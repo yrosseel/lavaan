@@ -1,0 +1,244 @@
+
+computeExpectedInformation <- function(object, sample=NULL, estimator="ML",
+                                       Delta=NULL, extra=FALSE) {
+
+    # is no Delta is provided, we compute Delta for the free parameters only
+    if(is.null(Delta))  Delta <- computeDelta(object)
+
+    # compute WLS.V
+    WLS.V       <- vector("list", length=sample@ngroups)
+    if(estimator == "GLS" || estimator == "WLS") {
+        # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
+        # for WLS, the WLS.V22 part is: Gamma
+        WLS.V <- sample@WLS.V
+    } else if(estimator == "ML") {
+        Sigma.hat <- computeSigmaHat(object)
+        if(object@meanstructure) Mu.hat <- computeMuHat(object)
+        for(g in 1:sample@ngroups) {
+            if(sample@missing.flag) {
+                WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
+                                            Mu.hat=Mu.hat[[g]],
+                                            sample=sample, group=g,
+                                            information="expected")
+            } else {
+                # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
+                WLS.V[[g]] <- 
+                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
+                                           Mu.hat=Mu.hat[[g]],
+                                           meanstructure=object@meanstructure)
+            }
+        }
+    } # ML
+
+
+    # compute Information per group
+    Info.group  <- vector("list", length=sample@ngroups)
+    for(g in 1:sample@ngroups) {
+        # take care of multiple groups
+        WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
+
+        # compute information for this group
+        Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]] 
+    }
+
+    # assemble over groups
+    Information <- Info.group[[1]]
+    if(sample@ngroups > 1) {
+        for(g in 2:sample@ngroups) {
+            Information <- Information + Info.group[[g]]
+        }
+    }
+
+    if(extra) {
+        attr(Information, "Delta") <- Delta
+        attr(Information, "WLS.V") <- WLS.V
+    }
+
+    Information
+}
+
+# only for Mplus MLM
+computeExpectedInformationMLM <- function(object, sample=NULL, Delta=NULL) {
+
+    # is no Delta is provided, we compute Delta for the free parameters only
+    if(is.null(Delta))  Delta <- computeDelta(object)
+
+    # compute WLS.V 
+    WLS.V <- vector("list", length=sample@ngroups)
+    for(g in 1:sample@ngroups) {
+        WLS.V[[g]] <- compute.A1.sample(sample=sample, group=g,
+                                        meanstructure=TRUE)
+        # the same as GLS... (except for the N/N-1 scaling)
+    }
+
+    # compute Information per group
+    Info.group  <- vector("list", length=sample@ngroups)
+    for(g in 1:sample@ngroups) {
+        # take care of multiple groups
+        WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
+
+        # compute information for this group
+        Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
+    }
+
+    # assemble over groups
+    Information <- Info.group[[1]]
+    if(sample@ngroups > 1) {
+        for(g in 2:sample@ngroups) {
+            Information <- Information + Info.group[[g]]
+        }
+    }
+
+    # always
+    attr(Information, "Delta") <- Delta
+    attr(Information, "WLS.V") <- WLS.V
+
+    Information
+}
+
+
+
+
+
+computeObservedInformation <- function(object, sample=NULL, 
+                                       type="free", estimator="ML", 
+                                       group.weight=TRUE) {
+
+
+    # computing the Richardson extrapolation
+    # (note that this matrix is not fully symmetric --> do not use chol)
+    Hessian <- matrix(0, object@nx.free, object@nx.free)
+    x <- getModelParameters(object)
+    for(j in 1:object@nx.free) {
+        h.j <- 10e-4 
+        x.left <- x.left2 <- x.right <- x.right2 <- x
+        x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
+        x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
+
+        g.left <- 
+            computeGradient(object=object, GLIST=x2GLIST(object, x.left), 
+                            sample=sample, type="free", estimator=estimator, 
+                            group.weight=group.weight)
+        g.left2 <-    
+            computeGradient(object=object, GLIST=x2GLIST(object, x.left2),
+                            sample=sample, type="free", estimator=estimator, 
+                            group.weight=group.weight)
+
+        g.right <- 
+            computeGradient(object=object, GLIST=x2GLIST(object, x.right),
+                            sample=sample, type="free", estimator=estimator,
+                            group.weight=group.weight)
+
+        g.right2 <- 
+            computeGradient(object=object, GLIST=x2GLIST(object, x.right2),
+                            sample=sample, type="free", estimator=estimator,
+                            group.weight=group.weight)
+    
+        Hessian[,j] <- ( -1 * (g.left2 - 8*g.left + 
+                                         8*g.right - 
+                               g.right2)/(12*h.j) )
+    }
+
+    #cat("Hessian 1:\n")
+    #print(Hessian)
+
+    #compute.fx <- function(x) {
+    #    fx <- computeObjective(object, x=x, sample=sample,
+    #                           estimator=estimator)
+    #    fx
+    #}
+    #Hessian <- numDeriv::hessian(func=compute.fx, x=x)
+    #cat("Hessian 2:\n")
+    #print(Hessian)
+
+    #stop("for now")
+
+
+    # make symmetric (NEEDED? probably not)
+    #Hessian <- ( Hessian + t(Hessian) )/2.0
+  
+    Information.ok <- ( -1 * Hessian )
+
+    # attempt to compute HESSIAN analytically
+    if(FALSE) {
+        # analytical formula -- NOT OK!!! 
+        Delta       <- computeDelta(object)
+        WLS.V       <- vector("list", length=sample@ngroups)
+        Info.group  <- vector("list", length=sample@ngroups)
+
+        # compute WLS.V
+        Sigma.hat <- computeSigmaHat(object)
+        if(object@meanstructure) Mu.hat <- computeMuHat(object)
+        for(g in 1:sample@ngroups) {
+            WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
+                                        Mu.hat=Mu.hat[[g]],
+                                        sample=sample, group=g,
+                                        information="observed")
+        }
+
+        # compute Information per group
+        for(g in 1:sample@ngroups) {
+            # take care of multiple groups
+            WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
+
+            # compute information for this group
+            Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
+        }
+
+        # assemble over groups
+        Information <- Info.group[[1]]
+        if(sample@ngroups > 1) {
+            for(g in 2:sample@ngroups) {
+                Information <- Information + Info.group[[g]]
+            }
+        }
+
+        # NOTE: diagonal is OK, but off-diagonal elements mostly not
+        cat("DEBUG: analytical HESSIAN. DIAG( solve(I) ):\n")
+        print( diag( solve(Information) ) )
+        cat("DEBUG: numerical HESSIAN. DIAG( solve(I) ):\n")
+        print( diag( solve(Information.ok) ) )
+    } # analytical hessian
+
+    # use numerical only for now
+    Information <- Information.ok
+
+    # augmented Information matrix (only for fixed.x)
+    if(type == "free.fixed.x" && object@fixed.x && length(object@x.idx) > 0) {
+        idx.all <- which(object$free > 0 | (object$fixed.x > 0 &
+                         object$row >= object$col))
+        idx.free <- which(object$free > 0)
+        idx.x <- which(object$fixed.x > 0 & object$row >= object$col)
+
+        info.free.idx  <- idx.all %in% idx.free
+        info.fixed.idx <- idx.all %in% idx.x
+
+        Information.big <- matrix(0, nrow=length(idx.all), ncol=length(idx.all))
+        Information.big[info.free.idx, info.free.idx] <- Information
+
+        #### FIXME FOR MULTIPLE GROUPS !!!!!
+        x.idx <- object@x.idx
+        A1.group <- vector("list", sample@ngroups)
+        for(g in 1:sample@ngroups) {
+            A1.group[[g]] <- 
+                compute.A1.sample(sample=sample, group=g,
+                                  meanstructure=object@meanstructure,
+                                  idx=x.idx)
+        }
+        if(object@multigroup) {
+            # groups weights
+            A1 <- (sample@nobs[[1]]/sample@ntotal) * A1.group[[1]]
+            for(g in 2:sample@ngroups) {
+                A1 <- A1 + (sample@nobs[[g]]/sample@ntotal) * A1.group[[g]]
+            }
+        } else {
+            A1 <- A1.group[[1]]
+        }
+
+        Information.big[info.fixed.idx, info.fixed.idx] <- A1
+        
+        Information <- Information.big
+    }
+
+    Information
+}

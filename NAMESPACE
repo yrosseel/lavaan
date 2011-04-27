@@ -1,0 +1,63 @@
+# only when we have src code
+# useDynLib("lavaan")
+
+importFrom("stats", 
+           coef,
+           residuals, resid,
+           fitted.values, fitted,
+           predict,
+           update,
+           anova,
+           vcov)
+
+# AIC and friends...
+if(getRversion() >= "2.13.0") {
+    importFrom("stats4",AIC, BIC, logLik, nobs)
+    export(logLik) # not AIC, nobs, BIC?
+} else {
+    importFrom("stats4",AIC, BIC, logLik)
+    export(logLik, BIC, nobs) # not AIC?
+}
+
+
+# export ordinary functions defined in this package
+export("lavaan",
+       "cfa",
+       "sem",
+       "growth",
+       "lavaanify",
+       "lavaanNames",
+       #"setLavaanOptions",
+       #"simulateData",
+       # "export",
+       #"independence.model",
+       "modindices", "modificationIndices", "modificationindices",
+       "standardizedSolution", "standardizedsolution",
+       "parameterEstimates", "parameterestimates",
+       "fitMeasures", "fitmeasures",
+       "measurementInvariance", "measurementinvariance"
+      )
+
+# export Classes
+exportClasses(
+              "lavaan"
+             )
+
+# export Methods
+exportMethods(
+              "predict", 
+              "update",
+              "anova",
+              "coef",
+              "residuals", "resid",
+              "vcov", 
+              "logLik",
+              "fitted.values", "fitted",
+              "summary",
+              "inspect"
+             )
+
+S3method(print, lavaan.data.frame)
+S3method(print, lavaan.matrix)
+S3method(print, lavaan.matrix.symmetric)
+S3method(print, lavaan.vector)
