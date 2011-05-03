@@ -521,7 +521,7 @@ derivatives <- function(object) {
 
 setMethod("coef", "lavaan",
 function(object, labels=TRUE, show.all=FALSE) {
-  if(show.all){
+  if(!show.all){
 
 	cof    <- object@Fit@x
     if(labels) {
