@@ -1,5 +1,7 @@
 #
 # initial version: YR 25/03/2009
+# Changelog:
+# 5/3/2011 - JEB, added show.all argument to coef
 
 short.summary <- function(object) {
 
@@ -518,18 +520,27 @@ derivatives <- function(object) {
 }
 
 setMethod("coef", "lavaan",
-function(object, labels=TRUE) {
+function(object, labels=TRUE, show.all=FALSE) {
+  if(show.all){
 
-    cof    <- object@Fit@x
+	cof    <- object@Fit@x
     if(labels) {
-        idx <- which(object@User$free > 0 & !duplicated(object@User$free))
-        #labels <- paste(object@User$lhs[idx], 
-        #                object@User$op[idx], 
-        #                object@User$rhs[idx], sep="")
-        labels <- object@User$label[idx]
+        idx <- which(object@User$free > 0 & !duplicated(object@User$free)) 
+      	#  labels <- paste(object@User$lhs[idx], 
+      	#                  object@User$op[idx], 
+      	#                  object@User$rhs[idx], sep="")
+      	labels <- object@User$label[idx]
         names(cof) <- labels
     }
+    
+  #if the user wants to see the parameters with equality constraints  
+  }else{ 
+    cof    <- object@Fit@est
+    if(labels) {
+    names(cof) <- object@User$label
+    }
     class(cof) <- c("lavaan.vector", "numeric")
+  }
     cof
 
 })
