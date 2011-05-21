@@ -723,6 +723,10 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     # for example in   y ~ b1*x1 + b2*x2 + b3*x3
     # but only if the formula contains the "~" operator (excluding constraints)
     idx.formula <- which(grepl("[~]", model))
+    # first, we replace NA* by as.numeric(NA)*
+    model[idx.formula] <-
+        gsub("(NA)\\*", "as.numeric(NA)\\*", model[idx.formula])
+    # second, we replace ab* by label("ab")*
     model[idx.formula] <- 
         gsub("([[:alpha:]][[:alnum:]]*)\\*", "label(\"\\1\")\\*", model[idx.formula])
 
