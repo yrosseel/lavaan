@@ -240,9 +240,10 @@ lavaanify <- function(model.syntax    = NULL,
             # ok, we have a LV with only a single indicator
             lv.names.single <- names(T)[T == 1L]
             # get corresponding indicator if unique
-            single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single
-                                    & !(duplicated(rhs) | 
-                                        duplicated(rhs, fromLast=TRUE)))]
+            lhs.mm <- lhs[mm.idx]; rhs.mm <- rhs[mm.idx]
+            single.ind <- rhs.mm[which(lhs.mm %in% lv.names.single & 
+                                       !(duplicated(rhs.mm) | 
+                                         duplicated(rhs.mm, fromLast=TRUE)))]
             # is the indicator unique?
             if(length(single.ind)) {
                 var.idx <- which(op == "~~" & lhs %in% single.ind
