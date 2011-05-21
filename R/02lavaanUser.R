@@ -235,17 +235,18 @@ lavaanify <- function(model.syntax    = NULL,
     # 2. fix residual variance of single indicators to zero
     if(auto.var && auto.fix.single) {
         mm.idx <- which(op == "=~")
-        nind  <- lhs[ mm.idx[which(!duplicated(rhs[mm.idx]))] ]
-        T <- table(nind)
-        lv.names.single <- names(T)[T == 1L]
-        single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single)]
-        if(length(single.ind)) {
-            var.idx <- which(op == "~~" & lhs %in% single.ind
-                                        & rhs %in% single.ind
-                                        & lhs == rhs 
-                                        & user == 0L)
-            ustart[var.idx] <- 0.0
-              free[var.idx] <- 0L
+        T <- table(lhs[mm.idx])
+        if(any(T == 1L)) {
+            lv.names.single <- names(T)[T == 1L]
+            single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single)]
+            if(length(single.ind)) {
+                var.idx <- which(op == "~~" & lhs %in% single.ind
+                                            & rhs %in% single.ind
+                                            & lhs == rhs 
+                                            & user == 0L)
+                ustart[var.idx] <- 0.0
+                  free[var.idx] <- 0L
+            }
         }
     }
 
