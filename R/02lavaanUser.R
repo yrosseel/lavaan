@@ -237,8 +237,13 @@ lavaanify <- function(model.syntax    = NULL,
         mm.idx <- which(op == "=~")
         T <- table(lhs[mm.idx])
         if(any(T == 1L)) {
+            # ok, we have a LV with only a single indicator
             lv.names.single <- names(T)[T == 1L]
-            single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single)]
+            # get corresponding indicator if unique
+            single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single
+                                    & !(duplicated(rhs) | 
+                                        duplicated(rhs, fromLast=TRUE)))]
+            # is the indicator unique?
             if(length(single.ind)) {
                 var.idx <- which(op == "~~" & lhs %in% single.ind
                                             & rhs %in% single.ind
