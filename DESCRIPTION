@@ -1,7 +1,9 @@
 Package: lavaan
 Title: Latent Variable Analysis
 Version: 0.5-1
-Author: Yves Rosseel <Yves.Rosseel@UGent.be> with contributions of Daniel Oberski <daniel.oberski@gmail.com>
+Author: Yves Rosseel <Yves.Rosseel@UGent.be> with contributions of 
+        Daniel Oberski <daniel.oberski@gmail.com> and
+        Jarrett Byrnes <byrnes@nceas.ucsb.edu>
 Maintainer: Yves Rosseel <Yves.Rosseel@UGent.be>
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
