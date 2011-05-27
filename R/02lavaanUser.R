@@ -11,6 +11,14 @@
 #                                   a model (but no matrix representation)
 
 
+##NOTES BY JEB IN CAPS
+# To fix using standardized coefficients, will need to pass data or covariance
+# matrices through.  Unless constraints are handled otherwise.  Hrm.  Tricky
+# as standardized constraint will need to take fitted variance into account
+# so...maybe no data needed at this level?  It's for fitting.  Egads.  This
+# just got more difficult than I thought it would.  Then again, standardizing
+# is just a constraint of sorts...
+
 lavaanify <- function(model.syntax    = NULL, 
                       meanstructure   = FALSE,
                       int.ov.free     = FALSE,
@@ -768,6 +776,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         # 1f, ">" operator?
         } else if(grepl(">", line.simple, fixed=TRUE)) {
             op <- ">"
+    ##CATCH COMPOSITES HERE -JEB
         } else {
             stop("unknown operator in ", model[i])
         }
@@ -840,6 +849,8 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                     FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
                     rhs.mod <- 1L
                 }
+                
+        ###INSERT STD VARIABLES HERE?  BUT NEED DATA FRAME OF COV MAT -JEB
                 if(length(out[[j]]$start) > 0) {
                     mod$start <- out[[j]]$start
                     FLAT.start[FLAT.idx] <- paste(mod$start, collapse=";")
@@ -877,6 +888,10 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         } # lhs elements
     } # model elements
 
+  ##DEAL WITH COMPOSITE MODIFICATIONS HERE -JEB 
+  ##REMEMBER TO MOVE MODIFIERS AS WELL
+  ##AND CHANGE THEIR SYNTAX...OR IS THIS GETTING KLUDGY?
+  
     # enumerate modifier indices
     mod.idx <- which(FLAT.rhs.mod.idx > 0)
     FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
@@ -962,6 +977,7 @@ parse.rhs <- function(rhs, debug=FALSE, warn=TRUE) {
                 } else if( last.term[[2]][[1]] == "label" ) {
                     label <- eval( last.term[[2]][[2]], envir=NULL,enclos=NULL )
                     out[[ii]]$label <- label
+            ##INSERT STD TERM HERE -JEB
                 } else {
                     stop("lavaan ERROR: unknown function name `",
                          last.term[[2]][[1]],

@@ -16,6 +16,7 @@ lavaanNames <- function(object, type="ov") {
 }
 
 # internal version
+# TODO - write composite variable methods - cv? -JEB
 vnames <- function(user, type=NULL) {
 
     stopifnot(is.list(user), !missing(type),
