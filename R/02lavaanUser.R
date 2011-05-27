@@ -243,17 +243,24 @@ lavaanify <- function(model.syntax    = NULL,
     # 2. fix residual variance of single indicators to zero
     if(auto.var && auto.fix.single) {
         mm.idx <- which(op == "=~")
-        nind  <- lhs[ mm.idx[which(!duplicated(rhs[mm.idx]))] ]
-        T <- table(nind)
-        lv.names.single <- names(T)[T == 1L]
-        single.ind <- rhs[which(op == "=~" & lhs %in% lv.names.single)]
-        if(length(single.ind)) {
-            var.idx <- which(op == "~~" & lhs %in% single.ind
-                                        & rhs %in% single.ind
-                                        & lhs == rhs 
-                                        & user == 0L)
-            ustart[var.idx] <- 0.0
-              free[var.idx] <- 0L
+        T <- table(lhs[mm.idx])
+        if(any(T == 1L)) {
+            # ok, we have a LV with only a single indicator
+            lv.names.single <- names(T)[T == 1L]
+            # get corresponding indicator if unique
+            lhs.mm <- lhs[mm.idx]; rhs.mm <- rhs[mm.idx]
+            single.ind <- rhs.mm[which(lhs.mm %in% lv.names.single & 
+                                       !(duplicated(rhs.mm) | 
+                                         duplicated(rhs.mm, fromLast=TRUE)))]
+            # is the indicator unique?
+            if(length(single.ind)) {
+                var.idx <- which(op == "~~" & lhs %in% single.ind
+                                            & rhs %in% single.ind
+                                            & lhs == rhs 
+                                            & user == 0L)
+                ustart[var.idx] <- 0.0
+                  free[var.idx] <- 0L
+            }
         }
     }
 
@@ -724,6 +731,10 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     # for example in   y ~ b1*x1 + b2*x2 + b3*x3
     # but only if the formula contains the "~" operator (excluding constraints)
     idx.formula <- which(grepl("[~]", model))
+    # first, we replace NA* by as.numeric(NA)*
+    model[idx.formula] <-
+        gsub("(NA)\\*", "as.numeric(NA)\\*", model[idx.formula])
+    # second, we replace ab* by label("ab")*
     model[idx.formula] <- 
         gsub("([[:alpha:]][[:alnum:]]*)\\*", "label(\"\\1\")\\*", model[idx.formula])
 
