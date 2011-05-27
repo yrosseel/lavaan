@@ -58,9 +58,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             baseline <- c("baseline.chisq", "baseline.df", "baseline.pvalue")
         }
         if(scaled) {
-            cfi.tli <- c("cfi", "tli", "cfi.scaled", "tli.scaled")
+            cfi.tli <- c("cfi", "tli", "nfi", "cfi.scaled", "tli.scaled", "nfi.scaled")
         } else {
-            cfi.tli <- c("cfi", "tli")
+            cfi.tli <- c("cfi", "tli", "nfi")
         }
         if(scaled && object@Options$test == "yuan.bentler") {
             logl <- c("logl", "unrestricted.logl", "npar", "aic", "bic",
@@ -126,6 +126,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
 
     if(any(c("cfi", "cfi.scaled", "tli", "tli.scaled",
+    		"nfi", "nfi.scaled", 
              "baseline.chisq", "baseline.chisq.scaled",
              "baseline.pvalue", "baseline.pvalue.scaled") %in% fit.measures)) {
 
@@ -209,7 +210,17 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                              X2.null.scaled - df.null.scaled, 0) ) 
                 )
         }
-
+        
+         # NFI 
+        if("nfi" %in% fit.measures) {
+            indices["nfi"] <- (X2.null-X2)/X2.null
+        }
+        if("nfi.scaled" %in% fit.measures) {
+            indices["nfi.scaled"] <- 
+			(X2.null.scaled-X2.scaled)/X2.null.scaled            
+        }
+        
+        
         # TLI 
         if("tli" %in% fit.measures) {
             if(df > 0) {
@@ -574,11 +585,18 @@ print.fit.measures <- function(x) {
                  sprintf("  %10.3f", x["cfi.scaled"]), "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
-       t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI)")
+       t0.txt <- sprintf("  %-40s", "Bentler-Bonnet Normed Fit Index (NFI)")
+       t1.txt <- sprintf("  %10.3f", x["nfi"])
+       t2.txt <- ifelse(scaled,
+                 sprintf("  %10.3f", x["nfi.scaled"]), "")
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+       t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI, NNFI)")
        t1.txt <- sprintf("  %10.3f", x["tli"])
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["tli.scaled"]), "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+              
    }
 
    # likelihood
