@@ -220,8 +220,8 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
 # shortcut to only get Abeta
 compute.Abeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
-                          group=1, information="observed") { 
-    if(sample@missing.flag) {
+                          group=1L, information="observed") { 
+    if(sample@missing.flag[group]) {
         X <- NULL
         M <- sample@missing[[group]]
     } else {
@@ -257,13 +257,13 @@ compute.Abeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 # shortcut if Sigma and Mu are simply the sample counterparts
-compute.A1.sample <- function(sample, group=1, meanstructure=TRUE,
+compute.A1.sample <- function(sample, group=1L, meanstructure=TRUE,
                               idx=NULL, information=NULL) {
 
     # note: for complete data, the type of information does not matter
     # but for incomplete data, it makes a difference!
 
-    if(sample@missing.flag) {
+    if(sample@missing.flag[group]) {
         # incomplete data
         A1 <- compute.Abeta(Sigma.hat=sample@missing[[group]]$sigma,
                             Mu.hat=sample@missing[[group]]$mu,
@@ -293,8 +293,8 @@ compute.A1.sample <- function(sample, group=1, meanstructure=TRUE,
 }
 
 # shortcut to only get Bbeta
-compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL, group=1) {
-    if(sample@missing.flag) {
+compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL, group=1L) {
+    if(sample@missing.flag[group]) {
         X <- NULL
         M <- sample@missing[[group]]
     } else {
@@ -307,9 +307,9 @@ compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL, group=1) {
     Bbeta
 }
 
-compute.B1.sample <- function(sample=NULL, group=1, meanstructure=TRUE) {
+compute.B1.sample <- function(sample=NULL, group=1L, meanstructure=TRUE) {
 
-    if(sample@missing.flag) {
+    if(sample@missing.flag[group]) {
         stopifnot(meanstructure == TRUE)
         B1 <- compute.Bbeta(Sigma.hat=sample@missing[[group]]$sigma,
                             Mu.hat=sample@missing[[group]]$mu,

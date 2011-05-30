@@ -89,7 +89,7 @@ Sample <- function(data=NULL,
                 #   - store sufficient statistics (per missing pattern group)
                 #   - compute pairwise coverage
                 d.missing[[g]] <- missing.patterns(data.obs, warn=warn)
-                if(d.missing[[g]]$npatterns > 1) {
+                if(d.missing[[g]]$npatterns > 1L) {
                     # ok, we have missing values - check the estimator
                     if(estimator == "GLS" || estimator == "WLS") {
                         stop("estimator ", estimator, 
@@ -265,7 +265,7 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
                   nvar=nvar,
                   ngroups=ngroups,
                   group.label=group.label,
-                  missing.flag=any(missing.flag),
+                  missing.flag=missing.flag,
 
                   ntotal=sum(unlist(d.nobs)),
                   nobs=d.nobs,

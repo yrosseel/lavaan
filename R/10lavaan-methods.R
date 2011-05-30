@@ -49,7 +49,7 @@ short.summary <- function(object) {
 
     # listwise deletion?
     listwise <- FALSE
-    if(!object@Sample@missing.flag &&
+    if(!any(object@Sample@missing.flag) &&
        (object@Sample@nobs[[1]] < object@Sample@missing[[1]]$norig)) {
         listwise <- TRUE
     }
@@ -84,12 +84,12 @@ short.summary <- function(object) {
     cat("\n")
 
     # missing patterns?
-    if(object@Sample@missing.flag && object@Sample@ngroups == 1L) {
+    if(object@Sample@missing.flag[1] && object@Sample@ngroups == 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns")
         t1.txt <- sprintf("  %10i", object@Sample@missing[[1]]$npatterns)
         cat(t0.txt, t1.txt, "\n\n", sep="")
     }
-    if(object@Sample@missing.flag && object@Sample@ngroups > 1L) {
+    if(any(object@Sample@missing.flag) && object@Sample@ngroups > 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
         cat(t0.txt, "\n")
         for(g in 1:object@Sample@ngroups) {
@@ -746,6 +746,7 @@ rsquare <- function(object, est.std.all=NULL) {
     if(is.null(est.std.all)) est.std.all <- standardize.est.all(object)
     ngroups <- object@Sample@ngroups
     user <- object@User
+    user$rsquare <- 1.0 - est.std.all
     r2 <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
@@ -755,10 +756,7 @@ rsquare <- function(object, est.std.all=NULL) {
 
         idx <- which(user$op == "~~" & user$lhs %in% y.names & 
                      user$rhs == user$lhs & user$group == g)
-
-        idx.correct <- match(user$lhs[idx], y.names)
-    
-        tmp <- 1.0 - est.std.all[idx][idx.correct]; names(tmp) <- y.names
+        tmp <- user$rsquare[idx]; names(tmp) <- user$lhs[idx]
         r2[[g]] <- tmp
     }
 

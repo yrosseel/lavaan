@@ -70,6 +70,11 @@ lavaan <- function(# user-specified model syntax
                      "' not found in names data:", names(data))
             }
             group.label <- unique(as.character(data[,group]))
+            if(warn && any(is.na(group.label))) {
+                cat("lavaan WARNING: group variable `", group, "` contains missing values\n",
+                    sep="")
+            }
+            group.label <- group.label[!is.na(group.label)]
             ngroups     <- length(group.label)
         } else {
             group.label <- character(0)

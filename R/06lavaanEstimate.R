@@ -178,8 +178,8 @@ function(object, GLIST=NULL, sample, estimator="ML",
     fx.group <- numeric( sample@ngroups )
     for(g in 1:sample@ngroups) {
 
-        # incomplete data and missing.flag=TRUE?
-        if(sample@missing.flag) {
+        # incomplete data and missing.flag[g]=TRUE?
+        if(sample@missing.flag[g]) {
             if(estimator == "ML") {
                 # FIML
 
@@ -385,7 +385,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
-            if(!sample@missing.flag) { # complete data
+            if(!sample@missing.flag[g]) { # complete data
                 if(meanstructure) {
                     diff <- sample@mean[[g]] - Mu.hat[[g]]
                     W.tilde <- sample@cov[[g]] + tcrossprod(diff)
@@ -601,7 +601,7 @@ function(object, sample, do.fit=TRUE, options=NULL) {
 
         # current strategy: forcePD is by default FALSE, except
         # if missing patterns are used
-        if(sample@missing.flag) {
+        if(any(sample@missing.flag)) {
             forcePD <- TRUE
         } else {
             forcePD <- FALSE
@@ -905,9 +905,12 @@ function(object, sample, do.fit=TRUE, options=NULL) {
     fx <- minimize.this.function(x) # to get "fx.group" attribute
 
     # adjust fx if FIML (using h1 value)
-    if(sample@missing.flag) {
-        fx.group <- attr(fx,"fx.group") - unlist( 
-                                    lapply(sample@missing, "[[", "h1") )/2.0
+    if(any(sample@missing.flag)) {
+        fx.group <- attr(fx,"fx.group") 
+        h1 <- lapply(sample@missing, "[[", "h1")
+        # in case we have a complete group
+        h1[unlist(lapply(h1, is.null))] <- 0.0
+        fx.group <- fx.group - unlist(h1)/2.0
         fx <- sum(fx.group)
         attr(fx, "fx.group") <- fx.group
     }

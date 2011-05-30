@@ -67,7 +67,7 @@ function(object, type="raw", labels=TRUE) {
     R <- vector("list", length=G)
     for(g in 1:G) {
         # sample moments
-        if(!object@Sample@missing.flag) {
+        if(!object@Sample@missing.flag[g]) {
             S <- object@Sample@cov[[g]]
             M <- object@Sample@mean[[g]]
         } else {
