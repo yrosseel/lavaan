@@ -202,7 +202,7 @@ lavaan <- function(# user-specified model syntax
 
     # 6. estimate free parameters
     x <- VCOV <- TEST <- NULL
-    if(do.fit) {
+    if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
                            sample  = lavaanSample, 
                            options = lavaanOptions)
@@ -212,7 +212,7 @@ lavaan <- function(# user-specified model syntax
     }
 
     # 7. estimate vcov of free parameters (for standard errors)
-    if(se != "none") {
+    if(se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSample,
                              options = lavaanOptions)
