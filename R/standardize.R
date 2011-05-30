@@ -21,7 +21,12 @@ standardize.est.lv <- function(object, user=NULL, est=NULL,
         if(object@Model@representation == "LISREL") {
             # replace negative variances by 0
             idx <- which(diag( MLIST$theta) < 0); diag(MLIST$theta)[idx] <- 0
-            idx <- which(diag( MLIST$psi  ) < 0); diag(MLIST$psi)[idx] <- 0
+            # bug reported by Daniel Oberski:
+            # als er een negatieve psi is klopt de gestandaardiseerde waarde 
+            # niet omdat je hem op 0 zet. Dat hoeft echter niet want een i
+            # negatieve psi impliceert niet per se een negatieve variantie i
+            # van de latente variabele. 
+            #idx <- which(diag( MLIST$psi  ) < 0); diag(MLIST$psi)[idx] <- 0
 
             if("beta" %in% names(MLIST)) {
                 tmp <- -1.0 * MLIST$beta; diag(tmp) <- 1.0
