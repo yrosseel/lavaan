@@ -15,6 +15,29 @@ inv.chol <- function(S, logdet=FALSE) {
     S.inv
 }
 
+# convert correlation matrix + standard deviations to covariance matrix
+# based on cov2cor in package:stats
+cor2cov <- function(R, sds) {
+
+    p <- (d <- dim(R))[1L]
+    if(!is.numeric(R) || length(d) != 2L || p != d[2L]) 
+        stop("'V' is not a square numeric matrix")
+
+    if(any(!is.finite(sds))) 
+        warning("sds had 0 or NA entries; non-finite result is doubtful")
+
+    #if(sum(diag(R)) != p) 
+    #    stop("The diagonal of a correlation matrix should be all ones.")
+
+    if(p != length(sds)) 
+        stop("The standard deviation vector and correlation matrix have a different number of variables")
+
+    S <- R
+    S[] <- sds * R * rep(sds, each=p)
+
+    S
+} 
+
 # generalized inverse
 # MASS version for now
 MASS.ginv <-
