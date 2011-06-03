@@ -213,7 +213,8 @@ lavaanify <- function(model.syntax    = NULL,
     mod.idx <- c(USER$mod.idx, DEFAULT$mod.idx)
     free    <- rep(1L,  length(lhs))
     ustart  <- rep(as.numeric(NA), length(lhs))
-    label   <- paste(lhs, op, rhs, sep="")
+    #label   <- paste(lhs, op, rhs, sep="")
+    label   <- rep(character(1), length(lhs))
     exo     <- rep(0L, length(lhs))
 
     # 1. fix metric of regular latent variables
@@ -323,7 +324,7 @@ lavaanify <- function(model.syntax    = NULL,
         # specific changes per group
         for(g in 2:ngroups) {
             # label
-            label[group == g] <- paste(label[group == 1], ".g", g, sep="")
+            # label[group == g] <- paste(label[group == 1], ".g", g, sep="")
 
             # free/fix intercepts
             if(meanstructure) {
@@ -436,6 +437,9 @@ lavaanify <- function(model.syntax    = NULL,
 
     # group.equal and group.partial
     if(ngroups > 1 && length(group.equal) > 0) {
+ 
+        # create `default' labels for all parameters
+        LABEL <- getParameterLabels(LIST)
 
         # LOADINGS
         if("loadings" %in% group.equal) {
@@ -445,7 +449,7 @@ lavaanify <- function(model.syntax    = NULL,
                 idx <- which(LIST$op == "=~" & # LIST$free > 0 &
                              LIST$group == g)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -457,7 +461,7 @@ lavaanify <- function(model.syntax    = NULL,
                 idx <- which(LIST$op == "~1"  & # LIST$free > 0 &
                              LIST$group == g  & LIST$lhs %in% ov.names.nox)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -471,7 +475,7 @@ lavaanify <- function(model.syntax    = NULL,
                              LIST$group == g &
                              LIST$lhs %in% lv.names)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
      
@@ -483,7 +487,7 @@ lavaanify <- function(model.syntax    = NULL,
                 idx <- which(LIST$op == "~" & # LIST$free > 0 &
                              LIST$group == g)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -499,7 +503,7 @@ lavaanify <- function(model.syntax    = NULL,
                              LIST$lhs %in% ov.names.nox &
                              LIST$lhs == LIST$rhs)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -515,7 +519,7 @@ lavaanify <- function(model.syntax    = NULL,
                              LIST$lhs %in% ov.names.nox &
                              LIST$lhs != LIST$rhs)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -531,7 +535,7 @@ lavaanify <- function(model.syntax    = NULL,
                              LIST$lhs %in% lv.names &
                              LIST$lhs == LIST$rhs)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -547,7 +551,7 @@ lavaanify <- function(model.syntax    = NULL,
                              LIST$lhs %in% lv.names &
                              LIST$lhs != LIST$rhs)
                 LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LIST$label[g1.idx]
+                LIST$equal[idx] <- LABEL[g1.idx]
             }
         }
 
@@ -572,7 +576,7 @@ lavaanify <- function(model.syntax    = NULL,
 
             # free up this parameter
             for(g in 2:ngroups) {
-                idx <- which(LIST$label %in% group.partial)
+                idx <- which(LABEL %in% group.partial)
                 LIST$free[idx] <- 1L
                 LIST$equal[idx] <- ""
             }
@@ -585,17 +589,18 @@ lavaanify <- function(model.syntax    = NULL,
     # 1. those explicitly marked with the equal() modifier
     idx.eq.label <- which(LIST$equal != "")
     if(length(idx.eq.label) > 0) {
+        if(!exists("LABEL")) LABEL <- getParameterLabels(LIST)
         for(idx in idx.eq.label) {
             eq.label <- LIST$equal[idx]
-            ref.idx <- which(LIST$label == eq.label)
+            ref.idx <- which(LABEL == eq.label)
             if(length(ref.idx) == 0) {
                 stop("equality label [", eq.label, "] not found")
             }
             LIST$eq.id[idx] <- ref.idx
         }
     }
-    # 2. those with the same label
-    idx.eq.label <- which(duplicated(LIST$label))
+    # 2. those with the same (non-epmty) label (user-specified only!)
+    idx.eq.label <- which(nchar(LIST$label) & duplicated(LIST$label))
     if(length(idx.eq.label) > 0) {
         for(idx in idx.eq.label) {
             eq.label <- LIST$label[idx]
@@ -605,7 +610,6 @@ lavaanify <- function(model.syntax    = NULL,
         }
     }
     # remove label and equal columns
-    #LIST$label <- NULL
     LIST$equal <- NULL
 
     # count free parameters

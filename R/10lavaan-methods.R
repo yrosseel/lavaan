@@ -521,14 +521,7 @@ setMethod("coef", "lavaan",
 function(object, labels=TRUE) {
 
     cof    <- object@Fit@x
-    if(labels) {
-        idx <- which(object@User$free > 0 & !duplicated(object@User$free))
-        #labels <- paste(object@User$lhs[idx], 
-        #                object@User$op[idx], 
-        #                object@User$rhs[idx], sep="")
-        labels <- object@User$label[idx]
-        names(cof) <- labels
-    }
+    if(labels) names(cof) <- getParameterLabels(object@User, type="free")
     class(cof) <- c("lavaan.vector", "numeric")
     cof
 
@@ -728,12 +721,8 @@ function(object, labels=TRUE) {
                            options=object@Options)
 
     if(labels) {
-        idx <- which(object@User$free > 0 & !duplicated(object@User$free))
-        #labels <- paste(object@User$lhs[idx],
-        #                object@User$op[idx],
-        #                object@User$rhs[idx], sep="")
-        labels <- object@User$label[idx]
-        colnames(VarCov) <- rownames(VarCov) <- labels
+        colnames(VarCov) <- rownames(VarCov) <- 
+            getParameterLabels(object@User, type="free")
     }
 
     class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")

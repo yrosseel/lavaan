@@ -187,6 +187,37 @@ getDF <- function(user) {
     as.integer(df)
 }
 
+getParameterLabels <- function(user, type="user") {
+    # default labels
+    label <- paste(user$lhs, user$op, user$rhs, sep="")
+    
+    # handle multiple groups
+    ngroups <- max(user$group)
+    if(ngroups > 1L) {
+        for(g in 2:ngroups) {
+            label[user$group == g] <- 
+                paste(label[user$group == 1], ".g", g, sep="")
+        }
+    }
+
+    # user-specified labels
+    user.idx <- which(nchar(user$label) > 1L)
+    label[user.idx] <- user$label[user.idx]
+
+    # which labels do we need?
+    if(type == "user") {
+        idx <- 1:length(label)
+    } else if(type == "free") {
+        idx <- which(user$free > 0L & !duplicated(user$free))
+    } else if(type == "unco") {
+        idx <- which(user$free.uncon > 0L & !duplicated(user$free.uncon))
+    } else {
+        stop("argument `user' must be one of free, unco, or user")
+    }
+   
+    label[idx]
+}
+
 
 getUserListFull <- function(user=NULL) {
 
