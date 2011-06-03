@@ -11,6 +11,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # everything lowercase
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
 
+    # do.fit implies se="none and test="none" (unless not default)
+    if(!opt$do.fit) {
+        if(opt$se == "default") {
+            opt$se <- "none"
+        }
+        if(opt$test == "default") {
+            opt$test <- "none"
+        }
+    }
+
     # group.equal and group.partial
     if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
         opt$group.equal <- character(0)
@@ -172,11 +182,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
         } else if(opt$se == "none") {
             # nothing to do
         } else {
-            stop("unknown value for `se' argument when estimator is WLS: ", 
+            stop("invalid value for `se' argument when estimator is WLS: ", 
                  opt$se, "\n")
         }
         if(opt$test != "standard") {
             stop("invalid value for `test' argument when estimator is GLS: ", 
+                 opt$test, "\n")
+        }
+    } else if(opt$estimator == "uls") {
+        opt$estimator <- "none"
+        if(opt$se == "default" || opt$se == "standard") {
+            opt$se <- "standard"
+        } else if(opt$se == "none") {
+            # nothing to do
+        } else {
+            stop("invalid value for `se' argument when estimator is ULS: ", 
+                 opt$se, "\n")
+        }
+        if(opt$test != "standard") {
+            stop("invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
         }
     } else {

@@ -201,7 +201,7 @@ lavaan <- function(# user-specified model syntax
               debug          = lavaanOptions$debug)
 
     # 6. estimate free parameters
-    x <- VCOV <- TEST <- NULL
+    x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
                            sample  = lavaanSample, 
@@ -209,22 +209,26 @@ lavaan <- function(# user-specified model syntax
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
-    }
+    } 
 
     # 7. estimate vcov of free parameters (for standard errors)
-    if(se != "none" && lavaanModel@nx.free > 0L) {
+    VCOV <- NULL
+    if(opt$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSample,
                              options = lavaanOptions)
     }
 
     # 8. compute test statistic (chi-square and friends)
-    TEST <- computeTestStatistic(lavaanModel,
-                                 user    = lavaanUser,
-                                 sample  = lavaanSample,
-                                 options = lavaanOptions,
-                                 x       = x,
-                                 VCOV    = VCOV)
+    TEST <- NULL
+    if(opt$test != "none") {
+        TEST <- computeTestStatistic(lavaanModel,
+                                     user    = lavaanUser,
+                                     sample  = lavaanSample,
+                                     options = lavaanOptions,
+                                     x       = x,
+                                     VCOV    = VCOV)
+    }
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(user  = lavaanUser, 
