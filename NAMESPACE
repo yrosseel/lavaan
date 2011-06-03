@@ -35,6 +35,7 @@ export("lavaan",
        "standardizedSolution", "standardizedsolution",
        "parameterEstimates", "parameterestimates",
        "fitMeasures", "fitmeasures",
+       "modelCov",
        "measurementInvariance", "measurementinvariance"
       )
 
