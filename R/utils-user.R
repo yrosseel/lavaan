@@ -212,7 +212,7 @@ getParameterLabels <- function(user, type="user") {
     } else if(type == "unco") {
         idx <- which(user$free.uncon > 0L & !duplicated(user$free.uncon))
     } else {
-        stop("argument `user' must be one of free, unco, or user")
+        stop("argument `type' must be one of free, unco, or user")
     }
    
     label[idx]

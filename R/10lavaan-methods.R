@@ -518,13 +518,28 @@ derivatives <- function(object) {
 }
 
 setMethod("coef", "lavaan",
-function(object, labels=TRUE) {
+function(object, type="free", labels=TRUE) {
 
-    cof    <- object@Fit@x
-    if(labels) names(cof) <- getParameterLabels(object@User, type="free")
+    if(type == "user" || type == "all") {
+        type <- "user"
+        idx <- 1:length( object@User$lhs )
+    } else if(type == "free") {
+        idx <- which(object@User$free > 0L & !duplicated(object@User$free))
+    } else if(type == "unco") {
+        idx <- which(object@User$free.uncon > 0L & 
+                     !duplicated(object@User$free.uncon))
+    } else {
+        stop("argument `type' must be one of free, unco, or user")
+    }
+    cof <- object@Fit@est[idx]
+  
+    # labels?
+    if(labels) names(cof) <- getParameterLabels(object@User, type=type)
+
+    # class
     class(cof) <- c("lavaan.vector", "numeric")
-    cof
 
+    cof
 })
 
 standardizedSolution <- standardizedsolution <- function(object, std.YX=TRUE) {
