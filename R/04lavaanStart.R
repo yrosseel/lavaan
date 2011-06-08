@@ -1,6 +1,7 @@
 # StartingValues.R
 #
-# initial version: YR 30/11/2010
+# YR 30/11/2010: initial version
+# YR 08/06/2011: add fabin3 start values for factor loadings
 
 # fill in the 'ustart' column in a User data.frame with reasonable
 # starting values, using the sample data
@@ -19,14 +20,37 @@ StartingValues <- function(user       = NULL,
 
     # info from user model
     ov.names    <- vnames(user, "ov")
-    lv.names    <- vnames(user, "lv")
+    lv.names    <- vnames(user, "lv"); nfac <- length(lv.names)
     ov.names.x  <- vnames(user, "ov.x")
     
     # 0. everyting is zero
     start <- numeric( length(user$ustart) )
 
-    # 1. =~ factor loadings: 1.0
+    # 1. =~ factor loadings: 1.0 
     start[ which(user$op == "=~") ] <- 1.0
+    # or slightly better using 2sls
+    for(g in 1:ngroups) {
+        if(!sum( user$ustart[ user$op == "=~" & user$group == g], 
+                na.rm=TRUE) == length(lv.names)) {
+            next
+        }
+        # only if all latent variables have a reference item,
+        # we use the fabin3 estimator (2sls) of Hagglund (1982)
+        # per factor
+        for(f in lv.names) {
+            user.idx <- which( user$lhs == f & user$op == "=~" 
+                                             & user$group == g )
+            ov.idx <- match(user$rhs[user.idx], ov.names)
+            if(length(ov.idx) > 2L) {
+                if(sample@missing.flag[g]) {
+                    COV <- sample@missing[[g]]$sigma[ov.idx,ov.idx]
+                } else {
+                    COV <- sample@cov[[g]][ov.idx,ov.idx]
+                }
+                start[user.idx] <- fabin3.uni(COV)
+            }
+        }
+    }
 
     # 2. residual lv variances for latent variables
     lv.var.idx <- which(user$op == "~~"        & 
