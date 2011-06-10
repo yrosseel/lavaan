@@ -558,6 +558,9 @@ lavaanify <- function(model.syntax    = NULL,
 
         # PARTIAL: undo constraints for user-specified parameters
         if(length(group.partial) > 0) {
+            # strip white space
+            group.partial <- gsub("[[:space:]]+", "", group.partial)
+
             # allow labels without a group prefix
             # add group prefix for all groups > 1
             group.partial.orig <- group.partial
@@ -574,6 +577,13 @@ lavaanify <- function(model.syntax    = NULL,
                     }
                 }
             }
+
+            # check if all group.partial names are found
+            if(warn) {
+                idx.not <- which(!group.partial %in% LABEL)
+                if(length(idx.not) > 0L) 
+                    warning("lavaan WARNING: some parameter names in group.partial are not found:", group.partial[idx.not])
+            }   
 
             # free up this parameter
             for(g in 2:ngroups) {
