@@ -266,6 +266,7 @@ cfa <- sem <- function(model.syntax = '',
     mc <- match.call()
 
     mc$model.type      = as.character( mc[[1L]] )
+    if(length(mc$model.type) == 3L) mc$model.type <- mc$model.type[3L]
     mc$int.ov.free     = TRUE
     mc$int.lv.free     = FALSE
     mc$auto.fix.first  = !std.lv

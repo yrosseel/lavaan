@@ -34,6 +34,7 @@ lavaanify <- function(model.syntax    = NULL,
                       
                       as.data.frame.   = TRUE) {
 
+
     # check for empty model.syntax
     stopifnot(nchar(model.syntax) > 0L)
 

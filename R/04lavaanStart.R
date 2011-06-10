@@ -11,7 +11,6 @@ StartingValues <- function(user       = NULL,
                            model.type = "sem",
                            debug      = FALSE) {
 
-
     # check arguments
     stopifnot(is.list(user), class(sample) == "Sample")
 

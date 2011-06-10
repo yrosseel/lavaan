@@ -9,7 +9,10 @@
 setLavaanOptions <- function(opt = formals(lavaan))
 {
     # everything lowercase
+    opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
+    # except group.partial, which may contain capital letters
+    opt$group.partial <- opt.old$group.partial
 
     # do.fit implies se="none and test="none" (unless not default)
     if(!opt$do.fit) {
@@ -146,6 +149,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "mlm") {
         opt$estimator <- "ML"
         opt$information <- "expected"
+        if(opt$meanstructure == FALSE) 
+            warning("lavaan WARNING: estimator MLM forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
         opt$se <- "robust.mlm"
         opt$test <- "satorra.bentler"
@@ -154,12 +159,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
         }
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
+        if(opt$meanstructure == FALSE) 
+            warning("lavaan WARNING: estimator MLF forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
         opt$se <- "first.order"
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         opt$se <- "robust.mlr"
         opt$test <- "yuan.bentler"
+        if(opt$meanstructure == FALSE) 
+            warning("lavaan WARNING: estimator MLR forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"
@@ -260,10 +269,14 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # meanstructure
     if(opt$missing == "ml" || opt$model.type == "growth") {
+        if(opt$meanstructure == FALSE) 
+            warning("lavaan WARNING: FIML forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
     }
     if("intercepts" %in% opt$group.equal ||
        "means" %in% opt$group.equal) {
+        if(opt$meanstructure == FALSE) 
+            warning("lavaan WARNING: group.equal arguments force meanstructure = TRUE")
         opt$meanstructure <- TRUE
     }
     stopifnot(is.logical(opt$meanstructure))
