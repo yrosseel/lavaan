@@ -67,6 +67,10 @@ Sample <- function(data=NULL,
                 data.obs <- data[, var.idx]
             }
 
+            # check if we have enough observations
+            if(nrow(data.obs) < nvar)
+                stop("lavaan ERROR: too few observations (nobs < nvar)")
+
             # data.obs should contain numeric values only
             # strip dimnames and coerce to matrix
             data.obs <- data.matrix(data.obs); dimnames(data.obs) <- NULL
