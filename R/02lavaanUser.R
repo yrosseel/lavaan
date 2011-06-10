@@ -703,13 +703,9 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     model <- model[idx]
 
     # check for multi-line formulas: they contain no "~" or "=" character
-    # but before we do that, we remove everything within parentheses
+    # but before we do that, we remove all modifiers
     # to avoid confusion with for example equal("f1=~x1") statements
-    #model.simple <- gsub("\\(.[^\\)]*\\)", "()", model)
-   
-    # new approach: delete everything between double quotes
-    model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
-
+    model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
 
     start.idx <- grep("[~=<>]", model.simple)
     end.idx <- c( start.idx[-1]-1, length(model) )
