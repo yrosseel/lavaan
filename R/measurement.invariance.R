@@ -1,6 +1,10 @@
 measurementInvariance <- measurementinvariance <- function(..., 
     strict=FALSE, quiet=FALSE) {
 
+    # check for a group.equal argument in ...
+    if(!is.null(as.list(...)$group.equal))
+        stop("lavaan ERROR: group.equal argument should not be used")
+
     res <- list()
     # base-line model: configural invariance
     res$fit.configural <- cfa(..., group.equal="")

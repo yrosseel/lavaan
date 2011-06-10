@@ -113,7 +113,14 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # meanstructure
     if(is.logical(opt$meanstructure)) {
-        # nothing to do
+        if(opt$meanstructure == FALSE) {
+            # user explicitly wants meanstructure == FALSE
+            # check for conflicting arguments
+            if(opt$estimator %in% c("mlm", "mlr", "mlf"))
+                warning("lavaan WARNING: estimator forces meanstructure = TRUE")
+            if(opt$missing == "ml")
+                warning("lavaan WARNING: missing argument forces meanstructure = TRUE")
+        }
     } else if(opt$meanstructure == "default") {
         # by default: no meanstructure!
         opt$meanstructure <- FALSE
@@ -149,8 +156,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "mlm") {
         opt$estimator <- "ML"
         opt$information <- "expected"
-        if(opt$meanstructure == FALSE) 
-            warning("lavaan WARNING: estimator MLM forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
         opt$se <- "robust.mlm"
         opt$test <- "satorra.bentler"
@@ -159,16 +164,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         }
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
-        if(opt$meanstructure == FALSE) 
-            warning("lavaan WARNING: estimator MLF forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
         opt$se <- "first.order"
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         opt$se <- "robust.mlr"
         opt$test <- "yuan.bentler"
-        if(opt$meanstructure == FALSE) 
-            warning("lavaan WARNING: estimator MLR forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"
@@ -269,14 +270,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # meanstructure
     if(opt$missing == "ml" || opt$model.type == "growth") {
-        if(opt$meanstructure == FALSE) 
-            warning("lavaan WARNING: FIML forces meanstructure = TRUE")
         opt$meanstructure <- TRUE
     }
     if("intercepts" %in% opt$group.equal ||
        "means" %in% opt$group.equal) {
-        if(opt$meanstructure == FALSE) 
-            warning("lavaan WARNING: group.equal arguments force meanstructure = TRUE")
         opt$meanstructure <- TRUE
     }
     stopifnot(is.logical(opt$meanstructure))
