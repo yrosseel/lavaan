@@ -14,8 +14,9 @@ growth(model.syntax = '', fixed.x = "default",
     do.fit = TRUE, verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See 
-    \code{\link{model.syntax}} for more information.}
+\item{model.syntax}{The model syntax specifying the model. See                 
+    \code{\link{model.syntax}} for more information. Or a parsed model
+    list as outputted by the lavaanify() function.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered

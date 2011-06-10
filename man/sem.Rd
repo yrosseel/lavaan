@@ -14,8 +14,9 @@ sem(model.syntax = '', meanstructure = "default", fixed.x = "default",
     do.fit = TRUE, verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See 
-    \code{\link{model.syntax}} for more information.}
+\item{model.syntax}{The model syntax specifying the model. See                 
+    \code{\link{model.syntax}} for more information. Or a parsed model
+    list as outputted by the lavaanify() function.}
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}

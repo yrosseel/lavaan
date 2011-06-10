@@ -137,29 +137,45 @@ lavaan <- function(# user-specified model syntax
     
 
     # 2a. construct lavaan User list: description of the user-specified model
-    lavaanUser <- 
-        lavaanify(model.syntax    = model.syntax, 
-                  meanstructure   = lavaanOptions$meanstructure, 
-                  int.ov.free     = lavaanOptions$int.ov.free,
-                  int.lv.free     = lavaanOptions$int.lv.free,
-                  orthogonal      = lavaanOptions$orthogonal, 
-                  fixed.x         = lavaanOptions$fixed.x,
-                  std.lv          = lavaanOptions$std.lv,
-                  constraints     = constraints,
+    if(is.character(model.syntax)) {
+        lavaanUser <- 
+            lavaanify(model.syntax    = model.syntax, 
+                      meanstructure   = lavaanOptions$meanstructure, 
+                      int.ov.free     = lavaanOptions$int.ov.free,
+                      int.lv.free     = lavaanOptions$int.lv.free,
+                      orthogonal      = lavaanOptions$orthogonal, 
+                      fixed.x         = lavaanOptions$fixed.x,
+                      std.lv          = lavaanOptions$std.lv,
+                      constraints     = constraints,
 
-                  auto.fix.first  = lavaanOptions$auto.fix.first,
-                  auto.fix.single = lavaanOptions$auto.fix.single,
-                  auto.var        = lavaanOptions$auto.var,
-                  auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
-                  auto.cov.y      = lavaanOptions$auto.cov.y,
+                      auto.fix.first  = lavaanOptions$auto.fix.first,
+                      auto.fix.single = lavaanOptions$auto.fix.single,
+                      auto.var        = lavaanOptions$auto.var,
+                      auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
+                      auto.cov.y      = lavaanOptions$auto.cov.y,
 
-                  ngroups         = ngroups,
-                  group.equal     = lavaanOptions$group.equal, 
-                  group.partial   = lavaanOptions$group.partial,
-                  debug           = lavaanOptions$debug,
-                  warn            = lavaanOptions$warn,
+                      ngroups         = ngroups,
+                      group.equal     = lavaanOptions$group.equal, 
+                      group.partial   = lavaanOptions$group.partial,
+                      debug           = lavaanOptions$debug,
+                      warn            = lavaanOptions$warn,
 
-                  as.data.frame.  = FALSE)
+                      as.data.frame.  = FALSE)
+    } else if(is.list(model.syntax)) {
+        # two possibilities: either model.syntax is already lavaanified
+        # or it is a list of model.syntaxes (perhaps one for each group)
+        if(!is.null(model.syntax$lhs) &&
+           !is.null(model.syntax$op) &&
+           !is.null(model.syntax$rhs) &&
+           !is.null(model.syntax$free)) {
+            lavaanUser <- model.syntax
+        } else if(is.character(model.syntax[[1]])) {
+            # we lavaanify each model in term, and assume multiple groups
+            stop("lavaan ERROR: list of model syntaxes: not implemented yet")
+        }
+    }
+
+
 
     # 2b. change meanstructure flag?
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE

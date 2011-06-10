@@ -18,7 +18,8 @@ lavaan(model.syntax = "", model.type = "sem", meanstructure = "default",
 }
 \arguments{
 \item{model.syntax}{The model syntax specifying the model. See 
-    \code{\link{model.syntax}} for more information.}
+    \code{\link{model.syntax}} for more information. Or a parsed model
+    list as outputted by the lavaanify() function.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology
