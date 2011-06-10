@@ -39,8 +39,12 @@ StartingValues <- function(user       = NULL,
         for(f in lv.names) {
             user.idx <- which( user$lhs == f & user$op == "=~" 
                                              & user$group == g )
+            # no second order
+            if(any(user$rhs[user.idx] %in% lv.names)) next
+
+            # get observed indicators for this latent variable
             ov.idx <- match(user$rhs[user.idx], ov.names)
-            if(length(ov.idx) > 2L) {
+            if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
                 if(sample@missing.flag[g]) {
                     COV <- sample@missing[[g]]$sigma[ov.idx,ov.idx]
                 } else {
