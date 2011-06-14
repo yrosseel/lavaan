@@ -677,11 +677,14 @@ function(object, sample, do.fit=TRUE, options=NULL) {
 
     # scaling factors
     # FIXME: what is the best way to set the scale??
-    # current strategy: if startx > 10.0, we rescale by using
+    # current strategy: if startx > 1.0, we rescale by using
     # 1/startx
     SCALE <- rep(1.0, length(start.x))
-    idx <- which(abs(start.x) > 10.0)
+    #idx <- which(abs(start.x) > 10.0)
+    idx <- which(abs(start.x) > 1.0)
     if(length(idx) > 0L) SCALE[idx] <- abs(1.0/start.x[idx])
+    #idx <- which(abs(start.x) < 1.0 & start.x != 0.0)
+    #if(length(idx) > 0L) SCALE[idx] <- abs(1.0/start.x[idx])
     if(debug) {
         cat("SCALE = ", SCALE, "\n")
     }
