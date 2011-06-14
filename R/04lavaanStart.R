@@ -37,6 +37,10 @@ StartingValues <- function(user       = NULL,
         # we use the fabin3 estimator (2sls) of Hagglund (1982)
         # per factor
         for(f in lv.names) {
+            free.idx <- which( user$lhs == f & user$op == "=~"
+                                             & user$group == g
+                                             & user$free > 0L)
+            if(length(free.idx) < 2L) next
             user.idx <- which( user$lhs == f & user$op == "=~" 
                                              & user$group == g )
             # no second order
