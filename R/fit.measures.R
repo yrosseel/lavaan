@@ -318,6 +318,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         }
     }
 
+    N.RMSEA <- max(N, 10000L) # FIXME: is 10000 overkill?
     if(any(c("rmsea","rmsea.scaled") %in% fit.measures)) {
         # RMSEA
         if(df > 0) {
@@ -389,10 +390,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.05)
         }
-        if(df < 1 || upper.lambda(N) > 0) {
+        if(df < 1 || upper.lambda(N.RMSEA) > 0) {
             indices["rmsea.ci.upper"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic == "Mplus") {
                 GG <- 0
@@ -409,10 +410,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(X2, df=df2, ncp=lambda) - 0.05)
         }
-        if(df < 1 || df2 < 1 || upper.lambda(N) > 0) {
+        if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0) {
             indices["rmsea.ci.upper.scaled"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic == "Mplus") {
                 GG <- 0
