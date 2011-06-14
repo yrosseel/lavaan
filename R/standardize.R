@@ -129,7 +129,7 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
     GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
 
-    Sigma.hat <- computeSigmaHat(object@Model)
+    Sigma.hat <- object@Fit@Sigma.hat
 
     for(g in 1:object@Sample@ngroups) {
 
@@ -176,14 +176,16 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
         idx <- which(user$op == "~~" & !(user$lhs %in% lv.names) &
                      user$lhs != user$rhs &
                      user$group == g)
-        if(cov.std == FALSE) {
-            out[idx] <- ( out[idx] / OV[ match(user$lhs[idx], ov.names) ]
-                                   / OV[ match(user$rhs[idx], ov.names) ] )
-        } else {
-            RV   <- sqrt(est[rv.idx])
-            rv.names <- user$lhs[rv.idx]
-            out[idx] <- ( out[idx] / RV[ match(user$lhs[idx], rv.names) ]
-                                   / RV[ match(user$rhs[idx], rv.names) ] )
+        if(length(idx) > 0L) {
+            if(cov.std == FALSE) {
+                out[idx] <- ( out[idx] / OV[ match(user$lhs[idx], ov.names) ]
+                                       / OV[ match(user$rhs[idx], ov.names) ] )
+            } else {
+                RV   <- sqrt(est[rv.idx])
+                rv.names <- user$lhs[rv.idx]
+                out[idx] <- ( out[idx] / RV[ match(user$lhs[idx], rv.names) ]
+                                       / RV[ match(user$rhs[idx], rv.names) ] )
+            }
         }
 
         # 3b. "~~" lv

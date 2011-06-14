@@ -751,6 +751,8 @@ rsquare <- function(object, est.std.all=NULL) {
     ngroups <- object@Sample@ngroups
     user <- object@User
     user$rsquare <- 1.0 - est.std.all
+    # no values > 1.0
+    user$rsquare[user$rsquare > 1.0] <- as.numeric(NA)
     r2 <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
