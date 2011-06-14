@@ -201,7 +201,7 @@ getParameterLabels <- function(user, type="user") {
     }
 
     # user-specified labels
-    user.idx <- which(nchar(user$label) > 1L)
+    user.idx <- which(nchar(user$label) > 0L)
     label[user.idx] <- user$label[user.idx]
 
     # which labels do we need?
