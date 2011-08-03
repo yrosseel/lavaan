@@ -49,7 +49,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         # WARNING: this will likely change soon
         # for now, we use mimic=Mplus as the default, but since
         # there are an increasing number of Mplus oddities, we will
-        # make are own decisions in the future.
+        # make our own decisions in the future.
         opt$mimic <- "Mplus"
     } else if(opt$mimic == "mplus") {
         opt$mimic <- "Mplus"
@@ -124,6 +124,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$meanstructure == "default") {
         # by default: no meanstructure!
         opt$meanstructure <- FALSE
+        # unless there is a group argument? (added since 0.4-10)
+        if(!is.null(opt$group)) opt$meanstructure <- TRUE
     } else {
         stop("meanstructure must be TRUE, FALSE or \"default\"\n")
     }
