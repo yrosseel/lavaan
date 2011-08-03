@@ -220,7 +220,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
     JAC <- rbind(ceq.jac(a$par, ...), cin.jac(a$par, ...))
     inactive.idx <- integer(0L)
     cin.idx <- which(cin.flag)
-    ceq.idx <- which(!cin.flag)
+    #ceq.idx <- which(!cin.flag)
     if(ncin > 0L) {
         # FIXME: slack value not too strict??
         slack <- 1e-05
