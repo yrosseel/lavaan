@@ -153,7 +153,7 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
             }
  
             # lower triangle must be filled
-            if(sum(tmp.cov[lower.tri(tmp.cov)]) == 0) {
+            if(all(tmp.cov[lower.tri(tmp.cov)] == 0)) {
                 stop("please provide a lower-triangular covariance matrix!\n")
             }
             # make sure that the matrix is fully symmetric
