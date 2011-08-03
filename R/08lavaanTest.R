@@ -129,15 +129,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     }    
 
     # get fx.group
-    if(is.null(x)) {
-        npar <- max(user$free)
-        fx <- computeObjective(object, sample=sample, estimator=estimator)
-        fx.group <- attr(fx, "fx.group")
-    } else {
-        fx <- attr(x, "fx")
-        fx.group <- attr(fx, "fx.group")
-    }
-
+    fx <- attr(x, "fx")
+    fx.group <- attr(fx, "fx.group")
 
     # always compute `standard' test statistic
     ## FIXME: the NFAC is now implicit in the computation of fx...

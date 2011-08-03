@@ -226,7 +226,12 @@ lavaan <- function(# user-specified model syntax
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
-    } 
+    } else {
+        x <- numeric(0L)
+        attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
+        attr(x, "fx") <- computeObjective(lavaanModel, sample = lavaanSample, 
+                                          estimator = lavaanOptions$estimator)
+    }
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL

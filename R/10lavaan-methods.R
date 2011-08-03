@@ -732,8 +732,12 @@ function(object, labels=TRUE) {
 setMethod("vcov", "lavaan",
 function(object, labels=TRUE) {
 
-    VarCov <- estimateVCOV(object@Model, sample=object@Sample, 
-                           options=object@Options)
+    if(object@Fit@npar == 0) {
+        VarCov <- matrix(0,0,0)
+    } else {
+        VarCov <- estimateVCOV(object@Model, sample=object@Sample, 
+                               options=object@Options)
+    }
 
     if(labels) {
         colnames(VarCov) <- rownames(VarCov) <- 

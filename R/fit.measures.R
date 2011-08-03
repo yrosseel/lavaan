@@ -1,5 +1,10 @@
 fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
+    # do we have a test statistic?
+    if(object@Fit@test[[1]]$test == "none") {
+        stop("lavaan ERROR: please refit the model with test=\"standard\"")
+    }
+
     if("all" %in% fit.measures) {
        class.flag <- TRUE
     } else {

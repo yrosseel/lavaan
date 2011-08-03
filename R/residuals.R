@@ -15,6 +15,12 @@ function(object, type="raw", labels=TRUE) {
         stop("type must be one of \"raw\", \"normalized\" or \"standardized\"")
     }
 
+    # check for 0 parameters if type == standardized
+    if(type == "standardized" &&
+       object@Fit@npar == 0) {
+        stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
+    }
+
     G <- object@Sample@ngroups
     nvar <- object@Sample@nvar
     meanstructure <- object@Model@meanstructure
@@ -92,7 +98,8 @@ function(object, type="raw", labels=TRUE) {
             N <- object@Sample@nobs[[g]]; nvar <- length(R[[g]]$mean)
             idx.mean <- 1:nvar
 
-            if(object@Options$se == "standard") {
+            if(object@Options$se == "standard" ||
+               object@Options$se == "none") {
                 dS <- diag(S)
                 Var.mean <- Var.sample.mean <- dS / N 
                 Var.cov  <- Var.sample.cov  <- (tcrossprod(dS) + S^2) / N

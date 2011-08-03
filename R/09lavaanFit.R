@@ -3,23 +3,14 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     stopifnot(is.list(user), length(user$lhs) == length(start),
               class(model) == "Model")
 
-    # did we estimated the free parameters?
-    if(is.null(x)) {
-        x <- numeric(0L)
-        est <- start
-        converged  <- FALSE
-        iterations <- 0L
-        fx <- as.numeric(NA)
-        fx.group <- as.numeric(NA)
-    } else {
-        iterations = attr(x, "iterations")
-        converged  = attr(x, "converged")
-        fx         = attr(x, "fx")
-        fx.group   = attr(fx, "fx.group")
-        attributes(fx) <- NULL
-        attributes(x) <- NULL
-        est <- getModelParameters(model, type="user")
-    }
+    # extract information from 'x'
+    iterations = attr(x, "iterations")
+    converged  = attr(x, "converged")
+    fx         = attr(x, "fx")
+    fx.group   = attr(fx, "fx.group")
+    attributes(fx) <- NULL
+    attributes(x) <- NULL
+    est <- getModelParameters(model, type="user")
 
     # did we compute standard errors?
     se <- numeric( length(est) )
