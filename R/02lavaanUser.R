@@ -594,20 +594,8 @@ lavaanify <- function(model.syntax    = NULL,
 
     # handle equality constraints
     # two types: 
-    # 1. those explicitly marked with the equal() modifier
-    idx.eq.label <- which(LIST$equal != "")
-    if(length(idx.eq.label) > 0) {
-        if(!exists("LABEL")) LABEL <- getParameterLabels(LIST)
-        for(idx in idx.eq.label) {
-            eq.label <- LIST$equal[idx]
-            ref.idx <- which(LABEL == eq.label)
-            if(length(ref.idx) == 0) {
-                stop("equality label [", eq.label, "] not found")
-            }
-            LIST$eq.id[idx] <- ref.idx
-        }
-    }
-    # 2. those with the same (non-epmty) label (user-specified only!)
+
+    # 1. those with the same (non-empty) label (user-specified only!)
     idx.eq.label <- which(nchar(LIST$label) & duplicated(LIST$label))
     if(length(idx.eq.label) > 0) {
         for(idx in idx.eq.label) {
@@ -617,8 +605,23 @@ lavaanify <- function(model.syntax    = NULL,
             LIST$free[idx] <- 0L  # fix!
         }
     }
+
+
+    # 2. those explicitly marked with the equal() modifier
+    idx.eq.label <- which(LIST$equal != "")
+    if(length(idx.eq.label) > 0) {
+        if(!exists("LABEL")) LABEL <- getParameterLabels(LIST)
+        for(idx in idx.eq.label) {
+            eq.label <- LIST$equal[idx]
+            ref.idx <- which(LABEL == eq.label)[1] # the first one only
+            if(length(ref.idx) == 0) {
+                stop("equality label [", eq.label, "] not found")
+            }
+            LIST$eq.id[idx] <- ref.idx
+        }
+    }
     # remove label and equal columns
-    LIST$equal <- NULL
+    #LIST$equal <- NULL
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
