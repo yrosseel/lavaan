@@ -35,9 +35,6 @@ lavaanify <- function(model.syntax    = NULL,
                       as.data.frame.   = TRUE) {
 
 
-    # check for empty model.syntax
-    stopifnot(nchar(model.syntax) > 0L)
-
     # parse the model syntax and flatten the user-specified model
     # return a data.frame, where each line is a model element (rhs, op, lhs)
     FLAT <- flatten.model.syntax(model.syntax=model.syntax, warn=warn)
