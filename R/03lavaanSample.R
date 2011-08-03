@@ -108,6 +108,8 @@ Sample <- function(data=NULL,
                 } else {
                     # data is complete after all (for this group)
                     missing.flag[g] <- FALSE
+                    d.missing[[g]]$norig <- nrow(data.obs)
+                    d.missing[[g]]$nobs  <- nrow(data.obs)
                 }
             }
   
