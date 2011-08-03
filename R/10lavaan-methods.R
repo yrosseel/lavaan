@@ -850,7 +850,7 @@ function(object, ...) {
                  decreasing = TRUE)]
 
     # here come the checks
-    #if(check) {
+    if(TRUE) {
         # 1. same data? we check the covariance matrices of the first group
         ## wow FIXME: we may need to reorder the rows/columns first!!
         #COVS <- lapply(mods, function(x) slot(slot(x, "Sample"), "cov")[[1]])
@@ -860,7 +860,10 @@ function(object, ...) {
         # 2. nested models? 
      
         # TODO!
-    #}
+        
+        # 3. all meanstructure?
+        
+    }
 
     # which models have used a `scaled' test statistic?
     mods.scaled <- unlist( lapply(mods, function(x) {
@@ -874,6 +877,18 @@ function(object, ...) {
     } else {
         warning("lavaan WARNING: some models (but not all) have scaled test statistics")
         scaled <- FALSE
+    }
+
+    # which models have used a MEANSTRUCTURE?
+    mods.meanstructure <- sapply(mods, function(x) { 
+                                 unlist(slot(slot(x, "Model"), 
+                                                     "meanstructure"))})
+    if(all(mods.meanstructure)) {
+        meanstructure <- "ok"
+    } else if(sum(mods.meanstructure) == 0) {
+        meanstructure <- "ok"
+    } else {
+        stop("lavaan ERROR: some models (but not all) have a meanstructure")
     }
 
     # collect statistics for each model
