@@ -51,11 +51,12 @@ growth(model.syntax = '', fixed.x = "default",
     or a vector with the number of observations for each group.}
 \item{group}{A variable name in the data frame defining the groups in a
     multiple group analysis.}
- \item{group.equal}{A vector of character strings. Only used in
-    a multiple group analysis. Can be one or more of the following: 
-    \code{"loadings"}, \code{"intercepts"},
-    \code{"means"}, \code{"regressions"}, \code{"residuals"} or   
-    \code{"covariances"}, specifying the pattern of equality
+\item{group.equal}{A vector of character strings. Only used in
+    a multiple group analysis. Can be one or more of the following:
+    \code{"loadings"}, \code{"intercepts"}, \code{"means"}, 
+    \code{"regressions"}, \code{"residuals"},
+    \code{"residual.covariances"}, \code{"lv.variances"} or
+    \code{"lv.covariances"}, specifying the pattern of equality
     constraints across multiple groups.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
