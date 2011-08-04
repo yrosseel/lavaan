@@ -323,7 +323,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         }
     }
 
-    N.RMSEA <- max(N, 10000L) # FIXME: is 10000 overkill?
+    N.RMSEA <- max(N, X2*2) # FIXME: good strategy??
     if(any(c("rmsea","rmsea.scaled") %in% fit.measures)) {
         # RMSEA
         if(df > 0) {
