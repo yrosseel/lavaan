@@ -13,7 +13,7 @@ importFrom("stats",
 # AIC and friends...
 if(getRversion() >= "2.13.0") {
     importFrom("stats4",AIC, BIC, logLik, nobs)
-    export(logLik) # not AIC, nobs, BIC?
+    export(logLik, nobs) # not AIC, BIC?
 } else {
     importFrom("stats4",AIC, BIC, logLik)
     export(logLik, BIC, nobs) # not AIC?
