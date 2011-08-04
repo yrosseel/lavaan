@@ -87,6 +87,11 @@ Sample <- function(data=NULL,
                 d.missing[[g]]$norig <- nrow(data.obs)
                 data.obs <- na.omit(data.obs)
                 d.missing[[g]]$nobs <- nrow(data.obs)
+                # check again if we have enough observations
+                if(nrow(data.obs) == 0) 
+                    stop("lavaan ERROR: no cases left after listwise deletion")
+                if(nrow(data.obs) < nvar)
+                    stop("lavaan ERROR: too few observations (nobs < nvar)")
             } else {
                 # do more (but only if missing!)
                 #   - get missing patterns
