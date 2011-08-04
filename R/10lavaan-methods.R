@@ -659,6 +659,8 @@ function(object, what="free") {
               what == "r-square" ||
               what == "r2") {
          rsquare(object)
+    } else if(what == "converged") {
+        object@Fit@converged
     } else {
         stop("unknown `what' argument in inspect function: `", what, "'")
     }

@@ -134,6 +134,8 @@ Objects can be created via the
         \item{\code{"modification"}:}{An alias for \code{"mi"}.}
         \item{\code{"modificationindices"}:}{An alias for \code{"mi"}.}
         \item{\code{"modification.indices"}:}{An alias for \code{"mi"}.}
+        \item{\code{"converged"}:}{Returns TRUE if the optimization routine
+          has converged; FALSE otherwise.}
         \item{\code{"list"}:}{A dataframe showing the internal 
           representation of a lavaan model. 
           Each row corresponds to a model parameter. The 
