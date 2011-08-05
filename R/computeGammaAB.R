@@ -138,7 +138,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     if(Abeta) {
-        D <- duplication.matrix(n = nvar)
+        D <- duplicationMatrix(n = nvar)
         tD <- t(D)
         Aj22 <- matrix(0, nvar^2, nvar^2)
         Aj11 <- matrix(0, nvar, nvar)
@@ -245,7 +245,7 @@ compute.Abeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL,
         Sigma.hat.inv <- inv.chol(Sigma.hat)
     }
 
-    D <- duplication.matrix( ncol(Sigma.hat) ); tD <- t(D)
+    D <- duplicationMatrix( ncol(Sigma.hat) ); tD <- t(D)
     A <- 0.5 * tD %*% (Sigma.hat.inv %x% Sigma.hat.inv) %*% D
 
     if(meanstructure) {
@@ -280,7 +280,7 @@ compute.A1.sample <- function(sample, group=1L, meanstructure=TRUE,
             sample.mean <- sample.mean[idx]
         }
 
-        D <- duplication.matrix( ncol(sample.icov) ); tD <- t(D)
+        D <- duplicationMatrix( ncol(sample.icov) ); tD <- t(D)
         A1 <- 0.5 * (tD %*% (sample.icov %x% sample.icov) %*% D)
 
         if(meanstructure) {
@@ -341,7 +341,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
     diff.mean <- as.matrix(sample.mean - Mu.hat)
     TT <- sample.cov + tcrossprod(diff.mean)
     Sigma.hat.inv <- attr(Sigma.hat, "inv")
-    D <- duplication.matrix( ncol(Sigma.hat) ); tD <- t(D)
+    D <- duplicationMatrix( ncol(Sigma.hat) ); tD <- t(D)
     W <- 0.5 * tD %*% (Sigma.hat.inv %x% Sigma.hat.inv) %*% D
 
     if(meanstructure) {

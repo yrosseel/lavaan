@@ -319,7 +319,7 @@ derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
 
     # pre
     if(m == "lambda" || m == "beta") {
-        IK <- diag(nvar^2) + commutation.matrix(nvar, nvar)
+        IK <- diag(nvar^2) + commutationMatrix(nvar, nvar)
         IB.inv..PSI..tIB.inv..tLAMBDA <-
             IB.inv %*% PSI %*% t(IB.inv) %*% t(LAMBDA)
     }
@@ -336,7 +336,7 @@ derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
         DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv) 
         # symmetry correction, but keeping all duplicated elements
         # since we depend on idx=m.el.idx
-        # otherwise, we could simply postmultiply with the duplication matrix
+        # otherwise, we could simply postmultiply with the duplicationMatrix
 
         ## FIXME!! find a more elegant solution here...
         # we sum up lower.tri + upper.tri (but not the diagonal elements!)

@@ -190,7 +190,7 @@ hessian.MVN.saturated <- function(Sigma=NULL, Mu=NULL,
     #} else {
 
         Sigma.inv <- inv.chol(Sigma, logdet=FALSE)
-        D <- duplication.matrix(nvar)
+        D <- duplicationMatrix(nvar)
 
         if(meanstructure) {
             diff <- as.matrix(data.mean - Mu)

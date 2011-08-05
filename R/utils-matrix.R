@@ -200,7 +200,7 @@ dup4 <- function(n = 1L) {
 }
 
 # default dup:
-dup <- dup3
+duplicationMatrix <- dup3
 
 
 # compute t(D) %*% A (without explicitly computing D)
@@ -292,4 +292,23 @@ dup.pre.post <- function(A = matrix(0,0,0)) {
 
     OUT
 }
+
+# commutation matrix
+commutationMatrix <- function (m, n)
+{
+    m <- as.integer(m)
+    n <- as.integer(n)
+
+    p <- m*n
+    x <- numeric( p*p )
+
+    pattern <- rep(c(rep((m+1L)*n, (m-1L)), n+1L), n)
+    idx <- c(1L, 1L + cumsum(pattern)[-p])
+
+    x[idx] <- 1.0
+    attr(x, "dim") <- c(p,p)
+
+    x
+}
+
 

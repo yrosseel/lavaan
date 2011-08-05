@@ -234,7 +234,7 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
 
     # WLS.V (for GLS and WLS only)
     if(estimator == "GLS") {
-        D <- duplication.matrix(nvar); tD <- t(D)
+        D <- duplicationMatrix(nvar); tD <- t(D)
         for(g in 1:ngroups) {
             if(meanstructure) {
                 V11 <- d.icov[[g]]
