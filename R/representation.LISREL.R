@@ -295,7 +295,7 @@ derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
     THETA  <- MLIST$theta
  
     # only lower.tri part of sigma (not same order as elimination matrix?)
-    v.idx <- vecs.idx( nvar  ); pstar <- nvar*(nvar+1)/2
+    v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
     # all model matrix elements, or only a few?
     # NOTE: for symmetric matrices, we assume that the have full 

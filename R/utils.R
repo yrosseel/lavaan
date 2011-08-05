@@ -82,33 +82,6 @@ force.pd <- function(S) {
 }
 
 
-# vecs operator
-# returns a vector (not a matrix of column 1)
-# only lower triangle + diagonal of a symmetric matrix
-vecs <- function(S) {
-    S[lower.tri(S, diag=TRUE)]
-}
-
-# return indices of vecs elements in symmetric matrix of size pxp
-vecs.idx <- function(p) {
-    S <- matrix(0, nrow=p, ncol=p)
-    idx <- which(lower.tri(S, diag=TRUE))
-    idx
-}
-
-# put vecs back in a symmetrix matrix
-unvecs <- function(x) {
-    # guess dimensions
-    n <- length(x)
-    p <- Re(polyroot(c(-2*n, 1, 1)))[1]  
-
-    S <- matrix(0, nrow=p, ncol=p)
-    S[lower.tri(S, diag=TRUE)] <- x
-    tmp <- t(S)
-    S[upper.tri(S)] <- tmp[upper.tri(tmp)]    
-    S
-}
-
 # translate row+col matrix indices to vec idx
 rowcol2vec <- function(row.idx, col.idx, nrow, symmetric=FALSE) {
 
@@ -606,7 +579,7 @@ read.prelis.acm <- function(file="") {
 
     # guess dimensions
     n <- length(raw)
-    p <- Re(polyroot(c(-2*n, 1, 1)))[1]
+    p <- (sqrt(1 + 8*n)-1)/2
 
     W <- matrix(0, p, p)
     W[lower.tri(W, diag=TRUE)] <- raw

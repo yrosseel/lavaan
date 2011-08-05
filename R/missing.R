@@ -125,7 +125,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
     first.derivative.param <- function(x, verbose = FALSE) {
         out <- x2param(x)
         dx.out <- derivative.FIML(Sigma.hat=out$sigma, Mu.hat=out$mu, M=M)
-        dx <- c(dx.out$dx.mu, vecs(dx.out$dx.Sigma))
+        dx <- c(dx.out$dx.mu, vech(dx.out$dx.Sigma))
         dx
     }
 
@@ -147,7 +147,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
     }
 
     # get staring values
-    start.x <- c(start.mean, vecs(start.cov))
+    start.x <- c(start.mean, vech(start.cov))
 
     # start iterations
     iter.max <- 100

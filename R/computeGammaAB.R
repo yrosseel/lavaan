@@ -195,7 +195,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
                   Sigma.inv))
                 diag(dx.Sigma) <- diag(dx.Sigma)/2
                 # in lavaan: first the means, then the covariances
-                dx <- c(dx.Mu, vecs(dx.Sigma))
+                dx <- c(dx.Mu, vech(dx.Sigma))
                 Bj <- Bj + tcrossprod(dx)
             }
         }
@@ -353,7 +353,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
         B12 <- Sigma.hat.inv %*% G12 %*% W
         B21 <- t(B12)
 
-        diff <- tcrossprod(vecs(TT) - vecs(Sigma.hat))
+        diff <- tcrossprod(vech(TT) - vech(Sigma.hat))
         G0 <- G22 + diff
 
         B22 <- W %*% G0 %*% W
@@ -365,7 +365,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
         # to meanstructure=TRUE and is probably not correct?
         # not used for now
         G <- compute.Gamma1(X)
-        diff <- tcrossprod(vecs(sample.cov) - vecs(Sigma.hat))
+        diff <- tcrossprod(vech(sample.cov) - vech(Sigma.hat))
         G0 <- G + diff
         B1 <- W %*% G0 %*% W
     }

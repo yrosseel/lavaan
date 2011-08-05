@@ -54,10 +54,10 @@ estimator.WLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     if(!meanstructure) {
         obs <- w.vecs
-        est <- vecs(Sigma.hat)
+        est <- vech(Sigma.hat)
     } else {
         obs <- c(data.mean, w.vecs)
-        est <- c(Mu.hat, vecs(Sigma.hat))
+        est <- c(Mu.hat, vech(Sigma.hat))
     }
 
     diff <- as.matrix(obs - est)

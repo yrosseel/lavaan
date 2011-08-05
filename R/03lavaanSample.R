@@ -229,7 +229,7 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
 
     # cov.vecs
     for(g in 1:ngroups) {
-        d.cov.vecs[[g]] <- vecs(d.cov[[g]])
+        d.cov.vecs[[g]] <- vech(d.cov[[g]])
     }
 
     # WLS.V (for GLS and WLS only)

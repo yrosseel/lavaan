@@ -66,7 +66,7 @@ x2GLIST <- function(object, x=NULL, type="free") {
         } else if(type == "full") {
             if(object@isSymmetric[mm]) {
                 N <- ncol(GLIST[[mm]])
-                m.el.idx <- vecs.idx(N)
+                m.el.idx <- vech.idx(N)
             } else {
                 m.el.idx <- 1:length(GLIST[[mm]])
             }
@@ -557,10 +557,10 @@ function(object, GLIST=NULL, sample=NULL, type="free",
             # Browne & Arminger 1995 eq 4.49
             if(!meanstructure) {
                 obs <- sample@cov.vecs[[g]]
-                est <- vecs(Sigma.hat[[g]])
+                est <- vech(Sigma.hat[[g]])
             } else {
                 obs <- c(sample@mean[[g]], sample@cov.vecs[[g]])
-                est <- c(Mu.hat[[g]], vecs(Sigma.hat[[g]]))
+                est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             }
             diff <- as.matrix(obs - est)
             group.dx <- -1 * ( t(Delta[[g]]) %*% sample@WLS.V[[g]] %*% diff)

@@ -167,10 +167,10 @@ hessian.MVN.saturated <- function(Sigma=NULL, Mu=NULL,
     #    param2x <- function(Sigma, Mu) {
     #        if(meanstructure) {
     #            x1 <- as.numeric(Mu)
-    #            x2 <- vecs(Sigma)
+    #            x2 <- vech(Sigma)
     #            x <- c(x1, x2)
     #        } else {
-    #            x <- vecs(Sigma)
+    #            x <- vech(Sigma)
     #        }
     #        x
     #    }
