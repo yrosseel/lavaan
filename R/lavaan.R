@@ -50,6 +50,9 @@ lavaan <- function(# user-specified model syntax
                    mimic           = "default",
                    representation  = "default",
                    do.fit          = TRUE,
+
+                   # starting values
+                   start           = "default",
   
                    # verbosity
                    verbose         = FALSE,
@@ -166,7 +169,7 @@ lavaan <- function(# user-specified model syntax
         # two possibilities: either model.syntax is already lavaanified
         # or it is a list of model.syntaxes (perhaps one for each group)
         if(!is.null(model.syntax$lhs) &&
-           !is.null(model.syntax$op) &&
+           !is.null(model.syntax$op)  &&
            !is.null(model.syntax$rhs) &&
            !is.null(model.syntax$free)) {
             lavaanUser <- model.syntax
@@ -205,10 +208,11 @@ lavaan <- function(# user-specified model syntax
 
     # 4. compute some reasonable starting values 
     lavaanStart <- 
-        StartingValues(user       = lavaanUser, 
-                       sample     = lavaanSample, 
-                       model.type = lavaanOptions$model.type,
-                       debug      = lavaanOptions$debug)
+        StartingValues(start.method = start,
+                       user         = lavaanUser, 
+                       sample       = lavaanSample, 
+                       model.type   = lavaanOptions$model.type,
+                       debug        = lavaanOptions$debug)
 
     # 5. construct internal model (S4) representation
     lavaanModel <- 
@@ -283,7 +287,8 @@ cfa <- sem <- function(model.syntax = '',
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     mimic = "default", representation = "default",
-    do.fit = TRUE, verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, start = "default", 
+    verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
@@ -311,7 +316,8 @@ growth <- function(model.syntax = '',
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     mimic = "default", representation = "default",
-    do.fit = TRUE, verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, start = "default",
+    verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 

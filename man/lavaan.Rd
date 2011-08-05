@@ -13,7 +13,8 @@ lavaan(model.syntax = "", model.type = "sem", meanstructure = "default",
     group = NULL, group.equal = "", group.partial = "",
     constraints = '', estimator = "default", likelihood = "default", 
     information = "default", se = "default",  test = "default", 
-    mimic = "default", representation = "default", do.fit = TRUE, 
+    mimic = "default", representation = "default", 
+    do.fit = TRUE, start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -138,6 +139,21 @@ lavaan(model.syntax = "", model.type = "sem", meanstructure = "default",
     representation is used to represent the model (using the all-y variant).}
 \item{do.fit}{If \code{FALSE}, the model is not fit, and the current
     starting values of the model parameters are preserved.}
+\item{start}{If it is a character string,
+    the two options are currently \code{"simple"} and \code{"Mplus"}. 
+    In the first
+    case, all parameter values are set to zero, except the factor loadings
+    (set to one), the variances of latent variables (set to 0.05), and
+    the residual variances of observed variables (set to half the observed 
+    variance).
+    If \code{"Mplus"}, we use a similar scheme, but the factor loadings are
+    estimated using the fabin3 estimator (tsls) per factor. 
+    If \code{start} is a fitted
+    object of class \code{\linkS4class{lavaan}}, the estimated values of
+    the corresponding parameters will be extracted. If it is a model list, 
+    for example the output of the \code{paramaterEstimates()} function, 
+    the values of the \code{est} or \code{start} or \code{ustart} column 
+    (whichever is found first) will be extracted.}
 \item{verbose}{If \code{TRUE}, the function value is printed out during
     each iteration.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
