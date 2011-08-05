@@ -60,8 +60,10 @@ lavaan <- function(# user-specified model syntax
                    debug           = FALSE
                   )
 {
-    # 0. store call
+    # 0. store call, start timer
     mc  <- match.call()
+    start.time0 <- start.time <- proc.time()[3]
+    timing <- list()
 
     # 1a. check data/sample.cov and get the number of groups
     if(!is.null(data)) {
@@ -138,6 +140,8 @@ lavaan <- function(# user-specified model syntax
         representation = representation, do.fit = do.fit, verbose = verbose,
         warn = warn, debug = debug, data.type = data.type)
     lavaanOptions <- setLavaanOptions(opt)
+    timing$InitOptions <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
     
 
     # 2a. construct lavaan User list: description of the user-specified model
@@ -179,10 +183,10 @@ lavaan <- function(# user-specified model syntax
         }
     }
 
-
-
     # 2b. change meanstructure flag?
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
+    timing$User <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 3. construct lavaan Sample (S4) object: description of the data
     lavaanSample <- 
@@ -204,7 +208,8 @@ lavaan <- function(# user-specified model syntax
                missing       = lavaanOptions$missing,
                warn          = lavaanOptions$warn,
                verbose       = lavaanOptions$verbose)
-
+    timing$Sample <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 4. compute some reasonable starting values 
     lavaanStart <- 
@@ -213,6 +218,8 @@ lavaan <- function(# user-specified model syntax
                        sample       = lavaanSample, 
                        model.type   = lavaanOptions$model.type,
                        debug        = lavaanOptions$debug)
+    timing$Start <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 5. construct internal model (S4) representation
     lavaanModel <- 
@@ -220,6 +227,8 @@ lavaan <- function(# user-specified model syntax
               start          = lavaanStart, 
               representation = lavaanOptions$representation,
               debug          = lavaanOptions$debug)
+    timing$Model <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 6. estimate free parameters
     x <- NULL
@@ -236,6 +245,8 @@ lavaan <- function(# user-specified model syntax
         attr(x, "fx") <- computeObjective(lavaanModel, sample = lavaanSample, 
                                           estimator = lavaanOptions$estimator)
     }
+    timing$Estimate <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
@@ -244,6 +255,8 @@ lavaan <- function(# user-specified model syntax
                              sample  = lavaanSample,
                              options = lavaanOptions)
     }
+    timing$VCOV <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 8. compute test statistic (chi-square and friends)
     TEST <- NULL
@@ -255,6 +268,8 @@ lavaan <- function(# user-specified model syntax
                                      x       = x,
                                      VCOV    = VCOV)
     }
+    timing$TEST <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(user  = lavaanUser, 
@@ -263,10 +278,12 @@ lavaan <- function(# user-specified model syntax
                      x     = x, 
                      VCOV  = VCOV,
                      TEST  = TEST)
+    timing$total <- (proc.time()[3] - start.time0)
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
                   call    = mc,             # match.call
+                  timing  = timing,         # list
                   Options = lavaanOptions,  # list
                   User    = lavaanUser,     # list
                   Sample  = lavaanSample,   # S4 class

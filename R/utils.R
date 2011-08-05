@@ -81,11 +81,6 @@ force.pd <- function(S) {
     S
 }
 
-# vec operator
-# returns a vector (not a matrix of column 1)
-vec <- function(A) {
-    as.numeric(A)
-}
 
 # vecs operator
 # returns a vector (not a matrix of column 1)

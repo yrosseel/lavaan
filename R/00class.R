@@ -89,6 +89,7 @@ setClass("Fit",
 setClass("lavaan",
     representation(
         call    = "call",            # matched call
+        timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
         User    = "list",            # user specified model
         Sample  = "Sample",          # sample statistics
