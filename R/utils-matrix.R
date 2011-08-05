@@ -75,7 +75,6 @@ vechr.idx2 <- function(n = 1L, diagonal = TRUE) {
     unlist(lapply(1:n, function(x) 1L + 0L:(n-x)*n + (n+1L)*(x-1L) ))
 }
 
-#
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)
 #
@@ -83,8 +82,8 @@ vechr.idx2 <- function(n = 1L, diagonal = TRUE) {
 #
 # M&N book: pages 48-50
 #
-# note: several flavors: dup1 and dup2
-# 
+# note: several flavors: dup1, dup2, dup3, ...
+# currently used: dup3
 
 # first attempt
 # dup1: working on the vector indices only
@@ -293,12 +292,28 @@ dup.pre.post <- function(A = matrix(0,0,0)) {
     OUT
 }
 
-# commutation matrix
-commutationMatrix <- function (m, n)
-{
-    m <- as.integer(m)
-    n <- as.integer(n)
+# create the commutation matrix (K_mn) 
+# the mn x mx commutation matrix is a permutation matrix which
+# transforms vec(A) into vec(A')
+#
+# K %*% vec(A) == vec(A')
+#
+# M&N book: pages 46-48
+#
+# note: several flavors: com1, com2, ...
+# currently used: com1
 
+# first attempt
+com1 <- function(m = 1L, n = 1L) {
+
+    if ((m < 1L) | (round(m) != m)) {
+        stop("n must be a positive integer")
+    }
+
+    if ((n < 1L) | (round(n) != n)) {
+        stop("n must be a positive integer")
+    }
+    
     p <- m*n
     x <- numeric( p*p )
 
@@ -309,6 +324,44 @@ commutationMatrix <- function (m, n)
     attr(x, "dim") <- c(p,p)
 
     x
+}
+
+commutationMatrix <- com1
+
+# compute K_n %*% A without explicitly computing K
+# K_n = K_nn, so sqrt(nrow(A)) must be an integer!
+# = permuting the rows of A
+com.n.pre <- function(A) {
+
+    # number of rows of A
+    n2 <- nrow(A)
+
+    # K_nn only (n2 = m * n)
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # compute row indices
+    row.idx <- as.integer(t(matrix(1:n2, n, n)))
+
+    OUT <- A[row.idx,]
+    OUT   
+}
+
+# compute K_mn %*% A without explicitly computing K
+# = permuting the rows of A
+com.mn.pre <- function(A, m = 1L, n = 1L) {
+
+    # number of rows of A
+    mn <- nrow(A)
+    stopifnot(mn == m * n)
+
+    # compute row indices
+    row.idx <- as.integer(t(matrix(1:mn, m, n)))
+
+    OUT <- A[row.idx,]
+    OUT
 }
 
 
