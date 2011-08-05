@@ -31,6 +31,8 @@ Objects can be created via the
 \section{Slots}{
   \describe{
     \item{\code{call}:}{The function call as returned by match.called().}
+    \item{\code{timing}:}{The elapsed time (user+system) for various parts of 
+      the program as a list, including the total time.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
     \item{\code{User}:}{Named list describing the model as specified by

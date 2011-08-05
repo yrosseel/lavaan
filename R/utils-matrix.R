@@ -177,26 +177,26 @@ dup3 <- function(n = 1L) {
 
 
 # dup4: using Matrix package, returning a sparse matrix
-dup4 <- function(n = 1L) {
-    if ((n < 1L) | (round(n) != n)) {
-        stop("n must be a positive integer")
-    }
-
-    if(n > 255L) {
-        stop("n is too large")
-    }
-
-    nstar <- n * (n+1)/2
-    #n2    <- n * n
-
-    tmp <- matrix(0L, n, n)
-    tmp[vech.idx(n)] <- 1:nstar
-    tmp[vechr.idx(n)] <- 1:nstar
-
-    x <- Matrix:::sparseMatrix(i = 1:(n*n), j = vec(tmp), x = 1.0)
-
-    x
-}
+#dup4 <- function(n = 1L) {
+#    if ((n < 1L) | (round(n) != n)) {
+#        stop("n must be a positive integer")
+#    }
+#
+#    if(n > 255L) {
+#        stop("n is too large")
+#    }
+#
+#    nstar <- n * (n+1)/2
+#    #n2    <- n * n
+#
+#    tmp <- matrix(0L, n, n)
+#    tmp[vech.idx(n)] <- 1:nstar
+#    tmp[vechr.idx(n)] <- 1:nstar
+#
+#    x <- Matrix:::sparseMatrix(i = 1:(n*n), j = vec(tmp), x = 1.0)
+#
+#    x
+#}
 
 # default dup:
 duplicationMatrix <- dup3
