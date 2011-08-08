@@ -150,7 +150,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
     start.x <- c(start.mean, vech(start.cov))
 
     # start iterations
-    iter.max <- 100
+    iter.max <- 500
     optim.out <- nlminb(start=start.x, objective=minimize.this.function, 
                         gradient=first.derivative.param, 
                         control=list(iter.max=iter.max, eval.max=iter.max*2, 
