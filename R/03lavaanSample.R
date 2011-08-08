@@ -234,18 +234,17 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
 
     # WLS.V (for GLS and WLS only)
     if(estimator == "GLS") {
-        D <- duplicationMatrix(nvar); tD <- t(D)
         for(g in 1:ngroups) {
             if(meanstructure) {
                 V11 <- d.icov[[g]]
                 if(mimic == "Mplus") { # is this a bug in Mplus?
                     V11 <- V11 * d.nobs[[g]]/(d.nobs[[g]]-1)
                 }
-                V22 <- 0.5 * tD %*% (d.icov[[g]] %x% d.icov[[g]]) %*% D
+                V22 <- 0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
                 d.WLS.V[[g]] <- bdiag(V11,V22)
             } else {
                 d.WLS.V[[g]] <-
-                    0.5 * tD %*% (d.icov[[g]] %x% d.icov[[g]]) %*% D
+                    0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
             }
         }
     } else if(estimator == "WLS") {

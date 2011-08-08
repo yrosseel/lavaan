@@ -203,9 +203,9 @@ duplicationMatrix <- dup3
 
 
 # compute t(D) %*% A (without explicitly computing D)
-# A must be a square matrix and sqrt(ncol) an integer
-# A is not symmetric
-dup.pre <- function(A = matrix(0,0,0)) {
+# sqrt(ncol(A)) is an integer
+# A is not symmetric, and not even square
+D.pre <- function(A = matrix(0,0,0)) {
 
     # number of columns
     n2 <- ncol(A)
@@ -248,14 +248,14 @@ dup.pre2 <- function(A = matrix(0,0,0)) {
 
 
 # compute A %*% D (without explicitly computing D)
-# A must be a square matrix and sqrt(ncol) an integer
-dup.post <- function(A = matrix(0,0,0)) {
+# sqrt(ncol(A)) must be an integer
+D.post <- function(A = matrix(0,0,0)) {
 
     # number of columns
     n2 <- ncol(A)
 
     # square A only, n2 = n^2
-    stopifnot(nrow(A) == n2, sqrt(n2) == round(sqrt(n2)))
+    stopifnot(ncol(A) == n2, sqrt(n2) == round(sqrt(n2)))
 
     # dimension
     n <- sqrt(n2)
@@ -271,7 +271,7 @@ dup.post <- function(A = matrix(0,0,0)) {
 
 # compute t(D) %*% A %*% D (without explicitly computing D)
 # A must be a square matrix and sqrt(ncol) an integer
-dup.pre.post <- function(A = matrix(0,0,0)) {
+D.pre.post <- function(A = matrix(0,0,0)) {
 
     # number of columns
     n2 <- ncol(A)
@@ -331,7 +331,7 @@ commutationMatrix <- com1
 # compute K_n %*% A without explicitly computing K
 # K_n = K_nn, so sqrt(nrow(A)) must be an integer!
 # = permuting the rows of A
-com.n.pre <- function(A) {
+K.n.pre <- function(A) {
 
     # number of rows of A
     n2 <- nrow(A)
@@ -351,7 +351,7 @@ com.n.pre <- function(A) {
 
 # compute K_mn %*% A without explicitly computing K
 # = permuting the rows of A
-com.mn.pre <- function(A, m = 1L, n = 1L) {
+K.mn.pre <- function(A, m = 1L, n = 1L) {
 
     # number of rows of A
     mn <- nrow(A)
@@ -363,5 +363,7 @@ com.mn.pre <- function(A, m = 1L, n = 1L) {
     OUT <- A[row.idx,]
     OUT
 }
+
+## 
 
 
