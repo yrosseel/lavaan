@@ -130,21 +130,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
         stop("meanstructure must be TRUE, FALSE or \"default\"\n")
     }
 
+
+    # estimator and se
+    if(opt$se == "boot" || opt$se == "bootstrap") {
+        opt$se <- "bootstrap"
+        opt$information <- "observed"
+        opt$bootstrap <- as.integer(opt$bootstrap)
+        stopifnot(opt$bootstrap > 0L)
+    }
     if(opt$estimator == "default" || opt$estimator == "ml") {
         opt$estimator <- "ML"
         if(opt$se == "default") {
             opt$se <- "standard"
         } else if(opt$se == "first.order" || 
+                  opt$se == "bootstrap"   ||
                   opt$se == "none"        || 
                   opt$se == "standard"    ||
                   opt$se == "robust.mlr"  || 
                   opt$se == "robust.mlm") {
             # nothing to do
-        } else if(opt$se == "boot" || opt$se == "bootstrap") {
-            opt$se <- "bootstrap"
-            opt$information <- "observed"
-            opt$bootstrap <- as.integer(opt$bootstrap)
-            stopifnot(opt$bootstrap > 0L)
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
                 opt$se <- "robust.mlr"
@@ -159,6 +163,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$estimator <- "ML"
         opt$information <- "expected"
         opt$meanstructure <- TRUE
+        if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
         opt$se <- "robust.mlm"
         opt$test <- "satorra.bentler"
         if(opt$missing == "ml") {
@@ -167,9 +172,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
         opt$meanstructure <- TRUE
+        if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
         opt$se <- "first.order"
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
+        if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
         opt$se <- "robust.mlr"
         opt$test <- "yuan.bentler"
         opt$meanstructure <- TRUE
@@ -177,7 +184,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$estimator <- "GLS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none") {
+        } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
         } else {
             stop("invalid value for `se' argument when estimator is GLS: ", 
@@ -191,7 +198,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$estimator <- "WLS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none") {
+        } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
         } else {
             stop("invalid value for `se' argument when estimator is WLS: ", 
@@ -205,7 +212,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$estimator <- "none"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none") {
+        } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
         } else {
             stop("invalid value for `se' argument when estimator is ULS: ", 

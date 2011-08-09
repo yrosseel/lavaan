@@ -261,7 +261,7 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
                                    Mplus.WLS=(mimic=="Mplus"))
             # Gamma should be po before we invert
             ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-            if(any(ev < 0)) {
+            if(is.complex(ev) || any(Re(ev) < 0)) {
                 stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
             }
             #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?

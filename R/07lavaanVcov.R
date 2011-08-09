@@ -53,9 +53,9 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
         verbose <- FALSE
     }
  
-    COEF <- boostrapParameters.internal(model=object, sample=sample,
-                                        options=options, data=data,
-                                        R=R, verbose=verbose)
+    COEF <- bootstrapParameters.internal(model=object, sample=sample,
+                                         options=options, data=data,
+                                         R=R, verbose=verbose)
     
     # FIXME: cov rescale? Yes for now
     nboot <- nrow(COEF)
