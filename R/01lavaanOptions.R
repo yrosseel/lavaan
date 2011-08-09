@@ -130,11 +130,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
         stop("meanstructure must be TRUE, FALSE or \"default\"\n")
     }
 
-    # default estimator and se
-    if(opt$se == "bootstrap") {
-        stop("bootstrapped standard errors are not implemented yet!\n")
-    }
-
     if(opt$estimator == "default" || opt$estimator == "ml") {
         opt$estimator <- "ML"
         if(opt$se == "default") {
@@ -145,6 +140,9 @@ setLavaanOptions <- function(opt = formals(lavaan))
                   opt$se == "robust.mlr"  || 
                   opt$se == "robust.mlm") {
             # nothing to do
+        } else if(opt$se == "boot" || opt$se == "bootstrap") {
+            opt$se <- "bootstrap"
+            opt$information <- "observed"
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
                 opt$se <- "robust.mlr"

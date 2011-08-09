@@ -253,7 +253,8 @@ lavaan <- function(# user-specified model syntax
     if(opt$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSample,
-                             options = lavaanOptions)
+                             options = lavaanOptions,
+                             data    = data)
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

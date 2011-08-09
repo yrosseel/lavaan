@@ -37,6 +37,33 @@ Nvcov.standard <- function(object, sample=NULL, estimator="ML",
     NVarCov
 }
 
+Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
+
+    # number of bootstrap draws
+    if(!is.null(options$nboot)) {
+        R <- options$nboot
+    } else {
+        R <- 1000L
+    }
+  
+    # verbose or not
+    if(options$verbose) {
+        verbose <- TRUE
+    } else {
+        verbose <- FALSE
+    }
+ 
+    COEF <- boostrapParameters.internal(model=object, sample=sample,
+                                        options=options, data=data,
+                                        R=R, verbose=verbose)
+    
+    # FIXME: cov rescale? Yes for now
+    nboot <- nrow(COEF)
+    NVarCov <- sample@ntotal * (cov(COEF) * (nboot-1)/nboot )
+ 
+    NVarCov
+}
+
 Nvcov.first.order <- function(object, sample=NULL, type="free") {
 
     B0.group <- vector("list", sample@ngroups)
@@ -190,7 +217,7 @@ Nvcov.robust.mlr <- function(object, sample=NULL, information="observed") {
 }
            
 
-estimateVCOV <- function(object, sample, options=NULL) {
+estimateVCOV <- function(object, sample, options=NULL, data=NULL) {
 
     estimator   <- options$estimator
     likelihood  <- options$likelihood
@@ -231,7 +258,10 @@ estimateVCOV <- function(object, sample, options=NULL) {
                                          information = information) )
 
     } else if(se == "bootstrap") {
-        stop("se `bootstrap' is not implemented (yet)\n")
+        NVarCov <- try( Nvcov.bootstrap(object      = object,
+                                        sample      = sample,
+                                        options     = options,
+                                        data        = data) )
     }
 
     if(! inherits(NVarCov, "try-error") ) {
