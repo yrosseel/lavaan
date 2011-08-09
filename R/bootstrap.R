@@ -72,7 +72,7 @@ boostrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
 
     # handle errors
     if(length(error.idx) > 0L) {
-        warning("lavaan WARNING: only", (R-length(error.idx)), " bootstrap draws were successful")
+        warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
         COEF <- COEF[-error.idx,]
     } else {
         if(verbose) cat("Number of successful bootstrap draws:", 

@@ -738,7 +738,9 @@ function(object, labels=TRUE) {
         VarCov <- matrix(0,0,0)
     } else {
         VarCov <- estimateVCOV(object@Model, sample=object@Sample, 
-                               options=object@Options)
+                               options=object@Options,
+                               data=eval(object@call[["data"]], 
+                                         parent.frame()) )
     }
 
     if(labels) {
