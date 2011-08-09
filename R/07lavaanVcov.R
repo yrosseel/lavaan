@@ -40,8 +40,8 @@ Nvcov.standard <- function(object, sample=NULL, estimator="ML",
 Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
 
     # number of bootstrap draws
-    if(!is.null(options$nboot)) {
-        R <- options$nboot
+    if(!is.null(options$bootstrap)) {
+        R <- options$bootstrap
     } else {
         R <- 1000L
     }

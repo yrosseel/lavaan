@@ -47,6 +47,7 @@ lavaan <- function(# user-specified model syntax
                    information     = "default",
                    se              = "default",
                    test            = "default",
+                   bootstrap       = 1000L,
                    mimic           = "default",
                    representation  = "default",
                    do.fit          = TRUE,
@@ -136,7 +137,8 @@ lavaan <- function(# user-specified model syntax
         group.equal = group.equal, group.partial = group.partial, 
         constraints = constraints,
         estimator = estimator, likelihood = likelihood,
-        information = information, se = se, test = test, mimic = mimic,
+        information = information, se = se, test = test, 
+        bootstrap = bootstrap, mimic = mimic,
         representation = representation, do.fit = do.fit, verbose = verbose,
         warn = warn, debug = debug, data.type = data.type)
     lavaanOptions <- setLavaanOptions(opt)
@@ -304,7 +306,7 @@ cfa <- sem <- function(model.syntax = '',
     group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
-    mimic = "default", representation = "default",
+    bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, start = "default", 
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
@@ -333,7 +335,7 @@ growth <- function(model.syntax = '',
     group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
-    mimic = "default", representation = "default",
+    bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 

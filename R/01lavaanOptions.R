@@ -143,6 +143,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
         } else if(opt$se == "boot" || opt$se == "bootstrap") {
             opt$se <- "bootstrap"
             opt$information <- "observed"
+            opt$bootstrap <- as.integer(opt$bootstrap)
+            stopifnot(opt$bootstrap > 0L)
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
                 opt$se <- "robust.mlr"

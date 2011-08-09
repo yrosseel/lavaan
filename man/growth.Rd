@@ -10,7 +10,8 @@ growth(model.syntax = '', fixed.x = "default",
     sample.nobs = NULL, group = NULL, group.equal = "",
     group.partial = "", constraints = '', estimator = "default", 
     likelihood = "default", information = "default", se = "default", 
-    test = "default", mimic = "default", representation = "default", 
+    test = "default", bootstrap = 1000L,
+    mimic = "default", representation = "default", 
     do.fit = TRUE, start = "default", 
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
@@ -100,7 +101,11 @@ growth(model.syntax = '', fixed.x = "default",
     Huber-White) approach.
     If \code{"robust"}, either \code{"robust.mlm"} or \code{"robust.mlr"} is
     used depending on the estimator, the mimic option, and whether the data
-    are complete or not. If \code{"none"}, no standard errors are computed.}
+    are complete or not.
+    If \code{"boot"} or \code{"bootstrap"}, bootstrap standard errors are
+    computed using standard bootstrapping.
+    If \code{"none"}, no standard errors are computed.}
+\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{test}{If \code{"standard"}, a conventional chi-square test is computed.
     If \code{"Satorra-Bentler"}, a Satorra-Bentler scaled test statistic is
     computed. If \code{"Yuan-Bentler"}, a Yuan-Bentler scaled test statistic
