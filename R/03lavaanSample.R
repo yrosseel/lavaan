@@ -105,8 +105,10 @@ Sample <- function(data=NULL,
                         " not allowed when data contains missing values\n")
                     }
                     # estimate moments
-                    out <- estimate.moments.fiml(X=data.obs, M=d.missing[[g]],
-                                                 verbose=verbose)
+                    #out <- estimate.moments.fiml(X=data.obs, M=d.missing[[g]],
+                    #                             verbose=verbose)
+                    out <- estimate.moments.EM(X=data.obs, M=d.missing[[g]],
+                                               verbose=verbose)
                     d.missing[[g]]$sigma <- out$sigma
                     d.missing[[g]]$mu    <- out$mu
                     d.missing[[g]]$h1    <- out$fx

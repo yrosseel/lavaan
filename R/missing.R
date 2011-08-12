@@ -2,7 +2,132 @@
 ## the data are incomplete
 ##
 ## initial verions Y.R. -- july 2010
+##
+## -- added EM algorithm: Y.R. aug 2011
 
+# mle using EM
+estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
+                                 max.iter = 500L, tol = 1e-04) {
+
+    if(verbose) {
+        cat("\n")
+        cat("lavaan Sample: estimation saturated H1 model -- start EM steps\n")
+    }
+
+    nvar <- ncol(X); pstar <- nvar * (nvar + 1)/2
+    npatterns <- M$npatterns
+    N <- M$nobs
+
+    # starting values
+    #sigma0 <- force.pd(cov(X, use = "p")); dimnames(sigma0) <- NULL
+    #  mu0  <- apply(X, 2, mean, na.rm = TRUE); names(mu0) <- NULL
+
+    # starting values as used by Mplus
+    mu0  <- apply(X, 2, mean, na.rm = TRUE); names(mu0) <- NULL
+    var0 <- apply(X, 2,  var, na.rm = TRUE); names(var0) <- NULL
+    sigma0 <- diag(x=var0, nrow=length(var0))
+    mu <- mu0; sigma <- sigma0
+
+    # report
+    if(verbose) {
+        fx0 <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
+        cat("  EM iteration:", sprintf("%4d", 0),
+            " fx = ", sprintf("%15.10f", fx0),
+            "\n")
+    }
+
+    # EM steps
+    for(i in 1:max.iter) {
+        T1 <- numeric(nvar)
+        T2 <- matrix(0, nvar, nvar)
+        for(p in 1:npatterns) {
+            X       <- M$data[[p]][["X"]]
+            MX      <- M$data[[p]][["MX"]]
+            nobs    <- M$data[[p]][["nobs"]]
+            var.idx <- M$data[[p]][["var.idx"]]
+
+            if(all(var.idx)) {
+                # complete pattern
+                T1 <- T1 + colSums(X)
+                T2 <- T2 + crossprod(X)
+                next
+            }
+
+            # partition Mu (1=missing, 2=complete)
+            Mu_1 <- mu[!var.idx]
+            Mu_2 <- mu[ var.idx]
+
+            # partition Sigma (1=missing, 2=complete)
+            Sigma_11 <- sigma[!var.idx, !var.idx, drop=FALSE]
+            Sigma_12 <- sigma[!var.idx,  var.idx, drop=FALSE]
+            Sigma_21 <- sigma[ var.idx, !var.idx, drop=FALSE]
+            Sigma_22 <- sigma[ var.idx,  var.idx, drop=FALSE]
+            Sigma_22.inv <- inv.chol(Sigma_22, logdet=FALSE)
+            #Sigma_22.inv <- solve(Sigma_22)
+
+            # estimate missing values in this pattern
+            Diff <- apply(X, 1, '-', Mu_2)
+            X_missing2 <- t(Sigma_12 %*% Sigma_22.inv %*% Diff)
+            X_missing <- t(apply(X_missing2, 1, '+', Mu_1))
+
+            # complete data for this pattern
+            X_complete <- matrix(0, nobs, nvar)
+            X_complete[, var.idx] <- X
+            X_complete[,!var.idx] <- X_missing
+
+            # 1. SUM `completed' pattern
+            T1_p <- colSums(X_complete)
+            T1 <- T1 + T1_p
+
+            # 2. CROSSPROD `completed' pattern
+            T2_p <- crossprod(X_complete)
+
+            # correction for missing cells: conditional covariances
+            T2_p11 <- Sigma_11 - (Sigma_12 %*% Sigma_22.inv %*% Sigma_21)
+            T2_p[!var.idx, !var.idx] <- T2_p[!var.idx, !var.idx] + (T2_p11*nobs)
+            T2 <- T2 + T2_p
+        }
+
+        # M-step -- Little & Rubin (2000) page 225: eq. 11.6
+        # recompute mu and sigma
+        mu    <- T1/N
+        sigma <- T2/N - tcrossprod(mu)
+
+        # max absolute difference in parameter values
+        DELTA <- max(abs(c(mu,vech(sigma)) - c(mu0,vech(sigma0))))
+
+        # report fx
+        if(verbose) {
+            fx <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
+            cat("  EM iteration:", sprintf("%4d", i),
+                " fx = ", sprintf("%15.10f", fx), 
+                " delta par = ", sprintf("%9.8f", DELTA),
+                "\n")
+        }
+
+        # convergence check: using parameter values:
+        if(DELTA < tol)
+            break
+
+        # again
+        mu0 <- mu; sigma0 <- sigma
+    }
+
+    # compute fx if we haven't already
+    if(!verbose) 
+        fx <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
+
+    if(verbose) {
+        cat("estimated Sigma and Mu (H1):\n")
+        cat("\nSigma:\n"); print(sigma)
+        cat("\nMu:\n"); print(mu)
+        cat("\n")
+        cat("lavaan Sample: estimation saturated H1 model -- end\n\n")
+    }
+
+    # fx <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
+    list(sigma = sigma, mu = mu, fx = fx)
+}
 
 # construct summary information of missing patterns
 missing.patterns <- function (X, warn=FALSE) {
@@ -31,7 +156,7 @@ missing.patterns <- function (X, warn=FALSE) {
     if(length(empty.idx) > 0) {
         if(warn) {
             warning("lavaan WARNING: some cases are empty and will be removed")
-            cat("lavaan WARNING: empty cases: "); print( empty.idx )
+            cat("lavaan WARNING: empty cases:\n"); print( empty.idx )
         }
         MISSING <- MISSING[-empty.idx,]
               X <-       X[-empty.idx,]
