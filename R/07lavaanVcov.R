@@ -60,6 +60,9 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
     # FIXME: cov rescale? Yes for now
     nboot <- nrow(COEF)
     NVarCov <- sample@ntotal * (cov(COEF) * (nboot-1)/nboot )
+
+    # save COEF
+    attr(NVarCov, "BOOT") <- COEF
  
     NVarCov
 }

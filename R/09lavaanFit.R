@@ -34,6 +34,11 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     Sigma.hat <- computeSigmaHat(model)
        Mu.hat <-    computeMuHat(model)
 
+    # if bootstrapped parameters, add attr to 'est'
+    if(!is.null(attr(VCOV, "BOOT"))) {
+        attr(est, "BOOT") <- attr(VCOV, "BOOT")
+    }
+
     new("Fit",
         npar       = max(user$free),
         x          = x,
