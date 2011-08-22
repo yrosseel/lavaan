@@ -795,6 +795,9 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         }
 
         # 2. split by operator (only the *first* occurence!)
+        # check first if equal/label modifier has been used on the LEFT!
+        if(substr(x,1,5) == "equal") stop("equal modifier can not be used on the left-hand side of the operator")
+        if(substr(x,1,5) == "label") stop("label modifier can not be used on the left-hand side of the operator")
         op.idx <- regexpr(op, x)
         lhs <- substr(x, 1, op.idx-1)
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
