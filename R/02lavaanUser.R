@@ -659,7 +659,7 @@ lavaanify <- function(model.syntax    = NULL,
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$fixed.x    <- c(LIST$fixed.x,    rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      paste("c", 1:length(lhs),sep="") )
-        #LIST$equal      <- c(LIST$equal,      rep("",  length(lhs)) )
+        LIST$equal      <- c(LIST$equal,      rep("",  length(lhs)) )
         LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         LIST$free.uncon <- c(LIST$free.uncon, rep(0L,  length(lhs)) )
     }
@@ -790,6 +790,9 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         # 1f, ">" operator?
         } else if(grepl(">", line.simple, fixed=TRUE)) {
             op <- ">"
+        # 1g, ":=" operator?
+        } else if(grepl(":=", line.simple, fixed=TRUE)) {
+            op <- ":="
         } else {
             stop("unknown operator in ", model[i])
         }
@@ -802,8 +805,8 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         lhs <- substr(x, 1, op.idx-1)
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
 
-        # 2b. if operator is "==" or "<" or ">", put it in CON
-        if(op == "==" || op == "<" || op == ">") {
+        # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
+        if(op == "==" || op == "<" || op == ">" || op == ":=") {
             CON.idx <- CON.idx + 1L
             CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs)
             next

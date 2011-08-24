@@ -56,6 +56,7 @@ setClass("Model",          # MATRIX representation of the sem model
         eq.constraints="logical",
         eq.constraints.K="matrix",
 
+        def.function="function",
         ceq.function="function",
         ceq.jacobian="function",
         cin.function="function",
