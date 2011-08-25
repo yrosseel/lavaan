@@ -61,9 +61,12 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
 
         # 6. estimate free parameters
         lavaanModel <- setModelParameters(model, x = start)
+        # switch of verbose in estimateModel
+        verbose.old <- options$verbose; options$verbose <- FALSE
         x <- try( estimateModel(lavaanModel,
                                 sample  = bootSample,
                                 options = options) )
+        options$verbose <- verbose.old
         if(inherits(x, "try-error")) {
             error.idx <- c(error.idx, b)
             if(verbose) cat("     FAILED: in estimation\n")

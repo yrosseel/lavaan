@@ -218,6 +218,14 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
     t1.txt <- sprintf("  %12s", paste(toupper(substring(tmp.txt,1,1)),  
                                       substring(tmp.txt,2), sep=""))
     cat(t0.txt, t1.txt, "\n", sep="")
+    if(object@Options$se == "bootstrap") {
+        t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
+        t1.txt <- sprintf("  %10i", object@Options$boot)
+        cat(t0.txt, t1.txt, "\n", sep="")
+        t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
+        t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT")))
+        cat(t0.txt, t1.txt, "\n", sep="")
+    }
     cat("\n")
 
     # local print function
