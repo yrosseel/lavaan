@@ -366,7 +366,7 @@ Model <- function(user           = NULL,
             if(rhs == "0" && op == ">") {
                 ineq.string <- lhs
             } else if(rhs == "0" && op == "<") {
-                ineq.string <- paste(lhs, " - (", lhs, ")", sep="")   
+                ineq.string <- paste(rhs, " - (", lhs, ")", sep="")   
             } else if(rhs != "0" && op == ">") {
                 ineq.string <- paste(lhs, " - (", rhs, ")", sep="")
             } else if(rhs != "0" && op == "<") {
@@ -414,6 +414,11 @@ Model <- function(user           = NULL,
     # TODO!!!
 
 
+    # which free parameters are observed variances?
+    x.free.var.idx <-  user$free[ user$free & !duplicated(user$free) &
+                                  user$lhs %in% ov.names &
+                                  user$op == "~~" & user$lhs == user$rhs ]
+
     Model <- new("Model",
                  GLIST=GLIST,
                  dimNames=rep(mmDimNames, ngroups),
@@ -433,6 +438,7 @@ Model <- function(user           = NULL,
                  x.unco.idx=x.unco.idx,
                  m.user.idx=m.user.idx,
                  x.user.idx=x.user.idx,
+                 x.free.var.idx=x.free.var.idx,
                  eq.constraints=eq.constraints,
                  eq.constraints.K=K,
                  def.function=def.function,

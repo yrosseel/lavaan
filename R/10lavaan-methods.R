@@ -227,7 +227,7 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         name <- substr(name, 1, 13)
 
         if(!standardized) {
-            if(is.na(se[i])) {
+            if(is.na(se[i]) || (est[i]/se[i] > 9999.999)) {
                 txt <- sprintf("    %-13s %9.3f %8.3f\n", name, est[i], se[i])
             } else if(se[i] == 0) {
                 txt <- sprintf("    %-13s %9.3f\n", name, est[i])
@@ -274,6 +274,23 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             cat("                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.all\n")
         }
 
+        makeNames <- function(NAMES, LABELS) {
+            # labels?
+            l.idx <- which(nchar(LABELS) > 0L)
+            if(length(l.idx) > 0L) {
+                LABELS <- abbreviate(LABELS, 4)
+                LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep="")
+                MAX.L <- max(nchar(LABELS))
+                NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
+                                    strict = TRUE)
+                NAMES <- paste(NAMES, LABELS, sep="")
+            } else {
+                NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
+            }
+        }
+
+        NAMES <- object@User$rhs
+
         # 1. indicators ("=~") (we do show dummy indicators)
         mm.idx <- which( object@User$op == "=~" & 
                         !object@User$lhs %in% ov.names &
@@ -281,10 +298,12 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         if(length(mm.idx)) {
             cat("Latent variables:\n")
             lhs.old <- ""
+            NAMES[mm.idx] <- makeNames(  object@User$rhs[mm.idx],
+                                       object@User$label[mm.idx])
             for(i in mm.idx) {
                 lhs <- object@User$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " =~\n", sep="")
-                print.estimate(name=object@User$rhs[i], i)
+                print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
             }
             cat("\n")
@@ -295,10 +314,12 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         if(length(eqs.idx) > 0) {
             cat("Regressions:\n")
             lhs.old <- ""
+            NAMES[eqs.idx] <- makeNames(  object@User$rhs[eqs.idx],
+                                        object@User$label[eqs.idx])
             for(i in eqs.idx) {
                 lhs <- object@User$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " ~\n", sep="")
-                print.estimate(name=object@User$rhs[i], i)
+                print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
             }
             cat("\n")
@@ -312,10 +333,12 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         if(length(cov.idx) > 0) {
             cat("Covariances:\n")
             lhs.old <- ""
+            NAMES[cov.idx] <- makeNames(  object@User$rhs[cov.idx],
+                                        object@User$label[cov.idx])
             for(i in cov.idx) {
                 lhs <- object@User$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " ~~\n", sep="")
-                print.estimate(name=object@User$rhs[i], i)
+                print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
             }
             cat("\n")
@@ -327,8 +350,10 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
                          object@User$group == g)
         if(length(int.idx) > 0) {
             cat("Intercepts:\n")
+            NAMES[int.idx] <- makeNames(  object@User$lhs[int.idx],
+                                        object@User$label[int.idx])
             for(i in int.idx) {
-                print.estimate(name=object@User$lhs[i], i)
+                print.estimate(name=NAMES[i], i)
             }
             cat("\n")
         }
@@ -340,10 +365,60 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
                          object@User$group == g)
         if(length(var.idx) > 0) {
             cat("Variances:\n")
+            NAMES[var.idx] <- makeNames(  object@User$rhs[var.idx],
+                                        object@User$label[var.idx])
             for(i in var.idx) {
-                print.estimate(name=object@User$rhs[i], i)
-                lhs.old <- lhs
+                print.estimate(name=NAMES[i], i)
             }
+            cat("\n")
+        }
+
+        # 6. variable definitions
+        def.idx <- which(object@User$op == ":=" &
+                         object@User$group == g)
+        if(length(def.idx) > 0) {
+            cat("Defined parameters:\n")
+            NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx],
+                                        object@User$label[def.idx])
+            for(i in def.idx) {
+                print.estimate(name=NAMES[i], i)
+            }
+            cat("\n")
+        }
+
+        # 7. constraints
+        cin.idx <- which((object@User$op == "<" | 
+                          object@User$op == ">") &
+                         object@User$group == g)
+        ceq.idx <- which(object@User$op == "==" & object@User$group == g)
+        if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
+            slack <- est
+            slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
+            slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
+           
+            cat("Constraints:                               Slack (>=0)\n")
+            for(i in c(cin.idx,ceq.idx)) {
+                lhs <- object@User$lhs[i]
+                 op <- object@User$op[i]
+                rhs <- object@User$rhs[i]
+                if(rhs == "0" && op == ">") {
+                    con.string <- paste(lhs, " - 0", sep="")
+                } else if(rhs == "0" && op == "<") {
+                    con.string <- paste(rhs, " - (", lhs, ")", sep="")
+                } else if(rhs != "0" && op == ">") {
+                    con.string <- paste(lhs, " - (", rhs, ")", sep="")
+                } else if(rhs != "0" && op == "<") {
+                    con.string <- paste(rhs, " - (", lhs, ")", sep="")
+                } else if(rhs == "0" && op == "==") {
+                    con.string <- paste(lhs, " - 0", sep="")
+                } else if(rhs != "0" && op == "==") {
+                    con.string <- paste(lhs, " - (", rhs, ")", sep="")
+                }
+                con.string <- abbreviate(con.string, 41, strict = TRUE)
+                txt <- sprintf("    %-41s %8.3f\n", 
+                               con.string, slack[i])
+                cat(txt)
+            }   
             cat("\n")
         }
     } # ngroups
@@ -585,11 +660,15 @@ parameterEstimates <- parameterestimates <- function(object) {
     LIST$est.std.all <- standardize.est.all(object, est.std=LIST$est.std)
 
     # select only a few columns
-    LIST <- LIST[,c("lhs", "op", "rhs", "group", "est", "se", "z",
+    LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
                     "est.std", "est.std.all")]
 
     # if single group, remove group column
     if(object@Sample@ngroups == 1L) LIST$group <- NULL
+
+    # if no user-defined labels, remove label column
+    if(sum(nchar(object@User$label)) == 0L) LIST$label <- NULL
+
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
     LIST

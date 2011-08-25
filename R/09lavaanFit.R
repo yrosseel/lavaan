@@ -12,6 +12,19 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     attributes(x) <- NULL
     est <- getModelParameters(model, type="user")
 
+    # impute computed values for 'variable definitions'
+    def.idx <- which(user$op == ":=")
+    if(length(def.idx) > 0L) {
+        def.est <- model@def.function(x)
+        est[def.idx] <- def.est
+    }
+
+    # set est values for "==" and "<>" elements to NA
+    con.idx <- which(user$op == "==" | 
+                     user$op == "<"  | 
+                     user$op == ">")
+    est[con.idx] <- NA
+
     # did we compute standard errors?
     se <- numeric( length(est) )
     if(!is.null(VCOV)) { 
@@ -22,6 +35,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         se[ which(user$free.uncon == 0L) ] <- 0.0
         #se[ user$free & !duplicated(user$free) ] <- x.se
     }
+    se[con.idx] <- NA
 
     # did we compute test statistics
     if(is.null(TEST)) {

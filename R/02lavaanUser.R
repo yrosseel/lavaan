@@ -658,7 +658,7 @@ lavaanify <- function(model.syntax    = NULL,
         LIST$free       <- c(LIST$free,       rep(0L, length(lhs)) )
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$fixed.x    <- c(LIST$fixed.x,    rep(0L, length(lhs)) )
-        LIST$label      <- c(LIST$label,      paste("c", 1:length(lhs),sep="") )
+        LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
         LIST$equal      <- c(LIST$equal,      rep("",  length(lhs)) )
         LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         LIST$free.uncon <- c(LIST$free.uncon, rep(0L,  length(lhs)) )

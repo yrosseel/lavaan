@@ -607,6 +607,9 @@ function(object, sample, do.fit=TRUE, options=NULL) {
             forcePD <- FALSE
         }
 
+        # transform variances back
+        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
@@ -628,6 +631,9 @@ function(object, sample, do.fit=TRUE, options=NULL) {
 
     first.derivative.param <- function(x, verbose=FALSE) {
 
+        # transform variances back
+        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
@@ -644,6 +650,10 @@ function(object, sample, do.fit=TRUE, options=NULL) {
     } 
 
     first.derivative.param.numerical <- function(x, verbose=FALSE) {
+
+        # transform variances back
+        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+
         # numerical approximation using the Richardson method
         npar <- length(x)
         h <- 10e-6
@@ -688,6 +698,10 @@ function(object, sample, do.fit=TRUE, options=NULL) {
     if(debug) {
         cat("SCALE = ", SCALE, "\n")
     }
+
+    # transforming variances using atan (or another sigmoid function?)
+    # FIXME: better approach?
+    #start.x[object@x.free.var.idx] <- atan(start.x[object@x.free.var.idx])
 
     if(do.fit) {
         iter.max <- 10000
@@ -904,8 +918,10 @@ function(object, sample, do.fit=TRUE, options=NULL) {
         }
     }
 
-    
     fx <- minimize.this.function(x) # to get "fx.group" attribute
+
+    # transform variances back
+    #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
     # adjust fx if FIML (using h1 value)
     if(any(sample@missing.flag)) {
