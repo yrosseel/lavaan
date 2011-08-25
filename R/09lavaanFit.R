@@ -39,7 +39,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         if(length(def.idx) > 0L) {
             if(!is.null(attr(VCOV, "BOOT"))) {
                 BOOT <- attr(VCOV, "BOOT")
-                def.cov <- cov(t(apply(BOOT, 1, fit@Model@def.function)))
+                def.cov <- cov(t(apply(BOOT, 1, model@def.function)))
             } else {
                 # regular delta method
                 nvar <- length(x)
