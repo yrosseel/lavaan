@@ -378,8 +378,7 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
                          object@User$group == g)
         if(length(def.idx) > 0) {
             cat("Defined parameters:\n")
-            NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx],
-                                        object@User$label[def.idx])
+            NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx], "")
             for(i in def.idx) {
                 print.estimate(name=NAMES[i], i)
             }

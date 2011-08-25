@@ -35,7 +35,17 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         se[ which(user$free.uncon == 0L) ] <- 0.0
         #se[ user$free & !duplicated(user$free) ] <- x.se
     }
+
+    # constraints elements have no SE
     se[con.idx] <- NA
+
+    # defined parameters: using the delta method?
+    if(length(def.idx) > 0L) {
+        nvar <- length(x)
+        JAC <- jacobian(func = model@def.function, x = x, method = "Richardson")
+        def.cov <- JAC %*% VCOV %*% t(JAC)
+        se[def.idx] <- sqrt(diag(def.cov))
+    }
 
     # did we compute test statistics
     if(is.null(TEST)) {

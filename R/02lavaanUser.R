@@ -664,6 +664,10 @@ lavaanify <- function(model.syntax    = NULL,
         LIST$free.uncon <- c(LIST$free.uncon, rep(0L,  length(lhs)) )
     }
 
+    # put lhs of := elements in label column
+    def.idx <- which(LIST$op == ":=")
+    LIST$label[def.idx] <- LIST$lhs[def.idx]
+
 
     if(debug) { 
         cat("[lavaan DEBUG] lavaanUser\n")
