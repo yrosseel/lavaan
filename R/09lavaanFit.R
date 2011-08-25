@@ -19,11 +19,11 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         est[def.idx] <- def.est
     }
 
-    # set est values for "==" and "<>" elements to NA
-    con.idx <- which(user$op == "==" | 
-                     user$op == "<"  | 
-                     user$op == ">")
-    est[con.idx] <- NA
+    # set est values for "==" and "<>" elements to slack values
+    ceq.idx <- which(user$op == "==")
+    if(length(ceq.idx) > 0L) est[ceq.idx] <- model@ceq.function(x)
+    cin.idx <- which(user$op == "<"  | user$op == ">")
+    if(length(cin.idx) > 0L) est[cin.idx] <- model@cin.function(x)   
 
     # did we compute standard errors?
     se <- numeric( length(est) )
@@ -34,17 +34,21 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         # fixed parameters -> se = 0.0
         se[ which(user$free.uncon == 0L) ] <- 0.0
         #se[ user$free & !duplicated(user$free) ] <- x.se
-    }
 
-    # constraints elements have no SE
-    se[con.idx] <- NA
-
-    # defined parameters: using the delta method?
-    if(length(def.idx) > 0L) {
-        nvar <- length(x)
-        JAC <- jacobian(func = model@def.function, x = x, method = "Richardson")
-        def.cov <- JAC %*% VCOV %*% t(JAC)
-        se[def.idx] <- sqrt(diag(def.cov))
+        # defined parameters: 
+        if(length(def.idx) > 0L) {
+            if(!is.null(attr(VCOV, "BOOT"))) {
+                BOOT <- attr(VCOV, "BOOT")
+                def.cov <- cov(t(apply(BOOT, 1, fit@Model@def.function)))
+            } else {
+                # regular delta method
+                nvar <- length(x)
+                JAC <- jacobian(func = model@def.function, x = x, 
+                                method = "Richardson")
+                def.cov <- JAC %*% VCOV %*% t(JAC)
+            }
+            se[def.idx] <- sqrt(diag(def.cov))
+        }
     }
 
     # did we compute test statistics

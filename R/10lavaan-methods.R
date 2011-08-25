@@ -392,8 +392,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         ceq.idx <- which(object@User$op == "==" & object@User$group == g)
         if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
             slack <- est
-            slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
-            slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
+            #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
+            #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
            
             cat("Constraints:                               Slack (>=0)\n")
             for(i in c(cin.idx,ceq.idx)) {
