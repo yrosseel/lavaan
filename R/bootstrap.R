@@ -8,6 +8,76 @@
 #
 # Notes: - faulty runs are simply ignored (with a warning)
 #        - default R=1000
+
+
+lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
+                                model=NULL, sample=NULL, options=NULL,
+                                max.iter=1000L, verbose=FALSE, b=0L) {
+
+    b <- b + 1
+    if(verbose) cat("  ... bootstrap draw number: ", b)
+    npar <- length(start)
+
+    # 3. construct lavaan Sample (S4) object: description of the data
+    bootSample <-
+        try( Sample(data          = data[boot.idx,],
+                    group         = options$group,
+                    sample.cov    = NULL,
+                    sample.mean   = NULL,
+                    sample.nobs   = NULL,
+                    std.ov        = FALSE,
+
+                    ov.names      = sample@ov.names,
+                    data.type     = "full",
+                    ngroups       = sample@ngroups,
+                    group.label   = sample@group.label,
+                    estimator     = options$estimator,
+                    likelihood    = options$likelihood,
+                    mimic         = options$mimic,
+                    meanstructure = options$meanstructure,
+                    missing       = options$missing,
+                    warn          = options$warn,
+                    verbose       = options$verbose) )
+    if(inherits(bootSample, "try-error")) {
+        error.idx <- c(error.idx, b)
+        if(verbose) cat("     FAILED: creating sample statistics\n")
+        return(rep(NA, npar))
+    }
+
+    # 6. estimate free parameters
+    lavaanModel <- setModelParameters(model, x = start)
+    # switch of verbose in estimateModel
+    verbose.old <- options$verbose; options$verbose <- FALSE
+    x <- try( estimateModel(lavaanModel,
+                            sample  = bootSample,
+                            options = options) )
+    options$verbose <- verbose.old
+    if(inherits(x, "try-error")) {
+        error.idx <- c(error.idx, b)
+        if(verbose) cat("     FAILED: in estimation\n")
+        return(rep(NA, npar))
+    } else if(!attr(x, "converged")) {
+        error.idx <- c(error.idx, b)
+        if(verbose) cat("     FAILED: no convergence\n")
+        return(rep(NA, npar))
+    } else if(attr(x, "iterations") > max.iter) {
+        # FIXME: is this wise? How should we choose max.iter??
+        error.idx <- c(error.idx, b)
+        if(verbose) cat("     FAILED: too many iterations\n")
+        return(rep(NA, npar))
+    }
+
+    if(verbose) cat("     ok -- niter = ", attr(x, "iterations"), "\n")
+
+    # strip attributes
+    attributes(x) <- NULL
+
+    x
+}
+
+
+# Notes: - faulty runs are REMOVED!
+#        - default R=1000
 bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
                                          data=NULL, R=1000L, verbose=FALSE,
                                          max.iter=1000L) {
@@ -20,69 +90,20 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
     start <- getModelParameters(model, type="free"); npar <- length(start)
     N <- sample@ntotal
     COEF <- matrix(NA, R, npar)
-    # avoid showing all iterations for each bootstrap run
-    #if(options$verbose) options$verbose <- FALSE
-
-    # starting values
-    start <- getModelParameters(model, type="free")
 
     # run bootstraps
     error.idx <- integer(0)
     for(b in 1:R) {
-        if(verbose) cat("  ... bootstrap draw number: ", b)
         # take a bootstrap sample
         boot.idx <- sample(x=N, size=N, replace=TRUE)
 
-        # 3. construct lavaan Sample (S4) object: description of the data
-        bootSample <-
-            try( Sample(data          = data[boot.idx,],
-                        group         = options$group,
-                        sample.cov    = NULL,
-                        sample.mean   = NULL,
-                        sample.nobs   = NULL,
-                        std.ov        = FALSE,
+        # run bootstrap draw
+        x <- lavaanBootStatistic(data=data, boot.idx=boot.idx, start=start,
+                                 model=model, sample=sample, options=options,
+                                 max.iter=max.iter, verbose=verbose, b=b)
 
-                        ov.names      = sample@ov.names,
-                        data.type     = "full",
-                        ngroups       = sample@ngroups,
-                        group.label   = sample@group.label,
-                        estimator     = options$estimator,
-                        likelihood    = options$likelihood,
-                        mimic         = options$mimic,
-                        meanstructure = options$meanstructure,
-                        missing       = options$missing,
-                        warn          = options$warn,
-                        verbose       = options$verbose) )
-        if(inherits(bootSample, "try-error")) {
-            error.idx <- c(error.idx, b)
-            if(verbose) cat("     FAILED: creating sample statistics\n")
-            next
-        }
-
-        # 6. estimate free parameters
-        lavaanModel <- setModelParameters(model, x = start)
-        # switch of verbose in estimateModel
-        verbose.old <- options$verbose; options$verbose <- FALSE
-        x <- try( estimateModel(lavaanModel,
-                                sample  = bootSample,
-                                options = options) )
-        options$verbose <- verbose.old
-        if(inherits(x, "try-error")) {
-            error.idx <- c(error.idx, b)
-            if(verbose) cat("     FAILED: in estimation\n")
-            next
-        } else if(!attr(x, "converged")) {
-            error.idx <- c(error.idx, b)
-            if(verbose) cat("     FAILED: no convergence\n")
-            next
-        } else if(attr(x, "iterations") > max.iter) {
-            # FIXME: is this wise? How should we choose max.iter??
-            error.idx <- c(error.idx, b)
-            if(verbose) cat("     FAILED: too many iterations\n")
-            next    
-        }
-
-        if(verbose) cat("     ok -- niter = ", attr(x, "iterations"), "\n")
+        # catch faulty run
+        if(any(is.na(x))) error.idx <- c(error.idx, b)    
 
         COEF[b,] <- x
     }
@@ -100,19 +121,36 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
     COEF
 }
 
+# using the 'boot' package
+boot.lavaan <- function(object, data=NULL, ...) {
+
+    require("boot", quietly = TRUE)
+
+    boot.out <- boot:::boot(data = data, 
+                       statistic = lavaanBootStatistic, 
+                       ...,
+                       start   = getModelParameters(object@Model, type="free"),
+                       model   = object@Model, 
+                       sample  = object@Sample, 
+                       options = object@Options,
+                       # no more than 4 times the number of iterations
+                       # than the original run
+                       max.iter = max(100, object@Fit@iterations*4), 
+                       verbose = FALSE, b = 0L)
+
+    boot.out
+}
 
 # bootstrap parameters
-#
-# fixme! turn this into a 'boot' object
 bootstrapParameters <- function(object, data = NULL, R = 1000L,
-                                verbose = TRUE, summarize = TRUE) {
+                                verbose = TRUE, summarize = FALSE) {
 
     COEF <- bootstrapParameters.internal(model   = object@Model, 
-                                        sample  = object@Sample, 
-                                        options = object@Options, 
-                                        data    = data,
-                                        R       = R, 
-                                        verbose = verbose)
+                                         sample  = object@Sample, 
+                                         options = object@Options, 
+                                         data    = data,
+                                         R       = R, 
+                                         verbose = verbose)
 
     if(summarize) {
         OUT <- parameterEstimates(object)
@@ -137,3 +175,4 @@ bootstrapParameters <- function(object, data = NULL, R = 1000L,
 
     OUT
 }
+
