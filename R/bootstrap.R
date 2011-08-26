@@ -144,17 +144,37 @@ lavaanBoot <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
                        verbose = verbose, b = -1L)
 
     # add rhs/op/lhs elements
-    free.idx <- which(object@User$free & !duplicated(object@User$free))
-    boot.out$rhs <- object@User$rhs[free.idx]
-    boot.out$op  <-  object@User$op[free.idx]
-    boot.out$lhs <- object@User$lhs[free.idx]
+    #free.idx <- which(object@User$free & !duplicated(object@User$free))
+    #boot.out$rhs <- object@User$rhs[free.idx]
+    #boot.out$op  <-  object@User$op[free.idx]
+    #boot.out$lhs <- object@User$lhs[free.idx]
+    attr(boot.out$t, "dimnames")[[2]] <-
+        getParameterLabels(object@User, type="free")
+
+    # adding defined parameters
+    def.idx <- which(object@User$op == ":=")
+    if(length(def.idx) > 0L) {
+        boot.out$t0 <- c(boot.out$t0, object@Fit@est[def.idx])
+        BOOT.def <- apply(boot.out$t, 1, object@Model@def.function)
+        if(length(def.idx) == 1L) {
+            BOOT.def <- as.matrix(BOOT.def)
+        } else {
+            BOOT.def <- t(BOOT.def)
+        }        
+        colnames(BOOT.def) <- object@User$lhs[def.idx]
+        boot.out$t <- cbind(boot.out$t, BOOT.def)
+        #boot.out$rhs <- c(boot.out$rhs, object@User$rhs[def.idx])
+        #boot.out$op  <- c(boot.out$op,   object@User$op[def.idx])
+        #boot.out$lhs <- c(boot.out$lhs, object@User$lhs[def.idx])
+        
+    }
 
     class(boot.out) <- c("lavaan.boot", "boot")
     boot.out
 }
 
 
-summary.lavaan.boot <- function(object=NULL, ..., type="bca", conf=0.95) {
+summary.lavaan.boot <- function(object=NULL, ..., type="perc", conf=0.95) {
 
     # catch 'estimated adjustment 'a' is NA' error
     # if R < nrow(data)
@@ -174,15 +194,18 @@ summary.lavaan.boot <- function(object=NULL, ..., type="bca", conf=0.95) {
         ci
     }
 
+    label <- colnames(object$t)
     est <- object$t0
     se <- apply(object$t, 2, sd)
     npar <- length(object$t0)
     CI <- sapply(seq_len(npar), ci)
     lower <- CI[1,]; upper <- CI[2,]
 
-    LIST <- data.frame(object$lhs, object$op, object$rhs, 
-                       est, se, lower, upper)
-    names(LIST) <- c("lhs","op","rhs","est", "se", 
+    #LIST <- data.frame(object$lhs, object$op, object$rhs, 
+    #                   est, se, lower, upper)
+    LIST <- data.frame(label, est, se, lower, upper)
+    #names(LIST) <- c("lhs","op","rhs","est", "se", 
+    names(LIST) <- c("label", "est", "se",
                      paste(type, ((1 - conf)/2*100), sep=""),
                      paste(type, ((conf+(1-conf)/2)*100), sep=""))
     class(LIST) <- c("lavaan.data.frame", "data.frame")
