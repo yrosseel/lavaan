@@ -12,7 +12,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     attributes(x) <- NULL
     est <- getModelParameters(model, type="user")
 
-    # impute computed values for 'variable definitions'
+    # impute computed values for 'defined parameters'
     def.idx <- which(user$op == ":=")
     if(length(def.idx) > 0L) {
         def.est <- model@def.function(x)

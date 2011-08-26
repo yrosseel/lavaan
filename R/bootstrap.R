@@ -2,7 +2,7 @@
 # this function draws the bootstrap samples, and estimates the
 # free parameters for each bootstrap sample
 #
-# return COEF matrix of size R x npar (R = number of bootstrap samples)
+# return BOOT matrix of size R x npar (R = number of bootstrap samples)
 # 
 # YR. 9 aug 2011
 #
@@ -14,8 +14,16 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                                 model=NULL, sample=NULL, options=NULL,
                                 max.iter=1000L, verbose=FALSE, b=0L) {
 
-    b <- b + 1
-    if(verbose) cat("  ... bootstrap draw number: ", b)
+    # verbose
+    if(verbose) {
+        if(b == -1L) { 
+            cat("  ... bootstrap draw: ")
+        } else {
+            b <- b + 1
+            cat("  ... bootstrap draw number: ", b)
+        }
+    }
+
     npar <- length(start)
 
     # 3. construct lavaan Sample (S4) object: description of the data
@@ -39,7 +47,6 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                     warn          = options$warn,
                     verbose       = options$verbose) )
     if(inherits(bootSample, "try-error")) {
-        error.idx <- c(error.idx, b)
         if(verbose) cat("     FAILED: creating sample statistics\n")
         return(rep(NA, npar))
     }
@@ -53,16 +60,13 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                             options = options) )
     options$verbose <- verbose.old
     if(inherits(x, "try-error")) {
-        error.idx <- c(error.idx, b)
         if(verbose) cat("     FAILED: in estimation\n")
         return(rep(NA, npar))
     } else if(!attr(x, "converged")) {
-        error.idx <- c(error.idx, b)
         if(verbose) cat("     FAILED: no convergence\n")
         return(rep(NA, npar))
     } else if(attr(x, "iterations") > max.iter) {
         # FIXME: is this wise? How should we choose max.iter??
-        error.idx <- c(error.idx, b)
         if(verbose) cat("     FAILED: too many iterations\n")
         return(rep(NA, npar))
     }
@@ -89,7 +93,7 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
     # prepare
     start <- getModelParameters(model, type="free"); npar <- length(start)
     N <- sample@ntotal
-    COEF <- matrix(NA, R, npar)
+    BOOT <- matrix(NA, R, npar)
 
     # run bootstraps
     error.idx <- integer(0)
@@ -105,60 +109,118 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
         # catch faulty run
         if(any(is.na(x))) error.idx <- c(error.idx, b)    
 
-        COEF[b,] <- x
+        BOOT[b,] <- x
     }
 
     # handle errors
     if(length(error.idx) > 0L) {
         warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
-        COEF <- COEF[-error.idx,]
-        attr(COEF, "error.idx") <- error.idx
+        BOOT <- BOOT[-error.idx,]
+        attr(BOOT, "error.idx") <- error.idx
     } else {
         if(verbose) cat("Number of successful bootstrap draws:", 
-                        nrow(COEF), "\n")
+                        nrow(BOOT), "\n")
     }
 
-    COEF
+    BOOT
 }
 
 # using the 'boot' package
-boot.lavaan <- function(object, data=NULL, ...) {
+lavaanBoot <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
 
     require("boot", quietly = TRUE)
 
     boot.out <- boot:::boot(data = data, 
-                       statistic = lavaanBootStatistic, 
+                            statistic = lavaanBootStatistic, 
+                            R = R,
                        ...,
                        start   = getModelParameters(object@Model, type="free"),
                        model   = object@Model, 
                        sample  = object@Sample, 
                        options = object@Options,
                        # no more than 4 times the number of iterations
-                       # than the original run
+                       # of the original run
                        max.iter = max(100, object@Fit@iterations*4), 
-                       verbose = FALSE, b = 0L)
+                       verbose = verbose, b = -1L)
 
+    # add rhs/op/lhs elements
+    free.idx <- which(object@User$free & !duplicated(object@User$free))
+    boot.out$rhs <- object@User$rhs[free.idx]
+    boot.out$op  <-  object@User$op[free.idx]
+    boot.out$lhs <- object@User$lhs[free.idx]
+
+    class(boot.out) <- c("lavaan.boot", "boot")
     boot.out
+}
+
+
+summary.lavaan.boot <- function(object=NULL, ..., type="bca", conf=0.95) {
+
+    # catch 'estimated adjustment 'a' is NA' error
+    # if R < nrow(data)
+    if(type == "bca" && object$R < nrow(object$data)) {
+        stop("lavaan ERROR: number of bootstrap draws must be greater than number of observations if type == \"bca\"")
+    }
+
+
+    # extract ci for one parameter
+    ci <- function(index=1L) {
+        out <- boot.ci(object, type=type, conf=conf, index=index)
+        if(type == "norm") {
+            ci <- out[[type, exact=FALSE]][c(2,3)]
+        } else {
+            ci <- out[[type, exact=FALSE]][c(4,5)]
+        }
+        ci
+    }
+
+    est <- object$t0
+    se <- apply(object$t, 2, sd)
+    npar <- length(object$t0)
+    CI <- sapply(seq_len(npar), ci)
+    lower <- CI[1,]; upper <- CI[2,]
+
+    LIST <- data.frame(object$lhs, object$op, object$rhs, 
+                       est, se, lower, upper)
+    names(LIST) <- c("lhs","op","rhs","est", "se", 
+                     paste(type, ((1 - conf)/2*100), sep=""),
+                     paste(type, ((conf+(1-conf)/2)*100), sep=""))
+    class(LIST) <- c("lavaan.data.frame", "data.frame")
+ 
+    LIST
 }
 
 # bootstrap parameters
 bootstrapParameters <- function(object, data = NULL, R = 1000L,
                                 verbose = TRUE, summarize = FALSE) {
 
-    COEF <- bootstrapParameters.internal(model   = object@Model, 
+    BOOT <- bootstrapParameters.internal(model   = object@Model, 
                                          sample  = object@Sample, 
                                          options = object@Options, 
                                          data    = data,
                                          R       = R, 
                                          verbose = verbose)
 
+    # add defined parameters
+    def.idx <- which(object@User$op == ":=")
+    if(length(def.idx) > 0L) {
+        BOOT.def <- apply(BOOT, 1, object@Model@def.function)
+        if(length(def.idx) == 1L) {
+            BOOT.def <- as.matrix(BOOT.def)
+        } else {
+            BOOT.def <- t(BOOT.def)
+        }
+        colnames(BOOT.def) <- object@User$lhs[def.idx]
+    }
+    
+
     if(summarize) {
         OUT <- parameterEstimates(object)
         OUT$est.std <- NULL
         OUT$est.std.all <- NULL
      
-        boot.mean <- apply(COEF, 2, mean)
-        boot.sd   <- apply(COEF, 2, sd) # fix N-1/N?
+        boot.mean <- apply(BOOT, 2, mean)
+        boot.sd   <- apply(BOOT, 2, sd) # fix N-1/N?
 
         GLIST <- x2GLIST(object@Model, x=boot.mean, type="free")
         OUT$est.boot.mean <- 
@@ -169,10 +231,11 @@ bootstrapParameters <- function(object, data = NULL, R = 1000L,
             getModelParameters(object@Model, GLIST=GLIST, type="user")
         OUT$est.boot.sd[ which(object@User$free.uncon == 0L) ] <- 0.0
     } else {
-        colnames(COEF) <- names( coef(object) )
-        OUT <- COEF
+        colnames(BOOT) <- names( coef(object) )
+        OUT <- BOOT
     }
 
     OUT
 }
+
 
