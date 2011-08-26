@@ -20,7 +20,7 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
             cat("  ... bootstrap draw: ")
         } else {
             b.iter <- b.iter + 1
-            cat("  ... bootstrap draw number: ", b)
+            cat("  ... bootstrap draw number: ", b.iter)
         }
     }
 
