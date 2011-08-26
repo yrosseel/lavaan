@@ -12,14 +12,14 @@
 
 lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                                 model=NULL, sample=NULL, options=NULL,
-                                max.iter=1000L, verbose=FALSE, b=0L) {
+                                max.iter=1000L, verbose=FALSE, b.iter=0L) {
 
     # verbose
     if(verbose) {
-        if(b == -1L) { 
+        if(b.iter == -1L) { 
             cat("  ... bootstrap draw: ")
         } else {
-            b <- b + 1
+            b.iter <- b.iter + 1
             cat("  ... bootstrap draw number: ", b)
         }
     }
@@ -104,7 +104,7 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
         # run bootstrap draw
         x <- lavaanBootStatistic(data=data, boot.idx=boot.idx, start=start,
                                  model=model, sample=sample, options=options,
-                                 max.iter=max.iter, verbose=verbose, b=b)
+                                 max.iter=max.iter, verbose=verbose, b.iter=b)
 
         # catch faulty run
         if(any(is.na(x))) error.idx <- c(error.idx, b)    
@@ -130,18 +130,18 @@ lavaanBoot <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
 
     require("boot", quietly = TRUE)
 
-    boot.out <- boot:::boot(data = data, 
-                            statistic = lavaanBootStatistic, 
-                            R = R,
-                       ...,
-                       start   = getModelParameters(object@Model, type="free"),
-                       model   = object@Model, 
-                       sample  = object@Sample, 
-                       options = object@Options,
-                       # no more than 4 times the number of iterations
-                       # of the original run
-                       max.iter = max(100, object@Fit@iterations*4), 
-                       verbose = verbose, b = -1L)
+    boot.out <- boot(data = data, 
+                     statistic = lavaanBootStatistic, 
+                     R = R,
+                     ...,
+                     start   = getModelParameters(object@Model, type="free"),
+                     model   = object@Model, 
+                     sample  = object@Sample, 
+                     options = object@Options,
+                     # no more than 4 times the number of iterations
+                     # of the original run
+                     max.iter = max(100, object@Fit@iterations*4), 
+                     verbose = verbose, b.iter = -1L)
 
     # add rhs/op/lhs elements
     #free.idx <- which(object@User$free & !duplicated(object@User$free))
