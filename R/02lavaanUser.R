@@ -79,7 +79,8 @@ lavaanify <- function(model.syntax    = NULL,
     lv.names.x   <- vnames(FLAT, type="lv.x")   # exogenous lv
     ov.names.y   <- vnames(FLAT, type="ov.y")   # dependent ov
     lv.names.y   <- vnames(FLAT, type="lv.y")   # dependent lv
-    lvov.names.y <- c(ov.names.y, lv.names.y)
+    #lvov.names.y <- c(ov.names.y, lv.names.y)
+    lvov.names.y <- c(lv.names.y, ov.names.y)
 
 
     #### prepare LIST
@@ -150,6 +151,11 @@ lavaanify <- function(model.syntax    = NULL,
     # check order of covariances: we only fill the upper.tri!
     cov.idx <- which(op == "~~" & lhs != rhs)
     for(i in cov.idx) {
+        lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
+        lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
+        if(lv.idx[1] > lv.idx[2]) { # swap!
+            tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+        }  
         if(lhs[i] %in% lv.names && rhs[i] %in% lv.names) {
             lv.idx <- match(c(lhs[i], rhs[i]), lv.names)
             if(lv.idx[1] > lv.idx[2]) { # swap!
@@ -160,13 +166,18 @@ lavaanify <- function(model.syntax    = NULL,
             if(ov.idx[1] > ov.idx[2]) { # swap!
                 tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
             }
-        } else {
-            cat("lavaan WARNING: lhs and rhs are not BOTH in ov.names or lv.names.\n")
-            cat("lhs = ", lhs[i], "\n")
-            cat("rhs = ", rhs[i], "\n")
-            cat("ov.names = "); print(ov.names)
-            cat("lv.names = "); print(lv.names)
-            stop("lavaan ERROR: problem in model syntax")
+        } else { # mixed!! # we allow this since 0.4-10
+            lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
+            lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
+            if(lv.idx[1] > lv.idx[2]) { # swap!
+                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+            }
+        #    cat("lavaan WARNING: lhs and rhs are not BOTH in ov.names or lv.names.\n")
+        #    cat("lhs = ", lhs[i], "\n")
+        #    cat("rhs = ", rhs[i], "\n")
+        #    cat("ov.names = "); print(ov.names)
+        #    cat("lv.names = "); print(lv.names)
+        #    stop("lavaan ERROR: problem in model syntax")
         }
     }
 
