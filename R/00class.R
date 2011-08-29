@@ -52,6 +52,9 @@ setClass("Model",          # MATRIX representation of the sem model
         x.unco.idx="list",
         m.user.idx="list",
         x.user.idx="list",
+        x.def.idx="integer",
+        x.ceq.idx="integer",
+        x.cin.idx="integer",
         x.free.var.idx="integer",
 
         eq.constraints="logical",

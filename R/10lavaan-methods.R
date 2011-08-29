@@ -231,7 +231,7 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
     # local print function
     print.estimate <- function(name="ERROR", i=1) {
        
-        # cut name if too long
+        # cut name if (still) too long
         name <- substr(name, 1, 13)
 
         if(!standardized) {
@@ -291,7 +291,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
                 MAX.L <- max(nchar(LABELS))
                 NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
                                     strict = TRUE)
-                NAMES <- paste(NAMES, LABELS, sep="")
+                NAMES <- sprintf(paste("%-", (13 - MAX.L), "s%", MAX.L, "s",
+                                       sep=""), NAMES, LABELS)
             } else {
                 NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
             }

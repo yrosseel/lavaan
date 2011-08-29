@@ -12,30 +12,18 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     attributes(x) <- NULL
     est <- getModelParameters(model, type="user")
 
-    # impute computed values for 'defined parameters'
-    def.idx <- which(user$op == ":=")
-    if(length(def.idx) > 0L) {
-        def.est <- model@def.function(x)
-        est[def.idx] <- def.est
-    }
-
-    # set est values for "==" and "<>" elements to slack values
-    ceq.idx <- which(user$op == "==")
-    if(length(ceq.idx) > 0L) est[ceq.idx] <- model@ceq.function(x)
-    cin.idx <- which(user$op == "<"  | user$op == ">")
-    if(length(cin.idx) > 0L) est[cin.idx] <- model@cin.function(x)   
-
     # did we compute standard errors?
     se <- numeric( length(est) )
     if(!is.null(VCOV)) { 
         x.se <- sqrt( diag(VCOV) )
         GLIST <- x2GLIST(model, x=x.se, type="free")
-        se <- getModelParameters(model, GLIST=GLIST, type="user")
+        se <- getModelParameters(model, GLIST=GLIST, type="user", 
+                                 extra=FALSE) # no def/cin/ceq entries!
         # fixed parameters -> se = 0.0
         se[ which(user$free.uncon == 0L) ] <- 0.0
-        #se[ user$free & !duplicated(user$free) ] <- x.se
 
         # defined parameters: 
+        def.idx <- which(user$op == ":=")
         if(length(def.idx) > 0L) {
             if(!is.null(attr(VCOV, "BOOT"))) {
                 BOOT <- attr(VCOV, "BOOT")

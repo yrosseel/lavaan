@@ -3,7 +3,8 @@
 #
 # initial version: YR 25/03/2009: `methods' for the Model class
 
-getModelParameters <- function(object, GLIST=NULL, type="free") {
+getModelParameters <- function(object, GLIST=NULL, type="free",
+                               extra=TRUE) {
 
     # type == "free": only non-redundant free parameters (x)
     # type == "unco": all free parameters (including constrained ones)
@@ -33,6 +34,22 @@ getModelParameters <- function(object, GLIST=NULL, type="free") {
             x.idx <- object@x.user.idx[[mm]]
         }
         x[x.idx] <- GLIST[[mm]][m.idx]
+    }
+
+    if(type == "user" && extra && sum(object@x.def.idx,
+                                      object@x.ceq.idx, 
+                                      object@x.cin.idx) > 0L) {
+        # we need 'free' x
+        x.free <- getModelParameters(object, GLIST=GLIST, type="free")
+        if(length(object@x.def.idx) > 0L) {
+            x[object@x.def.idx] <- object@def.function(x.free)
+        }
+        if(length(object@x.ceq.idx) > 0L) {
+            x[object@x.ceq.idx] <- object@ceq.function(x.free)
+        }
+        if(length(object@x.cin.idx) > 0L) {
+            x[object@x.cin.idx] <- object@cin.function(x.free)
+        }
     }
 
     x

@@ -107,10 +107,28 @@ standardize.est.lv <- function(object, user=NULL, est=NULL,
                      user$group == g)
         out[idx] <- out[idx] / ETA[ match(user$lhs[idx], lv.names) ]
 
-        # 5. ":="
+        # 5a ":="
         idx <- which(user$op == ":=" & user$group == g)
-        x <- out[ user$free & !duplicated(user$free) ]
-        out[idx] <- object@Model@def.function(x)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@def.function(x)
+        }
+
+        # 5b "=="
+        idx <- which(user$op == "==" & user$group == g)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@ceq.function(x)
+        }
+
+        # 5c. "<" or ">"
+        idx <- which((user$op == "<" | user$op == ">") & user$group == g)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@cin.function(x)
+        }
+
+        
     }
 
     out
@@ -205,10 +223,26 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
         #idx <- which(user$op == "~1" & user$lhs %in% lv.names &
         #             user$group == g)
 
-        # 5. ":="
+        # 5a ":="
         idx <- which(user$op == ":=" & user$group == g)
-        x <- out[ user$free & !duplicated(user$free) ]
-        out[idx] <- object@Model@def.function(x)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@def.function(x)
+        }
+
+        # 5b "=="
+        idx <- which(user$op == "==" & user$group == g)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@ceq.function(x)
+        }
+
+        # 5c. "<" or ">"
+        idx <- which((user$op == "<" | user$op == ">") & user$group == g)
+        if(length(idx) > 0L) {
+            x <- out[ user$free & !duplicated(user$free) ]
+            out[idx] <- object@Model@cin.function(x)
+        }
     }
 
     out
