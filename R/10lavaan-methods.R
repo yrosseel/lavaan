@@ -653,23 +653,151 @@ standardizedSolution <- standardizedsolution <- function(object, std.YX=TRUE) {
     LIST
 }
 
-parameterEstimates <- parameterestimates <- function(object) {
+parameterEstimates <- parameterestimates <- 
+    function(object, level = 0.95, boot.ci.type = "bca.simple") {
 
     LIST <- inspect(object, "list")
 
     # add est and se column
-    LIST$est <- object@Fit@est
+    est <- object@Fit@est
+    BOOT <- attr(est, "BOOT")
+    attributes(est) <- NULL
+    LIST$est <- est
     LIST$se  <- object@Fit@se
     tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
     LIST$z <- LIST$est / tmp.se
 
+    # confidence interval
+    if(object@Options$se != "none") {
+        # next three lines based on confint.lm
+        a <- (1 - level)/2; a <- c(a, 1 - a)
+        if(object@Options$se != "bootstrap") {
+            fac <- qnorm(a)
+            ci <- LIST$est + LIST$se %o% fac
+        } else if(object@Options$se == "bootstrap") {
+            stopifnot(!is.null(BOOT))
+            stopifnot(boot.ci.type %in% c("norm","basic","perc","bca.simple"))
+            if(boot.ci.type == "norm") {
+                fac <- qnorm(a)
+                boot.x <- colMeans(BOOT)
+                boot.est <- 
+                    getModelParameters(object@Model, 
+                                       GLIST=x2GLIST(object@Model, boot.x), 
+                                       type="user", extra=TRUE)
+                bias.est <- (boot.est - LIST$est)
+                ci <- (LIST$est - bias.est) + LIST$se %o% fac
+            } else if(boot.ci.type == "basic") {
+                ci <- cbind(LIST$est, LIST$est)
+                alpha <- (1 + c(level, -level))/2
+
+                # free.idx only
+                qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
+                free.idx <- which(object@User$free & 
+                                  !duplicated(object@User$free))
+                ci[free.idx,] <- 2*ci[free.idx,] - t(qq[c(3,4),])
+
+                # def.idx
+                def.idx <- which(object@User$op == ":=")
+                if(length(def.idx) > 0L) {
+                    BOOT.def <- apply(BOOT, 1, object@Model@def.function)
+                    if(length(def.idx) == 1L) {
+                        BOOT.def <- as.matrix(BOOT.def)
+                    } else {
+                        BOOT.def <- t(BOOT.def)
+                    }
+                    qq <- apply(BOOT.def, 2, boot:::norm.inter, alpha)
+                    ci[def.idx,] <- 2*ci[def.idx,] - t(qq[c(3,4),])
+                }
+
+                # TODO: add cin/ceq?
+               
+            } else if(boot.ci.type == "perc") {
+                ci <- cbind(LIST$est, LIST$est)
+                alpha <- (1 + c(-level, level))/2
+
+                # free.idx only
+                qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
+                free.idx <- which(object@User$free & 
+                                  !duplicated(object@User$free))
+                ci[free.idx,] <- t(qq[c(3,4),])
+
+                # def.idx
+                def.idx <- which(object@User$op == ":=")
+                if(length(def.idx) > 0L) {
+                    BOOT.def <- apply(BOOT, 1, object@Model@def.function)
+                    if(length(def.idx) == 1L) {
+                        BOOT.def <- as.matrix(BOOT.def)
+                    } else {
+                        BOOT.def <- t(BOOT.def)
+                    }
+                    qq <- apply(BOOT.def, 2, boot:::norm.inter, alpha)
+                    def.idx <- which(object@User$op == ":=")
+                    ci[def.idx,] <- t(qq[c(3,4),])
+                }
+
+                # TODO:  add cin/ceq?
+
+            } else if(boot.ci.type == "bca.simple") {
+               # no adjustment for scale!! only bias!!
+               alpha <- (1 + c(-level, level))/2
+               zalpha <- qnorm(alpha)
+               ci <- cbind(LIST$est, LIST$est)
+
+               # free.idx only
+               free.idx <- which(object@User$free & 
+                                 !duplicated(object@User$free))
+               x <- LIST$est[free.idx]
+               for(i in 1:length(free.idx)) {
+                   t <- BOOT[,i]; t <- t[is.finite(t)]; t0 <- x[i]
+                   w <- qnorm(sum(t < t0)/length(t))
+                   a <- 0.0 #### !!! ####
+                   adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
+                   qq <- boot:::norm.inter(t, adj.alpha)
+                   ci[free.idx[i],] <- qq[,2]
+               }
+
+               # def.idx
+               def.idx <- which(object@User$op == ":=")
+               if(length(def.idx) > 0L) {
+                   x.def <- object@Model@def.function(x)
+                   BOOT.def <- apply(BOOT, 1, object@Model@def.function)
+                   if(length(def.idx) == 1L) {
+                       BOOT.def <- as.matrix(BOOT.def)
+                   } else {
+                       BOOT.def <- t(BOOT.def)
+                   }
+                   for(i in 1:length(def.idx)) {
+                       t <- BOOT.def[,i]; t <- t[is.finite(t)]; t0 <- x.def[i]
+                       w <- qnorm(sum(t < t0)/length(t))
+                       a <- 0.0 #### !!! ####
+                       adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
+                       qq <- boot:::norm.inter(t, adj.alpha)
+                       ci[def.idx[i],] <- qq[,2]
+                   }
+               }
+               
+               # TODO:
+               # - add cin/ceq
+            }
+        }
+
+        LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]    
+    }
+
     # add std and std.all columns
-    LIST$est.std     <- standardize.est.lv(object)
-    LIST$est.std.all <- standardize.est.all(object, est.std=LIST$est.std)
+    #LIST$est.std     <- standardize.est.lv(object)
+    #LIST$est.std.all <- standardize.est.all(object, est.std=LIST$est.std)
 
     # select only a few columns
-    LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
-                    "est.std", "est.std.all")]
+    #LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
+    #                "est.std", "est.std.all")]
+ 
+    if(object@Options$se == "none") {
+        LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est")]
+    } else {
+        LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
+                        "ci.lower", "ci.upper")]
+    }
 
     # if single group, remove group column
     if(object@Sample@ngroups == 1L) LIST$group <- NULL
