@@ -235,9 +235,11 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         name <- substr(name, 1, 13)
 
         if(!standardized) {
-            if(se[i] == 0) {
+            if(is.na(se[i])) {
+                txt <- sprintf("    %-13s %9.3f %8.3f\n", name, est[i], se[i])
+            } else if(se[i] == 0) {
                 txt <- sprintf("    %-13s %9.3f\n", name, est[i])
-            } else if(is.na(se[i]) || (est[i]/se[i] > 9999.999)) {
+            } else if(est[i]/se[i] > 9999.999) {
                 txt <- sprintf("    %-13s %9.3f %8.3f\n", name, est[i], se[i])
             } else {
                 z <- est[i]/se[i]
@@ -249,6 +251,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             if(is.na(se[i])) {
                 txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
             } else if(se[i] == 0) {
+                txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
+            } else if(est[i]/se[i] > 9999.999) {
                 txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
             } else {
                 z <- est[i]/se[i]
