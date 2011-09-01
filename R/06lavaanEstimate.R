@@ -604,7 +604,7 @@ function(object, GLIST=NULL, sample=NULL, type="free",
 
 
 setMethod("estimateModel", "Model",
-function(object, sample, do.fit=TRUE, options=NULL) {
+function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
 
     estimator     <- options$estimator
     verbose       <- options$verbose
@@ -612,7 +612,7 @@ function(object, sample, do.fit=TRUE, options=NULL) {
 
 
     # function to be minimized
-    minimize.this.function <- function(x, verbose=FALSE) {
+    minimize.this.function <- function(x, verbose=FALSE, infToMax=FALSE) {
       
         #cat("DEBUG: x = ", x, "\n")
 
@@ -643,10 +643,13 @@ function(object, sample, do.fit=TRUE, options=NULL) {
             cat("Current free parameter values =\n"); print(x); cat("\n")
         }
 
+        # for L-BFGS-B
+        if(infToMax && is.infinite(fx)) fx <- 1e20
+
         fx
     }
 
-    first.derivative.param <- function(x, verbose=FALSE) {
+    first.derivative.param <- function(x, verbose=FALSE, infToMax=FALSE) {
 
         # transform variances back
         #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
@@ -720,21 +723,33 @@ function(object, sample, do.fit=TRUE, options=NULL) {
     # FIXME: better approach?
     #start.x[object@x.free.var.idx] <- atan(start.x[object@x.free.var.idx])
 
-    if(do.fit) {
-        iter.max <- 10000
+
+    # first some nelder mead steps? (default = FALSE)
+    if(is.null(control$init_nelder_mead)) {
+        INIT_NELDER_MEAD <- FALSE
     } else {
-        iter.max <- 0
+        INIT_NELDER_MEAD <- control$init_nelder_mead
     }
 
-    INIT_NELDER_MEAD <- FALSE
+    # optimizer
     if(is.null(body(object@ceq.function)) && 
        is.null(body(object@cin.function)) ) {
-        OPTIMIZER <- "NLMINB"
-        #OPTIMIZER <- "BFGS"      # slightly slower, no bounds; better scaling!
-        #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
+        if(is.null(control$optim.method)) {
+            OPTIMIZER <- "NLMINB"
+            #OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
+            #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
+        } else {
+            OPTIMIZER <- toupper(control$optim.method)
+            stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B"))
+        }
     } else {
-        OPTIMIZER <- "NLMINB.CONSTR"
-        #OPTIMIZER <- "ALABAMA"
+        if(is.null(control$optim.method)) {
+            OPTIMIZER <- "NLMINB.CONSTR"
+            #OPTIMIZER <- "ALABAMA"
+        } else {
+            OPTIMIZER <- toupper(control$optim.method)
+            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "ALABAMA"))
+        }
     }
 
     if(INIT_NELDER_MEAD) {
@@ -754,14 +769,23 @@ function(object, sample, do.fit=TRUE, options=NULL) {
 
     if(OPTIMIZER == "NLMINB") {
         if(verbose) cat("Quasi-Newton steps using NLMINB:\n")
-        trace <- 0L; if(debug) trace <- 1L;
+        #if(debug) control$trace <- 1L;
+        control.nlminb <- list(eval.max=20000L,
+                               iter.max=10000L,
+                               trace=0L,
+                               abs.tol=1e-20,
+                               rel.tol=1e-10,
+                               x.tol=1.5e-8,
+                               step.min=2.2e-14)
+        control.nlminb <- modifyList(control.nlminb, control)
+        control.nlminb <- control.nlminb[c("eval.max", "iter.max", "trace",
+                                           "abs.tol", "rel.tol", "x.tol",
+                                           "step.min")]
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
                             gradient=first.derivative.param,
                             #gradient=first.derivative.param.numerical,
-                            control=list(iter.max=iter.max,
-                                         eval.max=iter.max*2, 
-                                         trace=trace),
+                            control=control.nlminb,
                             scale=SCALE,
                             verbose=verbose) 
         if(verbose) {
@@ -785,15 +809,24 @@ function(object, sample, do.fit=TRUE, options=NULL) {
         # (but WLS works!)
         # - BB.ML works too
 
-        trace <- 0L; if(verbose) trace <- 1L
+        control.bfgs <- list(trace=0L, fnscale=1, 
+                             parscale=SCALE, ## or not?
+                             ndeps=1e-3,
+                             maxit=10000,
+                             abstol=1e-20,
+                             reltol=1e-10,
+                             REPORT=1L)
+        control.bfgs <- modifyList(control.bfgs, control)
+        control.bfgs <- control.bfgs[c("trace", "fnscale", "parscale", "ndeps",
+                                       "maxit", "abstol", "reltol", "REPORT")]
+        #trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
                            gr=first.derivative.param,
                            method="BFGS",
-                           control=list(maxit=iter.max, REPORT=1L, 
-                                        parscale=SCALE,
-                                        trace=trace, reltol=1e-12),
-                           hessian=FALSE)
+                           control=control.bfgs,
+                           hessian=FALSE,
+                           verbose=verbose)
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("optim BFGS message says: ", optim.out$message, "\n")
@@ -812,14 +845,28 @@ function(object, sample, do.fit=TRUE, options=NULL) {
         }
     } else if(OPTIMIZER == "L-BFGS-B") {
 
-        trace <- 0L; if(verbose) trace <- 1L
+        # warning, does not cope with Inf values!!
+
+        control.lbfgsb <- list(trace=0L, fnscale=1,
+                               parscale=SCALE, ## or not?
+                               ndeps=1e-3,
+                               maxit=10000,
+                               REPORT=1L,
+                               lmm=5L,
+                               factr=1e7,
+                               pgtol=0)
+        control.lbfgsb <- modifyList(control.lbfgsb, control)
+        control.lbfgsb <- control.lbfgsb[c("trace", "fnscale", "parscale", 
+                                           "ndeps", "maxit", "REPORT", "lmm", 
+                                           "factr", "pgtol")]
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
                            gr=first.derivative.param,
                            method="L-BFGS-B",
-                           control=list(maxit=iter.max, REPORT=1L, 
-                                        trace=trace, factr=1e-12),
-                           hessian=FALSE)
+                           control=control.lbfgsb,
+                           hessian=FALSE,
+                           verbose=verbose,
+                           infToMax=TRUE)
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("optim L-BFGS-B message says: ", optim.out$message, "\n")

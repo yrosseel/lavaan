@@ -51,6 +51,7 @@ lavaan <- function(# user-specified model syntax
                    mimic           = "default",
                    representation  = "default",
                    do.fit          = TRUE,
+                   control         = list(),
 
                    # starting values
                    start           = "default",
@@ -237,7 +238,8 @@ lavaan <- function(# user-specified model syntax
     if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
                            sample  = lavaanSample, 
-                           options = lavaanOptions)
+                           options = lavaanOptions,
+                           control = control)
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
@@ -307,7 +309,7 @@ cfa <- sem <- function(model.syntax = '',
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, start = "default", 
+    do.fit = TRUE, control = list(), start = "default", 
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -336,7 +338,7 @@ growth <- function(model.syntax = '',
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, start = "default",
+    do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()

@@ -12,7 +12,7 @@ sem(model.syntax = '', meanstructure = "default", fixed.x = "default",
     likelihood = "default", information = "default", se = "default", 
     test = "default", bootstrap = 1000L, 
     mimic = "default", representation = "default", 
-    do.fit = TRUE, start = "default",
+    do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -121,6 +121,16 @@ sem(model.syntax = '', meanstructure = "default", fixed.x = "default",
     representation is used to represent the model (using the all-y variant).}
 \item{do.fit}{If \code{FALSE}, the model is not fit, and the current
     starting values of the model parameters are preserved.}
+\item{control}{A list containing control parameters passed to the optimizer. 
+    By default, lavaan uses \code{"nlminb"}. See the manpage of 
+    \code{\link{nlminb}} for an overview of the control parameters. 
+    A different optimizer can be chosen by setting the value of 
+    \code{optim.method}. For unconstrained optimization (the model syntax 
+    does not include any "==", ">" or "<" operators),
+    the available options are \code{"nlminb"} (the default), \code{"BFGS"} and 
+    \code{"L-BFGS-B"}. See the manpage of the \code{\link{optim}} function for
+    the control parameters of the latter two options. For constrained
+    optimization, the only available option is \code{"nlminb.constr"}.}
 \item{start}{If it is a character string,
     the two options are currently \code{"simple"} and \code{"Mplus"}. 
     In the first
