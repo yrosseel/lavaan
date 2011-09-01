@@ -7,7 +7,7 @@
 
 # mle using EM
 estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
-                                 max.iter = 500L, tol = 1e-04) {
+                                 max.iter = 500L, tol = 1e-05) {
 
     if(verbose) {
         cat("\n")

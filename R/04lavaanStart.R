@@ -113,13 +113,21 @@ StartingValues <- function(start.method = "default",
                             user$op    == "~~"      & 
                             user$lhs %in% ov.names  & 
                             user$lhs == user$rhs)
-        start[ov.var.idx] <- (1.0 - 0.50) * sample@var[[g]]
+        if(start.initial == "mplus") {
+            start[ov.var.idx] <- (1.0 - 0.50) * sample@var[[1L]]
+        } else {
+            start[ov.var.idx] <- (1.0 - 0.50) * sample@var[[g]]
+        }
 
         # 2. intercepts
         ov.int.idx <- which(user$group == g         &
                             user$op == "~1"         & 
                             user$lhs %in% ov.names)
-        start[ov.int.idx] <- sample@mean[[g]]
+        if(start.initial == "mplus") {
+            start[ov.int.idx] <- sample@mean[[1L]]
+        } else {
+            start[ov.int.idx] <- sample@mean[[g]]
+        }
 
         # 3. exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {
