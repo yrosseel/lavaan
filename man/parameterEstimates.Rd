@@ -19,9 +19,9 @@ parameterEstimates(object, level = 0.95, boot.ci.type = "bca.simple")
   bias).}
 }
 \value{
-  A data.frame containing both unstandardized and standardized model 
-  parameters, standard errors (for the unstandardized estimates), and
-  z-values.
+  A data.frame containing the estimated parameters,
+  parameters, standard errors, z-values, and the lower and upper values
+  of the confidence intervals.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
