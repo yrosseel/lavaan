@@ -945,6 +945,18 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
             converged <- FALSE
         }
     } else if(OPTIMIZER == "NLMINB.CONSTR") {
+
+        control.nlminb <- list(eval.max=20000L,
+                               iter.max=10000L,
+                               trace=0L,
+                               abs.tol=1e-20,
+                               rel.tol=1e-10,
+                               x.tol=1.5e-8,
+                               step.min=2.2e-14)
+        control.nlminb <- modifyList(control.nlminb, control)
+        control.nlminb <- control.nlminb[c("eval.max", "iter.max", "trace",
+                                           "abs.tol", "rel.tol", "x.tol",
+                                           "step.min")]
         cin <- cin.jac <- ceq <- ceq.jac <- NULL
         if(!is.null(body(object@cin.function))) cin     <- object@cin.function
         if(!is.null(body(object@cin.jacobian))) cin.jac <- object@cin.jacobian
@@ -955,9 +967,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
                                    objective=minimize.this.function,
                                    gradient=first.derivative.param,
                                    #gradient=first.derivative.param.numerical,
-                                   control=list(iter.max=iter.max,
-                                                eval.max=iter.max*2,
-                                                trace=trace),
+                                   control=control.nlminb,
                                    scale=SCALE,
                                    verbose=verbose,
                                    cin = cin, cin.jac = cin.jac,
