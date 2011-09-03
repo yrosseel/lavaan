@@ -50,7 +50,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         # for now, we use mimic=Mplus as the default, but since
         # there are an increasing number of Mplus oddities, we will
         # make our own decisions in the future.
-        opt$mimic <- "Mplus"
+        opt$mimic <- "lavaan"
     } else if(opt$mimic == "mplus") {
         opt$mimic <- "Mplus"
     } else if(opt$mimic == "eqs") {
@@ -59,7 +59,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         cat("Warning: mimic=\"LISREL\" is not ready yet. Using EQS instead.\n")
         opt$mimic <- "EQS"
     } else {
-        stop("mimic must be \"Mplus\" or \"EQS\" \n")
+        stop("mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
     }
 
     # representation

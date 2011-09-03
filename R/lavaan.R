@@ -220,6 +220,7 @@ lavaan <- function(# user-specified model syntax
                        user         = lavaanUser, 
                        sample       = lavaanSample, 
                        model.type   = lavaanOptions$model.type,
+                       mimic        = lavaanOptions$mimic,
                        debug        = lavaanOptions$debug)
     timing$Start <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

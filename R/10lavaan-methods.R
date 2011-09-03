@@ -229,7 +229,7 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
     cat("\n")
 
     # local print function
-    print.estimate <- function(name="ERROR", i=1) {
+    print.estimate <- function(name="ERROR", i=1, z.stat=TRUE) {
        
         # cut name if (still) too long
         name <- substr(name, 1, 13)
@@ -240,6 +240,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             } else if(se[i] == 0) {
                 txt <- sprintf("    %-13s %9.3f\n", name, est[i])
             } else if(est[i]/se[i] > 9999.999) {
+                txt <- sprintf("    %-13s %9.3f %8.3f\n", name, est[i], se[i])
+            } else if(!z.stat) {
                 txt <- sprintf("    %-13s %9.3f %8.3f\n", name, est[i], se[i])
             } else {
                 z <- est[i]/se[i]
@@ -253,6 +255,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             } else if(se[i] == 0) {
                 txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
             } else if(est[i]/se[i] > 9999.999) {
+                txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
+            } else if(!z.stat) {
                 txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
             } else {
                 z <- est[i]/se[i]
@@ -381,7 +385,11 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             NAMES[var.idx] <- makeNames(  object@User$rhs[var.idx],
                                         object@User$label[var.idx])
             for(i in var.idx) {
-                print.estimate(name=NAMES[i], i)
+                if(object@Options$mimic == "lavaan") {
+                    print.estimate(name=NAMES[i], i, z.stat=FALSE)
+                } else {
+                    print.estimate(name=NAMES[i], i, z.stat=TRUE)
+                }
             }
             cat("\n")
         }

@@ -15,7 +15,7 @@ Sample <- function(data=NULL,
                    group.label=character(0),
                    estimator="ML",
                    likelihood="normal",
-                   mimic="Mplus",
+                   mimic="lavaan",
                    meanstructure=FALSE,
                    missing="listwise",
 

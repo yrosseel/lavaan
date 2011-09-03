@@ -10,19 +10,27 @@ StartingValues <- function(start.method = "default",
                            user         = NULL, 
                            sample       = NULL,
                            model.type   = "sem",
+                           mimic        = "lavaan",
                            debug        = FALSE) {
 
     # check arguments
     stopifnot(is.list(user), class(sample) == "Sample")
 
     # check start.method
-    start.initial <- "mplus"
+    if(mimic == "lavaan") {
+        start.initial <- "lavaan"
+    } else if(mimic == "Mplus") {
+        start.initial <- "mplus"
+    } else {
+        # FIXME: use LISREL/EQS/AMOS/.... schems
+        start.initial <- "lavaan"
+    }
     start.user    <- NULL
     if(is.character(start.method)) {
         start.method <- tolower(start.method)
         if(start.method == "default") {
             # nothing to do
-        } else if(start.method %in% c("simple", "mplus")) { 
+        } else if(start.method %in% c("simple", "lavaan", "mplus")) { 
             start.initial <- start.method
         } else {
             stop("lavaan ERROR: unknown value for start argument")
@@ -66,7 +74,8 @@ StartingValues <- function(start.method = "default",
     # 1. =~ factor loadings: 1.0 
     start[ which(user$op == "=~") ] <- 1.0
 
-    if(start.initial == "mplus" && model.type %in% c("sem", "cfa")) {
+    if(start.initial %in% c("lavaan", "mplus") && 
+       model.type %in% c("sem", "cfa")) {
         # or slightly better using 2sls
         for(g in 1:ngroups) {
             if(!sum( user$ustart[ user$op == "=~" & user$group == g], 
@@ -143,7 +152,8 @@ StartingValues <- function(start.method = "default",
     # growth models:
     # - compute starting values for mean latent variables
     # - compute starting values for variance latent variables
-    if(start.initial == "mplus" && model.type == "growth") {
+    if(start.initial %in% c("lavaan", "mplus") && 
+       model.type == "growth") {
         ### DEBUG ONLY
         #lv.var.idx <- which(user$op == "~~"                &
         #                user$lhs %in% lv.names &
