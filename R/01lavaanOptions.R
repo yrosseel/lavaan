@@ -45,11 +45,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     }
 
     # mimic
-    if(opt$mimic == "default") {
-        # WARNING: this will likely change soon
-        # for now, we use mimic=Mplus as the default, but since
-        # there are an increasing number of Mplus oddities, we will
-        # make our own decisions in the future.
+    if(opt$mimic == "default" || opt$mimic == "lavaan") {
         opt$mimic <- "lavaan"
     } else if(opt$mimic == "mplus") {
         opt$mimic <- "Mplus"

@@ -85,8 +85,8 @@ independence.model.fit <- function(object) {
                   auto.cov.y      = lavaanOptions$auto.cov.y,
 
                   ngroups         = object@Sample@ngroups,
-                  group.equal     = lavaanOptions$group.equal,
-                  group.partial   = lavaanOptions$group.partial,
+                  group.equal     = NULL,
+                  group.partial   = NULL,
                   debug           = lavaanOptions$debug,
                   warn            = lavaanOptions$warn,
 

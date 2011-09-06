@@ -45,6 +45,45 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
     trace.UGamma
 }
 
+testStatisticYuanBentler <- function(sample=sample,
+                                     A1.group=NULL,
+                                     B1.group=NULL,
+                                     Delta=NULL,
+                                     E.inv=NULL,
+                                     x.idx=integer(0)) {
+
+    # we always assume a meanstructure
+    meanstructure <- TRUE
+
+    trace.UGamma <- numeric( sample@ngroups )
+    trace.h1     <- numeric( sample@ngroups )
+    trace.h0     <- numeric( sample@ngroups )
+
+    for(g in 1:sample@ngroups) {
+        A1 <- A1.group[[g]]
+        B1 <- B1.group[[g]]
+
+        # mask independent 'fixed-x' variables
+        # note: this only affects the saturated H1 model
+        if(length(x.idx) > 0L) {
+            idx <- eliminate.pstar.idx(nvar=sample@nvar, el.idx=x.idx,
+                                       meanstructure=meanstructure, type="all")
+            A1 <- A1[idx,idx]
+            B1 <- B1[idx,idx]
+        }
+
+        trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
+        trace.h0[g]     <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% A1) * t( solve(A1) ) )
+                           
+        trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
+    }
+
+    attr(trace.UGamma, "h1") <- trace.h1
+    attr(trace.UGamma, "h0") <- trace.h0
+
+    trace.UGamma
+}
+
 testStatisticYuanBentler.Mplus <- function(sample=sample, 
                                            information="observed",
                                            B0.group=NULL,
@@ -72,7 +111,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
         # note: this only affects the saturated H1 model
         if(length(x.idx) > 0L) {
             idx <- eliminate.pstar.idx(nvar=sample@nvar, el.idx=x.idx,
-                                       meanstructure=TRUE, type="all")
+                                       meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
         }
@@ -283,20 +322,48 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                     estimator   = "ML",
                                     information = information)
         }
-        if(is.null(B0.group)) {
-            Nvcov <- Nvcov.first.order(object = object, sample = sample)
-            B0.group <- attr(Nvcov, "B0.group")
-        }
 
         if(mimic == "Mplus") {
+            if(is.null(B0.group)) {
+                Nvcov <- Nvcov.first.order(object = object, sample = sample)
+                B0.group <- attr(Nvcov, "B0.group")
+            } 
             trace.UGamma <- 
                 testStatisticYuanBentler.Mplus(sample=sample,
                                                information=information,
                                                B0.group=B0.group,
                                                E.inv=E.inv,
                                                x.idx=x.idx)
-        } else if(test == "yuan.bentler" && mimic != "Mplus") {
-            cat("lavaan WARNING: test `yuan.bentler' only available if mimic=Mplus (for now)")
+        } else {
+            Delta <- computeDelta(object)
+            Sigma.hat <- computeSigmaHat(object)
+            if(object@meanstructure) Mu.hat <- computeMuHat(object)
+            A1.group <- vector("list", length=sample@ngroups)
+            B1.group <- vector("list", length=sample@ngroups)
+            for(g in 1:sample@ngroups) {
+                if(sample@missing.flag[g]) {
+                    X <- NULL
+                    M <- sample@missing[[g]]
+                } else {
+                    X <- sample@data.obs[[g]]
+                    M <- NULL
+                }
+                out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat[[g]], 
+                                           Mu.hat=Mu.hat[[g]], 
+                                           X=X,
+                                           M=M,
+                                           Abeta=TRUE, Bbeta=TRUE, 
+                                           information=information)
+                A1.group[[g]] <- out$Abeta
+                B1.group[[g]] <- out$Bbeta
+            }
+            trace.UGamma <-
+                testStatisticYuanBentler(sample=sample,
+                                         A1.group=A1.group,
+                                         B1.group=B1.group,
+                                         Delta=Delta,
+                                         E.inv=E.inv,
+                                         x.idx=x.idx)
         }
 
         scaling.factor       <- sum(trace.UGamma) / df
