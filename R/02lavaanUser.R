@@ -914,6 +914,12 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                     FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
                     rhs.mod <- 1L
                 }
+                if(op == "=~" && rhs == "0") {
+                    mod$fixed <- 0
+                    FLAT.rhs[FLAT.idx] <- FLAT.lhs[FLAT.idx]
+                    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
+                    rhs.mod <- 1L
+                }
 
                 FLAT.rhs.mod.idx[FLAT.idx] <- rhs.mod
 
