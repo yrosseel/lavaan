@@ -272,7 +272,8 @@ lavaan <- function(# user-specified model syntax
                                      sample  = lavaanSample,
                                      options = lavaanOptions,
                                      x       = x,
-                                     VCOV    = VCOV)
+                                     VCOV    = VCOV,
+                                     data    = data)
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

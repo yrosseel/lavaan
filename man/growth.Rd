@@ -103,14 +103,19 @@ growth(model.syntax = '', fixed.x = "default",
     used depending on the estimator, the mimic option, and whether the data
     are complete or not.
     If \code{"boot"} or \code{"bootstrap"}, bootstrap standard errors are
-    computed using standard bootstrapping.
+    computed using standard bootstrapping (unless Bollen-Stine bootstrapping
+    is requested for the test statistic; in this case bootstrap standard 
+    errors are computed using model-based bootstrapping).
     If \code{"none"}, no standard errors are computed.}
-\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{test}{If \code{"standard"}, a conventional chi-square test is computed.
     If \code{"Satorra-Bentler"}, a Satorra-Bentler scaled test statistic is
     computed. If \code{"Yuan-Bentler"}, a Yuan-Bentler scaled test statistic
-    is computed. If \code{"default"}, the value depends on the
+    is computed. If \code{"boot"} or \code{"bootstrap"} or 
+    \code{"bollen.stine"}, the Bollen-Stine bootstrap is used to compute
+    the bootstrap probability value of the test statistic.
+    If \code{"default"}, the value depends on the
     values of other arguments.}
+\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
     If \code{"default"}, the value is (currently) set to \code{"Mplus"}.}

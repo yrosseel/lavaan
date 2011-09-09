@@ -12,15 +12,16 @@
 
 lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                                 model=NULL, sample=NULL, options=NULL,
-                                max.iter=1000L, verbose=FALSE, b.iter=0L) {
+                                max.iter=1000L, verbose=FALSE, b.iter=0L,
+                                Sigma.hat=NULL, Mu.hat=NULL) {
 
     # verbose
     if(verbose) {
         if(b.iter == -1L) { 
             cat("  ... bootstrap draw: ")
         } else {
-            b.iter <- b.iter + 1
             cat("  ... bootstrap draw number: ", b.iter)
+            b.iter <- b.iter + 1
         }
     }
 
@@ -28,12 +29,15 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
 
     # 3. construct lavaan Sample (S4) object: description of the data
     bootSample <-
-        try( Sample(data          = data[boot.idx,],
+        try( Sample(data          = data,
                     group         = options$group,
                     sample.cov    = NULL,
                     sample.mean   = NULL,
                     sample.nobs   = NULL,
                     std.ov        = FALSE,
+                    boot.idx      = boot.idx,
+                    model.cov     = Sigma.hat,
+                    model.mean    = Mu.hat,
 
                     ov.names      = sample@ov.names,
                     data.type     = "full",
@@ -71,10 +75,13 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
         return(rep(NA, npar))
     }
 
-    if(verbose) cat("     ok -- niter = ", attr(x, "iterations"), "\n")
+    if(verbose) cat("     ok -- niter = ", attr(x, "iterations"), 
+                    " fx = ", attr(x, "fx"), "\n")
 
-    # strip attributes
-    attributes(x) <- NULL
+    # strip attributes if not bollen.stine
+    if(is.null(Sigma.hat)) {
+        attributes(x) <- NULL
+    } 
 
     x
 }
@@ -95,6 +102,17 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
     N <- sample@ntotal
     BOOT <- matrix(NA, R, npar)
 
+    # bollen.stine? We need the Sigma.hat values
+    # FIXME: What about Mu.hat? Do we need to correct for that too??? YES!
+    if(options$test == "bollen.stine") {
+        Sigma.hat <- computeSigmaHat(model)
+        Mu.hat <- computeMuHat(model) 
+        fx.group <- matrix(NA, R, sample@ngroups)
+    } else {
+        Sigma.hat <- NULL
+        Mu.hat <- NULL
+    }
+
     # run bootstraps
     error.idx <- integer(0)
     for(b in 1:R) {
@@ -102,24 +120,44 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
         boot.idx <- sample(x=N, size=N, replace=TRUE)
 
         # run bootstrap draw
+        ok <- TRUE
         x <- lavaanBootStatistic(data=data, boot.idx=boot.idx, start=start,
                                  model=model, sample=sample, options=options,
-                                 max.iter=max.iter, verbose=verbose, b.iter=b)
+                                 max.iter=max.iter, verbose=verbose, b.iter=b,
+                                 Sigma.hat=Sigma.hat, Mu.hat=Mu.hat)
 
         # catch faulty run
-        if(any(is.na(x))) error.idx <- c(error.idx, b)    
+        if(any(is.na(x))) { 
+            error.idx <- c(error.idx, b)    
+            ok <- FALSE
+        }
 
+        # store parameters
         BOOT[b,] <- x
+
+        # store fx.group
+        if(options$test == "bollen.stine" && ok) {
+            fx.group[b,] <- attr(attr(x, "fx"), "fx.group")
+        }
     }
 
     # handle errors
     if(length(error.idx) > 0L) {
         warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
-        BOOT <- BOOT[-error.idx,]
+        BOOT <- BOOT[-error.idx,,drop=FALSE]
         attr(BOOT, "error.idx") <- error.idx
+
+        if(options$test == "bollen.stine") {
+            fx.group <- fx.group[-error.idx,,drop=FALSE]
+        }
+
     } else {
         if(verbose) cat("Number of successful bootstrap draws:", 
                         nrow(BOOT), "\n")
+    }
+
+    if(options$test == "bollen.stine") {
+        attr(BOOT, "fx.group") <- fx.group
     }
 
     BOOT

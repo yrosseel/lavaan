@@ -422,27 +422,30 @@ lavaanify <- function(model.syntax    = NULL,
     LIST$mod.idx <- NULL
 
     # check if CON contains *simple* equality constraints (eg b1 == b2)
-    if(length(CON) > 0L) {
-        el.idx <- integer(0L)
-        for(el in 1:length(CON)) {
-            if(CON[[el]]$op == "==") {
-                lhs.idx <- which(LIST$label == CON[[el]]$lhs)
-                rhs.idx <- which(LIST$label == CON[[el]]$rhs)
-                if(length(lhs.idx) && length(rhs.idx)) {
-                    # flag this constraint (to be removed)
-                    el.idx <- c(el.idx, el)
-                    # fill in equal and fix
-                    if(LIST$equal[lhs.idx] == "") {
-                        LIST$equal[rhs.idx] <- LIST$label[lhs.idx]
-                    } else {
-                        LIST$equal[rhs.idx] <- LIST$equal[lhs.idx]
-                    }
-                    LIST$free[ rhs.idx] <- 0L
-                }
-            }
-        }
-        if(length(el.idx) > 0L) CON <- CON[-el.idx]
-    }
+    # FIXME!!!
+    # b1 == b3
+    # b2 == b3 does not work
+    #if(length(CON) > 0L) {
+    #    el.idx <- integer(0L)
+    #    for(el in 1:length(CON)) {
+    #        if(CON[[el]]$op == "==") {
+    #            lhs.idx <- which(LIST$label == CON[[el]]$lhs)
+    #            rhs.idx <- which(LIST$label == CON[[el]]$rhs)
+    #            if(length(lhs.idx) && length(rhs.idx)) {
+    #                # flag this constraint (to be removed)
+    #                el.idx <- c(el.idx, el)
+    #                # fill in equal and fix
+    #                if(LIST$equal[lhs.idx] == "") {
+    #                    LIST$equal[rhs.idx] <- LIST$label[lhs.idx]
+    #                } else {
+    #                    LIST$equal[rhs.idx] <- LIST$equal[lhs.idx]
+    #                }
+    #                LIST$free[ rhs.idx] <- 0L
+    #            }
+    #        }
+    #    }
+    #    if(length(el.idx) > 0L) CON <- CON[-el.idx]
+    #}
 
     # group.equal and group.partial
     if(ngroups > 1 && length(group.equal) > 0) {

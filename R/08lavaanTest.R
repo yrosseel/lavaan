@@ -132,7 +132,8 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
            
 
 computeTestStatistic <- function(object, user=NULL, sample=NULL, 
-                                 options=NULL, x=NULL, VCOV=NULL) {
+                                 options=NULL, x=NULL, VCOV=NULL,
+                                 data=NULL) {
 
     estimator   <- options$estimator
     mimic       <- options$mimic
@@ -388,7 +389,43 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                           trace.UGamma=trace.UGamma)
 
     } else if(test == "bootstrap" || test == "bollen.stine") {
-        cat("lavaan WARNING: method `bootstrap' (bollen.stine) not available yet")
+        # check if we have bootstrap data
+        BOOT <- attr(VCOV, "BOOT")
+        if(is.null(BOOT)) {
+            if(!is.null(options$bootstrap)) {
+                R <- options$bootstrap
+            } else {
+                R <- 1000L
+            }
+            BOOT <- bootstrapParameters.internal(model=object, sample=sample,
+                        options=options, data=data, R=R, 
+                        verbose=options$verbose)
+        }    
+
+        fx.group <- attr(BOOT, "fx.group")
+        if(sample@ngroups > 1L) {
+            boot.group <- t(apply(fx.group, 1, '*', NFAC))
+            boot.group[which(boot.group < 0)] <- 0.0
+            T.boot <- apply(boot.group, 1, sum)
+        } else {
+            boot.group <- fx.group * NFAC
+            boot.group[which(boot.group < 0)] <- 0.0
+            T.boot <- boot.group
+        }
+
+        # p-value
+        boot.larger <- sum(T.boot > chisq)
+        boot.length <- length(T.boot)
+        pvalue.boot <- boot.larger/boot.length
+
+        TEST[[2]] <- list(test="bootstrap",
+                          stat=chisq,
+                          stat.group=chisq.group,
+                          df=df,
+                          pvalue=pvalue.boot,
+                          boot.T=T.boot,
+                          boot.larger=boot.larger,
+                          boot.length=boot.length)
     }
 
     TEST

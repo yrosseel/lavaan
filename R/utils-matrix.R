@@ -364,6 +364,19 @@ K.mn.pre <- function(A, m = 1L, n = 1L) {
     OUT
 }
 
-## 
 
+# square root of a positive definite symmetric matrix
+sqrtSymmetricMatrix <- function(A = matrix(0,0,0)) {
+
+    n <- nrow(A)
+
+    # eigen decomposition
+    A.eigen <- eigen(A)
+    V <- A.eigen$vectors; d <- A.eigen$values
+
+    # sqrt the eigenvalues and reconstruct
+    A.sqrt <- V %*% diag(sqrt(d), n, n) %*% t(V)
+
+    A.sqrt
+}
 

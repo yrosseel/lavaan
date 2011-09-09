@@ -142,6 +142,13 @@ short.summary <- function(object) {
                   sprintf("  %10.3f", object@Fit@test[[2]]$pvalue), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
+        # 3b. Do we have a Bollen-Stine p-value?
+        if(object@Options$test == "bollen.stine") {
+            t0.txt <- sprintf("  %-40s", "P-value (Bollen-Stine Boostrap)")
+            t1.txt <- sprintf("  %10.3f", object@Fit@test[[2]]$pvalue)
+            cat(t0.txt, t1.txt, "\n", sep="")
+        }
+
         # 4. Scaling correction factor
         if(scaled) {
             t0.txt <- sprintf("  %-40s", "Scaling correction factor")
@@ -1092,11 +1099,12 @@ function(object, ...) {
         #if(!all(sapply(COVS, all.equal, COVS[[1]]))) {
         #    stop("lavaan ERROR: models must be fit to the same data")
         #}
-        # 2. nested models? 
+        # 2. nested models? *different* npars?
      
         # TODO!
         
         # 3. all meanstructure?
+
         
     }
 

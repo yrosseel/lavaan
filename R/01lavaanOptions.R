@@ -93,14 +93,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # default test statistic
     if(opt$test == "default") {
         opt$test <- "standard"
-    } else if(opt$test %in% c("none", "standard", 
-                              "satorra.bentler", "yuan.bentler",
-                              "bollen.stine", "bootstrap")) {
+    } else if(opt$test %in% c("none", "standard")) {
         # nothing to do
-    } else if(opt$test == "satorra" || opt$test == "satorra-bentler") {
+    } else if(opt$test == "satorra" || 
+              opt$test == "sb" || 
+              opt$test == "SB" ||
+              opt$test == "satorra.bentler" ||
+              opt$test == "satorra-bentler") {
         opt$test <- "satorra.bentler"
-    } else if(opt$test == "yuan" || opt$test == "yuan-bentler") {
+    } else if(opt$test == "yuan" || 
+              opt$test == "yb" ||
+              opt$test == "YB" ||
+              opt$test == "yuan.bentler" ||
+              opt$test == "yuan-bentler") {
         opt$test <- "yuan.bentler"
+    } else if(opt$test == "bootstrap" || 
+              opt$test == "boot" ||
+              opt$test == "bollen.stine" || 
+              opt$test == "bollen-stine") {
+        opt$test <- "bollen.stine"
     } else {
         stop("`test' argument must one of \"none\", \"standard\"",
              "\"satorra.bentler\", \"yuan.bentler\", \"bollen.stine\"",

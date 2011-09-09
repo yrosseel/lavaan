@@ -8,6 +8,9 @@ Sample <- function(data=NULL,
                    sample.mean=NULL,
                    sample.nobs=NULL,
                    std.ov=FALSE,
+                   boot.idx=NULL,
+                   model.cov=NULL,
+                   model.mean=NULL,
 
                    ov.names=character(0),
                    data.type="unknown",
@@ -80,6 +83,41 @@ Sample <- function(data=NULL,
                 data.obs <- scale(data.obs)[,]
             }
 
+            # transform observed variables?
+            # eg. bollen-stine bootstrap
+            # FIXME: we do this for every bootstrap draw now,
+            #        while, we should only this  ONCE!
+            #        WE NEED A NEW DATA-FLOW!!
+            if(!is.null(model.cov) && !missing.flag[g]) {
+                d.cov[[g]] <- cov(data.obs, use="pairwise") # full dataset
+                sigma.sqrt <- sqrtSymmetricMatrix(model.cov[[g]])
+                S.inv.sqrt <- sqrtSymmetricMatrix( solve(d.cov[[g]]) )
+
+                # center
+                data.obs <- scale(data.obs, center=TRUE, scale=FALSE)
+
+                # transform
+                data.obs <- data.obs %*% S.inv.sqrt %*% sigma.sqrt
+
+                # add model.mean[[g]]
+                if(!is.null(model.mean)) {
+                    data.obs <- scale(data.obs, center=(-1*model.mean[[g]]), 
+                                      scale=FALSE)
+                }
+            }
+
+            # bootstrap sample?
+            if(!is.null(boot.idx)) {
+                if(ngroups == 1L) {
+                    data.obs <- data.obs[boot.idx,]
+                } else {
+                    CASE.idx <- which(case.idx)
+                    in.idx <- ( boot.idx[which(boot.idx %in% CASE.idx)] -
+                                min(CASE.idx) + 1L )
+                    data.obs <- data.obs[in.idx,]
+                }
+            }
+
             # missing data?
             d.missing[[g]] <- list()
             if(!missing.flag[g]) {
@@ -133,6 +171,7 @@ Sample <- function(data=NULL,
             if(!missing.flag[g]) {
                 d.data[[g]] <- data.obs
             }
+
         } # ngroups
 
     } 
@@ -152,12 +191,7 @@ Sample <- function(data=NULL,
             if(g == 1 && ( sum(diag(tmp.cov)) == ncol(tmp.cov) ) ) {
                 # ok, we do not stop here, but spit out a big fat warning
                 text <- 
-paste("  \nsample covariance matrix looks like a correlation matrix!\n\n",
-      "  lavaan currently does not support the analysis of correlation\n",
-      "  matrices; the standard errors in the summary output will be most \n",
-      "  likely wrong; see the following reference:\n\n",
-      "  Cudeck, R. (1989). Analysis of correlation matrices using covariance\n",
-      "  structure models. Psychological Bulletin, 105, 317-327.\n\n", sep="")
+paste("  \nsample covariance matrix looks like a correlation matrix!\n")
                 warning(text)
             }
  
