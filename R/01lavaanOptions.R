@@ -73,11 +73,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # missing
     if(opt$missing == "default") {
-        #if(opt$mimic == "Mplus") { # since version 5?
-        #    opt$missing <- "ml"
-        #} else {
+        if(opt$mimic == "Mplus") { # since version 5?
+            opt$missing <- "ml"
+        } else {
             opt$missing <- "listwise"
-        #}
+        }
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
     } else if(opt$missing %in% c("two.stage", "listwise")) {
@@ -274,7 +274,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(is.logical(opt$fixed.x)) {
         # nothing to do
     } else if(opt$fixed.x == "default") {
-        if(opt$estimator == "ML" && opt$mimic == "Mplus") {
+        if(opt$estimator == "ML" && (opt$mimic == "Mplus" || 
+                                     opt$mimic == "lavaan")) {
             opt$fixed.x <- TRUE
         } else {
             opt$fixed.x <- FALSE

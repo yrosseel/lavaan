@@ -195,11 +195,12 @@ function(object) {
 })
 
 setMethod("summary", "lavaan",
-function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
+function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE, std.nox=FALSE,
          modindices=FALSE) {
 
     ov.names <- vnames(object@User, "ov")
     lv.names <- vnames(object@User, "lv")
+    if(std.nox) standardized <- TRUE
 
     # always print the 'short' summary
     short.summary(object)
@@ -258,13 +259,13 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
             }
         } else {
             if(is.na(se[i])) {
-                txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
+                txt <- sprintf("    %-13s %9.3f %8.3f                   %8.3f %8.3f\n", name, est[i], se[i], est.std[i], est.std.all[i])
             } else if(se[i] == 0) {
                 txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
             } else if(est[i]/se[i] > 9999.999) {
-                txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
+                txt <- sprintf("    %-13s %9.3f %8.3f                   %8.3f %8.3f\n", name, est[i], se[i], est.std[i], est.std.all[i])
             } else if(!z.stat) {
-                txt <- sprintf("    %-13s %9.3f                            %8.3f %8.3f\n", name, est[i], est.std[i], est.std.all[i])
+                txt <- sprintf("    %-13s %9.3f %8.3f                   %8.3f %8.3f\n", name, est[i], se[i], est.std[i], est.std.all[i])
             } else {
                 z <- est[i]/se[i]
                 pval <- 2 * (1 - pnorm( abs(z) ))
@@ -279,7 +280,11 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
     se  <- object@Fit@se
     if(rsquare || standardized) {
         est.std    <- standardize.est.lv(object)
-        est.std.all <- standardize.est.all(object, est.std=est.std)
+        if(std.nox) {
+            est.std.all <- standardize.est.all.nox(object, est.std=est.std)
+        } else {
+            est.std.all <- standardize.est.all(object, est.std=est.std)
+        }
     } 
 
     for(g in 1:object@Sample@ngroups) {
@@ -294,7 +299,12 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE,
         if(!standardized) {
             cat("                   Estimate  Std.err  Z-value  P(>|z|)\n")
         } else {
-            cat("                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.all\n")
+            if(std.nox) {
+                cat("                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.nox\n")
+            }
+            else {
+                cat("                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.all\n")
+            }
         }
 
         makeNames <- function(NAMES, LABELS) {
@@ -644,26 +654,30 @@ function(object, type="free", labels=TRUE) {
     cof
 })
 
-standardizedSolution <- standardizedsolution <- function(object, std.YX=TRUE) {
+standardizedSolution <- standardizedsolution <- function(object, type="std.all") {
+
+    stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     LIST <- inspect(object, "list")
-
-    # add est column
-    LIST$est <- object@Fit@est
+    LIST <- LIST[,c("lhs", "op", "rhs", "group")]
 
     # add std and std.all columns
-    LIST$est.std     <- standardize.est.lv(object)
-    if(std.YX) {
-        LIST$est.std.all <- standardize.est.all(object, est.std=LIST$est.std)
+    if(type == "std.lv") {
+        LIST$est.std     <- standardize.est.lv(object)
+    } else if(type == "std.all") {
+        LIST$est.std <- standardize.est.all(object)
+    } else if(type == "std.nox") {
+        LIST$est.std <- standardize.est.all.nox(object)
     }
 
-    # select only a few columns
-    if(std.YX) {
-        LIST <- LIST[,c("lhs", "op", "rhs", "group", "est", 
-                        "est.std", "est.std.all")]
-    } else {
-        LIST <- LIST[,c("lhs", "op", "rhs", "group", "est", "est.std")]
-    }
+    # add 'se' for standardized parameters
+    # TODO!!
+    LIST$se <- rep(NA, length(LIST$lhs))
+
+    # add 'z' column
+    tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+    LIST$z <- LIST$est.std / tmp.se
+    LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
 
     # if single group, remove group column
     if(object@Sample@ngroups == 1L) LIST$group <- NULL
@@ -676,15 +690,19 @@ parameterEstimates <- parameterestimates <-
     function(object, level = 0.95, boot.ci.type = "bca.simple") {
 
     LIST <- inspect(object, "list")
-
+    LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
     # add est and se column
     est <- object@Fit@est
     BOOT <- attr(est, "BOOT")
     attributes(est) <- NULL
     LIST$est <- est
-    LIST$se  <- object@Fit@se
-    tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
-    LIST$z <- LIST$est / tmp.se
+
+    if(object@Options$se != "none") {
+        LIST$se  <- object@Fit@se
+        tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+        LIST$z <- LIST$est / tmp.se
+        LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+    }
 
     # confidence interval
     if(object@Options$se != "none") {
@@ -804,19 +822,9 @@ parameterEstimates <- parameterestimates <-
     }
 
     # add std and std.all columns
-    #LIST$est.std     <- standardize.est.lv(object)
-    #LIST$est.std.all <- standardize.est.all(object, est.std=LIST$est.std)
-
-    # select only a few columns
-    #LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
-    #                "est.std", "est.std.all")]
- 
-    if(object@Options$se == "none") {
-        LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est")]
-    } else {
-        LIST <- LIST[,c("lhs", "op", "rhs", "group", "label", "est", "se", "z",
-                        "ci.lower", "ci.upper")]
-    }
+    #LIST$std.lv  <- standardize.est.lv(object)
+    #LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
+    #LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
 
     # if single group, remove group column
     if(object@Sample@ngroups == 1L) LIST$group <- NULL

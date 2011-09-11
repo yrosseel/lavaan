@@ -15,7 +15,7 @@ independence.model <- function(model.syntax = '', ...) {
 
     # reconstruct model.syntax...
     OV.X <- character(0L)
-    if(no.fit@Options$mimic == "Mplus")
+    if(no.fit@Options$mimic %in% c("lavaan", "Mplus"))
             OV.X <- vnames(no.fit@User, type="ov.x")
     model.syntax <- 
         syntax.independence.model(ov.names   = no.fit@Sample@ov.names,
@@ -33,7 +33,7 @@ independence.model.fit2 <- function(object) {
 
     # construct syntax for independence model
     OV.X <- character(0L)
-    if(object@Options$mimic == "Mplus")
+    if(object@Options$mimic %in% c("lavaan", "Mplus"))
         OV.X <- vnames(object@User, type="ov.x")
     model.syntax <- 
         syntax.independence.model(ov.names   = object@Sample@ov.names,
@@ -50,7 +50,7 @@ independence.model.fit <- function(object) {
 
     # construct syntax for independence model
     OV.X <- character(0L)
-    if(object@Options$mimic == "Mplus")
+    if(object@Options$mimic %in% c("lavaan", "Mplus"))
         OV.X <- vnames(object@User, type="ov.x")
     model.syntax <-
         syntax.independence.model(ov.names   = object@Sample@ov.names,
