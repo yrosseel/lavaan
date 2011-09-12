@@ -687,7 +687,8 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 }
 
 parameterEstimates <- parameterestimates <- 
-    function(object, level = 0.95, boot.ci.type = "bca.simple") {
+    function(object, level = 0.95, boot.ci.type = "bca.simple", 
+             standardized = TRUE) {
 
     LIST <- inspect(object, "list")
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
@@ -822,9 +823,11 @@ parameterEstimates <- parameterestimates <-
     }
 
     # add std and std.all columns
-    #LIST$std.lv  <- standardize.est.lv(object)
-    #LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
-    #LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
+    if(standardized) {
+        LIST$std.lv  <- standardize.est.lv(object)
+        LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
+        LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
+    }
 
     # if single group, remove group column
     if(object@Sample@ngroups == 1L) LIST$group <- NULL
