@@ -74,7 +74,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # missing
     if(opt$missing == "default") {
         if(opt$mimic == "Mplus") { # since version 5?
-            opt$missing <- "ml"
+            opt$missing <- "ml" ## will trigger error if estimator="MLM"!
+            if(opt$estimator == "mlm") {
+                opt$estimator <- "mlr"
+                warning("lavaan WARNING: switching to estimator=MLR; use missing=\"listwise\" explicitly to use estimator=MLM")
+            }
         } else {
             opt$missing <- "listwise"
         }
@@ -136,7 +140,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else {
         stop("meanstructure must be TRUE, FALSE or \"default\"\n")
     }
-
 
     # estimator and se
     if(opt$se == "boot" || opt$se == "bootstrap") {
@@ -285,12 +288,18 @@ setLavaanOptions <- function(opt = formals(lavaan))
     }
 
 
-    # meanstructure
+    # meanstructure again
     if(opt$missing == "ml" || opt$model.type == "growth") {
         opt$meanstructure <- TRUE
     }
     if("intercepts" %in% opt$group.equal ||
        "means" %in% opt$group.equal) {
+        opt$meanstructure <- TRUE
+    }
+    if(opt$se == "robust.mlr" || 
+       opt$se == "robust.mlm" ||
+       opt$test == "satorra.bentler" ||
+       opt$test == "yuan.bentler") {
         opt$meanstructure <- TRUE
     }
     stopifnot(is.logical(opt$meanstructure))

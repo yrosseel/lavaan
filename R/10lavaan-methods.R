@@ -687,8 +687,9 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 }
 
 parameterEstimates <- parameterestimates <- 
-    function(object, level = 0.95, boot.ci.type = "bca.simple", 
-             standardized = TRUE) {
+    function(object, 
+             ci = TRUE, level = 0.95, boot.ci.type = "bca.simple",
+             standardized = FALSE) {
 
     LIST <- inspect(object, "list")
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
@@ -706,7 +707,7 @@ parameterEstimates <- parameterestimates <-
     }
 
     # confidence interval
-    if(object@Options$se != "none") {
+    if(object@Options$se != "none" && ci) {
         # next three lines based on confint.lm
         a <- (1 - level)/2; a <- c(a, 1 - a)
         if(object@Options$se != "bootstrap") {

@@ -209,6 +209,9 @@ modificationIndices <- modificationindices <- modindices <- function(object,
         LIST$sepc.all <- standardize.est.all(object, user=LIST, est=LIST$epc,
                                              est.std=LIST$sepc.lv,
                                              cov.std=FALSE)
+        LIST$sepc.nox <- standardize.est.all.nox(object,user=LIST,est=LIST$epc,
+                                             est.std=LIST$sepc.lv,
+                                             cov.std=FALSE)
     }
 
     # power?
