@@ -195,8 +195,8 @@ function(object) {
 })
 
 setMethod("summary", "lavaan",
-function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE, std.nox=FALSE,
-         modindices=FALSE) {
+function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE, 
+         rsquare=FALSE, std.nox=FALSE, modindices=FALSE) {
 
     ov.names <- vnames(object@User, "ov")
     lv.names <- vnames(object@User, "lv")
@@ -213,6 +213,9 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE, std.nox=
             print.fit.measures( fitMeasures(object) )
         }
     }
+
+
+    if(estimates) {
 
     # main part: parameter estimates
     cat("Parameter estimates:\n\n")
@@ -459,6 +462,8 @@ function(object, fit.measures=FALSE, standardized=FALSE, rsquare=FALSE, std.nox=
             cat("\n")
         }
     } # ngroups
+
+    }
 
 
     # R-square?
