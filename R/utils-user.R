@@ -3,7 +3,8 @@ lavaanNames <- function(object, type="ov") {
 
     if(class(object) == "lavaan") {
          user <- object@User
-    } else if(class(object) == "list") {
+    } else if(class(object) == "list" ||
+              class(object) == "data.frame") {
         user <- object
     }
 
