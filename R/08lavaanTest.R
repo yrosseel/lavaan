@@ -324,7 +324,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                     information = information)
         }
 
-        if(mimic == "Mplus") {
+        if(mimic == "Mplus" || mimic == "lavaan") {
             if(is.null(B0.group)) {
                 Nvcov <- Nvcov.first.order(object = object, sample = sample)
                 B0.group <- attr(Nvcov, "B0.group")

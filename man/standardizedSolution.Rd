@@ -5,16 +5,17 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, std.YX = TRUE)
+standardizedSolution(object, type = "std.all")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{std.YX}{If \code{FALSE}, a single column (est.std) will contain the
-standardized estimates based on the variances of the (continuous) latent
-variables. If \code{TRUE}, an additional column (est.std.all) will contain 
-the standardized estimates based
+\item{type}{If \code{"std.lv"}, the standardized estimates are
+on the variances of the (continuous) latent variables only.
+If \code{"std.all"}, the standardized estimates are based
 on both the variances of both (continuous) observed and latent variables.
-(Residual) covariances are standardized using (residual) variances.}
+If \code{"std.nox"}, the standardized estimates are based
+on both the variances of both (continuous) observed and latent variables, 
+but not the variances of exogenous covariates.}
 }
 \value{
   A data.frame containing both unstandardized and standardized model 

@@ -73,9 +73,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else {
             logl <- c("logl", "unrestricted.logl", "npar", "aic", "bic", "ntotal")
         }
-        if(object@Options$mimic == "Mplus") {
+        #if(object@Options$mimic == "Mplus") {
             logl <- c(logl, "bic2")
-        }
+        #}
         if(scaled) {
             rmsea <- c("rmsea", "rmsea.scaled")
             rmsea.ci <- c("rmsea", "rmsea.ci.lower", "rmsea.ci.upper",
@@ -304,12 +304,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 BIC <- -2*logl.H0 + npar*log(N)
                 indices["bic"] <- BIC
 
-                if(object@Options$mimic == "Mplus") {
-                    # add sample-size adjusted bic
-                    N.star <- (N + 2) / 24
-                    BIC2 <- -2*logl.H0 + npar*log(N.star)
-                    indices["bic2"] <- BIC2
-                }
+                # add sample-size adjusted bic
+                N.star <- (N + 2) / 24
+                BIC2 <- -2*logl.H0 + npar*log(N.star)
+                indices["bic2"] <- BIC2
             }
            
 
@@ -330,7 +328,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             if(scaled) {
                 d <- sum(object@Fit@test[[2]]$trace.UGamma)
             } 
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 GG <- 0
                 RMSEA <- sqrt( max( c((X2/N)/df - 1/(N-GG), 0) ) ) * sqrt(G)
                 if(scaled) {
@@ -361,7 +359,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else {
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.lower"] <- 
                     sqrt( lambda.l/((N-GG)*df) ) * sqrt(G)
@@ -381,7 +379,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else {
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.lower.scaled"] <- 
                     sqrt( lambda.l/((N-GG)*df2) ) * sqrt(G)
@@ -400,7 +398,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else {
             lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.upper"] <- 
                     sqrt( lambda.u/((N-GG)*df) ) * sqrt(G)
@@ -420,7 +418,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else {
             lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.upper.scaled"] <- 
                     sqrt( lambda.u/((N-GG)*df2) ) * sqrt(G)
@@ -433,7 +431,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     if("rmsea.pvalue" %in% fit.measures) {
         if(df > 0) {
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan","Mplus")) {
                 GG <- 0
                 ncp <- (N-GG)*df*0.05^2/G
                 indices["rmsea.pvalue"] <- 
@@ -450,7 +448,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     if("rmsea.pvalue.scaled" %in% fit.measures) {
         df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
         if(df > 0) {
-            if(object@Options$mimic == "Mplus") {
+            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 ncp <- (N-GG)*df2*0.05^2/G
                 indices["rmsea.pvalue.scaled"] <- 
