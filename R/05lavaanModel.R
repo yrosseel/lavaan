@@ -208,37 +208,49 @@ Model <- function(user           = NULL,
     def.function <- function(x, ...) NULL
     def.idx <- which(user$op == ":=")
     if(length(def.idx) > 0L) {
-        lhs.names <- character(length(def.idx))
-        BODY.txt <- paste("{\nout <- rep(NA, ", length(def.idx), ")\n", sep="")
-        for(i in 1:length(def.idx)) {
-            lhs <- user$lhs[ def.idx[i] ]
-            rhs <- user$rhs[ def.idx[i] ]
-            lhs.names[i] <- as.character(lhs)
-            def.string <- rhs # expression must be on the right-hand side
-            # coerce to expression to extract variable names
-            def.labels <- all.vars( parse(file="", text=def.string) )
-            # get corresponding 'x' indices
-            def.x.idx  <- user$free[match(def.labels, user$label)]
-            if(any(is.na(def.x.idx))) {
-                stop("lavaan ERROR: unknown label(s) in variable definition: ",
-                     paste(def.labels[which(is.na(def.x.idx))], collapse=" "))
-            }
-            if(any(def.x.idx == 0)) {
-                stop("lavaan ERROR: non-free parameter(s) in variable definition: ",
-                    paste(def.labels[which(def.x.idx == 0)], collapse=" "))
-            }
-            def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
-            # put both the labels and the expression in the function BODY
-            BODY.txt <- paste(BODY.txt,
-                paste(def.labels, "=",def.x.lab, collapse=";"),"\n",
-                "out[", i, "] = ", def.string, "\n", sep="")
+        BODY.txt <- paste("{\n# parameter definitions\n\n")
+
+        lhs.names <- user$lhs[def.idx]
+        def.labels <- all.vars( parse(file="", text=user$rhs[def.idx]) )
+        # remove the ones in lhs.names
+        idx <- which(def.labels %in% lhs.names)
+        if(length(idx) > 0L) def.labels <- def.labels[-idx]
+
+        # get corresponding 'x' indices
+        def.x.idx  <- user$free[match(def.labels, user$label)]
+        if(any(is.na(def.x.idx))) {
+            stop("lavaan ERROR: unknown label(s) in variable definitions: ",
+                 paste(def.labels[which(is.na(def.x.idx))], collapse=" "))
         }
+        if(any(def.x.idx == 0)) {
+            stop("lavaan ERROR: non-free parameter(s) in variable definitions: ",
+                paste(def.labels[which(def.x.idx == 0)], collapse=" "))
+        }
+        def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
+        # put both the labels the function BODY
+        if(length(def.x.idx) > 0L) {
+            BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+                paste(def.labels, " <- ",def.x.lab, collapse="\n"),
+                "\n", sep="")
+        } 
+
+        # write the definitions literally
+        BODY.txt <- paste(BODY.txt, "\n# parameter definitions\n", sep="")
+        for(i in 1:length(def.idx)) {
+            BODY.txt <- paste(BODY.txt,
+                lhs.names[i], " <- ", user$rhs[def.idx[i]], "\n", sep="")
+        }
+
+        # put the results in 'out'
+        BODY.txt <- paste(BODY.txt, "\nout <- ", 
+            paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
         # what to do with NA values? -> return +Inf???
         BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep="")
         BODY.txt <- paste(BODY.txt, "names(out) <- ", 
             paste("c(\"", paste(lhs.names, collapse="\",\""), "\")\n", sep=""),
             sep="")
         BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
+
         body(def.function) <- parse(file="", text=BODY.txt)
         if(debug) { cat("def.function = \n"); print(def.function); cat("\n") }
     }
