@@ -432,7 +432,8 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
                          object@User$group == g)
         ceq.idx <- which(object@User$op == "==" & object@User$group == g)
         if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
-            slack <- est
+            # set small negative values to zero, to avoid printing " -0.000"
+            slack <- ifelse(abs(est) < 1e-5, 0, est)
             #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
             #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
            
