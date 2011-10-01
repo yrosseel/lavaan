@@ -380,11 +380,16 @@ lavaanify <- function(model.syntax    = NULL,
 
             # check for single argument if multiple groups
             if(ngroups > 1) {
+                # Ok, this is not very consisten:
+                # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1) MOD.start <- rep(MOD.start, ngroups)
+                # B) here we do NOT!
                 if(length(MOD.label) == 1) MOD.label <-
-                    c(MOD.label, paste(MOD.label, ".g", 2:ngroups, sep=""))
-                if(length(MOD.equal) == 1) MOD.equal <- rep(MOD.equal, ngroups)
+                    #c(MOD.label, paste(MOD.label, ".g", 2:ngroups, sep=""))
+                    c(MOD.label, rep("", (ngroups-1L)) )
+                if(length(MOD.equal) == 1) MOD.equal <- 
+                    c(MOD.equal, rep("", (ngroups)) )
             }
 
             # check for wrong number of arguments if multiple groups
