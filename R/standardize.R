@@ -146,7 +146,7 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(user$lhs))
 
-    ov.names <- vnames(object@User, "ov") # not user, which may be incomplet
+    ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
     lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
@@ -261,7 +261,8 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(user$lhs))
 
-    ov.names <- vnames(object@User, "ov") # not user, which may be incomplet
+    ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
+    ov.names.x <- vnames(object@User, "ov.x")
     ov.names.nox <- vnames(object@User, "ov.nox")
     lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
@@ -305,6 +306,7 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
 
         # variances
         rv.idx <- which(user$op == "~~" & !(user$lhs %in% lv.names) & 
+                        !(user$lhs %in% ov.names.x) &
                         user$lhs == user$rhs &
                         user$group == g)
         out[rv.idx] <- ( out[rv.idx] / OV[ match(user$lhs[rv.idx], ov.names) ]
@@ -312,6 +314,8 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
 
         # covariances
         idx <- which(user$op == "~~" & !(user$lhs %in% lv.names) &
+                     !(user$lhs %in% ov.names.x) &
+                     !(user$rhs %in% ov.names.x) &
                      user$lhs != user$rhs &
                      user$group == g)
         if(length(idx) > 0L) {
@@ -332,6 +336,7 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
 
         # 4a. "~1" ov
         idx <- which(user$op == "~1" & !(user$lhs %in% lv.names) &
+                     !(user$lhs %in% ov.names.x) &
                      user$group == g)
         out[idx] <- out[idx] / OV[ match(user$lhs[idx], ov.names) ]
 
