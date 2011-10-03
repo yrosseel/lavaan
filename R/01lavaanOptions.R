@@ -8,6 +8,9 @@
 
 setLavaanOptions <- function(opt = formals(lavaan))
 {
+
+    if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
+
     # everything lowercase
     opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
@@ -74,16 +77,20 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # missing
     if(opt$missing == "default") {
         if(opt$mimic == "Mplus") { # since version 5?
-            opt$missing <- "ml" ## will trigger error if estimator="MLM"!
-            if(opt$estimator == "mlm") {
-                opt$estimator <- "mlr"
-                warning("lavaan WARNING: switching to estimator=MLR; use missing=\"listwise\" explicitly to use estimator=MLM")
+            opt$missing <- "ml" 
+            # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
+            if(opt$estimator %in% c("mlm", "gls", "wls")) {
+                opt$missing <- "listwise"
+                warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS or WLS")
             }
         } else {
             opt$missing <- "listwise"
         }
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
+        if(opt$estimator %in% c("mlm", "gls", "wls")) {
+            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, GLS or WLS")
+        }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
         # nothing to do
     } else {
