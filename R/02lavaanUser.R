@@ -380,7 +380,7 @@ lavaanify <- function(model.syntax    = NULL,
 
             # check for single argument if multiple groups
             if(ngroups > 1) {
-                # Ok, this is not very consisten:
+                # Ok, this is not very consistent:
                 # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1) MOD.start <- rep(MOD.start, ngroups)
@@ -662,18 +662,18 @@ lavaanify <- function(model.syntax    = NULL,
     LIST$free.uncon[idx.free.uncon] <- 1:length(idx.free.uncon)
 
 
-    # handle constraints (if any)
+    # handle constraints (if any) (NOT per group, but overall - 0.4-11)
     if(length(CON) > 0L) {
         #cat("DEBUG:\n"); print(CON)
-        lhs = rep( unlist(lapply(CON, "[[", "lhs")), ngroups)
-         op = rep( unlist(lapply(CON, "[[",  "op")), ngroups)
-        rhs = rep( unlist(lapply(CON, "[[", "rhs")), ngroups)
+        lhs = unlist(lapply(CON, "[[", "lhs"))
+         op = unlist(lapply(CON, "[[",  "op"))
+        rhs = unlist(lapply(CON, "[[", "rhs"))
         LIST$id         <- c(LIST$id,         max(LIST$id) + 1:length(lhs) )
         LIST$lhs        <- c(LIST$lhs,        lhs)
         LIST$op         <- c(LIST$op,         op)
         LIST$rhs        <- c(LIST$rhs,        rhs)
         LIST$user       <- c(LIST$user,       rep(1L, length(lhs)) )
-        LIST$group      <- c(LIST$group,      rep(1:ngroups, each=length(CON)))
+        LIST$group      <- c(LIST$group,      rep(0L, each=length(CON)))
         LIST$free       <- c(LIST$free,       rep(0L, length(lhs)) )
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$fixed.x    <- c(LIST$fixed.x,    rep(0L, length(lhs)) )

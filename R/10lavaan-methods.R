@@ -414,57 +414,58 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             cat("\n")
         }
 
-        # 6. variable definitions
-        def.idx <- which(object@User$op == ":=" &
-                         object@User$group == g)
-        if(length(def.idx) > 0) {
-            cat("Defined parameters:\n")
-            NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx], "")
-            for(i in def.idx) {
-                print.estimate(name=NAMES[i], i)
-            }
-            cat("\n")
-        }
-
-        # 7. constraints
-        cin.idx <- which((object@User$op == "<" | 
-                          object@User$op == ">") &
-                         object@User$group == g)
-        ceq.idx <- which(object@User$op == "==" & object@User$group == g)
-        if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
-            # set small negative values to zero, to avoid printing " -0.000"
-            slack <- ifelse(abs(est) < 1e-5, 0, est)
-            #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
-            #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
-           
-            cat("Constraints:                               Slack (>=0)\n")
-            for(i in c(cin.idx,ceq.idx)) {
-                lhs <- object@User$lhs[i]
-                 op <- object@User$op[i]
-                rhs <- object@User$rhs[i]
-                if(rhs == "0" && op == ">") {
-                    con.string <- paste(lhs, " - 0", sep="")
-                } else if(rhs == "0" && op == "<") {
-                    con.string <- paste(rhs, " - (", lhs, ")", sep="")
-                } else if(rhs != "0" && op == ">") {
-                    con.string <- paste(lhs, " - (", rhs, ")", sep="")
-                } else if(rhs != "0" && op == "<") {
-                    con.string <- paste(rhs, " - (", lhs, ")", sep="")
-                } else if(rhs == "0" && op == "==") {
-                    con.string <- paste(lhs, " - 0", sep="")
-                } else if(rhs != "0" && op == "==") {
-                    con.string <- paste(lhs, " - (", rhs, ")", sep="")
-                }
-                con.string <- abbreviate(con.string, 41, strict = TRUE)
-                txt <- sprintf("    %-41s %8.3f\n", 
-                               con.string, slack[i])
-                cat(txt)
-            }   
-            cat("\n")
-        }
     } # ngroups
 
+    # 6. variable definitions
+    def.idx <- which(object@User$op == ":=")
+    if(length(def.idx) > 0) {
+        if(object@Sample@ngroups > 1) cat("\n")
+        cat("Defined parameters:\n")
+        NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx], "")
+        for(i in def.idx) {
+            print.estimate(name=NAMES[i], i)
+        }
+        cat("\n")
     }
+
+    # 7. constraints
+    cin.idx <- which((object@User$op == "<" | 
+                      object@User$op == ">"))
+    ceq.idx <- which(object@User$op == "==")
+    if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
+        # set small negative values to zero, to avoid printing " -0.000"
+        slack <- ifelse(abs(est) < 1e-5, 0, est)
+        #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
+        #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
+       
+        if(object@Sample@ngroups > 1 && length(def.idx) == 0L) cat("\n")
+        cat("Constraints:                               Slack (>=0)\n")
+        for(i in c(cin.idx,ceq.idx)) {
+            lhs <- object@User$lhs[i]
+             op <- object@User$op[i]
+            rhs <- object@User$rhs[i]
+            if(rhs == "0" && op == ">") {
+                con.string <- paste(lhs, " - 0", sep="")
+            } else if(rhs == "0" && op == "<") {
+                con.string <- paste(rhs, " - (", lhs, ")", sep="")
+            } else if(rhs != "0" && op == ">") {
+                con.string <- paste(lhs, " - (", rhs, ")", sep="")
+            } else if(rhs != "0" && op == "<") {
+                con.string <- paste(rhs, " - (", lhs, ")", sep="")
+            } else if(rhs == "0" && op == "==") {
+                con.string <- paste(lhs, " - 0", sep="")
+            } else if(rhs != "0" && op == "==") {
+                con.string <- paste(lhs, " - (", rhs, ")", sep="")
+            }
+            con.string <- abbreviate(con.string, 41, strict = TRUE)
+            txt <- sprintf("    %-41s %8.3f\n", 
+                           con.string, slack[i])
+            cat(txt)
+        }   
+        cat("\n")
+    }
+
+    } # parameter estimates
 
 
     # R-square?
