@@ -122,26 +122,29 @@ StartingValues <- function(start.method = "default",
                             user$op    == "~~"      & 
                             user$lhs %in% ov.names  & 
                             user$lhs == user$rhs)
+        sample.var.idx <- match(user$lhs[ov.var.idx], ov.names)
         if(start.initial == "mplus") {
-            start[ov.var.idx] <- (1.0 - 0.50) * sample@var[[1L]]
+            start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
         } else {
-            start[ov.var.idx] <- (1.0 - 0.50) * sample@var[[g]]
+            start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[g]][sample.var.idx]
         }
 
         # 2. intercepts
         ov.int.idx <- which(user$group == g         &
                             user$op == "~1"         & 
                             user$lhs %in% ov.names)
+        sample.var.idx <- match(user$lhs[ov.int.idx], ov.names)
         if(start.initial == "mplus") {
-            start[ov.int.idx] <- sample@mean[[1L]]
+            start[ov.int.idx] <- sample@mean[[1L]][sample.var.idx]
         } else {
-            start[ov.int.idx] <- sample@mean[[g]]
+            start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
         }
 
         # 3. exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {
-            exo.idx <- which(user$group == g        &
-                             user$op == "~~"        & 
+            exo.idx <- which(user$group == g          &
+                             user$op == "~~"          & 
+                             user$lhs %in% ov.names.x &
                              user$rhs %in% ov.names.x)
             row.idx <- match(user$lhs[exo.idx], ov.names)
             col.idx <- match(user$rhs[exo.idx], ov.names)
