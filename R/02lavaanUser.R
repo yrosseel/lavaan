@@ -962,8 +962,9 @@ parse.rhs <- function(rhs, debug=FALSE, warn=TRUE) {
     nvar <- length(var.names)
 
     if(nels == 0) {
-        rhs.names <- "intercept"
-        nels <- 1
+        # warning, there may be multiple modifiers
+        nels <- length(strsplit(paste(rhs,collapse=""), "\\+")[[1]])
+        rhs.names <- rep("intercept", nels)
         var.names <- "intercept"
         nvar <- 1
     }
