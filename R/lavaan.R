@@ -76,6 +76,7 @@ lavaan <- function(# user-specified model syntax
                 stop("grouping variable `", group,
                      "' not found in names data:", names(data))
             }
+            # note: we use the order as in the data; not as in levels(data)
             group.label <- unique(as.character(data[,group]))
             if(warn && any(is.na(group.label))) {
                 cat("lavaan WARNING: group variable `", group, "` contains missing values\n",

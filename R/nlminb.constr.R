@@ -144,7 +144,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
         }
         optim.out <- nlminb(start = x.par, objective = auglag, 
                             gradient = fgrad, control = control,
-                            scale = scale)
+                            scale = scale, ...)
         ############################################################
         x.par <- optim.out$par
         r <- optim.out$objective
