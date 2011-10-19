@@ -13,7 +13,7 @@
 lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                                 model=NULL, sample=NULL, options=NULL,
                                 max.iter=1000L, verbose=FALSE, b.iter=0L,
-                                Sigma.hat=NULL, Mu.hat=NULL) {
+                                Sigma.hat=NULL, Mu.hat=NULL, test=FALSE) {
 
     # verbose
     if(verbose) {
@@ -79,7 +79,7 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
                     " fx = ", attr(x, "fx"), "\n")
 
     # strip attributes if not bollen.stine
-    if(is.null(Sigma.hat)) {
+    if(!test) {
         attributes(x) <- NULL
     } 
 
@@ -98,14 +98,14 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
                                type="ordinary", 
                                verbose=FALSE,
                                coef=TRUE,
-                               fx=FALSE,
+                               test=FALSE,
                                FUN=NULL,
                                ...,
                                max.iter=1000L) {
 
     # checks
     stopifnot(!is.null(model), !is.null(sample), !is.null(options), 
-              !is.null(data),
+              !is.null(data), 
               type %in% c("nonparametric", "ordinary", 
                           "bollen.stine", "parametric"))
     if(type == "nonparametric") type <- "ordinary"
@@ -114,12 +114,12 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
     start <- getModelParameters(model, type="free"); npar <- length(start)
     N <- sample@ntotal
 
-    COEF <- FX.GROUP <- NULL
+    COEF <- TEST <- NULL
     if(coef) {
         COEF <- matrix(NA, R, npar)
     } 
-    if(fx) {
-        FX.GROUP <- matrix(NA, R, sample@ngroups)
+    if(test) {
+        TEST <- rep(as.numeric(NA), R)
     }
 
     # bollen.stine or parametric: we need the Sigma.hat values
@@ -143,16 +143,15 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
         }
 
         # run bootstrap draw
-        ok <- TRUE
         x <- lavaanBootStatistic(data=data, boot.idx=boot.idx, start=start,
                                  model=model, sample=sample, options=options,
                                  max.iter=max.iter, verbose=verbose, b.iter=b,
-                                 Sigma.hat=Sigma.hat, Mu.hat=Mu.hat)
+                                 Sigma.hat=Sigma.hat, Mu.hat=Mu.hat, test=test)
 
         # catch faulty run
         if(any(is.na(x))) { 
             error.idx <- c(error.idx, b)    
-            ok <- FALSE
+            next
         }
 
         if(coef) {
@@ -160,9 +159,20 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
             COEF[b,] <- x
         }
 
-        # store fx.group
-        if(fx && ok) {
-            FX.GROUP[b,] <- attr(attr(x, "fx"), "fx.group")
+        # store test statistic
+        if(test) {
+            NFAC <- 2 * unlist(sample@nobs)
+            if(options$estimator == "ML" && options$likelihood == "wishart") {
+                # first divide by two
+                NFAC <- NFAC / 2
+                NFAC <- NFAC - 1
+                NFAC <- NFAC * 2
+            }
+            fx.group <- attr(attr(x, "fx"), "fx.group")
+            chisq.group <- fx.group * NFAC
+            chisq.group[which(chisq.group < 0)] <- 0.0
+            chisq <- sum(chisq.group)
+            TEST[b] <- chisq
         }
     }
 
@@ -172,8 +182,8 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
         COEF <- COEF[-error.idx,,drop=FALSE]
         attr(COEF, "error.idx") <- error.idx
 
-        if(fx) {
-            FX.GROUP <- FX.GROUP[-error.idx,,drop=FALSE]
+        if(test) {
+            TEST <- TEST[-error.idx]
         }
 
     } else {
@@ -181,17 +191,17 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
                         (R - length(error.idx)), "\n")
     }
 
-    list(coef.boot=COEF, fx.group.boot=FX.GROUP)
+    list(coef=COEF, test=TEST)
 }
 
 # using the 'internal' function
 bootstrapLavaan <- function(object, data=NULL, R=1000, type="ordinary", 
-                            verbose=FALSE, coef=TRUE, fx=FALSE,
+                            verbose=FALSE, coef=TRUE, test=FALSE,
                             FUN=NULL, ...) {
 
     # three types of information we may want to return:
     # 1) the coefficients (free only)
-    # 2) the fx.group values (to compute the standard chisquare test statistic)
+    # 2) the test statistic (chisq)
     # 3) any other type of information we can extract from a lavaan S4 object
 
     out <- bootstrap.internal(model=object@Model, 
@@ -201,17 +211,16 @@ bootstrapLavaan <- function(object, data=NULL, R=1000, type="ordinary",
                               verbose=verbose,
                               type=type,
                               coef=coef,
-                              fx=fx,
+                              test=test,
                               FUN=FUN, ...)
 
-    if(coef && !fx && is.null(FUN)) {
+    if(coef && !test && is.null(FUN)) {
         # coefficients only
-        out <- out$coef.boot
-    } else if(!coef && fx && is.null(FUN)) {
-        # fx.group only
-        out <- out$fx.group.boot
-    } else if(coef && fx && is.null(FUN)) {
-        out <- list(coef=out$coef.boot, fx=out$fx.group.boot, FUN=NULL)
+        out <- out$coef
+    } else if(!coef && test && is.null(FUN)) {
+        out <- out$test
+    } else if(coef && test && is.null(FUN)) {
+        out <- list(coef=out$coef, test=out$test, FUN=NULL)
     } 
 
     out
