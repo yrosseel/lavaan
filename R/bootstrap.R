@@ -2,7 +2,7 @@
 # this function draws the bootstrap samples, and estimates the
 # free parameters for each bootstrap sample
 #
-# return BOOT matrix of size R x npar (R = number of bootstrap samples)
+# return COEF matrix of size R x npar (R = number of bootstrap samples)
 # 
 # YR. 9 aug 2011
 #
@@ -89,25 +89,43 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
 
 # Notes: - faulty runs are REMOVED!
 #        - default R=1000
-bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
-                                         data=NULL, R=1000L, verbose=FALSE,
-                                         max.iter=1000L) {
+#
+#        - 3 types: 1) ordinary (=nonparametric), 
+#                   2) bollen.stine (transform data under H0 + nonparametric)
+#                   3) parametric
+bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
+                               data=NULL, R=1000L,
+                               type="ordinary", 
+                               verbose=FALSE,
+                               coef=TRUE,
+                               fx=FALSE,
+                               FUN=NULL,
+                               ...,
+                               max.iter=1000L) {
 
     # checks
     stopifnot(!is.null(model), !is.null(sample), !is.null(options), 
-              !is.null(data))
+              !is.null(data),
+              type %in% c("nonparametric", "ordinary", 
+                          "bollen.stine", "parametric"))
+    if(type == "nonparametric") type <- "ordinary"
 
     # prepare
     start <- getModelParameters(model, type="free"); npar <- length(start)
     N <- sample@ntotal
-    BOOT <- matrix(NA, R, npar)
 
-    # bollen.stine? We need the Sigma.hat values
-    # FIXME: What about Mu.hat? Do we need to correct for that too??? YES!
-    if(options$test == "bollen.stine") {
+    COEF <- FX.GROUP <- NULL
+    if(coef) {
+        COEF <- matrix(NA, R, npar)
+    } 
+    if(fx) {
+        FX.GROUP <- matrix(NA, R, sample@ngroups)
+    }
+
+    # bollen.stine or parametric: we need the Sigma.hat values
+    if(type == "bollen.stine" || type == "parametric") {
         Sigma.hat <- computeSigmaHat(model)
         Mu.hat <- computeMuHat(model) 
-        fx.group <- matrix(NA, R, sample@ngroups)
     } else {
         Sigma.hat <- NULL
         Mu.hat <- NULL
@@ -116,8 +134,13 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
     # run bootstraps
     error.idx <- integer(0)
     for(b in 1:R) {
-        # take a bootstrap sample
-        boot.idx <- sample(x=N, size=N, replace=TRUE)
+        if(type == "bollen.stine" || type == "ordinary") {
+            # take a bootstrap sample
+            boot.idx <- sample(x=N, size=N, replace=TRUE)
+        } else {
+            # parametric!
+            boot.idx <- NULL
+        }
 
         # run bootstrap draw
         ok <- TRUE
@@ -132,39 +155,70 @@ bootstrapParameters.internal <- function(model=NULL, sample=NULL, options=NULL,
             ok <- FALSE
         }
 
-        # store parameters
-        BOOT[b,] <- x
+        if(coef) {
+            # store parameters
+            COEF[b,] <- x
+        }
 
         # store fx.group
-        if(options$test == "bollen.stine" && ok) {
-            fx.group[b,] <- attr(attr(x, "fx"), "fx.group")
+        if(fx && ok) {
+            FX.GROUP[b,] <- attr(attr(x, "fx"), "fx.group")
         }
     }
 
     # handle errors
     if(length(error.idx) > 0L) {
         warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
-        BOOT <- BOOT[-error.idx,,drop=FALSE]
-        attr(BOOT, "error.idx") <- error.idx
+        COEF <- COEF[-error.idx,,drop=FALSE]
+        attr(COEF, "error.idx") <- error.idx
 
-        if(options$test == "bollen.stine") {
-            fx.group <- fx.group[-error.idx,,drop=FALSE]
+        if(fx) {
+            FX.GROUP <- FX.GROUP[-error.idx,,drop=FALSE]
         }
 
     } else {
         if(verbose) cat("Number of successful bootstrap draws:", 
-                        nrow(BOOT), "\n")
+                        (R - length(error.idx)), "\n")
     }
 
-    if(options$test == "bollen.stine") {
-        attr(BOOT, "fx.group") <- fx.group
-    }
+    list(coef.boot=COEF, fx.group.boot=FX.GROUP)
+}
 
-    BOOT
+# using the 'internal' function
+bootstrapLavaan <- function(object, data=NULL, R=1000, type="ordinary", 
+                            verbose=FALSE, coef=TRUE, fx=FALSE,
+                            FUN=NULL, ...) {
+
+    # three types of information we may want to return:
+    # 1) the coefficients (free only)
+    # 2) the fx.group values (to compute the standard chisquare test statistic)
+    # 3) any other type of information we can extract from a lavaan S4 object
+
+    out <- bootstrap.internal(model=object@Model, 
+                              sample=object@Sample,
+                              options=object@Options, 
+                              data=data, R=R,
+                              verbose=verbose,
+                              type=type,
+                              coef=coef,
+                              fx=fx,
+                              FUN=FUN, ...)
+
+    if(coef && !fx && is.null(FUN)) {
+        # coefficients only
+        out <- out$coef.boot
+    } else if(!coef && fx && is.null(FUN)) {
+        # fx.group only
+        out <- out$fx.group.boot
+    } else if(coef && fx && is.null(FUN)) {
+        out <- list(coef=out$coef.boot, fx=out$fx.group.boot, FUN=NULL)
+    } 
+
+    out
 }
 
 # using the 'boot' package
-lavaanBoot <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
+bootLavaan <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
 
     require("boot", quietly = TRUE)
 
@@ -193,14 +247,14 @@ lavaanBoot <- function(object, data=NULL, R=1000, ..., verbose=FALSE) {
     def.idx <- which(object@User$op == ":=")
     if(length(def.idx) > 0L) {
         boot.out$t0 <- c(boot.out$t0, object@Fit@est[def.idx])
-        BOOT.def <- apply(boot.out$t, 1, object@Model@def.function)
+        COEF.def <- apply(boot.out$t, 1, object@Model@def.function)
         if(length(def.idx) == 1L) {
-            BOOT.def <- as.matrix(BOOT.def)
+            COEF.def <- as.matrix(COEF.def)
         } else {
-            BOOT.def <- t(BOOT.def)
+            COEF.def <- t(COEF.def)
         }        
-        colnames(BOOT.def) <- object@User$lhs[def.idx]
-        boot.out$t <- cbind(boot.out$t, BOOT.def)
+        colnames(COEF.def) <- object@User$lhs[def.idx]
+        boot.out$t <- cbind(boot.out$t, COEF.def)
         #boot.out$rhs <- c(boot.out$rhs, object@User$rhs[def.idx])
         #boot.out$op  <- c(boot.out$op,   object@User$op[def.idx])
         #boot.out$lhs <- c(boot.out$lhs, object@User$lhs[def.idx])
@@ -250,53 +304,3 @@ summary.lavaan.boot <- function(object=NULL, ..., type="perc", conf=0.95) {
  
     LIST
 }
-
-# bootstrap parameters
-bootstrapParameters <- function(object, data = NULL, R = 1000L,
-                                verbose = TRUE, summarize = FALSE) {
-
-    BOOT <- bootstrapParameters.internal(model   = object@Model, 
-                                         sample  = object@Sample, 
-                                         options = object@Options, 
-                                         data    = data,
-                                         R       = R, 
-                                         verbose = verbose)
-
-    # add defined parameters
-    def.idx <- which(object@User$op == ":=")
-    if(length(def.idx) > 0L) {
-        BOOT.def <- apply(BOOT, 1, object@Model@def.function)
-        if(length(def.idx) == 1L) {
-            BOOT.def <- as.matrix(BOOT.def)
-        } else {
-            BOOT.def <- t(BOOT.def)
-        }
-        colnames(BOOT.def) <- object@User$lhs[def.idx]
-    }
-    
-
-    if(summarize) {
-        OUT <- parameterEstimates(object)
-        OUT$est.std <- NULL
-        OUT$est.std.all <- NULL
-     
-        boot.mean <- apply(BOOT, 2, mean)
-        boot.sd   <- apply(BOOT, 2, sd) # fix N-1/N?
-
-        GLIST <- x2GLIST(object@Model, x=boot.mean, type="free")
-        OUT$est.boot.mean <- 
-            getModelParameters(object@Model, GLIST=GLIST, type="user")
-        
-        GLIST <- x2GLIST(object@Model, x=boot.sd, type="free")
-        OUT$est.boot.sd   <- 
-            getModelParameters(object@Model, GLIST=GLIST, type="user")
-        OUT$est.boot.sd[ which(object@User$free.uncon == 0L) ] <- 0.0
-    } else {
-        colnames(BOOT) <- names( coef(object) )
-        OUT <- BOOT
-    }
-
-    OUT
-}
-
-

@@ -83,12 +83,22 @@ Sample <- function(data=NULL,
                 data.obs <- scale(data.obs)[,]
             }
 
+            # parametric bootstrap? replace data.obs with random
+            # data
+            if(is.null(boot.idx) && !is.null(model.cov) 
+                                 && !is.null(model.mean)) {
+
+                data.obs <- MASS:::mvrnorm(n = nrow(data.obs), 
+                                           mu = model.mean[[g]], 
+                                           Sigma = model.cov[[g]])
+            }
+
             # transform observed variables?
             # eg. bollen-stine bootstrap
             # FIXME: we do this for every bootstrap draw now,
             #        while, we should only this  ONCE!
             #        WE NEED A NEW DATA-FLOW!!
-            if(!is.null(model.cov) && !missing.flag[g]) {
+            if(!is.null(boot.idx) && !is.null(model.cov) && !missing.flag[g]) {
                 d.cov[[g]] <- cov(data.obs, use="pairwise") # full dataset
                 sigma.sqrt <- sqrtSymmetricMatrix(model.cov[[g]])
                 S.inv.sqrt <- sqrtSymmetricMatrix( solve(d.cov[[g]]) )

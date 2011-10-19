@@ -1,11 +1,11 @@
-\name{lavaanBoot}
-\alias{lavaanBoot}
+\name{bootLavaan}
+\alias{bootLavaan}
 \title{Bootstrap a Lavaan Model}
 \description{
 Bootstraps a lavaan model using the \code{\link[boot]{boot}} function
 in the boot package.}
 \usage{
-lavaanBoot(object, data=NULL, R=1000, ..., verbose=FALSE)
+bootLavaan(object, data=NULL, R=1000, ..., verbose=FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}

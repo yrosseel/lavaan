@@ -36,7 +36,7 @@ export("lavaan",
        "parameterEstimates", "parameterestimates",
        "fitMeasures", "fitmeasures",
        "modelCov",
-       "lavaanBoot",
+       "bootLavaan",
        "measurementInvariance", "measurementinvariance"
       )
 

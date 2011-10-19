@@ -397,12 +397,18 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             } else {
                 R <- 1000L
             }
-            BOOT <- bootstrapParameters.internal(model=object, sample=sample,
-                        options=options, data=data, R=R, 
-                        verbose=options$verbose)
+            boot.type <- "ordinary"
+            if(test == "bollen.stine") boot.type <- "bollen.stine"
+            out <- bootstrap.internal(model=object, sample=sample,
+                                      options=options, data=data, R=R, 
+                                      verbose=options$verbose,
+                                      type=boot.type,
+                                      coef=FALSE,
+                                      fx=TRUE)
+
+            fx.group <- out$fx.group.boot
         }    
 
-        fx.group <- attr(BOOT, "fx.group")
         if(sample@ngroups > 1L) {
             boot.group <- t(apply(fx.group, 1, '*', NFAC))
             boot.group[which(boot.group < 0)] <- 0.0

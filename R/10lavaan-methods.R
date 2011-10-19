@@ -144,7 +144,7 @@ short.summary <- function(object) {
 
         # 3b. Do we have a Bollen-Stine p-value?
         if(object@Options$test == "bollen.stine") {
-            t0.txt <- sprintf("  %-40s", "P-value (Bollen-Stine Boostrap)")
+            t0.txt <- sprintf("  %-40s", "P-value (Bollen-Stine Bootstrap)")
             t1.txt <- sprintf("  %10.3f", object@Fit@test[[2]]$pvalue)
             cat(t0.txt, t1.txt, "\n", sep="")
         }
