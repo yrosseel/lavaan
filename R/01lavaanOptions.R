@@ -16,6 +16,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
     # except group.partial, which may contain capital letters
     opt$group.partial <- opt.old$group.partial
+    opt$group <- opt.old$group
 
     # do.fit implies se="none and test="none" (unless not default)
     if(!opt$do.fit) {

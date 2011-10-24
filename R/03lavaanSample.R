@@ -22,6 +22,7 @@ Sample <- function(data=NULL,
                    meanstructure=FALSE,
                    missing="listwise",
 
+                   debug=FALSE,
                    warn=TRUE,
                    verbose=FALSE)
 {
@@ -88,9 +89,9 @@ Sample <- function(data=NULL,
             if(is.null(boot.idx) && !is.null(model.cov) 
                                  && !is.null(model.mean)) {
 
-                data.obs <- MASS:::mvrnorm(n = nrow(data.obs), 
-                                           mu = model.mean[[g]], 
-                                           Sigma = model.cov[[g]])
+                data.obs <- MASS.mvrnorm(n = nrow(data.obs), 
+                                         mu = model.mean[[g]], 
+                                         Sigma = model.cov[[g]])
             }
 
             # transform observed variables?
@@ -184,9 +185,7 @@ Sample <- function(data=NULL,
 
         } # ngroups
 
-    } 
-
-    if(data.type == "moment") {
+    } else if (data.type == "moment") {
 
         sample.nobs <- as.list(as.integer(sample.nobs))
         if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
@@ -246,72 +245,80 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n")
             d.nobs[[g]] <- sample.nobs[[g]]
             d.missing[[g]] <- list(norig=sample.nobs[[g]])
         } # g
-    } # moment
-
-    # rescale d.cov? only if ML and likelihood == "normal"
-    if((estimator == "ML") && likelihood == "normal") {
+    } else if (data.type == "none") {
         for(g in 1:ngroups) {
-            # we 'transform' the sample cov (divided by n-1) 
-            # to a sample cov divided by 'n'
-            d.cov[[g]] <- (d.nobs[[g]]-1)/d.nobs[[g]] * d.cov[[g]]
+            d.nobs[[g]] <- 0L
+            d.missing[[g]] <- list(norig=0L)
         }
-    }
+    } 
 
-    # icov and cov.log.det
-    for(g in 1:ngroups) {
-        tmp <- try(inv.chol(d.cov[[g]], logdet=TRUE))
-        if(inherits(tmp, "try-error")) {
-            if(ngroups > 1) {
-                stop("sample covariance can not be inverted in group", g)
-            } else {
-                stop("sample covariance can not be inverted")
+    if(data.type != "none") {
+
+        # rescale d.cov? only if ML and likelihood == "normal"
+        if((estimator == "ML") && likelihood == "normal") {
+            for(g in 1:ngroups) {
+                # we 'transform' the sample cov (divided by n-1) 
+                # to a sample cov divided by 'n'
+                d.cov[[g]] <- (d.nobs[[g]]-1)/d.nobs[[g]] * d.cov[[g]]
             }
-        } else {
-            d.cov.log.det[[g]] <- attr(tmp, "logdet")
-            attr(tmp, "logdet") <- NULL
-            d.icov[[g]]        <- tmp
         }
-    }
 
-    # cov.vecs
-    for(g in 1:ngroups) {
-        d.cov.vecs[[g]] <- vech(d.cov[[g]])
-    }
-
-    # WLS.V (for GLS and WLS only)
-    if(estimator == "GLS") {
+        # icov and cov.log.det
         for(g in 1:ngroups) {
-            if(meanstructure) {
-                V11 <- d.icov[[g]]
-                if(mimic == "Mplus") { # is this a bug in Mplus?
-                    V11 <- V11 * d.nobs[[g]]/(d.nobs[[g]]-1)
+            tmp <- try(inv.chol(d.cov[[g]], logdet=TRUE))
+            if(inherits(tmp, "try-error")) {
+                if(ngroups > 1) {
+                    stop("sample covariance can not be inverted in group", g)
+                } else {
+                    stop("sample covariance can not be inverted")
                 }
-                V22 <- 0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
-                d.WLS.V[[g]] <- bdiag(V11,V22)
             } else {
-                d.WLS.V[[g]] <-
-                    0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
+                d.cov.log.det[[g]] <- attr(tmp, "logdet")
+                attr(tmp, "logdet") <- NULL
+                d.icov[[g]]        <- tmp
             }
         }
-    } else if(estimator == "WLS") {
-        for(g in 1:ngroups) {
-            # sample size large enough?
-            pstar <- nvar*(nvar+1)/2
-            if(meanstructure) pstar <- pstar + nvar
-            if(d.nobs[g] < pstar) {
-                if(g > 1L) cat("in group: ", g, ":\n", sep="")
-                stop("lavaan ERROR: cannot compute Gamma: number of observations too small") 
-            }
 
-            Gamma <- compute.Gamma(d.data[[g]], meanstructure=meanstructure,
-                                   Mplus.WLS=(mimic=="Mplus"))
-            # Gamma should be po before we invert
-            ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-            if(is.complex(ev) || any(Re(ev) < 0)) {
-                stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+        # cov.vecs
+        for(g in 1:ngroups) {
+            d.cov.vecs[[g]] <- vech(d.cov[[g]])
+        }
+
+        # WLS.V (for GLS and WLS only)
+        if(estimator == "GLS") {
+            for(g in 1:ngroups) {
+                if(meanstructure) {
+                    V11 <- d.icov[[g]]
+                    if(mimic == "Mplus") { # is this a bug in Mplus?
+                        V11 <- V11 * d.nobs[[g]]/(d.nobs[[g]]-1)
+                    }
+                    V22 <- 0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
+                    d.WLS.V[[g]] <- bdiag(V11,V22)
+                } else {
+                    d.WLS.V[[g]] <-
+                        0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
+                }
             }
-            #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
-            d.WLS.V[[g]] <- inv.chol(Gamma)
+        } else if(estimator == "WLS") {
+            for(g in 1:ngroups) {
+                # sample size large enough?
+                pstar <- nvar*(nvar+1)/2
+                if(meanstructure) pstar <- pstar + nvar
+                if(d.nobs[g] < pstar) {
+                    if(g > 1L) cat("in group: ", g, ":\n", sep="")
+                    stop("lavaan ERROR: cannot compute Gamma: number of observations too small") 
+                }
+
+                Gamma <- compute.Gamma(d.data[[g]], meanstructure=meanstructure,
+                                       Mplus.WLS=(mimic=="Mplus"))
+                # Gamma should be po before we invert
+                ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
+                if(is.complex(ev) || any(Re(ev) < 0)) {
+                    stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+                }
+                #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
+                d.WLS.V[[g]] <- inv.chol(Gamma)
+            }
         }
     }
    
@@ -338,6 +345,11 @@ paste("  \nsample covariance matrix looks like a correlation matrix!\n")
                   missing=d.missing
 
                  )
+
+    if(debug) {
+        cat("[lavaan DEBUG] lavaanSample\n")
+        str(Sample)
+    }
 
     Sample
 }

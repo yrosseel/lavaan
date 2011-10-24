@@ -36,9 +36,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         scaled <- FALSE
     }
 
-    # always compute X2 and df (both scaled and unscaled)
-    X2 <- object@Fit@test[[1]]$stat
-    df <- object@Fit@test[[1]]$df
+    # scaled X2
     if(scaled) {
         X2.scaled <- object@Fit@test[[2]]$stat
         df.scaled <- object@Fit@test[[2]]$df
@@ -393,7 +391,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.05)
         }
-        if(df < 1 || upper.lambda(N.RMSEA) > 0) {
+        if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
             indices["rmsea.ci.upper"] <- 0
         } else {
             lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)

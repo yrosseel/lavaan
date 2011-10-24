@@ -89,10 +89,7 @@ lavaan <- function(# user-specified model syntax
             ngroups     <- 1L
         }
         data.type <- "full"
-    } else {
-        # sample.cov is null?
-        if(is.null(sample.cov))
-            stop("both data and sample.cov are null")
+    } else if(!is.null(sample.cov)) {
 
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
@@ -121,6 +118,28 @@ lavaan <- function(# user-specified model syntax
             group.label <- character(0)
         }
         data.type <- "moment"
+    } else {
+        # both data and sample.cov are NULL
+        # maybe we want an empty lavaan object to simulate?
+
+        # number of groups
+        if(!is.null(sample.nobs)) {
+            ngroups <- length(unlist(sample.nobs))
+        } else {
+            ngroups <- 1L
+        }
+        if(ngroups > 1L) {
+            group.label <- paste("Group ", 1:ngroups, sep="")
+        } else {
+            group.label <- character(0)
+        }
+        data.type <- "none"
+
+        # no data? no fitting!
+        do.fit <- FALSE
+        se <- "none"
+        test <- "none"
+        start <- "simple"
     }
 
 
@@ -185,6 +204,9 @@ lavaan <- function(# user-specified model syntax
             # we lavaanify each model in term, and assume multiple groups
             stop("lavaan ERROR: list of model syntaxes: not implemented yet")
         }
+    } else {
+        cat("model.syntax type: ", class(model.syntax), "\n")
+        stop("lavaan ERROR: model.syntax is not a string or a list")
     }
 
     # 2b. change meanstructure flag?
@@ -210,6 +232,7 @@ lavaan <- function(# user-specified model syntax
                mimic         = lavaanOptions$mimic,
                meanstructure = lavaanOptions$meanstructure,
                missing       = lavaanOptions$missing,
+               debug         = lavaanOptions$debug,
                warn          = lavaanOptions$warn,
                verbose       = lavaanOptions$verbose)
     timing$Sample <- (proc.time()[3] - start.time)
@@ -248,8 +271,9 @@ lavaan <- function(# user-specified model syntax
     } else {
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
-        attr(x, "fx") <- computeObjective(lavaanModel, sample = lavaanSample, 
-                                          estimator = lavaanOptions$estimator)
+        attr(x, "fx") <- 
+            computeObjective(lavaanModel, sample = lavaanSample, 
+                             estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

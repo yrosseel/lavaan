@@ -16,6 +16,17 @@ StartingValues <- function(start.method = "default",
     # check arguments
     stopifnot(is.list(user), class(sample) == "Sample")
 
+    # shortcut for 'simple'
+    if(start.method == "simple") {
+        start <- numeric( length(user$ustart) )
+        start[ which(user$op == "=~") ] <- 1.0    
+        var.idx <- which(user$op == "~~" & user$lhs == user$rhs)
+        start[var.idx] <- 1.0
+        user.idx <- which(!is.na(user$ustart))
+        start[user.idx] <- user$ustart[user.idx]
+        return(start)
+    }
+
     # check start.method
     if(mimic == "lavaan") {
         start.initial <- "lavaan"

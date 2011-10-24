@@ -185,6 +185,13 @@ setMethod("computeObjective", "Model",
 function(object, GLIST=NULL, sample, estimator="ML", 
          verbose=FALSE, forcePD=TRUE) {
 
+    # shortcut for data.type == "none"
+    if(is.null(sample@cov[[1L]])) {
+        fx <- as.numeric(NA)
+        attr(fx, "fx.group") <- rep(as.numeric(NA), sample@ngroups)
+        return(fx)
+    }
+
     meanstructure <- object@meanstructure
 
     # compute moments for all groups

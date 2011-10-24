@@ -37,6 +37,7 @@ export("lavaan",
        "fitMeasures", "fitmeasures",
        "modelCov",
        "bootLavaan",
+       "simulateData",
        "measurementInvariance", "measurementinvariance"
       )
 

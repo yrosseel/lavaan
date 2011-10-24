@@ -404,22 +404,11 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                       verbose=options$verbose,
                                       type=boot.type,
                                       coef=FALSE,
-                                      fx=TRUE)
-
-            fx.group <- out$fx.group.boot
+                                      test=TRUE)
+            T.boot <- out$test
         }    
 
-        if(sample@ngroups > 1L) {
-            boot.group <- t(apply(fx.group, 1, '*', NFAC))
-            boot.group[which(boot.group < 0)] <- 0.0
-            T.boot <- apply(boot.group, 1, sum)
-        } else {
-            boot.group <- fx.group * NFAC
-            boot.group[which(boot.group < 0)] <- 0.0
-            T.boot <- boot.group
-        }
-
-        # p-value
+        # bootstrap p-value
         boot.larger <- sum(T.boot > chisq)
         boot.length <- length(T.boot)
         pvalue.boot <- boot.larger/boot.length
