@@ -957,7 +957,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
                                iter.max=10000L,
                                trace=0L,
                                abs.tol=1e-20,
-                               rel.tol=1e-10,
+                               rel.tol=1e-9, # 1e-10 seems 'too strict'
                                x.tol=1.5e-8,
                                step.min=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, control)
