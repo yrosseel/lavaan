@@ -268,6 +268,10 @@ lavaan <- function(# user-specified model syntax
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
+        # check if model has converged or not
+        if(!attr(x, "converged") && lavaanOptions$warn) {
+           warning("lavaan WARNING: model has NOT converged!")
+        }
     } else {
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
