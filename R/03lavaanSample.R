@@ -59,6 +59,7 @@ Sample <- function(data=NULL,
             stop("missing observed variables in dataset: ",
                  paste(ov.names[idx.missing], collapse=" "))
         }
+
      
         for(g in 1:ngroups) {
 
@@ -123,8 +124,8 @@ Sample <- function(data=NULL,
                     data.obs <- data.obs[boot.idx,]
                 } else {
                     CASE.idx <- which(case.idx)
-                    in.idx <- ( boot.idx[which(boot.idx %in% CASE.idx)] -
-                                min(CASE.idx) + 1L )
+                    gboot.idx <- boot.idx[which(boot.idx %in% CASE.idx)] 
+                    in.idx <- match(gboot.idx, CASE.idx)
                     data.obs <- data.obs[in.idx,]
                 }
             }

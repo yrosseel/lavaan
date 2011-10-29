@@ -15,6 +15,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
     # except group.partial, which may contain capital letters
+    # except group
     opt$group.partial <- opt.old$group.partial
     opt$group <- opt.old$group
 
@@ -28,9 +29,27 @@ setLavaanOptions <- function(opt = formals(lavaan))
         }
     }
 
+    # mimic
+    if(opt$mimic == "default" || opt$mimic == "lavaan") {
+        opt$mimic <- "lavaan"
+    } else if(opt$mimic == "mplus") {
+        opt$mimic <- "Mplus"
+    } else if(opt$mimic == "eqs") {
+        opt$mimic <- "EQS"
+    } else if(opt$mimic == "lisrel") {
+        cat("Warning: mimic=\"LISREL\" is not ready yet. Using EQS instead.\n")
+        opt$mimic <- "EQS"
+    } else {
+        stop("mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
+    }
+
     # group.equal and group.partial
     if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
-        opt$group.equal <- character(0)
+        if(opt$mimic == "Mplus" && !is.null(opt$group)) {
+            opt$group.equal <- c("loadings", "intercepts")
+        } else {
+            opt$group.equal <- character(0)
+        }
     } else if(length(opt$group.equal) == 0) {
         # nothing to do
     } else if(all(opt$group.equal %in% c("loadings", "intercepts", "means",
@@ -48,19 +67,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
         # nothing to do
     }
 
-    # mimic
-    if(opt$mimic == "default" || opt$mimic == "lavaan") {
-        opt$mimic <- "lavaan"
-    } else if(opt$mimic == "mplus") {
-        opt$mimic <- "Mplus"
-    } else if(opt$mimic == "eqs") {
-        opt$mimic <- "EQS"
-    } else if(opt$mimic == "lisrel") {
-        cat("Warning: mimic=\"LISREL\" is not ready yet. Using EQS instead.\n")
-        opt$mimic <- "EQS"
-    } else {
-        stop("mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
-    }
 
     # representation
     if(opt$representation == "default") {
