@@ -107,7 +107,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     indices <- list()
 
     # Chi-square value estimated model (H0)
-    if(any(c("chisq", "chisq.scaled") %in% fit.measures)) {
+    if(any(c("chisq", "chisq.scaled", 
+             "chisq.scaling.factor") %in% fit.measures)) {
 	indices["chisq"] <- X2
         if(scaled) {
             indices["chisq.scaled"] <- X2.scaled
