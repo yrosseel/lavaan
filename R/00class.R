@@ -4,7 +4,21 @@
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
 
-setClass("Sample",                 # sample statistics 
+setClass("FullData",
+    representation(
+        X="list",
+        ov.names="character",
+        nvar="integer",            
+        ngroups="integer",
+        group.label="character",
+        norig="integer",
+        nobs="integer",
+        Missing="list",
+        missing.flag="logical"
+    )
+)
+
+setClass("SampleStats",            # sample statistics 
     representation(
         ov.names="character",      # observed variable names
         nvar="integer",            # number of *used* variables
@@ -97,7 +111,7 @@ setClass("lavaan",
         timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
         User    = "list",            # user specified model
-        Sample  = "Sample",          # sample statistics
+        Sample  = "SampleStats",     # sample statistics
         Model   = "Model",           # internal matrix representation
         Fit     = "Fit"              # optimization info
     ) 

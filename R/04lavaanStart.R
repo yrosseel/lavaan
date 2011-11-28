@@ -14,7 +14,7 @@ StartingValues <- function(start.method = "default",
                            debug        = FALSE) {
 
     # check arguments
-    stopifnot(is.list(user), class(sample) == "Sample")
+    stopifnot(is.list(user), class(sample) == "SampleStats")
 
     # shortcut for 'simple'
     if(start.method == "simple") {

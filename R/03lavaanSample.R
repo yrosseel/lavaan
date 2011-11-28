@@ -1,35 +1,32 @@
 # constructor for the 'Sample' class
 #
 # initial version: YR 25/03/2009
+# major revision: YR 5/11/2011: separate data.obs and sample statistics
 
-Sample <- function(data=NULL,
-                   group=NULL,
-                   sample.cov=NULL,
-                   sample.mean=NULL,
-                   sample.nobs=NULL,
-                   std.ov=FALSE,
-                   boot.idx=NULL,
-                   model.cov=NULL,
-                   model.mean=NULL,
+# extract the data we need for this particular model
+getData <- function(data        = NULL, 
+                    ov.names    = character(0),
 
-                   ov.names=character(0),
-                   data.type="unknown",
-                   ngroups=1L,
-                   group.label=character(0),
-                   estimator="ML",
-                   likelihood="normal",
-                   mimic="lavaan",
-                   meanstructure=FALSE,
-                   missing="listwise",
+                    # transform? (for bollen.stine bootstrap)
+                    model.cov   = NULL,
+                    model.mean  = NULL,
+                    
+                    # standardize?
+                    std.ov      = FALSE,
 
-                   debug=FALSE,
-                   warn=TRUE,
-                   verbose=FALSE)
+                    # multiple groups?
+                    group       = NULL,
+                    ngroups     = 1L,
+                    group.label = character(0),
+    
+                    # how to deal with missing data?
+                    missing     = "listwise",
+
+                    debug       = FALSE,
+                    warn        = TRUE,
+                    verbose     = FALSE
+                   ) 
 {
-
-    # number of observed variables
-    nvar  <- length(ov.names)
-
     # set missing flag (can be overriden later)
     if(missing == "ml") {
         missing.flag <- rep(TRUE, ngroups)
@@ -37,321 +34,274 @@ Sample <- function(data=NULL,
         missing.flag <- rep(FALSE, ngroups)
     }
 
-    # sample statistics per group
-    d.cov         <- vector("list", length=ngroups)
-    d.icov        <- vector("list", length=ngroups)
-    d.cov.log.det <- vector("list", length=ngroups)
-    d.cov.vecs    <- vector("list", length=ngroups)
-    d.var     <- vector("list", length=ngroups)
-    d.mean    <- vector("list", length=ngroups)
-    d.nobs    <- vector("list", length=ngroups)
+    # number of observed variables
+    nvar  <- length(ov.names)
+
+    # prepare empty list for complete data
+    X <- vector("list", length=ngroups)
+    norig <- integer(ngroups)
+    nobs  <- integer(ngroups)
+
+    # prepare empty list for missing data
     d.missing <- vector("list", length=ngroups)
-    d.data    <- vector("list", length=ngroups)
-    d.WLS.V   <- vector("list", length=ngroups)
 
-    #### FULL DATA FRAME ####
-    if(data.type == "full") {
+    # does the data contain all the observed variables
+    # needed in the user-specified model for this group
+    idx.missing <- which(!(ov.names %in% names(data)))
+    if(length(idx.missing)) {
+        stop("lavaan ERROR: missing observed variables in dataset: ",
+             paste(ov.names[idx.missing], collapse=" "))
+    }
 
-        # does the data frame contain all the observed variables
-        # needed in the user-specified model?
-        idx.missing <- which(!(ov.names %in% names(data)))
-        if(length(idx.missing)) {
-            stop("missing observed variables in dataset: ",
-                 paste(ov.names[idx.missing], collapse=" "))
+    for(g in 1:ngroups) {
+
+        # extract variables in correct order
+        var.idx <- match(ov.names, names(data))
+        if(ngroups > 1L) {
+            case.idx <- data[, group] == group.label[g]
+            data.tmp <- data[case.idx, var.idx]
+        } else {
+            data.tmp <- data[, var.idx]
         }
 
-     
-        for(g in 1:ngroups) {
+        # check if we have enough observations
+        if(nrow(data.tmp) < nvar)
+            stop("lavaan ERROR: too few observations (nobs < nvar)")
 
-            # extract variables in correct order
-            var.idx <- match(ov.names, names(data))
-            if(ngroups > 1L) {
-                case.idx <- data[, group] == group.label[g]
-                data.obs <- data[case.idx, var.idx]
-            } else {
-                data.obs <- data[, var.idx]
+        # data should contain numeric values only
+        # strip dimnames and coerce to matrix
+        data.tmp <- data.matrix(data.tmp); dimnames(data.tmp) <- NULL
+
+        # transform observed variables (eg. for bollen-stine bootstrap)
+        # simple transform is no missing data!
+        if(!is.null(model.cov) && !missing.flag[g]) {
+            cov.g <- cov(data.tmp, use="pairwise") # full dataset
+            sigma.sqrt <- sqrtSymmetricMatrix( model.cov[[g]] )
+            S.inv.sqrt <- sqrtSymmetricMatrix( solve(cov.g) )
+
+            # center
+            data.tmp <- scale(data.tmp, center=TRUE, scale=FALSE)[,]
+
+            # transform
+            data.tmp <- data.tmp %*% S.inv.sqrt %*% sigma.sqrt
+
+            # add model.mean[[g]]
+            if(!is.null(model.mean)) {
+                data.tmp <- scale(data.tmp, center=(-1*model.mean[[g]]), 
+                                  scale=FALSE)[,]
             }
+        }
 
-            # check if we have enough observations
-            if(nrow(data.obs) < nvar)
+        # standardize observed variables?
+        if(std.ov) {
+            data.tmp <- scale(data.tmp)[,]
+        }
+
+        # number of observations
+        norig[g] <- nobs[g] <- nrow(data.tmp)
+
+        # missing data?
+        d.missing[[g]] <- list()
+        if(!missing.flag[g]) {
+            # listwise deletion
+            keep.idx <- complete.cases(data.tmp)
+            if(length(keep.idx) > 0L) {
+                data.tmp <- data.tmp[keep.idx,,drop=FALSE]
+                nobs[g] <- nrow(data.tmp)
+            }
+            # check again if we have enough observations
+            if(nrow(data.tmp) == 0L)
+                stop("lavaan ERROR: no cases left after listwise deletion")
+            if(nrow(data.tmp) < nvar)
                 stop("lavaan ERROR: too few observations (nobs < nvar)")
-
-            # data.obs should contain numeric values only
-            # strip dimnames and coerce to matrix
-            data.obs <- data.matrix(data.obs); dimnames(data.obs) <- NULL
-
-            # standardize observed variables?
-            if(std.ov) {
-                data.obs <- scale(data.obs)[,]
-            }
-
-            # parametric bootstrap? replace data.obs with random
-            # data
-            if(is.null(boot.idx) && !is.null(model.cov) 
-                                 && !is.null(model.mean)) {
-
-                data.obs <- MASS.mvrnorm(n = nrow(data.obs), 
-                                         mu = model.mean[[g]], 
-                                         Sigma = model.cov[[g]])
-            }
-
-            # transform observed variables?
-            # eg. bollen-stine bootstrap
-            # FIXME: we do this for every bootstrap draw now,
-            #        while, we should only this  ONCE!
-            #        WE NEED A NEW DATA-FLOW!!
-            if(!is.null(boot.idx) && !is.null(model.cov) && !missing.flag[g]) {
-                d.cov[[g]] <- cov(data.obs, use="pairwise") # full dataset
-                sigma.sqrt <- sqrtSymmetricMatrix(model.cov[[g]])
-                S.inv.sqrt <- sqrtSymmetricMatrix( solve(d.cov[[g]]) )
-
-                # center
-                data.obs <- scale(data.obs, center=TRUE, scale=FALSE)
-
-                # transform
-                data.obs <- data.obs %*% S.inv.sqrt %*% sigma.sqrt
-
-                # add model.mean[[g]]
-                if(!is.null(model.mean)) {
-                    data.obs <- scale(data.obs, center=(-1*model.mean[[g]]), 
-                                      scale=FALSE)
-                }
-            }
-
-            # bootstrap sample?
-            if(!is.null(boot.idx)) {
-                if(ngroups == 1L) {
-                    data.obs <- data.obs[boot.idx,]
-                } else {
-                    CASE.idx <- which(case.idx)
-                    gboot.idx <- boot.idx[which(boot.idx %in% CASE.idx)] 
-                    in.idx <- match(gboot.idx, CASE.idx)
-                    data.obs <- data.obs[in.idx,]
-                }
-            }
-
-            # missing data?
-            d.missing[[g]] <- list()
-            if(!missing.flag[g]) {
-                # store original nobs per group
-                d.missing[[g]]$norig <- nrow(data.obs)
-                data.obs <- na.omit(data.obs)
-                d.missing[[g]]$nobs <- nrow(data.obs)
-                # check again if we have enough observations
-                if(nrow(data.obs) == 0) 
-                    stop("lavaan ERROR: no cases left after listwise deletion")
-                if(nrow(data.obs) < nvar)
-                    stop("lavaan ERROR: too few observations (nobs < nvar)")
+            # fill in some basic information in d.missing
+            d.missing[[g]] <- list(npatterns=0L)
+        } else {
+            # do more (but only if missing!)
+            #   - get missing patterns
+            #   - store sufficient statistics (per missing pattern group)
+            #   - compute pairwise coverage
+            d.missing[[g]] <- missing.patterns(data.tmp, warn=warn)
+            if(d.missing[[g]]$npatterns > 1L) {
+                # estimate moments
+                #out <- estimate.moments.fiml(X=data.obs, M=d.missing[[g]],
+                #                             verbose=verbose)
+                out <- estimate.moments.EM(X=data.tmp, M=d.missing[[g]],
+                                           verbose=verbose)
+                d.missing[[g]]$sigma <- out$sigma
+                d.missing[[g]]$mu    <- out$mu
+                d.missing[[g]]$h1    <- out$fx
             } else {
-                # do more (but only if missing!)
-                #   - get missing patterns
-                #   - store sufficient statistics (per missing pattern group)
-                #   - compute pairwise coverage
-                d.missing[[g]] <- missing.patterns(data.obs, warn=warn)
-                if(d.missing[[g]]$npatterns > 1L) {
-                    # ok, we have missing values - check the estimator
-                    if(estimator == "GLS" || estimator == "WLS") {
-                        stop("estimator ", estimator, 
-                        " not allowed when data contains missing values\n")
-                    }
-                    # estimate moments
-                    #out <- estimate.moments.fiml(X=data.obs, M=d.missing[[g]],
-                    #                             verbose=verbose)
-                    out <- estimate.moments.EM(X=data.obs, M=d.missing[[g]],
-                                               verbose=verbose)
-                    d.missing[[g]]$sigma <- out$sigma
-                    d.missing[[g]]$mu    <- out$mu
-                    d.missing[[g]]$h1    <- out$fx
-                } else {
-                    # data is complete after all (for this group)
-                    missing.flag[g] <- FALSE
-                    d.missing[[g]]$norig <- nrow(data.obs)
-                    d.missing[[g]]$nobs  <- nrow(data.obs)
-                }
-            }
-  
-            # fill in the other slots
-            d.cov[[g]] <- cov(data.obs, use="pairwise") # must be pairwise
-            d.var[[g]]  <- apply(data.obs, 2, var, na.rm=TRUE)
-            d.mean[[g]] <- apply(data.obs, 2, mean, na.rm=TRUE)
-            d.nobs[[g]] <- d.missing[[g]]$nobs
-
-            # for convenience (and for predict and residual), we store
-            # a local copy of the data inside
-            # FIXME!!
-            # for large datasets, this may be overkill!
-            if(!missing.flag[g]) {
-                d.data[[g]] <- data.obs
-            }
-
-        } # ngroups
-
-    } else if (data.type == "moment") {
-
-        sample.nobs <- as.list(as.integer(sample.nobs))
-        if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
-        if(!is.null(sample.mean) && !is.list(sample.mean)) 
-            sample.mean <- list(sample.mean)
-
-        for(g in 1:ngroups) {
-
-            tmp.cov <- sample.cov[[g]]
-
-            # is it a not a correlation matrix?
-            if(g == 1 && ( sum(diag(tmp.cov)) == ncol(tmp.cov) ) ) {
-                # ok, we do not stop here, but spit out a big fat warning
-                text <- 
-paste("  \nsample covariance matrix looks like a correlation matrix!\n")
-                warning(text)
-            }
- 
-            # lower triangle must be filled
-            if(all(tmp.cov[lower.tri(tmp.cov)] == 0)) {
-                stop("please provide a lower-triangular covariance matrix!\n")
-            }
-            # make sure that the matrix is fully symmetric
-            T <- t(tmp.cov)
-            tmp.cov[upper.tri(tmp.cov)] <- T[upper.tri(T)]
-
-            # check dimnames
-            if(is.null(rownames(tmp.cov))) {
-                stop("please provide row names for the covariance matrix!\n")
-            }
-   
-            # extract only the part we need (using ov.names)
-            idx <- match(ov.names, rownames(tmp.cov))
-            if(any(is.na(idx))) {
-                cat("found: ", rownames(tmp.cov)[idx], "\n")
-                cat("expected: ", ov.names, "\n")
-                stop("rownames of covariance matrix do not match the model!\n")
-            } else {
-                tmp.cov <- tmp.cov[idx,idx]
-            }
-
-            # strip dimnames
-            dimnames(tmp.cov) <- NULL
-        
-            if(is.null(sample.mean)) {
-                # assume zero mean vector
-                tmp.mean <- numeric(nvar)
-            } else {
-                # extract only the part we need
-                tmp.mean <- sample.mean[[g]][idx]
-                names(tmp.mean) <- NULL
-            }
-
-            d.cov[[g]]  <- tmp.cov
-            d.var[[g]]  <- diag(tmp.cov)
-            d.mean[[g]] <- tmp.mean
-            d.nobs[[g]] <- sample.nobs[[g]]
-            d.missing[[g]] <- list(norig=sample.nobs[[g]])
-        } # g
-    } else if (data.type == "none") {
-        for(g in 1:ngroups) {
-            d.nobs[[g]] <- 0L
-            d.missing[[g]] <- list(norig=0L)
-        }
-    } 
-
-    if(data.type != "none") {
-
-        # rescale d.cov? only if ML and likelihood == "normal"
-        if((estimator == "ML") && likelihood == "normal") {
-            for(g in 1:ngroups) {
-                # we 'transform' the sample cov (divided by n-1) 
-                # to a sample cov divided by 'n'
-                d.cov[[g]] <- (d.nobs[[g]]-1)/d.nobs[[g]] * d.cov[[g]]
+                # data is complete after all (for this group)
+                missing.flag[g] <- FALSE
             }
         }
 
-        # icov and cov.log.det
+        X[[g]] <- data.tmp
+
+    } # ngroups
+
+    DataObject <- new("FullData",
+                      X           = X,
+                      ov.names    = ov.names,
+                      nvar        = nvar,
+                      ngroups     = ngroups,
+                      group.label = group.label,
+                      norig       = norig,
+                      nobs        = nobs,
+                      Missing     = d.missing,
+                      missing.flag = missing.flag
+                     )
+
+    DataObject
+}
+
+getSampleStatsFromDataObject <- function(data          = NULL, 
+                                         boot.idx      = NULL,
+
+                                         estimator     = "ML",
+                                         likelihood    = "normal",
+                                         mimic         = "lavaan",
+                                         meanstructure = FALSE,
+
+                                         debug         = FALSE,
+                                         warn          = TRUE,
+                                         verbose       = FALSE)
+
+{
+
+    # number of variables
+    nvar  <- ncol(data@X[[1L]])
+    ngroups <- length(data@X)
+
+    # sample statistics per group
+    cov         <- vector("list", length=ngroups)
+    icov        <- vector("list", length=ngroups)
+    cov.log.det <- vector("list", length=ngroups)
+    cov.vecs    <- vector("list", length=ngroups)
+    var         <- vector("list", length=ngroups)
+    mean        <- vector("list", length=ngroups)
+    nobs        <- vector("list", length=ngroups)
+    missing     <- vector("list", length=ngroups)
+    WLS.V       <- vector("list", length=ngroups)
+
+    for(g in 1:ngroups) {
+
+        # bootstrap sample?
+        #if(!is.null(boot.idx)) {
+        #    if(ngroups == 1L) {
+        #        data.obs <- data.obs[boot.idx,]
+        #    } else {
+        #        CASE.idx <- which(case.idx)
+        #        gboot.idx <- boot.idx[which(boot.idx %in% CASE.idx)] 
+        #        in.idx <- match(gboot.idx, CASE.idx)
+        #        data.obs <- data.obs[in.idx,]
+        #    }
+        #}
+
+
+        # fill in the other slots
+        cov[[g]]  <-   cov(data@X[[g]], use="pairwise") # must be pairwise
+        var[[g]]  <- apply(data@X[[g]], 2,  var, na.rm=TRUE)
+        mean[[g]] <- apply(data@X[[g]], 2, mean, na.rm=TRUE)
+        nobs[[g]] <- data@nobs[g]
+
+    } # ngroups
+
+    # rescale d.cov? only if ML and likelihood == "normal"
+    if((estimator == "ML") && likelihood == "normal") {
         for(g in 1:ngroups) {
-            tmp <- try(inv.chol(d.cov[[g]], logdet=TRUE))
-            if(inherits(tmp, "try-error")) {
-                if(ngroups > 1) {
-                    stop("sample covariance can not be inverted in group", g)
-                } else {
-                    stop("sample covariance can not be inverted")
-                }
-            } else {
-                d.cov.log.det[[g]] <- attr(tmp, "logdet")
-                attr(tmp, "logdet") <- NULL
-                d.icov[[g]]        <- tmp
-            }
-        }
-
-        # cov.vecs
-        for(g in 1:ngroups) {
-            d.cov.vecs[[g]] <- vech(d.cov[[g]])
-        }
-
-        # WLS.V (for GLS and WLS only)
-        if(estimator == "GLS") {
-            for(g in 1:ngroups) {
-                if(meanstructure) {
-                    V11 <- d.icov[[g]]
-                    if(mimic == "Mplus") { # is this a bug in Mplus?
-                        V11 <- V11 * d.nobs[[g]]/(d.nobs[[g]]-1)
-                    }
-                    V22 <- 0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
-                    d.WLS.V[[g]] <- bdiag(V11,V22)
-                } else {
-                    d.WLS.V[[g]] <-
-                        0.5 * D.pre.post(d.icov[[g]] %x% d.icov[[g]])
-                }
-            }
-        } else if(estimator == "WLS") {
-            for(g in 1:ngroups) {
-                # sample size large enough?
-                pstar <- nvar*(nvar+1)/2
-                if(meanstructure) pstar <- pstar + nvar
-                if(d.nobs[g] < pstar) {
-                    if(g > 1L) cat("in group: ", g, ":\n", sep="")
-                    stop("lavaan ERROR: cannot compute Gamma: number of observations too small") 
-                }
-
-                Gamma <- compute.Gamma(d.data[[g]], meanstructure=meanstructure,
-                                       Mplus.WLS=(mimic=="Mplus"))
-                # Gamma should be po before we invert
-                ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-                if(is.complex(ev) || any(Re(ev) < 0)) {
-                    stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
-                }
-                #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
-                d.WLS.V[[g]] <- inv.chol(Gamma)
-            }
+            # we 'transform' the sample cov (divided by n-1) 
+            # to a sample cov divided by 'n'
+            cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
         }
     }
-   
+
+    # icov and cov.log.det
+    for(g in 1:ngroups) {
+        tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
+        if(inherits(tmp, "try-error")) {
+            if(ngroups > 1) {
+                stop("sample covariance can not be inverted in group", g)
+            } else {
+                stop("sample covariance can not be inverted")
+            }
+        } else {
+            cov.log.det[[g]] <- attr(tmp, "logdet")
+            attr(tmp, "logdet") <- NULL
+            icov[[g]]        <- tmp
+        }
+    }
+
+    # cov.vecs
+    for(g in 1:ngroups) {
+        cov.vecs[[g]] <- vech(cov[[g]])
+    }
+
+    # WLS.V (for GLS and WLS only)
+    if(estimator == "GLS") {
+        for(g in 1:ngroups) {
+            if(meanstructure) {
+                V11 <- icov[[g]]
+                if(mimic == "Mplus") { # is this a bug in Mplus?
+                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                }
+                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                WLS.V[[g]] <- bdiag(V11,V22)
+            } else {
+                WLS.V[[g]] <-
+                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+            }
+        }
+    } else if(estimator == "WLS") {
+        for(g in 1:ngroups) {
+            # sample size large enough?
+            pstar <- nvar*(nvar+1)/2
+            if(meanstructure) pstar <- pstar + nvar
+            if(d.nobs[g] < pstar) {
+                if(g > 1L) cat("in group: ", g, ":\n", sep="")
+                stop("lavaan ERROR: cannot compute Gamma: number of observations too small")
+            }
+
+            Gamma <- compute.Gamma(data@X[[g]], meanstructure=meanstructure,
+                                   Mplus.WLS=(mimic=="Mplus"))
+            # Gamma should be po before we invert
+            ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
+            if(is.complex(ev) || any(Re(ev) < 0)) {
+               stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+            }
+            #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
+            WLS.V[[g]] <- inv.chol(Gamma)
+        }
+    }
+
+
+
     # construct Sample object
-    Sample <- new("Sample",
-                  ov.names=ov.names,
-                  nvar=nvar,
-                  ngroups=ngroups,
-                  group.label=group.label,
-                  missing.flag=missing.flag,
+    SampleStats <- new("SampleStats",
 
-                  ntotal=sum(unlist(d.nobs)),
-                  nobs=d.nobs,
+                      # sample moments
+                      mean           = mean,
+                      cov            = cov,
+                      var            = var,
+                      nobs           = nobs,
+                      nvar           = nvar,
+                      ntotal         = sum(unlist(nobs)),
 
-                  mean=d.mean,
-                  cov=d.cov,
-                  icov=d.icov,
-                  cov.log.det=d.cov.log.det,
-                  cov.vecs=d.cov.vecs,
-                  WLS.V=d.WLS.V,
-                  var=d.var,
-                  data.obs=d.data,
-                  
-                  missing=d.missing
+                      # convenience
+                      ov.names       = data@ov.names,
+                      ngroups        = data@ngroups,
+                      group.label    = data@group.label,
 
-                 )
+                      # missing data information
+                      missing        = data@Missing,
+                      missing.flag   = data@missing.flag,
 
-    if(debug) {
-        cat("[lavaan DEBUG] lavaanSample\n")
-        str(Sample)
-    }
-
-    Sample
+                      # extra
+                      icov           = icov,
+                      cov.log.det    = cov.log.det,
+                      cov.vecs       = cov.vecs,
+                      WLS.V          = WLS.V
+                   )
 }
 

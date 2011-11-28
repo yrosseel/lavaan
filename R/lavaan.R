@@ -214,27 +214,41 @@ lavaan <- function(# user-specified model syntax
     timing$User <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    # 3. construct lavaan Sample (S4) object: description of the data
-    lavaanSample <- 
-        Sample(data          = data, 
-               group         = group,
-               sample.cov    = sample.cov, 
-               sample.mean   = sample.mean,
-               sample.nobs   = sample.nobs, 
-               std.ov        = std.ov,
-               
-               ov.names      = vnames(lavaanUser, "ov"),
-               data.type     = data.type,
-               ngroups       = ngroups,
-               group.label   = group.label,
-               estimator     = lavaanOptions$estimator,
-               likelihood    = lavaanOptions$likelihood,
-               mimic         = lavaanOptions$mimic,
-               meanstructure = lavaanOptions$meanstructure,
-               missing       = lavaanOptions$missing,
-               debug         = lavaanOptions$debug,
-               warn          = lavaanOptions$warn,
-               verbose       = lavaanOptions$verbose)
+    # 3a. handle full data: construct data.obs per group
+    DataObject <- NULL
+    if(data.type == "full") {
+        DataObject <- getData(data        = data, 
+                              ov.names    = vnames(lavaanUser, type="ov"),
+
+                              # standardize?
+                              std.ov      = std.ov,
+
+                              # multiple groups?
+                              group       = group,
+                              ngroups     = ngroups,
+                              group.label = group.label,
+
+                              # how to deal with missing data?
+                              missing     = missing,
+
+                              debug       = lavaanOptions$debug,
+                              warn        = lavaanOptions$warn,
+                              verbose     = lavaanOptions$verbose
+                             )
+
+         lavaanSampleStats <- getSampleStatsFromDataObject(data = DataObject,
+                                  estimator     = lavaanOptions$estimator,
+                                  likelihood    = lavaanOptions$likelihood,
+                                  mimic         = lavaanOptions$mimic,
+                                  meanstructure = lavaanOptions$meanstructure,
+                                  debug         = lavaanOptions$debug,
+                                  warn          = lavaanOptions$warn,
+                                  verbose       = lavaanOptions$verbose)
+
+    } else if(data.type == "moment") {
+        stop("working on it...")
+    } 
+
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -242,7 +256,7 @@ lavaan <- function(# user-specified model syntax
     lavaanStart <- 
         StartingValues(start.method = start,
                        user         = lavaanUser, 
-                       sample       = lavaanSample, 
+                       sample       = lavaanSampleStats, 
                        model.type   = lavaanOptions$model.type,
                        mimic        = lavaanOptions$mimic,
                        debug        = lavaanOptions$debug)
@@ -262,7 +276,7 @@ lavaan <- function(# user-specified model syntax
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
-                           sample  = lavaanSample, 
+                           sample  = lavaanSampleStats, 
                            options = lavaanOptions,
                            control = control)
         lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -286,7 +300,7 @@ lavaan <- function(# user-specified model syntax
     VCOV <- NULL
     if(opt$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
-                             sample  = lavaanSample,
+                             sample  = lavaanSampleStats,
                              options = lavaanOptions,
                              data    = data)
     }
@@ -298,7 +312,7 @@ lavaan <- function(# user-specified model syntax
     if(opt$test != "none") {
         TEST <- computeTestStatistic(lavaanModel,
                                      user    = lavaanUser,
-                                     sample  = lavaanSample,
+                                     sample  = lavaanSampleStats,
                                      options = lavaanOptions,
                                      x       = x,
                                      VCOV    = VCOV,
@@ -318,13 +332,13 @@ lavaan <- function(# user-specified model syntax
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call    = mc,             # match.call
-                  timing  = timing,         # list
-                  Options = lavaanOptions,  # list
-                  User    = lavaanUser,     # list
-                  Sample  = lavaanSample,   # S4 class
-                  Model   = lavaanModel,    # S4 class
-                  Fit     = lavaanFit       # S4 class
+                  call    = mc,                  # match.call
+                  timing  = timing,              # list
+                  Options = lavaanOptions,       # list
+                  User    = lavaanUser,          # list
+                  Sample  = lavaanSampleStats,   # S4 class
+                  Model   = lavaanModel,         # S4 class
+                  Fit     = lavaanFit            # S4 class
                  )
 
     lavaan
