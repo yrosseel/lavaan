@@ -54,7 +54,6 @@ simulateData <- function(
 
     # ngroups
     ngroups <- length(sample.nobs)
-       nvar <- fit@Sample@nvar
 
     # prepare 
     X <- vector("list", length=ngroups)

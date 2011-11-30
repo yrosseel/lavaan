@@ -15,7 +15,7 @@ computeExpectedInformation <- function(object, sample=NULL, estimator="ML",
         Sigma.hat <- computeSigmaHat(object)
         if(object@meanstructure) Mu.hat <- computeMuHat(object)
         for(g in 1:sample@ngroups) {
-            if(sample@missing.flag[g]) {
+            if(sample@missing[[g]]$flag) {
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
                                             sample=sample, group=g,
@@ -103,7 +103,6 @@ computeExpectedInformationMLM <- function(object, sample=NULL, Delta=NULL) {
 computeObservedInformation <- function(object, sample=NULL, 
                                        type="free", estimator="ML", 
                                        group.weight=TRUE) {
-
 
     # computing the Richardson extrapolation
     # (note that this matrix is not fully symmetric --> do not use chol)
@@ -227,12 +226,12 @@ computeObservedInformation <- function(object, sample=NULL,
         }
         if(object@multigroup) {
             # groups weights
-            A1 <- (sample@nobs[[1]]/sample@ntotal) * A1.group[[1]]
+            A1 <- (sample@nobs[[1L]]/sample@ntotal) * A1.group[[1L]]
             for(g in 2:sample@ngroups) {
                 A1 <- A1 + (sample@nobs[[g]]/sample@ntotal) * A1.group[[g]]
             }
         } else {
-            A1 <- A1.group[[1]]
+            A1 <- A1.group[[1L]]
         }
 
         Information.big[info.fixed.idx, info.fixed.idx] <- A1

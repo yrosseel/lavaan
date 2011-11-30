@@ -24,7 +24,7 @@ reliability <- function(object) {
     OUT <- vector("list", length=G)
     for(g in 1:G) {
                S <- object@Sample@cov[[g]]
-            nvar <- object@Sample@nvar
+            nvar <- ncol(S)
         SigmaHat <- object@Fit@Sigma.hat[[g]]
            THETA <- object@Model@GLIST[[ theta.idx[g] ]]
 

@@ -182,7 +182,7 @@ function(object, GLIST=NULL) {
 })
 
 setMethod("computeObjective", "Model",
-function(object, GLIST=NULL, sample, estimator="ML", 
+function(object, GLIST=NULL, sample, extra, estimator="ML", 
          verbose=FALSE, forcePD=TRUE) {
 
     # shortcut for data.type == "none"
@@ -202,8 +202,8 @@ function(object, GLIST=NULL, sample, estimator="ML",
     fx.group <- numeric( sample@ngroups )
     for(g in 1:sample@ngroups) {
 
-        # incomplete data and missing.flag[g]=TRUE?
-        if(sample@missing.flag[g]) {
+        # incomplete data and missing[[g]]$flag=TRUE?
+        if(sample@missing[[g]]$flag) {
             if(estimator == "ML") {
                 # FIML
 
@@ -225,14 +225,14 @@ function(object, GLIST=NULL, sample, estimator="ML",
                                      Mu.hat=Mu.hat[[g]],
                                      data.cov=sample@cov[[g]], 
                                      data.mean=sample@mean[[g]], 
-                                     data.cov.log.det=sample@cov.log.det[[g]],
+                                     data.cov.log.det=extra@cov.log.det[[g]],
                                      meanstructure=meanstructure)
         } else if(estimator == "GLS" || estimator == "WLS") {
             group.fx <- estimator.WLS(Sigma.hat=Sigma.hat[[g]], 
                                       Mu.hat=Mu.hat[[g]],
-                                      w.vecs=sample@cov.vecs[[g]], 
+                                      w.vecs=extra@cov.vecs[[g]], 
                                       data.mean=sample@mean[[g]],
-                                      WLS.V=sample@WLS.V[[g]],  
+                                      WLS.V=extra@WLS.V[[g]],  
                                       meanstructure=meanstructure)
         } else {
             stop("unsupported estimator: ", estimator)
@@ -386,7 +386,8 @@ computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
 }
 
 computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,  
-                         sample=NULL, estimator="ML", meanstructure=FALSE) {
+                         sample=NULL, extra=NULL, 
+                         estimator="ML", meanstructure=FALSE) {
 
     Omega    <- vector("list", length=sample@ngroups)
     Omega.mu <- vector("list", length=sample@ngroups)
@@ -409,7 +410,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
-            if(!sample@missing.flag[g]) { # complete data
+            if(!sample@missing[[g]]$flag) { # complete data
                 if(meanstructure) {
                     diff <- sample@mean[[g]] - Mu.hat[[g]]
                     W.tilde <- sample@cov[[g]] + tcrossprod(diff)
@@ -427,8 +428,9 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
             } else { # missing data
                 M <- sample@missing[[g]]
 
-                OMEGA    <- matrix(0, sample@nvar, sample@nvar)
-                OMEGA.MU <- matrix(0, sample@nvar, 1)
+                nvar <- ncol(sample@cov[[g]])
+                OMEGA    <- matrix(0, nvar, nvar)
+                OMEGA.MU <- matrix(0, nvar, 1)
 
                 for(p in 1:M$npatterns) {
                     SX <- M$data[[p]][["SX"]]
@@ -457,7 +459,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
         # GLS
         } else if(estimator == "GLS") {
-            W.inv <- sample@icov[[g]]
+            W.inv <- extra@icov[[g]]
             W     <- sample@cov[[g]]
             Omega[[g]] <- (sample@nobs[[g]]-1)/sample@nobs[[g]] *
                               (W.inv %*% (W - Sigma.hat[[g]]) %*% W.inv)
@@ -476,7 +478,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
 
 setMethod("computeGradient", "Model",
-function(object, GLIST=NULL, sample=NULL, type="free", 
+function(object, GLIST=NULL, sample=NULL, extra=NULL, type="free", 
          estimator="ML", verbose=FALSE, forcePD=TRUE, 
          group.weight=TRUE, constraints=TRUE) {
 
@@ -580,14 +582,14 @@ function(object, GLIST=NULL, sample=NULL, type="free",
         for(g in 1:sample@ngroups) {
             # Browne & Arminger 1995 eq 4.49
             if(!meanstructure) {
-                obs <- sample@cov.vecs[[g]]
+                obs <- extra@cov.vecs[[g]]
                 est <- vech(Sigma.hat[[g]])
             } else {
-                obs <- c(sample@mean[[g]], sample@cov.vecs[[g]])
+                obs <- c(sample@mean[[g]], extra@cov.vecs[[g]])
                 est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             }
             diff <- as.matrix(obs - est)
-            group.dx <- -1 * ( t(Delta[[g]]) %*% sample@WLS.V[[g]] %*% diff)
+            group.dx <- -1 * ( t(Delta[[g]]) %*% extra@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
 
             if(g == 1) {
@@ -611,7 +613,7 @@ function(object, GLIST=NULL, sample=NULL, type="free",
 
 
 setMethod("estimateModel", "Model",
-function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
+function(object, sample, extra, do.fit=TRUE, options=NULL, control=list()) {
 
     estimator     <- options$estimator
     verbose       <- options$verbose
@@ -625,11 +627,11 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
 
         # current strategy: forcePD is by default FALSE, except
         # if missing patterns are used
-        if(any(sample@missing.flag)) {
-            forcePD <- TRUE
-        } else {
+        #if(any(sample@missing.flag)) {
+        #    forcePD <- TRUE
+        #} else {
             forcePD <- FALSE
-        }
+        #}
 
         # transform variances back
         #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
@@ -637,7 +639,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        fx <- computeObjective(object, GLIST=GLIST, sample,
+        fx <- computeObjective(object, GLIST=GLIST, sample, extra,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
@@ -664,7 +666,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        dx <- computeGradient(object, GLIST=GLIST, sample, 
+        dx <- computeGradient(object, GLIST=GLIST, sample, extra,
                               type="free", 
                               estimator=estimator,
                               verbose=verbose, forcePD=TRUE)
@@ -1005,7 +1007,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
     # adjust fx if FIML (using h1 value)
-    if(any(sample@missing.flag)) {
+    if(any( unlist(lapply(sample@missing, "[[", "flag")) ) ) {
         fx.group <- attr(fx,"fx.group") 
         h1 <- lapply(sample@missing, "[[", "h1")
         # in case we have a complete group

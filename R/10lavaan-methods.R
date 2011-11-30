@@ -6,7 +6,7 @@ short.summary <- function(object) {
     # Convergence or not?
     if(object@Fit@iterations > 0) {
         if(object@Fit@converged) {
-	    cat(sprintf("Lavaan (%s) converged normally after %i iterations\n",
+	    cat(sprintf("lavaan (%s) converged normally after %i iterations\n",
                         packageDescription("lavaan", fields="Version"),
                         object@Fit@iterations))
         } else {
@@ -49,21 +49,21 @@ short.summary <- function(object) {
 
     # listwise deletion?
     listwise <- FALSE
-    if(!any(object@Sample@missing.flag) &&
-       (object@Sample@nobs[[1]] < object@Sample@missing[[1]]$norig)) {
+    if(!any(unlist(lapply(object@Sample@missing, "[[", "flag"))) &&
+       (object@Sample@nobs[[1L]] < object@Sample@norig[[1L]])) {
         listwise <- TRUE
     }
 
-    if(object@Sample@ngroups == 1) {
+    if(object@Sample@ngroups == 1L) {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"), 
                                         sprintf("  %10s", "Total"),
                 "\n", sep="")
         }
         t0.txt <- sprintf("  %-40s", "Number of observations")
-        t1.txt <- sprintf("  %10i", object@Sample@nobs[[1]])
+        t1.txt <- sprintf("  %10i", object@Sample@nobs[[1L]])
         t2.txt <- ifelse(listwise,
-                  sprintf("  %10i", object@Sample@missing[[1]]$norig), "")
+                  sprintf("  %10i", object@Sample@norig[[1L]]), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     } else {
         if(listwise) {
@@ -77,19 +77,20 @@ short.summary <- function(object) {
             t.txt <- sprintf("  %-40s  %10i", object@Sample@group.label[[g]],
                                                 object@Sample@nobs[[g]])
             t2.txt <- ifelse(listwise,
-                      sprintf("  %10i", object@Sample@missing[[g]]$norig), "")
+                      sprintf("  %10i", object@Sample@norig[[g]]), "")
             cat(t.txt, t2.txt, "\n", sep="")
         }
     }
     cat("\n")
 
     # missing patterns?
-    if(object@Sample@missing.flag[1] && object@Sample@ngroups == 1L) {
+    if(object@Sample@missing[[1L]]$flag && object@Sample@ngroups == 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns")
         t1.txt <- sprintf("  %10i", object@Sample@missing[[1]]$npatterns)
         cat(t0.txt, t1.txt, "\n\n", sep="")
     }
-    if(any(object@Sample@missing.flag) && object@Sample@ngroups > 1L) {
+    if(any(unlist(lapply(object@Sample@missing, "[[", "flag"))) && 
+       object@Sample@ngroups > 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
         cat(t0.txt, "\n")
         for(g in 1:object@Sample@ngroups) {
@@ -695,7 +696,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 
 parameterEstimates <- parameterestimates <- 
     function(object, 
-             ci = TRUE, level = 0.95, boot.ci.type = "bca.simple",
+             ci = TRUE, level = 0.95, boot.ci.type = "perc",
              standardized = FALSE) {
 
     LIST <- inspect(object, "list")

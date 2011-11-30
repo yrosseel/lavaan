@@ -46,6 +46,7 @@ independence.model.fit2 <- function(object) {
     lavaan
 }
 
+#### FIXME!!!!! we should get rid of this function.... !
 independence.model.fit <- function(object) {
 
     # construct syntax for independence model
@@ -96,15 +97,15 @@ independence.model.fit <- function(object) {
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
 
     # 3. 
-    lavaanSample <- object@Sample
+    lavaanSampleStats      <- object@Sample
+    lavaanSampleStatsExtra <- object@Extra
 
     # 4. 
     lavaanStart <-
         StartingValues(user       = lavaanUser,
-                       sample     = lavaanSample,
+                       sample     = lavaanSampleStats,
                        model.type = lavaanOptions$model.type,
                        debug      = lavaanOptions$debug)
-
 
     # 5. 
     lavaanModel <-
@@ -117,8 +118,10 @@ independence.model.fit <- function(object) {
     x <- VCOV <- TEST <- NULL
     if(do.fit) {
         x <- estimateModel(lavaanModel,
-                           sample  = lavaanSample,
+                           sample  = lavaanSampleStats,
+                           extra   = lavaanSampleStatsExtra,
                            options = lavaanOptions)
+                           # control???
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac")))
             lavaanModel@con.jac <- attr(x, "con.jac")
@@ -129,7 +132,7 @@ independence.model.fit <- function(object) {
     # 8.
     TEST <- computeTestStatistic(lavaanModel,
                                  user    = lavaanUser,
-                                 sample  = lavaanSample,
+                                 sample  = lavaanSampleStats,
                                  options = lavaanOptions,
                                  x       = x,
                                  VCOV    = VCOV)
@@ -144,12 +147,15 @@ independence.model.fit <- function(object) {
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call    = match.call(),   # match.call
-                  Options = lavaanOptions,  # list
-                  User    = lavaanUser,     # list
-                  Sample  = lavaanSample,   # S4 class
-                  Model   = lavaanModel,    # S4 class
-                  Fit     = lavaanFit       # S4 class
+                  call    = mc,                     # match.call
+                  timing  = timing,                 # list
+                  Options = lavaanOptions,          # list
+                  User    = lavaanUser,             # list
+                  Data    = lavaanData,             # list
+                  Sample  = lavaanSampleStats,      # S4 class
+                  Extra   = lavaanSampleStatsExtra, # S4 class
+                  Model   = lavaanModel,            # S4 class
+                  Fit     = lavaanFit               # S4 class
                  )
 
     lavaan

@@ -16,9 +16,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     # collect info from the lavaan slots
     GLIST <- object@Model@GLIST
     N <- object@Sample@ntotal
-    nvar <- object@Sample@nvar
-    q <- length(vnames(object@User, "ov.x"))
-    p <- nvar - q
+    #q <- length(vnames(object@User, "ov.x"))
+    #p <- nvar - q
     npar <- object@Fit@npar
     fx <- object@Fit@fx
     fx.group <- object@Fit@fx.group
@@ -245,7 +244,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
             for(g in 1:G) {
-                if(!object@Sample@missing.flag[g]) {
+                nvar <- col(object@Sample@cov[[g]])
+                if(!object@Sample@missing[[g]]$flag) {
                     Ng <- object@Sample@nobs[[g]]
                     c <- Ng*nvar/2 * log(2 * pi)
                     logl.H1.group[g] <- ( -c -(Ng/2) *
@@ -466,7 +466,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         srmr.group <- numeric(G)
         for(g in 1:G) {
             # observed
-            if(!object@Sample@missing.flag[g]) {
+            if(!object@Sample@missing[[g]]$flag) {
                 S <- object@Sample@cov[[g]]
                 M <- object@Sample@mean[[g]]
             } else {
@@ -474,6 +474,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 S <- object@Sample@missing[[g]]$sigma
                 M <- object@Sample@missing[[g]]$mu
             }
+            nvar <- col(S)
 
             # estimated
             Sigma.hat <- object@Fit@Sigma.hat[[g]]

@@ -22,7 +22,6 @@ function(object, type="raw", labels=TRUE) {
     }
 
     G <- object@Sample@ngroups
-    nvar <- object@Sample@nvar
     meanstructure <- object@Model@meanstructure
     ov.names <- object@Sample@ov.names
 
@@ -73,7 +72,7 @@ function(object, type="raw", labels=TRUE) {
     R <- vector("list", length=G)
     for(g in 1:G) {
         # sample moments
-        if(!object@Sample@missing.flag[g]) {
+        if(!object@Sample@missing[[g]]$flag) {
             S <- object@Sample@cov[[g]]
             M <- object@Sample@mean[[g]]
         } else {
@@ -83,6 +82,7 @@ function(object, type="raw", labels=TRUE) {
         if(!meanstructure) {
             M <- numeric( length(M) )
         }
+        nvar <- ncol(S)
 
         # raw residuals (for this group
         R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]

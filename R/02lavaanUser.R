@@ -65,7 +65,7 @@ lavaanify <- function(model.syntax    = NULL,
         #stop("lavaan ERROR: model does not contain a measurement model",
         #     "or at least one regression formula")
         warning("lavaan WARNING: model does not contain a measurement model",
-              "or at least one regression formula")
+              " or at least one regression formula")
     }
 
     # check for meanstructure

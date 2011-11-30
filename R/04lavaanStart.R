@@ -72,7 +72,7 @@ StartingValues <- function(start.method = "default",
     }   
 
     # info from sample
-    ngroups <- sample@ngroups
+    ngroups <- length(sample@cov)
 
     # info from user model
     ov.names    <- vnames(user, "ov")
@@ -109,7 +109,7 @@ StartingValues <- function(start.method = "default",
                 # get observed indicators for this latent variable
                 ov.idx <- match(user$rhs[user.idx], ov.names)
                if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
-                    if(sample@missing.flag[g]) {
+                    if(sample@missing[[g]]$flag) {
                         COV <- sample@missing[[g]]$sigma[ov.idx,ov.idx]
                     } else {
                         COV <- sample@cov[[g]][ov.idx,ov.idx]
@@ -135,9 +135,13 @@ StartingValues <- function(start.method = "default",
                             user$lhs == user$rhs)
         sample.var.idx <- match(user$lhs[ov.var.idx], ov.names)
         if(start.initial == "mplus") {
-            start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
+            #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
+            start[ov.var.idx] <- 
+                (1.0 - 0.50)*diag(sample@cov[[1L]])[sample.var.idx]
         } else {
-            start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[g]][sample.var.idx]
+            #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[g]][sample.var.idx]
+            start[ov.var.idx] <- 
+                (1.0 - 0.50)*diag(sample@cov[[g]])[sample.var.idx]
         }
 
         # 2. intercepts

@@ -73,7 +73,7 @@ lavaan <- function(# user-specified model syntax
         stopifnot(is.data.frame(data))
         if(!is.null(group)) {
             if(!(group %in% names(data))) {
-                stop("grouping variable `", group,
+                stop("lavaan ERROR: grouping variable `", group,
                      "' not found in names data:", names(data))
             }
             # note: we use the order as in the data; not as in levels(data)
@@ -93,11 +93,11 @@ lavaan <- function(# user-specified model syntax
 
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
-            stop("please specify number of observations")
+            stop("lavaan ERROR: please specify number of observations")
 
         # if meanstructure=TRUE, we need sample.mean
         if(meanstructure == TRUE && is.null(sample.mean))
-            stop("please provide sample.mean if meanstructure=TRUE")
+            stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
 
         # list?
         if(is.list(sample.cov)) {
@@ -113,7 +113,7 @@ lavaan <- function(# user-specified model syntax
             }
         } else {
             if(!is.matrix(sample.cov))
-                stop("sample.cov must be a matrix or a list of matrices")
+                stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
             ngroups <- 1L
             group.label <- character(0)
         }
@@ -214,36 +214,32 @@ lavaan <- function(# user-specified model syntax
     timing$User <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    # 3a. handle full data: construct data.obs per group
-    DataObject <- NULL
+    # 3a. handle full data
     if(data.type == "full") {
-        DataObject <- getData(data        = data, 
+        lavaanData <- getData(data        = data, 
                               ov.names    = vnames(lavaanUser, type="ov"),
-
-                              # standardize?
                               std.ov      = std.ov,
-
-                              # multiple groups?
                               group       = group,
-                              ngroups     = ngroups,
-                              group.label = group.label,
+                              group.label = group.label)
 
-                              # how to deal with missing data?
-                              missing     = missing,
+        lavaanMissing <- 
+            getMissingPatterns(X       = lavaanData, 
+                               missing = lavaanOptions$missing,
+                               warn    = lavaanOptions$warn,
+                               verbose = lavaanOptions$verbose)
 
-                              debug       = lavaanOptions$debug,
-                              warn        = lavaanOptions$warn,
-                              verbose     = lavaanOptions$verbose
-                             )
-
-         lavaanSampleStats <- getSampleStatsFromDataObject(data = DataObject,
-                                  estimator     = lavaanOptions$estimator,
-                                  likelihood    = lavaanOptions$likelihood,
-                                  mimic         = lavaanOptions$mimic,
-                                  meanstructure = lavaanOptions$meanstructure,
-                                  debug         = lavaanOptions$debug,
-                                  warn          = lavaanOptions$warn,
-                                  verbose       = lavaanOptions$verbose)
+        lavaanSampleStats <- 
+            getSampleStats(X       = lavaanData,
+                           M       = lavaanMissing,
+                           rescale = (lavaanOptions$estimator == "ML" &&
+                                      lavaanOptions$likelihood == "normal"))
+                                                 
+        lavaanSampleStatsExtra <- 
+            getSampleStatsExtra(X             = lavaanData,
+                                sample        = lavaanSampleStats,
+                                estimator     = lavaanOptions$estimator,
+                                mimic         = lavaanOptions$mimic,
+                                meanstructure = lavaanOptions$meanstructure)
 
     } else if(data.type == "moment") {
         stop("working on it...")
@@ -256,7 +252,7 @@ lavaan <- function(# user-specified model syntax
     lavaanStart <- 
         StartingValues(start.method = start,
                        user         = lavaanUser, 
-                       sample       = lavaanSampleStats, 
+                       sample       = lavaanSampleStats,
                        model.type   = lavaanOptions$model.type,
                        mimic        = lavaanOptions$mimic,
                        debug        = lavaanOptions$debug)
@@ -276,7 +272,8 @@ lavaan <- function(# user-specified model syntax
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
-                           sample  = lavaanSampleStats, 
+                           sample  = lavaanSampleStats,
+                           extra   = lavaanSampleStatsExtra,
                            options = lavaanOptions,
                            control = control)
         lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -290,7 +287,8 @@ lavaan <- function(# user-specified model syntax
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "fx") <- 
-            computeObjective(lavaanModel, sample = lavaanSample, 
+            computeObjective(lavaanModel, sample = lavaanSampleStats, 
+                             extra = lavaanSampleStatsExtra,
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -332,13 +330,15 @@ lavaan <- function(# user-specified model syntax
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call    = mc,                  # match.call
-                  timing  = timing,              # list
-                  Options = lavaanOptions,       # list
-                  User    = lavaanUser,          # list
-                  Sample  = lavaanSampleStats,   # S4 class
-                  Model   = lavaanModel,         # S4 class
-                  Fit     = lavaanFit            # S4 class
+                  call    = mc,                     # match.call
+                  timing  = timing,                 # list
+                  Options = lavaanOptions,          # list
+                  User    = lavaanUser,             # list
+                  Data    = lavaanData,             # list
+                  Sample  = lavaanSampleStats,      # S4 class
+                  Extra   = lavaanSampleStatsExtra, # S4 class
+                  Model   = lavaanModel,            # S4 class
+                  Fit     = lavaanFit               # S4 class
                  )
 
     lavaan

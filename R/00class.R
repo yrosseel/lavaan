@@ -4,41 +4,27 @@
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
 
-setClass("FullData",
+setClass("SampleStats",            # sample moments
     representation(
-        X="list",
-        ov.names="character",
-        nvar="integer",            
-        ngroups="integer",
-        group.label="character",
-        norig="integer",
-        nobs="integer",
-        Missing="list",
-        missing.flag="logical"
+        cov="list",                # observed var/cov matrix (per group)
+        mean="list",               # observed mean vector (per group)
+
+        nobs="list",               # effective number of obs (per group)
+        norig="list",              # original number of obs (per group)
+        ntotal="integer",          # total number of obs (all groups)
+        ngroups="integer",         # number of groups
+        ov.names="list",           # variable names (per group)
+
+        missing="list"             # missingness information
     )
 )
 
-setClass("SampleStats",            # sample statistics 
+setClass("SampleStatsExtra",       # additional sample statistics 
     representation(
-        ov.names="character",      # observed variable names
-        nvar="integer",            # number of *used* variables
-        ngroups="integer",         # number of groups
-        group.label="character",   # group labels (levels)
-        missing.flag="logical",    # store/use missing patterns or not?
-
-        ntotal="integer",          # total number of observations 
-        nobs="list",               # effective number of obs (per group)
-
-        mean="list",               # observed mean vector (per group)
-        cov="list",                # observed var/cov matrix (per group)
         icov="list",
         cov.log.det="list",
         cov.vecs="list",
-        WLS.V="list",
-        var="list",                # observed variances (per group)
-        data.obs="list",           # in some cases, we store the full data
-        
-        missing="list"             # missingness information
+        WLS.V="list"
     )
 )
 
@@ -111,7 +97,9 @@ setClass("lavaan",
         timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
         User    = "list",            # user specified model
+        Data    = "list",            # full data 
         Sample  = "SampleStats",     # sample statistics
+        Extra   = "SampleStatsExtra",# extra sample statistics
         Model   = "Model",           # internal matrix representation
         Fit     = "Fit"              # optimization info
     ) 

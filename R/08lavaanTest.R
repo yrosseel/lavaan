@@ -31,7 +31,8 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx) > 0L) {
-            idx <- eliminate.pstar.idx(nvar=sample@nvar, el.idx=x.idx,
+            nvar <- ncol(sample@cov[[g]])
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
                                        meanstructure=TRUE, type="all")
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
@@ -66,7 +67,8 @@ testStatisticYuanBentler <- function(sample=sample,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx) > 0L) {
-            idx <- eliminate.pstar.idx(nvar=sample@nvar, el.idx=x.idx,
+            nvar <- ncol(sample@cov[[g]])
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
@@ -110,7 +112,8 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx) > 0L) {
-            idx <- eliminate.pstar.idx(nvar=sample@nvar, el.idx=x.idx,
+            nvar <- ncol(sample@cov[[g]])
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
@@ -342,7 +345,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             A1.group <- vector("list", length=sample@ngroups)
             B1.group <- vector("list", length=sample@ngroups)
             for(g in 1:sample@ngroups) {
-                if(sample@missing.flag[g]) {
+                if(sample@missing[[g]]$flag) {
                     X <- NULL
                     M <- sample@missing[[g]]
                 } else {

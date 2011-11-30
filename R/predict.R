@@ -12,13 +12,12 @@
 setMethod("predict", "lavaan",
 function(object, data=NULL, ...) {
 
-    if(any(object@Sample@missing.flag)) {
+    if(object@Sample@missing[[1L]]$flag) {
         stop("FIXME: predict does not work with missing data (yet)!")
     }
 
     G <- object@Sample@ngroups
     nmat <- object@Model@nmat
-    nvar <- object@Sample@nvar
     lv.names <- vnames(object@User, type="lv")
     FS <- vector("list", length=G)
 
@@ -28,7 +27,7 @@ function(object, data=NULL, ...) {
         if(is.null(object@Sample@data.obs[[1]])) {
             stop("no local copy of data; FIXME!")
         } else {
-            data.obs <- object@Sample@data.obs
+            data.obs <- object@Data
         }
     } else { 
         stop("this function needs revision!")
@@ -68,6 +67,7 @@ function(object, data=NULL, ...) {
               solve( LAMBDA %*% V.eta %*% t(LAMBDA) + THETA ) )
 
         N <- nrow(data.obs[[g]])
+        nvar <- ncol(object@Sample@cov[[g]])
         tmp1 <- matrix(NU, N, nvar, byrow=TRUE)
         tmp2 <- matrix(LAMBDA %*% E.eta, N, nvar, byrow=TRUE)
         tmp3 <- matrix(E.eta, N, NFAC, byrow=TRUE)
