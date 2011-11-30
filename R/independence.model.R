@@ -98,7 +98,6 @@ independence.model.fit <- function(object) {
 
     # 3. 
     lavaanSampleStats      <- object@Sample
-    lavaanSampleStatsExtra <- object@Extra
 
     # 4. 
     lavaanStart <-
@@ -119,7 +118,6 @@ independence.model.fit <- function(object) {
     if(do.fit) {
         x <- estimateModel(lavaanModel,
                            sample  = lavaanSampleStats,
-                           extra   = lavaanSampleStatsExtra,
                            options = lavaanOptions)
                            # control???
         lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -153,7 +151,6 @@ independence.model.fit <- function(object) {
                   User    = lavaanUser,             # list
                   Data    = lavaanData,             # list
                   Sample  = lavaanSampleStats,      # S4 class
-                  Extra   = lavaanSampleStatsExtra, # S4 class
                   Model   = lavaanModel,            # S4 class
                   Fit     = lavaanFit               # S4 class
                  )

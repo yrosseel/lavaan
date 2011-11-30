@@ -124,12 +124,20 @@ getMissingPatterns <- function(X       = NULL,
 }
 
 getSampleStats <- function(X           = NULL,
-                             M           = NULL,
-                             boot.idx    = NULL,
-                             rescale     = FALSE) {
+                           M           = NULL,
+                           boot.idx    = NULL,
+                           rescale     = FALSE,
+                           group.label = NULL,
+                           WLS.V       = list()) {
 
     # number of groups
     ngroups <- length(X)
+   
+    # group labels
+    if(is.null(group.label)) {
+        group.label <- paste("Group ", 1:ngroups, sep="")
+    } 
+    group.label <- as.list(group.label)
 
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
@@ -138,6 +146,10 @@ getSampleStats <- function(X           = NULL,
     nobs        <- vector("list", length=ngroups)
     norig       <- vector("list", length=ngroups)
     ov.names    <- vector("list", length=ngroups)
+    # extra sample statistics per group
+    icov        <- vector("list", length=ngroups)
+    cov.log.det <- vector("list", length=ngroups)
+    cov.vecs    <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 
@@ -170,77 +182,89 @@ getSampleStats <- function(X           = NULL,
             cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
         }
 
-    } # ngroups
-
-    # construct SampleStats object
-    SampleStats <- new("SampleStats",
-
-                         # sample moments
-                         mean           = mean,
-                         cov            = cov,
-                         #var            = var,
-
-                         # convenience
-                         nobs           = nobs,
-                         norig          = norig,
-                         ngroups        = ngroups,
-                         ntotal         = sum(unlist(nobs)),
-                         ov.names       = ov.names,
-
-                         # missingness
-                         missing        = M
-                        )
-
-    SampleStats
-}
-
-
-getSampleStatsExtra <- function(X             = NULL, 
-                                sample        = NULL,
-
-                                estimator     = "ML",
-                                mimic         = "lavaan",
-                                meanstructure = FALSE) {
-
-    # number of groups
-    ngroups <- sample@ngroups
-
-    # extra sample statistics per group
-    icov        <- vector("list", length=ngroups)
-    cov.log.det <- vector("list", length=ngroups)
-    cov.vecs    <- vector("list", length=ngroups)
-    WLS.V       <- vector("list", length=ngroups)
-
-    # icov and cov.log.det
-    for(g in 1:ngroups) {
-        tmp <- try(inv.chol(sample@cov[[g]], logdet=TRUE))
+        # icov and cov.log.det
+        tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
         if(inherits(tmp, "try-error")) {
             if(ngroups > 1) {
-                stop("sample covariance can not be inverted in group", g)
+                stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
             } else {
-                stop("sample covariance can not be inverted")
+                stop("lavaan ERROR: sample covariance can not be inverted")
             }
         } else {
             cov.log.det[[g]] <- attr(tmp, "logdet")
             attr(tmp, "logdet") <- NULL
             icov[[g]]        <- tmp
         }
+
+        # cov.vecs
+        cov.vecs[[g]] <- vech(cov[[g]])
+
+    } # ngroups
+
+    # construct SampleStats object
+    SampleStats <- new("SampleStats",
+
+                       # sample moments
+                       mean        = mean,
+                       cov         = cov,
+                       #var        = var,
+
+                       # convenience
+                       nobs        = nobs,
+                       norig       = norig,
+                       ntotal      = sum(unlist(nobs)),
+                       ov.names    = ov.names,
+                       ngroups     = ngroups,
+                       group.label = group.label,
+
+                       # extra sample statistics
+                       icov        = icov,
+                       cov.log.det = cov.log.det,
+                       cov.vecs    = cov.vecs,
+                       WLS.V       = WLS.V,                     
+
+                       # missingness
+                       missing     = M
+                      )
+
+    SampleStats
+}
+
+
+getWLS.V <- function(X             = NULL, 
+                     sample        = NULL,
+
+                     estimator     = "ML",
+                     mimic         = "lavaan",
+                     meanstructure = FALSE) {
+
+    # number of groups
+    if(is.null(sample)) {
+        ngroups <- length(X)
+    } else {
+        ngroups <- sample@ngroups
     }
 
-    # cov.vecs
-    if(estimator == "GLS" || estimator == "WLS") {
-        for(g in 1:ngroups) {
-            cov.vecs[[g]] <- vech(sample@cov[[g]])
-        }
-    }
+    WLS.V       <- vector("list", length=ngroups)
 
     # WLS.V (for GLS and WLS only)
     if(estimator == "GLS") {
+        if(is.null(sample)) {
+            # FIXME: maybe we should avoid sample = NULL alltogether...
+            # tmp cov and icov, assuming data is complete
+            cov         <- lapply(X, cov, use="pairwise")
+            icov        <- lapply(cov, inv.chol, logdet=FALSE)
+            nobs        <- lapply(X, nrow)
+        } else {
+            cov <- sample@cov
+            icov <- sample@icov
+            nobs <- sample@nobs
+        }
         for(g in 1:ngroups) {
             if(meanstructure) {
                 V11 <- icov[[g]]
                 if(mimic == "Mplus") { # is this a bug in Mplus?
-                    V11 <- V11 * sample@nobs[[g]]/(sample@nobs[[g]]-1)
+                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                 }
                 V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
                 WLS.V[[g]] <- bdiag(V11,V22)
@@ -252,15 +276,23 @@ getSampleStatsExtra <- function(X             = NULL,
     } else if(estimator == "WLS") {
         for(g in 1:ngroups) {
             # sample size large enough?
+            nvar <- ncol(X[[g]])
             pstar <- nvar*(nvar+1)/2
             if(meanstructure) pstar <- pstar + nvar
-            if(d.nobs[g] < pstar) {
-                if(g > 1L) cat("in group: ", g, ":\n", sep="")
-                stop("lavaan ERROR: cannot compute Gamma: number of observations too small")
+            if(nrow(X[[g]]) < pstar) {
+                if(ngroups > 1L) { 
+                    txt <- cat(" in group: ", g, "\n", sep="")
+                } else {
+                    txt <- "\n"
+                }
+                stop("lavaan ERROR: cannot compute Gamma: ",
+                     "number of observations (", nrow(X[[g]]), ") too small",
+                     txt)
             }
 
             Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
                                    Mplus.WLS=(mimic=="Mplus"))
+
             # Gamma should be po before we invert
             ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
             if(is.complex(ev) || any(Re(ev) < 0)) {
@@ -271,17 +303,6 @@ getSampleStatsExtra <- function(X             = NULL,
         }
     }
 
-
-
-    # construct Sample object
-    SampleStatsExtra <- new("SampleStatsExtra",
-
-                            icov           = icov,
-                            cov.log.det    = cov.log.det,
-                            cov.vecs       = cov.vecs,
-                            WLS.V          = WLS.V
-                           )
-
-    SampleStatsExtra
+    WLS.V
 }
 

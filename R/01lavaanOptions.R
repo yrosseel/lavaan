@@ -188,8 +188,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$information <- "expected"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        opt$se <- "robust.mlm"
-        opt$test <- "satorra.bentler"
+        if(opt$se != "none") opt$se <- "robust.mlm"
+        if(opt$test != "none") opt$test <- "satorra.bentler"
         if(opt$missing == "ml") {
             stop("the MLM estimator can not be used when data are incomplete\n")
         }
@@ -197,12 +197,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$estimator <- "ML"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        opt$se <- "first.order"
+        if(opt$se != "none") opt$se <- "first.order"
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        opt$se <- "robust.mlr"
-        opt$test <- "yuan.bentler"
+        if(opt$se != "none") opt$se <- "robust.mlr"
+        if(opt$test != "none") opt$test <- "yuan.bentler"
         opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"

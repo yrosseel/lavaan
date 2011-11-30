@@ -1,5 +1,6 @@
 
-computeExpectedInformation <- function(object, sample=NULL, estimator="ML",
+computeExpectedInformation <- function(object, sample=NULL, data=NULL,
+                                       estimator="ML",
                                        Delta=NULL, extra=FALSE) {
 
     # is no Delta is provided, we compute Delta for the free parameters only
@@ -18,7 +19,7 @@ computeExpectedInformation <- function(object, sample=NULL, estimator="ML",
             if(sample@missing[[g]]$flag) {
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
-                                            sample=sample, group=g,
+                                            sample=sample, data=data, group=g,
                                             information="expected")
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
@@ -100,7 +101,7 @@ computeExpectedInformationMLM <- function(object, sample=NULL, Delta=NULL) {
 
 
 
-computeObservedInformation <- function(object, sample=NULL, 
+computeObservedInformation <- function(object, sample=NULL, data=NULL,
                                        type="free", estimator="ML", 
                                        group.weight=TRUE) {
 
@@ -171,7 +172,7 @@ computeObservedInformation <- function(object, sample=NULL,
         for(g in 1:sample@ngroups) {
             WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                         Mu.hat=Mu.hat[[g]],
-                                        sample=sample, group=g,
+                                        sample=sample, data=data, group=g,
                                         information="observed")
         }
 

@@ -87,6 +87,7 @@ testStatisticYuanBentler <- function(sample=sample,
 }
 
 testStatisticYuanBentler.Mplus <- function(sample=sample, 
+                                           data=data,
                                            information="observed",
                                            B0.group=NULL,
                                            E.inv=NULL,
@@ -107,7 +108,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
         A1 <- compute.A1.sample(sample=sample, group=g,
                                meanstructure=meanstructure,
                                information=information)
-        B1 <- compute.B1.sample(sample=sample, group=g)
+        B1 <- compute.B1.sample(sample=sample, data=data, group=g)
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
@@ -235,6 +236,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
             if(!mimic == "Mplus") {
                 E <- computeExpectedInformation(object, sample=sample,
+                                                data=data,
                                                 estimator="ML", Delta=NULL,
                                                 extra=TRUE)
                 E.inv <- solve(E)
@@ -253,8 +255,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
         if(is.null(Gamma)) {
             Gamma <- vector("list", length=sample@ngroups)
             for(g in 1:sample@ngroups) {
-                Gamma[[g]] <- compute.Gamma(sample@data.obs[[g]],
-                                            meanstructure=TRUE)
+                Gamma[[g]] <- compute.Gamma(data[[g]], meanstructure=TRUE)
             }
         }
         
@@ -323,17 +324,21 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             if(options$se != "robust.mlr") information <- "observed"
             E.inv <- Nvcov.standard(object      = object,
                                     sample      = sample,
+                                    data        = data,
                                     estimator   = "ML",
                                     information = information)
         }
 
         if(mimic == "Mplus" || mimic == "lavaan") {
             if(is.null(B0.group)) {
-                Nvcov <- Nvcov.first.order(object = object, sample = sample)
+                Nvcov <- Nvcov.first.order(object = object, 
+                                           sample = sample,
+                                           data   = data)
                 B0.group <- attr(Nvcov, "B0.group")
             } 
             trace.UGamma <- 
                 testStatisticYuanBentler.Mplus(sample=sample,
+                                               data=data,
                                                information=information,
                                                B0.group=B0.group,
                                                E.inv=E.inv,
@@ -349,7 +354,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                     X <- NULL
                     M <- sample@missing[[g]]
                 } else {
-                    X <- sample@data.obs[[g]]
+                    X <- data[[g]]
                     M <- NULL
                 }
                 out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat[[g]], 

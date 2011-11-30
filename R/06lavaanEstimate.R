@@ -182,7 +182,7 @@ function(object, GLIST=NULL) {
 })
 
 setMethod("computeObjective", "Model",
-function(object, GLIST=NULL, sample, extra, estimator="ML", 
+function(object, GLIST=NULL, sample, estimator="ML", 
          verbose=FALSE, forcePD=TRUE) {
 
     # shortcut for data.type == "none"
@@ -225,14 +225,14 @@ function(object, GLIST=NULL, sample, extra, estimator="ML",
                                      Mu.hat=Mu.hat[[g]],
                                      data.cov=sample@cov[[g]], 
                                      data.mean=sample@mean[[g]], 
-                                     data.cov.log.det=extra@cov.log.det[[g]],
+                                     data.cov.log.det=sample@cov.log.det[[g]],
                                      meanstructure=meanstructure)
         } else if(estimator == "GLS" || estimator == "WLS") {
             group.fx <- estimator.WLS(Sigma.hat=Sigma.hat[[g]], 
                                       Mu.hat=Mu.hat[[g]],
-                                      w.vecs=extra@cov.vecs[[g]], 
+                                      w.vecs=sample@cov.vecs[[g]], 
                                       data.mean=sample@mean[[g]],
-                                      WLS.V=extra@WLS.V[[g]],  
+                                      WLS.V=sample@WLS.V[[g]],  
                                       meanstructure=meanstructure)
         } else {
             stop("unsupported estimator: ", estimator)
@@ -386,8 +386,7 @@ computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
 }
 
 computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,  
-                         sample=NULL, extra=NULL, 
-                         estimator="ML", meanstructure=FALSE) {
+                         sample=NULL, estimator="ML", meanstructure=FALSE) {
 
     Omega    <- vector("list", length=sample@ngroups)
     Omega.mu <- vector("list", length=sample@ngroups)
@@ -459,7 +458,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
         # GLS
         } else if(estimator == "GLS") {
-            W.inv <- extra@icov[[g]]
+            W.inv <- sample@icov[[g]]
             W     <- sample@cov[[g]]
             Omega[[g]] <- (sample@nobs[[g]]-1)/sample@nobs[[g]] *
                               (W.inv %*% (W - Sigma.hat[[g]]) %*% W.inv)
@@ -478,7 +477,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
 
 setMethod("computeGradient", "Model",
-function(object, GLIST=NULL, sample=NULL, extra=NULL, type="free", 
+function(object, GLIST=NULL, sample=NULL, type="free", 
          estimator="ML", verbose=FALSE, forcePD=TRUE, 
          group.weight=TRUE, constraints=TRUE) {
 
@@ -582,14 +581,14 @@ function(object, GLIST=NULL, sample=NULL, extra=NULL, type="free",
         for(g in 1:sample@ngroups) {
             # Browne & Arminger 1995 eq 4.49
             if(!meanstructure) {
-                obs <- extra@cov.vecs[[g]]
+                obs <- sample@cov.vecs[[g]]
                 est <- vech(Sigma.hat[[g]])
             } else {
-                obs <- c(sample@mean[[g]], extra@cov.vecs[[g]])
+                obs <- c(sample@mean[[g]], sample@cov.vecs[[g]])
                 est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             }
             diff <- as.matrix(obs - est)
-            group.dx <- -1 * ( t(Delta[[g]]) %*% extra@WLS.V[[g]] %*% diff)
+            group.dx <- -1 * ( t(Delta[[g]]) %*% sample@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
 
             if(g == 1) {
@@ -613,7 +612,7 @@ function(object, GLIST=NULL, sample=NULL, extra=NULL, type="free",
 
 
 setMethod("estimateModel", "Model",
-function(object, sample, extra, do.fit=TRUE, options=NULL, control=list()) {
+function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
 
     estimator     <- options$estimator
     verbose       <- options$verbose
@@ -639,7 +638,7 @@ function(object, sample, extra, do.fit=TRUE, options=NULL, control=list()) {
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        fx <- computeObjective(object, GLIST=GLIST, sample, extra,
+        fx <- computeObjective(object, GLIST=GLIST, sample,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
@@ -666,7 +665,7 @@ function(object, sample, extra, do.fit=TRUE, options=NULL, control=list()) {
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        dx <- computeGradient(object, GLIST=GLIST, sample, extra,
+        dx <- computeGradient(object, GLIST=GLIST, sample,
                               type="free", 
                               estimator=estimator,
                               verbose=verbose, forcePD=TRUE)

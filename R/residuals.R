@@ -172,7 +172,7 @@ function(object, type="raw", labels=TRUE) {
     if(G == 1) {
         R <- R[[1]]
     } else {
-        names(R) <- object@Sample@group.label
+        names(R) <- unlist(object@Sample@group.label)
     }
 
     R

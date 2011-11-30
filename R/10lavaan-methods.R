@@ -175,7 +175,7 @@ short.summary <- function(object) {
             cat("\n")
             cat("Chi-square for each group:\n\n")
             for(g in 1:object@Sample@ngroups) {
-                t0.txt <- sprintf("  %-40s", object@Sample@group.label[g])
+                t0.txt <- sprintf("  %-40s", object@Sample@group.label[[g]])
                 t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$stat.group[g])
                 t2.txt <- ifelse(scaled, sprintf("  %10.3f", 
                                  object@Fit@test[[2]]$stat.group[g]), "")
@@ -296,7 +296,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         if(object@Sample@ngroups > 1) {
             if(g > 1) cat("\n\n")
             cat("Group ", g, 
-                " [", object@Sample@group.label[g], "]:\n\n", sep="")
+                " [", object@Sample@group.label[[g]], "]:\n\n", sep="")
         }
 
         # estimates header
@@ -475,7 +475,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         if(object@Sample@ngroups == 1L) r2 <- list(r2)
         for(g in 1:object@Sample@ngroups) {
             if(object@Sample@ngroups > 1) {
-                cat("R-Square Group ", object@Sample@group.label[g], 
+                cat("R-Square Group ", object@Sample@group.label[[g]], 
                     ":\n\n", sep="")       
             } else {
                 cat("R-Square:\n\n")
@@ -943,7 +943,7 @@ sampStat <- function(object, labels=TRUE) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- object@Sample@group.label
+        names(OUT) <- unlist(object@Sample@group.label)
     }
 
     OUT
@@ -972,7 +972,7 @@ function(object, labels=TRUE) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- object@Sample@group.label
+        names(OUT) <- unlist(object@Sample@group.label)
     }
 
     OUT
@@ -1031,7 +1031,7 @@ rsquare <- function(object, est.std.all=NULL) {
     if(ngroups == 1) {
         r2 <- r2[[1]]
     } else {
-        names(r2) <- object@Sample@group.label
+        names(r2) <- unlist(object@Sample@group.label)
     }
 
     r2

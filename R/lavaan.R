@@ -228,19 +228,23 @@ lavaan <- function(# user-specified model syntax
                                warn    = lavaanOptions$warn,
                                verbose = lavaanOptions$verbose)
 
-        lavaanSampleStats <- 
-            getSampleStats(X       = lavaanData,
-                           M       = lavaanMissing,
-                           rescale = (lavaanOptions$estimator == "ML" &&
-                                      lavaanOptions$likelihood == "normal"))
-                                                 
-        lavaanSampleStatsExtra <- 
-            getSampleStatsExtra(X             = lavaanData,
-                                sample        = lavaanSampleStats,
-                                estimator     = lavaanOptions$estimator,
-                                mimic         = lavaanOptions$mimic,
-                                meanstructure = lavaanOptions$meanstructure)
+        WLS.V <- list()
+        if(lavaanOptions$estimator %in% c("GLS", "WLS")) {
+            WLS.V <- getWLS.V(X             = lavaanData,
+                              sample        = NULL,
+                              estimator     = lavaanOptions$estimator,
+                              mimic         = lavaanOptions$mimic,
+                              meanstructure = lavaanOptions$meanstructure)
+        }
 
+        lavaanSampleStats <- 
+            getSampleStats(X           = lavaanData,
+                           M           = lavaanMissing,
+                           rescale     = (lavaanOptions$estimator == "ML" &&
+                                          lavaanOptions$likelihood == "normal"),
+                           group.label = group.label,
+                           WLS.V       = WLS.V)
+                                                 
     } else if(data.type == "moment") {
         stop("working on it...")
     } 
@@ -273,7 +277,6 @@ lavaan <- function(# user-specified model syntax
     if(do.fit && lavaanModel@nx.free > 0L) {
         x <- estimateModel(lavaanModel,
                            sample  = lavaanSampleStats,
-                           extra   = lavaanSampleStatsExtra,
                            options = lavaanOptions,
                            control = control)
         lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -288,7 +291,6 @@ lavaan <- function(# user-specified model syntax
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "fx") <- 
             computeObjective(lavaanModel, sample = lavaanSampleStats, 
-                             extra = lavaanSampleStatsExtra,
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -300,7 +302,7 @@ lavaan <- function(# user-specified model syntax
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSampleStats,
                              options = lavaanOptions,
-                             data    = data)
+                             data    = lavaanData)
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -314,7 +316,7 @@ lavaan <- function(# user-specified model syntax
                                      options = lavaanOptions,
                                      x       = x,
                                      VCOV    = VCOV,
-                                     data    = data)
+                                     data    = lavaanData)
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -336,7 +338,6 @@ lavaan <- function(# user-specified model syntax
                   User    = lavaanUser,             # list
                   Data    = lavaanData,             # list
                   Sample  = lavaanSampleStats,      # S4 class
-                  Extra   = lavaanSampleStatsExtra, # S4 class
                   Model   = lavaanModel,            # S4 class
                   Fit     = lavaanFit               # S4 class
                  )

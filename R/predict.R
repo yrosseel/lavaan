@@ -24,7 +24,7 @@ function(object, data=NULL, ...) {
     # need full data set supplied
     if(is.null(data)) {
         # do we have an internal copy:
-        if(is.null(object@Sample@data.obs[[1]])) {
+        if(is.null(object@Data[[1]])) {
             stop("no local copy of data; FIXME!")
         } else {
             data.obs <- object@Data

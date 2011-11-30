@@ -1,5 +1,5 @@
 # public version
-lavaanNames <- function(object, type="ov") {
+lavaanNames <- function(object, type="ov", group=NULL) {
 
     if(class(object) == "lavaan") {
          user <- object@User
@@ -13,17 +13,26 @@ lavaanNames <- function(object, type="ov") {
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
                           "ov.nox"))
-    vnames(user, type=type)
+    vnames(user, type=type, group=group)
 }
 
 # internal version
-vnames <- function(user, type=NULL) {
+vnames <- function(user, type=NULL, group=NULL) {
 
     stopifnot(is.list(user), !missing(type),
               type %in% c("lv",   "ov", 
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
                           "ov.nox"))
+
+    # select single group only?
+    if(!is.null(group)) {
+        group <- as.integer(group)
+        idx <- which(user$group %in% group)
+        user$lhs <- user$lhs[idx]
+        user$op  <- user$op[idx]
+        user$rhs <- user$rhs[idx]
+    }
 
     # regular latent variables: lhs =~
     if(type == "lv") {
@@ -86,8 +95,8 @@ vnames <- function(user, type=NULL) {
 
     # ov's withouth ov.x
     if(type == "ov.nox") {
-        out <- vnames(user, "ov")
-        ov.names.x <- vnames(user, "ov.x")
+        out <- vnames(user, "ov", group=group)
+        ov.names.x <- vnames(user, "ov.x", group=group)
         idx <- which(out %in% ov.names.x)
         if(length(idx)) out <- out[-idx]
     } else
@@ -106,7 +115,7 @@ vnames <- function(user, type=NULL) {
  
     # dependent ov (but not also indicator or x)
     if(type == "ov.y") {
-        ov.names <- vnames(user, "ov")
+        ov.names <- vnames(user, "ov", group=group)
         lv.names <- unique( user$lhs[ user$op == "=~" ] )
         v.ind    <- unique( user$rhs[ user$op == "=~" ] )
         eqs.x <- unique( user$rhs[ user$op == "~" ] )
@@ -133,9 +142,9 @@ vnames <- function(user, type=NULL) {
     out
 }
 
-getNDAT <- function(user) {
+getNDAT <- function(user, group=NULL) {
 
-    ov.names <- vnames(user, "ov")
+    ov.names <- vnames(user, "ov", group=group)
     nvar <- length(ov.names)
 
     ngroups <- max(user$group)
@@ -147,7 +156,8 @@ getNDAT <- function(user) {
 
     # correction for fixed.x?
     if(fixed.x) {
-        ov.names.x <- vnames(user, "ov.x"); nvar.x <- length(ov.names.x)
+        ov.names.x <- vnames(user, "ov.x", group=group)
+        nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
         ndat <- ndat - (ngroups * pstar.x)
@@ -161,9 +171,9 @@ getNPAR <- function(user) {
     npar
 }
 
-getDF <- function(user) {
+getDF <- function(user, group=NULL) {
 
-    ov.names <- vnames(user, "ov")
+    ov.names <- vnames(user, "ov", group=group)
     nvar <- length(ov.names)
     npar <- max(user$free)
 
@@ -176,7 +186,8 @@ getDF <- function(user) {
 
     # correction for fixed.x?
     if(fixed.x) {
-        ov.names.x <- vnames(user, "ov.x"); nvar.x <- length(ov.names.x)
+        ov.names.x <- vnames(user, "ov.x", group=group)
+        nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
         ndat <- ndat - (ngroups * pstar.x)
@@ -220,20 +231,20 @@ getParameterLabels <- function(user, type="user") {
 }
 
 
-getUserListFull <- function(user=NULL) {
+getUserListFull <- function(user=NULL, group=NULL) {
 
     # meanstructure + number of groups
     meanstructure <- any(user$op == "~1")
     ngroups <- max(user$group)
 
     # extract `names' of various types of variables:
-    lv.names     <- vnames(user, type="lv")     # latent variables
-    ov.names     <- vnames(user, type="ov")     # observed variables
-    ov.names.x   <- vnames(user, type="ov.x")   # exogenous x covariates
-    ov.names.nox <- vnames(user, type="ov.nox") # ov's without exo's
-    lv.names.x   <- vnames(user, type="lv.x")   # exogenous lv
-    ov.names.y   <- vnames(user, type="ov.y")   # dependent ov
-    lv.names.y   <- vnames(user, type="lv.y")   # dependent lv
+    lv.names     <- vnames(user, type="lv",  group=group)   # latent variables
+    ov.names     <- vnames(user, type="ov",  group=group)   # observed variables
+    ov.names.x   <- vnames(user, type="ov.x",group=group)   # exogenous x covariates
+    ov.names.nox <- vnames(user, type="ov.nox",group=group) # ov's without exo's
+    lv.names.x   <- vnames(user, type="lv.x",group=group)   # exogenous lv
+    ov.names.y   <- vnames(user, type="ov.y",group=group)   # dependent ov
+    lv.names.y   <- vnames(user, type="lv.y",group=group)   # dependent lv
     lvov.names.y <- c(ov.names.y, lv.names.y)
 
 

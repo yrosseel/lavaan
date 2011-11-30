@@ -13,18 +13,15 @@ setClass("SampleStats",            # sample moments
         norig="list",              # original number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
+        group.label="list",        # group label
         ov.names="list",           # variable names (per group)
 
-        missing="list"             # missingness information
-    )
-)
+        icov="list",               # inverse of observed cov (per group)
+        cov.log.det="list",        # log det of observed cov (per group)
+        cov.vecs="list",           # cov lower tri elements in vector
+        WLS.V="list",              # weight matrix for GLS/WLS
 
-setClass("SampleStatsExtra",       # additional sample statistics 
-    representation(
-        icov="list",
-        cov.log.det="list",
-        cov.vecs="list",
-        WLS.V="list"
+        missing="list"             # missingness information
     )
 )
 
@@ -99,7 +96,6 @@ setClass("lavaan",
         User    = "list",            # user specified model
         Data    = "list",            # full data 
         Sample  = "SampleStats",     # sample statistics
-        Extra   = "SampleStatsExtra",# extra sample statistics
         Model   = "Model",           # internal matrix representation
         Fit     = "Fit"              # optimization info
     ) 

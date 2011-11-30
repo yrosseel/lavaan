@@ -43,7 +43,7 @@ reliability <- function(object) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- object@Sample@group.label
+        names(OUT) <- unlist(object@Sample@group.label)
     }
 
     OUT
