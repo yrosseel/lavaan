@@ -120,7 +120,7 @@ function(object, GLIST=NULL, extra=FALSE) {
     for(g in 1:ngroups) {
 
         # which mm belong to group g?
-        mm.in.group <- nmat * (g - 1L) + 1:nmat
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
         if(representation == "LISREL") {
             Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = GLIST[mm.in.group])
@@ -166,10 +166,10 @@ function(object, GLIST=NULL) {
     for(g in 1:ngroups) {
 
         # which mm belong to group g?
-        mm.in.group <- nmat * (g - 1L) + 1:nmat
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
         if(!meanstructure) {
-            Mu.hat[[g]] <- numeric( object@nvar )
+            Mu.hat[[g]] <- numeric( object@nvar[g] )
         } else
         if(representation == "LISREL") {
             Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = GLIST[ mm.in.group ])
@@ -186,7 +186,7 @@ function(object, GLIST=NULL, sample, estimator="ML",
          verbose=FALSE, forcePD=TRUE) {
 
     # shortcut for data.type == "none"
-    if(is.null(sample@cov[[1L]])) {
+    if(length(sample@cov) == 0L) {
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), sample@ngroups)
         return(fx)
@@ -302,10 +302,13 @@ computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
     type <- "nonfree"
     if(is.null(m.el.idx) && is.null(x.el.idx)) type <- "free"
 
-    # number of rows in DELTA
-    pstar <- nvar * (nvar + 1) / 2
-    if(object@meanstructure) {
-        pstar <- nvar + pstar  # first the means, then sigma
+    # number of rows in DELTA.group
+    pstar <- integer(ngroups)
+    for(g in 1:ngroups) {
+        pstar[g] <- as.integer(nvar[g] * (nvar[g] + 1) / 2)
+        if(object@meanstructure) {
+            pstar[g] <- nvar[g] + pstar[g]  # first the means, then sigma
+        }
     }
 
     # number of columns in DELTA + m.el.idx/x.el.idx
@@ -344,10 +347,10 @@ computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
     # compute Delta
     Delta <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
-        Delta.group <- matrix(0, nrow=pstar, ncol=NCOL)
+        Delta.group <- matrix(0, nrow=pstar[g], ncol=NCOL)
 
         # which mm belong to group g?
-        mm.in.group <- nmat * (g - 1L) + 1:nmat
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
         for(mm in mm.in.group) {
             mname <- names(object@GLIST)[mm]
@@ -524,7 +527,7 @@ function(object, GLIST=NULL, sample=NULL, type="free",
       
         for(g in 1:sample@ngroups) {
             # which mm belong to group g?
-            mm.in.group <- nmat * (g - 1L) + 1:nmat
+            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
             mm.names <- names( GLIST[mm.in.group] )
 
             if(representation == "LISREL") {
@@ -550,7 +553,7 @@ function(object, GLIST=NULL, sample=NULL, type="free",
         if(type == "free") {
             dx <- numeric( nx.unco )
             for(g in 1:sample@ngroups) {
-                mm.in.group <- nmat * (g - 1L) + 1:nmat
+                mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
                 for(mm in mm.in.group) {
                       m.unco.idx  <- object@m.unco.idx[[mm]]
                          x.unco.idx  <- object@x.unco.idx[[mm]]

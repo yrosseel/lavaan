@@ -216,8 +216,10 @@ lavaan <- function(# user-specified model syntax
 
     # 3a. handle full data
     if(data.type == "full") {
+        ov.names <- lapply(as.list(1:ngroups), 
+                           function(x) vnames(lavaanUser, type="ov", x))
         lavaanData <- getData(data        = data, 
-                              ov.names    = vnames(lavaanUser, type="ov"),
+                              ov.names    = ov.names,
                               std.ov      = std.ov,
                               group       = group,
                               group.label = group.label)
@@ -247,7 +249,12 @@ lavaan <- function(# user-specified model syntax
                                                  
     } else if(data.type == "moment") {
         stop("working on it...")
+    } else {
+        # no data
+        lavaanData <- list()
+        lavaanSampleStats <- new("SampleStats", ngroups=ngroups)
     } 
+    if(debug) print(str(lavaanSampleStats))
 
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

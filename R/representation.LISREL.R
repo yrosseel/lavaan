@@ -5,88 +5,161 @@
 # - derivative.F
 
 # initital version: YR 2011-01-21: LISREL stuff
+# updates:          YR 2011-12-01: group specific extraction
 
-representation.LISREL <- function(user=NULL, target=NULL, extra=FALSE) {
-
-    # info from user model
-    ov.names <- vnames(user, "ov"); nvar <- length(ov.names)
-    lv.names <- vnames(user, "lv"); nfac <- length(lv.names)
-    ngroups <- max(user$group)
-    meanstructure <- any(user$op == "~1")
-
-    # in this representation, we need to create 'phantom/dummy' latent 
-    # variables for all `x' and `y' variables not in lv.names
-    tmp.names <- unique( c(user$lhs[ user$op == "~" ],
-                           user$rhs[ user$op == "~" ]) )
-    dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
-    if(length(dummy.names)) {
-        # make sure order is the same as ov.names
-        ov.dummy.names <- ov.names[ ov.names %in% dummy.names ]
-
-        # extend lv.names
-        lv.names <- c(lv.names, ov.dummy.names)
-        nfac <- length(lv.names)
-
-        # add 'dummy' =~ entries
-        dummy.mat <- rep("lambda", length(dummy.names))
-    } else {
-        ov.dummy.names <- character(0)
-    }
+representation.LISREL <- function(user=NULL, target=NULL, 
+                                  extra=FALSE) {
 
     # prepare target list
     if(is.null(target)) target <- user
 
+    # prepare output
     N <- length(target$lhs)
     tmp.mat <- character(N); tmp.row <- integer(N); tmp.col <- integer(N)
 
-    # 1a. "=~" regular indicators
-    idx <- which(target$op == "=~" & !(target$rhs %in% lv.names))
-    tmp.mat[idx] <- "lambda"
-    tmp.row[idx] <- match(target$rhs[idx], ov.names)
-    tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    # global settings
+    meanstructure <- any(user$op == "~1")
 
-    # 1b. "=~" regular higher-order lv indicators
-    idx <- which(target$op == "=~" & !(target$rhs %in% ov.names))
-    tmp.mat[idx] <- "beta"
-    tmp.row[idx] <- match(target$rhs[idx], lv.names)
-    tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    # number of groups
+    ngroups <- max(user$group)
+    ov.dummy.names <- vector("list", ngroups)
+    if(extra) {
+        REP.mmNames     <- vector("list", ngroups)
+        REP.mmNumber    <- vector("list", ngroups)
+        REP.mmRows      <- vector("list", ngroups)
+        REP.mmCols      <- vector("list", ngroups)
+        REP.mmDimNames  <- vector("list", ngroups)
+        REP.mmSymmetric <- vector("list", ngroups)
+    }
 
-    # 1c. "=~" indicators that are both in ov and lv
-    idx <- which(target$op == "=~" & target$rhs %in% ov.names
-                                   & target$rhs %in% lv.names)
-    tmp.mat[idx] <- "beta"
-    tmp.row[idx] <- match(target$rhs[idx], lv.names)
-    tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    for(g in 1:ngroups) {
 
-    # 2. "~" regressions
-    idx <- which(target$op == "~")
-    tmp.mat[idx] <- "beta"
-    tmp.row[idx] <- match(target$lhs[idx], lv.names)
-    tmp.col[idx] <- match(target$rhs[idx], lv.names)
+        # info from user model per group
+        ov.names <- vnames(user, "ov", group=g); nvar <- length(ov.names)
+        lv.names <- vnames(user, "lv", group=g); nfac <- length(lv.names)
 
-    # 3a. "~~" ov
-    idx <- which(target$op == "~~" & !(target$lhs %in% lv.names))
-    tmp.mat[idx] <- "theta"
-    tmp.row[idx] <- match(target$lhs[idx], ov.names)
-    tmp.col[idx] <- match(target$rhs[idx], ov.names)
+        # in this representation, we need to create 'phantom/dummy' latent 
+        # variables for all `x' and `y' variables not in lv.names
+        tmp.names <- 
+            unique( c(user$lhs[user$op == "~" & user$group == g],
+                      user$rhs[user$op == "~" & user$group == g]) )
+        dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
+        if(length(dummy.names)) {
+            # make sure order is the same as ov.names
+            ov.dummy.names[[g]] <- ov.names[ ov.names %in% dummy.names ]
 
-    # 3b. "~~" lv
-    idx <- which(target$op == "~~" & target$rhs %in% lv.names)
-    tmp.mat[idx] <- "psi"
-    tmp.row[idx] <- match(target$lhs[idx], lv.names)
-    tmp.col[idx] <- match(target$rhs[idx], lv.names)
+            # extend lv.names
+            lv.names <- c(lv.names, ov.dummy.names)
+            nfac <- length(lv.names)
 
-    # 4a. "~1" ov
-    idx <- which(target$op == "~1" & !(target$lhs %in% lv.names))
-    tmp.mat[idx] <- "nu"
-    tmp.row[idx] <- match(target$lhs[idx], ov.names)
-    tmp.col[idx] <- 1L
+            # add 'dummy' =~ entries
+            dummy.mat <- rep("lambda", length(dummy.names))
+        } else {
+            ov.dummy.names[[g]] <- character(0)
+        }
 
-    # 4b. "~1" lv
-    idx <- which(target$op == "~1" & target$lhs %in% lv.names)
-    tmp.mat[idx] <- "alpha"
-    tmp.row[idx] <- match(target$lhs[idx], lv.names)
-    tmp.col[idx] <- 1L
+        # 1a. "=~" regular indicators
+        idx <- which(target$group == g &
+                     target$op == "=~" & !(target$rhs %in% lv.names))
+        tmp.mat[idx] <- "lambda"
+        tmp.row[idx] <- match(target$rhs[idx], ov.names)
+        tmp.col[idx] <- match(target$lhs[idx], lv.names)
+
+        # 1b. "=~" regular higher-order lv indicators
+        idx <- which(target$group == g &
+                     target$op == "=~" & !(target$rhs %in% ov.names))
+        tmp.mat[idx] <- "beta"
+        tmp.row[idx] <- match(target$rhs[idx], lv.names)
+        tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    
+        # 1c. "=~" indicators that are both in ov and lv
+        idx <- which(target$group == g &
+                     target$op == "=~" & target$rhs %in% ov.names
+                                       & target$rhs %in% lv.names)
+        tmp.mat[idx] <- "beta"
+        tmp.row[idx] <- match(target$rhs[idx], lv.names)
+        tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    
+        # 2. "~" regressions
+        idx <- which(target$group == g & target$op == "~")
+        tmp.mat[idx] <- "beta"
+        tmp.row[idx] <- match(target$lhs[idx], lv.names)
+        tmp.col[idx] <- match(target$rhs[idx], lv.names)
+
+        # 3a. "~~" ov
+        idx <- which(target$group == g &
+                     target$op == "~~" & !(target$lhs %in% lv.names))
+        tmp.mat[idx] <- "theta"
+        tmp.row[idx] <- match(target$lhs[idx], ov.names)
+        tmp.col[idx] <- match(target$rhs[idx], ov.names)
+    
+        # 3b. "~~" lv
+        idx <- which(target$group == g &
+                     target$op == "~~" & target$rhs %in% lv.names)
+        tmp.mat[idx] <- "psi"
+        tmp.row[idx] <- match(target$lhs[idx], lv.names)
+        tmp.col[idx] <- match(target$rhs[idx], lv.names)
+  
+        # 4a. "~1" ov
+        idx <- which(target$group == g &
+                     target$op == "~1" & !(target$lhs %in% lv.names))
+        tmp.mat[idx] <- "nu"
+        tmp.row[idx] <- match(target$lhs[idx], ov.names)
+        tmp.col[idx] <- 1L
+    
+        # 4b. "~1" lv
+        idx <- which(target$group == g &
+                     target$op == "~1" & target$lhs %in% lv.names)
+        tmp.mat[idx] <- "alpha"
+        tmp.row[idx] <- match(target$lhs[idx], lv.names)
+        tmp.col[idx] <- 1L
+
+        if(extra) {
+            # mRows
+            mmRows <- list(nu     = nvar,
+                           lambda = nvar,
+                           theta  = nvar,
+                           alpha  = nfac,
+                           beta   = nfac,
+                           psi    = nfac)
+
+            # mCols
+            mmCols <- list(nu     = 1L,
+                           lambda = nfac,
+                           theta  = nvar,
+                           alpha  = 1L,
+                           beta   = nfac,
+                           psi    = nfac)
+
+            # dimNames for LISREL model matrices
+            mmDimNames <- list(nu     = list( ov.names, "intercept"),
+                               lambda = list( ov.names,    lv.names),
+                               theta  = list( ov.names,    ov.names),
+                               alpha  = list( lv.names, "intercept"),
+                               beta   = list( lv.names,    lv.names),
+                               psi    = list( lv.names,    lv.names))
+    
+            # isSymmetric
+            mmSymmetric <- list(nu     = FALSE,
+                                lambda = FALSE,
+                                theta  = TRUE,
+                                alpha  = FALSE,
+                                beta   = FALSE,
+                                psi    = TRUE)
+    
+            # which mm's do we need? (always include lambda, theta and psi)
+            mmNames <- c("lambda", "theta", "psi")
+            if("beta" %in% tmp.mat) mmNames <- c(mmNames, "beta")
+            if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
+
+            REP.mmNames[[g]]     <- mmNames
+            REP.mmNumber[[g]]    <- length(mmNames)
+            REP.mmRows[[g]]      <- unlist(mmRows[ mmNames ])
+            REP.mmCols[[g]]      <- unlist(mmCols[ mmNames ])
+            REP.mmDimNames[[g]]  <- mmDimNames[ mmNames ]
+            REP.mmSymmetric[[g]] <- unlist(mmSymmetric[ mmNames ])
+        } # extra
+    } # ngroups
 
     REP <- list(mat = tmp.mat,
                 row = tmp.row,
@@ -96,49 +169,12 @@ representation.LISREL <- function(user=NULL, target=NULL, extra=FALSE) {
     attr(REP, "ov.dummy.names") <- ov.dummy.names
 
     if(extra) {
-        # mRows
-        mmRows <- list(nu     = nvar,
-                       lambda = nvar,
-                       theta  = nvar,
-                       alpha  = nfac,
-                       beta   = nfac,
-                       psi    = nfac)
-
-        # mCols
-        mmCols <- list(nu     = 1L,
-                       lambda = nfac,
-                       theta  = nvar,
-                       alpha  = 1L,
-                       beta   = nfac,
-                       psi    = nfac)
-
-        # dimNames for LISREL model matrices
-        mmDimNames <- list(nu     = list( ov.names, "intercept"),
-                           lambda = list( ov.names,    lv.names),
-                           theta  = list( ov.names,    ov.names),
-                           alpha  = list( lv.names, "intercept"),
-                           beta   = list( lv.names,    lv.names),
-                           psi    = list( lv.names,    lv.names))
-
-        # isSymmetric
-        mmSymmetric <- list(nu     = FALSE,
-                            lambda = FALSE,
-                            theta  = TRUE,
-                            alpha  = FALSE,
-                            beta   = FALSE,
-                            psi    = TRUE)
-
-        # which mm's do we need? (always include lambda, theta and psi)
-        mmNames <- c("lambda", "theta", "psi")
-        if("beta" %in% REP$mat) mmNames <- c(mmNames, "beta")
-        if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
-
-        attr(REP, "mmNames")     <- mmNames
-        attr(REP, "mmNumber")    <- length(mmNames)
-        attr(REP, "mmRows")      <- unlist(mmRows[ mmNames ])
-        attr(REP, "mmCols")      <- unlist(mmCols[ mmNames ])
-        attr(REP, "mmDimNames")  <- mmDimNames[ mmNames ]
-        attr(REP, "mmSymmetric") <- unlist(mmSymmetric[ mmNames ])
+        attr(REP, "mmNames")     <- REP.mmNames
+        attr(REP, "mmNumber")    <- REP.mmNumber
+        attr(REP, "mmRows")      <- REP.mmRows
+        attr(REP, "mmCols")      <- REP.mmCols
+        attr(REP, "mmDimNames")  <- REP.mmDimNames
+        attr(REP, "mmSymmetric") <- REP.mmSymmetric
     }
 
     REP

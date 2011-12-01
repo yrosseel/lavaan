@@ -28,10 +28,16 @@ vnames <- function(user, type=NULL, group=NULL) {
     # select single group only?
     if(!is.null(group)) {
         group <- as.integer(group)
-        idx <- which(user$group %in% group)
-        user$lhs <- user$lhs[idx]
-        user$op  <- user$op[idx]
-        user$rhs <- user$rhs[idx]
+        group.idx <- which(user$group %in% group)
+        if(is.data.frame(user)) {
+            user <- user[group.idx,]
+        } else {
+            user.old <- user
+            user <- list()
+            user$lhs <- user.old$lhs[group.idx]
+            user$op  <- user.old$op[group.idx]
+            user$rhs <- user.old$rhs[group.idx]
+        }
     }
 
     # regular latent variables: lhs =~

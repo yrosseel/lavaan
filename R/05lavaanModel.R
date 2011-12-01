@@ -8,33 +8,15 @@ Model <- function(user           = NULL,
                   representation = "LISREL",
                   debug          = FALSE) {
 
-    # info from user model
-    ov.names    <- vnames(user, "ov"); nvar <- length(ov.names)
-    lv.names    <- vnames(user, "lv")
+    # global info from user model
     ngroups <- max(user$group)
     meanstructure <- any(user$op == "~1")
 
     # what if no starting values are provided? 
-    if(is.null(start)) {
-        start <- user$ustart
-
-        # 0. set everything to 0.0
-        start[ is.na(user$ustart) ] <- 0.0
-
-        # 1. factor loadings: set to 1.0
-        start[ is.na(user$ustart) & user$op == "=~" ] <- 1.0
-
-        # 2. all lv variances: set to 0.05
-        start[ is.na(user$ustart) & user$op == "~~"
-                                  & user$lhs %in% lv.names 
-                                  & user$lhs == user$rhs ] <- 0.05
+    if(is.null(start)) 
+        start <- StartingValues(start.method="simple", user=user)
  
-        # 3. residual ov variances
-        start[ is.na(user$ustart) & user$op == "~~"
-                                  & user$lhs %in% ov.names
-                                  & user$lhs == user$rhs ] <- 1.0
-    }
- 
+    # check start length
     stopifnot(length(start) == nrow(user))
 
     # only representation = "LISREL" for now
@@ -61,58 +43,70 @@ Model <- function(user           = NULL,
         eq.constraints <- TRUE
     }
 
+
     # select model matrices
     if(representation == "LISREL") {
         REP <- representation.LISREL(user, target=NULL, extra=TRUE)
     } else {
         stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
     }
-    REP$mat <- REP$mat
-    REP$row <- REP$row
-    REP$col <- REP$col
 
-    # summarize representation
-    mmNumber    <- attr(REP, "mmNumber") 
-    mmNames     <- attr(REP, "mmNames")
-    mmSymmetric <- attr(REP, "mmSymmetric")
-    mmDimNames  <- attr(REP, "mmDimNames")
-    mmRows      <- attr(REP, "mmRows")
-    mmCols      <- attr(REP, "mmCols")
-
-    # matrix size (unique elements only)
-    mm.size <- integer(mmNumber)
-    for(mm in 1:mmNumber) {
-        if(mmSymmetric[mm]) {
-            N <- mmRows[mm]
-            mm.size[mm] <- as.integer(N*(N+1)/2)
-        } else {
-            mm.size[mm] <- as.integer(mmRows[mm] * mmCols[mm])
-        }
-    }
-
-
-    # fill in GLIST
-    GLIST <- vector(mode="list", length=mmNumber*ngroups)
-    names(GLIST) <- rep(mmNames, times=ngroups)
+    # prepare nG-sized slots
+    nG <- sum(unlist(attr(REP, "mmNumber")))
+    GLIST <- vector(mode="list", nG)
+    names(GLIST) <- unlist(attr(REP, "mmNames"))
+    dimNames    <- vector(mode="list", length=nG)
+    isSymmetric <- logical(nG)
+    mmSize      <- integer(nG)
 
     m.free.idx <- m.unco.idx <- m.user.idx <- 
-        vector(mode="list", length=mmNumber*ngroups)
+        vector(mode="list", length=nG)
     x.free.idx <- x.unco.idx <- x.user.idx <-
-        vector(mode="list", length=mmNumber*ngroups)
-    
+        vector(mode="list", length=nG)
 
+    # prepare ngroups-sized slots
+    nvar <- integer(ngroups)
+    nmat <- unlist(attr(REP, "mmNumber"))
+
+
+    offset <- 0L
     for(g in 1:ngroups) {
+
+        # observed and latent variables for this group
+        ov.names <- vnames(user, "ov", group=g)
+        nvar[g] <- length(ov.names)
+        lv.names <- vnames(user, "lv", group=g)
+
+        # model matrices for this group
+        mmNumber    <- attr(REP, "mmNumber")[[g]]
+        mmNames     <- attr(REP, "mmNames")[[g]]
+        mmSymmetric <- attr(REP, "mmSymmetric")[[g]]
+        mmDimNames  <- attr(REP, "mmDimNames")[[g]]
+        mmRows      <- attr(REP, "mmRows")[[g]]
+        mmCols      <- attr(REP, "mmCols")[[g]]
+
         for(mm in 1:mmNumber) {
 
             # offset in GLIST
-            offset <- mmNumber*(g - 1L) + mm
+            offset <- offset + 1L
+
+            # matrix size, symmetric, dimNames
+            if(mmSymmetric[mm]) {
+                N <- mmRows[mm]
+                mm.size <- as.integer(N*(N+1)/2)
+            } else {
+                mm.size <- as.integer(mmRows[mm] * mmCols[mm])
+            }
+            mmSize[offset] <- mm.size
+            isSymmetric[offset] <- mmSymmetric[mm]
+            dimNames[[offset]] <- mmDimNames[[mm]]
 
             # select elements for this matrix
             idx <- which(user$group == g & REP$mat == mmNames[mm]) 
 
             # create empty `pattern' matrix
             # FIXME: one day, we may want to use sparse matrices...
-            #        but they may not slow things down!
+            #        but they should not slow things down!
             tmp <- matrix(0L, nrow=mmRows[mm],
                               ncol=mmCols[mm])
 
@@ -129,7 +123,8 @@ Model <- function(user           = NULL,
             # 2. if equality constraints, unconstrained free parameters
             #    -> to be used in computeGradient
             if(eq.constraints) {
-                tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- user$free.uncon[idx]
+                tmp[ cbind(REP$row[idx], 
+                           REP$col[idx]) ] <- user$free.uncon[idx]
                 if(mmSymmetric[mm]) {
                     # NOTE: we assume everything is in the UPPER tri!
                     T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -161,7 +156,7 @@ Model <- function(user           = NULL,
 
             # representation specific stuff
             if(representation == "LISREL" && mmNames[mm] == "lambda") { 
-                ov.dummy.names <- attr(REP, "ov.dummy.names")
+                ov.dummy.names <- attr(REP, "ov.dummy.names")[[g]]
                 # define dummy latent variables
                 if(length(ov.dummy.names)) {
                     # in this case, lv.names will be extended with the dummys
@@ -427,19 +422,20 @@ Model <- function(user           = NULL,
 
 
     # which free parameters are observed variances?
-    x.free.var.idx <-  user$free[ user$free & !duplicated(user$free) &
-                                  user$lhs %in% ov.names &
-                                  user$op == "~~" & user$lhs == user$rhs ]
+    #ov.names <- vnames(user, "ov")
+    #x.free.var.idx <-  user$free[ user$free & !duplicated(user$free) &
+    #                              user$lhs %in% ov.names &
+    #                              user$op == "~~" & user$lhs == user$rhs ]
 
     Model <- new("Model",
                  GLIST=GLIST,
-                 dimNames=rep(mmDimNames, ngroups),
-                 isSymmetric=rep(mmSymmetric, ngroups),
-                 mmSize=rep(mm.size, ngroups),
+                 dimNames=dimNames,
+                 isSymmetric=isSymmetric,
+                 mmSize=mmSize,
                  representation=representation,
                  meanstructure=meanstructure,
                  ngroups=ngroups,
-                 nmat=mmNumber,
+                 nmat=nmat,
                  nvar=nvar,
                  nx.free=max(user$free),
                  nx.unco=max(user$free.uncon),
@@ -453,7 +449,7 @@ Model <- function(user           = NULL,
                  x.def.idx=def.idx,
                  x.ceq.idx=eq.idx,
                  x.cin.idx=ineq.idx,
-                 x.free.var.idx=x.free.var.idx,
+                 #x.free.var.idx=x.free.var.idx,
                  eq.constraints=eq.constraints,
                  eq.constraints.K=K,
                  def.function=def.function,

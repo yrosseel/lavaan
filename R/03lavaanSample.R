@@ -5,7 +5,7 @@
 
 # extract the data we need for this particular model
 getData <- function(data        = NULL, 
-                    ov.names    = character(0),
+                    ov.names    = NULL,
 
                     # standardize?
                     std.ov      = FALSE,
@@ -15,6 +15,9 @@ getData <- function(data        = NULL,
                     group.label = character(0)
                    ) 
 {
+    # check arguments
+    if(!is.list(ov.names)) ov.names <- list(ov.names)
+
     # number of observed variables
     nvar  <- length(ov.names)
 
@@ -25,19 +28,19 @@ getData <- function(data        = NULL,
     # prepare empty list for data.matrix per group
     X <- vector("list", length=ngroups)
 
-    # does the data contain all the observed variables
-    # needed in the user-specified model for this group
-    idx.missing <- which(!(ov.names %in% names(data)))
-    if(length(idx.missing)) {
-        stop("lavaan ERROR: missing observed variables in dataset: ",
-             paste(ov.names[idx.missing], collapse=" "))
-    }
-
     # for each group
     for(g in 1:ngroups) {
 
+        # does the data contain all the observed variables
+        # needed in the user-specified model for this group
+        idx.missing <- which(!(ov.names[[g]] %in% names(data)))
+        if(length(idx.missing)) {
+            stop("lavaan ERROR: missing observed variables in dataset: ",
+                 paste(ov.names[[g]][idx.missing], collapse=" "))
+        }
+
         # extract variables in correct order
-        var.idx <- match(ov.names, names(data))
+        var.idx <- match(ov.names[[g]], names(data))
         if(ngroups > 1L) {
             case.idx <- data[, group] == group.label[g]
             data.tmp <- data[case.idx, var.idx]

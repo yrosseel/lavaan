@@ -15,7 +15,7 @@ standardize.est.lv <- function(object, user=NULL, est=NULL,
     for(g in 1:object@Sample@ngroups) {
 
         # which mm belong to group g?
-        mm.in.group <- nmat * (g - 1L) + 1:nmat
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
         if(object@Model@representation == "LISREL") {
@@ -149,7 +149,6 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
     ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
     lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
-    nmat <- object@Model@nmat
 
     Sigma.hat <- object@Fit@Sigma.hat
 
@@ -266,7 +265,6 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
     ov.names.nox <- vnames(object@User, "ov.nox")
     lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
-    nmat <- object@Model@nmat
 
     Sigma.hat <- object@Fit@Sigma.hat
 

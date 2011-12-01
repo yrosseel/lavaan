@@ -34,7 +34,7 @@ function(object, data=NULL, ...) {
     }
 
     for(g in 1:G) {
-        mm.in.group <- nmat * (g - 1L) + 1:nmat
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]
 
         NFAC <- ncol(MLIST$lambda)

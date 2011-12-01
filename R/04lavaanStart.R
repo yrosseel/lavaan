@@ -71,24 +71,35 @@ StartingValues <- function(start.method = "default",
         }
     }   
 
-    # info from sample
-    ngroups <- length(sample@cov)
 
-    # info from user model
-    ov.names    <- vnames(user, "ov")
-    lv.names    <- vnames(user, "lv"); nfac <- length(lv.names)
-    ov.names.x  <- vnames(user, "ov.x")
-    
+    # global settings
     # 0. everyting is zero
     start <- numeric( length(user$ustart) )
 
     # 1. =~ factor loadings: 1.0 
     start[ which(user$op == "=~") ] <- 1.0
 
-    if(start.initial %in% c("lavaan", "mplus") && 
-       model.type %in% c("sem", "cfa")) {
-        # or slightly better using 2sls
-        for(g in 1:ngroups) {
+    # 2. residual lv variances for latent variables
+    lv.names    <- vnames(user, "lv") # all groups
+    lv.var.idx <- which(user$op == "~~"        &
+                        user$lhs %in% lv.names &
+                        user$lhs == user$rhs)
+    start[lv.var.idx] <- 0.05
+
+
+    # group-specific settings
+    ngroups <- sample@ngroups
+
+    for(g in 1:ngroups) {
+
+        # info from user model for this group
+        ov.names    <- vnames(user, "ov",   group=g)
+        lv.names    <- vnames(user, "lv",   group=g); nfac <- length(lv.names)
+        ov.names.x  <- vnames(user, "ov.x", group=g)
+    
+        if(start.initial %in% c("lavaan", "mplus") && 
+           model.type %in% c("sem", "cfa")) {
+            # or slightly better using 2sls
             if(!sum( user$ustart[ user$op == "=~" & user$group == g], 
                     na.rm=TRUE) == length(lv.names)) {
                 next
@@ -108,7 +119,7 @@ StartingValues <- function(start.method = "default",
 
                 # get observed indicators for this latent variable
                 ov.idx <- match(user$rhs[user.idx], ov.names)
-               if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
+                if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
                     if(sample@missing[[g]]$flag) {
                         COV <- sample@missing[[g]]$sigma[ov.idx,ov.idx]
                     } else {
@@ -118,16 +129,7 @@ StartingValues <- function(start.method = "default",
                 }
             }
         }
-    }
 
-    # 2. residual lv variances for latent variables
-    lv.var.idx <- which(user$op == "~~"        & 
-                        user$lhs %in% lv.names & 
-                        user$lhs == user$rhs)
-    start[lv.var.idx] <- 0.05
-
-    # group/sample dependent
-    for(g in 1:ngroups) {
         # 1. residual ov variances (including exo, to be overriden)
         ov.var.idx <- which(user$group == g         & 
                             user$op    == "~~"      & 
@@ -137,7 +139,7 @@ StartingValues <- function(start.method = "default",
         if(start.initial == "mplus") {
             #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
             start[ov.var.idx] <- 
-                (1.0 - 0.50)*diag(sample@cov[[1L]])[sample.var.idx]
+                (1.0 - 0.50)*diag(sample@cov[[g]])[sample.var.idx]
         } else {
             #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[g]][sample.var.idx]
             start[ov.var.idx] <- 
@@ -150,7 +152,7 @@ StartingValues <- function(start.method = "default",
                             user$lhs %in% ov.names)
         sample.var.idx <- match(user$lhs[ov.int.idx], ov.names)
         if(start.initial == "mplus") {
-            start[ov.int.idx] <- sample@mean[[1L]][sample.var.idx]
+            start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
         } else {
             start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
         }
@@ -204,8 +206,6 @@ StartingValues <- function(start.method = "default",
     # override if the model syntax contains explicit starting values
     user.idx <- which(!is.na(user$ustart))
     start[user.idx] <- user$ustart[user.idx]
-
-    
 
     if(debug) {
         cat("lavaan DEBUG: lavaanStart\n")
