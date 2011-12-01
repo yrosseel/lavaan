@@ -16,9 +16,9 @@ independence.model <- function(model.syntax = '', ...) {
     # reconstruct model.syntax...
     OV.X <- character(0L)
     if(no.fit@Options$mimic %in% c("lavaan", "Mplus"))
-            OV.X <- vnames(no.fit@User, type="ov.x")
+        OV.X <- vnames(no.fit@User, type="ov.x", group=1L)
     model.syntax <- 
-        syntax.independence.model(ov.names   = no.fit@Sample@ov.names,
+        syntax.independence.model(ov.names   = no.fit@Sample@ov.names[[1L]],
                                   ov.names.x = OV.X,
                                   sample.cov = no.fit@Sample@cov)
     # refit
@@ -34,9 +34,9 @@ independence.model.fit2 <- function(object) {
     # construct syntax for independence model
     OV.X <- character(0L)
     if(object@Options$mimic %in% c("lavaan", "Mplus"))
-        OV.X <- vnames(object@User, type="ov.x")
+        OV.X <- vnames(object@User, type="ov.x", group=1L)
     model.syntax <- 
-        syntax.independence.model(ov.names   = object@Sample@ov.names,
+        syntax.independence.model(ov.names   = object@Sample@ov.names[[1L]],
                                   ov.names.x = OV.X,
                                   sample.cov = object@Sample@cov)
 
@@ -47,14 +47,18 @@ independence.model.fit2 <- function(object) {
 }
 
 #### FIXME!!!!! we should get rid of this function.... !
+#### FIXME: will not work if two different models in multiple groups
 independence.model.fit <- function(object) {
+
+    mc <- match.call()
+    timing <- list()
 
     # construct syntax for independence model
     OV.X <- character(0L)
     if(object@Options$mimic %in% c("lavaan", "Mplus"))
-        OV.X <- vnames(object@User, type="ov.x")
+        OV.X <- vnames(object@User, type="ov.x", group=1L)
     model.syntax <-
-        syntax.independence.model(ov.names   = object@Sample@ov.names,
+        syntax.independence.model(ov.names   = object@Sample@ov.names[[1L]],
                                   ov.names.x = OV.X,
                                   sample.cov = object@Sample@cov)
 
@@ -97,6 +101,7 @@ independence.model.fit <- function(object) {
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
 
     # 3. 
+    lavaanData             <- object@Data
     lavaanSampleStats      <- object@Sample
 
     # 4. 

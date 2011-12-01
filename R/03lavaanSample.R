@@ -55,6 +55,9 @@ getData <- function(data        = NULL,
         # data should contain numeric values only
         data.tmp <- data.matrix(data.tmp)
 
+        # get rid of row names, but keep column names
+        rownames(data.tmp) <- NULL
+
         # standardize observed variables?
         if(std.ov) {
             data.tmp <- scale(data.tmp)[,]

@@ -7,12 +7,14 @@ standardize.est.lv <- function(object, user=NULL, est=NULL,
     out <- est; N <- length(est)
     stopifnot(N == length(user$lhs))
 
-    ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
-    lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
     
     for(g in 1:object@Sample@ngroups) {
+
+        ov.names <- vnames(object@User, "ov", group=g) # not user, 
+                                                       # which may be incomplete
+        lv.names <- vnames(object@User, "lv", group=g)
 
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
@@ -146,13 +148,14 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(user$lhs))
 
-    ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
-    lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
 
     Sigma.hat <- object@Fit@Sigma.hat
 
     for(g in 1:object@Sample@ngroups) {
+
+        ov.names <- vnames(object@User, "ov", group=g) # not user
+        lv.names <- vnames(object@User, "lv", group=g)
 
         OV2 <- diag(Sigma.hat[[g]])
         OV  <- sqrt(OV2)
@@ -260,15 +263,16 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(user$lhs))
 
-    ov.names <- vnames(object@User, "ov") # not user, which may be incomplete
-    ov.names.x <- vnames(object@User, "ov.x")
-    ov.names.nox <- vnames(object@User, "ov.nox")
-    lv.names <- vnames(object@User, "lv")
     GLIST <- object@Model@GLIST
 
     Sigma.hat <- object@Fit@Sigma.hat
 
     for(g in 1:object@Sample@ngroups) {
+
+        ov.names     <- vnames(object@User, "ov",     group=g) # not user
+        ov.names.x   <- vnames(object@User, "ov.x",   group=g)
+        ov.names.nox <- vnames(object@User, "ov.nox", group=g)
+        lv.names     <- vnames(object@User, "lv",     group=g)
 
         OV2 <- diag(Sigma.hat[[g]])
         OV  <- sqrt(OV2)

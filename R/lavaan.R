@@ -254,7 +254,12 @@ lavaan <- function(# user-specified model syntax
         lavaanData <- list()
         lavaanSampleStats <- new("SampleStats", ngroups=ngroups)
     } 
-    if(debug) print(str(lavaanSampleStats))
+    if(debug) {
+        print(str(lavaanData))
+        print(str(WLS.V))
+        print(str(lavaanSampleStats))
+    }
+
 
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

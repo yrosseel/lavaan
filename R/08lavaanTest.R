@@ -1,6 +1,6 @@
 testStatisticSatorraBentler <- function(sample=sample, 
                                         E.inv, Delta, WLS.V, Gamma, 
-                                        x.idx=integer(0)) {
+                                        x.idx=list(integer(0))) {
     
     trace.UGamma <- numeric( sample@ngroups )
 
@@ -17,7 +17,7 @@ testStatisticSatorraBentler <- function(sample=sample,
 
 testStatisticSatorraBentler.Mplus <- function(sample=sample, 
                                               E.inv, Delta, WLS.V, Gamma,
-                                              x.idx=integer(0)) {
+                                              x.idx=list(integer(0))) {
     
     trace.UGamma <- numeric( sample@ngroups )
 
@@ -30,12 +30,12 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
-        if(length(x.idx) > 0L) {
+        if(length(x.idx[[g]]) > 0L) {
             nvar <- ncol(sample@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
+            A1 <- A1[idx,idx[[g]]]
+            B1 <- B1[idx,idx[[g]]]
         }
 
         trace.h1     <- sum( B1 * t( solve(A1) ) )
@@ -51,7 +51,7 @@ testStatisticYuanBentler <- function(sample=sample,
                                      B1.group=NULL,
                                      Delta=NULL,
                                      E.inv=NULL,
-                                     x.idx=integer(0)) {
+                                     x.idx=list(integer(0))) {
 
     # we always assume a meanstructure
     meanstructure <- TRUE
@@ -66,12 +66,12 @@ testStatisticYuanBentler <- function(sample=sample,
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
-        if(length(x.idx) > 0L) {
+        if(length(x.idx[[g]]) > 0L) {
             nvar <- ncol(sample@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
+            A1 <- A1[idx,idx[[g]]]
+            B1 <- B1[idx,idx[[g]]]
         }
 
         trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
@@ -91,7 +91,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
                                            information="observed",
                                            B0.group=NULL,
                                            E.inv=NULL,
-                                           x.idx=integer(0)) {
+                                           x.idx=list(integer(0))) {
     # typical for Mplus:
     # - do NOT use the YB formula, but use an approximation
     #   relying  on A0 ~= Delta'*A1*Delta and the same for B0
@@ -112,12 +112,12 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
-        if(length(x.idx) > 0L) {
+        if(length(x.idx[[g]]) > 0L) {
             nvar <- ncol(sample@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx,
+            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
+            A1 <- A1[idx,idx[[g]]]
+            B1 <- B1[idx,idx[[g]]]
         }
 
         trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
@@ -219,9 +219,14 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     }
 
     # fixed.x idx
-    x.idx <- integer(0)
-    if(options$fixed.x) {
-         x.idx <- match(vnames(user, "ov.x"), sample@ov.names)
+    x.idx <- vector("list", length=sample@ngroups)
+    for(g in 1:sample@ngroups) {
+        if(options$fixed.x) {
+            x.idx[[g]] <- match(vnames(user, "ov.x", group=g), 
+                                sample@ov.names[[g]])
+        } else {
+            x.idx[[g]] <- integer(0L)
+        }
     }
 
     if(test == "satorra.bentler" && df > 0) {

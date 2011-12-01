@@ -199,8 +199,6 @@ setMethod("summary", "lavaan",
 function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE, 
          rsquare=FALSE, std.nox=FALSE, modindices=FALSE) {
 
-    ov.names <- vnames(object@User, "ov")
-    lv.names <- vnames(object@User, "lv")
     if(std.nox) standardized <- TRUE
 
     # always print the 'short' summary
@@ -292,6 +290,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     } 
 
     for(g in 1:object@Sample@ngroups) {
+        ov.names <- vnames(object@User, "ov", group=g)
+        lv.names <- vnames(object@User, "lv", group=g)
+
         # group header
         if(object@Sample@ngroups > 1) {
             if(g > 1) cat("\n\n")

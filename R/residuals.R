@@ -30,9 +30,10 @@ function(object, type="raw", labels=TRUE) {
         # fixed.x idx?
         x.idx <- integer(0)
         if(object@Options$fixed.x) {
-            x.idx <- match(vnames(object@User, "ov.x"),
-                           object@Sample@ov.names)
-        }
+            x.idx <- match(vnames(object@User, "ov.x", group=1L),
+                           object@Sample@ov.names[[1L]]) ### FIXME!!!! will not
+                                                         ### work for different
+        }                                                ### models in groups
 
         if(length(x.idx) > 0L) {
             # we need to:
@@ -88,7 +89,7 @@ function(object, type="raw", labels=TRUE) {
         R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]
         R[[g]]$mean <- M - object@Fit@Mu.hat[[g]]
         if(labels) {
-            rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names
+            rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
 
 
@@ -164,7 +165,7 @@ function(object, type="raw", labels=TRUE) {
 
         # prepare for pretty printing
         R[[g]]$mean <- as.numeric(R[[g]]$mean)
-        if(labels) names(R[[g]]$mean) <- ov.names
+        if(labels) names(R[[g]]$mean) <- ov.names[[g]]
         class(R[[g]]$mean) <- c("lavaan.vector", "numeric")
         class(R[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
     }

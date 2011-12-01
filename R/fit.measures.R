@@ -244,7 +244,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
             for(g in 1:G) {
-                nvar <- col(object@Sample@cov[[g]])
+                nvar <- ncol(object@Sample@cov[[g]])
                 if(!object@Sample@missing[[g]]$flag) {
                     Ng <- object@Sample@nobs[[g]]
                     c <- Ng*nvar/2 * log(2 * pi)
@@ -474,7 +474,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 S <- object@Sample@missing[[g]]$sigma
                 M <- object@Sample@missing[[g]]$mu
             }
-            nvar <- col(S)
+            nvar <- ncol(S)
 
             # estimated
             Sigma.hat <- object@Fit@Sigma.hat[[g]]

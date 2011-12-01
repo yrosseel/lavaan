@@ -18,7 +18,6 @@ function(object, data=NULL, ...) {
 
     G <- object@Sample@ngroups
     nmat <- object@Model@nmat
-    lv.names <- vnames(object@User, type="lv")
     FS <- vector("list", length=G)
 
     # need full data set supplied
@@ -34,6 +33,9 @@ function(object, data=NULL, ...) {
     }
 
     for(g in 1:G) {
+
+        lv.names <- vnames(object@User, type="lv", group=g)
+
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]
 
