@@ -316,6 +316,301 @@ getUserListFull <- function(user=NULL, group=NULL) {
 
     LIST <- data.frame(lhs=lhs, op=op, rhs=rhs, group=group,
                        stringsAsFactors=FALSE)
-        
+}
+
+getLIST <- function(FLAT=NULL,
+                    meanstructure   = FALSE,
+                    int.ov.free     = FALSE,
+                    int.lv.free     = FALSE,
+                    orthogonal      = FALSE,
+                    std.lv          = FALSE,
+                    fixed.x         = TRUE,
+                    auto.fix.first  = FALSE,
+                    auto.fix.single = FALSE,
+                    auto.var        = FALSE,
+                    auto.cov.lv.x   = FALSE,
+                    auto.cov.y      = FALSE,
+                    group.equal     = NULL,
+                    ngroups         = 1L) {
+
+    ### DEFAULT elements: parameters that are typically not specified by
+    ###                   users, but should typically be considered, 
+    ###                   either free or fixed
+
+    # extract `names' of various types of variables:
+    lv.names     <- vnames(FLAT, type="lv")     # latent variables
+    ov.names     <- vnames(FLAT, type="ov")     # observed variables
+    ov.names.x   <- vnames(FLAT, type="ov.x")   # exogenous x covariates 
+    ov.names.nox <- vnames(FLAT, type="ov.nox")
+    lv.names.x   <- vnames(FLAT, type="lv.x")   # exogenous lv
+    ov.names.y   <- vnames(FLAT, type="ov.y")   # dependent ov
+    lv.names.y   <- vnames(FLAT, type="lv.y")   # dependent lv
+    #lvov.names.y <- c(ov.names.y, lv.names.y)
+    lvov.names.y <- c(lv.names.y, ov.names.y)
+
+    lhs <- rhs <- character(0)
+
+    # 1. default (residual) variances and covariances
+
+    # a) (residual) VARIANCES (all ov's, except exo and regular lv's)
+    if(auto.var) {
+        lhs <- c(lhs, ov.names.nox, lv.names)
+        rhs <- c(rhs, ov.names.nox, lv.names)
+    }
+
+    # b) `independent` latent variable COVARIANCES (lv.names.x)
+    if(auto.cov.lv.x && length(lv.names.x) > 1L) {
+        tmp <- combn(lv.names.x, 2)
+        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+        rhs <- c(rhs, tmp[2,])
+    }
+
+    # c) `dependent` latent variables COVARIANCES (lv.y.idx + ov.y.lv.idx)
+    if(auto.cov.y && length(lvov.names.y) > 1L) {
+        tmp <- combn(lvov.names.y, 2L)
+        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+        rhs <- c(rhs, tmp[2,])
+    }
+
+    # d) exogenous x covariates: VARIANCES + COVARIANCES
+    if((nx <- length(ov.names.x)) > 0L) {
+        idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
+        lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
+        rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
+    }
+    op <- rep("~~", length(lhs))
+
+    # 2. INTERCEPTS
+    if(meanstructure) {
+        int.lhs <- c(ov.names, lv.names)
+        lhs <- c(lhs, int.lhs)
+        rhs <- c(rhs, rep("",   length(int.lhs)))
+        op  <- c(op,  rep("~1", length(int.lhs)))
+    }
+
+    DEFAULT <- data.frame(lhs=lhs, op=op, rhs=rhs,
+                          mod.idx=rep(0L, length(lhs)),
+                          stringsAsFactors=FALSE)
+
+
+    # 4. USER: user-specified elements
+    lhs     <- FLAT$lhs
+     op     <- FLAT$op
+    rhs     <- FLAT$rhs
+    mod.idx <- FLAT$mod.idx
+
+    lv.names     <- vnames(FLAT, type="lv")     # latent variables
+    ov.names     <- vnames(FLAT, type="ov")     # observed variables
+
+    # check order of covariances: we only fill the upper.tri!
+    cov.idx <- which(op == "~~" & lhs != rhs)
+    for(i in cov.idx) {
+        lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
+        lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
+        if(lv.idx[1] > lv.idx[2]) { # swap!
+            tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+        }
+        if(lhs[i] %in% lv.names && rhs[i] %in% lv.names) {
+            lv.idx <- match(c(lhs[i], rhs[i]), lv.names)
+            if(lv.idx[1] > lv.idx[2]) { # swap!
+                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+            }
+        } else if(lhs[i] %in% ov.names && rhs[i] %in% ov.names) {
+            ov.idx <- match(c(lhs[i], rhs[i]), ov.names)
+            if(ov.idx[1] > ov.idx[2]) { # swap!
+                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+            }
+        } else { # mixed!! # we allow this since 0.4-10
+            lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
+            lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
+            if(lv.idx[1] > lv.idx[2]) { # swap!
+                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
+            }
+        }
+    }
+
+    USER <- data.frame(lhs=lhs, op=op, rhs=rhs, mod.idx=mod.idx,
+                       stringsAsFactors=FALSE)
+
+    # check for duplicated elements in DEFAULT
+    # - FIXME: can we not avoid this somehow??
+    # - for example, if the user model includes 'x1 ~~ x1'
+    #   or 'x1 ~ 1' 
+    # - remove them from DEFAULT
+    TMP <- rbind(DEFAULT[,1:3], USER[,1:3])
+    idx <- which(duplicated(TMP, fromLast=TRUE)) # idx should be in DEFAULT
+    if(length(idx)) {
+        for(i in idx) {
+            flat.idx <- which(USER$lhs   == DEFAULT$lhs[i] &
+                              USER$op    == DEFAULT$op[i]  &
+                              USER$rhs   == DEFAULT$rhs[i])
+            if(length(flat.idx) != 1L) {
+                cat("[lavaan DEBUG] idx in TMP: i = ", i, "\n"); print(TMP[i,])
+                cat("[lavaan DEBUG] idx in DEFAULT: i = ", i, "\n"); print(DEFAULT[i,])
+               cat("[lavaan DEBUG] flat.idx:"); print(flat.idx)
+            }
+    }
+        DEFAULT <- DEFAULT[-idx,]
+    }
+
+    # now that we have removed all duplicated elements, we can construct
+    # the LIST for a single group
+    lhs     <- c(USER$lhs, DEFAULT$lhs)
+    op      <- c(USER$op,  DEFAULT$op)
+    rhs     <- c(USER$rhs, DEFAULT$rhs)
+    user    <- c(rep(1L, length(USER$lhs)),
+                 rep(0L, length(DEFAULT$lhs)))
+    mod.idx <- c(USER$mod.idx, DEFAULT$mod.idx)
+    free    <- rep(1L,  length(lhs))
+    ustart  <- rep(as.numeric(NA), length(lhs))
+    #label   <- paste(lhs, op, rhs, sep="")
+    label   <- rep(character(1), length(lhs))
+    exo     <- rep(0L, length(lhs))
+
+    # 1. fix metric of regular latent variables
+    if(std.lv) {
+        # fix metric by fixing the variance of the latent variable
+        lv.var.idx <- which(op == "~~" &
+                            lhs %in% lv.names & lhs == rhs)
+        ustart[lv.var.idx] <- 1.0
+          free[lv.var.idx] <- 0L
+    }
+    if(auto.fix.first) {
+        # fix metric by fixing the loading of the first indicator
+        mm.idx <- which(op == "=~")
+        first.idx <- mm.idx[which(!duplicated(lhs[mm.idx]))]
+        ustart[first.idx] <- 1.0
+          free[first.idx] <- 0L
+    }
+
+    # 2. fix residual variance of single indicators to zero
+    if(auto.var && auto.fix.single) {
+        mm.idx <- which(op == "=~")
+        T <- table(lhs[mm.idx])
+        if(any(T == 1L)) {
+            # ok, we have a LV with only a single indicator
+            lv.names.single <- names(T)[T == 1L]
+            # get corresponding indicator if unique
+            lhs.mm <- lhs[mm.idx]; rhs.mm <- rhs[mm.idx]
+            single.ind <- rhs.mm[which(lhs.mm %in% lv.names.single &
+                                       !(duplicated(rhs.mm) |
+                                         duplicated(rhs.mm, fromLast=TRUE)))]
+            # is the indicator unique?
+            if(length(single.ind)) {
+                var.idx <- which(op == "~~" & lhs %in% single.ind
+                                            & rhs %in% single.ind
+                                            & lhs == rhs
+                                            & user == 0L)
+                ustart[var.idx] <- 0.0
+                  free[var.idx] <- 0L
+            }
+        }
+    }
+
+    # 3. orthogonal=TRUE?
+    if(orthogonal) {
+        # FIXME: only lv.x.idx for now
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+
+    # 4. intercepts
+    if(meanstructure) {
+        if(int.ov.free == FALSE) {
+            # zero intercepts/means observed variables
+                   ov.int.idx <- which(op == "~1" &
+                                       lhs %in% ov.names &
+                                       user == 0L)
+            ustart[ov.int.idx] <- 0.0
+              free[ov.int.idx] <- 0L
+        }
+        if(int.lv.free == FALSE) {
+            # zero intercepts/means latent variables
+                   lv.int.idx <- which(op == "~1" &
+                                       lhs %in% lv.names &
+                                       user == 0L)
+            ustart[lv.int.idx] <- 0.0
+              free[lv.int.idx] <- 0L
+        }
+    }
+
+    # 5. handle exogenous `fixed.x' covariates
+    if(length(ov.names.x) > 0 && fixed.x) {
+        # 1. variances/covariances
+               exo.idx  <- which(op == "~~" &
+                                 rhs %in% ov.names.x &
+                                 user == 0L)
+        ustart[exo.idx] <- as.numeric(NA) # should be overriden later!
+          free[exo.idx] <- 0L
+           exo[exo.idx] <- 1L
+
+        # 2. intercepts
+               exo.int.idx  <- which(op == "~1" &
+                                     lhs %in% ov.names.x &
+                                     user == 0L)
+        ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
+          free[exo.int.idx] <- 0L
+           exo[exo.int.idx] <- 1L
+    }
+
+    # 6. multiple groups?
+    group <- rep(1L, length(lhs))
+    if(ngroups > 1) {
+        group   <- rep(1:ngroups, each=length(lhs))
+        user    <- rep(user,    times=ngroups)
+        lhs     <- rep(lhs,     times=ngroups)
+        op      <- rep(op,      times=ngroups)
+        rhs     <- rep(rhs,     times=ngroups)
+        free    <- rep(free,    times=ngroups)
+        ustart  <- rep(ustart,  times=ngroups)
+        mod.idx <- rep(mod.idx, times=ngroups)
+        label   <- rep(label,   times=ngroups)
+        exo     <- rep(exo,     times=ngroups)
+
+        # specific changes per group
+        for(g in 2:ngroups) {
+            # label
+            # label[group == g] <- paste(label[group == 1], ".g", g, sep="")
+
+            # free/fix intercepts
+            if(meanstructure) {
+                int.idx  <- which(op == "~1" &
+                                  lhs %in% lv.names &
+                                  user == 0L &
+                                  group == g)
+                if(int.lv.free == FALSE && g > 1 &&
+                   "intercepts" %in% group.equal &&
+                   !("means" %in% group.equal) ) {
+                      free[ int.idx ] <- 1L
+                    ustart[ int.idx ] <- as.numeric(NA)
+                }
+            }
+        } # g
+    } # ngroups
+
+    # construct LIST
+    #LIST  <- data.frame(
+    LIST   <- list(     id          = 1:length(lhs),
+                        lhs         = lhs,
+                        op          = op,
+                        rhs         = rhs,
+                        user        = user,
+                        group       = group,
+                        mod.idx     = mod.idx,
+                        free        = free,
+                        ustart      = ustart,
+                        fixed.x     = exo,
+                        label       = label,
+                        equal       = rep("",  length(lhs)),
+                        eq.id       = rep(0L,  length(lhs)),
+                        free.uncon  = rep(0L,  length(lhs))
+                   )
+    #                   stringsAsFactors=FALSE)
+
+    LIST
 }
 
