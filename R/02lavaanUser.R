@@ -124,12 +124,15 @@ lavaanify <- function(model.syntax    = NULL,
             MOD.label <- MOD[[el]]$label; MOD.equal <- MOD[[el]]$equal
 
             # check for single argument if multiple groups
-            if(ngroups > 1) {
+            if(ngroups > 1 && length(idx) > 1L) {
                 # Ok, this is not very consistent:
                 # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1) MOD.start <- rep(MOD.start, ngroups)
                 # B) here we do NOT!
+                cat("DEBUG: idx = ", idx, "\n")
+                cat("MOD.label = ", MOD.label, "\n")
+                cat("ngroups = ", ngroups, "\n")
                 if(length(MOD.label) == 1) MOD.label <-
                     #c(MOD.label, paste(MOD.label, ".g", 2:ngroups, sep=""))
                     c(MOD.label, rep("", (ngroups-1L)) )
@@ -138,10 +141,11 @@ lavaanify <- function(model.syntax    = NULL,
             }
 
             # check for wrong number of arguments if multiple groups
-            if( (!is.null(MOD.fixed) && ngroups != length(MOD.fixed)) ||
-                (!is.null(MOD.start) && ngroups != length(MOD.start)) ||
-                (!is.null(MOD.label) && ngroups != length(MOD.label)) ||
-                (!is.null(MOD.equal) && ngroups != length(MOD.equal)) ) {
+            nidx <- length(idx)
+            if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
+                (!is.null(MOD.start) && nidx != length(MOD.start)) ||
+                (!is.null(MOD.label) && nidx != length(MOD.label)) ||
+                (!is.null(MOD.equal) && nidx != length(MOD.equal)) ) {
                 el.idx <- which(LIST$mod.idx == el)
                 stop("lavaan ERROR: wrong number of arguments in modifier of ", LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
             }
