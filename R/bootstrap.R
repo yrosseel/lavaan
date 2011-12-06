@@ -28,29 +28,29 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
     npar <- length(start)
 
     # 3. construct lavaan Sample (S4) object: description of the data
-    bootSample <-
-        try( Sample(data          = data,
-                    group         = options$group,
-                    sample.cov    = NULL,
-                    sample.mean   = NULL,
-                    sample.nobs   = NULL,
-                    std.ov        = FALSE,
-                    boot.idx      = boot.idx,
-                    model.cov     = Sigma.hat,
-                    model.mean    = Mu.hat,
-
-                    ov.names      = sample@ov.names,
-                    data.type     = "full",
-                    ngroups       = sample@ngroups,
-                    group.label   = sample@group.label,
-                    estimator     = options$estimator,
-                    likelihood    = options$likelihood,
-                    mimic         = options$mimic,
-                    meanstructure = options$meanstructure,
-                    missing       = options$missing,
-                    warn          = options$warn,
-                    verbose       = options$verbose) )
-    if(inherits(bootSample, "try-error")) {
+    # FIXME!!!
+    Missing <-  getMissingPatterns(X       = data,
+                                   missing = options$missing,
+                                   warn    = FALSE,
+                                   verbose = FALSE)
+    WLS.V <- list()
+    if(options$estimator %in% c("GLS", "WLS")) {
+        WLS.V <- getWLS.V(X             = data,
+                          sample        = NULL,
+                          boot.idx      = boot.idx,
+                          estimator     = options$estimator,
+                          mimic         = options$mimic,
+                          meanstructure = options$meanstructure)
+    }
+    bootSampleStats <- try(getSampleStatsFromData(
+                               X           = data,
+                               M           = Missing,
+                               boot.idx    = boot.idx,
+                               rescale     = (options$estimator == "ML" &&
+                                              options$likelihood == "normal"),
+                               group.label = sample@group.label,
+                               WLS.V       = WLS.V)) # fixme!!
+    if(inherits(bootSampleStats, "try-error")) {
         if(verbose) cat("     FAILED: creating sample statistics\n")
         return(rep(NA, npar))
     }
@@ -60,7 +60,8 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
     # switch of verbose in estimateModel
     verbose.old <- options$verbose; options$verbose <- FALSE
     x <- try( estimateModel(lavaanModel,
-                            sample  = bootSample,
+                            sample  = bootSampleStats,
+                            # control??
                             options = options) )
     options$verbose <- verbose.old
     if(inherits(x, "try-error")) {
@@ -251,7 +252,6 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
 
     # prepare
     start <- getModelParameters(model, type="free"); npar <- length(start)
-    N <- sample@ntotal
 
     COEF <- TEST <- NULL
     if(coef) {
@@ -274,8 +274,11 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
     error.idx <- integer(0)
     for(b in 1:R) {
         if(type == "bollen.stine" || type == "ordinary") {
-            # take a bootstrap sample
-            boot.idx <- sample(x=N, size=N, replace=TRUE)
+            # take a bootstrap sample for each group
+            boot.idx <- vector("list", length=sample@ngroups)
+            for(g in 1:sample@ngroups) 
+                boot.idx[[g]] <- sample(x=sample@nobs[[g]], 
+                                        size=sample@nobs[[g]], replace=TRUE)
         } else {
             # parametric!
             boot.idx <- NULL

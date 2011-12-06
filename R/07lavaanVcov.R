@@ -61,7 +61,7 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
                               R=R, verbose=verbose,
                               type=boot.type,
                               coef=TRUE, 
-                              fx=(options$test == "bollen.stine"))
+                              test=(options$test == "bollen.stine"))
     COEF <- out$coef
     
     # FIXME: cov rescale? Yes for now

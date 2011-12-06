@@ -165,14 +165,14 @@ getSampleStatsFromData <- function(X           = NULL,
 
         # bootstrap sample?
         if(!is.null(boot.idx)) {
-            X[[g]] <- X[[g]][boot.idx[[g]]]
+            X[[g]] <- X[[g]][boot.idx[[g]],,drop=FALSE]
         }
 
         # listwise deletion?
         norig[[g]] <- nrow(X[[g]])
         if(is.null(M)) {
             keep.idx <- complete.cases(X[[g]])
-            X[[g]] <- X[[g]][keep.idx,,drop=TRUE]
+            X[[g]] <- X[[g]][keep.idx,,drop=FALSE]
         }
         nobs[[g]] <- nrow(X[[g]])
 
@@ -380,7 +380,7 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
 
 getWLS.V <- function(X             = NULL, 
                      sample        = NULL,
-
+                     boot.idx      = NULL,
                      estimator     = "ML",
                      mimic         = "lavaan",
                      meanstructure = FALSE) {
@@ -390,6 +390,13 @@ getWLS.V <- function(X             = NULL,
         ngroups <- length(X)
     } else {
         ngroups <- sample@ngroups
+    }
+
+    # bootstrap sample?
+    if(!is.null(boot.idx)) {
+        for(g in 1:ngroups) {
+            X[[g]] <- X[[g]][boot.idx[[g]],,drop=FALSE]
+        }
     }
 
     WLS.V       <- vector("list", length=ngroups)
