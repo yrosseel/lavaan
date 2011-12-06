@@ -282,16 +282,24 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
         tmp.cov[upper.tri(tmp.cov)] <- T[upper.tri(T)]
 
         # check dimnames
-        if(is.null(rownames(tmp.cov))) {
-            stop("lavaan ERROR: please provide row names for the covariance matrix!\n")
+        if(!is.null(rownames(tmp.cov))) {
+            cov.names <- rownames(tmp.cov)
+        } else if(!is.null(colnames(tmp.cov))) {
+            cov.names <- colnames(tmp.cov)
+        } else {
+            stop("lavaan ERROR: please provide row/col names ",
+                "for the covariance matrix!\n")
         }
 
         # extract only the part we need (using ov.names)
-        idx <- match(ov.names[[g]], rownames(tmp.cov))
+        idx <- match(ov.names[[g]], cov.names)
         if(any(is.na(idx))) {
-            cat("found: ", rownames(tmp.cov)[idx], "\n")
+            cat("found: ", cov.names, "\n")
             cat("expected: ", ov.names[[g]], "\n")
-            stop("lavaan ERROR: rownames of covariance matrix do not match the model!\n")
+            stop("lavaan ERROR: rownames of covariance matrix do not match ",
+                 "the model!\n", 
+                 "  found: ", paste(cov.names, collapse=" "), "\n",
+                 "  expected: ", paste(ov.names[[g]], collapse=" "), "\n")
         } else {
             tmp.cov <- tmp.cov[idx,idx]
         }

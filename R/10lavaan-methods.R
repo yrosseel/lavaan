@@ -931,12 +931,13 @@ sampStat <- function(object, labels=TRUE) {
     OUT <- vector("list", length=G)
     for(g in 1:G) {
         OUT[[g]]$cov  <- object@Sample@cov[[g]]
-        if(labels) rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names
+        if(labels) 
+            rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
         class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
 
         #if(object@Model@meanstructure) {
             OUT[[g]]$mean <- as.numeric(object@Sample@mean[[g]])
-            if(labels) names(OUT[[g]]$mean) <- ov.names
+            if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
     }
@@ -960,12 +961,13 @@ function(object, labels=TRUE) {
     OUT <- vector("list", length=G)
     for(g in 1:G) {
         OUT[[g]]$cov  <- object@Fit@Sigma.hat[[g]]
-        if(labels) rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names
+        if(labels) 
+            rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
         class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
 
         #if(object@Model@meanstructure) {
             OUT[[g]]$mean <- as.numeric(object@Fit@Mu.hat[[g]])
-            if(labels) names(OUT[[g]]$mean) <- ov.names
+            if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
     }
