@@ -38,6 +38,65 @@ cor2cov <- function(R, sds) {
     S
 } 
 
+# convert characters within single quotes to numeric vector
+char2num <- function(x = '') {
+    # first, strip all ',' or ';'
+    x <- gsub(","," ", x); x <- gsub(";"," ", x)
+    tc <- textConnection(x)
+    out <- scan(tc, quiet=TRUE)
+    close(tc)
+    out
+}
+
+# create full matrix based on lower.tri elements; add names
+getCov <- function(x, lower=TRUE, diag=TRUE, sds=NULL,
+                   names=paste("V", 1:nvar, sep="")) {
+
+    # check x and sds
+    if(is.character(x)) x <- char2num(x)
+    if(is.character(sds)) sds <- char2num(sds)
+   
+    nels <- length(x)
+    if(lower) {
+        # lower only
+        if(diag) {
+            nvar <- floor((sqrt(1 + 8 * nels) - 1)/2)
+            stopifnot(nels == nvar*(nvar+1)/2)
+            COV <- matrix(0, nvar, nvar)
+        } else {
+            nvar <- floor((sqrt(1 + 8 * nels) + 1)/2)
+            stopifnot(nels == nvar*(nvar-1)/2)
+            COV <- diag(nvar)
+        }
+    } else {
+        if(!diag) stop("lavaan ERROR: diag must be TRUE if lower is FALSE")
+        # full matrix
+        nvar <- floor(sqrt(nels))
+        stopifnot(nels == nvar*nvar)
+    }
+
+    # fill in elements
+    if(lower) {
+        COV[upper.tri(COV, diag=diag)] <- x
+        COV <- t(COV)
+        COV[upper.tri(COV, diag=diag)] <- x
+    } else {
+        COV <- matrix(x, nvar, nvar, byrow=TRUE)
+    }
+
+    # check if we have sds argument
+    if(!is.null(sds)) {
+        stopifnot(length(sds) == nvar)
+        COV <- cor2cov(COV, sds)
+    }
+
+    # names
+    stopifnot(length(names) == nvar)
+    rownames(COV) <- colnames(COV) <- names
+
+    COV
+}
+
 # generalized inverse
 # MASS version for now
 MASS.ginv <-

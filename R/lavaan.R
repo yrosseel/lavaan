@@ -214,10 +214,12 @@ lavaan <- function(# user-specified model syntax
     timing$User <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
+    # 3. get sample statistics
+    ov.names <- lapply(as.list(1:ngroups),
+                       function(x) vnames(lavaanUser, type="ov", x))
+
     # 3a. handle full data
     if(data.type == "full") {
-        ov.names <- lapply(as.list(1:ngroups), 
-                           function(x) vnames(lavaanUser, type="ov", x))
         lavaanData <- getData(data        = data, 
                               ov.names    = ov.names,
                               std.ov      = std.ov,
@@ -239,8 +241,8 @@ lavaan <- function(# user-specified model syntax
                               meanstructure = lavaanOptions$meanstructure)
         }
 
-        lavaanSampleStats <- 
-            getSampleStats(X           = lavaanData,
+        lavaanSampleStats <- getSampleStatsFromData(
+                           X           = lavaanData,
                            M           = lavaanMissing,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"),
@@ -248,7 +250,24 @@ lavaan <- function(# user-specified model syntax
                            WLS.V       = WLS.V)
                                                  
     } else if(data.type == "moment") {
-        stop("working on it...")
+        lavaanData <- list()
+        lavaanSampleStats <- getSampleStatsFromMoments(
+                           sample.cov  = sample.cov,
+                           sample.mean = sample.mean,
+                           sample.nobs = sample.nobs,
+                           ov.names    = ov.names,
+                           rescale     = (lavaanOptions$estimator == "ML" &&
+                                          lavaanOptions$likelihood == "normal"),
+                           group.label = group.label)
+
+        if(lavaanOptions$estimator == "GLS") {
+            WLS.V <- getWLS.V(X             = NULL,
+                              sample        = lavaanSampleStats,
+                              estimator     = lavaanOptions$estimator,
+                              mimic         = lavaanOptions$mimic,
+                              meanstructure = lavaanOptions$meanstructure)
+            lavaanSampleStats@WLS.V <- WLS.V
+        }
     } else {
         # no data
         lavaanData <- list()

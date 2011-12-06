@@ -129,12 +129,12 @@ getMissingPatterns <- function(X       = NULL,
     missing
 }
 
-getSampleStats <- function(X           = NULL,
-                           M           = NULL,
-                           boot.idx    = NULL,
-                           rescale     = FALSE,
-                           group.label = NULL,
-                           WLS.V       = list()) {
+getSampleStatsFromData <- function(X           = NULL,
+                                   M           = NULL,
+                                   boot.idx    = NULL,
+                                   rescale     = FALSE,
+                                   group.label = NULL,
+                                   WLS.V       = list()) {
 
     # number of groups
     ngroups <- length(X)
@@ -236,6 +236,139 @@ getSampleStats <- function(X           = NULL,
     SampleStats
 }
 
+
+getSampleStatsFromMoments <- function(sample.cov  = NULL,
+                                      sample.mean = NULL,
+                                      sample.nobs = NULL,
+                                      rescale     = FALSE,
+                                      ov.names    = NULL,
+                                      group.label = NULL,
+                                      WLS.V       = list()) {
+
+    # matrix -> list
+    if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
+        if(!is.null(sample.mean) && !is.list(sample.mean))
+            sample.mean <- list(sample.mean)
+
+    # number of groups
+    ngroups <- length(sample.cov)
+   
+    # group labels
+    if(is.null(group.label)) {
+        group.label <- paste("Group ", 1:ngroups, sep="")
+    } 
+    group.label <- as.list(group.label)
+
+    # sample statistics per group
+    cov         <- vector("list", length=ngroups)
+    #var         <- vector("list", length=ngroups)
+    mean        <- vector("list", length=ngroups)
+    nobs        <- as.list(as.integer(sample.nobs))
+    norig       <- nobs
+    # extra sample statistics per group
+    icov        <- vector("list", length=ngroups)
+    cov.log.det <- vector("list", length=ngroups)
+    cov.vecs    <- vector("list", length=ngroups)
+    
+    # prepare empty list for missing data
+    missing <- vector("list", length=ngroups)
+
+    for(g in 1:ngroups) {
+
+        tmp.cov <- sample.cov[[g]]
+
+        # make sure that the matrix is fully symmetric (NEEDED?)
+        T <- t(tmp.cov)
+        tmp.cov[upper.tri(tmp.cov)] <- T[upper.tri(T)]
+
+        # check dimnames
+        if(is.null(rownames(tmp.cov))) {
+            stop("lavaan ERROR: please provide row names for the covariance matrix!\n")
+        }
+
+        # extract only the part we need (using ov.names)
+        idx <- match(ov.names[[g]], rownames(tmp.cov))
+        if(any(is.na(idx))) {
+            cat("found: ", rownames(tmp.cov)[idx], "\n")
+            cat("expected: ", ov.names[[g]], "\n")
+            stop("lavaan ERROR: rownames of covariance matrix do not match the model!\n")
+        } else {
+            tmp.cov <- tmp.cov[idx,idx]
+        }
+
+        # strip dimnames
+        dimnames(tmp.cov) <- NULL
+
+        if(is.null(sample.mean)) {
+            # assume zero mean vector
+            tmp.mean <- numeric(ncol(tmp.cov))
+        } else {
+            # extract only the part we need
+            tmp.mean <- sample.mean[[g]][idx]
+            names(tmp.mean) <- NULL
+        }
+
+        cov[[g]]  <- tmp.cov
+        #var[[g]]  <- diag(tmp.cov)
+        mean[[g]] <- tmp.mean
+
+        # rescale cov by (N-1)/N?
+        if(rescale) {
+            # we 'transform' the sample cov (divided by n-1) 
+            # to a sample cov divided by 'n'
+            cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+        }
+
+        # icov and cov.log.det
+        tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
+        if(inherits(tmp, "try-error")) {
+            if(ngroups > 1) {
+                stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+            } else {
+                stop("lavaan ERROR: sample covariance can not be inverted")
+            }
+        } else {
+            cov.log.det[[g]] <- attr(tmp, "logdet")
+            attr(tmp, "logdet") <- NULL
+            icov[[g]]        <- tmp
+        }
+
+        # cov.vecs
+        cov.vecs[[g]] <- vech(cov[[g]])
+
+        # missing
+        missing[[g]] <- list(npatterns=0L, flag=FALSE)
+
+    } # ngroups
+
+    # construct SampleStats object
+    SampleStats <- new("SampleStats",
+
+                       # sample moments
+                       mean        = mean,
+                       cov         = cov,
+                       #var        = var,
+
+                       # convenience
+                       nobs        = nobs,
+                       norig       = norig,
+                       ntotal      = sum(unlist(nobs)),
+                       ov.names    = ov.names,
+                       ngroups     = ngroups,
+                       group.label = group.label,
+
+                       # extra sample statistics
+                       icov        = icov,
+                       cov.log.det = cov.log.det,
+                       cov.vecs    = cov.vecs,
+                       WLS.V       = WLS.V,                     
+
+                       # missingness
+                       missing     = missing
+                      )
+
+    SampleStats
+}
 
 getWLS.V <- function(X             = NULL, 
                      sample        = NULL,
