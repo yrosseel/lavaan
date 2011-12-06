@@ -17,6 +17,7 @@ Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML",
     }
 
     E.inv <- solve(E)
+    #E.inv <- MASS.ginv(E)
     if(nrow(object@con.jac) > 0L) {
         H <- object@con.jac
         inactive.idx <- attr(H, "inactive.idx")

@@ -127,12 +127,12 @@ lavaanify <- function(model.syntax    = NULL,
             if(ngroups > 1 && length(idx) > 1L) {
                 # Ok, this is not very consistent:
                 # A) here we force same behavior across groups
-                if(length(MOD.fixed) == 1) MOD.fixed <- rep(MOD.fixed, ngroups)
-                if(length(MOD.start) == 1) MOD.start <- rep(MOD.start, ngroups)
+                if(length(MOD.fixed) == 1L) MOD.fixed <- rep(MOD.fixed, ngroups)
+                if(length(MOD.start) == 1L) MOD.start <- rep(MOD.start, ngroups)
                 # B) here we do NOT!
-                cat("DEBUG: idx = ", idx, "\n")
-                cat("MOD.label = ", MOD.label, "\n")
-                cat("ngroups = ", ngroups, "\n")
+                #cat("DEBUG: idx = ", idx, "\n")
+                #cat("MOD.label = ", MOD.label, "\n")
+                #cat("ngroups = ", ngroups, "\n")
                 if(length(MOD.label) == 1) MOD.label <-
                     #c(MOD.label, paste(MOD.label, ".g", 2:ngroups, sep=""))
                     c(MOD.label, rep("", (ngroups-1L)) )
@@ -202,10 +202,18 @@ lavaanify <- function(model.syntax    = NULL,
     #}
 
     # group.equal and group.partial
-    if(ngroups > 1 && length(group.equal) > 0) {
+    if(ngroups > 1L && length(group.equal) > 0L) {
  
         # create `default' labels for all parameters
         LABEL <- getParameterLabels(LIST)
+
+        if("intercepts" %in% group.equal ||
+           "residuals"  %in%  group.equal ||
+           "residual.covariances" %in%  group.equal) {
+            ov.names.nox <- vector("list", length=ngroups)
+            for(g in 1:ngroups) 
+                ov.names.nox[[g]] <- vnames(LIST, "ov.nox", group=g)
+        }
 
         # LOADINGS
         if("loadings" %in% group.equal) {
@@ -222,10 +230,10 @@ lavaanify <- function(model.syntax    = NULL,
         # INTERCEPTS (OV)
         if("intercepts" %in% group.equal) {
             g1.idx <- which(LIST$op == "~1"  & # LIST$free > 0 &
-                            LIST$group == 1  & LIST$lhs %in% ov.names.nox)
+                            LIST$group == 1  & LIST$lhs %in% ov.names.nox[[1L]])
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~1"  & # LIST$free > 0 &
-                             LIST$group == g  & LIST$lhs %in% ov.names.nox)
+                             LIST$group == g  & LIST$lhs %in% ov.names.nox[[g]])
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]
             }
@@ -261,12 +269,12 @@ lavaanify <- function(model.syntax    = NULL,
         if("residuals" %in% group.equal) {
             g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                             LIST$group == 1 &
-                            LIST$lhs %in% ov.names.nox &
+                            LIST$lhs %in% ov.names.nox[[1L]] &
                             LIST$lhs == LIST$rhs)
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                              LIST$group == g &
-                             LIST$lhs %in% ov.names.nox &
+                             LIST$lhs %in% ov.names.nox[[g]] &
                              LIST$lhs == LIST$rhs)
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]
@@ -277,12 +285,12 @@ lavaanify <- function(model.syntax    = NULL,
         if("residual.covariances" %in% group.equal) {
             g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                             LIST$group == 1 &
-                            LIST$lhs %in% ov.names.nox &
+                            LIST$lhs %in% ov.names.nox[[1L]] &
                             LIST$lhs != LIST$rhs)
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                              LIST$group == g &
-                             LIST$lhs %in% ov.names.nox &
+                             LIST$lhs %in% ov.names.nox[[g]] &
                              LIST$lhs != LIST$rhs)
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]

@@ -50,6 +50,7 @@ Model <- function(user           = NULL,
     } else {
         stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
     }
+    if(debug) print(REP)
 
     # prepare nG-sized slots
     nG <- sum(unlist(attr(REP, "mmNumber")))

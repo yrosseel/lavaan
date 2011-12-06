@@ -49,7 +49,7 @@ representation.LISREL <- function(user=NULL, target=NULL,
             ov.dummy.names[[g]] <- ov.names[ ov.names %in% dummy.names ]
 
             # extend lv.names
-            lv.names <- c(lv.names, ov.dummy.names)
+            lv.names <- c(lv.names, ov.dummy.names[[g]])
             nfac <- length(lv.names)
 
             # add 'dummy' =~ entries

@@ -32,11 +32,11 @@ vnames <- function(user, type=NULL, group=NULL) {
         if(is.data.frame(user)) {
             user <- user[group.idx,]
         } else {
-            user.old <- user
-            user <- list()
-            user$lhs <- user.old$lhs[group.idx]
-            user$op  <- user.old$op[group.idx]
-            user$rhs <- user.old$rhs[group.idx]
+            user.old <- user; user <- list()
+            user$lhs   <- user.old$lhs[group.idx]
+            user$op    <- user.old$op[group.idx]
+            user$rhs   <- user.old$rhs[group.idx]
+            user$group <- user.old$group[group.idx]
         }
     }
 

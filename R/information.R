@@ -155,7 +155,7 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
 
 
     # make symmetric (NEEDED? probably not)
-    #Hessian <- ( Hessian + t(Hessian) )/2.0
+    Hessian <- ( Hessian + t(Hessian) )/2.0
   
     Information.ok <- ( -1 * Hessian )
 

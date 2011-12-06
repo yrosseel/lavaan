@@ -34,8 +34,8 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
             nvar <- ncol(sample@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
-            A1 <- A1[idx,idx[[g]]]
-            B1 <- B1[idx,idx[[g]]]
+            A1 <- A1[idx,idx]
+            B1 <- B1[idx,idx]
         }
 
         trace.h1     <- sum( B1 * t( solve(A1) ) )
@@ -70,8 +70,8 @@ testStatisticYuanBentler <- function(sample=sample,
             nvar <- ncol(sample@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx[[g]]]
-            B1 <- B1[idx,idx[[g]]]
+            A1 <- A1[idx,idx]
+            B1 <- B1[idx,idx]
         }
 
         trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
@@ -116,8 +116,8 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
             nvar <- ncol(sample@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx[[g]]]
-            B1 <- B1[idx,idx[[g]]]
+            A1 <- A1[idx,idx]
+            B1 <- B1[idx,idx]
         }
 
         trace.h1[g]     <- sum( B1 * t( solve(A1) ) )

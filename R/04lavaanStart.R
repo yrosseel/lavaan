@@ -96,14 +96,11 @@ StartingValues <- function(start.method = "default",
         ov.names    <- vnames(user, "ov",   group=g)
         lv.names    <- vnames(user, "lv",   group=g); nfac <- length(lv.names)
         ov.names.x  <- vnames(user, "ov.x", group=g)
-    
+
         if(start.initial %in% c("lavaan", "mplus") && 
-           model.type %in% c("sem", "cfa")) {
-            # or slightly better using 2sls
-            if(!sum( user$ustart[ user$op == "=~" & user$group == g], 
-                    na.rm=TRUE) == length(lv.names)) {
-                next
-            }
+           model.type %in% c("sem", "cfa") &&
+           sum( user$ustart[ user$op == "=~" & user$group == g],
+                                   na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
             # we use the fabin3 estimator (2sls) of Hagglund (1982)
             # per factor
