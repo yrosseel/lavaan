@@ -5,8 +5,8 @@
 # major revision: YR 9/12/2010: - new workflow (since 0.4-5)
 #                               - merge cfa/sem/growth functions
 
-lavaan <- function(# user-specified model syntax
-                   model.syntax    = '',
+lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
+                   model           = NULL,
                    model.type      = "sem",
                 
                    # model modifiers
@@ -148,7 +148,7 @@ lavaan <- function(# user-specified model syntax
     # force evaluation of `language` and/or `symbol` arguments
     #opt <- lapply(opt, function(x) if(typeof(x) %in% c("language", "symbol")) 
     #                                   eval(x, parent.frame()) else x)
-    opt <- list(model.syntax = model.syntax, model.type = model.type,
+    opt <- list(model = model, model.type = model.type,
         meanstructure = meanstructure, int.ov.free = int.ov.free,
         int.lv.free = int.lv.free, fixed.x = fixed.x, orthogonal = orthogonal,
         std.lv = std.lv, auto.fix.first = auto.fix.first,
@@ -168,9 +168,9 @@ lavaan <- function(# user-specified model syntax
     
 
     # 2a. construct lavaan User list: description of the user-specified model
-    if(is.character(model.syntax)) {
+    if(is.character(model)) {
         lavaanUser <- 
-            lavaanify(model.syntax    = model.syntax, 
+            lavaanify(model           = model, 
                       meanstructure   = lavaanOptions$meanstructure, 
                       int.ov.free     = lavaanOptions$int.ov.free,
                       int.lv.free     = lavaanOptions$int.lv.free,
@@ -192,21 +192,23 @@ lavaan <- function(# user-specified model syntax
                       warn            = lavaanOptions$warn,
 
                       as.data.frame.  = FALSE)
-    } else if(is.list(model.syntax)) {
-        # two possibilities: either model.syntax is already lavaanified
-        # or it is a list of model.syntaxes (perhaps one for each group)
-        if(!is.null(model.syntax$lhs) &&
-           !is.null(model.syntax$op)  &&
-           !is.null(model.syntax$rhs) &&
-           !is.null(model.syntax$free)) {
-            lavaanUser <- model.syntax
-        } else if(is.character(model.syntax[[1]])) {
+    } else if(is.list(model)) {
+        # two possibilities: either model is already lavaanified
+        # or it is a list of modeles (perhaps one for each group)
+        if(!is.null(model$lhs) &&
+           !is.null(model$op)  &&
+           !is.null(model$rhs) &&
+           !is.null(model$free)) {
+            lavaanUser <- model
+        } else if(is.character(model[[1]])) {
             # we lavaanify each model in term, and assume multiple groups
-            stop("lavaan ERROR: list of model syntaxes: not implemented yet")
+            # ... or not: we now allow multiple groups (with different
+            # manifest variables within a single syntax... (dec 2011)
+            stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
     } else {
-        cat("model.syntax type: ", class(model.syntax), "\n")
-        stop("lavaan ERROR: model.syntax is not a string or a list")
+        cat("model type: ", class(model), "\n")
+        stop("lavaan ERROR: model is not of type character or list")
     }
 
     # 2b. change meanstructure flag?
@@ -377,7 +379,7 @@ lavaan <- function(# user-specified model syntax
 }
 
 # cfa + sem
-cfa <- sem <- function(model.syntax = '', 
+cfa <- sem <- function(model = NULL,
     meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
@@ -406,7 +408,7 @@ cfa <- sem <- function(model.syntax = '',
 }
 
 # simple growth models
-growth <- function(model.syntax = '',
+growth <- function(model = NULL,
     fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,

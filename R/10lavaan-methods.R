@@ -1066,7 +1066,7 @@ function(object, ...) {
 
 # see: src/library/stats/R/update.R
 setMethod("update", signature(object = "lavaan"),
-function(object, model.syntax., ..., evaluate = TRUE) {
+function(object, model, ..., evaluate = TRUE) {
 
     call <- object@call
     if(is.null(call))
@@ -1074,9 +1074,9 @@ function(object, model.syntax., ..., evaluate = TRUE) {
 
     extras <- match.call(expand.dots = FALSE)$...
 
-    if(!missing(model.syntax.))
+    if(!missing(model))
         #call$formula <- update.formula(formula(object), formula.)
-        call$model.syntax <- model.syntax.
+        call$model <- model
 
     if(length(extras) > 0) {
         existing <- !is.na(match(names(extras), names(call)))

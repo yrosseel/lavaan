@@ -11,7 +11,7 @@
 independence.model <- function(model.syntax = '', ...) {
 
     # process
-    no.fit <- cfa(model.syntax, ..., se="none", do.fit=FALSE)
+    no.fit <- cfa(model=model.syntax, ..., data=NULL, sample.cov=NULL)
 
     # reconstruct model.syntax...
     OV.X <- character(0L)
@@ -22,7 +22,7 @@ independence.model <- function(model.syntax = '', ...) {
                                   ov.names.x = OV.X,
                                   sample.cov = no.fit@Sample@cov)
     # refit
-    lavaan <- cfa(model.syntax, ...)
+    lavaan <- cfa(model=model.syntax, ...)
 
     lavaan
 }
@@ -41,7 +41,7 @@ independence.model.fit2 <- function(object) {
                                   sample.cov = object@Sample@cov)
 
     # refit
-    lavaan <- update(object, model.syntax = model.syntax)
+    lavaan <- update(object, model = model.syntax)
 
     lavaan
 }

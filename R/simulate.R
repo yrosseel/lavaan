@@ -3,8 +3,8 @@
 # initial version: YR 24 jan 2011
 # revision for 0.4-11: YR 21 okt 2011
 simulateData <- function(
-                         # user-specified model syntax
-                         model.syntax = '',
+                         # user-specified model
+                         model           = NULL,
                          model.type      = "sem",
 
                          # model modifiers
@@ -34,7 +34,7 @@ simulateData <- function(
     RNGstate <- .Random.seed
 
     # run lavaan to set up the model matrices
-    fit <- lavaan(model.syntax, 
+    fit <- lavaan(model=model,
                   meanstructure=meanstructure, 
                   int.ov.free=int.ov.free, int.lv.free=int.lv.free,
                   fixed.x=fixed.x,

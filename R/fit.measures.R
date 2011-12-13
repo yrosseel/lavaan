@@ -154,12 +154,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         #    syntax.independence.model(ov.names   = object@Sample@ov.names,
         #                              ov.names.x = OV.X,
         #                              sample.cov = object@Sample@cov)
-        #fit.indep <- update(object, model.syntax = indep.syntax, 
+        #fit.indep <- update(object, model = indep.syntax, 
         #                    se = "none", do.fit=TRUE, 
         #                    constraints = "",
         #                    verbose = FALSE, warn = FALSE)
         #OCALL <- as.list(object@call); OCALL$env <- NULL; OCALL[[1]] <- NULL
-        #NCALL <- list(model.syntax = indep.syntax, se = "none", do.fit = TRUE, 
+        #NCALL <- list(model = indep.syntax, se = "none", do.fit = TRUE, 
         #              constraints = "", verbose = FALSE, warn = FALSE)
         #CALL  <- modifyList(OCALL, NCALL)
         #cat("DEBUG!\n"); print(as.list(object@call$env)); cat("*******\n")
