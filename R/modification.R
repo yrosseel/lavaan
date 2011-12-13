@@ -27,7 +27,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     } else {
         stop("only LISREL representation has been implemented")
     }
-    LIST <- cbind(LIST, as.data.frame(REP))
+    LIST <- cbind(LIST, as.data.frame(REP, stringsAsFactors = FALSE))
 
     # here we remove `non-existing' parameters (depends on the matrix
     # representation (eg in LISREL rep, there is no ~~ between lv and ov)

@@ -463,17 +463,14 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         stop("lavaan ERROR: empty model syntax")
     }
 
-    # replace semicolons by newlines
-    model.syntax <- gsub(";","\n", model.syntax)
-
     # break up in lines 
     model <- unlist( strsplit(model.syntax, "\n") )
 
-    # remove comments starting with '#'
-    model <- gsub("#.*","", model)
+    # remove comments starting with '#' or '!'
+    model <- gsub("#.*","", model); model <- gsub("!.*","", model)
 
-    # remove comments starting with '!'
-    model <- gsub("!.*","", model)
+    # replace semicolons by newlines and split in lines again
+    model <- gsub(";","\n", model); model <- unlist( strsplit(model, "\n") )
 
     # strip all white space
     model <- gsub("[[:space:]]+", "", model)
@@ -634,19 +631,19 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 
                 # check if we not already have this combination
                 # 1. asymmetric (=~, ~, ~1)
-                #idx <- which(FLAT.lhs == lhs.names[l] &
-                #             FLAT.op  == op &
-                #             FLAT.rhs == rhs.name)
-                #if(length(idx) > 0) {
-                #    stop("lavaan ERROR: duplicate model element in: ", model[i])
-                #}
+                idx <- which(FLAT.lhs == lhs.names[l] &
+                             FLAT.op  == op &
+                             FLAT.rhs == rhs.name)
+                if(length(idx) > 0) {
+                    stop("lavaan ERROR: duplicate model element in: ", model[i])
+                }
                 # 2. symmetric (~~)
-                #idx <- which(FLAT.lhs == rhs.name &
-                #             FLAT.op  == "~~" &
-                #             FLAT.rhs == lhs.names[l])
-                #if(length(idx) > 0) {
-                #    stop("lavaan ERROR: duplicate model element in: ", model[i])
-                #}
+                idx <- which(FLAT.lhs == rhs.name &
+                             FLAT.op  == "~~" &
+                             FLAT.rhs == lhs.names[l])
+                if(length(idx) > 0) {
+                    stop("lavaan ERROR: duplicate model element in: ", model[i])
+                }
 
                 FLAT.idx <- FLAT.idx + 1
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
