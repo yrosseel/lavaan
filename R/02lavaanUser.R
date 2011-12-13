@@ -20,6 +20,8 @@ lavaanify <- function(model.syntax    = NULL,
                       fixed.x         = TRUE,
                       constraints     = NULL,
 
+                      auto            = FALSE,
+                      model.type      = "sem",
                       auto.fix.first  = FALSE,
                       auto.fix.single = FALSE,
                       auto.var        = FALSE,
@@ -57,6 +59,30 @@ lavaanify <- function(model.syntax    = NULL,
         print( str(MOD) )
         cat("[lavaan DEBUG]: CON (constraints):\n")
         print( str(CON) )
+    }
+
+    # auto=TRUE?
+    if(auto && model.type == "sem") { # mimic sem/cfa auto behavior
+        if(model.type == "sem") {
+            int.ov.free     = TRUE
+            int.lv.free     = FALSE
+            auto.fix.first  = !std.lv
+            auto.fix.single = TRUE
+            auto.var        = TRUE
+            auto.cov.lv.x   = TRUE
+            auto.cov.y      = TRUE
+        } else 
+        
+        if(model.type == "growth") {
+            model.type      = "growth"
+            int.ov.free     = FALSE
+            int.lv.free     = TRUE
+            auto.fix.first  = !std.lv
+            auto.fix.single = TRUE
+            auto.var        = TRUE
+            auto.cov.lv.x   = TRUE
+            auto.cov.y      = TRUE    
+        }
     }
 
     # check for `empty' model

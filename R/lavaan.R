@@ -170,7 +170,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 2a. construct lavaan User list: description of the user-specified model
     if(is.character(model)) {
         lavaanUser <- 
-            lavaanify(model           = model, 
+            lavaanify(model.syntax    = model, 
                       meanstructure   = lavaanOptions$meanstructure, 
                       int.ov.free     = lavaanOptions$int.ov.free,
                       int.lv.free     = lavaanOptions$int.lv.free,
