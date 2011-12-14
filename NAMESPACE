@@ -40,7 +40,7 @@ export("lavaan",
        "parameterEstimates", "parameterestimates",
        "fitMeasures", "fitmeasures",
        "inspectSampleCov",
-       #"bootstrapLavaan", "bootstrapLRT",
+       "bootstrapLavaan", "bootstrapLRT",
        "simulateData",
        "measurementInvariance", "measurementinvariance"
       )

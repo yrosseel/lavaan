@@ -1,6 +1,6 @@
 # bootstrapLRT: bootstrap LR test for nested models
 
-bootstrapLRT <- function(h0, h1, data=NULL, R=1000, 
+bootstrapLRT <- function(h0, h1, R=1000, 
                          type="bollen.stine", verbose=FALSE) {
 
     out <- bootstrapLRT.internal(model1  = h0@Model,
