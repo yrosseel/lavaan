@@ -9,13 +9,13 @@ function \code{lavaanify} turns it into a list that represents the full
 model as specified by the user.} 
 \usage{
 lavaanify(model.syntax = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
-    fixed.x = TRUE, constraints = NULL, auto.fix.first = FALSE, 
-    auto.fix.single = FALSE,  auto.var = FALSE, auto.cov.lv.x = FALSE, 
-    auto.cov.y = FALSE, ngroups = 1L, group.equal = NULL, 
+    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, fixed.x = TRUE, 
+    constraints = NULL, auto = FALSE, model.type = "sem",
+    auto.fix.first = FALSE, auto.fix.single = FALSE,  auto.var = FALSE, 
+    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, ngroups = 1L, group.equal = NULL,
     group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-lavaanNames(object, type = "ov")
+lavaanNames(object, type = "ov", group = NULL)
 }
 \arguments{
 \item{model.syntax}{The model syntax specifying the model. See
@@ -38,6 +38,10 @@ the model both for both observed and latent variables.}
     random, and the means, variances and covariances are free parameters.}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
+\item{auto}{If \code{TRUE}, the default values are used for the auto.*
+    arguments, depending on the value of \code{model.type}.}
+\item{model.type}{Either \code{"sem"} or \code{"growth"}; only used if
+    \code{auto=TRUE}.}
 \item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
 \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
@@ -75,6 +79,10 @@ and \code{"lv.y"} types return dependent variables only (in the regression
 sense, excluding the indicators of latent variables). The
 \code{"ov.nox"} type returns all observed variables, except the exogenous
 ones.}
+\item{group}{Only used in the function \code{lavaanNames}. If \code{NULL},
+all groups (if any) are used. If an integer (vector), only names from those
+groups are extracted. The group numbers are found in the \code{group}
+column of the parameter table.}
 }
 \details{
 The model syntax consists of one or more formula-like expressions, each one

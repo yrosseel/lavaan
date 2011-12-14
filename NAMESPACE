@@ -28,16 +28,19 @@ export("lavaan",
        "lavaanify",
        "lavaanNames",
        #"setLavaanOptions",
-       #"simulateData",
        # "export",
        #"independence.model",
-       "getCov", "cor2cov", "char2num",
+       "getCov", "char2num", "cor2cov",
+       "vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
+       "vechr", "vechr.reverse", "vechu", "vechu.reverse", "upper2full", 
+       "duplicationMatrix", "commutationMatrix",
+       "sqrtSymmetricMatrix",
        "modindices", "modificationIndices", "modificationindices",
        "standardizedSolution", "standardizedsolution",
        "parameterEstimates", "parameterestimates",
        "fitMeasures", "fitmeasures",
-       "modelCov",
-       "bootLavaan",
+       "inspectSampleCov",
+       #"bootstrapLavaan", "bootstrapLRT",
        "simulateData",
        "measurementInvariance", "measurementinvariance"
       )
@@ -65,4 +68,4 @@ S3method(print, lavaan.data.frame)
 S3method(print, lavaan.matrix)
 S3method(print, lavaan.matrix.symmetric)
 S3method(print, lavaan.vector)
-S3method(summary, lavaan.boot)
+#S3method(summary, lavaan.boot)

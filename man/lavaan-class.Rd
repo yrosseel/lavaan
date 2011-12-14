@@ -37,6 +37,9 @@ Objects can be created via the
       the user, or filled-in automatically.}
     \item{\code{User}:}{Named list describing the model as specified by
                         the user. Can be coerced to a data.frame.}
+    \item{\code{Data}:}{A list containing the raw data (as a numeric matrix 
+       with only column names) per group; the matrix contains only the 
+       observed variables mentioned in the model.}
     \item{\code{Sample}:}{Object of internal class \code{"Sample"}: sample 
       statistics}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the 

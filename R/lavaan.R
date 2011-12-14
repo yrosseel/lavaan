@@ -273,7 +273,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         # no data
         lavaanData <- list()
-        lavaanSampleStats <- new("SampleStats", ngroups=ngroups)
+        lavaanSampleStats <- new("SampleStats", ngroups=ngroups,
+                                 ov.names=ov.names)
     } 
     if(debug) {
         print(str(lavaanData))

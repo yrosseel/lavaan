@@ -12,6 +12,14 @@
 # note: we do not coerce to 'double/numeric' storage-mode (like as.numeric)
 vec <- as.vector
 
+# vecr operator
+#
+# the vecr operator ransforms a matrix into 
+# a vector by stacking the *rows* of the matrix one underneath the other
+vecr <- function(A) {
+    vec(t(A))
+}
+
 # vech 
 # 
 # the vech operator (for 'half vectorization') transforms a *symmetric* matrix 
@@ -26,20 +34,14 @@ vech <- function(S, diagonal = TRUE) {
     if(diagonal) S[ROW >= COL] else S[ROW > COL]
 }
 
-# vech.reverse
+# the vechru operator transforms a *symmetric* matrix 
+# into a vector by stacking the *rows* of the matrix one after the
+# other, but eliminating all infradiagonal elements
 #
-# given the output of vech(S), reconstruct S
-vech.reverse <- function(x) {
-    # guess dimensions
-    p <- (sqrt(1 + 8*length(x))-1)/2
-
-    S <- numeric(p*p)
-    S[vech.idx(p)] <- S[vechr.idx(p)] <- x
-
-    attr(S, "dim") <- c(p, p)   
-    S
+# same as vech (but using upper-diagonal elements)
+vechru <- function(S, diagonal = TRUE) {
+    S[vechru.idx(n = ncol(S), diagonal = diagonal)]
 }
-
 
 # return the the *vector* indices of the lower triangular elements of a 
 # symmetric matrix of size 'n'
@@ -50,6 +52,63 @@ vech.idx <- function(n = 1L, diagonal = TRUE) {
 }
 
 # return the the *vector* indices of the upper triangular elements of a 
+# symmetric matrix of size 'n' -- ROW-WISE
+#
+# FIXME!! make this more efficient (without creating a n*n matrix!)
+#
+vechru.idx <- function(n = 1L, diagonal = TRUE) {
+    n <- as.integer(n)
+    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
+    if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
+}
+
+# vech.reverse and vechru.reverse (aka `upper2full')
+#
+# given the output of vech(S) --or vechru(S) which is identical-- 
+# reconstruct S
+vech.reverse <- vechru.reverse <- upper2full <- function(x, diagonal = TRUE) {
+    # guess dimensions
+    if(diagonal) {
+        p <- (sqrt(1 + 8*length(x))-1)/2
+    } else {
+        p <- (sqrt(1 + 8*length(x))+1)/2
+    }
+
+    S <- numeric(p*p)
+    S[vech.idx( p, diagonal=diagonal)] <- x
+    S[vechru.idx(p, diagonal=diagonal)] <- x
+
+    attr(S, "dim") <- c(p, p)   
+    S
+}
+
+
+
+# the vechr operator transforms a *symmetric* matrix 
+# into a vector by stacking the *rows* of the matrix one after the
+# other, but eliminating all supradiagonal elements
+vechr <- function(S, diagonal = TRUE) {
+    S[vechr.idx(n = ncol(S), diagonal = diagonal)]
+}
+
+# the vechu operator transforms a *symmetric* matrix 
+# into a vector by stacking the *columns* of the matrix one after the
+# other, but eliminating all infradiagonal elements
+vechu <- function(S, diagonal = TRUE) {
+    S[vechu.idx(n = ncol(S), diagonal = diagonal)]
+}
+
+# return the the *vector* indices of the lower triangular elements of a 
+# symmetric matrix of size 'n' -- ROW-WISE
+vechr.idx <- function(n = 1L, diagonal = TRUE) {
+    n <- as.integer(n)
+    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
+    if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
+}
+
+# return the the *vector* indices of the upper triangular elements of a 
 # symmetric matrix of size 'n' -- COLUMN-WISE
 vechu.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
@@ -57,23 +116,30 @@ vechu.idx <- function(n = 1L, diagonal = TRUE) {
     if(diagonal) which(ROW <= COL) else which(ROW < COL)
 }
 
-# return the the *vector* indices of the upper triangular elements of a 
-# symmetric matrix of size 'n' -- ROW-WISE
+# vechr.reverse vechu.reversie (aka `lower2full)
 #
-# FIXME!! make this more efficient (without creating a n*n matrix!)
-#
-vechr.idx <- function(n = 1L, diagonal = TRUE) {
-    n <- as.integer(n)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
-    tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
-    if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
+# given the output of vechr(S) --or vechu(S) which is identical--
+# reconstruct S
+vechr.reverse <- vechu.reverse <- lower2full <- function(x, diagonal = TRUE) {
+    # guess dimensions
+    if(diagonal) {
+        p <- (sqrt(1 + 8*length(x))-1)/2
+    } else {
+        p <- (sqrt(1 + 8*length(x))+1)/2
+    }
+
+    S <- numeric(p*p)
+    S[vechr.idx(p, diagonal=diagonal)] <- x
+    S[vechu.idx(p, diagonal=diagonal)] <- x
+
+    attr(S, "dim") <- c(p, p)
+    S
 }
 
-# tooo slow, only diag=TRUE
-vechr.idx2 <- function(n = 1L, diagonal = TRUE) {
-    n <- as.integer(n)
-    unlist(lapply(1:n, function(x) 1L + 0L:(n-x)*n + (n+1L)*(x-1L) ))
-}
+
+
+
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)
@@ -138,7 +204,7 @@ dup2 <- function (n = 1L) {
     x <- numeric(n2 * nstar)
 
     idx1 <- vech.idx(n)  + ((1L:nstar)-1L) * n2 # vector indices
-    idx2 <- vechr.idx(n) + ((1L:nstar)-1L) * n2 # vector indices
+    idx2 <- vechru.idx(n) + ((1L:nstar)-1L) * n2 # vector indices
 
     x[idx1] <- 1.0
     x[idx2] <- 1.0
@@ -165,7 +231,7 @@ dup3 <- function(n = 1L) {
 
     tmp <- matrix(0L, n, n)
     tmp[vech.idx(n)] <- 1:nstar
-    tmp[vechr.idx(n)] <- 1:nstar
+    tmp[vechru.idx(n)] <- 1:nstar
 
     idx <- (1:n2) + (vec(tmp)-1L) * n2
 
@@ -191,7 +257,7 @@ dup3 <- function(n = 1L) {
 #
 #    tmp <- matrix(0L, n, n)
 #    tmp[vech.idx(n)] <- 1:nstar
-#    tmp[vechr.idx(n)] <- 1:nstar
+#    tmp[vechru.idx(n)] <- 1:nstar
 #
 #    x <- Matrix:::sparseMatrix(i = 1:(n*n), j = vec(tmp), x = 1.0)
 #
@@ -217,7 +283,7 @@ D.pre <- function(A = matrix(0,0,0)) {
     n <- sqrt(n2)
 
     # dup idx
-    idx1 <- vech.idx(n); idx2 <- vechr.idx(n)
+    idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
     OUT <- A[idx1,] + A[idx2,]
     u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0
@@ -238,7 +304,7 @@ dup.pre2 <- function(A = matrix(0,0,0)) {
     n <- sqrt(n2)
 
     # dup idx
-    idx1 <- vech.idx(n); idx2 <- vechr.idx(n)
+    idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
     OUT <- A[idx1,]
     u <- which(!idx1 %in% idx2); OUT[u,] <- OUT[u,] + A[idx2[u],]
@@ -261,7 +327,7 @@ D.post <- function(A = matrix(0,0,0)) {
     n <- sqrt(n2)
 
     # dup idx
-    idx1 <- vech.idx(n); idx2 <- vechr.idx(n)
+    idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
     OUT <- A[,idx1] + A[,idx2]
     u <- which(idx1 %in% idx2); OUT[,u] <- OUT[,u] / 2.0
@@ -283,7 +349,7 @@ D.pre.post <- function(A = matrix(0,0,0)) {
     n <- sqrt(n2)
 
     # dup idx
-    idx1 <- vech.idx(n); idx2 <- vechr.idx(n)
+    idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
     OUT <- A[idx1,] + A[idx2,]
     u <- which(idx1 %in% idx2);     OUT[u,] <- OUT[u,] / 2.0
@@ -364,19 +430,20 @@ K.mn.pre <- function(A, m = 1L, n = 1L) {
     OUT
 }
 
-
 # square root of a positive definite symmetric matrix
-sqrtSymmetricMatrix <- function(A = matrix(0,0,0)) {
+sqrtSymmetricMatrix <- function(S = matrix(0,0,0)) {
 
-    n <- nrow(A)
+    n <- nrow(S)
 
     # eigen decomposition
-    A.eigen <- eigen(A)
-    V <- A.eigen$vectors; d <- A.eigen$values
+    S.eigen <- eigen(S)
+    V <- S.eigen$vectors; d <- S.eigen$values
 
     # sqrt the eigenvalues and reconstruct
-    A.sqrt <- V %*% diag(sqrt(d), n, n) %*% t(V)
+    S.sqrt <- V %*% diag(sqrt(d), n, n) %*% t(V)
 
-    A.sqrt
+    S.sqrt
 }
+
+
 

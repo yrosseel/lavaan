@@ -403,8 +403,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
 
     } else if(test == "bootstrap" || test == "bollen.stine") {
         # check if we have bootstrap data
-        BOOT <- attr(VCOV, "BOOT")
-        if(is.null(BOOT)) {
+        BOOT.TEST <- attr(VCOV, "BOOT.TEST")
+        if(is.null(BOOT.TEST)) {
             if(!is.null(options$bootstrap)) {
                 R <- options$bootstrap
             } else {
@@ -418,12 +418,12 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                       type=boot.type,
                                       coef=FALSE,
                                       test=TRUE)
-            T.boot <- out$test
-        }    
+            BOOT.TEST <- out$test
+        }
 
         # bootstrap p-value
-        boot.larger <- sum(T.boot > chisq)
-        boot.length <- length(T.boot)
+        boot.larger <- sum(BOOT.TEST > chisq)
+        boot.length <- length(BOOT.TEST)
         pvalue.boot <- boot.larger/boot.length
 
         TEST[[2]] <- list(test="bootstrap",
@@ -431,7 +431,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                           stat.group=chisq.group,
                           df=df,
                           pvalue=pvalue.boot,
-                          boot.T=T.boot,
+                          boot.T=BOOT.TEST,
                           boot.larger=boot.larger,
                           boot.length=boot.length)
     }

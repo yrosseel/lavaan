@@ -4,7 +4,7 @@
 \description{
 Fit a Confirmatory Factor Analysis (CFA) model.}
 \usage{
-cfa(model.syntax = '', meanstructure = "default", fixed.x = "default",
+cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.equal = "",
@@ -16,9 +16,11 @@ cfa(model.syntax = '', meanstructure = "default", fixed.x = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See                 
-    \code{\link{model.syntax}} for more information. Or a parsed model
-    list as outputted by the lavaanify() function.}
+\item{model}{A description of the user-specified model. Typically, the model
+    is described using the lavaan model syntax. See                 
+    \code{\link{model.syntax}} for more information. Alternatively, a
+    parameter list (eg. the output of the \code{lavaanify()} function) is also
+    accepted.}
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}

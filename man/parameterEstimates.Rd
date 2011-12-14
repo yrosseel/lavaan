@@ -6,7 +6,7 @@
 Parameter estimates of a latent variable model.}
 \usage{
 parameterEstimates(object, ci = TRUE, level = 0.95, 
-                   boot.ci.type = "bca.simple", standardized = FALSE)
+                   boot.ci.type = "perc", standardized = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}

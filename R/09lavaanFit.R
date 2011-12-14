@@ -25,8 +25,8 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         # defined parameters: 
         def.idx <- which(user$op == ":=")
         if(length(def.idx) > 0L) {
-            if(!is.null(attr(VCOV, "BOOT"))) {
-                BOOT <- attr(VCOV, "BOOT")
+            if(!is.null(attr(VCOV, "BOOT.COEF"))) {
+                BOOT <- attr(VCOV, "BOOT.COEF")
                 BOOT.def <- apply(BOOT, 1, model@def.function)
                 if(length(def.idx) == 1L) {
                     BOOT.def <- as.matrix(BOOT.def)
@@ -57,8 +57,8 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
        Mu.hat <-    computeMuHat(model)
 
     # if bootstrapped parameters, add attr to 'est'
-    if(!is.null(attr(VCOV, "BOOT"))) {
-        attr(est, "BOOT") <- attr(VCOV, "BOOT")
+    if(!is.null(attr(VCOV, "BOOT.COEF"))) {
+        attr(est, "BOOT.COEF") <- attr(VCOV, "BOOT.COEF")
     }
 
     new("Fit",

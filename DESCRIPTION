@@ -1,7 +1,8 @@
 Package: lavaan
 Title: Latent Variable Analysis
 Version: 0.4-11
-Author: Yves Rosseel <Yves.Rosseel@UGent.be>
+Author: Yves Rosseel <Yves.Rosseel@UGent.be> with contributions from 
+        many people. See the lavaan website for a list of contributors.
 Maintainer: Yves Rosseel <Yves.Rosseel@UGent.be>
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling

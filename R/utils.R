@@ -17,7 +17,7 @@ inv.chol <- function(S, logdet=FALSE) {
 
 # convert correlation matrix + standard deviations to covariance matrix
 # based on cov2cor in package:stats
-cor2cov <- function(R, sds) {
+cor2cov <- function(R, sds, names=NULL) {
 
     p <- (d <- dim(R))[1L]
     if(!is.numeric(R) || length(d) != 2L || p != d[2L]) 
@@ -35,21 +35,30 @@ cor2cov <- function(R, sds) {
     S <- R
     S[] <- sds * R * rep(sds, each=p)
 
+    # optionally, add names
+    if(!is.null(names)) {
+        stopifnot(length(names) == p)
+        rownames(S) <- colnames(S) <- names
+    }
+
     S
 } 
 
 # convert characters within single quotes to numeric vector
-char2num <- function(x = '') {
+# eg. s <- '3 4.3 8e-3 2.0'
+#     x <- char2num(s)
+char2num <- function(s = '') {
     # first, strip all ',' or ';'
-    x <- gsub(","," ", x); x <- gsub(";"," ", x)
-    tc <- textConnection(x)
-    out <- scan(tc, quiet=TRUE)
+    s <- gsub(","," ", s); s <- gsub(";"," ", s)
+    tc <- textConnection(s)
+    x <- scan(tc, quiet=TRUE)
     close(tc)
-    out
+    x 
 }
 
-# create full matrix based on lower.tri elements; add names
-getCov <- function(x, lower=TRUE, diag=TRUE, sds=NULL,
+# create full matrix based on lower.tri or upper.tri elements; add names
+# always ROW-WISE!!
+getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
                    names=paste("V", 1:nvar, sep="")) {
 
     # check x and sds
@@ -58,33 +67,16 @@ getCov <- function(x, lower=TRUE, diag=TRUE, sds=NULL,
    
     nels <- length(x)
     if(lower) {
-        # lower only
-        if(diag) {
-            nvar <- floor((sqrt(1 + 8 * nels) - 1)/2)
-            stopifnot(nels == nvar*(nvar+1)/2)
-            COV <- matrix(0, nvar, nvar)
-        } else {
-            nvar <- floor((sqrt(1 + 8 * nels) + 1)/2)
-            stopifnot(nels == nvar*(nvar-1)/2)
-            COV <- diag(nvar)
-        }
+        COV <- lower2full(x, diagonal=diagonal)
     } else {
-        if(!diag) stop("lavaan ERROR: diag must be TRUE if lower is FALSE")
-        # full matrix
-        nvar <- floor(sqrt(nels))
-        stopifnot(nels == nvar*nvar)
+        COV <- upper2full(x, diagonal=diagonal)
     }
+    nvar <- ncol(COV)
 
-    # fill in elements
-    if(lower) {
-        COV[upper.tri(COV, diag=diag)] <- x
-        COV <- t(COV)
-        COV[upper.tri(COV, diag=diag)] <- x
-    } else {
-        COV <- matrix(x, nvar, nvar, byrow=TRUE)
-    }
+    # if diagonal is false, assume unit diagonal
+    if(!diagonal) diag(COV) <- 1
 
-    # check if we have sds argument
+    # check if we have a sds argument
     if(!is.null(sds)) {
         stopifnot(length(sds) == nvar)
         COV <- cor2cov(COV, sds)

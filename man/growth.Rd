@@ -4,7 +4,7 @@
 \description{
 Fit a Growth Curve model.}
 \usage{
-growth(model.syntax = '', fixed.x = "default",
+growth(model = NULL, fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.equal = "",
@@ -16,9 +16,11 @@ growth(model.syntax = '', fixed.x = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See                 
-    \code{\link{model.syntax}} for more information. Or a parsed model
-    list as outputted by the lavaanify() function.}
+\item{model}{A description of the user-specified model. Typically, the model
+    is described using the lavaan model syntax. See            
+    \code{\link{model.syntax}} for more information. Alternatively, a
+    parameter list (eg. the output of the \code{lavaanify()} function) is also
+    accepted.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered

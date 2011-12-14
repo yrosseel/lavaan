@@ -4,7 +4,7 @@
 \description{
 Fit a latent variable model.}
 \usage{
-lavaan(model.syntax = "", model.type = "sem", meanstructure = "default", 
+lavaan(model = NULL, model.type = "sem", meanstructure = "default", 
     int.ov.free = FALSE, int.lv.free = FALSE, fixed.x = "default", 
     orthogonal = FALSE, std.lv = FALSE, auto.fix.first = FALSE, 
     auto.fix.single = FALSE, auto.var = FALSE, auto.cov.lv.x = FALSE, 
@@ -18,9 +18,11 @@ lavaan(model.syntax = "", model.type = "sem", meanstructure = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See 
-    \code{\link{model.syntax}} for more information. Or a parsed model
-    list as outputted by the lavaanify() function.}
+\item{model}{A description of the user-specified model. Typically, the model
+    is described using the lavaan model syntax. See            
+    \code{\link{model.syntax}} for more information. Alternatively, a
+    parameter list (eg. the output of the \code{lavaanify()} function) is also
+    accepted.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology

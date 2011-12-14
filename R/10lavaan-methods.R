@@ -233,7 +233,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         t1.txt <- sprintf("  %10i", object@Options$boot)
         cat(t0.txt, t1.txt, "\n", sep="")
         t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
-        t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT")))
+        t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT.COEF")))
         cat(t0.txt, t1.txt, "\n", sep="")
     }
     cat("\n")
@@ -704,7 +704,7 @@ parameterEstimates <- parameterestimates <-
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
     # add est and se column
     est <- object@Fit@est
-    BOOT <- attr(est, "BOOT")
+    BOOT <- attr(est, "BOOT.COEF")
     attributes(est) <- NULL
     LIST$est <- est
 
@@ -1111,8 +1111,15 @@ function(object, ...) {
     names(mods) <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], as.character)
 
     # put them in order (using number of free parameters)
-    mods <- mods[order(sapply(lapply(mods, logLik), attr, "df"), 
-                 decreasing = TRUE)]
+    nfreepar <- sapply(lapply(mods, logLik), attr, "df")
+    if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
+        # what, same number of free parameters?
+        # maybe, we need to count number of constraints
+        ncon <- sapply(mods, function(x) { nrow(x@Model@con.jac) })
+        nfreepar <- nfreepar - ncon
+    }
+
+    mods <- mods[order(nfreepar, decreasing = TRUE)]
 
     # here come the checks
     if(TRUE) {

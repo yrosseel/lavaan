@@ -240,6 +240,13 @@ lavaanify <- function(model.syntax    = NULL,
             for(g in 1:ngroups) 
                 ov.names.nox[[g]] <- vnames(LIST, "ov.nox", group=g)
         }
+        if("means" %in% group.equal ||
+           "lv.variances" %in% group.equal ||
+           "lv.covariances" %in% group.equal) {
+            lv.names <- vector("list", length=ngroups)
+            for(g in 1:ngroups)
+                lv.names[[g]] <- vnames(LIST, "lv", group=g)
+        }
 
         # LOADINGS
         if("loadings" %in% group.equal) {
@@ -269,11 +276,11 @@ lavaanify <- function(model.syntax    = NULL,
         if("means" %in% group.equal) {
             g1.idx <- which(LIST$op == "~1" & # LIST$free > 0 &
                             LIST$group == 1 &
-                            LIST$lhs %in% lv.names)
+                            LIST$lhs %in% lv.names[[1L]])
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~1" & # LIST$free > 0 &
                              LIST$group == g &
-                             LIST$lhs %in% lv.names)
+                             LIST$lhs %in% lv.names[[g]])
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]
             }
@@ -327,12 +334,12 @@ lavaanify <- function(model.syntax    = NULL,
         if("lv.variances" %in% group.equal) {
             g1.idx <- which(LIST$op == "~~" &
                             LIST$group == 1 &
-                            LIST$lhs %in% lv.names &
+                            LIST$lhs %in% lv.names[[1L]] &
                             LIST$lhs == LIST$rhs)
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                              LIST$group == g &
-                             LIST$lhs %in% lv.names &
+                             LIST$lhs %in% lv.names[[g]] &
                              LIST$lhs == LIST$rhs)
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]
@@ -343,12 +350,12 @@ lavaanify <- function(model.syntax    = NULL,
         if("lv.covariances" %in% group.equal) {
             g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                             LIST$group == 1 &
-                            LIST$lhs %in% lv.names &
+                            LIST$lhs %in% lv.names[[1L]] &
                             LIST$lhs != LIST$rhs)
             for(g in 2:ngroups) {
                 idx <- which(LIST$op == "~~" & # LIST$free > 0 &
                              LIST$group == g &
-                             LIST$lhs %in% lv.names &
+                             LIST$lhs %in% lv.names[[g]] &
                              LIST$lhs != LIST$rhs)
                 LIST$free[ idx] <- 0L
                 LIST$equal[idx] <- LABEL[g1.idx]
