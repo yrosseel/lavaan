@@ -70,8 +70,8 @@ bootstrapLRT.internal <- function(model1=NULL, model2=NULL,
             boot.idx <- NULL
             for(g in 1:sample@ngroups) {
                 data[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
-                                          mu    = Sigma.hat[[g]],
-                                          Sigma = Mu.hat[[g]])
+                                          mu    = Mu.hat[[g]],
+                                          Sigma = Sigma.hat[[g]])
             }
         }
 

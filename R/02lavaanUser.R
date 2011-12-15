@@ -508,7 +508,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     # strip all white space
     model <- gsub("[[:space:]]+", "", model)
 
-    # remove empty lines
+    # keep non-empty lines only
     idx <- which(nzchar(model))
     model <- model[idx]
 
@@ -535,28 +535,6 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         stop("lavaan ERROR: syntax error in lavaan model syntax")
     }
   
-    if(debug) {
-       cat("DEBUG: before gsub label():\n")
-       cat(model, "\n\n")
-    }
-
-    # EXPERIMENTAL: auto-add label(" ") around literal labels
-    # for example in   y ~ b1*x1 + b2*x2 + b3*x3
-    # but only if the formula contains the "~" operator (excluding constraints)
-    idx.formula <- which(grepl("[~]", model))
-    # first, we replace NA* by as.numeric(NA)*
-    model[idx.formula] <-
-        gsub("(NA)\\*", "as.numeric(NA)\\*", model[idx.formula])
-    # second, we replace ab* by label("ab")*
-    model[idx.formula] <- 
-        gsub("([[:alpha:]][[:alnum:]]*)\\*", "label(\"\\1\")\\*", model[idx.formula])
-
-    if(debug) {
-       cat("DEBUG: after gsub label():\n")
-       cat(model, "\n\n")
-    }
-
-
 
     # main operation: flatten formulas into single bivariate pieces
     # with a left-hand-side (lhs), an operator (eg "=~"), and a 
@@ -568,6 +546,8 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     FLAT.op          <- character(0)
     FLAT.rhs         <- character(0)
     FLAT.rhs.mod.idx <- integer(0)
+    FLAT.group       <- integer(0)    # keep track of groups using ":" operator
+
     FLAT.fixed       <- character(0)  # only for display purposes! 
     FLAT.start       <- character(0)  # only for display purposes!
     FLAT.label       <- character(0)  # only for display purposes!
@@ -577,6 +557,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     CON.idx  <- 0L
     MOD <- vector("list", length=0L)
     CON <- vector("list", length=0L)
+    GRP <- 0L
     for(i in 1:length(model)) {
         x <- model[i]
 
@@ -603,6 +584,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         # 1g, ":=" operator?
         } else if(grepl(":=", line.simple, fixed=TRUE)) {
             op <- ":="
+        # 1h, ":" operator?
         } else if(grepl(":", line.simple, fixed=TRUE)) {
             op <- ":"
         } else {
@@ -626,7 +608,8 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 
         # 2c if operator is ":", put it in GRP
         if(op == ":") {
-            FLAT.idx <- FLAT.idx + 1
+            FLAT.idx <- FLAT.idx + 1L
+            GRP <- GRP + 1L
             FLAT.lhs[FLAT.idx] <- lhs
             FLAT.op[ FLAT.idx] <- op
             FLAT.rhs[FLAT.idx] <- ""
@@ -635,6 +618,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
             FLAT.label[FLAT.idx] <- ""
             FLAT.equal[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
+            FLAT.group[FLAT.idx] <- GRP
             next
         }
 
@@ -662,10 +646,11 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                     rhs.name <- names(out)[j]
                 }
 
-                # check if we not already have this combination
+                # check if we not already have this combination (in this group)
                 # 1. asymmetric (=~, ~, ~1)
                 idx <- which(FLAT.lhs == lhs.names[l] &
                              FLAT.op  == op &
+                             FLAT.group == GRP &
                              FLAT.rhs == rhs.name)
                 if(length(idx) > 0) {
                     stop("lavaan ERROR: duplicate model element in: ", model[i])
@@ -673,6 +658,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                 # 2. symmetric (~~)
                 idx <- which(FLAT.lhs == rhs.name &
                              FLAT.op  == "~~" &
+                             FLAT.group == GRP &
                              FLAT.rhs == lhs.names[l])
                 if(length(idx) > 0) {
                     stop("lavaan ERROR: duplicate model element in: ", model[i])
@@ -682,6 +668,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
                 FLAT.op[ FLAT.idx] <- op
                 FLAT.rhs[FLAT.idx] <- rhs.name
+                FLAT.group[FLAT.idx] <- GRP
                 FLAT.fixed[FLAT.idx] <- ""
                 FLAT.start[FLAT.idx] <- ""
                 FLAT.label[FLAT.idx] <- ""
@@ -747,7 +734,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
 
     FLAT <- data.frame(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
-                       mod.idx=FLAT.rhs.mod.idx,
+                       mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
                        fixed=FLAT.fixed, start=FLAT.start,
                        label=FLAT.label, equal=FLAT.equal,
                        stringsAsFactors=FALSE)
@@ -757,92 +744,110 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     FLAT
 }
 
-parse.rhs <- function(rhs, debug=FALSE, warn=TRUE) {
+parse.rhs <- function(rhs) {
 
-    rhs.names <- all.vars(rhs, unique=FALSE)
-    nels <- length(rhs.names)
-    var.names <- all.vars(rhs, unique=TRUE)
-    nvar <- length(var.names)
+    # new version YR 15 dec 2011!
 
-    if(nels == 0) {
-        # warning, there may be multiple modifiers
-        nels <- length(strsplit(paste(rhs,collapse=""), "\\+")[[1]])
-        rhs.names <- rep("intercept", nels)
-        var.names <- "intercept"
-        nvar <- 1
-    }
-
-    if(debug) {
-        cat("[lavaan DEBUG] number of elements in the expression: ", nels, "\n")
-        cat("[lavaan DEBUG] number of unique variables: ", nvar, "\n")
-        cat("[lavaan DEBUG] names: ", var.names, "\n")
-    }
-
-    # default
-    out <- vector("list", length=nvar); names(out) <- var.names
-
-    # parse modifiers
-    for(i in nels:1) {
-        if(debug) {
-            cat("[lavaan DEBUG] element = ", i," rhs = \n")
-            print(as.list(rhs)); cat("\n")
-        }
-        if(i > 1) {
-            operator <- rhs[[1]]
-            if(operator != "+" ) {
-                print(as.list(rhs))
-                stop("lavaan ERROR: i'm confused: main operator is not '+' in ",rhs)
+    getModifier <- function(mod) {
+        if(length(mod) == 1L) {
+            # three possibilites: 1) numeric, 2) NA, or 3) quoted character
+            if( is.numeric(mod) ) 
+                return( list(fixed=mod) )
+            if( is.na(mod) ) 
+                return( list(fixed=as.numeric(NA)) )
+            if( is.character(mod) )
+                return( list(label=mod) )
+        } else if(mod[[1L]] == "start") {
+            cof <- unlist(lapply(as.list(mod)[-1], 
+                                 eval, envir=NULL, enclos=NULL))
+            return( list(start=cof) )
+        } else if(mod[[1L]] == "equal") {
+            label <- unlist(lapply(as.list(mod)[-1],    
+                            eval, envir=NULL, enclos=NULL))
+            return( list(equal=label) )
+        } else if(mod[[1L]] == "label") {
+            label <- unlist(lapply(as.list(mod)[-1],
+                            eval, envir=NULL, enclos=NULL))     
+            return( list(label=label) )
+        } else if(mod[[1L]] == "c") {
+            # vector: we allow numeric and character only!
+            cof <- unlist(lapply(as.list(mod)[-1],    
+                                 eval, envir=NULL, enclos=NULL))
+            if(is.numeric(cof)) 
+                 return( list(fixed=cof) )
+            else if(is.character(cof))
+                 return( list(label=cof) )
+            else {
+                stop("lavaan ERROR: can not parse modifier:", mod, "\n")
             }
-            last.term <- rhs[[3]]
         } else {
-            last.term <- rhs
-        }
-        ii <- which(var.names %in% rhs.names[i])
-        if(debug) {
-            cat("[lavaan DEBUG] last.term = ")
-            print(as.list(last.term)); cat("\n")
-        }
-        if( length(last.term) == 3 ) {  # there is at least one modifier!
-            if(last.term[[1]] != "*") { # and the last operator must be a '*'
-                stop("lavaan ERROR: i'm confused: last term operator is not '*'\n in ", rhs)
+            # unknown expression
+            # as a final attempt, we will evaluate it and coerce it
+            # to either a numeric or character (vector)
+            cof <- try( eval(mod, envir=NULL, enclos=NULL), silent=TRUE)
+            if(is.numeric(cof))
+                 return( list(fixed=cof) )
+            else if(is.character(cof))
+                 return( list(label=cof) )
+            else {
+                stop("lavaan ERROR: can not parse modifier:", mod, "\n")
             }
-            # extract coefficient
-            cof <- try( eval(last.term[[2]], envir=NULL, enclos=NULL),
-                       silent=TRUE)
-            if( is.numeric(cof) ) {
-                out[[ii]]$fixed <- cof
-            } else if( is.na(cof) ) {
-                out[[ii]]$fixed <- as.numeric(NA)
-            } else if( length(last.term[[2]]) > 2) { # a multiple modifiers!
-                cat("lavaan WARNING: \n")
-                cat("multiple modifiers not allowed in\n"); print(rhs)
-            } else if( length(last.term[[2]]) == 2 ) { # a single modifier
-                if( last.term[[2]][[1]] == "start" ) {
-                    # extract number(s) inside start()
-                    cof <- eval( last.term[[2]][[2]], envir=NULL, enclos=NULL )
-                    out[[ii]]$start <- cof
-                } else if( last.term[[2]][[1]] == "equal" ) {
-                    # extract label(s) inside equal()
-                    cof <- eval( last.term[[2]][[2]], envir=NULL, enclos=NULL )
-                    out[[ii]]$equal <- cof
-                } else if( last.term[[2]][[1]] == "label" ) {
-                    label <- eval( last.term[[2]][[2]], envir=NULL,enclos=NULL )
-                    out[[ii]]$label <- label
-                } else {
-                    stop("lavaan ERROR: unknown function name `",
-                         last.term[[2]][[1]],
-                         "' in ", rhs)
-                }
-            }
-        } # modifier in this term
-
-        if(i > 1) {
-            rhs <- rhs[[2]]
         }
+    }
 
-    } # nels
+    # fill in rhs list
+    out <- list()
+    repeat {
+        if(length(rhs) == 1L) { # last one and only a single element
+            out <- c(vector("list", 1L), out)
+            names(out)[1L] <- as.character(rhs)
+            break
+        } else if(rhs[[1L]] == "*") { # last one, but with modifier
+            out <- c(vector("list", 1L), out)
+            names(out)[1L] <- as.character(rhs[[3]])
+            i.var <- all.vars(rhs[[2L]])
+            if(length(i.var) > 0L) {
+                # modifier are unquoted labels
+                out[[1L]]$label <- i.var
+            } else {
+                # modifer is something else
+                out[[1L]] <- getModifier(rhs[[2L]])
+            }
+            break
+        } else if(rhs[[1L]] == "+") { # not last one!
+            i.var <- all.vars(rhs[[3L]])
+            n.var <- length(i.var)
+            out <- c(vector("list", 1L), out)
+            names(out)[1L] <- i.var[n.var]
+            if(n.var > 1L) { 
+                # modifier are unquoted labels
+                out[[1L]]$label <- i.var[-n.var]
+            } else if(length(rhs[[3]]) == 3L) {
+                # modifiers!!
+                out[[1L]] <- getModifier(rhs[[3L]][[2L]])
+            }
+
+            # next element
+            rhs <- rhs[[2L]]
+        } else {
+            stop("lavaan ERROR: I'm confused parsing this line: ", rhs, "\n")
+        }
+    }
+
+    # if multiple elements, check for duplicated elements and merge if found
+    if(length(out) > 1L) {
+        rhs.names <- names(out)
+        idx <- which(duplicated(rhs.names))
+        if(length(idx) > 0L) {
+            for(i in 1:length(idx)) {
+                dup.name <- rhs.names[ idx[i] ]
+                orig.idx <- match(dup.name, rhs.names)
+                out[[orig.idx]] <- c( out[[orig.idx]], out[[idx[i]]] )
+                out <- out[-idx[i]]
+            }
+        }
+    }
 
     out
 }
-
 
