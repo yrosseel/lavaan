@@ -850,6 +850,12 @@ parameterEstimates <- parameterestimates <-
     LIST
 }
 
+parameterTable <- parametertable <- parTable <- partable <-
+        function(object) {
+    inspect(object, "list")            
+}
+
+
 
 setMethod("inspect", "lavaan",
 function(object, what="free") {

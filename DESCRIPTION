@@ -11,6 +11,5 @@ Depends: methods, R(>= 2.10.1)
 Imports: stats4, stats
 Suggests: psych, qgraph, boot
 License: GPL (>=2)
-LazyLoad: yes
 LazyData: yes
 URL: http://lavaan.org

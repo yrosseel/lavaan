@@ -65,6 +65,9 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$group.partial <- character(0)
     } else if(length(opt$group.partial) == 0) {
         # nothing to do
+    } else {
+        # strip white space
+        opt$group.partial <- gsub("[[:space:]]+", "", opt$group.partial)
     }
 
 

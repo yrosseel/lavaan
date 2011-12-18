@@ -205,13 +205,13 @@ getDF <- function(user, group=NULL) {
     as.integer(df)
 }
 
-getParameterLabels <- function(user, type="user") {
+getParameterLabels <- function(user, type="user", ignore.groups=FALSE) {
     # default labels
     label <- paste(user$lhs, user$op, user$rhs, sep="")
     
     # handle multiple groups
     ngroups <- max(user$group)
-    if(ngroups > 1L) {
+    if(ngroups > 1L && !ignore.groups) {
         for(g in 2:ngroups) {
             label[user$group == g] <- 
                 paste(label[user$group == 1], ".g", g, sep="")
@@ -605,7 +605,6 @@ getLIST <- function(FLAT=NULL,
                         ustart      = ustart,
                         fixed.x     = exo,
                         label       = label,
-                        equal       = rep("",  length(lhs)),
                         eq.id       = rep(0L,  length(lhs)),
                         free.uncon  = rep(0L,  length(lhs))
                    )

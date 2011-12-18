@@ -139,39 +139,34 @@ lavaanify <- function(model.syntax    = NULL,
     }        
     if(debug) {
         cat("[lavaan DEBUG]: parameter LIST:\n")
-        print( as.data.frame(LIST))
+        print( as.data.frame(LIST, stringsAsFactors=FALSE) )
     }
 
     # apply user-specified modifiers
     if(length(MOD)) {
         for(el in 1:length(MOD)) {
             idx <- which(LIST$mod.idx == el) # for each group
-            MOD.fixed <- MOD[[el]]$fixed; MOD.start <- MOD[[el]]$start
-            MOD.label <- MOD[[el]]$label; MOD.equal <- MOD[[el]]$equal
+            MOD.fixed <- MOD[[el]]$fixed  
+            MOD.start <- MOD[[el]]$start
+            MOD.label <- MOD[[el]]$label 
 
             # check for single argument if multiple groups
-            if(ngroups > 1 && length(idx) > 1L) {
+            if(ngroups > 1L && length(idx) > 1L) {
                 # Ok, this is not very consistent:
                 # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1L) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1L) MOD.start <- rep(MOD.start, ngroups)
-                # B) here we do NOT!
-                #cat("DEBUG: idx = ", idx, "\n")
-                #cat("MOD.label = ", MOD.label, "\n")
-                #cat("ngroups = ", ngroups, "\n")
-                if(length(MOD.label) == 1) MOD.label <-
-                    #c(MOD.label, paste(MOD.label, ".g", 2:ngroups, sep=""))
-                    c(MOD.label, rep("", (ngroups-1L)) )
-                if(length(MOD.equal) == 1) MOD.equal <- 
-                    c(MOD.equal, rep("", (ngroups)) )
+                # B) here we do NOT! otherwise, it would imply an equality 
+                #                    constraint...
+                if(length(MOD.label) == 1) 
+                    MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
             }
 
             # check for wrong number of arguments if multiple groups
             nidx <- length(idx)
             if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
                 (!is.null(MOD.start) && nidx != length(MOD.start)) ||
-                (!is.null(MOD.label) && nidx != length(MOD.label)) ||
-                (!is.null(MOD.equal) && nidx != length(MOD.equal)) ) {
+                (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)
                 stop("lavaan ERROR: wrong number of arguments in modifier of ", LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
             }
@@ -189,12 +184,6 @@ lavaanify <- function(model.syntax    = NULL,
             }
             if(!is.null(MOD.label)) {
                 LIST$label[idx] <- MOD.label
-            }
-            if(!is.null(MOD.equal)) {
-                # NA or "" remain free
-                not.na.idx <- which(!is.na(MOD.equal) & nchar(MOD.equal))
-                LIST$equal[idx][not.na.idx] <- MOD.equal[not.na.idx]
-                LIST$free[ idx][not.na.idx] <- 0L
             }
         }
     }
@@ -215,10 +204,10 @@ lavaanify <- function(model.syntax    = NULL,
     #                # flag this constraint (to be removed)
     #                el.idx <- c(el.idx, el)
     #                # fill in equal and fix
-    #                if(LIST$equal[lhs.idx] == "") {
-    #                    LIST$equal[rhs.idx] <- LIST$label[lhs.idx]
+    #                if(LIST$label[lhs.idx] == "") {
+    #                    LIST$label[rhs.idx] <- LIST$label[lhs.idx]
     #                } else {
-    #                    LIST$equal[rhs.idx] <- LIST$equal[lhs.idx]
+    #                    LIST$label[rhs.idx] <- LIST$label[lhs.idx]
     #                }
     #                LIST$free[ rhs.idx] <- 0L
     #            }
@@ -230,9 +219,6 @@ lavaanify <- function(model.syntax    = NULL,
     # group.equal and group.partial
     if(ngroups > 1L && length(group.equal) > 0L) {
  
-        # create `default' labels for all parameters
-        LABEL <- getParameterLabels(LIST)
-
         if("intercepts" %in% group.equal ||
            "residuals"  %in%  group.equal ||
            "residual.covariances" %in%  group.equal) {
@@ -248,200 +234,113 @@ lavaanify <- function(model.syntax    = NULL,
                 lv.names[[g]] <- vnames(LIST, "lv", group=g)
         }
 
+        # g1.flag: TRUE if included, FALSE if not
+        g1.flag <- logical(length(which(LIST$group == 1L)))
+
         # LOADINGS
-        if("loadings" %in% group.equal) {
-            g1.idx <- which(LIST$op == "=~" & # LIST$free > 0 &
-                            LIST$group == 1)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "=~" & # LIST$free > 0 &
-                             LIST$group == g)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("loadings" %in% group.equal)
+            g1.flag[ LIST$op == "=~" & LIST$group == 1L  ] <- TRUE
         # INTERCEPTS (OV)
-        if("intercepts" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~1"  & # LIST$free > 0 &
-                            LIST$group == 1  & LIST$lhs %in% ov.names.nox[[1L]])
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~1"  & # LIST$free > 0 &
-                             LIST$group == g  & LIST$lhs %in% ov.names.nox[[g]])
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("intercepts" %in% group.equal)
+            g1.flag[ LIST$op == "~1"  & LIST$group == 1L  & 
+                     LIST$lhs %in% ov.names.nox[[1L]] ] <- TRUE
         # MEANS (LV)
-        if("means" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~1" & # LIST$free > 0 &
-                            LIST$group == 1 &
-                            LIST$lhs %in% lv.names[[1L]])
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~1" & # LIST$free > 0 &
-                             LIST$group == g &
-                             LIST$lhs %in% lv.names[[g]])
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-     
+        if("means" %in% group.equal)
+            g1.flag[ LIST$op == "~1" & LIST$group == 1L &
+                     LIST$lhs %in% lv.names[[1L]] ] <- TRUE
         # REGRESSIONS
-        if("regressions" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~" & # LIST$free > 0 &
-                            LIST$group == 1)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~" & # LIST$free > 0 &
-                             LIST$group == g)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("regressions" %in% group.equal)
+            g1.flag[ LIST$op == "~" & LIST$group == 1L ] <- TRUE
         # RESIDUAL variances (FIXME: OV ONLY!)
-        if("residuals" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                            LIST$group == 1 &
-                            LIST$lhs %in% ov.names.nox[[1L]] &
-                            LIST$lhs == LIST$rhs)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                             LIST$group == g &
-                             LIST$lhs %in% ov.names.nox[[g]] &
-                             LIST$lhs == LIST$rhs)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("residuals" %in% group.equal) 
+            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
+                     LIST$lhs %in% ov.names.nox[[1L]] &
+                     LIST$lhs == LIST$rhs ] <- TRUE
         # RESIDUAL covariances (FIXME: OV ONLY!)
-        if("residual.covariances" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                            LIST$group == 1 &
-                            LIST$lhs %in% ov.names.nox[[1L]] &
-                            LIST$lhs != LIST$rhs)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                             LIST$group == g &
-                             LIST$lhs %in% ov.names.nox[[g]] &
-                             LIST$lhs != LIST$rhs)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("residual.covariances" %in% group.equal)
+            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
+                     LIST$lhs %in% ov.names.nox[[1L]] &
+                     LIST$lhs != LIST$rhs ] <- TRUE
         # LV VARIANCES
-        if("lv.variances" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~~" &
-                            LIST$group == 1 &
-                            LIST$lhs %in% lv.names[[1L]] &
-                            LIST$lhs == LIST$rhs)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                             LIST$group == g &
-                             LIST$lhs %in% lv.names[[g]] &
-                             LIST$lhs == LIST$rhs)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
-        }
-
+        if("lv.variances" %in% group.equal)
+            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
+                     LIST$lhs %in% lv.names[[1L]] &
+                     LIST$lhs == LIST$rhs ] <- TRUE
         # LV COVARIANCES
-        if("lv.covariances" %in% group.equal) {
-            g1.idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                            LIST$group == 1 &
-                            LIST$lhs %in% lv.names[[1L]] &
-                            LIST$lhs != LIST$rhs)
-            for(g in 2:ngroups) {
-                idx <- which(LIST$op == "~~" & # LIST$free > 0 &
-                             LIST$group == g &
-                             LIST$lhs %in% lv.names[[g]] &
-                             LIST$lhs != LIST$rhs)
-                LIST$free[ idx] <- 0L
-                LIST$equal[idx] <- LABEL[g1.idx]
-            }
+        if("lv.covariances" %in% group.equal)
+            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
+                     LIST$lhs %in% lv.names[[1L]] &
+                     LIST$lhs != LIST$rhs ] <- TRUE
+
+        # PARTIAL
+        # if group.partial, set corresponding flag to FALSE
+        if(length(group.partial) > 0L) {
+            LABEL <- getParameterLabels(LIST)
+            g1.flag[ LABEL %in% group.partial & 
+                     LIST$group == 1L ] <- FALSE
         }
 
-        # PARTIAL: undo constraints for user-specified parameters
-        if(length(group.partial) > 0) {
-            # strip white space
-            group.partial <- gsub("[[:space:]]+", "", group.partial)
-
-            # allow labels without a group prefix
-            # add group prefix for all groups > 1
-            group.partial.orig <- group.partial
-            group.partial <- character(0)
-            for(v in group.partial.orig) {
-                # prefix?
-                if(grepl("*.g[0-9]$", v)) {
-                    group.partial <- c(group.partial, v)
-                } else {
-                    # add all groups > 1
-                    for(g in 2:ngroups) {
-                        v2 <- paste(v, ".g", 2:ngroups, sep="")
-                        group.partial <- c(group.partial, v2)
-                    }
-                }
-            }
-
-            # check if all group.partial names are found
-            if(warn) {
-                idx.not <- which(!group.partial %in% LABEL)
-                if(length(idx.not) > 0L) 
-                    warning("lavaan WARNING: some parameter names in group.partial are not found:", group.partial[idx.not])
-            }   
-
-            # free up this parameter
-            for(g in 2:ngroups) {
-                idx <- which(LABEL %in% group.partial)
-                LIST$free[idx] <- 1L
-                LIST$equal[idx] <- ""
-            }
-
-        }
-    }
-
-    # handle equality constraints
-    # two types: 
-
-    # 1. those with the same (non-empty) label (user-specified only!)
-    idx.eq.label <- which(nchar(LIST$label) & duplicated(LIST$label))
-    if(length(idx.eq.label) > 0) {
-        for(idx in idx.eq.label) {
-            eq.label <- LIST$label[idx]
-            ref.idx <- which(LIST$label == eq.label)[1] # the first one only
-            LIST$eq.id[idx] <- ref.idx
-            LIST$free[idx] <- 0L  # fix!
-        }
-    }
-
-
-    # 2. those explicitly marked with the equal() modifier
-    idx.eq.label <- which(LIST$equal != "")
-    if(length(idx.eq.label) > 0) {
-        if(!exists("LABEL")) LABEL <- getParameterLabels(LIST)
-        for(idx in idx.eq.label) {
-            eq.label <- LIST$equal[idx]
-            ref.idx <- which(LABEL == eq.label)[1] # the first one only
-            if(length(ref.idx) == 0) {
-                stop("equality label [", eq.label, "] not found")
-            }
+        # set eq.id of reference (1st group) parameters 
+        g1.idx <- which(g1.flag)
+        LIST$eq.id[g1.idx] <- g1.idx
+        # for each parameter in 'group 1', find a similar one
+        # in the other group (we assume here that the models need
+        # NOT be the same across groups!
+        for(i in 1:length(g1.idx)) {
+            ref.idx <- g1.idx[i]
+            idx <- which(LIST$lhs == LIST$lhs[ref.idx] &
+                         LIST$op  == LIST$op[ ref.idx] &
+                         LIST$rhs == LIST$rhs[ref.idx] &
+                         LIST$group > 1L)
+            LIST$free[ idx] <- 0L
             LIST$eq.id[idx] <- ref.idx
         }
+
+        # remove fixed parameters from eq.id
+        fixed.idx <- which(LIST$free == 0L & !is.na(LIST$ustart))
+        LIST$eq.id[fixed.idx] <- 0L
     }
-    # remove label and equal columns
-    #LIST$equal <- NULL
+
+
+    # handle user-specified equality constraints
+    # insert 'target/reference' id's in eq.id/label columns
+    # so that the eq.id column reflects sets of equal parameters
+    # the 'reference' parameter has free > 0; the 'equal to' pars free == 0
+    LABEL <- getParameterLabels(LIST)
+    idx.eq.label <- which(duplicated(LABEL))
+    if(length(idx.eq.label) > 0L) {
+        for(idx in idx.eq.label) {
+            eq.label <- LABEL[idx]
+            ref.idx <- which(LABEL == eq.label)[1L] # the first one only
+            # adjust ref.idx (original)
+            LIST$eq.id[ref.idx] <- ref.idx
+            LIST$label[ref.idx] <- eq.label
+            # adjust target (idx)
+            LIST$eq.id[idx] <- ref.idx
+            LIST$free[idx] <- 0L
+            # special case: check if there are any more instances 
+            # of idx in  LIST$eq.id (perhaps due to group.equal)
+            idx.all <- which(LIST$eq.id == idx)
+            if(length(idx.all) > 0L) {
+                ref.idx.all <- which(LIST$eq.id == ref.idx)
+                LIST$label[ref.idx.all] <- eq.label
+                LIST$eq.id[idx.all] <- ref.idx
+                LIST$free[idx.all] <- 0L  # fix!
+                LIST$label[idx.all] <- eq.label
+            }
+            # special case: ref.idx is a fixed parameter
+            if(LIST$free[ref.idx] == 0L) {
+                ref.idx.all <- which(LIST$eq.id == ref.idx)
+                LIST$ustart[ref.idx.all] <- LIST$ustart[ref.idx]
+                #LIST$free[ ref.idx.all] <- 0L
+                LIST$eq.id[ref.idx.all] <- 0L
+            }
+        }
+    }
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
     LIST$free[idx.free] <- 1:length(idx.free)
-
-    # insert 'target/reference' id's in eq.id/eq.label columns
-    # so the eq.id/eq.label columns reflect sets of equal parameters
-    # the 'reference' parameter has free > 0; the 'equal to' pars free == 0
-    idx <- which(LIST$eq.id > 0)
-    id.idx <- unique(  LIST$eq.id[idx] )
-    LIST$eq.id[id.idx] <- id.idx
 
     # 2. add free counter to this element
     idx.equal <- which(LIST$eq.id > 0)
@@ -468,7 +367,6 @@ lavaanify <- function(model.syntax    = NULL,
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$fixed.x    <- c(LIST$fixed.x,    rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
-        LIST$equal      <- c(LIST$equal,      rep("",  length(lhs)) )
         LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         LIST$free.uncon <- c(LIST$free.uncon, rep(0L,  length(lhs)) )
     }
@@ -551,7 +449,6 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     FLAT.fixed       <- character(0)  # only for display purposes! 
     FLAT.start       <- character(0)  # only for display purposes!
     FLAT.label       <- character(0)  # only for display purposes!
-    FLAT.equal       <- character(0)  # only for display purposes!
     FLAT.idx <- 0L
     MOD.idx  <- 0L
     CON.idx  <- 0L
@@ -593,14 +490,16 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 
         # 2. split by operator (only the *first* occurence!)
         # check first if equal/label modifier has been used on the LEFT!
-        if(substr(x,1,5) == "equal") stop("equal modifier can not be used on the left-hand side of the operator")
         if(substr(x,1,5) == "label") stop("label modifier can not be used on the left-hand side of the operator")
         op.idx <- regexpr(op, x)
-        lhs <- substr(x, 1, op.idx-1)
+        lhs <- substr(x, 1L, op.idx-1L)
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
 
         # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
         if(op == "==" || op == "<" || op == ">" || op == ":=") {
+            # remove quotes, if any
+            lhs <- gsub("\\\"", "", lhs)
+            rhs <- gsub("\\\"", "", rhs)
             CON.idx <- CON.idx + 1L
             CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs)
             next
@@ -616,7 +515,6 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
             FLAT.fixed[FLAT.idx] <- ""
             FLAT.start[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
-            FLAT.equal[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
             FLAT.group[FLAT.idx] <- GRP
             next
@@ -625,12 +523,12 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         # 3. parse left hand
         #    lhs modifiers will be ignored for now
         lhs.formula <- as.formula(paste("~",lhs))
-        out <- parse.rhs(rhs=lhs.formula[[2]])
+        out <- parse.rhs(rhs=lhs.formula[[2L]])
         lhs.names <- names(out)
 
         # 4. parse rhs (as rhs of a single-sided formula)
         rhs.formula <- as.formula(paste("~",rhs))
-        out <- parse.rhs(rhs=rhs.formula[[2]])
+        out <- parse.rhs(rhs=rhs.formula[[2L]])
 
         # for each lhs element
         for(l in 1:length(lhs.names)) {
@@ -652,7 +550,7 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                              FLAT.op  == op &
                              FLAT.group == GRP &
                              FLAT.rhs == rhs.name)
-                if(length(idx) > 0) {
+                if(length(idx) > 0L) {
                     stop("lavaan ERROR: duplicate model element in: ", model[i])
                 }
                 # 2. symmetric (~~)
@@ -660,11 +558,11 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                              FLAT.op  == "~~" &
                              FLAT.group == GRP &
                              FLAT.rhs == lhs.names[l])
-                if(length(idx) > 0) {
+                if(length(idx) > 0L) {
                     stop("lavaan ERROR: duplicate model element in: ", model[i])
                 }
 
-                FLAT.idx <- FLAT.idx + 1
+                FLAT.idx <- FLAT.idx + 1L
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
                 FLAT.op[ FLAT.idx] <- op
                 FLAT.rhs[FLAT.idx] <- rhs.name
@@ -672,40 +570,23 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
                 FLAT.fixed[FLAT.idx] <- ""
                 FLAT.start[FLAT.idx] <- ""
                 FLAT.label[FLAT.idx] <- ""
-                FLAT.equal[FLAT.idx] <- ""
 
                 mod <- list()
                 rhs.mod <- 0L
-                if(length(out[[j]]$fixed) > 0) {
+                if(length(out[[j]]$fixed) > 0L) {
                     mod$fixed <- out[[j]]$fixed
                     FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
                     rhs.mod <- 1L
                 }
-                if(length(out[[j]]$start) > 0) {
+                if(length(out[[j]]$start) > 0L) {
                     mod$start <- out[[j]]$start
                     FLAT.start[FLAT.idx] <- paste(mod$start, collapse=";")
                     rhs.mod <- 1L
                 }
-                if(length(out[[j]]$label) > 0) {
+                if(length(out[[j]]$label) > 0L) {
                     mod$label <- out[[j]]$label
                     FLAT.label[FLAT.idx] <- paste(mod$label, collapse=";")
                     rhs.mod <- 1L
-                }
-                if(length(out[[j]]$equal) > 0) {
-                    mod$equal <- out[[j]]$equal
-                    FLAT.equal[FLAT.idx] <- paste(mod$equal, collapse=";")
-                    rhs.mod <- 1L
-    
-                    # if there is also a 'fixed', remove it with a warning
-                    if(length(mod$fixed) > 0) {
-                        if(warn) {
-                            warning("lavaan WARNING: if an equality constraint is placed on a parameter,\n",
-                                    "                you cannot also fix the value of that parameter:\n\n", 
-                                    "                ", rhs)
-                        } 
-                        mod$fixed <- NULL
-                        FLAT.fixed[FLAT.idx] <- ""
-                    }
                 }
                 if(op == "~1" && rhs == "0") {
                     mod$fixed <- 0
@@ -721,8 +602,8 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 
                 FLAT.rhs.mod.idx[FLAT.idx] <- rhs.mod
 
-                if(rhs.mod > 0) {
-                    MOD.idx <- MOD.idx + 1
+                if(rhs.mod > 0L) {
+                    MOD.idx <- MOD.idx + 1L
                     MOD[[MOD.idx]] <- mod
                 }
             } # rhs elements
@@ -730,14 +611,13 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     } # model elements
 
     # enumerate modifier indices
-    mod.idx <- which(FLAT.rhs.mod.idx > 0)
+    mod.idx <- which(FLAT.rhs.mod.idx > 0L)
     FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
 
     FLAT <- data.frame(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
                        mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
                        fixed=FLAT.fixed, start=FLAT.start,
-                       label=FLAT.label, equal=FLAT.equal,
-                       stringsAsFactors=FALSE)
+                       label=FLAT.label, stringsAsFactors=FALSE)
     attr(FLAT, "modifiers") <- MOD
     attr(FLAT, "constraints") <- CON
 
@@ -747,6 +627,9 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 parse.rhs <- function(rhs) {
 
     # new version YR 15 dec 2011!
+    # - no 'equal' field anymore (only labels!)
+    # - every modifier is evaluated
+    # - unquoted labels are allowed (eg. x1 + x2 + c(v1,v2,v3)*x3)
 
     getModifier <- function(mod) {
         if(length(mod) == 1L) {
@@ -764,7 +647,7 @@ parse.rhs <- function(rhs) {
         } else if(mod[[1L]] == "equal") {
             label <- unlist(lapply(as.list(mod)[-1],    
                             eval, envir=NULL, enclos=NULL))
-            return( list(equal=label) )
+            return( list(label=label) )
         } else if(mod[[1L]] == "label") {
             label <- unlist(lapply(as.list(mod)[-1],
                             eval, envir=NULL, enclos=NULL))     
