@@ -42,10 +42,10 @@ function(object, type="raw", labels=TRUE) {
 
             # create 'augmented' User object (as if fixed.x=FALSE was used)
             augUser <- object@User
-            idx <- which(augUser$fixed.x > 0L)
-            augUser$fixed.x[   idx ] <- 0L
+            idx <- which(augUser$exo > 0L)
+            augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
-            augUser$free.uncon[idx ] <- max(augUser$free.uncon) + 1:length(idx) 
+            augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
             augModel <- Model(user           = augUser,
                               start          = object@Fit@est,
                               representation = object@Options$representation,

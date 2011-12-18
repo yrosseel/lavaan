@@ -93,7 +93,7 @@ setClass("lavaan",
         call    = "call",            # matched call
         timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
-        User    = "list",            # user specified model
+        User    = "list",            # parameter table user-specified model
         Data    = "list",            # full data 
         Sample  = "SampleStats",     # sample statistics
         Model   = "Model",           # internal matrix representation

@@ -5,7 +5,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
 
     # get LIST parameter list
     LIST <- getUserListFull(object@User)
-    LIST$free <- 0L; LIST$eq.id <- 0L; LIST$free.uncon <- 0L
+    LIST$free <- 0L; LIST$eq.id <- 0L; LIST$unco <- 0L
     LIST <- as.data.frame(LIST)
 
     # fill in USER information
@@ -17,7 +17,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
                           LIST$group == user$group[i])
         LIST$free[LIST.idx] <- user$free[i]
         LIST$eq.id[LIST.idx] <- user$eq.id[i]
-        LIST$free.uncon[LIST.idx] <- user$free.uncon[i]
+        LIST$unco[LIST.idx] <- user$unco[i]
     }
 
     # add matrix representation
@@ -237,7 +237,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
 
 
     # remove some columns
-    LIST$free <- LIST$eq.id <- LIST$free.uncon <- NULL
+    LIST$free <- LIST$eq.id <- LIST$unco <- NULL
     LIST$mat <- LIST$row <- LIST$col <- LIST$id <- NULL
     if(power) {
         LIST$epc <- NULL

@@ -366,7 +366,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
 
         # 3. covariances
         cov.idx <- which(object@User$op == "~~" & 
-                         !object@User$fixed.x &
+                         !object@User$exo &
                          object@User$lhs != object@User$rhs &
                          object@User$group == g)
         if(length(cov.idx) > 0) {
@@ -385,7 +385,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
 
         # 4. intercepts/means
         int.idx <- which(object@User$op == "~1" & 
-                         !object@User$fixed.x &
+                         !object@User$exo &
                          object@User$group == g)
         if(length(int.idx) > 0) {
             cat("Intercepts:\n")
@@ -399,7 +399,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
 
         # 5. (residual) variances
         var.idx <- which(object@User$op == "~~" &
-                         !object@User$fixed.x &
+                         !object@User$exo &
                          object@User$lhs == object@User$rhs &
                          object@User$group == g)
         if(length(var.idx) > 0) {
@@ -647,8 +647,8 @@ function(object, type="free", labels=TRUE) {
     } else if(type == "free") {
         idx <- which(object@User$free > 0L & !duplicated(object@User$free))
     } else if(type == "unco") {
-        idx <- which(object@User$free.uncon > 0L & 
-                     !duplicated(object@User$free.uncon))
+        idx <- which(object@User$unco > 0L & 
+                     !duplicated(object@User$unco))
     } else {
         stop("argument `type' must be one of free, unco, or user")
     }

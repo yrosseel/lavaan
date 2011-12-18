@@ -155,7 +155,7 @@ getNDAT <- function(user, group=NULL) {
 
     ngroups <- max(user$group)
     meanstructure <- any(user$op == "~1")
-    fixed.x <- any(user$fixed.x > 0 & user$free == 0)
+    fixed.x <- any(user$exo > 0L & user$free == 0L)
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
@@ -185,7 +185,7 @@ getDF <- function(user, group=NULL) {
 
     ngroups <- max(user$group)
     meanstructure <- any(user$op == "~1")
-    fixed.x <- any(user$fixed.x > 0 & user$free == 0)
+    fixed.x <- any(user$exo > 0L & user$free == 0L)
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
@@ -228,7 +228,7 @@ getParameterLabels <- function(user, type="user", ignore.groups=FALSE) {
     } else if(type == "free") {
         idx <- which(user$free > 0L & !duplicated(user$free))
     } else if(type == "unco") {
-        idx <- which(user$free.uncon > 0L & !duplicated(user$free.uncon))
+        idx <- which(user$unco > 0L & !duplicated(user$unco))
     } else {
         stop("argument `type' must be one of free, unco, or user")
     }
@@ -603,10 +603,10 @@ getLIST <- function(FLAT=NULL,
                         mod.idx     = mod.idx,
                         free        = free,
                         ustart      = ustart,
-                        fixed.x     = exo,
+                        exo         = exo,
                         label       = label,
                         eq.id       = rep(0L,  length(lhs)),
-                        free.uncon  = rep(0L,  length(lhs))
+                        unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)
 

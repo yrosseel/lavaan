@@ -20,7 +20,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         se <- getModelParameters(model, GLIST=GLIST, type="user", 
                                  extra=FALSE) # no def/cin/ceq entries!
         # fixed parameters -> se = 0.0
-        se[ which(user$free.uncon == 0L) ] <- 0.0
+        se[ which(user$unco == 0L) ] <- 0.0
 
         # defined parameters: 
         def.idx <- which(user$op == ":=")

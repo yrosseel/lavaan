@@ -347,8 +347,8 @@ lavaanify <- function(model.syntax    = NULL,
     LIST$free[idx.equal] <- LIST$free[ LIST$eq.id[idx.equal] ]
 
     # 3. which parameters would be free without equality constraints?
-    idx.free.uncon <- which(LIST$free > 0)
-    LIST$free.uncon[idx.free.uncon] <- 1:length(idx.free.uncon)
+    idx.unco <- which(LIST$free > 0)
+    LIST$unco[idx.unco] <- 1:length(idx.unco)
 
 
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
@@ -365,10 +365,10 @@ lavaanify <- function(model.syntax    = NULL,
         LIST$group      <- c(LIST$group,      rep(0L, each=length(CON)))
         LIST$free       <- c(LIST$free,       rep(0L, length(lhs)) )
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
-        LIST$fixed.x    <- c(LIST$fixed.x,    rep(0L, length(lhs)) )
+        LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
         LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
-        LIST$free.uncon <- c(LIST$free.uncon, rep(0L,  length(lhs)) )
+        LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
     }
 
     # put lhs of := elements in label column

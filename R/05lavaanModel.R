@@ -25,18 +25,18 @@ Model <- function(user           = NULL,
 
     # capture equality constraints in 'K' matrix
     # rows are the unconstrained parameters, cols are the unique parameters
-    n.free.uncon <- max(user$free.uncon)
+    n.unco <- max(user$unco)
     n.free       <- max(user$free)
-    if(n.free == n.free.uncon) {
+    if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
     } else {
-        K <- matrix(0, nrow=n.free.uncon, ncol=n.free)
+        K <- matrix(0, nrow=n.unco, ncol=n.free)
         #####
         #####     FIXME !
         #####
         idx.free <- user$free[ user$free > 0 ]
-        for(k in 1:n.free.uncon) {
+        for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
         }
@@ -125,7 +125,7 @@ Model <- function(user           = NULL,
             #    -> to be used in computeGradient
             if(eq.constraints) {
                 tmp[ cbind(REP$row[idx], 
-                           REP$col[idx]) ] <- user$free.uncon[idx]
+                           REP$col[idx]) ] <- user$unco[idx]
                 if(mmSymmetric[mm]) {
                     # NOTE: we assume everything is in the UPPER tri!
                     T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -174,7 +174,7 @@ Model <- function(user           = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(user$fixed.x > 1 & user$free == 0)
+    fixed.x <- any(user$exo > 1L & user$free == 0L)
 
 
 
@@ -183,15 +183,15 @@ Model <- function(user           = NULL,
     # 1. simple equality constraints (eg b1 == b2)
     #    capture equality constraints in 'K' matrix
     #    rows are the unconstrained parameters, cols are the unique parameters
-    n.free.uncon <- max(user$free.uncon)
+    n.unco <- max(user$unco)
     n.free       <- max(user$free)
-    if(n.free == n.free.uncon) {
+    if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
     } else {
-        K <- matrix(0, nrow=n.free.uncon, ncol=n.free)
+        K <- matrix(0, nrow=n.unco, ncol=n.free)
         idx.free <- user$free[ user$free > 0 ]
-        for(k in 1:n.free.uncon) {
+        for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
         }
@@ -439,7 +439,7 @@ Model <- function(user           = NULL,
                  nmat=nmat,
                  nvar=nvar,
                  nx.free=max(user$free),
-                 nx.unco=max(user$free.uncon),
+                 nx.unco=max(user$unco),
                  nx.user=max(user$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,

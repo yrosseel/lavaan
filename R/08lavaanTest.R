@@ -269,10 +269,10 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
 #            if(length(x.idx) > 0L) {
 #                cat("\n\nDEBUG FIXED.X\n\n\n")
 #                augUser <- user
-#                idx <- which(augUser$fixed.x > 0L)
-#                augUser$fixed.x[   idx ] <- 0L
+#                idx <- which(augUser$exo > 0L)
+#                augUser$exo[       idx ] <- 0L
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
-#                augUser$free.uncon[idx ] <- max(augUser$free.uncon) + 1:length(idx)
+#                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
 #                augModel <- Model(user           = augUser,
 #                                  start          = getModelParameters(object, type="user"),
 #                                  representation = object@representation,
