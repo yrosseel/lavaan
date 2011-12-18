@@ -1,4 +1,5 @@
 \name{parameterTable}
+\alias{parameterTable}
 \alias{parametertable}
 \alias{parTable}
 \alias{partable}

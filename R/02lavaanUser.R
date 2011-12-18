@@ -650,7 +650,8 @@ parse.rhs <- function(rhs) {
             return( list(label=label) )
         } else if(mod[[1L]] == "label") {
             label <- unlist(lapply(as.list(mod)[-1],
-                            eval, envir=NULL, enclos=NULL))     
+                            eval, envir=NULL, enclos=NULL))
+            label[is.na(label)] <- "" # catch 'NA' elements in a label
             return( list(label=label) )
         } else if(mod[[1L]] == "c") {
             # vector: we allow numeric and character only!
@@ -658,9 +659,10 @@ parse.rhs <- function(rhs) {
                                  eval, envir=NULL, enclos=NULL))
             if(is.numeric(cof)) 
                  return( list(fixed=cof) )
-            else if(is.character(cof))
+            else if(is.character(cof)) {
+                 cof[is.na(cof)] <- "" # catch 'NA' elements in a label
                  return( list(label=cof) )
-            else {
+            } else {
                 stop("lavaan ERROR: can not parse modifier:", mod, "\n")
             }
         } else {
@@ -683,11 +685,23 @@ parse.rhs <- function(rhs) {
     repeat {
         if(length(rhs) == 1L) { # last one and only a single element
             out <- c(vector("list", 1L), out)
-            names(out)[1L] <- as.character(rhs)
+            NAME <- all.vars(rhs)
+            if(length(NAME) > 0L) {
+                names(out)[1L] <- NAME
+            } else { # intercept
+                names(out)[1L] <- "intercept"
+                if(as.character(rhs) == "0")
+                    out[[1L]]$fixed <- 0
+            }
             break
         } else if(rhs[[1L]] == "*") { # last one, but with modifier
             out <- c(vector("list", 1L), out)
-            names(out)[1L] <- as.character(rhs[[3]])
+            NAME <- all.vars(rhs[[3L]])
+            if(length(NAME) > 0L) {
+                names(out)[1L] <- NAME
+            } else { # intercept
+                names(out)[1L] <- "intercept"
+            }
             i.var <- all.vars(rhs[[2L]])
             if(length(i.var) > 0L) {
                 # modifier are unquoted labels
@@ -701,7 +715,11 @@ parse.rhs <- function(rhs) {
             i.var <- all.vars(rhs[[3L]])
             n.var <- length(i.var)
             out <- c(vector("list", 1L), out)
-            names(out)[1L] <- i.var[n.var]
+            if(length(i.var) > 0L) {
+                names(out)[1L] <- i.var[n.var]
+            } else {
+                names(out)[1L] <- "intercept"
+            }
             if(n.var > 1L) { 
                 # modifier are unquoted labels
                 out[[1L]]$label <- i.var[-n.var]

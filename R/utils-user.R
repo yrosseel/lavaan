@@ -58,11 +58,19 @@ vnames <- function(user, type=NULL, group=NULL) {
         eqs.y <- unique( user$lhs[ user$op == "~" ] )
         ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
 
-        # 2. independent ov's
+        # 3. independent ov's
         eqs.x <- unique( user$rhs[ user$op == "~" ] )
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
-        
+
         out <- c(ov.ind, ov.y, ov.x)
+
+        # 4. special case: empty model (no ~, no =~)
+        if(length(out) == 0L) {
+            ov.cov <- c(user$lhs[ user$op == "~~"], 
+                        user$rhs[ user$op == "~~"])
+            ov.int <- user$lhs[ user$op == "~1" ]
+            out <- unique(c(ov.cov, ov.int))
+        }
     } else
 
     # exogenous `x' covariates
