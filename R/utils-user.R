@@ -222,7 +222,7 @@ getParameterLabels <- function(user, type="user", ignore.groups=FALSE) {
     if(ngroups > 1L && !ignore.groups) {
         for(g in 2:ngroups) {
             label[user$group == g] <- 
-                paste(label[user$group == 1], ".g", g, sep="")
+                paste(label[user$group == g], ".g", g, sep="")
         }
     }
 

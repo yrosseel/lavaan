@@ -457,6 +457,9 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
     GRP <- 0L
     for(i in 1:length(model)) {
         x <- model[i]
+        if(debug) {
+            cat("formula to parse:\n"); print(x); cat("\n")
+        }
 
         # 1. which operator is used?
         line.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
@@ -738,14 +741,12 @@ parse.rhs <- function(rhs) {
     # if multiple elements, check for duplicated elements and merge if found
     if(length(out) > 1L) {
         rhs.names <- names(out)
-        idx <- which(duplicated(rhs.names))
-        if(length(idx) > 0L) {
-            for(i in 1:length(idx)) {
-                dup.name <- rhs.names[ idx[i] ]
-                orig.idx <- match(dup.name, rhs.names)
-                out[[orig.idx]] <- c( out[[orig.idx]], out[[idx[i]]] )
-                out <- out[-idx[i]]
-            }
+        while( !is.na(idx <- which(duplicated(rhs.names))[1L]) ) {
+            dup.name <- rhs.names[ idx ]
+            orig.idx <- match(dup.name, rhs.names)
+            out[[orig.idx]] <- c( out[[orig.idx]], out[[idx]] )
+            out <- out[-idx]
+            rhs.names <- names(out)
         }
     }
 
