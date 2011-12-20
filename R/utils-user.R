@@ -720,7 +720,8 @@ getLIST <- function(FLAT=NULL,
 }
 
 independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
-                              meanstructure=FALSE, sample.mean=NULL) {
+                              meanstructure=FALSE, sample.mean=NULL,
+                              fixed.x=TRUE) {
 
     ngroups <- length(ov.names)
     ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
@@ -775,9 +776,14 @@ independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
             lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
              op    <- c(op, rep("~~", nel))
             rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
-            free   <- c(free,  rep(0L, nel))
+            if(fixed.x) {
+                free   <- c(free,  rep(0L, nel))
+                exo    <- c(exo,   rep(1L, nel))
+            } else {
+                free   <- c(free,  rep(1L, nel))
+                exo    <- c(exo,   rep(1L, nel))
+            }
             group  <- c(group, rep(g,  nel))
-            exo    <- c(exo,   rep(1L, nel))
             ustart <- c(ustart, rep(as.numeric(NA), nel))
 
             # meanstructure?

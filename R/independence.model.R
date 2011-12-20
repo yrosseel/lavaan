@@ -62,7 +62,8 @@ independence.model.fit <- function(object) {
                                     ov.names.x = OV.X,
                                     sample.cov = object@Sample@cov,
                                     meanstructure = object@Model@meanstructure,
-                                    sample.mean = object@Sample@mean)
+                                    sample.mean = object@Sample@mean,
+                                    fixed.x    = object@Model@fixed.x)
     # fit?
     do.fit <- TRUE
 
