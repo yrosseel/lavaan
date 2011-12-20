@@ -101,7 +101,7 @@ getMissingPatterns <- function(X       = NULL,
             if(nobs < ncol(X[[g]]))
                 stop("lavaan ERROR: too few observations (nobs < nvar)")
             # fill in some basic information in missing
-            missing[[g]] <- list(npatterns=0L, flag=FALSE)
+            missing[[g]] <- list(npatterns=0L, flag=FALSE, nobs=nobs)
         } else {
             # do more (but only if missing!)
             #   - get missing patterns
@@ -173,8 +173,10 @@ getSampleStatsFromData <- function(X           = NULL,
         if(is.null(M)) {
             keep.idx <- complete.cases(X[[g]])
             X[[g]] <- X[[g]][keep.idx,,drop=FALSE]
+            nobs[[g]] <- nrow(X[[g]])
+        } else {
+            nobs[[g]] <- M[[g]]$nobs
         }
-        nobs[[g]] <- nrow(X[[g]])
 
         # fill in the other slots
         cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise

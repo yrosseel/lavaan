@@ -621,6 +621,11 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     verbose       <- options$verbose
     debug         <- options$debug
 
+    if(any( unlist(lapply(sample@missing, "[[", "flag")) )) {
+        group.weight <- FALSE
+    } else {
+        group.weight <- TRUE
+    }
 
     # function to be minimized
     minimize.this.function <- function(x, verbose=FALSE, infToMax=FALSE) {
@@ -670,6 +675,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
 
         dx <- computeGradient(object, GLIST=GLIST, sample,
                               type="free", 
+                              group.weight=group.weight, ### check me!!
                               estimator=estimator,
                               verbose=verbose, forcePD=TRUE)
 

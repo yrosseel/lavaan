@@ -216,97 +216,16 @@ lavaanify <- function(model.syntax    = NULL,
     #    if(length(el.idx) > 0L) CON <- CON[-el.idx]
     #}
 
-    # group.equal and group.partial
-    if(ngroups > 1L && length(group.equal) > 0L) {
- 
-        if("intercepts" %in% group.equal ||
-           "residuals"  %in%  group.equal ||
-           "residual.covariances" %in%  group.equal) {
-            ov.names.nox <- vector("list", length=ngroups)
-            for(g in 1:ngroups) 
-                ov.names.nox[[g]] <- vnames(LIST, "ov.nox", group=g)
-        }
-        if("means" %in% group.equal ||
-           "lv.variances" %in% group.equal ||
-           "lv.covariances" %in% group.equal) {
-            lv.names <- vector("list", length=ngroups)
-            for(g in 1:ngroups)
-                lv.names[[g]] <- vnames(LIST, "lv", group=g)
-        }
-
-        # g1.flag: TRUE if included, FALSE if not
-        g1.flag <- logical(length(which(LIST$group == 1L)))
-
-        # LOADINGS
-        if("loadings" %in% group.equal)
-            g1.flag[ LIST$op == "=~" & LIST$group == 1L  ] <- TRUE
-        # INTERCEPTS (OV)
-        if("intercepts" %in% group.equal)
-            g1.flag[ LIST$op == "~1"  & LIST$group == 1L  & 
-                     LIST$lhs %in% ov.names.nox[[1L]] ] <- TRUE
-        # MEANS (LV)
-        if("means" %in% group.equal)
-            g1.flag[ LIST$op == "~1" & LIST$group == 1L &
-                     LIST$lhs %in% lv.names[[1L]] ] <- TRUE
-        # REGRESSIONS
-        if("regressions" %in% group.equal)
-            g1.flag[ LIST$op == "~" & LIST$group == 1L ] <- TRUE
-        # RESIDUAL variances (FIXME: OV ONLY!)
-        if("residuals" %in% group.equal) 
-            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
-                     LIST$lhs %in% ov.names.nox[[1L]] &
-                     LIST$lhs == LIST$rhs ] <- TRUE
-        # RESIDUAL covariances (FIXME: OV ONLY!)
-        if("residual.covariances" %in% group.equal)
-            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
-                     LIST$lhs %in% ov.names.nox[[1L]] &
-                     LIST$lhs != LIST$rhs ] <- TRUE
-        # LV VARIANCES
-        if("lv.variances" %in% group.equal)
-            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
-                     LIST$lhs %in% lv.names[[1L]] &
-                     LIST$lhs == LIST$rhs ] <- TRUE
-        # LV COVARIANCES
-        if("lv.covariances" %in% group.equal)
-            g1.flag[ LIST$op == "~~" & LIST$group == 1L &
-                     LIST$lhs %in% lv.names[[1L]] &
-                     LIST$lhs != LIST$rhs ] <- TRUE
-
-        # PARTIAL
-        # if group.partial, set corresponding flag to FALSE
-        if(length(group.partial) > 0L) {
-            LABEL <- getParameterLabels(LIST)
-            g1.flag[ LABEL %in% group.partial & 
-                     LIST$group == 1L ] <- FALSE
-        }
-
-        # set eq.id of reference (1st group) parameters 
-        g1.idx <- which(g1.flag)
-        LIST$eq.id[g1.idx] <- g1.idx
-        # for each parameter in 'group 1', find a similar one
-        # in the other group (we assume here that the models need
-        # NOT be the same across groups!
-        for(i in 1:length(g1.idx)) {
-            ref.idx <- g1.idx[i]
-            idx <- which(LIST$lhs == LIST$lhs[ref.idx] &
-                         LIST$op  == LIST$op[ ref.idx] &
-                         LIST$rhs == LIST$rhs[ref.idx] &
-                         LIST$group > 1L)
-            LIST$free[ idx] <- 0L
-            LIST$eq.id[idx] <- ref.idx
-        }
-
-        # remove fixed parameters from eq.id
-        fixed.idx <- which(LIST$free == 0L & !is.na(LIST$ustart))
-        LIST$eq.id[fixed.idx] <- 0L
-    }
-
+    # get 'virtual' parameter labels
+    LABEL <- getParameterLabels(user=LIST, group.equal=group.equal,
+                                group.partial=group.partial)
+    #cat("DEBUG: label after getParameterLabels:\n"); print(LABEL); cat("\n")
+    #cat("DEBUG: eq.id after group.equal:\n"); print(LIST$eq.id); cat("\n")
 
     # handle user-specified equality constraints
     # insert 'target/reference' id's in eq.id/label columns
     # so that the eq.id column reflects sets of equal parameters
     # the 'reference' parameter has free > 0; the 'equal to' pars free == 0
-    LABEL <- getParameterLabels(LIST)
     idx.eq.label <- which(duplicated(LABEL))
     if(length(idx.eq.label) > 0L) {
         for(idx in idx.eq.label) {
@@ -337,6 +256,8 @@ lavaanify <- function(model.syntax    = NULL,
             }
         }
     }
+ 
+    #cat("DEBUG: eq.id after eq.id:\n"); print(LIST$eq.id); cat("\n")    
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
@@ -705,7 +626,7 @@ parse.rhs <- function(rhs) {
             } else { # intercept
                 names(out)[1L] <- "intercept"
             }
-            i.var <- all.vars(rhs[[2L]])
+            i.var <- all.vars(rhs[[2L]], unique=FALSE)
             if(length(i.var) > 0L) {
                 # modifier are unquoted labels
                 out[[1L]]$label <- i.var
@@ -715,7 +636,7 @@ parse.rhs <- function(rhs) {
             }
             break
         } else if(rhs[[1L]] == "+") { # not last one!
-            i.var <- all.vars(rhs[[3L]])
+            i.var <- all.vars(rhs[[3L]], unique=FALSE)
             n.var <- length(i.var)
             out <- c(vector("list", 1L), out)
             if(length(i.var) > 0L) {

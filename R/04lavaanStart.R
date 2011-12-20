@@ -97,6 +97,7 @@ StartingValues <- function(start.method = "default",
         lv.names    <- vnames(user, "lv",   group=g); nfac <- length(lv.names)
         ov.names.x  <- vnames(user, "ov.x", group=g)
 
+        # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
            sum( user$ustart[ user$op == "=~" & user$group == g],
@@ -127,7 +128,7 @@ StartingValues <- function(start.method = "default",
             }
         }
 
-        # 1. residual ov variances (including exo, to be overriden)
+        # 2g) residual ov variances (including exo, to be overriden)
         ov.var.idx <- which(user$group == g         & 
                             user$op    == "~~"      & 
                             user$lhs %in% ov.names  & 
@@ -143,7 +144,7 @@ StartingValues <- function(start.method = "default",
                 (1.0 - 0.50)*diag(sample@cov[[g]])[sample.var.idx]
         }
 
-        # 2. intercepts
+        # 3g) intercepts
         ov.int.idx <- which(user$group == g         &
                             user$op == "~1"         & 
                             user$lhs %in% ov.names)
@@ -154,7 +155,7 @@ StartingValues <- function(start.method = "default",
             start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
         }
 
-        # 3. exogenous `fixed.x' covariates
+        # 4g) exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {
             exo.idx <- which(user$group == g          &
                              user$op == "~~"          & 

@@ -213,22 +213,109 @@ getDF <- function(user, group=NULL) {
     as.integer(df)
 }
 
-getParameterLabels <- function(user, type="user", ignore.groups=FALSE) {
+getParameterLabels <- function(user, group.equal="", group.partial="", 
+                               type="user") {
     # default labels
     label <- paste(user$lhs, user$op, user$rhs, sep="")
     
     # handle multiple groups
     ngroups <- max(user$group)
-    if(ngroups > 1L && !ignore.groups) {
+    if(ngroups > 1L) {
         for(g in 2:ngroups) {
             label[user$group == g] <- 
                 paste(label[user$group == g], ".g", g, sep="")
         }
     }
+ 
+    #cat("DEBUG: label start:\n"); print(label); cat("\n")
+    #cat("group.equal = ", group.equal, "\n")
+    #cat("group.partial = ", group.partial, "\n")
 
-    # user-specified labels
+    # use group.equal so that equal sets of parameters get the same label
+    if(ngroups > 1L && length(group.equal) > 0L) {
+
+        if("intercepts" %in% group.equal ||
+           "residuals"  %in%  group.equal ||
+           "residual.covariances" %in%  group.equal) {
+            ov.names.nox <- vector("list", length=ngroups)
+            for(g in 1:ngroups)
+                ov.names.nox[[g]] <- vnames(user, "ov.nox", group=g)
+        }
+        if("means" %in% group.equal ||
+           "lv.variances" %in% group.equal ||
+           "lv.covariances" %in% group.equal) {
+            lv.names <- vector("list", length=ngroups)
+            for(g in 1:ngroups)
+                lv.names[[g]] <- vnames(user, "lv", group=g)
+        }
+
+        # g1.flag: TRUE if included, FALSE if not
+        g1.flag <- logical(length(which(user$group == 1L)))
+
+        # LOADINGS
+        if("loadings" %in% group.equal)
+            g1.flag[ user$op == "=~" & user$group == 1L  ] <- TRUE
+        # INTERCEPTS (OV)
+        if("intercepts" %in% group.equal)
+            g1.flag[ user$op == "~1"  & user$group == 1L  &
+                     user$lhs %in% ov.names.nox[[1L]] ] <- TRUE
+        # MEANS (LV)
+        if("means" %in% group.equal)
+            g1.flag[ user$op == "~1" & user$group == 1L &
+                     user$lhs %in% lv.names[[1L]] ] <- TRUE
+        # REGRESSIONS
+        if("regressions" %in% group.equal)
+            g1.flag[ user$op == "~" & user$group == 1L ] <- TRUE
+        # RESIDUAL variances (FIXME: OV ONLY!)
+        if("residuals" %in% group.equal)
+            g1.flag[ user$op == "~~" & user$group == 1L &
+                     user$lhs %in% ov.names.nox[[1L]] &
+                     user$lhs == user$rhs ] <- TRUE
+        # RESIDUAL covariances (FIXME: OV ONLY!)
+        if("residual.covariances" %in% group.equal)
+            g1.flag[ user$op == "~~" & user$group == 1L &
+                     user$lhs %in% ov.names.nox[[1L]] &
+                     user$lhs != user$rhs ] <- TRUE
+        # LV VARIANCES
+        if("lv.variances" %in% group.equal)
+            g1.flag[ user$op == "~~" & user$group == 1L &
+                     user$lhs %in% lv.names[[1L]] &
+                     user$lhs == user$rhs ] <- TRUE
+        # LV COVARIANCES
+        if("lv.covariances" %in% group.equal)
+            g1.flag[ user$op == "~~" & user$group == 1L &
+                     user$lhs %in% lv.names[[1L]] &
+                     user$lhs != user$rhs ] <- TRUE
+
+        # if group.partial, set corresponding flag to FALSE
+        if(length(group.partial) > 0L) {
+            g1.flag[ label %in% group.partial &
+                     user$group == 1L ] <- FALSE
+        }
+
+        # for each (constrained) parameter in 'group 1', find a similar one
+        # in the other groups (we assume here that the models need
+        # NOT be the same across groups!
+        g1.idx <- which(g1.flag)
+        for(i in 1:length(g1.idx)) {
+            ref.idx <- g1.idx[i]
+            idx <- which(user$lhs == user$lhs[ref.idx] &
+                         user$op  == user$op[ ref.idx] &
+                         user$rhs == user$rhs[ref.idx] &
+                         user$group > 1L)
+            label[idx] <- label[ref.idx]
+        }
+    }
+
+    #cat("DEBUG: g1.idx = ", g1.idx, "\n")
+    #cat("DEBUG: label after group.equal:\n"); print(label); cat("\n")
+
+    # user-specified labels -- override everything!!
     user.idx <- which(nchar(user$label) > 0L)
     label[user.idx] <- user$label[user.idx]
+
+    #cat("DEBUG: user.idx = ", user.idx, "\n")
+    #cat("DEBUG: label after user.idx:\n"); print(label); cat("\n")
 
     # which labels do we need?
     if(type == "user") {
@@ -240,7 +327,7 @@ getParameterLabels <- function(user, type="user", ignore.groups=FALSE) {
     } else {
         stop("argument `type' must be one of free, unco, or user")
     }
-   
+
     label[idx]
 }
 
