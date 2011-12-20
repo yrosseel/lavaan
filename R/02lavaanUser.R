@@ -158,8 +158,14 @@ lavaanify <- function(model.syntax    = NULL,
                 if(length(MOD.start) == 1L) MOD.start <- rep(MOD.start, ngroups)
                 # B) here we do NOT! otherwise, it would imply an equality 
                 #                    constraint...
-                if(length(MOD.label) == 1) 
-                    MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
+                #    except if group.equal="loadings"!
+                if(length(MOD.label) == 1L) {
+                    if("loadings" %in% group.equal) {
+                        MOD.label <- rep(MOD.label, ngroups)
+                    } else {
+                        MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
+                    }
+                }
             }
 
             # check for wrong number of arguments if multiple groups
@@ -167,8 +173,10 @@ lavaanify <- function(model.syntax    = NULL,
             if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
                 (!is.null(MOD.start) && nidx != length(MOD.start)) ||
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
-                el.idx <- which(LIST$mod.idx == el)
-                stop("lavaan ERROR: wrong number of arguments in modifier of ", LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
+                el.idx <- which(LIST$mod.idx == el)[1L]
+                stop("lavaan ERROR: wrong number of arguments in modifier (",
+                    paste(MOD.label, collapse=","), ") of element ", 
+                    LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
             }
 
             # apply modifiers
@@ -221,6 +229,7 @@ lavaanify <- function(model.syntax    = NULL,
                                 group.partial=group.partial)
     #cat("DEBUG: label after getParameterLabels:\n"); print(LABEL); cat("\n")
     #cat("DEBUG: eq.id after group.equal:\n"); print(LIST$eq.id); cat("\n")
+    #cat("DEBUG: LIST$label:\n"); print(LIST$label); cat("\n")
 
     # handle user-specified equality constraints
     # insert 'target/reference' id's in eq.id/label columns
@@ -231,12 +240,11 @@ lavaanify <- function(model.syntax    = NULL,
         for(idx in idx.eq.label) {
             eq.label <- LABEL[idx]
             ref.idx <- which(LABEL == eq.label)[1L] # the first one only
-            # adjust ref.idx (original)
-            LIST$eq.id[ref.idx] <- ref.idx
-            LIST$label[ref.idx] <- eq.label
-            # adjust target (idx)
-            LIST$eq.id[idx] <- ref.idx
+            # set eq.id equal
+            LIST$eq.id[ref.idx] <- LIST$eq.id[idx] <- ref.idx
+            # fix target
             LIST$free[idx] <- 0L
+
             # special case: check if there are any more instances 
             # of idx in  LIST$eq.id (perhaps due to group.equal)
             idx.all <- which(LIST$eq.id == idx)
@@ -251,13 +259,13 @@ lavaanify <- function(model.syntax    = NULL,
             if(LIST$free[ref.idx] == 0L) {
                 ref.idx.all <- which(LIST$eq.id == ref.idx)
                 LIST$ustart[ref.idx.all] <- LIST$ustart[ref.idx]
-                #LIST$free[ ref.idx.all] <- 0L
                 LIST$eq.id[ref.idx.all] <- 0L
             }
         }
     }
  
     #cat("DEBUG: eq.id after eq.id:\n"); print(LIST$eq.id); cat("\n")    
+    #cat("DEBUG: LIST$label:\n"); print(LIST$label); cat("\n")
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
