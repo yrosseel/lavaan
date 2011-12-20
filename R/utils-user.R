@@ -37,6 +37,7 @@ vnames <- function(user, type=NULL, group=NULL) {
             user$op    <- user.old$op[group.idx]
             user$rhs   <- user.old$rhs[group.idx]
             user$group <- user.old$group[group.idx]
+            user$exo   <- user.old$exo[group.idx]
         }
     }
 
@@ -64,13 +65,13 @@ vnames <- function(user, type=NULL, group=NULL) {
 
         out <- c(ov.ind, ov.y, ov.x)
 
-        # 4. special case: empty model (no ~, no =~)
-        if(length(out) == 0L) {
-            ov.cov <- c(user$lhs[ user$op == "~~"], 
-                        user$rhs[ user$op == "~~"])
-            ov.int <- user$lhs[ user$op == "~1" ]
-            out <- unique(c(ov.cov, ov.int))
-        }
+        # 4. orphaned covariances
+        ov.cov <- c(user$lhs[ user$op == "~~" & !user$lhs %in% lv.names ], 
+                    user$rhs[ user$op == "~~" & !user$rhs %in% lv.names ])
+        ov.int <- user$lhs[ user$op == "~1" & !user$lhs %in% lv.names ]
+        extra <- unique(c(ov.cov, ov.int))
+        extra.idx <- which(!extra %in% out)
+        out <- c(out, extra[extra.idx])
     } else
 
     # exogenous `x' covariates
@@ -103,8 +104,18 @@ vnames <- function(user, type=NULL, group=NULL) {
         #}
         #idx.no.x <- which(ov.x %in% vars)
         #if(length(idx.no.x)) ov.x <- ov.x[-idx.no.x]
-        
+ 
         out <- ov.x
+
+        # extra
+        if(!is.null(user$exo)) {
+            ov.cov <- c(user$lhs[ user$op == "~~" & user$exo == 1L],
+                        user$rhs[ user$op == "~~" & user$exo == 1L])
+            ov.int <- user$lhs[ user$op == "~1" & user$exo == 1L ]
+            extra <- unique(c(ov.cov, ov.int))
+            extra.idx <- which(!extra %in% out)
+            out <- c(out, extra[extra.idx])
+        }
     } else
 
     # ov's withouth ov.x
@@ -707,4 +718,101 @@ getLIST <- function(FLAT=NULL,
 
     LIST
 }
+
+independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
+                              meanstructure=FALSE, sample.mean=NULL) {
+
+    ngroups <- length(ov.names)
+    ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
+                    ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
+
+
+    lhs <- rhs <- op <- character(0)
+    group <- free <- exo <- integer(0)
+    ustart <- numeric(0)
+
+    for(g in 1:ngroups) {
+
+        # a) VARIANCES (all ov's, except exo's)
+        nvar  <- length(ov.names.nox[[g]])
+        lhs   <- c(lhs, ov.names.nox[[g]])
+         op   <- c(op, rep("~~", nvar))
+        rhs   <- c(rhs, ov.names.nox[[g]])
+        group <- c(group, rep(g,  nvar))
+        free  <- c(free,  rep(1L, nvar))
+        exo   <- c(exo,   rep(0L, nvar))
+
+        # starting values
+        if(!is.null(sample.cov)) {
+            sample.var.idx <- match(ov.names.nox[[g]], ov.names[[g]])
+            ustart <- c(ustart, diag(sample.cov[[g]])[sample.var.idx])
+        } else {
+            ustart <- c(ustart, rep(as.numeric(NA), nvar))
+        }
+
+        # meanstructure?
+        if(meanstructure) {
+            lhs   <- c(lhs, ov.names.nox[[g]])
+             op   <- c(op, rep("~1", nvar))
+            rhs   <- c(rhs, rep("", nvar))
+            group <- c(group, rep(g,  nvar))
+            free  <- c(free,  rep(1L, nvar))
+            exo   <- c(exo,   rep(0L, nvar))
+            # starting values
+            if(!is.null(sample.mean)) {
+                sample.int.idx <- match(ov.names.nox[[g]], ov.names[[g]])
+                ustart <- c(ustart, sample.mean[[g]][sample.int.idx])
+            } else {
+                ustart <- c(ustart, rep(as.numeric(NA), nvar))
+            }
+        }
+
+
+        # fixed.x exogenous variables?
+        if((nx <- length(ov.names.x[[g]])) > 0L) {
+            idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
+            nel <- sum(idx)
+            lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
+             op    <- c(op, rep("~~", nel))
+            rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
+            free   <- c(free,  rep(0L, nel))
+            group  <- c(group, rep(g,  nel))
+            exo    <- c(exo,   rep(1L, nel))
+            ustart <- c(ustart, rep(as.numeric(NA), nel))
+
+            # meanstructure?
+            if(meanstructure) {
+                lhs    <- c(lhs,    ov.names.x[[g]])
+                 op    <- c(op,     rep("~1", nx))
+                rhs    <- c(rhs,    rep("", nx))
+                group  <- c(group,  rep(g,  nx))
+                free   <- c(free,   rep(0L, nx))
+                exo    <- c(exo,    rep(1L, nx))
+                ustart <- c(ustart, rep(as.numeric(NA), nx))
+            }
+        }
+
+    } # ngroups
+
+    # free counter
+    idx.free <- which(free > 0)
+    free[idx.free] <- 1:length(idx.free)
+
+    LIST   <- list(     id          = 1:length(lhs),
+                        lhs         = lhs,
+                        op          = op,
+                        rhs         = rhs,
+                        user        = rep(1L,  length(lhs)),
+                        group       = group,
+                        mod.idx     = rep(0L,  length(lhs)),
+                        free        = free,
+                        ustart      = ustart,
+                        exo         = exo,
+                        label       = rep("",  length(lhs)),
+                        eq.id       = rep(0L,  length(lhs)),
+                        unco        = free
+                   )
+    LIST
+}
+
 

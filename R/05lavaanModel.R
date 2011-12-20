@@ -174,7 +174,7 @@ Model <- function(user           = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(user$exo > 1L & user$free == 0L)
+    fixed.x <- any(user$exo > 0L & user$free == 0L)
 
 
 

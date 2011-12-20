@@ -53,15 +53,16 @@ independence.model.fit <- function(object) {
     mc <- match.call()
     timing <- list()
 
-    # construct syntax for independence model
-    OV.X <- character(0L)
-    if(object@Options$mimic %in% c("lavaan", "Mplus"))
-        OV.X <- vnames(object@User, type="ov.x", group=1L)
-    model.syntax <-
-        syntax.independence.model(ov.names   = object@Sample@ov.names[[1L]],
-                                  ov.names.x = OV.X,
-                                  sample.cov = object@Sample@cov)
+    # construct parameter Table for independence model
+    OV.X <- lapply(as.list(1:object@Sample@ngroups),
+                   function(x) vnames(object@User, type="ov.x", x))
 
+    # construct
+    lavaanUser <- independenceModel(ov.names   = object@Sample@ov.names,
+                                    ov.names.x = OV.X,
+                                    sample.cov = object@Sample@cov,
+                                    meanstructure = object@Model@meanstructure,
+                                    sample.mean = object@Sample@mean)
     # fit?
     do.fit <- TRUE
 
@@ -71,31 +72,6 @@ independence.model.fit <- function(object) {
     lavaanOptions$do.fit  <- do.fit
     lavaanOptions$verbose <- FALSE
     lavaanOptions$warn    <- FALSE
-
-    # 2a. construct lavaan User list: description of the user-specified model
-    lavaanUser <-
-        lavaanify(model.syntax    = model.syntax,
-                  meanstructure   = lavaanOptions$meanstructure,
-                  int.ov.free     = lavaanOptions$int.ov.free,
-                  int.lv.free     = lavaanOptions$int.lv.free,
-                  orthogonal      = lavaanOptions$orthogonal,
-                  fixed.x         = lavaanOptions$fixed.x,
-                  std.lv          = lavaanOptions$std.lv,
-                  constraints     = '',
-
-                  auto.fix.first  = lavaanOptions$auto.fix.first,
-                  auto.fix.single = lavaanOptions$auto.fix.single,
-                  auto.var        = lavaanOptions$auto.var,
-                  auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
-                  auto.cov.y      = lavaanOptions$auto.cov.y,
-
-                  ngroups         = object@Sample@ngroups,
-                  group.equal     = NULL,
-                  group.partial   = NULL,
-                  debug           = lavaanOptions$debug,
-                  warn            = lavaanOptions$warn,
-
-                  as.data.frame.  = FALSE)
 
     # 2b. change meanstructure flag?
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE

@@ -25,7 +25,7 @@ syntax.independence.model <- function(ov.names=character(0),
 
     # =~ lines (each observed variables has its own latent variable)
     # excepct for ov's that are in ov.names.x
-    txt <- paste(txt, paste(lv.names, " =~ ", ov.names.nox,
+    txt <- paste(txt, paste(lv.names, " =~ 1*", ov.names.nox,
                             "\n", sep="", collapse=""), sep="")
 
     # residual ov variances fixed to zero

@@ -1,7 +1,12 @@
 testStatisticSatorraBentler <- function(sample=sample, 
                                         E.inv, Delta, WLS.V, Gamma, 
                                         x.idx=list(integer(0))) {
-    
+
+    # warn if fixed.x!
+    if(length(x.idx[[1L]] > 0L)) {
+        warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
+    }
+
     trace.UGamma <- numeric( sample@ngroups )
 
     for(g in 1:sample@ngroups) {
@@ -10,6 +15,7 @@ testStatisticSatorraBentler <- function(sample=sample,
         trace.UGamma[g] <-
                 sample@ntotal/sample@nobs[[g]] * sum( U * Gamma[[g]] )
     }
+
 
     trace.UGamma
 }
