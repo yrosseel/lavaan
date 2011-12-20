@@ -778,11 +778,10 @@ independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
             rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
             if(fixed.x) {
                 free   <- c(free,  rep(0L, nel))
-                exo    <- c(exo,   rep(1L, nel))
             } else {
                 free   <- c(free,  rep(1L, nel))
-                exo    <- c(exo,   rep(1L, nel))
             }
+            exo    <- c(exo,   rep(1L, nel))
             group  <- c(group, rep(g,  nel))
             ustart <- c(ustart, rep(as.numeric(NA), nel))
 
@@ -792,7 +791,11 @@ independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
                  op    <- c(op,     rep("~1", nx))
                 rhs    <- c(rhs,    rep("", nx))
                 group  <- c(group,  rep(g,  nx))
-                free   <- c(free,   rep(0L, nx))
+                if(fixed.x) {
+                    free   <- c(free,   rep(0L, nx))
+                } else {
+                    free   <- c(free,   rep(1L, nx))
+                }
                 exo    <- c(exo,    rep(1L, nx))
                 ustart <- c(ustart, rep(as.numeric(NA), nx))
             }
