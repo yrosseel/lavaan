@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.4-11
+Version: 0.4-12
 Author: Yves Rosseel <Yves.Rosseel@UGent.be> with contributions from 
         many people. See the lavaan website for a list of contributors.
 Maintainer: Yves Rosseel <Yves.Rosseel@UGent.be>
