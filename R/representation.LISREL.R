@@ -377,11 +377,13 @@ derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
         ## FIXME!! find a more elegant solution here...
         # we sum up lower.tri + upper.tri (but not the diagonal elements!)
         imatrix <- matrix(1:nfac^2,nfac,nfac)
-        lower.idx <- imatrix[lower.tri(t(imatrix), diag=FALSE)]
-        upper.idx <- t(imatrix)[lower.tri(t(imatrix), diag=FALSE)]
-        tmp <- DX[,lower.idx]
-        DX[,lower.idx] <- DX[,lower.idx] + DX[,upper.idx]
-        DX[,upper.idx] <- DX[,upper.idx] + tmp
+        lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
+        upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
+        
+        #MH: If I understand this correctly, because the upper and lower triangle elements are replaced by the sum, all elements will be equal.
+        #MH: Is a single assignment using a tiling of the off diagonal sum more elegant? :) 
+        offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
+        DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
     } else if(m == "theta") {
         DX <- diag(nvar^2) # very sparse...
         # symmetry correction not needed, since all off-diagonal elements
