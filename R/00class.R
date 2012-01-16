@@ -82,6 +82,7 @@ setClass("Fit",
         fx.group="numeric",
         iterations="integer",      # number of iterations
         converged="logical",
+        control="list",
         Sigma.hat="list",
         Mu.hat="list",
         test="list"

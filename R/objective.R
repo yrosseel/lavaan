@@ -23,6 +23,9 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
                data.cov.log.det - nvar)
     }
 
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
+
     fx
 }
 
@@ -43,6 +46,9 @@ estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
         fx <- tmp1 + tmp2
     }
 
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
+
     fx
 }
 
@@ -62,6 +68,9 @@ estimator.WLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     diff <- as.matrix(obs - est)
     fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
+
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -101,6 +110,9 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL) {
     }
 
     fx <- weighted.mean(fx.p, w=w.p)
+
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
 
     fx
 }

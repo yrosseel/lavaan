@@ -8,6 +8,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     converged  = attr(x, "converged")
     fx         = attr(x, "fx")
     fx.group   = attr(fx, "fx.group")
+    control    = attr(x, "control")
     attributes(fx) <- NULL
     attributes(x) <- NULL
     est <- getModelParameters(model, type="user")
@@ -71,6 +72,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         fx.group   = fx.group,
         iterations = iterations,
         converged  = converged,
+        control    = control,
         Sigma.hat  = Sigma.hat,
         Mu.hat     = Mu.hat,
         test       = test

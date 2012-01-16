@@ -11,11 +11,15 @@
 # 
 # Updates: - now we have a separate @data slot, we only need to transform once
 #            for the bollen.stine bootstrap (13 dec 2011)
+#          - bug fix: we need to 'update' the fixed.x variances/covariances
+#            for each bootstrap draw!!
+#
+# Question: if fixed.x=TRUE, should we not keep X fixed, and bootstrap Y
+#           only, conditional on X?? How to implement the conditional part?
 
-
-lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
+lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, user=NULL,
                                 model=NULL, sample=NULL, options=NULL,
-                                max.iter=1000L, verbose=FALSE, b.iter=0L,
+                                verbose=FALSE, b.iter=0L, control=NULL,
                                 test=FALSE) {
 
     # verbose
@@ -23,12 +27,12 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
         if(b.iter == -1L) { 
             cat("  ... bootstrap draw: ")
         } else {
-            cat("  ... bootstrap draw number: ", b.iter)
+            cat("  ... bootstrap draw number: ", sprintf("%5d", b.iter))
             b.iter <- b.iter + 1
         }
     }
 
-    npar <- length(start)
+    npar <- model@nx.free
 
     # 3. construct lavaan Sample (S4) object: description of the data
     # FIXME!!!
@@ -58,29 +62,53 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
         return(rep(NA, npar))
     }
 
+    # 5. fill in starting values in Model (free parameters only!)
+    #lavaanModel <- setModelParameters(model, x = start)
+    lavaanStart <-
+        StartingValues(start.method = "default",
+                       user         = user,
+                       sample       = bootSampleStats,
+                       model.type   = options$model.type,
+                       mimic        = options$mimic,
+                       debug        = options$debug)
+
+    # 5. construct internal model (S4) representation
+    lavaanModel <-
+        Model(user           = user,
+              start          = lavaanStart,
+              representation = options$representation,
+              debug          = options$debug)
+
     # 6. estimate free parameters
-    lavaanModel <- setModelParameters(model, x = start)
     # switch of verbose in estimateModel
-    verbose.old <- options$verbose; options$verbose <- FALSE
+    #verbose.old <- options$verbose; options$verbose <- FALSE
     x <- try( estimateModel(lavaanModel,
                             sample  = bootSampleStats,
-                            # control??
+                            control = control,
                             options = options) )
-    options$verbose <- verbose.old
+    #options$verbose <- verbose.old
     if(inherits(x, "try-error")) {
         if(verbose) cat("     FAILED: in estimation\n")
         return(rep(NA, npar))
     } else if(!attr(x, "converged")) {
         if(verbose) cat("     FAILED: no convergence\n")
-        return(rep(NA, npar))
-    } else if(attr(x, "iterations") > max.iter) {
-        # FIXME: is this wise? How should we choose max.iter??
-        if(verbose) cat("     FAILED: too many iterations\n")
+
+        # DEBUG
+        #write.csv(data, file="BDEBUG.TXT", row.names=FALSE)
+        #str(options)
+        #str(user)
+        #str(bootSampleStats)
+        #str(lavaanModel)
+        #cat("x = \n"); print(x)
+        #cat("starting values: ", lavaanStart, "\n")
+        #stop("for now")
+
         return(rep(NA, npar))
     }
 
-    if(verbose) cat("     ok -- niter = ", attr(x, "iterations"), 
-                    " fx = ", attr(x, "fx"), "\n")
+    if(verbose) cat("     ok -- niter = ", 
+                    sprintf("%3d", attr(x, "iterations")), 
+                    " fx = ", sprintf("%13.9f", attr(x, "fx")), "\n")
 
     # strip attributes if not bollen.stine
     if(!test) {
@@ -92,25 +120,25 @@ lavaanBootStatistic <- function(data=NULL, boot.idx=NULL, start=NULL,
 
 
 bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
-                               data=NULL, R=1000L,
+                               data=NULL, user=NULL, R=1000L,
                                type="ordinary",
                                verbose=FALSE,
                                coef=TRUE,
                                test=FALSE,
                                FUN=NULL,
                                ...,
-                               max.iter=1000L) {
+                               control=list()) {
 
     # checks
     stopifnot(!is.null(model), !is.null(sample), !is.null(options),
-              !is.null(data),
+              !is.null(data), !is.null(user),
               type %in% c("nonparametric", "ordinary",
                           "bollen.stine", "parametric"))
     if(type == "nonparametric") type <- "ordinary"
 
     # prepare
-    start <- getModelParameters(model, type="free"); npar <- length(start)
-
+    npar <- model@nx.free
+    
     COEF <- TEST <- NULL
     if(coef) {
         COEF <- matrix(NA, R, npar)
@@ -161,17 +189,18 @@ bootstrap.internal <- function(model=NULL, sample=NULL, options=NULL,
         } else { # parametric!
             boot.idx <- NULL
             for(g in 1:sample@ngroups) {
-                data[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
-                                          mu    = Sigma.hat[[g]],
-                                          Sigma = Mu.hat[[g]])
+                    data[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
+                                              Sigma = Sigma.hat[[g]],
+                                              mu    = Mu.hat[[g]])
             }
         }
 
         # run bootstrap draw
-        x <- lavaanBootStatistic(data=data, boot.idx=boot.idx, start=start,
+        x <- lavaanBootStatistic(data=data, boot.idx=boot.idx,
                                  model=model, sample=sample, options=options,
-                                 max.iter=max.iter, verbose=verbose, b.iter=b,
-                                 test=test)
+                                 user=user, 
+                                 verbose=verbose, b.iter=b, test=test,
+                                 control=control)
 
         # catch faulty run
         if(any(is.na(x))) {
@@ -233,6 +262,8 @@ bootstrapLavaan <- function(object, R=1000, type="ordinary",
                               sample  = object@Sample,
                               options = object@Options, 
                               data    = object@Data, 
+                              user    = object@User,
+                              control = object@Fit@control,
                               R       = R,
                               verbose = verbose,
                               type    = type,

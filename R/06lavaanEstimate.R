@@ -790,19 +790,21 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
                                trace=0L,
-                               abs.tol=1e-20,
+                               #abs.tol=1e-20, ### important!! fx never negative
+                               abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-10,
                                x.tol=1.5e-8,
                                step.min=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, control)
-        control.nlminb <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                           "abs.tol", "rel.tol", "x.tol",
-                                           "step.min")]
+        control <- control.nlminb[c("eval.max", "iter.max", "trace",
+                                    "abs.tol", "rel.tol", "x.tol",
+                                    "step.min")]
+        #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
                             gradient=first.derivative.param,
                             #gradient=first.derivative.param.numerical,
-                            control=control.nlminb,
+                            control=control,
                             scale=SCALE,
                             verbose=verbose) 
         if(verbose) {
@@ -834,14 +836,14 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
                              reltol=1e-10,
                              REPORT=1L)
         control.bfgs <- modifyList(control.bfgs, control)
-        control.bfgs <- control.bfgs[c("trace", "fnscale", "parscale", "ndeps",
-                                       "maxit", "abstol", "reltol", "REPORT")]
+        control <- control.bfgs[c("trace", "fnscale", "parscale", "ndeps",
+                                  "maxit", "abstol", "reltol", "REPORT")]
         #trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
                            gr=first.derivative.param,
                            method="BFGS",
-                           control=control.bfgs,
+                           control=control,
                            hessian=FALSE,
                            verbose=verbose)
         if(verbose) {
@@ -873,14 +875,14 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
                                factr=1e7,
                                pgtol=0)
         control.lbfgsb <- modifyList(control.lbfgsb, control)
-        control.lbfgsb <- control.lbfgsb[c("trace", "fnscale", "parscale", 
-                                           "ndeps", "maxit", "REPORT", "lmm", 
-                                           "factr", "pgtol")]
+        control <- control.lbfgsb[c("trace", "fnscale", "parscale", 
+                                    "ndeps", "maxit", "REPORT", "lmm", 
+                                    "factr", "pgtol")]
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
                            gr=first.derivative.param,
                            method="L-BFGS-B",
-                           control=control.lbfgsb,
+                           control=control,
                            hessian=FALSE,
                            verbose=verbose,
                            infToMax=TRUE)
@@ -966,14 +968,15 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
                                trace=0L,
-                               abs.tol=1e-20,
+                               #abs.tol=1e-20,
+                               abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-9, # 1e-10 seems 'too strict'
                                x.tol=1.5e-8,
                                step.min=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, control)
-        control.nlminb <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                           "abs.tol", "rel.tol", "x.tol",
-                                           "step.min")]
+        control <- control.nlminb[c("eval.max", "iter.max", "trace",
+                                    "abs.tol", "rel.tol", "x.tol",
+                                    "step.min")]
         cin <- cin.jac <- ceq <- ceq.jac <- NULL
         if(!is.null(body(object@cin.function))) cin     <- object@cin.function
         if(!is.null(body(object@cin.jacobian))) cin.jac <- object@cin.jacobian
@@ -984,7 +987,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
                                    objective=minimize.this.function,
                                    gradient=first.derivative.param,
                                    #gradient=first.derivative.param.numerical,
-                                   control=control.nlminb,
+                                   control=control,
                                    scale=SCALE,
                                    verbose=verbose,
                                    cin = cin, cin.jac = cin.jac,
@@ -1027,6 +1030,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
 
     attr(x, "converged")  <- converged
     attr(x, "iterations") <- iterations
+    attr(x, "control")    <- control
     attr(x, "fx")         <- fx
     if(!is.null(optim.out$con.jac)) attr(x, "con.jac") <- optim.out$con.jac
 

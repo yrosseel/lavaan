@@ -323,12 +323,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
+        attr(x, "control") <- control
         attr(x, "fx") <- 
             computeObjective(lavaanModel, sample = lavaanSampleStats, 
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
+
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
