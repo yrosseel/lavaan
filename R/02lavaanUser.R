@@ -61,6 +61,13 @@ lavaanify <- function(model.syntax    = NULL,
         print( str(CON) )
     }
 
+    # check for wrongly specified variances/covariances/intercepts
+    # of exogenous variables in model syntax (if fixed.x=TRUE)
+    if(fixed.x) { # we ignore the groups here!
+        # we only call this function for the warning message
+        tmp <- vnames(FLAT, "ov.x", warn=TRUE); rm(tmp)
+    }
+
     # auto=TRUE?
     if(auto && model.type == "sem") { # mimic sem/cfa auto behavior
         if(model.type == "sem") {

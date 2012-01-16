@@ -17,7 +17,7 @@ lavaanNames <- function(object, type="ov", group=NULL) {
 }
 
 # internal version
-vnames <- function(user, type=NULL, group=NULL) {
+vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     stopifnot(is.list(user), !missing(type),
               type %in% c("lv",   "ov", 
@@ -91,19 +91,26 @@ vnames <- function(user, type=NULL, group=NULL) {
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
 
         # correction: is any of these ov.names.x mentioned as a variance,
-        #             covariance, or intercept? If so, omit from ov.x!
-        # FIXME: better use fixed.x=FALSE flag
-        #if(is.null(user$user)) { # FLAT!
-        #    vars <- c(user$lhs[user$op == "~1"],
-        #              user$lhs[user$op == "~~"],
-        #              user$rhs[user$op == "~~"])
-        #} else {
-        #    vars <- c(user$lhs[user$op == "~1" & user$user == 1],
-        #              user$lhs[user$op == "~~" & user$user == 1],
-        #              user$rhs[user$op == "~~" & user$user == 1])
-        #}
-        #idx.no.x <- which(ov.x %in% vars)
-        #if(length(idx.no.x)) ov.x <- ov.x[-idx.no.x]
+        #             covariance, or intercept? 
+        # this should trigger a warning in lavaanify()
+        if(is.null(user$user)) { # FLAT!
+            vars <- c(user$lhs[user$op == "~1"],
+                      user$lhs[user$op == "~~"],
+                      user$rhs[user$op == "~~"])
+        } else {
+            vars <- c(user$lhs[user$op == "~1" & user$user == 1],
+                      user$lhs[user$op == "~~" & user$user == 1],
+                      user$rhs[user$op == "~~" & user$user == 1])
+        }
+        idx.no.x <- which(ov.x %in% vars)
+        if(length(idx.no.x)) {
+            if(warn) {
+                warning("lavaan WARNING: model syntax contains variance/covariance/intercept of\n  exogenous variable(s) [", 
+                        paste(ov.x[idx.no.x], collapse=" "),
+                        "];\n  Please use fixed.x=FALSE or leave them alone")
+            } 
+            ov.x <- ov.x[-idx.no.x]
+        }
  
         out <- ov.x
 
