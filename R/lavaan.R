@@ -98,6 +98,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # if meanstructure=TRUE, we need sample.mean
         if(meanstructure == TRUE && is.null(sample.mean))
             stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
+        # if group.equal contains "intercepts", we need sample.mean
+        if("intercepts" %in% group.equal && is.null(sample.mean))
+            stop("lavaan ERROR: please provide sample.mean if group.equal contains \"intercepts\"")
+
 
         # list?
         if(is.list(sample.cov)) {
