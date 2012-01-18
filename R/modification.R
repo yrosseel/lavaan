@@ -56,12 +56,12 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     ngroups  <- object@Model@ngroups
     mmNumber <- object@Model@nmat
     mmNames  <- names(object@Model@GLIST)
-    mmRows   <- 
     m.el.idx <- x.el.idx <- vector("list", length=length(object@Model@GLIST))
+    offset <- 0L
     for(g in 1:ngroups) {
-        for(mm in 1:mmNumber) {
+        for(mm in 1:mmNumber[g]) {
             # offset in GLIST
-            offset <- mmNumber*(g - 1L) + mm
+            offset <- offset + 1L
 
             # select elements for this matrix
             idx <- which(LIST$group == g & LIST$mat == mmNames[offset])
