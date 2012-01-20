@@ -41,8 +41,10 @@ representation.LISREL <- function(user=NULL, target=NULL,
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
         tmp.names <- 
-            unique( c(user$lhs[user$op == "~" & user$group == g],
-                      user$rhs[user$op == "~" & user$group == g]) )
+            unique( c(user$lhs[(user$op == "~" | user$op == "<~") & 
+                                user$group == g],
+                      user$rhs[(user$op == "~" | user$op == "<~") & 
+                                user$group == g]) )
         dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
         if(length(dummy.names)) {
             # make sure order is the same as ov.names
@@ -81,7 +83,8 @@ representation.LISREL <- function(user=NULL, target=NULL,
         tmp.col[idx] <- match(target$lhs[idx], lv.names)
     
         # 2. "~" regressions
-        idx <- which(target$group == g & target$op == "~")
+        idx <- which(target$group == g & (target$op == "~" |
+                                          target$op == "<~") )
         tmp.mat[idx] <- "beta"
         tmp.row[idx] <- match(target$lhs[idx], lv.names)
         tmp.col[idx] <- match(target$rhs[idx], lv.names)

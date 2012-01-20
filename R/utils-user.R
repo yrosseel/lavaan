@@ -9,7 +9,7 @@ lavaanNames <- function(object, type="ov", group=NULL) {
     }
 
     stopifnot(is.list(user), 
-              type %in% c("lv",   "ov",
+              type %in% c("lv",   "ov", "lv.regular",
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
                           "ov.nox"))
@@ -20,7 +20,7 @@ lavaanNames <- function(object, type="ov", group=NULL) {
 vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     stopifnot(is.list(user), !missing(type),
-              type %in% c("lv",   "ov", 
+              type %in% c("lv",   "ov", "lv.regular",
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
                           "ov.nox"))
@@ -41,14 +41,19 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
         }
     }
 
-    # regular latent variables: lhs =~
+    # regular latent variables: lhs =~ and formative variables lhs <~
     if(type == "lv") {
-        out <- unique( user$lhs[ user$op == "=~" ] )
+        out <- unique( user$lhs[ user$op == "=~"  | user$op == "<~" ] )
     } else 
+
+    # regular latent variables ONLY
+    if(type == "lv.regular") {
+        out <- unique( user$lhs[ user$op == "=~" ] )
+    } else
 
     # observed variables 
     if(type == "ov") {
-        lv.names <- unique( user$lhs[ user$op == "=~" ] )
+        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
         
         # order is important!
         # 1. indicators, which are not latent variables themselves
@@ -60,7 +65,7 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
         ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
 
         # 3. independent ov's
-        eqs.x <- unique( user$rhs[ user$op == "~" ] )
+        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
 
         out <- c(ov.ind, ov.y, ov.x)
@@ -76,7 +81,7 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # exogenous `x' covariates
     if(type == "ov.x") {
-        lv.names <- unique( user$lhs[ user$op == "=~" ] )
+        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
         
         # 1. indicators, which are not latent variables themselves
         v.ind <- unique( user$rhs[ user$op == "=~" ] )
@@ -87,7 +92,7 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
         ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
 
         # 2. independent ov's
-        eqs.x <- unique( user$rhs[ user$op == "~" ] )
+        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~"] )
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
 
         # correction: is any of these ov.names.x mentioned as a variance,
@@ -136,7 +141,7 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # exogenous lv's
     if(type == "lv.x") {
-        lv.names <- unique( user$lhs[ user$op == "=~" ] )
+        lv.names <- unique( user$lhs[ user$op == "=~"  | user$op == "<~" ] )
         v.ind    <- unique( user$rhs[ user$op == "=~" ] )
         eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
 
@@ -148,9 +153,9 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
     # dependent ov (but not also indicator or x)
     if(type == "ov.y") {
         ov.names <- vnames(user, "ov", group=group)
-        lv.names <- unique( user$lhs[ user$op == "=~" ] )
+        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
         v.ind    <- unique( user$rhs[ user$op == "=~" ] )
-        eqs.x <- unique( user$rhs[ user$op == "~" ] )
+        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
         eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
@@ -160,9 +165,9 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # dependent lv (but not also indicator or x)
     if(type == "lv.y") {
-        lv.names <- unique( user$lhs[ user$op == "=~" ] )
+        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
         v.ind    <- unique( user$rhs[ user$op == "=~" ] )
-        eqs.x <- unique( user$rhs[ user$op == "~" ] )
+        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
         eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x) &
@@ -452,6 +457,7 @@ getLIST <- function(FLAT=NULL,
 
     # extract `names' of various types of variables:
     lv.names     <- vnames(FLAT, type="lv")     # latent variables
+    lv.names.r   <- vnames(FLAT, type="lv.regular") # regular latent variables
     ov.names     <- vnames(FLAT, type="ov")     # observed variables
     ov.names.x   <- vnames(FLAT, type="ov.x")   # exogenous x covariates 
     ov.names.nox <- vnames(FLAT, type="ov.nox")
@@ -465,10 +471,10 @@ getLIST <- function(FLAT=NULL,
 
     # 1. default (residual) variances and covariances
 
-    # a) (residual) VARIANCES (all ov's, except exo and regular lv's)
+    # a) (residual) VARIANCES (all ov's except exo, and regular lv's)
     if(auto.var) {
-        lhs <- c(lhs, ov.names.nox, lv.names)
-        rhs <- c(rhs, ov.names.nox, lv.names)
+        lhs <- c(lhs, ov.names.nox, lv.names.r)
+        rhs <- c(rhs, ov.names.nox, lv.names.r)
     }
 
     # b) `independent` latent variable COVARIANCES (lv.names.x)

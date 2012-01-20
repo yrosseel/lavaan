@@ -399,28 +399,31 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
 
         # 1. which operator is used?
         line.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
-        # 1.a "=~" operator?
+        # "=~" operator?
         if(grepl("=~", line.simple, fixed=TRUE)) {
             op <- "=~"
-        # 1b. "~~" operator?
+        # "<~" operator?
+        } else if(grepl("<~", line.simple, fixed=TRUE)) {
+            op <- "<~"
+        # "~~" operator?
         } else if(grepl("~~", line.simple, fixed=TRUE)) {
             op <- "~~"
-        # 1c. "~" operator?
+        # "~" operator?
         } else if(grepl("~", line.simple, fixed=TRUE)) {
             op <- "~"           
-        # 1d, "==" operator?
+        # "==" operator?
         } else if(grepl("==", line.simple, fixed=TRUE)) {
             op <- "=="  
-        # 1e, "<" operator?
+        # "<" operator?
         } else if(grepl("<", line.simple, fixed=TRUE)) {
             op <- "<"
-        # 1f, ">" operator?
+        # ">" operator?
         } else if(grepl(">", line.simple, fixed=TRUE)) {
             op <- ">"
-        # 1g, ":=" operator?
+        # ":=" operator?
         } else if(grepl(":=", line.simple, fixed=TRUE)) {
             op <- ":="
-        # 1h, ":" operator?
+        # ":" operator?
         } else if(grepl(":", line.simple, fixed=TRUE)) {
             op <- ":"
         } else {
