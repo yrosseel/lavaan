@@ -1,45 +1,44 @@
 # bootstrapLRT: bootstrap LR test for nested models
 
-bootstrapLRT <- function(h0, h1, R=1000, 
-                         type="bollen.stine", verbose=FALSE) {
+# revision YR 23 jan 2012: - use lavaan() for both model fits
+#                          - add calibration
 
-    out <- bootstrapLRT.internal(model1  = h0@Model,
-                                 model2  = h1@Model,
-                                 sample  = h0@Sample,
-                                 options = h0@Options,
-                                 data    = h0@Data, 
-                                 R       = R,
-                                 verbose = verbose,
-                                 type=type)
-    out
-}
-
-
-bootstrapLRT.internal <- function(model1=NULL, model2=NULL, 
-                                  sample=NULL, options=NULL,
-                                  data=NULL, R=1000L,
-                                  type="bollen.stine", 
-                                  verbose=FALSE,
-                                  max.iter=1000L) {
+bootstrapLRT <- function(h0              = NULL,  # restricted model 
+                         h1              = NULL,  # unrestrited model
+                         R               = 1000, 
+                         type            = "bollen.stine", 
+                         verbose         = FALSE,
+                         return.LRT      = FALSE,
+                         calibrate       = FALSE,
+                         calibrate.R     = 1000,
+                         calibrate.alpha = 0.05,
+                         warn            = 1L,
+                        ) {
 
     # checks
-    stopifnot(!is.null(model1), !is.null(model2),
-              !is.null(sample), !is.null(options), 
-              !is.null(data), 
+    stopifnot(class(h0) == "lavaan", class(h1) == "lavaan",
               type %in% c("bollen.stine", "parametric"))
+
+    # set warning level
+    options(warn = warn)
 
     # prepare
     LRT <- rep(as.numeric(NA), R)
+    LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
+    if(calibrate) plugin.pvalues <- numeric(R)
+    
+    # data
+    data <- h0@Data
 
     # bollen.stine or parametric: we need the Sigma.hat values
-    Sigma.hat <- computeSigmaHat(model1)
-    Mu.hat <- computeMuHat(model1) 
+    Sigma.hat <- computeSigmaHat(h0@Model)
+    Mu.hat    <- computeMuHat(   h0@Model) 
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
-        for(g in 1:sample@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(  Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(sample@icov[[g]])
+        for(g in 1:h0@Sample@ngroups) {
+            sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
 
             # center (needed???)
             X <- scale(data[[g]], center=TRUE, scale=FALSE)
@@ -48,8 +47,8 @@ bootstrapLRT.internal <- function(model1=NULL, model2=NULL,
             X <- X %*% S.inv.sqrt %*% sigma.sqrt
 
             # add model-based mean
-            if(model1@meanstructure)
-                X <- scale(X, center=(-1*sample@mean[[g]]), scale=FALSE)
+            if(h0@Model@meanstructure)
+                X <- scale(X, center=(-1*h0@Sample@mean[[g]]), scale=FALSE)
 
             # replace data slot
             data[[g]] <- X
@@ -60,121 +59,105 @@ bootstrapLRT.internal <- function(model1=NULL, model2=NULL,
     error.idx <- integer(0)
     for(b in 1:R) {
         if(type == "bollen.stine") {
-            # take a bootstrap sample for each group
-            boot.idx <- vector("list", length=sample@ngroups)
-            for(g in 1:sample@ngroups)
-                boot.idx[[g]] <- sample(x=sample@nobs[[g]],
-                                        size=sample@nobs[[g]], replace=TRUE)
+            # take a bootstrap h0@Sample for each group
+            boot.idx <- vector("list", length=h0@Sample@ngroups)
+            for(g in 1:h0@Sample@ngroups)
+                boot.idx[[g]] <- sample(x=h0@Sample@nobs[[g]],
+                                        size=h0@Sample@nobs[[g]], replace=TRUE)
         } else {
             # parametric!
             boot.idx <- NULL
-            for(g in 1:sample@ngroups) {
-                data[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
+            for(g in 1:h0@Sample@ngroups) {
+                data[[g]] <- MASS.mvrnorm(n     = h0@Sample@nobs[[g]],
                                           mu    = Mu.hat[[g]],
                                           Sigma = Sigma.hat[[g]])
             }
         }
+        colnames(data[[g]]) <- h0@Sample@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number: ", b, "\n")
 
-        # take care of bootstrap sample statistics
+        # take care of bootstrap h0@Sample statistics
         Missing <-  getMissingPatterns(X       = data,
-                                   missing = options$missing,
-                                   warn    = FALSE,
-                                   verbose = FALSE)
+                                       missing = h0@Options$missing,
+                                       warn    = FALSE,
+                                       verbose = FALSE)
         WLS.V <- list()
-        if(options$estimator %in% c("GLS", "WLS")) {
+        if(h0@Options$estimator %in% c("GLS", "WLS")) {
             WLS.V <- getWLS.V(X             = data,
                               sample        = NULL,
                               boot.idx      = boot.idx,
-                              estimator     = options$estimator,
-                              mimic         = options$mimic,
-                              meanstructure = options$meanstructure)
+                              estimator     = h0@Options$estimator,
+                              mimic         = h0@Options$mimic,
+                              meanstructure = h0@Options$meanstructure)
         }
         bootSampleStats <- try(getSampleStatsFromData(
                                X           = data,
                                M           = Missing,
                                boot.idx    = boot.idx,
-                               rescale     = (options$estimator == "ML" &&
-                                              options$likelihood == "normal"),
-                               group.label = sample@group.label,
+                               rescale     = (h0@Options$estimator == "ML" &&
+                                              h0@Options$likelihood == "normal"),
+                               group.label = h0@Sample@group.label,
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
-            if(verbose) cat("     FAILED: creating sample statistics\n")
+            if(verbose) cat("     FAILED: creating h0@Sample statistics\n")
             error.idx <- c(error.idx, b)
             next
         }
 
 
         # estimate model 1
-        if(verbose) cat("  ... ... model 1: ")
-        start1 <- getModelParameters(model1, type="free")
-        lavaanModel1 <- setModelParameters(model1, x = start1)
-        # switch of verbose in estimateModel
-        verbose.old <- options$verbose; options$verbose <- FALSE
-        x1 <- try( estimateModel(lavaanModel1,
-                                 sample  = bootSampleStats,
-                                 # control??
-                                 options = options) )
-        options$verbose <- verbose.old
-        if(inherits(x1, "try-error")) {
-            if(verbose) cat("     FAILED: in estimation\n")
-            error.idx <- c(error.idx, b)
-            next
-        } else if(!attr(x1, "converged")) {
+        if(verbose) cat("  ... ... model h0: ")
+        h0@Options$verbose <- FALSE
+        h0@Options$se <- "none"
+        h0@Options$test <- "standard"
+        fit.h0 <- lavaan(slotOptions = h0@Options,
+                         slotUser    = h0@User,
+                        #slotModel   = h0@Model, # only if fixed.x=FALSE???
+                         slotSample  = bootSampleStats,
+                         slotData    = data)
+        if(!fit.h0@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             error.idx <- c(error.idx, b)
             next
         } 
-        if(verbose) cat("     ok -- niter = ", attr(x1, "iterations"),
-                        " fx = ", attr(x1, "fx"), "\n")
+        if(verbose) cat("     ok -- niter = ", fit.h0@Fit@iterations,
+                        " fx = ", fit.h0@Fit@fx, "\n")
 
         # estimate model 2
-        if(verbose) cat("  ... ... model 2: ")
-        start2 <- getModelParameters(model2, type="free")
-        lavaanModel2 <- setModelParameters(model2, x = start2)
-        # switch of verbose in estimateModel
-        verbose.old <- options$verbose; options$verbose <- FALSE
-        x2 <- try( estimateModel(lavaanModel2,
-                                 sample  = bootSampleStats,
-                                 # control??
-                                 options = options) )
-        options$verbose <- verbose.old
-        if(inherits(x2, "try-error")) {
-            if(verbose) cat("     FAILED: in estimation\n")
-            error.idx <- c(error.idx, b)
-            next
-        } else if(!attr(x2, "converged")) {
+        if(verbose) cat("  ... ... model h1: ")
+        h0@Options$verbose <- FALSE
+        h0@Options$se <- "none"
+        h0@Options$test <- "standard"
+        fit.h1 <- lavaan(slotOptions = h0@Options,
+                         slotUser    = h1@User,
+                        #slotModel   = h0@Model, # only if fixed.x=FALSE???
+                         slotSample  = bootSampleStats,
+                         slotData    = data)
+        if(!fit.h1@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             error.idx <- c(error.idx, b)
             next
-        }
-        if(verbose) cat("     ok -- niter = ", attr(x2, "iterations"),
-                        " fx = ", attr(x2, "fx"), "\n")
+        } 
+        if(verbose) cat("     ok -- niter = ", fit.h1@Fit@iterations,
+                        " fx = ", fit.h1@Fit@fx, "\n")
 
 
         # store LRT
-        NFAC <- 2 * unlist(sample@nobs)
-        if(options$estimator == "ML" && options$likelihood == "wishart") {
-            # first divide by two
-            NFAC <- NFAC / 2
-            NFAC <- NFAC - 1
-            NFAC <- NFAC * 2
+        LRT[b] <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
+        if(verbose) cat("  ... ... LRT = ", LRT[b],"\n")
+
+        # calibration
+        if(calibrate) {
+            if(verbose) cat("  ... ... calibrating p.value - ");
+            plugin.pvalues[b] <- bootstrapLRT(h0=fit.h0, h1=fit.h1,
+                                                 R=calibrate.R,
+                                                 type=type, verbose=FALSE,
+                                                 calibrate=FALSE,
+                                                 return.LRT=FALSE)
+            if(verbose) cat(sprintf("%5.3f", plugin.pvalues[b]),"\n")
         }
-        # model 1
-        fx.group1 <- attr(attr(x1, "fx"), "fx.group")
-        chisq.group1 <- fx.group1 * NFAC
-        chisq.group1[which(chisq.group1 < 0)] <- 0.0
-        chisq1 <- sum(chisq.group1)
-
-        # model 2
-        fx.group2 <- attr(attr(x2, "fx"), "fx.group")
-        chisq.group2 <- fx.group2 * NFAC
-        chisq.group2[which(chisq.group2 < 0)] <- 0.0
-        chisq2 <- sum(chisq.group2)
-
-        LRT[b] <- abs(chisq1 - chisq2)
 
     } # b
 
@@ -188,6 +171,18 @@ bootstrapLRT.internal <- function(model1=NULL, model2=NULL,
                         (R - length(error.idx)), "\n")
     }
 
-    LRT
+    pvalue <- sum(LRT >= LRT.original)/length(LRT)
+    if(return.LRT) { 
+        attr(pvalue, "LRT") <- LRT
+        attr(pvalue, "LRT.original") <- LRT.original
+    }
+     
+    if(calibrate) {
+        adj.alpha <- quantile(plugin.pvalues, alpha)
+        attr(pvalue, "plugin.pvalues") <- plugin.pvalues
+        attr(pvalue, "adj.alpha") <- adj.alpha
+    }
+
+    pvalue
 }
 

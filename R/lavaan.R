@@ -55,6 +55,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                    # starting values
                    start           = "default",
+
+                   # full slots from previous fits
+                   slotOptions     = NULL,
+                   slotUser        = NULL,
+                   slotSample      = NULL,
+                   slotData        = NULL,
+                   slotModel       = NULL,
   
                    # verbosity
                    verbose         = FALSE,
@@ -68,7 +75,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing <- list()
 
     # 1a. check data/sample.cov and get the number of groups
-    if(!is.null(data)) {
+    if(!is.null(slotSample)) {
+        stopifnot(class(slotSample) == "SampleStats")
+        if(is.null(slotData)) {
+            lavaanData <- list()
+        } else {
+            # need further checking?
+            lavaanData <- slotData
+        }
+        ngroups <- slotSample@ngroups
+        data.type = "sampleStats"
+    } else if(!is.null(data)) {
         # good, we got a full data frame
         stopifnot(is.data.frame(data))
         if(!is.null(group)) {
@@ -152,27 +169,34 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # force evaluation of `language` and/or `symbol` arguments
     #opt <- lapply(opt, function(x) if(typeof(x) %in% c("language", "symbol")) 
     #                                   eval(x, parent.frame()) else x)
-    opt <- list(model = model, model.type = model.type,
-        meanstructure = meanstructure, int.ov.free = int.ov.free,
-        int.lv.free = int.lv.free, fixed.x = fixed.x, orthogonal = orthogonal,
-        std.lv = std.lv, auto.fix.first = auto.fix.first,
-        auto.fix.single = auto.fix.single, auto.var = auto.var,
-        auto.cov.lv.x = auto.cov.lv.x, auto.cov.y = auto.cov.y,
-        std.ov = std.ov, missing = missing, group = group, 
-        group.equal = group.equal, group.partial = group.partial, 
-        constraints = constraints,
-        estimator = estimator, likelihood = likelihood,
-        information = information, se = se, test = test, 
-        bootstrap = bootstrap, mimic = mimic,
-        representation = representation, do.fit = do.fit, verbose = verbose,
-        warn = warn, debug = debug, data.type = data.type)
-    lavaanOptions <- setLavaanOptions(opt)
+    if(!is.null(slotOptions)) {
+        lavaanOptions <- slotOptions
+    } else {
+        opt <- list(model = model, model.type = model.type,
+            meanstructure = meanstructure, int.ov.free = int.ov.free,
+            int.lv.free = int.lv.free, fixed.x = fixed.x, 
+            orthogonal = orthogonal, std.lv = std.lv, 
+            auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
+            auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
+            auto.cov.y = auto.cov.y, std.ov = std.ov, missing = missing, 
+            group = group, group.equal = group.equal, 
+            group.partial = group.partial, 
+            constraints = constraints,
+            estimator = estimator, likelihood = likelihood,
+            information = information, se = se, test = test, 
+            bootstrap = bootstrap, mimic = mimic,
+            representation = representation, do.fit = do.fit, verbose = verbose,
+            warn = warn, debug = debug, data.type = data.type)
+        lavaanOptions <- setLavaanOptions(opt)
+    }
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     
 
     # 2a. construct lavaan User list: description of the user-specified model
-    if(is.character(model)) {
+    if(!is.null(slotUser)) {
+        lavaanUser <- slotUser
+    } else if(is.character(model)) {
         lavaanUser <- 
             lavaanify(model.syntax    = model, 
                       meanstructure   = lavaanOptions$meanstructure, 
@@ -225,7 +249,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        function(x) vnames(lavaanUser, type="ov", x))
 
     # 3a. handle full data
-    if(data.type == "full") {
+    if(data.type == "sampleStats") {
+        lavaanSampleStats <- slotSample
+    } else if(data.type == "full") {
+        # ov.names User model
+        ov.names <- lapply(as.list(1:ngroups),
+                       function(x) vnames(lavaanUser, type="ov", x))   
         lavaanData <- getData(data        = data, 
                               ov.names    = ov.names,
                               std.ov      = std.ov,
@@ -282,7 +311,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } 
     if(debug) {
         print(str(lavaanData))
-        print(str(WLS.V))
         print(str(lavaanSampleStats))
     }
 
@@ -291,24 +319,31 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
     # 4. compute some reasonable starting values 
-    lavaanStart <- 
-        StartingValues(start.method = start,
-                       user         = lavaanUser, 
-                       sample       = lavaanSampleStats,
-                       model.type   = lavaanOptions$model.type,
-                       mimic        = lavaanOptions$mimic,
-                       debug        = lavaanOptions$debug)
-    timing$Start <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    if(!is.null(slotModel)) {
+        lavaanModel <- slotModel
+        lavaanStart <- getModelParameters(lavaanModel, type="user")
+        timing$Start <- (proc.time()[3] - start.time)
+        start.time <- proc.time()[3]
+        timing$Model <- (proc.time()[3] - start.time)
+        start.time <- proc.time()[3]
+    } else {
+        lavaanStart <- 
+            StartingValues(start.method = start,
+                           user         = lavaanUser, 
+                           sample       = lavaanSampleStats,
+                           model.type   = lavaanOptions$model.type,
+                           mimic        = lavaanOptions$mimic,
+                           debug        = lavaanOptions$debug)
+        timing$Start <- (proc.time()[3] - start.time)
+        start.time <- proc.time()[3]
 
-    # 5. construct internal model (S4) representation
-    lavaanModel <- 
-        Model(user           = lavaanUser, 
-              start          = lavaanStart, 
-              representation = lavaanOptions$representation,
-              debug          = lavaanOptions$debug)
-    timing$Model <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+        # 5. construct internal model (S4) representation
+        lavaanModel <- 
+            Model(user           = lavaanUser, 
+                  start          = lavaanStart, 
+                  representation = lavaanOptions$representation,
+                  debug          = lavaanOptions$debug)
+    }
 
     # 6. estimate free parameters
     x <- NULL
@@ -338,7 +373,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
-    if(opt$se != "none" && lavaanModel@nx.free > 0L) {
+    if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSampleStats,
                              options = lavaanOptions,
@@ -349,7 +384,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 8. compute test statistic (chi-square and friends)
     TEST <- NULL
-    if(opt$test != "none") {
+    if(lavaanOptions$test != "none") {
         TEST <- computeTestStatistic(lavaanModel,
                                      user    = lavaanUser,
                                      sample  = lavaanSampleStats,
@@ -396,6 +431,8 @@ cfa <- sem <- function(model = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
+    slotOptions = NULL, slotUser = NULL, slotSample = NULL,
+    slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -425,6 +462,8 @@ growth <- function(model = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default",
+    slotOptions = NULL, slotUser = NULL, slotSample = NULL,
+    slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
