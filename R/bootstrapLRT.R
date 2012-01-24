@@ -12,7 +12,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                          calibrate       = FALSE,
                          calibrate.R     = 1000,
                          calibrate.alpha = 0.05,
-                         warn            = 1L,
+                         warn            = -1L
                         ) {
 
     # checks
@@ -106,15 +106,23 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
             next
         }
 
+        # adjust h0@Model slot if fixed.x variances/covariances
+        # have changed:
+      ### FIXME #####
+        #if(h0@Model@fixed.x && length(vnames(fit0@User, "ov.x")) > 0L) {
+        #    for(g in 1:h0@Sample@ngroups) {
+        #        
+        #    }
+        #}
+
 
         # estimate model 1
         if(verbose) cat("  ... ... model h0: ")
         h0@Options$verbose <- FALSE
-        h0@Options$se <- "none"
-        h0@Options$test <- "standard"
+        h0@Options$se <- "none"; h0@Options$test <- "standard"
         fit.h0 <- lavaan(slotOptions = h0@Options,
                          slotUser    = h0@User,
-                        #slotModel   = h0@Model, # only if fixed.x=FALSE???
+                         slotModel   = h0@Model, # only if fixed.x=FALSE???
                          slotSample  = bootSampleStats,
                          slotData    = data)
         if(!fit.h0@Fit@converged) {
@@ -127,12 +135,11 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
 
         # estimate model 2
         if(verbose) cat("  ... ... model h1: ")
-        h0@Options$verbose <- FALSE
-        h0@Options$se <- "none"
-        h0@Options$test <- "standard"
-        fit.h1 <- lavaan(slotOptions = h0@Options,
+        h1@Options$verbose <- FALSE
+        h1@Options$se <- "none"; h1@Options$test <- "standard"
+        fit.h1 <- lavaan(slotOptions = h1@Options,
                          slotUser    = h1@User,
-                        #slotModel   = h0@Model, # only if fixed.x=FALSE???
+                         slotModel   = h1@Model, # only if fixed.x=FALSE???
                          slotSample  = bootSampleStats,
                          slotData    = data)
         if(!fit.h1@Fit@converged) {
@@ -178,7 +185,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
     }
      
     if(calibrate) {
-        adj.alpha <- quantile(plugin.pvalues, alpha)
+        adj.alpha <- quantile(plugin.pvalues, calibrate.alpha)
         attr(pvalue, "plugin.pvalues") <- plugin.pvalues
         attr(pvalue, "adj.alpha") <- adj.alpha
     }
