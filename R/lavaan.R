@@ -258,6 +258,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanData <- getData(data        = data, 
                               ov.names    = ov.names,
                               std.ov      = std.ov,
+                              missing     = lavaanOptions$missing,
                               group       = group,
                               group.label = group.label)
 
@@ -343,16 +344,72 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   start          = lavaanStart, 
                   representation = lavaanOptions$representation,
                   debug          = lavaanOptions$debug)
+        timing$Model <- (proc.time()[3] - start.time)
+        start.time <- proc.time()[3]
     }
 
     # 6. estimate free parameters
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
-        x <- estimateModel(lavaanModel,
-                           sample  = lavaanSampleStats,
-                           options = lavaanOptions,
-                           control = control)
-        lavaanModel <- setModelParameters(lavaanModel, x = x)
+        # catch some simple models
+        if(length(vnames(lavaanUser, "ov.y")) == 1L && 
+           length(vnames(lavaanUser,   "lv")) == 0L &&
+           #data.type == "full" && # and sampleStats???
+           ngroups == 1L &&
+           lavaanOptions$missing == "listwise") {
+            # simple univariate regression
+            ov.y.idx <- match(vnames(lavaanUser, "ov.y"), 
+                              colnames(lavaanData[[1L]]))
+            ov.x.idx <- match(vnames(lavaanUser, "ov.x"), 
+                              colnames(lavaanData[[1L]]))
+            YX <- lavaanData[[1L]]
+            # constraints?
+            if(sum(length(lavaanModel@x.ceq.idx) + 
+                   length(lavaanModel@x.cin.idx)) == 0L) {
+                out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
+                              y=YX[,ov.y.idx])
+                x.beta <- out$coefficients
+                if(!lavaanOptions$meanstructure) {
+                    x.beta <- x.beta[-1L]
+                } else {
+                    x.beta <- c(x.beta[-1L], x.beta[1L])
+                }
+                y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
+                x <- c(x.beta, y.rvar)
+            } else {
+                require(quadprog)
+                A <- matrix( c( 0, -1, 1,  0,
+                                0, 0,  -1, 1), 4, 2)
+                X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
+                Y <- YX[,ov.y.idx]; X.Y <- crossprod(X, Y)
+                out <- solve.QP(Dmat=X.X, dvec=X.Y, Amat=A, 
+                                bvec=rep(0, NCOL(A)), 
+                                meq=length(lavaanModel@x.ceq.idx))
+                x.beta <- out$solution
+                residuals <- Y - (X %*% x.beta)
+                y.rvar <- sum(residuals^2)/length(residuals) #ML?
+                if(!lavaanOptions$meanstructure) {
+                    x.beta <- x.beta[-1L]
+                } else {
+                    x.beta <- c(x.beta[-1L], x.beta[1L])
+                }
+                x <- c(x.beta, y.rvar)
+            }
+            lavaanModel <- setModelParameters(lavaanModel, x = x)
+            attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
+            attr(x, "control") <- control
+            attr(x, "fx") <-
+                computeObjective(lavaanModel, sample = lavaanSampleStats,
+                                 estimator = lavaanOptions$estimator)
+        } else {
+            cat("REGULAR\n")
+            # regular estimation
+            x <- estimateModel(lavaanModel,
+                               sample  = lavaanSampleStats,
+                               options = lavaanOptions,
+                               control = control)
+            lavaanModel <- setModelParameters(lavaanModel, x = x)
+        }
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
         # check if model has converged or not

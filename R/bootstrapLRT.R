@@ -139,7 +139,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         h1@Options$se <- "none"; h1@Options$test <- "standard"
         fit.h1 <- lavaan(slotOptions = h1@Options,
                          slotUser    = h1@User,
-                         slotModel   = h1@Model, # only if fixed.x=FALSE???
+                         #slotModel   = h1@Model, # only if fixed.x=FALSE???
                          slotSample  = bootSampleStats,
                          slotData    = data)
         if(!fit.h1@Fit@converged) {

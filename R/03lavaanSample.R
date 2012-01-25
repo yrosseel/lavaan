@@ -10,6 +10,9 @@ getData <- function(data        = NULL,
                     # standardize?
                     std.ov      = FALSE,
 
+                    # remove missings?
+                    missing     = "listwise",
+
                     # multiple groups?
                     group       = NULL,
                     group.label = character(0)
@@ -47,6 +50,10 @@ getData <- function(data        = NULL,
         } else {
             data.tmp <- data[, var.idx]
         }
+ 
+        # remove cases listwise?
+        if(missing == "listwise") 
+            data.tmp <- na.omit(data.tmp)
 
         # check if we have enough observations
         if(nrow(data.tmp) < nvar)
