@@ -35,7 +35,7 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
     package needs to be installed.}
 \item{ncpus}{The number of CPU's. Normally one chose this to the number of 
     available CPU's - 1'. The default is set 1.} 
-\item{cl}{cluster object. For more information see manual page \code{\link{snow}} package.}
+\item{cl}{cluster object. For more information see manual page of the snow package.}
 \item{verbose}{If \code{TRUE}, information is shown at each bootstrap draw.}
 \item{stoptest}{The procedure stops when the plug-in p-value for Type A is 
     larger than the pre-specified value. The default is set 1.}
