@@ -5,10 +5,16 @@
 \description{Bootstrap functions to get bootstrap standard errors and
 bootstrap test statistics}
 \usage{
-bootstrapLavaan(object, R = 1000, type = "ordinary", verbose = FALSE, 
-                coef = TRUE, test = FALSE, FUN = NULL, ...)
+bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
+                FUN = "coef", ..., warn = -1L, return.boot = FALSE,
+                parallel = c("no", "multicore", "snow"),
+                ncups = 1L, cl = NULL)
 
-bootstrapLRT(h0, h1, R = 1000, type="bollen.stine", verbose=FALSE)
+bootstrapLRT(h0, h1, R = 1000L, type="bollen.stine", verbose=FALSE,
+             return.LRT = FALSE, calibrate = FALSE, calibrate.R = 1000L,
+             calibrate.alpha = 0.05, warn = -1L, 
+             parallel = c("no", "multicore", "snow"),
+             ncups = 1L, cl = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -24,13 +30,33 @@ in the resampling space. If \code{"parametric"}, the parametric bootstrap
 approach is used. Currently, this is only valid for continuous data
 following a multivariate normal distribution.
 }
+\item{FUN}{A function which when applied to the \code{\linkS4class{lavaan}} 
+object returns a vector containing the statistic(s) of interest.
+The default is \code{FUN="coef"}, returning the estimated values of the
+free parameters in the model.}
+\item{\dots}{Other named arguments for \code{FUN} which are passed
+    unchanged each time it is called.}
 \item{verbose}{If \code{TRUE}, show information for each bootstrap draw.}
-\item{coef}{If \code{TRUE}, return the estimated parameters for each
-bootstrap draw as a matrix.}
-\item{test}{If \code{TRUE}, return the test statistic for each bootstrap
-draw as a numeric vector.}
-\item{FUN}{Not used for now.}
-\item{...}{Not used for now.}
+  \item{parallel}{
+    The type of parallel operation to be used (if any).  If missing, the
+    default is \code{"no"}.
+  }
+  \item{ncpus}{
+    integer: number of processes to be used in parallel operation:
+    typically one would chose this to the number of available CPUs.
+  }
+  \item{cl}{
+    An optional \pkg{parallel} or \pkg{snow} cluster for use if
+    \code{parallel = "snow"}.  If not supplied, a cluster on the
+    local machine is created for the duration of the \code{bootstrapLavaan}
+    or \code{bootstrapLRT} call.
+  }
+\item{calibrate}{If \code{TRUE}, a double (nested) bootstrap is used to
+compute an additional set of plugin-values for each bootstrap sample.}
+\item{calibrate.R}{Integer. The number of bootstrap draws to be use for
+the double bootstrap.}
+\item{calibrate.alpha}{The significance level to compute the adjusted
+alpha based on the plugin p-values.}
 }
 
 \examples{

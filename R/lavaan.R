@@ -382,10 +382,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } else {
                 require(quadprog)
 
-                A.ceq <- t(numDeriv:::jacobian(f=lavaanModel@ceq.function, 
-                                               x=rep(0,lavaanModel@nx.free)))
-                A.cin <- t(numDeriv:::jacobian(f=lavaanModel@cin.function, 
-                                               x=rep(0,lavaanModel@nx.free)))
+                A.ceq <- t(jacobian(f=lavaanModel@ceq.function, 
+                                    x=rep(0,lavaanModel@nx.free)))
+                A.cin <- t(jacobian(f=lavaanModel@cin.function, 
+                                    x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
                 # meanstructure? last row is intercept
                 if(lavaanOptions$meanstructure) {
@@ -505,8 +505,6 @@ cfa <- sem <- function(model = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
-    slotOptions = NULL, slotUser = NULL, slotSample = NULL,
-    slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -536,8 +534,6 @@ growth <- function(model = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default",
-    slotOptions = NULL, slotUser = NULL, slotSample = NULL,
-    slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()

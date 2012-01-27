@@ -41,7 +41,7 @@ export("lavaan",
        "parameterTable", "parametertable", "parTable", "partable",
        "fitMeasures", "fitmeasures",
        "inspectSampleCov",
-       "bootstrapLavaan", "bootstrapLRT",
+       "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
        "simulateData",
        "measurementInvariance", "measurementinvariance"
       )
@@ -69,4 +69,6 @@ S3method(print, lavaan.data.frame)
 S3method(print, lavaan.matrix)
 S3method(print, lavaan.matrix.symmetric)
 S3method(print, lavaan.vector)
+S3method(print, InformativeTesting)
+S3method(summary, InformativeTesting)
 #S3method(summary, lavaan.boot)

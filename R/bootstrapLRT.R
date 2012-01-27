@@ -5,15 +5,17 @@
 
 bootstrapLRT <- function(h0              = NULL,  # restricted model 
                          h1              = NULL,  # unrestricted model
-                         mother.h0       = NULL,  # h0 for double bootstrap
-                         R               = 1000, 
+                         R               = 1000L, 
                          type            = "bollen.stine", 
                          verbose         = FALSE,
                          return.LRT      = FALSE,
                          calibrate       = FALSE,
-                         calibrate.R     = 1000,
+                         calibrate.R     = 1000L,
                          calibrate.alpha = 0.05,
-                         warn            = -1L
+                         warn            = -1L,
+                         parallel        = c("no", "multicore", "snow"),
+                         ncpus           = 1L,
+                         cl              = NULL
                         ) {
 
     # checks
@@ -28,21 +30,33 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
     LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
     if(calibrate) plugin.pvalues <- numeric(R)
 
-    # mother.h0
-    if(is.null(mother.h0)) mother.h0 <- h0
+    # parallel stuff (see boot() from the boot package)
+    if (missing(parallel)) parallel <- "no"
+    parallel <- match.arg(parallel)
+    have_mc <- have_snow <- FALSE
+    if (parallel != "no" && ncpus > 1L) {
+        if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
+        else if (parallel == "snow") have_snow <- TRUE
+        if (!have_mc && !have_snow) ncpus <- 1L
+    }
+
+    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+    seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    if(!is.null(seed)) set.seed(seed)
+
     
     # data
-    data <- mother.h0@Data
+    data <- h0@Data
 
     # bollen.stine or parametric: we need the Sigma.hat values
-    Sigma.hat <- computeSigmaHat(mother.h0@Model)
-    Mu.hat    <- computeMuHat(   mother.h0@Model) 
+    Sigma.hat <- computeSigmaHat(h0@Model)
+    Mu.hat    <- computeMuHat(   h0@Model) 
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
         for(g in 1:h0@Sample@ngroups) {
             sigma.sqrt <- sqrtSymmetricMatrix(            Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(mother.h0@Sample@icov[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
 
             # center (needed???)
             X <- scale(data[[g]], center=TRUE, scale=FALSE)
@@ -52,7 +66,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
 
             # add model-based mean
             if(h0@Model@meanstructure)
-                X <- scale(X, center=(-1*mother.h0@Sample@mean[[g]]), 
+                X <- scale(X, center=(-1*h0@Sample@mean[[g]]), 
                               scale=FALSE)
 
             # replace data slot
@@ -61,8 +75,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
     }
 
     # run bootstraps
-    error.idx <- integer(0)
-    for(b in 1:R) {
+    fn <- function(b) {
         if(type == "bollen.stine") {
             # take a bootstrap h0@Sample for each group
             boot.idx <- vector("list", length=h0@Sample@ngroups)
@@ -108,8 +121,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating h0@Sample statistics\n")
-            error.idx <- c(error.idx, b)
-            next
+            return(NULL)
         }
 
         # adjust h0@Model slot if fixed.x variances/covariances
@@ -142,8 +154,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                          slotData    = data.boot)
         if(!fit.h0@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
-            error.idx <- c(error.idx, b)
-            next
+            return(NULL)
         } 
         if(verbose) cat("     ok -- niter = ", fit.h0@Fit@iterations,
                         " fx = ", fit.h0@Fit@fx, "\n")
@@ -159,39 +170,68 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                          slotData    = data.boot)
         if(!fit.h1@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
-            error.idx <- c(error.idx, b)
-            next
+            return(NULL)
         } 
         if(verbose) cat("     ok -- niter = ", fit.h1@Fit@iterations,
                         " fx = ", fit.h1@Fit@fx, "\n")
 
 
         # store LRT
-        LRT[b] <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
-        if(verbose) cat("  ... ... LRT = ", LRT[b],"\n")
+        lrt.boot <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
+        if(verbose) cat("  ... ... LRT = ", lrt.boot,"\n")
 
-        # calibration
+         # calibration
         if(calibrate) {
             if(verbose) cat("  ... ... calibrating p.value - ");
             
-            plugin.pvalues[b] <- bootstrapLRT(h0=fit.h0, h1=fit.h1,
-                                              #mother.h0=h0,
-                                              mother.h0=fit.h0,
-                                              R=calibrate.R,
-                                              type=type,
-                                              verbose=FALSE,
-                                              calibrate=FALSE,
-                                              return.LRT=FALSE)
-            if(verbose) cat(sprintf("%5.3f", plugin.pvalues[b]),"\n")
-
+            plugin.pvalue <- bootstrapLRT(h0=fit.h0, h1=fit.h1,
+                                          R=calibrate.R,
+                                          type=type,
+                                          verbose=FALSE,
+                                          calibrate=FALSE,
+                                          return.LRT=FALSE)
+            if(verbose) cat(sprintf("%5.3f", plugin.pvalue),"\n")
+            attr(lrt.boot, "plugin.pvalue") <- plugin.pvalue
         }
 
+        lrt.boot
     } # b
+
+    # this is from the boot function in package boot
+    RR <- sum(R)
+    res <- if (ncpus > 1L && (have_mc || have_snow)) {
+        if (have_mc) {
+            parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
+        } else if (have_snow) {
+            #list(...) # evaluate any promises
+            if (is.null(cl)) {
+                cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
+                if(RNGkind()[1L] == "L'Ecuyer-CMRG")
+                    parallel::clusterSetRNGStream(cl)
+                res <- parallel::parLapply(cl, seq_len(RR), fn)
+                parallel::stopCluster(cl)
+                res
+            } else parallel::parLapply(cl, seq_len(RR), fn)
+        }
+    } else lapply(seq_len(RR), fn)
+
+    # handle errors and fill in container
+    error.idx <- integer(0)
+    for(b in seq_len(RR)) {
+        if(!is.null(res[[b]])) {
+            LRT[b] <- res[[b]]
+            if(calibrate) 
+                plugin.pvalues[b] <- attr(res[[b]], "plugin.pvalue")
+        } else {
+            error.idx <- c(error.idx, b)
+        }
+    }
 
     # handle errors
     if(length(error.idx) > 0L) {
         warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
         LRT <- LRT[-error.idx]
+        if(calibrate) plugin.pvalues <- plugin.pvalues[-error.idx]
         attr(LRT, "error.idx") <- error.idx
     } else {
         if(verbose) cat("Number of successful bootstrap draws:", 
