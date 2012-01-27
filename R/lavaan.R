@@ -244,6 +244,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$User <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
+    # 2c. prepare constraints functions
+
     # 3. get sample statistics
     ov.names <- lapply(as.list(1:ngroups),
                        function(x) vnames(lavaanUser, type="ov", x))
@@ -351,7 +353,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 6. estimate free parameters
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
-        # catch some simple models
+        # catch simple linear regression models
         if(length(vnames(lavaanUser, "ov.y")) == 1L && 
            length(vnames(lavaanUser,   "lv")) == 0L &&
            #data.type == "full" && # and sampleStats???
@@ -363,6 +365,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.x.idx <- match(vnames(lavaanUser, "ov.x"), 
                               colnames(lavaanData[[1L]]))
             YX <- lavaanData[[1L]]
+            #print(head(YX))
             # constraints?
             if(sum(length(lavaanModel@x.ceq.idx) + 
                    length(lavaanModel@x.cin.idx)) == 0L) {
@@ -378,8 +381,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 x <- c(x.beta, y.rvar)
             } else {
                 require(quadprog)
-                A <- matrix( c( 0, -1, 1,  0,
-                                0, 0,  -1, 1), 4, 2)
+
+                A.ceq <- t(numDeriv:::jacobian(f=lavaanModel@ceq.function, 
+                                               x=rep(0,lavaanModel@nx.free)))
+                A.cin <- t(numDeriv:::jacobian(f=lavaanModel@cin.function, 
+                                               x=rep(0,lavaanModel@nx.free)))
+                A <- cbind(A.ceq, A.cin)
+                # meanstructure? last row is intercept
+                if(lavaanOptions$meanstructure) {
+                    A <- rbind(A[nrow(A),,drop=FALSE], A[-nrow(A),,drop=FALSE])
+                } else {
+                    A <- rbind(rep(0,ncol(A)), A)
+                }
+                # remove residual variance (last row)
+                A <- A[-nrow(A),,drop=FALSE]
+                #A <- matrix( c( 0, -1, 1,  0,
+                #                0, 0,  -1, 1), 4, 2)
                 X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
                 Y <- YX[,ov.y.idx]; X.Y <- crossprod(X, Y)
                 out <- solve.QP(Dmat=X.X, dvec=X.Y, Amat=A, 
@@ -402,7 +419,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 computeObjective(lavaanModel, sample = lavaanSampleStats,
                                  estimator = lavaanOptions$estimator)
         } else {
-            cat("REGULAR\n")
+            #cat("REGULAR\n")
             # regular estimation
             x <- estimateModel(lavaanModel,
                                sample  = lavaanSampleStats,

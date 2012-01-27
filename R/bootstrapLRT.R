@@ -4,7 +4,8 @@
 #                          - add calibration
 
 bootstrapLRT <- function(h0              = NULL,  # restricted model 
-                         h1              = NULL,  # unrestrited model
+                         h1              = NULL,  # unrestricted model
+                         mother.h0       = NULL,  # h0 for double bootstrap
                          R               = 1000, 
                          type            = "bollen.stine", 
                          verbose         = FALSE,
@@ -26,19 +27,22 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
     LRT <- rep(as.numeric(NA), R)
     LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
     if(calibrate) plugin.pvalues <- numeric(R)
+
+    # mother.h0
+    if(is.null(mother.h0)) mother.h0 <- h0
     
     # data
-    data <- h0@Data
+    data <- mother.h0@Data
 
     # bollen.stine or parametric: we need the Sigma.hat values
-    Sigma.hat <- computeSigmaHat(h0@Model)
-    Mu.hat    <- computeMuHat(   h0@Model) 
+    Sigma.hat <- computeSigmaHat(mother.h0@Model)
+    Mu.hat    <- computeMuHat(   mother.h0@Model) 
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
         for(g in 1:h0@Sample@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
+            sigma.sqrt <- sqrtSymmetricMatrix(            Sigma.hat[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(mother.h0@Sample@icov[[g]])
 
             # center (needed???)
             X <- scale(data[[g]], center=TRUE, scale=FALSE)
@@ -48,7 +52,8 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
 
             # add model-based mean
             if(h0@Model@meanstructure)
-                X <- scale(X, center=(-1*h0@Sample@mean[[g]]), scale=FALSE)
+                X <- scale(X, center=(-1*mother.h0@Sample@mean[[g]]), 
+                              scale=FALSE)
 
             # replace data slot
             data[[g]] <- X
@@ -62,6 +67,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
             # take a bootstrap h0@Sample for each group
             boot.idx <- vector("list", length=h0@Sample@ngroups)
             for(g in 1:h0@Sample@ngroups)
+                stopifnot(h0@Sample@nobs[[g]] > 1L)
                 boot.idx[[g]] <- sample(x=h0@Sample@nobs[[g]],
                                         size=h0@Sample@nobs[[g]], replace=TRUE)
         } else {
@@ -115,6 +121,15 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         #    }
         #}
 
+        # just in case we need the dataSlot (lm!)
+        if(type == "bollen.stine") {
+            data.boot <- data
+            for(g in 1:h0@Sample@ngroups) {
+                data.boot[[g]] <- data[[g]][ boot.idx[[g]],,drop=FALSE]
+            }
+        } else {
+            data.boot <- data
+        }
 
         # estimate model 1
         if(verbose) cat("  ... ... model h0: ")
@@ -122,9 +137,9 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         h0@Options$se <- "none"; h0@Options$test <- "standard"
         fit.h0 <- lavaan(slotOptions = h0@Options,
                          slotUser    = h0@User,
-                         slotModel   = h0@Model, # only if fixed.x=FALSE???
+                         #slotModel   = h0@Model, # only if fixed.x=FALSE???
                          slotSample  = bootSampleStats,
-                         slotData    = data)
+                         slotData    = data.boot)
         if(!fit.h0@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             error.idx <- c(error.idx, b)
@@ -141,7 +156,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                          slotUser    = h1@User,
                          #slotModel   = h1@Model, # only if fixed.x=FALSE???
                          slotSample  = bootSampleStats,
-                         slotData    = data)
+                         slotData    = data.boot)
         if(!fit.h1@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             error.idx <- c(error.idx, b)
@@ -158,12 +173,17 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         # calibration
         if(calibrate) {
             if(verbose) cat("  ... ... calibrating p.value - ");
+            
             plugin.pvalues[b] <- bootstrapLRT(h0=fit.h0, h1=fit.h1,
-                                                 R=calibrate.R,
-                                                 type=type, verbose=FALSE,
-                                                 calibrate=FALSE,
-                                                 return.LRT=FALSE)
+                                              #mother.h0=h0,
+                                              mother.h0=fit.h0,
+                                              R=calibrate.R,
+                                              type=type,
+                                              verbose=FALSE,
+                                              calibrate=FALSE,
+                                              return.LRT=FALSE)
             if(verbose) cat(sprintf("%5.3f", plugin.pvalues[b]),"\n")
+
         }
 
     } # b
@@ -178,7 +198,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                         (R - length(error.idx)), "\n")
     }
 
-    pvalue <- sum(LRT >= LRT.original)/length(LRT)
+    pvalue <- sum(LRT > LRT.original)/length(LRT)
     if(return.LRT) { 
         attr(pvalue, "LRT") <- LRT
         attr(pvalue, "LRT.original") <- LRT.original
