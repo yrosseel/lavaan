@@ -372,13 +372,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
                               y=YX[,ov.y.idx])
                 x.beta <- out$coefficients
+                y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
                     x.beta <- x.beta[-1L]
+                    x <- c(x.beta, y.rvar)
                 } else {
-                    x.beta <- c(x.beta[-1L], x.beta[1L])
+                    x <- c(x.beta[-1L], y.rvar, x.beta[1L])
                 }
-                y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
-                x <- c(x.beta, y.rvar)
             } else {
                 require(quadprog)
 
