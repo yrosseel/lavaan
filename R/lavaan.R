@@ -451,7 +451,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         VCOV <- estimateVCOV(lavaanModel,
                              sample  = lavaanSampleStats,
                              options = lavaanOptions,
-                             data    = lavaanData)
+                             data    = lavaanData,
+                             user    = lavaanUser,
+                             control = control)
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -465,7 +467,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      options = lavaanOptions,
                                      x       = x,
                                      VCOV    = VCOV,
-                                     data    = lavaanData)
+                                     data    = lavaanData,
+                                     control = control)
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

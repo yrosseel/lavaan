@@ -17,6 +17,8 @@
 # Question: if fixed.x=TRUE, should we not keep X fixed, and bootstrap Y
 #           only, conditional on X?? How to implement the conditional part?
 
+
+
 bootstrapLavaan <- function(object, 
                             R           = 1000L, 
                             type        = "ordinary",
@@ -35,6 +37,77 @@ bootstrapLavaan <- function(object,
                           "bollen.stine", "parametric"))
     if(type == "nonparametric") type <- "ordinary"
 
+    # check if options$se is not bootstrap, otherwise, we get an infinite loop
+    if(object@Options$se == "bootstrap") {
+        warning("lavaan WARNING: object@Options$se == \"bootstrap\"; will set this to \"none\"")
+        object@Options$se <- "none"
+    }
+    # check if options$test is not bollen.stine
+    if(object@Options$test == "bollen.stine") {
+        warning("lavaan WARNING: object@Options$test == \"bollen.stine\"; will set this to \"standard\"")
+        object@Options$test <- "standard"
+    }
+
+    bootstrap.internal(object = object,
+                       data        = NULL,
+                       model       = NULL,
+                       sample      = NULL,
+                       options     = NULL,
+                       user        = NULL,
+                       R           = R,
+                       type        = type,
+                       verbose     = verbose,
+                       FUN         = FUN,
+                       warn        = warn,
+                       return.boot = return.boot,
+                       parallel    = parallel,
+                       ncpus       = ncpus,
+                       cl          = cl,
+                       ...)
+}
+
+# we need an internal version to be called from VCOV and computeTestStatistic
+# when there is no lavaan object yet!
+bootstrap.internal <- function(object = NULL,
+                               data        = NULL,
+                               model       = NULL,
+                               sample      = NULL,
+                               options     = NULL,
+                               user        = NULL,
+                               R           = 1000L,
+                               type        = "ordinary",
+                               verbose     = FALSE,
+                               FUN         = "coef",
+                               warn        = 0L,
+                               return.boot = FALSE,
+                               parallel    = c("no", "multicore", "snow"),
+                               ncpus       = 1L,
+                               cl          = NULL,
+                               ...) {
+
+
+    # object slots
+    if(!is.null(object)) {
+        data <- object@Data; model <- object@Model; sample <- object@Sample
+        options <- object@Options; user <- object@User
+        FUN <- match.fun(FUN)
+        t0 <- FUN(object, ...)
+        t.star <- matrix(as.numeric(NA), R, length(t0))
+        colnames(t.star) <- names(t0)
+    } else {
+        # internal version!
+        options$se <- "none"; options$test <- "standard"
+        options$verbose <- FALSE
+        if(FUN == "coef") {
+            t.star <- matrix(as.numeric(NA), R, model@nx.free)
+            options$test <- "none"
+        } else if(FUN == "test") {
+            t.star <- matrix(as.numeric(NA), R, 1L)
+        } else if(FUN == "coeftest") {
+            t.star <- matrix(as.numeric(NA), R, model@nx.free + 1L)
+        }
+    }
+
     # prepare
     options(warn = warn)
     if (missing(parallel)) parallel <- "no"
@@ -48,22 +121,11 @@ bootstrapLavaan <- function(object,
 
     if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
     seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    FUN <- match.fun(FUN)
-    t0 <- FUN(object, ...)
-    t.star <- matrix(as.numeric(NA), R, length(t0))
-    colnames(t.star) <- names(t0)
-
-    # object slots
-    data <- object@Data; model <- object@Model; sample <- object@Sample
-    options <- object@Options
 
     # bollen.stine or parametric: we need the Sigma.hat values
     if(type == "bollen.stine" || type == "parametric") {
         Sigma.hat <- computeSigmaHat(model)
         Mu.hat <- computeMuHat(model)
-    } else {
-        Sigma.hat <- NULL
-        Mu.hat <- NULL
     }
 
     # if bollen.stine, transform data here
@@ -147,12 +209,12 @@ bootstrapLavaan <- function(object,
         # adjust model slot if fixed.x variances/covariances
         # have changed:
       ### FIXME #####
-        #if(model@fixed.x && length(vnames(object@User, "ov.x")) > 0L) {
+        #if(model@fixed.x && length(vnames(user, "ov.x")) > 0L) {
         #    for(g in 1:sample@ngroups) {
         #        
         #    }
         #}
-        if(model@fixed.x && length(vnames(object@User, "ov.x")) > 0L) {
+        if(model@fixed.x && length(vnames(user, "ov.x")) > 0L) {
             model.boot <- NULL
         } else {
             model.boot <- model
@@ -160,7 +222,7 @@ bootstrapLavaan <- function(object,
 
         # fit model on bootstrap sample
         fit.boot <- lavaan(slotOptions = options,
-                           slotUser    = object@User,
+                           slotUser    = user,
                            slotModel   = model.boot,
                            slotSample  = bootSampleStats,
                            slotData    = data.boot)
@@ -170,8 +232,17 @@ bootstrapLavaan <- function(object,
         } 
         
         # extract information we need
-        out <- try(FUN(fit.boot, ...))
-        #out <- coef(fit.boot)
+        if(is.null(object)) { # internal use only!
+            if(FUN == "coef") {
+                out <- fit.boot@Fit@x
+            } else if(FUN == "test") { 
+                out <- fit.boot@Fit@test[[1L]]$stat
+            } else if(FUN == "coeftest") { 
+                out <- c(fit.boot@Fit@x, fit.boot@Fit@test[[1L]]$stat)
+            } 
+        } else { # general use
+            out <- try(FUN(fit.boot, ...))
+        }
         if(inherits(out, "try-error")) {
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")
             return(NULL)
@@ -228,5 +299,8 @@ bootstrapLavaan <- function(object,
 
     t.star
 }
+
+
+
 
 

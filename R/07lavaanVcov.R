@@ -38,7 +38,8 @@ Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML",
     NVarCov
 }
 
-Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
+Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
+                            user=NULL, control=list()) {
 
     # number of bootstrap draws
     if(!is.null(options$bootstrap)) {
@@ -47,23 +48,27 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL) {
         R <- 1000L
     }
   
-    # verbose or not
-    if(options$verbose) {
-        verbose <- TRUE
-    } else {
-        verbose <- FALSE
-    }
- 
     boot.type <- "ordinary"
     if(options$test == "bollen.stine") boot.type <- "bollen.stine"
-    out <- bootstrap.internal(model=object, sample=sample,
-                              options=options, data=data,
-                              R=R, verbose=verbose,
-                              type=boot.type,
-                              coef=TRUE, 
-                              test=(options$test == "bollen.stine"))
-    COEF <- out$coef; TEST <- out$test
-    
+
+    TEST <- NULL
+    COEF <- bootstrap.internal(object=NULL,
+                               model=object, sample=sample, user=user,
+                               options=options, data=data,
+                               R=R, verbose=options$verbose,
+                               type=boot.type,
+                               FUN <- ifelse(boot.type == "bollen.stine",
+                                             "coeftest", "coef"),
+                               warn=-1L,
+                               parallel=control$parallel,
+                               ncpus=control$ncpus,
+                               cl=control$cl)
+    if(boot.type == "bollen.stine") {
+        nc <- ncol(COEF)
+        TEST <- COEF[,nc]
+        COEF <- COEF[,-nc]
+    }
+
     # FIXME: cov rescale? Yes for now
     nboot <- nrow(COEF)
     NVarCov <- sample@ntotal * (cov(COEF) * (nboot-1)/nboot )
@@ -232,7 +237,8 @@ Nvcov.robust.mlr <- function(object, sample=NULL, data=NULL,
 }
            
 
-estimateVCOV <- function(object, sample, options=NULL, data=NULL) {
+estimateVCOV <- function(object, sample, options=NULL, data=NULL, 
+                         user=NULL, control=list()) {
 
     estimator   <- options$estimator
     likelihood  <- options$likelihood
@@ -281,7 +287,9 @@ estimateVCOV <- function(object, sample, options=NULL, data=NULL) {
         NVarCov <- try( Nvcov.bootstrap(object      = object,
                                         sample      = sample,
                                         options     = options,
-                                        data        = data) )
+                                        data        = data,
+                                        user        = user,
+                                        control     = control) )
     }
 
     if(! inherits(NVarCov, "try-error") ) {

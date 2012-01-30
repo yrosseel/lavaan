@@ -143,7 +143,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
 
 computeTestStatistic <- function(object, user=NULL, sample=NULL, 
                                  options=NULL, x=NULL, VCOV=NULL,
-                                 data=NULL) {
+                                 data=NULL, control=list()) {
 
     estimator   <- options$estimator
     mimic       <- options$mimic
@@ -416,15 +416,19 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             } else {
                 R <- 1000L
             }
-            boot.type <- "ordinary"
-            if(test == "bollen.stine") boot.type <- "bollen.stine"
-            out <- bootstrap.internal(model=object, sample=sample,
-                                      options=options, data=data, R=R, 
-                                      verbose=options$verbose,
-                                      type=boot.type,
-                                      coef=FALSE,
-                                      test=TRUE)
-            BOOT.TEST <- out$test
+            boot.type <- "bollen.stine"
+            BOOT.TEST <- 
+                bootstrap.internal(object=NULL,
+                                   model=object, sample=sample, user=user,
+                                   options=options, data=data,
+                                   R=R, verbose=options$verbose,
+                                   type=boot.type,
+                                   FUN <- "test",
+                                   warn=-1L,
+                                   parallel=control$parallel,
+                                   ncpus=control$ncpus,
+                                   cl=control$cl)
+            BOOT.TEST <- drop(BOOT.TEST)
         }
 
         # bootstrap p-value
