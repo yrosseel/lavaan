@@ -330,7 +330,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
 
         NAMES <- object@User$rhs
 
-        # 1. indicators ("=~") (we do show dummy indicators)
+        # 1a. indicators ("=~") (we do show dummy indicators)
         mm.idx <- which( object@User$op == "=~" & 
                         !object@User$lhs %in% ov.names &
                          object@User$group == g)
@@ -342,6 +342,23 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             for(i in mm.idx) {
                 lhs <- object@User$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " =~\n", sep="")
+                print.estimate(name=NAMES[i], i)
+                lhs.old <- lhs
+            }
+            cat("\n")
+        }
+
+        # 1b. formative/composites ("<~")
+        fm.idx <- which( object@User$op == "<~" &
+                         object@User$group == g)
+        if(length(fm.idx)) {
+            cat("Composites:\n")
+            lhs.old <- ""
+            NAMES[fm.idx] <- makeNames(  object@User$rhs[fm.idx],
+                                       object@User$label[fm.idx])
+            for(i in fm.idx) {
+                lhs <- object@User$lhs[i]
+                if(lhs != lhs.old) cat("  ", lhs, " <~\n", sep="")
                 print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
             }
