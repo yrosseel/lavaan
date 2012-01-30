@@ -61,14 +61,19 @@ Objects can be created via the
     \item{fitted}{\code{signature(object = "lavaan")}: an alias for
         \code{fitted.values}.}
     \item{residuals}{\code{signature(object = "lavaan", type="raw")}: 
-      If \code{type="raw"}, this function returns the 
-      raw (=unstandardized) difference between the implied moments and the 
-      observed moments as a list of two elements: \code{cov} for the residual
-      covariance matrix, and \code{mean} for the residual mean vector.
-      If only the covariance matrix was analyzed, the residual mean vector
-      will be zero. If \code{type="normalized"}, the residuals are
+      If \code{type="raw"}, this function returns the raw (=unstandardized)
+      difference between the implied moments and the observed moments as 
+      a list of two elements: \code{cov} for the residual covariance matrix, 
+      and \code{mean} for the residual mean vector. 
+      If only the covariance matrix was analyzed, the residual mean vector 
+      will be zero. 
+      If code{type="cor"}, the observed and model implied covariance matrix 
+      is first transformed to a correlation matrix (using \code{cov2cor}), 
+      before the residuals are computed.
+      If \code{type="normalized"}, the residuals are
       normalized. If \code{type="standardized"}, the residuals are
-      standardized.}
+      standardized. In the latter case, the residuals have a metric similar
+      to z-values.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
     \item{vcov}{\code{signature(object = "lavaan")}: returns the

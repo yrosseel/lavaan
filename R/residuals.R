@@ -87,12 +87,15 @@ function(object, type="raw", labels=TRUE) {
         nvar <- ncol(S)
 
         # raw residuals (for this group
-        R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]
+        if(type == "cor") {
+            R[[g]]$cov  <- cov2cor(S) - cov2cor(object@Fit@Sigma.hat[[g]])
+        } else {
+            R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]
+        }
         R[[g]]$mean <- M - object@Fit@Mu.hat[[g]]
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
-
 
         if(type == "normalized" || type == "standardized") {
          
@@ -170,6 +173,12 @@ function(object, type="raw", labels=TRUE) {
         class(R[[g]]$mean) <- c("lavaan.vector", "numeric")
         class(R[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
     }
+
+    # replace 'cov' by 'cor' if type == "cor"
+    if(type == "cor") {
+        R <- lapply(R, "names<-", c("cor", "mean") )
+    }
+
 
     if(G == 1) {
         R <- R[[1]]
