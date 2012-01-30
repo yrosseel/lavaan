@@ -354,7 +354,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         # catch simple linear regression models
-        if(length(vnames(lavaanUser, "ov.y")) == 1L && 
+        if(length(unique(lavaanUser$lhs[lavaanUser$op == "~"])) == 1L && 
            length(vnames(lavaanUser,   "lv")) == 0L &&
            #data.type == "full" && # and sampleStats???
            ngroups == 1L &&

@@ -42,8 +42,6 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
 
     if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
     seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    if(!is.null(seed)) set.seed(seed)
-
     
     # data
     data <- h0@Data

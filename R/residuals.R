@@ -3,7 +3,8 @@ setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {
  
     # check estimator
-    if(type != "raw" && object@Options$estimator != "ML") {
+    if(type %in% c("normalized", "standardized") && 
+       object@Options$estimator != "ML") {
         stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
     }
     # NOTE: for some reason, Mplus does not compute the normalized/standardized
@@ -11,8 +12,8 @@ function(object, type="raw", labels=TRUE) {
  
 
     # check type
-    if(!type %in% c("raw", "normalized", "standardized")) {
-        stop("type must be one of \"raw\", \"normalized\" or \"standardized\"")
+    if(!type %in% c("raw", "cor", "normalized", "standardized")) {
+        stop("type must be one of \"raw\", \"cor\", \"normalized\" or \"standardized\"")
     }
 
     # check for 0 parameters if type == standardized

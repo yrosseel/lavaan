@@ -48,7 +48,6 @@ bootstrapLavaan <- function(object,
 
     if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
     seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    if(!is.null(seed)) set.seed(seed)
     FUN <- match.fun(FUN)
     t0 <- FUN(object, ...)
     t.star <- matrix(as.numeric(NA), R, length(t0))
