@@ -8,8 +8,9 @@ simulateData(model = NULL, model.type = "sem", meanstructure = "default",
              orthogonal = FALSE, std.lv = FALSE, auto.fix.first = !std.lv, 
              auto.fix.single = TRUE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
              auto.cov.y = TRUE, ..., sample.nobs = 500L, 
-             group.label = paste("G", 1:ngroups, sep = ""), 
-             seed = NULL, empirical = FALSE, return.type = "data.frame")
+             group.label = paste("G", 1:ngroups, sep = ""),
+             skewness = NULL, kurtosis = NULL, seed = NULL, 
+             empirical = FALSE, return.type = "data.frame")
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -62,6 +63,8 @@ simulateData(model = NULL, model.type = "sem", meanstructure = "default",
     a \code{group} variable is added to mimic a multiple group dataset.}
   \item{group.label}{The group labels that should be used if multiple
     groups are created.}
+  \item{skewness}{Numeric vector. The skewness values for the observed variables. Defaults to zero.}
+  \item{kurtosis}{Numeric vector. The kurtosis values for the observed variables. Defaults to zero.}
   \item{seed}{Set random seed.}
   \item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
     specify the empirical not population mean and covariance matrix.}
@@ -73,7 +76,9 @@ simulateData(model = NULL, model.type = "sem", meanstructure = "default",
 \details{Model parameters can be specified by fixed values in the lavaan
 model syntax. If no fixed values are specified, the value zero will be 
 assumed, except for factor loadings and variances, which are set to unity 
-by default. Currently, only multivariate normal data can be generated.}
+by default. By default, multivariate normal data are generated. However,
+by providing skewness and/or kurtosis values, nonnormal multivariate data
+can be generated, using the Vale & Maurelli (1983) method.}
 \value{The generated data. Either as a data.frame 
 (if \code{return.type="data.frame"}, 
 a numeric matrix (if \code{return.type="matrix"},

@@ -221,7 +221,8 @@ figures <- function(lrt.A = 1L,
 }
 
 
-print.InformativeTesting <- function(object) {
+print.InformativeTesting <- function(x, ...) {
+ object <- x
  cat("\n")
  cat("  Order Constrained Hypothesis Testing:\n\n\n")
   if(object$calibrate){
@@ -297,7 +298,7 @@ print.InformativeTesting <- function(object) {
   #cat("\n\n")
 }
 
-summary.InformativeTesting <- function(object){
+summary.InformativeTesting <- function(object, ...){
      cat("\n")
      cat("  Variable names in model       :", unlist(object$fitA1@Sample@ov.names), "\n")
      cat("  Number of variables           :", object$fitA1@Model@nvar, "\n")

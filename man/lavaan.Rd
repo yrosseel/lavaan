@@ -14,7 +14,8 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     constraints = '', estimator = "default", likelihood = "default", 
     information = "default", se = "default",  test = "default", 
     bootstrap = 1000L, mimic = "default", representation = "default", 
-    do.fit = TRUE, control = list(), start = "default",
+    do.fit = TRUE, control = list(), start = "default", slotOptions = NULL, 
+    slotUser = NULL, slotSample = NULL, slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -175,6 +176,16 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     for example the output of the \code{paramaterEstimates()} function, 
     the values of the \code{est} or \code{start} or \code{ustart} column 
     (whichever is found first) will be extracted.}
+\item{slotOptions}{Options slot from a fitted lavaan object. If provided,
+no new Options slot will be created by this call.}
+\item{slotUser}{User slot from a fitted lavaan object. If provided,
+no new User slot will be created by this call.}
+\item{slotSample}{Sample slot from a fitted lavaan object. If provided,
+no new Sample slot will be created by this call.}
+\item{slotData}{Data slot from a fitted lavaan object. If provided,
+no new Data slot will be created by this call.}
+\item{slotModel}{Model slot from a fitted lavaan object. If provided,
+no new Model slot will be created by this call.}
 \item{verbose}{If \code{TRUE}, the function value is printed out during
     each iteration.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed

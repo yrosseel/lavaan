@@ -2,6 +2,6 @@
 # plot commands
 
 # suggested by JEB
-pairs.lavaan <- function(x=object, group=1L, ...) {
+pairs.lavaan <- function(x, group=1L, ...) {
         pairs(x@Data[[group]])
 }

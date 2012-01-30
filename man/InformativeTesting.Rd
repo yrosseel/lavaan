@@ -7,7 +7,7 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
                    type = "bollen.stine", return.LRT = TRUE, calibrate = FALSE, 
                    calibrate.R = 500L, calibrate.alpha = 0.05, 
                    parallel = c("no", "multicore", "snow"), ncpus = 1L, 
-                   cl = NULL, verbose = FALSE, stoptest = 0.10, 
+                   cl = NULL, verbose = FALSE, stoptest = 1.0, 
                    conclusion = FALSE, ...)
 }
 \arguments{
@@ -40,8 +40,6 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
 \item{stoptest}{The procedure stops when the plug-in p-value for Type A is 
     larger than the pre-specified value. The default value is set to 1.}
 \item{conclusion}{If \code{TRUE}, a conclusion in words is printed.}
-\item{figures}{If \code{TRUE}, the function plots the (double) bootstrapped 
-    values.} 
 \item{...}{Other named arguments from the lavaan package which are passed to 
     the function. For example \code{group} for a multiple group model.}
 }
