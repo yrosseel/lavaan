@@ -1234,5 +1234,3 @@ function(object, ...) {
 
 })
 
-
-

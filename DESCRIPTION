@@ -8,7 +8,7 @@ Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
              and latent growth curve models.
 Depends: methods, R(>= 2.10.1)
-Imports: stats4, stats
+Imports: stats4, stats, graphics
 Suggests: psych, qgraph, quadprog, boot
 License: GPL (>=2)
 LazyData: yes
