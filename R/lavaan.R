@@ -379,7 +379,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 } else {
                     x <- c(x.beta[-1L], y.rvar, x.beta[1L])
                 }
-            } else {
+                lavaanModel <- setModelParameters(lavaanModel, x = x)
+                attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
+                attr(x, "control") <- control
+                attr(x, "fx") <-
+                computeObjective(lavaanModel, sample = lavaanSampleStats,
+                                 estimator = lavaanOptions$estimator)
+            } else if(checkLinearConstraints(lavaanModel) == TRUE) {
                 require(quadprog)
 
                 A.ceq <- t(jacobian(f=lavaanModel@ceq.function, 
@@ -411,13 +417,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     x.beta <- c(x.beta[-1L], x.beta[1L])
                 }
                 x <- c(x.beta, y.rvar)
+                lavaanModel <- setModelParameters(lavaanModel, x = x)
+                attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
+                attr(x, "control") <- control
+                attr(x, "fx") <-
+                    computeObjective(lavaanModel, sample = lavaanSampleStats,
+                                     estimator = lavaanOptions$estimator)
+            } else {
+                # regular estimation after all
+                x <- estimateModel(lavaanModel,
+                               sample  = lavaanSampleStats,
+                               options = lavaanOptions,
+                               control = control)
+                lavaanModel <- setModelParameters(lavaanModel, x = x)
             }
-            lavaanModel <- setModelParameters(lavaanModel, x = x)
-            attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
-            attr(x, "control") <- control
-            attr(x, "fx") <-
-                computeObjective(lavaanModel, sample = lavaanSampleStats,
-                                 estimator = lavaanOptions$estimator)
         } else {
             #cat("REGULAR\n")
             # regular estimation
