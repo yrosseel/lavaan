@@ -200,7 +200,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     # global test statistic
     chisq <- sum(chisq.group)
 
-    # pvalue
+    # pvalue  ### FIXME: what if df=0? NA? or 1? or 0?
     pvalue <- 1 - pchisq(chisq, df)
 
     TEST[[1]] <- list(test="standard",

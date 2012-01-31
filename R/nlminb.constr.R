@@ -55,7 +55,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
     # control outer default values
     control.outer.default <- list(mu0     = 100,
                                   lambda0 = 10,
-                                  tol     = 1e-07,
+                                  tol     = 1e-06, # changed this in 0.4-12
                                   itmax   = 100L,
                                   verbose = FALSE)
     control.outer <- modifyList(control.outer.default, control.outer)
