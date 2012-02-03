@@ -388,9 +388,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
                 require(quadprog)
 
-                A.ceq <- t(jacobian(f=lavaanModel@ceq.function, 
+                A.ceq <- t(jacobian(func=lavaanModel@ceq.function, 
                                     x=rep(0,lavaanModel@nx.free)))
-                A.cin <- t(jacobian(f=lavaanModel@cin.function, 
+                A.cin <- t(jacobian(func=lavaanModel@cin.function, 
                                     x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
                 # meanstructure? last row is intercept

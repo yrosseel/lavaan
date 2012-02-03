@@ -7,7 +7,7 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
                    type = "bollen.stine", return.LRT = TRUE, calibrate = FALSE, 
                    calibrate.R = 500L, calibrate.alpha = 0.05, 
                    parallel = c("no", "multicore", "snow"), ncpus = 1L, 
-                   cl = NULL, verbose = FALSE, stoptest = 1.0, 
+                   cl = NULL, verbose = FALSE, stoptest = NULL, 
                    conclusion = FALSE, ...)
 }
 \arguments{
@@ -16,39 +16,39 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
 \item{data}{The data frame containing the observed variables being used to 
     fit the model.}
 \item{constraints}{The imposed inequality constraints on the model.}
-\item{R}{Number of bootstrap draws. Default value is set to 1000.}
+\item{R}{Integer; number of bootstrap draws. Default value is set to 1000.}
 \item{type}{If \code{"parametric"}, the parametric bootstrap is used. 
     If \code{"bollen.stine"}, the semi-nonparametric Bollen-Stine boostrap 
-    is used. The default is set \code{"bollen.stine"}.}
-\item{return.LRT}{If \code{TRUE}, the function returns bootstrapped LRT-values 
-    from the observed data.}
-\item{calibrate}{If \code{TRUE}, a double bootstrap is performed for adjusting 
-    the alpha level.}
-\item{calibrate.R}{Number of double bootstrap draws. Only used if 
+    is used. The default value is set to \code{"bollen.stine"}.}
+\item{return.LRT}{Logical; if \code{TRUE}, the function returns bootstrapped         
+    LRT-values.}
+\item{calibrate}{Logical; if \code{TRUE}, a double bootstrap is used to compute 
+    an additional set of plug-in p-values for each boostrap sample.}
+\item{calibrate.R}{Integer; number of double bootstrap draws. Only used if 
     \code{calibrate=TRUE}. The default value is set to 500.}
-\item{calibrate.alpha}{Sets the x'th quantile of generated plug-in p-value. 
-    Default is the 5th quantile (0.05). Only used if \code{calibrate=TRUE}}
-\item{parallel}{The type of parallel operation to be used (if any). If missing,
-    the default is set \code{"no"}. The value \code{"multicore"} is for 
-    Linux/Mac systems and the value \code{"snow"} for Windows systems. 
-    If the value is \code{"snow"} the snow package needs to be installed.}
-\item{ncpus}{The number of CPU's. Normally one chose this to the number of 
-    available CPU's - 1'. The default value is set to 1.} 
-\item{cl}{cluster object. For more information see the manual page of the 
-    snow package.}
-\item{verbose}{If \code{TRUE}, information is shown at each bootstrap draw.}
-\item{stoptest}{The procedure stops when the plug-in p-value for Type A is 
-    larger than the pre-specified value. The default value is set to 1.}
-\item{conclusion}{If \code{TRUE}, a conclusion in words is printed.}
+\item{calibrate.alpha}{The significance level to compute the adjusted alpha 
+    based on the plugin p-values. Only used if \code{calibrate=TRUE}}
+\item{parallel}{The type of parallel operation to be used (if any). If missing, 
+    the default is "no".}
+\item{ncpus}{Integer: number of processes to be used in parallel operation: 
+    typically one would chose this to the number of available CPUs.} 
+\item{cl}{An optional parallel or snow cluster for use if 
+    \code{parallel = "snow"}. If not supplied, a cluster on the local machine 
+    is created for the duration of the \code{InformativeTesting} call.}
+\item{verbose}{Logical; if \code{TRUE}, information is shown at each bootstrap         
+    draw.}
+\item{stoptest}{The \code{InformativeTesting()} stops when the plug-in p-value 
+    for the null-hypothesis for Type A is larger than the pre-specified value.}
+\item{conclusion}{Logical; if \code{TRUE}, a conclusion in words is printed.}
 \item{...}{Other named arguments from the lavaan package which are passed to 
-    the function. For example \code{group} for a multiple group model.}
+    the function. For example \code{"group"} for a multiple group model.}
 }
 %\details{}
-\value{An object of class InformativeTesting for which a summary method is 
-available.}   
+\value{An object of class InformativeTesting for which a summary and a plot 
+method is available.}   
 %\seealso{}
 \examples{
-# Multiple regression 
+#Multiple regression 
 
 model  <- '
           y1 ~ b1*x1 + b2*x2 + b3*x3 +
@@ -68,11 +68,12 @@ constraints  <-'
 
 example <- InformativeTesting(model = model, data = PoliticalDemocracy, 
                               constraints = constraints, R = 5, 
-                              type = "bollen.stine", return.LRT = FALSE, 
+                              type = "bollen.stine",
                               calibrate = TRUE, calibrate.R = 2,                       
                               calibrate.alpha = 0.05)
 example
 summary(example)
+#plot(example)
 }
 
 \references{
