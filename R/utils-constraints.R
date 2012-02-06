@@ -11,7 +11,8 @@ checkLinearConstraints <- function(model) {
      A.cin <- t(jacobian(func=model@cin.function, x=rep(1,model@nx.free)))
      A1 <- cbind(A.ceq, A.cin)
 
-     if(sum(A0 - A1) == 0)
+     A0minA1 <- all.equal(A0,A1)
+     if(is.logical(A0minA1) && A0minA1 == TRUE) 
          return(TRUE)
      else
          return(FALSE)

@@ -53,7 +53,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
         for(g in 1:h0@Sample@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(            Sigma.hat[[g]])
+            sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
             S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
 
             # center (needed???)
@@ -77,10 +77,11 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         if(type == "bollen.stine") {
             # take a bootstrap h0@Sample for each group
             boot.idx <- vector("list", length=h0@Sample@ngroups)
-            for(g in 1:h0@Sample@ngroups)
+            for(g in 1:h0@Sample@ngroups) {
                 stopifnot(h0@Sample@nobs[[g]] > 1L)
                 boot.idx[[g]] <- sample(x=h0@Sample@nobs[[g]],
                                         size=h0@Sample@nobs[[g]], replace=TRUE)
+            }
         } else {
             # parametric!
             boot.idx <- NULL
@@ -90,8 +91,10 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                                           Sigma = Sigma.hat[[g]])
             }
         }
-        colnames(data[[g]]) <- h0@Sample@ov.names[[g]]
-
+        # names
+        for(g in 1:h0@Sample@ngroups) 
+            colnames(data[[g]]) <- h0@Sample@ov.names[[g]]
+ 
         # verbose
         if(verbose) cat("  ... bootstrap draw number: ", b, "\n")
 

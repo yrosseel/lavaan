@@ -154,9 +154,11 @@ bootstrap.internal <- function(object = NULL,
         if(type == "bollen.stine" || type == "ordinary") {
             # take a bootstrap sample for each group
             boot.idx <- vector("list", length=sample@ngroups)
-            for(g in 1:sample@ngroups)
+            for(g in 1:sample@ngroups) {
+                stopifnot(h0@Sample@nobs[[g]] > 1L)
                 boot.idx[[g]] <- sample(x=sample@nobs[[g]],
                                         size=sample@nobs[[g]], replace=TRUE)
+            }
         } else { # parametric!
             boot.idx <- NULL
             for(g in 1:sample@ngroups) {
@@ -165,7 +167,9 @@ bootstrap.internal <- function(object = NULL,
                                               mu    = Mu.hat[[g]])
             }
         }
-        colnames(data[[g]]) <- sample@ov.names[[g]]
+        # names
+        for(g in 1:h0@Sample@ngroups) 
+            colnames(data[[g]]) <- sample@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
