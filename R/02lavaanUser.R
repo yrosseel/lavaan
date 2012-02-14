@@ -467,6 +467,10 @@ flatten.model.syntax <- function(model.syntax='', warn=TRUE, debug=FALSE) {
         lhs.formula <- as.formula(paste("~",lhs))
         out <- parse.rhs(rhs=lhs.formula[[2L]])
         lhs.names <- names(out)
+        # check if we have modifiers
+        if(sum(sapply(out, length)) > 0L) {
+            warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
+        }
 
         # 4. parse rhs (as rhs of a single-sided formula)
         rhs.formula <- as.formula(paste("~",rhs))
