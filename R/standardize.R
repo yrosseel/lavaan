@@ -58,12 +58,14 @@ standardize.est.lv <- function(object, user=NULL, est=NULL,
         #                             & user$rhs %in% lv.names &
         #             user$group == g)
 
-        # 2. "~" regressions
-        idx <- which(user$op == "~" & user$lhs %in% lv.names &
+        # 2. "~" regressions (and "<~")
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$lhs %in% lv.names &
                      user$group == g)
         out[idx] <- out[idx] / ETA[ match(user$lhs[idx], lv.names) ] 
 
-        idx <- which(user$op == "~" & user$rhs %in% lv.names &
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$rhs %in% lv.names &
                      user$group == g)
         out[idx] <- out[idx] * ETA[ match(user$rhs[idx], lv.names) ]
 
@@ -172,12 +174,14 @@ standardize.est.all <- function(object, user=NULL, est=NULL, est.std=NULL,
         #                             & user$rhs %in% lv.names &
         #             user$group == g)
 
-        # 2. "~" regressions
-        idx <- which(user$op == "~" & user$lhs %in% ov.names &
+        # 2. "~" regressions (and "<~")
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$lhs %in% ov.names &
                      user$group == g)
         out[idx] <- out[idx] / OV[ match(user$lhs[idx], ov.names) ]
 
-        idx <- which(user$op == "~" & user$rhs %in% ov.names &
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$rhs %in% ov.names &
                      user$group == g)
         out[idx] <- out[idx] * OV[ match(user$rhs[idx], ov.names) ]
 
@@ -289,12 +293,14 @@ standardize.est.all.nox <- function(object, user=NULL, est=NULL, est.std=NULL,
         #                             & user$rhs %in% lv.names &
         #             user$group == g)
 
-        # 2. "~" regressions
-        idx <- which(user$op == "~" & user$lhs %in% ov.names &
+        # 2. "~" regressions (and "<~")
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$lhs %in% ov.names &
                      user$group == g)
         out[idx] <- out[idx] / OV[ match(user$lhs[idx], ov.names) ]
 
-        idx <- which(user$op == "~" & user$rhs %in% ov.names.nox &
+        idx <- which((user$op == "~" | user$op == "<~") & 
+                     user$rhs %in% ov.names.nox &
                      user$group == g)
         out[idx] <- out[idx] * OV[ match(user$rhs[idx], ov.names.nox) ]
 
