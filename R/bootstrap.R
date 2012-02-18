@@ -155,7 +155,7 @@ bootstrap.internal <- function(object = NULL,
             # take a bootstrap sample for each group
             boot.idx <- vector("list", length=sample@ngroups)
             for(g in 1:sample@ngroups) {
-                stopifnot(h0@Sample@nobs[[g]] > 1L)
+                stopifnot(sample@nobs[[g]] > 1L)
                 boot.idx[[g]] <- sample(x=sample@nobs[[g]],
                                         size=sample@nobs[[g]], replace=TRUE)
             }
@@ -168,7 +168,7 @@ bootstrap.internal <- function(object = NULL,
             }
         }
         # names
-        for(g in 1:h0@Sample@ngroups) 
+        for(g in 1:sample@ngroups) 
             colnames(data[[g]]) <- sample@ov.names[[g]]
 
         # verbose
