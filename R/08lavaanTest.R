@@ -266,7 +266,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
         if(is.null(Gamma)) {
             Gamma <- vector("list", length=sample@ngroups)
             for(g in 1:sample@ngroups) {
-                Gamma[[g]] <- compute.Gamma(data[[g]], meanstructure=TRUE)
+                Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
             }
         }
         
@@ -365,7 +365,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                     X <- NULL
                     M <- sample@missing[[g]]
                 } else {
-                    X <- data[[g]]
+                    X <- data@X[[g]]
                     M <- NULL
                 }
                 out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat[[g]], 

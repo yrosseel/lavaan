@@ -111,6 +111,7 @@ bootstrap.internal <- function(object = NULL,
     # prepare
     options(warn = warn)
     if (missing(parallel)) parallel <- "no"
+    # the next 10 lines are borrowed from the boot package
     parallel <- match.arg(parallel)
     have_mc <- have_snow <- FALSE
     if (parallel != "no" && ncpus > 1L) {
@@ -135,7 +136,7 @@ bootstrap.internal <- function(object = NULL,
             S.inv.sqrt <- sqrtSymmetricMatrix(sample@icov[[g]])
 
             # center (needed???)
-            X <- scale(data[[g]], center=TRUE, scale=FALSE)
+            X <- scale(data@X[[g]], center=TRUE, scale=FALSE)
 
             # transform
             X <- X %*% S.inv.sqrt %*% sigma.sqrt
@@ -145,7 +146,7 @@ bootstrap.internal <- function(object = NULL,
                 X <- scale(X, center=(-1*sample@mean[[g]]), scale=FALSE)
 
             # replace data slot
-            data[[g]] <- X
+            data@X[[g]] <- X
         }
     }
 
@@ -162,25 +163,25 @@ bootstrap.internal <- function(object = NULL,
         } else { # parametric!
             boot.idx <- NULL
             for(g in 1:sample@ngroups) {
-                    data[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
-                                              Sigma = Sigma.hat[[g]],
-                                              mu    = Mu.hat[[g]])
+                    data@X[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
+                                                Sigma = Sigma.hat[[g]],
+                                                mu    = Mu.hat[[g]])
             }
         }
         # names
         for(g in 1:sample@ngroups) 
-            colnames(data[[g]]) <- sample@ov.names[[g]]
+            colnames(data@X[[g]]) <- sample@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
-        Missing <-  getMissingPatterns(X       = data,
+        Missing <-  getMissingPatterns(Data    = data,
                                        missing = options$missing,
                                        warn    = FALSE,
                                        verbose = FALSE)
         WLS.V <- list()
         if(options$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(X             = data,
+            WLS.V <- getWLS.V(Data          = data,
                               sample        = NULL,
                               boot.idx      = boot.idx,
                               estimator     = options$estimator,
@@ -188,7 +189,7 @@ bootstrap.internal <- function(object = NULL,
                               meanstructure = options$meanstructure)
         }
         bootSampleStats <- try(getSampleStatsFromData(
-                               X           = data,
+                               Data        = data,
                                M           = Missing,
                                boot.idx    = boot.idx,
                                rescale     = (options$estimator == "ML" &&
@@ -204,7 +205,7 @@ bootstrap.internal <- function(object = NULL,
         if(type == "bollen.stine") {
             data.boot <- data
             for(g in 1:sample@ngroups) {
-                data.boot[[g]] <- data[[g]][ boot.idx[[g]],,drop=FALSE]
+                data.boot@X[[g]] <- data@X[[g]][ boot.idx[[g]],,drop=FALSE]
             }
         } else {
             data.boot <- data

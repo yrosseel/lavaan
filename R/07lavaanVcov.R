@@ -138,7 +138,7 @@ Nvcov.robust.mlm <- function(object, sample=NULL, data=NULL) {
     # compute Gamma matrix (per group)
     Gamma <- vector("list", length=sample@ngroups)
     for(g in 1:sample@ngroups) {
-        Gamma[[g]] <- compute.Gamma(data[[g]], meanstructure=TRUE)
+        Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
@@ -173,7 +173,7 @@ Nvcov.robust.mlm.mplus <- function(object, sample=NULL, data=NULL) {
     # compute Gamma matrix (per group)
     Gamma <- vector("list", length=sample@ngroups)
     for(g in 1:sample@ngroups) {
-        Gamma[[g]] <- compute.Gamma(data[[g]], meanstructure=TRUE)
+        Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))

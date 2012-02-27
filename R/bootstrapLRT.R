@@ -57,7 +57,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
             S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
 
             # center (needed???)
-            X <- scale(data[[g]], center=TRUE, scale=FALSE)
+            X <- scale(data@X[[g]], center=TRUE, scale=FALSE)
 
             # transform
             X <- X %*% S.inv.sqrt %*% sigma.sqrt
@@ -68,7 +68,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                               scale=FALSE)
 
             # replace data slot
-            data[[g]] <- X
+            data@X[[g]] <- X
         }
     }
 
@@ -86,26 +86,26 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
             # parametric!
             boot.idx <- NULL
             for(g in 1:h0@Sample@ngroups) {
-                data[[g]] <- MASS.mvrnorm(n     = h0@Sample@nobs[[g]],
-                                          mu    = Mu.hat[[g]],
-                                          Sigma = Sigma.hat[[g]])
+                data@X[[g]] <- MASS.mvrnorm(n     = h0@Sample@nobs[[g]],
+                                            mu    = Mu.hat[[g]],
+                                            Sigma = Sigma.hat[[g]])
             }
         }
         # names
         for(g in 1:h0@Sample@ngroups) 
-            colnames(data[[g]]) <- h0@Sample@ov.names[[g]]
+            colnames(data@X[[g]]) <- h0@Sample@ov.names[[g]]
  
         # verbose
         if(verbose) cat("  ... bootstrap draw number: ", b, "\n")
 
         # take care of bootstrap h0@Sample statistics
-        Missing <-  getMissingPatterns(X       = data,
+        Missing <-  getMissingPatterns(Data    = data,
                                        missing = h0@Options$missing,
                                        warn    = FALSE,
                                        verbose = FALSE)
         WLS.V <- list()
         if(h0@Options$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(X             = data,
+            WLS.V <- getWLS.V(Data          = data,
                               sample        = NULL,
                               boot.idx      = boot.idx,
                               estimator     = h0@Options$estimator,
@@ -113,7 +113,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                               meanstructure = h0@Options$meanstructure)
         }
         bootSampleStats <- try(getSampleStatsFromData(
-                               X           = data,
+                               Data        = data,
                                M           = Missing,
                                boot.idx    = boot.idx,
                                rescale     = (h0@Options$estimator == "ML" &&
@@ -138,7 +138,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         if(type == "bollen.stine") {
             data.boot <- data
             for(g in 1:h0@Sample@ngroups) {
-                data.boot[[g]] <- data[[g]][ boot.idx[[g]],,drop=FALSE]
+                data.boot@X[[g]] <- data@X[[g]][ boot.idx[[g]],,drop=FALSE]
             }
         } else {
             data.boot <- data

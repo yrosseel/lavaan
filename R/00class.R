@@ -4,6 +4,23 @@
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
 
+setClass("lavaanData",
+    representation(
+        env.data="environment",    # environment name where original data lives
+        env.data.name="character", # symbol name of original data
+        ngroups="integer",         # number of groups
+        group.label="character",   # group labels
+        nobs="list",               # effective number of observations
+        norig="list",              # original number of observations
+        ov.names="list",           # variable names (per group)
+        ov.idx="list",             # column indices (all observed variables)
+        case.idx="list",           # case indices per group
+        isComplete="logical",      # data is complete or not?
+        missingPatterns="list",    # if not complete, missing patterns
+        X="list"                   # local copy (parametric?)
+    )
+)
+
 setClass("SampleStats",            # sample moments
     representation(
         cov="list",                # observed var/cov matrix (per group)
@@ -95,7 +112,7 @@ setClass("lavaan",
         timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
         User    = "list",            # parameter table user-specified model
-        Data    = "list",            # full data 
+        Data    = "lavaanData",      # full data
         Sample  = "SampleStats",     # sample statistics
         Model   = "Model",           # internal matrix representation
         Fit     = "Fit"              # optimization info

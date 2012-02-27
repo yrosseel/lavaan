@@ -116,7 +116,7 @@ independence.model.fit <- function(object) {
                                  options = lavaanOptions,
                                  x       = x,
                                  VCOV    = VCOV,
-                                 data    = lavaanData)
+                                 data    = lavaanData@X)
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(user  = lavaanUser,

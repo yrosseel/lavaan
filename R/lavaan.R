@@ -69,102 +69,31 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    debug           = FALSE
                   )
 {
-    # 0. store call, start timer
+    # start timer
+    start.time0 <- start.time <- proc.time()[3]; timing <- list()
+
+    # 0. store call
     mc  <- match.call()
-    start.time0 <- start.time <- proc.time()[3]
-    timing <- list()
 
-    # 1a. check data/sample.cov and get the number of groups
-    if(!is.null(slotSample)) {
-        stopifnot(class(slotSample) == "SampleStats")
-        if(is.null(slotData)) {
-            lavaanData <- list()
-        } else {
-            # need further checking?
-            lavaanData <- slotData
-        }
-        ngroups <- slotSample@ngroups
-        data.type = "sampleStats"
-    } else if(!is.null(data)) {
-        # good, we got a full data frame
-        stopifnot(is.data.frame(data))
-        if(!is.null(group)) {
-            if(!(group %in% names(data))) {
-                stop("lavaan ERROR: grouping variable `", group,
-                     "' not found in names data:", names(data))
-            }
-            # note: we use the order as in the data; not as in levels(data)
-            group.label <- unique(as.character(data[,group]))
-            if(warn && any(is.na(group.label))) {
-                cat("lavaan WARNING: group variable `", group, "` contains missing values\n",
-                    sep="")
-            }
-            group.label <- group.label[!is.na(group.label)]
-            ngroups     <- length(group.label)
-        } else {
-            group.label <- character(0)
-            ngroups     <- 1L
-        }
-        data.type <- "full"
-    } else if(!is.null(sample.cov)) {
-
-        # we also need the number of observations (per group)
-        if(is.null(sample.nobs))
-            stop("lavaan ERROR: please specify number of observations")
-
-        # if meanstructure=TRUE, we need sample.mean
-        if(meanstructure == TRUE && is.null(sample.mean))
-            stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
-        # if group.equal contains "intercepts", we need sample.mean
-        if("intercepts" %in% group.equal && is.null(sample.mean))
-            stop("lavaan ERROR: please provide sample.mean if group.equal contains \"intercepts\"")
-
-
-        # list?
-        if(is.list(sample.cov)) {
-            # multiple groups, multiple cov matrices
-            if(!is.null(sample.mean)) {
-                stopifnot(length(sample.mean) == length(sample.cov))
-            }
-            # multiple groups, multiple cov matrices
-            ngroups     <- length(sample.cov)
-            group.label <- names(sample.cov)
-            if(is.null(group.label)) {
-                group.label <- paste("Group ", 1:ngroups, sep="")
-            }
-        } else {
-            if(!is.matrix(sample.cov))
-                stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
-            ngroups <- 1L
-            group.label <- character(0)
-        }
-        data.type <- "moment"
-    } else {
-        # both data and sample.cov are NULL
-        # maybe we want an empty lavaan object to simulate?
-
-        # number of groups
-        if(!is.null(sample.nobs)) {
-            ngroups <- length(unlist(sample.nobs))
-        } else {
-            ngroups <- 1L
-        }
-        if(ngroups > 1L) {
-            group.label <- paste("Group ", 1:ngroups, sep="")
-        } else {
-            group.label <- character(0)
-        }
-        data.type <- "none"
-
-        # no data? no fitting!
-        do.fit <- FALSE
-        se <- "none"
-        test <- "none"
-        start <- "simple"
+    # 1a. get ov.names (per group) -- needed for getData()
+    if(!is.null(slotUser)) {
+        # do nothing
+    } else if(is.character(model)) {
+        FLAT <- flatten.model.syntax(model)
+        if(max(FLAT$group) < 2L) # same model for all groups 
+            ov.names <- vnames(FLAT, type="ov")
+        else # different model per group
+            ov.names <- lapply(unique(FLAT$group),
+                               function(x) vnames(FLAT, type="ov", group=x))
+    } else if(is.list(model)) {
+        if(max(model$group) < 2L) # same model for all groups 
+            ov.names <- vnames(model, type="ov")
+        else # different model per group
+            ov.names <- lapply(unique(model$group),
+                               function(x) vnames(model, type="ov", group=x))
     }
 
-
-    # 1a. collect various options/flags and fill in `default' values
+    # 1b. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])
     # force evaluation of `language` and/or `symbol` arguments
     #opt <- lapply(opt, function(x) if(typeof(x) %in% c("language", "symbol")) 
@@ -172,6 +101,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotOptions)) {
         lavaanOptions <- slotOptions
     } else {
+        if(!is.null(slotSample)) {
+            data.type = "sampleStats"
+        } else if(!is.null(data)) {
+            data.type = "full"
+        } else if(!is.null(sample.cov)) {
+            data.type = "moment"
+        } else {
+            data.type = "none"
+        }
         opt <- list(model = model, model.type = model.type,
             meanstructure = meanstructure, int.ov.free = int.ov.free,
             int.lv.free = int.lv.free, fixed.x = fixed.x, 
@@ -191,14 +129,80 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
-    
+
+    # 1a. check data/sample.cov and get the number of groups
+    ngroups <- 1L; group.label <- character(0)
+    if(!is.null(slotSample)) {
+        stopifnot(class(slotSample) == "SampleStats")
+        if(is.null(slotData)) 
+            lavaanData <- new("lavaanData")
+        else 
+            lavaanData <- slotData
+        ngroups <- slotSample@ngroups
+        data.type = "sampleStats"
+    } else if(!is.null(data)) { # good, we got a full data frame
+        stopifnot(is.data.frame(data))
+        env.data.name <- as.character(as.list(mc)$data)
+        #env.data <- find(env.data.name, mode="list") # TAKES A LONG TIME!
+        env.data <- parent.frame()
+        lavaanData <- getData(env.data      = env.data,
+                              env.data.name = env.data.name,
+                              group         = group,
+                              ov.names      = ov.names,
+                              std.ov        = lavaanOptions$std.ov,
+                              missing       = lavaanOptions$missing,
+                              warn          = lavaanOptions$warn)
+        ngroups <- lavaanData@ngroups
+        group.label <- lavaanData@group.label
+        data.type <- "full"
+    } else if(!is.null(sample.cov)) {
+        # we also need the number of observations (per group)
+        if(is.null(sample.nobs))
+            stop("lavaan ERROR: please specify number of observations")
+
+        # if meanstructure=TRUE, we need sample.mean
+        if(meanstructure == TRUE && is.null(sample.mean))
+            stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
+        # if group.equal contains "intercepts", we need sample.mean
+        if("intercepts" %in% group.equal && is.null(sample.mean))
+            stop("lavaan ERROR: please provide sample.mean if group.equal contains \"intercepts\"")
+
+        # list?
+        if(is.list(sample.cov)) {
+            # multiple groups, multiple cov matrices
+            if(!is.null(sample.mean)) {
+                stopifnot(length(sample.mean) == length(sample.cov))
+            }
+            # multiple groups, multiple cov matrices
+            ngroups     <- length(sample.cov)
+            group.label <- names(sample.cov)
+            if(is.null(group.label)) {
+                group.label <- paste("Group ", 1:ngroups, sep="")
+            }
+        } else {
+            if(!is.matrix(sample.cov))
+                stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
+        }
+        data.type <- "moment"
+    } else { # both data and sample.cov are NULL; simulating?
+        if(!is.null(sample.nobs)) 
+            ngroups <- length(unlist(sample.nobs))
+        if(ngroups > 1L) 
+            group.label <- paste("Group ", 1:ngroups, sep="")
+        data.type <- "none"
+        # no data? no fitting!
+        do.fit <- FALSE; se <- "none"; test <- "none"; start <- "simple"
+    }
+    timing$InitData <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
+
 
     # 2a. construct lavaan User list: description of the user-specified model
     if(!is.null(slotUser)) {
         lavaanUser <- slotUser
     } else if(is.character(model)) {
         lavaanUser <- 
-            lavaanify(model.syntax    = model, 
+            lavaanify(model.syntax    = FLAT,
                       meanstructure   = lavaanOptions$meanstructure, 
                       int.ov.free     = lavaanOptions$int.ov.free,
                       int.lv.free     = lavaanOptions$int.lv.free,
@@ -254,25 +258,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(data.type == "sampleStats") {
         lavaanSampleStats <- slotSample
     } else if(data.type == "full") {
-        # ov.names User model
-        ov.names <- lapply(as.list(1:ngroups),
-                       function(x) vnames(lavaanUser, type="ov", x))   
-        lavaanData <- getData(data        = data, 
-                              ov.names    = ov.names,
-                              std.ov      = std.ov,
-                              missing     = lavaanOptions$missing,
-                              group       = group,
-                              group.label = group.label)
-
         lavaanMissing <- 
-            getMissingPatterns(X       = lavaanData, 
+            getMissingPatterns(Data    = lavaanData, 
                                missing = lavaanOptions$missing,
                                warn    = lavaanOptions$warn,
                                verbose = lavaanOptions$verbose)
 
         WLS.V <- list()
         if(lavaanOptions$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(X             = lavaanData,
+            WLS.V <- getWLS.V(Data          = lavaanData,
                               sample        = NULL,
                               estimator     = lavaanOptions$estimator,
                               mimic         = lavaanOptions$mimic,
@@ -280,7 +274,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         lavaanSampleStats <- getSampleStatsFromData(
-                           X           = lavaanData,
+                           Data        = lavaanData,
                            M           = lavaanMissing,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"),
@@ -308,7 +302,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     } else {
         # no data
-        lavaanData <- list()
+        lavaanData <- new("lavaanData")
         lavaanSampleStats <- new("SampleStats", ngroups=ngroups,
                                  ov.names=ov.names)
     } 
@@ -358,13 +352,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
            length(vnames(lavaanUser,   "lv")) == 0L &&
            #data.type == "full" && # and sampleStats???
            ngroups == 1L &&
+           lavaanOptions$fixed &&
            lavaanOptions$missing == "listwise") {
             # simple univariate regression
             ov.y.idx <- match(vnames(lavaanUser, "ov.y"), 
-                              colnames(lavaanData[[1L]]))
+                              colnames(lavaanData@X[[1L]]))
             ov.x.idx <- match(vnames(lavaanUser, "ov.x"), 
-                              colnames(lavaanData[[1L]]))
-            YX <- lavaanData[[1L]]
+                              colnames(lavaanData@X[[1L]]))
+            YX <- lavaanData@X[[1L]]
             #print(head(YX))
             # constraints?
             if(sum(length(lavaanModel@x.ceq.idx) + 

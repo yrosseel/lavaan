@@ -223,7 +223,7 @@ compute.Abeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
         X <- NULL
         M <- sample@missing[[group]]
     } else {
-        X <- data[[group]]
+        X <- data@X[[group]]
         M <- NULL
     }
     out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat, 
@@ -295,7 +295,7 @@ compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
         X <- NULL
         M <- sample@missing[[group]]
     } else {
-        X <- data[[group]]
+        X <- data@X[[group]]
         M <- NULL
     }
     out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat, 
@@ -316,7 +316,7 @@ compute.B1.sample <- function(sample=NULL, data=NULL,
         # complete data and sample values only: B1 = A1 %*% Gamma %*% A1
         A1 <- compute.A1.sample(sample=sample, group=group, 
                                 meanstructure=meanstructure)
-        Gamma <- compute.Gamma(data=data[[group]],
+        Gamma <- compute.Gamma(data=data@X[[group]],
                                meanstructure=meanstructure)
         B1 <- A1 %*% Gamma %*% A1
     }

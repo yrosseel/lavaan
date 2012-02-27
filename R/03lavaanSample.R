@@ -4,32 +4,74 @@
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 
 # extract the data we need for this particular model
-getData <- function(data        = NULL, 
-                    ov.names    = NULL,
-
-                    # standardize?
-                    std.ov      = FALSE,
-
-                    # remove missings?
-                    missing     = "listwise",
-
-                    # multiple groups?
-                    group       = NULL,
-                    group.label = character(0)
+getData <- function(env.data      = NULL,          # env of data.frame
+                    env.data.name = NULL,          # symbol name of data.frame
+                    group         = NULL,          # multiple groups?
+                    ov.names      = NULL,          # variables needed in model
+                    std.ov        = FALSE,         # standardize ov's?
+                    missing       = "listwise",    # remove missings?
+                    warn          = TRUE           # produce warnings?
                    ) 
 {
-    # check arguments
-    if(!is.list(ov.names)) ov.names <- list(ov.names)
+    # NOTE: we store a 'pointer' to the data (well, the environment, and
+    # and the symbol name)
 
-    # number of observed variables
-    nvar  <- length(ov.names)
+    # pointer to data
+    if(exists(env.data.name, envir = env.data, inherits=FALSE)) {
+        # nothing to do
+    } else if(exists(env.data.name, envir = as.environment("package:lavaan"))) {
+        env.data <- as.environment("package:lavaan")
+    } else {
+        env.data <- as.environment(find(env.data.name, mode="list"))
+    }
+    data <- get(env.data.name, envir = env.data)
+
 
     # number of groups
-    ngroups <- 1L
-    if(length(group.label) > 1L) ngroups <- length(group.label) 
+    ngroups <- 1L; group.label <- character(0)
+    if(!is.null(group)) {
+        if(!(group %in% names(data))) {
+            stop("lavaan ERROR: grouping variable ", sQuote(group),
+                 " not found;\n  ",
+                 "variable names found in data frame ", sQuote(env.data.name), 
+                 " are:\n  ", paste(names(data), collapse=" "))
+        }
+        # note: we use the order as in the data; not as in levels(data)
+        group.label <- unique(as.character(data[,group]))
+        if(warn && any(is.na(group.label))) {
+            cat("lavaan WARNING: group variable ", sQuote(group), 
+                " contains missing values\n", sep="")
+        }
+        group.label <- group.label[!is.na(group.label)]
+        ngroups     <- length(group.label)
+    }
+
+    # ov.names
+    if(ngroups > 1L) {
+        if(is.list(ov.names)) {
+            if(length(ov.names) != ngroups)
+                stop("lavaan ERROR: ov.names assumes ", length(ov.names),
+                     " groups; data contains ", ngroups, " groups")
+        } else {
+            tmp <- ov.names
+            ov.names <- vector("list", length=ngroups)
+            ov.names[1:ngroups] <- list(tmp)
+        }
+    } else {
+        if(is.list(ov.names)) {
+            if(length(ov.names) > 1L)
+                stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
+        } else {
+            ov.names <- list(ov.names)
+        }
+    }
 
     # prepare empty list for data.matrix per group
-    X <- vector("list", length=ngroups)
+    ov.idx   <- vector("list", length=ngroups)
+    case.idx <- vector("list", length=ngroups)
+    nobs     <- vector("list", length=ngroups)
+    norig    <- vector("list", length=ngroups)
+    X        <- vector("list", length=ngroups)
 
     # for each group
     for(g in 1:ngroups) {
@@ -43,44 +85,82 @@ getData <- function(data        = NULL,
         }
 
         # extract variables in correct order
-        var.idx <- match(ov.names[[g]], names(data))
+        ov.idx[[g]] <- match(ov.names[[g]], names(data))
+
+        # extract cases per group
         if(ngroups > 1L) {
-            case.idx <- data[, group] == group.label[g]
-            data.tmp <- data[case.idx, var.idx]
+            if(missing == "listwise") {
+                case.idx[[g]] <- which(data[, group] == group.label[g] &
+                                       complete.cases(data[,ov.idx[[g]]]))
+                nobs[[g]] <- length(case.idx[[g]])
+                norig[[g]] <- length(which(data[, group] == group.label[g]))
+            } else {
+                case.idx[[g]] <- which(data[, group] == group.label[g])
+                nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])
+            }
         } else {
-            data.tmp <- data[, var.idx]
+            if(missing == "listwise") {
+                case.idx[[g]] <- which(complete.cases(data[,ov.idx[[g]]]))
+                nobs[[g]] <- length(case.idx[[g]])
+                norig[[g]] <- nrow(data)
+            } else {
+                case.idx[[g]] <- 1:nrow(data)
+                nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])
+            }
         }
- 
-        # remove cases listwise?
-        if(missing == "listwise") 
-            data.tmp <- na.omit(data.tmp)
 
         # check if we have enough observations
-        if(nrow(data.tmp) < nvar)
-            stop("lavaan ERROR: too few observations (nobs < nvar)")
+        if( nobs[[g]] < (nvar <- length(ov.idx[[g]])) ) {
+            txt <- ""
+            if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
+            stop("lavaan ERROR: too few observations (nobs < nvar)", txt,
+                 "\n  nobs = ", nobs[[g]], " nvar = ", nvar)
+        }
 
-        # data should contain numeric values only
-        data.tmp <- data.matrix(data.tmp)
 
+        ### ONLY if we wish to store X ####
+     
+        # extract data
+        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx[[g]]] )
+        #print( tracemem(X[[g]]) )
+ 
         # get rid of row names, but keep column names
-        rownames(data.tmp) <- NULL
+        #rownames(X[[g]]) <- NULL ### WHY are two copies made here? 
+                                  ### answer: rownames is NOT a primitive
+        dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
 
         # standardize observed variables?
         if(std.ov) {
-            data.tmp <- scale(data.tmp)[,]
+            X[[g]] <- scale(X[[g]])[,] # three copies are made!
         }
-
-        X[[g]] <- data.tmp
 
     } # ngroups
 
-    X
+
+    lavaanData <- new("lavaanData",
+                      env.data        = env.data,
+                      env.data.name   = env.data.name,
+                      ngroups         = ngroups,
+                      group.label     = group.label,
+                      nobs            = nobs,
+                      norig           = norig,
+                      ov.names        = ov.names,
+                      ov.idx          = ov.idx,
+                      case.idx        = case.idx,
+                      X               = X,
+                      isComplete      = TRUE,
+                      missingPatterns = list()
+                     )
+    lavaanData                     
 }
 
-getMissingPatterns <- function(X       = NULL, 
+getMissingPatterns <- function(Data    = NULL, 
                                missing = "listwise",
                                warn    = TRUE,
                                verbose = FALSE) {
+
+    # get X
+    X <- Data@X
 
     # number of groups
     ngroups <- length(X)
@@ -136,12 +216,15 @@ getMissingPatterns <- function(X       = NULL,
     missing
 }
 
-getSampleStatsFromData <- function(X           = NULL,
+getSampleStatsFromData <- function(Data        = NULL,
                                    M           = NULL,
                                    boot.idx    = NULL,
                                    rescale     = FALSE,
                                    group.label = NULL,
                                    WLS.V       = list()) {
+
+    # get X
+    X <- Data@X
 
     # number of groups
     ngroups <- length(X)
@@ -387,7 +470,7 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
     SampleStats
 }
 
-getWLS.V <- function(X             = NULL, 
+getWLS.V <- function(Data          = NULL, 
                      sample        = NULL,
                      boot.idx      = NULL,
                      estimator     = "ML",
@@ -396,6 +479,7 @@ getWLS.V <- function(X             = NULL,
 
     # number of groups
     if(is.null(sample)) {
+        X <- Data@X
         ngroups <- length(X)
     } else {
         ngroups <- sample@ngroups
