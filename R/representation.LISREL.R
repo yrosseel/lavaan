@@ -196,13 +196,17 @@ computeSigmaHat.LISREL <- function(MLIST=NULL) {
     if(is.null(BETA)) {
         LAMBDA..IB.inv <- LAMBDA
     } else {
-        tmp <- -1.0 * BETA; diag(tmp) <- 1.0
-        IB.inv <- solve(tmp)
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                        PACKAGE = "base")
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
+
     # compute Sigma Hat
-    Sigma.hat <- ( LAMBDA..IB.inv %*% PSI %*% t(LAMBDA..IB.inv) + THETA )
+    Sigma.hat <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
 
     Sigma.hat
 }
@@ -219,8 +223,11 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
     if(is.null(BETA)) {
         LAMBDA..IB.inv <- LAMBDA
     } else {
-        tmp <- -1.0 * BETA; diag(tmp) <- 1.0
-        IB.inv <- solve(tmp)
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                        PACKAGE = "base")
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
     
@@ -245,8 +252,11 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
     if(is.null(BETA)) {
         LAMBDA..IB.inv <- LAMBDA
     } else {
-        tmp <- -1.0 * BETA; diag(tmp) <- 1.0
-        IB.inv <- solve(tmp)
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                        PACKAGE = "base")
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
