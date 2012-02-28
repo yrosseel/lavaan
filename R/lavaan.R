@@ -4,6 +4,7 @@
 # added lavaanOptions YR 02/08/2010
 # major revision: YR 9/12/2010: - new workflow (since 0.4-5)
 #                               - merge cfa/sem/growth functions
+# YR 25/02/2012: changed data slot (from list() to S4); data@X contains data
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    model           = NULL,
@@ -72,28 +73,38 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # start timer
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
-    # 0. store call
+    # 0a. store call
     mc  <- match.call()
 
-    # 1a. get ov.names (per group) -- needed for getData()
+    # 0b. get ov.names (per group) -- needed for getData()
     if(!is.null(slotUser)) {
-        # do nothing
+        FLAT <- slotUser
     } else if(is.character(model)) {
-        FLAT <- flatten.model.syntax(model)
-        if(max(FLAT$group) < 2L) # same model for all groups 
-            ov.names <- vnames(FLAT, type="ov")
-        else # different model per group
-            ov.names <- lapply(unique(FLAT$group),
-                               function(x) vnames(FLAT, type="ov", group=x))
+        FLAT <- parseModelString(model)
     } else if(is.list(model)) {
-        if(max(model$group) < 2L) # same model for all groups 
-            ov.names <- vnames(model, type="ov")
-        else # different model per group
-            ov.names <- lapply(unique(model$group),
-                               function(x) vnames(model, type="ov", group=x))
+        FLAT <- model
+    }
+    if(max(FLAT$group) < 2L) { # same model for all groups 
+        ov.names <- vnames(FLAT, type="ov")
+    } else { # different model per group
+        ov.names <- lapply(unique(FLAT$group),
+                           function(x) vnames(FLAT, type="ov", group=x))
     }
 
-    # 1b. collect various options/flags and fill in `default' values
+    # 0c. get data.type
+    if(!is.null(slotSample)) {
+        data.type = "sampleStats"
+    } else if(!is.null(data)) {
+        data.type = "full"
+    } else if(!is.null(sample.cov)) {
+        data.type = "moment"
+    } else {
+        data.type = "none"
+        # no data? no fitting!
+        do.fit <- FALSE; se <- "none"; test <- "none"; start <- "simple"
+    }
+
+    # 1a. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])
     # force evaluation of `language` and/or `symbol` arguments
     #opt <- lapply(opt, function(x) if(typeof(x) %in% c("language", "symbol")) 
@@ -101,15 +112,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotOptions)) {
         lavaanOptions <- slotOptions
     } else {
-        if(!is.null(slotSample)) {
-            data.type = "sampleStats"
-        } else if(!is.null(data)) {
-            data.type = "full"
-        } else if(!is.null(sample.cov)) {
-            data.type = "moment"
-        } else {
-            data.type = "none"
-        }
         opt <- list(model = model, model.type = model.type,
             meanstructure = meanstructure, int.ov.free = int.ov.free,
             int.lv.free = int.lv.free, fixed.x = fixed.x, 
@@ -130,17 +132,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    # 1a. check data/sample.cov and get the number of groups
+    # 1b. check data/sample.cov and get the number of groups
     ngroups <- 1L; group.label <- character(0)
-    if(!is.null(slotSample)) {
+    if(data.type == "sampleStats") {
         stopifnot(class(slotSample) == "SampleStats")
         if(is.null(slotData)) 
             lavaanData <- new("lavaanData")
         else 
             lavaanData <- slotData
         ngroups <- slotSample@ngroups
-        data.type = "sampleStats"
-    } else if(!is.null(data)) { # good, we got a full data frame
+    } else if(data.type == "full") {
         stopifnot(is.data.frame(data))
         env.data.name <- as.character(as.list(mc)$data)
         #env.data <- find(env.data.name, mode="list") # TAKES A LONG TIME!
@@ -154,8 +155,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               warn          = lavaanOptions$warn)
         ngroups <- lavaanData@ngroups
         group.label <- lavaanData@group.label
-        data.type <- "full"
-    } else if(!is.null(sample.cov)) {
+    } else if(data.type == "moment") {
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
             stop("lavaan ERROR: please specify number of observations")
@@ -183,15 +183,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             if(!is.matrix(sample.cov))
                 stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
         }
-        data.type <- "moment"
     } else { # both data and sample.cov are NULL; simulating?
         if(!is.null(sample.nobs)) 
             ngroups <- length(unlist(sample.nobs))
         if(ngroups > 1L) 
             group.label <- paste("Group ", 1:ngroups, sep="")
-        data.type <- "none"
-        # no data? no fitting!
-        do.fit <- FALSE; se <- "none"; test <- "none"; start <- "simple"
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -226,16 +222,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       as.data.frame.  = FALSE)
     } else if(is.list(model)) {
         # two possibilities: either model is already lavaanified
-        # or it is a list of modeles (perhaps one for each group)
-        if(!is.null(model$lhs) &&
-           !is.null(model$op)  &&
-           !is.null(model$rhs) &&
-           !is.null(model$free)) {
+        # or it is something else...
+        if(!is.null(model$lhs) && !is.null(model$op)  &&
+           !is.null(model$rhs) && !is.null(model$free)) {
             lavaanUser <- model
         } else if(is.character(model[[1]])) {
-            # we lavaanify each model in term, and assume multiple groups
-            # ... or not: we now allow multiple groups (with different
-            # manifest variables within a single syntax... (dec 2011)
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
     } else {
@@ -245,12 +236,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 2b. change meanstructure flag?
     if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
+
+    # 2c. prepare constraints functions
     timing$User <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    # 2c. prepare constraints functions
-
     # 3. get sample statistics
+    # here we know the number of groups!
     ov.names <- lapply(as.list(1:ngroups),
                        function(x) vnames(lavaanUser, type="ov", x))
 
@@ -304,6 +296,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         lavaanData <- new("lavaanData")
         lavaanSampleStats <- new("SampleStats", ngroups=ngroups,
+                                 norig=as.list(rep(0L,ngroups)), 
+                                 nobs=as.list(rep(0L, ngroups)),
                                  ov.names=ov.names)
     } 
     if(debug) {

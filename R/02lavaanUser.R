@@ -42,7 +42,7 @@ lavaanify <- function(model.syntax    = NULL,
     } else {
         # parse the model syntax and flatten the user-specified model
         # return a data.frame, where each line is a model element (rhs, op, lhs)
-        FLAT <- flatten.model.syntax(model.syntax=model.syntax, warn=warn)
+        FLAT <- parseModelString(model.syntax=model.syntax, warn=warn)
     }
     # user-specified *modifiers* are returned as an attribute
     MOD  <- attr(FLAT, "modifiers"); attr(FLAT, "modifiers") <- NULL
@@ -51,7 +51,7 @@ lavaanify <- function(model.syntax    = NULL,
 
     # extra constraints?
     if(!is.null(constraints) && nchar(constraints) > 0L) {
-        FLAT2 <- flatten.model.syntax(model.syntax=constraints, warn=warn)
+        FLAT2 <- parseModelString(model.syntax=constraints, warn=warn)
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
     }
@@ -327,7 +327,7 @@ lavaanify <- function(model.syntax    = NULL,
     LIST
 }
 
-flatten.model.syntax <- function(model.syntax='', .as.data.frame=FALSE,
+parseModelString <- function(model.syntax='', .as.data.frame=FALSE,
                                  warn=TRUE, debug=FALSE) {
 
     # check for empty syntax
