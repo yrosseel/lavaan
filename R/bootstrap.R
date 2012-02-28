@@ -170,7 +170,7 @@ bootstrap.internal <- function(object = NULL,
         }
         # names
         for(g in 1:sample@ngroups) 
-            colnames(data@X[[g]]) <- sample@ov.names[[g]]
+            colnames(data@X[[g]]) <- data@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))

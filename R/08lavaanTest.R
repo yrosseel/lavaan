@@ -229,7 +229,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     for(g in 1:sample@ngroups) {
         if(options$fixed.x) {
             x.idx[[g]] <- match(vnames(user, "ov.x", group=g), 
-                                sample@ov.names[[g]])
+                                data@ov.names[[g]])
         } else {
             x.idx[[g]] <- integer(0L)
         }

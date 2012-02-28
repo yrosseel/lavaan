@@ -133,11 +133,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
     # 1b. check data/sample.cov and get the number of groups
-    ngroups <- 1L; group.label <- character(0)
     if(data.type == "slotData") {
         lavaanData <- slotData
-        ngroups <- slotData@ngroups
-        group.label <- slotData@group.label
     } else if(data.type == "full") {
         stopifnot(is.data.frame(data)) ## FIXME!!
         env.data.name <- as.character(as.list(mc)$data)
@@ -150,8 +147,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               std.ov        = lavaanOptions$std.ov,
                               missing       = lavaanOptions$missing,
                               warn          = lavaanOptions$warn)
-        ngroups <- lavaanData@ngroups
-        group.label <- lavaanData@group.label
     } else if(data.type == "moment") {
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
@@ -199,6 +194,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         ngroups <- length(unlist(sample.nobs))
         if(ngroups > 1L) 
             group.label <- paste("Group ", 1:ngroups, sep="")
+        else
+            group.label <- character(0)
         if(!is.list(ov.names)) {
             tmp <- ov.names; ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
@@ -233,7 +230,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
                       auto.cov.y      = lavaanOptions$auto.cov.y,
 
-                      ngroups         = ngroups,
+                      ngroups         = lavaanData@ngroups,
                       group.equal     = lavaanOptions$group.equal, 
                       group.partial   = lavaanOptions$group.partial,
                       debug           = lavaanOptions$debug,
@@ -263,7 +260,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 3. get sample statistics
     # here we know the number of groups!
-    ov.names <- lapply(as.list(1:ngroups),
+    ov.names <- lapply(as.list(1:lavaanData@ngroups),
                        function(x) vnames(lavaanUser, type="ov", x))
 
     if(data.type == "sampleStats") {
@@ -289,7 +286,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            M           = lavaanMissing,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"),
-                           group.label = group.label,
                            WLS.V       = WLS.V)
                                                  
     } else if(data.type == "moment") {
@@ -299,8 +295,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.nobs = sample.nobs,
                            ov.names    = ov.names,
                            rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"),
-                           group.label = group.label)
+                                          lavaanOptions$likelihood == "normal"))
 
         if(lavaanOptions$estimator == "GLS") {
             WLS.V <- getWLS.V(X             = NULL,
@@ -312,9 +307,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     } else {
         # no data
-        lavaanSampleStats <- new("SampleStats", ngroups=ngroups,
-                                 norig=as.list(rep(0L,ngroups)), 
-                                 nobs=as.list(rep(0L, ngroups)),
+        lavaanSampleStats <- new("SampleStats", ngroups=lavaanData@ngroups,
+                                 nobs=as.list(rep(0L, lavaanData@ngroups)),
                                  ov.names=ov.names)
     } 
     if(debug) {
@@ -362,7 +356,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(unique(lavaanUser$lhs[lavaanUser$op == "~"])) == 1L && 
            length(vnames(lavaanUser,   "lv")) == 0L &&
            #data.type == "full" && # and sampleStats???
-           ngroups == 1L &&
+           lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&
            lavaanOptions$missing == "listwise") {
             # simple univariate regression

@@ -18,7 +18,7 @@ independence.model <- function(model.syntax = '', ...) {
     if(no.fit@Options$mimic %in% c("lavaan", "Mplus"))
         OV.X <- vnames(no.fit@User, type="ov.x", group=1L)
     model.syntax <- 
-        syntax.independence.model(ov.names   = no.fit@Sample@ov.names[[1L]],
+        syntax.independence.model(ov.names   = no.fit@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
                                   sample.cov = no.fit@Sample@cov)
     # refit
@@ -36,7 +36,7 @@ independence.model.fit2 <- function(object) {
     if(object@Options$mimic %in% c("lavaan", "Mplus"))
         OV.X <- vnames(object@User, type="ov.x", group=1L)
     model.syntax <- 
-        syntax.independence.model(ov.names   = object@Sample@ov.names[[1L]],
+        syntax.independence.model(ov.names   = object@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
                                   sample.cov = object@Sample@cov)
 
@@ -58,7 +58,7 @@ independence.model.fit <- function(object) {
                    function(x) vnames(object@User, type="ov.x", x))
 
     # construct
-    lavaanUser <- independenceModel(ov.names   = object@Sample@ov.names,
+    lavaanUser <- independenceModel(ov.names   = object@Data@ov.names,
                                     ov.names.x = OV.X,
                                     sample.cov = object@Sample@cov,
                                     meanstructure = object@Model@meanstructure,
@@ -116,7 +116,7 @@ independence.model.fit <- function(object) {
                                  options = lavaanOptions,
                                  x       = x,
                                  VCOV    = VCOV,
-                                 data    = lavaanData@X)
+                                 data    = lavaanData)
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(user  = lavaanUser,
@@ -132,7 +132,7 @@ independence.model.fit <- function(object) {
                   timing  = timing,                 # list
                   Options = lavaanOptions,          # list
                   User    = lavaanUser,             # list
-                  Data    = lavaanData,             # list
+                  Data    = lavaanData,             # S3 class
                   Sample  = lavaanSampleStats,      # S4 class
                   Model   = lavaanModel,            # S4 class
                   Fit     = lavaanFit               # S4 class

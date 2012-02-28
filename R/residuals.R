@@ -24,7 +24,7 @@ function(object, type="raw", labels=TRUE) {
 
     G <- object@Sample@ngroups
     meanstructure <- object@Model@meanstructure
-    ov.names <- object@Sample@ov.names
+    ov.names <- object@Data@ov.names
 
     # if type == standardized, we need VarCov and Delta
     if(type == "standardized") {
@@ -32,9 +32,9 @@ function(object, type="raw", labels=TRUE) {
         x.idx <- integer(0)
         if(object@Options$fixed.x) {
             x.idx <- match(vnames(object@User, "ov.x", group=1L),
-                           object@Sample@ov.names[[1L]]) ### FIXME!!!! will not
-                                                         ### work for different
-        }                                                ### models in groups
+                           object@Data@ov.names[[1L]]) ### FIXME!!!! will not
+                                                       ### work for different
+        }                                              ### models in groups
 
         if(length(x.idx) > 0L) {
             # we need to:

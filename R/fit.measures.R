@@ -151,7 +151,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         #    OV.X <- vnames(object@User, type="ov.x")
 
         #indep.syntax <- 
-        #    syntax.independence.model(ov.names   = object@Sample@ov.names,
+        #    syntax.independence.model(ov.names   = object@Data@ov.names,
         #                              ov.names.x = OV.X,
         #                              sample.cov = object@Sample@cov)
         #fit.indep <- update(object, model = indep.syntax, 

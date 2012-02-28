@@ -241,12 +241,12 @@ print.InformativeTesting <- function(x, ...) {
 
 summary.InformativeTesting <- function(object, ...){
   cat("\n")
-  cat("  Variable names in model       :", unlist(object$fitA1@Sample@ov.names), "\n")  
+  cat("  Variable names in model       :", unlist(object$fitA1@Data@ov.names), "\n")  
   cat("  Number of variables           :", object$fitA1@Model@nvar, "\n")  
-  cat("  Number of groups              :", object$fitA1@Sample@ngroups, "\n")  
+  cat("  Number of groups              :", object$fitA1@Data@ngroups, "\n")  
   cat("  Used sample size per group    :", unlist(object$fitA1@Sample@nobs), "\n")
-  cat("  Used sample size              :", sum(unlist(object$fitA1@Sample@nobs)), "\n")
-  cat("  Total sample size             :", sum(unlist(object$fitA1@Sample@norig)), "\n\n")
+  cat("  Used sample size              :", sum(unlist(object$fitA1@Data@nobs)), "\n")
+  cat("  Total sample size             :", sum(unlist(object$fitA1@Data@norig)), "\n\n")
   cat("  Estimator                     :", object$fitA1@Options$estimator, "\n")
   cat("  Missing data                  :", object$fitA1@Options$missing, "\n\n")
   cat("  Bootstrap method              :", object$type, "\n")

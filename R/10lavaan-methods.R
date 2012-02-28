@@ -10,17 +10,14 @@ short.summary <- function(object) {
                         packageDescription("lavaan", fields="Version"),
                         object@Fit@iterations))
         } else {
-            cat("\n")
-            cat(sprintf("** WARNING ** Lavaan (%s) did NOT converge after %i iterations\n", 
+            cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n", 
                 packageDescription("lavaan", fields="Version"),
                 object@Fit@iterations))
             cat("** WARNING ** Estimates below are most likely unreliable\n")
         }
     } else {
-        cat("\n")
-        cat(sprintf("Lavaan (%s)\n",
+        cat(sprintf("** WARNING ** lavaan (%s) model has NOT been fitted\n",
                     packageDescription("lavaan", fields="Version")))
-        cat("** WARNING ** Model has not been fitted\n")
         cat("** WARNING ** Estimates below are simply the starting values\n")
     }
     cat("\n")
@@ -44,26 +41,28 @@ short.summary <- function(object) {
     #cat(t0.txt, t1.txt, "\n", sep="")
 
     #t0.txt <- sprintf("  %-38s", "Number of groups")
-    #t1.txt <- sprintf("  %9i", object@Sample@ngroups)
+    #t1.txt <- sprintf("  %9i", object@Data@ngroups)
     #cat(t0.txt, t1.txt, "\n", sep="")
 
     # listwise deletion?
     listwise <- FALSE
-    if(!any(unlist(lapply(object@Sample@missing, "[[", "flag"))) &&
-       (object@Sample@nobs[[1L]] < object@Sample@norig[[1L]])) {
-        listwise <- TRUE
+    for(g in 1:object@Data@ngroups) {
+       if(object@Data@nobs[[1L]] < object@Data@norig[[1L]]) {
+           listwise <- TRUE
+           break
+       }
     }
 
-    if(object@Sample@ngroups == 1L) {
+    if(object@Data@ngroups == 1L) {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"), 
                                         sprintf("  %10s", "Total"),
                 "\n", sep="")
         }
         t0.txt <- sprintf("  %-40s", "Number of observations")
-        t1.txt <- sprintf("  %10i", object@Sample@nobs[[1L]])
+        t1.txt <- sprintf("  %10i", object@Data@nobs[[1L]])
         t2.txt <- ifelse(listwise,
-                  sprintf("  %10i", object@Sample@norig[[1L]]), "")
+                  sprintf("  %10i", object@Data@norig[[1L]]), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     } else {
         if(listwise) {
@@ -73,32 +72,34 @@ short.summary <- function(object) {
         }
         t0.txt <- sprintf("  %-40s", "Number of observations per group")
         cat(t0.txt, "\n")
-        for(g in 1:object@Sample@ngroups) {
-            t.txt <- sprintf("  %-40s  %10i", object@Sample@group.label[[g]],
-                                                object@Sample@nobs[[g]])
+        for(g in 1:object@Data@ngroups) {
+            t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
+                                              object@Data@nobs[[g]])
             t2.txt <- ifelse(listwise,
-                      sprintf("  %10i", object@Sample@norig[[g]]), "")
+                      sprintf("  %10i", object@Data@norig[[g]]), "")
             cat(t.txt, t2.txt, "\n", sep="")
         }
     }
     cat("\n")
 
     # missing patterns?
-    if(object@Sample@missing[[1L]]$flag && object@Sample@ngroups == 1L) {
+    if(length(object@Sample@missing)) {
+    if(object@Sample@missing[[1L]]$flag && object@Data@ngroups == 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns")
         t1.txt <- sprintf("  %10i", object@Sample@missing[[1]]$npatterns)
         cat(t0.txt, t1.txt, "\n\n", sep="")
     }
     if(any(unlist(lapply(object@Sample@missing, "[[", "flag"))) && 
-       object@Sample@ngroups > 1L) {
+       object@Data@ngroups > 1L) {
         t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
         cat(t0.txt, "\n")
-        for(g in 1:object@Sample@ngroups) {
-            t.txt <- sprintf("  %-40s  %10i", object@Sample@group.label[[g]],
+        for(g in 1:object@Data@ngroups) {
+            t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
                              object@Sample@missing[[g]]$npatterns)
             cat(t.txt, "\n", sep="")
         }
         cat("\n")
+    }
     }
 
     # Print Chi-square value for the user-specified (full/h0) model
@@ -171,11 +172,11 @@ short.summary <- function(object) {
             }
         } 
 
-        if(object@Sample@ngroups > 1L) {
+        if(object@Data@ngroups > 1L) {
             cat("\n")
             cat("Chi-square for each group:\n\n")
-            for(g in 1:object@Sample@ngroups) {
-                t0.txt <- sprintf("  %-40s", object@Sample@group.label[[g]])
+            for(g in 1:object@Data@ngroups) {
+                t0.txt <- sprintf("  %-40s", object@Data@group.label[[g]])
                 t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$stat.group[g])
                 t2.txt <- ifelse(scaled, sprintf("  %10.3f", 
                                  object@Fit@test[[2]]$stat.group[g]), "")
@@ -289,15 +290,15 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
     } 
 
-    for(g in 1:object@Sample@ngroups) {
+    for(g in 1:object@Data@ngroups) {
         ov.names <- vnames(object@User, "ov", group=g)
         lv.names <- vnames(object@User, "lv", group=g)
 
         # group header
-        if(object@Sample@ngroups > 1) {
+        if(object@Data@ngroups > 1) {
             if(g > 1) cat("\n\n")
             cat("Group ", g, 
-                " [", object@Sample@group.label[[g]], "]:\n\n", sep="")
+                " [", object@Data@group.label[[g]], "]:\n\n", sep="")
         }
 
         # estimates header
@@ -438,7 +439,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     # 6. variable definitions
     def.idx <- which(object@User$op == ":=")
     if(length(def.idx) > 0) {
-        if(object@Sample@ngroups > 1) cat("\n")
+        if(object@Data@ngroups > 1) cat("\n")
         cat("Defined parameters:\n")
         NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx], "")
         for(i in def.idx) {
@@ -457,7 +458,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
         #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
        
-        if(object@Sample@ngroups > 1 && length(def.idx) == 0L) cat("\n")
+        if(object@Data@ngroups > 1 && length(def.idx) == 0L) cat("\n")
         cat("Constraints:                               Slack (>=0)\n")
         for(i in c(cin.idx,ceq.idx)) {
             lhs <- object@User$lhs[i]
@@ -490,10 +491,10 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     # R-square?
     if(rsquare) {
         r2 <- rsquare(object, est.std.all=est.std.all)
-        if(object@Sample@ngroups == 1L) r2 <- list(r2)
-        for(g in 1:object@Sample@ngroups) {
-            if(object@Sample@ngroups > 1) {
-                cat("R-Square Group ", object@Sample@group.label[[g]], 
+        if(object@Data@ngroups == 1L) r2 <- list(r2)
+        for(g in 1:object@Data@ngroups) {
+            if(object@Data@ngroups > 1) {
+                cat("R-Square Group ", object@Data@group.label[[g]], 
                     ":\n\n", sep="")       
             } else {
                 cat("R-Square:\n\n")
@@ -503,7 +504,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
                                   r2[[g]][i])
                 cat(t1.txt)
             }
-            if(g < object@Sample@ngroups) cat("\n")
+            if(g < object@Data@ngroups) cat("\n")
         }
     }
 
@@ -706,7 +707,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
 
     # if single group, remove group column
-    if(object@Sample@ngroups == 1L) LIST$group <- NULL
+    if(object@Data@ngroups == 1L) LIST$group <- NULL
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
     LIST
@@ -857,7 +858,7 @@ parameterEstimates <- parameterestimates <-
     }
 
     # if single group, remove group column
-    if(object@Sample@ngroups == 1L) LIST$group <- NULL
+    if(object@Data@ngroups == 1L) LIST$group <- NULL
 
     # if no user-defined labels, remove label column
     if(sum(nchar(object@User$label)) == 0L) LIST$label <- NULL
@@ -948,8 +949,8 @@ function(object, what="free") {
 # fixme, should we export this function?
 sampStat <- function(object, labels=TRUE) {
 
-    G <- object@Sample@ngroups
-    ov.names <- object@Sample@ov.names
+    G <- object@Data@ngroups
+    ov.names <- object@Data@ov.names
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
@@ -968,7 +969,7 @@ sampStat <- function(object, labels=TRUE) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- unlist(object@Sample@group.label)
+        names(OUT) <- unlist(object@Data@group.label)
     }
 
     OUT
@@ -978,8 +979,8 @@ sampStat <- function(object, labels=TRUE) {
 setMethod("fitted.values", "lavaan",
 function(object, labels=TRUE) {
 
-    G <- object@Sample@ngroups
-    ov.names <- object@Sample@ov.names
+    G <- object@Data@ngroups
+    ov.names <- object@Data@ov.names
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
@@ -998,7 +999,7 @@ function(object, labels=TRUE) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- unlist(object@Sample@group.label)
+        names(OUT) <- unlist(object@Data@group.label)
     }
 
     OUT
@@ -1036,7 +1037,7 @@ function(object, labels=TRUE) {
 rsquare <- function(object, est.std.all=NULL) {
 
     if(is.null(est.std.all)) est.std.all <- standardize.est.all(object)
-    ngroups <- object@Sample@ngroups
+    ngroups <- object@Data@ngroups
     user <- object@User
     user$rsquare <- 1.0 - est.std.all
     # no values > 1.0
@@ -1057,7 +1058,7 @@ rsquare <- function(object, est.std.all=NULL) {
     if(ngroups == 1) {
         r2 <- r2[[1]]
     } else {
-        names(r2) <- unlist(object@Sample@group.label)
+        names(r2) <- unlist(object@Data@group.label)
     }
 
     r2

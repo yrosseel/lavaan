@@ -220,28 +220,19 @@ getSampleStatsFromData <- function(Data        = NULL,
                                    M           = NULL,
                                    boot.idx    = NULL,
                                    rescale     = FALSE,
-                                   group.label = NULL,
                                    WLS.V       = list()) {
 
     # get X
     X <- Data@X
 
     # number of groups
-    ngroups <- length(X)
+    ngroups <- Data@ngroups
+    nobs <- Data@nobs
    
-    # group labels
-    if(is.null(group.label)) {
-        group.label <- paste("Group ", 1:ngroups, sep="")
-    } 
-    group.label <- as.list(group.label)
-
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
-    nobs        <- vector("list", length=ngroups)
-    norig       <- vector("list", length=ngroups)
-    ov.names    <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov        <- vector("list", length=ngroups)
     cov.log.det <- vector("list", length=ngroups)
@@ -249,23 +240,9 @@ getSampleStatsFromData <- function(Data        = NULL,
 
     for(g in 1:ngroups) {
 
-        # get variable names for this group
-        ov.names[[g]] <- colnames(X[[g]])
-        X[[g]] <- unname(X[[g]])
-
         # bootstrap sample?
         if(!is.null(boot.idx)) {
             X[[g]] <- X[[g]][boot.idx[[g]],,drop=FALSE]
-        }
-
-        # listwise deletion?
-        norig[[g]] <- nrow(X[[g]])
-        if(is.null(M)) {
-            keep.idx <- complete.cases(X[[g]])
-            X[[g]] <- X[[g]][keep.idx,,drop=FALSE]
-            nobs[[g]] <- nrow(X[[g]])
-        } else {
-            nobs[[g]] <- M[[g]]$nobs
         }
 
         # fill in the other slots
@@ -309,11 +286,8 @@ getSampleStatsFromData <- function(Data        = NULL,
 
                        # convenience
                        nobs        = nobs,
-                       norig       = norig,
                        ntotal      = sum(unlist(nobs)),
-                       ov.names    = ov.names,
                        ngroups     = ngroups,
-                       group.label = group.label,
 
                        # extra sample statistics
                        icov        = icov,
@@ -334,7 +308,6 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
                                       sample.nobs = NULL,
                                       rescale     = FALSE,
                                       ov.names    = NULL,
-                                      group.label = NULL,
                                       WLS.V       = list()) {
 
     # matrix -> list
@@ -345,18 +318,11 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
     # number of groups
     ngroups <- length(sample.cov)
    
-    # group labels
-    if(is.null(group.label)) {
-        group.label <- paste("Group ", 1:ngroups, sep="")
-    } 
-    group.label <- as.list(group.label)
-
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
     #var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     nobs        <- as.list(as.integer(sample.nobs))
-    norig       <- nobs
     # extra sample statistics per group
     icov        <- vector("list", length=ngroups)
     cov.log.det <- vector("list", length=ngroups)
@@ -451,11 +417,8 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
 
                        # convenience
                        nobs        = nobs,
-                       norig       = norig,
                        ntotal      = sum(unlist(nobs)),
-                       ov.names    = ov.names,
                        ngroups     = ngroups,
-                       group.label = group.label,
 
                        # extra sample statistics
                        icov        = icov,

@@ -93,7 +93,7 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         }
         # names
         for(g in 1:h0@Sample@ngroups) 
-            colnames(data@X[[g]]) <- h0@Sample@ov.names[[g]]
+            colnames(data@X[[g]]) <- h0@Data@ov.names[[g]]
  
         # verbose
         if(verbose) cat("  ... bootstrap draw number: ", b, "\n")

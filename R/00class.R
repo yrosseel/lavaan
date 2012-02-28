@@ -27,10 +27,8 @@ setClass("SampleStats",            # sample moments
         mean="list",               # observed mean vector (per group)
 
         nobs="list",               # effective number of obs (per group)
-        norig="list",              # original number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
-        group.label="list",        # group label
         ov.names="list",           # variable names (per group)
 
         icov="list",               # inverse of observed cov (per group)
