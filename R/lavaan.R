@@ -92,8 +92,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # 0c. get data.type
-    if(!is.null(slotSample)) {
-        data.type = "sampleStats"
+    if(!is.null(slotData)) {
+        data.type = "slotData"
     } else if(!is.null(data)) {
         data.type = "full"
     } else if(!is.null(sample.cov)) {
@@ -134,15 +134,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 1b. check data/sample.cov and get the number of groups
     ngroups <- 1L; group.label <- character(0)
-    if(data.type == "sampleStats") {
-        stopifnot(class(slotSample) == "SampleStats")
-        if(is.null(slotData)) 
-            lavaanData <- new("lavaanData")
-        else 
-            lavaanData <- slotData
-        ngroups <- slotSample@ngroups
+    if(data.type == "slotData") {
+        lavaanData <- slotData
+        ngroups <- slotData@ngroups
+        group.label <- slotData@group.label
     } else if(data.type == "full") {
-        stopifnot(is.data.frame(data))
+        stopifnot(is.data.frame(data)) ## FIXME!!
         env.data.name <- as.character(as.list(mc)$data)
         #env.data <- find(env.data.name, mode="list") # TAKES A LONG TIME!
         env.data <- parent.frame()
@@ -183,11 +180,34 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             if(!is.matrix(sample.cov))
                 stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
         }
+        if(!is.list(ov.names)) {
+            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
+            ov.names[1:ngroups] <- list(tmp)
+        } else {
+            if(length(ov.names) != ngroups)
+                stop("lavaan ERROR: ov.names assumes ", length(ov.names),
+                     " groups; data contains ", ngroups, " groups")
+        }
+        lavaanData <- new("lavaanData",
+                          ngroups = ngroups, group.label = group.label,
+                          nobs = as.list(sample.nobs),
+                          norig = as.list(sample.nobs),
+                          ov.names = ov.names)
     } else { # both data and sample.cov are NULL; simulating?
-        if(!is.null(sample.nobs)) 
-            ngroups <- length(unlist(sample.nobs))
+        if(is.null(sample.nobs)) sample.nobs <- 0L
+        sample.nobs <- as.list(sample.nobs)
+        ngroups <- length(unlist(sample.nobs))
         if(ngroups > 1L) 
             group.label <- paste("Group ", 1:ngroups, sep="")
+        if(!is.list(ov.names)) {
+            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
+            ov.names[1:ngroups] <- list(tmp)
+        }
+        lavaanData <- new("lavaanData",
+                          ngroups = ngroups, group.label = group.label,
+                          nobs = sample.nobs,
+                          norig = sample.nobs,
+                          ov.names = ov.names)
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -246,7 +266,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ov.names <- lapply(as.list(1:ngroups),
                        function(x) vnames(lavaanUser, type="ov", x))
 
-    # 3a. handle full data
     if(data.type == "sampleStats") {
         lavaanSampleStats <- slotSample
     } else if(data.type == "full") {
@@ -274,7 +293,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            WLS.V       = WLS.V)
                                                  
     } else if(data.type == "moment") {
-        lavaanData <- list()
         lavaanSampleStats <- getSampleStatsFromMoments(
                            sample.cov  = sample.cov,
                            sample.mean = sample.mean,
@@ -294,7 +312,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     } else {
         # no data
-        lavaanData <- new("lavaanData")
         lavaanSampleStats <- new("SampleStats", ngroups=ngroups,
                                  norig=as.list(rep(0L,ngroups)), 
                                  nobs=as.list(rep(0L, ngroups)),
