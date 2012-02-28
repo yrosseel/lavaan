@@ -172,6 +172,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 group.label <- paste("Group ", 1:ngroups, sep="")
             }
         } else {
+            ngroups <- 1L; group.label <- character(0)
             if(!is.matrix(sample.cov))
                 stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
         }
@@ -263,7 +264,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ov.names <- lapply(as.list(1:lavaanData@ngroups),
                        function(x) vnames(lavaanUser, type="ov", x))
 
-    if(data.type == "sampleStats") {
+    if(!is.null(slotSample)) {
         lavaanSampleStats <- slotSample
     } else if(data.type == "full") {
         lavaanMissing <- 

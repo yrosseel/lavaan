@@ -118,7 +118,6 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
                                boot.idx    = boot.idx,
                                rescale     = (h0@Options$estimator == "ML" &&
                                               h0@Options$likelihood == "normal"),
-                               group.label = h0@Sample@group.label,
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating h0@Sample statistics\n")

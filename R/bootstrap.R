@@ -194,7 +194,6 @@ bootstrap.internal <- function(object = NULL,
                                boot.idx    = boot.idx,
                                rescale     = (options$estimator == "ML" &&
                                               options$likelihood == "normal"),
-                               group.label = sample@group.label,
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
