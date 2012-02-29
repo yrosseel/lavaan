@@ -6,8 +6,6 @@
 
 setClass("lavaanData",
     representation(
-        env.data="environment",    # environment name where original data lives
-        env.data.name="character", # symbol name of original data
         ngroups="integer",         # number of groups
         group.label="character",   # group labels
         nobs="list",               # effective number of observations

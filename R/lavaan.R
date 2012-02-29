@@ -136,17 +136,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(data.type == "slotData") {
         lavaanData <- slotData
     } else if(data.type == "full") {
-        stopifnot(is.data.frame(data)) ## FIXME!!
-        env.data.name <- as.character(as.list(mc)$data)
-        #env.data <- find(env.data.name, mode="list") # TAKES A LONG TIME!
-        env.data <- parent.frame()
-        lavaanData <- getData(env.data      = env.data,
-                              env.data.name = env.data.name,
-                              group         = group,
-                              ov.names      = ov.names,
-                              std.ov        = lavaanOptions$std.ov,
-                              missing       = lavaanOptions$missing,
-                              warn          = lavaanOptions$warn)
+        stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
+        lavaanData <- getData(data     = data,
+                              group    = group,
+                              ov.names = ov.names,
+                              std.ov   = lavaanOptions$std.ov,
+                              missing  = lavaanOptions$missing,
+                              warn     = lavaanOptions$warn)
     } else if(data.type == "moment") {
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
@@ -216,7 +212,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanUser <- slotUser
     } else if(is.character(model)) {
         lavaanUser <- 
-            lavaanify(model.syntax    = FLAT,
+            lavaanify(model           = FLAT,
                       meanstructure   = lavaanOptions$meanstructure, 
                       int.ov.free     = lavaanOptions$int.ov.free,
                       int.lv.free     = lavaanOptions$int.lv.free,

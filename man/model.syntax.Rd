@@ -1,25 +1,31 @@
 \name{model.syntax}
 \alias{model.syntax}
 \alias{lavaanify}
+\alias{parseModelString}
 \alias{lavaanNames}
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
 function \code{lavaanify} turns it into a list that represents the full
-model as specified by the user.} 
+model as specified by the user. We refer to this list as the parameter table.} 
 \usage{
-lavaanify(model.syntax = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
+lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, fixed.x = TRUE, 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE,  auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, ngroups = 1L, group.equal = NULL,
     group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
+parseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
+
 lavaanNames(object, type = "ov", group = NULL)
 }
 \arguments{
-\item{model.syntax}{The model syntax specifying the model. See
-    details for more information.}
+\item{model}{The model syntax specifying the model. This can be either
+a literal string describing the model, or a parameter table (e.g., the
+output of \code{parseModelString}. See details for more information.}
+\item{model.syntax}{The model syntax specifying the model. Must be a literal
+string.}
 \item{meanstructure}{If \code{TRUE}, intercepts/means will be added to
 the model both for both observed and latent variables.}
 \item{int.ov.free}{If \code{FALSE}, the intercepts of the observed variables
@@ -64,13 +70,13 @@ the model both for both observed and latent variables.}
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
-    out during the iterations.}
+    out.}
 \item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
-as a data.frame.}
+as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
-\item{object}{Either a list containing the user-specificed model, as 
-returned by \code{lavaanify}, or an object of class 
-\code{\linkS4class{lavaan}}.}
+\item{object}{Either a list containing the parameter table, as 
+returned by \code{lavaanify} or \code{parseModelString}, or an 
+object of class \code{\linkS4class{lavaan}}.}
 \item{type}{Only used in the function \code{lavaanNames}. If type contains 
 \code{"ov"}, only observed variable names are returned. If type contains
 \code{"lv"}, only latent variable names are returned. The \code{"ov.x"}

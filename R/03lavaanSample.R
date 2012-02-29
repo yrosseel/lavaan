@@ -4,8 +4,7 @@
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 
 # extract the data we need for this particular model
-getData <- function(env.data      = NULL,          # env of data.frame
-                    env.data.name = NULL,          # symbol name of data.frame
+getData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
                     ov.names      = NULL,          # variables needed in model
                     std.ov        = FALSE,         # standardize ov's?
@@ -13,20 +12,6 @@ getData <- function(env.data      = NULL,          # env of data.frame
                     warn          = TRUE           # produce warnings?
                    ) 
 {
-    # NOTE: we store a 'pointer' to the data (well, the environment, and
-    # and the symbol name)
-
-    # pointer to data
-    if(exists(env.data.name, envir = env.data, inherits=FALSE)) {
-        # nothing to do
-    } else if(exists(env.data.name, envir = as.environment("package:lavaan"))) {
-        env.data <- as.environment("package:lavaan")
-    } else {
-        env.data <- as.environment(find(env.data.name, mode="list"))
-    }
-    data <- get(env.data.name, envir = env.data)
-
-
     # number of groups
     ngroups <- 1L; group.label <- character(0)
     if(!is.null(group)) {
@@ -138,8 +123,6 @@ getData <- function(env.data      = NULL,          # env of data.frame
 
 
     lavaanData <- new("lavaanData",
-                      env.data        = env.data,
-                      env.data.name   = env.data.name,
                       ngroups         = ngroups,
                       group.label     = group.label,
                       nobs            = nobs,

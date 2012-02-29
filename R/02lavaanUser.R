@@ -11,7 +11,7 @@
 #                                   a model (but no matrix representation)
 
 
-lavaanify <- function(model.syntax    = NULL, 
+lavaanify <- function(model           = NULL, 
                       meanstructure   = FALSE,
                       int.ov.free     = FALSE,
                       int.lv.free     = FALSE,
@@ -36,13 +36,13 @@ lavaanify <- function(model.syntax    = NULL,
                       
                       as.data.frame.   = TRUE) {
 
-    # check if model.syntax is already FLAT
-    if(is.list(model.syntax) && !is.null(model.syntax$lhs)) {
-        FLAT <- model.syntax
+    # check if model is already FLAT
+    if(is.list(model) && !is.null(model$lhs)) {
+        FLAT <- model
     } else {
         # parse the model syntax and flatten the user-specified model
         # return a data.frame, where each line is a model element (rhs, op, lhs)
-        FLAT <- parseModelString(model.syntax=model.syntax, warn=warn)
+        FLAT <- parseModelString(model.syntax=model, warn=warn, debug=FALSE)
     }
     # user-specified *modifiers* are returned as an attribute
     MOD  <- attr(FLAT, "modifiers"); attr(FLAT, "modifiers") <- NULL
@@ -327,8 +327,8 @@ lavaanify <- function(model.syntax    = NULL,
     LIST
 }
 
-parseModelString <- function(model.syntax='', .as.data.frame=FALSE,
-                                 warn=TRUE, debug=FALSE) {
+parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
+                             warn = TRUE, debug = FALSE) {
 
     # check for empty syntax
     if(length(model.syntax) == 0) {
@@ -565,17 +565,13 @@ parseModelString <- function(model.syntax='', .as.data.frame=FALSE,
     mod.idx <- which(FLAT.rhs.mod.idx > 0L)
     FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
 
-    if(.as.data.frame) {
-        FLAT <- data.frame(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
-                           mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
-                           fixed=FLAT.fixed, start=FLAT.start,
-                           label=FLAT.label, stringsAsFactors=FALSE)
-    } else { 
-        FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
-                     mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
-                     fixed=FLAT.fixed, start=FLAT.start,
-                     label=FLAT.label)
-    }
+    FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
+                 mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
+                 fixed=FLAT.fixed, start=FLAT.start,
+                 label=FLAT.label)
+
+    if(as.data.frame.) FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
+
     attr(FLAT, "modifiers") <- MOD
     attr(FLAT, "constraints") <- CON
 
