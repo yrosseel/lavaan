@@ -119,9 +119,9 @@ simulateData <- function(
     }
 }
 
-Skewness <- function(x, N1=TRUE) {
-    x <- x[!is.na(x)]; N <- length(x)
-    mean.x <- mean(x); xc <- x - mean(x); var.x <- var(x)
+Skewness <- function(x., N1=TRUE) {
+    x <- x.; x <- x[!is.na(x)]; N <- length(x)
+    mean.x <- mean(x); xc <- x - mean.x; var.x <- var(x)
     if(!N1) var.x <- var.x * (N-1)/N
     sd.x <- sqrt(var.x)
     sk <- sum(xc^3)/sd.x^3
@@ -129,9 +129,9 @@ Skewness <- function(x, N1=TRUE) {
     skewness
 }
 
-Kurtosis <- function(x, N1=TRUE) {
-    x <- x[!is.na(x)]; N <- length(x)
-    mean.x <- mean(x); xc <- x - mean(x); var.x <- var(x)
+Kurtosis <- function(x., N1=TRUE) {
+    x <- x.; x <- x[!is.na(x)]; N <- length(x)
+    mean.x <- mean(x); xc <- x - mean.x; var.x <- var(x)
     if(!N1) var.x <- var.x * (N-1)/N
     k <- sum(xc^4)/var.x^2
     kurtosis <- N*(N+1)*k/((N-1)*(N-2)*(N-3))-3*(N-1)^2/((N-2)*(N-3))
@@ -166,11 +166,11 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis) {
 
     fleishman1978_abcd <- function(skewness, kurtosis) {
         system.function <- function(x, skewness, kurtosis) {
-            b=x[1L]; c=x[2L]; d=x[3L]
-            eq1 <- b^2 + 6*b*d + 2*c^2 + 15*d^2 - 1
-            eq2 <- 2*c*(b^2 + 24*b*d + 105*d^2 + 2) - skewness
-            eq3 <- 24*(b*d + c^2*(1 + b^2 + 28*b*d) +
-                       d^2*(12 + 48*b*d + 141*c^2 + 225*d^2)) - kurtosis
+            b.=x[1L]; c.=x[2L]; d.=x[3L]
+            eq1 <- b.^2 + 6*b.*d. + 2*c.^2 + 15*d.^2 - 1
+            eq2 <- 2*c.*(b.^2 + 24*b.*d. + 105*d.^2 + 2) - skewness
+            eq3 <- 24*(b.*d. + c.^2*(1 + b.^2 + 28*b.*d.) +
+                       d.^2*(12 + 48*b.*d. + 141*c.^2 + 225*d.^2)) - kurtosis
             eq <- c(eq1,eq2,eq3)
             sum(eq^2) ## SS
         }
@@ -180,8 +180,8 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis) {
                       control=list(trace=0),
                       skewness=skewness, kurtosis=kurtosis)
         if(out$convergence != 0) warning("no convergence")
-        b <- out$par[1L]; c <- out$par[2L]; d <- out$par[3L]; a <- -c
-        c(a,b,c,d)
+        b. <- out$par[1L]; c. <- out$par[2L]; d. <- out$par[3L]; a. <- -c.
+        c(a.,b.,c.,d.)
     }
 
     getICOV <- function(b1, c1, d1, b2, c2, d2, R) {

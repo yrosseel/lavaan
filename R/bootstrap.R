@@ -32,30 +32,28 @@ bootstrapLavaan <- function(object,
                             ...) {
 
     # checks
+    type. <- type # overwritten if nonparametric
     stopifnot(class(object) == "lavaan",
-              type %in% c("nonparametric", "ordinary",
+              type. %in% c("nonparametric", "ordinary",
                           "bollen.stine", "parametric"))
-    if(type == "nonparametric") type <- "ordinary"
+    if(type. == "nonparametric") type. <- "ordinary"
 
     # check if options$se is not bootstrap, otherwise, we get an infinite loop
-    if(object@Options$se == "bootstrap") {
-        warning("lavaan WARNING: object@Options$se == \"bootstrap\"; will set this to \"none\"")
-        object@Options$se <- "none"
-    }
+    if(object@Options$se == "bootstrap")
+        stop("lavaan ERROR: se == \"bootstrap\"; please refit model with another option for \"se\"")
+     
     # check if options$test is not bollen.stine
-    if(object@Options$test == "bollen.stine") {
-        warning("lavaan WARNING: object@Options$test == \"bollen.stine\"; will set this to \"standard\"")
-        object@Options$test <- "standard"
-    }
+    if(object@Options$test == "bollen.stine")
+        stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
 
     bootstrap.internal(object = object,
-                       data        = NULL,
-                       model       = NULL,
-                       sample      = NULL,
-                       options     = NULL,
-                       user        = NULL,
+                       data.       = NULL,
+                       model.      = NULL,
+                       sample.     = NULL,
+                       options.    = NULL,
+                       user.       = NULL,
                        R           = R,
-                       type        = type,
+                       type        = type.,
                        verbose     = verbose,
                        FUN         = FUN,
                        warn        = warn,
@@ -69,11 +67,11 @@ bootstrapLavaan <- function(object,
 # we need an internal version to be called from VCOV and computeTestStatistic
 # when there is no lavaan object yet!
 bootstrap.internal <- function(object = NULL,
-                               data        = NULL,
-                               model       = NULL,
-                               sample      = NULL,
-                               options     = NULL,
-                               user        = NULL,
+                               data.       = NULL,
+                               model.      = NULL,
+                               sample.     = NULL,
+                               options.    = NULL,
+                               user.       = NULL,
                                R           = 1000L,
                                type        = "ordinary",
                                verbose     = FALSE,
@@ -85,22 +83,29 @@ bootstrap.internal <- function(object = NULL,
                                cl          = NULL,
                                ...) {
 
+    # warning: avoid use of 'options', 'sample' (both are used as functions
+    # below...
+    # options -> opt
+    # sample -> samp
+
 
     # object slots
     if(!is.null(object)) {
-        data <- object@Data; model <- object@Model; sample <- object@Sample
-        options <- object@Options; user <- object@User
+        data <- object@Data; model <- object@Model; samp <- object@Sample
+        opt <- object@Options; user <- object@User
         FUN <- match.fun(FUN)
         t0 <- FUN(object, ...)
         t.star <- matrix(as.numeric(NA), R, length(t0))
         colnames(t.star) <- names(t0)
     } else {
         # internal version!
-        options$se <- "none"; options$test <- "standard"
-        options$verbose <- FALSE
+        data <- data.; model <- model.; samp <- sample.
+        opt <- options.; user <- user.
+        opt$se <- "none"; opt$test <- "standard"
+        opt$verbose <- FALSE
         if(FUN == "coef") {
             t.star <- matrix(as.numeric(NA), R, model@nx.free)
-            options$test <- "none"
+            opt$test <- "none"
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
         } else if(FUN == "coeftest") {
@@ -114,14 +119,16 @@ bootstrap.internal <- function(object = NULL,
     # the next 10 lines are borrowed from the boot package
     parallel <- match.arg(parallel)
     have_mc <- have_snow <- FALSE
+    ncpus <- ncpus
     if (parallel != "no" && ncpus > 1L) {
         if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
         else if (parallel == "snow") have_snow <- TRUE
         if (!have_mc && !have_snow) ncpus <- 1L
     }
 
-    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
-    seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    # only if we return the seed
+    #if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+    #seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
 
     # bollen.stine or parametric: we need the Sigma.hat values
     if(type == "bollen.stine" || type == "parametric") {
@@ -131,9 +138,9 @@ bootstrap.internal <- function(object = NULL,
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
-        for(g in 1:sample@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(  Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(sample@icov[[g]])
+        for(g in 1:samp@ngroups) {
+            sigma.sqrt <- sqrtSymmetricMatrix(Sigma.hat[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(samp@icov[[g]])
 
             # center (needed???)
             X <- scale(data@X[[g]], center=TRUE, scale=FALSE)
@@ -143,7 +150,7 @@ bootstrap.internal <- function(object = NULL,
 
             # add model-based mean
             if(model@meanstructure)
-                X <- scale(X, center=(-1*sample@mean[[g]]), scale=FALSE)
+                X <- scale(X, center=(-1*samp@mean[[g]]), scale=FALSE)
 
             # replace data slot
             data@X[[g]] <- X
@@ -154,46 +161,46 @@ bootstrap.internal <- function(object = NULL,
     fn <- function(b) {
         if(type == "bollen.stine" || type == "ordinary") {
             # take a bootstrap sample for each group
-            boot.idx <- vector("list", length=sample@ngroups)
-            for(g in 1:sample@ngroups) {
-                stopifnot(sample@nobs[[g]] > 1L)
-                boot.idx[[g]] <- sample(x=sample@nobs[[g]],
-                                        size=sample@nobs[[g]], replace=TRUE)
+            boot.idx <- vector("list", length=samp@ngroups)
+            for(g in 1:samp@ngroups) {
+                stopifnot(samp@nobs[[g]] > 1L)
+                boot.idx[[g]] <- sample(x=samp@nobs[[g]],
+                                        size=samp@nobs[[g]], replace=TRUE)
             }
         } else { # parametric!
             boot.idx <- NULL
-            for(g in 1:sample@ngroups) {
-                    data@X[[g]] <- MASS.mvrnorm(n     = sample@nobs[[g]],
+            for(g in 1:samp@ngroups) {
+                    data@X[[g]] <- MASS.mvrnorm(n     = samp@nobs[[g]],
                                                 Sigma = Sigma.hat[[g]],
                                                 mu    = Mu.hat[[g]])
             }
         }
         # names
-        for(g in 1:sample@ngroups) 
+        for(g in 1:samp@ngroups) 
             colnames(data@X[[g]]) <- data@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
         Missing <-  getMissingPatterns(Data    = data,
-                                       missing = options$missing,
+                                       missing = opt$missing,
                                        warn    = FALSE,
                                        verbose = FALSE)
         WLS.V <- list()
-        if(options$estimator %in% c("GLS", "WLS")) {
+        if(opt$estimator %in% c("GLS", "WLS")) {
             WLS.V <- getWLS.V(Data          = data,
                               sample        = NULL,
                               boot.idx      = boot.idx,
-                              estimator     = options$estimator,
-                              mimic         = options$mimic,
-                              meanstructure = options$meanstructure)
+                              estimator     = opt$estimator,
+                              mimic         = opt$mimic,
+                              meanstructure = opt$meanstructure)
         }
         bootSampleStats <- try(getSampleStatsFromData(
                                Data        = data,
                                M           = Missing,
                                boot.idx    = boot.idx,
-                               rescale     = (options$estimator == "ML" &&
-                                              options$likelihood == "normal"),
+                               rescale     = (opt$estimator == "ML" &&
+                                              opt$likelihood == "normal"),
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
@@ -203,7 +210,7 @@ bootstrap.internal <- function(object = NULL,
         # just in case we need the dataSlot (lm!)
         if(type == "bollen.stine") {
             data.boot <- data
-            for(g in 1:sample@ngroups) {
+            for(g in 1:samp@ngroups) {
                 data.boot@X[[g]] <- data@X[[g]][ boot.idx[[g]],,drop=FALSE]
             }
         } else {
@@ -214,7 +221,7 @@ bootstrap.internal <- function(object = NULL,
         # have changed:
       ### FIXME #####
         #if(model@fixed.x && length(vnames(user, "ov.x")) > 0L) {
-        #    for(g in 1:sample@ngroups) {
+        #    for(g in 1:samp@ngroups) {
         #        
         #    }
         #}
@@ -225,7 +232,7 @@ bootstrap.internal <- function(object = NULL,
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions = options,
+        fit.boot <- lavaan(slotOptions = opt,
                            slotUser    = user,
                            slotModel   = model.boot,
                            slotSample  = bootSampleStats,

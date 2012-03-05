@@ -47,7 +47,8 @@ cor2cov <- function(R, sds, names=NULL) {
 # convert characters within single quotes to numeric vector
 # eg. s <- '3 4.3 8e-3 2.0'
 #     x <- char2num(s)
-char2num <- function(s = '') {
+char2num <- function(s. = '') {
+    s <- s.
     # first, strip all ',' or ';'
     s <- gsub(","," ", s); s <- gsub(";"," ", s)
     tc <- textConnection(s)
@@ -92,8 +93,9 @@ getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
 # generalized inverse
 # MASS version for now
 MASS.ginv <-
-function (X, tol = sqrt(.Machine$double.eps))
+function (X., tol = sqrt(.Machine$double.eps))
 {
+    X. <- X
     if (length(dim(X)) > 2L || !(is.numeric(X) || is.complex(X)))
         stop("'X' must be a numeric or complex matrix")
     if (!is.matrix(X))
@@ -320,9 +322,9 @@ eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0),
 
 # construct 'augmented' covariance matrix
 # based on the covariance matrix and the mean vector
-augmented.covariance <- function(S, mean) {
+augmented.covariance <- function(S., mean) {
 
-    S <- as.matrix(S)
+    S <- as.matrix(S.)
     m <- as.matrix(mean)
     p <- ncol(S)
 

@@ -14,10 +14,12 @@ Model <- function(user           = NULL,
 
     # what if no starting values are provided? 
     if(is.null(start)) 
-        start <- StartingValues(start.method="simple", user=user)
+        startValues <- StartingValues(start.method="simple", user=user)
+    else
+        startValues <- start
  
     # check start length
-    stopifnot(length(start) == nrow(user))
+    stopifnot(length(startValues) == nrow(user))
 
     # only representation = "LISREL" for now
     stopifnot(representation == "LISREL")
@@ -76,7 +78,6 @@ Model <- function(user           = NULL,
         # observed and latent variables for this group
         ov.names <- vnames(user, "ov", group=g)
         nvar[g] <- length(ov.names)
-        lv.names <- vnames(user, "lv", group=g)
 
         # model matrices for this group
         mmNumber    <- attr(REP, "mmNumber")[[g]]
@@ -150,7 +151,7 @@ Model <- function(user           = NULL,
             # FIXME: again, we may want to use sparse matrices here...
             tmp <- matrix(0.0, nrow=mmRows[mm],
                                ncol=mmCols[mm])
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- start[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- startValues[idx]
             if(mmSymmetric[mm]) {
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
             }
@@ -201,9 +202,10 @@ Model <- function(user           = NULL,
     # 2. variable definitions
     #    define a new variable as a arbitrary expression of free parameters
     #
-    def.function <- function(x, ...) NULL
+    def.function <- function() NULL
     def.idx <- which(user$op == ":=")
     if(length(def.idx) > 0L) {
+        formals(def.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\n# parameter definitions\n\n")
 
         lhs.names <- user$lhs[def.idx]
@@ -262,9 +264,10 @@ Model <- function(user           = NULL,
     #             out[1] <- b1 + b2 - 2
     #         }
     
-    ceq.function <- function(x, ...) NULL
+    ceq.function <- function() NULL
     eq.idx <- which(user$op == "==")
     if(length(eq.idx) > 0L) {
+        formals(ceq.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
 
         # first come the variable definitions
@@ -331,7 +334,7 @@ Model <- function(user           = NULL,
     
     # 3b. construct jacobian function 
     #     corresponding with the ceq.function constraints
-    ceq.jacobian <- function(x, ...) NULL
+    ceq.jacobian <- function() NULL
     # TODO!!!
    
     # 4a. non-trivial inequality constraints (linear or nonlinear)
@@ -344,9 +347,10 @@ Model <- function(user           = NULL,
     #             b1 = x[10]; b2 = x[17] 
     #             out[1] <- b1 + b2 - 2
     #         }
-    cin.function <- function(x, ...) NULL
+    cin.function <- function() NULL
     ineq.idx <- which(user$op == ">" | user$op == "<")
     if(length(ineq.idx) > 0L) {
+        formals(cin.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
 
         # first come the variable definitions
@@ -418,7 +422,7 @@ Model <- function(user           = NULL,
 
     # 4b. construct jacobian function 
     #     corresponding with the cin.function constraints
-    cin.jacobian <- function(x, ...) NULL
+    cin.jacobian <- function() NULL
     # TODO!!!
 
 

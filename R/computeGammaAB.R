@@ -29,9 +29,9 @@ compute.Gamma <- function(data, meanstructure=FALSE, Mplus.WLS=FALSE) {
 
 # function to compute 'Gamma' (cov only),  the ADF weight matrix
 # see Browne and Arminger 1995 page 190-191
-compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
+compute.Gamma1 <- function(data., Mplus.WLS=FALSE) {
 
-    data <- as.matrix(data)
+    data <- as.matrix(data.)
 
     # we need central moments, so center
     zdata <- scale(data, center=TRUE, scale=FALSE)
@@ -57,9 +57,9 @@ compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
 
 ## compute the multivariate third order central moment
 ## speeded up version for p < 20 contributed by Thierry Marchant (4 sept 2009)
-compute.third.moment <- function(data) {
+compute.third.moment <- function(data.) {
 
-    data <- as.matrix(data)
+    data <- as.matrix(data.)
 
     # center
     zdata <- scale(data, center=TRUE, scale=FALSE)
@@ -116,7 +116,7 @@ compute.Omega.Beta <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL, M=NULL,
 
 
 compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, 
-                                X=NULL, M=NULL, Abeta=TRUE, Bbeta=TRUE,
+                                X.orig=NULL, M=NULL, Abeta=TRUE, Bbeta=TRUE,
                                 information="observed") {
     if(is.null(Mu.hat)) {
         stop("Mu.hat=NULL not implemented yet; use meanstructure=TRUE")
@@ -124,11 +124,11 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     if(is.null(M)) {
         type <- "full"
-        if(is.null(X) || !is.matrix(X)) {
+        if(is.null(X.orig) || !is.matrix(X.orig)) {
             stop("X is null or non-matrix")
         }
-        ntotal <- nrow(X)
-        nvar <- ncol(X)
+        ntotal <- nrow(X.orig)
+        nvar <- ncol(X.orig)
         npatterns <- 1L
     } else {
         type <- "missing"
@@ -158,6 +158,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
             taoj <- diag(nvar)[var.idx, , drop = FALSE]
         } else {
             nobs <- ntotal
+            X <- X.orig
             MX <- colMeans(X)
             SX <- crossprod(X)/nobs - tcrossprod(MX)
             var.idx <- rep(TRUE, nvar)
@@ -233,8 +234,7 @@ compute.Abeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
     Abeta
 }
 
-compute.Abeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, 
-                                   meanstructure=TRUE) {
+compute.Abeta.complete <- function(Sigma.hat=NULL, meanstructure=TRUE) {
 
     inv <- attr(Sigma.hat, "inv")
     if(is.matrix(inv)) {

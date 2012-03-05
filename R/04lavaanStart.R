@@ -7,11 +7,11 @@
 # starting values, using the sample data
 
 StartingValues <- function(start.method = "default",
-                           user         = NULL, 
-                           sample       = NULL,
-                           model.type   = "sem",
-                           mimic        = "lavaan",
-                           debug        = FALSE) {
+                           user          = NULL, 
+                           sample        = NULL,
+                           model.type    = "sem",
+                           mimic         = "lavaan",
+                           debug         = FALSE) {
 
     # check arguments
     stopifnot(is.list(user), class(sample) == "SampleStats")
@@ -38,11 +38,11 @@ StartingValues <- function(start.method = "default",
     }
     start.user    <- NULL
     if(is.character(start.method)) {
-        start.method <- tolower(start.method)
-        if(start.method == "default") {
+        start.method. <- tolower(start.method)
+        if(start.method. == "default") {
             # nothing to do
-        } else if(start.method %in% c("simple", "lavaan", "mplus")) { 
-            start.initial <- start.method
+        } else if(start.method. %in% c("simple", "lavaan", "mplus")) { 
+            start.initial <- start.method.
         } else {
             stop("lavaan ERROR: unknown value for start argument")
         }
@@ -94,7 +94,7 @@ StartingValues <- function(start.method = "default",
 
         # info from user model for this group
         ov.names    <- vnames(user, "ov",   group=g)
-        lv.names    <- vnames(user, "lv",   group=g); nfac <- length(lv.names)
+        lv.names    <- vnames(user, "lv",   group=g)
         ov.names.x  <- vnames(user, "ov.x", group=g)
 
         # g1) factor loadings

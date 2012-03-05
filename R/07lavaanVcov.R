@@ -57,8 +57,8 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
                                options=options, data=data,
                                R=R, verbose=options$verbose,
                                type=boot.type,
-                               FUN <- ifelse(boot.type == "bollen.stine",
-                                             "coeftest", "coef"),
+                               FUN=ifelse(boot.type == "bollen.stine",
+                                          "coeftest", "coef"),
                                warn=-1L,
                                parallel=control$parallel,
                                ncpus=control$ncpus,
@@ -80,7 +80,7 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.first.order <- function(object, sample=NULL, data=NULL, type="free") {
+Nvcov.first.order <- function(object, sample=NULL, data=NULL) {
 
     B0.group <- vector("list", sample@ngroups)
 
@@ -142,7 +142,6 @@ Nvcov.robust.mlm <- function(object, sample=NULL, data=NULL) {
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-    trace.UGamma <- numeric( sample@ngroups )
 
     for(g in 1:sample@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
@@ -177,7 +176,6 @@ Nvcov.robust.mlm.mplus <- function(object, sample=NULL, data=NULL) {
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-    trace.UGamma <- numeric( sample@ngroups )
 
     for(g in 1:sample@ngroups) {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)

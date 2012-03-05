@@ -25,7 +25,6 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
                 WLS.V[[g]] <- 
                     compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
-                                           Mu.hat=Mu.hat[[g]],
                                            meanstructure=object@meanstructure)
             }
         }

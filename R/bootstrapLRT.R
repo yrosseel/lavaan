@@ -40,8 +40,8 @@ bootstrapLRT <- function(h0              = NULL,  # restricted model
         if (!have_mc && !have_snow) ncpus <- 1L
     }
 
-    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
-    seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    #if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
+    #seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
     
     # data
     data <- h0@Data

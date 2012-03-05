@@ -3,8 +3,9 @@
 #
 # not for real use; only to check the GaussJordanPivot function
 # this function will fail if a pivot is (near)zero!
-GaussJordanInverseNoPivoting <- function(A) {
+GaussJordanInverseNoPivoting <- function(A.) {
 
+    A <- A. # we will change it
     p <- (d <- dim(A))[1L]
     if (!is.numeric(A) || length(d) != 2L || p != d[2L])
         stop("'A' is not a square numeric matrix")
@@ -30,8 +31,9 @@ GaussJordanInverseNoPivoting <- function(A) {
 }
 
 # just for fun, *with* pivoting of rows
-GaussJordanInverse <- function(A) {
+GaussJordanInverse <- function(A.) {
 
+    A <- A.
     p <- (d <- dim(A))[1L]
     if (!is.numeric(A) || length(d) != 2L || p != d[2L])
         stop("'A' is not a square numeric matrix")
@@ -63,8 +65,9 @@ GaussJordanInverse <- function(A) {
 # perform a single 'Gauss-Jordan' pivot on a 
 # square matrix 'A' using a diagonal element A[k,k]
 # as a pivot element
-GaussJordanPivot <- function(A, k=1L) {
+GaussJordanPivot <- function(A., k=1L) {
 
+    A <- A.
     p <- (d <- dim(A))[1L]
     if (!is.numeric(A) || length(d) != 2L || p != d[2L])
         stop("'A' is not a square numeric matrix")

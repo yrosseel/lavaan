@@ -86,7 +86,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # missing
     if(opt$missing == "default") {
-        if(opt$mimic == "Mplus") { # since version 5?
+        if(opt$mimic == "Mplus" && opt$data.type != "moment") { 
+            # since version 5?
             opt$missing <- "ml" 
             # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
             if(opt$estimator %in% c("mlm", "gls", "wls")) {

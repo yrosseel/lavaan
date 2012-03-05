@@ -10,7 +10,8 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     fx.group   = attr(fx, "fx.group")
     control    = attr(x, "control")
     attributes(fx) <- NULL
-    attributes(x) <- NULL
+    x.copy <- x # we are going to change it (remove attributes)
+    attributes(x.copy) <- NULL
     est <- getModelParameters(model, type="user")
 
     # did we compute standard errors?
@@ -37,7 +38,6 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
                 def.cov <- cov(BOOT.def )
             } else {
                 # regular delta method
-                nvar <- length(x)
                 JAC <- jacobian(func = model@def.function, x = x, 
                                 method = "Richardson")
                 def.cov <- JAC %*% VCOV %*% t(JAC)
@@ -64,7 +64,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
 
     new("Fit",
         npar       = max(user$free),
-        x          = x,
+        x          = x.copy,
         start      = start,
         est        = est,
         se         = se,

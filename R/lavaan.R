@@ -87,7 +87,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(max(FLAT$group) < 2L) { # same model for all groups 
         ov.names <- vnames(FLAT, type="ov")
     } else { # different model per group
-        ov.names <- lapply(unique(FLAT$group),
+        ov.names <- lapply(1:max(FLAT$group),
                            function(x) vnames(FLAT, type="ov", group=x))
     }
 
