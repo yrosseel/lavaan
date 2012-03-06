@@ -11,8 +11,8 @@ bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE,
                 ncpus = 1L, cl = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
-             verbose=FALSE, return.LRT = FALSE, 
-             calibrate = FALSE, calibrate.R = 1000L, calibrate.alpha = 0.05, 
+             verbose = FALSE, return.LRT = TRUE, double.bootstrap = "FDB", 
+             double.bootstrap.R = 500L, double.bootstrap.alpha = 0.05, 
              warn = -1L, parallel = c("no", "multicore", "snow"),
              ncpus = 1L, cl = NULL)
 }
@@ -54,11 +54,14 @@ free parameters in the model.}
     local machine is created for the duration of the \code{bootstrapLavaan}
     or \code{bootstrapLRT} call.
   }
-\item{calibrate}{If \code{TRUE}, a double (nested) bootstrap is used to
-compute an additional set of plugin-values for each bootstrap sample.}
-\item{calibrate.R}{Integer. The number of bootstrap draws to be use for
+\item{double.bootstrap}{If \code{"standard"} the genuine double bootstrap is
+    used to compute an additional set of plug-in p-values for each boostrap
+    sample. If \code{"FDB"}, the fast double bootstrap is used to compute   
+    second level LRT-values for each bootstrap sample. If \code{"no"}, no
+    double bootstrap is used. The default is set to \code{"FDB"}.}
+\item{double.bootstrap.R}{Integer. The number of bootstrap draws to be use for
 the double bootstrap.}
-\item{calibrate.alpha}{The significance level to compute the adjusted
+\item{double.bootstrap.alpha}{The significance level to compute the adjusted
 alpha based on the plugin p-values.}
 }
 
@@ -68,7 +71,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
-fit <- cfa(HS.model, data=HolzingerSwineford1939)
+fit <- cfa(HS.model, data=HolzingerSwineford1939, se="none")
 
 # get the test statistic for the original sample
 T.orig <- fitMeasures(fit, "chisq")

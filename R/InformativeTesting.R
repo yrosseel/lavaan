@@ -1,6 +1,6 @@
 # This code is contributed by Leonard Vanbrabant <L.G.F.Vanbrabant@uu.nl>
 InformativeTesting <- function(model = NULL, data, constraints = NULL, 
-                               R = NULL, type = "bollen.stine",
+                               R = 1000L, type = "bollen.stine",
                                return.LRT = TRUE, 
                                double.bootstrap = "FDB",
                                double.bootstrap.R = 500L, 
@@ -8,8 +8,8 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
                                parallel = c("no", "multicore", "snow"), 
                                ncpus = 1L, cl = NULL, verbose = FALSE, ...){
   #prepare
-  if (missing(R) & double.bootstrap == "standard") R <- 1000L
-  if (missing(R) & double.bootstrap == "FDB") R <- 2000L
+  if (missing(R) && double.bootstrap == "standard") R <- 1000L
+  if (missing(R) && double.bootstrap == "FDB") R <- 2000L
   
   #fit unconstrained (free) model and H1
   fit.free <- sem(model, data = data, se = "none", test = "standard", ...) 

@@ -1,4 +1,4 @@
-bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = NULL, 
+bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           type = "bollen.stine", verbose = FALSE,
                           return.LRT = TRUE, 
                           double.bootstrap = "FDB",

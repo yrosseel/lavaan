@@ -2,7 +2,6 @@
 \alias{InformativeTesting}
 \alias{print.InformativeTesting}
 \alias{summary.InformativeTesting}
-\alias{plot.InformativeTesting}
 \title{Testing order Constrained Hypotheses in SEM}
 \description{Testing order constrained Hypotheses in SEM}
 \usage{
@@ -10,7 +9,7 @@ InformativeTesting(model = NULL, data, constraints = NULL,
                    R = 1000L, type = "bollen.stine",
                    return.LRT = TRUE, 
                    double.bootstrap = "FDB",
-                   double.bootstrap.R = 1000L, 
+                   double.bootstrap.R = 500L, 
                    double.bootstrap.alpha = 0.05,
                    parallel = c("no", "multicore", "snow"), 
                    ncpus = 1L, cl = NULL, verbose = FALSE, \dots)
