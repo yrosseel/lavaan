@@ -18,8 +18,8 @@ getData <- function(data          = NULL,          # data.frame
         if(!(group %in% names(data))) {
             stop("lavaan ERROR: grouping variable ", sQuote(group),
                  " not found;\n  ",
-                 "variable names found in data frame ", sQuote(env.data.name), 
-                 " are:\n  ", paste(names(data), collapse=" "))
+                 "variable names found in data frame are:\n  ", 
+                 paste(names(data), collapse=" "))
         }
         # note: we use the order as in the data; not as in levels(data)
         group.label <- unique(as.character(data[,group]))

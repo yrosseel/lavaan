@@ -53,8 +53,8 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
 
     TEST <- NULL
     COEF <- bootstrap.internal(object=NULL,
-                               model=object, sample=sample, user=user,
-                               options=options, data=data,
+                               model.=object, sample.=sample, user.=user,
+                               options.=options, data.=data,
                                R=R, verbose=options$verbose,
                                type=boot.type,
                                FUN=ifelse(boot.type == "bollen.stine",

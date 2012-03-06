@@ -47,11 +47,10 @@ cor2cov <- function(R, sds, names=NULL) {
 # convert characters within single quotes to numeric vector
 # eg. s <- '3 4.3 8e-3 2.0'
 #     x <- char2num(s)
-char2num <- function(s. = '') {
-    s <- s.
+char2num <- function(s = '') {
     # first, strip all ',' or ';'
-    s <- gsub(","," ", s); s <- gsub(";"," ", s)
-    tc <- textConnection(s)
+    s. <- gsub(","," ", s); s. <- gsub(";"," ", s.)
+    tc <- textConnection(s.)
     x <- scan(tc, quiet=TRUE)
     close(tc)
     x 
@@ -95,7 +94,7 @@ getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
 MASS.ginv <-
 function (X., tol = sqrt(.Machine$double.eps))
 {
-    X. <- X
+    X <- X.
     if (length(dim(X)) > 2L || !(is.numeric(X) || is.complex(X)))
         stop("'X' must be a numeric or complex matrix")
     if (!is.matrix(X))

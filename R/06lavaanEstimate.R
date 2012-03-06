@@ -288,7 +288,7 @@ function(object, GLIST=NULL, sample, estimator="ML",
 ### FIXME: should we here also:
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
-computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
+computeDelta <- function(object, GLIST.=NULL, m.el.idx=NULL, x.el.idx=NULL) {
 
     representation <- object@representation
     nmat           <- object@nmat
@@ -296,7 +296,10 @@ computeDelta <- function(object, GLIST=NULL, m.el.idx=NULL, x.el.idx=NULL) {
     nvar           <- object@nvar
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST.)) 
+        GLIST <- object@GLIST
+    else
+        GLIST <- GLIST.
 
     # type = "free" or something else?
     type <- "nonfree"
@@ -579,7 +582,7 @@ function(object, GLIST=NULL, sample=NULL, type="free",
         if(type != "free") {
             stop("FIXME: WLS gradient with type != free needs fixing!")
         }
-        Delta <- computeDelta(object, GLIST=GLIST)
+        Delta <- computeDelta(object, GLIST.=GLIST)
 
         for(g in 1:sample@ngroups) {
             # Browne & Arminger 1995 eq 4.49

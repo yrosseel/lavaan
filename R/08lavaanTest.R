@@ -419,8 +419,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             boot.type <- "bollen.stine"
             BOOT.TEST <- 
                 bootstrap.internal(object=NULL,
-                                   model=object, sample=sample, user=user,
-                                   options=options, data=data,
+                                   model.=object, sample.=sample, user.=user,
+                                   options.=options, data.=data,
                                    R=R, verbose=options$verbose,
                                    type=boot.type,
                                    FUN <- "test",

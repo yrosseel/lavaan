@@ -29,9 +29,9 @@ compute.Gamma <- function(data, meanstructure=FALSE, Mplus.WLS=FALSE) {
 
 # function to compute 'Gamma' (cov only),  the ADF weight matrix
 # see Browne and Arminger 1995 page 190-191
-compute.Gamma1 <- function(data., Mplus.WLS=FALSE) {
+compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
 
-    data <- as.matrix(data.)
+    #data <- as.matrix(data)
 
     # we need central moments, so center
     zdata <- scale(data, center=TRUE, scale=FALSE)
@@ -116,7 +116,7 @@ compute.Omega.Beta <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL, M=NULL,
 
 
 compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, 
-                                X.orig=NULL, M=NULL, Abeta=TRUE, Bbeta=TRUE,
+                                X=NULL, M=NULL, Abeta=TRUE, Bbeta=TRUE,
                                 information="observed") {
     if(is.null(Mu.hat)) {
         stop("Mu.hat=NULL not implemented yet; use meanstructure=TRUE")
@@ -124,11 +124,11 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     if(is.null(M)) {
         type <- "full"
-        if(is.null(X.orig) || !is.matrix(X.orig)) {
+        if(is.null(X) || !is.matrix(X)) {
             stop("X is null or non-matrix")
         }
-        ntotal <- nrow(X.orig)
-        nvar <- ncol(X.orig)
+        ntotal <- nrow(X)
+        nvar <- ncol(X)
         npatterns <- 1L
     } else {
         type <- "missing"
@@ -150,7 +150,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     for(j in 1:npatterns) {
         if(type == "missing") {
-            X <- M$data[[j]][["X"]]
+            Xp <- M$data[[j]][["X"]]
             SX <- M$data[[j]][["SX"]]
             MX <- M$data[[j]][["MX"]]
             nobs <- M$data[[j]][["nobs"]]
@@ -158,7 +158,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
             taoj <- diag(nvar)[var.idx, , drop = FALSE]
         } else {
             nobs <- ntotal
-            X <- X.orig
+            Xp <- X
             MX <- colMeans(X)
             SX <- crossprod(X)/nobs - tcrossprod(MX)
             var.idx <- rep(TRUE, nvar)
@@ -187,7 +187,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 dx.Mu    <- matrix(0, nvar, 1)
                 dx.Sigma <- matrix(0, nvar, nvar)
 
-                diff.i <- t(X[i,] - Mu)
+                diff.i <- t(Xp[i,] - Mu)
                 dx.Mu[var.idx, 1] <- -1 * t(diff.i %*% Sigma.inv)
                 dx.Sigma[var.idx, var.idx] <- (-1 * (Sigma.inv %*% 
                   (crossprod(diff.i) - Sigma.hat[var.idx, var.idx]) %*% 

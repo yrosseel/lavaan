@@ -10,7 +10,9 @@
 # M&N book: page 30
 #
 # note: we do not coerce to 'double/numeric' storage-mode (like as.numeric)
-vec <- as.vector
+vec <- function(A) {
+    as.vector(A)
+}
 
 # vecr operator
 #
@@ -29,8 +31,7 @@ vecr <- function(A) {
 # M&N book: page 48-49
 #
 vech <- function(S, diagonal = TRUE) {
-    n <- nrow(S)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    ROW <- row(S); COL <- col(S)
     if(diagonal) S[ROW >= COL] else S[ROW > COL]
 }
 
@@ -46,22 +47,25 @@ vechru <- function(S, diagonal = TRUE) {
 # return the the *vector* indices of the lower triangular elements of a 
 # symmetric matrix of size 'n'
 vech.idx <- function(n = 1L, diagonal = TRUE) {
+    # FIXME: is there a way to avoid creating ROW/COL matrices?
     n <- as.integer(n)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
     if(diagonal) which(ROW >= COL) else which(ROW > COL)
 }
+ 
 
 # return the the *vector* indices of the upper triangular elements of a 
 # symmetric matrix of size 'n' -- ROW-WISE
 #
-# FIXME!! make this more efficient (without creating a n*n matrix!)
+# FIXME!! make this more efficient (without creating 3 n*n matrices!)
 #
 vechru.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
     tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
     if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
 }
+
 
 # vech.reverse and vechru.reverse (aka `upper2full')
 #
@@ -103,7 +107,7 @@ vechu <- function(S, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- ROW-WISE
 vechr.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
     tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
     if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
 }
@@ -112,7 +116,7 @@ vechr.idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- COLUMN-WISE
 vechu.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- .Internal(row(c(n,n))); COL <- .Internal(col(c(n,n)))
+    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
     if(diagonal) which(ROW <= COL) else which(ROW < COL)
 }
 
@@ -127,6 +131,7 @@ vechr.reverse <- vechu.reverse <- lower2full <- function(x, diagonal = TRUE) {
     } else {
         p <- (sqrt(1 + 8*length(x))+1)/2
     }
+    stopifnot(p == round(p,0))
 
     S <- numeric(p*p)
     S[vechr.idx(p, diagonal=diagonal)] <- x

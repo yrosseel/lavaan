@@ -295,7 +295,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                           lavaanOptions$likelihood == "normal"))
 
         if(lavaanOptions$estimator == "GLS") {
-            WLS.V <- getWLS.V(X             = NULL,
+            WLS.V <- getWLS.V(Data          = NULL,
                               sample        = lavaanSampleStats,
                               estimator     = lavaanOptions$estimator,
                               mimic         = lavaanOptions$mimic,
@@ -385,10 +385,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
                 require(quadprog)
 
-                A.ceq <- t(jacobian(func=lavaanModel@ceq.function, 
-                                    x=rep(0,lavaanModel@nx.free)))
-                A.cin <- t(jacobian(func=lavaanModel@cin.function, 
-                                    x=rep(0,lavaanModel@nx.free)))
+                A.ceq <- A.cin <- matrix(0, lavaanModel@nx.free, 0)
+                if(!is.null(body(lavaanModel@ceq.function)))
+                    A.ceq <- t(jacobian(func=lavaanModel@ceq.function, 
+                                        x=rep(0,lavaanModel@nx.free)))
+                if(!is.null(body(lavaanModel@cin.function)))
+                    A.cin <- t(jacobian(func=lavaanModel@cin.function, 
+                                        x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
                 # meanstructure? last row is intercept
                 if(lavaanOptions$meanstructure) {
