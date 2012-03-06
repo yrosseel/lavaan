@@ -1,14 +1,19 @@
 \name{InformativeTesting}
 \alias{InformativeTesting}
-\title{Testing Inequality Constrained Hypotheses in SEM}
-\description{Testing inequality constrained Hypotheses in SEM}
+\alias{print.InformativeTesting}
+\alias{summary.InformativeTesting}
+\alias{plot.InformativeTesting}
+\title{Testing order Constrained Hypotheses in SEM}
+\description{Testing order constrained Hypotheses in SEM}
 \usage{
-InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L, 
-                   type = "bollen.stine", return.LRT = TRUE, calibrate = FALSE, 
-                   calibrate.R = 500L, calibrate.alpha = 0.05, 
-                   parallel = c("no", "multicore", "snow"), ncpus = 1L, 
-                   cl = NULL, verbose = FALSE, stoptest = NULL, 
-                   conclusion = FALSE, ...)
+InformativeTesting(model = NULL, data, constraints = NULL, 
+                   R = 1000L, type = "bollen.stine",
+                   return.LRT = TRUE, 
+                   double.bootstrap = "FDB",
+                   double.bootstrap.R = 1000L, 
+                   double.bootstrap.alpha = 0.05,
+                   parallel = c("no", "multicore", "snow"), 
+                   ncpus = 1L, cl = NULL, verbose = FALSE, \dots)
 }
 \arguments{
 \item{model}{Model syntax specifying the model. See \code{\link{model.syntax}} 
@@ -16,20 +21,25 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
 \item{data}{The data frame containing the observed variables being used to 
     fit the model.}
 \item{constraints}{The imposed inequality constraints on the model.}
-\item{R}{Integer; number of bootstrap draws. Default value is set to 1000.}
+\item{R}{Integer; number of bootstrap draws. Default value is set to 1000. 
+    If \code{double.bootstrap = "FDB"} the default value is set to 2000.}
 \item{type}{If \code{"parametric"}, the parametric bootstrap is used. 
     If \code{"bollen.stine"}, the semi-nonparametric Bollen-Stine boostrap 
-    is used. The default value is set to \code{"bollen.stine"}.}
+    is used. The default is set to \code{"bollen.stine"}.}
 \item{return.LRT}{Logical; if \code{TRUE}, the function returns bootstrapped         
     LRT-values.}
-\item{calibrate}{Logical; if \code{TRUE}, a double bootstrap is used to compute 
-    an additional set of plug-in p-values for each boostrap sample.}
-\item{calibrate.R}{Integer; number of double bootstrap draws. Only used if 
-    \code{calibrate=TRUE}. The default value is set to 500.}
-\item{calibrate.alpha}{The significance level to compute the adjusted alpha 
-    based on the plugin p-values. Only used if \code{calibrate=TRUE}}
+\item{double.bootstrap}{If \code{"standard"} the genuine double bootstrap is 
+    used to compute an additional set of plug-in p-values for each boostrap       
+    sample. If \code{"FDB"}, the fast double bootstrap is used to compute           
+    second level LRT-values for each bootstrap sample. If \code{"no"}, no 
+    double bootstrap is used. The default is set to \code{"FDB"}.}    
+\item{double.bootstrap.R}{Integer; number of double bootstrap draws. Only used         
+    if \code{double.bootstrap = "standard"}. The default value is set to 500.}
+\item{double.bootstrap.alpha}{The significance level to compute the adjusted 
+    alpha based on the plugin p-values. Only used if \code{double.bootstrap = 
+    "standard"}. The default value is set to 0.05.}
 \item{parallel}{The type of parallel operation to be used (if any). If missing, 
-    the default is "no".}
+    the default is set "no".}
 \item{ncpus}{Integer: number of processes to be used in parallel operation: 
     typically one would chose this to the number of available CPUs.} 
 \item{cl}{An optional parallel or snow cluster for use if 
@@ -37,18 +47,15 @@ InformativeTesting(model = NULL, data, constraints = NULL, R = 1000L,
     is created for the duration of the \code{InformativeTesting} call.}
 \item{verbose}{Logical; if \code{TRUE}, information is shown at each bootstrap         
     draw.}
-\item{stoptest}{The \code{InformativeTesting()} stops when the plug-in p-value 
-    for the null-hypothesis for Type A is larger than the pre-specified value.}
-\item{conclusion}{Logical; if \code{TRUE}, a conclusion in words is printed.}
 \item{...}{Other named arguments from the lavaan package which are passed to 
     the function. For example \code{"group"} for a multiple group model.}
 }
 %\details{}
 \value{An object of class InformativeTesting for which a summary and a plot 
-method is available.}   
+    method is available.}   
 %\seealso{}
 \examples{
-#Multiple regression 
+#Multiple regression model
 
 model  <- '
           y1 ~ b1*x1 + b2*x2 + b3*x3 +
@@ -63,16 +70,18 @@ constraints  <-'
               '
 
 
-#We only generate 5 bootstrap samples and 2 double bootstraps; 
+#We only generate 5 bootstrap samples; 
 #in practice you may wish to use a much higher number.
 
 example <- InformativeTesting(model = model, data = PoliticalDemocracy, 
-                              constraints = constraints, R = 5, 
-                              type = "bollen.stine",
-                              calibrate = TRUE, calibrate.R = 2,                       
-                              calibrate.alpha = 0.05)
+                              constraints = constraints, R = 5) 
+                              
 example
-summary(example)
+#summary(example)
+
+#The original estimates for the unconstrained model.
+#summary(example, fit = "hu")
+
 #plot(example)
 }
 
@@ -89,6 +98,6 @@ International Journal of Behavioral Development 35(2), 180-190.
 
 \author{
 Leonard Vanbrabant
-\email{l.g.f.vanbrabant@uu.nl}
+\email{l.g.f.vanbrabant@hotmail.com}
 }
 

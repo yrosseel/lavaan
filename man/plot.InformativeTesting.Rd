@@ -1,8 +1,7 @@
 \name{plot.InformativeTesting}
 \alias{plot.InformativeTesting}
 \title{Plot output InformativeTesting()}
-\description{The function plots the distributions of bootstrapped LRT values and 
-    plug-in p-values.}
+\description{The function plots the distributions of bootstrapped LRT values and plug-in p-values.}
     
 \usage{
   \method{plot}{InformativeTesting}(x, \dots,
@@ -20,10 +19,11 @@
 }
 \arguments{
   \item{x}{The output of the \code{InformativeTesting()} function}
+  \item{ldots}{Currently not used}
   \item{type}{If \code{"all"}, all available plots are plotted simultaneously. 
     If \code{LRT.A} or \code{LRT.B}, a distribution of the 
-    bootstrapped LRT values is plotted. If \code{plugin.pvalues.A} or 
-    \code{plugin.pvalues.B}, a distribution of the boostrapped 
+    bootstrapped LRT values is plotted. If \code{ppvalues.A} or 
+    \code{ppvalues.B}, a distribution of the boostrapped 
     plug-in p-values is plotted.}
   \item{main}{The main title(s) for the plot(s)}
   \item{xlab}{A label for the x axis, default depends on input type.}
@@ -58,7 +58,6 @@
     text and symbols should be magnified relative to the default. 
     This starts as 1 when a device is opened, and is reset when the layout 
     is changed}
-  \item{...}{Further arguments to be passed to the plot function.}
   \item{loc.legend}{The location of the legend, specified by a single 
     keyword from the list \code{"bottomright"}, \code{"bottom"}, 
     \code{"bottomleft"}, \code{"left"}, \code{"topleft"}, \code{"top"}, 
