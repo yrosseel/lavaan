@@ -1,10 +1,10 @@
 
 computeExpectedInformation <- function(object, sample=NULL, data=NULL,
                                        estimator="ML",
-                                       Delta=NULL, extra=FALSE) {
-
-    # is no Delta is provided, we compute Delta for the free parameters only
-    if(is.null(Delta))  Delta <- computeDelta(object)
+                                       # is no Delta is provided, we compute 
+                                       # Delta for the free parameters only
+                                       Delta=computeDelta(object), 
+                                       extra=FALSE) {
 
     # compute WLS.V
     WLS.V       <- vector("list", length=sample@ngroups)
@@ -58,10 +58,8 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
 }
 
 # only for Mplus MLM
-computeExpectedInformationMLM <- function(object, sample=NULL, Delta=NULL) {
-
-    # is no Delta is provided, we compute Delta for the free parameters only
-    if(is.null(Delta))  Delta <- computeDelta(object)
+computeExpectedInformationMLM <- function(object, sample = NULL, 
+                                          Delta = computeDelta(object)) {
 
     # compute WLS.V 
     WLS.V <- vector("list", length=sample@ngroups)
@@ -155,52 +153,7 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
 
     # make symmetric (NEEDED? probably not)
     Hessian <- ( Hessian + t(Hessian) )/2.0
-  
-    Information.ok <- ( -1 * Hessian )
-
-    # attempt to compute HESSIAN analytically
-    if(FALSE) {
-        # analytical formula -- NOT OK!!! 
-        Delta       <- computeDelta(object)
-        WLS.V       <- vector("list", length=sample@ngroups)
-        Info.group  <- vector("list", length=sample@ngroups)
-
-        # compute WLS.V
-        Sigma.hat <- computeSigmaHat(object)
-        if(object@meanstructure) Mu.hat <- computeMuHat(object)
-        for(g in 1:sample@ngroups) {
-            WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
-                                        Mu.hat=Mu.hat[[g]],
-                                        sample=sample, data=data, group=g,
-                                        information="observed")
-        }
-
-        # compute Information per group
-        for(g in 1:sample@ngroups) {
-            # take care of multiple groups
-            WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
-
-            # compute information for this group
-            Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
-        }
-
-        # assemble over groups
-        Information <- Info.group[[1]]
-        if(sample@ngroups > 1) {
-            for(g in 2:sample@ngroups) {
-                Information <- Information + Info.group[[g]]
-            }
-        }
-
-        # NOTE: diagonal is OK, but off-diagonal elements mostly not
-        cat("DEBUG: analytical HESSIAN. DIAG( solve(I) ):\n")
-        print( diag( solve(Information) ) )
-        cat("DEBUG: numerical HESSIAN. DIAG( solve(I) ):\n")
-        print( diag( solve(Information.ok) ) )
-    } # analytical hessian
-
-    # use numerical only for now
-    Information <- Information.ok
+    Information <- ( -1 * Hessian )
 
     # augmented Information matrix (only for fixed.x)
     if(type == "free.fixed.x" && object@fixed.x && length(object@x.idx) > 0) {

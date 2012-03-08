@@ -197,8 +197,7 @@ summary.InformativeTesting <- function(object,
   }
 }
 
-
-plot.InformativeTesting <- function(x, ..., 
+plot.InformativeTesting <- function(x, ...,
                                     type = "all",
                                     main = "main",
                                     xlab = "xlabel",
@@ -210,22 +209,21 @@ plot.InformativeTesting <- function(x, ...,
                                     col = "grey",
                                     border = par("fg"),
                                     axes = TRUE,
-                                    vline.LRT = FALSE, 
-                                    vline.col = "red", 
+                                    vline.LRT = FALSE,
+                                    vline.col = "red",
                                     lty = NULL,
                                     lwd = NULL,
                                     legend = FALSE,
                                     cex.legend = 0.75,
-                                    loc.legend = "topright") 
+                                    loc.legend = "topright")
  {
-  
+
   #prepare
   object <- x
   return.LRT <- object$return.LRT
   double.bootstrap <- object$double.bootstrap
-  
   #checks
-  stopifnot(type %in% c("all", "LRT.A", "LRT.B", 
+  stopifnot(type %in% c("all", "LRT.A", "LRT.B",
                         "ppvalues.A", "ppvalues.B"))
   if (type == "ppvalues.A" | type == "ppvalues.B") {
     stopifnot(double.bootstrap == "standard")
@@ -233,54 +231,58 @@ plot.InformativeTesting <- function(x, ...,
   if (type == "LRT.A" | type == "LRT.B") {
     stopifnot(return.LRT)
   }
-  if (type == "all" & !return.LRT) { 
+  if (type == "all" & !return.LRT) {
     stopifnot (double.bootstrap != "FDB")
   }
-  
+
   #prepare data
-  pvalue <- rep(as.numeric(NA), 2) 
+  pvalue <- rep(as.numeric(NA), 2)
    pvalue[1]   <- object$lrt.bootA[1]
    pvalue[2]   <- object$lrt.bootB[1]
-  
+
   if (ylab == "ylabel") {
     y.lab  <- "Frequency"
-  } else {
+  }
+  else {
     y.lab <- ylab
   }
-  
+
   if (return.LRT) {
-    lrt.obs <- rep(as.numeric(NA), 2) 
+    lrt.obs <- rep(as.numeric(NA), 2)
       lrt.obs[1]  <- attr(object$lrt.bootA, "LRT.original")
       lrt.obs[2]  <- attr(object$lrt.bootB, "LRT.original")
-        
+
       lrt.A <- attr(object$lrt.bootA, "LRT")
       lrt.B <- attr(object$lrt.bootB, "LRT")
-    
-    lrt <- list(data.frame(lrt.A), data.frame(lrt.B))
-    lrt <- do.call(rbind.fill, lrt)
-            
-    if (xlab == "xlabel") { 
+
+    if (length(lrt.A) - length(lrt.B) < 0L) {
+      lrt <- cbind(c(lrt.A, rep(NA, length(lrt.B) - length(lrt.A))), lrt.B)
+    }else{
+      lrt <- cbind(lrt.A, c(lrt.B, rep(NA, length(lrt.A) - length(lrt.B))))
+    }
+
+    if (xlab == "xlabel") {
       x.lrt <- c("Bootstrapped LRT values")
     }
     else {
       x.lrt <- xlab
     }
     if (main == "main") {
-      m.lrt <- c("Distribution of bootstrapped LRT values - type A", 
+      m.lrt <- c("Distribution of bootstrapped LRT values - type A",
                  "Distribution of bootstrapped LRT values - type B")
     }
     else {
       m.lrt <- main
     }
-  } 
+  }
   if (double.bootstrap == "FDB") {
       lrt.q <- rep(as.numeric(NA), 2)
-        lrt.q[1] <- attr(object$lrt.bootA, "lrt.q") 
+        lrt.q[1] <- attr(object$lrt.bootA, "lrt.q")
         lrt.q[2] <- attr(object$lrt.bootB, "lrt.q")
       adj.pvalue <- rep(as.numeric(NA), 2)
         adj.pvalue[1] <- attr(object$lrt.bootA, "adj.pvalue")
         adj.pvalue[2] <- attr(object$lrt.bootB, "adj.pvalue")
-      
+
       if (xlab == "xlabel") {
         x.lrt <- c("Bootstrapped LRT values")
       }
@@ -288,49 +290,54 @@ plot.InformativeTesting <- function(x, ...,
         x.lrt <- xlab
       }
       if (main == "main") {
-        m.lrt <- c("Distribution of first level LRT values - type A", 
+        m.lrt <- c("Distribution of first level LRT values - type A",
                    "Distribution of first level LRT values - type B")
       }
       else {
         m.lrt <- main
       }
     }
-  
+
   if (double.bootstrap == "standard") {
     ppvalue.A <- attr(object$lrt.bootA, "plugin.pvalues")
     ppvalue.B <- attr(object$lrt.bootB, "plugin.pvalues")
-    
-    ppv <- list(data.frame(ppvalue.A), data.frame(ppvalue.B))
-    ppv <- do.call(rbind.fill, ppv)
-    
+
+    if (length(ppvalue.A) - length(ppvalue.B) < 0L) {
+      ppv <- cbind(c(ppvalue.A, rep(NA, length(ppvalue.B) - length(ppvalue.A))), 
+                   ppvalue.B)
+    }else{
+      ppv <- cbind(ppvalue.A, c(ppvalue.B, rep(NA, length(ppvalue.A) -
+        length(ppvalue.B))))
+    }
+
     if (xlab == "xlabel") {
       x.ppv  <- c("Bootstrapped plug-in p values")
     }
     else {
-      x.ppv <- xlab    
+      x.ppv <- xlab
     }
     if (main == "main") {
-      m.ppv  <- c("Distribution of plug-in p values - type A", 
+      m.ppv  <- c("Distribution of plug-in p values - type A",
                   "Distribution of plug-in p values - type B")
     }else {
       m.ppv <- main
-    }  
+    }
   }
-  
+
   if (return.LRT & type == "all" & double.bootstrap != "standard") {
     par(mfrow = c(1, 2))
   }
   if (return.LRT & type == "all" & double.bootstrap == "standard") {
     par(mfrow = c(2, 2))
   }
-  if (!return.LRT & (double.bootstrap == "standard" | 
+  if (!return.LRT & (double.bootstrap == "standard" |
        double.bootstrap == "FDB")) {
     par(mfrow = c(1, 2))
   }
   if (type != "all") {
     par(mfrow = c(1, 1))
   }
-    
+
   #make histograms
   if (type == "LRT.A" | type == "LRT.B") {
     double.bootstrap = "no"
@@ -339,7 +346,7 @@ plot.InformativeTesting <- function(x, ...,
     return.LRT <- FALSE
   }
   if ((type == "LRT.A" & return.LRT) |
-      (type == "ppvalues.A" & double.bootstrap == "standard")) { 
+      (type == "ppvalues.A" & double.bootstrap == "standard")) {
     a = 1L
     b = 1L
   }
@@ -351,47 +358,44 @@ plot.InformativeTesting <- function(x, ...,
   if (type == "all") {
     a = 1L
     b = 2L
-  }  
-  
+  }
+
   for (i in a:b) {
     if (return.LRT) {
-      plot <- hist(lrt[, i], nclass = nclass, xlim = range(lrt[, i]), plot = FALSE) 
-      plot(plot, freq = freq, main = m.lrt[i], xlab = x.lrt, ylab = y.lab, 
-           cex.main = cex.main, cex.lab = cex.lab, nclass = nclass, 
-           col = col, border = border, axes = axes) 
-      
+      plot <- hist(lrt[, i], nclass = nclass, xlim = range(lrt[, i]), plot = FALSE)
+      plot(plot, freq = freq, main = m.lrt[i], xlab = x.lrt, ylab = y.lab,
+           cex.main = cex.main, cex.lab = cex.lab, nclass = nclass,
+           col = col, border = border, axes = axes)
+
       if (vline.LRT & double.bootstrap != "FDB") {
         abline(v = lrt.obs[i], col = vline.col, lty = lty, lwd = lwd)
       }
       else if (vline.LRT & double.bootstrap == "FDB") {
         abline(v = lrt.q[i], col = vline.col, lty = lty, lwd = lwd)
       }
-      
+
       if (legend & double.bootstrap != "FDB") {
-          ppval    <- sprintf("  %15s  %1.3f", "plug-in p value", pvalue[i]) 
+          ppval    <- sprintf("  %15s  %1.3f", "plug-in p value", pvalue[i])
           obs.lrt  <- sprintf("  %15s  %4.2f", "obs LRT", lrt.obs[i])
             legend.obj <- c(obs.lrt, ppval)
-          legend(loc.legend, legend.obj, lty = lty, 
+          legend(loc.legend, legend.obj, lty = lty,
                  lwd = lwd, cex = cex.legend, bty="n")
       }
       if (legend & double.bootstrap == "FDB") {
-        ppval      <- sprintf("  %15s  %1.3f", "FDB p-value", adj.pvalue[i]) 
+        ppval      <- sprintf("  %15s  %1.3f", "FDB p-value", adj.pvalue[i])
         obs.lrt.q  <- sprintf("  %15s  %4.2f", "obs LRT.q", lrt.q[i])
         legend.obj <- c(obs.lrt.q, ppval)
-        legend(loc.legend, legend.obj, lty = lty, 
+        legend(loc.legend, legend.obj, lty = lty,
                lwd = lwd, cex = cex.legend, bty="n")
       }
     }
-    if (double.bootstrap == "standard") {      
-        plot <- hist(ppv[, i], nclass = nclass, xlim = range(0:1), 
-                     plot = FALSE) 
-        plot(plot, freq = TRUE, main = m.ppv[i], xlab = x.ppv, ylab = y.lab, 
-             cex.main = cex.main, cex.lab = cex.lab, nclass = nclass, 
-             col = col, border = border, axes = axes) 
+    if (double.bootstrap == "standard") {
+        plot <- hist(ppv[, i], nclass = nclass, xlim = range(0:1),
+                     plot = FALSE)
+        plot(plot, freq = TRUE, main = m.ppv[i], xlab = x.ppv, ylab = y.lab,
+             cex.main = cex.main, cex.lab = cex.lab, nclass = nclass,
+             col = col, border = border, axes = axes)
       }
   }
 }
-
-
-
 

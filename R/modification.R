@@ -79,7 +79,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
             x.el.idx[[offset]] <- tmp[which(tmp > 0)]
         }
     }
-    Delta <- computeDelta(object@Model, m.el.idx=m.el.idx, x.el.idx=x.el.idx)
+    Delta <- computeDelta(object@Model, m.el.idx.=m.el.idx, x.el.idx.=x.el.idx)
 
     # compute information matrix
     E <- computeExpectedInformation(object@Model, sample=object@Sample,

@@ -243,9 +243,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
 
     LAMBDA <- MLIST$lambda
     PSI    <- MLIST$psi
-    THETA  <- MLIST$theta
     BETA   <- MLIST$beta
-    NU     <- MLIST$nu
     ALPHA  <- MLIST$alpha 
 
     # beta?
@@ -337,19 +335,20 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
 # note:
 # we avoid using the duplication and elimination matrices
 # for now (perhaps until we'll use the Matrix package)
-derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
+derivative.sigma.LISREL <- function(m="lambda", 
+                                    # all model matrix elements, or only a few?
+                                    # NOTE: for symmetric matrices, 
+                                    # we assume that the have full size 
+                                    # (nvar*nvar) (but already correct for 
+                                    # symmetry)
+                                    idx=1:length(MLIST[[m]]),
+                                    MLIST=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     PSI    <- MLIST$psi
-    THETA  <- MLIST$theta
  
     # only lower.tri part of sigma (not same order as elimination matrix?)
     v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
-
-    # all model matrix elements, or only a few?
-    # NOTE: for symmetric matrices, we assume that the have full 
-    #       size (nvar*nvar) (but already correct for symmetry)
-    if(is.null(idx)) idx <- 1:length(MLIST[[m]])
 
     # shortcut for nu and alpha: empty matrix
     if(m == "nu" || m == "alpha") {
@@ -410,12 +409,13 @@ derivative.sigma.LISREL <- function(m="lambda", idx=NULL, MLIST=NULL) {
 }
 
 # dMu/dx -- per model matrix
-derivative.mu.LISREL <- function(m="alpha", idx=NULL, MLIST=NULL) {
+derivative.mu.LISREL <- function(m="alpha", 
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]), 
+                                 MLIST=NULL) {
+
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
-
-    # all model matrix elements, or only a few?
-    if(is.null(idx)) idx <- 1:length(MLIST[[m]])
 
     # shortcut for empty matrices
     if(m == "psi" || m == "theta") {
@@ -432,7 +432,6 @@ derivative.mu.LISREL <- function(m="alpha", idx=NULL, MLIST=NULL) {
     } else {
         IB.inv <- diag(nfac)
     }
-    NU     <- MLIST$nu
     ALPHA  <- MLIST$alpha
 
     if(m == "nu") {

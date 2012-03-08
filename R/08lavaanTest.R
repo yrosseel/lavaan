@@ -145,7 +145,6 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                  options=NULL, x=NULL, VCOV=NULL,
                                  data=NULL, control=list()) {
 
-    estimator   <- options$estimator
     mimic       <- options$mimic
     test        <- options$test
     information <- options$information
@@ -423,7 +422,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
                                    options.=options, data.=data,
                                    R=R, verbose=options$verbose,
                                    type=boot.type,
-                                   FUN <- "test",
+                                   FUN ="test",
                                    warn=-1L,
                                    parallel=control$parallel,
                                    ncpus=control$ncpus,

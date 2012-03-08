@@ -288,7 +288,7 @@ function(object, GLIST=NULL, sample, estimator="ML",
 ### FIXME: should we here also:
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
-computeDelta <- function(object, GLIST.=NULL, m.el.idx=NULL, x.el.idx=NULL) {
+computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
     representation <- object@representation
     nmat           <- object@nmat
@@ -303,7 +303,9 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx=NULL, x.el.idx=NULL) {
 
     # type = "free" or something else?
     type <- "nonfree"
-    if(is.null(m.el.idx) && is.null(x.el.idx)) type <- "free"
+    m.el.idx <- m.el.idx.; x.el.idx <- x.el.idx.
+    if(is.null(m.el.idx) && is.null(x.el.idx)) 
+        type <- "free"
 
     # number of rows in DELTA.group
     pstar <- integer(ngroups)
