@@ -352,7 +352,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # catch simple linear regression models
         if(length(unique(lavaanUser$lhs[lavaanUser$op == "~"])) == 1L && 
            length(vnames(lavaanUser,   "lv")) == 0L &&
-           #data.type == "full" && # and sampleStats???
+           length(lavaanData@X) > 0L &&
            lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&
            lavaanOptions$missing == "listwise") {
