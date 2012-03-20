@@ -302,9 +302,7 @@ estimateVCOV <- function(object, sample, options=NULL, data=NULL,
         VarCov <- 1/N * NVarCov
 
     } else {
-        cat("\n[lavaan message:] could not compute standard errors!\n")
-        cat("\n You can still request a summary of the fit to inspect")
-        cat("\n the current estimates of the parameters.\n")
+        warning("lavaan WARNING: could not compute standard errors!\n")
         VarCov <- NULL
     }
 

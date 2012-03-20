@@ -716,7 +716,7 @@ parameterEstimates <- parameterestimates <-
     function(object, 
              ci = TRUE, level = 0.95, boot.ci.type = "perc",
              standardized = FALSE, 
-             frac.missing.information = (object@Options$missing == "ml")) {
+             frac.missing.information = object@Sample@missing.flag) {
 
     LIST <- inspect(object, "list")
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
@@ -859,20 +859,33 @@ parameterEstimates <- parameterestimates <-
 
     # fractional missing information (if estimator="fiml")
     if(frac.missing.information) {
-        SE.cfa <- LIST$se
-        Moments <- fitted(object)
-        # FIXME: rescale COV!!!
+        SE.orig <- LIST$se
+        COV <- object@Fit@Sigma.hat
+        MEAN <- object@Fit@Mu.hat
+
+        # provide rownames
+        for(g in 1:object@Data@ngroups)
+            rownames(COV[[g]]) <- object@Data@ov.names[[g]]
+
+
+        # if estimator="ML" and likelihood="normal" --> rescale
+        if(object@Options$estimator == "ML" &&
+           object@Options$likelihood == "normal") {
+            for(g in 1:object@Data@ngroups) {
+                N <- object@Data@nobs[[g]]
+                COV[[g]] <- (N+1)/N * COV[[g]]
+            }
+        }
+
         # fit another model, using the model-implied moments as input data
-        # FIXME: this will NOT work for multiple groups
-        step2.cfa <- lavaan(slotOptions = object@Options,
-                            slotUser    = object@User,
-                            sample.cov  = Moments$cov,
-                            sample.mean = Moments$mean,
-                            sample.nobs = object@Data@nobs)
-        SE.step2.cfa <- ifelse(step2.cfa@Fit@se == 0.0, as.numeric(NA), 
-                               step2.cfa@Fit@se)
-        LIST$fmi <- 1-(SE.step2.cfa^2/SE.cfa^2)
-    } 
+        step2 <- lavaan(slotOptions = object@Options,
+                        slotUser    = object@User,
+                        sample.cov  = COV,
+                        sample.mean = MEAN,
+                        sample.nobs = object@Data@nobs)
+        SE.step2 <- ifelse(step2@Fit@se == 0.0, as.numeric(NA), step2@Fit@se)
+        LIST$fmi <- 1-(SE.step2^2/SE.orig^2)
+    }
 
     # if single group, remove group column
     if(object@Data@ngroups == 1L) LIST$group <- NULL

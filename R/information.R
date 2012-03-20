@@ -107,7 +107,7 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
     Hessian <- matrix(0, object@nx.free, object@nx.free)
     x <- getModelParameters(object)
     for(j in 1:object@nx.free) {
-        h.j <- 10e-4 
+        h.j <- 10e-6
         x.left <- x.left2 <- x.right <- x.right2 <- x
         x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
         x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
@@ -139,12 +139,14 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
     #cat("Hessian 1:\n")
     #print(Hessian)
 
+    #x <- getModelParameters(object, type="free")
     #compute.fx <- function(x) {
-    #    fx <- computeObjective(object, x=x, sample=sample,
+    #    GLIST <- x2GLIST(object, x=x)
+    #    fx <- computeObjective(object, GLIST=GLIST, sample=sample,
     #                           estimator=estimator)
     #    fx
     #}
-    #Hessian <- numDeriv::hessian(func=compute.fx, x=x)
+    #Hessian <- - numDeriv::hessian(func=compute.fx, x=x)
     #cat("Hessian 2:\n")
     #print(Hessian)
 

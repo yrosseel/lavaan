@@ -247,15 +247,14 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             if(!mimic == "Mplus") {
                 E <- computeExpectedInformation(object, sample=sample,
                                                 data=data,
-                                                estimator="ML", Delta=NULL,
+                                                estimator="ML", #Delta=NULL,
                                                 extra=TRUE)
                 E.inv <- solve(E)
                 Delta <- attr(E, "Delta")
                 WLS.V <- attr(E, "WLS.V")
             } else {
                 # special treatment for Mplus
-                E <- computeExpectedInformationMLM(object, sample=sample,
-                                                   Delta=NULL)
+                E <- computeExpectedInformationMLM(object, sample=sample)
                 E.inv <- solve(E)
                 Delta <- attr(E, "Delta")
                 WLS.V <- attr(E, "WLS.V")
