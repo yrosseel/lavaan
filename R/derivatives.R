@@ -3,16 +3,17 @@
 # pattern-based method
 derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
 
-    ntotal <- M$nobs
-    nvar   <- M$nvar
+    ntotal    <- sum(sapply(M, "[[", "nobs"))
+    nvar      <- length(Mu.hat)
+    npatterns <- length(M)
     dx.Sigma <- matrix(0, nvar, nvar)
     dx.Mu    <- matrix(0, nvar, 1)
 
-    for(p in 1:M$npatterns) {
-        SX <- M$data[[p]][["SX"]]
-        MX <- M$data[[p]][["MX"]]
-        nobs <- M$data[[p]][["nobs"]]
-        var.idx <- M$data[[p]][["var.idx"]]
+    for(p in 1:npatterns) {
+        SX <- M[[p]][["SX"]]
+        MX <- M[[p]][["MX"]]
+        nobs <- M[[p]][["nobs"]]
+        var.idx <- M[[p]][["var.idx"]]
 
         Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx],
                               logdet=FALSE)

@@ -202,8 +202,8 @@ function(object, GLIST=NULL, sample, estimator="ML",
     fx.group <- numeric( sample@ngroups )
     for(g in 1:sample@ngroups) {
 
-        # incomplete data and missing[[g]]$flag=TRUE?
-        if(sample@missing[[g]]$flag) {
+        # incomplete data and fiml?
+        if(!is.null(sample@missing[[g]])) {
             if(estimator == "ML") {
                 # FIML
 
@@ -417,7 +417,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
-            if(!sample@missing[[g]]$flag) { # complete data
+            if(is.null(sample@missing[[g]])) { # complete data
                 if(meanstructure) {
                     diff <- sample@mean[[g]] - Mu.hat[[g]]
                     W.tilde <- sample@cov[[g]] + tcrossprod(diff)
@@ -439,11 +439,11 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 OMEGA    <- matrix(0, nvar, nvar)
                 OMEGA.MU <- matrix(0, nvar, 1)
 
-                for(p in 1:M$npatterns) {
-                    SX <- M$data[[p]][["SX"]]
-                    MX <- M$data[[p]][["MX"]]
-                    nobs <- M$data[[p]][["nobs"]]
-                    var.idx <- M$data[[p]][["var.idx"]]
+                for(p in 1:length(M)) {
+                    SX <- M[[p]][["SX"]]
+                    MX <- M[[p]][["MX"]]
+                    nobs <- M[[p]][["nobs"]]
+                    var.idx <- M[[p]][["var.idx"]]
 
                     Sigma.inv <- inv.chol(Sigma.hat[[g]][var.idx, var.idx],
                                           logdet=FALSE)
@@ -626,7 +626,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     verbose       <- options$verbose
     debug         <- options$debug
 
-    if(any( unlist(lapply(sample@missing, "[[", "flag")) )) {
+    if(!is.null(sample@missing[[1L]])) { 
         group.weight <- FALSE
     } else {
         group.weight <- TRUE
@@ -1023,11 +1023,11 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
     # adjust fx if FIML (using h1 value)
-    if(any( unlist(lapply(sample@missing, "[[", "flag")) ) ) {
+    if(!is.null(sample@missing[[1L]])) {
         fx.group <- attr(fx,"fx.group") 
-        h1 <- lapply(sample@missing, "[[", "h1")
+        h1 <- lapply(sample@missing.h1, "[[", "h1")
         # in case we have a complete group
-        h1[unlist(lapply(h1, is.null))] <- 0.0
+        #h1[unlist(lapply(h1, is.null))] <- 0.0
         fx.group <- fx.group - unlist(h1)/2.0
         fx <- sum(fx.group)
         attr(fx, "fx.group") <- fx.group

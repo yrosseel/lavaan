@@ -47,7 +47,7 @@ short.summary <- function(object) {
     # listwise deletion?
     listwise <- FALSE
     for(g in 1:object@Data@ngroups) {
-       if(object@Data@nobs[[1L]] < object@Data@norig[[1L]]) {
+       if(object@Data@nobs[[1L]] != object@Data@norig[[1L]]) {
            listwise <- TRUE
            break
        }
@@ -83,23 +83,22 @@ short.summary <- function(object) {
     cat("\n")
 
     # missing patterns?
-    if(length(object@Sample@missing)) {
-    if(object@Sample@missing[[1L]]$flag && object@Data@ngroups == 1L) {
-        t0.txt <- sprintf("  %-40s", "Number of missing patterns")
-        t1.txt <- sprintf("  %10i", object@Sample@missing[[1]]$npatterns)
-        cat(t0.txt, t1.txt, "\n\n", sep="")
-    }
-    if(any(unlist(lapply(object@Sample@missing, "[[", "flag"))) && 
-       object@Data@ngroups > 1L) {
-        t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
-        cat(t0.txt, "\n")
-        for(g in 1:object@Data@ngroups) {
-            t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
-                             object@Sample@missing[[g]]$npatterns)
-            cat(t.txt, "\n", sep="")
+    if(!is.null(object@Sample@missing[[1L]])) {
+        if(object@Data@ngroups == 1L) {
+            t0.txt <- sprintf("  %-40s", "Number of missing patterns")
+            t1.txt <- sprintf("  %10i", 
+                              object@Data@missingPatterns[[1L]]$npatterns)
+            cat(t0.txt, t1.txt, "\n\n", sep="")
+        } else {
+            t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
+            cat(t0.txt, "\n")
+            for(g in 1:object@Data@ngroups) {
+                t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
+                                 object@Data@missingPatterns[[g]]$npatterns)
+                cat(t.txt, "\n", sep="")
+            }
+            cat("\n")
         }
-        cat("\n")
-    }
     }
 
     # Print Chi-square value for the user-specified (full/h0) model
@@ -716,7 +715,8 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 parameterEstimates <- parameterestimates <- 
     function(object, 
              ci = TRUE, level = 0.95, boot.ci.type = "perc",
-             standardized = FALSE) {
+             standardized = FALSE, 
+             frac.missing.information = (object@Options$missing == "ml")) {
 
     LIST <- inspect(object, "list")
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
@@ -856,6 +856,23 @@ parameterEstimates <- parameterestimates <-
         LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
         LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
     }
+
+    # fractional missing information (if estimator="fiml")
+    if(frac.missing.information) {
+        SE.cfa <- LIST$se
+        Moments <- fitted(object)
+        # FIXME: rescale COV!!!
+        # fit another model, using the model-implied moments as input data
+        # FIXME: this will NOT work for multiple groups
+        step2.cfa <- lavaan(slotOptions = object@Options,
+                            slotUser    = object@User,
+                            sample.cov  = Moments$cov,
+                            sample.mean = Moments$mean,
+                            sample.nobs = object@Data@nobs)
+        SE.step2.cfa <- ifelse(step2.cfa@Fit@se == 0.0, as.numeric(NA), 
+                               step2.cfa@Fit@se)
+        LIST$fmi <- 1-(SE.step2.cfa^2/SE.cfa^2)
+    } 
 
     # if single group, remove group column
     if(object@Data@ngroups == 1L) LIST$group <- NULL

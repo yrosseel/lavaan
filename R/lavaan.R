@@ -205,6 +205,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
+    if(debug) print(str(lavaanData))
 
 
     # 2a. construct lavaan User list: description of the user-specified model
@@ -263,12 +264,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotSample)) {
         lavaanSampleStats <- slotSample
     } else if(data.type == "full") {
-        lavaanMissing <- 
-            getMissingPatterns(Data    = lavaanData, 
-                               missing = lavaanOptions$missing,
-                               warn    = lavaanOptions$warn,
-                               verbose = lavaanOptions$verbose)
-
         WLS.V <- list()
         if(lavaanOptions$estimator %in% c("GLS", "WLS")) {
             WLS.V <- getWLS.V(Data          = lavaanData,
@@ -280,10 +275,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         lavaanSampleStats <- getSampleStatsFromData(
                            Data        = lavaanData,
-                           M           = lavaanMissing,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"),
-                           WLS.V       = WLS.V)
+                           WLS.V       = WLS.V,
+                           verbose     = lavaanOptions$verbose)
                                                  
     } else if(data.type == "moment") {
         lavaanSampleStats <- getSampleStatsFromMoments(
@@ -308,14 +303,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
                                  ov.names=ov.names)
     } 
-    if(debug) {
-        print(str(lavaanData))
-        print(str(lavaanSampleStats))
-    }
-
-
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
+    if(debug) print(str(lavaanSampleStats))
 
     # 4. compute some reasonable starting values 
     if(!is.null(slotModel)) {

@@ -12,7 +12,7 @@
 setMethod("predict", "lavaan",
 function(object, data=NULL, ...) {
 
-    if(object@Sample@missing[[1L]]$flag) {
+    if(!is.null(object@Sample@missing[[1L]])) {
         stop("FIXME: predict does not work with missing data (yet)!")
     }
 

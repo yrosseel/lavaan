@@ -78,7 +78,7 @@ estimator.WLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
 # Full Information ML estimator (FIML) handling the missing values 
 estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL) {
 
-    npatterns <- M$npatterns
+    npatterns <- length(M)
 
     fx.p <- numeric(npatterns)
      w.p <- numeric(npatterns)
@@ -86,10 +86,10 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL) {
     # for each missing pattern, combine cases and compute raw loglikelihood
     for(p in 1:npatterns) {
 
-        SX <- M$data[[p]][["SX"]]
-        MX <- M$data[[p]][["MX"]]
-        w.p[p] <- nobs <- M$data[[p]][["nobs"]]
-        var.idx <- M$data[[p]][["var.idx"]]
+        SX <- M[[p]][["SX"]]
+        MX <- M[[p]][["MX"]]
+        w.p[p] <- nobs <- M[[p]][["nobs"]]
+        var.idx <- M[[p]][["var.idx"]]
 
         # note: if a decent 'sweep operator' was available (in fortran)
         # we might win some time by 'updating' the inverse by sweeping

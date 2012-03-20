@@ -32,6 +32,7 @@ getData <- function(data          = NULL,          # data.frame
     }
 
     # ov.names
+    if(is.null(ov.names)) ov.names <- names(data)
     if(ngroups > 1L) {
         if(is.list(ov.names)) {
             if(length(ov.names) != ngroups)
@@ -56,6 +57,7 @@ getData <- function(data          = NULL,          # data.frame
     case.idx <- vector("list", length=ngroups)
     nobs     <- vector("list", length=ngroups)
     norig    <- vector("list", length=ngroups)
+    Mp       <- vector("list", length=ngroups)
     X        <- vector("list", length=ngroups)
 
     # for each group
@@ -94,29 +96,39 @@ getData <- function(data          = NULL,          # data.frame
             }
         }
 
-        # check if we have enough observations
-        if( nobs[[g]] < (nvar <- length(ov.idx[[g]])) ) {
-            txt <- ""
-            if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
-            stop("lavaan ERROR: too few observations (nobs < nvar)", txt,
-                 "\n  nobs = ", nobs[[g]], " nvar = ", nvar)
-        }
-
-
-        ### ONLY if we wish to store X ####
-     
         # extract data
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx[[g]]] )
         #print( tracemem(X[[g]]) )
- 
+
         # get rid of row names, but keep column names
         #rownames(X[[g]]) <- NULL ### WHY are two copies made here? 
                                   ### answer: rownames is NOT a primitive
-        dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
+        #dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
+        dimnames(X[[g]]) <-
 
         # standardize observed variables?
         if(std.ov) {
             X[[g]] <- scale(X[[g]])[,] # three copies are made!
+        }
+
+        # missing data
+        if(missing != "listwise") {
+            # get missing patterns
+            Mp[[g]] <- getMissingPatterns(X[[g]])
+            if(length(Mp[[g]]$empty.idx) > 0L) {
+                X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+            }
+            # in case we had observations with only missings
+            nobs[[g]] <- Mp[[g]]$nobs
+        }
+
+        # warn if we have a small number of observations (but NO error!)
+        if( nobs[[g]] < (nvar <- length(ov.idx[[g]])) ) {
+            txt <- ""
+            if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
+            warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,
+                    "\n  nobs = ", nobs[[g]], " nvar = ", nvar)
         }
 
     } # ngroups
@@ -131,79 +143,17 @@ getData <- function(data          = NULL,          # data.frame
                       ov.idx          = ov.idx,
                       case.idx        = case.idx,
                       X               = X,
-                      isComplete      = TRUE,
-                      missingPatterns = list()
+                      missingPatterns = Mp
                      )
     lavaanData                     
 }
 
-getMissingPatterns <- function(Data    = NULL, 
-                               missing = "listwise",
-                               warn    = TRUE,
-                               verbose = FALSE) {
-
-    # get X
-    X <- Data@X
-
-    # number of groups
-    ngroups <- length(X)
-
-    # set missing flag (can be overriden later)
-    if(missing == "ml") {
-        missing.flag <- rep(TRUE, ngroups)
-    } else {
-        missing.flag <- rep(FALSE, ngroups)
-    }
-
-    # prepare empty list for missing data
-    missing <- vector("list", length=ngroups)
-
-    for(g in 1:ngroups) {
-        missing[[g]] <- list()
-        
-        if(!missing.flag[g]) {
-            # listwise deletion
-            keep.idx <- complete.cases(X[[g]])
-            nobs <- sum(keep.idx)
-            # check again if we have enough observations
-            if(nobs == 0L)
-                stop("lavaan ERROR: no cases left after listwise deletion")
-            if(nobs < ncol(X[[g]]))
-                stop("lavaan ERROR: too few observations (nobs < nvar)")
-            # fill in some basic information in missing
-            missing[[g]] <- list(npatterns=0L, flag=FALSE, nobs=nobs)
-        } else {
-            # do more (but only if missing!)
-            #   - get missing patterns
-            #   - store sufficient statistics (per missing pattern group)
-            #   - compute pairwise coverage
-            missing[[g]] <- missing.patterns(X[[g]], warn=warn)
-            if(missing[[g]]$npatterns > 1L) {
-                # estimate moments
-                #out <- estimate.moments.fiml(X=data.obs, M=missing[[g]],
-                #                             verbose=verbose)
-                out <- estimate.moments.EM(X=X[[g]], M=missing[[g]],
-                                           verbose=verbose)
-                missing[[g]]$sigma <- out$sigma
-                missing[[g]]$mu    <- out$mu
-                missing[[g]]$h1    <- out$fx
-                missing[[g]]$flag  <- TRUE
-            } else {
-                # data is complete after all (for this group)
-                missing[[g]]$flag  <- FALSE
-            }
-        }
-
-    } # ngroups
-
-    missing
-}
 
 getSampleStatsFromData <- function(Data        = NULL,
-                                   M           = NULL,
                                    boot.idx    = NULL,
                                    rescale     = FALSE,
-                                   WLS.V       = list()) {
+                                   WLS.V       = list(),
+                                   verbose     = verbose) {
 
     # get X
     X <- Data@X
@@ -220,6 +170,8 @@ getSampleStatsFromData <- function(Data        = NULL,
     icov        <- vector("list", length=ngroups)
     cov.log.det <- vector("list", length=ngroups)
     cov.vecs    <- vector("list", length=ngroups)
+    missing     <- vector("list", length=ngroups)
+    missing.h1  <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 
@@ -257,6 +209,19 @@ getSampleStatsFromData <- function(Data        = NULL,
         # cov.vecs
         cov.vecs[[g]] <- vech(cov[[g]])
 
+        # if missing = "fiml", sample statistics per pattern
+        if(!is.null(Data@missingPatterns[[g]])) {
+            missing[[g]] <- 
+                getMissingPatternStats(X  = X[[g]],
+                                       Mp = Data@missingPatterns[[g]])
+            # estimate moments unrestricted model
+            out <- estimate.moments.EM(X=X[[g]], M=missing[[g]],
+                                       verbose=verbose)
+            missing.h1[[g]]$sigma <- out$sigma
+            missing.h1[[g]]$mu    <- out$mu
+            missing.h1[[g]]$h1    <- out$fx
+        } 
+
     } # ngroups
 
     # construct SampleStats object
@@ -279,7 +244,8 @@ getSampleStatsFromData <- function(Data        = NULL,
                        WLS.V       = WLS.V,                     
 
                        # missingness
-                       missing     = M
+                       missing     = missing,
+                       missing.h1  = missing.h1
                       )
 
     SampleStats
@@ -385,9 +351,6 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
         # cov.vecs
         cov.vecs[[g]] <- vech(cov[[g]])
 
-        # missing
-        missing[[g]] <- list(npatterns=0L, flag=FALSE)
-
     } # ngroups
 
     # construct SampleStats object
@@ -407,10 +370,7 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
                        icov        = icov,
                        cov.log.det = cov.log.det,
                        cov.vecs    = cov.vecs,
-                       WLS.V       = WLS.V,                     
-
-                       # missingness
-                       missing     = missing
+                       WLS.V       = WLS.V                    
                       )
 
     SampleStats

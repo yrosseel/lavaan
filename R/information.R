@@ -16,7 +16,7 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
         Sigma.hat <- computeSigmaHat(object)
         if(object@meanstructure) Mu.hat <- computeMuHat(object)
         for(g in 1:sample@ngroups) {
-            if(sample@missing[[g]]$flag) {
+            if(!is.null(sample@missing[[g]])) {
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
                                             sample=sample, data=data, group=g,

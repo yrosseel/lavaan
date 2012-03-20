@@ -245,18 +245,18 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             logl.H1.group <- numeric(G)
             for(g in 1:G) {
                 nvar <- ncol(object@Sample@cov[[g]])
-                if(!object@Sample@missing[[g]]$flag) {
+                if(is.null(object@Sample@missing[[1L]])) {
                     Ng <- object@Sample@nobs[[g]]
                     c <- Ng*nvar/2 * log(2 * pi)
                     logl.H1.group[g] <- ( -c -(Ng/2) *
                                           object@Sample@cov.log.det[[g]]
                                           - (Ng/2)*nvar )
                 } else { # missing patterns case
-                    pat <- object@Sample@missing[[g]]$pat
-                    Ng <- object@Sample@nobs[[g]]
+                    pat <- object@Data@missingPatterns[[g]]$pat
+                    Ng <- object@Data@nobs[[g]]
                     ni <- as.numeric(apply(pat, 1, sum) %*% 
                                      as.integer(rownames(pat)))
-                    fx.full <- object@Sample@missing[[g]]$h1
+                    fx.full <- object@Sample@missing.h1[[g]]$h1
                     logl.H1.group[g] <- - (ni/2 * log(2 * pi)) - 
                                               (Ng/2 * fx.full)
                 }
@@ -466,13 +466,13 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         srmr.group <- numeric(G)
         for(g in 1:G) {
             # observed
-            if(!object@Sample@missing[[g]]$flag) {
+            if(is.null(object@Sample@missing[[g]])) {
                 S <- object@Sample@cov[[g]]
                 M <- object@Sample@mean[[g]]
             } else {
                 # EM estimates
-                S <- object@Sample@missing[[g]]$sigma
-                M <- object@Sample@missing[[g]]$mu
+                S <- object@Sample@missing.h1[[g]]$sigma
+                M <- object@Sample@missing.h1[[g]]$mu
             }
             nvar <- ncol(S)
 

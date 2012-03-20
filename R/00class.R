@@ -13,7 +13,6 @@ setClass("lavaanData",
         ov.names="list",           # variable names (per group)
         ov.idx="list",             # column indices (all observed variables)
         case.idx="list",           # case indices per group
-        isComplete="logical",      # data is complete or not?
         missingPatterns="list",    # if not complete, missing patterns
         X="list"                   # local copy (parametric?)
     )
@@ -27,14 +26,14 @@ setClass("SampleStats",            # sample moments
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
-        ov.names="list",           # variable names (per group)
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)
         cov.vecs="list",           # cov lower tri elements in vector
         WLS.V="list",              # weight matrix for GLS/WLS
 
-        missing="list"             # missingness information
+        missing="list",            # missingness information
+        missing.h1="list"          # h1 model
     )
 )
 

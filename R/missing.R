@@ -15,8 +15,8 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
     }
 
     nvar <- ncol(X); pstar <- nvar * (nvar + 1)/2
-    npatterns <- M$npatterns
-    N <- M$nobs
+    npatterns <- length(M)
+    N <- nrow(X)
 
     # starting values
     #sigma0 <- force.pd(cov(X, use = "p")); dimnames(sigma0) <- NULL
@@ -41,10 +41,10 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
         T1 <- numeric(nvar)
         T2 <- matrix(0, nvar, nvar)
         for(p in 1:npatterns) {
-            X       <- M$data[[p]][["X"]]
-            MX      <- M$data[[p]][["MX"]]
-            nobs    <- M$data[[p]][["nobs"]]
-            var.idx <- M$data[[p]][["var.idx"]]
+            X       <- M[[p]][["X"]]
+            MX      <- M[[p]][["MX"]]
+            nobs    <- M[[p]][["nobs"]]
+            var.idx <- M[[p]][["var.idx"]]
 
             if(all(var.idx)) {
                 # complete pattern
@@ -129,8 +129,8 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
     list(sigma = sigma, mu = mu, fx = fx)
 }
 
-# construct summary information of missing patterns
-missing.patterns <- function (X, warn=FALSE) {
+# get missing patterns for a single group (X is a matrix)
+getMissingPatterns <- function (X) {
 
     ntotal <- nrow(X); nvar <- ncol(X)
 
@@ -154,10 +154,6 @@ missing.patterns <- function (X, warn=FALSE) {
     # identify and remove empty row
     empty.idx <- which(id == "empty")
     if(length(empty.idx) > 0) {
-        if(warn) {
-            warning("lavaan WARNING: some cases are empty and will be removed")
-            cat("lavaan WARNING: empty cases:\n"); print( empty.idx )
-        }
         MISSING <- MISSING[-empty.idx,]
               X <-       X[-empty.idx,]
              id <-      id[-empty.idx]
@@ -172,6 +168,23 @@ missing.patterns <- function (X, warn=FALSE) {
     pat <- 1L - MISSING[match(order, id), , drop = FALSE]
     storage.mode(pat) <- "logical"
     row.names(pat) <- as.character(TABLE)
+
+    # return a list
+    out <- list(nobs=ntotal, nvar=nvar,
+                coverage=coverage, id=id, npatterns=npatterns,
+                order=order, pat=pat, empty.idx=empty.idx)
+    out
+}
+
+# construct summary statistics (cov/mean) per missing pattern
+getMissingPatternStats <- function (X = NULL, Mp = NULL) {
+
+    npatterns <- Mp$npatterns
+    id        <- Mp$id   
+    order     <- Mp$order
+    pat       <- Mp$pat
+
+    # prepare
     data <- vector("list", length = npatterns)
 
     # fill in pattern information
@@ -187,15 +200,11 @@ missing.patterns <- function (X, warn=FALSE) {
             S <- 0
             M <- as.numeric(Xp)
         }
-        data[[p]] <- list(X = Xp, SX = S, MX = M, nobs = nobs, 
+        data[[p]] <- list(X = Xp, SX = S, MX = M, nobs = nobs,
             var.idx = pat[p, ])
     }
 
-    # return a list
-    out <- list(nobs=ntotal, nvar=nvar, data=data, 
-                coverage=coverage, id=id, npatterns=npatterns,
-                order=order, pat=pat)
-    out
+    data
 }
 
 

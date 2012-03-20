@@ -74,12 +74,12 @@ function(object, type="raw", labels=TRUE) {
     R <- vector("list", length=G)
     for(g in 1:G) {
         # sample moments
-        if(!object@Sample@missing[[g]]$flag) {
+        if(is.null(object@Sample@missing[[g]])) {
             S <- object@Sample@cov[[g]]
             M <- object@Sample@mean[[g]]
         } else {
-            S <- object@Sample@missing[[g]]$sigma
-            M <- object@Sample@missing[[g]]$mu
+            S <- object@Sample@missing.h1[[g]]$sigma
+            M <- object@Sample@missing.h1[[g]]$mu
         }
         if(!meanstructure) {
             M <- numeric( length(M) )
