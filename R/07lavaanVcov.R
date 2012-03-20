@@ -3,7 +3,7 @@ Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML",
 
     # compute information matrix
     if(information == "observed") {
-        if(!is.null(sample@missing[[1L]])) {
+        if(sample@missing.flag) {
             group.weight <- FALSE
         } else {
             group.weight <- TRUE

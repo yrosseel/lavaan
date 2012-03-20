@@ -203,7 +203,7 @@ function(object, GLIST=NULL, sample, estimator="ML",
     for(g in 1:sample@ngroups) {
 
         # incomplete data and fiml?
-        if(!is.null(sample@missing[[g]])) {
+        if(sample@missing.flag) {
             if(estimator == "ML") {
                 # FIML
 
@@ -417,7 +417,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
-            if(is.null(sample@missing[[g]])) { # complete data
+            if(!sample@missing.flag) { # complete data
                 if(meanstructure) {
                     diff <- sample@mean[[g]] - Mu.hat[[g]]
                     W.tilde <- sample@cov[[g]] + tcrossprod(diff)
@@ -626,7 +626,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     verbose       <- options$verbose
     debug         <- options$debug
 
-    if(!is.null(sample@missing[[1L]])) { 
+    if(sample@missing.flag) { 
         group.weight <- FALSE
     } else {
         group.weight <- TRUE
@@ -1023,7 +1023,7 @@ function(object, sample, do.fit=TRUE, options=NULL, control=list()) {
     #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
     # adjust fx if FIML (using h1 value)
-    if(!is.null(sample@missing[[1L]])) {
+    if(sample@missing.flag) {
         fx.group <- attr(fx,"fx.group") 
         h1 <- lapply(sample@missing.h1, "[[", "h1")
         # in case we have a complete group

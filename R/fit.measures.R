@@ -245,7 +245,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             logl.H1.group <- numeric(G)
             for(g in 1:G) {
                 nvar <- ncol(object@Sample@cov[[g]])
-                if(is.null(object@Sample@missing[[1L]])) {
+                if(!object@Sample@missing.flag) {
                     Ng <- object@Sample@nobs[[g]]
                     c <- Ng*nvar/2 * log(2 * pi)
                     logl.H1.group[g] <- ( -c -(Ng/2) *
@@ -466,7 +466,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         srmr.group <- numeric(G)
         for(g in 1:G) {
             # observed
-            if(is.null(object@Sample@missing[[g]])) {
+            if(!object@Sample@missing.flag) {
                 S <- object@Sample@cov[[g]]
                 M <- object@Sample@mean[[g]]
             } else {

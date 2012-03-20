@@ -301,7 +301,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         lavaanSampleStats <- new("SampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
-                                 ov.names=ov.names)
+                                 missing.flag=FALSE)
     } 
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

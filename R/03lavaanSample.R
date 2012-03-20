@@ -172,6 +172,7 @@ getSampleStatsFromData <- function(Data        = NULL,
     cov.vecs    <- vector("list", length=ngroups)
     missing     <- vector("list", length=ngroups)
     missing.h1  <- vector("list", length=ngroups)
+    missing.flag <- FALSE
 
     for(g in 1:ngroups) {
 
@@ -211,6 +212,7 @@ getSampleStatsFromData <- function(Data        = NULL,
 
         # if missing = "fiml", sample statistics per pattern
         if(!is.null(Data@missingPatterns[[g]])) {
+            missing.flag <- TRUE
             missing[[g]] <- 
                 getMissingPatternStats(X  = X[[g]],
                                        Mp = Data@missingPatterns[[g]])
@@ -228,24 +230,25 @@ getSampleStatsFromData <- function(Data        = NULL,
     SampleStats <- new("SampleStats",
 
                        # sample moments
-                       mean        = mean,
-                       cov         = cov,
-                       #var        = var,
+                       mean         = mean,
+                       cov          = cov,
+                       #var         = var,
 
                        # convenience
-                       nobs        = nobs,
-                       ntotal      = sum(unlist(nobs)),
-                       ngroups     = ngroups,
+                       nobs         = nobs,
+                       ntotal       = sum(unlist(nobs)),
+                       ngroups      = ngroups,
 
                        # extra sample statistics
-                       icov        = icov,
-                       cov.log.det = cov.log.det,
-                       cov.vecs    = cov.vecs,
-                       WLS.V       = WLS.V,                     
+                       icov         = icov,
+                       cov.log.det  = cov.log.det,
+                       cov.vecs     = cov.vecs,
+                       WLS.V        = WLS.V,                     
 
                        # missingness
-                       missing     = missing,
-                       missing.h1  = missing.h1
+                       missing.flag = missing.flag,
+                       missing      = missing,
+                       missing.h1   = missing.h1
                       )
 
     SampleStats
@@ -370,7 +373,9 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
                        icov        = icov,
                        cov.log.det = cov.log.det,
                        cov.vecs    = cov.vecs,
-                       WLS.V       = WLS.V                    
+                       WLS.V       = WLS.V,
+
+                       missing.flag = FALSE
                       )
 
     SampleStats

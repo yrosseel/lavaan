@@ -32,6 +32,7 @@ setClass("SampleStats",            # sample moments
         cov.vecs="list",           # cov lower tri elements in vector
         WLS.V="list",              # weight matrix for GLS/WLS
 
+        missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information
         missing.h1="list"          # h1 model
     )

@@ -83,7 +83,7 @@ short.summary <- function(object) {
     cat("\n")
 
     # missing patterns?
-    if(!is.null(object@Sample@missing[[1L]])) {
+    if(object@Sample@missing.flag) {
         if(object@Data@ngroups == 1L) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
             t1.txt <- sprintf("  %10i", 

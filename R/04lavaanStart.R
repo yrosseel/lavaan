@@ -118,7 +118,7 @@ StartingValues <- function(start.method = "default",
                 # get observed indicators for this latent variable
                 ov.idx <- match(user$rhs[user.idx], ov.names)
                 if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
-                    if(!is.null(sample@missing[[g]])) {
+                    if(sample@missing.flag) {
                         COV <- sample@missing.h1[[g]]$sigma[ov.idx,ov.idx]
                     } else {
                         COV <- sample@cov[[g]][ov.idx,ov.idx]

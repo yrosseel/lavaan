@@ -220,7 +220,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
 # shortcut to only get Abeta
 compute.Abeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
                           data=NULL, group=1L, information="observed") { 
-    if(!is.null(sample@missing[[group]])) {
+    if(sample@missing.flag) {
         X <- NULL
         M <- sample@missing[[group]]
     } else {
@@ -260,7 +260,7 @@ compute.A1.sample <- function(sample, group=1L, meanstructure=TRUE,
     # note: for complete data, the type of information does not matter
     # but for incomplete data, it makes a difference!
 
-    if(!is.null(sample@missing[[group]])) {
+    if(sample@missing.flag) {
         # incomplete data
         A1 <- compute.Abeta(Sigma.hat=sample@missing.h1[[group]]$sigma,
                             Mu.hat=sample@missing.h1[[group]]$mu,
@@ -291,7 +291,7 @@ compute.A1.sample <- function(sample, group=1L, meanstructure=TRUE,
 # shortcut to only get Bbeta
 compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL, 
                           data=NULL, group=1L) {
-    if(!is.null(sample@missing[[group]])) {
+    if(sample@missing.flag) {
         X <- NULL
         M <- sample@missing[[group]]
     } else {
@@ -307,7 +307,7 @@ compute.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL, sample=NULL,
 compute.B1.sample <- function(sample=NULL, data=NULL,
                               group=1L, meanstructure=TRUE) {
 
-    if(!is.null(sample@missing[[group]])) {
+    if(sample@missing.flag) {
         stopifnot(meanstructure == TRUE)
         B1 <- compute.Bbeta(Sigma.hat=sample@missing.h1[[group]]$sigma,
                             Mu.hat=sample@missing.h1[[group]]$mu,

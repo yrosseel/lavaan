@@ -360,7 +360,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             A1.group <- vector("list", length=sample@ngroups)
             B1.group <- vector("list", length=sample@ngroups)
             for(g in 1:sample@ngroups) {
-                if(!is.null(sample@missing[[g]])) {
+                if(sample@missing.flag) {
                     X <- NULL
                     M <- sample@missing[[g]]
                 } else {
