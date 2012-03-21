@@ -114,7 +114,7 @@ bootstrap.internal <- function(object = NULL,
     }
 
     # prepare
-    options(warn = warn)
+    old_options <- options(); options(warn = warn)
     if (missing(parallel)) parallel <- "no"
     # the next 10 lines are borrowed from the boot package
     parallel <- match.arg(parallel)
@@ -258,6 +258,7 @@ bootstrap.internal <- function(object = NULL,
                                WLS.V       = WLS.V)) # fixme!!
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
+            options(old_options)
             return(NULL)
         }
 
@@ -294,6 +295,7 @@ bootstrap.internal <- function(object = NULL,
                            slotData    = data.boot)
         if(!fit.boot@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
+            options(old_options)
             return(NULL)
         } 
         
@@ -311,6 +313,7 @@ bootstrap.internal <- function(object = NULL,
         }
         if(inherits(out, "try-error")) {
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")
+            options(old_options)
             return(NULL)
         } 
         if(verbose) cat("   OK -- niter = ", 
@@ -362,6 +365,9 @@ bootstrap.internal <- function(object = NULL,
     if(return.boot) {
         # mimic output boot function
     } 
+
+    # restore options
+    options(old_options)
 
     t.star
 }

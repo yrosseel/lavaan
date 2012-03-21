@@ -13,7 +13,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
               type %in% c("bollen.stine", "parametric", "yuan"), 
               double.bootstrap %in% c("no", "FDB", "standard"))
   
-    options(warn = warn)
+    old_options <- options(); options(warn = warn)
 
     # prepare
     LRT <- rep(as.numeric(NA), R)
@@ -21,6 +21,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         # restricted fit should not be better!
         cat(" ... h0@Fit@fx = ", h0@Fit@fx, "h1@Fit@fx = ", h1@Fit@fx,
             "h0 should not be better!\n")
+        options(old_options)
         return(NULL)
     }
     LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
@@ -184,6 +185,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) 
                 cat("     FAILED: creating h0@Sample statistics\n")
+            options(old_options)
             return(NULL)
         }
 
@@ -210,6 +212,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
         if (!fit.h0@Fit@converged) {
             if (verbose) cat("     FAILED: no convergence\n")
+            options(old_options)
             return(NULL)
         }
         if (verbose) 
@@ -230,6 +233,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             if (verbose) 
                 cat("     FAILED: no convergence -- niter = ", fit.h1@Fit@iterations, 
                     " fx = ", fit.h1@Fit@fx,"\n")
+            options(old_options)
             return(NULL)
         }
         if (verbose) 
@@ -241,6 +245,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             #if((fit.h1@Fit@fx - fit.h0@Fit@fx) > 0.0) {
             if (verbose)
                 cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@Fit@fx - fit.h0@Fit@fx, "\n")
+            options(old_options)
             return(NULL)
         } else {
             lrt.boot <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
@@ -365,5 +370,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         # adj.pvalue <- sum(plugin.pvalues < pvalue) / length(R) #adj.pvalue < or <=??
         # attr(pvalue, "adj.pvalue") <- adj.pvalue
     }
+
+    # restore options
+    options(old_options)
+
     pvalue
 }
