@@ -716,7 +716,22 @@ parameterEstimates <- parameterestimates <-
     function(object, 
              ci = TRUE, level = 0.95, boot.ci.type = "perc",
              standardized = FALSE, 
-             frac.missing.information = object@Sample@missing.flag) {
+             fmi = "default") {
+
+    # fmi or not
+    FMI <- fmi
+    if(fmi == "default") {
+        if(object@Sample@missing.flag &&
+           object@Options$estimator == "ML" &&
+           object@Options$se == "standard")
+            FMI <- TRUE
+        else
+            FMI <- FALSE
+    }
+    if(FMI && object@Options$se != "standard") {
+        warning("lavaan WARNING: fmi only available if se=\"standard\"")
+        FMI <- FALSE
+    }
 
     LIST <- inspect(object, "list")
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
@@ -858,7 +873,7 @@ parameterEstimates <- parameterestimates <-
     }
 
     # fractional missing information (if estimator="fiml")
-    if(frac.missing.information) {
+    if(FMI) {
         SE.orig <- LIST$se
         COV <- object@Fit@Sigma.hat
         MEAN <- object@Fit@Mu.hat
@@ -866,7 +881,6 @@ parameterEstimates <- parameterestimates <-
         # provide rownames
         for(g in 1:object@Data@ngroups)
             rownames(COV[[g]]) <- object@Data@ov.names[[g]]
-
 
         # if estimator="ML" and likelihood="normal" --> rescale
         if(object@Options$estimator == "ML" &&
