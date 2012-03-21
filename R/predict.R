@@ -23,10 +23,10 @@ function(object, data=NULL, ...) {
     # need full data set supplied
     if(is.null(data)) {
         # do we have an internal copy:
-        if(is.null(object@Data[[1]])) {
+        if(is.null(object@Data@X[[1]])) {
             stop("no local copy of data; FIXME!")
         } else {
-            data.obs <- object@Data
+            data.obs <- object@Data@X
         }
     } else { 
         stop("this function needs revision!")
