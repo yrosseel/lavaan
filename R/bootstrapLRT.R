@@ -10,7 +10,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     # checks
     stopifnot(class(h0) == "lavaan", 
               class(h1) == "lavaan", 
-              type %in% c("bollen.stine", "parametric"), 
+              type %in% c("bollen.stine", "parametric", "yuan"), 
               double.bootstrap %in% c("no", "FDB", "standard"))
   
     options(warn = warn)
@@ -75,10 +75,64 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
     }
 
+    # Yuan et al data transformation
+    if(type == "yuan") {
+        # page numbers refer to Yuan et al, 2007      
+        # Define a function to find appropriate value of a
+        # (p. 272)
+        g.a <- function(a, Sigmahat, Sigmahat.inv, S, tau.hat, p){
+            S.a <- a*S + (1-a)*Sigmahat
+            tmp.term <- S.a %*% Sigmahat.inv
+            res <- ((sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat)^2
+            # From p 272
+            attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
+                                     (Sigmahat.inv - chol2inv(chol(S.a)))))
+            res
+        }
+      
+        # Now use g.a within each group
+        for(g in 1:h0@Sample@ngroups) {
+            S <- h0@Sample@cov[[g]]
+            # test is in Fit slot
+            ghat <- h0@Fit@test[[1]]$stat.group[[g]]
+            df <- h0@Fit@test[[1]]$df
+            Sigmahat <- Sigma.hat[[g]]
+            Sigmahat.inv <- h0@Sample@icov[[g]]
+            nmv <- nrow(Sigmahat)
+            n <- data@nobs[[g]]
+
+            # Calculate tauhat_1, middle p. 267.
+            # Yuan et al note that tauhat_1 could be negative;
+            # if so, we need to let S.a = Sigmahat. (see middle p 275)
+            tau.hat <- (ghat - df)/(n-1)
+
+            if (tau.hat >= 0){
+              # Find a to minimize g.a
+              a <- optimize(g.a, c(0,1), Sigmahat, Sigmahat.inv,
+                            S, tau.hat, nmv)$minimum
+
+              # Calculate S_a (p. 267)
+              S.a <- a*S + (1-a)*Sigmahat
+            } else {
+              S.a <- Sigmahat
+            }
+
+            # Transform the data (p. 263)
+            S.a.sqrt <- sqrtSymmetricMatrix(S.a)
+            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
+
+            X <- data@X[[g]]
+            X <- X %*% S.inv.sqrt %*% S.a.sqrt            
+
+            # replace data slot
+            data@X[[g]] <- X
+        }
+    }
+    
     fn <- function(b) {
 
         #Sampling if Bollen-Stine
-        if (type == "bollen.stine") {
+        if (type == "bollen.stine" || type == "yuan") {
             boot.idx <- vector("list", length = h0@Sample@ngroups)
             for (g in 1:h0@Sample@ngroups) {
                 stopifnot(h0@Sample@nobs[[g]] > 1L)
@@ -134,7 +188,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
 
         #Bollen-Stine sampling
-        if (type == "bollen.stine") {
+        if (type == "bollen.stine" || type == "yuan") {
             data.boot <- data
             for (g in 1:h0@Sample@ngroups) {
                 data.boot@X[[g]] <- data@X[[g]][boot.idx[[g]], ,drop = FALSE]

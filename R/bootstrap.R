@@ -4,7 +4,7 @@
 #
 # return COEF matrix of size R x npar (R = number of bootstrap samples)
 # 
-# YR. 9 aug 2011
+# Ed. 9 mar 2012
 #
 # Notes: - faulty runs are simply ignored (with a warning)
 #        - default R=1000
@@ -35,7 +35,7 @@ bootstrapLavaan <- function(object,
     type. <- type # overwritten if nonparametric
     stopifnot(class(object) == "lavaan",
               type. %in% c("nonparametric", "ordinary",
-                          "bollen.stine", "parametric"))
+                          "bollen.stine", "parametric", "yuan"))
     if(type. == "nonparametric") type. <- "ordinary"
 
     # check if options$se is not bootstrap, otherwise, we get an infinite loop
@@ -130,8 +130,8 @@ bootstrap.internal <- function(object = NULL,
     #if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
     #seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
 
-    # bollen.stine or parametric: we need the Sigma.hat values
-    if(type == "bollen.stine" || type == "parametric") {
+    # bollen.stine, yuan, or parametric: we need the Sigma.hat values
+    if(type == "bollen.stine" || type == "parametric" || type == "yuan") {
         Sigma.hat <- computeSigmaHat(model)
         Mu.hat <- computeMuHat(model)
     }
@@ -157,9 +157,63 @@ bootstrap.internal <- function(object = NULL,
         }
     }
 
+    # if yuan, transform data here
+    if(type == "yuan") {
+        # page numbers refer to Yuan et al, 2007      
+        # Define a function to find appropriate value of a
+        # (p. 272)
+        g.a <- function(a, Sigmahat, Sigmahat.inv, S, tau.hat, p){
+            S.a <- a*S + (1-a)*Sigmahat
+            tmp.term <- S.a %*% Sigmahat.inv
+            res <- ((sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat)^2
+            # From p 272
+            attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
+                                     (Sigmahat.inv - chol2inv(chol(S.a)))))
+            res
+        }
+      
+        # Now use g.a within each group
+        for(g in 1:samp@ngroups) {
+            S <- samp@cov[[g]]
+            # test is in Fit slot
+            ghat <- object@Fit@test[[1]]$stat.group[[g]]
+            df <- object@Fit@test[[1]]$df
+            Sigmahat <- Sigma.hat[[g]]
+            Sigmahat.inv <- samp@icov[[g]]
+            nmv <- nrow(Sigmahat)
+            n <- data@nobs[[g]]
+
+            # Calculate tauhat_1, middle p. 267.
+            # Yuan et al note that tauhat_1 could be negative;
+            # if so, we need to let S.a = Sigmahat. (see middle p 275)
+            tau.hat <- (ghat - df)/(n-1)
+
+            if (tau.hat >= 0){
+              # Find a to minimize g.a
+              a <- optimize(g.a, c(0,1), Sigmahat, Sigmahat.inv,
+                            S, tau.hat, nmv)$minimum
+
+              # Calculate S_a (p. 267)
+              S.a <- a*S + (1-a)*Sigmahat
+            } else {
+              S.a <- Sigmahat
+            }
+
+            # Transform the data (p. 263)
+            S.a.sqrt <- sqrtSymmetricMatrix(S.a)
+            S.inv.sqrt <- sqrtSymmetricMatrix(samp@icov[[g]])
+
+            X <- data@X[[g]]
+            X <- X %*% S.inv.sqrt %*% S.a.sqrt            
+
+            # replace data slot
+            data@X[[g]] <- X
+        }
+    }
+    
     # run bootstraps
     fn <- function(b) {
-        if(type == "bollen.stine" || type == "ordinary") {
+        if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
             boot.idx <- vector("list", length=samp@ngroups)
             for(g in 1:samp@ngroups) {
@@ -208,7 +262,8 @@ bootstrap.internal <- function(object = NULL,
         }
 
         # just in case we need the dataSlot (lm!)
-        if(type == "bollen.stine") {
+        # guessing that yuan should be included here:
+        if(type == "bollen.stine" || type == "yuan") {
             data.boot <- data
             for(g in 1:samp@ngroups) {
                 data.boot@X[[g]] <- data@X[[g]][ boot.idx[[g]],,drop=FALSE]
