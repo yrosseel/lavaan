@@ -13,7 +13,7 @@ setClass("lavaanData",
         ov.names="list",           # variable names (per group)
         ov.idx="list",             # column indices (all observed variables)
         case.idx="list",           # case indices per group
-        missingPatterns="list",    # if not complete, missing patterns
+        Mp="list",                 # if not complete, missing patterns
         X="list"                   # local copy (parametric?)
     )
 )

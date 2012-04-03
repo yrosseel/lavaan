@@ -210,6 +210,13 @@ bootstrap.internal <- function(object = NULL,
             data@X[[g]] <- X
         }
     }
+
+    # if we have changed the data@X slot, and the data is incomplete,
+    # we must update the Mp slot
+    if(samp@missing.flag) {
+        for(g in 1:samp@ngroups)
+            data@Mp[[g]] <- getMissingPatterns(data@X[[g]])
+    }
     
     # run bootstraps
     fn <- function(b) {
@@ -229,17 +236,10 @@ bootstrap.internal <- function(object = NULL,
                                                 mu    = Mu.hat[[g]])
             }
         }
-        # names
-        for(g in 1:samp@ngroups) 
-            colnames(data@X[[g]]) <- data@ov.names[[g]]
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
-        Missing <-  getMissingPatterns(Data    = data,
-                                       missing = opt$missing,
-                                       warn    = FALSE,
-                                       verbose = FALSE)
         WLS.V <- list()
         if(opt$estimator %in% c("GLS", "WLS")) {
             WLS.V <- getWLS.V(Data          = data,
@@ -251,11 +251,11 @@ bootstrap.internal <- function(object = NULL,
         }
         bootSampleStats <- try(getSampleStatsFromData(
                                Data        = data,
-                               M           = Missing,
                                boot.idx    = boot.idx,
                                rescale     = (opt$estimator == "ML" &&
                                               opt$likelihood == "normal"),
-                               WLS.V       = WLS.V)) # fixme!!
+                               WLS.V       = WLS.V,  # fixme!!
+                               verbose     = FALSE)) 
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
             options(old_options)

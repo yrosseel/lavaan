@@ -143,7 +143,7 @@ getData <- function(data          = NULL,          # data.frame
                       ov.idx          = ov.idx,
                       case.idx        = case.idx,
                       X               = X,
-                      missingPatterns = Mp
+                      Mp              = Mp
                      )
     lavaanData                     
 }
@@ -153,7 +153,8 @@ getSampleStatsFromData <- function(Data        = NULL,
                                    boot.idx    = NULL,
                                    rescale     = FALSE,
                                    WLS.V       = list(),
-                                   verbose     = verbose) {
+                                   missing.h1  = TRUE,
+                                   verbose     = FALSE) {
 
     # get X
     X <- Data@X
@@ -167,12 +168,12 @@ getSampleStatsFromData <- function(Data        = NULL,
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     # extra sample statistics per group
-    icov        <- vector("list", length=ngroups)
-    cov.log.det <- vector("list", length=ngroups)
-    cov.vecs    <- vector("list", length=ngroups)
-    missing     <- vector("list", length=ngroups)
-    missing.h1  <- vector("list", length=ngroups)
-    missing.flag <- FALSE
+    icov          <- vector("list", length=ngroups)
+    cov.log.det   <- vector("list", length=ngroups)
+    cov.vecs      <- vector("list", length=ngroups)
+    missing.      <- vector("list", length=ngroups)
+    missing.h1.   <- vector("list", length=ngroups)
+    missing.flag. <- FALSE
 
     for(g in 1:ngroups) {
 
@@ -211,17 +212,20 @@ getSampleStatsFromData <- function(Data        = NULL,
         cov.vecs[[g]] <- vech(cov[[g]])
 
         # if missing = "fiml", sample statistics per pattern
-        if(!is.null(Data@missingPatterns[[g]])) {
-            missing.flag <- TRUE
-            missing[[g]] <- 
+        if(!is.null(Data@Mp[[g]])) {
+            missing.flag. <- TRUE
+            missing.[[g]] <- 
                 getMissingPatternStats(X  = X[[g]],
-                                       Mp = Data@missingPatterns[[g]])
-            # estimate moments unrestricted model
-            out <- estimate.moments.EM(X=X[[g]], M=missing[[g]],
-                                       verbose=verbose)
-            missing.h1[[g]]$sigma <- out$sigma
-            missing.h1[[g]]$mu    <- out$mu
-            missing.h1[[g]]$h1    <- out$fx
+                                       Mp = Data@Mp[[g]])
+
+            if(missing.h1) {
+                # estimate moments unrestricted model
+                out <- estimate.moments.EM(X=X[[g]], M=missing.[[g]],
+                                           verbose=verbose)
+                missing.h1.[[g]]$sigma <- out$sigma
+                missing.h1.[[g]]$mu    <- out$mu
+                missing.h1.[[g]]$h1    <- out$fx
+            }
         } 
 
     } # ngroups
@@ -246,9 +250,9 @@ getSampleStatsFromData <- function(Data        = NULL,
                        WLS.V        = WLS.V,                     
 
                        # missingness
-                       missing.flag = missing.flag,
-                       missing      = missing,
-                       missing.h1   = missing.h1
+                       missing.flag = missing.flag.,
+                       missing      = missing.,
+                       missing.h1   = missing.h1.
                       )
 
     SampleStats

@@ -129,6 +129,13 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             data@X[[g]] <- X
         }
     }
+
+    # if we have changed the data@X slot, and the data is incomplete,
+    # we must update the Mp slot
+    if(samp@missing.flag) {
+        for(g in 1:samp@ngroups)
+            data@Mp[[g]] <- getMissingPatterns(X[[g]])
+    }
     
     fn <- function(b) {
 
@@ -151,20 +158,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             }
         }
 
-        #Add variable names to columns
-        for (g in 1:h0@Sample@ngroups) 
-            colnames(data@X[[g]]) <- h0@Data@ov.names[[g]]
+        if (verbose) cat("  ... bootstrap draw number: ", b, "\n")
 
-        if (verbose) 
-            cat("  ... bootstrap draw number: ", b, "\n")
-
-        #Missing data handling
-        Missing <- getMissingPatterns(Data = data, 
-                                      missing = h0@Options$missing, 
-                                      warn = FALSE, 
-                                      verbose = FALSE)
         WLS.V <- list()
-
         if (h0@Options$estimator %in% c("GLS", "WLS")) {
             WLS.V <- getWLS.V(Data = data, 
                               sample = NULL, 
@@ -175,12 +171,13 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
 
         #Get sample statistics
-        bootSampleStats <- 
-            try(getSampleStatsFromData(Data = data, 
-                                       M = Missing, 
-                                       boot.idx = boot.idx, 
-                                       rescale = (h0@Options$estimator == "ML" && h0@Options$likelihood =="normal"), 
-                                       WLS.V = WLS.V))
+        bootSampleStats <- try(getSampleStatsFromData(
+                               Data     = data, 
+                               boot.idx = boot.idx, 
+                               rescale  = (h0@Options$estimator == "ML" && 
+                                           h0@Options$likelihood =="normal"), 
+                               WLS.V    = WLS.V,
+                               verbose  = FALSE))
 
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) 

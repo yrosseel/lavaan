@@ -87,14 +87,14 @@ short.summary <- function(object) {
         if(object@Data@ngroups == 1L) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
             t1.txt <- sprintf("  %10i", 
-                              object@Data@missingPatterns[[1L]]$npatterns)
+                              object@Data@Mp[[1L]]$npatterns)
             cat(t0.txt, t1.txt, "\n\n", sep="")
         } else {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
             cat(t0.txt, "\n")
             for(g in 1:object@Data@ngroups) {
                 t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
-                                 object@Data@missingPatterns[[g]]$npatterns)
+                                 object@Data@Mp[[g]]$npatterns)
                 cat(t.txt, "\n", sep="")
             }
             cat("\n")

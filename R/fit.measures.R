@@ -252,7 +252,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                                           object@Sample@cov.log.det[[g]]
                                           - (Ng/2)*nvar )
                 } else { # missing patterns case
-                    pat <- object@Data@missingPatterns[[g]]$pat
+                    pat <- object@Data@Mp[[g]]$pat
                     Ng <- object@Data@nobs[[g]]
                     ni <- as.numeric(apply(pat, 1, sum) %*% 
                                      as.integer(rownames(pat)))
