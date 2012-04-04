@@ -104,7 +104,7 @@ getData <- function(data          = NULL,          # data.frame
         #rownames(X[[g]]) <- NULL ### WHY are two copies made here? 
                                   ### answer: rownames is NOT a primitive
         #dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
-        dimnames(X[[g]]) <-
+        dimnames(X[[g]]) <- NULL
 
         # standardize observed variables?
         if(std.ov) {
@@ -149,20 +149,38 @@ getData <- function(data          = NULL,          # data.frame
 }
 
 
-getSampleStatsFromData <- function(Data        = NULL,
-                                   boot.idx    = NULL,
-                                   rescale     = FALSE,
-                                   WLS.V       = list(),
-                                   missing.h1  = TRUE,
-                                   verbose     = FALSE) {
+getSampleStatsFromData <- function(Data          = NULL,
+                                   DataX         = NULL,
+                                   missing       = "listwise",
+                                   rescale       = FALSE,
+                                   WLS.V         = NULL,
+                                   missing.h1    = TRUE,
+                                   estimator     = "ML",
+                                   mimic         = "lavaan",
+                                   meanstructure = FALSE,
+                                   verbose       = FALSE) {
 
-    # get X
-    X <- Data@X
+    # get X and Mp
+    if(!is.null(Data)) {
+        X <- Data@X; Mp <- Data@Mp
+        ngroups <- Data@ngroups
+        nobs <- Data@nobs
+    } else if(!is.null(DataX)) {
+        stopifnot(is.list(DataX), is.matrix(DataX[[1L]]))
+        X <- DataX
+        ngroups <- length(X)
+        Mp <- vector("list", length=ngroups)
+        nobs <- vector("list", length=ngroups)
+        for(g in 1:ngroups) {
+            if(missing != "listwise") {
+                Mp[[g]] <- getMissingPatterns(X[[g]])
+            }
+            nobs[[g]] <- nrow(X[[g]])
+        }
+    } else {
+        stop("both Data and DataX argument are NULL")
+    }
 
-    # number of groups
-    ngroups <- Data@ngroups
-    nobs <- Data@nobs
-   
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
     var         <- vector("list", length=ngroups)
@@ -174,13 +192,10 @@ getSampleStatsFromData <- function(Data        = NULL,
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
+    if(is.null(WLS.V))
+        WLS.V <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
-
-        # bootstrap sample?
-        if(!is.null(boot.idx)) {
-            X[[g]] <- X[[g]][boot.idx[[g]],,drop=FALSE]
-        }
 
         # fill in the other slots
         cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
@@ -212,11 +227,11 @@ getSampleStatsFromData <- function(Data        = NULL,
         cov.vecs[[g]] <- vech(cov[[g]])
 
         # if missing = "fiml", sample statistics per pattern
-        if(!is.null(Data@Mp[[g]])) {
+        if(!is.null(Mp[[g]])) {
             missing.flag. <- TRUE
             missing.[[g]] <- 
                 getMissingPatternStats(X  = X[[g]],
-                                       Mp = Data@Mp[[g]])
+                                       Mp = Mp[[g]])
 
             if(missing.h1) {
                 # estimate moments unrestricted model
@@ -227,6 +242,47 @@ getSampleStatsFromData <- function(Data        = NULL,
                 missing.h1.[[g]]$h1    <- out$fx
             }
         } 
+
+        # WLS.V
+        if(estimator == "GLS") {
+            if(meanstructure) {
+                V11 <- icov[[g]]
+                if(mimic == "Mplus") { # is this a bug in Mplus?
+                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                }
+                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                WLS.V[[g]] <- bdiag(V11,V22)
+            } else {
+                WLS.V[[g]] <-
+                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+            }
+        } else if(estimator == "WLS") {
+            # sample size large enough?
+            nvar <- ncol(X[[g]])
+            pstar <- nvar*(nvar+1)/2
+            if(meanstructure) pstar <- pstar + nvar
+            if(nrow(X[[g]]) < pstar) {
+                if(ngroups > 1L) {
+                    txt <- cat(" in group: ", g, "\n", sep="")
+                } else {
+                    txt <- "\n"
+                }
+                stop("lavaan ERROR: cannot compute Gamma: ",
+                     "number of observations (", nrow(X[[g]]), ") too small",
+                     txt)
+            }
+
+            Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
+                                   Mplus.WLS=(mimic=="Mplus"))
+
+            # Gamma should be po before we invert
+            ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
+            if(is.complex(ev) || any(Re(ev) < 0)) {
+               stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+            }
+            #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
+            WLS.V[[g]] <- inv.chol(Gamma)
+        }
 
     } # ngroups
 
@@ -264,7 +320,7 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
                                       sample.nobs = NULL,
                                       rescale     = FALSE,
                                       ov.names    = NULL,
-                                      WLS.V       = list()) {
+                                      WLS.V       = NULL) {
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
@@ -286,6 +342,10 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
     
     # prepare empty list for missing data
     missing <- vector("list", length=ngroups)
+
+    # WLS.V
+    if(is.null(WLS.V))
+        WLS.V <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 
@@ -358,6 +418,22 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
         # cov.vecs
         cov.vecs[[g]] <- vech(cov[[g]])
 
+        if(estimator == "GLS") {
+            if(meanstructure) {
+                V11 <- icov[[g]]
+                if(mimic == "Mplus") { # is this a bug in Mplus?
+                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                }
+                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                WLS.V[[g]] <- bdiag(V11,V22)
+            } else {
+                WLS.V[[g]] <-
+                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+            }
+        } else if(estimator == "WLS") {
+            stop("lavaan ERROR: WLS needs complete data")
+        }
+
     } # ngroups
 
     # construct SampleStats object
@@ -383,88 +459,5 @@ getSampleStatsFromMoments <- function(sample.cov  = NULL,
                       )
 
     SampleStats
-}
-
-getWLS.V <- function(Data          = NULL, 
-                     sample        = NULL,
-                     boot.idx      = NULL,
-                     estimator     = "ML",
-                     mimic         = "lavaan",
-                     meanstructure = FALSE) {
-
-    # number of groups
-    if(is.null(sample)) {
-        X <- Data@X
-        ngroups <- length(X)
-    } else {
-        ngroups <- sample@ngroups
-    }
-
-    # bootstrap sample?
-    if(!is.null(boot.idx)) {
-        for(g in 1:ngroups) {
-            X[[g]] <- X[[g]][boot.idx[[g]],,drop=FALSE]
-        }
-    }
-
-    WLS.V       <- vector("list", length=ngroups)
-
-    # WLS.V (for GLS and WLS only)
-    if(estimator == "GLS") {
-        if(is.null(sample)) {
-            # FIXME: maybe we should avoid sample = NULL alltogether...
-            # tmp cov and icov, assuming data is complete
-            cov         <- lapply(X, cov, use="pairwise")
-            icov        <- lapply(cov, inv.chol, logdet=FALSE)
-            nobs        <- lapply(X, nrow)
-        } else {
-            cov <- sample@cov
-            icov <- sample@icov
-            nobs <- sample@nobs
-        }
-        for(g in 1:ngroups) {
-            if(meanstructure) {
-                V11 <- icov[[g]]
-                if(mimic == "Mplus") { # is this a bug in Mplus?
-                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
-                }
-                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
-                WLS.V[[g]] <- bdiag(V11,V22)
-            } else {
-                WLS.V[[g]] <-
-                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
-            }
-        }
-    } else if(estimator == "WLS") {
-        for(g in 1:ngroups) {
-            # sample size large enough?
-            nvar <- ncol(X[[g]])
-            pstar <- nvar*(nvar+1)/2
-            if(meanstructure) pstar <- pstar + nvar
-            if(nrow(X[[g]]) < pstar) {
-                if(ngroups > 1L) { 
-                    txt <- cat(" in group: ", g, "\n", sep="")
-                } else {
-                    txt <- "\n"
-                }
-                stop("lavaan ERROR: cannot compute Gamma: ",
-                     "number of observations (", nrow(X[[g]]), ") too small",
-                     txt)
-            }
-
-            Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
-                                   Mplus.WLS=(mimic=="Mplus"))
-
-            # Gamma should be po before we invert
-            ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-            if(is.complex(ev) || any(Re(ev) < 0)) {
-               stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
-            }
-            #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
-            WLS.V[[g]] <- inv.chol(Gamma)
-        }
-    }
-
-    WLS.V
 }
 

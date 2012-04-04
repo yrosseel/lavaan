@@ -14,7 +14,8 @@ setClass("lavaanData",
         ov.idx="list",             # column indices (all observed variables)
         case.idx="list",           # case indices per group
         Mp="list",                 # if not complete, missing patterns
-        X="list"                   # local copy (parametric?)
+                                   # we need this here, to get nobs right!
+        X="list"                   # local copy
     )
 )
 

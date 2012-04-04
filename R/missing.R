@@ -28,9 +28,6 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
     sigma0 <- diag(x=var0, nrow=length(var0))
     mu <- mu0; sigma <- sigma0
 
-    print(X)
-    print(M)
-
     # report
     if(verbose) {
         fx0 <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
@@ -95,9 +92,6 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
         # recompute mu and sigma
         mu    <- T1/N
         sigma <- T2/N - tcrossprod(mu)
-
-        print(mu)
-        print(sigma)
 
         # max absolute difference in parameter values
         DELTA <- max(abs(c(mu,vech(sigma)) - c(mu0,vech(sigma0))))

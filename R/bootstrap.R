@@ -136,6 +136,17 @@ bootstrap.internal <- function(object = NULL,
         Mu.hat <- computeMuHat(model)
     }
 
+    
+    # can we use the original data, or do we need to transform it first?
+    if(type == "bollen.stine" || type == "yuan") {
+        # check if data is complete
+        if(opt$missing != "listwise")
+            stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
+        dataX <- vector("list", length=data@ngroups)
+    } else {
+        dataX <- data@X
+    }
+
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
         for(g in 1:samp@ngroups) {
@@ -152,8 +163,8 @@ bootstrap.internal <- function(object = NULL,
             if(model@meanstructure)
                 X <- scale(X, center=(-1*samp@mean[[g]]), scale=FALSE)
 
-            # replace data slot
-            data@X[[g]] <- X
+            # transformed data
+            dataX[[g]] <- X
         }
     }
 
@@ -206,18 +217,11 @@ bootstrap.internal <- function(object = NULL,
             X <- data@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            
 
-            # replace data slot
-            data@X[[g]] <- X
+            # transformed data
+            dataX[[g]] <- X
         }
     }
 
-    # if we have changed the data@X slot, and the data is incomplete,
-    # we must update the Mp slot
-    if(samp@missing.flag) {
-        for(g in 1:samp@ngroups)
-            data@Mp[[g]] <- getMissingPatterns(data@X[[g]])
-    }
-    
     # run bootstraps
     fn <- function(b) {
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
@@ -225,53 +229,42 @@ bootstrap.internal <- function(object = NULL,
             boot.idx <- vector("list", length=samp@ngroups)
             for(g in 1:samp@ngroups) {
                 stopifnot(samp@nobs[[g]] > 1L)
-                boot.idx[[g]] <- sample(x=samp@nobs[[g]],
-                                        size=samp@nobs[[g]], replace=TRUE)
+                boot.idx <- sample(x=samp@nobs[[g]],
+                                   size=samp@nobs[[g]], replace=TRUE)
+                dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
         } else { # parametric!
-            boot.idx <- NULL
             for(g in 1:samp@ngroups) {
-                    data@X[[g]] <- MASS.mvrnorm(n     = samp@nobs[[g]],
-                                                Sigma = Sigma.hat[[g]],
-                                                mu    = Mu.hat[[g]])
+                dataX[[g]] <- MASS.mvrnorm(n     = samp@nobs[[g]],
+                                           Sigma = Sigma.hat[[g]],
+                                           mu    = Mu.hat[[g]])
             }
         }
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
-        WLS.V <- list()
-        if(opt$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(Data          = data,
-                              sample        = NULL,
-                              boot.idx      = boot.idx,
-                              estimator     = opt$estimator,
-                              mimic         = opt$mimic,
-                              meanstructure = opt$meanstructure)
-        }
         bootSampleStats <- try(getSampleStatsFromData(
-                               Data        = data,
-                               boot.idx    = boot.idx,
-                               rescale     = (opt$estimator == "ML" &&
-                                              opt$likelihood == "normal"),
-                               WLS.V       = WLS.V,  # fixme!!
-                               verbose     = FALSE)) 
+                               Data          = NULL,
+                               DataX         = dataX,
+                               missing       = opt$missing,
+                               rescale       = (opt$estimator == "ML" &&
+                                                opt$likelihood == "normal"),
+                               WLS.V         = NULL,
+                               estimator     = opt$estimator,
+                               mimic         = opt$mimic,
+                               meanstructure = opt$meanstructure,
+                               missing.h1    = (FUN == "coef"),
+                               verbose       = FALSE)) 
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
             options(old_options)
             return(NULL)
         }
 
-        # just in case we need the dataSlot (lm!)
-        # guessing that yuan should be included here:
-        if(type == "bollen.stine" || type == "yuan") {
-            data.boot <- data
-            for(g in 1:samp@ngroups) {
-                data.boot@X[[g]] <- data@X[[g]][ boot.idx[[g]],,drop=FALSE]
-            }
-        } else {
-            data.boot <- data
-        }
+        # just in case we need the `transformed' X in the data slot (lm!)
+        if(type == "bollen.stine" || type == "yuan") 
+            data@X <- dataX
 
         # adjust model slot if fixed.x variances/covariances
         # have changed:
@@ -292,7 +285,7 @@ bootstrap.internal <- function(object = NULL,
                            slotUser    = user,
                            slotModel   = model.boot,
                            slotSample  = bootSampleStats,
-                           slotData    = data.boot)
+                           slotData    = data)
         if(!fit.boot@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)

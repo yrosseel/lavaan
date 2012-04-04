@@ -264,21 +264,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotSample)) {
         lavaanSampleStats <- slotSample
     } else if(data.type == "full") {
-        WLS.V <- list()
-        if(lavaanOptions$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(Data          = lavaanData,
-                              sample        = NULL,
-                              estimator     = lavaanOptions$estimator,
-                              mimic         = lavaanOptions$mimic,
-                              meanstructure = lavaanOptions$meanstructure)
-        }
-
         lavaanSampleStats <- getSampleStatsFromData(
-                           Data        = lavaanData,
-                           rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"),
-                           WLS.V       = WLS.V,
-                           verbose     = lavaanOptions$verbose)
+                       Data          = lavaanData,
+                       rescale       = (lavaanOptions$estimator == "ML" &&
+                                        lavaanOptions$likelihood == "normal"),
+                       WLS.V         = NULL,
+                       estimator     = lavaanOptions$estimator,
+                       mimic         = lavaanOptions$mimic,
+                       meanstructure = lavaanOptions$meanstructure,
+                       missing.h1    = (lavaanOptions$missing != "listwise"),
+                       verbose       = lavaanOptions$verbose)
                                                  
     } else if(data.type == "moment") {
         lavaanSampleStats <- getSampleStatsFromMoments(
@@ -286,17 +281,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.mean = sample.mean,
                            sample.nobs = sample.nobs,
                            ov.names    = ov.names,
+                           estimator     = lavaanOptions$estimator,
+                           mimic         = lavaanOptions$mimic,
+                           meanstructure = lavaanOptions$meanstructure,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"))
-
-        if(lavaanOptions$estimator == "GLS") {
-            WLS.V <- getWLS.V(Data          = NULL,
-                              sample        = lavaanSampleStats,
-                              estimator     = lavaanOptions$estimator,
-                              mimic         = lavaanOptions$mimic,
-                              meanstructure = lavaanOptions$meanstructure)
-            lavaanSampleStats@WLS.V <- WLS.V
-        }
     } else {
         # no data
         lavaanSampleStats <- new("SampleStats", ngroups=lavaanData@ngroups,
