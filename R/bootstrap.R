@@ -226,7 +226,6 @@ bootstrap.internal <- function(object = NULL,
     fn <- function(b) {
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
-            boot.idx <- vector("list", length=samp@ngroups)
             for(g in 1:samp@ngroups) {
                 stopifnot(samp@nobs[[g]] > 1L)
                 boot.idx <- sample(x=samp@nobs[[g]],
@@ -254,7 +253,7 @@ bootstrap.internal <- function(object = NULL,
                                estimator     = opt$estimator,
                                mimic         = opt$mimic,
                                meanstructure = opt$meanstructure,
-                               missing.h1    = (FUN == "coef"),
+                               missing.h1    = (FUN != "coef"),
                                verbose       = FALSE)) 
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")

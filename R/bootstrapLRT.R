@@ -1,7 +1,7 @@
 bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           type = "bollen.stine", verbose = FALSE,
-                          return.LRT = TRUE, 
-                          double.bootstrap = "FDB",
+                          return.LRT = FALSE, 
+                          double.bootstrap = "no",
                           double.bootstrap.R = 500L, 
                           double.bootstrap.alpha = 0.05, 
                           warn = -1L, parallel = c("no", "multicore", "snow"), 
@@ -54,25 +54,35 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     #Compute covariance matrix and additional mean vector
     Sigma.hat <- computeSigmaHat(h0@Model)
     Mu.hat    <- computeMuHat(h0@Model)
+
+    # can we use the original data, or do we need to transform it first?
+    if(type == "bollen.stine" || type == "yuan") {
+        # check if data is complete
+        if(opt$missing != "listwise")
+            stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
+        dataX <- vector("list", length=data@ngroups)
+    } else {
+        dataX <- data@X
+    }
   
     #Bollen-Stine data transformation
-    if (type == "bollen.stine") {
-        for (g in 1:h0@Sample@ngroups) {
+    if(type == "bollen.stine") {
+        for(g in 1:h0@Sample@ngroups) {
             sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
             S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
 
-            #center
+            # center
             X <- scale(data@X[[g]], center = TRUE, scale = FALSE)
 
-            #transform
+            # transform
             X <- X %*% S.inv.sqrt %*% sigma.sqrt
 
-            #add model based mean
+            # add model based mean
             if (h0@Model@meanstructure) 
                 X <- scale(X, center = (-1 * Mu.hat[[g]]), scale = FALSE)
 
-            #replace data slot
-            data@X[[g]] <- X
+            # transformed data
+            dataX[[g]] <- X
         }
     }
 
@@ -125,76 +135,54 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             X <- data@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            
 
-            # replace data slot
-            data@X[[g]] <- X
+            # transformed data
+            dataX[[g]] <- X
         }
     }
 
-    # if we have changed the data@X slot, and the data is incomplete,
-    # we must update the Mp slot
-    if(samp@missing.flag) {
-        for(g in 1:samp@ngroups)
-            data@Mp[[g]] <- getMissingPatterns(X[[g]])
-    }
-    
+    # run bootstraps
     fn <- function(b) {
-
-        #Sampling if Bollen-Stine
         if (type == "bollen.stine" || type == "yuan") {
-            boot.idx <- vector("list", length = h0@Sample@ngroups)
+            # take a bootstrap sample for each group
             for (g in 1:h0@Sample@ngroups) {
                 stopifnot(h0@Sample@nobs[[g]] > 1L)
-                boot.idx[[g]] <- sample(x = h0@Sample@nobs[[g]], 
-                                        size = h0@Sample@nobs[[g]], 
-                                        replace = TRUE)
+                boot.idx <- sample(x = h0@Sample@nobs[[g]], 
+                                   size = h0@Sample@nobs[[g]], replace = TRUE)
+                dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
-        } else {
-            #Parametric bootstrap
-            boot.idx <- NULL
+        } else { # parametric!
             for (g in 1:h0@Sample@ngroups) {
-                data@X[[g]] <- MASS.mvrnorm(n = h0@Sample@nobs[[g]], 
-                                            mu = Mu.hat[[g]], 
-                                            Sigma = Sigma.hat[[g]])
+                dataX[[g]] <- MASS.mvrnorm(n = h0@Sample@nobs[[g]], 
+                                           mu = Mu.hat[[g]], 
+                                           Sigma = Sigma.hat[[g]])
             }
         }
 
+        # verbose
         if (verbose) cat("  ... bootstrap draw number: ", b, "\n")
-
-        WLS.V <- list()
-        if (h0@Options$estimator %in% c("GLS", "WLS")) {
-            WLS.V <- getWLS.V(Data = data, 
-                              sample = NULL, 
-                              boot.idx = boot.idx, 
-                              estimator = h0@Options$estimator, 
-                              mimic = h0@Options$mimic, 
-                              meanstructure = h0@Options$meanstructure)
-        }
 
         #Get sample statistics
         bootSampleStats <- try(getSampleStatsFromData(
-                               Data     = data, 
-                               boot.idx = boot.idx, 
+                               Data     = NULL, 
+                               DataX    = dataX,
+                               missing       = opt$missing,
                                rescale  = (h0@Options$estimator == "ML" && 
                                            h0@Options$likelihood =="normal"), 
-                               WLS.V    = WLS.V,
+                               WLS.V    = NULL,
+                               estimator     = h0@Options$estimator,
+                               mimic         = h0@Options$mimic,
+                               meanstructure = h0@Options$meanstructure,
+                               missing.h1    = TRUE,
                                verbose  = FALSE))
-
         if (inherits(bootSampleStats, "try-error")) {
-            if (verbose) 
-                cat("     FAILED: creating h0@Sample statistics\n")
+            if (verbose) cat("     FAILED: creating h0@Sample statistics\n")
             options(old_options)
             return(NULL)
         }
 
-        #Bollen-Stine sampling
-        if (type == "bollen.stine" || type == "yuan") {
-            data.boot <- data
-            for (g in 1:h0@Sample@ngroups) {
-                data.boot@X[[g]] <- data@X[[g]][boot.idx[[g]], ,drop = FALSE]
-            }
-        } else {
-            data.boot <- data
-        }
+        # just in case we need the `transformed' X in the data slot (lm!)
+        if(type == "bollen.stine" || type == "yuan")
+            data@X <- dataX
 
         if (verbose) cat("  ... ... model h0: ")
         h0@Options$verbose <- FALSE
@@ -203,10 +191,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
         #Fit h0 model
         fit.h0 <- lavaan(slotOptions = h0@Options,
-                         slotUser = h0@User, 
-                         slotSample = bootSampleStats, 
-                         slotData = data.boot)
-
+                         slotUser    = h0@User, 
+                         slotSample  = bootSampleStats, 
+                         slotData    = data)
         if (!fit.h0@Fit@converged) {
             if (verbose) cat("     FAILED: no convergence\n")
             options(old_options)
@@ -215,6 +202,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         if (verbose) 
             cat("     ok -- niter = ", fit.h0@Fit@iterations, 
                 " fx = ", fit.h0@Fit@fx, "\n")
+
         if (verbose) cat("  ... ... model h1: ")
         h1@Options$verbose <- FALSE
         h1@Options$se <- "none"
@@ -222,9 +210,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
         #Fit h1 model
         fit.h1 <- lavaan(slotOptions = h1@Options, 
-                         slotUser = h1@User, 
-                         slotSample = bootSampleStats, 
-                         slotData = data.boot)
+                         slotUser    = h1@User, 
+                         slotSample  = bootSampleStats, 
+                         slotData    = data)
 
         if (!fit.h1@Fit@converged) {
             if (verbose) 
@@ -268,7 +256,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         } else if (double.bootstrap == "FDB") {
             #Fast double bootstrap
             plugin.pvalue <- bootstrapLRT(h0 = fit.h0, h1 = fit.h1, 
-                                          R = 1, 
+                                          R = 1L, 
                                           type = type, 
                                           verbose = FALSE, 
                                           warn = warn, 

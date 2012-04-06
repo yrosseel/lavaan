@@ -27,7 +27,7 @@ InformativeTesting(model = NULL, data, constraints = NULL,
 \item{type}{If \code{"parametric"}, the parametric bootstrap is used. 
     If \code{"bollen.stine"}, the semi-nonparametric Bollen-Stine bootstrap 
     is used. The default is set to \code{"bollen.stine"}.}
-\item{return.LRT} {Logical; if \code{TRUE}, the function returns bootstrapped         
+\item{return.LRT}{Logical; if \code{TRUE}, the function returns bootstrapped         
     LRT-values.}
 \item{double.bootstrap}{If \code{"standard"} the genuine double bootstrap is 
     used to compute an additional set of plug-in p-values for each bootstrap       
@@ -40,14 +40,14 @@ InformativeTesting(model = NULL, data, constraints = NULL,
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted 
     alpha based on the plugin p-values. Only used if \code{double.bootstrap = 
     "standard"}. The default value is set to 0.05.}
-\item{parallel} {The type of parallel operation to be used (if any). If missing, 
+\item{parallel}{The type of parallel operation to be used (if any). If missing, 
     the default is set "no".}
 \item{ncpus}{Integer: number of processes to be used in parallel operation: 
     typically one would chose this to the number of available CPUs.} 
 \item{cl}{An optional parallel or snow cluster for use if 
     \code{parallel = "snow"}. If not supplied, a cluster on the local machine 
     is created for the duration of the \code{InformativeTesting} call.}
-\item{verbose} {Logical; if \code{TRUE}, information is shown at each bootstrap         
+\item{verbose}{Logical; if \code{TRUE}, information is shown at each bootstrap         
     draw.}
 \item{...}{Other named arguments from the lavaan package which are passed to 
     the function. For example \code{"group"} in a multiple group model.}
