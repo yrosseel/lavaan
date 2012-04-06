@@ -5,22 +5,18 @@
     and plug-in p-values.}
     
 \usage{
-  \method{plot}{InformativeTesting}(x, \dots,
-       type = c("all", 
-                "LRT.A","LRT.B", 
-                "ppvalues.A", 
-                "ppvalues.B"),
-       main = "main title(s)", xlab = "xlabel",
+  \method{plot}{InformativeTesting}(x, ..., type = "all", 
+       main = "main", xlab = "xlabel",
        ylab = "ylabel", freq = TRUE, cex.main = 1, 
        cex.lab = NULL, cex.axis = NULL, nclass = NULL, 
        col = "grey", border = par("fg"), axes = TRUE, 
-       vline = FALSE, vline.col = "red", lty = NULL, 
-       lwd = NULL, legend = FALSE, cex.legend = 0.75, 
+       vline = FALSE, vline.col = c("red", "blue"), lty = c(1,2), 
+       lwd = 1, legend = FALSE, cex.legend = 0.75, 
        loc.legend = "topright")
 }
 \arguments{
   \item{x}{The output of the \code{InformativeTesting()} function}
-  \item{ldots}{Currently not used}
+  \item{...}{Currently not used}
   \item{type}{If \code{"all"}, all available plots are plotted simultaneously. 
     If \code{LRT.A} or \code{LRT.B}, a distribution of the first-level 
     bootstrapped LRT values is plotted. If \code{ppvalues.A} or 

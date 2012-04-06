@@ -58,7 +58,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     # can we use the original data, or do we need to transform it first?
     if(type == "bollen.stine" || type == "yuan") {
         # check if data is complete
-        if(opt$missing != "listwise")
+        if(h0@Options$missing != "listwise")
             stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
         dataX <- vector("list", length=data@ngroups)
     } else {
@@ -144,16 +144,16 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     fn <- function(b) {
         if (type == "bollen.stine" || type == "yuan") {
             # take a bootstrap sample for each group
-            for (g in 1:h0@Sample@ngroups) {
+            for(g in 1:h0@Sample@ngroups) {
                 stopifnot(h0@Sample@nobs[[g]] > 1L)
                 boot.idx <- sample(x = h0@Sample@nobs[[g]], 
                                    size = h0@Sample@nobs[[g]], replace = TRUE)
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
         } else { # parametric!
-            for (g in 1:h0@Sample@ngroups) {
-                dataX[[g]] <- MASS.mvrnorm(n = h0@Sample@nobs[[g]], 
-                                           mu = Mu.hat[[g]], 
+            for(g in 1:h0@Sample@ngroups) {
+                dataX[[g]] <- MASS.mvrnorm(n     = h0@Sample@nobs[[g]], 
+                                           mu    = Mu.hat[[g]], 
                                            Sigma = Sigma.hat[[g]])
             }
         }
@@ -165,7 +165,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         bootSampleStats <- try(getSampleStatsFromData(
                                Data     = NULL, 
                                DataX    = dataX,
-                               missing       = opt$missing,
+                               missing       = h0@Options$missing,
                                rescale  = (h0@Options$estimator == "ML" && 
                                            h0@Options$likelihood =="normal"), 
                                WLS.V    = NULL,
@@ -180,9 +180,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             return(NULL)
         }
 
-        # just in case we need the `transformed' X in the data slot (lm!)
-        if(type == "bollen.stine" || type == "yuan")
-            data@X <- dataX
+        # just in case we need the new X in the data slot (lm!)
+        data@X <- dataX
 
         if (verbose) cat("  ... ... model h0: ")
         h0@Options$verbose <- FALSE

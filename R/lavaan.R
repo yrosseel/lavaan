@@ -337,9 +337,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
            lavaanOptions$missing == "listwise") {
             # simple univariate regression
             ov.y.idx <- match(vnames(lavaanUser, "ov.y"), 
-                              colnames(lavaanData@X[[1L]]))
+                              lavaanData@ov.names[[1L]])
             ov.x.idx <- match(vnames(lavaanUser, "ov.x"), 
-                              colnames(lavaanData@X[[1L]]))
+                              lavaanData@ov.names[[1L]])
             YX <- lavaanData@X[[1L]]
             #print(head(YX))
             # constraints?

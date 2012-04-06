@@ -6,7 +6,8 @@
 Parameter estimates of a latent variable model.}
 \usage{
 parameterEstimates(object, ci = TRUE, level = 0.95, 
-                   boot.ci.type = "perc", standardized = FALSE)
+                   boot.ci.type = "perc", standardized = FALSE,
+                   fmi = "default")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -20,6 +21,10 @@ parameterEstimates(object, ci = TRUE, level = 0.95,
   percentile (BCa) method, but with no correction for acceleration (only for 
   bias).}
 \item{standardized}{If TRUE, standardized estimates are added to the output}
+\item{fmi}{Logical. If \code{TRUE}, an extra column is added containing the
+fraction of missing information for each estimated parameter. If
+\code{"default"}, the value is set to \code{TRUE} only if
+\code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.}
 }
 \value{
   A data.frame containing the estimated parameters,

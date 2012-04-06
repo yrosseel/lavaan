@@ -2,7 +2,6 @@
 \alias{InformativeTesting}
 \alias{print.InformativeTesting}
 \alias{summary.InformativeTesting}
-\alias{plot.InformativeTesting}
 \title{Testing order Constrained Hypotheses in SEM}
 \description{Testing order constrained Hypotheses in SEM}
 \usage{

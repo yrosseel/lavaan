@@ -8,11 +8,12 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
                                parallel = c("no", "multicore", "snow"), 
                                ncpus = 1L, cl = NULL, verbose = FALSE, ...){
   
-  if (missing(R) & double.bootstrap == "standard" |
-      double.bootstrap == "no") { R <- 1000L 
-  }
-  else if (missing(R) & double.bootstrap == "FDB") { R <- 2000L 
-  }
+  if (missing(R) && (double.bootstrap == "standard" || 
+                     double.bootstrap == "no"))
+      R <- 1000L 
+  else if (missing(R) && double.bootstrap == "FDB") 
+      R <- 2000L 
+
   
   fit.free <- sem(model, data = data, se = "none", test = "standard", ...) 
   fit.ineq <- sem(model, data = data, se = "none", test = "standard", 

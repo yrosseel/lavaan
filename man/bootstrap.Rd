@@ -11,7 +11,7 @@ bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE,
                 ncpus = 1L, cl = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
-             verbose = FALSE, return.LRT = TRUE, double.bootstrap = "FDB", 
+             verbose = FALSE, return.LRT = FALSE, double.bootstrap = "no", 
              double.bootstrap.R = 500L, double.bootstrap.alpha = 0.05, 
              warn = -1L, parallel = c("no", "multicore", "snow"),
              ncpus = 1L, cl = NULL)

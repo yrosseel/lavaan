@@ -315,12 +315,15 @@ getSampleStatsFromData <- function(Data          = NULL,
 }
 
 
-getSampleStatsFromMoments <- function(sample.cov  = NULL,
-                                      sample.mean = NULL,
-                                      sample.nobs = NULL,
-                                      rescale     = FALSE,
-                                      ov.names    = NULL,
-                                      WLS.V       = NULL) {
+getSampleStatsFromMoments <- function(sample.cov    = NULL,
+                                      sample.mean   = NULL,
+                                      sample.nobs   = NULL,
+                                      rescale       = FALSE,
+                                      ov.names      = NULL,
+                                      estimator     = "ML",
+                                      mimic         = "lavaan",
+                                      meanstructure = FALSE,
+                                      WLS.V         = NULL) {
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)

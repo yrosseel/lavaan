@@ -261,9 +261,8 @@ bootstrap.internal <- function(object = NULL,
             return(NULL)
         }
 
-        # just in case we need the `transformed' X in the data slot (lm!)
-        if(type == "bollen.stine" || type == "yuan") 
-            data@X <- dataX
+        # just in case we need the new X in the data slot (lm!)
+        data@X <- dataX
 
         # adjust model slot if fixed.x variances/covariances
         # have changed:
