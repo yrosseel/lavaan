@@ -161,7 +161,7 @@ bootstrap.internal <- function(object = NULL,
 
             # add model-based mean
             if(model@meanstructure)
-                X <- scale(X, center=(-1*samp@mean[[g]]), scale=FALSE)
+                X <- scale(X, center=(-1*Mu.hat[[g]]), scale=FALSE)
 
             # transformed data
             dataX[[g]] <- X

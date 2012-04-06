@@ -69,7 +69,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
             #add model based mean
             if (h0@Model@meanstructure) 
-                X <- scale(X, center = (-1 * h0@Sample@mean[[g]]), scale = FALSE)
+                X <- scale(X, center = (-1 * Mu.hat[[g]]), scale = FALSE)
 
             #replace data slot
             data@X[[g]] <- X
