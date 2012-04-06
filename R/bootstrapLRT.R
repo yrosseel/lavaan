@@ -349,10 +349,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     } else if (double.bootstrap == "standard") {
         adj.alpha <- quantile(plugin.pvalues, double.bootstrap.alpha,
                               na.rm=TRUE)
-        attr(pvalue, "plugin.pvalues") <- plugin.pvalues
         attr(pvalue, "adj.alpha") <- adj.alpha
-        # adj.pvalue <- sum(plugin.pvalues < pvalue) / length(R) #adj.pvalue < or <=??
-        # attr(pvalue, "adj.pvalue") <- adj.pvalue
+        adj.pvalue <- sum(plugin.pvalues < pvalue) / length(plugin.pvalues)
+        attr(pvalue, "plugin.pvalues") <- plugin.pvalues
+        attr(pvalue, "adj.pvalue") <- adj.pvalue
     }
 
     # restore options
