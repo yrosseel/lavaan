@@ -8,6 +8,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           ncpus = 1L, cl = NULL) 
 {
     # checks
+    type <- tolower(type)
     stopifnot(class(h0) == "lavaan", 
               class(h1) == "lavaan", 
               type %in% c("bollen.stine", "parametric", "yuan"), 
@@ -108,7 +109,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             ghat <- h0@Fit@test[[1]]$stat.group[[g]]
             df <- h0@Fit@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
-            Sigmahat.inv <- h0@Sample@icov[[g]]
+            Sigmahat.inv <- inv.chol(Sigmahat)
             nmv <- nrow(Sigmahat)
             n <- data@nobs[[g]]
 

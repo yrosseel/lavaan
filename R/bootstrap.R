@@ -32,7 +32,7 @@ bootstrapLavaan <- function(object,
                             ...) {
 
     # checks
-    type. <- type # overwritten if nonparametric
+    type. <- tolower(type) # overwritten if nonparametric
     stopifnot(class(object) == "lavaan",
               type. %in% c("nonparametric", "ordinary",
                           "bollen.stine", "parametric", "yuan"))
@@ -190,7 +190,7 @@ bootstrap.internal <- function(object = NULL,
             ghat <- object@Fit@test[[1]]$stat.group[[g]]
             df <- object@Fit@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
-            Sigmahat.inv <- samp@icov[[g]]
+            Sigmahat.inv <- inv.chol(Sigmahat)
             nmv <- nrow(Sigmahat)
             n <- data@nobs[[g]]
 
