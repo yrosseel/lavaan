@@ -8,7 +8,7 @@ Maintainer: Yves Rosseel <Yves.Rosseel@UGent.be>
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
              and latent growth curve models.
-Depends: methods, R(>= 2.10.1)
+Depends: methods, R(>= 2.14.0)
 Imports: stats4, stats, graphics
 Suggests: psych, qgraph, quadprog, boot
 License: GPL (>=2)
