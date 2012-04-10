@@ -17,7 +17,7 @@ returned. If only a single or a few fit measures are specified by name,
 only those are computed and returned.}
 }
 \value{
-  An named numeric vector of fit measures.
+A named numeric vector of fit measures.
 }
 %\details{
 %The following fit measures are available:

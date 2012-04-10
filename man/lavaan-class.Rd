@@ -30,16 +30,15 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{call}:}{The function call as returned by match.called().}
+    \item{\code{call}:}{The function call as returned by \code{match.called()}.}
     \item{\code{timing}:}{The elapsed time (user+system) for various parts of 
       the program as a list, including the total time.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
     \item{\code{User}:}{Named list describing the model as specified by
-                        the user. Can be coerced to a data.frame.}
-    \item{\code{Data}:}{A list containing the raw data (as a numeric matrix 
-       with only column names) per group; the matrix contains only the 
-       observed variables mentioned in the model.}
+                        the user. Can be coerced to a data.frame. In the documentation, this is called the `parameter table'.}
+    \item{\code{Data}:}{Object of internal class \code{"Data"}: information
+about the data.}
     \item{\code{Sample}:}{Object of internal class \code{"Sample"}: sample 
       statistics}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the 
@@ -50,8 +49,13 @@ Objects can be created via the
 }
 \section{Methods}{
   \describe{
-    \item{coef}{\code{signature(object = "lavaan")}: Returns the estimates 
-      of the free parameters in the model as a named numeric vector}
+    \item{coef}{\code{signature(object = "lavaan", type = "free")}: Returns 
+      the estimates of the parameters in the model as a named numeric vector.
+      If \code{type="free"}, only the free parameters are returned. If
+      \code{type="unco"}, both free and constrained parameters (simple
+      equality constraints only) are returned.
+      If \code{type="user"}, all parameters listed in the parameter table
+      are returned, including constrained and fixed parameters.}
     \item{fitted.values}{\code{signature(object = "lavaan")}: Returns the 
       implied moments of the model as a list with two elements (per group): 
       \code{cov} for the implied covariance matrix, 
@@ -79,10 +83,12 @@ Objects can be created via the
     \item{vcov}{\code{signature(object = "lavaan")}: returns the
       covariance matrix of the estimated parameters.}
     \item{predict}{\code{signature(object = "lavaan")}: compute
-      factor scores for all cases that are provided in the data frame.}
+      factor scores for all cases that are provided in the data frame. For
+      complete data only.}
     \item{anova}{\code{signature(object = "lavaan")}: returns 
       model comparison statistics. See \code{\link[stats]{anova}}. At least
-      two arguments (fitted models) are required.}
+      two arguments (fitted models) are required. If the test statistic is
+      scaled, an appropriate scaled difference test will be computed.}
     \item{update}{\code{signature(object = "lavaan", model.syntax, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
@@ -151,13 +157,15 @@ Objects can be created via the
           Each row corresponds to a model parameter. The 
           columns contain all the information that lavaan stores about 
           these parameters (for example, if it is free of fixed, the
-          user-specified starting values, etcetera).}
+          user-specified starting values, etcetera). This is called 
+          the parameter table.}
        }
     }
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", standardized=FALSE, 
-                                   fit.measures=FALSE, rsquare=FALSE, 
+                                   fit.measures=FALSE, 
+                                   rsquare=FALSE, 
                                    modindices=FALSE)}: 
       Print a nice summary of the model estimates. If \code{standardized=TRUE},
       the standardized solution is also printed. If \code{fit.measures=TRUE}, 

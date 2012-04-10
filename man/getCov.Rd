@@ -26,7 +26,8 @@ include the diagonal elements. If \code{FALSE}, a unit diagonal is assumed.}
 used to scale the elements in \code{x} or the correlation matrix \code{R}
 into a covariance matrix.}
 \item{names}{The variable names of the observed variables.}
-\item{s}{Character string containing numeric values.}
+\item{s}{Character string containing numeric values; comma's and semi-colons
+are ignored.}
 \item{R}{A correlation matrix, to be scaled into a covariance matrix.}
 }
 \details{

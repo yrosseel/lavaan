@@ -26,10 +26,13 @@ model.}
 \item{type}{If \code{"ordinary"} or \code{"nonparametric"}, the usual
 (naive) bootstrap method is used. If \code{"bollen.stine"}, the
 data is first transformed such that the null hypothesis holds exactly
-in the resampling space. If \code{"parametric"}, the parametric bootstrap
-approach is used. Currently, this is only valid for continuous data
-following a multivariate normal distribution.
-}
+in the resampling space. If \code{"yuan"}, the data is first transformed 
+by combining data and theory (model), such that the resampling space
+is closer to the population space.
+If \code{"parametric"}, the parametric bootstrap
+approach is used; currently, this is only valid for continuous data
+following a multivariate normal distribution. See references for more
+details.}
 \item{FUN}{A function which when applied to the \code{\linkS4class{lavaan}} 
 object returns a vector containing the statistic(s) of interest.
 The default is \code{FUN="coef"}, returning the estimated values of the
@@ -40,29 +43,32 @@ free parameters in the model.}
 \item{warn}{Sets the handling of warning messages. See \code{\link{options}}.}
 \item{return.boot}{Not used for now.}
 \item{return.LRT}{If \code{TRUE}, return the LRT values as an attribute to the pvalue.}
-  \item{parallel}{
-    The type of parallel operation to be used (if any).  If missing, the
-    default is \code{"no"}.
-  }
-  \item{ncpus}{
-    integer: number of processes to be used in parallel operation:
-    typically one would chose this to the number of available CPUs.
-  }
-  \item{cl}{
-    An optional \pkg{parallel} or \pkg{snow} cluster for use if
-    \code{parallel = "snow"}.  If not supplied, a cluster on the
-    local machine is created for the duration of the \code{bootstrapLavaan}
-    or \code{bootstrapLRT} call.
-  }
+\item{parallel}{The type of parallel operation to be used (if any).  If
+missing, the default is \code{"no"}.  }
+\item{ncpus}{Integer: number of processes to be used in parallel operation:
+typically one would chose this to the number of available CPUs.  }
+\item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
+\code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
+created for the duration of the \code{bootstrapLavaan} or \code{bootstrapLRT}
+call.}
 \item{double.bootstrap}{If \code{"standard"} the genuine double bootstrap is
-    used to compute an additional set of plug-in p-values for each boostrap
-    sample. If \code{"FDB"}, the fast double bootstrap is used to compute   
-    second level LRT-values for each bootstrap sample. If \code{"no"}, no
-    double bootstrap is used. The default is set to \code{"FDB"}.}
+used to compute an additional set of plug-in p-values for each boostrap sample.
+If \code{"FDB"}, the fast double bootstrap is used to compute   second level
+LRT-values for each bootstrap sample. If \code{"no"}, no double bootstrap is
+used. The default is set to \code{"FDB"}.}
 \item{double.bootstrap.R}{Integer. The number of bootstrap draws to be use for
 the double bootstrap.}
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted
 alpha based on the plugin p-values.}
+}
+\references{
+Bollen, K. and Stine, R. (1992) Bootstrapping Goodness of Fit Measures in
+        Structural Equation Models. Sociological Methods and Research, 21,
+        205--229.
+
+Yuan, K.-H., Hayashi, K., & Yanagihara, H. (2007). A class of population
+covariance matrices in the bootstrap approach to covariance structure analysis.
+Multivariate Behavioral Research, 42, 261--281.
 }
 
 \examples{

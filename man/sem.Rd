@@ -19,7 +19,7 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See            
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter list (eg. the output of the \code{lavaanify()} function) is also
+    parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
@@ -113,17 +113,18 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     errors are computed using model-based bootstrapping).
     If \code{"none"}, no standard errors are computed.}
 \item{test}{If \code{"standard"}, a conventional chi-square test is computed.
-    If \code{"Satorra-Bentler"}, a Satorra-Bentler scaled test statistic is
-    computed. If \code{"Yuan-Bentler"}, a Yuan-Bentler scaled test statistic
+    If \code{"Satorra.Bentler"}, a Satorra-Bentler scaled test statistic is
+    computed. If \code{"Yuan.Bentler"}, a Yuan-Bentler scaled test statistic
     is computed. If \code{"boot"} or \code{"bootstrap"} or 
-    \code{"bollen.stine"}, the Bollen-Stine bootstrap is used to compute
+    \code{"Bollen.Stine"}, the Bollen-Stine bootstrap is used to compute
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
     values of other arguments.}
 \item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
-    If \code{"default"}, the value is (currently) set to \code{"Mplus"}.}
+    If \code{"default"}, the value is (currently) set to to \code{"lavaan"},
+    which is very close to\code{"Mplus"}.}
 \item{representation}{If \code{"LISREL"} the classical LISREL matrix 
     representation is used to represent the model (using the all-y variant).}
 \item{do.fit}{If \code{FALSE}, the model is not fit, and the current

@@ -16,7 +16,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = "default",
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter list (eg. the output of the \code{lavaanify()} function) is also
+    parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
   \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect

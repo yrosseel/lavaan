@@ -24,7 +24,8 @@ parameterEstimates(object, ci = TRUE, level = 0.95,
 \item{fmi}{Logical. If \code{TRUE}, an extra column is added containing the
 fraction of missing information for each estimated parameter. If
 \code{"default"}, the value is set to \code{TRUE} only if
-\code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.}
+\code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.
+See references for more information.}
 }
 \value{
   A data.frame containing the estimated parameters,
@@ -32,6 +33,10 @@ fraction of missing information for each estimated parameter. If
   the lower and upper values of the confidence intervals. If requested,
   extra columns are added with standardized versions of the parameter
   estimates.
+}
+\references{
+Savalei, V. & Rhemtulla, M. (in press). On obtaining estimates of the fraction
+of missing information from FIML.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3

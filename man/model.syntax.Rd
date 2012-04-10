@@ -21,9 +21,10 @@ parseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE
 lavaanNames(object, type = "ov", group = NULL)
 }
 \arguments{
-\item{model}{The model syntax specifying the model. This can be either
-a literal string describing the model, or a parameter table (e.g., the
-output of \code{parseModelString}. See details for more information.}
+\item{model}{A description of the user-specified model. Typically, the model
+    is described using the lavaan model syntax; see details for more 
+    information. Alternatively, a parameter tablea (e.g., the output of 
+    \code{parseModelString} is also accepted.}
 \item{model.syntax}{The model syntax specifying the model. Must be a literal
 string.}
 \item{meanstructure}{If \code{TRUE}, intercepts/means will be added to
@@ -165,8 +166,9 @@ element on the left side (as for example in the third regression
 formula in the example above).
 
 In the right-hand side of these formula-like expressions, each element can be
-multiplied (using the \code{"*"} operator) by either a numeric constant,
-an expression resulting in a numeric constant, or one
+modified (using the \code{"*"} operator) by either a numeric constant,
+an expression resulting in a numeric constant, an expression resulting
+in a character vector, or one
 of three special functions: \code{start()}, \code{label()} and \code{equal()}.
 This provides the user with a mechanism to fix parameters, to provide
 alternative starting values, to label the parameters, and to define equality
@@ -176,8 +178,8 @@ following sections.
 
 \section{Fixing parameters}{
 It is often desirable to fix a model parameter that is otherwise (by default)
-free. Any parameter in a model can be fixed by using
-the pre-multiplication mechanism. Here are some examples:
+free. Any parameter in a model can be fixed by using a modifier resulting
+in a numerical constaint. Here are some examples:
 \itemize{
 
     \item Fixing the regression coefficient of the predictor 
@@ -196,9 +198,8 @@ will force the corresponding parameter to be free.
 }
 
 \section{Starting values}{
-User-provided starting values can be given by using the same pre-multiplication
-mechanism. But the numeric constant is now the argument
-of a special function \code{start()}. For example:
+User-provided starting values can be given by using the special function
+\code{start()}, containing a numeric constant. For example:
 \preformatted{y ~ x1 + start(1.0)*x2 + x3}
 Note that if a starting value is provided, the parameter is not 
 automatically considered to be free.
@@ -226,11 +227,16 @@ specify its own labels for specific parameters by using the \code{label()}
 modifier in a formula. For example, in the formula \code{f1 =~ x1 + x2 +
 label("mylabel")*x3}, the parameter corresponding with the factor loading of
 \code{x3} will be named \code{"mylabel"} instead of the default name
-\code{"f1=~x3"}. 
+\code{"f1=~x3"}. Since version 0.4-8, a more convenient way to specify
+the label is as follows: \code{f1 =~ x1 + x2 + mylabel*x3}: simply
+multiplying with a string literal is equivalent to the using the \code{"label"}
+modifier.
 
 To constrain a parameter
-to be equal to another target parameter, the pre-multiplication mechanism can
-be used using the special function \code{equal()}. The argument of
+to be equal to another target parameter, there are two ways. If you
+have specified your own labels, you can use the fact that equal labels
+imply equal parameter values. If you rely on automatic parameter labels, you
+can use the special function \code{equal()}. The argument of
 \code{equal()} is the (automatic or user-specified) name of the target
 parameter. For example, in the confirmatory factor analysis example below, the
 intercepts of the three indicators of each latent variable are constrained to
@@ -250,18 +256,20 @@ names. For the last three, we have provided a custom label for the
 
   # intercepts constrained to be equal
   # using a custom label
-    y2a ~ label("int2") * 1
-    y2b ~ equal("int2") * 1
-    y2c ~ equal("int2") * 1
+    y2a ~ int2 * 1
+    y2b ~ int2 * 1
+    y2c ~ int2 * 1
 '
 }
 }
 
 \section{Multiple groups}{
-In a multiple group analysis, you can still use the pre-multiplication 
-techniques, but the single argument is now replaced by a vector of 
-arguments, one for each group. If it is a single value, the same value
-is used for all groups. For example, if there are two groups:
+In a multiple group analysis, modifiers that contain a single constant
+must be replaced by a vector, having the same length as the number
+of groups. The only exception are numerical constants (for fixing values): if
+you provide only a single number, the same number will be used for all groups.
+However, it is safer (and cleaner) to specify the same number of elements as
+you have groups. For example, if there are two groups:
 \preformatted{HS.model <- ' visual  =~             x1 +
                                  0.5*x2 +
                          c(0.6, 0.8)*x3
@@ -270,15 +278,16 @@ is used for all groups. For example, if there are two groups:
                          start(c(1.2, 0.6))*x5 +
                                             x6
 
-              speed   =~                        x7 +
-                                                x8 +
-                         label(c("x9.group1",
-                                 "x9.group2"))*x9 '
+              speed   =~                x7 +
+                                        x8 +
+                         c(x9.group1,
+                           x9.group2) * x9 '
 }
 In this example, the factor loading of the `x2' indicator is fixed to the
 value 0.5 for all groups. However, the factor loadings of the `x3' indicator 
 are fixed to 0.6 and 0.8 for group 1 and group 2 respectively. The same
-logic is used for all modifiers.
+logic is used for all modifiers. Note that character vectors can contain
+unquoted strings.
 }
 
 \section{Multiple modifiers}{
@@ -286,5 +295,5 @@ In the model syntax, you can specify a variable more than once on the right hand
 side of an operator; therefore, several `modifiers' can be applied
 simultaneously; for example, if you want to fix the value of a parameter and
 also label that parameter, you can use something like:
-\preformatted{ f1 =~ x1 + x2 + 4*x3 + label("x3.loading")*x3}
+\preformatted{ f1 =~ x1 + x2 + 4*x3 + x3.loading*x3}
 }
