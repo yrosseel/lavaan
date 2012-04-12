@@ -7,9 +7,10 @@ Fit a Structural Equation Model (SEM).}
 sem(model = NULL, meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL, 
-    sample.nobs = NULL, group = NULL, group.equal = "",
-    group.partial = "", constraints = '', estimator = "default", 
-    likelihood = "default", information = "default", se = "default", 
+    sample.nobs = NULL, group = NULL, group.label = NULL,
+    group.equal = "", group.partial = "", constraints = '', 
+    estimator = "default", likelihood = "default", 
+    information = "default", se = "default", 
     test = "default", bootstrap = 1000L, 
     mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), start = "default",
@@ -58,6 +59,10 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     or a vector with the number of observations for each group.}
 \item{group}{A variable name in the data frame defining the groups in a
     multiple group analysis.}
+\item{group.label}{A character vector. The user can specify which group (or
+factor) levels need to be selected from the grouping variable, and in which
+order. If \code{NULL} (the default), all grouping levels are selected, in the
+order as they appear in the data.}
 \item{group.equal}{A vector of character strings. Only used in
     a multiple group analysis. Can be one or more of the following:
     \code{"loadings"}, \code{"intercepts"}, \code{"means"}, 

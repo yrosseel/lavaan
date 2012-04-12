@@ -23,7 +23,7 @@ getData <- function(data          = NULL,          # data.frame
         }
         # note: by default, we use the order as in the data; 
         # not as in levels(data[,group])
-        if(is.null(group.label)) {
+        if(length(group.label) == 0L) {
             group.label <- unique(as.character(data[,group]))
             if(warn && any(is.na(group.label))) {
                 warning("lavaan WARNING: group variable ", sQuote(group), 
@@ -41,9 +41,15 @@ getData <- function(data          = NULL,          # data.frame
                         paste(group.label[which(is.na(idx))], collapse=" "))
             }
             group.label <- group.label[!is.na(idx)]
+            # any groups left?
+            if(length(group.label) == 0L)
+                stop("lavaan ERROR: no group levels left; check the group.label argument")
         }
         ngroups     <- length(group.label)
     } else {
+        if(warn && length(group.label) > 0L)
+            warning("lavaan WARNING: `group.label' argument",
+                    " will be ignored if `group' argument is missing")
         ngroups <- 1L
         group.label <- character(0L)
     }
@@ -92,7 +98,7 @@ getData <- function(data          = NULL,          # data.frame
         ov.idx[[g]] <- match(ov.names[[g]], names(data))
 
         # extract cases per group
-        if(ngroups > 1L) {
+        if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(data[, group] == group.label[g] &
                                        complete.cases(data[,ov.idx[[g]]]))
