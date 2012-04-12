@@ -6,14 +6,14 @@
 # extract the data we need for this particular model
 getData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
+                    group.label   = NULL,          # custom group labels?
                     ov.names      = NULL,          # variables needed in model
                     std.ov        = FALSE,         # standardize ov's?
                     missing       = "listwise",    # remove missings?
                     warn          = TRUE           # produce warnings?
                    ) 
 {
-    # number of groups
-    ngroups <- 1L; group.label <- character(0)
+    # number of groups and group labels
     if(!is.null(group)) {
         if(!(group %in% names(data))) {
             stop("lavaan ERROR: grouping variable ", sQuote(group),
@@ -21,14 +21,31 @@ getData <- function(data          = NULL,          # data.frame
                  "variable names found in data frame are:\n  ", 
                  paste(names(data), collapse=" "))
         }
-        # note: we use the order as in the data; not as in levels(data)
-        group.label <- unique(as.character(data[,group]))
-        if(warn && any(is.na(group.label))) {
-            cat("lavaan WARNING: group variable ", sQuote(group), 
-                " contains missing values\n", sep="")
+        # note: by default, we use the order as in the data; 
+        # not as in levels(data[,group])
+        if(is.null(group.label)) {
+            group.label <- unique(as.character(data[,group]))
+            if(warn && any(is.na(group.label))) {
+                warning("lavaan WARNING: group variable ", sQuote(group), 
+                        " contains missing values\n", sep="")
+            }
+            group.label <- group.label[!is.na(group.label)]
+        } else {
+            group.label <- unique(as.character(group.label))
+            # check if user-provided group labels exist
+            LABEL <- unique(as.character(data[,group]))
+            idx <- match(group.label, LABEL)
+            if(warn && any(is.na(idx))) {
+                warning("lavaan WARNING: some group.labels do not appear ",
+                        "in the grouping variable: ",  
+                        paste(group.label[which(is.na(idx))], collapse=" "))
+            }
+            group.label <- group.label[!is.na(idx)]
         }
-        group.label <- group.label[!is.na(group.label)]
         ngroups     <- length(group.label)
+    } else {
+        ngroups <- 1L
+        group.label <- character(0L)
     }
 
     # ov.names

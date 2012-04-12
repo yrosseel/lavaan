@@ -36,6 +36,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                    # multiple groups
                    group           = NULL,
+                   group.label     = NULL,
                    group.equal     = '',
                    group.partial   = '',
              
@@ -137,12 +138,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanData <- slotData
     } else if(data.type == "full") {
         stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
-        lavaanData <- getData(data     = data,
-                              group    = group,
-                              ov.names = ov.names,
-                              std.ov   = lavaanOptions$std.ov,
-                              missing  = lavaanOptions$missing,
-                              warn     = lavaanOptions$warn)
+        lavaanData <- getData(data        = data,
+                              group       = group,
+                              group.label = group.label,
+                              ov.names    = ov.names,
+                              std.ov      = lavaanOptions$std.ov,
+                              missing     = lavaanOptions$missing,
+                              warn        = lavaanOptions$warn)
     } else if(data.type == "moment") {
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
@@ -494,8 +496,8 @@ cfa <- sem <- function(model = NULL,
     meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.equal = "",
-    group.partial = "", constraints = "",
+    sample.nobs = NULL, group = NULL, group.label = NULL,
+    group.equal = "", group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
@@ -523,8 +525,8 @@ growth <- function(model = NULL,
     fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.equal = "",
-    group.partial = "", constraints = "",
+    sample.nobs = NULL, group = NULL, group.label = NULL,
+    group.equal = "", group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
