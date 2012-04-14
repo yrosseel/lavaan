@@ -11,8 +11,7 @@ cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     group.equal = "", group.partial = "", constraints = '', 
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", 
-    test = "default", bootstrap = 1000L, 
-    mimic = "default", representation = "default", 
+    test = "default", mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }

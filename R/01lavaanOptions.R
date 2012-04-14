@@ -85,7 +85,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # missing
     if(opt$missing == "default") {
-        if(opt$mimic == "Mplus" && opt$data.type != "moment") { 
+        if(opt$mimic == "Mplus") { 
             # since version 5?
             opt$missing <- "ml" 
             # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
@@ -105,10 +105,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
         # nothing to do
     } else {
         stop("unknown value for `missing' argument: ", opt$missing, "\n")
-    }
-
-    if(opt$missing == "ml" && opt$data.type == "moment") {
-        stop("value for `missing' is \"ml\" but only sample statistics are provided")
     }
 
     # default test statistic

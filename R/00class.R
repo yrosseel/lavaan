@@ -4,20 +4,25 @@
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
 
-setClass("lavaanData",
+setClass("lavData",
     representation(
+        data.type="character",     # "full", "moment" or "none"
         ngroups="integer",         # number of groups
         group.label="character",   # group labels
+        std.ov="logical",          # standardize observed variables?
         nobs="list",               # effective number of observations
         norig="list",              # original number of observations
         ov.names="list",           # variable names (per group)
+        ov.types="list",           # variable types (per group)
         ov.idx="list",             # column indices (all observed variables)
         case.idx="list",           # case indices per group
+        missing="character",       # "listwise" or not?
         Mp="list",                 # if not complete, missing patterns
                                    # we need this here, to get nobs right!
         X="list"                   # local copy
     )
 )
+
 
 setClass("SampleStats",            # sample moments
     representation(
@@ -109,7 +114,7 @@ setClass("lavaan",
         timing  = "list",            # timing information
         Options = "list",            # lavaanOptions
         User    = "list",            # parameter table user-specified model
-        Data    = "lavaanData",      # full data
+        Data    = "lavData",         # full data
         Sample  = "SampleStats",     # sample statistics
         Model   = "Model",           # internal matrix representation
         Fit     = "Fit"              # optimization info

@@ -26,6 +26,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    
                    # full data
                    data            = NULL,
+                   ov.types        = "numeric",
                    std.ov          = FALSE,
                    missing         = "default",
 
@@ -76,7 +77,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 0a. store call
     mc  <- match.call()
 
-    # 0b. get ov.names (per group) -- needed for getData()
+    # 0b. get ov.names (per group) -- needed for lavData()
     if(!is.null(slotUser)) {
         FLAT <- slotUser
     } else if(is.character(model)) {
@@ -89,19 +90,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else { # different model per group
         ov.names <- lapply(1:max(FLAT$group),
                            function(x) vnames(FLAT, type="ov", group=x))
-    }
-
-    # 0c. get data.type
-    if(!is.null(slotData)) {
-        data.type = "slotData"
-    } else if(!is.null(data)) {
-        data.type = "full"
-    } else if(!is.null(sample.cov)) {
-        data.type = "moment"
-    } else {
-        data.type = "none"
-        # no data? no fitting!
-        do.fit <- FALSE; se <- "none"; test <- "none"; start <- "simple"
     }
 
     # 1a. collect various options/flags and fill in `default' values
@@ -118,7 +106,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             orthogonal = orthogonal, std.lv = std.lv, 
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
-            auto.cov.y = auto.cov.y, std.ov = std.ov, missing = missing, 
+            auto.cov.y = auto.cov.y, missing = missing, 
             group = group, 
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
@@ -126,83 +114,31 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             information = information, se = se, test = test, 
             bootstrap.R = control$bootstrap.R, mimic = mimic,
             representation = representation, do.fit = do.fit, verbose = verbose,
-            warn = warn, debug = debug, data.type = data.type)
+            warn = warn, debug = debug)
         lavaanOptions <- setLavaanOptions(opt)
     }
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     # 1b. check data/sample.cov and get the number of groups
-    if(data.type == "slotData") {
+    if(!is.null(slotData)) {
         lavaanData <- slotData
-    } else if(data.type == "full") {
-        stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
-        lavaanData <- getData(data        = data,
+    } else {
+        lavaanData <- lavData(data        = data,
                               group       = group,
                               group.label = group.label,
                               ov.names    = ov.names,
-                              std.ov      = lavaanOptions$std.ov,
+                              ov.types    = ov.types,
+                              std.ov      = std.ov,
                               missing     = lavaanOptions$missing,
+                              sample.cov  = sample.cov,
+                              sample.mean = sample.mean,
+                              sample.nobs = sample.nobs,
                               warn        = lavaanOptions$warn)
-    } else if(data.type == "moment") {
-        # we also need the number of observations (per group)
-        if(is.null(sample.nobs))
-            stop("lavaan ERROR: please specify number of observations")
-
-        # if meanstructure=TRUE, we need sample.mean
-        if(meanstructure == TRUE && is.null(sample.mean))
-            stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
-        # if group.equal contains "intercepts", we need sample.mean
-        if("intercepts" %in% group.equal && is.null(sample.mean))
-            stop("lavaan ERROR: please provide sample.mean if group.equal contains \"intercepts\"")
-
-        # list?
-        if(is.list(sample.cov)) {
-            # multiple groups, multiple cov matrices
-            if(!is.null(sample.mean)) {
-                stopifnot(length(sample.mean) == length(sample.cov))
-            }
-            # multiple groups, multiple cov matrices
-            ngroups     <- length(sample.cov)
-            group.label <- names(sample.cov)
-            if(is.null(group.label)) {
-                group.label <- paste("Group ", 1:ngroups, sep="")
-            }
-        } else {
-            ngroups <- 1L; group.label <- character(0)
-            if(!is.matrix(sample.cov))
-                stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
-        }
-        if(!is.list(ov.names)) {
-            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
-            ov.names[1:ngroups] <- list(tmp)
-        } else {
-            if(length(ov.names) != ngroups)
-                stop("lavaan ERROR: ov.names assumes ", length(ov.names),
-                     " groups; data contains ", ngroups, " groups")
-        }
-        lavaanData <- new("lavaanData",
-                          ngroups = ngroups, group.label = group.label,
-                          nobs = as.list(sample.nobs),
-                          norig = as.list(sample.nobs),
-                          ov.names = ov.names)
-    } else { # both data and sample.cov are NULL; simulating?
-        if(is.null(sample.nobs)) sample.nobs <- 0L
-        sample.nobs <- as.list(sample.nobs)
-        ngroups <- length(unlist(sample.nobs))
-        if(ngroups > 1L) 
-            group.label <- paste("Group ", 1:ngroups, sep="")
-        else
-            group.label <- character(0)
-        if(!is.list(ov.names)) {
-            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
-            ov.names[1:ngroups] <- list(tmp)
-        }
-        lavaanData <- new("lavaanData",
-                          ngroups = ngroups, group.label = group.label,
-                          nobs = sample.nobs,
-                          norig = sample.nobs,
-                          ov.names = ov.names)
+    }
+    if(lavaanData@data.type == "none") {
+        do.fit <- FALSE; start <- "simple"
+        lavaanOptions$se <- "none"; lavaanOptions$test <- "none"
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -264,7 +200,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     if(!is.null(slotSample)) {
         lavaanSampleStats <- slotSample
-    } else if(data.type == "full") {
+    } else if(lavaanData@data.type == "full") {
         lavaanSampleStats <- getSampleStatsFromData(
                        Data          = lavaanData,
                        rescale       = (lavaanOptions$estimator == "ML" &&
@@ -276,7 +212,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        missing.h1    = (lavaanOptions$missing != "listwise"),
                        verbose       = lavaanOptions$verbose)
                                                  
-    } else if(data.type == "moment") {
+    } else if(lavaanData@data.type == "moment") {
         lavaanSampleStats <- getSampleStatsFromMoments(
                            sample.cov  = sample.cov,
                            sample.mean = sample.mean,
@@ -493,7 +429,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 # cfa + sem
 cfa <- sem <- function(model = NULL,
     meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, data = NULL, 
+    ov.types = "numeric", std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", constraints = "",
@@ -522,7 +459,8 @@ cfa <- sem <- function(model = NULL,
 # simple growth models
 growth <- function(model = NULL,
     fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, data = NULL, 
+    ov.types = "numeric", std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", constraints = "",
