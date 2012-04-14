@@ -14,9 +14,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # everything lowercase
     opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
-    # except group,group.label,group.partial, which may contain capital letters
+    # except group,group.partial, which may contain capital letters
     opt$group <- opt.old$group
-    opt$group.label <- opt.old$group.label
     opt$group.partial <- opt.old$group.partial
 
     # do.fit implies se="none and test="none" (unless not default)
@@ -43,8 +42,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
         stop("mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
     }
 
-    if(is.null(opt$group.label) || nchar(opt$group.label) == 0L)
-        opt$group.label <- character(0)
     # group.equal and group.partial
     if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {

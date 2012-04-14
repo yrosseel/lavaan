@@ -36,7 +36,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                    # multiple groups
                    group           = NULL,
-                   group.label     = '',
+                   group.label     = NULL,
                    group.equal     = '',
                    group.partial   = '',
              
@@ -119,7 +119,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
             auto.cov.y = auto.cov.y, std.ov = std.ov, missing = missing, 
-            group = group, group.label = group.label, 
+            group = group, 
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
             estimator = estimator, likelihood = likelihood,
@@ -139,7 +139,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
         lavaanData <- getData(data        = data,
                               group       = group,
-                              group.label = lavaanOptions$group.label,
+                              group.label = group.label,
                               ov.names    = ov.names,
                               std.ov      = lavaanOptions$std.ov,
                               missing     = lavaanOptions$missing,
