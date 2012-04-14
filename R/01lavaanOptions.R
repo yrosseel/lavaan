@@ -165,8 +165,6 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(opt$se == "boot" || opt$se == "bootstrap") {
         opt$se <- "bootstrap"
         opt$information <- "observed"
-        opt$bootstrap <- as.integer(opt$bootstrap)
-        stopifnot(opt$bootstrap > 0L)
     }
     if(opt$estimator == "default" || opt$estimator == "ml") {
         opt$estimator <- "ML"

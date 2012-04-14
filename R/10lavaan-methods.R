@@ -230,7 +230,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     cat(t0.txt, t1.txt, "\n", sep="")
     if(object@Options$se == "bootstrap") {
         t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
-        t1.txt <- sprintf("  %10i", object@Options$boot)
+        t1.txt <- sprintf("  %10i", object@Options$bootstrap.R)
         cat(t0.txt, t1.txt, "\n", sep="")
         t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
         t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT.COEF")))
