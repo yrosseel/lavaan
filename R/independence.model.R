@@ -20,7 +20,7 @@ independence.model <- function(model.syntax = '', ...) {
     model.syntax <- 
         syntax.independence.model(ov.names   = no.fit@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
-                                  sample.cov = no.fit@Sample@cov)
+                                  sample.cov = no.fit@SampleStats@cov)
     # refit
     lavaan <- cfa(model=model.syntax, ...)
 
@@ -38,7 +38,7 @@ independence.model.fit2 <- function(object) {
     model.syntax <- 
         syntax.independence.model(ov.names   = object@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
-                                  sample.cov = object@Sample@cov)
+                                  sample.cov = object@SampleStats@cov)
 
     # refit
     lavaan <- update(object, model = model.syntax)
@@ -54,15 +54,15 @@ independence.model.fit <- function(object) {
     timing <- list()
 
     # construct parameter Table for independence model
-    OV.X <- lapply(as.list(1:object@Sample@ngroups),
+    OV.X <- lapply(as.list(1:object@Data@ngroups),
                    function(x) vnames(object@ParTable, type="ov.x", x))
 
     # construct
     lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
                                     ov.names.x = OV.X,
-                                    sample.cov = object@Sample@cov,
+                                    sample.cov = object@SampleStats@cov,
                                     meanstructure = object@Model@meanstructure,
-                                    sample.mean = object@Sample@mean,
+                                    sample.mean = object@SampleStats@mean,
                                     fixed.x    = object@Model@fixed.x)
     # fit?
     do.fit <- TRUE
@@ -79,7 +79,7 @@ independence.model.fit <- function(object) {
 
     # 3. 
     lavaanData             <- object@Data
-    lavaanSampleStats      <- object@Sample
+    lavaanSampleStats      <- object@SampleStats
 
     # 4. 
     lavaanStart <-
@@ -128,14 +128,14 @@ independence.model.fit <- function(object) {
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call     = mc,                     # match.call
-                  timing   = timing,                 # list
-                  Options  = lavaanOptions,          # list
-                  ParTable = lavaanParTable,         # list
-                  Data     = lavaanData,             # S3 class
-                  Sample   = lavaanSampleStats,      # S4 class
-                  Model    = lavaanModel,            # S4 class
-                  Fit      = lavaanFit               # S4 class
+                  call        = mc,                     # match.call
+                  timing      = timing,                 # list
+                  Options     = lavaanOptions,          # list
+                  ParTable    = lavaanParTable,         # list
+                  Data        = lavaanData,             # S3 class
+                  SampleStats = lavaanSampleStats,      # S4 class
+                  Model       = lavaanModel,            # S4 class
+                  Fit         = lavaanFit               # S4 class
                  )
 
     lavaan

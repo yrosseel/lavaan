@@ -10,7 +10,7 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
     GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
     
-    for(g in 1:object@Sample@ngroups) {
+    for(g in 1:object@Data@ngroups) {
 
         ov.names <- vnames(object@ParTable, "ov", group=g) # not user, 
                                                        # which may be incomplete
@@ -154,7 +154,7 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
 
     Sigma.hat <- object@Fit@Sigma.hat
 
-    for(g in 1:object@Sample@ngroups) {
+    for(g in 1:object@Data@ngroups) {
 
         ov.names <- vnames(object@ParTable, "ov", group=g) # not user
         lv.names <- vnames(object@ParTable, "lv", group=g)
@@ -271,7 +271,7 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
 
     Sigma.hat <- object@Fit@Sigma.hat
 
-    for(g in 1:object@Sample@ngroups) {
+    for(g in 1:object@Data@ngroups) {
 
         ov.names     <- vnames(object@ParTable, "ov",     group=g) # not user
         ov.names.x   <- vnames(object@ParTable, "ov.x",   group=g)

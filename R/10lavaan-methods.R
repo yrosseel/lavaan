@@ -61,7 +61,7 @@ short.summary <- function(object) {
     cat("\n")
 
     # missing patterns?
-    if(object@Sample@missing.flag) {
+    if(object@SampleStats@missing.flag) {
         if(object@Data@ngroups == 1L) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
             t1.txt <- sprintf("  %10i", 
@@ -612,7 +612,7 @@ parameter.list <- function(object) {
 derivatives <- function(object) {
  
     GLIST <- computeGradient(object@Model, GLIST=NULL, 
-                             sample=object@Sample, type="allofthem",
+                             samplestats=object@SampleStats, type="allofthem",
                              estimator=object@Options$estimator, 
                              verbose=FALSE, forcePD=TRUE,
                              group.weight=TRUE, constraints=FALSE)
@@ -699,7 +699,7 @@ parameterEstimates <- parameterestimates <-
     # fmi or not
     FMI <- fmi
     if(fmi == "default") {
-        if(object@Sample@missing.flag &&
+        if(object@SampleStats@missing.flag &&
            object@Options$estimator == "ML" &&
            object@Options$se == "standard")
             FMI <- TRUE
@@ -976,13 +976,13 @@ sampStat <- function(object, labels=TRUE) {
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
-        OUT[[g]]$cov  <- object@Sample@cov[[g]]
+        OUT[[g]]$cov  <- object@SampleStats@cov[[g]]
         if(labels) 
             rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
         class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
 
         #if(object@Model@meanstructure) {
-            OUT[[g]]$mean <- as.numeric(object@Sample@mean[[g]])
+            OUT[[g]]$mean <- as.numeric(object@SampleStats@mean[[g]])
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
@@ -1040,7 +1040,7 @@ function(object, labels=TRUE) {
     if(object@Fit@npar == 0) {
         VarCov <- matrix(0,0,0)
     } else {
-        VarCov <- estimateVCOV(object@Model, sample=object@Sample, 
+        VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
                                options=object@Options,
                                data=eval(object@call[["data"]], 
                                          parent.frame()) )
@@ -1107,7 +1107,7 @@ if(!exists("nobs", envir=asNamespace("stats4"))) {
 }
 setMethod("nobs", signature(object = "lavaan"),
 function(object, ...) {
-    object@Sample@ntotal
+    object@SampleStats@ntotal
 })
 
 # see: src/library/stats/R/update.R

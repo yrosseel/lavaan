@@ -1,5 +1,5 @@
 
-computeExpectedInformation <- function(object, sample=NULL, data=NULL,
+computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
                                        estimator="ML",
                                        # is no Delta is provided, we compute 
                                        # Delta for the free parameters only
@@ -7,19 +7,20 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
                                        extra=FALSE) {
 
     # compute WLS.V
-    WLS.V       <- vector("list", length=sample@ngroups)
+    WLS.V       <- vector("list", length=samplestats@ngroups)
     if(estimator == "GLS" || estimator == "WLS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
-        WLS.V <- sample@WLS.V
+        WLS.V <- samplestats@WLS.V
     } else if(estimator == "ML") {
         Sigma.hat <- computeSigmaHat(object)
         if(object@meanstructure) Mu.hat <- computeMuHat(object)
-        for(g in 1:sample@ngroups) {
-            if(sample@missing.flag) {
+        for(g in 1:samplestats@ngroups) {
+            if(samplestats@missing.flag) {
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
-                                            sample=sample, data=data, group=g,
+                                            samplestats=samplestats, 
+                                            data=data, group=g,
                                             information="expected")
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
@@ -32,10 +33,10 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
 
 
     # compute Information per group
-    Info.group  <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
+    Info.group  <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
         # take care of multiple groups
-        WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
+        WLS.V[[g]] <- samplestats@nobs[[g]]/samplestats@ntotal * WLS.V[[g]]
 
         # compute information for this group
         Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]] 
@@ -43,8 +44,8 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
 
     # assemble over groups
     Information <- Info.group[[1]]
-    if(sample@ngroups > 1) {
-        for(g in 2:sample@ngroups) {
+    if(samplestats@ngroups > 1) {
+        for(g in 2:samplestats@ngroups) {
             Information <- Information + Info.group[[g]]
         }
     }
@@ -58,22 +59,22 @@ computeExpectedInformation <- function(object, sample=NULL, data=NULL,
 }
 
 # only for Mplus MLM
-computeExpectedInformationMLM <- function(object, sample = NULL, 
+computeExpectedInformationMLM <- function(object, samplestats = NULL, 
                                           Delta = computeDelta(object)) {
 
     # compute WLS.V 
-    WLS.V <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
-        WLS.V[[g]] <- compute.A1.sample(sample=sample, group=g,
+    WLS.V <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
+        WLS.V[[g]] <- compute.A1.sample(samplestats=samplestats, group=g,
                                         meanstructure=TRUE)
         # the same as GLS... (except for the N/N-1 scaling)
     }
 
     # compute Information per group
-    Info.group  <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
+    Info.group  <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
         # take care of multiple groups
-        WLS.V[[g]] <- sample@nobs[[g]]/sample@ntotal * WLS.V[[g]]
+        WLS.V[[g]] <- samplestats@nobs[[g]]/samplestats@ntotal * WLS.V[[g]]
 
         # compute information for this group
         Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
@@ -81,8 +82,8 @@ computeExpectedInformationMLM <- function(object, sample = NULL,
 
     # assemble over groups
     Information <- Info.group[[1]]
-    if(sample@ngroups > 1) {
-        for(g in 2:sample@ngroups) {
+    if(samplestats@ngroups > 1) {
+        for(g in 2:samplestats@ngroups) {
             Information <- Information + Info.group[[g]]
         }
     }
@@ -98,7 +99,7 @@ computeExpectedInformationMLM <- function(object, sample = NULL,
 
 
 
-computeObservedInformation <- function(object, sample=NULL, data=NULL,
+computeObservedInformation <- function(object, samplestats=NULL, data=NULL,
                                        type="free", estimator="ML", 
                                        group.weight=TRUE) {
 
@@ -114,21 +115,21 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
 
         g.left <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.left), 
-                            sample=sample, type="free", estimator=estimator, 
+                            samplestats=samplestats, type="free", estimator=estimator, 
                             group.weight=group.weight)
         g.left2 <-    
             computeGradient(object=object, GLIST=x2GLIST(object, x.left2),
-                            sample=sample, type="free", estimator=estimator, 
+                            samplestats=samplestats, type="free", estimator=estimator, 
                             group.weight=group.weight)
 
         g.right <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.right),
-                            sample=sample, type="free", estimator=estimator,
+                            samplestats=samplestats, type="free", estimator=estimator,
                             group.weight=group.weight)
 
         g.right2 <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.right2),
-                            sample=sample, type="free", estimator=estimator,
+                            samplestats=samplestats, type="free", estimator=estimator,
                             group.weight=group.weight)
     
         Hessian[,j] <- ( -1 * (g.left2 - 8*g.left + 
@@ -142,7 +143,7 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
     #x <- getModelParameters(object, type="free")
     #compute.fx <- function(x) {
     #    GLIST <- x2GLIST(object, x=x)
-    #    fx <- computeObjective(object, GLIST=GLIST, sample=sample,
+    #    fx <- computeObjective(object, GLIST=GLIST, samplestats=samplestats,
     #                           estimator=estimator)
     #    fx
     #}
@@ -172,18 +173,18 @@ computeObservedInformation <- function(object, sample=NULL, data=NULL,
 
         #### FIXME FOR MULTIPLE GROUPS !!!!!
         x.idx <- object@x.idx
-        A1.group <- vector("list", sample@ngroups)
-        for(g in 1:sample@ngroups) {
+        A1.group <- vector("list", samplestats@ngroups)
+        for(g in 1:samplestats@ngroups) {
             A1.group[[g]] <- 
-                compute.A1.sample(sample=sample, group=g,
+                compute.A1.sample(samplestats=samplestats, group=g,
                                   meanstructure=object@meanstructure,
                                   idx=x.idx)
         }
         if(object@multigroup) {
             # groups weights
-            A1 <- (sample@nobs[[1L]]/sample@ntotal) * A1.group[[1L]]
-            for(g in 2:sample@ngroups) {
-                A1 <- A1 + (sample@nobs[[g]]/sample@ntotal) * A1.group[[g]]
+            A1 <- (samplestats@nobs[[1L]]/samplestats@ntotal) * A1.group[[1L]]
+            for(g in 2:samplestats@ngroups) {
+                A1 <- A1 + (samplestats@nobs[[g]]/samplestats@ntotal) * A1.group[[g]]
             }
         } else {
             A1 <- A1.group[[1L]]

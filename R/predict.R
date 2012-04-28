@@ -12,11 +12,11 @@
 setMethod("predict", "lavaan",
 function(object, data=NULL, ...) {
 
-    if(object@Sample@missing.flag) {
+    if(object@SampleStats@missing.flag) {
         stop("FIXME: predict does not work with missing data (yet)!")
     }
 
-    G <- object@Sample@ngroups
+    G <- object@Data@ngroups
     nmat <- object@Model@nmat
     FS <- vector("list", length=G)
 
@@ -50,7 +50,7 @@ function(object, data=NULL, ...) {
 
         # nu, alpha? if not, set to colMeans/zero respectively
         if( is.null(ALPHA) ) {
-            NU <- object@Sample@mean[[g]]
+            NU <- object@SampleStats@mean[[g]]
             ALPHA <- matrix(0, NFAC, 1)
         }
         
@@ -69,7 +69,7 @@ function(object, data=NULL, ...) {
               solve( LAMBDA %*% V.eta %*% t(LAMBDA) + THETA ) )
 
         N <- nrow(data.obs[[g]])
-        nvar <- ncol(object@Sample@cov[[g]])
+        nvar <- ncol(object@SampleStats@cov[[g]])
         tmp1 <- matrix(NU, N, nvar, byrow=TRUE)
         tmp2 <- matrix(LAMBDA %*% E.eta, N, nvar, byrow=TRUE)
         tmp3 <- matrix(E.eta, N, NFAC, byrow=TRUE)

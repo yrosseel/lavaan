@@ -8,13 +8,13 @@
 
 StartingValues <- function(start.method = "default",
                            partable     = NULL, 
-                           sample       = NULL,
+                           samplestats  = NULL,
                            model.type   = "sem",
                            mimic        = "lavaan",
                            debug        = FALSE) {
 
     # check arguments
-    stopifnot(is.list(partable), class(sample) == "SampleStats")
+    stopifnot(is.list(partable), class(samplestats) == "lavSampleStats")
 
     # shortcut for 'simple'
     if(start.method == "simple") {
@@ -88,7 +88,7 @@ StartingValues <- function(start.method = "default",
 
 
     # group-specific settings
-    ngroups <- sample@ngroups
+    ngroups <- samplestats@ngroups
 
     for(g in 1:ngroups) {
 
@@ -118,10 +118,10 @@ StartingValues <- function(start.method = "default",
                 # get observed indicators for this latent variable
                 ov.idx <- match(partable$rhs[user.idx], ov.names)
                 if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
-                    if(sample@missing.flag) {
-                        COV <- sample@missing.h1[[g]]$sigma[ov.idx,ov.idx]
+                    if(samplestats@missing.flag) {
+                        COV <- samplestats@missing.h1[[g]]$sigma[ov.idx,ov.idx]
                     } else {
-                        COV <- sample@cov[[g]][ov.idx,ov.idx]
+                        COV <- samplestats@cov[[g]][ov.idx,ov.idx]
                     }
                     start[user.idx] <- fabin3.uni(COV)
                 }
@@ -135,13 +135,13 @@ StartingValues <- function(start.method = "default",
                             partable$lhs == partable$rhs)
         sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names)
         if(start.initial == "mplus") {
-            #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
+            #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
             start[ov.var.idx] <- 
-                (1.0 - 0.50)*diag(sample@cov[[g]])[sample.var.idx]
+                (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
         } else {
-            #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[g]][sample.var.idx]
+            #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[g]][sample.var.idx]
             start[ov.var.idx] <- 
-                (1.0 - 0.50)*diag(sample@cov[[g]])[sample.var.idx]
+                (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
         }
 
         # 3g) intercepts
@@ -150,9 +150,9 @@ StartingValues <- function(start.method = "default",
                             partable$lhs %in% ov.names)
         sample.var.idx <- match(partable$lhs[ov.int.idx], ov.names)
         if(start.initial == "mplus") {
-            start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
+            start[ov.int.idx] <- samplestats@mean[[g]][sample.var.idx]
         } else {
-            start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
+            start[ov.int.idx] <- samplestats@mean[[g]][sample.var.idx]
         }
 
         # 4g) exogenous `fixed.x' covariates
@@ -163,7 +163,7 @@ StartingValues <- function(start.method = "default",
                              partable$rhs %in% ov.names.x)
             row.idx <- match(partable$lhs[exo.idx], ov.names)
             col.idx <- match(partable$rhs[exo.idx], ov.names)
-            start[exo.idx] <- sample@cov[[g]][ cbind(row.idx, col.idx) ]
+            start[exo.idx] <- samplestats@cov[[g]][ cbind(row.idx, col.idx) ]
         }
     }
 

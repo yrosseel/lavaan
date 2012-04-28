@@ -11,7 +11,7 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
 
     if(verbose) {
         cat("\n")
-        cat("lavaan Sample: estimation saturated H1 model -- start EM steps\n")
+        cat("estimation saturated H1 model -- start EM steps\n")
     }
 
     nvar <- ncol(X); pstar <- nvar * (nvar + 1)/2
@@ -122,7 +122,7 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
         cat("\nSigma:\n"); print(sigma)
         cat("\nMu:\n"); print(mu)
         cat("\n")
-        cat("lavaan Sample: estimation saturated H1 model -- end\n\n")
+        cat("estimation saturated H1 model -- end\n\n")
     }
 
     # fx <- estimator.FIML(Sigma.hat=sigma, Mu.hat=mu, M=M)
@@ -216,7 +216,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
 
     if(verbose) {
         cat("\n")
-        cat("lavaan Sample: estimation saturated H1 model -- start\n")
+        cat("estimation saturated H1 model -- start\n")
     }
 
     nvar <- ncol(X); pstar <- nvar * (nvar + 1)/2
@@ -308,7 +308,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
         cat("\nSigma:\n"); print(sigma)
         cat("\nMu:\n"); print(mu)
         cat("\n")
-        cat("lavaan Sample: estimation saturated H1 model -- end\n\n")
+        cat("estimation saturated H1 model -- end\n\n")
     }
 
     list(sigma = sigma, mu = mu, fx = fx)

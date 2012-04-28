@@ -1,9 +1,9 @@
-# constructor for the 'Sample' class
+# constructor for the 'lavSampleStats' class
 #
 # initial version: YR 25/03/2009
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 
-getSampleStatsFromData <- function(Data          = NULL,
+lavSampleStatsFromData <- function(Data          = NULL,
                                    DataX         = NULL,
                                    missing       = "listwise",
                                    rescale       = FALSE,
@@ -141,7 +141,7 @@ getSampleStatsFromData <- function(Data          = NULL,
     } # ngroups
 
     # construct SampleStats object
-    SampleStats <- new("SampleStats",
+    lavSampleStats <- new("lavSampleStats",
 
                        # sample moments
                        mean         = mean,
@@ -165,11 +165,11 @@ getSampleStatsFromData <- function(Data          = NULL,
                        missing.h1   = missing.h1.
                       )
 
-    SampleStats
+    lavSampleStats
 }
 
 
-getSampleStatsFromMoments <- function(sample.cov    = NULL,
+lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       sample.mean   = NULL,
                                       sample.nobs   = NULL,
                                       rescale       = FALSE,
@@ -294,7 +294,7 @@ getSampleStatsFromMoments <- function(sample.cov    = NULL,
     } # ngroups
 
     # construct SampleStats object
-    SampleStats <- new("SampleStats",
+    lavSampleStats <- new("lavSampleStats",
 
                        # sample moments
                        mean        = mean,
@@ -315,6 +315,6 @@ getSampleStatsFromMoments <- function(sample.cov    = NULL,
                        missing.flag = FALSE
                       )
 
-    SampleStats
+    lavSampleStats
 }
 

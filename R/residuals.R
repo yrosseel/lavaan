@@ -22,7 +22,7 @@ function(object, type="raw", labels=TRUE) {
         stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
     }
 
-    G <- object@Sample@ngroups
+    G <- object@Data@ngroups
     meanstructure <- object@Model@meanstructure
     ov.names <- object@Data@ov.names
 
@@ -51,7 +51,7 @@ function(object, type="raw", labels=TRUE) {
                               start          = object@Fit@est,
                               representation = object@Options$representation,
                               debug          = object@Options$debug)
-            VarCov <- estimateVCOV(augModel, sample = object@Sample,
+            VarCov <- estimateVCOV(augModel, samplestats = object@SampleStats,
                                    options = object@Options)
             # set cov between free and fixed.x elements to zero
             ###
@@ -65,7 +65,7 @@ function(object, type="raw", labels=TRUE) {
 
             Delta  <- computeDelta(augModel)
         } else {
-            VarCov <- estimateVCOV(object@Model, sample = object@Sample,
+            VarCov <- estimateVCOV(object@Model, samplestats = object@SampleStats,
                                    options = object@Options)
             Delta  <- computeDelta(object@Model)
         }   
@@ -74,12 +74,12 @@ function(object, type="raw", labels=TRUE) {
     R <- vector("list", length=G)
     for(g in 1:G) {
         # sample moments
-        if(!object@Sample@missing.flag) {
-            S <- object@Sample@cov[[g]]
-            M <- object@Sample@mean[[g]]
+        if(!object@SampleStats@missing.flag) {
+            S <- object@SampleStats@cov[[g]]
+            M <- object@SampleStats@mean[[g]]
         } else {
-            S <- object@Sample@missing.h1[[g]]$sigma
-            M <- object@Sample@missing.h1[[g]]$mu
+            S <- object@SampleStats@missing.h1[[g]]$sigma
+            M <- object@SampleStats@missing.h1[[g]]$mu
         }
         if(!meanstructure) {
             M <- numeric( length(M) )
@@ -100,7 +100,7 @@ function(object, type="raw", labels=TRUE) {
         if(type == "normalized" || type == "standardized") {
          
             # compute normalized residuals
-            N <- object@Sample@nobs[[g]]; nvar <- length(R[[g]]$mean)
+            N <- object@SampleStats@nobs[[g]]; nvar <- length(R[[g]]$mean)
             idx.mean <- 1:nvar
 
             if(object@Options$se == "standard" ||
@@ -111,16 +111,16 @@ function(object, type="raw", labels=TRUE) {
                 # this is identical to solve(A1)/N for complete data!!
             } else if(object@Options$se == "robust.mlr" ||
                       object@Options$se == "robust.mlm") {
-                A1 <- compute.A1.sample(sample=object@Sample, group=g, 
+                A1 <- compute.A1.sample(samplestats=object@SampleStats, group=g, 
                                         meanstructure=meanstructure,
                                         information=object@Options$information)
-                B1 <- compute.B1.sample(sample=object@Sample, group=g,
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
                                         meanstructure=meanstructure)
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
-                B1 <- compute.B1.sample(sample=object@Sample, group=g,
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
                                        meanstructure=meanstructure)
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
@@ -183,7 +183,7 @@ function(object, type="raw", labels=TRUE) {
     if(G == 1) {
         R <- R[[1]]
     } else {
-        names(R) <- unlist(object@Sample@group.label)
+        names(R) <- unlist(object@Data@group.label)
     }
 
     R

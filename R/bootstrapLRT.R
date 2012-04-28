@@ -68,9 +68,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
   
     #Bollen-Stine data transformation
     if(type == "bollen.stine") {
-        for(g in 1:h0@Sample@ngroups) {
+        for(g in 1:h0@Data@ngroups) {
             sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(h0@SampleStats@icov[[g]])
 
             # center
             X <- scale(data@X[[g]], center = TRUE, scale = FALSE)
@@ -103,8 +103,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
       
         # Now use g.a within each group
-        for(g in 1:h0@Sample@ngroups) {
-            S <- h0@Sample@cov[[g]]
+        for(g in 1:h0@Data@ngroups) {
+            S <- h0@SampleStats@cov[[g]]
             # test is in Fit slot
             ghat <- h0@Fit@test[[1]]$stat.group[[g]]
             df <- h0@Fit@test[[1]]$df
@@ -131,7 +131,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
             # Transform the data (p. 263)
             S.a.sqrt <- sqrtSymmetricMatrix(S.a)
-            S.inv.sqrt <- sqrtSymmetricMatrix(h0@Sample@icov[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(h0@SampleStats@icov[[g]])
 
             X <- data@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            
@@ -145,15 +145,15 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     fn <- function(b) {
         if (type == "bollen.stine" || type == "yuan") {
             # take a bootstrap sample for each group
-            for(g in 1:h0@Sample@ngroups) {
-                stopifnot(h0@Sample@nobs[[g]] > 1L)
-                boot.idx <- sample(x = h0@Sample@nobs[[g]], 
-                                   size = h0@Sample@nobs[[g]], replace = TRUE)
+            for(g in 1:h0@Data@ngroups) {
+                stopifnot(h0@SampleStats@nobs[[g]] > 1L)
+                boot.idx <- sample(x = h0@SampleStats@nobs[[g]], 
+                                   size = h0@SampleStats@nobs[[g]], replace = TRUE)
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
         } else { # parametric!
-            for(g in 1:h0@Sample@ngroups) {
-                dataX[[g]] <- MASS.mvrnorm(n     = h0@Sample@nobs[[g]], 
+            for(g in 1:h0@Data@ngroups) {
+                dataX[[g]] <- MASS.mvrnorm(n     = h0@SampleStats@nobs[[g]], 
                                            mu    = Mu.hat[[g]], 
                                            Sigma = Sigma.hat[[g]])
             }
@@ -163,7 +163,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         if (verbose) cat("  ... bootstrap draw number: ", b, "\n")
 
         #Get sample statistics
-        bootSampleStats <- try(getSampleStatsFromData(
+        bootSampleStats <- try(lavSampleStatsFromData(
                                Data     = NULL, 
                                DataX    = dataX,
                                missing       = h0@Options$missing,
@@ -176,7 +176,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                missing.h1    = TRUE,
                                verbose  = FALSE))
         if (inherits(bootSampleStats, "try-error")) {
-            if (verbose) cat("     FAILED: creating h0@Sample statistics\n")
+            if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")
             options(old_options)
             return(NULL)
         }
@@ -190,10 +190,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h0@Options$test <- "standard"
 
         #Fit h0 model
-        fit.h0 <- lavaan(slotOptions  = h0@Options,
-                         slotParTable = h0@ParTable, 
-                         slotSample   = bootSampleStats, 
-                         slotData     = data)
+        fit.h0 <- lavaan(slotOptions     = h0@Options,
+                         slotParTable    = h0@ParTable, 
+                         slotSampleStats = bootSampleStats, 
+                         slotData        = data)
         if (!fit.h0@Fit@converged) {
             if (verbose) cat("     FAILED: no convergence\n")
             options(old_options)
@@ -209,10 +209,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h1@Options$test <- "standard"
 
         #Fit h1 model
-        fit.h1 <- lavaan(slotOptions  = h1@Options, 
-                         slotParTable = h1@ParTable, 
-                         slotSample   = bootSampleStats, 
-                         slotData     = data)
+        fit.h1 <- lavaan(slotOptions     = h1@Options, 
+                         slotParTable    = h1@ParTable, 
+                         slotSampleStats = bootSampleStats, 
+                         slotData        = data)
 
         if (!fit.h1@Fit@converged) {
             if (verbose) 

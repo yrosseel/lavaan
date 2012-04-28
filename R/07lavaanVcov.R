@@ -1,18 +1,20 @@
-Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML", 
+Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML", 
                            information="observed") {
 
     # compute information matrix
     if(information == "observed") {
-        if(sample@missing.flag) {
+        if(samplestats@missing.flag) {
             group.weight <- FALSE
         } else {
             group.weight <- TRUE
         }
-        E <- computeObservedInformation(object, sample=sample, data=data,
+        E <- computeObservedInformation(object, samplestats=samplestats, 
+                                        data=data,
                                         estimator=estimator, type="free",
                                         group.weight=group.weight)
     } else {
-        E <- computeExpectedInformation(object, sample=sample, data=data,
+        E <- computeExpectedInformation(object, samplestats=samplestats, 
+                                        data=data,
                                         estimator=estimator)
     }
 
@@ -38,7 +40,7 @@ Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML",
     NVarCov
 }
 
-Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
+Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
                             partable=NULL, control=list()) {
 
     # number of bootstrap draws
@@ -53,7 +55,7 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
 
     TEST <- NULL
     COEF <- bootstrap.internal(object=NULL,
-                               model.=object, sample.=sample, 
+                               model.=object, samplestats.=samplestats, 
                                partable.=partable, 
                                options.=options, data.=data,
                                R=R, verbose=options$verbose,
@@ -72,7 +74,7 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
 
     # FIXME: cov rescale? Yes for now
     nboot <- nrow(COEF)
-    NVarCov <- sample@ntotal * (cov(COEF) * (nboot-1)/nboot )
+    NVarCov <- samplestats@ntotal * (cov(COEF) * (nboot-1)/nboot )
 
     # save COEF and TEST (if any)
     attr(NVarCov, "BOOT.COEF") <- COEF
@@ -81,17 +83,17 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.first.order <- function(object, sample=NULL, data=NULL) {
+Nvcov.first.order <- function(object, samplestats=NULL, data=NULL) {
 
-    B0.group <- vector("list", sample@ngroups)
+    B0.group <- vector("list", samplestats@ngroups)
 
     Sigma.hat <- computeSigmaHat(object); Mu.hat <- computeMuHat(object)
     Delta <- computeDelta(object)
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         B1 <- compute.Bbeta(Sigma.hat=Sigma.hat[[g]], 
                             Mu.hat=Mu.hat[[g]],
-                            sample=sample, data=data, group=g)
+                            samplestats=samplestats, data=data, group=g)
 
         B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]] 
 
@@ -110,11 +112,11 @@ Nvcov.first.order <- function(object, sample=NULL, data=NULL) {
         #}
     } # g
 
-    if(sample@ngroups > 1L) {
+    if(samplestats@ngroups > 1L) {
         # groups weights
-        B0 <- (sample@nobs[[1]]/sample@ntotal) * B0.group[[1]]
-        for(g in 2:sample@ngroups) {
-            B0 <- B0 + (sample@nobs[[g]]/sample@ntotal) * B0.group[[g]]
+        B0 <- (samplestats@nobs[[1]]/samplestats@ntotal) * B0.group[[1]]
+        for(g in 2:samplestats@ngroups) {
+            B0 <- B0 + (samplestats@nobs[[g]]/samplestats@ntotal) * B0.group[[g]]
         }
     } else {
         B0 <- B0.group[[1]]
@@ -127,30 +129,30 @@ Nvcov.first.order <- function(object, sample=NULL, data=NULL) {
     NVarCov
 }
 
-Nvcov.robust.mlm <- function(object, sample=NULL, data=NULL) {
+Nvcov.robust.mlm <- function(object, samplestats=NULL, data=NULL) {
 
     # compute information matrix
-    E <- computeExpectedInformation(object, sample=sample, data=data,
+    E <- computeExpectedInformation(object, samplestats=samplestats, data=data,
                                     estimator="ML", extra=TRUE) 
     E.inv <- solve(E)
     Delta <- attr(E, "Delta")
     WLS.V <- attr(E, "WLS.V")
 
     # compute Gamma matrix (per group)
-    Gamma <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
+    Gamma <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
         Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
-        NVarCov <- ( NVarCov +  (1/(sample@nobs[[g]]-1)) *
+        NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
                               (t(tmp) %*% Gamma[[g]] %*% tmp) )
     } # g
 
-    NVarCov <- NVarCov * (sample@ntotal-1)
+    NVarCov <- NVarCov * (samplestats@ntotal-1)
 
     # to be reused by lavaanTest
     attr(NVarCov, "E.inv") <- E.inv
@@ -162,26 +164,26 @@ Nvcov.robust.mlm <- function(object, sample=NULL, data=NULL) {
 }
 
 
-Nvcov.robust.mlm.mplus <- function(object, sample=NULL, data=NULL) {
+Nvcov.robust.mlm.mplus <- function(object, samplestats=NULL, data=NULL) {
 
     # compute information matrix with custom WLS.V
-    E <- computeExpectedInformationMLM(object, sample=sample)
+    E <- computeExpectedInformationMLM(object, samplestats=samplestats)
     E.inv <- solve(E)
     Delta <- attr(E, "Delta")
     WLS.V <- attr(E, "WLS.V")
 
     # compute Gamma matrix (per group)
-    Gamma <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
+    Gamma <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
         Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
     }
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
         # - WLS.V is not based on Sigma.hat and Mu.hat (as it
-        #   should be?), but on sample@cov and sample@mean...
+        #   should be?), but on samplestats@cov and samplestats@mean...
         # - Gamma is not identical to what is used for WLS; closer to EQS
         # - N/N-1 bug in G11 for NVarCov (but not test statistic)
         # - we divide by N-1! (just like EQS)
@@ -191,14 +193,14 @@ Nvcov.robust.mlm.mplus <- function(object, sample=NULL, data=NULL) {
         # should not be necessary, since already done!!
         # but otherwise, the std.errs for the intercepts are off...
         GAMMA <- Gamma[[g]]
-        G11 <- ( sample@cov[[g]] * (sample@nobs[[g]]-1)/sample@nobs[[g]] ) 
+        G11 <- ( samplestats@cov[[g]] * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] ) 
         GAMMA[1:nrow(G11), 1:nrow(G11)] <- G11
 
-        NVarCov <- ( NVarCov + (1/(sample@nobs[[g]]-1)) * 
+        NVarCov <- ( NVarCov + (1/(samplestats@nobs[[g]]-1)) * 
                                (t(tmp) %*% GAMMA %*% tmp) )
     } # g
 
-    NVarCov <- NVarCov * sample@ntotal
+    NVarCov <- NVarCov * samplestats@ntotal
 
     # to be reused by lavaanTest
     attr(NVarCov, "E.inv") <- E.inv
@@ -209,20 +211,20 @@ Nvcov.robust.mlm.mplus <- function(object, sample=NULL, data=NULL) {
     NVarCov
 }
 
-Nvcov.robust.mlr <- function(object, sample=NULL, data=NULL,
+Nvcov.robust.mlr <- function(object, samplestats=NULL, data=NULL,
                              information="observed") {
 
     # compute standard Nvcov
     E.inv <- Nvcov.standard(object      = object,
-                            sample      = sample,
+                            samplestats = samplestats,
                             data        = data,
                             estimator   = "ML",
                             information = information)
 
     # compute first.order Nvcov
-    Nvcov <- Nvcov.first.order(object = object, 
-                               sample = sample,
-                               data   = data)
+    Nvcov <- Nvcov.first.order(object      = object, 
+                               samplestats = samplestats,
+                               data        = data)
     B0 <- attr(Nvcov, "B0")
     B0.group <- attr(Nvcov, "B0.group")
 
@@ -236,7 +238,7 @@ Nvcov.robust.mlr <- function(object, sample=NULL, data=NULL,
 }
            
 
-estimateVCOV <- function(object, sample, options=NULL, data=NULL, 
+estimateVCOV <- function(object, samplestats, options=NULL, data=NULL, 
                          partable=NULL, control=list()) {
 
     estimator   <- options$estimator
@@ -256,35 +258,35 @@ estimateVCOV <- function(object, sample, options=NULL, data=NULL,
 
     if(se == "standard") {
         NVarCov <- try( Nvcov.standard(object      = object, 
-                                       sample      = sample,
+                                       samplestats = samplestats,
                                        data        = data,
                                        estimator   = estimator, 
                                        information = information) )
 
     } else if(se == "first.order") {
-        NVarCov <- try( Nvcov.first.order(object = object,
-                                          sample = sample,
-                                          data   = data) )
+        NVarCov <- try( Nvcov.first.order(object      = object,
+                                          samplestats = samplestats,
+                                          data        = data) )
 
     } else if(se == "robust.mlm" && mimic == "Mplus") {
         NVarCov <- try( Nvcov.robust.mlm.mplus(object      = object,
-                                               sample      = sample,
+                                               samplestats = samplestats,
                                                data        = data) )
 
     } else if(se == "robust.mlm" && mimic != "Mplus") {
         NVarCov <- try( Nvcov.robust.mlm(object      = object,
-                                         sample      = sample,
+                                         samplestats = samplestats,
                                          data        = data) )
 
     } else if(se == "robust.mlr") {
         NVarCov <- try( Nvcov.robust.mlr(object      = object,
-                                         sample      = sample,
+                                         samplestats = samplestats,
                                          data        = data,
                                          information = information) )
 
     } else if(se == "bootstrap") {
         NVarCov <- try( Nvcov.bootstrap(object      = object,
-                                        sample      = sample,
+                                        samplestats = samplestats,
                                         options     = options,
                                         data        = data,
                                         partable    = partable,
@@ -295,9 +297,9 @@ estimateVCOV <- function(object, sample, options=NULL, data=NULL,
 
         # denominator!
         if(estimator == "ML" && likelihood == "normal") {
-            N <- sample@ntotal
+            N <- samplestats@ntotal
         } else {
-            N <- sample@ntotal - sample@ngroups
+            N <- samplestats@ntotal - samplestats@ngroups
         }
 
         VarCov <- 1/N * NVarCov

@@ -18,12 +18,12 @@ reliability <- function(object) {
         stop("lavaanError: no latent factors in this model")
     }
     
-    G <- object@Sample@ngroups
+    G <- object@Data@ngroups
     theta.idx <- which( names(object@Model@GLIST) == "theta" )
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
-               S <- object@Sample@cov[[g]]
+               S <- object@SampleStats@cov[[g]]
             nvar <- ncol(S)
         SigmaHat <- object@Fit@Sigma.hat[[g]]
            THETA <- object@Model@GLIST[[ theta.idx[g] ]]
@@ -43,7 +43,7 @@ reliability <- function(object) {
     if(G == 1) {
         OUT <- OUT[[1]]
     } else {
-        names(OUT) <- unlist(object@Sample@group.label)
+        names(OUT) <- unlist(object@Data@group.label)
     }
 
     OUT

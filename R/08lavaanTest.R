@@ -1,4 +1,4 @@
-testStatisticSatorraBentler <- function(sample=sample, 
+testStatisticSatorraBentler <- function(samplestats=samplestats, 
                                         E.inv, Delta, WLS.V, Gamma, 
                                         x.idx=list(integer(0))) {
 
@@ -7,13 +7,13 @@ testStatisticSatorraBentler <- function(sample=sample,
         warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
     }
 
-    trace.UGamma <- numeric( sample@ngroups )
+    trace.UGamma <- numeric( samplestats@ngroups )
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
         U <- WLS.V[[g]] - (tmp %*% t(Delta[[g]]) %*% WLS.V[[g]])
         trace.UGamma[g] <-
-                sample@ntotal/sample@nobs[[g]] * sum( U * Gamma[[g]] )
+                samplestats@ntotal/samplestats@nobs[[g]] * sum( U * Gamma[[g]] )
     }
 
 
@@ -21,13 +21,13 @@ testStatisticSatorraBentler <- function(sample=sample,
 }
 
 
-testStatisticSatorraBentler.Mplus <- function(sample=sample, 
+testStatisticSatorraBentler.Mplus <- function(samplestats=samplestats, 
                                               E.inv, Delta, WLS.V, Gamma,
                                               x.idx=list(integer(0))) {
     
-    trace.UGamma <- numeric( sample@ngroups )
+    trace.UGamma <- numeric( samplestats@ngroups )
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         A1 <- WLS.V[[g]]
         B1 <- A1 %*% Gamma[[g]] %*% A1
 
@@ -37,7 +37,7 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(sample@cov[[g]])
+            nvar <- ncol(samplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
             A1 <- A1[idx,idx]
@@ -46,13 +46,13 @@ testStatisticSatorraBentler.Mplus <- function(sample=sample,
 
         trace.h1     <- sum( B1 * t( solve(A1) ) )
         trace.h0     <- sum( B0 * t(E.inv)       ) 
-        trace.UGamma[g] <- sample@ntotal/sample@nobs[[g]] * (trace.h1-trace.h0)
+        trace.UGamma[g] <- samplestats@ntotal/samplestats@nobs[[g]] * (trace.h1-trace.h0)
     }        
 
     trace.UGamma
 }
 
-testStatisticYuanBentler <- function(sample=sample,
+testStatisticYuanBentler <- function(samplestats=samplestats,
                                      A1.group=NULL,
                                      B1.group=NULL,
                                      Delta=NULL,
@@ -62,18 +62,18 @@ testStatisticYuanBentler <- function(sample=sample,
     # we always assume a meanstructure
     meanstructure <- TRUE
 
-    trace.UGamma <- numeric( sample@ngroups )
-    trace.h1     <- numeric( sample@ngroups )
-    trace.h0     <- numeric( sample@ngroups )
+    trace.UGamma <- numeric( samplestats@ngroups )
+    trace.h1     <- numeric( samplestats@ngroups )
+    trace.h0     <- numeric( samplestats@ngroups )
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         A1 <- A1.group[[g]]
         B1 <- B1.group[[g]]
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(sample@cov[[g]])
+            nvar <- ncol(samplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
@@ -92,7 +92,7 @@ testStatisticYuanBentler <- function(sample=sample,
     trace.UGamma
 }
 
-testStatisticYuanBentler.Mplus <- function(sample=sample, 
+testStatisticYuanBentler.Mplus <- function(samplestats=samplestats, 
                                            data=data,
                                            information="observed",
                                            B0.group=NULL,
@@ -105,21 +105,21 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
     # we always assume a meanstructure
     meanstructure <- TRUE
 
-    trace.UGamma <- numeric( sample@ngroups )
-    trace.h1     <- numeric( sample@ngroups )
-    trace.h0     <- numeric( sample@ngroups )
+    trace.UGamma <- numeric( samplestats@ngroups )
+    trace.h1     <- numeric( samplestats@ngroups )
+    trace.h0     <- numeric( samplestats@ngroups )
 
-    for(g in 1:sample@ngroups) {
+    for(g in 1:samplestats@ngroups) {
         # if data is complete, A1.22 is simply 0.5*D'(S.inv x S.inv)D
-        A1 <- compute.A1.sample(sample=sample, group=g,
+        A1 <- compute.A1.sample(samplestats=samplestats, group=g,
                                meanstructure=meanstructure,
                                information=information)
-        B1 <- compute.B1.sample(sample=sample, data=data, group=g)
+        B1 <- compute.B1.sample(samplestats=samplestats, data=data, group=g)
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(sample@cov[[g]])
+            nvar <- ncol(samplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
@@ -127,7 +127,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
         }
 
         trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
-        trace.h0[g]     <- ( sample@nobs[[g]]/sample@ntotal *
+        trace.h0[g]     <- ( samplestats@nobs[[g]]/samplestats@ntotal *
                              sum( B0.group[[g]] * t(E.inv) ) )
         trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
     }
@@ -141,7 +141,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
 
            
 
-computeTestStatistic <- function(object, partable=NULL, sample=NULL, 
+computeTestStatistic <- function(object, partable=NULL, samplestats=NULL, 
                                  options=NULL, x=NULL, VCOV=NULL,
                                  data=NULL, control=list()) {
 
@@ -183,7 +183,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
 
     # always compute `standard' test statistic
     ## FIXME: the NFAC is now implicit in the computation of fx...
-    NFAC <- 2 * unlist(sample@nobs)
+    NFAC <- 2 * unlist(samplestats@nobs)
     if(options$estimator == "ML" && options$likelihood == "wishart") {
         # first divide by two
         NFAC <- NFAC / 2
@@ -224,8 +224,8 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
     }
 
     # fixed.x idx
-    x.idx <- vector("list", length=sample@ngroups)
-    for(g in 1:sample@ngroups) {
+    x.idx <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
         if(options$fixed.x) {
             x.idx[[g]] <- match(vnames(partable, "ov.x", group=g), 
                                 data@ov.names[[g]])
@@ -245,7 +245,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
         #  we need to compute these again
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
             if(!mimic == "Mplus") {
-                E <- computeExpectedInformation(object, sample=sample,
+                E <- computeExpectedInformation(object, samplestats=samplestats,
                                                 data=data,
                                                 estimator="ML", #Delta=NULL,
                                                 extra=TRUE)
@@ -254,7 +254,8 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
                 WLS.V <- attr(E, "WLS.V")
             } else {
                 # special treatment for Mplus
-                E <- computeExpectedInformationMLM(object, sample=sample)
+                E <- computeExpectedInformationMLM(object, 
+                                                   samplestats=samplestats)
                 E.inv <- solve(E)
                 Delta <- attr(E, "Delta")
                 WLS.V <- attr(E, "WLS.V")
@@ -262,8 +263,8 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
         }
 
         if(is.null(Gamma)) {
-            Gamma <- vector("list", length=sample@ngroups)
-            for(g in 1:sample@ngroups) {
+            Gamma <- vector("list", length=samplestats@ngroups)
+            for(g in 1:samplestats@ngroups) {
                 Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
             }
         }
@@ -283,7 +284,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
 #                                  debug          = FALSE)
 #
 #                Delta <- computeDelta(augModel)
-#                E <- computeExpectedInformationMLM(object, sample=sample,
+#                E <- computeExpectedInformationMLM(object, samplestats=samplestats,
 #                                                   Delta=Delta)
 #                fixed.x.idx <- max(partable$free) + 1:length(idx)
 #                free.idx    <- 1:max(partable$free)
@@ -293,20 +294,20 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
 #                x.idx <- integer(0)
 #            }
             trace.UGamma <-
-                testStatisticSatorraBentler.Mplus(sample = sample,
-                                                  E.inv  = E.inv, 
-                                                  Delta  = Delta, 
-                                                  WLS.V  = WLS.V, 
-                                                  Gamma  = Gamma,
-                                                  x.idx  = x.idx)
+                testStatisticSatorraBentler.Mplus(samplestats = samplestats,
+                                                  E.inv       = E.inv, 
+                                                  Delta       = Delta, 
+                                                  WLS.V       = WLS.V, 
+                                                  Gamma       = Gamma,
+                                                  x.idx       = x.idx)
         } else if(test == "satorra.bentler" && mimic != "Mplus") {
             trace.UGamma <- 
-                testStatisticSatorraBentler(sample = sample,
-                                            E.inv  = E.inv, 
-                                            Delta  = Delta, 
-                                            WLS.V  = WLS.V, 
-                                            Gamma  = Gamma,
-                                            x.idx  = x.idx)
+                testStatisticSatorraBentler(samplestats = samplestats,
+                                            E.inv       = E.inv, 
+                                            Delta       = Delta, 
+                                            WLS.V       = WLS.V, 
+                                            Gamma       = Gamma,
+                                            x.idx       = x.idx)
         }
 
         scaling.factor <- sum(trace.UGamma) / df
@@ -332,7 +333,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
             # change it to observed
             if(options$se != "robust.mlr") information <- "observed"
             E.inv <- Nvcov.standard(object      = object,
-                                    sample      = sample,
+                                    samplestats = samplestats,
                                     data        = data,
                                     estimator   = "ML",
                                     information = information)
@@ -340,28 +341,28 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
 
         if(mimic == "Mplus" || mimic == "lavaan") {
             if(is.null(B0.group)) {
-                Nvcov <- Nvcov.first.order(object = object, 
-                                           sample = sample,
-                                           data   = data)
+                Nvcov <- Nvcov.first.order(object      = object, 
+                                           samplestats = samplestats,
+                                           data        = data)
                 B0.group <- attr(Nvcov, "B0.group")
             } 
             trace.UGamma <- 
-                testStatisticYuanBentler.Mplus(sample=sample,
-                                               data=data,
-                                               information=information,
-                                               B0.group=B0.group,
-                                               E.inv=E.inv,
-                                               x.idx=x.idx)
+                testStatisticYuanBentler.Mplus(samplestats = samplestats,
+                                               data        = data,
+                                               information = information,
+                                               B0.group    = B0.group,
+                                               E.inv       = E.inv,
+                                               x.idx       = x.idx)
         } else {
             Delta <- computeDelta(object)
             Sigma.hat <- computeSigmaHat(object)
             if(object@meanstructure) Mu.hat <- computeMuHat(object)
-            A1.group <- vector("list", length=sample@ngroups)
-            B1.group <- vector("list", length=sample@ngroups)
-            for(g in 1:sample@ngroups) {
-                if(sample@missing.flag) {
+            A1.group <- vector("list", length=samplestats@ngroups)
+            B1.group <- vector("list", length=samplestats@ngroups)
+            for(g in 1:samplestats@ngroups) {
+                if(samplestats@missing.flag) {
                     X <- NULL
-                    M <- sample@missing[[g]]
+                    M <- samplestats@missing[[g]]
                 } else {
                     X <- data@X[[g]]
                     M <- NULL
@@ -376,7 +377,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
                 B1.group[[g]] <- out$Bbeta
             }
             trace.UGamma <-
-                testStatisticYuanBentler(sample=sample,
+                testStatisticYuanBentler(samplestats=samplestats,
                                          A1.group=A1.group,
                                          B1.group=B1.group,
                                          Delta=Delta,
@@ -417,7 +418,7 @@ computeTestStatistic <- function(object, partable=NULL, sample=NULL,
             boot.type <- "bollen.stine"
             BOOT.TEST <- 
                 bootstrap.internal(object=NULL,
-                                   model.=object, sample.=sample, 
+                                   model.=object, samplestats.=samplestats, 
                                    partable.=partable,
                                    options.=options, data.=data,
                                    R=R, verbose=options$verbose,

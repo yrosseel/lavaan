@@ -46,41 +46,41 @@ bootstrapLavaan <- function(object,
     if(object@Options$test == "bollen.stine")
         stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
 
-    bootstrap.internal(object = object,
-                       data.       = NULL,
-                       model.      = NULL,
-                       sample.     = NULL,
-                       options.    = NULL,
-                       partable.   = NULL,
-                       R           = R,
-                       type        = type.,
-                       verbose     = verbose,
-                       FUN         = FUN,
-                       warn        = warn,
-                       return.boot = return.boot,
-                       parallel    = parallel,
-                       ncpus       = ncpus,
-                       cl          = cl,
+    bootstrap.internal(object       = object,
+                       data.        = NULL,
+                       model.       = NULL,
+                       samplestats. = NULL,
+                       options.     = NULL,
+                       partable.    = NULL,
+                       R            = R,
+                       type         = type.,
+                       verbose      = verbose,
+                       FUN          = FUN,
+                       warn         = warn,
+                       return.boot  = return.boot,
+                       parallel     = parallel,
+                       ncpus        = ncpus,
+                       cl           = cl,
                        ...)
 }
 
 # we need an internal version to be called from VCOV and computeTestStatistic
 # when there is no lavaan object yet!
-bootstrap.internal <- function(object = NULL,
-                               data.       = NULL,
-                               model.      = NULL,
-                               sample.     = NULL,
-                               options.    = NULL,
-                               partable.   = NULL,
-                               R           = 1000L,
-                               type        = "ordinary",
-                               verbose     = FALSE,
-                               FUN         = "coef",
-                               warn        = 0L,
-                               return.boot = FALSE,
-                               parallel    = c("no", "multicore", "snow"),
-                               ncpus       = 1L,
-                               cl          = NULL,
+bootstrap.internal <- function(object       = NULL,
+                               data.        = NULL,
+                               model.       = NULL,
+                               samplestats. = NULL,
+                               options.     = NULL,
+                               partable.    = NULL,
+                               R            = 1000L,
+                               type         = "ordinary",
+                               verbose      = FALSE,
+                               FUN          = "coef",
+                               warn         = 0L,
+                               return.boot  = FALSE,
+                               parallel     = c("no", "multicore", "snow"),
+                               ncpus        = 1L,
+                               cl           = NULL,
                                ...) {
 
     # warning: avoid use of 'options', 'sample' (both are used as functions
@@ -91,7 +91,7 @@ bootstrap.internal <- function(object = NULL,
 
     # object slots
     if(!is.null(object)) {
-        data <- object@Data; model <- object@Model; samp <- object@Sample
+        data <- object@Data; model <- object@Model; samp <- object@SampleStats
         opt <- object@Options; partable <- object@ParTable
         FUN <- match.fun(FUN)
         t0 <- FUN(object, ...)
@@ -99,7 +99,7 @@ bootstrap.internal <- function(object = NULL,
         colnames(t.star) <- names(t0)
     } else {
         # internal version!
-        data <- data.; model <- model.; samp <- sample.
+        data <- data.; model <- model.; samp <- samplestats.
         opt <- options.; partable <- partable.
         opt$se <- "none"; opt$test <- "standard"
         opt$verbose <- FALSE
@@ -243,7 +243,7 @@ bootstrap.internal <- function(object = NULL,
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
-        bootSampleStats <- try(getSampleStatsFromData(
+        bootSampleStats <- try(lavSampleStatsFromData(
                                Data          = NULL,
                                DataX         = dataX,
                                missing       = opt$missing,
@@ -279,11 +279,11 @@ bootstrap.internal <- function(object = NULL,
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions  = opt,
-                           slotParTable = partable,
-                           slotModel    = model.boot,
-                           slotSample   = bootSampleStats,
-                           slotData     = data)
+        fit.boot <- lavaan(slotOptions     = opt,
+                           slotParTable    = partable,
+                           slotModel       = model.boot,
+                           slotSampleStats = bootSampleStats,
+                           slotData        = data)
         if(!fit.boot@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)

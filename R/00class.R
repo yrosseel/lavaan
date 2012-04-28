@@ -24,7 +24,7 @@ setClass("lavData",
 )
 
 
-setClass("SampleStats",            # sample moments
+setClass("lavSampleStats",         # sample moments
     representation(
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
@@ -110,14 +110,14 @@ setClass("Fit",
 
 setClass("lavaan",
     representation(
-        call     = "call",            # matched call
-        timing   = "list",            # timing information
-        Options  = "list",            # lavaanOptions
-        ParTable = "list",            # parameter table user-specified model
-        Data     = "lavData",         # full data
-        Sample   = "SampleStats",     # sample statistics
-        Model    = "Model",           # internal matrix representation
-        Fit      = "Fit"              # optimization info
+        call        = "call",            # matched call
+        timing      = "list",            # timing information
+        Options     = "list",            # lavaanOptions
+        ParTable    = "list",            # parameter table user-specified model
+        Data        = "lavData",         # full data
+        SampleStats = "lavSampleStats",  # sample statistics
+        Model       = "Model",           # internal matrix representation
+        Fit         = "Fit"              # fitted results
     ) 
 )
 

@@ -60,8 +60,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                    # full slots from previous fits
                    slotOptions     = NULL,
-                   slotParTable        = NULL,
-                   slotSample      = NULL,
+                   slotParTable    = NULL,
+                   slotSampleStats = NULL,
                    slotData        = NULL,
                    slotModel       = NULL,
   
@@ -198,10 +198,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ov.names <- lapply(as.list(1:lavaanData@ngroups),
                        function(x) vnames(lavaanParTable, type="ov", x))
 
-    if(!is.null(slotSample)) {
-        lavaanSampleStats <- slotSample
+    if(!is.null(slotSampleStats)) {
+        lavaanSampleStats <- slotSampleStats
     } else if(lavaanData@data.type == "full") {
-        lavaanSampleStats <- getSampleStatsFromData(
+        lavaanSampleStats <- lavSampleStatsFromData(
                        Data          = lavaanData,
                        rescale       = (lavaanOptions$estimator == "ML" &&
                                         lavaanOptions$likelihood == "normal"),
@@ -213,7 +213,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
-        lavaanSampleStats <- getSampleStatsFromMoments(
+        lavaanSampleStats <- lavSampleStatsFromMoments(
                            sample.cov  = sample.cov,
                            sample.mean = sample.mean,
                            sample.nobs = sample.nobs,
@@ -225,7 +225,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                           lavaanOptions$likelihood == "normal"))
     } else {
         # no data
-        lavaanSampleStats <- new("SampleStats", ngroups=lavaanData@ngroups,
+        lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
                                  missing.flag=FALSE)
     } 
@@ -245,7 +245,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanStart <- 
             StartingValues(start.method = start,
                            partable     = lavaanParTable, 
-                           sample       = lavaanSampleStats,
+                           samplestats  = lavaanSampleStats,
                            model.type   = lavaanOptions$model.type,
                            mimic        = lavaanOptions$mimic,
                            debug        = lavaanOptions$debug)
@@ -296,7 +296,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 attr(x, "fx") <-
-                computeObjective(lavaanModel, sample = lavaanSampleStats,
+                computeObjective(lavaanModel, samplestat = lavaanSampleStats,
                                  estimator = lavaanOptions$estimator)
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
                 require(quadprog)
@@ -337,23 +337,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 attr(x, "fx") <-
-                    computeObjective(lavaanModel, sample = lavaanSampleStats,
+                    computeObjective(lavaanModel, 
+                                     samplestats = lavaanSampleStats,
                                      estimator = lavaanOptions$estimator)
             } else {
                 # regular estimation after all
                 x <- estimateModel(lavaanModel,
-                               sample  = lavaanSampleStats,
-                               options = lavaanOptions,
-                               control = control)
+                               samplestats  = lavaanSampleStats,
+                               options      = lavaanOptions,
+                               control      = control)
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
             }
         } else {
             #cat("REGULAR\n")
             # regular estimation
             x <- estimateModel(lavaanModel,
-                               sample  = lavaanSampleStats,
-                               options = lavaanOptions,
-                               control = control)
+                               samplestats  = lavaanSampleStats,
+                               options      = lavaanOptions,
+                               control      = control)
             lavaanModel <- setModelParameters(lavaanModel, x = x)
         }
         if(!is.null(attr(x, "con.jac"))) 
@@ -367,7 +368,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "control") <- control
         attr(x, "fx") <- 
-            computeObjective(lavaanModel, sample = lavaanSampleStats, 
+            computeObjective(lavaanModel, samplestats = lavaanSampleStats, 
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -378,9 +379,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     VCOV <- NULL
     if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
-                             sample   = lavaanSampleStats,
-                             options  = lavaanOptions,
-                             data     = lavaanData,
+                             samplestats  = lavaanSampleStats,
+                             options      = lavaanOptions,
+                             data         = lavaanData,
                              partable = lavaanParTable,
                              control  = control)
     }
@@ -391,8 +392,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     TEST <- NULL
     if(lavaanOptions$test != "none") {
         TEST <- computeTestStatistic(lavaanModel,
-                                     partable = lavaanParTable,
-                                     sample   = lavaanSampleStats,
+                                     partable    = lavaanParTable,
+                                     samplestats = lavaanSampleStats,
                                      options  = lavaanOptions,
                                      x        = x,
                                      VCOV     = VCOV,
@@ -413,14 +414,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call     = mc,                     # match.call
-                  timing   = timing,                 # list
-                  Options  = lavaanOptions,          # list
-                  ParTable = lavaanParTable,         # list
-                  Data     = lavaanData,             # S4 class
-                  Sample   = lavaanSampleStats,      # S4 class
-                  Model    = lavaanModel,            # S4 class
-                  Fit      = lavaanFit               # S4 class
+                  call         = mc,                     # match.call
+                  timing       = timing,                 # list
+                  Options      = lavaanOptions,          # list
+                  ParTable     = lavaanParTable,         # list
+                  Data         = lavaanData,             # S4 class
+                  SampleStats  = lavaanSampleStats,      # S4 class
+                  Model        = lavaanModel,            # S4 class
+                  Fit          = lavaanFit               # S4 class
                  )
 
     lavaan

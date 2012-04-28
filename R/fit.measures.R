@@ -15,17 +15,17 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # collect info from the lavaan slots
     GLIST <- object@Model@GLIST
-    N <- object@Sample@ntotal
+    N <- object@SampleStats@ntotal
     #q <- length(vnames(object@ParTable, "ov.x"))
     #p <- nvar - q
     npar <- object@Fit@npar
     fx <- object@Fit@fx
     fx.group <- object@Fit@fx.group
     meanstructure <- object@Model@meanstructure
-    multigroup    <- object@Sample@ngroups > 1L
+    multigroup    <- object@Data@ngroups > 1L
     estimator     <- object@Options$estimator
     test          <- object@Options$test
-    G <- object@Sample@ngroups  # number of groups
+    G <- object@Data@ngroups  # number of groups
     X2 <- object@Fit@test[[1]]$stat
     df <- object@Fit@test[[1]]$df
    
@@ -137,7 +137,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         # GLS and WLS
         # and MLM and MLR to get the scaling factor(s)!
         #if(estimator == "ML") {
-        #    if(object@Sample@missing.flag) {
+        #    if(object@SampleStats@missing.flag) {
         #        do.fit <- TRUE
         #    } else {
         #        do.fit <- FALSE
@@ -153,7 +153,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         #indep.syntax <- 
         #    syntax.independence.model(ov.names   = object@Data@ov.names,
         #                              ov.names.x = OV.X,
-        #                              sample.cov = object@Sample@cov)
+        #                              sample.cov = object@SampleStats@cov)
         #fit.indep <- update(object, model = indep.syntax, 
         #                    se = "none", do.fit=TRUE, 
         #                    constraints = "",
@@ -244,19 +244,19 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
             for(g in 1:G) {
-                nvar <- ncol(object@Sample@cov[[g]])
-                if(!object@Sample@missing.flag) {
-                    Ng <- object@Sample@nobs[[g]]
+                nvar <- ncol(object@SampleStats@cov[[g]])
+                if(!object@SampleStats@missing.flag) {
+                    Ng <- object@SampleStats@nobs[[g]]
                     c <- Ng*nvar/2 * log(2 * pi)
                     logl.H1.group[g] <- ( -c -(Ng/2) *
-                                          object@Sample@cov.log.det[[g]]
+                                          object@SampleStats@cov.log.det[[g]]
                                           - (Ng/2)*nvar )
                 } else { # missing patterns case
                     pat <- object@Data@Mp[[g]]$pat
                     Ng <- object@Data@nobs[[g]]
                     ni <- as.numeric(apply(pat, 1, sum) %*% 
                                      as.integer(rownames(pat)))
-                    fx.full <- object@Sample@missing.h1[[g]]$h1
+                    fx.full <- object@SampleStats@missing.h1[[g]]$h1
                     logl.H1.group[g] <- - (ni/2 * log(2 * pi)) - 
                                               (Ng/2 * fx.full)
                 }
@@ -274,7 +274,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # logl H0
             logl.H0.group <- numeric(G)
             for(g in 1:G) {
-                Ng <- object@Sample@nobs[[g]]
+                Ng <- object@SampleStats@nobs[[g]]
                 logl.H0.group[g] <- -Ng * (fx.group[g] - logl.H1.group[g]/Ng)
             }
             if(G > 1) {
@@ -466,13 +466,13 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         srmr.group <- numeric(G)
         for(g in 1:G) {
             # observed
-            if(!object@Sample@missing.flag) {
-                S <- object@Sample@cov[[g]]
-                M <- object@Sample@mean[[g]]
+            if(!object@SampleStats@missing.flag) {
+                S <- object@SampleStats@cov[[g]]
+                M <- object@SampleStats@mean[[g]]
             } else {
                 # EM estimates
-                S <- object@Sample@missing.h1[[g]]$sigma
-                M <- object@Sample@missing.h1[[g]]$mu
+                S <- object@SampleStats@missing.h1[[g]]$sigma
+                M <- object@SampleStats@missing.h1[[g]]$mu
             }
             nvar <- ncol(S)
 
@@ -508,9 +508,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             }
         }
         
-        if(object@Sample@ngroups > 1) {
+        if(G > 1) {
             ## FIXME: get the scaling right
-            SRMR <- as.numeric( (unlist(object@Sample@nobs) %*% srmr.group) / object@Sample@ntotal )
+            SRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr.group) / object@SampleStats@ntotal )
         } else {
             SRMR <- srmr.group[1]
         }
@@ -519,7 +519,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("ntotal" %in% fit.measures) {
-        indices["ntotal"] <- object@Sample@ntotal
+        indices["ntotal"] <- object@SampleStats@ntotal
     }
 
     # do we have everything that we requested?

@@ -82,13 +82,15 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     Delta <- computeDelta(object@Model, m.el.idx.=m.el.idx, x.el.idx.=x.el.idx)
 
     # compute information matrix
-    E <- computeExpectedInformation(object@Model, sample=object@Sample,
+    E <- computeExpectedInformation(object@Model, 
+                                    samplestats=object@SampleStats,
                                     estimator=object@Options$estimator,
                                     Delta=Delta)
-    Q <- (1/object@Sample@ntotal) * E
+    Q <- (1/object@SampleStats@ntotal) * E
 
     # list!
-    DX <- computeGradient(object@Model, GLIST=NULL, sample=object@Sample,
+    DX <- computeGradient(object@Model, GLIST=NULL, 
+                          samplestats=object@SampleStats,
                           type="allofthem", 
                           estimator=object@Options$estimator,
                           group.weight=TRUE)
@@ -179,7 +181,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     }
 
     # EPC
-    d <- (-1 * object@Sample@ntotal) * dx
+    d <- (-1 * object@SampleStats@ntotal) * dx
     # needed?
     d[which(abs(d) < 1e-15)] <- 1.0
     epc <- mi/d
