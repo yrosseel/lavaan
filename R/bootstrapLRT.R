@@ -190,10 +190,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h0@Options$test <- "standard"
 
         #Fit h0 model
-        fit.h0 <- lavaan(slotOptions = h0@Options,
-                         slotUser    = h0@User, 
-                         slotSample  = bootSampleStats, 
-                         slotData    = data)
+        fit.h0 <- lavaan(slotOptions  = h0@Options,
+                         slotParTable = h0@ParTable, 
+                         slotSample   = bootSampleStats, 
+                         slotData     = data)
         if (!fit.h0@Fit@converged) {
             if (verbose) cat("     FAILED: no convergence\n")
             options(old_options)
@@ -209,10 +209,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h1@Options$test <- "standard"
 
         #Fit h1 model
-        fit.h1 <- lavaan(slotOptions = h1@Options, 
-                         slotUser    = h1@User, 
-                         slotSample  = bootSampleStats, 
-                         slotData    = data)
+        fit.h1 <- lavaan(slotOptions  = h1@Options, 
+                         slotParTable = h1@ParTable, 
+                         slotSample   = bootSampleStats, 
+                         slotData     = data)
 
         if (!fit.h1@Fit@converged) {
             if (verbose) 

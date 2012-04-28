@@ -60,7 +60,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                    # full slots from previous fits
                    slotOptions     = NULL,
-                   slotUser        = NULL,
+                   slotParTable        = NULL,
                    slotSample      = NULL,
                    slotData        = NULL,
                    slotModel       = NULL,
@@ -78,8 +78,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     mc  <- match.call()
 
     # 0b. get ov.names (per group) -- needed for lavData()
-    if(!is.null(slotUser)) {
-        FLAT <- slotUser
+    if(!is.null(slotParTable)) {
+        FLAT <- slotParTable
     } else if(is.character(model)) {
         FLAT <- parseModelString(model)
     } else if(is.list(model)) {
@@ -145,11 +145,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(debug) print(str(lavaanData))
 
 
-    # 2a. construct lavaan User list: description of the user-specified model
-    if(!is.null(slotUser)) {
-        lavaanUser <- slotUser
+    # 2a. construct paramter table: description of the user-specified model
+    if(!is.null(slotParTable)) {
+        lavaanParTable <- slotParTable
     } else if(is.character(model)) {
-        lavaanUser <- 
+        lavaanParTable <- 
             lavaanify(model           = FLAT,
                       meanstructure   = lavaanOptions$meanstructure, 
                       int.ov.free     = lavaanOptions$int.ov.free,
@@ -177,7 +177,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # or it is something else...
         if(!is.null(model$lhs) && !is.null(model$op)  &&
            !is.null(model$rhs) && !is.null(model$free)) {
-            lavaanUser <- model
+            lavaanParTable <- model
         } else if(is.character(model[[1]])) {
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
@@ -187,16 +187,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # 2b. change meanstructure flag?
-    if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
+    if(any(lavaanParTable$op == "~1")) lavaanOptions$meanstructure <- TRUE
 
     # 2c. prepare constraints functions
-    timing$User <- (proc.time()[3] - start.time)
+    timing$ParTable <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     # 3. get sample statistics
     # here we know the number of groups!
     ov.names <- lapply(as.list(1:lavaanData@ngroups),
-                       function(x) vnames(lavaanUser, type="ov", x))
+                       function(x) vnames(lavaanParTable, type="ov", x))
 
     if(!is.null(slotSample)) {
         lavaanSampleStats <- slotSample
@@ -244,7 +244,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         lavaanStart <- 
             StartingValues(start.method = start,
-                           user         = lavaanUser, 
+                           partable     = lavaanParTable, 
                            sample       = lavaanSampleStats,
                            model.type   = lavaanOptions$model.type,
                            mimic        = lavaanOptions$mimic,
@@ -254,7 +254,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 5. construct internal model (S4) representation
         lavaanModel <- 
-            Model(user           = lavaanUser, 
+            Model(partable       = lavaanParTable, 
                   start          = lavaanStart, 
                   representation = lavaanOptions$representation,
                   debug          = lavaanOptions$debug)
@@ -266,16 +266,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         # catch simple linear regression models
-        if(length(unique(lavaanUser$lhs[lavaanUser$op == "~"])) == 1L && 
-           length(vnames(lavaanUser,   "lv")) == 0L &&
+        if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
+           length(vnames(lavaanParTable,   "lv")) == 0L &&
            length(lavaanData@X) > 0L &&
            lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&
            lavaanOptions$missing == "listwise") {
             # simple univariate regression
-            ov.y.idx <- match(vnames(lavaanUser, "ov.y"), 
+            ov.y.idx <- match(vnames(lavaanParTable, "ov.y"), 
                               lavaanData@ov.names[[1L]])
-            ov.x.idx <- match(vnames(lavaanUser, "ov.x"), 
+            ov.x.idx <- match(vnames(lavaanParTable, "ov.x"), 
                               lavaanData@ov.names[[1L]])
             YX <- lavaanData@X[[1L]]
             #print(head(YX))
@@ -378,11 +378,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     VCOV <- NULL
     if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {
         VCOV <- estimateVCOV(lavaanModel,
-                             sample  = lavaanSampleStats,
-                             options = lavaanOptions,
-                             data    = lavaanData,
-                             user    = lavaanUser,
-                             control = control)
+                             sample   = lavaanSampleStats,
+                             options  = lavaanOptions,
+                             data     = lavaanData,
+                             partable = lavaanParTable,
+                             control  = control)
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -391,36 +391,36 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     TEST <- NULL
     if(lavaanOptions$test != "none") {
         TEST <- computeTestStatistic(lavaanModel,
-                                     user    = lavaanUser,
-                                     sample  = lavaanSampleStats,
-                                     options = lavaanOptions,
-                                     x       = x,
-                                     VCOV    = VCOV,
-                                     data    = lavaanData,
-                                     control = control)
+                                     partable = lavaanParTable,
+                                     sample   = lavaanSampleStats,
+                                     options  = lavaanOptions,
+                                     x        = x,
+                                     VCOV     = VCOV,
+                                     data     = lavaanData,
+                                     control  = control)
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     # 9. collect information about model fit (S4)
-    lavaanFit <- Fit(user  = lavaanUser, 
-                     start = lavaanStart, 
-                     model = lavaanModel,
-                     x     = x, 
-                     VCOV  = VCOV,
-                     TEST  = TEST)
+    lavaanFit <- Fit(partable = lavaanParTable, 
+                     start    = lavaanStart, 
+                     model    = lavaanModel,
+                     x        = x, 
+                     VCOV     = VCOV,
+                     TEST     = TEST)
     timing$total <- (proc.time()[3] - start.time0)
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call    = mc,                     # match.call
-                  timing  = timing,                 # list
-                  Options = lavaanOptions,          # list
-                  User    = lavaanUser,             # list
-                  Data    = lavaanData,             # list
-                  Sample  = lavaanSampleStats,      # S4 class
-                  Model   = lavaanModel,            # S4 class
-                  Fit     = lavaanFit               # S4 class
+                  call     = mc,                     # match.call
+                  timing   = timing,                 # list
+                  Options  = lavaanOptions,          # list
+                  ParTable = lavaanParTable,         # list
+                  Data     = lavaanData,             # S4 class
+                  Sample   = lavaanSampleStats,      # S4 class
+                  Model    = lavaanModel,            # S4 class
+                  Fit      = lavaanFit               # S4 class
                  )
 
     lavaan

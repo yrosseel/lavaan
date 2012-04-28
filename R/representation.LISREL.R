@@ -7,21 +7,21 @@
 # initital version: YR 2011-01-21: LISREL stuff
 # updates:          YR 2011-12-01: group specific extraction
 
-representation.LISREL <- function(user=NULL, target=NULL, 
+representation.LISREL <- function(partable=NULL, target=NULL, 
                                   extra=FALSE) {
 
     # prepare target list
-    if(is.null(target)) target <- user
+    if(is.null(target)) target <- partable 
 
     # prepare output
     N <- length(target$lhs)
     tmp.mat <- character(N); tmp.row <- integer(N); tmp.col <- integer(N)
 
     # global settings
-    meanstructure <- any(user$op == "~1")
+    meanstructure <- any(partable$op == "~1")
 
     # number of groups
-    ngroups <- max(user$group)
+    ngroups <- max(partable$group)
     ov.dummy.names <- vector("list", ngroups)
     if(extra) {
         REP.mmNames     <- vector("list", ngroups)
@@ -35,16 +35,16 @@ representation.LISREL <- function(user=NULL, target=NULL,
     for(g in 1:ngroups) {
 
         # info from user model per group
-        ov.names <- vnames(user, "ov", group=g); nvar <- length(ov.names)
-        lv.names <- vnames(user, "lv", group=g); nfac <- length(lv.names)
+        ov.names <- vnames(partable, "ov", group=g); nvar <- length(ov.names)
+        lv.names <- vnames(partable, "lv", group=g); nfac <- length(lv.names)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
         tmp.names <- 
-            unique( c(user$lhs[(user$op == "~" | user$op == "<~") & 
-                                user$group == g],
-                      user$rhs[(user$op == "~" | user$op == "<~") & 
-                                user$group == g]) )
+            unique( c(partable$lhs[(partable$op == "~" | partable$op == "<~") & 
+                                partable$group == g],
+                      partable$rhs[(partable$op == "~" | partable$op == "<~") & 
+                                partable$group == g]) )
         dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
         if(length(dummy.names)) {
             # make sure order is the same as ov.names

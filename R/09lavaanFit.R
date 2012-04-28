@@ -1,6 +1,6 @@
-Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
+Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
 
-    stopifnot(is.list(user), length(user$lhs) == length(start),
+    stopifnot(is.list(partable), length(partable$lhs) == length(start),
               class(model) == "Model")
 
     # extract information from 'x'
@@ -22,10 +22,10 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         se <- getModelParameters(model, GLIST=GLIST, type="user", 
                                  extra=FALSE) # no def/cin/ceq entries!
         # fixed parameters -> se = 0.0
-        se[ which(user$unco == 0L) ] <- 0.0
+        se[ which(partable$unco == 0L) ] <- 0.0
 
         # defined parameters: 
-        def.idx <- which(user$op == ":=")
+        def.idx <- which(partable$op == ":=")
         if(length(def.idx) > 0L) {
             if(!is.null(attr(VCOV, "BOOT.COEF"))) {
                 BOOT <- attr(VCOV, "BOOT.COEF")
@@ -63,7 +63,7 @@ Fit <- function(user=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     }
 
     new("Fit",
-        npar       = max(user$free),
+        npar       = max(partable$free),
         x          = x.copy,
         start      = start,
         est        = est,

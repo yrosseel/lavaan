@@ -7,23 +7,23 @@
 # starting values, using the sample data
 
 StartingValues <- function(start.method = "default",
-                           user          = NULL, 
-                           sample        = NULL,
-                           model.type    = "sem",
-                           mimic         = "lavaan",
-                           debug         = FALSE) {
+                           partable     = NULL, 
+                           sample       = NULL,
+                           model.type   = "sem",
+                           mimic        = "lavaan",
+                           debug        = FALSE) {
 
     # check arguments
-    stopifnot(is.list(user), class(sample) == "SampleStats")
+    stopifnot(is.list(partable), class(sample) == "SampleStats")
 
     # shortcut for 'simple'
     if(start.method == "simple") {
-        start <- numeric( length(user$ustart) )
-        start[ which(user$op == "=~") ] <- 1.0    
-        var.idx <- which(user$op == "~~" & user$lhs == user$rhs)
+        start <- numeric( length(partable$ustart) )
+        start[ which(partable$op == "=~") ] <- 1.0    
+        var.idx <- which(partable$op == "~~" & partable$lhs == partable$rhs)
         start[var.idx] <- 1.0
-        user.idx <- which(!is.na(user$ustart))
-        start[user.idx] <- user$ustart[user.idx]
+        user.idx <- which(!is.na(partable$ustart))
+        start[user.idx] <- partable$ustart[user.idx]
         return(start)
     }
 
@@ -53,19 +53,19 @@ StartingValues <- function(start.method = "default",
     }
     # check model list elements, if provided
     if(!is.null(start.user)) {
-        if(is.null(start.user$lhs) ||
-           is.null(start.user$op)  ||
-           is.null(start.user$rhs)) {
+        if(is.null(start.partable$lhs) ||
+           is.null(start.partable$op)  ||
+           is.null(start.partable$rhs)) {
             stop("lavaan ERROR: problem with start argument: model list does not contain all elements: lhs/op/rhs")
         }
-        if(!is.null(start.user$est)) {
+        if(!is.null(start.partable$est)) {
             # excellent, we got an est column; nothing to do
-        } else if(!is.null(start.user$start)) {
+        } else if(!is.null(start.partable$start)) {
             # no est column, but we use the start column
-            start.user$est <- start.user$start
-        } else if(!is.null(start.user$ustart)) {
+            start.partable$est <- start.partable$start
+        } else if(!is.null(start.partable$ustart)) {
             # no ideal, but better than nothing
-            start.user$est <- start.user$ustart
+            start.partable$est <- start.partable$ustart
         } else {
             stop("lavaan ERROR: problem with start argument: could not find est/start column in model list")
         }
@@ -74,16 +74,16 @@ StartingValues <- function(start.method = "default",
 
     # global settings
     # 0. everyting is zero
-    start <- numeric( length(user$ustart) )
+    start <- numeric( length(partable$ustart) )
 
     # 1. =~ factor loadings: 1.0 
-    start[ which(user$op == "=~") ] <- 1.0
+    start[ which(partable$op == "=~") ] <- 1.0
 
     # 2. residual lv variances for latent variables
-    lv.names    <- vnames(user, "lv") # all groups
-    lv.var.idx <- which(user$op == "~~"        &
-                        user$lhs %in% lv.names &
-                        user$lhs == user$rhs)
+    lv.names    <- vnames(partable, "lv") # all groups
+    lv.var.idx <- which(partable$op == "~~"        &
+                        partable$lhs %in% lv.names &
+                        partable$lhs == partable$rhs)
     start[lv.var.idx] <- 0.05
 
 
@@ -93,30 +93,30 @@ StartingValues <- function(start.method = "default",
     for(g in 1:ngroups) {
 
         # info from user model for this group
-        ov.names    <- vnames(user, "ov",   group=g)
-        lv.names    <- vnames(user, "lv",   group=g)
-        ov.names.x  <- vnames(user, "ov.x", group=g)
+        ov.names    <- vnames(partable, "ov",   group=g)
+        lv.names    <- vnames(partable, "lv",   group=g)
+        ov.names.x  <- vnames(partable, "ov.x", group=g)
 
         # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
-           sum( user$ustart[ user$op == "=~" & user$group == g],
+           sum( partable$ustart[ partable$op == "=~" & partable$group == g],
                                    na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
             # we use the fabin3 estimator (2sls) of Hagglund (1982)
             # per factor
             for(f in lv.names) {
-                free.idx <- which( user$lhs == f & user$op == "=~"
-                                                 & user$group == g
-                                                 & user$free > 0L)
+                free.idx <- which( partable$lhs == f & partable$op == "=~"
+                                                 & partable$group == g
+                                                 & partable$free > 0L)
                 if(length(free.idx) < 2L) next
-                user.idx <- which( user$lhs == f & user$op == "=~" 
-                                                 & user$group == g )
+                user.idx <- which( partable$lhs == f & partable$op == "=~" 
+                                                 & partable$group == g )
                 # no second order
-                if(any(user$rhs[user.idx] %in% lv.names)) next
+                if(any(partable$rhs[user.idx] %in% lv.names)) next
 
                 # get observed indicators for this latent variable
-                ov.idx <- match(user$rhs[user.idx], ov.names)
+                ov.idx <- match(partable$rhs[user.idx], ov.names)
                 if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
                     if(sample@missing.flag) {
                         COV <- sample@missing.h1[[g]]$sigma[ov.idx,ov.idx]
@@ -129,11 +129,11 @@ StartingValues <- function(start.method = "default",
         }
 
         # 2g) residual ov variances (including exo, to be overriden)
-        ov.var.idx <- which(user$group == g         & 
-                            user$op    == "~~"      & 
-                            user$lhs %in% ov.names  & 
-                            user$lhs == user$rhs)
-        sample.var.idx <- match(user$lhs[ov.var.idx], ov.names)
+        ov.var.idx <- which(partable$group == g         & 
+                            partable$op    == "~~"      & 
+                            partable$lhs %in% ov.names  & 
+                            partable$lhs == partable$rhs)
+        sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names)
         if(start.initial == "mplus") {
             #start[ov.var.idx] <- (1.0 - 0.50)*sample@var[[1L]][sample.var.idx]
             start[ov.var.idx] <- 
@@ -145,10 +145,10 @@ StartingValues <- function(start.method = "default",
         }
 
         # 3g) intercepts
-        ov.int.idx <- which(user$group == g         &
-                            user$op == "~1"         & 
-                            user$lhs %in% ov.names)
-        sample.var.idx <- match(user$lhs[ov.int.idx], ov.names)
+        ov.int.idx <- which(partable$group == g         &
+                            partable$op == "~1"         & 
+                            partable$lhs %in% ov.names)
+        sample.var.idx <- match(partable$lhs[ov.int.idx], ov.names)
         if(start.initial == "mplus") {
             start[ov.int.idx] <- sample@mean[[g]][sample.var.idx]
         } else {
@@ -157,12 +157,12 @@ StartingValues <- function(start.method = "default",
 
         # 4g) exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {
-            exo.idx <- which(user$group == g          &
-                             user$op == "~~"          & 
-                             user$lhs %in% ov.names.x &
-                             user$rhs %in% ov.names.x)
-            row.idx <- match(user$lhs[exo.idx], ov.names)
-            col.idx <- match(user$rhs[exo.idx], ov.names)
+            exo.idx <- which(partable$group == g          &
+                             partable$op == "~~"          & 
+                             partable$lhs %in% ov.names.x &
+                             partable$rhs %in% ov.names.x)
+            row.idx <- match(partable$lhs[exo.idx], ov.names)
+            col.idx <- match(partable$rhs[exo.idx], ov.names)
             start[exo.idx] <- sample@cov[[g]][ cbind(row.idx, col.idx) ]
         }
     }
@@ -173,14 +173,14 @@ StartingValues <- function(start.method = "default",
     if(start.initial %in% c("lavaan", "mplus") && 
        model.type == "growth") {
         ### DEBUG ONLY
-        #lv.var.idx <- which(user$op == "~~"                &
-        #                user$lhs %in% lv.names &
-        #                user$lhs == user$rhs)
+        #lv.var.idx <- which(partable$op == "~~"                &
+        #                partable$lhs %in% lv.names &
+        #                partable$lhs == partable$rhs)
         #start[lv.var.idx] <- c(2.369511, 0.7026852)
         
         ### DEBUG ONLY
-        #lv.int.idx <- which(user$op == "~1"         &
-        #                    user$lhs %in% lv.names)
+        #lv.int.idx <- which(partable$op == "~1"         &
+        #                    partable$lhs %in% lv.names)
         #start[lv.int.idx] <- c(0.617156788, 1.005192793)
     }
 
@@ -188,22 +188,22 @@ StartingValues <- function(start.method = "default",
     # we only look at the 'est' column for now
     if(!is.null(start.user)) {
         # FIXME: avoid for loop!!!
-        for(i in 1:length(user$lhs)) {
+        for(i in 1:length(partable$lhs)) {
             # find corresponding parameters
-            lhs <- user$lhs[i]; op <- user$op[i]; rhs <- user$rhs[i]
-            start.user.idx <- which(start.user$lhs == lhs &
-                                    start.user$op  ==  op &
-                                    start.user$rhs == rhs)
+            lhs <- partable$lhs[i]; op <- partable$op[i]; rhs <- partable$rhs[i]
+            start.user.idx <- which(start.partable$lhs == lhs &
+                                    start.partable$op  ==  op &
+                                    start.partable$rhs == rhs)
             if(length(start.user.idx) == 1L && 
-               is.finite(start.user$est[start.user.idx])) {
-                start[i] <- start.user$est[start.user.idx]
+               is.finite(start.partable$est[start.user.idx])) {
+                start[i] <- start.partable$est[start.user.idx]
             }
         }
     }
   
     # override if the model syntax contains explicit starting values
-    user.idx <- which(!is.na(user$ustart))
-    start[user.idx] <- user$ustart[user.idx]
+    user.idx <- which(!is.na(partable$ustart))
+    start[user.idx] <- partable$ustart[user.idx]
 
     if(debug) {
         cat("lavaan DEBUG: lavaanStart\n")

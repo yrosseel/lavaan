@@ -104,7 +104,7 @@ simulateData <- function(
             }
             Data$group <- rep(1:ngroups, times=sample.nobs)
         }
-        var.names <- vnames(fit@User, type="ov", group=1L)
+        var.names <- vnames(fit@ParTable, type="ov", group=1L)
         if(ngroups > 1L) var.names <- c(var.names, "group")
         names(Data) <- var.names
         return(Data)

@@ -51,7 +51,7 @@ bootstrapLavaan <- function(object,
                        model.      = NULL,
                        sample.     = NULL,
                        options.    = NULL,
-                       user.       = NULL,
+                       partable.   = NULL,
                        R           = R,
                        type        = type.,
                        verbose     = verbose,
@@ -71,7 +71,7 @@ bootstrap.internal <- function(object = NULL,
                                model.      = NULL,
                                sample.     = NULL,
                                options.    = NULL,
-                               user.       = NULL,
+                               partable.   = NULL,
                                R           = 1000L,
                                type        = "ordinary",
                                verbose     = FALSE,
@@ -92,7 +92,7 @@ bootstrap.internal <- function(object = NULL,
     # object slots
     if(!is.null(object)) {
         data <- object@Data; model <- object@Model; samp <- object@Sample
-        opt <- object@Options; user <- object@User
+        opt <- object@Options; partable <- object@ParTable
         FUN <- match.fun(FUN)
         t0 <- FUN(object, ...)
         t.star <- matrix(as.numeric(NA), R, length(t0))
@@ -100,7 +100,7 @@ bootstrap.internal <- function(object = NULL,
     } else {
         # internal version!
         data <- data.; model <- model.; samp <- sample.
-        opt <- options.; user <- user.
+        opt <- options.; partable <- partable.
         opt$se <- "none"; opt$test <- "standard"
         opt$verbose <- FALSE
         if(FUN == "coef") {
@@ -267,23 +267,23 @@ bootstrap.internal <- function(object = NULL,
         # adjust model slot if fixed.x variances/covariances
         # have changed:
       ### FIXME #####
-        #if(model@fixed.x && length(vnames(user, "ov.x")) > 0L) {
+        #if(model@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
         #    for(g in 1:samp@ngroups) {
         #        
         #    }
         #}
-        if(model@fixed.x && length(vnames(user, "ov.x")) > 0L) {
+        if(model@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
             model.boot <- NULL
         } else {
             model.boot <- model
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions = opt,
-                           slotUser    = user,
-                           slotModel   = model.boot,
-                           slotSample  = bootSampleStats,
-                           slotData    = data)
+        fit.boot <- lavaan(slotOptions  = opt,
+                           slotParTable = partable,
+                           slotModel    = model.boot,
+                           slotSample   = bootSampleStats,
+                           slotData     = data)
         if(!fit.boot@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)

@@ -39,7 +39,7 @@ Nvcov.standard <- function(object, sample=NULL, data=NULL, estimator="ML",
 }
 
 Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
-                            user=NULL, control=list()) {
+                            partable=NULL, control=list()) {
 
     # number of bootstrap draws
     if(!is.null(options$bootstrap.R)) {
@@ -53,7 +53,8 @@ Nvcov.bootstrap <- function(object, sample=NULL, options=NULL, data=NULL,
 
     TEST <- NULL
     COEF <- bootstrap.internal(object=NULL,
-                               model.=object, sample.=sample, user.=user,
+                               model.=object, sample.=sample, 
+                               partable.=partable, 
                                options.=options, data.=data,
                                R=R, verbose=options$verbose,
                                type=boot.type,
@@ -236,7 +237,7 @@ Nvcov.robust.mlr <- function(object, sample=NULL, data=NULL,
            
 
 estimateVCOV <- function(object, sample, options=NULL, data=NULL, 
-                         user=NULL, control=list()) {
+                         partable=NULL, control=list()) {
 
     estimator   <- options$estimator
     likelihood  <- options$likelihood
@@ -286,7 +287,7 @@ estimateVCOV <- function(object, sample, options=NULL, data=NULL,
                                         sample      = sample,
                                         options     = options,
                                         data        = data,
-                                        user        = user,
+                                        partable    = partable,
                                         control     = control) )
     }
 

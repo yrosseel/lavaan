@@ -110,14 +110,14 @@ setClass("Fit",
 
 setClass("lavaan",
     representation(
-        call    = "call",            # matched call
-        timing  = "list",            # timing information
-        Options = "list",            # lavaanOptions
-        User    = "list",            # parameter table user-specified model
-        Data    = "lavData",         # full data
-        Sample  = "SampleStats",     # sample statistics
-        Model   = "Model",           # internal matrix representation
-        Fit     = "Fit"              # optimization info
+        call     = "call",            # matched call
+        timing   = "list",            # timing information
+        Options  = "list",            # lavaanOptions
+        ParTable = "list",            # parameter table user-specified model
+        Data     = "lavData",         # full data
+        Sample   = "SampleStats",     # sample statistics
+        Model    = "Model",           # internal matrix representation
+        Fit      = "Fit"              # optimization info
     ) 
 )
 

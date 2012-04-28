@@ -2,24 +2,24 @@
 lavaanNames <- function(object, type="ov", group=NULL) {
 
     if(class(object) == "lavaan") {
-         user <- object@User
+         partable <- object@ParTable
     } else if(class(object) == "list" ||
               class(object) == "data.frame") {
-        user <- object
+        partable <- object
     }
 
-    stopifnot(is.list(user), 
+    stopifnot(is.list(partable), 
               type %in% c("lv",   "ov", "lv.regular",
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
                           "ov.nox"))
-    vnames(user, type=type, group=group)
+    vnames(partable, type=type, group=group)
 }
 
 # internal version
-vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
+vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
 
-    stopifnot(is.list(user), !missing(type),
+    stopifnot(is.list(partable), !missing(type),
               type %in% c("lv",   "ov", "lv.regular",
                           "lv.x", "ov.x",
                           "lv.y", "ov.y",
@@ -28,52 +28,52 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
     # select single group only?
     if(!is.null(group)) {
         group <- as.integer(group)
-        group.idx <- which(user$group %in% group)
-        if(is.data.frame(user)) {
-            user <- user[group.idx,]
+        group.idx <- which(partable$group %in% group)
+        if(is.data.frame(partable)) {
+            partable <- partable[group.idx,]
         } else {
-            user.old <- user; user <- list()
-            user$lhs   <- user.old$lhs[group.idx]
-            user$op    <- user.old$op[group.idx]
-            user$rhs   <- user.old$rhs[group.idx]
-            user$group <- user.old$group[group.idx]
-            user$exo   <- user.old$exo[group.idx]
+            partable.old <- partable; partable <- list()
+            partable$lhs   <- partable.old$lhs[group.idx]
+            partable$op    <- partable.old$op[group.idx]
+            partable$rhs   <- partable.old$rhs[group.idx]
+            partable$group <- partable.old$group[group.idx]
+            partable$exo   <- partable.old$exo[group.idx]
         }
     }
 
     # regular latent variables: lhs =~ and formative variables lhs <~
     if(type == "lv") {
-        out <- unique( user$lhs[ user$op == "=~"  | user$op == "<~" ] )
+        out <- unique( partable$lhs[ partable$op == "=~"  | partable$op == "<~" ] )
     } else 
 
     # regular latent variables ONLY
     if(type == "lv.regular") {
-        out <- unique( user$lhs[ user$op == "=~" ] )
+        out <- unique( partable$lhs[ partable$op == "=~" ] )
     } else
 
     # observed variables 
     if(type == "ov") {
-        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
+        lv.names <- unique( partable$lhs[ partable$op == "=~" | partable$op == "<~" ] )
         
         # order is important!
         # 1. indicators, which are not latent variables themselves
-        v.ind <- unique( user$rhs[ user$op == "=~" ] )
+        v.ind <- unique( partable$rhs[ partable$op == "=~" ] )
         ov.ind <- v.ind[ !v.ind %in% lv.names ]
 
         # 2. dependent ov's
-        eqs.y <- unique( user$lhs[ user$op == "~" ] )
+        eqs.y <- unique( partable$lhs[ partable$op == "~" ] )
         ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
 
         # 3. independent ov's
-        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
+        eqs.x <- unique( partable$rhs[ partable$op == "~" | partable$op == "<~" ] )
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
 
         out <- c(ov.ind, ov.y, ov.x)
 
         # 4. orphaned covariances
-        ov.cov <- c(user$lhs[ user$op == "~~" & !user$lhs %in% lv.names ], 
-                    user$rhs[ user$op == "~~" & !user$rhs %in% lv.names ])
-        ov.int <- user$lhs[ user$op == "~1" & !user$lhs %in% lv.names ]
+        ov.cov <- c(partable$lhs[ partable$op == "~~" & !partable$lhs %in% lv.names ], 
+                    partable$rhs[ partable$op == "~~" & !partable$rhs %in% lv.names ])
+        ov.int <- partable$lhs[ partable$op == "~1" & !partable$lhs %in% lv.names ]
         extra <- unique(c(ov.cov, ov.int))
         extra.idx <- which(!extra %in% out)
         out <- c(out, extra[extra.idx])
@@ -81,31 +81,31 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # exogenous `x' covariates
     if(type == "ov.x") {
-        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
+        lv.names <- unique( partable$lhs[ partable$op == "=~" | partable$op == "<~" ] )
         
         # 1. indicators, which are not latent variables themselves
-        v.ind <- unique( user$rhs[ user$op == "=~" ] )
+        v.ind <- unique( partable$rhs[ partable$op == "=~" ] )
         ov.ind <- v.ind[ !v.ind %in% lv.names ]
 
         # 2. dependent ov's
-        eqs.y <- unique( user$lhs[ user$op == "~" ] )
+        eqs.y <- unique( partable$lhs[ partable$op == "~" ] )
         ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
 
         # 2. independent ov's
-        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~"] )
+        eqs.x <- unique( partable$rhs[ partable$op == "~" | partable$op == "<~"] )
         ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
 
         # correction: is any of these ov.names.x mentioned as a variance,
         #             covariance, or intercept? 
         # this should trigger a warning in lavaanify()
-        if(is.null(user$user)) { # FLAT!
-            vars <- c(user$lhs[user$op == "~1"],
-                      user$lhs[user$op == "~~"],
-                      user$rhs[user$op == "~~"])
+        if(is.null(partable$user)) { # FLAT!
+            vars <- c(partable$lhs[partable$op == "~1"],
+                      partable$lhs[partable$op == "~~"],
+                      partable$rhs[partable$op == "~~"])
         } else {
-            vars <- c(user$lhs[user$op == "~1" & user$user == 1],
-                      user$lhs[user$op == "~~" & user$user == 1],
-                      user$rhs[user$op == "~~" & user$user == 1])
+            vars <- c(partable$lhs[partable$op == "~1" & partable$user == 1],
+                      partable$lhs[partable$op == "~~" & partable$user == 1],
+                      partable$rhs[partable$op == "~~" & partable$user == 1])
         }
         idx.no.x <- which(ov.x %in% vars)
         if(length(idx.no.x)) {
@@ -120,10 +120,10 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
         out <- ov.x
 
         # extra
-        if(!is.null(user$exo)) {
-            ov.cov <- c(user$lhs[ user$op == "~~" & user$exo == 1L],
-                        user$rhs[ user$op == "~~" & user$exo == 1L])
-            ov.int <- user$lhs[ user$op == "~1" & user$exo == 1L ]
+        if(!is.null(partable$exo)) {
+            ov.cov <- c(partable$lhs[ partable$op == "~~" & partable$exo == 1L],
+                        partable$rhs[ partable$op == "~~" & partable$exo == 1L])
+            ov.int <- partable$lhs[ partable$op == "~1" & partable$exo == 1L ]
             extra <- unique(c(ov.cov, ov.int))
             extra.idx <- which(!extra %in% out)
             out <- c(out, extra[extra.idx])
@@ -132,8 +132,8 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # ov's withouth ov.x
     if(type == "ov.nox") {
-        out <- vnames(user, "ov", group=group)
-        ov.names.x <- vnames(user, "ov.x", group=group)
+        out <- vnames(partable, "ov", group=group)
+        ov.names.x <- vnames(partable, "ov.x", group=group)
         idx <- which(out %in% ov.names.x)
         if(length(idx)) out <- out[-idx]
     } else
@@ -141,9 +141,9 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # exogenous lv's
     if(type == "lv.x") {
-        lv.names <- unique( user$lhs[ user$op == "=~"  | user$op == "<~" ] )
-        v.ind    <- unique( user$rhs[ user$op == "=~" ] )
-        eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
+        lv.names <- unique( partable$lhs[ partable$op == "=~"  | partable$op == "<~" ] )
+        v.ind    <- unique( partable$rhs[ partable$op == "=~" ] )
+        eqs.y    <- unique( partable$lhs[ partable$op == "~"  ] )
 
         tmp <- lv.names[ !lv.names %in% c(v.ind, eqs.y) ]
         # make sure order is the same as lv.names
@@ -152,11 +152,11 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
  
     # dependent ov (but not also indicator or x)
     if(type == "ov.y") {
-        ov.names <- vnames(user, "ov", group=group)
-        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
-        v.ind    <- unique( user$rhs[ user$op == "=~" ] )
-        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
-        eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
+        ov.names <- vnames(partable, "ov", group=group)
+        lv.names <- unique( partable$lhs[ partable$op == "=~" | partable$op == "<~" ] )
+        v.ind    <- unique( partable$rhs[ partable$op == "=~" ] )
+        eqs.x <- unique( partable$rhs[ partable$op == "~" | partable$op == "<~" ] )
+        eqs.y    <- unique( partable$lhs[ partable$op == "~"  ] )
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
         # make sure order is the same as ov.names
@@ -165,10 +165,10 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
 
     # dependent lv (but not also indicator or x)
     if(type == "lv.y") {
-        lv.names <- unique( user$lhs[ user$op == "=~" | user$op == "<~" ] )
-        v.ind    <- unique( user$rhs[ user$op == "=~" ] )
-        eqs.x <- unique( user$rhs[ user$op == "~" | user$op == "<~" ] )
-        eqs.y    <- unique( user$lhs[ user$op == "~"  ] )
+        lv.names <- unique( partable$lhs[ partable$op == "=~" | partable$op == "<~" ] )
+        v.ind    <- unique( partable$rhs[ partable$op == "=~" ] )
+        eqs.x <- unique( partable$rhs[ partable$op == "~" | partable$op == "<~" ] )
+        eqs.y    <- unique( partable$lhs[ partable$op == "~"  ] )
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x) &
                        eqs.y %in% lv.names ]
@@ -179,21 +179,21 @@ vnames <- function(user, type=NULL, group=NULL, warn=FALSE) {
     out
 }
 
-getNDAT <- function(user, group=NULL) {
+getNDAT <- function(partable, group=NULL) {
 
-    ov.names <- vnames(user, "ov", group=group)
+    ov.names <- vnames(partable, "ov", group=group)
     nvar <- length(ov.names)
 
-    ngroups <- max(user$group)
-    meanstructure <- any(user$op == "~1")
-    fixed.x <- any(user$exo > 0L & user$free == 0L)
+    ngroups <- max(partable$group)
+    meanstructure <- any(partable$op == "~1")
+    fixed.x <- any(partable$exo > 0L & partable$free == 0L)
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
 
     # correction for fixed.x?
     if(fixed.x) {
-        ov.names.x <- vnames(user, "ov.x", group=group)
+        ov.names.x <- vnames(partable, "ov.x", group=group)
         nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
@@ -203,27 +203,27 @@ getNDAT <- function(user, group=NULL) {
     ndat
 }
 
-getNPAR <- function(user) {
-    npar <- max(user$free)
+getNPAR <- function(partable) {
+    npar <- max(partable$free)
     npar
 }
 
-getDF <- function(user, group=NULL) {
+getDF <- function(partable, group=NULL) {
 
-    ov.names <- vnames(user, "ov", group=group)
+    ov.names <- vnames(partable, "ov", group=group)
     nvar <- length(ov.names)
-    npar <- max(user$free)
+    npar <- max(partable$free)
 
-    ngroups <- max(user$group)
-    meanstructure <- any(user$op == "~1")
-    fixed.x <- any(user$exo > 0L & user$free == 0L)
+    ngroups <- max(partable$group)
+    meanstructure <- any(partable$op == "~1")
+    fixed.x <- any(partable$exo > 0L & partable$free == 0L)
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
 
     # correction for fixed.x?
     if(fixed.x) {
-        ov.names.x <- vnames(user, "ov.x", group=group)
+        ov.names.x <- vnames(partable, "ov.x", group=group)
         nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
@@ -236,17 +236,17 @@ getDF <- function(user, group=NULL) {
     as.integer(df)
 }
 
-getParameterLabels <- function(user, group.equal="", group.partial="", 
+getParameterLabels <- function(partable, group.equal="", group.partial="", 
                                type="user") {
     # default labels
-    label <- paste(user$lhs, user$op, user$rhs, sep="")
+    label <- paste(partable$lhs, partable$op, partable$rhs, sep="")
     
     # handle multiple groups
-    ngroups <- max(user$group)
+    ngroups <- max(partable$group)
     if(ngroups > 1L) {
         for(g in 2:ngroups) {
-            label[user$group == g] <- 
-                paste(label[user$group == g], ".g", g, sep="")
+            label[partable$group == g] <- 
+                paste(label[partable$group == g], ".g", g, sep="")
         }
     }
  
@@ -262,58 +262,58 @@ getParameterLabels <- function(user, group.equal="", group.partial="",
            "residual.covariances" %in%  group.equal) {
             ov.names.nox <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                ov.names.nox[[g]] <- vnames(user, "ov.nox", group=g)
+                ov.names.nox[[g]] <- vnames(partable, "ov.nox", group=g)
         }
         if("means" %in% group.equal ||
            "lv.variances" %in% group.equal ||
            "lv.covariances" %in% group.equal) {
             lv.names <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                lv.names[[g]] <- vnames(user, "lv", group=g)
+                lv.names[[g]] <- vnames(partable, "lv", group=g)
         }
 
         # g1.flag: TRUE if included, FALSE if not
-        g1.flag <- logical(length(which(user$group == 1L)))
+        g1.flag <- logical(length(which(partable$group == 1L)))
 
         # LOADINGS
         if("loadings" %in% group.equal)
-            g1.flag[ user$op == "=~" & user$group == 1L  ] <- TRUE
+            g1.flag[ partable$op == "=~" & partable$group == 1L  ] <- TRUE
         # INTERCEPTS (OV)
         if("intercepts" %in% group.equal)
-            g1.flag[ user$op == "~1"  & user$group == 1L  &
-                     user$lhs %in% ov.names.nox[[1L]] ] <- TRUE
+            g1.flag[ partable$op == "~1"  & partable$group == 1L  &
+                     partable$lhs %in% ov.names.nox[[1L]] ] <- TRUE
         # MEANS (LV)
         if("means" %in% group.equal)
-            g1.flag[ user$op == "~1" & user$group == 1L &
-                     user$lhs %in% lv.names[[1L]] ] <- TRUE
+            g1.flag[ partable$op == "~1" & partable$group == 1L &
+                     partable$lhs %in% lv.names[[1L]] ] <- TRUE
         # REGRESSIONS
         if("regressions" %in% group.equal)
-            g1.flag[ user$op == "~" & user$group == 1L ] <- TRUE
+            g1.flag[ partable$op == "~" & partable$group == 1L ] <- TRUE
         # RESIDUAL variances (FIXME: OV ONLY!)
         if("residuals" %in% group.equal)
-            g1.flag[ user$op == "~~" & user$group == 1L &
-                     user$lhs %in% ov.names.nox[[1L]] &
-                     user$lhs == user$rhs ] <- TRUE
+            g1.flag[ partable$op == "~~" & partable$group == 1L &
+                     partable$lhs %in% ov.names.nox[[1L]] &
+                     partable$lhs == partable$rhs ] <- TRUE
         # RESIDUAL covariances (FIXME: OV ONLY!)
         if("residual.covariances" %in% group.equal)
-            g1.flag[ user$op == "~~" & user$group == 1L &
-                     user$lhs %in% ov.names.nox[[1L]] &
-                     user$lhs != user$rhs ] <- TRUE
+            g1.flag[ partable$op == "~~" & partable$group == 1L &
+                     partable$lhs %in% ov.names.nox[[1L]] &
+                     partable$lhs != partable$rhs ] <- TRUE
         # LV VARIANCES
         if("lv.variances" %in% group.equal)
-            g1.flag[ user$op == "~~" & user$group == 1L &
-                     user$lhs %in% lv.names[[1L]] &
-                     user$lhs == user$rhs ] <- TRUE
+            g1.flag[ partable$op == "~~" & partable$group == 1L &
+                     partable$lhs %in% lv.names[[1L]] &
+                     partable$lhs == partable$rhs ] <- TRUE
         # LV COVARIANCES
         if("lv.covariances" %in% group.equal)
-            g1.flag[ user$op == "~~" & user$group == 1L &
-                     user$lhs %in% lv.names[[1L]] &
-                     user$lhs != user$rhs ] <- TRUE
+            g1.flag[ partable$op == "~~" & partable$group == 1L &
+                     partable$lhs %in% lv.names[[1L]] &
+                     partable$lhs != partable$rhs ] <- TRUE
 
         # if group.partial, set corresponding flag to FALSE
         if(length(group.partial) > 0L) {
             g1.flag[ label %in% group.partial &
-                     user$group == 1L ] <- FALSE
+                     partable$group == 1L ] <- FALSE
         }
 
         # for each (constrained) parameter in 'group 1', find a similar one
@@ -322,10 +322,10 @@ getParameterLabels <- function(user, group.equal="", group.partial="",
         g1.idx <- which(g1.flag)
         for(i in 1:length(g1.idx)) {
             ref.idx <- g1.idx[i]
-            idx <- which(user$lhs == user$lhs[ref.idx] &
-                         user$op  == user$op[ ref.idx] &
-                         user$rhs == user$rhs[ref.idx] &
-                         user$group > 1L)
+            idx <- which(partable$lhs == partable$lhs[ref.idx] &
+                         partable$op  == partable$op[ ref.idx] &
+                         partable$rhs == partable$rhs[ref.idx] &
+                         partable$group > 1L)
             label[idx] <- label[ref.idx]
         }
     }
@@ -334,8 +334,8 @@ getParameterLabels <- function(user, group.equal="", group.partial="",
     #cat("DEBUG: label after group.equal:\n"); print(label); cat("\n")
 
     # user-specified labels -- override everything!!
-    user.idx <- which(nchar(user$label) > 0L)
-    label[user.idx] <- user$label[user.idx]
+    user.idx <- which(nchar(partable$label) > 0L)
+    label[user.idx] <- partable$label[user.idx]
 
     #cat("DEBUG: user.idx = ", user.idx, "\n")
     #cat("DEBUG: label after user.idx:\n"); print(label); cat("\n")
@@ -344,9 +344,9 @@ getParameterLabels <- function(user, group.equal="", group.partial="",
     if(type == "user") {
         idx <- 1:length(label)
     } else if(type == "free") {
-        idx <- which(user$free > 0L & !duplicated(user$free))
+        idx <- which(partable$free > 0L & !duplicated(partable$free))
     } else if(type == "unco") {
-        idx <- which(user$unco > 0L & !duplicated(user$unco))
+        idx <- which(partable$unco > 0L & !duplicated(partable$unco))
     } else {
         stop("argument `type' must be one of free, unco, or user")
     }
@@ -355,20 +355,20 @@ getParameterLabels <- function(user, group.equal="", group.partial="",
 }
 
 
-getUserListFull <- function(user=NULL, group=NULL) {
+getUserListFull <- function(partable=NULL, group=NULL) {
 
     # meanstructure + number of groups
-    meanstructure <- any(user$op == "~1")
-    ngroups <- max(user$group)
+    meanstructure <- any(partable$op == "~1")
+    ngroups <- max(partable$group)
 
     # extract `names' of various types of variables:
-    lv.names     <- vnames(user, type="lv",  group=group)   # latent variables
-    ov.names     <- vnames(user, type="ov",  group=group)   # observed variables
-    ov.names.x   <- vnames(user, type="ov.x",group=group)   # exogenous x covariates
-    ov.names.nox <- vnames(user, type="ov.nox",group=group) # ov's without exo's
-    lv.names.x   <- vnames(user, type="lv.x",group=group)   # exogenous lv
-    ov.names.y   <- vnames(user, type="ov.y",group=group)   # dependent ov
-    lv.names.y   <- vnames(user, type="lv.y",group=group)   # dependent lv
+    lv.names     <- vnames(partable, type="lv",  group=group)   # latent variables
+    ov.names     <- vnames(partable, type="ov",  group=group)   # observed variables
+    ov.names.x   <- vnames(partable, type="ov.x",group=group)   # exogenous x covariates
+    ov.names.nox <- vnames(partable, type="ov.nox",group=group) # ov's without exo's
+    lv.names.x   <- vnames(partable, type="lv.x",group=group)   # exogenous lv
+    ov.names.y   <- vnames(partable, type="ov.y",group=group)   # dependent ov
+    lv.names.y   <- vnames(partable, type="lv.y",group=group)   # dependent lv
     lvov.names.y <- c(ov.names.y, lv.names.y)
 
 
@@ -396,10 +396,10 @@ getUserListFull <- function(user=NULL, group=NULL) {
 
     # 3 regressions?
     r.lhs <- r.rhs <- r.op <- character(0)
-    if(any(user$op == "~")) {
+    if(any(partable$op == "~")) {
         # FIXME: better choices?
-        eqs.names <- unique( c(user$lhs[ user$op == "~" ],
-                               user$rhs[ user$op == "~" ]) )
+        eqs.names <- unique( c(partable$lhs[ partable$op == "~" ],
+                               partable$rhs[ partable$op == "~" ]) )
         r.lhs <- rep(eqs.names, each=length(eqs.names))
         r.rhs <- rep(eqs.names, times=length(eqs.names))
         # remove self-arrows

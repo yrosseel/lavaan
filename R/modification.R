@@ -4,25 +4,25 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     if(power) standardized <- TRUE
 
     # get LIST parameter list
-    LIST <- getUserListFull(object@User)
+    LIST <- getUserListFull(object@ParTable)
     LIST$free <- 0L; LIST$eq.id <- 0L; LIST$unco <- 0L
     LIST <- as.data.frame(LIST)
 
     # fill in USER information
-    user <- object@User; N <- length(user$lhs)
+    partable <- object@ParTable; N <- length(partable$lhs)
     for(i in 1:N) {
-        LIST.idx <- which(LIST$lhs == user$lhs[i] &
-                          LIST$op  == user$op[i] &
-                          LIST$rhs == user$rhs[i] &
-                          LIST$group == user$group[i])
-        LIST$free[LIST.idx] <- user$free[i]
-        LIST$eq.id[LIST.idx] <- user$eq.id[i]
-        LIST$unco[LIST.idx] <- user$unco[i]
+        LIST.idx <- which(LIST$lhs == partable$lhs[i] &
+                          LIST$op  == partable$op[i] &
+                          LIST$rhs == partable$rhs[i] &
+                          LIST$group == partable$group[i])
+        LIST$free[LIST.idx] <- partable$free[i]
+        LIST$eq.id[LIST.idx] <- partable$eq.id[i]
+        LIST$unco[LIST.idx] <- partable$unco[i]
     }
 
     # add matrix representation
     if(object@Model@representation == "LISREL") {
-        REP <- representation.LISREL(user=object@User, target=LIST,
+        REP <- representation.LISREL(partable=object@ParTable, target=LIST,
                                      extra=FALSE)
     } else {
         stop("only LISREL representation has been implemented")
@@ -204,12 +204,12 @@ modificationIndices <- modificationindices <- modindices <- function(object,
 
     # standardize?
     if(standardized) {
-        LIST$sepc.lv  <- standardize.est.lv(object, user=LIST, est=LIST$epc,
+        LIST$sepc.lv  <- standardize.est.lv(object, partable=LIST, est=LIST$epc,
                                             cov.std=FALSE)
-        LIST$sepc.all <- standardize.est.all(object, user=LIST, est=LIST$epc,
+        LIST$sepc.all <- standardize.est.all(object, partable=LIST, est=LIST$epc,
                                              est.std=LIST$sepc.lv,
                                              cov.std=FALSE)
-        LIST$sepc.nox <- standardize.est.all.nox(object,user=LIST,est=LIST$epc,
+        LIST$sepc.nox <- standardize.est.all.nox(object,partable=LIST,est=LIST$epc,
                                              est.std=LIST$sepc.lv,
                                              cov.std=FALSE)
     }

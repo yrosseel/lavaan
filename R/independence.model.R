@@ -16,7 +16,7 @@ independence.model <- function(model.syntax = '', ...) {
     # reconstruct model.syntax...
     OV.X <- character(0L)
     if(no.fit@Options$mimic %in% c("lavaan", "Mplus"))
-        OV.X <- vnames(no.fit@User, type="ov.x", group=1L)
+        OV.X <- vnames(no.fit@ParTable, type="ov.x", group=1L)
     model.syntax <- 
         syntax.independence.model(ov.names   = no.fit@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
@@ -34,7 +34,7 @@ independence.model.fit2 <- function(object) {
     # construct syntax for independence model
     OV.X <- character(0L)
     if(object@Options$mimic %in% c("lavaan", "Mplus"))
-        OV.X <- vnames(object@User, type="ov.x", group=1L)
+        OV.X <- vnames(object@ParTable, type="ov.x", group=1L)
     model.syntax <- 
         syntax.independence.model(ov.names   = object@Data@ov.names[[1L]],
                                   ov.names.x = OV.X,
@@ -55,10 +55,10 @@ independence.model.fit <- function(object) {
 
     # construct parameter Table for independence model
     OV.X <- lapply(as.list(1:object@Sample@ngroups),
-                   function(x) vnames(object@User, type="ov.x", x))
+                   function(x) vnames(object@ParTable, type="ov.x", x))
 
     # construct
-    lavaanUser <- independenceModel(ov.names   = object@Data@ov.names,
+    lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
                                     ov.names.x = OV.X,
                                     sample.cov = object@Sample@cov,
                                     meanstructure = object@Model@meanstructure,
@@ -75,7 +75,7 @@ independence.model.fit <- function(object) {
     lavaanOptions$warn    <- FALSE
 
     # 2b. change meanstructure flag?
-    if(any(lavaanUser$op == "~1")) lavaanOptions$meanstructure <- TRUE
+    if(any(lavaanParTable$op == "~1")) lavaanOptions$meanstructure <- TRUE
 
     # 3. 
     lavaanData             <- object@Data
@@ -83,14 +83,14 @@ independence.model.fit <- function(object) {
 
     # 4. 
     lavaanStart <-
-        StartingValues(user       = lavaanUser,
+        StartingValues(partable   = lavaanParTable,
                        sample     = lavaanSampleStats,
                        model.type = lavaanOptions$model.type,
                        debug      = lavaanOptions$debug)
 
     # 5. 
     lavaanModel <-
-        Model(user           = lavaanUser,
+        Model(partable       = lavaanParTable,
               start          = lavaanStart,
               representation = lavaanOptions$representation,
               debug          = lavaanOptions$debug)
@@ -111,31 +111,31 @@ independence.model.fit <- function(object) {
     
     # 8.
     TEST <- computeTestStatistic(lavaanModel,
-                                 user    = lavaanUser,
-                                 sample  = lavaanSampleStats,
-                                 options = lavaanOptions,
-                                 x       = x,
-                                 VCOV    = VCOV,
-                                 data    = lavaanData)
+                                 partable = lavaanParTable,
+                                 sample   = lavaanSampleStats,
+                                 options  = lavaanOptions,
+                                 x        = x,
+                                 VCOV     = VCOV,
+                                 data     = lavaanData)
 
     # 9. collect information about model fit (S4)
-    lavaanFit <- Fit(user  = lavaanUser,
-                     start = lavaanStart,
-                     model = lavaanModel,
-                     x     = x,
-                     VCOV  = VCOV,
-                     TEST  = TEST)
+    lavaanFit <- Fit(partable = lavaanParTable,
+                     start    = lavaanStart,
+                     model    = lavaanModel,
+                     x        = x,
+                     VCOV     = VCOV,
+                     TEST     = TEST)
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call    = mc,                     # match.call
-                  timing  = timing,                 # list
-                  Options = lavaanOptions,          # list
-                  User    = lavaanUser,             # list
-                  Data    = lavaanData,             # S3 class
-                  Sample  = lavaanSampleStats,      # S4 class
-                  Model   = lavaanModel,            # S4 class
-                  Fit     = lavaanFit               # S4 class
+                  call     = mc,                     # match.call
+                  timing   = timing,                 # list
+                  Options  = lavaanOptions,          # list
+                  ParTable = lavaanParTable,         # list
+                  Data     = lavaanData,             # S3 class
+                  Sample   = lavaanSampleStats,      # S4 class
+                  Model    = lavaanModel,            # S4 class
+                  Fit      = lavaanFit               # S4 class
                  )
 
     lavaan

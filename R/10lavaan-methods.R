@@ -22,28 +22,6 @@ short.summary <- function(object) {
     }
     cat("\n")
    
-    # Short Model description + number of observations
-    #h.txt <- sprintf("%-40s%11s  %9s", "", "Independent", "Dependent")
-    #cat(h.txt,"\n")
-    #t0.txt <- sprintf("  %-38s", "Number of observed variables")
-    #t1.txt <- sprintf("  %9i", length( object@User@ov.x.idx ))
-    #t2.txt <- sprintf("  %9i", length( object@User@ov.mm.idx ))
-    #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-
-    #t0.txt <- sprintf("  %-38s", "Number of continuous latent variables")
-    #t1.txt <- sprintf("  %9i", length( object@User@lv.x.idx ))
-    #t2.txt <- sprintf("  %9i", length( object@User@lv.y.idx ))
-    #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    #cat("\n")
-
-    #t0.txt <- sprintf("  %-38s", "Number of free parameters")
-    #t1.txt <- sprintf("  %9i", object@User@npar )
-    #cat(t0.txt, t1.txt, "\n", sep="")
-
-    #t0.txt <- sprintf("  %-38s", "Number of groups")
-    #t1.txt <- sprintf("  %9i", object@Data@ngroups)
-    #cat(t0.txt, t1.txt, "\n", sep="")
-
     # listwise deletion?
     listwise <- FALSE
     for(g in 1:object@Data@ngroups) {
@@ -290,8 +268,8 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     } 
 
     for(g in 1:object@Data@ngroups) {
-        ov.names <- vnames(object@User, "ov", group=g)
-        lv.names <- vnames(object@User, "lv", group=g)
+        ov.names <- vnames(object@ParTable, "ov", group=g)
+        lv.names <- vnames(object@ParTable, "lv", group=g)
 
         # group header
         if(object@Data@ngroups > 1) {
@@ -328,19 +306,19 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             }
         }
 
-        NAMES <- object@User$rhs
+        NAMES <- object@ParTable$rhs
 
         # 1a. indicators ("=~") (we do show dummy indicators)
-        mm.idx <- which( object@User$op == "=~" & 
-                        !object@User$lhs %in% ov.names &
-                         object@User$group == g)
+        mm.idx <- which( object@ParTable$op == "=~" & 
+                        !object@ParTable$lhs %in% ov.names &
+                         object@ParTable$group == g)
         if(length(mm.idx)) {
             cat("Latent variables:\n")
             lhs.old <- ""
-            NAMES[mm.idx] <- makeNames(  object@User$rhs[mm.idx],
-                                       object@User$label[mm.idx])
+            NAMES[mm.idx] <- makeNames(  object@ParTable$rhs[mm.idx],
+                                       object@ParTable$label[mm.idx])
             for(i in mm.idx) {
-                lhs <- object@User$lhs[i]
+                lhs <- object@ParTable$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " =~\n", sep="")
                 print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
@@ -349,15 +327,15 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 1b. formative/composites ("<~")
-        fm.idx <- which( object@User$op == "<~" &
-                         object@User$group == g)
+        fm.idx <- which( object@ParTable$op == "<~" &
+                         object@ParTable$group == g)
         if(length(fm.idx)) {
             cat("Composites:\n")
             lhs.old <- ""
-            NAMES[fm.idx] <- makeNames(  object@User$rhs[fm.idx],
-                                       object@User$label[fm.idx])
+            NAMES[fm.idx] <- makeNames(  object@ParTable$rhs[fm.idx],
+                                       object@ParTable$label[fm.idx])
             for(i in fm.idx) {
-                lhs <- object@User$lhs[i]
+                lhs <- object@ParTable$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " <~\n", sep="")
                 print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
@@ -366,14 +344,14 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 2. regressions
-        eqs.idx <- which(object@User$op == "~" & object@User$group == g)
+        eqs.idx <- which(object@ParTable$op == "~" & object@ParTable$group == g)
         if(length(eqs.idx) > 0) {
             cat("Regressions:\n")
             lhs.old <- ""
-            NAMES[eqs.idx] <- makeNames(  object@User$rhs[eqs.idx],
-                                        object@User$label[eqs.idx])
+            NAMES[eqs.idx] <- makeNames(  object@ParTable$rhs[eqs.idx],
+                                        object@ParTable$label[eqs.idx])
             for(i in eqs.idx) {
-                lhs <- object@User$lhs[i]
+                lhs <- object@ParTable$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " ~\n", sep="")
                 print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
@@ -382,17 +360,17 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 3. covariances
-        cov.idx <- which(object@User$op == "~~" & 
-                         !object@User$exo &
-                         object@User$lhs != object@User$rhs &
-                         object@User$group == g)
+        cov.idx <- which(object@ParTable$op == "~~" & 
+                         !object@ParTable$exo &
+                         object@ParTable$lhs != object@ParTable$rhs &
+                         object@ParTable$group == g)
         if(length(cov.idx) > 0) {
             cat("Covariances:\n")
             lhs.old <- ""
-            NAMES[cov.idx] <- makeNames(  object@User$rhs[cov.idx],
-                                        object@User$label[cov.idx])
+            NAMES[cov.idx] <- makeNames(  object@ParTable$rhs[cov.idx],
+                                        object@ParTable$label[cov.idx])
             for(i in cov.idx) {
-                lhs <- object@User$lhs[i]
+                lhs <- object@ParTable$lhs[i]
                 if(lhs != lhs.old) cat("  ", lhs, " ~~\n", sep="")
                 print.estimate(name=NAMES[i], i)
                 lhs.old <- lhs
@@ -401,13 +379,13 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 4. intercepts/means
-        int.idx <- which(object@User$op == "~1" & 
-                         !object@User$exo &
-                         object@User$group == g)
+        int.idx <- which(object@ParTable$op == "~1" & 
+                         !object@ParTable$exo &
+                         object@ParTable$group == g)
         if(length(int.idx) > 0) {
             cat("Intercepts:\n")
-            NAMES[int.idx] <- makeNames(  object@User$lhs[int.idx],
-                                        object@User$label[int.idx])
+            NAMES[int.idx] <- makeNames(  object@ParTable$lhs[int.idx],
+                                        object@ParTable$label[int.idx])
             for(i in int.idx) {
                 print.estimate(name=NAMES[i], i)
             }
@@ -415,14 +393,14 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 5. (residual) variances
-        var.idx <- which(object@User$op == "~~" &
-                         !object@User$exo &
-                         object@User$lhs == object@User$rhs &
-                         object@User$group == g)
+        var.idx <- which(object@ParTable$op == "~~" &
+                         !object@ParTable$exo &
+                         object@ParTable$lhs == object@ParTable$rhs &
+                         object@ParTable$group == g)
         if(length(var.idx) > 0) {
             cat("Variances:\n")
-            NAMES[var.idx] <- makeNames(  object@User$rhs[var.idx],
-                                        object@User$label[var.idx])
+            NAMES[var.idx] <- makeNames(  object@ParTable$rhs[var.idx],
+                                        object@ParTable$label[var.idx])
             for(i in var.idx) {
                 if(object@Options$mimic == "lavaan") {
                     print.estimate(name=NAMES[i], i, z.stat=FALSE)
@@ -436,11 +414,11 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     } # ngroups
 
     # 6. variable definitions
-    def.idx <- which(object@User$op == ":=")
+    def.idx <- which(object@ParTable$op == ":=")
     if(length(def.idx) > 0) {
         if(object@Data@ngroups > 1) cat("\n")
         cat("Defined parameters:\n")
-        NAMES[def.idx] <- makeNames(  object@User$lhs[def.idx], "")
+        NAMES[def.idx] <- makeNames(  object@ParTable$lhs[def.idx], "")
         for(i in def.idx) {
             print.estimate(name=NAMES[i], i)
         }
@@ -448,9 +426,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     }
 
     # 7. constraints
-    cin.idx <- which((object@User$op == "<" | 
-                      object@User$op == ">"))
-    ceq.idx <- which(object@User$op == "==")
+    cin.idx <- which((object@ParTable$op == "<" | 
+                      object@ParTable$op == ">"))
+    ceq.idx <- which(object@ParTable$op == "==")
     if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
         # set small negative values to zero, to avoid printing " -0.000"
         slack <- ifelse(abs(est) < 1e-5, 0, est)
@@ -460,9 +438,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         if(object@Data@ngroups > 1 && length(def.idx) == 0L) cat("\n")
         cat("Constraints:                               Slack (>=0)\n")
         for(i in c(cin.idx,ceq.idx)) {
-            lhs <- object@User$lhs[i]
-             op <- object@User$op[i]
-            rhs <- object@User$rhs[i]
+            lhs <- object@ParTable$lhs[i]
+             op <- object@ParTable$op[i]
+            rhs <- object@ParTable$rhs[i]
             if(rhs == "0" && op == ">") {
                 con.string <- paste(lhs, " - 0", sep="")
             } else if(rhs == "0" && op == "<") {
@@ -626,7 +604,7 @@ parameter.values <- function(object) {
 
 parameter.list <- function(object) {
 
-    LIST <- as.data.frame(object@User, stringsAsFactors = FALSE)
+    LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
     LIST
 }
 
@@ -660,19 +638,19 @@ function(object, type="free", labels=TRUE) {
 
     if(type == "user" || type == "all") {
         type <- "user"
-        idx <- 1:length( object@User$lhs )
+        idx <- 1:length( object@ParTable$lhs )
     } else if(type == "free") {
-        idx <- which(object@User$free > 0L & !duplicated(object@User$free))
+        idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
     } else if(type == "unco") {
-        idx <- which(object@User$unco > 0L & 
-                     !duplicated(object@User$unco))
+        idx <- which(object@ParTable$unco > 0L & 
+                     !duplicated(object@ParTable$unco))
     } else {
         stop("argument `type' must be one of free, unco, or user")
     }
     cof <- object@Fit@est[idx]
   
     # labels?
-    if(labels) names(cof) <- getParameterLabels(object@User, type=type)
+    if(labels) names(cof) <- getParameterLabels(object@ParTable, type=type)
 
     # class
     class(cof) <- c("lavaan.vector", "numeric")
@@ -773,12 +751,12 @@ parameterEstimates <- parameterestimates <-
 
                 # free.idx only
                 qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
-                free.idx <- which(object@User$free & 
-                                  !duplicated(object@User$free))
+                free.idx <- which(object@ParTable$free & 
+                                  !duplicated(object@ParTable$free))
                 ci[free.idx,] <- 2*ci[free.idx,] - t(qq[c(3,4),])
 
                 # def.idx
-                def.idx <- which(object@User$op == ":=")
+                def.idx <- which(object@ParTable$op == ":=")
                 if(length(def.idx) > 0L) {
                     BOOT.def <- apply(BOOT, 1, object@Model@def.function)
                     if(length(def.idx) == 1L) {
@@ -798,12 +776,12 @@ parameterEstimates <- parameterestimates <-
 
                 # free.idx only
                 qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
-                free.idx <- which(object@User$free & 
-                                  !duplicated(object@User$free))
+                free.idx <- which(object@ParTable$free & 
+                                  !duplicated(object@ParTable$free))
                 ci[free.idx,] <- t(qq[c(3,4),])
 
                 # def.idx
-                def.idx <- which(object@User$op == ":=")
+                def.idx <- which(object@ParTable$op == ":=")
                 if(length(def.idx) > 0L) {
                     BOOT.def <- apply(BOOT, 1, object@Model@def.function)
                     if(length(def.idx) == 1L) {
@@ -812,7 +790,7 @@ parameterEstimates <- parameterestimates <-
                         BOOT.def <- t(BOOT.def)
                     }
                     qq <- apply(BOOT.def, 2, boot:::norm.inter, alpha)
-                    def.idx <- which(object@User$op == ":=")
+                    def.idx <- which(object@ParTable$op == ":=")
                     ci[def.idx,] <- t(qq[c(3,4),])
                 }
 
@@ -825,8 +803,8 @@ parameterEstimates <- parameterestimates <-
                ci <- cbind(LIST$est, LIST$est)
 
                # free.idx only
-               free.idx <- which(object@User$free & 
-                                 !duplicated(object@User$free))
+               free.idx <- which(object@ParTable$free & 
+                                 !duplicated(object@ParTable$free))
                x <- LIST$est[free.idx]
                for(i in 1:length(free.idx)) {
                    t <- BOOT[,i]; t <- t[is.finite(t)]; t0 <- x[i]
@@ -838,7 +816,7 @@ parameterEstimates <- parameterestimates <-
                }
 
                # def.idx
-               def.idx <- which(object@User$op == ":=")
+               def.idx <- which(object@ParTable$op == ":=")
                if(length(def.idx) > 0L) {
                    x.def <- object@Model@def.function(x)
                    BOOT.def <- apply(BOOT, 1, object@Model@def.function)
@@ -893,7 +871,7 @@ parameterEstimates <- parameterestimates <-
 
         # fit another model, using the model-implied moments as input data
         step2 <- lavaan(slotOptions = object@Options,
-                        slotUser    = object@User,
+                        slotUser    = object@ParTable,
                         sample.cov  = COV,
                         sample.mean = MEAN,
                         sample.nobs = object@Data@nobs)
@@ -905,7 +883,7 @@ parameterEstimates <- parameterestimates <-
     if(object@Data@ngroups == 1L) LIST$group <- NULL
 
     # if no user-defined labels, remove label column
-    if(sum(nchar(object@User$label)) == 0L) LIST$label <- NULL
+    if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
 
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
@@ -1070,7 +1048,7 @@ function(object, labels=TRUE) {
 
     if(labels) {
         colnames(VarCov) <- rownames(VarCov) <- 
-            getParameterLabels(object@User, type="free")
+            getParameterLabels(object@ParTable, type="free")
     }
 
     class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")
@@ -1082,20 +1060,20 @@ rsquare <- function(object, est.std.all=NULL) {
 
     if(is.null(est.std.all)) est.std.all <- standardize.est.all(object)
     ngroups <- object@Data@ngroups
-    user <- object@User
-    user$rsquare <- 1.0 - est.std.all
+    partable <- object@ParTable
+    partable$rsquare <- 1.0 - est.std.all
     # no values > 1.0
-    user$rsquare[user$rsquare > 1.0] <- as.numeric(NA)
+    partable$rsquare[partable$rsquare > 1.0] <- as.numeric(NA)
     r2 <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
-        ind.names   <- user$rhs[ which(user$op == "=~" & user$group == g) ]
-        eqs.y.names <- user$lhs[ which(user$op == "~"  & user$group == g) ]
+        ind.names   <- partable$rhs[ which(partable$op == "=~" & partable$group == g) ]
+        eqs.y.names <- partable$lhs[ which(partable$op == "~"  & partable$group == g) ]
         y.names <- unique( c(ind.names, eqs.y.names) )
 
-        idx <- which(user$op == "~~" & user$lhs %in% y.names & 
-                     user$rhs == user$lhs & user$group == g)
-        tmp <- user$rsquare[idx]; names(tmp) <- user$lhs[idx]
+        idx <- which(partable$op == "~~" & partable$lhs %in% y.names & 
+                     partable$rhs == partable$lhs & partable$group == g)
+        tmp <- partable$rsquare[idx]; names(tmp) <- partable$lhs[idx]
         r2[[g]] <- tmp
     }
 

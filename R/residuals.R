@@ -31,7 +31,7 @@ function(object, type="raw", labels=TRUE) {
         # fixed.x idx?
         x.idx <- integer(0)
         if(object@Options$fixed.x) {
-            x.idx <- match(vnames(object@User, "ov.x", group=1L),
+            x.idx <- match(vnames(object@ParTable, "ov.x", group=1L),
                            object@Data@ov.names[[1L]]) ### FIXME!!!! will not
                                                        ### work for different
         }                                              ### models in groups
@@ -42,7 +42,7 @@ function(object, type="raw", labels=TRUE) {
             # 2) set cov between free and fixed.x elements in VarCov to zero
 
             # create 'augmented' User object (as if fixed.x=FALSE was used)
-            augUser <- object@User
+            augUser <- object@ParTable
             idx <- which(augUser$exo > 0L)
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
@@ -58,8 +58,8 @@ function(object, type="raw", labels=TRUE) {
             ### FIXME: should we not do this on the information level,
             ###        *before* we compute VarCov?
             ###
-            fixed.x.idx <- max(object@User$free) + 1:length(idx) 
-            free.idx    <- 1:max(object@User$free)
+            fixed.x.idx <- max(object@ParTable$free) + 1:length(idx) 
+            free.idx    <- 1:max(object@ParTable$free)
             VarCov[free.idx, fixed.x.idx] <- 0.0
             VarCov[fixed.x.idx, free.idx] <- 0.0
 

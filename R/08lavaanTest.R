@@ -141,7 +141,7 @@ testStatisticYuanBentler.Mplus <- function(sample=sample,
 
            
 
-computeTestStatistic <- function(object, user=NULL, sample=NULL, 
+computeTestStatistic <- function(object, partable=NULL, sample=NULL, 
                                  options=NULL, x=NULL, VCOV=NULL,
                                  data=NULL, control=list()) {
 
@@ -152,7 +152,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     TEST <- list()
 
     # degrees of freedom
-    df <- getDF(user)
+    df <- getDF(partable)
 
     # handle constraints
     if(nrow(object@con.jac) > 0L) {
@@ -227,7 +227,7 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
     x.idx <- vector("list", length=sample@ngroups)
     for(g in 1:sample@ngroups) {
         if(options$fixed.x) {
-            x.idx[[g]] <- match(vnames(user, "ov.x", group=g), 
+            x.idx[[g]] <- match(vnames(partable, "ov.x", group=g), 
                                 data@ov.names[[g]])
         } else {
             x.idx[[g]] <- integer(0L)
@@ -285,8 +285,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
 #                Delta <- computeDelta(augModel)
 #                E <- computeExpectedInformationMLM(object, sample=sample,
 #                                                   Delta=Delta)
-#                fixed.x.idx <- max(user$free) + 1:length(idx)
-#                free.idx    <- 1:max(user$free)
+#                fixed.x.idx <- max(partable$free) + 1:length(idx)
+#                free.idx    <- 1:max(partable$free)
 #                E[free.idx, fixed.x.idx] <- 0.0
 #                E[fixed.x.idx, free.idx] <- 0.0
 #                E.inv <- solve(E)
@@ -389,8 +389,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
         chisq.scaled         <- sum(chisq.group / scaling.factor)
         pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
 
-        ndat <- getNDAT(user)
-        npar <- getNPAR(user)
+        ndat <- getNDAT(partable)
+        npar <- getNPAR(partable)
 
         scaling.factor.h1    <- sum( attr(trace.UGamma, "h1") ) / ndat
         scaling.factor.h0    <- sum( attr(trace.UGamma, "h0") ) / npar
@@ -417,7 +417,8 @@ computeTestStatistic <- function(object, user=NULL, sample=NULL,
             boot.type <- "bollen.stine"
             BOOT.TEST <- 
                 bootstrap.internal(object=NULL,
-                                   model.=object, sample.=sample, user.=user,
+                                   model.=object, sample.=sample, 
+                                   partable.=partable,
                                    options.=options, data.=data,
                                    R=R, verbose=options$verbose,
                                    type=boot.type,

@@ -3,23 +3,23 @@
 # initial version: YR 22/11/2010
 
 # construct MATRIX representation of the model
-Model <- function(user           = NULL,
+Model <- function(partable       = NULL,
                   start          = NULL, 
                   representation = "LISREL",
                   debug          = FALSE) {
 
     # global info from user model
-    ngroups <- max(user$group)
-    meanstructure <- any(user$op == "~1")
+    ngroups <- max(partable$group)
+    meanstructure <- any(partable$op == "~1")
 
     # what if no starting values are provided? 
     if(is.null(start)) 
-        startValues <- StartingValues(start.method="simple", user=user)
+        startValues <- StartingValues(start.method="simple", partable=partable)
     else
         startValues <- start
  
     # check start length
-    stopifnot(length(startValues) == nrow(user))
+    stopifnot(length(startValues) == nrow(partable))
 
     # only representation = "LISREL" for now
     stopifnot(representation == "LISREL")
@@ -27,8 +27,8 @@ Model <- function(user           = NULL,
 
     # capture equality constraints in 'K' matrix
     # rows are the unconstrained parameters, cols are the unique parameters
-    n.unco <- max(user$unco)
-    n.free       <- max(user$free)
+    n.unco <- max(partable$unco)
+    n.free       <- max(partable$free)
     if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
@@ -37,7 +37,7 @@ Model <- function(user           = NULL,
         #####
         #####     FIXME !
         #####
-        idx.free <- user$free[ user$free > 0 ]
+        idx.free <- partable$free[ partable$free > 0 ]
         for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
@@ -48,7 +48,7 @@ Model <- function(user           = NULL,
 
     # select model matrices
     if(representation == "LISREL") {
-        REP <- representation.LISREL(user, target=NULL, extra=TRUE)
+        REP <- representation.LISREL(partable, target=NULL, extra=TRUE)
     } else {
         stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
     }
@@ -76,7 +76,7 @@ Model <- function(user           = NULL,
     for(g in 1:ngroups) {
 
         # observed and latent variables for this group
-        ov.names <- vnames(user, "ov", group=g)
+        ov.names <- vnames(partable, "ov", group=g)
         nvar[g] <- length(ov.names)
 
         # model matrices for this group
@@ -104,7 +104,7 @@ Model <- function(user           = NULL,
             dimNames[[offset]] <- mmDimNames[[mm]]
 
             # select elements for this matrix
-            idx <- which(user$group == g & REP$mat == mmNames[mm]) 
+            idx <- which(partable$group == g & REP$mat == mmNames[mm]) 
 
             # create empty `pattern' matrix
             # FIXME: one day, we may want to use sparse matrices...
@@ -114,7 +114,7 @@ Model <- function(user           = NULL,
 
             # 1. first assign free values only, to get vector index
             #    -> to be used in computeObjective
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- user$free[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- partable$free[idx]
             if(mmSymmetric[mm]) {
                 # NOTE: we assume everything is in the UPPER tri!
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -126,7 +126,7 @@ Model <- function(user           = NULL,
             #    -> to be used in computeGradient
             if(eq.constraints) {
                 tmp[ cbind(REP$row[idx], 
-                           REP$col[idx]) ] <- user$unco[idx]
+                           REP$col[idx]) ] <- partable$unco[idx]
                 if(mmSymmetric[mm]) {
                     # NOTE: we assume everything is in the UPPER tri!
                     T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -139,7 +139,7 @@ Model <- function(user           = NULL,
             }
 
             # 3. general mapping between user and GLIST
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- user$id[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- partable$id[idx]
             if(mmSymmetric[mm]) {
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
             }
@@ -175,7 +175,7 @@ Model <- function(user           = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(user$exo > 0L & user$free == 0L)
+    fixed.x <- any(partable$exo > 0L & partable$free == 0L)
 
 
 
@@ -184,14 +184,14 @@ Model <- function(user           = NULL,
     # 1. simple equality constraints (eg b1 == b2)
     #    capture equality constraints in 'K' matrix
     #    rows are the unconstrained parameters, cols are the unique parameters
-    n.unco <- max(user$unco)
-    n.free       <- max(user$free)
+    n.unco <- max(partable$unco)
+    n.free       <- max(partable$free)
     if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
     } else {
         K <- matrix(0, nrow=n.unco, ncol=n.free)
-        idx.free <- user$free[ user$free > 0 ]
+        idx.free <- partable$free[ partable$free > 0 ]
         for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
@@ -203,19 +203,19 @@ Model <- function(user           = NULL,
     #    define a new variable as a arbitrary expression of free parameters
     #
     def.function <- function() NULL
-    def.idx <- which(user$op == ":=")
+    def.idx <- which(partable$op == ":=")
     if(length(def.idx) > 0L) {
         formals(def.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\n# parameter definitions\n\n")
 
-        lhs.names <- user$lhs[def.idx]
-        def.labels <- all.vars( parse(file="", text=user$rhs[def.idx]) )
+        lhs.names <- partable$lhs[def.idx]
+        def.labels <- all.vars( parse(file="", text=partable$rhs[def.idx]) )
         # remove the ones in lhs.names
         idx <- which(def.labels %in% lhs.names)
         if(length(idx) > 0L) def.labels <- def.labels[-idx]
 
         # get corresponding 'x' indices
-        def.x.idx  <- user$free[match(def.labels, user$label)]
+        def.x.idx  <- partable$free[match(def.labels, partable$label)]
         if(any(is.na(def.x.idx))) {
             stop("lavaan ERROR: unknown label(s) in variable definitions: ",
                  paste(def.labels[which(is.na(def.x.idx))], collapse=" "))
@@ -236,7 +236,7 @@ Model <- function(user           = NULL,
         BODY.txt <- paste(BODY.txt, "\n# parameter definitions\n", sep="")
         for(i in 1:length(def.idx)) {
             BODY.txt <- paste(BODY.txt,
-                lhs.names[i], " <- ", user$rhs[def.idx[i]], "\n", sep="")
+                lhs.names[i], " <- ", partable$rhs[def.idx[i]], "\n", sep="")
         }
 
         # put the results in 'out'
@@ -265,7 +265,7 @@ Model <- function(user           = NULL,
     #         }
     
     ceq.function <- function() NULL
-    eq.idx <- which(user$op == "==")
+    eq.idx <- which(partable$op == "==")
     if(length(eq.idx) > 0L) {
         formals(ceq.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
@@ -273,13 +273,13 @@ Model <- function(user           = NULL,
         # first come the variable definitions
         if(length(def.idx) > 0L) {
             for(i in 1:length(def.idx)) {
-                lhs <- user$lhs[ def.idx[i] ]
-                rhs <- user$rhs[ def.idx[i] ]
+                lhs <- partable$lhs[ def.idx[i] ]
+                rhs <- partable$rhs[ def.idx[i] ]
                 def.string <- rhs
                 # coerce to expression to extract variable names
                 def.labels <- all.vars( parse(file="", text=def.string) )
                 # get corresponding 'x' indices
-                def.x.idx  <- user$free[match(def.labels, user$label)]
+                def.x.idx  <- partable$free[match(def.labels, partable$label)]
                 def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
                 # put both the labels and the expression in the function BODY
                 BODY.txt <- paste(BODY.txt,
@@ -289,8 +289,8 @@ Model <- function(user           = NULL,
         }
 
         for(i in 1:length(eq.idx)) {
-            lhs <- user$lhs[ eq.idx[i] ]
-            rhs <- user$rhs[ eq.idx[i] ]
+            lhs <- partable$lhs[ eq.idx[i] ]
+            rhs <- partable$rhs[ eq.idx[i] ]
             if(rhs == "0") {
                 eq.string <- lhs
             } else {
@@ -301,12 +301,12 @@ Model <- function(user           = NULL,
             # get corresponding 'x' indices
             if(length(def.idx) > 0L) {
                 # remove def.names from ineq.labels
-                def.names <- as.character(user$lhs[def.idx])
+                def.names <- as.character(partable$lhs[def.idx])
                 d.idx <- which(eq.labels %in% def.names)
                 if(length(d.idx) > 0) eq.labels <- eq.labels[-d.idx]
             }
             if(length(eq.labels) > 0L) {
-                eq.x.idx  <- user$free[match(eq.labels, user$label)]
+                eq.x.idx  <- partable$free[match(eq.labels, partable$label)]
                 if(any(is.na(eq.x.idx))) {
                     stop("lavaan ERROR: unknown label(s) in equality constraint: ",
                          paste(eq.labels[which(is.na(eq.x.idx))], collapse=" "))
@@ -348,7 +348,7 @@ Model <- function(user           = NULL,
     #             out[1] <- b1 + b2 - 2
     #         }
     cin.function <- function() NULL
-    ineq.idx <- which(user$op == ">" | user$op == "<")
+    ineq.idx <- which(partable$op == ">" | partable$op == "<")
     if(length(ineq.idx) > 0L) {
         formals(cin.function) <- alist(x=, ...=)
         BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
@@ -356,13 +356,13 @@ Model <- function(user           = NULL,
         # first come the variable definitions
         if(length(def.idx) > 0L) {
             for(i in 1:length(def.idx)) {
-                lhs <- user$lhs[ def.idx[i] ]
-                rhs <- user$rhs[ def.idx[i] ]
+                lhs <- partable$lhs[ def.idx[i] ]
+                rhs <- partable$rhs[ def.idx[i] ]
                 def.string <- rhs 
                 # coerce to expression to extract variable names
                 def.labels <- all.vars( parse(file="", text=def.string) )
                 # get corresponding 'x' indices
-                def.x.idx  <- user$free[match(def.labels, user$label)]
+                def.x.idx  <- partable$free[match(def.labels, partable$label)]
                 def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
                 # put both the labels and the expression in the function BODY
                 BODY.txt <- paste(BODY.txt,
@@ -372,9 +372,9 @@ Model <- function(user           = NULL,
         }
 
         for(i in 1:length(ineq.idx)) {
-            lhs <- user$lhs[ ineq.idx[i] ]
-             op <- user$op[  ineq.idx[i] ]
-            rhs <- user$rhs[ ineq.idx[i] ]
+            lhs <- partable$lhs[ ineq.idx[i] ]
+             op <- partable$op[  ineq.idx[i] ]
+            rhs <- partable$rhs[ ineq.idx[i] ]
             if(rhs == "0" && op == ">") {
                 ineq.string <- lhs
             } else if(rhs == "0" && op == "<") {
@@ -389,12 +389,12 @@ Model <- function(user           = NULL,
             # get corresponding 'x' indices
             if(length(def.idx) > 0L) {
                 # remove def.names from ineq.labels
-                def.names <- as.character(user$lhs[def.idx])
+                def.names <- as.character(partable$lhs[def.idx])
                 d.idx <- which(ineq.labels %in% def.names)   
                 if(length(d.idx) > 0) ineq.labels <- ineq.labels[-d.idx]
             } 
             if(length(ineq.labels) > 0L) {
-                ineq.x.idx  <- user$free[match(ineq.labels, user$label)]
+                ineq.x.idx  <- partable$free[match(ineq.labels, partable$label)]
                 if(any(is.na(ineq.x.idx))) {
                    stop("lavaan ERROR: unknown label(s) in inequality constraint: ",
                         paste(ineq.labels[which(is.na(ineq.x.idx))], collapse=" "))
@@ -427,10 +427,10 @@ Model <- function(user           = NULL,
 
 
     # which free parameters are observed variances?
-    #ov.names <- vnames(user, "ov")
-    #x.free.var.idx <-  user$free[ user$free & !duplicated(user$free) &
-    #                              user$lhs %in% ov.names &
-    #                              user$op == "~~" & user$lhs == user$rhs ]
+    #ov.names <- vnames(partable, "ov")
+    #x.free.var.idx <-  partable$free[ partable$free & !duplicated(partable$free) &
+    #                              partable$lhs %in% ov.names &
+    #                              partable$op == "~~" & partable$lhs == partable$rhs ]
 
     Model <- new("Model",
                  GLIST=GLIST,
@@ -442,9 +442,9 @@ Model <- function(user           = NULL,
                  ngroups=ngroups,
                  nmat=nmat,
                  nvar=nvar,
-                 nx.free=max(user$free),
-                 nx.unco=max(user$unco),
-                 nx.user=max(user$id),
+                 nx.free=max(partable$free),
+                 nx.unco=max(partable$unco),
+                 nx.user=max(partable$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,
                  m.unco.idx=m.unco.idx,

@@ -19,9 +19,9 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
   fit.ineq <- sem(model, data = data, se = "none", test = "standard", 
                   constraints = constraints, ...) 
   
-  con.idx  <- (max(fit.free@User$id) + 1L):max(fit.ineq@User$id)
+  con.idx  <- (max(fit.free@ParTable$id) + 1L):max(fit.ineq@ParTable$id)
   
-  user.equal  <- fit.ineq@User
+  user.equal  <- fit.ineq@ParTable
   user.equal$op[con.idx] <- "=="
   
   fit.equal <- sem(user.equal, data = data, se="none", 
@@ -197,15 +197,15 @@ summary.InformativeTesting <- function(object,
     stopifnot (fit %in% c("h0","hi","hu"))
     
     if ("h0" %in% fit) {
-      fit.model <- sem(object$fitA1@User, 
+      fit.model <- sem(object$fitA1@ParTable, 
                        group = object$fitA1@Options$group, ...)
     }
     else if ("hi" %in% fit) {
-      fit.model <- sem(object$fitA2@User, 
+      fit.model <- sem(object$fitA2@ParTable, 
                        group = object$fitA2@Options$group, ...)
     }
     else if ("hu" %in% fit) {
-      fit.model <- sem(object$fitB2@User, 
+      fit.model <- sem(object$fitB2@ParTable, 
                        group = object$fitB2@Options$group, ...)
     }
     

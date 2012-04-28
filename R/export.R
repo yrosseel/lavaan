@@ -6,7 +6,7 @@ export <- function(object, target="mplus", file=NULL) {
     target <- tolower(target)
 
     if(class(object) == "lavaan") {
-        user <- object@User
+        user <- object@ParTable
     } else if(is.list(object)) {
         user <- object
     } else {

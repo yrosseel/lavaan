@@ -34,7 +34,7 @@ function(object, data=NULL, ...) {
 
     for(g in 1:G) {
 
-        lv.names <- vnames(object@User, type="lv", group=g)
+        lv.names <- vnames(object@ParTable, type="lv", group=g)
 
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]

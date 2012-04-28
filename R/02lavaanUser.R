@@ -1,4 +1,4 @@
-# constructor for the lavaanUser model description
+# constructor for the lavParTable model description
 #
 # initial version: YR 22/05/2009
 #  major revision: YR 02/11/2010: - FLATTEN the model syntax and turn it into a
@@ -11,7 +11,9 @@
 #                                   a model (but no matrix representation)
 
 
-lavaanify <- function(model           = NULL, 
+lavaanify <- lavParTable <- function(
+
+                      model           = NULL, 
                       meanstructure   = FALSE,
                       int.ov.free     = FALSE,
                       int.lv.free     = FALSE,
@@ -236,7 +238,7 @@ lavaanify <- function(model           = NULL,
     #}
 
     # get 'virtual' parameter labels
-    LABEL <- getParameterLabels(user=LIST, group.equal=group.equal,
+    LABEL <- getParameterLabels(partable=LIST, group.equal=group.equal,
                                 group.partial=group.partial)
     #cat("DEBUG: label after getParameterLabels:\n"); print(LABEL); cat("\n")
     #cat("DEBUG: eq.id after group.equal:\n"); print(LIST$eq.id); cat("\n")
@@ -317,7 +319,7 @@ lavaanify <- function(model           = NULL,
 
 
     if(debug) { 
-        cat("[lavaan DEBUG] lavaanUser\n")
+        cat("[lavaan DEBUG] lavParTable\n")
         print( as.data.frame(LIST) )
     }
 

@@ -16,7 +16,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     # collect info from the lavaan slots
     GLIST <- object@Model@GLIST
     N <- object@Sample@ntotal
-    #q <- length(vnames(object@User, "ov.x"))
+    #q <- length(vnames(object@ParTable, "ov.x"))
     #p <- nvar - q
     npar <- object@Fit@npar
     fx <- object@Fit@fx
@@ -148,7 +148,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
         #OV.X <- character(0L)
         #if(object@Options$mimic == "Mplus") 
-        #    OV.X <- vnames(object@User, type="ov.x")
+        #    OV.X <- vnames(object@ParTable, type="ov.x")
 
         #indep.syntax <- 
         #    syntax.independence.model(ov.names   = object@Data@ov.names,
