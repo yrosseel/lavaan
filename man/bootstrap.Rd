@@ -8,7 +8,7 @@ bootstrap test statistics}
 bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 FUN = "coef", warn = -1L, return.boot = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus = 1L, cl = NULL, ...)
+                ncpus = 1L, cl = NULL, h0.rmsea = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
              verbose = FALSE, return.LRT = FALSE, double.bootstrap = "no", 
@@ -51,6 +51,9 @@ typically one would chose this to the number of available CPUs.  }
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{bootstrapLavaan} or \code{bootstrapLRT}
 call.}
+\item{h0.rmsea}{Only used if \code{type="yuan"}. Allows one to do the Yuan
+bootstrap under the hypothesis that the population RMSEA equals a specified
+value.}
 \item{double.bootstrap}{If \code{"standard"} the genuine double bootstrap is
 used to compute an additional set of plug-in p-values for each boostrap sample.
 If \code{"FDB"}, the fast double bootstrap is used to compute   second level

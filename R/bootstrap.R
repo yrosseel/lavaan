@@ -29,6 +29,7 @@ bootstrapLavaan <- function(object,
                             parallel    = c("no", "multicore", "snow"),
                             ncpus       = 1L,
                             cl          = NULL,
+                            h0.rmsea    = NULL,
                             ...) {
 
     # checks
@@ -61,6 +62,7 @@ bootstrapLavaan <- function(object,
                        parallel     = parallel,
                        ncpus        = ncpus,
                        cl           = cl,
+                       h0.rmsea     = h0.rmsea,
                        ...)
 }
 
@@ -81,6 +83,7 @@ bootstrap.internal <- function(object       = NULL,
                                parallel     = c("no", "multicore", "snow"),
                                ncpus        = 1L,
                                cl           = NULL,
+                               h0.rmsea     = NULL,
                                ...) {
 
     # warning: avoid use of 'options', 'sample' (both are used as functions
@@ -178,8 +181,8 @@ bootstrap.internal <- function(object       = NULL,
             tmp.term <- S.a %*% Sigmahat.inv
             res <- ((sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat)^2
             # From p 272
-            attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
-                                     (Sigmahat.inv - chol2inv(chol(S.a)))))
+            #attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
+            #                         (Sigmahat.inv - chol2inv(chol(S.a)))))
             res
         }
       
@@ -197,7 +200,9 @@ bootstrap.internal <- function(object       = NULL,
             # Calculate tauhat_1, middle p. 267.
             # Yuan et al note that tauhat_1 could be negative;
             # if so, we need to let S.a = Sigmahat. (see middle p 275)
-            tau.hat <- (ghat - df)/(n-1)
+            ifelse(length(h0.rmsea)==0,
+              tau.hat <- (ghat - df)/(n-1),  # middle p 267
+              tau.hat <- df*(h0.rmsea^2))    # middle p 273
 
             if (tau.hat >= 0){
               # Find a to minimize g.a
