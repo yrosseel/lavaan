@@ -83,10 +83,10 @@ independence.model.fit <- function(object) {
 
     # 4. 
     lavaanStart <-
-        StartingValues(partable   = lavaanParTable,
-                       sample     = lavaanSampleStats,
-                       model.type = lavaanOptions$model.type,
-                       debug      = lavaanOptions$debug)
+        StartingValues(partable    = lavaanParTable,
+                       samplestats = lavaanSampleStats,
+                       model.type  = lavaanOptions$model.type,
+                       debug       = lavaanOptions$debug)
 
     # 5. 
     lavaanModel <-
@@ -99,8 +99,8 @@ independence.model.fit <- function(object) {
     x <- VCOV <- TEST <- NULL
     if(do.fit) {
         x <- estimateModel(lavaanModel,
-                           sample  = lavaanSampleStats,
-                           options = lavaanOptions)
+                           samplestats  = lavaanSampleStats,
+                           options      = lavaanOptions)
                            # control???
         lavaanModel <- setModelParameters(lavaanModel, x = x)
         if(!is.null(attr(x, "con.jac")))
@@ -111,12 +111,12 @@ independence.model.fit <- function(object) {
     
     # 8.
     TEST <- computeTestStatistic(lavaanModel,
-                                 partable = lavaanParTable,
-                                 sample   = lavaanSampleStats,
-                                 options  = lavaanOptions,
-                                 x        = x,
-                                 VCOV     = VCOV,
-                                 data     = lavaanData)
+                                 partable      = lavaanParTable,
+                                 samplestats   = lavaanSampleStats,
+                                 options       = lavaanOptions,
+                                 x             = x,
+                                 VCOV          = VCOV,
+                                 data          = lavaanData)
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(partable = lavaanParTable,

@@ -870,11 +870,11 @@ parameterEstimates <- parameterestimates <-
         }
 
         # fit another model, using the model-implied moments as input data
-        step2 <- lavaan(slotOptions = object@Options,
-                        slotUser    = object@ParTable,
-                        sample.cov  = COV,
-                        sample.mean = MEAN,
-                        sample.nobs = object@Data@nobs)
+        step2 <- lavaan(slotOptions  = object@Options,
+                        slotParTable = object@ParTable,
+                        sample.cov   = COV,
+                        sample.mean  = MEAN,
+                        sample.nobs  = object@Data@nobs)
         SE.step2 <- ifelse(step2@Fit@se == 0.0, as.numeric(NA), step2@Fit@se)
         LIST$fmi <- 1-(SE.step2^2/SE.orig^2)
     }

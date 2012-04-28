@@ -35,11 +35,10 @@ Objects can be created via the
       the program as a list, including the total time.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
-    \item{\code{User}:}{Named list describing the model as specified by
-                        the user. Can be coerced to a data.frame. In the documentation, this is called the `parameter table'.}
+    \item{\code{ParTable}:}{Named list describing the model parameters. Can be coerced to a data.frame. In the documentation, this is called the `parameter table'.}
     \item{\code{Data}:}{Object of internal class \code{"Data"}: information
 about the data.}
-    \item{\code{Sample}:}{Object of internal class \code{"Sample"}: sample 
+    \item{\code{SampleStats}:}{Object of internal class \code{"SampleStats"}: sample 
       statistics}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the 
       internal (matrix) representation of the model}

@@ -124,7 +124,6 @@ order as they appear in the data.}
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
     values of other arguments.}
-\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
     If \code{"default"}, the value is (currently) set to \code{"lavaan"},

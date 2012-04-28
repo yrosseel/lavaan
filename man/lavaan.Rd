@@ -13,9 +13,10 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
     constraints = '', estimator = "default", likelihood = "default", 
     information = "default", se = "default",  test = "default", 
-    bootstrap = 1000L, mimic = "default", representation = "default", 
-    do.fit = TRUE, control = list(), start = "default", slotOptions = NULL, 
-    slotUser = NULL, slotSample = NULL, slotData = NULL, slotModel = NULL,
+    mimic = "default", representation = "default", 
+    do.fit = TRUE, control = list(bootstrap.R=1000L), start = "default", 
+    slotOptions = NULL, slotParTable = NULL, slotSampleStats = NULL, 
+    slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -147,7 +148,6 @@ order as they appear in the data.}
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
     values of other arguments.}
-\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
     If \code{"default"}, the value is (currently) set to to \code{"lavaan"},
@@ -183,10 +183,10 @@ order as they appear in the data.}
     (whichever is found first) will be extracted.}
 \item{slotOptions}{Options slot from a fitted lavaan object. If provided,
 no new Options slot will be created by this call.}
-\item{slotUser}{User slot from a fitted lavaan object. If provided,
-no new User slot will be created by this call.}
-\item{slotSample}{Sample slot from a fitted lavaan object. If provided,
-no new Sample slot will be created by this call.}
+\item{slotParTable}{ParTable slot from a fitted lavaan object. If provided,
+no new ParTable slot will be created by this call.}
+\item{slotSampleStats}{SampleStats slot from a fitted lavaan object. 
+If provided, no new SampleStats slot will be created by this call.}
 \item{slotData}{Data slot from a fitted lavaan object. If provided,
 no new Data slot will be created by this call.}
 \item{slotModel}{Model slot from a fitted lavaan object. If provided,

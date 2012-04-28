@@ -26,7 +26,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    
                    # full data
                    data            = NULL,
-                   ov.types        = "numeric",
                    std.ov          = FALSE,
                    missing         = "default",
 
@@ -128,7 +127,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               group       = group,
                               group.label = group.label,
                               ov.names    = ov.names,
-                              ov.types    = ov.types,
+                              # ov.types    = ov.types,
                               std.ov      = std.ov,
                               missing     = lavaanOptions$missing,
                               sample.cov  = sample.cov,
@@ -430,8 +429,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 # cfa + sem
 cfa <- sem <- function(model = NULL,
     meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, 
-    ov.types = "numeric", std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", constraints = "",
@@ -460,8 +458,7 @@ cfa <- sem <- function(model = NULL,
 # simple growth models
 growth <- function(model = NULL,
     fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, 
-    ov.types = "numeric", std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", constraints = "",

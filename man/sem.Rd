@@ -11,8 +11,7 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     group.equal = "", group.partial = "", constraints = '', 
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", 
-    test = "default", bootstrap = 1000L, 
-    mimic = "default", representation = "default", 
+    test = "default", mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
@@ -125,7 +124,6 @@ order as they appear in the data.}
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
     values of other arguments.}
-\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
     If \code{"default"}, the value is (currently) set to to \code{"lavaan"},
