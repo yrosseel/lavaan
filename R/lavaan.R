@@ -49,10 +49,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    information     = "default",
                    se              = "default",
                    test            = "default",
+                   bootstrap       = 1000L,
                    mimic           = "default",
                    representation  = "default",
                    do.fit          = TRUE,
-                   control         = list(bootstrap.R=1000L),
+                   control         = list(),
 
                    # starting values
                    start           = "default",
@@ -111,7 +112,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             constraints = constraints,
             estimator = estimator, likelihood = likelihood,
             information = information, se = se, test = test, 
-            bootstrap.R = control$bootstrap.R, mimic = mimic,
+            bootstrap = bootstrap, mimic = mimic,
             representation = representation, do.fit = do.fit, verbose = verbose,
             warn = warn, debug = debug)
         lavaanOptions <- setLavaanOptions(opt)
@@ -435,7 +436,7 @@ cfa <- sem <- function(model = NULL,
     group.equal = "", group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
-    mimic = "default", representation = "default",
+    bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
@@ -464,7 +465,7 @@ growth <- function(model = NULL,
     group.equal = "", group.partial = "", constraints = "",
     estimator = "default", likelihood = "default",
     information = "default", se = "default", test = "default",
-    mimic = "default", representation = "default",
+    bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 

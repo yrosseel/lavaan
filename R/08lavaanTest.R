@@ -410,8 +410,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         # check if we have bootstrap data
         BOOT.TEST <- attr(VCOV, "BOOT.TEST")
         if(is.null(BOOT.TEST)) {
-            if(!is.null(options$bootstrap.R)) {
-                R <- options$bootstrap.R
+            if(!is.null(options$bootstrap)) {
+                R <- options$bootstrap
             } else {
                 R <- 1000L
             }

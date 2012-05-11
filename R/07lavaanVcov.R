@@ -44,8 +44,8 @@ Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
                             partable=NULL, control=list()) {
 
     # number of bootstrap draws
-    if(!is.null(options$bootstrap.R)) {
-        R <- options$bootstrap.R
+    if(!is.null(options$bootstrap)) {
+        R <- options$bootstrap
     } else {
         R <- 1000L
     }
