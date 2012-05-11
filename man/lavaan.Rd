@@ -13,8 +13,8 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
     constraints = '', estimator = "default", likelihood = "default", 
     information = "default", se = "default",  test = "default", 
-    mimic = "default", representation = "default", 
-    do.fit = TRUE, control = list(bootstrap.R=1000L), start = "default", 
+    mimic = "default", representation = "default", bootstrap = 1000L,
+    do.fit = TRUE, control = list(), start = "default", 
     slotOptions = NULL, slotParTable = NULL, slotSampleStats = NULL, 
     slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE)
@@ -148,6 +148,7 @@ order as they appear in the data.}
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
     values of other arguments.}
+\item{bootstrap}{Number of bootstrap draws, if bootstrapping is used.}
 \item{mimic}{If \code{"Mplus"}, an attempt is made to mimic the Mplus 
     program. If \code{"EQS"}, an attempt is made to mimic the EQS program.
     If \code{"default"}, the value is (currently) set to to \code{"lavaan"},
