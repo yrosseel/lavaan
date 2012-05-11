@@ -176,6 +176,10 @@ about the data.}
       to extract information from a fitted model).}
   }
 }
+\references{
+Yves Rosseel (2012). lavaan: An R Package for Structural Equation
+Modeling. Journal of Statistical Software, 48(2), 1-36. URL
+http://www.jstatsoft.org/v48/i02/.}
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}, 
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},

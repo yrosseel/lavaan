@@ -10,8 +10,8 @@ cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", constraints = '', 
     estimator = "default", likelihood = "default", 
-    information = "default", se = "default", bootstrap = 1000L,
-    test = "default", mimic = "default", representation = "default", 
+    information = "default", se = "default", test = "default",
+    bootstrap = 1000L, mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
@@ -176,6 +176,10 @@ order as they appear in the data.}
   An object of class \code{\linkS4class{lavaan}}, for which several methods
   are available, including a \code{summary} method.
 }
+\references{
+Yves Rosseel (2012). lavaan: An R Package for Structural Equation
+Modeling. Journal of Statistical Software, 48(2), 1-36. URL
+http://www.jstatsoft.org/v48/i02/.}
 \seealso{
 \code{\link{lavaan}}
 }

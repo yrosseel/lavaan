@@ -13,7 +13,7 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
     constraints = '', estimator = "default", likelihood = "default", 
     information = "default", se = "default",  test = "default", 
-    mimic = "default", representation = "default", bootstrap = 1000L,
+    bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
     slotOptions = NULL, slotParTable = NULL, slotSampleStats = NULL, 
     slotData = NULL, slotModel = NULL,
@@ -202,6 +202,10 @@ no new Model slot will be created by this call.}
   An object of class \code{\linkS4class{lavaan}}, for which several methods
   are available, including a \code{summary} method.
 }
+\references{
+Yves Rosseel (2012). lavaan: An R Package for Structural Equation
+Modeling. Journal of Statistical Software, 48(2), 1-36. URL
+http://www.jstatsoft.org/v48/i02/.}
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}
 }

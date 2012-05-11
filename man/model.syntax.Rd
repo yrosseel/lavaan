@@ -297,3 +297,7 @@ simultaneously; for example, if you want to fix the value of a parameter and
 also label that parameter, you can use something like:
 \preformatted{ f1 =~ x1 + x2 + 4*x3 + x3.loading*x3}
 }
+\references{
+Yves Rosseel (2012). lavaan: An R Package for Structural Equation
+Modeling. Journal of Statistical Software, 48(2), 1-36. URL
+http://www.jstatsoft.org/v48/i02/.}
