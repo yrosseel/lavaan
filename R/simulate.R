@@ -8,15 +8,15 @@ simulateData <- function(
                          model.type      = "sem",
 
                          # model modifiers
-                         meanstructure   = "default",
+                         meanstructure   = FALSE,
                          int.ov.free     = TRUE,
                          int.lv.free     = FALSE,
-                         fixed.x         = "default", # or FALSE?
+                         fixed.x         = FALSE,
                          orthogonal      = FALSE,
-                         std.lv          = FALSE,
+                         std.lv          = TRUE,
 
-                         auto.fix.first  = !std.lv,
-                         auto.fix.single = TRUE,
+                         auto.fix.first  = FALSE,
+                         auto.fix.single = FALSE,
                          auto.var        = TRUE,
                          auto.cov.lv.x   = TRUE,
                          auto.cov.y      = TRUE,
@@ -24,6 +24,7 @@ simulateData <- function(
 
                          # data properties
                          sample.nobs     = 500L,
+                         ov.var          = NULL,
                          group.label     = paste("G", 1:ngroups, sep=""),
                          skewness        = NULL,
                          kurtosis        = NULL,
@@ -40,20 +41,32 @@ simulateData <- function(
         runif(1)               # initialize the RNG if necessary
     RNGstate <- .Random.seed
 
+    # lavaanify
+    lav <- lavaanify(model = model, 
+                     meanstructure=meanstructure,
+                     int.ov.free=int.ov.free, 
+                     int.lv.free=int.lv.free,
+                     fixed.x=fixed.x,
+                     orthogonal=orthogonal,
+                     std.lv=std.lv,
+                     auto.fix.first=auto.fix.first,
+                     auto.fix.single=auto.fix.single,
+                     auto.var=auto.var,
+                     auto.cov.lv.x=auto.cov.lv.x,
+                     auto.cov.y=auto.cov.y)
+
+    # unstandardize 
+    if(!is.null(ov.var)) {
+        # FIXME: if ov.var is named, check the order of the elements
+
+        # 1. unstandardize observed variables
+        lav$ustart <- unstandardize.est.ov(partable=lav, ov.var=ov.var)
+
+        # 2. unstandardized latent variables
+    }
+
     # run lavaan to set up the model matrices
-    fit <- lavaan(model=model,
-                  meanstructure=meanstructure, 
-                  int.ov.free=int.ov.free, int.lv.free=int.lv.free,
-                  fixed.x=fixed.x,
-                  orthogonal=orthogonal,
-                  std.lv=std.lv,
-                  auto.fix.first=auto.fix.first,
-                  auto.fix.single=auto.fix.single,
-                  auto.var=auto.var,
-                  auto.cov.lv.x=auto.cov.lv.x,
-                  auto.cov.y=auto.cov.y,
-                  sample.nobs=sample.nobs,
-                  ...)
+    fit <- lavaan(model=lav, sample.nobs=sample.nobs, ...)
 
     # the model-implied moments for the population
     Sigma.hat <- computeSigmaHat(fit@Model)

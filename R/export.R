@@ -1,4 +1,4 @@
-# export `lavaan' user model description to third-party software
+# export `lavaan' lav model description to third-party software
 # 
 
 export <- function(object, target="mplus", file=NULL) {
@@ -6,45 +6,57 @@ export <- function(object, target="mplus", file=NULL) {
     target <- tolower(target)
 
     if(class(object) == "lavaan") {
-        user <- object@ParTable
+        lav <- object@ParTable
     } else if(is.list(object)) {
-        user <- object
+        lav <- object
     } else {
-        stop("lavaan ERROR: object must be a `lavaan' object or a lavaan user object")
+        stop("lavaan ERROR: object must be of class `lavaan' or a parTable")
     }
 
-    if(target == "mplus") {
-        export.mplus(user, file=file)
+    if(target == "lavaan") {
+        model <- export_lavaan(lav)
+    } else if(target == "mplus") {
+        model <- export_Mplus(lav)
     } else if(target == "lisrel") {
-        export.lisrel(user, file=file)
+        model <- export_lisrel(lav)
     } else if(target == "eqs") {
-        export.eqs(user, file=file)
+        model <- export_eqs(lav)
     } else if(target == "sem") {
-        export.sem(user, file=file)
+        model <- export_sem(lav)
     } else if(target == "openmx") {
-        export.openmx(user, file=file)
+        model <- export_openmx(lav)
     } else {
         stop("lavaan ERROR: target", target, "has not been implemented yet")
     }
 }
 
-export.mplus <- function(user, file=NULL) {
+## FIXME: this is completely UNFINISHED (just  used to quickly get something)
+export_lavaan(lav) {
+    N <- length(lav$lhs)
+    out <- character(N)
+    for(i in 1:length(lav$lhs)) {
+        out[i]
+    }
+    
+}
+
+export_mplus <- function(lav) {
     stop("this function needs revision")
 }
 
-export.lisrel <- function(user, file=NULL) {
+export_lisrel <- function(lav) {
     stop("this function needs revision")
 }
 
-export.eqs <- function(user, file=NULL) {
+export.eqs <- function(lav) {
     stop("this function needs revision")
 }
 
-export.sem <- function(user, file=NULL) {
+export.sem <- function(lav) {
     stop("this function needs revision")
 }
 
-export.openmx <- function(object, file=NULL) {
+export.openmx <- function(lav) {
     stop("this function needs revision")
 }
 

@@ -376,3 +376,94 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
 
     out
 }
+
+unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=FALSE) {
+
+    stopifnot(!any(is.na(partable$ustart)))
+    est <- out <- partable$ustart
+    N <- length(est)
+    ngroups <- max(partable$group)
+
+    for(g in 1:ngroups) {
+
+        ov.names <- vnames(partable, "ov", group=g) # not user
+        lv.names <- vnames(partable, "lv", group=g)
+
+        OV2 <- ov.var
+        OV  <- sqrt(OV2)
+
+        # 1a. "=~" regular indicators
+        idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- out[idx] * OV[ match(partable$rhs[idx], ov.names) ]
+
+        # 1b. "=~" regular higher-order lv indicators
+
+        # 1c. "=~" indicators that are both in ov and lv
+        #idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
+        #                             & partable$rhs %in% lv.names &
+        #             partable$group == g)
+
+        # 2. "~" regressions (and "<~")
+        idx <- which((partable$op == "~" | partable$op == "<~") & 
+                     partable$lhs %in% ov.names &
+                     partable$group == g)
+        out[idx] <- out[idx] * OV[ match(partable$lhs[idx], ov.names) ]
+
+        idx <- which((partable$op == "~" | partable$op == "<~") & 
+                     partable$rhs %in% ov.names &
+                     partable$group == g)
+        out[idx] <- out[idx] / OV[ match(partable$rhs[idx], ov.names) ]
+
+        # 3a. "~~" ov
+        # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances 
+        #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
+        #            were i.var and j.var where diagonal elements of OV
+        #
+        #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
+        #            elements are the 'THETA' diagonal elements!!
+
+        # variances
+        rv.idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) & 
+                        partable$lhs == partable$rhs &
+                        partable$group == g)
+        out[rv.idx] <- ( out[rv.idx] * OV[ match(partable$lhs[rv.idx], ov.names) ]
+                                     * OV[ match(partable$rhs[rv.idx], ov.names) ] )
+
+        # covariances
+        idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
+                     partable$lhs != partable$rhs &
+                     partable$group == g)
+        if(length(idx) > 0L) {
+            if(cov.std == FALSE) {
+                out[idx] <- ( out[idx] * OV[ match(partable$lhs[idx], ov.names) ]
+                                       * OV[ match(partable$rhs[idx], ov.names) ] )
+            } else {
+                RV   <- sqrt(est[rv.idx])
+                rv.names <- partable$lhs[rv.idx]
+                out[idx] <- ( out[idx] * RV[ match(partable$lhs[idx], rv.names) ]
+                                       * RV[ match(partable$rhs[idx], rv.names) ] )
+            }
+        }
+
+        # 3b. "~~" lv
+        #idx <- which(partable$op == "~~" & partable$rhs %in% lv.names &
+        #             partable$group == g)
+
+        # 4a. "~1" ov
+        idx <- which(partable$op == "~1" & !(partable$lhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- out[idx] * OV[ match(partable$lhs[idx], ov.names) ]
+
+        # 4b. "~1" lv
+        #idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
+        #             partable$group == g)
+
+        # 5a ":="
+        # 5b "=="
+        # 5c. "<" or ">"
+    }
+
+    out
+}
+
