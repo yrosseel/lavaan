@@ -2,7 +2,8 @@ measurementInvariance <- measurementinvariance <- function(...,
     strict=FALSE, quiet=FALSE) {
 
     # check for a group.equal argument in ...
-    if(!is.null(as.list(...)$group.equal))
+    dotdotdot <- list(...)
+    if(!is.null(dotdotdot$group.equal))
         stop("lavaan ERROR: group.equal argument should not be used")
 
     res <- list()

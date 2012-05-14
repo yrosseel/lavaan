@@ -16,7 +16,7 @@ measurementInvariance(..., strict = FALSE, quiet = FALSE)
     See \code{\link{cfa}} for more information.}
   \item{strict}{If \code{TRUE}, the sequence requires `strict' invariance.
     See details for more information.}
-  \item{quiet}{If \code{TRUE}, a summary is printed out containing an
+  \item{quiet}{If \code{FALSE}, a summary is printed out containing an
     overview of the different models that are fitted, together with some
     model comparison tests.}
 }
