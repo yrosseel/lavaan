@@ -377,7 +377,15 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
     out
 }
 
-unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=FALSE) {
+unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
+
+    # check if ustart is missing; if so, look for est
+    if(is.null(partable$ustart)) 
+        partable$ustart <- partable$est
+  
+    # check if group is missing
+    if(is.null(partable$group)) 
+        partable$group <- rep(1L, length(partable$ustart))
 
     stopifnot(!any(is.na(partable$ustart)))
     est <- out <- partable$ustart
@@ -439,7 +447,8 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=FALSE) {
                 out[idx] <- ( out[idx] * OV[ match(partable$lhs[idx], ov.names) ]
                                        * OV[ match(partable$rhs[idx], ov.names) ] )
             } else {
-                RV   <- sqrt(est[rv.idx])
+                # RV   <- sqrt(est[rv.idx])
+                RV   <- sqrt(out[rv.idx])
                 rv.names <- partable$lhs[rv.idx]
                 out[idx] <- ( out[idx] * RV[ match(partable$lhs[idx], rv.names) ]
                                        * RV[ match(partable$rhs[idx], rv.names) ] )
