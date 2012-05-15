@@ -148,11 +148,11 @@ StartingValues <- function(start.method = "default",
         ov.int.idx <- which(partable$group == g         &
                             partable$op == "~1"         & 
                             partable$lhs %in% ov.names)
-        sample.var.idx <- match(partable$lhs[ov.int.idx], ov.names)
-        if(start.initial == "mplus") {
-            start[ov.int.idx] <- samplestats@mean[[g]][sample.var.idx]
+        sample.int.idx <- match(partable$lhs[ov.int.idx], ov.names)
+        if(samplestats@missing.flag) {
+            start[ov.int.idx] <- samplestats@missing.h1[[g]]$mu[sample.int.idx]
         } else {
-            start[ov.int.idx] <- samplestats@mean[[g]][sample.var.idx]
+            start[ov.int.idx] <- samplestats@mean[[g]][sample.int.idx]
         }
 
         # 4g) exogenous `fixed.x' covariates
@@ -163,7 +163,12 @@ StartingValues <- function(start.method = "default",
                              partable$rhs %in% ov.names.x)
             row.idx <- match(partable$lhs[exo.idx], ov.names)
             col.idx <- match(partable$rhs[exo.idx], ov.names)
-            start[exo.idx] <- samplestats@cov[[g]][ cbind(row.idx, col.idx) ]
+            if(samplestats@missing.flag) {
+                start[exo.idx] <- 
+                    samplestats@missing.h1[[g]]$sigma[cbind(row.idx,col.idx)]
+            } else {
+                start[exo.idx] <- samplestats@cov[[g]][cbind(row.idx,col.idx)]
+            }
         }
     }
 
