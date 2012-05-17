@@ -53,20 +53,9 @@ estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 # general WLS estimator (Muthen, Appendix 4, eq 99 single group)
-estimator.WLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
-                          w.vecs=NULL, data.mean,
-                          WLS.V=NULL,
-                          meanstructure=FALSE) {
+estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
 
-    if(!meanstructure) {
-        obs <- w.vecs
-        est <- vech(Sigma.hat)
-    } else {
-        obs <- c(data.mean, w.vecs)
-        est <- c(Mu.hat, vech(Sigma.hat))
-    }
-
-    diff <- as.matrix(obs - est)
+    diff <- as.matrix(WLS.obs - WLS.est)
     fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
 
     # no negative values

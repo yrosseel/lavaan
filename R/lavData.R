@@ -2,7 +2,7 @@
 #
 # the lavData class describes how the data looks like
 #  - do we have a full data frame, or only sample statistics
-#  - variable type (numeric, categorical, ...)
+#  - variable type ("numeric", "ordered", ...)
 #  - how many groups, how many observations, ...
 #  - what about missing patterns?
 #
@@ -13,7 +13,7 @@ lavData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
                     group.label   = NULL,          # custom group labels?
                     ov.names      = names(data),   # variables needed in model
-                    ov.types      = "numeric",     # variable types
+                    ov.types      = NULL,          # variable types
                     std.ov        = FALSE,         # standardize ov's?
                     missing       = "listwise",    # remove missings?
                     sample.cov    = NULL,          # sample covariance(s)
@@ -84,7 +84,7 @@ lavData <- function(data          = NULL,          # data.frame
                 stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
         }
 
-        # handle ov.names and ov.types
+        # handle ov.names
         if(!is.list(ov.names)) {
             tmp <- ov.names; ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
@@ -93,13 +93,12 @@ lavData <- function(data          = NULL,          # data.frame
                 stop("lavaan ERROR: ov.names assumes ", length(ov.names),
                      " groups; data contains ", ngroups, " groups")
         }
-        if(!is.list(ov.types)) {
-            tmp <- ov.types; ov.types <- vector("list", length=ngroups)
-            ov.types[1:ngroups] <- list(tmp)
+
+        # handle ov.types (should be NULL if moments)
+        if(is.null(ov.types) || ov.types == "numeric") {
+            ov.types <- lapply(ov.names, function(x) rep("numeric", length(x)))
         } else {
-            if(length(ov.types) != ngroups)
-                stop("lavaan ERROR: ov.types assumes ", length(ov.types),
-                     " groups; data contains ", ngroups, " groups")
+            stop("lavaan ERROR: ov.types should be NULL of \"numeric\" if only sample moments are provided")
         }
 
         # construct lavData object
@@ -130,9 +129,11 @@ lavData <- function(data          = NULL,          # data.frame
             tmp <- ov.names; ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
         }
-        if(!is.list(ov.types)) {
-            tmp <- ov.types; ov.types <- vector("list", length=ngroups)
-            ov.types[1:ngroups] <- list(tmp)
+        # handle ov.types (should be NULL if "none")
+        if(is.null(ov.types) || ov.types == "numeric") {
+            ov.types <- lapply(ov.names, function(x) rep("numeric", length(x)))
+        } else {
+            stop("lavaan ERROR: ov.types should be NULL of \"numeric\" if only sample moments are provided")
         }
 
         # construct lavData object
@@ -156,7 +157,7 @@ getDataFull <- function(data          = NULL,          # data.frame
                         group         = NULL,          # multiple groups?
                         group.label   = NULL,          # custom group labels?
                         ov.names      = names(data),   # variables needed in model
-                        ov.types      = "numeric",
+                        ov.types      = NULL,          # variable class
                         std.ov        = FALSE,         # standardize ov's?
                         missing       = "listwise",    # remove missings?
                         warn          = TRUE           # produce warnings?
@@ -226,10 +227,16 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
     }
 
-    # ov.types
-    if(!is.list(ov.types)) {
+    # handle ov.types
+    if(is.character(ov.types) && ov.types %in% c("numeric", "ordinal")) {
+        ov.types <- lapply(ov.names, function(x) rep(ov.types, length(x)))
+    } else if(is.null(ov.types)) {
         tmp <- ov.types; ov.types <- vector("list", length=ngroups)
         ov.types[1:ngroups] <- list(tmp)
+    } else if(is.list(ov.types)) {
+        if(length(ov.types) != ngroups)
+            stop("lavaan ERROR: ov.types assumes ", length(ov.types),
+                 " groups; data contains ", ngroups, " groups")
     }
 
     # prepare empty list for data.matrix per group
@@ -253,6 +260,19 @@ getDataFull <- function(data          = NULL,          # data.frame
 
         # extract variables in correct order
         ov.idx[[g]] <- match(ov.names[[g]], names(data))
+
+        # get observed variable type
+        if(is.null(ov.types[[g]])) {
+            ov.types[[g]] <- sapply(data[,ov.idx[[g]]], 
+                                    function(x) class(x)[1L])
+        }
+
+        # FIXME: what do we do with UNORDERED factors??
+        if("factor" %in%  ov.types[[g]]) {
+            f.names <- names(which(ov.types[[g]] == "factor"))
+            warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
+        }
+                          
 
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {

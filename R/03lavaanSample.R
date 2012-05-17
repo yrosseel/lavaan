@@ -42,7 +42,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
-    cov.vecs      <- vector("list", length=ngroups)
+    WLS.obs       <- vector("list", length=ngroups)
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
@@ -50,6 +50,15 @@ lavSampleStatsFromData <- function(Data          = NULL,
         WLS.V <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
+
+        # check if we have categorical data in this group
+        categorical <- FALSE
+        if(!is.null(Data) && "ordered" %in% Data@ov.types[[g]]) {
+            categorical <- TRUE
+            CAT <- muthen1984(Data=Data@X[[g]], 
+                              ov.names=Data@ov.names[[g]], 
+                              ov.types=Data@ov.types[[g]])
+        }
 
         # fill in the other slots
         cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
@@ -77,8 +86,16 @@ lavSampleStatsFromData <- function(Data          = NULL,
             icov[[g]]        <- tmp
         }
 
-        # cov.vecs
-        cov.vecs[[g]] <- vech(cov[[g]])
+        # WLS.obs
+        if(categorical) {
+            WLS.obs[[g]] <- c(unlist(CAT$TH), 
+                              unlist(CAT$SLOPES),
+                              vech(CAT$COR, diag=FALSE))
+        } else if(!categorical && meanstructure) {
+            WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
+        } else {
+            WLS.obs[[g]] <- vech(cov[[g]])
+        }
 
         # if missing = "fiml", sample statistics per pattern
         if(!is.null(Mp[[g]])) {
@@ -110,7 +127,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 WLS.V[[g]] <-
                     0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
             }
-        } else if(estimator == "WLS") {
+        } else if(estimator == "WLS" && !categorical) {
             # sample size large enough?
             nvar <- ncol(X[[g]])
             pstar <- nvar*(nvar+1)/2
@@ -136,6 +153,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
             WLS.V[[g]] <- inv.chol(Gamma)
+        } else if(estimator == "WLS" && categorical) {
+            WLS.V[[g]] <- inv.chol(CAT$ACOV)
         }
 
     } # ngroups
@@ -156,7 +175,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
-                       cov.vecs     = cov.vecs,
+                       WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,                     
 
                        # missingness
@@ -195,14 +214,18 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     # extra sample statistics per group
     icov        <- vector("list", length=ngroups)
     cov.log.det <- vector("list", length=ngroups)
-    cov.vecs    <- vector("list", length=ngroups)
+    WLS.obs     <- vector("list", length=ngroups)
     
     # prepare empty list for missing data
     missing <- vector("list", length=ngroups)
 
     # WLS.V
-    if(is.null(WLS.V))
+    if(is.null(WLS.V)) {
         WLS.V <- vector("list", length=ngroups)
+    } else if(is.matrix(WLS.V)) {
+        tmp <- WLS.V; WLS.V <- vector("list", length=ngroups)
+        WLS.V[1:ngroups] <- list(tmp)
+    }
 
     for(g in 1:ngroups) {
 
@@ -272,8 +295,11 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             icov[[g]]        <- tmp
         }
 
-        # cov.vecs
-        cov.vecs[[g]] <- vech(cov[[g]])
+        # WLS.obs
+        if(meanstructure) 
+            WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
+        else
+            WLS.obs[[g]] <- vech(cov[[g]])
 
         if(estimator == "GLS") {
             if(meanstructure) {
@@ -288,7 +314,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                     0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
             }
         } else if(estimator == "WLS") {
-            stop("lavaan ERROR: WLS needs complete data")
+            if(is.null(WLS.V[[g]]))
+                stop("lavaan ERROR: no WLS.V provided")
         }
 
     } # ngroups
@@ -309,7 +336,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                        # extra sample statistics
                        icov        = icov,
                        cov.log.det = cov.log.det,
-                       cov.vecs    = cov.vecs,
+                       WLS.obs     = WLS.obs,
                        WLS.V       = WLS.V,
 
                        missing.flag = FALSE

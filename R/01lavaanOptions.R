@@ -213,7 +213,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `se' argument when estimator is GLS: ", 
                  opt$se, "\n")
         }
-        if(opt$test != "standard") {
+        if(!opt$test %in% c("standard","none")) {
             stop("invalid value for `test' argument when estimator is GLS: ", 
                  opt$test, "\n")
         }
@@ -227,8 +227,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `se' argument when estimator is WLS: ", 
                  opt$se, "\n")
         }
-        if(opt$test != "standard") {
-            stop("invalid value for `test' argument when estimator is GLS: ", 
+        if(!opt$test %in% c("standard","none")) {
+            stop("invalid value for `test' argument when estimator is WLS: ", 
                  opt$test, "\n")
         }
     } else if(opt$estimator == "uls") {

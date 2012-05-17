@@ -39,6 +39,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    group.label     = NULL,
                    group.equal     = '',
                    group.partial   = '',
+
+                   # clusters
+                   cluster         = NULL,
              
                    # constraints
                    constraints     = '',
@@ -46,6 +49,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # estimation
                    estimator       = "default",
                    likelihood      = "default",
+                   WLS.V           = NULL,
                    information     = "default",
                    se              = "default",
                    test            = "default",
@@ -135,6 +139,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               sample.mean = sample.mean,
                               sample.nobs = sample.nobs,
                               warn        = lavaanOptions$warn)
+        if("ordered" %in% unlist(lavaanData@ov.types) &&
+           lavaanOptions$estimator == "ML")
+            warning("lavaan WARNING: estimator ML is used for ordered data")
     }
     if(lavaanData@data.type == "none") {
         do.fit <- FALSE; start <- "simple"
@@ -205,7 +212,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        Data          = lavaanData,
                        rescale       = (lavaanOptions$estimator == "ML" &&
                                         lavaanOptions$likelihood == "normal"),
-                       WLS.V         = NULL,
+                       WLS.V         = WLS.V,
                        estimator     = lavaanOptions$estimator,
                        mimic         = lavaanOptions$mimic,
                        meanstructure = lavaanOptions$meanstructure,
@@ -222,7 +229,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
                            rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"))
+                                          lavaanOptions$likelihood == "normal"),
+                           WLS.V       = WLS.V)
     } else {
         # no data
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
@@ -433,8 +441,8 @@ cfa <- sem <- function(model = NULL,
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", constraints = "",
-    estimator = "default", likelihood = "default",
+    group.equal = "", group.partial = "", cluster = NULL, constraints = "",
+    estimator = "default", likelihood = "default", WLS.V = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
@@ -462,8 +470,8 @@ growth <- function(model = NULL,
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", constraints = "",
-    estimator = "default", likelihood = "default",
+    group.equal = "", group.partial = "", cluster = NULL, constraints = "",
+    estimator = "default", likelihood = "default", WLS.V = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default",

@@ -35,7 +35,7 @@ setClass("lavSampleStats",         # sample moments
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)
-        cov.vecs="list",           # cov lower tri elements in vector
+        WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
 
         missing.flag="logical",    # missing patterns?

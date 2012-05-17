@@ -228,12 +228,13 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                                      data.cov.log.det=samplestats@cov.log.det[[g]],
                                      meanstructure=meanstructure)
         } else if(estimator == "GLS" || estimator == "WLS") {
-            group.fx <- estimator.WLS(Sigma.hat=Sigma.hat[[g]], 
-                                      Mu.hat=Mu.hat[[g]],
-                                      w.vecs=samplestats@cov.vecs[[g]], 
-                                      data.mean=samplestats@mean[[g]],
-                                      WLS.V=samplestats@WLS.V[[g]],  
-                                      meanstructure=meanstructure)
+            if(meanstructure)
+                WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
+            else
+                WLS.est <- vech(Sigma.hat[[g]])
+            group.fx <- estimator.WLS(WLS.est = WLS.est,
+                                      WLS.obs = samplestats@WLS.obs[[g]], 
+                                      WLS.V=samplestats@WLS.V[[g]])  
         } else {
             stop("unsupported estimator: ", estimator)
         }
@@ -589,12 +590,11 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
         for(g in 1:samplestats@ngroups) {
             # Browne & Arminger 1995 eq 4.49
             if(!meanstructure) {
-                obs <- samplestats@cov.vecs[[g]]
                 est <- vech(Sigma.hat[[g]])
             } else {
-                obs <- c(samplestats@mean[[g]], samplestats@cov.vecs[[g]])
                 est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             }
+            obs <- samplestats@WLS.obs[[g]]
             diff <- as.matrix(obs - est)
             group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
