@@ -164,8 +164,6 @@ getDataFull <- function(data          = NULL,          # data.frame
                        )
 {
 
-
-
     # number of groups and group labels
     if(!is.null(group)) {
         if(!(group %in% names(data))) {
@@ -207,6 +205,29 @@ getDataFull <- function(data          = NULL,          # data.frame
         group.label <- character(0L)
     }
 
+    # construct OV list
+    OV.names <- unlist(ov.names)
+    OV <- lapply(data[,OV.names], function(x)
+              list(nobs=sum(!is.na(x)),
+                   type=class(x)[1],
+                   mean=ifelse(class(x)[1] == "numeric", 
+                               mean(x, na.rm=TRUE), as.numeric(NA)),
+                   var=ifelse(class(x)[1] == "numeric", 
+                              var(x, na.rm=TRUE), as.numeric(NA)),
+                   nlevels=nlevels(x),
+                   lnames=paste(levels(x),collapse="|")
+                  ))
+    ov <- list()
+    ov$name    <- names(OV)
+    #ov$group   <- rep.int(1:ngroups, times=sapply(ov.names, length)) # do we need this?
+    ov$idx     <- match(ov$name, names(data))
+    ov$nobs    <- sapply(OV, "[[", "nobs")
+    ov$type    <- sapply(OV, "[[", "type")
+    ov$mean    <- sapply(OV, "[[", "mean")
+    ov$var     <- sapply(OV, "[[", "var")
+    ov$nlevels <- sapply(OV, "[[", "nlevels")
+    ov$lnames  <- sapply(OV, "[[", "lnames")
+
     # ov.names
     if(ngroups > 1L) {
         if(is.list(ov.names)) {
@@ -227,20 +248,20 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
     }
 
-    # handle ov.types
-    if(is.character(ov.types) && ov.types %in% c("numeric", "ordinal")) {
-        ov.types <- lapply(ov.names, function(x) rep(ov.types, length(x)))
-    } else if(is.null(ov.types)) {
-        tmp <- ov.types; ov.types <- vector("list", length=ngroups)
-        ov.types[1:ngroups] <- list(tmp)
-    } else if(is.list(ov.types)) {
-        if(length(ov.types) != ngroups)
-            stop("lavaan ERROR: ov.types assumes ", length(ov.types),
-                 " groups; data contains ", ngroups, " groups")
-    }
+    # handle ov.types and ov.levels
+    #if(is.character(ov.types) && ov.types %in% c("numeric", "ordinal")) {
+    #    ov.types <- lapply(ov.names, function(x) rep(ov.types, length(x)))
+    #} else if(is.null(ov.types)) {
+    #    tmp <- ov.types; ov.types <- vector("list", length=ngroups)
+    #    ov.types[1:ngroups] <- list(tmp)
+    #} else if(is.list(ov.types)) {
+    #    if(length(ov.types) != ngroups)
+    #        stop("lavaan ERROR: ov.types assumes ", length(ov.types),
+    #             " groups; data contains ", ngroups, " groups")
+    #}
 
     # prepare empty list for data.matrix per group
-    ov.idx   <- vector("list", length=ngroups)
+    #ov.idx   <- vector("list", length=ngroups)
     case.idx <- vector("list", length=ngroups)
     nobs     <- vector("list", length=ngroups)
     norig    <- vector("list", length=ngroups)
@@ -259,26 +280,26 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # extract variables in correct order
-        ov.idx[[g]] <- match(ov.names[[g]], names(data))
+        ov.idx <- ov$idx[match(ov.names[[g]], ov$name)]
 
         # get observed variable type
-        if(is.null(ov.types[[g]])) {
-            ov.types[[g]] <- sapply(data[,ov.idx[[g]]], 
-                                    function(x) class(x)[1L])
-        }
+        #if(is.null(ov.types[[g]])) {
+        #    ov.types[[g]] <- sapply(data[,ov.idx[[g]]], 
+        #                            function(x) class(x)[1L])
+        #}
 
         # FIXME: what do we do with UNORDERED factors??
-        if("factor" %in%  ov.types[[g]]) {
-            f.names <- names(which(ov.types[[g]] == "factor"))
-            warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
-        }
+        #if("factor" %in%  ov.types[[g]]) {
+        #    f.names <- names(which(ov.types[[g]] == "factor"))
+        #    warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
+        #}
                           
 
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(data[, group] == group.label[g] &
-                                       complete.cases(data[,ov.idx[[g]]]))
+                                       complete.cases(data[,ov.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[, group] == group.label[g]))
             } else {
@@ -287,7 +308,7 @@ getDataFull <- function(data          = NULL,          # data.frame
             }
         } else {
             if(missing == "listwise") {
-                case.idx[[g]] <- which(complete.cases(data[,ov.idx[[g]]]))
+                case.idx[[g]] <- which(complete.cases(data[,ov.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else {
@@ -297,7 +318,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # extract data
-        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx[[g]]] )
+        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx] )
         #print( tracemem(X[[g]]) )
 
         # get rid of row names, but keep column names
@@ -324,7 +345,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # warn if we have a small number of observations (but NO error!)
-        if( nobs[[g]] < (nvar <- length(ov.idx[[g]])) ) {
+        if( nobs[[g]] < (nvar <- length(ov.idx)) ) {
             txt <- ""
             if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
             warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,
@@ -342,8 +363,9 @@ getDataFull <- function(data          = NULL,          # data.frame
                       nobs            = nobs,
                       norig           = norig,
                       ov.names        = ov.names,
-                      ov.types        = ov.types,
-                      ov.idx          = ov.idx,
+                      #ov.types        = ov.types,
+                      #ov.idx          = ov.idx,
+                      ov              = ov,
                       case.idx        = case.idx,
                       missing         = missing,
                       X               = X,

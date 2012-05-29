@@ -13,8 +13,9 @@ setClass("lavData",
         nobs="list",               # effective number of observations
         norig="list",              # original number of observations
         ov.names="list",           # variable names (per group)
-        ov.types="list",           # variable types (per group)
-        ov.idx="list",             # column indices (all observed variables)
+        #ov.types="list",           # variable types (per group)
+        #ov.idx="list",             # column indices (all observed variables)
+        ov="list",                 # variable table
         case.idx="list",           # case indices per group
         missing="character",       # "listwise" or not?
         Mp="list",                 # if not complete, missing patterns

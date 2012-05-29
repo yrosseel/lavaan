@@ -53,11 +53,12 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
         # check if we have categorical data in this group
         categorical <- FALSE
-        if(!is.null(Data) && "ordered" %in% Data@ov.types[[g]]) {
+        ov.types <- Data@ov$type[ match(Data@ov.names[[g]], Data@ov$name) ]
+        if(!is.null(Data) && "ordered" %in% ov.types) {
             categorical <- TRUE
             CAT <- muthen1984(Data=Data@X[[g]], 
                               ov.names=Data@ov.names[[g]], 
-                              ov.types=Data@ov.types[[g]])
+                              ov.types=ov.types)
         }
 
         # fill in the other slots

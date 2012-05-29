@@ -911,6 +911,14 @@ parameterTable <- parametertable <- parTable <- partable <-
     inspect(object, "list")            
 }
 
+varTable <- vartable <- 
+    function(object) {
+    VAR <- as.data.frame(object@Data@ov, stringsAsFactors=FALSE,
+                         row.names=1:length(object@Data@ov$name))
+    class(VAR) <- c("lavaan.data.frame", "data.frame")
+    VAR
+}
+
 
 
 setMethod("inspect", "lavaan",

@@ -141,7 +141,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               warn        = lavaanOptions$warn)
 
         # what have we learned from the data?
-        if("ordered" %in% unlist(lavaanData@ov.types)) {
+        if("ordered" %in% lavaanData@ov$type) {
             if(lavaanOptions$estimator == "ML")
                 warning("lavaan WARNING: estimator ML is used for ordered data")
             # Mplus style
