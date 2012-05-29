@@ -331,254 +331,262 @@ lavaanify <- lavParTable <- function(
 
 
 parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
-    warn = TRUE, debug = FALSE) {
+                             warn = TRUE, debug = FALSE) {
   
-  # check for empty syntax
-  if(length(model.syntax) == 0) {
-    stop("lavaan ERROR: empty model syntax")
-  }
-  
-  #replace semicolons with newlines prior to split
-  model.syntax <- gsub(";", "\n", model.syntax, fixed=TRUE)
-  
-  #remove comments prior to split. Match from comment character to newline, but don't eliminate newline
-  model.syntax <- gsub("[#!].*(?=\n)","", model.syntax, perl=TRUE)
-  
-  #remove whitespace prior to split
-  model.syntax <- gsub("[ \t]+", "", model.syntax, perl=TRUE)
-
-  #remove any occurrence of >= 2 consecutive newlines to eliminate blank statements
-  #this retains a blank newline at the beginning, if such exists, but parser will not choke because of start.idx
-  model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl=TRUE)
-  
-  # break up in lines 
-  model <- unlist( strsplit(model.syntax, "\n") )
-    
-  # check for multi-line formulas: they contain no "~" or "=" character
-  # but before we do that, we remove all modifiers
-  # to avoid confusion with for example equal("f1=~x1") statements
-  model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
-  
-  start.idx <- grep("[~=<>:]", model.simple)
-  end.idx <- c( start.idx[-1]-1, length(model) )
-  model.orig    <- model
-  model <- character( length(start.idx) )
-  for(i in 1:length(start.idx)) {
-    model[i] <- paste(model.orig[start.idx[i]:end.idx[i]], collapse="")
-  }
-  
-  # ok, in all remaining lines, we should have a '~' operator
-  # OR one of '=', '<' '>' outside the ""
-  model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
-  idx.wrong <- which(!grepl("[~=<>:]", model.simple))
-  if(length(idx.wrong) > 0) {
-    cat("lavaan: missing operator in formula(s):\n")
-    print(model[idx.wrong])
-    stop("lavaan ERROR: syntax error in lavaan model syntax")
-  }
-  
-  
-  # main operation: flatten formulas into single bivariate pieces
-  # with a left-hand-side (lhs), an operator (eg "=~"), and a 
-  # right-hand-side (rhs)
-  # both lhs and rhs can have a modifier 
-  # (but we ignore the lhs modifier for now)
-  FLAT.lhs         <- character(0)
-  #FLAT.lhs.mod    <- character(0)
-  FLAT.op          <- character(0)
-  FLAT.rhs         <- character(0)
-  FLAT.rhs.mod.idx <- integer(0)
-  FLAT.group       <- integer(0)    # keep track of groups using ":" operator
-  
-  FLAT.fixed       <- character(0)  # only for display purposes! 
-  FLAT.start       <- character(0)  # only for display purposes!
-  FLAT.label       <- character(0)  # only for display purposes!
-  FLAT.idx <- 0L
-  MOD.idx  <- 0L
-  CON.idx  <- 0L
-  MOD <- vector("list", length=0L)
-  CON <- vector("list", length=0L)
-  GRP <- 0L
-  for(i in 1:length(model)) {
-    x <- model[i]
-    if(debug) {
-      cat("formula to parse:\n"); print(x); cat("\n")
+    # check for empty syntax
+    if(length(model.syntax) == 0) {
+        stop("lavaan ERROR: empty model syntax")
     }
+  
+    # replace semicolons with newlines prior to split
+    model.syntax <- gsub(";", "\n", model.syntax, fixed=TRUE)
+  
+    # remove comments prior to split. 
+    # Match from comment character to newline, but don't eliminate newline
+    model.syntax <- gsub("[#!].*(?=\n)","", model.syntax, perl=TRUE)
+  
+    #remove whitespace prior to split
+    model.syntax <- gsub("[ \t]+", "", model.syntax, perl=TRUE)
+    # remove any occurrence of >= 2 consecutive newlines to eliminate \
+    # blank statements; this retains a blank newline at the beginning, 
+    # if such exists, but parser will not choke because of start.idx
+    model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl=TRUE)
+  
+    # break up in lines 
+    model <- unlist( strsplit(model.syntax, "\n") )
     
-    # 1. which operator is used?
-    line.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
-    # "=~" operator?
-    if(grepl("=~", line.simple, fixed=TRUE)) {
-      op <- "=~"
-      # "<~" operator?
-    } else if(grepl("<~", line.simple, fixed=TRUE)) {
-      op <- "<~"
-      # "~~" operator?
-    } else if(grepl("~~", line.simple, fixed=TRUE)) {
-      op <- "~~"
-      # "~" operator?
-    } else if(grepl("~", line.simple, fixed=TRUE)) {
-      op <- "~"           
-      # "==" operator?
-    } else if(grepl("==", line.simple, fixed=TRUE)) {
-      op <- "=="  
-      # "<" operator?
-    } else if(grepl("<", line.simple, fixed=TRUE)) {
-      op <- "<"
-      # ">" operator?
-    } else if(grepl(">", line.simple, fixed=TRUE)) {
-      op <- ">"
-      # ":=" operator?
-    } else if(grepl(":=", line.simple, fixed=TRUE)) {
-      op <- ":="
-      # ":" operator?
-    } else if(grepl(":", line.simple, fixed=TRUE)) {
-      op <- ":"
-    } else {
-      stop("unknown operator in ", model[i])
+    # check for multi-line formulas: they contain no "~" or "=" character
+    # but before we do that, we remove all modifiers
+    # to avoid confusion with for example equal("f1=~x1") statements
+    model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
+  
+    start.idx <- grep("[~=<>:|]", model.simple)
+    end.idx <- c( start.idx[-1]-1, length(model) )
+    model.orig    <- model
+    model <- character( length(start.idx) )
+    for(i in 1:length(start.idx)) {
+        model[i] <- paste(model.orig[start.idx[i]:end.idx[i]], collapse="")
     }
-    
-    # 2. split by operator (only the *first* occurence!)
-    # check first if equal/label modifier has been used on the LEFT!
-    if(substr(x,1,5) == "label") stop("label modifier can not be used on the left-hand side of the operator")
-    op.idx <- regexpr(op, x)
-    lhs <- substr(x, 1L, op.idx-1L)
-    rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
-    
-    # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
-    if(op == "==" || op == "<" || op == ">" || op == ":=") {
-      # remove quotes, if any
-      lhs <- gsub("\\\"", "", lhs)
-      rhs <- gsub("\\\"", "", rhs)
-      CON.idx <- CON.idx + 1L
-      CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs)
-      next
+  
+    # ok, in all remaining lines, we should have a '~' operator
+    # OR one of '=', '<', '>', '|' outside the ""
+    model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
+    idx.wrong <- which(!grepl("[~=<>:|]", model.simple))
+    if(length(idx.wrong) > 0) {
+        cat("lavaan: missing operator in formula(s):\n")
+        print(model[idx.wrong])
+        stop("lavaan ERROR: syntax error in lavaan model syntax")
     }
+  
+  
+    # main operation: flatten formulas into single bivariate pieces
+    # with a left-hand-side (lhs), an operator (eg "=~"), and a 
+    # right-hand-side (rhs)
+    # both lhs and rhs can have a modifier 
+    # (but we ignore the lhs modifier for now)
+    FLAT.lhs         <- character(0)
+    #FLAT.lhs.mod    <- character(0)
+    FLAT.op          <- character(0)
+    FLAT.rhs         <- character(0)
+    FLAT.rhs.mod.idx <- integer(0)
+    FLAT.group       <- integer(0)    # keep track of groups using ":" operator
+  
+    FLAT.fixed       <- character(0)  # only for display purposes! 
+    FLAT.start       <- character(0)  # only for display purposes!
+    FLAT.label       <- character(0)  # only for display purposes!
+    FLAT.idx <- 0L
+    MOD.idx  <- 0L
+    CON.idx  <- 0L
+    MOD <- vector("list", length=0L)
+    CON <- vector("list", length=0L)
+    GRP <- 0L
+    for(i in 1:length(model)) {
+        x <- model[i]
+        if(debug) {
+           cat("formula to parse:\n"); print(x); cat("\n")
+        }
     
-    # 2c if operator is ":", put it in GRP
-    if(op == ":") {
-      FLAT.idx <- FLAT.idx + 1L
-      GRP <- GRP + 1L
-      FLAT.lhs[FLAT.idx] <- lhs
-      FLAT.op[ FLAT.idx] <- op
-      FLAT.rhs[FLAT.idx] <- ""
-      FLAT.fixed[FLAT.idx] <- ""
-      FLAT.start[FLAT.idx] <- ""
-      FLAT.label[FLAT.idx] <- ""
-      FLAT.rhs.mod.idx[FLAT.idx] <- 0L
-      FLAT.group[FLAT.idx] <- GRP
-      next
-    }
-    
-    # 3. parse left hand
-    #    lhs modifiers will be ignored for now
-    lhs.formula <- as.formula(paste("~",lhs))
-    out <- parse.rhs(rhs=lhs.formula[[2L]])
-    lhs.names <- names(out)
-    # check if we have modifiers
-    if(sum(sapply(out, length)) > 0L) {
-      warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
-    }
-    
-    # 4. parse rhs (as rhs of a single-sided formula)
-    rhs.formula <- as.formula(paste("~",rhs))
-    out <- parse.rhs(rhs=rhs.formula[[2L]])
-    
-    # for each lhs element
-    for(l in 1:length(lhs.names)) {
-      
-      # for each rhs element
-      for(j in 1:length(out)) {
-        
-        # catch intercepts
-        if((op == "~" || op == "~1") && names(out)[j] == "intercept") {
-          op <- "~1"
-          rhs.name <- ""
+        # 1. which operator is used?
+        line.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
+        # "=~" operator?
+        if(grepl("=~", line.simple, fixed=TRUE)) {
+            op <- "=~"
+        # "<~" operator?
+        } else if(grepl("<~", line.simple, fixed=TRUE)) {
+            op <- "<~"
+        # "~~" operator?
+        } else if(grepl("~~", line.simple, fixed=TRUE)) {
+            op <- "~~"
+        # "~" operator?
+        } else if(grepl("~", line.simple, fixed=TRUE)) {
+            op <- "~"           
+        # "==" operator?
+        } else if(grepl("==", line.simple, fixed=TRUE)) {
+            op <- "=="  
+        # "<" operator?
+        } else if(grepl("<", line.simple, fixed=TRUE)) {
+            op <- "<"
+        # ">" operator?
+        } else if(grepl(">", line.simple, fixed=TRUE)) {
+            op <- ">"
+        # ":=" operator?
+        } else if(grepl(":=", line.simple, fixed=TRUE)) {
+            op <- ":="
+        # ":" operator?
+        } else if(grepl(":", line.simple, fixed=TRUE)) {
+            op <- ":"
+        } else if(grepl("|", line.simple, fixed=TRUE)) {
+            op <- "|"
         } else {
-          rhs.name <- names(out)[j]
+            stop("unknown operator in ", model[i])
         }
+    
+        # 2. split by operator (only the *first* occurence!)
+        # check first if equal/label modifier has been used on the LEFT!
+        if(substr(x,1,5) == "label") 
+            stop("label modifier can not be used on the left-hand side of the operator")
+        if(op == "|") {
+            op.idx <- regexpr("\\|", x)
+        } else {
+            op.idx <- regexpr(op, x)
+        }
+        lhs <- substr(x, 1L, op.idx-1L)
+        rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
+    
+        # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
+        if(op == "==" || op == "<" || op == ">" || op == ":=") {
+            # remove quotes, if any
+            lhs <- gsub("\\\"", "", lhs)
+            rhs <- gsub("\\\"", "", rhs)
+            CON.idx <- CON.idx + 1L
+            CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs)
+            next
+        }
+    
+        # 2c if operator is ":", put it in GRP
+        if(op == ":") {
+            FLAT.idx <- FLAT.idx + 1L
+            GRP <- GRP + 1L
+            FLAT.lhs[FLAT.idx] <- lhs
+            FLAT.op[ FLAT.idx] <- op
+            FLAT.rhs[FLAT.idx] <- ""
+            FLAT.fixed[FLAT.idx] <- ""
+            FLAT.start[FLAT.idx] <- ""
+            FLAT.label[FLAT.idx] <- ""
+            FLAT.rhs.mod.idx[FLAT.idx] <- 0L
+            FLAT.group[FLAT.idx] <- GRP
+            next
+        }
+    
+        # 3. parse left hand
+        #    lhs modifiers will be ignored for now
+        lhs.formula <- as.formula(paste("~",lhs))
+        out <- parse.rhs(rhs=lhs.formula[[2L]])
+        lhs.names <- names(out)
+        # check if we have modifiers
+        if(sum(sapply(out, length)) > 0L) {
+            warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
+        }
+    
+        # 4. parse rhs (as rhs of a single-sided formula)
+        rhs.formula <- as.formula(paste("~",rhs))
+        out <- parse.rhs(rhs=rhs.formula[[2L]])
+    
+        # for each lhs element
+        for(l in 1:length(lhs.names)) {
+      
+            # for each rhs element
+            for(j in 1:length(out)) {
         
-        # check if we not already have this combination (in this group)
-        # 1. asymmetric (=~, ~, ~1)
-        idx <- which(FLAT.lhs == lhs.names[l] &
-                FLAT.op  == op &
-                FLAT.group == GRP &
-                FLAT.rhs == rhs.name)
-        if(length(idx) > 0L) {
-          stop("lavaan ERROR: duplicate model element in: ", model[i])
-        }
-        # 2. symmetric (~~)
-        idx <- which(FLAT.lhs == rhs.name &
-                FLAT.op  == "~~" &
-                FLAT.group == GRP &
-                FLAT.rhs == lhs.names[l])
-        if(length(idx) > 0L) {
-          stop("lavaan ERROR: duplicate model element in: ", model[i])
-        }
+                # catch intercepts
+                if((op == "~" || op == "~1") && names(out)[j] == "intercept") {
+                    op <- "~1"
+                    rhs.name <- ""
+                } else {
+                    rhs.name <- names(out)[j]
+                }
         
-        FLAT.idx <- FLAT.idx + 1L
-        FLAT.lhs[FLAT.idx] <- lhs.names[l]
-        FLAT.op[ FLAT.idx] <- op
-        FLAT.rhs[FLAT.idx] <- rhs.name
-        FLAT.group[FLAT.idx] <- GRP
-        FLAT.fixed[FLAT.idx] <- ""
-        FLAT.start[FLAT.idx] <- ""
-        FLAT.label[FLAT.idx] <- ""
+                # check if we not already have this combination (in this group)
+                # 1. asymmetric (=~, ~, ~1)
+                idx <- which(FLAT.lhs == lhs.names[l] &
+                             FLAT.op  == op &
+                             FLAT.group == GRP &
+                             FLAT.rhs == rhs.name)
+                if(length(idx) > 0L) {
+                    stop("lavaan ERROR: duplicate model element in: ", model[i])
+                }
+                # 2. symmetric (~~)
+                idx <- which(FLAT.lhs == rhs.name &
+                             FLAT.op  == "~~" &
+                             FLAT.group == GRP &
+                             FLAT.rhs == lhs.names[l])
+                if(length(idx) > 0L) {
+                    stop("lavaan ERROR: duplicate model element in: ", model[i])
+                }
         
-        mod <- list()
-        rhs.mod <- 0L
-        if(length(out[[j]]$fixed) > 0L) {
-          mod$fixed <- out[[j]]$fixed
-          FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
-          rhs.mod <- 1L
-        }
-        if(length(out[[j]]$start) > 0L) {
-          mod$start <- out[[j]]$start
-          FLAT.start[FLAT.idx] <- paste(mod$start, collapse=";")
-          rhs.mod <- 1L
-        }
-        if(length(out[[j]]$label) > 0L) {
-          mod$label <- out[[j]]$label
-          FLAT.label[FLAT.idx] <- paste(mod$label, collapse=";")
-          rhs.mod <- 1L
-        }
-        if(op == "~1" && rhs == "0") {
-          mod$fixed <- 0
-          FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
-          rhs.mod <- 1L
-        }
-        if(op == "=~" && rhs == "0") {
-          mod$fixed <- 0
-          FLAT.rhs[FLAT.idx] <- FLAT.lhs[FLAT.idx]
-          FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
-          rhs.mod <- 1L
-        }
+                FLAT.idx <- FLAT.idx + 1L
+                FLAT.lhs[FLAT.idx] <- lhs.names[l]
+                FLAT.op[ FLAT.idx] <- op
+                FLAT.rhs[FLAT.idx] <- rhs.name
+                FLAT.group[FLAT.idx] <- GRP
+                FLAT.fixed[FLAT.idx] <- ""
+                FLAT.start[FLAT.idx] <- ""
+                FLAT.label[FLAT.idx] <- ""
         
-        FLAT.rhs.mod.idx[FLAT.idx] <- rhs.mod
+                mod <- list()
+                rhs.mod <- 0L
+                if(length(out[[j]]$fixed) > 0L) {
+                    mod$fixed <- out[[j]]$fixed
+                    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(length(out[[j]]$start) > 0L) {
+                    mod$start <- out[[j]]$start
+                    FLAT.start[FLAT.idx] <- paste(mod$start, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(length(out[[j]]$label) > 0L) {
+                    mod$label <- out[[j]]$label
+                    FLAT.label[FLAT.idx] <- paste(mod$label, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(op == "~1" && rhs == "0") {
+                    mod$fixed <- 0
+                    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(op == "=~" && rhs == "0") {
+                    mod$fixed <- 0
+                    FLAT.rhs[FLAT.idx] <- FLAT.lhs[FLAT.idx]
+                    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
+                    rhs.mod <- 1L
+                }
         
-        if(rhs.mod > 0L) {
-          MOD.idx <- MOD.idx + 1L
-          MOD[[MOD.idx]] <- mod
-        }
-      } # rhs elements
-    } # lhs elements
-  } # model elements
+                FLAT.rhs.mod.idx[FLAT.idx] <- rhs.mod
+        
+                if(rhs.mod > 0L) {
+                    MOD.idx <- MOD.idx + 1L
+                    MOD[[MOD.idx]] <- mod
+                }
+           } # rhs elements
+        } # lhs elements
+    } # model elements
   
-  # enumerate modifier indices
-  mod.idx <- which(FLAT.rhs.mod.idx > 0L)
-  FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
+    # enumerate modifier indices
+    mod.idx <- which(FLAT.rhs.mod.idx > 0L)
+    FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
   
-  FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
-      mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
-      fixed=FLAT.fixed, start=FLAT.start,
-      label=FLAT.label)
+    FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
+                 mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
+                 fixed=FLAT.fixed, start=FLAT.start,
+                 label=FLAT.label)
   
-  if(as.data.frame.) FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
+    if(as.data.frame.) FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
   
-  attr(FLAT, "modifiers") <- MOD
-  attr(FLAT, "constraints") <- CON
+    attr(FLAT, "modifiers") <- MOD
+    attr(FLAT, "constraints") <- CON
   
-  FLAT
+    FLAT
 }
 
 parse.rhs <- function(rhs) {
