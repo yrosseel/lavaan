@@ -185,6 +185,9 @@ setMethod("computeObjective", "Model",
 function(object, GLIST=NULL, samplestats=NULL, estimator="ML", 
          verbose=FALSE, forcePD=TRUE) {
 
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
     # shortcut for data.type == "none"
     if(length(samplestats@cov) == 0L) {
         fx <- as.numeric(NA)
@@ -193,10 +196,11 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
     }
 
     meanstructure <- object@meanstructure
+    categorical   <- object@categorical
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
-    if(meanstructure) Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    if(meanstructure || categorical) Mu.hat <- computeMuHat(object, GLIST=GLIST)
     
     fx <- 0.0
     fx.group <- numeric( samplestats@ngroups )
@@ -228,10 +232,17 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                                      data.cov.log.det=samplestats@cov.log.det[[g]],
                                      meanstructure=meanstructure)
         } else if(estimator == "GLS" || estimator == "WLS") {
-            if(meanstructure)
+            if(categorical) {
+                ### FIXME!!
+                TAU.idx <- which(names(GLIST) == "tau")
+                tau <- GLIST[[TAU.idx[g]]][,1]
+                mu <- Mu.hat[[g]]
+                WLS.est <- c(tau, vech(Sigma.hat[[g]], diag=FALSE))
+            } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
-            else
+            } else {
                 WLS.est <- vech(Sigma.hat[[g]])
+            }
             group.fx <- estimator.WLS(WLS.est = WLS.est,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
@@ -264,12 +275,12 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
 #computeDeltaNumerical <- function(object, GLIST=NULL, g=1) {
 #
 #    # state or final?
-#    if(is.null(GLIST)) GLIST <- object@GLIST
-#    
-#    compute.moments <- function(x) {
-#        GLIST <- x2GLIST(object, x=x, type="free")
-#        Sigma.hat <- computeSigmaHat(object, GLIST=GLIST)
-#        S.vec <- vecs(Sigma.hat[[g]])
+#   if(is.null(GLIST)) GLIST <- object@GLIST
+#   
+#   compute.moments <- function(x) {
+#       GLIST <- x2GLIST(object, x=x, type="free")
+#       Sigma.hat <- computeSigmaHat(object, GLIST=GLIST)
+#        S.vec <- vech(Sigma.hat[[g]])
 #        if(object@meanstructure) {
 #            Mu.hat <- computeMuHat(object, GLIST=GLIST)
 #            out <- c(Mu.hat[[g]], S.vec)
@@ -292,6 +303,7 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
 computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
     representation <- object@representation
+    categorical    <- object@categorical
     nmat           <- object@nmat
     ngroups        <- object@ngroups
     nvar           <- object@nvar
@@ -385,6 +397,23 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
         # if type == "free" take care of equality constraints
         if(type == "free" && object@eq.constraints) {
             Delta.group <- Delta.group %*% object@eq.constraints.K
+        }
+
+        # if categorical, change the rows
+        if(categorical) {
+            # add th
+            Ku  <- object@Ku; nth <- ncol(Ku)
+            Delta.muth <- t(Ku) %*% Delta.group[1:nvar,]
+            Delta.muth[ cbind(1:nth, 1:nth) ] <- 1L
+
+            # delete variances
+            Delta.sigma <- Delta.group[(nvar+1L):nrow(Delta.group),]
+
+            # FIXMEEEE
+            Delta.sigma <- Delta.sigma[-c(1,5,8,10),]
+
+            Delta.group <- rbind(Delta.muth, Delta.sigma)
+            cat("computeDelta -- FIXME!\n")
         }
  
         Delta[[g]] <- Delta.group
@@ -493,6 +522,7 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
     nmat           <- object@nmat
     representation <- object@representation
     meanstructure  <- object@meanstructure
+    categorical    <- object@categorical
     nx.unco  <- object@nx.unco
 
     # state or final?
@@ -589,13 +619,19 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
 
         for(g in 1:samplestats@ngroups) {
             # Browne & Arminger 1995 eq 4.49
-            if(!meanstructure) {
-                est <- vech(Sigma.hat[[g]])
-            } else {
-                est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
+            if(categorical) {                                    
+                ### FIXME!!                                  
+                TAU.idx <- which(names(GLIST) == "tau")
+                tau <- GLIST[[TAU.idx[g]]][,1]
+                mu <- Mu.hat[[g]]             
+                WLS.est <- c(tau, vech(Sigma.hat[[g]], diag=FALSE))
+            } else if(meanstructure) {                             
+                WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
+            } else {                                           
+                WLS.est <- vech(Sigma.hat[[g]])                
             }
-            obs <- samplestats@WLS.obs[[g]]
-            diff <- as.matrix(obs - est)
+            WLS.obs <- samplestats@WLS.obs[[g]]
+            diff <- as.matrix(WLS.obs - WLS.est)
             group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
 
@@ -807,8 +843,8 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            gradient=first.derivative.param,
-                            #gradient=first.derivative.param.numerical,
+                            #gradient=first.derivative.param,
+                            gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 

@@ -8,11 +8,6 @@ lavaanNames <- function(object, type="ov", group=NULL) {
         partable <- object
     }
 
-    stopifnot(is.list(partable), 
-              type %in% c("lv",   "ov", "lv.regular",
-                          "lv.x", "ov.x",
-                          "lv.y", "ov.y",
-                          "ov.nox"))
     vnames(partable, type=type, group=group)
 }
 
@@ -21,7 +16,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
 
     stopifnot(is.list(partable), !missing(type),
               type %in% c("lv",   "ov", "lv.regular",
-                          "lv.x", "ov.x",
+                          "lv.x", "ov.x", "ov.num", "ov.ord", "th",
                           "lv.y", "ov.y",
                           "ov.nox"))
 
@@ -138,6 +133,31 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         if(length(idx)) out <- out[-idx]
     } else
 
+    # ov's strictly ordered
+    if(type == "ov.ord") {
+        ov.names <- vnames(partable, "ov", group=group)
+        tmp <- unique(partable$lhs[ partable$op == "|" ])
+        out <- ov.names[ which(tmp %in% ov.names) ]
+    } else
+
+    # ov's strictly numeric
+    if(type == "ov.num") {
+        out <- vnames(partable, "ov", group=group)
+        ord.names <- unique(partable$lhs[ partable$op == "|" ])
+        idx <- which(out %in% ord.names)
+        if(length(idx)) out <- out[-idx]
+    } else
+
+    # threshold
+    if(type == "th") {
+        ord.names <- vnames(partable, "ov.ord", group=group)
+        lhs <- partable$lhs[ partable$op == "|" ]
+        rhs <- partable$rhs[ partable$op == "|" ]
+        TH <- paste(lhs, "|", rhs, sep="")
+        # return in the right order
+        out <- TH[unlist(lapply(ord.names, grep, TH))]
+    } else
+
 
     # exogenous lv's
     if(type == "lv.x") {
@@ -187,6 +207,7 @@ getNDAT <- function(partable, group=NULL) {
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
+    categorical <- any(partable$op == "|")
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
@@ -198,6 +219,20 @@ getNDAT <- function(partable, group=NULL) {
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
         ndat <- ndat - (ngroups * pstar.x)
+    }
+
+    # correction for ordinal data?
+    if(categorical) {
+        ov.ord   <- vnames(partable, "ov.ord", group=group)
+        nvar.ord <- length(ov.ord)
+        th       <- vnames(partable, "th", group=group)
+        nth      <- length(th)
+        # no variances
+        ndat <- ndat - (ngroups * nvar.ord)
+        # no means
+        ndat <- ndat - (ngroups * nvar.ord)
+        # but additional thresholds
+        ndat <- ndat + (ngroups * nth)
     }
 
     ndat
@@ -210,25 +245,8 @@ getNPAR <- function(partable) {
 
 getDF <- function(partable, group=NULL) {
 
-    ov.names <- vnames(partable, "ov", group=group)
-    nvar <- length(ov.names)
-    npar <- max(partable$free)
-
-    ngroups <- max(partable$group)
-    meanstructure <- any(partable$op == "~1")
-    fixed.x <- any(partable$exo > 0L & partable$free == 0L)
-
-    pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
-    ndat  <- ngroups*pstar
-
-    # correction for fixed.x?
-    if(fixed.x) {
-        ov.names.x <- vnames(partable, "ov.x", group=group)
-        nvar.x <- length(ov.names.x)
-        pstar.x <- nvar.x * (nvar.x + 1) / 2
-        if(meanstructure) pstar.x <- pstar.x + nvar.x
-        ndat <- ndat - (ngroups * pstar.x)
-    }
+    npar <- getNPAR(partable)
+    ndat <- getNDAT(partable, group=group)
 
     # degrees of freedom
     df <- ndat - npar
@@ -466,6 +484,7 @@ getLIST <- function(FLAT=NULL,
     lv.names.y   <- vnames(FLAT, type="lv.y")   # dependent lv
     #lvov.names.y <- c(ov.names.y, lv.names.y)
     lvov.names.y <- c(lv.names.y, ov.names.y)
+    ov.names.ord <- vnames(FLAT, type="ov.ord")
 
     lhs <- rhs <- character(0)
 
@@ -473,8 +492,13 @@ getLIST <- function(FLAT=NULL,
 
     # a) (residual) VARIANCES (all ov's except exo, and regular lv's)
     if(auto.var) {
-        lhs <- c(lhs, ov.names.nox, lv.names.r)
-        rhs <- c(rhs, ov.names.nox, lv.names.r)
+        # remove ordinal variables
+        ov.var <- ov.names.nox
+        idx <- which(ov.var %in% ov.names.ord)
+        if(length(idx)) ov.var <- ov.var[-idx]
+        
+        lhs <- c(lhs, ov.var, lv.names.r)
+        rhs <- c(rhs, ov.var, lv.names.r)
     }
 
     # b) `independent` latent variable COVARIANCES (lv.names.x)
@@ -501,7 +525,8 @@ getLIST <- function(FLAT=NULL,
 
     # 2. INTERCEPTS
     if(meanstructure) {
-        int.lhs <- c(ov.names, lv.names)
+        ov.num <- vnames(FLAT, type="ov.num")
+        int.lhs <- c(ov.num, lv.names)
         lhs <- c(lhs, int.lhs)
         rhs <- c(rhs, rep("",   length(int.lhs)))
         op  <- c(op,  rep("~1", length(int.lhs)))

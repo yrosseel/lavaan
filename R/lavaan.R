@@ -139,9 +139,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               sample.mean = sample.mean,
                               sample.nobs = sample.nobs,
                               warn        = lavaanOptions$warn)
-        if("ordered" %in% unlist(lavaanData@ov.types) &&
-           lavaanOptions$estimator == "ML")
-            warning("lavaan WARNING: estimator ML is used for ordered data")
+
+        # what have we learned from the data?
+        if("ordered" %in% unlist(lavaanData@ov.types)) {
+            if(lavaanOptions$estimator == "ML")
+                warning("lavaan WARNING: estimator ML is used for ordered data")
+            # Mplus style
+            lavaanOptions$meanstructure <- TRUE
+        }
     }
     if(lavaanData@data.type == "none") {
         do.fit <- FALSE; start <- "simple"

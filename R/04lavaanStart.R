@@ -154,6 +154,13 @@ StartingValues <- function(start.method = "default",
         } else {
             start[ov.int.idx] <- samplestats@mean[[g]][sample.int.idx]
         }
+        
+        # thresholds
+        ov.ord.idx <- which(partable$group == g        &
+                            partable$op == "|"         &
+                            partable$lhs %in% ov.names)
+        sample.ord.idx <- match(partable$lhs[ov.ord.idx], ov.names)
+        # FIXME!!
 
         # 4g) exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {

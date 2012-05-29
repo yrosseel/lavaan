@@ -65,9 +65,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
     SC.COR <- matrix(0, N, pstar)
     PSTAR <- matrix(0, nvar, nvar)
     COR.NAMES <- character(pstar)
-    #PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
+    # LAVAAN style: col-wise!
+    PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
     # LISREL style: row-wise
-    PSTAR[lavaan:::vechr.idx(nvar, diag=FALSE)] <- 1:pstar
+    #PSTAR[lavaan:::vechr.idx(nvar, diag=FALSE)] <- 1:pstar
     for(j in 1:(nvar-1L)) {
         for(i in (j+1L):nvar) {
             pstar.idx <- PSTAR[i,j]
@@ -209,7 +210,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 cbind(A21,A22) )
     B.inv <- solve(B)
 
-    ACOV <- B.inv %*% INNER %*% t(B.inv)
+    ACOV <- (B.inv %*% INNER %*% t(B.inv)) * N
 
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
@@ -363,7 +364,7 @@ pccor_TS <- function(x, y, th.x=NULL, th.y=NULL, freq=NULL,
                   method="nlminb", verbose=FALSE,
                   acov=FALSE) {
 
-    stopifnot(is.integer(x), is.integer(y), min(x) == 1L, min(y) == 1L,
+    stopifnot(min(x) == 1L, min(y) == 1L,
               method %in% c("nlminb", "optimize"))
 
     # thresholds
@@ -429,6 +430,91 @@ pccor_TS <- function(x, y, th.x=NULL, th.y=NULL, freq=NULL,
 
     rho
 }
+
+# polyserial x=numeric, y=ordinal -- TWO-STEP method
+pscor_TS <- function(X, Y, th.y=NULL, verbose=FALSE, method="nlminb",
+                     rescale.var=TRUE, acov=FALSE) {
+
+    stopifnot(min(Y) == 1L, method %in% c("nlminb", "optimize"))
+
+    # Y = ordinal
+    if(is.null(th.y)) th.y <- unithord(Y)
+
+    # X = numeric
+    mu.x <- mean(X); var.x <- var(X);
+    N <- length(X); if(rescale.var) var.x <- var.x * (N-1) / N
+    Z <- (X - mu.x) / sqrt(var.x)
+
+    # ML version to get Mplus results -- see Olsson 1982 eq 19 + 20
+    objectiveFunction <- function(x) {
+        rho = tanh(x[1L])
+        logl <- psLogl(rho=rho, mu.x=mu.x, var.x=var.x, th.y=th.y, X=X, Y=Y,
+                       Z=Z)
+        -logl
+    }
+
+    if(method == "optimize") {
+        out <- optimize(f=objectiveFunction,
+                        interval=c(-5, +5),  # on tanh scale!
+                        tol=1e-8, maximum=FALSE)
+        rho <- out$minimum
+    } else if(method == "nlminb") {
+        rho.init <- cor(X,Y) * sd(Y) / sum(dnorm(th.y)) # Olsson 1982 eq 38
+
+        gradientFunction <- function(x) {
+            rho = tanh(x[1L]); TH.Y <- c(-Inf, th.y, Inf); R <- sqrt(1-rho^2)
+            tauj.star  <- (TH.Y[Y+1L   ] - rho*Z)/R
+            tauj1.star <- (TH.Y[Y+1L-1L] - rho*Z)/R
+            d.tauj.star  <- dnorm(tauj.star); d.tauj1.star <- dnorm(tauj1.star)
+
+            # p(y|x)
+            pyx <- pspyx(rho=rho, th.y=th.y, Y=Y, Z=Z,
+                         tauj.star=tauj.star, tauj1.star=tauj1.star)
+            pyx.inv <- 1/pyx
+
+            # rho
+            TH.Y0 <- c(0,th.y,0) # if TH.Y = Inf or -Inf, dnorm() will be zero
+            pyx.inv.c <- pyx.inv * 1/R^3
+            TAUj  <- d.tauj.star  * (TH.Y0[Y+1L   ]*rho - Z)
+            TAUj1 <- d.tauj1.star * (TH.Y0[Y+1L-1L]*rho - Z)
+            dx.rho <- sum( pyx.inv.c * (TAUj - TAUj1) )
+
+            dx.x <- dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx 
+            -dx.x
+        }
+
+        out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
+                      gradient=gradientFunction,
+                      scale=10,
+                      control=list(trace=ifelse(verbose,1L,0L), rel.tol=1e-10))
+        if(out$convergence != 0L) warning("no convergence")
+        rho <- tanh(out$par)
+    }
+
+    rho
+}
+
+# logl for X=numeric, Y=ordinal, (Z=scale(X), only for two.step)
+psLogl <- function(rho, mu.x, var.x, th.y, X, Y, Z=NULL) {
+    sd.x <- sqrt(var.x)
+    if(is.null(Z)) Z <- (X - mu.x) / sd.x
+    pyx <- pspyx(rho=rho, th.y=th.y, Y=Y, Z=Z)
+    px <- dnorm(X, mean=mu.x, sd=sd.x)
+    logl <- sum(log(px) + log(pyx))
+    logl
+}
+
+# p(y|x)
+pspyx <- function(rho, th.y, Y, Z, tauj.star=NULL, tauj1.star=NULL) {
+    TH.Y <- c(-Inf, th.y, Inf); R <- sqrt(1-rho^2)
+    if(is.null(tauj.star )) tauj.star  <- (TH.Y[Y+1L   ] - rho*Z)/R
+    if(is.null(tauj1.star)) tauj1.star <- (TH.Y[Y+1L-1L] - rho*Z)/R
+    pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+    pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+    pyx
+}
+
+
 
 
 unithord_logl_x <- function(x, X) {

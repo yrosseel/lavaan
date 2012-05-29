@@ -38,6 +38,8 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
         # take care of multiple groups
         WLS.V[[g]] <- samplestats@nobs[[g]]/samplestats@ntotal * WLS.V[[g]]
 
+        print(Delta[[g]])
+
         # compute information for this group
         Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]] 
     }
@@ -78,6 +80,7 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
 
         # compute information for this group
         Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
+
     }
 
     # assemble over groups

@@ -53,6 +53,7 @@ setClass("Model",          # MATRIX representation of the sem model
 
         representation="character",  # stub, until we define more classes
         meanstructure="logical",
+        categorical="logical",
 
         ngroups="integer",
         nmat="integer",
@@ -82,6 +83,8 @@ setClass("Model",          # MATRIX representation of the sem model
         cin.function="function",
         cin.jacobian="function",
         con.jac="matrix",
+
+        Ku="matrix",
 
         fixed.x="logical"
 

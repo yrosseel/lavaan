@@ -392,6 +392,22 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             cat("\n")
         }
 
+        # 4b thresholds
+        th.idx <- which(object@ParTable$op == "|" &
+                        object@ParTable$group == g)
+        if(length(th.idx) > 0) {
+            cat("Thresholds:\n")
+            NAMES[th.idx] <- makeNames(  paste(object@ParTable$lhs[th.idx],
+                                               "|",
+                                               object@ParTable$rhs[th.idx],
+                                               sep=""),
+                                         object@ParTable$label[th.idx])
+            for(i in th.idx) {
+                print.estimate(name=NAMES[i], i)
+            }
+            cat("\n")
+        }
+
         # 5. (residual) variances
         var.idx <- which(object@ParTable$op == "~~" &
                          !object@ParTable$exo &

@@ -11,6 +11,7 @@ Model <- function(partable       = NULL,
     # global info from user model
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
+    categorical <- any(partable$op == "|")
 
     # what if no starting values are provided? 
     if(is.null(start)) 
@@ -44,6 +45,17 @@ Model <- function(partable       = NULL,
         }
         eq.constraints <- TRUE
     }
+
+    # Ku matrix (relation th and ov.ord)
+    # FIXME (not for mixed!)
+    if(categorical) {
+        th <- vnames(partable, "th")
+        ov <- vnames(partable, "ov")
+        Ku <- t(sapply(ov, grepl, th) + 0L)
+    } else {
+        Ku <- matrix(0,0,0)
+    }
+
 
 
     # select model matrices
@@ -439,6 +451,7 @@ Model <- function(partable       = NULL,
                  mmSize=mmSize,
                  representation=representation,
                  meanstructure=meanstructure,
+                 categorical=categorical,
                  ngroups=ngroups,
                  nmat=nmat,
                  nvar=nvar,
@@ -462,6 +475,7 @@ Model <- function(partable       = NULL,
                  ceq.jacobian=ceq.jacobian,
                  cin.function=cin.function,
                  cin.jacobian=cin.jacobian, 
+                 Ku=Ku,
                  fixed.x=fixed.x)
 
     if(debug) {

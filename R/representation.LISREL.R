@@ -6,6 +6,7 @@
 
 # initital version: YR 2011-01-21: LISREL stuff
 # updates:          YR 2011-12-01: group specific extraction
+#                   YR 2012-05-17: thresholds
 
 representation.LISREL <- function(partable=NULL, target=NULL, 
                                   extra=FALSE) {
@@ -37,6 +38,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         # info from user model per group
         ov.names <- vnames(partable, "ov", group=g); nvar <- length(ov.names)
         lv.names <- vnames(partable, "lv", group=g); nfac <- length(lv.names)
+        ov.th    <- vnames(partable, "th", group=g); nth  <- length(ov.th)
+        nth <- length(ov.th)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
@@ -117,9 +120,19 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.row[idx] <- match(target$lhs[idx], lv.names)
         tmp.col[idx] <- 1L
 
+        # 5. "|" th
+        LABEL <- paste(target$lhs, target$op, target$rhs, sep="")
+        idx <-  which(target$group == g & 
+                      target$op == "|" & LABEL %in% ov.th)
+        TH <- paste(target$lhs[idx], "|", target$rhs[idx], sep="")
+        tmp.mat[idx] <- "tau"
+        tmp.row[idx] <- match(TH, ov.th)
+        tmp.col[idx] <- 1L
+
         if(extra) {
             # mRows
-            mmRows <- list(nu     = nvar,
+            mmRows <- list(tau    = nth,
+                           nu     = nvar,
                            lambda = nvar,
                            theta  = nvar,
                            alpha  = nfac,
@@ -127,7 +140,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            psi    = nfac)
 
             # mCols
-            mmCols <- list(nu     = 1L,
+            mmCols <- list(tau    = 1L,
+                           nu     = 1L,
                            lambda = nfac,
                            theta  = nvar,
                            alpha  = 1L,
@@ -135,7 +149,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            psi    = nfac)
 
             # dimNames for LISREL model matrices
-            mmDimNames <- list(nu     = list( ov.names, "intercept"),
+            mmDimNames <- list(tau    = list( ov.th,    "threshold"),
+                               nu     = list( ov.names, "intercept"),
                                lambda = list( ov.names,    lv.names),
                                theta  = list( ov.names,    ov.names),
                                alpha  = list( lv.names, "intercept"),
@@ -143,7 +158,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                psi    = list( lv.names,    lv.names))
     
             # isSymmetric
-            mmSymmetric <- list(nu     = FALSE,
+            mmSymmetric <- list(tau    = FALSE,
+                                nu     = FALSE,
                                 lambda = FALSE,
                                 theta  = TRUE,
                                 alpha  = FALSE,
@@ -154,6 +170,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             mmNames <- c("lambda", "theta", "psi")
             if("beta" %in% tmp.mat) mmNames <- c(mmNames, "beta")
             if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
+            if("tau" %in% tmp.mat) mmNames <- c(mmNames, "tau")
 
             REP.mmNames[[g]]     <- mmNames
             REP.mmNumber[[g]]    <- length(mmNames)
@@ -328,7 +345,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
          theta  = THETA.deriv,
          psi    = PSI.deriv,
          nu     = NU.deriv, 
-         alpha  = ALPHA.deriv)
+         tau    = TAU.deriv)
 }
 
 # dSigma/dx -- per model matrix
@@ -350,8 +367,8 @@ derivative.sigma.LISREL <- function(m="lambda",
     # only lower.tri part of sigma (not same order as elimination matrix?)
     v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
-    # shortcut for nu and alpha: empty matrix
-    if(m == "nu" || m == "alpha") {
+    # shortcut for nu, alpha and tau: empty matrix
+    if(m == "nu" || m == "alpha" || m == "tau") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
@@ -418,7 +435,7 @@ derivative.mu.LISREL <- function(m="alpha",
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
     # shortcut for empty matrices
-    if(m == "psi" || m == "theta") {
+    if(m == "psi" || m == "theta" || m == "tau") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
  
