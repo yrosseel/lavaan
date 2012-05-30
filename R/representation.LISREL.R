@@ -467,5 +467,24 @@ derivative.mu.LISREL <- function(m="alpha",
     DX
 }
 
+# dTh/dx -- per model matrix
+derivative.th.LISREL <- function(m="alpha",
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]),
+                                 MLIST=NULL) {
+
+    TAU <- MLIST$tau; nth <- nrow(TAU)
+
+    if(m == "tau") {
+        DX <- diag(nth)
+        return( DX[, idx, drop=FALSE] )
+    } else {
+
+    ## FIXME!!!!
+
+        return( matrix(0.0, nrow=nth, ncol=length(idx) ) )
+    }
+}
+
 
 

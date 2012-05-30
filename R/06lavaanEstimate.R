@@ -233,11 +233,35 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                                      meanstructure=meanstructure)
         } else if(estimator == "GLS" || estimator == "WLS") {
             if(categorical) {
-                ### FIXME!!
+                # order of elements is important here:
+                # 1. thresholds
+                # 2. means (if any)
+                # 3. slopes (if any)
+                # 4. variances (if any)
+                # 5. correlations (no diagonal!)
+
+                # 1.
                 TAU.idx <- which(names(GLIST) == "tau")
-                tau <- GLIST[[TAU.idx[g]]][,1]
-                mu <- Mu.hat[[g]]
-                WLS.est <- c(tau, vech(Sigma.hat[[g]], diag=FALSE))
+                TH <- GLIST[[TAU.idx[g]]][,1]
+
+                # 2. mean (numeric only) ### FIXME, we need a priori num.idx!
+                THETA.idx <- which(names(GLIST) == "theta")
+                ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
+                th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
+                ord.names <- unique(gsub("\\|.*", "", x=th.names))
+                num.idx <- which(!ov.names %in% ord.names)
+                MEAN <- Mu.hat[[g]][num.idx]
+ 
+                # 3. slopes --- FIXME!!!!
+                SLOPES <- numeric(0)
+
+                # 4. variances (numeric only)
+                VAR <- diag(Sigma.hat[[g]])[num.idx]
+
+                # 5. correlations (off-diagonal)
+                COR <- vech(Sigma.hat[[g]], diag=FALSE)
+
+                WLS.est <- c(TH, MEAN, SLOPES, VAR, COR)
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -320,12 +344,36 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     if(is.null(m.el.idx) && is.null(x.el.idx)) 
         type <- "free"
 
+    # if categorical, get num.idx per group
+    if(categorical) {
+        num.idx <- vector("list", length=ngroups)
+        nth     <- integer(ngroups)
+        TAU.idx <- which(names(GLIST) == "tau")
+        THETA.idx <- which(names(GLIST) == "theta")
+        for(g in 1:ngroups) {
+            ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
+            th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
+            nth[g] <- length(th.names)
+            ord.names <- unique(gsub("\\|.*", "", x=th.names))
+            num.idx[[g]] <- which(!ov.names %in% ord.names)
+        }
+    }
+
     # number of rows in DELTA.group
     pstar <- integer(ngroups)
     for(g in 1:ngroups) {
         pstar[g] <- as.integer(nvar[g] * (nvar[g] + 1) / 2)
         if(object@meanstructure) {
             pstar[g] <- nvar[g] + pstar[g]  # first the means, then sigma
+        }
+        if(categorical) {
+            pstar[g] <- pstar[g] - nvar[g] # remove variances
+            pstar[g] <- pstar[g] - nvar[g] # remove means
+
+            pstar[g] <- pstar[g] + nth[g]  # add thresholds
+            pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num means
+            pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
+            # FIXME: add slopes!!
         }
     }
 
@@ -381,11 +429,34 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                 DELTA <- derivative.sigma.LISREL(m=mname,
                                                  idx=m.el.idx[[mm]],
                                                  MLIST=GLIST[ mm.in.group ])
+                if(categorical) {
+                    # reorder: first variances (of numeric), then covariances
+                    nvar <- length(ov.names)
+                    cov.idx  <- lavaan:::vech.idx(nvar)
+                    covd.idx <- lavaan:::vech.idx(nvar, diag=FALSE)
+
+                    var.idx <- which(is.na(match(cov.idx, 
+                                                 covd.idx)))[num.idx[[g]]]
+                    cor.idx <- match(covd.idx, cov.idx)
+ 
+                    DELTA <- rbind(DELTA[var.idx,,drop=FALSE], 
+                                   DELTA[cor.idx,,drop=FALSE])
+                }
                 if(object@meanstructure) {
                     DELTA.mu <- derivative.mu.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],
                                                      MLIST=GLIST[ mm.in.group ])
+                    if(categorical) {
+                       # retain only numeric rows
+                       DELTA.mu <- DELTA.mu[num.idx[[g]],,drop=FALSE]
+                    }
                     DELTA <- rbind(DELTA.mu, DELTA)
+                }
+                if(categorical) {
+                    DELTA.th <- derivative.th.LISREL(m=mname,
+                                                     idx=m.el.idx[[mm]],
+                                                     MLIST=GLIST[ mm.in.group ])
+                    DELTA <- rbind(DELTA.th, DELTA)
                 }
             } else {
                 stop("representation", representation, "not implemented yet")
@@ -399,23 +470,6 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             Delta.group <- Delta.group %*% object@eq.constraints.K
         }
 
-        # if categorical, change the rows
-        if(categorical) {
-            # add th
-            Ku  <- object@Ku; nth <- ncol(Ku)
-            Delta.muth <- t(Ku) %*% Delta.group[1:nvar,]
-            Delta.muth[ cbind(1:nth, 1:nth) ] <- 1L
-
-            # delete variances
-            Delta.sigma <- Delta.group[(nvar+1L):nrow(Delta.group),]
-
-            # FIXMEEEE
-            Delta.sigma <- Delta.sigma[-c(1,5,8,10),]
-
-            Delta.group <- rbind(Delta.muth, Delta.sigma)
-            cat("computeDelta -- FIXME!\n")
-        }
- 
         Delta[[g]] <- Delta.group
 
     } # g

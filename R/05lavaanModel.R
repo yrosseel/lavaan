@@ -48,13 +48,13 @@ Model <- function(partable       = NULL,
 
     # Ku matrix (relation th and ov.ord)
     # FIXME (not for mixed!)
-    if(categorical) {
-        th <- vnames(partable, "th")
-        ov <- vnames(partable, "ov")
-        Ku <- t(sapply(ov, grepl, th) + 0L)
-    } else {
-        Ku <- matrix(0,0,0)
-    }
+    #if(categorical) {
+    #    th <- vnames(partable, "th")
+    #    ov <- vnames(partable, "ov")
+    #    Ku <- t(sapply(ov, grepl, th) + 0L)
+    #} else {
+    #    Ku <- matrix(0,0,0)
+    #}
 
 
 
@@ -475,7 +475,6 @@ Model <- function(partable       = NULL,
                  ceq.jacobian=ceq.jacobian,
                  cin.function=cin.function,
                  cin.jacobian=cin.jacobian, 
-                 Ku=Ku,
                  fixed.x=fixed.x)
 
     if(debug) {
