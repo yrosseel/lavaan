@@ -487,19 +487,37 @@ getLIST <- function(FLAT=NULL,
     lv.names.y   <- vnames(FLAT, type="lv.y")   # dependent lv
     #lvov.names.y <- c(ov.names.y, lv.names.y)
     lvov.names.y <- c(lv.names.y, ov.names.y)
-    ov.names.ord <- vnames(FLAT, type="ov.ord")
+
+
+    # get 'ordered' variables, either from FLAT or varTable
+    ov.names.ord1 <- vnames(FLAT, type="ov.ord")
+    if(!is.null(varTable))
+        ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
+    ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
 
     lhs <- rhs <- character(0)
 
-    # 1. default (residual) variances and covariances
+    # 1. THRESHOLDS (based on varTable)
+    nth <- 0L
+    if(auto.th && length(ov.names.ord2) > 0L) {
+        for(o in ov.names.ord2) {
+            nth  <- varTable$nlev[ varTable$name == o ] - 1L
+            if(nth < 1L) next
+            lhs <- c(lhs, rep(o, nth))
+            rhs <- c(rhs, paste("t", seq_len(nth), sep=""))
+        }
+        nth <- length(lhs)
+    }
+
+    # 2. default (residual) variances and covariances
 
     # a) (residual) VARIANCES (all ov's except exo, and regular lv's)
     if(auto.var) {
-        # remove ordinal variables
+        # auto-remove ordinal variables
         ov.var <- ov.names.nox
         idx <- which(ov.var %in% ov.names.ord)
         if(length(idx)) ov.var <- ov.var[-idx]
-        
+
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)
     }
@@ -524,31 +542,23 @@ getLIST <- function(FLAT=NULL,
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
     }
-    op <- rep("~~", length(lhs))
+ 
+    # create 'op' (thresholds come first, then variances)
+    op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
 
-    # 2. INTERCEPTS
+    # 3. INTERCEPTS
     if(meanstructure) {
-        ov.num <- vnames(FLAT, type="ov.num")
-        int.lhs <- c(ov.num, lv.names)
+        # auto-remove ordinal variables
+        ov.int <- ov.names
+        idx <- which(ov.int %in% ov.names.ord)
+        if(length(idx)) ov.int <- ov.int[-idx]
+
+        int.lhs <- c(ov.int, lv.names)
         lhs <- c(lhs, int.lhs)
         rhs <- c(rhs, rep("",   length(int.lhs)))
         op  <- c(op,  rep("~1", length(int.lhs)))
     }
 
-    # 3. THRESHOLDS
-    if(auto.th && !is.null(varTable)) {
-        ord.idx <- which(varTable$type == "ordered")
-        if(length(ord.idx) > 0L) {
-            for(i in ord.idx) {
-                name <- varTable$name[i]
-                nth  <- varTable$nlev[i] - 1L
-                if(nth < 2L) next
-                lhs <- c(lhs, rep(name, nth))
-                rhs <- c(rhs, paste("t", seq_len(nth), sep=""))
-                 op <- c(op,  rep("|", nth))
-            }
-        }
-    }
 
     DEFAULT <- data.frame(lhs=lhs, op=op, rhs=rhs,
                           mod.idx=rep(0L, length(lhs)),
