@@ -674,11 +674,35 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
         for(g in 1:samplestats@ngroups) {
             # Browne & Arminger 1995 eq 4.49
             if(categorical) {                                    
-                ### FIXME!!                                  
+                # order of elements is important here:
+                # 1. thresholds
+                # 2. means (if any)
+                # 3. slopes (if any)
+                # 4. variances (if any)
+                # 5. correlations (no diagonal!)
+
+                # 1.
                 TAU.idx <- which(names(GLIST) == "tau")
-                tau <- GLIST[[TAU.idx[g]]][,1]
-                mu <- Mu.hat[[g]]             
-                WLS.est <- c(tau, vech(Sigma.hat[[g]], diag=FALSE))
+                TH <- GLIST[[TAU.idx[g]]][,1]
+
+                # 2. mean (numeric only) ### FIXME, we need a priori num.idx!
+                THETA.idx <- which(names(GLIST) == "theta")
+                ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
+                th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
+                ord.names <- unique(gsub("\\|.*", "", x=th.names))
+                num.idx <- which(!ov.names %in% ord.names)
+                MEAN <- Mu.hat[[g]][num.idx]
+
+                # 3. slopes --- FIXME!!!!
+                SLOPES <- numeric(0)
+
+                # 4. variances (numeric only)
+                VAR <- diag(Sigma.hat[[g]])[num.idx]
+
+                # 5. correlations (off-diagonal)
+                COR <- vech(Sigma.hat[[g]], diag=FALSE)
+
+                WLS.est <- c(TH, MEAN, SLOPES, VAR, COR)
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
             } else {                                           
@@ -897,8 +921,8 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            #gradient=first.derivative.param,
-                            gradient=first.derivative.param.numerical,
+                            gradient=first.derivative.param,
+                            #gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 
