@@ -23,6 +23,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    auto.var        = FALSE,
                    auto.cov.lv.x   = FALSE,
                    auto.cov.y      = FALSE,
+                   auto.th         = FALSE,
                    
                    # full data
                    data            = NULL,
@@ -110,7 +111,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             orthogonal = orthogonal, std.lv = std.lv, 
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
-            auto.cov.y = auto.cov.y, missing = missing, 
+            auto.cov.y = auto.cov.y, auto.th = auto.th, missing = missing, 
             group = group, 
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
@@ -176,7 +177,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       auto.var        = lavaanOptions$auto.var,
                       auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
                       auto.cov.y      = lavaanOptions$auto.cov.y,
+                      auto.th         = lavaanOptions$auto.th,
 
+                      varTable        = lavaanData@ov,
                       ngroups         = lavaanData@ngroups,
                       group.equal     = lavaanOptions$group.equal, 
                       group.partial   = lavaanOptions$group.partial,
@@ -464,6 +467,7 @@ cfa <- sem <- function(model = NULL,
     mc$auto.var        = TRUE
     mc$auto.cov.lv.x   = TRUE
     mc$auto.cov.y      = TRUE
+    mc$auto.th         = TRUE
     mc[[1L]] <- as.name("lavaan")
 
     eval(mc, parent.frame())
@@ -492,6 +496,7 @@ growth <- function(model = NULL,
     mc$auto.var        = TRUE
     mc$auto.cov.lv.x   = TRUE
     mc$auto.cov.y      = TRUE
+    mc$auto.th         = TRUE
     mc[[1L]] <- as.name("lavaan")
 
     eval(mc, parent.frame())

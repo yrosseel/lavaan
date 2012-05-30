@@ -466,8 +466,11 @@ getLIST <- function(FLAT=NULL,
                     auto.var        = FALSE,
                     auto.cov.lv.x   = FALSE,
                     auto.cov.y      = FALSE,
+                    auto.th         = FALSE,
+                    varTable        = NULL,
                     group.equal     = NULL,
                     ngroups         = 1L) {
+
 
     ### DEFAULT elements: parameters that are typically not specified by
     ###                   users, but should typically be considered, 
@@ -530,6 +533,21 @@ getLIST <- function(FLAT=NULL,
         lhs <- c(lhs, int.lhs)
         rhs <- c(rhs, rep("",   length(int.lhs)))
         op  <- c(op,  rep("~1", length(int.lhs)))
+    }
+
+    # 3. THRESHOLDS
+    if(auto.th && !is.null(varTable)) {
+        ord.idx <- which(varTable$type == "ordered")
+        if(length(ord.idx) > 0L) {
+            for(i in ord.idx) {
+                name <- varTable$name[i]
+                nth  <- varTable$nlev[i] - 1L
+                if(nth < 2L) next
+                lhs <- c(lhs, rep(name, nth))
+                rhs <- c(rhs, paste("t", seq_len(nth), sep=""))
+                 op <- c(op,  rep("|", nth))
+            }
+        }
     }
 
     DEFAULT <- data.frame(lhs=lhs, op=op, rhs=rhs,

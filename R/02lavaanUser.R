@@ -29,7 +29,9 @@ lavaanify <- lavParTable <- function(
                       auto.var        = FALSE,
                       auto.cov.lv.x   = FALSE,
                       auto.cov.y      = FALSE,
+                      auto.th         = FALSE,
 
+                      varTable        = NULL,
                       ngroups         = 1L,
                       group.equal     = NULL,
                       group.partial   = NULL,
@@ -84,6 +86,7 @@ lavaanify <- lavParTable <- function(
             auto.var        = TRUE
             auto.cov.lv.x   = TRUE
             auto.cov.y      = TRUE
+            auto.th         = TRUE
         } else 
         
         if(model.type == "growth") {
@@ -94,7 +97,8 @@ lavaanify <- lavParTable <- function(
             auto.fix.single = TRUE
             auto.var        = TRUE
             auto.cov.lv.x   = TRUE
-            auto.cov.y      = TRUE    
+            auto.cov.y      = TRUE
+            auto.th         = TRUE    
         }
     }
 
@@ -130,7 +134,8 @@ lavaanify <- lavParTable <- function(
                 auto.fix.first = auto.fix.first, 
                 auto.fix.single = auto.fix.single,
                 auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-                auto.cov.y = auto.cov.y, group.equal = NULL, ngroups = 1L)
+                auto.cov.y = auto.cov.y, auto.th = auto.th, 
+                varTable = varTable, group.equal = NULL, ngroups = 1L)
             LIST.group <- as.data.frame(LIST.group, stringsAsFactors=FALSE)
             if(g == 1L) {
                 LIST <- LIST.group
@@ -147,7 +152,8 @@ lavaanify <- lavParTable <- function(
             orthogonal = orthogonal, std.lv = std.lv, fixed.x = fixed.x,
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-            auto.cov.y = auto.cov.y, group.equal = group.equal, 
+            auto.cov.y = auto.cov.y, auto.th = auto.th, 
+            varTable = varTable, group.equal = group.equal, 
             ngroups = ngroups)
     }        
     if(debug) {
