@@ -236,6 +236,9 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
 
+    # shortcut
+    if(is.null(ALPHA) || is.null(NU)) return(matrix(0, nrow(LAMBDA), 1L))
+
     # beta?
     if(is.null(BETA)) {
         LAMBDA..IB.inv <- LAMBDA
@@ -344,8 +347,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
          beta   = BETA.deriv,
          theta  = THETA.deriv,
          psi    = PSI.deriv,
-         nu     = NU.deriv, 
-         tau    = TAU.deriv)
+         nu     = NU.deriv)
 }
 
 # dSigma/dx -- per model matrix

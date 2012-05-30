@@ -208,6 +208,7 @@ getNDAT <- function(partable, group=NULL) {
     meanstructure <- any(partable$op == "~1")
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
     categorical <- any(partable$op == "|")
+    if(categorical) meanstructure <- TRUE
 
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
@@ -513,10 +514,10 @@ getLIST <- function(FLAT=NULL,
 
     # a) (residual) VARIANCES (all ov's except exo, and regular lv's)
     if(auto.var) {
-        # auto-remove ordinal variables
         ov.var <- ov.names.nox
-        idx <- which(ov.var %in% ov.names.ord)
-        if(length(idx)) ov.var <- ov.var[-idx]
+        # auto-remove ordinal variables
+        #idx <- which(ov.var %in% ov.names.ord)
+        #if(length(idx)) ov.var <- ov.var[-idx]
 
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)
@@ -729,6 +730,15 @@ getLIST <- function(FLAT=NULL,
            exo[exo.int.idx] <- 1L
     }
 
+    # 5b. residual variances of ordinal variables?
+    if(length(ov.names.ord) > 0L) {
+        ord.idx <- which(lhs %in% ov.names.ord &
+                         op == "~~" &
+                         lhs == rhs)
+        ustart[ord.idx] <- 1L
+          free[ord.idx] <- 0L
+    }
+
     # 6. multiple groups?
     group <- rep(1L, length(lhs))
     if(ngroups > 1) {
@@ -785,14 +795,14 @@ getLIST <- function(FLAT=NULL,
     LIST
 }
 
-independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
+independenceModel <- function(ov.names=NULL, ov=NULL, 
+                              ov.names.x=NULL, sample.cov=NULL,
                               meanstructure=FALSE, sample.mean=NULL,
                               fixed.x=TRUE) {
 
     ngroups <- length(ov.names)
     ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
                     ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
-
 
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
@@ -817,22 +827,61 @@ independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
             ustart <- c(ustart, rep(as.numeric(NA), nvar))
         }
 
-        # meanstructure?
-        if(meanstructure) {
-            lhs   <- c(lhs, ov.names.nox[[g]])
-             op   <- c(op, rep("~1", nvar))
-            rhs   <- c(rhs, rep("", nvar))
-            group <- c(group, rep(g,  nvar))
-            free  <- c(free,  rep(1L, nvar))
-            exo   <- c(exo,   rep(0L, nvar))
-            # starting values
-            if(!is.null(sample.mean)) {
-                sample.int.idx <- match(ov.names.nox[[g]], ov.names[[g]])
-                ustart <- c(ustart, sample.mean[[g]][sample.int.idx])
-            } else {
-                ustart <- c(ustart, rep(as.numeric(NA), nvar))
+        # ordered? fix variances, add thresholds
+        ord.names <- character(0)
+        if(!is.null(ov) && any(ov$type == "ordered")) {
+            ord.names <- ov$name[ ov$type == "ordered" ]
+            # only for this group
+            ord.names <- ov.names[[g]][ which(ov.names[[g]] %in% ord.names) ]
+            
+            if(length(ord.names) > 0L) {
+                # fix variances to 1.0
+                idx <- which(lhs %in% ord.names & op == "~~" & lhs == rhs)
+                ustart[idx] <- 1.0
+                free[idx] <- 0L
+
+                # add thresholds
+                lhs.th <- character(0); rhs.th <- character(0)
+                for(o in ord.names) {
+                    nth  <- ov$nlev[ ov$name == o ] - 1L
+                    if(nth < 1L) next
+                    lhs.th <- c(lhs.th, rep(o, nth))
+                    rhs.th <- c(rhs.th, paste("t", seq_len(nth), sep=""))
+                }
+                nel   <- length(lhs.th)
+                lhs   <- c(lhs, lhs.th)
+                rhs   <- c(rhs, rhs.th)
+                 op   <- c(op, rep("|", nel))
+                group <- c(group, rep(g, nel))
+                 free <- c(free, rep(1L, nel))
+                  exo <- c(exo, rep(0L, nel))
+               # FIXME: provide better starting values here!!
+               ustart <- c(ustart, rep(as.numeric(NA), nel))
             }
         }
+        # meanstructure?
+        if(meanstructure) {
+            # auto-remove ordinal variables
+            ov.int <- ov.names.nox[[g]]
+            idx <- which(ov.int %in% ord.names)
+            if(length(idx)) ov.int <- ov.int[-idx]
+
+            nel <- length(ov.int)
+            lhs   <- c(lhs, ov.int)
+             op   <- c(op, rep("~1", nel))
+            rhs   <- c(rhs, rep("", nel))
+            group <- c(group, rep(g,  nel))
+            free  <- c(free,  rep(1L, nel))
+            exo   <- c(exo,   rep(0L, nel))
+            # starting values
+            if(!is.null(sample.mean)) {
+                sample.int.idx <- match(ov.int, ov.names[[g]])
+                ustart <- c(ustart, sample.mean[[g]][sample.int.idx])
+            } else {
+                ustart <- c(ustart, rep(as.numeric(NA), length(ov.int)))
+            }
+        }
+
 
 
         # fixed.x exogenous variables?
@@ -888,6 +937,7 @@ independenceModel <- function(ov.names=NULL, ov.names.x=NULL, sample.cov=NULL,
                         unco        = free
                    )
     LIST
+
 }
 
 

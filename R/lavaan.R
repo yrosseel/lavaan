@@ -390,7 +390,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
     if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {

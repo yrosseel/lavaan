@@ -12,6 +12,8 @@ Model <- function(partable       = NULL,
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
     categorical <- any(partable$op == "|")
+    if(categorical) meanstructure <- TRUE
+
 
     # what if no starting values are provided? 
     if(is.null(start)) 

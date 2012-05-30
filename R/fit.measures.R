@@ -22,6 +22,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     fx <- object@Fit@fx
     fx.group <- object@Fit@fx.group
     meanstructure <- object@Model@meanstructure
+    categorical   <- object@Model@categorical
     multigroup    <- object@Data@ngroups > 1L
     estimator     <- object@Options$estimator
     test          <- object@Options$test
@@ -89,7 +90,13 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             rmsea.full <- c("rmsea", 
                             "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.pvalue")
         }
-        srmr <- c("srmr")
+
+        if(categorical) {
+            srmr <- character(0)
+        } else {
+            srmr <- c("srmr")
+        }
+  
 
         if(estimator == "ML") {
             fit.measures <- c(chisq, baseline, cfi.tli, logl, rmsea.full, srmr)
