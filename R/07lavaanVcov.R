@@ -239,22 +239,30 @@ Nvcov.robust.mlr <- function(object, samplestats=NULL, data=NULL,
 
 Nvcov.robust.wls <- function(object, samplestats=NULL) {
 
-    # compute delta
-    Delta <- computeDelta(object)
+    # compute information matrix
+    E <- computeExpectedInformation(object, samplestats=samplestats, data=data,
+                                    estimator="WLS", extra=TRUE)
+    E.inv <- solve(E)
+    Delta <- attr(E, "Delta")
+    WLS.V <- attr(E, "WLS.V")
 
-    NVarCov <- matrix(0, ncol=ncol(Delta[[1]]), nrow=ncol(Delta[[1]]))
+    # compute ACOV matrix (per group)
+    ACOV <- samplestats@ACOV
+
+    NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
 
     for(g in 1:samplestats@ngroups) {
-        tmp <- Delta[[g]]
-        acov <- samplestats@ACOV[[g]]
+        tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
         NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
-                              (t(tmp) %*% acov %*% tmp) )
+                              (t(tmp) %*% ACOV[[g]] %*% tmp) )
     } # g
 
     NVarCov <- NVarCov * (samplestats@ntotal-1)
 
     # to be reused by lavaanTest
+    attr(NVarCov, "E.inv") <- E.inv
     attr(NVarCov, "Delta") <- Delta
+    attr(NVarCov, "WLS.V") <- WLS.V
 
     NVarCov
 }
