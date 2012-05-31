@@ -124,15 +124,26 @@ setLavaanOptions <- function(opt = formals(lavaan))
               opt$test == "yuan.bentler" ||
               opt$test == "yuan-bentler") {
         opt$test <- "yuan.bentler"
+    } else if(opt$test == "m.adjusted" ||
+              opt$test == "m" ||
+              opt$test == "mean.adjusted" ||
+              opt$test == "mean-adjusted") {
+        opt$test <- "mean.adjusted"
+    } else if(opt$test == "mean.var.adjusted" ||
+              opt$test == "mean-var-adjusted" ||
+              opt$test == "mv" ||
+              opt$test == "mv.adjusted") {
+        opt$test <- "mean.var.adjusted"
     } else if(opt$test == "bootstrap" || 
               opt$test == "boot" ||
               opt$test == "bollen.stine" || 
               opt$test == "bollen-stine") {
         opt$test <- "bollen.stine"
     } else {
-        stop("`test' argument must one of \"none\", \"standard\"",
-             "\"satorra.bentler\", \"yuan.bentler\", \"bollen.stine\"",
-             " or \"bootstrap\"")
+        stop("`test' argument must one of \"none\", \"standard\",
+             \"mean.adjusted\", \"mean.var.adjusted\",
+             \"satorra.bentler\", \"yuan.bentler\", \"bollen.stine\",
+             or \"bootstrap\"")
     }
 
     # meanstructure
@@ -253,6 +264,22 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is WLS: ",
                  opt$test, "\n")
         }
+    } else if(opt$estimator == "wlsm") {
+        opt$estimator <- "DWLS"
+        if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$test != "none") opt$test <- "mean.adjusted"
+        if(opt$missing == "ml") {
+            stop("the WLSM estimator can not be used when data are incomplete\n")
+        }
+     } else if(opt$estimator == "wlsmv") {
+        opt$estimator <- "DWLS"
+        if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        if(opt$missing == "ml") {
+            stop("the WLSMV estimator can not be used when data are incomplete\n")
+        }
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -270,6 +297,22 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$test != "standard") {
             stop("invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
+        }
+    } else if(opt$estimator == "ulsm") {
+        opt$estimator <- "ULS"
+        if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$test != "none") opt$test <- "mean.adjusted"
+        if(opt$missing == "ml") {
+            stop("the ULSM estimator can not be used when data are incomplete\n")
+        }
+    } else if(opt$estimator == "ulsmv") {
+        opt$estimator <- "ULS"
+        if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        if(opt$missing == "ml") {
+            stop("the ULSMV estimator can not be used when data are incomplete\n")
         }
     } else {
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")

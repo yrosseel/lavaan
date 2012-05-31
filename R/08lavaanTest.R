@@ -149,6 +149,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     test        <- options$test
     information <- options$information
 
+
     TEST <- list()
 
     # degrees of freedom
@@ -208,7 +209,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                       df=df, 
                       pvalue=pvalue) 
 
-    if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler")) {
+    if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
+                              "mean.adjusted", "mean.var.adjusted")) {
         TEST[[2]] <- list(test=test,
                           stat=chisq, 
                           stat.group=chisq.group,
@@ -322,6 +324,87 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           pvalue=pvalue.scaled,
                           scaling.factor=scaling.factor,
                           trace.UGamma=trace.UGamma)
+
+    } else if(test == "mean.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
+        # try to extract attr from VCOV (if present)
+        E.inv <- attr(VCOV, "E.inv")
+        Delta <- attr(VCOV, "Delta")
+        WLS.V <- attr(VCOV, "WLS.V")
+        ACOV  <- samplestats@ACOV
+
+        # if not present (perhaps se.type="standard" or se.type="none")
+        #  we need to compute these again
+        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
+            E <- computeExpectedInformation(object, samplestats=samplestats,
+                                            data=data,
+                                            estimator="WLS", #Delta=NULL,
+                                            extra=TRUE)
+            E.inv <- solve(E)
+            Delta <- attr(E, "Delta")
+            WLS.V <- attr(E, "WLS.V")
+        }
+
+        trace.UGamma <- 
+            testStatisticSatorraBentler(samplestats = samplestats,
+                                        E.inv       = E.inv, 
+                                        Delta       = Delta, 
+                                        WLS.V       = WLS.V, 
+                                        Gamma       = ACOV,
+                                        x.idx       = x.idx)
+
+        scaling.factor <- sum(trace.UGamma) / df
+        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+        chisq.scaled         <- sum(chisq.group / scaling.factor)
+        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
+
+        TEST[[2]] <- list(test=test,
+                          stat=chisq.scaled,
+                          stat.group=(chisq.group / scaling.factor),
+                          df=df,
+                          pvalue=pvalue.scaled,
+                          scaling.factor=scaling.factor,
+                          trace.UGamma=trace.UGamma)
+
+    } else if(test == "mean.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
+        # try to extract attr from VCOV (if present)
+        E.inv <- attr(VCOV, "E.inv")
+        Delta <- attr(VCOV, "Delta")
+        WLS.V <- attr(VCOV, "WLS.V")
+        ACOV  <- samplestats@ACOV
+
+        # if not present (perhaps se.type="standard" or se.type="none")
+        #  we need to compute these again
+        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
+            E <- computeExpectedInformation(object, samplestats=samplestats,
+                                            data=data,
+                                            estimator="WLS", #Delta=NULL,
+                                            extra=TRUE)
+            E.inv <- solve(E)
+            Delta <- attr(E, "Delta")
+            WLS.V <- attr(E, "WLS.V")
+        }
+
+        trace.UGamma <- 
+            testStatisticSatorraBentler(samplestats = samplestats,
+                                        E.inv       = E.inv, 
+                                        Delta       = Delta, 
+                                        WLS.V       = WLS.V, 
+                                        Gamma       = ACOV,
+                                        x.idx       = x.idx)
+
+        scaling.factor <- sum(trace.UGamma) / df
+        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+        chisq.scaled         <- sum(chisq.group / scaling.factor)
+        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
+
+        TEST[[2]] <- list(test=test,
+                          stat=chisq.scaled,
+                          stat.group=(chisq.group / scaling.factor),
+                          df=df,
+                          pvalue=pvalue.scaled,
+                          scaling.factor=scaling.factor,
+                          trace.UGamma=trace.UGamma)
+
 
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)

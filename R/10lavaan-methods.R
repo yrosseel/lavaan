@@ -82,7 +82,8 @@ short.summary <- function(object) {
     # Print Chi-square value for the user-specified (full/h0) model
 
     # robust/scaled statistics?
-    if(object@Options$test %in% c("satorra.bentler", "yuan.bentler")) {
+    if(object@Options$test %in% c("satorra.bentler", "yuan.bentler",
+                                  "mean.adjusted", "mean.var.adjusted")) {
         scaled <- TRUE
     } else {
         scaled <- FALSE
