@@ -31,7 +31,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     df <- object@Fit@test[[1]]$df
    
     if(test %in% c("satorra.bentler", "yuan.bentler", "mean.adjusted",
-                   "mean.var.adjusted")) {
+                   "mean.var.adjusted", "scaled.shifted")) {
         scaled <- TRUE
     } else {
         scaled <- FALSE

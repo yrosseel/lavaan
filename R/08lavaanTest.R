@@ -13,11 +13,11 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
     for(g in 1:samplestats@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
         U <- WLS.V[[g]] - (tmp %*% t(Delta[[g]]) %*% WLS.V[[g]])
+        UG <- U %*% Gamma[[g]]; tUG <- t(UG)
         trace.UGamma[g] <-
                 samplestats@ntotal/samplestats@nobs[[g]] * sum( U * Gamma[[g]] )
         trace.UGamma2[g] <-
-                #samplestats@ntotal/samplestats@nobs[[g]] * sum((U*Gamma[[g]])^2)
-                samplestats@ntotal/samplestats@nobs[[g]] * sum(diag( (U %*% Gamma[[g]]) %*% (U %*% Gamma[[g]])  ))
+                samplestats@ntotal/samplestats@nobs[[g]] * sum( UG * tUG )
     }
 
     attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
@@ -399,6 +399,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
         # note: this corresponds with Muthen 1997 and Mplus 4
         # but Mplus 6 seems to do something different...
+        # see 'Simple Second Order Chi-Square Correction' 2010 www.statmodel.com
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
 
         df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
@@ -414,7 +415,59 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           df=df,
                           pvalue=pvalue.scaled,
                           scaling.factor=scaling.factor,
-                          trace.UGamma=trace.UGamma)
+                          trace.UGamma=trace.UGamma,
+                          trace.UGamma2=trace.UGamma2)
+
+
+    } else if(test == "scaled.shifted" && df > 0) { # for WLSM/ULSM only (for now)
+        # try to extract attr from VCOV (if present)
+        E.inv <- attr(VCOV, "E.inv")
+        Delta <- attr(VCOV, "Delta")
+        WLS.V <- attr(VCOV, "WLS.V")
+        ACOV  <- samplestats@ACOV
+
+        # if not present (perhaps se.type="standard" or se.type="none")
+        #  we need to compute these again
+        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
+            E <- computeExpectedInformation(object, samplestats=samplestats,
+                                            data=data,
+                                            estimator="WLS", #Delta=NULL,
+                                            extra=TRUE)
+            E.inv <- solve(E)
+            Delta <- attr(E, "Delta")
+            WLS.V <- attr(E, "WLS.V")
+        }
+
+        trace.UGamma <- 
+            testStatisticSatorraBentler(samplestats = samplestats,
+                                        E.inv       = E.inv, 
+                                        Delta       = Delta, 
+                                        WLS.V       = WLS.V, 
+                                        Gamma       = ACOV,
+                                        x.idx       = x.idx)
+
+        # here we use the 'T3' statistic as used by Mplus 6 and higher
+        # see 'Simple Second Order Chi-Square Correction' 2010 www.statmodel.com
+        trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
+
+        scaling.factor <- sqrt(sum(trace.UGamma2) / df)
+        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+        shift.parameter <- df - sqrt( df*sum(trace.UGamma)^2 / 
+                                      sum(trace.UGamma2) )
+        chisq.scaled         <- sum(chisq.group / scaling.factor + 
+                                    shift.parameter)
+        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
+
+        TEST[[2]] <- list(test=test,
+                          stat=chisq.scaled,
+                          stat.group=(chisq.group / scaling.factor + 
+                                      shift.parameter),
+                          df=df,
+                          pvalue=pvalue.scaled,
+                          scaling.factor=scaling.factor,
+                          shift.parameter=shift.parameter,
+                          trace.UGamma=trace.UGamma,
+                          trace.UGamma2=trace.UGamma2)
 
 
     } else if(test == "yuan.bentler" && df > 0) {
