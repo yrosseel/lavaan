@@ -97,6 +97,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            function(x) vnames(FLAT, type="ov", group=x))
     }
 
+    # 0c categorical variables? -- needed for lavaanOptions
+    categorical <- any(FLAT$op == "|")
+    if(!is.null(data)) {
+        ov.types <- sapply(Data[,unlist(ov.names)], function(x) class(x)[1])
+        if("ordered" %in% ov.types) categorical <- TRUE
+    }
+
     # 1a. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])
     # force evaluation of `language` and/or `symbol` arguments
@@ -112,7 +119,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
             auto.cov.y = auto.cov.y, auto.th = auto.th, missing = missing, 
-            group = group, 
+            group = group, categorical = categorical,
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
             estimator = estimator, likelihood = likelihood,

@@ -179,7 +179,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$bootstrap <- as.integer(opt$bootstrap)
         stopifnot(opt$bootstrap > 0L)
     }
-    if(opt$estimator == "default" || opt$estimator == "ml") {
+
+    # default estimator
+    if(opt$estimator == "default") {
+        if(opt$categorical) 
+            opt$estimator <- "wlsmv"
+        else
+            opt$estimator <- "ml"
+    }
+
+    if(opt$estimator == "ml") {
         opt$estimator <- "ML"
         if(opt$se == "default") {
             opt$se <- "standard"
@@ -200,6 +209,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("unknown value for `se' argument when estimator is ML: ", 
                  opt$se, "\n")
         }
+
     } else if(opt$estimator == "mlm") {
         opt$estimator <- "ML"
         opt$information <- "expected"
