@@ -7,15 +7,20 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
         warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
     }
 
-    trace.UGamma <- numeric( samplestats@ngroups )
+    trace.UGamma  <- numeric( samplestats@ngroups )
+    trace.UGamma2 <- numeric( samplestats@ngroups )
 
     for(g in 1:samplestats@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
         U <- WLS.V[[g]] - (tmp %*% t(Delta[[g]]) %*% WLS.V[[g]])
         trace.UGamma[g] <-
                 samplestats@ntotal/samplestats@nobs[[g]] * sum( U * Gamma[[g]] )
+        trace.UGamma2[g] <-
+                #samplestats@ntotal/samplestats@nobs[[g]] * sum((U*Gamma[[g]])^2)
+                samplestats@ntotal/samplestats@nobs[[g]] * sum(diag( (U %*% Gamma[[g]]) %*% (U %*% Gamma[[g]])  ))
     }
 
+    attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
 
     trace.UGamma
 }
@@ -365,7 +370,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           scaling.factor=scaling.factor,
                           trace.UGamma=trace.UGamma)
 
-    } else if(test == "mean.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
+    } else if(test == "mean.var.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
         # try to extract attr from VCOV (if present)
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
@@ -391,6 +396,12 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                         WLS.V       = WLS.V, 
                                         Gamma       = ACOV,
                                         x.idx       = x.idx)
+
+        # note: this corresponds with Muthen 1997 and Mplus 4
+        # but Mplus 6 seems to do something different...
+        trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
+
+        df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
 
         scaling.factor <- sum(trace.UGamma) / df
         if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
