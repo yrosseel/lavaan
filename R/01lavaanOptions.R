@@ -89,9 +89,9 @@ setLavaanOptions <- function(opt = formals(lavaan))
             # since version 5?
             opt$missing <- "ml" 
             # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
-            if(opt$estimator %in% c("mlm", "gls", "wls", "uls")) {
+            if(opt$estimator %in% c("mlm", "gls", "wls", "dwls", "uls")) {
                 opt$missing <- "listwise"
-                warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS or WLS")
+                warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS, ULS, DWLS or WLS")
             }
         } else {
             opt$missing <- "listwise"
@@ -99,7 +99,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
         if(opt$estimator %in% c("mlm", "gls", "wls", "uls")) {
-            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, GLS or WLS")
+            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, GLS, ULS, DWLS or WLS")
         }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
         # nothing to do
@@ -223,6 +223,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
+        } else if(opt$se == "robust.wls") {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$se <- "robust.wls"
         } else {
             stop("invalid value for `se' argument when estimator is WLS: ", 
                  opt$se, "\n")
@@ -231,12 +235,34 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is WLS: ", 
                  opt$test, "\n")
         }
+    } else if(opt$estimator == "dwls") {
+        opt$estimator <- "DWLS"
+        if(opt$se == "default" || opt$se == "standard") {
+            opt$se <- "standard"
+        } else if(opt$se == "none" || opt$se == "bootstrap") {
+            # nothing to do
+        } else if(opt$se == "robust.wls") {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$se <- "robust.wls"
+        } else {
+            stop("invalid value for `se' argument when estimator is WLS: ",
+                 opt$se, "\n")
+        }
+        if(!opt$test %in% c("standard","none")) {
+            stop("invalid value for `test' argument when estimator is WLS: ",
+                 opt$test, "\n")
+        }
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
         } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
+        } else if(opt$se == "robust.wls") {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$se <- "robust.wls"
         } else {
             stop("invalid value for `se' argument when estimator is ULS: ", 
                  opt$se, "\n")

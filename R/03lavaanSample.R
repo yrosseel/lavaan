@@ -167,6 +167,11 @@ lavSampleStatsFromData <- function(Data          = NULL,
         } else if(estimator == "WLS" && categorical) {
             WLS.V[[g]] <- inv.chol(CAT$ACOV)
             ACOV[[g]]  <- CAT$ACOV
+        } else if(estimator == "DWLS" && categorical) {
+            dacov <- diag(CAT$ACOV)
+            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$ACOV),
+                                        ncol=ncol(CAT$ACOV))
+            ACOV[[g]]  <- CAT$ACOV
         } else if(estimator == "ULS" && categorical) {
             # FIXME: cor elements *2??
             DWLS <- diag(nrow(CAT$ACOV))

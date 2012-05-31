@@ -236,6 +236,28 @@ Nvcov.robust.mlr <- function(object, samplestats=NULL, data=NULL,
 
     NVarCov
 }
+
+Nvcov.robust.wls <- function(object, samplestats=NULL) {
+
+    # compute delta
+    Delta <- computeDelta(object)
+
+    NVarCov <- matrix(0, ncol=ncol(Delta[[1]]), nrow=ncol(Delta[[1]]))
+
+    for(g in 1:samplestats@ngroups) {
+        tmp <- Delta[[g]]
+        acov <- samplestats@ACOV[[g]]
+        NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
+                              (t(tmp) %*% acov %*% tmp) )
+    } # g
+
+    NVarCov <- NVarCov * (samplestats@ntotal-1)
+
+    # to be reused by lavaanTest
+    attr(NVarCov, "Delta") <- Delta
+
+    NVarCov
+}
            
 
 estimateVCOV <- function(object, samplestats, options=NULL, data=NULL, 
@@ -283,6 +305,10 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                          samplestats = samplestats,
                                          data        = data,
                                          information = information) )
+
+    } else if(se == "robust.wls") {
+        NVarCov <- try( Nvcov.robust.wls(object      = object,
+                                         samplestats = samplestats) )
 
     } else if(se == "bootstrap") {
         NVarCov <- try( Nvcov.bootstrap(object      = object,

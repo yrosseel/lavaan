@@ -8,7 +8,10 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
 
     # compute WLS.V
     WLS.V       <- vector("list", length=samplestats@ngroups)
-    if(estimator == "GLS" || estimator == "WLS" || estimator == "ULS") {
+    if(estimator == "GLS"  || 
+       estimator == "WLS"  || 
+       estimator == "DWLS" ||
+       estimator == "ULS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
         WLS.V <- samplestats@WLS.V
