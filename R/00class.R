@@ -38,6 +38,7 @@ setClass("lavSampleStats",         # sample moments
         cov.log.det="list",        # log det of observed cov (per group)
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
+        ACOV="list",               # asymptotic covariance matrix
 
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information

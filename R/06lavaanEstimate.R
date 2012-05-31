@@ -231,7 +231,9 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                                      data.mean=samplestats@mean[[g]], 
                                      data.cov.log.det=samplestats@cov.log.det[[g]],
                                      meanstructure=meanstructure)
-        } else if(estimator == "GLS" || estimator == "WLS") {
+        } else if(estimator == "GLS" || 
+                  estimator == "WLS" || 
+                  estimator == "ULS") {
             if(categorical) {
                 # order of elements is important here:
                 # 1. thresholds
@@ -664,7 +666,7 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
     } else # ML/GLS
 
     # 2. WLS approach
-    if(estimator == "WLS") {
+    if(estimator == "WLS" || estimator == "ULS") {
 
         if(type != "free") {
             stop("FIXME: WLS gradient with type != free needs fixing!")

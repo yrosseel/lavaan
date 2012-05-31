@@ -48,6 +48,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     missing.flag. <- FALSE
     if(is.null(WLS.V))
         WLS.V <- vector("list", length=ngroups)
+    ACOV          <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 
@@ -162,8 +163,16 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
             WLS.V[[g]] <- inv.chol(Gamma)
+            ACOV[[g]]  <- Gamma
         } else if(estimator == "WLS" && categorical) {
             WLS.V[[g]] <- inv.chol(CAT$ACOV)
+            ACOV[[g]]  <- CAT$ACOV
+        } else if(estimator == "ULS" && categorical) {
+            # FIXME: cor elements *2??
+            DWLS <- diag(nrow(CAT$ACOV))
+            #diag(DWLS)[7:21] <- 2.0
+            WLS.V[[g]] <- DWLS
+            ACOV[[g]]  <- CAT$ACOV
         }
 
     } # ngroups
@@ -186,6 +195,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        cov.log.det  = cov.log.det,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,                     
+                       ACOV         = ACOV,
 
                        # missingness
                        missing.flag = missing.flag.,
