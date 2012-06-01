@@ -29,6 +29,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    data            = NULL,
                    std.ov          = FALSE,
                    missing         = "default",
+                   ordered         = NULL,
 
                    # summary data
                    sample.cov      = NULL,
@@ -99,9 +100,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 0c categorical variables? -- needed for lavaanOptions
     categorical <- any(FLAT$op == "|")
+    #if(!is.null(data) && length(ordered) > 0L) {
+    #    categorical <- TRUE
+    #}
     if(!is.null(data)) {
-        ov.types <- sapply(Data[,unlist(ov.names)], function(x) class(x)[1])
-        if("ordered" %in% ov.types) categorical <- TRUE
+         ov.types <- sapply(data[,unlist(ov.names)], function(x) class(x)[1])
+         if("ordered" %in% ov.types) categorical <- TRUE
     }
 
     # 1a. collect various options/flags and fill in `default' values
@@ -140,7 +144,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               group       = group,
                               group.label = group.label,
                               ov.names    = ov.names,
-                              # ov.types    = ov.types,
+                              ordered     = ordered,
                               std.ov      = std.ov,
                               missing     = lavaanOptions$missing,
                               sample.cov  = sample.cov,
