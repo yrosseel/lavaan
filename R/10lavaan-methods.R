@@ -84,7 +84,8 @@ short.summary <- function(object) {
     # robust/scaled statistics?
     if(object@Options$test %in% c("satorra.bentler", "yuan.bentler",
                                   "mean.adjusted", "mean.var.adjusted",
-                                  "scaled.shifted")) {
+                                  "scaled.shifted") &&
+       length(object@Fit@test) > 1L) {
         scaled <- TRUE
     } else {
         scaled <- FALSE
