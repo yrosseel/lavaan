@@ -212,7 +212,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
 
     ACOV <- (B.inv %*% INNER %*% t(B.inv)) * N
 
-    out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR,
+    # COV matrix
+    COV <- cor2cov(R=COR, sds=sqrt(unlist(VAR)))
+
+    out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
                 ACOV=ACOV)
     out

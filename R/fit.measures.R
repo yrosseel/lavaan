@@ -95,7 +95,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         if(categorical) {
             srmr <- character(0)
         } else {
-            srmr <- c("srmr")
+            srmr <- c("srmr", "srmr_nomean")
         }
   
 
@@ -472,6 +472,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     if("srmr" %in% fit.measures) {
         # SRMR
         srmr.group <- numeric(G)
+        srmr_nomean.group <- numeric(G)
         for(g in 1:G) {
             # observed
             if(!object@SampleStats@missing.flag) {
@@ -500,30 +501,34 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             #D2 <- diag(sqrt.d2, ncol=length(sqrt.d2))
             #R <- D %*% S %*% D   - D2 %*% Sigma.hat %*% D2
 
-            # standardized residual mean vector
             if(meanstructure) {
+                # standardized residual mean vector
                 R.mean <- D %*% (M - Mu.hat)
                 #R.mean <-  D %*% M - D2 %*% Mu.hat
-            }
-
-            if(meanstructure) {
                 e <- nvar*(nvar+1)/2 + nvar
                 srmr.group[g] <- sqrt( (sum(R[lower.tri(R, diag=TRUE)]^2) +
                                         sum(R.mean^2))/ e )
+                e <- nvar*(nvar+1)/2
+                srmr_nomean.group[g] <- sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
+                srmr_nomean.group[g] 
             } else {
                 e <- nvar*(nvar+1)/2
-                srmr.group[g] <- sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
+                srmr_nomean.group[g] <- srmr.group[g] <- sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
+                
             }
         }
         
         if(G > 1) {
             ## FIXME: get the scaling right
             SRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr.group) / object@SampleStats@ntotal )
+            SRMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_nomean.group) / object@SampleStats@ntotal )
         } else {
             SRMR <- srmr.group[1]
+            SRMR_NOMEAN <- srmr_nomean.group[1]
         }
 
         indices["srmr"] <- SRMR
+        indices["srmr_nomean"] <- SRMR_NOMEAN
     }
 
     if("ntotal" %in% fit.measures) {

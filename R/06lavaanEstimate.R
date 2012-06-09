@@ -259,12 +259,20 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 SLOPES <- numeric(0)
 
                 # 4. variances (numeric only)
-                VAR <- diag(Sigma.hat[[g]])[num.idx]
+                VAR <- diag(Sigma.hat[[g]])
+                VAR.num <- VAR[num.idx]
 
                 # 5. correlations (off-diagonal)
-                COR <- vech(Sigma.hat[[g]], diag=FALSE)
+                COR <- Sigma.hat[[g]]; diag(COR) <- 1.0
+                COV <- vech(cor2cov(R=COR, sds=sqrt(VAR)), diag=FALSE)
 
-                WLS.est <- c(TH, MEAN, SLOPES, VAR, COR)
+                cat("*****************\n")
+                print(COR)
+                print(VAR)
+                print(COV)
+                cat("*****************\n")
+
+                WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -700,12 +708,14 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
                 SLOPES <- numeric(0)
 
                 # 4. variances (numeric only)
-                VAR <- diag(Sigma.hat[[g]])[num.idx]
+                VAR <- diag(Sigma.hat[[g]])
+                VAR.num <- VAR[num.idx]
 
                 # 5. correlations (off-diagonal)
-                COR <- vech(Sigma.hat[[g]], diag=FALSE)
+                COR <- Sigma.hat[[g]]; diag(COR) <- 1.0
+                COV <- vech(cor2cov(R=COR, sds=sqrt(VAR)), diag=FALSE)
 
-                WLS.est <- c(TH, MEAN, SLOPES, VAR, COR)
+                WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
             } else {                                           

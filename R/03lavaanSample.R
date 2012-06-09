@@ -95,12 +95,12 @@ lavSampleStatsFromData <- function(Data          = NULL,
             # 2. means (if any)
             # 3. slopes (if any)
             # 4. variances (if any)
-            # 5. correlations (no diagonal!)
+            # 5. covariance matrix (no diagonal!)
             WLS.obs[[g]] <- c(unlist(CAT$TH[ov.types == "ordered"]), 
                               unlist(CAT$TH[ov.types == "numeric"]),
                               unlist(CAT$SLOPES),
                               unlist(CAT$VAR[ov.types == "numeric"]),
-                              vech(CAT$COR, diag=FALSE))
+                              vech(CAT$COV, diag=FALSE))
         } else if(!categorical && meanstructure) {
             WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
         } else {
