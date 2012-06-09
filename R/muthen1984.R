@@ -6,6 +6,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
     # First success: Friday 20 Jan 2012: the standard errors for
     #                thresholds and polychoric correlations (in an 
     #                unrestricted/saturated model) are spot on!
+    # Second success: Saturday 9 June 2012: support for mixed (ordinal + metric)
+    #                 variables; thanks to the delta method to get the ACOV 
+    #                 right (see H matrix)
 
     nvar <- ncol(Data); stopifnot(nvar > 1L); N <- nrow(Data)
 
@@ -65,6 +68,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
     SC.COR <- matrix(0, N, pstar)
     PSTAR <- matrix(0, nvar, nvar)
     COR.NAMES <- character(pstar)
+    H22 <- diag(pstar) # for the delta rule
     # LAVAAN style: col-wise!
     PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
     # LISREL style: row-wise
@@ -80,6 +84,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                     scores_cor(X=Data[,i], Y=Data[,j], rho=COR[i,j],
                                mu.x=TH[[i]], var.x=VAR[[i]], 
                                mu.y=TH[[j]], var.y=VAR[[j]])
+                H22[pstar.idx,pstar.idx] <- sqrt(VAR[[i]]) * sqrt(VAR[[j]])
             } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                 # polyserial
                 out <- pscor_TS(X=Data[,i], Y=Data[,j], th.y=TH[[j]])
@@ -87,6 +92,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 SC.COR[,pstar.idx] <- 
                     scores_pscor(X=Data[,i], Y=Data[,j], rho=COR[i,j], 
                                  mu.x=TH[[i]], var.x=VAR[[i]], th.y=TH[[j]])
+                H22[pstar.idx,pstar.idx] <- sqrt(VAR[[i]])
             } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
                 # polyserial
                 out <- pscor_TS(X=Data[,j], Y=Data[,i], th.y=TH[[i]])
@@ -94,6 +100,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 SC.COR[,pstar.idx] <- 
                     scores_pscor(X=Data[,j], Y=Data[,i], rho=COR[i,j], 
                                  mu.x=TH[[j]], var.x=VAR[[j]], th.y=TH[[i]])
+                H22[pstar.idx,pstar.idx] <- sqrt(VAR[[j]])
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
                 out <- pccor_TS(Data[,i], Data[,j],
@@ -129,6 +136,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
 
     # A21
     A21 <- matrix(0, pstar, ncol(A11))
+    H21 <- matrix(0, pstar, ncol(A11))
     # for this one, we need new scores: for each F_ij (cor), the
     # scores with respect to the TH, VAR, ...
     for(j in 1:(nvar-1L)) {
@@ -153,6 +161,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 A21[pstar.idx, ncol(SC.TH) + match(j, num.idx)] <-
                     crossprod(SC.COR[,pstar.idx],
                               SC.COR.UNI[,4L])
+                H21[pstar.idx, ncol(SC.TH) + match(i, num.idx)] <-
+                    (sqrt(VAR[[j]]) * COR[i,j]) / (2*sqrt(VAR[[i]]))
+                H21[pstar.idx,  ncol(SC.TH) + match(j, num.idx)] <- 
+                    (sqrt(VAR[[i]]) * COR[i,j]) / (2*sqrt(VAR[[j]]))
             } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                 # polyserial
                 SC.COR.UNI <-
@@ -167,6 +179,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 A21[pstar.idx, ncol(SC.TH) + match(i, num.idx)] <-
                     crossprod(SC.COR[,pstar.idx],
                               SC.COR.UNI[,2L])
+                H21[pstar.idx, ncol(SC.TH) + match(i, num.idx)] <- 
+                    COR[i,j] / (2*sqrt(VAR[[i]]))
             } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
                 # polyserial
                 SC.COR.UNI <-
@@ -181,6 +195,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 A21[pstar.idx, ncol(SC.TH) + match(j, num.idx)] <-
                     crossprod(SC.COR[,pstar.idx],
                               SC.COR.UNI[,2L])
+                H21[pstar.idx, ncol(SC.TH) + match(j, num.idx)] <- 
+                    COR[i,j] / (2*sqrt(VAR[[j]]))
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
                 SC.COR.UNI <-
@@ -210,14 +226,31 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 cbind(A21,A22) )
     B.inv <- solve(B)
 
-    ACOV <- (B.inv %*% INNER %*% t(B.inv)) * N
+    ACOR <- (B.inv %*% INNER %*% t(B.inv)) * N
 
-    # COV matrix
-    COV <- cor2cov(R=COR, sds=sqrt(unlist(VAR)))
+    # COV matrix?
+    if(any("numeric" %in% ov.types)) {
+        COV <- cor2cov(R=COR, sds=sqrt(unlist(VAR)))
+
+        # construct H matrix to apply delta rule (for the tranformation
+        # of rho_ij to cov_ij)
+        H11 <- diag(nrow(A11))
+        H12 <- matrix(0, nrow(A11), ncol(A22))
+        # H22 and H21 already filled in
+        H <- rbind( cbind(H11,H12),
+                    cbind(H21,H22) )
+
+        ACOV <- H %*% ACOR %*% t(H)
+    } else {
+        COV <- COR
+       ACOV <- ACOR
+          H <- diag(ncol(ACOR))
+    }
+    
 
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
-                ACOV=ACOV)
+                ACOR=ACOR, ACOV=ACOV, H=H)
     out
 }
 

@@ -263,14 +263,7 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 VAR.num <- VAR[num.idx]
 
                 # 5. correlations (off-diagonal)
-                COR <- Sigma.hat[[g]]; diag(COR) <- 1.0
-                COV <- vech(cor2cov(R=COR, sds=sqrt(VAR)), diag=FALSE)
-
-                cat("*****************\n")
-                print(COR)
-                print(VAR)
-                print(COV)
-                cat("*****************\n")
+                COV <- vech(Sigma.hat[[g]], diag=FALSE)
 
                 WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {
@@ -712,8 +705,7 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
                 VAR.num <- VAR[num.idx]
 
                 # 5. correlations (off-diagonal)
-                COR <- Sigma.hat[[g]]; diag(COR) <- 1.0
-                COV <- vech(cor2cov(R=COR, sds=sqrt(VAR)), diag=FALSE)
+                COV <- vech(Sigma.hat[[g]], diag=FALSE)
 
                 WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {                             
