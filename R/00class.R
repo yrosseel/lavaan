@@ -29,6 +29,9 @@ setClass("lavSampleStats",         # sample moments
     representation(
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
+        th="list",                 # thresholds for non-numeric var (per group)
+        th.idx="list",
+        th.names="list",           # threshold names
 
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
@@ -38,7 +41,7 @@ setClass("lavSampleStats",         # sample moments
         cov.log.det="list",        # log det of observed cov (per group)
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
-        ACOV="list",               # asymptotic covariance matrix
+        NACOV="list",              # N times the asymptotic covariance matrix
 
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information
@@ -60,6 +63,8 @@ setClass("Model",          # MATRIX representation of the sem model
         ngroups="integer",
         nmat="integer",
         nvar="integer",
+        num.idx="list",
+        th.idx="list",
 
         nx.free="integer",
         nx.unco="integer",

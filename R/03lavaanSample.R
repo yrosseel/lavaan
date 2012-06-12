@@ -39,6 +39,9 @@ lavSampleStatsFromData <- function(Data          = NULL,
     cov         <- vector("list", length=ngroups)
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
+    th          <- vector("list", length=ngroups)
+    th.idx      <- vector("list", length=ngroups)
+    th.names    <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
@@ -48,7 +51,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     missing.flag. <- FALSE
     if(is.null(WLS.V))
         WLS.V <- vector("list", length=ngroups)
-    ACOV          <- vector("list", length=ngroups)
+    NACOV          <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 
@@ -63,17 +66,27 @@ lavSampleStatsFromData <- function(Data          = NULL,
         }
 
         # fill in the other slots
-        cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
-        #var[[g]]  <- apply(X[[g]], 2,  var, na.rm=TRUE)
-        mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
+        if(categorical) {
+            cov[[g]]  <- unname(CAT$COV)
+            mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
+            notnum.idx <- which(ov.types != "numeric")
+            mean[[g]][notnum.idx] <- 0.0
 
-        # rescale cov by (N-1)/N?
-        if(rescale) {
-            # we 'transform' the sample cov (divided by n-1) 
-            # to a sample cov divided by 'n'
-            cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+            # th contains the means of numeric variables
+            th[[g]] <- unlist(CAT$TH)
+            th.idx[[g]] <- unlist(CAT$TH.IDX)
+            th.names[[g]] <- unlist(CAT$TH.NAMES)
+        } else {
+            cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
+            # rescale cov by (N-1)/N?
+            if(rescale) {
+                # we 'transform' the sample cov (divided by n-1) 
+                # to a sample cov divided by 'n'
+                cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+            }
+            mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
         }
-
+        
         # icov and cov.log.det
         tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
         if(inherits(tmp, "try-error")) {
@@ -91,14 +104,12 @@ lavSampleStatsFromData <- function(Data          = NULL,
         # WLS.obs
         if(categorical) {
             # order of elements is important here:
-            # 1. thresholds 
-            # 2. means (if any)
-            # 3. slopes (if any)
-            # 4. variances (if any)
-            # 5. covariance matrix (no diagonal!)
-            WLS.obs[[g]] <- c(unlist(CAT$TH[ov.types == "ordered"]), 
-                              unlist(CAT$TH[ov.types == "numeric"]),
-                              unlist(CAT$SLOPES),
+            # 1. thresholds + means (interleaved)
+            # 2. slopes (if any)
+            # 3. variances (if any)
+            # 4. covariance matrix (no diagonal!)
+            WLS.obs[[g]] <- c(th[[g]],
+                              unlist(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),
                               vech(CAT$COV, diag=FALSE))
         } else if(!categorical && meanstructure) {
@@ -163,21 +174,21 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
             WLS.V[[g]] <- inv.chol(Gamma)
-            ACOV[[g]]  <- Gamma
+            NACOV[[g]]  <- Gamma
         } else if(estimator == "WLS" && categorical) {
-            WLS.V[[g]] <- inv.chol(CAT$ACOV)
-            ACOV[[g]]  <- CAT$ACOV
+            WLS.V[[g]] <- inv.chol(CAT$NACOV)
+            NACOV[[g]]  <- CAT$NACOV
         } else if(estimator == "DWLS" && categorical) {
-            dacov <- diag(CAT$ACOV)
-            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$ACOV),
-                                        ncol=ncol(CAT$ACOV))
-            ACOV[[g]]  <- CAT$ACOV
+            dacov <- diag(CAT$NACOV)
+            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$NACOV),
+                                        ncol=ncol(CAT$NACOV))
+            NACOV[[g]]  <- CAT$NACOV
         } else if(estimator == "ULS" && categorical) {
             # FIXME: cor elements *2??
-            DWLS <- diag(nrow(CAT$ACOV))
+            DWLS <- diag(nrow(CAT$NACOV))
             #diag(DWLS)[7:21] <- 2.0
             WLS.V[[g]] <- DWLS
-            ACOV[[g]]  <- CAT$ACOV
+            NACOV[[g]]  <- CAT$NACOV
         }
 
     } # ngroups
@@ -186,9 +197,13 @@ lavSampleStatsFromData <- function(Data          = NULL,
     lavSampleStats <- new("lavSampleStats",
 
                        # sample moments
+                       th           = th,
+                       th.idx       = th.idx,
+                       th.names     = th.names,
                        mean         = mean,
                        cov          = cov,
                        #var         = var,
+                     
 
                        # convenience
                        nobs         = nobs,
@@ -200,7 +215,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        cov.log.det  = cov.log.det,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,                     
-                       ACOV         = ACOV,
+                       NACOV        = NACOV,
 
                        # missingness
                        missing.flag = missing.flag.,

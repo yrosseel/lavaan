@@ -16,6 +16,10 @@ StartingValues <- function(start.method = "default",
     # check arguments
     stopifnot(is.list(partable), class(samplestats) == "lavSampleStats")
 
+    # categorical?
+    categorical <- any(partable$op == "|")
+    #ord.names <- unique(partable$lhs[ partable$op == "|" ])
+
     # shortcut for 'simple'
     if(start.method == "simple") {
         start <- numeric( length(partable$ustart) )
@@ -100,6 +104,7 @@ StartingValues <- function(start.method = "default",
         # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
+           !categorical &&
            sum( partable$ustart[ partable$op == "=~" & partable$group == g],
                                    na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
@@ -156,11 +161,19 @@ StartingValues <- function(start.method = "default",
         }
         
         # thresholds
-        ov.ord.idx <- which(partable$group == g        &
-                            partable$op == "|"         &
-                            partable$lhs %in% ov.names)
-        sample.ord.idx <- match(partable$lhs[ov.ord.idx], ov.names)
-        # FIXME!!
+        th.idx <- which(partable$group == g & partable$op == "|")
+        if(length(th.idx) > 0L) {
+            th.names.partable <- paste(partable$lhs[th.idx], "|",
+                                       partable$rhs[th.idx], sep="")
+            th.names.sample   <- 
+                samplestats@th.names[[g]][ samplestats@th.idx[[g]] > 0L ]
+            # th.names.sample should identical to
+            # vnames(partable, "th", group = g)
+            th.values <- samplestats@th[[g]][ samplestats@th.idx[[g]] > 0L ]
+            start[th.idx] <- th.values[match(th.names.partable,
+                                             th.names.sample)]
+        }
+        
 
         # 4g) exogenous `fixed.x' covariates
         if(length(ov.names.x) > 0) {

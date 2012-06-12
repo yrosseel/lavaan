@@ -39,7 +39,6 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         ov.names <- vnames(partable, "ov", group=g); nvar <- length(ov.names)
         lv.names <- vnames(partable, "lv", group=g); nfac <- length(lv.names)
         ov.th    <- vnames(partable, "th", group=g); nth  <- length(ov.th)
-        nth <- length(ov.th)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names

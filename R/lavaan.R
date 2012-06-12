@@ -279,11 +279,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
+        lavaanParTable$start <- lavaanStart
+        print(as.data.frame(lavaanParTable))
+
         # 5. construct internal model (S4) representation
         lavaanModel <- 
             Model(partable       = lavaanParTable, 
                   start          = lavaanStart, 
                   representation = lavaanOptions$representation,
+                  th.idx         = lavaanSampleStats@th.idx,
                   debug          = lavaanOptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]

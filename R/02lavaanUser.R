@@ -496,7 +496,7 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     
         # 4. parse rhs (as rhs of a single-sided formula)
         rhs.formula <- as.formula(paste("~",rhs))
-        out <- parse.rhs(rhs=rhs.formula[[2L]])
+        out <- parse.rhs(rhs=rhs.formula[[2L]],op=op)
     
         # for each lhs element
         for(l in 1:length(lhs.names)) {
@@ -595,7 +595,7 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT
 }
 
-parse.rhs <- function(rhs) {
+parse.rhs <- function(rhs, op="") {
 
     # new version YR 15 dec 2011!
     # - no 'equal' field anymore (only labels!)
@@ -712,11 +712,20 @@ parse.rhs <- function(rhs) {
         while( !is.na(idx <- which(duplicated(rhs.names))[1L]) ) {
             dup.name <- rhs.names[ idx ]
             orig.idx <- match(dup.name, rhs.names)
-            out[[orig.idx]] <- c( out[[orig.idx]], out[[idx]] )
+            merged <- c( out[[orig.idx]], out[[idx]] )
+            if(!is.null(merged)) # be careful, NULL will delete element
+                out[[orig.idx]] <- merged
             out <- out[-idx]
             rhs.names <- names(out)
         }
     }
+
+    # if thresholds, check order and reorder if necessary
+    #if(op == "|") {
+    #    t.names <- names(out)
+    #    idx <- match(sort(t.names), t.names)
+    #    out <- out[idx]
+    #}
 
     out
 }

@@ -335,7 +335,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
         WLS.V <- attr(VCOV, "WLS.V")
-        ACOV  <- samplestats@ACOV
+        NACOV  <- samplestats@NACOV
 
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
@@ -354,7 +354,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                         E.inv       = E.inv, 
                                         Delta       = Delta, 
                                         WLS.V       = WLS.V, 
-                                        Gamma       = ACOV,
+                                        Gamma       = NACOV,
                                         x.idx       = x.idx)
 
         scaling.factor <- sum(trace.UGamma) / df
@@ -375,7 +375,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
         WLS.V <- attr(VCOV, "WLS.V")
-        ACOV  <- samplestats@ACOV
+        NACOV  <- samplestats@NACOV
 
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
@@ -394,7 +394,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                         E.inv       = E.inv, 
                                         Delta       = Delta, 
                                         WLS.V       = WLS.V, 
-                                        Gamma       = ACOV,
+                                        Gamma       = NACOV,
                                         x.idx       = x.idx)
 
         # note: this corresponds with Muthen 1997 and Mplus 4
@@ -424,7 +424,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
         WLS.V <- attr(VCOV, "WLS.V")
-        ACOV  <- samplestats@ACOV
+        NACOV  <- samplestats@NACOV
 
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
@@ -443,7 +443,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                         E.inv       = E.inv, 
                                         Delta       = Delta, 
                                         WLS.V       = WLS.V, 
-                                        Gamma       = ACOV,
+                                        Gamma       = NACOV,
                                         x.idx       = x.idx)
 
         # here we use the 'T3' statistic as used by Mplus 6 and higher

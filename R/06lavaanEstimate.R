@@ -58,14 +58,28 @@ getModelParameters <- function(object, GLIST=NULL, type="free",
 # warning: this will make a copy of object
 setModelParameters <- function(object, x=NULL) {
 
-    names.GLIST <- names(object@GLIST)
-
     tmp <- object@GLIST
     for(mm in 1:length(object@GLIST)) {
         m.free.idx <- object@m.free.idx[[mm]]
         x.free.idx <- object@x.free.idx[[mm]]
         tmp[[mm]][m.free.idx] <- x[x.free.idx]
     }
+
+    # categorical? set theta elements (if any)
+    if(object@categorical) {
+       if(object@representation == "LISREL") {
+           theta.idx <- which(names(tmp) == "theta")
+            Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
+            for(g in 1:object@ngroups) {
+                num.idx <- object@num.idx[[g]]
+                diag(tmp[[theta.idx[g]]])[-num.idx] <-
+                    (1 - diag(Sigma.hat[[g]])[-num.idx])
+            }
+        } else {
+            cat("FIXME: deal with theta elements in the categorical case")
+        }
+    }
+
     object@GLIST <- tmp
 
     object
@@ -113,6 +127,7 @@ function(object, GLIST=NULL, extra=FALSE) {
     nmat           <- object@nmat
     ngroups        <- object@ngroups
     representation <- object@representation
+    categorical    <- object@categorical
 
     # return a list
     Sigma.hat <- vector("list", length=ngroups)
@@ -237,35 +252,34 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                   estimator == "ULS") {
             if(categorical) {
                 # order of elements is important here:
-                # 1. thresholds
-                # 2. means (if any)
-                # 3. slopes (if any)
-                # 4. variances (if any)
-                # 5. correlations (no diagonal!)
+                # 1. thresholds + means (interleaved)
+                # 2. slopes (if any)
+                # 3. variances (if any)
+                # 4. correlations (no diagonal!)
 
-                # 1.
+                # 1 th + mean
+                TH.MEAN <- numeric( length(samplestats@th.idx[[g]]) )
+                # 1a
                 TAU.idx <- which(names(GLIST) == "tau")
-                TH <- GLIST[[TAU.idx[g]]][,1]
+                TH.MEAN[ samplestats@th.idx[[g]] > 0L] <- 
+                    GLIST[[TAU.idx[g]]][,1L]
 
-                # 2. mean (numeric only) ### FIXME, we need a priori num.idx!
-                THETA.idx <- which(names(GLIST) == "theta")
-                ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
-                th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
-                ord.names <- unique(gsub("\\|.*", "", x=th.names))
-                num.idx <- which(!ov.names %in% ord.names)
-                MEAN <- Mu.hat[[g]][num.idx]
+                # 1b. mean (numeric only) 
+                num.idx <- object@num.idx[[g]]
+                TH.MEAN[ samplestats@th.idx[[g]] == 0L] <- 
+                    Mu.hat[[g]][num.idx]
  
-                # 3. slopes --- FIXME!!!!
+                # 2. slopes --- FIXME!!!!
                 SLOPES <- numeric(0)
 
-                # 4. variances (numeric only)
+                # 3. variances (numeric only)
                 VAR <- diag(Sigma.hat[[g]])
                 VAR.num <- VAR[num.idx]
 
-                # 5. correlations (off-diagonal)
+                # 4. covariances/correlations (off-diagonal)
                 COV <- vech(Sigma.hat[[g]], diag=FALSE)
 
-                WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
+                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -335,6 +349,11 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     nmat           <- object@nmat
     ngroups        <- object@ngroups
     nvar           <- object@nvar
+    num.idx        <- object@num.idx
+    th.idx         <- object@th.idx
+
+    # number of thresholds per group (if any)
+    nth <- sapply(th.idx, function(x) sum(x > 0L))
 
     # state or final?
     if(is.null(GLIST.)) 
@@ -346,22 +365,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     type <- "nonfree"
     m.el.idx <- m.el.idx.; x.el.idx <- x.el.idx.
     if(is.null(m.el.idx) && is.null(x.el.idx)) 
-        type <- "free"
-
-    # if categorical, get num.idx per group
-    if(categorical) {
-        num.idx <- vector("list", length=ngroups)
-        nth     <- integer(ngroups)
-        TAU.idx <- which(names(GLIST) == "tau")
-        THETA.idx <- which(names(GLIST) == "theta")
-        for(g in 1:ngroups) {
-            ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
-            th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
-            nth[g] <- length(th.names)
-            ord.names <- unique(gsub("\\|.*", "", x=th.names))
-            num.idx[[g]] <- which(!ov.names %in% ord.names)
-        }
-    }
+         type <- "free"
 
     # number of rows in DELTA.group
     pstar <- integer(ngroups)
@@ -435,9 +439,8 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                  MLIST=GLIST[ mm.in.group ])
                 if(categorical) {
                     # reorder: first variances (of numeric), then covariances
-                    nvar <- length(ov.names)
-                    cov.idx  <- lavaan:::vech.idx(nvar)
-                    covd.idx <- lavaan:::vech.idx(nvar, diag=FALSE)
+                    cov.idx  <- lavaan:::vech.idx(nvar[g])
+                    covd.idx <- lavaan:::vech.idx(nvar[g], diag=FALSE)
 
                     var.idx <- which(is.na(match(cov.idx, 
                                                  covd.idx)))[num.idx[[g]]]
@@ -452,15 +455,18 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                      MLIST=GLIST[ mm.in.group ])
                     if(categorical) {
                        # retain only numeric rows
-                       DELTA.mu <- DELTA.mu[num.idx[[g]],,drop=FALSE]
+                       DELTA.mean <- DELTA.mu[num.idx[[g]],,drop=FALSE]
+                       DELTA.th <- 
+                           derivative.th.LISREL(m=mname,
+                                                idx=m.el.idx[[mm]],
+                                                MLIST=GLIST[ mm.in.group ])
+                       # interleave!
+                       DELTA.mu <- matrix(0, nrow=length(th.idx[[g]]), 
+                                             ncol=ncol(DELTA.th))
+                       DELTA.mu[ th.idx[[g]]  > 0L,] <- DELTA.th
+                       DELTA.mu[ th.idx[[g]] == 0L,] <- DELTA.mean
                     }
                     DELTA <- rbind(DELTA.mu, DELTA)
-                }
-                if(categorical) {
-                    DELTA.th <- derivative.th.LISREL(m=mname,
-                                                     idx=m.el.idx[[mm]],
-                                                     MLIST=GLIST[ mm.in.group ])
-                    DELTA <- rbind(DELTA.th, DELTA)
                 }
             } else {
                 stop("representation", representation, "not implemented yet")
@@ -679,35 +685,34 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
             # Browne & Arminger 1995 eq 4.49
             if(categorical) {                                    
                 # order of elements is important here:
-                # 1. thresholds
-                # 2. means (if any)
-                # 3. slopes (if any)
-                # 4. variances (if any)
-                # 5. correlations (no diagonal!)
+                # 1. thresholds + means (interleaved)
+                # 2. slopes (if any)
+                # 3. variances (if any)
+                # 4. correlations (no diagonal!)
 
-                # 1.
+                # 1 th + mean
+                TH.MEAN <- numeric( length(samplestats@th.idx[[g]]) )
+                # 1a
                 TAU.idx <- which(names(GLIST) == "tau")
-                TH <- GLIST[[TAU.idx[g]]][,1]
+                TH.MEAN[ samplestats@th.idx[[g]] > 0L] <-
+                    GLIST[[TAU.idx[g]]][,1L]
 
-                # 2. mean (numeric only) ### FIXME, we need a priori num.idx!
-                THETA.idx <- which(names(GLIST) == "theta")
-                ov.names <- object@dimNames[[THETA.idx[g]]][[1L]]
-                th.names <- object@dimNames[[TAU.idx[g]]][[1L]]
-                ord.names <- unique(gsub("\\|.*", "", x=th.names))
-                num.idx <- which(!ov.names %in% ord.names)
-                MEAN <- Mu.hat[[g]][num.idx]
+                # 1b. mean (numeric only) 
+                num.idx <- object@num.idx[[g]]
+                TH.MEAN[ samplestats@th.idx[[g]] == 0L] <-
+                    Mu.hat[[g]][num.idx]
 
-                # 3. slopes --- FIXME!!!!
+                # 2. slopes --- FIXME!!!!
                 SLOPES <- numeric(0)
 
-                # 4. variances (numeric only)
+                # 3. variances (numeric only)
                 VAR <- diag(Sigma.hat[[g]])
                 VAR.num <- VAR[num.idx]
 
-                # 5. correlations (off-diagonal)
+                # 4. covariances/correlations (off-diagonal)
                 COV <- vech(Sigma.hat[[g]], diag=FALSE)
 
-                WLS.est <- c(TH, MEAN, SLOPES, VAR.num, COV)
+                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COV)
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
             } else {                                           

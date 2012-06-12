@@ -137,7 +137,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
     if(type == "ov.ord") {
         ov.names <- vnames(partable, "ov", group=group)
         tmp <- unique(partable$lhs[ partable$op == "|" ])
-        out <- ov.names[ which(tmp %in% ov.names) ]
+        out <- ov.names[ov.names %in% tmp]
     } else
 
     # ov's strictly numeric
@@ -155,7 +155,8 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         rhs <- partable$rhs[ partable$op == "|" ]
         TH <- paste(lhs, "|", rhs, sep="")
         # return in the right order
-        out <- TH[unlist(lapply(ord.names, grep, TH))]
+        out <- unlist(lapply(ord.names, 
+                      function(x) paste(x, "|t", 1:length(grep(x,TH)), sep="")))
     } else
 
 
@@ -494,6 +495,9 @@ getLIST <- function(FLAT=NULL,
     ov.names.ord1 <- vnames(FLAT, type="ov.ord")
     if(!is.null(varTable))
         ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
+    else
+        ov.names.ord2 <- character(0)
+    #### FIXME!!!!! ORDER!
     ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
 
     lhs <- rhs <- character(0)
@@ -516,8 +520,8 @@ getLIST <- function(FLAT=NULL,
     if(auto.var) {
         ov.var <- ov.names.nox
         # auto-remove ordinal variables
-        #idx <- which(ov.var %in% ov.names.ord)
-        #if(length(idx)) ov.var <- ov.var[-idx]
+        idx <- match(ov.names.ord, ov.var)
+        if(length(idx)) ov.var <- ov.var[-idx]
 
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)

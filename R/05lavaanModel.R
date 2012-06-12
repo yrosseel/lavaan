@@ -6,6 +6,7 @@
 Model <- function(partable       = NULL,
                   start          = NULL, 
                   representation = "LISREL",
+                  th.idx         = NULL,
                   debug          = FALSE) {
 
     # global info from user model
@@ -84,14 +85,16 @@ Model <- function(partable       = NULL,
     # prepare ngroups-sized slots
     nvar <- integer(ngroups)
     nmat <- unlist(attr(REP, "mmNumber"))
-
+    num.idx <- vector("list", length=ngroups)
 
     offset <- 0L
     for(g in 1:ngroups) {
 
         # observed and latent variables for this group
         ov.names <- vnames(partable, "ov", group=g)
+        ov.num <- vnames(partable, "ov.num", group=g)
         nvar[g] <- length(ov.names)
+        num.idx[[g]] <- match(ov.num, ov.names)
 
         # model matrices for this group
         mmNumber    <- attr(REP, "mmNumber")[[g]]
@@ -457,6 +460,8 @@ Model <- function(partable       = NULL,
                  ngroups=ngroups,
                  nmat=nmat,
                  nvar=nvar,
+                 num.idx=num.idx,
+                 th.idx=th.idx,
                  nx.free=max(partable$free),
                  nx.unco=max(partable$unco),
                  nx.user=max(partable$id),

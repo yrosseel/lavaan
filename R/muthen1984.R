@@ -18,6 +18,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
 
     # means and thresholds
     TH <- vector("list", length=nvar)
+    TH.NAMES <- vector("list", length=nvar)
+    TH.IDX <- vector("list", length=nvar)
     # slopes (only if fixed.x)
     SLOPES <- vector("list", length=nvar)
     # variances (for continuous variables only)
@@ -31,8 +33,14 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
             # compute mean and variance
             TH[[i]] <- mean(Data[,i], na.rm=TRUE)
             VAR[[i]] <- var(Data[,i], na.rm=TRUE) * (N-1)/N
+            TH.NAMES[[i]] <- ov.names[i]
+            TH.IDX[[i]] <- 0L
         } else if(ov.types[i] == "ordered") {
             TH[[i]] <- unithord(X=Data[,i]); VAR[[i]] <- 1.0
+            TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
+                                   sep="")
+            #TH.IDX[[i]] <- max(c(0L,unlist(TH.IDX))) + 1:length(TH[[i]])
+            TH.IDX[[i]] <- rep(i, length(TH[[i]]))
         } else {
             stop("unknown ov.types:", ov.types[i])
         }
@@ -226,7 +234,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
                 cbind(A21,A22) )
     B.inv <- solve(B)
 
-    ACOR <- (B.inv %*% INNER %*% t(B.inv)) * N
+    NACOV <- (B.inv %*% INNER %*% t(B.inv)) * N
 
     # COV matrix?
     if(any("numeric" %in% ov.types)) {
@@ -240,17 +248,16 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL) {
         H <- rbind( cbind(H11,H12),
                     cbind(H21,H22) )
 
-        ACOV <- H %*% ACOR %*% t(H)
+        NACOV <- H %*% NACOV %*% t(H)
     } else {
         COV <- COR
-       ACOV <- ACOR
-          H <- diag(ncol(ACOR))
+          H <- diag(ncol(NACOV))
     }
     
 
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
-                ACOR=ACOR, ACOV=ACOV, H=H)
+                NACOV=NACOV, H=H, TH.NAMES=TH.NAMES, TH.IDX=TH.IDX)
     out
 }
 
