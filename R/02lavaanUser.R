@@ -30,6 +30,7 @@ lavaanify <- lavParTable <- function(
                       auto.cov.lv.x   = FALSE,
                       auto.cov.y      = FALSE,
                       auto.th         = FALSE,
+                      auto.delta      = FALSE,
 
                       varTable        = NULL,
                       ngroups         = 1L,
@@ -87,6 +88,7 @@ lavaanify <- lavParTable <- function(
             auto.cov.lv.x   = TRUE
             auto.cov.y      = TRUE
             auto.th         = TRUE
+            auto.delta      = TRUE
         } else 
         
         if(model.type == "growth") {
@@ -99,6 +101,7 @@ lavaanify <- lavParTable <- function(
             auto.cov.lv.x   = TRUE
             auto.cov.y      = TRUE
             auto.th         = TRUE    
+            auto.delta      = TRUE
         }
     }
 
@@ -135,6 +138,7 @@ lavaanify <- lavParTable <- function(
                 auto.fix.single = auto.fix.single,
                 auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
                 auto.cov.y = auto.cov.y, auto.th = auto.th, 
+                auto.delta = auto.delta, 
                 varTable = varTable, group.equal = NULL, ngroups = 1L)
             LIST.group <- as.data.frame(LIST.group, stringsAsFactors=FALSE)
             if(g == 1L) {
@@ -153,6 +157,7 @@ lavaanify <- lavParTable <- function(
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
             auto.cov.y = auto.cov.y, auto.th = auto.th, 
+            auto.delta = auto.delta,
             varTable = varTable, group.equal = group.equal, 
             ngroups = ngroups)
     }        
@@ -420,6 +425,8 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # "<~" operator?
         } else if(grepl("<~", line.simple, fixed=TRUE)) {
             op <- "<~"
+        } else if(grepl("~*~", line.simple, fixed=TRUE)) {
+            op <- "~*~"
         # "~~" operator?
         } else if(grepl("~~", line.simple, fixed=TRUE)) {
             op <- "~~"
@@ -453,6 +460,8 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             stop("label modifier can not be used on the left-hand side of the operator")
         if(op == "|") {
             op.idx <- regexpr("\\|", x)
+        } else if(op == "~*~") {
+            op.idx <- regexpr("~\\*~", x)    
         } else {
             op.idx <- regexpr(op, x)
         }

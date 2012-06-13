@@ -128,9 +128,17 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.row[idx] <- match(TH, ov.th)
         tmp.col[idx] <- 1L
 
+        # 6. "~*~" scales
+        idx <- which(target$group == g &
+                     target$op == "~*~")
+        tmp.mat[idx] <- "delta"
+        tmp.row[idx] <- match(target$lhs[idx], ov.names)
+        tmp.col[idx] <- 1L
+
         if(extra) {
             # mRows
             mmRows <- list(tau    = nth,
+                           delta  = nvar,
                            nu     = nvar,
                            lambda = nvar,
                            theta  = nvar,
@@ -140,6 +148,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
             # mCols
             mmCols <- list(tau    = 1L,
+                           delta  = 1L,
                            nu     = 1L,
                            lambda = nfac,
                            theta  = nvar,
@@ -149,6 +158,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
             # dimNames for LISREL model matrices
             mmDimNames <- list(tau    = list( ov.th,    "threshold"),
+                               delta  = list( ov.names,    "scales"),
                                nu     = list( ov.names, "intercept"),
                                lambda = list( ov.names,    lv.names),
                                theta  = list( ov.names,    ov.names),
@@ -158,6 +168,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     
             # isSymmetric
             mmSymmetric <- list(tau    = FALSE,
+                                delta  = FALSE,
                                 nu     = FALSE,
                                 lambda = FALSE,
                                 theta  = TRUE,
@@ -170,6 +181,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             if("beta" %in% tmp.mat) mmNames <- c(mmNames, "beta")
             if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
             if("tau" %in% tmp.mat) mmNames <- c(mmNames, "tau")
+            if("delta" %in% tmp.mat) mmNames <- c(mmNames, "delta")
 
             REP.mmNames[[g]]     <- mmNames
             REP.mmNumber[[g]]    <- length(mmNames)

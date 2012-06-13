@@ -6,7 +6,7 @@
 Model <- function(partable       = NULL,
                   start          = NULL, 
                   representation = "LISREL",
-                  th.idx         = NULL,
+                  th.idx         = list(),
                   debug          = FALSE) {
 
     # global info from user model

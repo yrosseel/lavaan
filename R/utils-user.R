@@ -469,6 +469,7 @@ getLIST <- function(FLAT=NULL,
                     auto.cov.lv.x   = FALSE,
                     auto.cov.y      = FALSE,
                     auto.th         = FALSE,
+                    auto.delta      = FALSE,
                     varTable        = NULL,
                     group.equal     = NULL,
                     ngroups         = 1L) {
@@ -550,6 +551,13 @@ getLIST <- function(FLAT=NULL,
  
     # create 'op' (thresholds come first, then variances)
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
+
+    # LATENT RESPONSE SCALES (DELTA)
+    if(auto.delta && auto.th && length(ov.names.ord) > 0L && ngroups > 1L) {
+        lhs <- c(lhs, ov.names.ord)
+        rhs <- c(rhs, ov.names.ord)
+         op <- c(op,  rep("~*~", length(ov.names.ord)))
+    }
 
     # 3. INTERCEPTS
     if(meanstructure) {
@@ -743,6 +751,13 @@ getLIST <- function(FLAT=NULL,
           free[ord.idx] <- 0L
     }
 
+    # 5c latent response scales of ordinal variables?
+    if(length(ov.names.ord) > 0L) {
+        delta.idx <- which(op == "~*~")
+        ustart[delta.idx] <- 1.0
+          free[delta.idx] <- 0L
+    }
+
     # 6. multiple groups?
     group <- rep(1L, length(lhs))
     if(ngroups > 1) {
@@ -774,6 +789,13 @@ getLIST <- function(FLAT=NULL,
                       free[ int.idx ] <- 1L
                     ustart[ int.idx ] <- as.numeric(NA)
                 }
+            }
+
+            # latent response scaling
+            if(any(op == "~*~" & group == g)) {
+                delta.idx <- which(op == "~*~" & group == g)
+                  free[ delta.idx ] <- 1L
+                ustart[ delta.idx ] <- as.numeric(NA)
             }
         } # g
     } # ngroups

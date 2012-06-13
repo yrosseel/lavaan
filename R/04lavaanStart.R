@@ -90,6 +90,10 @@ StartingValues <- function(start.method = "default",
                         partable$lhs == partable$rhs)
     start[lv.var.idx] <- 0.05
 
+    # 3. latent response scales (if any)
+    delta.idx <- which(partable$op == "~*~")
+    start[delta.idx] <- 1.0
+
 
     # group-specific settings
     ngroups <- samplestats@ngroups

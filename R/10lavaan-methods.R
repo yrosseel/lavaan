@@ -430,6 +430,19 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             cat("\n")
         }
 
+        # 6. latent response scales
+        delta.idx <- which(object@ParTable$op == "~*~" &
+                         object@ParTable$group == g)
+        if(length(delta.idx) > 0) {
+            cat("Scales y*:\n")
+            NAMES[delta.idx] <- makeNames(  object@ParTable$rhs[delta.idx],
+                                            object@ParTable$label[delta.idx])
+            for(i in delta.idx) {
+                print.estimate(name=NAMES[i], i, z.stat=TRUE)
+            }
+            cat("\n")
+        }
+
     } # ngroups
 
     # 6. variable definitions

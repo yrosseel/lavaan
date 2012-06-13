@@ -257,17 +257,32 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
 
-                # 1 th + mean
-                TH.MEAN <- numeric( length(samplestats@th.idx[[g]]) )
-                # 1a
                 TAU.idx <- which(names(GLIST) == "tau")
-                TH.MEAN[ samplestats@th.idx[[g]] > 0L] <- 
-                    GLIST[[TAU.idx[g]]][,1L]
-
-                # 1b. mean (numeric only) 
+                DELTA.idx <- which(names(GLIST) == "delta")
                 num.idx <- object@num.idx[[g]]
-                TH.MEAN[ samplestats@th.idx[[g]] == 0L] <- 
-                    Mu.hat[[g]][num.idx]
+                 th.idx <- samplestats@th.idx[[g]]
+
+                # get DELTA if any
+                delta.flag <- FALSE
+                if(length(DELTA.idx) > 1L && g > 1L) {
+                    # only for multiple groups!
+                    delta.flag <- TRUE
+                    DELTA.diag <- GLIST[[DELTA.idx[g]]][,1L]
+                    DELTA.star.diag <- numeric(length(th.idx))
+                    nlev <- tabulate(th.idx); nlev[nlev == 0L] <- 1L
+                    DELTA.star.diag <- rep(DELTA.diag, times=nlev)
+                    DELTA <- diag(DELTA.diag)
+                    print(DELTA.diag)
+                    print(nlev)
+                    print(DELTA.star.diag)
+                    print(DELTA)
+                }
+           
+                # 1 th + mean
+                TH.MEAN <- numeric( length(th.idx) )
+                TH.MEAN[ th.idx  > 0L] <- GLIST[[TAU.idx[g]]][,1L]
+                TH.MEAN[ th.idx == 0L] <- Mu.hat[[g]][num.idx]
+                if(delta.flag) TH.MEAN <- TH.MEAN * DELTA.star.diag
  
                 # 2. slopes --- FIXME!!!!
                 SLOPES <- numeric(0)
@@ -277,9 +292,11 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 VAR.num <- VAR[num.idx]
 
                 # 4. covariances/correlations (off-diagonal)
-                COV <- vech(Sigma.hat[[g]], diag=FALSE)
+                COV <- Sigma.hat[[g]]
+                if(delta.flag) COV <- DELTA %*% COV %*% DELTA
+                COVs <- vech(COV, diag=FALSE)
 
-                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COV)
+                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COVs)
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -690,17 +707,32 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
 
-                # 1 th + mean
-                TH.MEAN <- numeric( length(samplestats@th.idx[[g]]) )
-                # 1a
                 TAU.idx <- which(names(GLIST) == "tau")
-                TH.MEAN[ samplestats@th.idx[[g]] > 0L] <-
-                    GLIST[[TAU.idx[g]]][,1L]
-
-                # 1b. mean (numeric only) 
+                DELTA.idx <- which(names(GLIST) == "delta")
                 num.idx <- object@num.idx[[g]]
-                TH.MEAN[ samplestats@th.idx[[g]] == 0L] <-
-                    Mu.hat[[g]][num.idx]
+                 th.idx <- samplestats@th.idx[[g]]
+
+                # get DELTA if any
+                delta.flag <- FALSE
+                if(length(DELTA.idx) > 1L && g > 1L) {
+                    # only for multiple groups!
+                    delta.flag <- TRUE
+                    DELTA.diag <- GLIST[[DELTA.idx[g]]][,1L]
+                    DELTA.star.diag <- numeric(length(th.idx))
+                    nlev <- tabulate(th.idx); nlev[nlev == 0L] <- 1L
+                    DELTA.star.diag <- rep(DELTA.diag, times=nlev)
+                    DELTA <- diag(DELTA.diag)
+                    print(DELTA.diag)
+                    print(nlev)
+                    print(DELTA.star.diag)
+                    print(DELTA)
+                }
+
+                # 1 th + mean
+                TH.MEAN <- numeric( length(th.idx) )
+                TH.MEAN[ th.idx  > 0L] <- GLIST[[TAU.idx[g]]][,1L]
+                TH.MEAN[ th.idx == 0L] <- Mu.hat[[g]][num.idx]
+                if(delta.flag) TH.MEAN <- TH.MEAN * DELTA.star.diag
 
                 # 2. slopes --- FIXME!!!!
                 SLOPES <- numeric(0)
@@ -710,9 +742,11 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
                 VAR.num <- VAR[num.idx]
 
                 # 4. covariances/correlations (off-diagonal)
-                COV <- vech(Sigma.hat[[g]], diag=FALSE)
+                COV <- Sigma.hat[[g]]
+                if(delta.flag) COV <- DELTA %*% COV %*% DELTA
+                COVs <- vech(COV, diag=FALSE)
 
-                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COV)
+                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COVs)
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
             } else {                                           
@@ -931,8 +965,8 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            gradient=first.derivative.param,
-                            #gradient=first.derivative.param.numerical,
+                            #gradient=first.derivative.param,
+                            gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 

@@ -24,6 +24,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    auto.cov.lv.x   = FALSE,
                    auto.cov.y      = FALSE,
                    auto.th         = FALSE,
+                   auto.delta      = FALSE,
                    
                    # full data
                    data            = NULL,
@@ -122,7 +123,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             orthogonal = orthogonal, std.lv = std.lv, 
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x, 
-            auto.cov.y = auto.cov.y, auto.th = auto.th, missing = missing, 
+            auto.cov.y = auto.cov.y, auto.th = auto.th, 
+            auto.delta = auto.delta, missing = missing, 
             group = group, categorical = categorical,
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
@@ -189,6 +191,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       auto.cov.lv.x   = lavaanOptions$auto.cov.lv.x,
                       auto.cov.y      = lavaanOptions$auto.cov.y,
                       auto.th         = lavaanOptions$auto.th,
+                      auto.delta      = lavaanOptions$auto.delta,
 
                       varTable        = lavaanData@ov,
                       ngroups         = lavaanData@ngroups,
@@ -279,8 +282,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
-        lavaanParTable$start <- lavaanStart
-        print(as.data.frame(lavaanParTable))
+        #lavaanParTable$start <- lavaanStart
+        #print(as.data.frame(lavaanParTable))
 
         # 5. construct internal model (S4) representation
         lavaanModel <- 
@@ -482,6 +485,7 @@ cfa <- sem <- function(model = NULL,
     mc$auto.cov.lv.x   = TRUE
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
+    mc$auto.delta      = TRUE
     mc[[1L]] <- as.name("lavaan")
 
     eval(mc, parent.frame())
@@ -511,6 +515,7 @@ growth <- function(model = NULL,
     mc$auto.cov.lv.x   = TRUE
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
+    mc$auto.delta      = TRUE
     mc[[1L]] <- as.name("lavaan")
 
     eval(mc, parent.frame())
