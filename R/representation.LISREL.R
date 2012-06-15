@@ -446,7 +446,8 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
          beta   = BETA.deriv,
          theta  = THETA.deriv,
          psi    = PSI.deriv,
-         nu     = NU.deriv)
+         nu     = NU.deriv,
+         alpha  = ALPHA.deriv)
 }
 
 # dSigma/dx -- per model matrix
