@@ -452,8 +452,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
         scaling.factor <- sqrt(sum(trace.UGamma2) / df)
         if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-        shift.parameter <- df - sqrt( df*sum(trace.UGamma)^2 / 
-                                      sum(trace.UGamma2) )
+        shift.parameter <- max(0, df - sqrt( df*sum(trace.UGamma)^2 / 
+                                      sum(trace.UGamma2) ) )
         chisq.scaled         <- sum(chisq.group / scaling.factor + 
                                     shift.parameter)
         pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)

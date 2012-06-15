@@ -213,9 +213,9 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
 
 # compute SigmaHat for a single group
-computeSigmaHat.LISREL <- function(MLIST=NULL) {
+computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE) {
 
-    LAMBDA <- MLIST$lambda
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
     THETA  <- MLIST$theta
     BETA   <- MLIST$beta
@@ -232,9 +232,14 @@ computeSigmaHat.LISREL <- function(MLIST=NULL) {
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
-
     # compute Sigma Hat
     Sigma.hat <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
+
+    # if delta, scale
+    if(delta && !is.null(MLIST$delta)) {
+        DELTA <- diag(MLIST$delta[,1L], nrow=nvar, ncol=nvar)
+        Sigma.hat <- DELTA %*% Sigma.hat %*% DELTA
+    }
 
     Sigma.hat
 }
@@ -267,6 +272,89 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
 
     Mu.hat
 }
+
+# compute TH for a single group
+computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
+
+    NU     <- MLIST$nu
+    ALPHA  <- MLIST$alpha
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
+    BETA   <- MLIST$beta
+    TAU    <- MLIST$tau; nth <- nrow(TAU)
+
+    if(is.null(th.idx)) {
+        th.idx <- 1:nth
+        nlev <- rep(1L, nvar)
+        K_nu <- diag(nvar)
+    } else {
+        nlev <- tabulate(th.idx, nbins=nvar); nlev[nlev == 0L] <- 1L
+        K_nu <- matrix(0, sum(nlev), nvar)
+        K_nu[ cbind(1:sum(nlev), rep(1:nvar, times=nlev)) ] <- 1.0
+    }
+
+    # shortcut
+    if(is.null(ALPHA) || is.null(NU)) return(matrix(0, nrow(LAMBDA), 1L))
+
+    # beta?
+    if(is.null(BETA)) {
+        LAMBDA..IB.inv <- LAMBDA
+    } else {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                        PACKAGE = "base")
+        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+   
+    # compute pi0
+    pi0 <- NU + LAMBDA..IB.inv %*% ALPHA
+
+    # interleave th's with zeros where we have numeric variables
+    th <- numeric( length(th.idx) )
+    th[ th.idx > 0L ] <- TAU[,1L]
+
+    # compute TH
+    TH <- th - (K_nu %*% pi0)
+
+    # if delta, scale
+    if(!is.null(MLIST$delta)) {
+        DELTA.diag <- MLIST$delta[,1L]
+        DELTA.star.diag <- rep(DELTA.diag, times=nlev)
+        TH <- TH * DELTA.star.diag
+    }
+
+    as.numeric(TH)
+}
+
+# compute PI for a single group
+computePI.LISREL <- function(MLIST=NULL) {
+
+    LAMBDA <- MLIST$lambda
+    BETA   <- MLIST$beta
+    GAMMA  <- MLIST$gamma
+
+    # shortcut
+    if(is.null(GAMMA)) return(matrix(0, nrow(LAMBDA), 0L))
+
+    # beta?
+    if(is.null(BETA)) {
+        LAMBDA..IB.inv <- LAMBDA
+    } else {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                        PACKAGE = "base")
+        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+
+    # compute PI
+    PI <- LAMBDA..IB.inv %*% GAMMA
+
+    PI
+}
+
 
 
 # derivative of the objective function
@@ -378,11 +466,18 @@ derivative.sigma.LISREL <- function(m="lambda",
     PSI    <- MLIST$psi
  
     # only lower.tri part of sigma (not same order as elimination matrix?)
-    v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
+    v.idx <- lavaan:::vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
     # shortcut for nu, alpha and tau: empty matrix
     if(m == "nu" || m == "alpha" || m == "tau") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
+    }
+
+    # Delta?
+    delta.flag <- FALSE
+    if(!is.null(MLIST$delta)) {
+        DELTA <- MLIST$delta
+        delta.flag <- TRUE
     }
 
     # beta?
@@ -396,8 +491,9 @@ derivative.sigma.LISREL <- function(m="lambda",
     }
 
     # pre
-    if(m == "lambda" || m == "beta") {
+    if(m == "lambda" || m == "beta" || m == "delta") 
         IK <- diag(nvar^2) + commutationMatrix(nvar, nvar)
+    if(m == "lambda" || m == "beta") {
         IB.inv..PSI..tIB.inv..tLAMBDA <-
             IB.inv %*% PSI %*% t(IB.inv) %*% t(LAMBDA)
     }
@@ -408,8 +504,14 @@ derivative.sigma.LISREL <- function(m="lambda",
     # here we go:
     if(m == "lambda") {
         DX <- IK %*% t(IB.inv..PSI..tIB.inv..tLAMBDA %x% diag(nvar))
+        if(delta.flag)
+             DX <- DX * as.numeric(DELTA %x% DELTA)
     } else if(m == "beta") {
         DX <- IK %*% ( t(IB.inv..PSI..tIB.inv..tLAMBDA) %x% LAMBDA..IB.inv )
+        # this is not really needed (because we select idx=m.el.idx)
+        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        if(delta.flag) 
+             DX <- DX * as.numeric(DELTA %x% DELTA)
     } else if(m == "psi") {
         DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv) 
         # symmetry correction, but keeping all duplicated elements
@@ -426,10 +528,20 @@ derivative.sigma.LISREL <- function(m="lambda",
         #MH: Is a single assignment using a tiling of the off diagonal sum more elegant? :) 
         offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
         DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
+        if(delta.flag)
+            DX <- DX * as.numeric(DELTA %x% DELTA)
     } else if(m == "theta") {
         DX <- diag(nvar^2) # very sparse...
         # symmetry correction not needed, since all off-diagonal elements
         # are zero?
+        if(delta.flag)
+            DX <- DX * as.numeric(DELTA %x% DELTA)
+    } else if(m == "delta") {
+        Omega <- computeSigmaHat.LISREL(MLIST, delta=FALSE)
+        DD <- diag(DELTA[,1], nvar, nvar)
+        DD.Omega <- (DD %*% Omega)
+        A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
+        DX <- A[,lavaan:::diag.idx(nvar)] + B[,lavaan:::diag.idx(nvar)]
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -448,7 +560,7 @@ derivative.mu.LISREL <- function(m="alpha",
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
     # shortcut for empty matrices
-    if(m == "psi" || m == "theta" || m == "tau") {
+    if(m == "psi" || m == "theta" || m == "tau" || m == "delta") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
  
@@ -470,6 +582,8 @@ derivative.mu.LISREL <- function(m="alpha",
         DX <- t(IB.inv %*% ALPHA) %x% diag(nvar)
     } else if(m == "beta") {
         DX <- t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
+        # this is not really needed (because we select idx=m.el.idx)
+        DX[,lavaan:::diag.idx(nfac)] <- 0.0
     } else if(m == "alpha") {
         DX <- LAMBDA %*% IB.inv
     } else {
@@ -481,23 +595,207 @@ derivative.mu.LISREL <- function(m="alpha",
 }
 
 # dTh/dx -- per model matrix
-derivative.th.LISREL <- function(m="alpha",
+derivative.th.LISREL <- function(m="tau",
                                  # all model matrix elements, or only a few?
                                  idx=1:length(MLIST[[m]]),
+                                 th.idx=NULL,
                                  MLIST=NULL) {
 
+    # for testing only
+    #compute.th2 <- function(x, mm="tau") {
+    #    mlist <- MLIST; mlist[[mm]][,] <- x
+    #    lavaan:::computeTH(fit@Model, GLIST=mlist)[[1]]
+    #}
+    #mm <- "tau"
+    #numDeriv::jacobian(func=compute.th2, x=rnorm(length(MLIST[[mm]])), mm=mm)
+
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     TAU <- MLIST$tau; nth <- nrow(TAU)
+    ALPHA  <- MLIST$alpha; NU <- MLIST$nu
+
+    # Delta?
+    delta.flag <- FALSE
+    if(!is.null(MLIST$delta)) {
+        DELTA <- MLIST$delta
+        delta.flag <- TRUE
+    }
+
+    if(is.null(th.idx)) {
+        th.idx <- 1:nth
+        nlev <- rep(1L, nvar)
+        K_nu <- diag(nvar)
+    } else {
+        nlev <- tabulate(th.idx, nbins=nvar); nlev[nlev == 0L] <- 1L
+        K_nu <- matrix(0, sum(nlev), nvar)
+        K_nu[ cbind(1:sum(nlev), rep(1:nvar, times=nlev)) ] <- 1.0
+    }
+
+    # shortcut for empty matrices
+    if(m == "psi" || m == "theta") {
+        return( matrix(0.0, nrow=length(th.idx), ncol=length(idx) ) )
+    }
+
+    # beta?
+    if(!is.null(MLIST$ibeta.inv)) {
+        IB.inv <- MLIST$ibeta.inv
+    } else if(!is.null(MLIST$beta)) {
+        tmp <- -1.0 * MLIST$beta; diag(tmp) <- 1.0
+        IB.inv <- solve(tmp)
+    } else {
+        IB.inv <- diag(nfac)
+    }
 
     if(m == "tau") {
-        DX <- diag(nth)
-        return( DX[, idx, drop=FALSE] )
+        DX <- matrix(0, nrow=length(th.idx), ncol=nth)
+        DX[ th.idx > 0L, ] <-  diag(nth)
+        if(delta.flag)
+            DX <- DX * as.numeric(K_nu %*% DELTA)
+    } else if(m == "nu") {
+        DX <- (-1) * K_nu
+        if(delta.flag)
+            DX <- DX * as.numeric(K_nu %*% DELTA)
+    } else if(m == "lambda") {
+        DX <- (-1) * t(IB.inv %*% ALPHA) %x% diag(nvar)
+        DX <- K_nu %*% DX
+        if(delta.flag)
+            DX <- DX * as.numeric(K_nu %*% DELTA)
+    } else if(m == "beta") {
+        DX <- (-1) * t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
+        # this is not really needed (because we select idx=m.el.idx)
+        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        DX <- K_nu %*% DX
+        if(delta.flag)
+            DX <- DX * as.numeric(K_nu %*% DELTA)
+    } else if(m == "alpha") {
+        DX <- (-1) * LAMBDA %*% IB.inv
+        DX <- K_nu %*% DX
+        if(delta.flag)
+            DX <- DX * as.numeric(K_nu %*% DELTA)
+    } else if(m == "delta") {
+        DX1 <- matrix(0, nrow=length(th.idx), ncol=1)
+        DX1[ th.idx > 0L, ] <-  TAU
+        DX2 <- NU + LAMBDA %*% IB.inv %*% ALPHA
+        DX2 <- K_nu %*% DX2
+        DX <- K_nu * as.numeric(DX1 - DX2)
     } else {
-
-    ## FIXME!!!!
-
-        return( matrix(0.0, nrow=nth, ncol=length(idx) ) )
+        stop("wrong model matrix names: ", m, "\n")
     }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
 }
 
+TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE) {
+
+    if(is.null(MLIST)) {
+        # create artificial matrices, compare 'numerical' vs 'analytical' 
+        # derivatives
+        nvar <- 12; nfac <- 3
+        th.idx <- c(1,0,3,3,3,3,3,3,0,0,6,7,8,0,10,10,10,10,10,11,11,0)
+        nth <- sum(th.idx > 0L)
+
+        MLIST <- list()
+        MLIST$lambda <- matrix(0,nvar,nfac) 
+        MLIST$beta   <- matrix(0,nfac,nfac)
+        MLIST$theta  <- matrix(0,nvar,nvar)
+        MLIST$psi    <- matrix(0,nfac,nfac)
+        MLIST$alpha  <- matrix(0,nfac,1L)
+        MLIST$nu     <- matrix(0,nvar,1L)
+        if(th) MLIST$tau    <- matrix(0,nth,1L)
+        if(delta) MLIST$delta  <- matrix(0,nvar,1L)
+
+        # feed random numbers
+        MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
+        # fix
+        diag(MLIST$beta) <- 0.0
+        MLIST$psi[ lavaan:::vechru.idx(nfac) ] <-  
+            MLIST$psi[ lavaan:::vech.idx(nfac) ]
+        MLIST$theta[ lavaan:::vechru.idx(nvar) ] <-  
+            MLIST$theta[ lavaan:::vech.idx(nvar) ]
+        if(delta) MLIST$delta[,] <- abs(MLIST$delta)*10
+    }
+
+    compute.sigma <- function(x, mm="lambda", MLIST=NULL) {
+        mlist <- MLIST
+        if(mm %in% c("psi", "theta")) {
+            mlist[[mm]] <- vech.reverse(x)
+        } else {
+            mlist[[mm]][,] <- x
+        }
+        vech(computeSigmaHat.LISREL(mlist))
+    }
+
+    compute.mu <- function(x, mm="lambda", MLIST=NULL) {
+        mlist <- MLIST
+        if(mm %in% c("psi", "theta")) {
+            mlist[[mm]] <- vech.reverse(x)
+        } else {
+            mlist[[mm]][,] <- x
+        }
+        computeMuHat.LISREL(mlist)
+    }
+
+    compute.th2 <- function(x, mm="tau", MLIST=NULL) {
+        mlist <- MLIST
+        if(mm %in% c("psi", "theta")) {
+            mlist[[mm]] <- vech.reverse(x)
+        } else {
+            mlist[[mm]][,] <- x
+        }
+        computeTH.LISREL(mlist, th.idx=th.idx)
+    }
+
+    for(mm in names(MLIST)) {
+        if(mm %in% c("psi", "theta")) {
+            x <- lavaan:::vech(MLIST[[mm]])
+        } else {
+            x <- lavaan:::vec(MLIST[[mm]])
+        }
+
+        # 1. sigma
+        DX1 <- numDeriv::jacobian(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
+        DX2 <- derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                       MLIST=MLIST)
+        if(mm %in% c("psi","theta")) {
+            # remove duplicated columns of symmetric matrices 
+            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            DX2 <- DX2[,-idx]
+        }
+        cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "sum delta = ", 
+            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+            sprintf("%12.9f", max(DX1-DX2)), "\n")
+
+        # 2. mu
+        DX1 <- numDeriv::jacobian(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
+        DX2 <- derivative.mu.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                       MLIST=MLIST)
+        if(mm %in% c("psi","theta")) {
+            # remove duplicated columns of symmetric matrices 
+            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            DX2 <- DX2[,-idx]
+        }
+        cat("[MU   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+            sprintf("%12.9f", max(DX1-DX2)), "\n")
+
+        # 3. th
+        if(th) {
+        DX1 <- numDeriv::jacobian(func=compute.th2, x=x, mm=mm, MLIST=MLIST)
+        DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                    MLIST=MLIST, th.idx=th.idx)
+        if(mm %in% c("psi","theta")) {
+            # remove duplicated columns of symmetric matrices 
+            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            DX2 <- DX2[,-idx]
+        }
+        cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+            sprintf("%12.9f", max(DX1-DX2)), "\n")
+        }
+    }
+
+    MLIST
+}
 
 

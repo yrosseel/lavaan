@@ -125,6 +125,7 @@ function(object, GLIST=NULL, extra=FALSE) {
     if(is.null(GLIST)) GLIST <- object@GLIST
 
     nmat           <- object@nmat
+    nvar           <- object@nvar
     ngroups        <- object@ngroups
     representation <- object@representation
     categorical    <- object@categorical
@@ -136,9 +137,10 @@ function(object, GLIST=NULL, extra=FALSE) {
 
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[mm.in.group]
 
         if(representation == "LISREL") {
-            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = GLIST[mm.in.group])
+            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -196,6 +198,111 @@ function(object, GLIST=NULL) {
     Mu.hat
 })
 
+# pi0 = nu + lambda (I-B)^-1 alpha
+computePi0 <- function(object, GLIST=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    nmat           <- object@nmat
+    ngroups        <- object@ngroups
+    representation <- object@representation
+    meanstructure  <- object@meanstructure
+
+    # return a list
+    pi0 <- vector("list", length=ngroups)
+
+    for(g in 1:ngroups) {
+
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+
+        if(!meanstructure) {
+            pi0[[g]] <- numeric( object@nvar[g] )
+        } else
+        if(representation == "LISREL") {
+            pi0[[g]] <- computePi0.LISREL(MLIST = GLIST[ mm.in.group ])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+    } # ngroups
+
+    pi0
+}
+
+# TH.star = DELTA.star * (th.star - pi0.star)
+# see Muthen 1984 eq 11
+computeTH <- function(object, GLIST=NULL) {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups <- object@ngroups
+    nmat    <- object@nmat
+    representation <- object@representation
+    th.idx  <- object@th.idx
+
+    # return a list
+    TH <- vector("list", length=ngroups)
+
+    # compute TH for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+
+        if(representation == "LISREL") {
+            TH[[g]] <- computeTH.LISREL(MLIST = GLIST[ mm.in.group ],
+                                        th.idx=th.idx[[g]])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+    }
+
+    TH
+}
+
+# PI = slope structure
+# see Muthen 1984 eq 12
+computePI <- function(object, GLIST=NULL) {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+    fixed.x        <- object@fixed.x
+
+    # return a list
+    PI <- vector("list", length=ngroups)
+
+    # compute TH for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(!fixed.x) {
+            PI.g <- numeric( object@nvar[g] )
+        } else
+        if(representation == "LISREL") {
+            PI.g <- computePI.LISREL(MLIST = MLIST)
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        # if delta, scale
+        if(!is.null(MLIST$delta)) {
+            DELTA <- diag(MLIST$delta[,1L], nrow=nvar[g], ncol=nvar[g])
+            PI.g  <- DELTA %*% PI.g
+        }
+
+        PI[[g]] <- PI.g
+    }
+
+    PI
+}
+
+
 setMethod("computeObjective", "Model",
 function(object, GLIST=NULL, samplestats=NULL, estimator="ML", 
          verbose=FALSE, forcePD=TRUE) {
@@ -212,10 +319,18 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
 
     meanstructure <- object@meanstructure
     categorical   <- object@categorical
+    fixed.x       <- object@fixed.x
+    num.idx       <- object@num.idx
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
-    if(meanstructure || categorical) Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    if(meanstructure && !categorical) {
+        Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    } else if(categorical) {
+        TH <- computeTH(object, GLIST=GLIST)
+        if(fixed.x) 
+            PI <- computePI(object, GLIST=GLIST)
+    }
     
     fx <- 0.0
     fx.group <- numeric( samplestats@ngroups )
@@ -256,47 +371,14 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 # 2. slopes (if any)
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
-
-                TAU.idx <- which(names(GLIST) == "tau")
-                DELTA.idx <- which(names(GLIST) == "delta")
-                num.idx <- object@num.idx[[g]]
-                 th.idx <- samplestats@th.idx[[g]]
-
-                # get DELTA if any
-                delta.flag <- FALSE
-                if(length(DELTA.idx) > 1L && g > 1L) {
-                    # only for multiple groups!
-                    delta.flag <- TRUE
-                    DELTA.diag <- GLIST[[DELTA.idx[g]]][,1L]
-                    DELTA.star.diag <- numeric(length(th.idx))
-                    nlev <- tabulate(th.idx); nlev[nlev == 0L] <- 1L
-                    DELTA.star.diag <- rep(DELTA.diag, times=nlev)
-                    DELTA <- diag(DELTA.diag)
-                    print(DELTA.diag)
-                    print(nlev)
-                    print(DELTA.star.diag)
-                    print(DELTA)
+                if(fixed.x) {
+                    WLS.est <- c(TH[[g]],PI[[g]],
+                                 diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                 vech(Sigma.hat[[g]], diag=FALSE))
+                } else {
+                    WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                 vech(Sigma.hat[[g]], diag=FALSE))
                 }
-           
-                # 1 th + mean
-                TH.MEAN <- numeric( length(th.idx) )
-                TH.MEAN[ th.idx  > 0L] <- GLIST[[TAU.idx[g]]][,1L]
-                TH.MEAN[ th.idx == 0L] <- Mu.hat[[g]][num.idx]
-                if(delta.flag) TH.MEAN <- TH.MEAN * DELTA.star.diag
- 
-                # 2. slopes --- FIXME!!!!
-                SLOPES <- numeric(0)
-
-                # 3. variances (numeric only)
-                VAR <- diag(Sigma.hat[[g]])
-                VAR.num <- VAR[num.idx]
-
-                # 4. covariances/correlations (off-diagonal)
-                COV <- Sigma.hat[[g]]
-                if(delta.flag) COV <- DELTA %*% COV %*% DELTA
-                COVs <- vech(COV, diag=FALSE)
-
-                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COVs)
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -466,24 +548,17 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                     DELTA <- rbind(DELTA[var.idx,,drop=FALSE], 
                                    DELTA[cor.idx,,drop=FALSE])
                 }
-                if(object@meanstructure) {
+                if(object@meanstructure && !categorical) {
                     DELTA.mu <- derivative.mu.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],
                                                      MLIST=GLIST[ mm.in.group ])
-                    if(categorical) {
-                       # retain only numeric rows
-                       DELTA.mean <- DELTA.mu[num.idx[[g]],,drop=FALSE]
-                       DELTA.th <- 
-                           derivative.th.LISREL(m=mname,
-                                                idx=m.el.idx[[mm]],
-                                                MLIST=GLIST[ mm.in.group ])
-                       # interleave!
-                       DELTA.mu <- matrix(0, nrow=length(th.idx[[g]]), 
-                                             ncol=ncol(DELTA.th))
-                       DELTA.mu[ th.idx[[g]]  > 0L,] <- DELTA.th
-                       DELTA.mu[ th.idx[[g]] == 0L,] <- DELTA.mean
-                    }
                     DELTA <- rbind(DELTA.mu, DELTA)
+                } else if(categorical) {
+                    DELTA.th <- derivative.th.LISREL(m=mname,
+                                                     idx=m.el.idx[[mm]],
+                                                     th.idx=th.idx[[g]],
+                                                     MLIST=GLIST[ mm.in.group ])
+                    DELTA <- rbind(DELTA.th, DELTA)
                 }
             } else {
                 stop("representation", representation, "not implemented yet")
@@ -604,7 +679,9 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
     representation <- object@representation
     meanstructure  <- object@meanstructure
     categorical    <- object@categorical
-    nx.unco  <- object@nx.unco
+    fixed.x        <- object@fixed.x
+    num.idx        <- object@num.idx
+    nx.unco        <- object@nx.unco
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -618,7 +695,13 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
 
     # Sigma.hat + Mu.hat
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator == "ML"))
-    if(meanstructure) Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    if(meanstructure && !categorical) {
+        Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    } else if(categorical) {
+        TH <- computeTH(object, GLIST=GLIST)
+        if(fixed.x)
+            PI <- computePI(object, GLIST=GLIST)
+    }
     
 
     # two approaches:
@@ -699,54 +782,20 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
         Delta <- computeDelta(object, GLIST.=GLIST)
 
         for(g in 1:samplestats@ngroups) {
-            # Browne & Arminger 1995 eq 4.49
             if(categorical) {                                    
                 # order of elements is important here:
                 # 1. thresholds + means (interleaved)
                 # 2. slopes (if any)
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
-
-                TAU.idx <- which(names(GLIST) == "tau")
-                DELTA.idx <- which(names(GLIST) == "delta")
-                num.idx <- object@num.idx[[g]]
-                 th.idx <- samplestats@th.idx[[g]]
-
-                # get DELTA if any
-                delta.flag <- FALSE
-                if(length(DELTA.idx) > 1L && g > 1L) {
-                    # only for multiple groups!
-                    delta.flag <- TRUE
-                    DELTA.diag <- GLIST[[DELTA.idx[g]]][,1L]
-                    DELTA.star.diag <- numeric(length(th.idx))
-                    nlev <- tabulate(th.idx); nlev[nlev == 0L] <- 1L
-                    DELTA.star.diag <- rep(DELTA.diag, times=nlev)
-                    DELTA <- diag(DELTA.diag)
-                    print(DELTA.diag)
-                    print(nlev)
-                    print(DELTA.star.diag)
-                    print(DELTA)
+                if(fixed.x) {
+                    WLS.est <- c(TH[[g]],PI[[g]],
+                                 diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                 vech(Sigma.hat[[g]], diag=FALSE))
+                } else {
+                    WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                 vech(Sigma.hat[[g]], diag=FALSE))
                 }
-
-                # 1 th + mean
-                TH.MEAN <- numeric( length(th.idx) )
-                TH.MEAN[ th.idx  > 0L] <- GLIST[[TAU.idx[g]]][,1L]
-                TH.MEAN[ th.idx == 0L] <- Mu.hat[[g]][num.idx]
-                if(delta.flag) TH.MEAN <- TH.MEAN * DELTA.star.diag
-
-                # 2. slopes --- FIXME!!!!
-                SLOPES <- numeric(0)
-
-                # 3. variances (numeric only)
-                VAR <- diag(Sigma.hat[[g]])
-                VAR.num <- VAR[num.idx]
-
-                # 4. covariances/correlations (off-diagonal)
-                COV <- Sigma.hat[[g]]
-                if(delta.flag) COV <- DELTA %*% COV %*% DELTA
-                COVs <- vech(COV, diag=FALSE)
-
-                WLS.est <- c(TH.MEAN, SLOPES, VAR.num, COVs)
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
             } else {                                           
@@ -965,8 +1014,8 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            #gradient=first.derivative.param,
-                            gradient=first.derivative.param.numerical,
+                            gradient=first.derivative.param,
+                            #gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 

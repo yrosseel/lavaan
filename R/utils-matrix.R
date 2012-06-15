@@ -141,9 +141,12 @@ vechr.reverse <- vechu.reverse <- lower2full <- function(x, diagonal = TRUE) {
     S
 }
 
-
-
-
+# return the *vector* indices of the diagonal elements of a symmetric
+# matrix of size 'n'
+diag.idx <- function(n = 1L) {
+    if(n < 1L) return(integer(0L))
+    1L + 0L:(n-1L)*(n+1L)
+}
 
 
 # create the duplication matrix (D_n): it 'duplicates' the elements

@@ -96,6 +96,7 @@ independence.model.fit <- function(object) {
         Model(partable       = lavaanParTable,
               start          = lavaanStart,
               representation = lavaanOptions$representation,
+              th.idx         = lavaanSampleStats@th.idx,
               debug          = lavaanOptions$debug)
 
     # 6.
