@@ -157,7 +157,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # what have we learned from the data?
         if("ordered" %in% lavaanData@ov$type) {
             if(lavaanOptions$estimator == "ML")
-                warning("lavaan WARNING: estimator ML is used for ordered data")
+                stop("lavaan ERROR: estimator ML for ordered data is not supported yet. Use WLSMV instead.")
             # Mplus style
             lavaanOptions$meanstructure <- TRUE
         }

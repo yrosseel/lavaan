@@ -94,13 +94,6 @@ lavData <- function(data          = NULL,          # data.frame
                      " groups; data contains ", ngroups, " groups")
         }
 
-        # handle ov.types (should be NULL if moments)
-        if(is.null(ov.types) || ov.types == "numeric") {
-            ov.types <- lapply(ov.names, function(x) rep("numeric", length(x)))
-        } else {
-            stop("lavaan ERROR: ov.types should be NULL of \"numeric\" if only sample moments are provided")
-        }
-
         ov <- list()
         ov$name <- unique(unlist(ov.names)); nvar <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
@@ -130,16 +123,10 @@ lavData <- function(data          = NULL,          # data.frame
         else
             group.label <- character(0)
 
-        # handle ov.names and ov.types
+        # handle ov.names
         if(!is.list(ov.names)) {
             tmp <- ov.names; ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
-        }
-        # handle ov.types (should be NULL if "none")
-        if(is.null(ov.types) || ov.types == "numeric") {
-            ov.types <- lapply(ov.names, function(x) rep("numeric", length(x)))
-        } else {
-            stop("lavaan ERROR: ov.types should be NULL of \"numeric\" if only sample moments are provided")
         }
 
         ov <- list()

@@ -166,6 +166,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         bootSampleStats <- try(lavSampleStatsFromData(
                                Data     = NULL, 
                                DataX    = dataX,
+                               DataOv        = data@ov,
+                               DataOvnames   = data@ov.names,
                                missing       = h0@Options$missing,
                                rescale  = (h0@Options$estimator == "ML" && 
                                            h0@Options$likelihood =="normal"), 

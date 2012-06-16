@@ -139,7 +139,6 @@ bootstrap.internal <- function(object       = NULL,
         Mu.hat <- computeMuHat(model)
     }
 
-    
     # can we use the original data, or do we need to transform it first?
     if(type == "bollen.stine" || type == "yuan") {
         # check if data is complete
@@ -251,6 +250,8 @@ bootstrap.internal <- function(object       = NULL,
         bootSampleStats <- try(lavSampleStatsFromData(
                                Data          = NULL,
                                DataX         = dataX,
+                               DataOv        = data@ov,
+                               DataOvnames   = data@ov.names,
                                missing       = opt$missing,
                                rescale       = (opt$estimator == "ML" &&
                                                 opt$likelihood == "normal"),

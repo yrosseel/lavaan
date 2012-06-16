@@ -5,6 +5,8 @@
 
 lavSampleStatsFromData <- function(Data          = NULL,
                                    DataX         = NULL,
+                                   DataOvnames   = NULL,
+                                   DataOv        = NULL,
                                    missing       = "listwise",
                                    rescale       = FALSE,
                                    WLS.V         = NULL,
@@ -19,6 +21,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
         X <- Data@X; Mp <- Data@Mp
         ngroups <- Data@ngroups
         nobs <- Data@nobs
+        ov.names <- Data@ov.names
+        DataOv <- Data@ov
     } else if(!is.null(DataX)) {
         stopifnot(is.list(DataX), is.matrix(DataX[[1L]]))
         X <- DataX
@@ -31,6 +35,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             nobs[[g]] <- nrow(X[[g]])
         }
+        ov.names <- DataOvnames
     } else {
         stop("both Data and DataX argument are NULL")
     }
@@ -57,11 +62,11 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
         # check if we have categorical data in this group
         categorical <- FALSE
-        ov.types <- Data@ov$type[ match(Data@ov.names[[g]], Data@ov$name) ]
+        ov.types <- DataOv$type[ match(ov.names[[g]], DataOv$name) ]
         if(!is.null(Data) && "ordered" %in% ov.types) {
             categorical <- TRUE
-            CAT <- muthen1984(Data=Data@X[[g]], 
-                              ov.names=Data@ov.names[[g]], 
+            CAT <- muthen1984(Data=X[[g]], 
+                              ov.names=ov.names[[g]], 
                               ov.types=ov.types)
         }
 

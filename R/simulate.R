@@ -83,18 +83,18 @@ simulateData <- function(
         # FIXME: change to rmvnorm once we include the library?
         if(is.null(skewness) && is.null(kurtosis)) {
             X[[g]] <- MASS.mvrnorm(n = sample.nobs[g],
-                                   mu = Mu.hat[[g]],
-                                   Sigma = Sigma.hat[[g]],
+                                   mu = Mu.hat[[1L]],
+                                   Sigma = Sigma.hat[[1L]],
                                    empirical = empirical)
         } else {
             # first generate Z
             Z <- ValeMaurelli1983(n        = sample.nobs[g], 
-                                  COR      = cov2cor(Sigma.hat[[g]]), 
+                                  COR      = cov2cor(Sigma.hat[[1L]]), 
                                   skewness = skewness,  # FIXME: per group?
                                   kurtosis = kurtosis)
             # rescale
-            X[[g]] <- scale(Z, center = Mu.hat[[g]],
-                               scale  = 1/sqrt(diag(Sigma.hat[[g]])))
+            X[[g]] <- scale(Z, center = Mu.hat[[1L]],
+                               scale  = 1/sqrt(diag(Sigma.hat[[1L]])))
         }
 
         if(return.type == "data.frame") X[[g]] <- as.data.frame(X[[g]])
