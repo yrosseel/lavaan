@@ -13,6 +13,7 @@ setClass("lavData",
         nobs="list",               # effective number of observations
         norig="list",              # original number of observations
         ov.names="list",           # variable names (per group)
+        ov.names.x="list",         # exo variable names (per group)
         #ov.types="list",           # variable types (per group)
         #ov.idx="list",             # column indices (all observed variables)
         ov="list",                 # variable table
@@ -20,6 +21,7 @@ setClass("lavData",
         missing="character",       # "listwise" or not?
         Mp="list",                 # if not complete, missing patterns
                                    # we need this here, to get nobs right!
+        eXo="list",                # local copy exo only
         X="list"                   # local copy
     )
 )

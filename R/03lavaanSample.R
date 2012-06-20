@@ -67,7 +67,14 @@ lavSampleStatsFromData <- function(Data          = NULL,
             categorical <- TRUE
             CAT <- muthen1984(Data=X[[g]], 
                               ov.names=ov.names[[g]], 
-                              ov.types=ov.types)
+                              ov.types=ov.types,
+                              ov.names.x=Data@ov.names.x[[g]],
+                              eXo=Data@eXo[[g]]) ## FIXME, will not work with bootstrap
+
+            print(CAT$TH)
+            print(CAT$COV)
+            print(CAT$SLOPES)
+            stop("for now")
         }
 
         # fill in the other slots

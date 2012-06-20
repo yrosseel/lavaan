@@ -101,7 +101,11 @@ StartingValues <- function(start.method = "default",
     for(g in 1:ngroups) {
 
         # info from user model for this group
-        ov.names    <- vnames(partable, "ov",   group=g)
+        if(categorical) {
+            ov.names    <- vnames(partable, "ov",   group=g)
+        } else {
+            ov.names    <- vnames(partable, "ov.nox",   group=g)
+        }
         lv.names    <- vnames(partable, "lv",   group=g)
         ov.names.x  <- vnames(partable, "ov.x", group=g)
 
@@ -180,7 +184,7 @@ StartingValues <- function(start.method = "default",
         
 
         # 4g) exogenous `fixed.x' covariates
-        if(length(ov.names.x) > 0) {
+        if(!categorical && length(ov.names.x) > 0) {
             exo.idx <- which(partable$group == g          &
                              partable$op == "~~"          & 
                              partable$lhs %in% ov.names.x &

@@ -14,6 +14,7 @@ lavData <- function(data          = NULL,          # data.frame
                     group.label   = NULL,          # custom group labels?
                     ov.names      = names(data),   # variables needed in model
                     ordered       = NULL,          # ordered variables
+                    ov.names.x    = character(0),  # exo variables
                     std.ov        = FALSE,         # standardize ov's?
                     missing       = "listwise",    # remove missings?
                     sample.cov    = NULL,          # sample covariance(s)
@@ -36,6 +37,7 @@ lavData <- function(data          = NULL,          # data.frame
                                group.label = group.label,
                                ov.names    = ov.names,
                                ordered     = ordered,
+                               ov.names.x  = ov.names.x,
                                std.ov      = std.ov,
                                missing     = missing,
                                warn        = warn)
@@ -93,9 +95,19 @@ lavData <- function(data          = NULL,          # data.frame
                 stop("lavaan ERROR: ov.names assumes ", length(ov.names),
                      " groups; data contains ", ngroups, " groups")
         }
+        # handle ov.names.x
+        if(!is.list(ov.names.x)) {
+            tmp <- ov.names.x; ov.names.x <- vector("list", length=ngroups)
+            ov.names.x[1:ngroups] <- list(tmp)
+        } else {
+            if(length(ov.names.x) != ngroups)
+                stop("lavaan ERROR: ov.names.x assumes ", length(ov.names.x),
+                     " groups; data contains ", ngroups, " groups")
+        }
 
         ov <- list()
-        ov$name <- unique(unlist(ov.names)); nvar <- length(ov$name)
+        ov$name <- unique(unlist(c(ov.names,ov.names.x)))
+        nvar    <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
         ov$nobs <- rep(sample.nobs, nvar)
         ov$type <- rep("numeric", nvar)
@@ -108,6 +120,7 @@ lavData <- function(data          = NULL,          # data.frame
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
+                       ov.naems.x  = ov.names.x,
                        ov          = ov,
                        missing     = "listwise")
 
@@ -128,9 +141,15 @@ lavData <- function(data          = NULL,          # data.frame
             tmp <- ov.names; ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
         }
+        # handle ov.names.x
+        if(!is.list(ov.names.x)) {
+            tmp <- ov.names.x; ov.names.x <- vector("list", length=ngroups)
+            ov.names.x[1:ngroups] <- list(tmp)
+        }
 
         ov <- list()
-        ov$name <- unique(unlist(ov.names)); nvar <- length(ov$name)
+        ov$name <- unique(unlist(c(ov.names,ov.names.x)))
+        nvar    <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
         ov$nobs <- rep(0L, nvar)
         ov$type <- rep("numeric", nvar)
@@ -143,6 +162,7 @@ lavData <- function(data          = NULL,          # data.frame
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
+                       ov.names.x  = ov.names.x,
                        ov          = ov,
                        missing     = "listwise")
     }
@@ -157,6 +177,7 @@ getDataFull <- function(data          = NULL,          # data.frame
                         group.label   = NULL,          # custom group labels?
                         ov.names      = names(data),   # variables needed in model
                         ordered       = NULL,          # ordered variables
+                        ov.names.x    = character(0),  # exo variables
                         std.ov        = FALSE,         # standardize ov's?
                         missing       = "listwise",    # remove missings?
                         warn          = TRUE           # produce warnings?
@@ -214,12 +235,27 @@ getDataFull <- function(data          = NULL,          # data.frame
             ov.names <- vector("list", length=ngroups)
             ov.names[1:ngroups] <- list(tmp)
         }
+        if(is.list(ov.names.x)) {
+            if(length(ov.names.x) != ngroups)
+                stop("lavaan ERROR: ov.names assumes ", length(ov.names.x),
+                     " groups; data contains ", ngroups, " groups")
+        } else {
+            tmp <- ov.names.x
+            ov.names.x <- vector("list", length=ngroups)
+            ov.names.x[1:ngroups] <- list(tmp)
+        }
     } else {
         if(is.list(ov.names)) {
             if(length(ov.names) > 1L)
                 stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
         } else {
             ov.names <- list(ov.names)
+        }
+        if(is.list(ov.names.x)) {
+            if(length(ov.namesi.x) > 1L)
+                stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
+        } else {
+            ov.names.x <- list(ov.names.x)
         }
     }
 
@@ -234,7 +270,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
     }
     # here, we now for sure all ov.names exist in the data.frame
-    OV <- lapply(data[,unique(unlist(ov.names))], function(x)
+    OV <- lapply(data[,unique(unlist(c(ov.names,ov.names.x)))], function(x)
               list(nobs=sum(!is.na(x)),
                    type=class(x)[1],
                    mean=ifelse(class(x)[1] == "numeric",
@@ -258,8 +294,8 @@ getDataFull <- function(data          = NULL,          # data.frame
     # check for unordered factors
     if("factor" %in%  ov$type) {
         f.names <- ov$name[ov$type == "factor"]
-        warning(paste("lavaan WARNING: unordered factor(s) detected in data:", 
-                paste(f.names, collapse=" ")))
+        if(f.names %in% unlist(ov.names))
+            warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
     }
     # check for zero-cases
     idx <- which(ov$nobs == 0L || ov$var == 0)
@@ -278,12 +314,14 @@ getDataFull <- function(data          = NULL,          # data.frame
     norig    <- vector("list", length=ngroups)
     Mp       <- vector("list", length=ngroups)
     X        <- vector("list", length=ngroups)
+    eXo      <- vector("list", length=ngroups)
 
     # for each group
     for(g in 1:ngroups) {
 
         # extract variables in correct order
-        ov.idx <- ov$idx[match(ov.names[[g]], ov$name)]
+        ov.idx  <- ov$idx[match(ov.names[[g]],   ov$name)]
+        exo.idx <- ov$idx[match(ov.names.x[[g]], ov$name)] 
 
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {
@@ -309,6 +347,8 @@ getDataFull <- function(data          = NULL,          # data.frame
 
         # extract data
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx] )
+        if(length(exo.idx) > 0L)
+            eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx] )
         #print( tracemem(X[[g]]) )
 
         # get rid of row names, but keep column names
@@ -316,10 +356,13 @@ getDataFull <- function(data          = NULL,          # data.frame
                                   ### answer: rownames is NOT a primitive
         #dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
         dimnames(X[[g]]) <- NULL
+        dimnames(eXo[[g]]) <- NULL
 
         # standardize observed variables?
         if(std.ov) {
-            X[[g]] <- scale(X[[g]])[,] # three copies are made!
+            X[[g]]  <- scale(X[[g]])[,] # three copies are made!
+            if(length(exo.idx) > 0L)
+                eXo[[g]] <- scale(eXo[[g]])[,]
         }
 
         # missing data
@@ -352,12 +395,14 @@ getDataFull <- function(data          = NULL,          # data.frame
                       nobs            = nobs,
                       norig           = norig,
                       ov.names        = ov.names,
+                      ov.names.x      = ov.names.x,
                       #ov.types        = ov.types,
                       #ov.idx          = ov.idx,
                       ov              = ov,
                       case.idx        = case.idx,
                       missing         = missing,
                       X               = X,
+                      eXo             = eXo,
                       Mp              = Mp
                      )
     lavData                     

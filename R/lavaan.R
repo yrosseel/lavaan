@@ -84,7 +84,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 0a. store call
     mc  <- match.call()
 
-    # 0b. get ov.names (per group) -- needed for lavData()
+    # 0b. get ov.names and ov.names.x (per group) -- needed for lavData()
     if(!is.null(slotParTable)) {
         FLAT <- slotParTable
     } else if(is.character(model)) {
@@ -93,7 +93,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         FLAT <- model
     }
     if(max(FLAT$group) < 2L) { # same model for all groups 
-        ov.names <- vnames(FLAT, type="ov")
+        ov.names   <- vnames(FLAT, type="ov")
     } else { # different model per group
         ov.names <- lapply(1:max(FLAT$group),
                            function(x) vnames(FLAT, type="ov", group=x))
@@ -106,8 +106,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #}
     if(!is.null(data)) {
          ov.types <- sapply(data[,unlist(ov.names)], function(x) class(x)[1])
-         if("ordered" %in% ov.types) categorical <- TRUE
+         if("ordered" %in% ov.types) 
+             categorical <- TRUE
     }
+
+    # if categorical, make a distinction between exo and the rest
+    if(categorical) {
+        if(max(FLAT$group) < 2L) { # same model for all groups 
+            ov.names   <- vnames(FLAT, type="ov.nox")
+            ov.names.x <- vnames(FLAT, type="ov.x")
+        } else { # different model per group
+            ov.names <- lapply(1:max(FLAT$group),
+                               function(x) vnames(FLAT, type="ov.nox", group=x))
+            ov.names.x <- lapply(1:max(FLAT$group),
+                                 function(x) vnames(FLAT, type="ov.x", group=x))
+        }
+    } else {
+        ov.names.x <- character(0)
+    } 
 
     # 1a. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])
@@ -147,6 +163,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               group.label = group.label,
                               ov.names    = ov.names,
                               ordered     = ordered,
+                              ov.names.x  = ov.names.x,
                               std.ov      = std.ov,
                               missing     = lavaanOptions$missing,
                               sample.cov  = sample.cov,

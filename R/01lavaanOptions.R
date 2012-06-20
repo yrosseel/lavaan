@@ -380,6 +380,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$estimator == "ML" && (opt$mimic == "Mplus" || 
                                      opt$mimic == "lavaan")) {
             opt$fixed.x <- TRUE
+        } else if(opt$categorical) {
+            opt$fixed.x <- TRUE
         } else {
             opt$fixed.x <- FALSE
         }
