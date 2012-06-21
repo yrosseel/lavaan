@@ -620,4 +620,24 @@ dbinorm <- function(u, v, rho) {
     1/(2*pi*sqrt(R)) * exp( - 0.5*(u^2 - 2*rho*u*v + v^2)/R )
 }
 
+# partial derivative - rho
+dbinorm_drho <- function(u, v, rho) {
+    R <- 1 - rho^2
+    dbinorm(u,v,rho) * (u*v*R -rho*(u^2 - 2*rho*u*v + v^2) + rho*R )/R^2
+}
+
+# partial derivative - u
+dbinorm_du <- function(u, v, rho) {
+    R <- 1 - rho^2
+    -dbinorm(u,v,rho) * (u - rho*v)/R
+}
+
+# partial derivative - v
+dbinorm_dv <- function(u, v, rho) {
+    R <- 1 - rho^2
+    -dbinorm(u,v,rho) * (v - rho*u)/R
+}
+
+
+
 
