@@ -1,6 +1,16 @@
-# various flavors of ordered probit regression
+# ordered probit regression
 # 
 # YR 21 June 2012
+#
+# why not using MASS:::polr?
+# - it does not deal with binary responses (must use glm.fit instead)
+# - we need scores
+# - Newton-Raphson is must faster
+# - allow for empty X
+# - however, we do force thresholds to be strictly positive!
+
+# NOTE: X should NOT contain a column of 1's for the intercept!!
+
 
 # wrapper function
 lavProbit <- function(y, X, weights = rep(1, length(y)),
@@ -36,6 +46,7 @@ fields = list(y = "integer", X = "matrix",
               nobs = "integer", nexo = "integer", nth = "integer", 
               weights = "numeric", offset = "numeric",
               Y1 = "matrix", Y2 = "matrix",
+              th.idx = "integer", beta.idx = "integer",
               # cache:
               # this doesn't result in better speed; but makes the code cleaner
               z1 = "numeric", z2 = "numeric", probits = "numeric",
@@ -44,18 +55,28 @@ fields = list(y = "integer", X = "matrix",
 # methods
 methods = list(
 
-initialize = function(y, X, weights = rep(1, length(y)),
+initialize = function(y, X,
+                      weights = rep(1, length(y)),
                       offset = rep(0, length(y))) {
     # y
     y <<- as.integer(y); nth <<- length(unique(.self$y)) - 1L
+    nobs <<- length(y)
     # X
-    X <<- X; nobs <<- nrow(X); nexo <<- ncol(X)
+    if(!missing(X)) {
+        X <<- X; nexo <<- ncol(X)
+    } else {
+        nexo <<- 0L
+    }
     # weights and offset
     weights <<- weights; offset <<- offset
     
     # TH matrices (TRUE/FALSE)
     Y1 <<- matrix(1:nth, nobs, nth, byrow=TRUE) == .self$y
     Y2 <<- matrix(1:nth, nobs, nth, byrow=TRUE) == (.self$y - 1L)
+
+    # indices of free parameters
+    th.idx <<- 1:nth
+    beta.idx <<- nth + (1:nexo)
 
     # set up for Optim
     npar  <<- nth + nexo
@@ -66,7 +87,10 @@ initialize = function(y, X, weights = rep(1, length(y)),
 objective = function(x) {
     if(!missing(x)) theta <<- x
     th <- theta[1:nth]; TH <- c(-Inf, th, +Inf); beta <- theta[-c(1:nth)]
-    eta <- drop(X %*% beta) + offset
+    if(nexo > 0L) 
+        eta <- drop(X %*% beta) + offset
+    else
+        eta <- numeric(nobs)
     z1 <<- pmin( 100, TH[y+1L   ] - eta)
     z2 <<- pmax(-100, TH[y+1L-1L] - eta)
     probits <<- pnorm(z1) - pnorm(z2)
@@ -80,11 +104,27 @@ gradient = function(x) {
     p1 <<- dnorm(z1); p2 <<- dnorm(z2)
     
     # beta
-    dx.beta <- crossprod(X, weights*(p1 - p2)/probits)
+    dx.beta <- numeric(0L)
+    if(nexo > 0L)
+        dx.beta <- crossprod(X, weights*(p1 - p2)/probits)
     # th
     dx.th   <- crossprod(Y2*p2 - Y1*p1, weights/probits)
 
     c(dx.th, dx.beta)
+},
+
+scores = function(x) {
+    if(!missing(x)) objective(x)
+    p1 <<- dnorm(z1); p2 <<- dnorm(z2)
+
+    # beta
+    scores.beta <- matrix(0, length(p1), 0L)
+    if(nexo > 0L) 
+        scores.beta <- weights*(p1 - p2)/probits * X
+    # th
+    scores.th   <- (Y2*p2 - Y1*p1) * (weights/probits)
+
+    cbind(scores.th, scores.beta)
 },
 
 hessian = function(x) {
@@ -93,15 +133,18 @@ hessian = function(x) {
     gnorm <- function(x) { -x * dnorm(x) }
     wtpr <- weights/probits
 
-    dxb <-  X*p1 - X*p2
-    dx2.beta <- crossprod(dxb, (dxb * wtpr / probits)) -
-                  ( crossprod(X * gnorm(z1) * wtpr, X) - 
-                    crossprod(X * gnorm(z2) * wtpr, X) )
-
     dxa <- Y1*p1 - Y2*p2
     dx2.alpha <- crossprod(dxa, (dxa * wtpr / probits)) -
                    ( crossprod(Y1 * gnorm(z1) * wtpr, Y1) -
                      crossprod(Y2 * gnorm(z2) * wtpr, Y2) )
+
+    # only for empty X
+    if(nexo == 0L) return(dx2.alpha)
+
+    dxb <-  X*p1 - X*p2
+    dx2.beta <- crossprod(dxb, (dxb * wtpr / probits)) -
+                  ( crossprod(X * gnorm(z1) * wtpr, X) - 
+                    crossprod(X * gnorm(z2) * wtpr, X) )
 
     dx.ab <- crossprod(dxa, (dxb * wtpr / probits)) -
                ( crossprod(Y1 * gnorm(z1) * wtpr, X) -

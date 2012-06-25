@@ -1,10 +1,5 @@
-muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
+muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        ov.names.x=NULL, eXo=NULL) {
-
-    print(ov.names)
-    print(ov.types)
-    print(ov.names.x)
- 
 
     require(mvtnorm)
 
@@ -17,6 +12,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
     #                 right (see H matrix)
 
     nvar <- ncol(Data); stopifnot(nvar > 1L); N <- nrow(Data)
+    nTH <- ov.levels - 1L; nTH[nTH == -1L] <- 1L
+    nth <- sum(nTH)
+    th.end.idx <- cumsum(nTH); th.start.idx <- th.end.idx - (nTH - 1L)
 
     # variable types; default = numeric
     ord.idx <- which(ov.types == "ordered")
@@ -39,79 +37,61 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
     # correlations
     COR <- diag(nvar); colnames(COR) <- rownames(COR) <- ov.names
 
+    # SCORES
     SC.VAR <- matrix(0, N, nvar); colnames(SC.VAR) <- ov.names
     SC.SL  <- matrix(0, N, nvar*nexo)
     colnames(SC.SL) <- paste(rep(ov.names, each=nexo), 
                              rep(ov.names.x,nvar), sep="")
+    SC.TH  <- matrix(0, N, nth)
+    colnames(SC.TH) <- unlist(lapply(as.list(1:nvar),
+        function(x) paste(ov.names[x],"|",1:nTH[x],sep="")))
 
     # stage one - TH/SLOPES/VAR only
     ov.num <- 0L
     for(i in 1:nvar) {
         cat("var = ", ov.names[i], " type = ", ov.types[i], "\n")
+        th.idx <- th.start.idx[i]:th.end.idx[i]
         if(ov.types[i] == "numeric") {
             ov.num <- ov.num + 1L
             # compute mean and variance
             TH[[i]] <- mean(Data[,i], na.rm=TRUE)
             VAR[[i]] <- var(Data[,i], na.rm=TRUE) * (N-1)/N
-            TH.NAMES[[i]] <- ov.names[i]
-            TH.IDX[[i]] <- 0L
+            TH.NAMES[[i]] <- ov.names[i]; TH.IDX[[i]] <- 0L
+            SC.TH[,th.idx] <-
+                scores_mu(Data[,i], mu.x=TH[[i]], var.x=VAR[[i]])
+            SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[[i]])
             if(nexo > 0L) {
-                print(exo.fit$coefficients)
-                print(ov.num)
                 SLOPES[[i]] <- unname(exo.fit$coefficients[-1L,ov.num])
                 ### FIXME!!
-                end.idx <- (i*nexo)
-                start.idx <- (i-1L)*nexo + 1L
-                print(c(start.idx, end.idx))
-                SC.SL[,start.idx:end.idx] <- matrix(0, N, nexo)
+                sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+                SC.SL[,sl.start.idx:sl.end.idx] <- matrix(0, N, nexo)
             }
         } else if(ov.types[i] == "ordered") {
             if(nexo == 0L) {
                 TH[[i]] <- unithord(X=Data[,i])
+                SC.TH[,th.idx] <- scores_th(Data[,i], TH[[i]])
+                SC.VAR[,i] <- rep(0, N)
             } else {
-                out <- uni.ordinal(x=eXo, y=Data[,i])
-                print(str(out))
-                TH[[i]] <- out$intercepts
-                SLOPES[[i]] <- out$slopes
-                end.idx <- (i*nexo)
-                start.idx <- (i-1L)*nexo + 1L
-                print(c(start.idx, end.idx))
-                SC.SL[,start.idx:end.idx] <- out$dx[,-1L]
+                fit <- lavProbit(y=Data[,i], X=eXo)
+                scores <- fit$scores()
+                TH[[i]] <- fit$theta[fit$th.idx]
+                SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
+                SLOPES[[i]] <- fit$theta[fit$beta.idx]
+                sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+                SC.SL[,sl.start.idx:sl.end.idx] <- 
+                    scores[,fit$beta.idx,drop=FALSE]
             }
             VAR[[i]] <- 1.0
             TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
                                    sep="")
-            #TH.IDX[[i]] <- max(c(0L,unlist(TH.IDX))) + 1:length(TH[[i]])
             TH.IDX[[i]] <- rep(i, length(TH[[i]]))
         } else {
             stop("unknown ov.types:", ov.types[i])
         }
     }
 
-    # stage one - SC
-    SC.TH  <- matrix(0, N, length(unlist(TH)))
-    colnames(SC.TH) <- unlist(lapply(as.list(1:nvar), 
-        function(x) paste(ov.names[x],"|",1:length(TH[[x]]),sep="")))
-    nTH <- unlist(lapply(TH, length)) # number of TH per variable
-    end.idx <- cumsum(nTH); start.idx <- end.idx - (nTH - 1L)
-    for(i in 1:nvar) {
-        th.idx <- start.idx[i]:end.idx[i]
-        if(ov.types[i] == "numeric") {
-            SC.TH[,th.idx] <-
-                scores_mu(Data[,i], mu.x=TH[[i]], var.x=VAR[[i]])
-            SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[[i]])
-        } else if(ov.types[i] == "ordered") {
-            #
-            # FIXME, if nexo > 1, we need out$dx[,1L] instead!!
-            #
-            SC.TH[,th.idx] <- scores_th(Data[,i], TH[[i]])
-            SC.VAR[,i] <- rep(0, N)
-        } else {
-            stop("unknown ov.types:", ov.types[i])
-        }
-    }
     # rm VAR columns from ordinal variables
-    SC.VAR <- SC.VAR[,-ord.idx] 
+    SC.VAR <- SC.VAR[,-ord.idx]
 
 
     # stage two
@@ -177,7 +157,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
     }
     # A11 - TH
     for(i in 1:nvar) {
-        th.idx <- start.idx[i]:end.idx[i]
+        th.idx <- th.start.idx[i]:th.end.idx[i]
         SC.TH_i <- SC.TH[,th.idx]
         A11_block[[i]] <- crossprod(SC.TH_i)
     }
@@ -185,9 +165,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
     if(nexo > 0L) {
         cat("here\n")
         for(i in 1:nvar) {
-            end.idx <- (i*nexo)
-            start.idx <- (i-1L)*nexo + 1L
-            A11_block[[ nvar + i ]] <- crossprod(SC.SL[,start.idx:end.idx])
+            th.end.idx <- (i*nexo)
+            th.start.idx <- (i-1L)*nexo + 1L
+            A11_block[[ nvar + i ]] <- crossprod(SC.SL[,th.start.idx:th.end.idx])
         }
 
     }
@@ -211,8 +191,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL,
     for(j in 1:(nvar-1L)) {
         for(i in (j+1L):nvar) {
             pstar.idx <- PSTAR[i,j]
-            th.idx_i <- start.idx[i]:end.idx[i]
-            th.idx_j <- start.idx[j]:end.idx[j]
+            th.idx_i <- th.start.idx[i]:th.end.idx[i]
+            th.idx_j <- th.start.idx[j]:th.end.idx[j]
             if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
                 SC.COR.UNI <-
                     scores_cor_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j],

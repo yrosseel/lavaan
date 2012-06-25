@@ -62,19 +62,21 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
         # check if we have categorical data in this group
         categorical <- FALSE
-        ov.types <- DataOv$type[ match(ov.names[[g]], DataOv$name) ]
+        ov.types  <- DataOv$type[ match(ov.names[[g]], DataOv$name) ]
+        ov.levels <- DataOv$nlev[ match(ov.names[[g]], DataOv$name) ]
         if(!is.null(Data) && "ordered" %in% ov.types) {
             categorical <- TRUE
             CAT <- muthen1984(Data=X[[g]], 
                               ov.names=ov.names[[g]], 
                               ov.types=ov.types,
+                              ov.levels=ov.levels,
                               ov.names.x=Data@ov.names.x[[g]],
                               eXo=Data@eXo[[g]]) ## FIXME, will not work with bootstrap
 
             print(CAT$TH)
             print(CAT$COV)
             print(CAT$SLOPES)
-            stop("for now")
+            #stop("for now")
         }
 
         # fill in the other slots

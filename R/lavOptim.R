@@ -9,6 +9,7 @@ lavRefOptim <- setRefClass("lavOptim",
 fields = list(
     npar            = "integer",     # number of free model parameters
     theta           = "numeric",     # the model parameters (free only)
+    theta.start     = "numeric",     # starting values
     optim.method    = "character",   # optimization method
     optim.control   = "list",        # control parameter for optimization method
     optim.out       = "list"         # optimization results
@@ -41,10 +42,13 @@ start = function() {
     rep(0, npar)    
 },
 
-optimize = function(method = "nlminb", control = list(), verbose = FALSE) {
+optimize = function(method = "nlminb", control = list(), verbose = FALSE,
+                    start = NULL) {
     method <- tolower(method)
     hessian <- FALSE
-    if( method %in% c("nlminb", "quasi-newton", "quasi.newton", 
+    if( method == "none" ) {
+        optim.method <<- "none"
+    } else if( method %in% c("nlminb", "quasi-newton", "quasi.newton", 
                       "nlminb.hessian") ) {
         optim.method <<- "nlminb"
         if(verbose)
@@ -80,7 +84,12 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE) {
     }
 
     # starting values
-    theta.start <- start()
+    if(is.null(start)) {
+        theta.start <<- .self$start()
+    } else {
+        stopifnot(length(start) == npar)
+        theta.start <<- start
+    }
 
     # run objective function to intialize (and see if starting values
     # are valid
