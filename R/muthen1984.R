@@ -52,19 +52,22 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         cat("var = ", ov.names[i], " type = ", ov.types[i], "\n")
         th.idx <- th.start.idx[i]:th.end.idx[i]
         if(ov.types[i] == "numeric") {
+            fit <- lavOLS(y=Data[,i], X=eXo); scores <- fit$scores()
             ov.num <- ov.num + 1L
             # compute mean and variance
-            TH[[i]] <- mean(Data[,i], na.rm=TRUE)
-            VAR[[i]] <- var(Data[,i], na.rm=TRUE) * (N-1)/N
+            TH[[i]] <- fit$theta[1L]
+            VAR[[i]] <- fit$theta[fit$npar]
             TH.NAMES[[i]] <- ov.names[i]; TH.IDX[[i]] <- 0L
-            SC.TH[,th.idx] <-
-                scores_mu(Data[,i], mu.x=TH[[i]], var.x=VAR[[i]])
-            SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[[i]])
+            #SC.TH[,th.idx] <-
+            #    scores_mu(Data[,i], mu.x=TH[[i]], var.x=VAR[[i]])
+            SC.TH[,th.idx] <- scores[,1L]
+            #SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[[i]])
+            SC.VAR[,i] <- scores[,npar]
             if(nexo > 0L) {
-                SLOPES[[i]] <- unname(exo.fit$coefficients[-1L,ov.num])
-                ### FIXME!!
+                SLOPES[[i]] <- fit$theta[-c(1L, fit$npar)]
                 sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                SC.SL[,sl.start.idx:sl.end.idx] <- matrix(0, N, nexo)
+                SC.SL[,sl.start.idx:sl.end.idx] <- 
+                    scores[,-c(1L, fit$npar),drop=FALSE]
             }
         } else if(ov.types[i] == "ordered") {
             if(nexo == 0L) {
@@ -72,8 +75,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 SC.TH[,th.idx] <- scores_th(Data[,i], TH[[i]])
                 SC.VAR[,i] <- rep(0, N)
             } else {
-                fit <- lavProbit(y=Data[,i], X=eXo)
-                scores <- fit$scores()
+                fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()
                 TH[[i]] <- fit$theta[fit$th.idx]
                 SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
                 SLOPES[[i]] <- fit$theta[fit$beta.idx]
