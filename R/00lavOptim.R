@@ -111,6 +111,9 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
         # FIXME: use generic fields
         optim.out <<- out
     }
+    # just in case, a last call to objective() 
+    tmp <- objective()
+
 }
 
 ))

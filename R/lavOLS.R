@@ -34,6 +34,7 @@ contains = "lavOptim",
 fields = list(y = "numeric", X = "matrix", 
               nobs = "integer", nexo = "integer", 
               weights = "numeric", offset = "numeric",
+              beta.idx = "integer", var.idx = "integer",
               # internal
               yhat = "numeric"),
 
@@ -54,6 +55,10 @@ initialize = function(y, X = NULL,
     }
     # weights and offset
     weights <<- weights; offset <<- offset
+
+    # indices of free parameters
+    beta.idx <<- 1:(nexo + 1L) # note INCLUDES intercept (unlike lavProbit)
+     var.idx <<- 1L + nexo + 1L
     
     # set up for Optim
     npar  <<- 1L + nexo + 1L # intercept + beta + var
@@ -68,8 +73,8 @@ objective = function(x) {
         yhat <<- drop(X %*% beta) + offset
     else
         yhat <<- rep(beta[1], nobs)
-    dy <- dnorm(y, yhat, sd=sqrt(e.var), log=TRUE)
-    -sum(weights * dy)
+    log.dy <- dnorm(y, mean=yhat, sd=sqrt(e.var), log=TRUE)
+    -sum(weights * log.dy)
 },
 
 gradient = function(x) {

@@ -244,6 +244,84 @@ pccor_TS <- function(x, y, th.x=NULL, th.y=NULL, freq=NULL,
     rho
 }
 
+pccorX_TS <- function(x, y, eXo=NULL, 
+                      x.z1=NULL, x.z2=NULL, y.z1=NULL, y.z2=NULL,
+                      method="nlminb", verbose=FALSE, scores=FALSE) {
+
+    stopifnot(min(x) == 1L, min(y) == 1L,
+              method %in% c("nlminb", "optimize"))
+  
+    # thresholds
+    if(is.null(x.z1) || is.null(x.z2)) {
+        fit.x <- lavProbit(y=x, X=eXo)
+        x.z1 <- fit.x$z1; x.z2 <- fit.x$z2
+    }
+    if(is.null(y.z1) || is.null(y.z2)) {
+        fit.y <- lavProbit(y=y, X=eXo)
+        y.z1 <- fit.y$z1; y.z2 <- fit.y$z2
+    }
+
+    objectiveFunction <- function(x) {
+        rho = tanh(x[1L])
+        logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
+        #cat("rho = ", tanh(x[1L]), "\n")
+        -logl
+    }
+
+    if(method == "optimize") {
+        out <- optimize(f=objectiveFunction,
+                        interval=c(-5, +5), # tanh scale!
+                        tol=1e-8, maximum=FALSE)
+        rho <- tanh(out$minimum)
+    } else if(method == "nlminb") {
+        rho.init <- cov(x,y)
+
+        gradientFunction <- function(x) {
+            rho = tanh(x[1L])
+            lik <- pcL_i(x.z1, x.z2, y.z1, y.z2, rho)
+            dx <- ( dbinorm(x.z1, y.z1, rho) -
+                    dbinorm(x.z2, y.z1, rho) -
+                    dbinorm(x.z1, y.z2, rho) +
+                    dbinorm(x.z2, y.z2, rho) ) / lik
+            -sum(dx) * 1/cosh(x)^2
+        }
+
+        hessianFunction <- function(x) {
+            ### FIXME: TODO
+        }
+
+        if(method == "nlminb") {
+            out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
+                          gradient=gradientFunction,
+                          scale=10,
+                          control=list(trace=ifelse(verbose,1L,0L), 
+                                       rel.tol=1e-10))
+        } 
+        #else if(method == "nlminb.hessian") {
+        #    # to mimic Mplus
+        #    out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
+        #                  gradient=gradientFunction,
+        #                  hessian=hessianFunction,
+        #                  scale=10, # not needed?
+        #                  control=list(trace=ifelse(verbose,1L,0L), 
+        #                               rel.tol=1e-5))
+        #}
+        if(out$convergence != 0L) warning("no convergence")
+        rho <- tanh(out$par)
+    }
+
+    if(scores) {
+        lik <- pcL_i(x.z1, x.z2, y.z1, y.z2, rho)
+        dx <- ( dbinorm(x.z1, y.z1, rho) -
+                dbinorm(x.z2, y.z1, rho) -
+                dbinorm(x.z1, y.z2, rho) +
+                dbinorm(x.z2, y.z2, rho) ) / lik    
+        attr(rho, "scores") <- dx
+    }
+
+    rho
+}
+
 # polyserial x=numeric, y=ordinal -- TWO-STEP method
 pscor_TS <- function(X, Y, th.y=NULL, verbose=FALSE, method="nlminb",
                      rescale.var=TRUE, acov=FALSE) {
@@ -307,12 +385,113 @@ pscor_TS <- function(X, Y, th.y=NULL, verbose=FALSE, method="nlminb",
     rho
 }
 
+# X = residuals!
+pscorX_TS <- function(X, Y, eXo=NULL, 
+                      mu.x=NULL, var.x=NULL, XRESID=NULL,
+                      y.z1=NULL, y.z2=NULL, 
+                      verbose=FALSE, method="nlminb", scores=FALSE) {
+
+    stopifnot(min(Y) == 1L, method %in% c("nlminb", "optimize"))
+
+    # Y = ordinal
+    if(is.null(y.z1) || is.null(y.z2)) {
+        fit.y <- lavProbit(y=Y, X=eXo)
+        y.z1 <- fit.y$z1; y.z2 <- fit.y$z2
+    }
+
+    # X = numeric
+    if(is.null(mu.x) || is.null(var.x) || is.null(XRESID)) {
+        fit.x <- lavOLS(y=X, X=eXo)
+        var.x <- fit.x$theta[fit.x$npar]
+        mu.x  <- fit.x$theta[1L]
+        eta.x <- fit.x$yhat
+        ZRESID <- (fit.x$y - fit.x$yhat)/sqrt(var.x)
+    }
+
+    objectiveFunction <- function(x) {
+        rho = tanh(x[1L])
+        logl <- psLoglx(rho=rho, X=X, eta.x=eta.x, var.x=var.x, 
+                        y.z1=y.z1, y.z2=y.z2, ZRESID=ZRESID)
+        -logl
+    }
+
+    if(method == "optimize") {
+        out <- optimize(f=objectiveFunction,
+                        interval=c(-5, +5),  # on tanh scale!
+                        tol=1e-8, maximum=FALSE)
+        rho <- out$minimum
+    } else if(method == "nlminb") {
+        rho.init <- cor(X,Y)
+
+        gradientFunction <- function(x) {
+            rho = tanh(x[1L])
+            R <- sqrt(1-rho^2)
+            tauj.star  <- (y.z1 - rho*ZRESID)/R
+            tauj1.star <- (y.z2 - rho*ZRESID)/R
+            d.tauj.star  <- dnorm(tauj.star); d.tauj1.star <- dnorm(tauj1.star)
+   
+            # p(y|x)
+            pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+            pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+            pyx.inv <- 1/pyx
+     
+            # rho
+            pyx.inv.c <- pyx.inv * 1/R^3
+            TAUj  <- d.tauj.star  * (y.z1*rho - ZRESID)
+            TAUj1 <- d.tauj1.star * (y.z2*rho - ZRESID)
+            dx.rho <- sum( pyx.inv.c * (TAUj - TAUj1) )
+            -dx.rho * 1/cosh(x)^2
+        }
+
+        out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
+                      gradient=gradientFunction,
+                      scale=10,
+                      control=list(trace=ifelse(verbose,1L,0L), rel.tol=1e-10))
+        if(out$convergence != 0L) warning("no convergence")
+        rho <- tanh(out$par)
+    }
+
+    if(scores) {
+        R <- sqrt(1-rho^2)
+        tauj.star  <- (y.z1 - rho*ZRESID)/R
+        tauj1.star <- (y.z2 - rho*ZRESID)/R
+        d.tauj.star  <- dnorm(tauj.star); d.tauj1.star <- dnorm(tauj1.star)
+
+        # p(y|x)
+        pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+        pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+        pyx.inv <- 1/pyx
+
+        # rho
+        pyx.inv.c <- pyx.inv * 1/R^3
+        TAUj  <- d.tauj.star  * (y.z1*rho - ZRESID)
+        TAUj1 <- d.tauj1.star * (y.z2*rho - ZRESID)
+        dx.rho <-  pyx.inv.c * (TAUj - TAUj1)
+
+        attr(rho, "scores") <- dx.rho
+    }
+
+    rho
+}
+
+
 # logl for X=numeric, Y=ordinal, (Z=scale(X), only for two.step)
 psLogl <- function(rho, mu.x, var.x, th.y, X, Y, Z=NULL) {
     sd.x <- sqrt(var.x)
     if(is.null(Z)) Z <- (X - mu.x) / sd.x
     pyx <- pspyx(rho=rho, th.y=th.y, Y=Y, Z=Z)
     px <- dnorm(X, mean=mu.x, sd=sd.x)
+    logl <- sum(log(px) + log(pyx))
+    logl
+}
+
+psLoglx <- function(rho, X, eta.x, var.x, y.z1=NULL, y.z2=NULL, ZRESID=NULL) {
+    R <- sqrt(1-rho^2)
+    tauj.star  <- (y.z1 - rho*ZRESID)/R
+    tauj1.star <- (y.z2 - rho*ZRESID)/R
+    pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+    pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+    px <- dnorm(X, mean=eta.x, sd=sqrt(var.x))
     logl <- sum(log(px) + log(pyx))
     logl
 }
@@ -326,6 +505,7 @@ pspyx <- function(rho, th.y, Y, Z, tauj.star=NULL, tauj1.star=NULL) {
     pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
     pyx
 }
+
 
 
 
@@ -427,6 +607,35 @@ scores_pccor <- function(X, Y, rho=NULL, th.x=NULL, th.y=NULL) {
 scores_pccor_uni <- function(X, Y, rho, th.x, th.y) {
 
     PI  <- pcComputePI(rho, th.x, th.y); PI.XY.inv <- 1/PI[ cbind(X,Y) ]
+    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf); R <- sqrt(1-rho^2)
+ 
+    # th.x
+    x.Y1 <- matrix(1:length(th.x),length(X),length(th.x), byrow=TRUE) == X
+    x.Y2 <- matrix(1:length(th.x),length(X),length(th.x), byrow=TRUE) == (X-1L)
+    x.z1 <- pmin( 100, TH.X[X+1L   ]); x.z2 <- pmax(-100, TH.X[X+1L-1L])
+    x.Z1 <- ( dnorm(x.z1) * pnorm( (TH.Y[Y+1L   ]-rho*x.z1)/R) -
+              dnorm(x.z1) * pnorm( (TH.Y[Y+1L-1L]-rho*x.z1)/R) )
+    x.Z2 <- ( dnorm(x.z2) * pnorm( (TH.Y[Y+1L   ]-rho*x.z2)/R) -
+              dnorm(x.z2) * pnorm( (TH.Y[Y+1L-1L]-rho*x.z2)/R) )
+    dx.th.x <- (x.Y1*x.Z1 - x.Y2*x.Z2) * PI.XY.inv
+
+    # th.y
+    y.Y1 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == Y
+    y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
+    y.z1 <- pmin( 100, TH.Y[Y+1L   ]); y.z2 <- pmax(-100, TH.Y[Y+1L-1L])
+    y.Z1  <- ( dnorm(y.z1) * pnorm( (TH.X[X+1L   ]-rho*y.z1)/R) -
+               dnorm(y.z1) * pnorm( (TH.X[X+1L-1L]-rho*y.z1)/R) )
+    y.Z2  <- ( dnorm(y.z2) * pnorm( (TH.X[X+1L   ]-rho*y.z2)/R) -
+               dnorm(y.z2) * pnorm( (TH.X[X+1L-1L]-rho*y.z2)/R) )
+    dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * PI.XY.inv
+
+    cbind(dx.th.x, dx.th.y)
+}
+
+# old version, not used anymore
+scores_pccor_uni2 <- function(X, Y, rho, th.x, th.y) {
+
+    PI  <- pcComputePI(rho, th.x, th.y); PI.XY.inv <- 1/PI[ cbind(X,Y) ]
     TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
     dth.x <- dnorm(th.x); dth.y <- dnorm(th.y); R <- sqrt(1-rho^2) 
 
@@ -450,7 +659,69 @@ scores_pccor_uni <- function(X, Y, rho, th.x, th.y) {
     cbind(dx.th.x, dx.th.y)
 }
 
+scores_pccorX_uni <- function(X, Y, rho, th.x, th.y, sl.x, sl.y,
+                              x.z1, x.z2, y.z1, y.z2, eXo=NULL) {
+
+    lik <- pcL_i(x.z1=x.z1, x.z2=x.z2, y.z1=y.z1, y.z2=y.z2, rho=rho)
+    R <- sqrt(1-rho^2)
+
+    # th.x
+    x.Y1 <- matrix(1:length(th.x),length(X),length(th.x), byrow=TRUE) == X
+    x.Y2 <- matrix(1:length(th.x),length(X),length(th.x), byrow=TRUE) == (X-1L)
+    x.Z1 <- ( dnorm(x.z1) * pnorm( (y.z1-rho*x.z1)/R) -
+              dnorm(x.z1) * pnorm( (y.z2-rho*x.z1)/R) )
+    x.Z2 <- ( dnorm(x.z2) * pnorm( (y.z1-rho*x.z2)/R) -
+              dnorm(x.z2) * pnorm( (y.z2-rho*x.z2)/R) )
+    dx.th.x <- (x.Y1*x.Z1 - x.Y2*x.Z2) / lik
+
+    # th.y
+    y.Y1 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == Y
+    y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
+    y.Z1  <- ( dnorm(y.z1) * pnorm( (x.z1-rho*y.z1)/R) -
+               dnorm(y.z1) * pnorm( (x.z2-rho*y.z1)/R) )
+    y.Z2  <- ( dnorm(y.z2) * pnorm( (x.z1-rho*y.z2)/R) -
+               dnorm(y.z2) * pnorm( (x.z2-rho*y.z2)/R) )
+    dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) / lik
+
+    # sl.x
+    dx.sl.x <- (x.Z2 - x.Z1) * eXo / lik
+
+    # sl.y
+    dx.sl.y <- (y.Z2 - y.Z1) * eXo / lik
+
+    cbind(dx.th.x, dx.th.y, dx.sl.x, dx.sl.y)
+}
+
 scores_pscor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
+    sd.x=sqrt(var.x); Z <- (X - mu.x) / sd.x # ALWAYS recompute Z
+    TH.Y <- c(-Inf, th.y, Inf); R <- sqrt(1-rho^2)
+
+    tauj.star  <- (TH.Y[Y+1L   ] - rho*Z)/R
+    tauj1.star <- (TH.Y[Y+1L-1L] - rho*Z)/R
+    y.Z1  <- dnorm(tauj.star); y.Z2 <- dnorm(tauj1.star)
+
+    # p(y|x)
+    pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+    pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+    pyx.inv <- 1/pyx
+
+    # mu.x
+    y.Z1.y.Z2 <- y.Z1-y.Z2
+    dx.mu.x <- 1/sd.x * (Z + (pyx.inv * (rho/R) * y.Z1.y.Z2))
+
+    # var.x
+    dx.var.x <-  1/(2*var.x) * ( (Z^2-1) + (pyx.inv*rho*Z/R)*(y.Z1.y.Z2) )
+
+    # th.y
+    y.Y1 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == Y
+    y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
+    dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * 1/R * pyx.inv 
+
+    cbind(dx.mu.x, dx.var.x, dx.th.y)
+}
+
+# old version, not used anymore
+scores_pscor_uni2 <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
     sd.x=sqrt(var.x)
     Z <- (X - mu.x) / sd.x # ALWAYS recompute Z
     TH.Y <- c(-Inf, th.y, Inf); TH.Y0 <- c(0,th.y,0)
@@ -482,6 +753,43 @@ scores_pscor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
     }
 
     cbind(dx.mu.x, dx.var.x, dx.th.y)
+}
+
+scores_pscorX_uni <- function(X, Y, eXo=NULL, rho=NULL,
+                              eta.x=NULL, var.x=NULL, y.z1=NULL,
+                              y.z2=NULL, ZRESID=NULL) {
+
+    R <- sqrt(1-rho^2)
+    tauj.star  <- (y.z1 - rho*ZRESID)/R
+    tauj1.star <- (y.z2 - rho*ZRESID)/R
+    y.Z1  <- dnorm(tauj.star); y.Z2 <- dnorm(tauj1.star)
+
+    # p(y|x)
+    pyx <- pnorm(tauj.star) - pnorm(tauj1.star)
+    pyx[pyx < .Machine$double.eps] <- .Machine$double.eps
+    pyx.inv <- 1/pyx
+
+    # mu.x
+    y.Z1.y.Z2 <- y.Z1-y.Z2
+    dx.mu.x <- 1/sqrt(var.x) * (ZRESID + (pyx.inv * (rho/R) * y.Z1.y.Z2))
+
+    # var.x
+    dx.var.x <-  1/(2*var.x) * ( (ZRESID^2-1) +
+                     (pyx.inv*rho*ZRESID/R)*(y.Z1.y.Z2) )
+
+    # th.y
+    y.Y1 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == Y
+    y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
+    dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * 1/R * pyx.inv
+
+    # sl.x
+    
+    dx.sl.x <-  1/var.x * eXo * (X - eta.x) # * p(X) * 1/p(X)
+
+    # sl.y
+    dx.sl.y <- (y.Z2 - y.Z1) * eXo * pyx.inv
+
+    cbind(dx.mu.x, dx.var.x, dx.th.y, dx.sl.x, dx.sl.y)
 }
 
 scores_cor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL,
@@ -637,6 +945,150 @@ dbinorm_dv <- function(u, v, rho) {
     R <- 1 - rho^2
     -dbinorm(u,v,rho) * (v - rho*u)/R
 }
+
+# CDF of bivariate standard normal
+# function pbinorm(upper.x, upper.y, rho)
+
+# partial derivative pbinorm - upper.x
+pbinorm_dupper.x <- function(upper.x, upper.y, rho=0.0) {
+    R <- 1 - rho^2
+    dnorm(upper.x) * pnorm( (upper.y - rho*upper.x)/R )
+}
+
+pbinorm_dupper.y <- function(upper.x, upper.y, rho=0.0) {
+    R <- 1 - rho^2
+    dnorm(upper.y) * pnorm( (upper.x - rho*upper.y)/R )
+}
+
+pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
+    dbinorm(upper.x, upper.y, rho)    
+}
+
+
+
+pcL_i <- function(x.z1, x.z2, y.z1, y.z2, rho) {
+   # using pbivnorm is MUCH faster (loop in fortran)
+   #
+   #lik <-  ( pbivnorm(x=x.z1, y=y.z1, rho=rho) -
+   #          pbivnorm(x=x.z2, y=y.z1, rho=rho) -
+   #          pbivnorm(x=x.z1, y=y.z2, rho=rho) +
+   #          pbivnorm(x=x.z2, y=y.z2, rho=rho)  )
+
+   # this uses mvtnorm
+   lik <- pbinorm(upper.x=x.z1, upper.y=y.z1,
+                  lower.x=x.z2, lower.y=y.z2, rho=rho)
+   lik
+}
+
+
+pcLogl_i <- function(x.z1, x.z2, y.z1, y.z2, rho) {
+
+    lik <- pcL_i(x.z1=x.z1, x.z2=x.z2, y.z1=y.z1, y.z2=y.z2, rho=rho)
+    logl <- sum( log(lik) )
+
+    logl
+}
+
+# testing only
+F_ij_pc <- function(x) {
+    rho = x[1L]
+    th.x = x[1L + 1:length(th.x)]
+    th.y = x[1L + length(th.x) + 1:length(th.y)]
+    
+    logl <- pcLogl_freq(freq, rho=tanh(x[1L]), th.x, th.y)
+    logl
+}
+#numDeriv:::grad(F_ij_pc, x=x.par)
+#scores <- scores_pccor_uni(X=X, Y=Y, rho=rho, th.x=th.x, th.y=th.y)
+#apply(scores, 2, sum)
+
+F_ij_ps <- function(x) {
+    rho = x[1L]
+    mu.x = x[2L]
+    var.x = x[3L]
+    th.y = x[3L + 1:length(th.y)]
+
+    Z <- (X - mu.x) / sqrt(var.x)
+    logl <- psLogl(rho=rho, mu.x=mu.x, var.x=var.x, th.y=th.y, X=X, Y=Y,
+                   Z=Z)
+    logl
+}
+
+#numDeriv:::grad(F_ij_ps, x=x.par)
+#scores <- scores_pscor_uni(X=X, Y=Y, rho=rho, mu.x=mu.x, var.x=var.x, th.y=th.y)
+#apply(scores, 2, sum)
+
+F_ij_pcX <- function(x) {
+    rho = x[1L]
+mu.x = x[2L]
+    var.x = x[3L]
+    th.y = x[3L + 1:length(th.y)]
+
+
+
+    th.x = x[1L + 1:length(th.x)]
+    th.y = x[1L + length(th.x) + 1:length(th.y)]
+    sl.x = x[1L + length(th.x) + length(th.y) + 1:length(sl.x)]
+    sl.y = x[1L + length(th.x) + length(th.y) + length(sl.x) + 1:length(sl.y)]
+
+    TH.x <- c(-Inf, th.x, +Inf); eta.x <- drop(eXo %*% sl.x)
+    x.z1 <- pmin( 100, TH.x[X+1L   ] - eta.x)
+    x.z2 <- pmax(-100, TH.x[X+1L-1L] - eta.x)
+    TH.y <- c(-Inf, th.y, +Inf); eta.y <- drop(eXo %*% sl.y)
+    y.z1 <- pmin( 100, TH.y[Y+1L   ] - eta.y)
+    y.z2 <- pmax(-100, TH.y[Y+1L-1L] - eta.y)
+
+    logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
+    logl
+}
+numDeriv:::grad(F_ij_pcX, x=x.par)[-1]
+
+F_ij_pcX <- function(x) {
+    rho = x[1L]
+    mu.x = x[2L]
+    var.x = x[3L]
+    th.y = x[3L + 1:length(th.y)]
+
+    th.x = x[1L + 1:length(th.x)]
+    th.y = x[1L + length(th.x) + 1:length(th.y)]
+    sl.x = x[1L + length(th.x) + length(th.y) + 1:length(sl.x)]
+    sl.y = x[1L + length(th.x) + length(th.y) + length(sl.x) + 1:length(sl.y)]
+
+    TH.x <- c(-Inf, th.x, +Inf); eta.x <- drop(eXo %*% sl.x)
+    x.z1 <- pmin( 100, TH.x[X+1L   ] - eta.x)
+    x.z2 <- pmax(-100, TH.x[X+1L-1L] - eta.x)
+    TH.y <- c(-Inf, th.y, +Inf); eta.y <- drop(eXo %*% sl.y)
+    y.z1 <- pmin( 100, TH.y[Y+1L   ] - eta.y)
+    y.z2 <- pmax(-100, TH.y[Y+1L-1L] - eta.y)
+
+    logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
+    logl
+}
+#numDeriv:::grad(F_ij_pcX, x=x.par)[-1]
+
+
+F_ij_psX <- function(x) {
+
+    rho = x[1L]
+    mu.x = x[2L]
+    var.x = x[3L]
+    th.y = x[3L + 1:length(th.y)]
+    sl.x = x[3L + length(th.y) + 1:length(sl.x)]
+    sl.y = x[3L + length(th.y) + length(sl.x) + 1:length(sl.y)]
+
+    eta.x <- drop( cbind(1,eXo) %*% c(mu.x,sl.x) )
+    ZRESID <- (fit.x$y - eta.x)/sqrt(var.x)
+
+    TH.y <- c(-Inf, th.y, +Inf); eta.y <- drop(eXo %*% sl.y)
+    y.z1 <- pmin( 100, TH.y[Y+1L   ] - eta.y)
+    y.z2 <- pmax(-100, TH.y[Y+1L-1L] - eta.y)
+
+    logl <- psLoglx(rho=rho, X=X, eta.x=eta.x, var.x=var.x, y.z1=y.z1,
+                    y.z2=y.z2, ZRESID=ZRESID)
+    logl
+}
+#numDeriv:::grad(F_ij_psX, x=x.par)[-1]
+
 
 
 
