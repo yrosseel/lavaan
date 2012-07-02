@@ -290,12 +290,6 @@ computePI <- function(object, GLIST=NULL) {
             stop("only representation LISREL has been implemented for now")
         }
 
-        # if delta, scale
-        if(!is.null(MLIST$delta)) {
-            DELTA <- diag(MLIST$delta[,1L], nrow=nvar[g], ncol=nvar[g])
-            PI.g  <- DELTA %*% PI.g
-        }
-
         PI[[g]] <- PI.g
     }
 
@@ -331,7 +325,7 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
         if(fixed.x) 
             PI <- computePI(object, GLIST=GLIST)
     }
-    
+ 
     fx <- 0.0
     fx.group <- numeric( samplestats@ngroups )
     for(g in 1:samplestats@ngroups) {
@@ -450,6 +444,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     nvar           <- object@nvar
     num.idx        <- object@num.idx
     th.idx         <- object@th.idx
+    nexo           <- object@nexo
 
     # number of thresholds per group (if any)
     nth <- sapply(th.idx, function(x) sum(x > 0L))
@@ -480,7 +475,8 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             pstar[g] <- pstar[g] + nth[g]  # add thresholds
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num means
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
-            # FIXME: add slopes!!
+            if(nexo[g] > 0L)
+                pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
         }
     }
 
@@ -558,7 +554,14 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                      idx=m.el.idx[[mm]],
                                                      th.idx=th.idx[[g]],
                                                      MLIST=GLIST[ mm.in.group ])
-                    DELTA <- rbind(DELTA.th, DELTA)
+                    if(object@nexo > 0L) {
+                        DELTA.pi <- derivative.pi.LISREL(m=mname,
+                                                         idx=m.el.idx[[mm]],
+                                                         MLIST=GLIST[ mm.in.group ])
+                        DELTA <- rbind(DELTA.th, DELTA.pi, DELTA)
+                    } else {
+                        DELTA <- rbind(DELTA.th, DELTA)
+                    }
                 }
             } else {
                 stop("representation", representation, "not implemented yet")

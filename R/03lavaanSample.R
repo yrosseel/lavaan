@@ -71,12 +71,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               ov.types=ov.types,
                               ov.levels=ov.levels,
                               ov.names.x=Data@ov.names.x[[g]],
-                              eXo=Data@eXo[[g]]) ## FIXME, will not work with bootstrap
-
-            print(CAT$TH)
-            print(CAT$COV)
-            print(CAT$SLOPES)
-            #stop("for now")
+                              eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
+                              verbose=verbose)
         }
 
         # fill in the other slots

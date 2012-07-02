@@ -3,9 +3,9 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
                                         x.idx=list(integer(0))) {
 
     # warn if fixed.x!
-    if(length(x.idx[[1L]] > 0L)) {
-        warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
-    }
+    #if(length(x.idx[[1L]] > 0L)) {
+    #    warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
+    #}
 
     trace.UGamma  <- numeric( samplestats@ngroups )
     trace.UGamma2 <- numeric( samplestats@ngroups )
@@ -215,7 +215,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                       pvalue=pvalue) 
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
-                              "mean.adjusted", "mean.var.adjusted")) {
+                              "mean.adjusted", "mean.var.adjusted",
+                              "scaled.shifted")) {
         TEST[[2]] <- list(test=test,
                           stat=chisq, 
                           stat.group=chisq.group,

@@ -52,10 +52,15 @@ independence.model.fit <- function(object) {
 
     mc <- match.call()
     timing <- list()
+    categorical <- object@Model@categorical
 
     # construct parameter Table for independence model
-    OV.X <- lapply(as.list(1:object@Data@ngroups),
-                   function(x) vnames(object@ParTable, type="ov.x", x))
+    if(!categorical) {
+        OV.X <- lapply(as.list(1:object@Data@ngroups),
+                       function(x) vnames(object@ParTable, type="ov.x", x))
+    } else {
+        OV.X <- NULL
+    }
 
     # construct
     lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
@@ -65,6 +70,7 @@ independence.model.fit <- function(object) {
                                     meanstructure = object@Model@meanstructure,
                                     sample.mean = object@SampleStats@mean,
                                     fixed.x    = object@Model@fixed.x)
+    print(as.data.frame(lavaanParTable))
 
 
     # fit?

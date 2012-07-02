@@ -319,6 +319,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # catch simple linear regression models
         if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
+           ! categorical &&
            length(lavaanData@X) > 0L &&
            lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&

@@ -86,14 +86,22 @@ Model <- function(partable       = NULL,
     nvar <- integer(ngroups)
     nmat <- unlist(attr(REP, "mmNumber"))
     num.idx <- vector("list", length=ngroups)
+    nexo <- integer(ngroups)
 
     offset <- 0L
     for(g in 1:ngroups) {
 
         # observed and latent variables for this group
         ov.names <- vnames(partable, "ov", group=g)
+        ov.names.nox <- vnames(partable, "ov.nox", group=g)
+        ov.names.x <- vnames(partable, "ov.x", group=g)
+        nexo[g] <- length(ov.names.x)
         ov.num <- vnames(partable, "ov.num", group=g)
-        nvar[g] <- length(ov.names)
+        if(categorical) {
+            nvar[g] <- length(ov.names.nox)
+        } else {
+            nvar[g] <- length(ov.names)
+        }
         num.idx[[g]] <- match(ov.num, ov.names)
 
         # model matrices for this group
@@ -192,7 +200,11 @@ Model <- function(partable       = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(partable$exo > 0L & partable$free == 0L)
+    fixed.x <- any(partable$exo > 0L & partable$free == 0L) 
+    
+    # second check (categorical)
+    if(categorical)
+        fixed.x <- TRUE
 
 
 
@@ -482,6 +494,7 @@ Model <- function(partable       = NULL,
                  ceq.jacobian=ceq.jacobian,
                  cin.function=cin.function,
                  cin.jacobian=cin.jacobian, 
+                 nexo=nexo,
                  fixed.x=fixed.x)
 
     if(debug) {

@@ -269,8 +269,10 @@ getDataFull <- function(data          = NULL,          # data.frame
                  paste(ov.names[[g]][idx.missing], collapse=" "))
         }
     }
+
     # here, we now for sure all ov.names exist in the data.frame
-    OV <- lapply(data[,unique(unlist(c(ov.names,ov.names.x)))], function(x)
+    OV <- lapply(data[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE], 
+                 function(x)
               list(nobs=sum(!is.na(x)),
                    type=class(x)[1],
                    mean=ifelse(class(x)[1] == "numeric",
@@ -346,17 +348,15 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # extract data
-        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx] )
-        if(length(exo.idx) > 0L)
-            eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx] )
-        #print( tracemem(X[[g]]) )
-
-        # get rid of row names, but keep column names
-        #rownames(X[[g]]) <- NULL ### WHY are two copies made here? 
-                                  ### answer: rownames is NOT a primitive
-        #dimnames(X[[g]]) <- list(NULL, ov.names[[g]]) # only 1 copy
+        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop=FALSE] )
         dimnames(X[[g]]) <- NULL
-        dimnames(eXo[[g]]) <- NULL
+        if(length(exo.idx) > 0L) {
+            eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx, drop=FALSE] )
+            dimnames(eXo[[g]]) <- NULL
+        } else {
+            eXo[g] <- list(NULL)
+        }
+        #print( tracemem(X[[g]]) )
 
         # standardize observed variables?
         if(std.ov) {

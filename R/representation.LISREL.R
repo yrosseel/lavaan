@@ -20,6 +20,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
     # global settings
     meanstructure <- any(partable$op == "~1")
+    categorical   <- any(partable$op == "|")
+    gamma <- categorical
 
     # number of groups
     ngroups <- max(partable$group)
@@ -36,17 +38,33 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     for(g in 1:ngroups) {
 
         # info from user model per group
-        ov.names <- vnames(partable, "ov", group=g); nvar <- length(ov.names)
-        lv.names <- vnames(partable, "lv", group=g); nfac <- length(lv.names)
-        ov.th    <- vnames(partable, "th", group=g); nth  <- length(ov.th)
+        if(gamma) {
+            ov.names <- vnames(partable, "ov.nox",  group=g)
+        } else {
+            ov.names <- vnames(partable, "ov",  group=g)
+        }
+        nvar <- length(ov.names)
+        lv.names   <- vnames(partable, "lv",  group=g); nfac <- length(lv.names)
+        ov.th      <- vnames(partable, "th",  group=g); nth  <- length(ov.th)
+        ov.names.x <- vnames(partable, "ov.x",group=g); nexo <- length(ov.names.x)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
-        tmp.names <- 
-            unique( c(partable$lhs[(partable$op == "~" | partable$op == "<~") & 
-                                partable$group == g],
-                      partable$rhs[(partable$op == "~" | partable$op == "<~") & 
-                                partable$group == g]) )
+        # (only y if categorical)
+        if(categorical) {
+            tmp.names <-
+                unique( partable$lhs[(partable$op == "~" | 
+                                        partable$op == "<~") &
+                                        partable$group == g] )
+        } else {
+            tmp.names <- 
+                unique( c(partable$lhs[(partable$op == "~" | 
+                                        partable$op == "<~") & 
+                                        partable$group == g],
+                          partable$rhs[(partable$op == "~" | 
+                                        partable$op == "<~") & 
+                                        partable$group == g]) )
+        }
         dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
         if(length(dummy.names)) {
             # make sure order is the same as ov.names
@@ -85,12 +103,30 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.col[idx] <- match(target$lhs[idx], lv.names)
     
         # 2. "~" regressions
-        idx <- which(target$group == g & (target$op == "~" |
-                                          target$op == "<~") )
-        tmp.mat[idx] <- "beta"
-        tmp.row[idx] <- match(target$lhs[idx], lv.names)
-        tmp.col[idx] <- match(target$rhs[idx], lv.names)
+        if(categorical) {
+            # gamma
+            idx <- which(target$rhs %in% ov.names.x &
+                         target$group == g & (target$op == "~" |
+                                              target$op == "<~") )
+            tmp.mat[idx] <- "gamma"
+            tmp.row[idx] <- match(target$lhs[idx], lv.names)
+            tmp.col[idx] <- match(target$rhs[idx], ov.names.x)
 
+            # beta
+            idx <- which(!target$rhs %in% ov.names.x &
+                         target$group == g & (target$op == "~" |
+                                              target$op == "<~") )
+            tmp.mat[idx] <- "beta"
+            tmp.row[idx] <- match(target$lhs[idx], lv.names)
+            tmp.col[idx] <- match(target$rhs[idx], lv.names)
+        } else {
+            idx <- which(target$group == g & (target$op == "~" |
+                                              target$op == "<~") )
+            tmp.mat[idx] <- "beta"
+            tmp.row[idx] <- match(target$lhs[idx], lv.names)
+            tmp.col[idx] <- match(target$rhs[idx], lv.names)
+        }
+  
         # 3a. "~~" ov
         idx <- which(target$group == g &
                      target$op == "~~" & !(target$lhs %in% lv.names))
@@ -144,6 +180,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            theta  = nvar,
                            alpha  = nfac,
                            beta   = nfac,
+                           gamma  = nfac,
                            psi    = nfac)
 
             # mCols
@@ -154,6 +191,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            theta  = nvar,
                            alpha  = 1L,
                            beta   = nfac,
+                           gamma  = nexo,
                            psi    = nfac)
 
             # dimNames for LISREL model matrices
@@ -164,6 +202,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                theta  = list( ov.names,    ov.names),
                                alpha  = list( lv.names, "intercept"),
                                beta   = list( lv.names,    lv.names),
+                               gamma  = list( lv.names,  ov.names.x),
                                psi    = list( lv.names,    lv.names))
     
             # isSymmetric
@@ -174,6 +213,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                 theta  = TRUE,
                                 alpha  = FALSE,
                                 beta   = FALSE,
+                                gamma  = FALSE,
                                 psi    = TRUE)
     
             # which mm's do we need? (always include lambda, theta and psi)
@@ -182,6 +222,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
             if("tau" %in% tmp.mat) mmNames <- c(mmNames, "tau")
             if("delta" %in% tmp.mat) mmNames <- c(mmNames, "delta")
+            if("gamma" %in% tmp.mat) mmNames <- c(mmNames, "gamma")
 
             REP.mmNames[[g]]     <- mmNames
             REP.mmNumber[[g]]    <- length(mmNames)
@@ -352,10 +393,14 @@ computePI.LISREL <- function(MLIST=NULL) {
     # compute PI
     PI <- LAMBDA..IB.inv %*% GAMMA
 
+    # if delta, scale
+    if(!is.null(MLIST$delta)) {
+        DELTA.diag <- MLIST$delta[,1L]
+        PI <- PI * DELTA.diag
+    }
+
     PI
 }
-
-
 
 # derivative of the objective function
 derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
@@ -469,8 +514,8 @@ derivative.sigma.LISREL <- function(m="lambda",
     # only lower.tri part of sigma (not same order as elimination matrix?)
     v.idx <- lavaan:::vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
-    # shortcut for nu, alpha and tau: empty matrix
-    if(m == "nu" || m == "alpha" || m == "tau") {
+    # shortcut for gamma, nu, alpha and tau: empty matrix
+    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
@@ -561,7 +606,8 @@ derivative.mu.LISREL <- function(m="alpha",
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
     # shortcut for empty matrices
-    if(m == "psi" || m == "theta" || m == "tau" || m == "delta") {
+    if(m == "gamma" || m == "psi" || m == "theta" || 
+       m == "tau" || m == "delta") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
  
@@ -633,7 +679,7 @@ derivative.th.LISREL <- function(m="tau",
     }
 
     # shortcut for empty matrices
-    if(m == "psi" || m == "theta") {
+    if(m == "gamma" || m == "psi" || m == "theta") {
         return( matrix(0.0, nrow=length(th.idx), ncol=length(idx) ) )
     }
 
@@ -687,12 +733,69 @@ derivative.th.LISREL <- function(m="tau",
     DX
 }
 
-TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE) {
+# dPi/dx -- per model matrix
+derivative.pi.LISREL <- function(m="lambda",
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]),
+                                 MLIST=NULL) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+    GAMMA <- MLIST$gamma; nexo <- ncol(GAMMA)
+
+    # Delta?
+    delta.flag <- FALSE
+    if(!is.null(MLIST$delta)) {
+        DELTA.diag <- MLIST$delta[,1L]
+        delta.flag <- TRUE
+    }
+
+    # shortcut for empty matrices
+    if(m == "tau" || m == "nu" || m == "alpha" || m == "psi" || m == "theta") {
+        return( matrix(0.0, nrow=nvar*nexo, ncol=length(idx) ) )
+    }
+
+    # beta?
+    if(!is.null(MLIST$ibeta.inv)) {
+        IB.inv <- MLIST$ibeta.inv
+    } else if(!is.null(MLIST$beta)) {
+        tmp <- -1.0 * MLIST$beta; diag(tmp) <- 1.0
+        IB.inv <- solve(tmp)
+    } else {
+        IB.inv <- diag(nfac)
+    }
+
+    if(m == "lambda") {
+        DX <- t(IB.inv %*% GAMMA) %x% diag(nvar)
+        if(delta.flag)
+            DX <- DX * DELTA.diag
+    } else if(m == "beta") {
+        DX <- t(IB.inv %*% GAMMA) %x% (LAMBDA %*% IB.inv)
+        # this is not really needed (because we select idx=m.el.idx)
+        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        if(delta.flag)
+            DX <- DX * DELTA.diag
+    } else if(m == "gamma") {
+        DX <- diag(nexo) %x% (LAMBDA %*% IB.inv)
+        if(delta.flag)
+            DX <- DX * DELTA.diag
+    } else if(m == "delta") {
+        PRE <- rep(1, nexo) %x% diag(nvar)
+        DX <- PRE * as.numeric(LAMBDA %*% IB.inv %*% GAMMA)
+    } else {
+        stop("wrong model matrix names: ", m, "\n")
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
+TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE,
+                                       pi=FALSE) {
 
     if(is.null(MLIST)) {
         # create artificial matrices, compare 'numerical' vs 'analytical' 
         # derivatives
-        nvar <- 12; nfac <- 3
+        nvar <- 12; nfac <- 3; nexo <- 4
         th.idx <- c(1,0,3,3,3,3,3,3,0,0,6,7,8,0,10,10,10,10,10,11,11,0)
         nth <- sum(th.idx > 0L)
 
@@ -705,6 +808,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE) {
         MLIST$nu     <- matrix(0,nvar,1L)
         if(th) MLIST$tau    <- matrix(0,nth,1L)
         if(delta) MLIST$delta  <- matrix(0,nvar,1L)
+        MLIST$gamma <- matrix(0,nfac,nexo)
 
         # feed random numbers
         MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
@@ -746,6 +850,16 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE) {
         }
         computeTH.LISREL(mlist, th.idx=th.idx)
     }
+
+    compute.pi <- function(x, mm="lambda", MLIST=NULL) {
+        mlist <- MLIST
+        if(mm %in% c("psi", "theta")) {
+            mlist[[mm]] <- vech.reverse(x)
+        } else {
+            mlist[[mm]][,] <- x
+        }
+        computePI.LISREL(mlist)
+    } 
 
     for(mm in names(MLIST)) {
         if(mm %in% c("psi", "theta")) {
@@ -791,6 +905,21 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE) {
             DX2 <- DX2[,-idx]
         }
         cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+            sprintf("%12.9f", max(DX1-DX2)), "\n")
+        }
+
+        # 4. pi
+        if(pi) {
+        DX1 <- numDeriv::jacobian(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
+        DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                    MLIST=MLIST)
+        if(mm %in% c("psi","theta")) {
+            # remove duplicated columns of symmetric matrices 
+            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            DX2 <- DX2[,-idx]
+        }
+        cat("[PI   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
             sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
             sprintf("%12.9f", max(DX1-DX2)), "\n")
         }

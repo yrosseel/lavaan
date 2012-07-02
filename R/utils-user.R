@@ -140,9 +140,9 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         out <- ov.names[ov.names %in% tmp]
     } else
 
-    # ov's strictly numeric
+    # ov's strictly numeric (but no x)
     if(type == "ov.num") {
-        out <- vnames(partable, "ov", group=group)
+        out <- vnames(partable, "ov.nox", group=group)
         ord.names <- unique(partable$lhs[ partable$op == "|" ])
         idx <- which(out %in% ord.names)
         if(length(idx)) out <- out[-idx]
@@ -202,20 +202,24 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
 
 getNDAT <- function(partable, group=NULL) {
 
-    ov.names <- vnames(partable, "ov", group=group)
-    nvar <- length(ov.names)
-
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
     categorical <- any(partable$op == "|")
     if(categorical) meanstructure <- TRUE
 
+    if(categorical) {
+        ov.names <- vnames(partable, "ov.nox", group=group)
+    } else {
+        ov.names <- vnames(partable, "ov", group=group)
+    }
+    nvar <- length(ov.names)
+
     pstar <- nvar*(nvar+1)/2; if(meanstructure) pstar <- pstar + nvar
     ndat  <- ngroups*pstar
 
     # correction for fixed.x?
-    if(fixed.x) {
+    if(!categorical && fixed.x) {
         ov.names.x <- vnames(partable, "ov.x", group=group)
         nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
@@ -225,6 +229,8 @@ getNDAT <- function(partable, group=NULL) {
 
     # correction for ordinal data?
     if(categorical) {
+        ov.names.x <- vnames(partable, "ov.x", group=group)
+        nexo     <- length(ov.names.x)
         ov.ord   <- vnames(partable, "ov.ord", group=group)
         nvar.ord <- length(ov.ord)
         th       <- vnames(partable, "th", group=group)
@@ -235,6 +241,8 @@ getNDAT <- function(partable, group=NULL) {
         ndat <- ndat - (ngroups * nvar.ord)
         # but additional thresholds
         ndat <- ndat + (ngroups * nth)
+        # add slopes
+        ndat <- ndat + (nvar * nexo)
     }
 
     ndat
@@ -474,6 +482,7 @@ getLIST <- function(FLAT=NULL,
                     group.equal     = NULL,
                     ngroups         = 1L) {
 
+    categorical <- FALSE
 
     ### DEFAULT elements: parameters that are typically not specified by
     ###                   users, but should typically be considered, 
@@ -500,6 +509,10 @@ getLIST <- function(FLAT=NULL,
         ov.names.ord2 <- character(0)
     #### FIXME!!!!! ORDER!
     ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
+    if(length(ov.names.ord) > 0L)
+        categorical <- TRUE
+    
+
 
     lhs <- rhs <- character(0)
 
@@ -543,7 +556,7 @@ getLIST <- function(FLAT=NULL,
     }
 
     # d) exogenous x covariates: VARIANCES + COVARIANCES
-    if((nx <- length(ov.names.x)) > 0L) {
+    if(!categorical && (nx <- length(ov.names.x)) > 0L) {
         idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
@@ -561,10 +574,14 @@ getLIST <- function(FLAT=NULL,
 
     # 3. INTERCEPTS
     if(meanstructure) {
+        if(categorical) {
+            ov.int <- ov.names.nox
+        } else {
+            ov.int <- ov.names
+        }
         # auto-remove ordinal variables
-        ov.int <- ov.names
-        idx <- which(ov.int %in% ov.names.ord)
-        if(length(idx)) ov.int <- ov.int[-idx]
+        #idx <- which(ov.int %in% ov.names.ord)
+        #if(length(idx)) ov.int <- ov.int[-idx]
 
         int.lhs <- c(ov.int, lv.names)
         lhs <- c(lhs, int.lhs)
@@ -705,6 +722,14 @@ getLIST <- function(FLAT=NULL,
 
     # 4. intercepts
     if(meanstructure) {
+        if(categorical) {
+            # zero intercepts/means ordinal variables
+                   ov.int.idx <- which(op == "~1" &
+                                       lhs %in% ov.names.ord &
+                                       user == 0L)
+            ustart[ov.int.idx] <- 0.0
+              free[ov.int.idx] <- 0L
+        }
         if(int.ov.free == FALSE) {
             # zero intercepts/means observed variables
                    ov.int.idx <- which(op == "~1" &
