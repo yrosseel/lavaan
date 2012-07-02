@@ -124,7 +124,7 @@ scores = function(x) {
     # th
     scores.th   <- (Y2*p2 - Y1*p1) * (weights/probits)
 
-    cbind(scores.th, scores.beta)
+    cbind(scores.th, -scores.beta)
 },
 
 hessian = function(x) {

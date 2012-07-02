@@ -387,7 +387,7 @@ pscor_TS <- function(X, Y, th.y=NULL, verbose=FALSE, method="nlminb",
 
 # X = residuals!
 pscorX_TS <- function(X, Y, eXo=NULL, 
-                      mu.x=NULL, var.x=NULL, XRESID=NULL,
+                      mu.x=NULL, var.x=NULL, eta.x=NULL,
                       y.z1=NULL, y.z2=NULL, 
                       verbose=FALSE, method="nlminb", scores=FALSE) {
 
@@ -400,13 +400,13 @@ pscorX_TS <- function(X, Y, eXo=NULL,
     }
 
     # X = numeric
-    if(is.null(mu.x) || is.null(var.x) || is.null(XRESID)) {
+    if(is.null(mu.x) || is.null(var.x) || is.null(eta.x)) {
         fit.x <- lavOLS(y=X, X=eXo)
         var.x <- fit.x$theta[fit.x$npar]
         mu.x  <- fit.x$theta[1L]
         eta.x <- fit.x$yhat
-        ZRESID <- (fit.x$y - fit.x$yhat)/sqrt(var.x)
     }
+    ZRESID <- (X - eta.x)/sqrt(var.x)
 
     objectiveFunction <- function(x) {
         rho = tanh(x[1L])
@@ -629,7 +629,7 @@ scores_pccor_uni <- function(X, Y, rho, th.x, th.y) {
                dnorm(y.z2) * pnorm( (TH.X[X+1L-1L]-rho*y.z2)/R) )
     dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * PI.XY.inv
 
-    cbind(dx.th.x, dx.th.y)
+    list(dx.th.x=dx.th.x, dx.th.y=dx.th.y)
 }
 
 # old version, not used anymore
@@ -689,7 +689,7 @@ scores_pccorX_uni <- function(X, Y, rho, th.x, th.y, sl.x, sl.y,
     # sl.y
     dx.sl.y <- (y.Z2 - y.Z1) * eXo / lik
 
-    cbind(dx.th.x, dx.th.y, dx.sl.x, dx.sl.y)
+    list(dx.th.x=dx.th.x, dx.th.y=dx.th.y, dx.sl.x=dx.sl.x, dx.sl.y=dx.sl.y)
 }
 
 scores_pscor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
@@ -717,7 +717,7 @@ scores_pscor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
     y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
     dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * 1/R * pyx.inv 
 
-    cbind(dx.mu.x, dx.var.x, dx.th.y)
+    list(dx.mu.x=dx.mu.x, dx.var.x=dx.var.x, dx.th.y=dx.th.y)
 }
 
 # old version, not used anymore
@@ -756,9 +756,9 @@ scores_pscor_uni2 <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) 
 }
 
 scores_pscorX_uni <- function(X, Y, eXo=NULL, rho=NULL,
-                              eta.x=NULL, var.x=NULL, y.z1=NULL,
-                              y.z2=NULL, ZRESID=NULL) {
+                              eta.x=NULL, var.x=NULL, y.z1=NULL, y.z2=NULL) {
 
+    ZRESID <- (X - eta.x)/sqrt(var.x)
     R <- sqrt(1-rho^2)
     tauj.star  <- (y.z1 - rho*ZRESID)/R
     tauj1.star <- (y.z2 - rho*ZRESID)/R
@@ -778,8 +778,9 @@ scores_pscorX_uni <- function(X, Y, eXo=NULL, rho=NULL,
                      (pyx.inv*rho*ZRESID/R)*(y.Z1.y.Z2) )
 
     # th.y
-    y.Y1 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == Y
-    y.Y2 <- matrix(1:length(th.y),length(Y),length(th.y), byrow=TRUE) == (Y-1L)
+    nth <- NCOL(y.z1)
+    y.Y1 <- matrix(1:nth, length(Y), nth, byrow=TRUE) == Y
+    y.Y2 <- matrix(1:nth, length(Y), nth, byrow=TRUE) == (Y-1L)
     dx.th.y <- (y.Y1*y.Z1 - y.Y2*y.Z2) * 1/R * pyx.inv
 
     # sl.x
@@ -789,7 +790,8 @@ scores_pscorX_uni <- function(X, Y, eXo=NULL, rho=NULL,
     # sl.y
     dx.sl.y <- (y.Z2 - y.Z1) * eXo * pyx.inv
 
-    cbind(dx.mu.x, dx.var.x, dx.th.y, dx.sl.x, dx.sl.y)
+    list(dx.mu.x=dx.mu.x, dx.var.x=dx.var.x, dx.th.y=dx.th.y, 
+         dx.sl.x=dx.sl.x, dx.sl.y=dx.sl.y)
 }
 
 scores_cor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL,
@@ -816,8 +818,43 @@ scores_cor_uni <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL,
     #dx.rho <- rho/R + (Xc*Yc/(sd.x*sd.y*R) - z*rho/R^2)
 
     #dx <- cbind(dx.mu.x, dx.mu.y, dx.var.x, dx.var.y, dx.rho)
-    cbind(dx.mu.x, dx.mu.y, dx.var.x, dx.var.y)
+    list(dx.mu.x=dx.mu.x, dx.mu.y=dx.mu.y, dx.var.x=dx.var.x, dx.var.y=dx.var.y)
 }
+
+scores_corX_uni <- function(X, Y, rho=NULL, eXo=NULL,
+                            eta.x=NULL, var.x=NULL, eta.y=NULL, var.y=NULL) {
+    R <- (1-rho^2); sd.x <- sqrt(var.x); sd.y <- sqrt(var.y)
+    Xc <- X-eta.x; Yc <- Y-eta.y
+
+    # mu.x
+    dx.mu.x <- (2*Xc/var.x - 2*rho*Yc/(sd.x*sd.y))/(2*R)
+
+    # mu.y
+    dx.mu.y <- - (2*rho*Xc/(sd.x*sd.y) - 2*Yc/var.y)/(2*R)
+
+    # var.x
+    dx.var.x <- - (0.5/var.x -
+                   (Xc^2/var.x^2 - rho*Xc*Yc/(var.x*sd.x*sd.y))/(2*R))
+
+    # var.y
+    dx.var.y <- -(0.5/var.y +
+                  (rho*Xc*Yc/(var.y*sd.x*sd.y) - Yc^2/var.y^2)/(2*R))
+
+    # sl.x
+    dx.sl.x <- dx.mu.x * eXo
+
+    # sl.y
+    dx.sl.y <- dx.mu.y * eXo
+
+    # rho
+    #z <- Xc^2/var.x - 2*rho*Xc*Yc/(sd.x*sd.y) + Yc^2/var.y
+    #dx.rho <- rho/R + (Xc*Yc/(sd.x*sd.y*R) - z*rho/R^2)
+
+    #dx <- cbind(dx.mu.x, dx.mu.y, dx.var.x, dx.var.y, dx.rho)
+    list(dx.mu.x=dx.mu.x, dx.var.x=dx.var.x, dx.mu.y=dx.mu.y, dx.var.y=dx.var.y,
+         dx.sl.x=dx.sl.x, dx.sl.y=dx.sl.y)
+}
+
 
 # faster!
 pcLogl_freq <- function(freq, rho, th.x, th.y) {
@@ -1041,7 +1078,7 @@ mu.x = x[2L]
     logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
     logl
 }
-numDeriv:::grad(F_ij_pcX, x=x.par)[-1]
+#numDeriv:::grad(F_ij_pcX, x=x.par)[-1]
 
 F_ij_pcX <- function(x) {
     rho = x[1L]
@@ -1089,6 +1126,33 @@ F_ij_psX <- function(x) {
 }
 #numDeriv:::grad(F_ij_psX, x=x.par)[-1]
 
+F_ij_corX <- function(x) {
+
+    Lx <- function(X, Y, rho, eta.x, var.x, eta.y, var.y) {
+        cov.xy <- rho*sqrt(var.x)*sqrt(var.y)
+        sigma <- matrix(c(var.x,cov.xy,cov.xy,var.y), 2L, 2L)
+        dx <- numeric(length(X))
+        for(i in 1:length(X))
+            dx[i] <- dmvnorm(c(X[i],Y[i]), mean=c(eta.x[i], eta.y[i]), sigma=sigma)
+        sum(log(dx))
+    }
+
+    rho = x[1L]
+    mu.x = x[2L]
+    var.x = x[3L]
+    mu.y = x[4L]
+    var.y = x[5L]
+    sl.x = x[5L + 1:length(sl.x)]
+    sl.y = x[5L + length(sl.x) + 1:length(sl.y)]
+
+    eta.x <- drop( cbind(1,eXo) %*% c(mu.x,sl.x) )
+    eta.y <- drop( cbind(1,eXo) %*% c(mu.y,sl.y) )
+
+    logl <- Lx(X=X, Y=Y, rho=rho, eta.x=eta.x, var.x=var.x,
+               eta.y=eta.y, var.y=var.y)
+    logl
+}
+#numDeriv:::grad(F_ij_corX, x=x.par)[-1]
 
 
 

@@ -347,8 +347,10 @@ augmented.covariance <- function(S., mean) {
 # slight changes by YR
 bdiag <- function(...) {
     mlist <- list(...)
-    ## handle case in which list of matrices is given
+    # handle case in which list of matrices is given
     if(length(mlist) == 1) mlist <- unlist(mlist, recursive=FALSE)
+    # remove/ignore NULL blocks
+    null.idx <- sapply(mlist, is.null); mlist <- mlist[!null.idx]
     csdim <- rbind(c(0,0), apply(sapply(mlist,dim), 1, cumsum ))
     ret <- array(0, dim=csdim[length(mlist)+1,])
     add1 <- matrix(rep(1:0,2), ncol=2)

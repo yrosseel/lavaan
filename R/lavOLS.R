@@ -52,6 +52,7 @@ initialize = function(y, X = NULL,
         X <<- cbind(1,X) # add intercept
     } else {
         nexo <<- 0L
+        X <<- matrix(1, nobs, 1L)
     }
     # weights and offset
     weights <<- weights; offset <<- offset
@@ -102,7 +103,7 @@ scores = function(x) {
     # var
     scores.var  <- -1/(2*e.var) + 1/(2*e.var^2) * (y - yhat)^2
 
-    cbind(-scores.beta, -scores.var)
+    cbind(scores.beta, scores.var)
 },
 
 hessian = function(x) {
