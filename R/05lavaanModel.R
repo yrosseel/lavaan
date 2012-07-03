@@ -193,6 +193,13 @@ Model <- function(partable       = NULL,
                     tmp[ cbind(row..idx, col..idx)] <- 1.0
                 }
             }
+
+            # representation specific stuff (part 2)
+            if(representation == "LISREL" && mmNames[mm] == "psi") {
+                # this only seems to happen in the categorical case
+                idx <- which(diag(tmp) == 0.0)
+                diag(tmp)[idx] <- 1.0
+            }
             
             # assign matrix to GLIST
             GLIST[[offset]] <- tmp

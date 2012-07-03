@@ -225,13 +225,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         var.idx <- integer(0L)
         if(nexo > 0L) {
             sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-            sl.idx <- ncol(SC.TH) + c(sl.start.idx, sl.end.idx)
+            sl.idx <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
         } 
         if(ov.types[i] == "numeric") {
             var.idx <- ncol(SC.TH) + ncol(SC.SL) + match(i, num.idx)
         }
-        var.idx <- c(th.idx, sl.idx, var.idx)
-        A11[var.idx, var.idx] <- INNER[var.idx, var.idx]
+        a11.idx <- c(th.idx, sl.idx, var.idx)
+        A11[a11.idx, a11.idx] <- INNER[a11.idx, a11.idx]
     }
 
     # A21
