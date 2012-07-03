@@ -37,7 +37,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     TH.NAMES <- vector("list", length=nvar)
     TH.IDX <- vector("list", length=nvar)
     # slopes (only if fixed.x)
-    SLOPES <- vector("list", length=nvar)
+    SLOPES <- matrix(as.numeric(NA), nrow=nvar, ncol=nexo)
     # variances (for continuous variables only)
     VAR <- vector("list", length=nvar)
     # correlations
@@ -46,8 +46,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # SCORES
     SC.VAR <- matrix(0, N, nvar); colnames(SC.VAR) <- ov.names
     SC.SL  <- matrix(0, N, nvar*nexo)
-    colnames(SC.SL) <- paste(rep(ov.names, each=nexo), 
-                             rep(ov.names.x,nvar), sep="")
+    #colnames(SC.SL) <- paste(rep(ov.names, times=nexo), 
+    #                         rep(ov.names.x,nvar), sep="")
     SC.TH  <- matrix(0, N, nth)
     colnames(SC.TH) <- unlist(lapply(as.list(1:nvar),
         function(x) paste(ov.names[x],"|",1:nTH[x],sep="")))
@@ -58,6 +58,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     for(i in 1:nvar) {
         #cat("var = ", ov.names[i], " type = ", ov.types[i], "\n")
         th.idx <- th.start.idx[i]:th.end.idx[i]
+        sl.idx <- seq(i, by=nvar, length.out=nexo)
         if(ov.types[i] == "numeric") {
             fit <- lavOLS(y=Data[,i], X=eXo); scores <- fit$scores()
             FIT[[i]] <- fit
@@ -72,10 +73,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             #SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[[i]])
             SC.VAR[,i] <- scores[,fit$npar]
             if(nexo > 0L) {
-                SLOPES[[i]] <- fit$theta[-c(1L, fit$npar)]
-                sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                SC.SL[,sl.start.idx:sl.end.idx] <- 
-                    scores[,-c(1L, fit$npar),drop=FALSE]
+                SLOPES[i,] <- fit$theta[-c(1L, fit$npar)]
+                #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+                SC.SL[,sl.idx] <- scores[,-c(1L, fit$npar),drop=FALSE]
             }
         } else if(ov.types[i] == "ordered") {
             if(nexo == 0L) {
@@ -88,10 +88,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 FIT[[i]] <- fit
                 TH[[i]] <- fit$theta[fit$th.idx]
                 SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
-                SLOPES[[i]] <- fit$theta[fit$beta.idx]
-                sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                SC.SL[,sl.start.idx:sl.end.idx] <- 
-                    scores[,fit$beta.idx,drop=FALSE]
+                SLOPES[i,] <- fit$theta[fit$beta.idx]
+                #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+                SC.SL[,sl.idx] <- scores[,fit$beta.idx,drop=FALSE]
             }
             VAR[[i]] <- 1.0
             TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
@@ -110,7 +109,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         cat("Threshold + means:\n")
         print(unlist(TH))
         cat("Slopes (if any):\n")
-        print(unlist(SLOPES))
+        print(SLOPES)
         cat("Variances:\n")
         print(unlist(VAR))
     }
@@ -224,8 +223,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         sl.idx <- integer(0L)
         var.idx <- integer(0L)
         if(nexo > 0L) {
-            sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-            sl.idx <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
+            sl.idx <- ncol(SC.TH) + seq(i, by=nvar, length.out=nexo)
+            #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+            #sl.idx <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
         } 
         if(ov.types[i] == "numeric") {
             var.idx <- ncol(SC.TH) + ncol(SC.SL) + match(i, num.idx)
@@ -246,10 +246,12 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 th.idx_i <- th.start.idx[i]:th.end.idx[i]
                 th.idx_j <- th.start.idx[j]:th.end.idx[j]
                 if(nexo > 0L) {
-                    sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                    sl.idx_i <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
-                    sl.end.idx <- (j*nexo); sl.start.idx <- (j-1L)*nexo + 1L
-                    sl.idx_j <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
+                    #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+                    #sl.idx_i <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
+                    #sl.end.idx <- (j*nexo); sl.start.idx <- (j-1L)*nexo + 1L
+                    #sl.idx_j <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
+                    sl.idx_i <- ncol(SC.TH) + seq(i, by=nvar, length.out=nexo)
+                    sl.idx_j <- ncol(SC.TH) + seq(j, by=nvar, length.out=nexo)
 
                     var.idx_i <- ncol(SC.TH) + ncol(SC.SL) + match(i, num.idx)
                     var.idx_j <- ncol(SC.TH) + ncol(SC.SL) + match(j, num.idx)
@@ -353,7 +355,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                         SC.COR.UNI <-
                             scores_pccorX_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j],
                                               th.x=TH[[i]], th.y=TH[[j]],
-                                              sl.x=SLOPES[[i]], sl.y=SLOPES[[j]],
+                                              sl.x=SLOPES[i,], sl.y=SLOPES[j,],
                                               x.z1=FIT[[i]]$z1, x.z2=FIT[[i]]$z2,
                                               y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2,
                                               eXo=eXo)

@@ -119,7 +119,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             # 3. variances (if any)
             # 4. covariance matrix (no diagonal!)
             WLS.obs[[g]] <- c(th[[g]],
-                              unlist(CAT$SLOPES), # FIXME
+                              vec(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),
                               vech(CAT$COV, diag=FALSE))
         } else if(!categorical && meanstructure) {

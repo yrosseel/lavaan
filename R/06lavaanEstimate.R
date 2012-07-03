@@ -366,13 +366,21 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
                 if(fixed.x) {
-                    WLS.est <- c(TH[[g]],PI[[g]],
+                    WLS.est <- c(TH[[g]],vec(PI[[g]]), 
                                  diag(Sigma.hat[[g]])[num.idx[[g]]],
                                  vech(Sigma.hat[[g]], diag=FALSE))
                 } else {
                     WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
                                  vech(Sigma.hat[[g]], diag=FALSE))
                 }
+                #cat("WLS.obs = \n")
+                #print(samplestats@WLS.obs[[g]])
+                #cat("WLS.est = \n")
+                #print(WLS.est)
+                #cat("TH = \n"); print(TH[[g]])
+                #cat("PI = \n"); print(PI[[g]])
+                #cat("VAR = \n"); print(diag(Sigma.hat[[g]])[num.idx[[g]]])
+                #cat("COR = \n"); print(vech(Sigma.hat[[g]], diag=FALSE))
             } else if(meanstructure) {
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
             } else {
@@ -559,6 +567,13 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                          idx=m.el.idx[[mm]],
                                                          MLIST=GLIST[ mm.in.group ])
                         DELTA <- rbind(DELTA.th, DELTA.pi, DELTA)
+                        #cat("**************************************\n")
+                        #cat("m = ", mm, " name = ", mname, " x.el.idx = ");
+                        #print(x.el.idx[[mm]]);
+                        #print(DELTA.th)
+                        #print(DELTA.pi)
+                        #print(DELTA)
+                        #cat("**************************************\n")
                     } else {
                         DELTA <- rbind(DELTA.th, DELTA)
                     }
