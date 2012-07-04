@@ -170,17 +170,17 @@ StartingValues <- function(start.method = "default",
         
         # thresholds
         th.idx <- which(partable$group == g & partable$op == "|")
-        #if(length(th.idx) > 0L) {
-        #    th.names.partable <- paste(partable$lhs[th.idx], "|",
-        #                               partable$rhs[th.idx], sep="")
-        #    th.names.sample   <- 
-        #        samplestats@th.names[[g]][ samplestats@th.idx[[g]] > 0L ]
-        #    # th.names.sample should identical to
-        #   # vnames(partable, "th", group = g)
-        #   th.values <- samplestats@th[[g]][ samplestats@th.idx[[g]] > 0L ]
-        #    start[th.idx] <- th.values[match(th.names.partable,
-        #                                     th.names.sample)]
-        #}
+        if(length(th.idx) > 0L) {
+            th.names.partable <- paste(partable$lhs[th.idx], "|",
+                                       partable$rhs[th.idx], sep="")
+            th.names.sample   <- 
+                samplestats@th.names[[g]][ samplestats@th.idx[[g]] > 0L ]
+            # th.names.sample should identical to
+           # vnames(partable, "th", group = g)
+           th.values <- samplestats@th[[g]][ samplestats@th.idx[[g]] > 0L ]
+            start[th.idx] <- th.values[match(th.names.partable,
+                                             th.names.sample)]
+        }
         
 
         # 4g) exogenous `fixed.x' covariates

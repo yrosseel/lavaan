@@ -198,37 +198,6 @@ function(object, GLIST=NULL) {
     Mu.hat
 })
 
-# pi0 = nu + lambda (I-B)^-1 alpha
-computePi0 <- function(object, GLIST=NULL) {
-    # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
-
-    nmat           <- object@nmat
-    ngroups        <- object@ngroups
-    representation <- object@representation
-    meanstructure  <- object@meanstructure
-
-    # return a list
-    pi0 <- vector("list", length=ngroups)
-
-    for(g in 1:ngroups) {
-
-        # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-
-        if(!meanstructure) {
-            pi0[[g]] <- numeric( object@nvar[g] )
-        } else
-        if(representation == "LISREL") {
-            pi0[[g]] <- computePi0.LISREL(MLIST = GLIST[ mm.in.group ])
-        } else {
-            stop("only representation LISREL has been implemented for now")
-        }
-    } # ngroups
-
-    pi0
-}
-
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
 computeTH <- function(object, GLIST=NULL) {
@@ -362,7 +331,7 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
             if(categorical) {
                 # order of elements is important here:
                 # 1. thresholds + means (interleaved)
-                # 2. slopes (if any)
+                # 2. slopes (if any, columnwise per exo)
                 # 3. variances (if any)
                 # 4. correlations (no diagonal!)
                 if(fixed.x) {
@@ -567,13 +536,6 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                          idx=m.el.idx[[mm]],
                                                          MLIST=GLIST[ mm.in.group ])
                         DELTA <- rbind(DELTA.th, DELTA.pi, DELTA)
-                        #cat("**************************************\n")
-                        #cat("m = ", mm, " name = ", mname, " x.el.idx = ");
-                        #print(x.el.idx[[mm]]);
-                        #print(DELTA.th)
-                        #print(DELTA.pi)
-                        #print(DELTA)
-                        #cat("**************************************\n")
                     } else {
                         DELTA <- rbind(DELTA.th, DELTA)
                     }

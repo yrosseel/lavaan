@@ -82,7 +82,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             notnum.idx <- which(ov.types != "numeric")
             mean[[g]][notnum.idx] <- 0.0
 
-            # th contains the means of numeric variables
+            # th also contains the means of numeric variables
             th[[g]] <- unlist(CAT$TH)
             th.idx[[g]] <- unlist(CAT$TH.IDX)
             th.names[[g]] <- unlist(CAT$TH.NAMES)
@@ -114,11 +114,13 @@ lavSampleStatsFromData <- function(Data          = NULL,
         # WLS.obs
         if(categorical) {
             # order of elements is important here:
-            # 1. thresholds + means (interleaved)
+            # 1. thresholds + (negative) means (interleaved)
             # 2. slopes (if any)
             # 3. variances (if any)
             # 4. covariance matrix (no diagonal!)
-            WLS.obs[[g]] <- c(th[[g]],
+            TH <- th[[g]]
+            TH[ov.types == "numeric"] <- -1*TH[ov.types == "numeric"]
+            WLS.obs[[g]] <- c(TH,
                               vec(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),
                               vech(CAT$COV, diag=FALSE))
