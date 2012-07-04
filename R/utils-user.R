@@ -242,7 +242,7 @@ getNDAT <- function(partable, group=NULL) {
         # but additional thresholds
         ndat <- ndat + (ngroups * nth)
         # add slopes
-        ndat <- ndat + (nvar * nexo)
+        ndat <- ndat + (ngroups * nvar * nexo)
     }
 
     ndat
@@ -292,6 +292,11 @@ getParameterLabels <- function(partable, group.equal="", group.partial="",
             for(g in 1:ngroups)
                 ov.names.nox[[g]] <- vnames(partable, "ov.nox", group=g)
         }
+        if("thresholds" %in% group.equal) {
+            ov.names.ord <- vector("list", length=ngroups)
+            for(g in 1:ngroups)
+                ov.names.ord[[g]] <- vnames(partable, "ov.ord", group=g)
+        }
         if("means" %in% group.equal ||
            "lv.variances" %in% group.equal ||
            "lv.covariances" %in% group.equal) {
@@ -310,6 +315,10 @@ getParameterLabels <- function(partable, group.equal="", group.partial="",
         if("intercepts" %in% group.equal)
             g1.flag[ partable$op == "~1"  & partable$group == 1L  &
                      partable$lhs %in% ov.names.nox[[1L]] ] <- TRUE
+        # THRESHOLDS (OV-ORD)
+        if("thresholds" %in% group.equal)
+            g1.flag[ partable$op == "|"  & partable$group == 1L  &
+                     partable$lhs %in% ov.names.ord[[1L]] ] <- TRUE
         # MEANS (LV)
         if("means" %in% group.equal)
             g1.flag[ partable$op == "~1" & partable$group == 1L &
@@ -809,7 +818,8 @@ getLIST <- function(FLAT=NULL,
                                   user == 0L &
                                   group == g)
                 if(int.lv.free == FALSE && g > 1 &&
-                   "intercepts" %in% group.equal &&
+                   ("intercepts" %in% group.equal ||
+                    "thresholds" %in% group.equal) &&
                    !("means" %in% group.equal) ) {
                       free[ int.idx ] <- 1L
                     ustart[ int.idx ] <- as.numeric(NA)

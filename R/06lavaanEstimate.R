@@ -531,7 +531,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                      idx=m.el.idx[[mm]],
                                                      th.idx=th.idx[[g]],
                                                      MLIST=GLIST[ mm.in.group ])
-                    if(object@nexo > 0L) {
+                    if(object@nexo[g] > 0L) {
                         DELTA.pi <- derivative.pi.LISREL(m=mname,
                                                          idx=m.el.idx[[mm]],
                                                          MLIST=GLIST[ mm.in.group ])

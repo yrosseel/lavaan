@@ -47,6 +47,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     th          <- vector("list", length=ngroups)
     th.idx      <- vector("list", length=ngroups)
     th.names    <- vector("list", length=ngroups)
+    slopes      <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
@@ -86,29 +87,32 @@ lavSampleStatsFromData <- function(Data          = NULL,
             th[[g]] <- unlist(CAT$TH)
             th.idx[[g]] <- unlist(CAT$TH.IDX)
             th.names[[g]] <- unlist(CAT$TH.NAMES)
+
+            slopes[[g]] <- CAT$SLOPES
         } else {
             cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
-            # rescale cov by (N-1)/N?
+            var[[g]]  <-   diag(cov[[g]])
+            # rescale cov by (N-1)/N? (only COV!)
             if(rescale) {
                 # we 'transform' the sample cov (divided by n-1) 
                 # to a sample cov divided by 'n'
                 cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
             }
             mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
-        }
         
-        # icov and cov.log.det
-        tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
-        if(inherits(tmp, "try-error")) {
-            if(ngroups > 1) {
-                stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+            # icov and cov.log.det
+            tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
+            if(inherits(tmp, "try-error")) {
+                if(ngroups > 1) {
+                    stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+                } else {
+                    stop("lavaan ERROR: sample covariance can not be inverted")
+                }
             } else {
-                stop("lavaan ERROR: sample covariance can not be inverted")
+                cov.log.det[[g]] <- attr(tmp, "logdet")
+                attr(tmp, "logdet") <- NULL
+                icov[[g]]        <- tmp
             }
-        } else {
-            cov.log.det[[g]] <- attr(tmp, "logdet")
-            attr(tmp, "logdet") <- NULL
-            icov[[g]]        <- tmp
         }
 
         # WLS.obs
@@ -214,9 +218,9 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        th.names     = th.names,
                        mean         = mean,
                        cov          = cov,
-                       #var         = var,
-                     
-
+                       var          = var,
+                       slopes       = slopes,
+ 
                        # convenience
                        nobs         = nobs,
                        ntotal       = sum(unlist(nobs)),
@@ -259,7 +263,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
    
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
-    #var         <- vector("list", length=ngroups)
+    var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     nobs        <- as.list(as.integer(sample.nobs))
     # extra sample statistics per group
@@ -322,7 +326,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
         }
 
         cov[[g]]  <- tmp.cov
-        #var[[g]]  <- diag(tmp.cov)
+        var[[g]]  <- diag(tmp.cov)
         mean[[g]] <- tmp.mean
 
         # rescale cov by (N-1)/N?
@@ -375,9 +379,9 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     lavSampleStats <- new("lavSampleStats",
 
                        # sample moments
-                       mean        = mean,
+                       var         = var,
                        cov         = cov,
-                       #var        = var,
+                       mean        = mean,
 
                        # convenience
                        nobs        = nobs,

@@ -397,7 +397,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 cbind(A21,A22) )
     B.inv <- solve(B)
 
-    NACOV <- (B.inv %*% INNER %*% t(B.inv)) * N
+    NACOV <- (B.inv %*% INNER %*% t(B.inv)) * (N-1) # use N-1, since we will
+                                                    # divide by N-1 later on??
 
     # COV matrix?
     if(any("numeric" %in% ov.types)) {

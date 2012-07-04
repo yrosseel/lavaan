@@ -6,9 +6,9 @@ short.summary <- function(object) {
     # Convergence or not?
     if(object@Fit@iterations > 0) {
         if(object@Fit@converged) {
-	    cat(sprintf("lavaan (%s) converged normally after %i iterations\n",
-                        packageDescription("lavaan", fields="Version"),
-                        object@Fit@iterations))
+	    cat(sprintf("lavaan (%s) converged normally after %3i iterations\n",
+                    packageDescription("lavaan", fields="Version"),
+                    object@Fit@iterations))
         } else {
             cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n", 
                 packageDescription("lavaan", fields="Version"),
@@ -21,6 +21,13 @@ short.summary <- function(object) {
         cat("** WARNING ** Estimates below are simply the starting values\n")
     }
     cat("\n")
+
+    # number of free parameters
+    #t0.txt <- sprintf("  %-40s", "Number of free parameters")
+    #t1.txt <- sprintf("  %10i", object@Fit@npar)
+    #t2.txt <- ""
+    #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    #cat("\n")
    
     # listwise deletion?
     listwise <- FALSE
@@ -30,6 +37,7 @@ short.summary <- function(object) {
            break
        }
     }
+
 
     if(object@Data@ngroups == 1L) {
         if(listwise) {
@@ -382,7 +390,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 4. intercepts/means
+        ord.names <- vnames(object@ParTable, type="ov.ord", group=g)
         int.idx <- which(object@ParTable$op == "~1" & 
+                         !object@ParTable$lhs %in% ord.names &
                          !object@ParTable$exo &
                          object@ParTable$group == g)
         if(length(int.idx) > 0) {

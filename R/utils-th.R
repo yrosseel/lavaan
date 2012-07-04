@@ -226,7 +226,7 @@ pccor_TS <- function(x, y, th.x=NULL, th.y=NULL, freq=NULL,
                           hessian=hessianFunction,
                           scale=10, # not needed?
                           control=list(trace=ifelse(verbose,1L,0L), 
-                                       rel.tol=1e-5))
+                                       rel.tol=1e-7))
         }
         if(out$convergence != 0L) warning("no convergence")
         rho <- tanh(out$par)

@@ -29,11 +29,13 @@ setClass("lavData",
 
 setClass("lavSampleStats",         # sample moments
     representation(
+        var="list",                # variances
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
         th="list",                 # thresholds for non-numeric var (per group)
         th.idx="list",
         th.names="list",           # threshold names
+        slopes="list",             # slopes
 
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)

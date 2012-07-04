@@ -53,7 +53,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         # nothing to do
     } else if(all(opt$group.equal %in% c("loadings", "intercepts", "means",
                                          "regressions", "residuals",
-                                         "residual.covariances",
+                                         "residual.covariances", "thresholds",
                                          "lv.variances", "lv.covariances"))) {
         # nothing to do 
     } else {
@@ -67,6 +67,15 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else {
         # strip white space
         opt$group.partial <- gsub("[[:space:]]+", "", opt$group.partial)
+    }
+
+    # if categorical, and group.equal contains "intercepts", also add
+    # thresholds (and vice versa)
+    if(opt$categorical && "intercepts" %in% opt$group.equal) {
+        opt$group.equal <- unique(c(opt$group.equal, "thresholds"))
+    }
+    if(opt$categorical && "thresholds" %in% opt$group.equal) {
+        opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
     }
 
 
