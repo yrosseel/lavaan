@@ -102,9 +102,9 @@ StartingValues <- function(start.method = "default",
 
         # info from user model for this group
         if(categorical) {
-            ov.names    <- vnames(partable, "ov",   group=g)
+            ov.names    <- vnames(partable, "ov.nox", group=g)
         } else {
-            ov.names    <- vnames(partable, "ov.nox",   group=g)
+            ov.names    <- vnames(partable, "ov",     group=g)
         }
         lv.names    <- vnames(partable, "lv",   group=g)
         ov.names.x  <- vnames(partable, "ov.x", group=g)
@@ -177,7 +177,7 @@ StartingValues <- function(start.method = "default",
                 samplestats@th.names[[g]][ samplestats@th.idx[[g]] > 0L ]
             # th.names.sample should identical to
            # vnames(partable, "th", group = g)
-           th.values <- samplestats@th[[g]][ samplestats@th.idx[[g]] > 0L ]
+           th.values <- samplestats@th.nox[[g]][ samplestats@th.idx[[g]] > 0L ]
             start[th.idx] <- th.values[match(th.names.partable,
                                              th.names.sample)]
         }

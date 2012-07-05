@@ -156,9 +156,12 @@ hessian = function(x) {
 },
 
 start = function() {
-    #th.start <- sort(rnorm(nth))
     th.start <- lavaan:::unithord(freq=tabulate(y)) # unconditional th's
     beta.start <- rep(0, nexo)
+    #Y <- as.numeric(y); range <- 16; Y <- Y*range/nexo
+    #fit.ols <- lavOLS(y=Y, X=X, weights=weights, offset=offset)
+    #beta.start <- fit.ols$theta[fit.ols$beta.idx[-1L]]
+    print(beta.start)
     c( th.start, beta.start )
 }
 

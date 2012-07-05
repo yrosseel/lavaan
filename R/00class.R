@@ -33,6 +33,7 @@ setClass("lavSampleStats",         # sample moments
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
         th="list",                 # thresholds for non-numeric var (per group)
+        th.nox="list",             # thresholds ignoring eXo
         th.idx="list",
         th.names="list",           # threshold names
         slopes="list",             # slopes

@@ -45,6 +45,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     th          <- vector("list", length=ngroups)
+    th.nox      <- vector("list", length=ngroups)
     th.idx      <- vector("list", length=ngroups)
     th.names    <- vector("list", length=ngroups)
     slopes      <- vector("list", length=ngroups)
@@ -85,6 +86,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
             # th also contains the means of numeric variables
             th[[g]] <- unlist(CAT$TH)
+            th.nox[[g]] <- unlist(CAT$TH.NOX)
             th.idx[[g]] <- unlist(CAT$TH.IDX)
             th.names[[g]] <- unlist(CAT$TH.NAMES)
 
@@ -214,6 +216,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
                        # sample moments
                        th           = th,
+                       th.nox       = th.nox,
                        th.idx       = th.idx,
                        th.names     = th.names,
                        mean         = mean,

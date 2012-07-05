@@ -35,6 +35,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     # means and thresholds
     TH <- vector("list", length=nvar)
+    TH.NOX <- vector("list", length=nvar)
     TH.NAMES <- vector("list", length=nvar)
     TH.IDX <- vector("list", length=nvar)
     # slopes (only if fixed.x)
@@ -65,29 +66,27 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             FIT[[i]] <- fit
             ov.num <- ov.num + 1L
             # compute mean and variance
-            TH[[i]] <- fit$theta[1L]
+            TH[[i]] <- TH.NOX[[i]] <- fit$theta[1L]
             VAR[i] <- fit$theta[fit$npar]
             TH.NAMES[[i]] <- ov.names[i]; TH.IDX[[i]] <- 0L
-            #SC.TH[,th.idx] <-
-            #    scores_mu(Data[,i], mu.x=TH[[i]], var.x=VAR[i])
             SC.TH[,th.idx] <- scores[,1L]
-            #SC.VAR[,i] <- scores_var(Data[,i], mu.x=TH[[i]],var.x=VAR[i])
             SC.VAR[,i] <- scores[,fit$npar]
             if(nexo > 0L) {
                 SLOPES[i,] <- fit$theta[-c(1L, fit$npar)]
-                #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
                 SC.SL[,sl.idx] <- scores[,-c(1L, fit$npar),drop=FALSE]
+                TH.NOX[[i]] <- mean(Data[,i], na.rm=TRUE)
             }
         } else if(ov.types[i] == "ordered") {
             if(nexo == 0L) {
                 # FIXME: merge with lavProbit...
-                TH[[i]] <- unithord(X=Data[,i])
+                TH[[i]] <- TH.NOX[[i]] <- unithord(X=Data[,i])
                 SC.TH[,th.idx] <- scores_th(Data[,i], TH[[i]])
                 SC.VAR[,i] <- rep(0, N)
             } else {
                 fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()
                 FIT[[i]] <- fit
                 TH[[i]] <- fit$theta[fit$th.idx]
+                TH.NOX[[i]] <- unithord(X=Data[,i])
                 SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
                 SLOPES[i,] <- fit$theta[fit$beta.idx]
                 #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
@@ -420,7 +419,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     
 
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
-                SC=SC,
+                SC=SC, TH.NOX=TH.NOX,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
                 NACOV=NACOV, H=H, TH.NAMES=TH.NAMES, TH.IDX=TH.IDX)
     out
