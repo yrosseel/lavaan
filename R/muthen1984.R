@@ -396,8 +396,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 cbind(A21,A22) )
     B.inv <- solve(B)
 
-    NACOV <- (B.inv %*% INNER %*% t(B.inv)) * (N-1) # use N-1, since we will
-                                                    # divide by N-1 later on??
+    #  weight matrix (correlation metric)
+    WLS.W <- B.inv %*% INNER %*% t(B.inv)
 
     # COV matrix?
     if(any("numeric" %in% ov.types)) {
@@ -411,17 +411,17 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         H <- rbind( cbind(H11,H12),
                     cbind(H21,H22) )
 
-        NACOV <- H %*% NACOV %*% t(H)
+        WLS.W <- H %*% WLS.W %*% t(H)
     } else {
         COV <- COR
-          H <- diag(ncol(NACOV))
+          H <- diag(ncol(WLS.W))
     }
     
 
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
-                SC=SC, TH.NOX=TH.NOX,
+                SC=SC, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
-                NACOV=NACOV, H=H, TH.NAMES=TH.NAMES, TH.IDX=TH.IDX)
+                WLS.W=WLS.W, H=H)
     out
 }
 

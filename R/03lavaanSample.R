@@ -194,19 +194,19 @@ lavSampleStatsFromData <- function(Data          = NULL,
             WLS.V[[g]] <- inv.chol(Gamma)
             NACOV[[g]]  <- Gamma
         } else if(estimator == "WLS" && categorical) {
-            WLS.V[[g]] <- inv.chol(CAT$NACOV)
-            NACOV[[g]]  <- CAT$NACOV
+            WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
+            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         } else if(estimator == "DWLS" && categorical) {
-            dacov <- diag(CAT$NACOV)
-            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$NACOV),
-                                        ncol=ncol(CAT$NACOV))
-            NACOV[[g]]  <- CAT$NACOV
+            dacov <- diag(CAT$WLS.W * nobs[[g]])
+            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$WLS.W),
+                                        ncol=ncol(CAT$WLS.W))
+            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         } else if(estimator == "ULS" && categorical) {
             # FIXME: cor elements *2??
-            DWLS <- diag(nrow(CAT$NACOV))
+            DWLS <- diag(nrow(CAT$WLS.W))
             #diag(DWLS)[7:21] <- 2.0
             WLS.V[[g]] <- DWLS
-            NACOV[[g]]  <- CAT$NACOV
+            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         }
 
     } # ngroups

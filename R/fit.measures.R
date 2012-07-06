@@ -338,9 +338,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 GG <- 0
                 RMSEA <- sqrt( max( c((X2/N)/df - 1/(N-GG), 0) ) ) * sqrt(G)
-                if(scaled) {
+                if(scaled && test != "scaled.shifted") {
                     RMSEA.scaled <- 
                          sqrt( max( c((X2/N)/d - 1/(N-GG), 0) ) ) * sqrt(G)
+                } else if(test == "scaled.shifted") {
+                    RMSEA.scaled <-
+                         sqrt( max(c((X2.scaled/N)/df - 1/(N-GG), 0))) * sqrt(G)
                 }
             } else {
                 RMSEA <- sqrt( max( c((X2/N)/df - 1/N, 0) ) )
@@ -377,14 +380,20 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.ci.lower.scaled" %in% fit.measures) {
-        df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        if(test == "scaled.shifted") {
+            XX2 <- X2.scaled
+            df2 <- df
+        } else {
+            XX2 <- X2
+            df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        }
         lower.lambda <- function(lambda) {
-            (pchisq(X2, df=df2, ncp=lambda) - 0.95)
+            (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
         }
         if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower.scaled"] <- 0
         } else {
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
+            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -416,9 +425,15 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.ci.upper.scaled" %in% fit.measures) {
-        df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        if(test == "scaled.shifted") {
+            XX2 <- X2.scaled
+            df2 <- df
+        } else {
+            XX2 <- X2
+            df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        }
         upper.lambda <- function(lambda) {
-            (pchisq(X2, df=df2, ncp=lambda) - 0.05)
+            (pchisq(XX2, df=df2, ncp=lambda) - 0.05)
         }
         if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0) {
             indices["rmsea.ci.upper.scaled"] <- 0
@@ -453,16 +468,22 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.pvalue.scaled" %in% fit.measures) {
-        df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        if(test == "scaled.shifted") {
+            XX2 <- X2.scaled
+            df2 <- df
+        } else {
+            XX2 <- X2
+            df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+        }
         if(df > 0) {
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 ncp <- (N-GG)*df2*0.05^2/G
                 indices["rmsea.pvalue.scaled"] <- 
-                    1 - pchisq(X2, df=df2, ncp=ncp)
+                    1 - pchisq(XX2, df=df2, ncp=ncp)
             } else {
                 indices["rmsea.pvalue.scaled"] <-
-                    1 - pchisq(X2, df=df2, ncp=(N*df2*0.05^2))
+                    1 - pchisq(XX2, df=df2, ncp=(N*df2*0.05^2))
             }
         } else {
             indices["rmsea.pvalue.scaled"] <- 1
