@@ -102,7 +102,7 @@ Model <- function(partable       = NULL,
         } else {
             nvar[g] <- length(ov.names)
         }
-        num.idx[[g]] <- match(ov.num, ov.names)
+        num.idx[[g]] <- match(ov.num, ov.names.nox)
 
         # model matrices for this group
         mmNumber    <- attr(REP, "mmNumber")[[g]]

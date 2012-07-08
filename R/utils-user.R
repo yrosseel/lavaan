@@ -68,7 +68,9 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         # 4. orphaned covariances
         ov.cov <- c(partable$lhs[ partable$op == "~~" & !partable$lhs %in% lv.names ], 
                     partable$rhs[ partable$op == "~~" & !partable$rhs %in% lv.names ])
-        ov.int <- partable$lhs[ partable$op == "~1" & !partable$lhs %in% lv.names ]
+        # 5. orphaned intercepts/thresholds
+        ov.int <- partable$lhs[ (partable$op == "~1" | partable$op == "|") &
+                                 !partable$lhs %in% lv.names ]
         extra <- unique(c(ov.cov, ov.int))
         extra.idx <- which(!extra %in% out)
         out <- c(out, extra[extra.idx])
@@ -859,6 +861,7 @@ getLIST <- function(FLAT=NULL,
 independenceModel <- function(ov.names=NULL, ov=NULL, 
                               ov.names.x=NULL, sample.cov=NULL,
                               meanstructure=FALSE, sample.mean=NULL,
+                              sample.th=NULL,
                               fixed.x=TRUE) {
 
     ngroups <- length(ov.names)
@@ -868,6 +871,8 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
     ustart <- numeric(0)
+
+    categorical <- any(ov$type == "ordered")
 
     for(g in 1:ngroups) {
 
@@ -889,8 +894,8 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
         }
 
         # ordered? fix variances, add thresholds
-        ord.names <- character(0)
-        if(!is.null(ov) && any(ov$type == "ordered")) {
+        ord.names <- character(0L)
+        if(categorical) {
             ord.names <- ov$name[ ov$type == "ordered" ]
             # only for this group
             ord.names <- ov.names[[g]][ which(ov.names[[g]] %in% ord.names) ]
@@ -916,8 +921,9 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
                 group <- c(group, rep(g, nel))
                  free <- c(free, rep(1L, nel))
                   exo <- c(exo, rep(0L, nel))
-               # FIXME: provide better starting values here!!
-               ustart <- c(ustart, rep(as.numeric(NA), nel))
+               th.start <- rep(0, nel)
+               #th.start <- sample.th[[g]] ### FIXME::: ORDER??? ONLY ORD!!!
+               ustart <- c(ustart, th.start)
             }
         }
         # meanstructure?
@@ -943,10 +949,8 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
             }
         }
 
-
-
         # fixed.x exogenous variables?
-        if((nx <- length(ov.names.x[[g]])) > 0L) {
+        if(!categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
             idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
             nel <- sum(idx)
             lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
@@ -975,6 +979,22 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
                 exo    <- c(exo,    rep(1L, nx))
                 ustart <- c(ustart, rep(as.numeric(NA), nx))
             }
+        }
+
+        if(categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
+            # add regressions
+            lhs <- c(lhs, rep("dummy", nx))
+             op <- c( op, rep("~", nx))
+            rhs <- c(rhs, ov.names.x[[g]])
+            # add 3 dummy lines
+            lhs <- c(lhs, "dummy"); op <- c(op, "=~"); rhs <- c(rhs, "dummy")
+            lhs <- c(lhs, "dummy"); op <- c(op, "~~"); rhs <- c(rhs, "dummy")
+            lhs <- c(lhs, "dummy"); op <- c(op, "~1"); rhs <- c(rhs, "")
+
+            exo    <- c(exo,   rep(0L, nx + 3L))
+            group  <- c(group, rep(g,  nx + 3L))
+            free   <- c(free,  rep(0L, nx + 3L))
+            ustart <- c(ustart, rep(0, nx)); ustart <- c(ustart, c(0,1,0))
         }
 
     } # ngroups

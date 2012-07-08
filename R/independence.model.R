@@ -55,12 +55,12 @@ independence.model.fit <- function(object) {
     categorical <- object@Model@categorical
 
     # construct parameter Table for independence model
-    if(!categorical) {
+    #if(!categorical) {
         OV.X <- lapply(as.list(1:object@Data@ngroups),
                        function(x) vnames(object@ParTable, type="ov.x", x))
-    } else {
-        OV.X <- NULL
-    }
+    #} else {
+    #    OV.X <- NULL
+    #}
 
     # construct
     lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
@@ -69,10 +69,9 @@ independence.model.fit <- function(object) {
                                     sample.cov = object@SampleStats@cov,
                                     meanstructure = object@Model@meanstructure,
                                     sample.mean = object@SampleStats@mean,
+                                    sample.th   = object@SampleStats@th,
                                     fixed.x    = object@Model@fixed.x)
-    print(as.data.frame(lavaanParTable))
-
-
+   
     # fit?
     do.fit <- TRUE
 
@@ -120,10 +119,16 @@ independence.model.fit <- function(object) {
     # 7.
     
     # 8.
+    # NOTE: Mplus 6 BUG??
+    # - if estimator = WLSMV, baseline model is NOT using
+    #   scaled.shifted, but mean.(var.)adusted!!
+    test.options <- lavaanOptions
+    if(test.options$test == "scaled.shifted")
+        test.options$test <- "mean.var.adjusted"
     TEST <- computeTestStatistic(lavaanModel,
                                  partable      = lavaanParTable,
                                  samplestats   = lavaanSampleStats,
-                                 options       = lavaanOptions,
+                                 options       = test.options,
                                  x             = x,
                                  VCOV          = VCOV,
                                  data          = lavaanData)
