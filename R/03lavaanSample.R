@@ -79,6 +79,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
         # fill in the other slots
         if(categorical) {
+            var[[g]]  <- CAT$VAR
             cov[[g]]  <- unname(CAT$COV)
             mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
             notnum.idx <- which(ov.types != "numeric")
@@ -198,13 +199,11 @@ lavSampleStatsFromData <- function(Data          = NULL,
             NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         } else if(estimator == "DWLS" && categorical) {
             dacov <- diag(CAT$WLS.W * nobs[[g]])
-            WLS.V[[g]] <- diag(1/dacov, nrow=nrow(CAT$WLS.W),
-                                        ncol=ncol(CAT$WLS.W))
+            WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
+                                        ncol=NCOL(CAT$WLS.W))
             NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         } else if(estimator == "ULS" && categorical) {
-            # FIXME: cor elements *2??
-            DWLS <- diag(nrow(CAT$WLS.W))
-            #diag(DWLS)[7:21] <- 2.0
+            DWLS <- diag(NROW(CAT$WLS.W))
             WLS.V[[g]] <- DWLS
             NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
         }
@@ -213,7 +212,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
 
     # construct SampleStats object
     lavSampleStats <- new("lavSampleStats",
-
+                       CAT = CAT, # debug only
                        # sample moments
                        th           = th,
                        th.nox       = th.nox,

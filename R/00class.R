@@ -29,6 +29,7 @@ setClass("lavData",
 
 setClass("lavSampleStats",         # sample moments
     representation(
+        CAT="list",
         var="list",                # variances
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)

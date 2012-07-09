@@ -102,7 +102,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     }
 
     # rm VAR columns from ordinal variables
-    SC.VAR <- SC.VAR[,-ord.idx]
+    SC.VAR <- SC.VAR[,-ord.idx, drop=FALSE]
 
     if(verbose) {
         cat("STEP 1: univariate statistics\n")
@@ -236,6 +236,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     # A21
     A21 <- matrix(0, pstar, ncol(A11))
+    AA21 <- matrix(0, pstar, ncol(A11)) # debug only
     H21 <- matrix(0, pstar, ncol(A11))
     # for this one, we need new scores: for each F_ij (cor), the
     # scores with respect to the TH, VAR, ...
@@ -259,6 +260,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     var.idx_i <- ncol(SC.TH) + match(i, num.idx)
                     var.idx_j <- ncol(SC.TH) + match(j, num.idx)
                 }
+                #cat("i = ", i, " j = ", j, "\n")
+                #cat("ov.types[i] = ", ov.types[i], "\n",
+                #   "ov.types[j] = ", ov.types[j], "\n")
+                #cat("nexo = ", nexo, "\n")
                 if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
                     if(nexo > 0) {
                         SC.COR.UNI <-
@@ -292,7 +297,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     if(nexo > 0L) {
                         SC.COR.UNI <-
                             scores_pscorX_uni(X=Data[,i], Y=Data[,j], eXo=eXo,
-                                              rho=COR[i,j],
+                                              rho=COR[i,j], th.y=TH[[j]],
                                               eta.x=FIT[[i]]$yhat, var.x=VAR[i], 
                                               y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2)
                     } else {
@@ -323,7 +328,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     if(nexo > 0L) {
                         SC.COR.UNI <-
                             scores_pscorX_uni(X=Data[,j], Y=Data[,i], eXo=eXo,
-                                              rho=COR[i,j],
+                                              rho=COR[i,j], th.y=TH[[i]],
                                               eta.x=FIT[[j]]$yhat, var.x=VAR[j], 
                                               y.z1=FIT[[i]]$z1, y.z2=FIT[[i]]$z2)
                     } else {
@@ -349,6 +354,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                         crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.x)
                     # H21 only for VAR
                     H21[pstar.idx, var.idx_j] <- COR[i,j] / (2*sqrt(VAR[j]))
+
+                    UNI <- cbind(SC.COR.UNI$dx.mu.x,
+                                 SC.COR.UNI$dx.th.y,
+                                 SC.COR.UNI$dx.sl.x,
+                                 SC.COR.UNI$dx.sl.y,
+                                 SC.COR.UNI$dx.var.x)
+                    UNI1 <- apply(UNI, 2, sum)
                 } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     # polychoric correlation
                     if(nexo > 0L) {
