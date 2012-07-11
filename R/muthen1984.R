@@ -77,21 +77,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 TH.NOX[[i]] <- mean(Data[,i], na.rm=TRUE)
             }
         } else if(ov.types[i] == "ordered") {
-            if(nexo == 0L) {
-                # FIXME: merge with lavProbit...
-                TH[[i]] <- TH.NOX[[i]] <- unithord(X=Data[,i])
-                SC.TH[,th.idx] <- scores_th(Data[,i], TH[[i]])
-                SC.VAR[,i] <- rep(0, N)
-            } else {
-                fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()
-                FIT[[i]] <- fit
-                TH[[i]] <- fit$theta[fit$th.idx]
-                TH.NOX[[i]] <- unithord(X=Data[,i])
-                SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
-                SLOPES[i,] <- fit$theta[fit$beta.idx]
-                #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                SC.SL[,sl.idx] <- scores[,fit$beta.idx,drop=FALSE]
-            }
+            fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()
+            FIT[[i]] <- fit
+            TH[[i]] <- fit$theta[fit$th.idx]
+            TH.NOX[[i]] <- pc_th(Y=Data[,i])
+            SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
+            SLOPES[i,] <- fit$theta[fit$slope.idx]
+            SC.SL[,sl.idx] <- scores[,fit$slope.idx,drop=FALSE]
             VAR[i] <- 1.0
             TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
                                    sep="")
@@ -184,19 +176,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     H22[pstar.idx,pstar.idx] <- sqrt(VAR[j])
                 } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     # polychoric correlation
-                    if(nexo > 0L) {
-                        out <- pccorX_TS(x=Data[,i], y=Data[,j], eXo=NULL,
-                                         x.z1=FIT[[i]]$z1, x.z2=FIT[[i]]$z2,
-                                         y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2,
-                                         scores=TRUE)
-                        SC.COR[,pstar.idx] <- attr(out, "scores")
-                    } else {
-                        out <- pccor_TS(Data[,i], Data[,j],
-                                        th.x = TH[[i]], th.y = TH[[j]])
-                        SC.COR[,pstar.idx] <- 
-                            scores_pccor(X=Data[,i], Y=Data[,j], rho=out,
-                                         th.x=TH[[i]], th.y=TH[[j]])
-                    }
+                    out <- pc_cor_TS(Y1=Data[,i], Y2=Data[,j], eXo=eXo,
+                                     th.y1 = TH[[i]], th.y2 = TH[[j]],
+                                     y1.z1=FIT[[i]]$z1, y1.z2=FIT[[i]]$z2,
+                                     y2.z1=FIT[[j]]$z1, y2.z2=FIT[[j]]$z2)
                     COR[i,j] <- COR[j,i] <- out
                 }
             }
@@ -363,21 +346,15 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     UNI1 <- apply(UNI, 2, sum)
                 } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     # polychoric correlation
-                    if(nexo > 0L) {
-                        SC.COR.UNI <-
-                            scores_pccorX_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j],
-                                              th.x=TH[[i]], th.y=TH[[j]],
-                                              sl.x=SLOPES[i,], sl.y=SLOPES[j,],
-                                              x.z1=FIT[[i]]$z1, x.z2=FIT[[i]]$z2,
-                                              y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2,
-                                              eXo=eXo)
-                    } else {
-                        SC.COR.UNI <-
-                            scores_pccor_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j],
-                                             th.x=TH[[i]], th.y=TH[[j]])
-                    }
+                    SC.COR.UNI <-
+                        pc_cor_scores(Y1=Data[,i], Y2=Data[,j], rho=COR[i,j],
+                                      eXo=eXo,
+                                      fit.y1=FIT[[i]], fit.y2=FIT[[i]])
+                    # RHO
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                    
                     # TH
-                   A21[pstar.idx, th.idx_i] <- 
+                    A21[pstar.idx, th.idx_i] <- 
                         crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.x)
                     A21[pstar.idx, th.idx_j] <- 
                         crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y)

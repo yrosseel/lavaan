@@ -120,208 +120,6 @@ ppcor_TS <- function(X,Y, mu.x=NULL, var.x=NULL, mu.y=NULL, var.y=NULL,
     out$par
 }
 
-# low-level function, no checking
-bifreq <- function(x, y) {
-    max.x <- max(x, na.rm=TRUE); max.y <- max(y, na.rm=TRUE)
-    bin <- x - 1L; bin <- bin + max.x * (y - 1L); bin <- bin[!is.na(bin)]
-    if (length(bin)) bin <- bin + 1L
-    freq <- array(tabulate(bin, nbins = max.x*max.y), dim=c(max.x, max.y))
-    freq
-}
-
-
-# low-level function, no checking
-unithord <- function(X, freq=NULL, prop=NULL) {
-    if(is.null(prop)) {
-        if(is.null(freq)) freq <- tabulate(X)
-        prop <- freq / sum(freq)
-    }
-    th <- qnorm(cumsum(prop))[-length(prop)]
-    th
-}
-
-pccor_TS <- function(x, y, th.x=NULL, th.y=NULL, freq=NULL,
-                  method="nlminb", verbose=FALSE,
-                  acov=FALSE) {
-
-    stopifnot(min(x) == 1L, min(y) == 1L,
-              method %in% c("nlminb", "optimize", "nlminb.hessian"))
-  
-    # thresholds
-    if(is.null(th.x)) th.x <- unithord(freq=tabulate(x))
-    if(is.null(th.y)) th.y <- unithord(freq=tabulate(y))
-
-    # create cross-table low-level (see table() function)
-    if(is.null(freq)) freq <- bifreq(x,y)
-    nr <- nrow(freq); nc <- ncol(freq)
-
-    objectiveFunction <- function(x) {
-        logl <- pcLogl_freq(freq, rho=tanh(x[1L]), th.x, th.y)
-        #cat("rho = ", tanh(x[1L]), "\n")
-        -logl
-    }
-
-    if(method == "optimize") {
-        out <- optimize(f=objectiveFunction,
-                        interval=c(-5, +5), # tanh scale!
-                        tol=1e-8, maximum=FALSE)
-        rho <- tanh(out$minimum)
-    } else if(method == "nlminb" || method == "nlminb.hessian") {
-
-        # catch tetrachoric case
-        if(nr == 2L && nc == 2L) {
-           # Divgi 1979 initial value
-            h <- max(abs(th.x), abs(th.y)); k <- min(abs(th.x), abs(th.y))
-            R <- (freq[1,1]*freq[2,2])/(freq[1,2]*freq[2,1])
-            D <- k*(.79289 + 4.28981/(1+3.30231*h));D <- D*sign(th.x)*sign(th.y)
-            C <- 0.07557*h + (h-k)^2 * (0.51141/(h+2.05793) - 0.07557/h)
-            B <- 0.5/(1 + (h^2 + k^2)*(0.82281-1.03514*(k/sqrt(h^2+k^2))))
-            A <- 0.5/(1 + (h^2 + k^2)*(0.12454-0.27102*(1-h/sqrt(h^2+k^2))))
-            alpha <- A + B*(-1 + 1/(1 + C*(log(R)-D)^2))
-            rho.init <- cos(pi/(1+R^alpha))
-        } else {
-            rho.init <- cov(x,y)
-        }
-
-        gradientFunction <- function(x) {
-            rho <- tanh(x[1L])
-            PI  <- pcComputePI(rho, th.x, th.y)
-            phi <- pcComputephi(rho, th.x, th.y)
-            dx.rho <- sum(freq/PI * phi)
-            -dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
-        }
-
-        # OLSSON 1979 A2 + A3
-        hessianFunction <- function(x) {
-            rho <- tanh(x[1L])
-            PI  <- pcComputePI(rho, th.x, th.y)
-            phi <- pcComputephi(rho, th.x, th.y)
-            gnorm <- pcComputegnorm(rho, th.x, th.y)
-            H <-  sum(freq/PI * gnorm) - sum(freq/PI^2 * phi^2)
-
-            # to compensate for tanh
-            # u=f(x), d^2y/dx^2 = d^2y/du^2 * (du/dx)^2 + dy/du * d^2u/dx^2
-            # dtanh = 1/cosh(x)^2
-            # dtanh_2 = 8*exp(2*x)*(1-exp(2*x))/(exp(2*x)+1)^3
-            grad <- sum(freq/PI * phi)
-            u1 <- 1/cosh(x)^2
-            u2 <- 8*exp(2*x)*(1-exp(2*x))/(exp(2*x)+1)^3
-            H <- H * u1^2 + grad * u2
-            dim(H) <- c(1L,1L) # for nlminb
-
-            -H
-        }
-
-
-        if(method == "nlminb") {
-            out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
-                          gradient=gradientFunction,
-                          scale=10,
-                          control=list(trace=ifelse(verbose,1L,0L), 
-                                       rel.tol=1e-10))
-        } else if(method == "nlminb.hessian") {
-            # to mimic Mplus
-            out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
-                          gradient=gradientFunction,
-                          hessian=hessianFunction,
-                          scale=10, # not needed?
-                          control=list(trace=ifelse(verbose,1L,0L), 
-                                       rel.tol=1e-7))
-        }
-        if(out$convergence != 0L) warning("no convergence")
-        rho <- tanh(out$par)
-    }
-
-    if(acov) {
-        Gamma <- pcGamma(freq, rho=rho, th.x=th.x, th.y=th.y)
-        omega <- attr(Gamma, "omega"); attr(Gamma, "omega") <- NULL
-           PI <- attr(Gamma, "PI");    attr(Gamma, "PI") <- NULL
-        attr(rho, "Gamma") <- Gamma
-        attr(rho, "omega") <- omega
-        attr(rho, "PI")    <- PI
-    }
-
-    rho
-}
-
-pccorX_TS <- function(x, y, eXo=NULL, 
-                      x.z1=NULL, x.z2=NULL, y.z1=NULL, y.z2=NULL,
-                      method="nlminb", verbose=FALSE, scores=FALSE) {
-
-    stopifnot(min(x) == 1L, min(y) == 1L,
-              method %in% c("nlminb", "optimize"))
-  
-    # thresholds
-    if(is.null(x.z1) || is.null(x.z2)) {
-        fit.x <- lavProbit(y=x, X=eXo)
-        x.z1 <- fit.x$z1; x.z2 <- fit.x$z2
-    }
-    if(is.null(y.z1) || is.null(y.z2)) {
-        fit.y <- lavProbit(y=y, X=eXo)
-        y.z1 <- fit.y$z1; y.z2 <- fit.y$z2
-    }
-
-    objectiveFunction <- function(x) {
-        rho = tanh(x[1L])
-        logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
-        #cat("rho = ", tanh(x[1L]), "\n")
-        -logl
-    }
-
-    if(method == "optimize") {
-        out <- optimize(f=objectiveFunction,
-                        interval=c(-5, +5), # tanh scale!
-                        tol=1e-8, maximum=FALSE)
-        rho <- tanh(out$minimum)
-    } else if(method == "nlminb") {
-        rho.init <- cov(x,y)
-
-        gradientFunction <- function(x) {
-            rho = tanh(x[1L])
-            lik <- pcL_i(x.z1, x.z2, y.z1, y.z2, rho)
-            dx <- ( dbinorm(x.z1, y.z1, rho) -
-                    dbinorm(x.z2, y.z1, rho) -
-                    dbinorm(x.z1, y.z2, rho) +
-                    dbinorm(x.z2, y.z2, rho) ) / lik
-            -sum(dx) * 1/cosh(x)^2
-        }
-
-        hessianFunction <- function(x) {
-            ### FIXME: TODO
-        }
-
-        if(method == "nlminb") {
-            out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
-                          gradient=gradientFunction,
-                          scale=10,
-                          control=list(trace=ifelse(verbose,1L,0L), 
-                                       rel.tol=1e-10))
-        } 
-        #else if(method == "nlminb.hessian") {
-        #    # to mimic Mplus
-        #    out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
-        #                  gradient=gradientFunction,
-        #                  hessian=hessianFunction,
-        #                  scale=10, # not needed?
-        #                  control=list(trace=ifelse(verbose,1L,0L), 
-        #                               rel.tol=1e-5))
-        #}
-        if(out$convergence != 0L) warning("no convergence")
-        rho <- tanh(out$par)
-    }
-
-    if(scores) {
-        lik <- pcL_i(x.z1, x.z2, y.z1, y.z2, rho)
-        dx <- ( dbinorm(x.z1, y.z1, rho) -
-                dbinorm(x.z2, y.z1, rho) -
-                dbinorm(x.z1, y.z2, rho) +
-                dbinorm(x.z2, y.z2, rho) ) / lik    
-        attr(rho, "scores") <- dx
-    }
-
-    rho
-}
-
 # polyserial x=numeric, y=ordinal -- TWO-STEP method
 pscor_TS <- function(X, Y, th.y=NULL, verbose=FALSE, method="nlminb",
                      rescale.var=TRUE, acov=FALSE) {
@@ -510,14 +308,6 @@ pspyx <- function(rho, th.y, Y, Z, tauj.star=NULL, tauj1.star=NULL) {
 
 
 
-unithord_logl_x <- function(x, X) {
-    TH <- c(-Inf, x, Inf) 
-    freq <- tabulate(X)
-    PI <- pnorm(TH)[-1L] - pnorm(TH)[-length(TH)]
-    logl <- sum( freq * log(PI) )
-    logl
-}
-
 # testing only
 # solution is: th = qnorm(cumsum(prop)[-length(prop)])
 ml_th <- function(X, verbose=TRUE) {
@@ -552,28 +342,6 @@ ml_th <- function(X, verbose=TRUE) {
     out$par
 }
 
-unithord_logl_dx <- function(x, X) {
-    TH <- c(-Inf, x, Inf)  
-    freq <- tabulate(X)
-    PI <- pnorm(TH)[-1L] - pnorm(TH)[-length(TH)]
-    logl <- sum( freq * log(PI) )
-    logl
-}
-
-scores_th <- function(X, th.x=NULL) {
-    if(is.null(th.x)) th.x <- unithord(X)
-    TH <- c(-Inf, th.x, Inf)
-    PI <- pnorm(TH)[-1L] - pnorm(TH)[-length(TH)]; D_pi.inv <- diag(1/PI)
-    dth  <- dnorm(th.x)
-    if(length(th.x) > 1L) {
-        Delta <- matrix(0, length(th.x)+1L, length(th.x))
-        diag(Delta) <- dth; diag(Delta[-1L,]) <- -dth
-    } else {
-        Delta <- matrix(c(dth, -dth), 2L, 1L)
-    }
-    dFdTH <- D_pi.inv %*% Delta
-    dFdTH[X,]   
-}
 
 scores_pscor <- function(X, Y, rho=NULL, mu.x=NULL, var.x=NULL, th.y=NULL) {
     sd.x=sqrt(var.x)
@@ -631,6 +399,66 @@ scores_pccor_uni <- function(X, Y, rho, th.x, th.y) {
 
     list(dx.th.x=dx.th.x, dx.th.y=dx.th.y)
 }
+
+
+pcComputePI <- function(rho, th.x, th.y) {
+
+    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
+    pTH.X <- pnorm(TH.X); rowPI <- pTH.X[-1L] - pTH.X[-length(TH.X)]
+    pTH.Y <- pnorm(TH.Y); colPI <- pTH.Y[-1L] - pTH.Y[-length(TH.Y)]
+
+    # catch special case: rho = 0.0
+    if(rho == 0.0) {
+        PI.ij <- outer(rowPI, colPI)
+        return(PI.ij)
+    }
+
+    nr <- length(TH.X) - 1L; nc <- length(TH.Y) - 1L
+    sigma <- matrix(c(1,rho,rho,1), 2L, 2L)
+    PI <- matrix(0, nr, nc)
+    for(i in seq_len(nr-1L)) {
+        for(j in seq_len(nc-1L)) {
+            PI[i,j] <- pmvnorm(lower=c(TH.X[i-1L+1L], TH.Y[j-1L+1L]),
+                                  upper=c(TH.X[i   +1L], TH.Y[j   +1L]),
+                                  mean=c(0,0), corr=sigma)
+        }
+    }
+    # add last col (rowSums(PI) must correspond with TH.X)
+    PI[,nc] <- rowPI - rowSums(PI[,1:(nc-1L),drop=FALSE])
+    # PI[nr,nc] will be wrong at this point, but gets overridden
+    # add last row (colSums(PI) must correspond with TH.Y)
+    PI[nr,] <- colPI - colSums(PI[1:(nr-1L),,drop=FALSE])
+
+    # all elements should be strictly positive
+    PI[PI < .Machine$double.eps] <- .Machine$double.eps
+
+    PI
+}
+
+
+pcComputephi <- function(rho, th.x, th.y) {
+
+    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
+    nr <- length(TH.X) - 1L; nc <- length(TH.Y) - 1L
+    phi <- matrix(0, nr, nc)
+    for(i in seq_len(nr)) {
+        for(j in seq_len(nc)) {
+            p1 <- p2 <- p3 <- p4 <- 0
+            if(i < nr && j < nc)
+                p1 <- dbinorm(TH.X[i   +1L], TH.Y[j   +1L], rho)
+            if(i > 1L && j < nc)
+                p2 <- dbinorm(TH.X[i-1L+1L], TH.Y[j   +1L], rho)
+            if(i < nr && j > 1L)
+                p3 <- dbinorm(TH.X[i   +1L], TH.Y[j-1L+1L], rho)
+            if(i > 1L && j > 1L)
+                p4 <- dbinorm(TH.X[i-1L+1L], TH.Y[j-1L+1L], rho)
+            phi[i,j] <- (p1 - p2 - p3 + p4)
+        }
+    }
+
+    phi
+}
+
 
 # old version, not used anymore
 scores_pccor_uni2 <- function(X, Y, rho, th.x, th.y) {
@@ -856,191 +684,6 @@ scores_corX_uni <- function(X, Y, rho=NULL, eXo=NULL,
 }
 
 
-# faster!
-pcLogl_freq <- function(freq, rho, th.x, th.y) {
-
-    PI <- pcComputePI(rho, th.x, th.y)
-    logl <- sum( freq * log(PI) )
-
-    logl
-}
-
-pcComputePI <- function(rho, th.x, th.y) {
-
-    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
-    pTH.X <- pnorm(TH.X); rowPI <- pTH.X[-1L] - pTH.X[-length(TH.X)]
-    pTH.Y <- pnorm(TH.Y); colPI <- pTH.Y[-1L] - pTH.Y[-length(TH.Y)]
-
-    # catch special case: rho = 0.0
-    if(rho == 0.0) {
-        PI.ij <- outer(rowPI, colPI)
-        return(PI.ij)
-    }
-
-    nr <- length(TH.X) - 1L; nc <- length(TH.Y) - 1L
-    sigma <- matrix(c(1,rho,rho,1), 2L, 2L)
-    PI <- matrix(0, nr, nc)
-    for(i in seq_len(nr-1L)) {
-        for(j in seq_len(nc-1L)) {
-            PI[i,j] <- pmvnorm(lower=c(TH.X[i-1L+1L], TH.Y[j-1L+1L]),
-                                  upper=c(TH.X[i   +1L], TH.Y[j   +1L]),
-                                  mean=c(0,0), corr=sigma)
-        }
-    }
-    # add last col (rowSums(PI) must correspond with TH.X)
-    PI[,nc] <- rowPI - rowSums(PI[,1:(nc-1L),drop=FALSE])
-    # PI[nr,nc] will be wrong at this point, but gets overridden
-    # add last row (colSums(PI) must correspond with TH.Y)
-    PI[nr,] <- colPI - colSums(PI[1:(nr-1L),,drop=FALSE])
-
-    # all elements should be strictly positive
-    PI[PI < .Machine$double.eps] <- .Machine$double.eps
-
-    PI
-}
-
-pcComputephi <- function(rho, th.x, th.y) {
-
-    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
-    nr <- length(TH.X) - 1L; nc <- length(TH.Y) - 1L
-    phi <- matrix(0, nr, nc)
-    for(i in seq_len(nr)) {
-        for(j in seq_len(nc)) {
-            p1 <- p2 <- p3 <- p4 <- 0
-            if(i < nr && j < nc)
-                p1 <- dbinorm(TH.X[i   +1L], TH.Y[j   +1L], rho)
-            if(i > 1L && j < nc)
-                p2 <- dbinorm(TH.X[i-1L+1L], TH.Y[j   +1L], rho)
-            if(i < nr && j > 1L)
-                p3 <- dbinorm(TH.X[i   +1L], TH.Y[j-1L+1L], rho)
-            if(i > 1L && j > 1L)
-                p4 <- dbinorm(TH.X[i-1L+1L], TH.Y[j-1L+1L], rho)
-            phi[i,j] <- (p1 - p2 - p3 + p4)
-        }
-    }
-
-    phi
-}
-
-pcComputegnorm <- function(rho, th.x, th.y) {
-
-    # note: Olsson 1979 A2 contains an error!!
-    guv <- function(u, v, rho) {
-        R <- (1-rho^2)
-        ( u*v*R - rho*(u^2 - 2*rho*u*v + v^2) + rho*R ) / R^2
-    }
-
-    TH.X <- c(-Inf, th.x, Inf); TH.Y <- c(-Inf, th.y, Inf)
-    nr <- length(TH.X) - 1L; nc <- length(TH.Y) - 1L
-    gnorm <- matrix(0, nr, nc)
-    for(i in seq_len(nr)) {
-        for(j in seq_len(nc)) {
-            g1 <- g2 <- g3 <- g4 <- 0
-            if(i < nr && j < nc) {
-                u <- TH.X[i   +1L]; v <- TH.Y[j   +1L]
-                g1 <- dbinorm(u, v, rho) * guv(u,v,rho)
-            }
-            if(i > 1L && j < nc) {
-                u <- TH.X[i-1L+1L]; v <- TH.Y[j   +1L]
-                g2 <- dbinorm(u, v, rho) * guv(u,v,rho)
-            }
-            if(i < nr && j > 1L) {
-                u <- TH.X[i   +1L]; v <- TH.Y[j-1L+1L]
-                g3 <- dbinorm(u, v, rho) * guv(u,v,rho)
-            }
-            if(i > 1L && j > 1L) {
-                u <- TH.X[i-1L+1L]; v <- TH.Y[j-1L+1L]
-                g4 <- dbinorm(u, v, rho) * guv(u,v,rho)
-            }
-            gnorm[i,j] <- (g1 - g2 - g3 + g4)
-        }
-    }
-
-    gnorm
-}
-
-# density of a bivariate standard normal 
-dbinorm <- function(u, v, rho) {
-    R <- 1-rho^2
-    1/(2*pi*sqrt(R)) * exp( - 0.5*(u^2 - 2*rho*u*v + v^2)/R )
-}
-
-# partial derivative - rho
-dbinorm_drho <- function(u, v, rho) {
-    R <- 1 - rho^2
-    dbinorm(u,v,rho) * (u*v*R -rho*(u^2 - 2*rho*u*v + v^2) + rho*R )/R^2
-}
-
-# partial derivative - u
-dbinorm_du <- function(u, v, rho) {
-    R <- 1 - rho^2
-    -dbinorm(u,v,rho) * (u - rho*v)/R
-}
-
-# partial derivative - v
-dbinorm_dv <- function(u, v, rho) {
-    R <- 1 - rho^2
-    -dbinorm(u,v,rho) * (v - rho*u)/R
-}
-
-# CDF of bivariate standard normal
-# function pbinorm(upper.x, upper.y, rho)
-
-# partial derivative pbinorm - upper.x
-pbinorm_dupper.x <- function(upper.x, upper.y, rho=0.0) {
-    R <- 1 - rho^2
-    dnorm(upper.x) * pnorm( (upper.y - rho*upper.x)/R )
-}
-
-pbinorm_dupper.y <- function(upper.x, upper.y, rho=0.0) {
-    R <- 1 - rho^2
-    dnorm(upper.y) * pnorm( (upper.x - rho*upper.y)/R )
-}
-
-pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
-    dbinorm(upper.x, upper.y, rho)    
-}
-
-
-
-pcL_i <- function(x.z1, x.z2, y.z1, y.z2, rho) {
-   # using pbivnorm is MUCH faster (loop in fortran)
-   #
-   #lik <-  ( pbivnorm(x=x.z1, y=y.z1, rho=rho) -
-   #          pbivnorm(x=x.z2, y=y.z1, rho=rho) -
-   #          pbivnorm(x=x.z1, y=y.z2, rho=rho) +
-   #          pbivnorm(x=x.z2, y=y.z2, rho=rho)  )
-
-   # this uses mvtnorm
-   lik <- pbinorm(upper.x=x.z1, upper.y=y.z1,
-                  lower.x=x.z2, lower.y=y.z2, rho=rho)
-   lik
-}
-
-
-pcLogl_i <- function(x.z1, x.z2, y.z1, y.z2, rho) {
-
-    lik <- pcL_i(x.z1=x.z1, x.z2=x.z2, y.z1=y.z1, y.z2=y.z2, rho=rho)
-    logl <- sum( log(lik) )
-
-    logl
-}
-
-# testing only
-F_ij_pc <- function(x, X, Y, nth.x, nth.y, verbose=FALSE) {
-    rho = x[1L]
-    th.x = x[1L + 1:nth.x]
-    th.y = x[1L + nth.x + 1:nth.y]
-
-    freq <- bifreq(X,Y)
-    
-    logl <- pcLogl_freq(freq, rho=x[1L], th.x, th.y)
-    logl
-}
-#numDeriv:::grad(F_ij_pc, x=x.par)
-#scores <- scores_pccor_uni(X=X, Y=Y, rho=rho, th.x=th.x, th.y=th.y)
-#apply(scores, 2, sum)
-
 F_ij_ps <- function(x, X, Y, nth.y, verbose=FALSE) {
     rho = x[1L]
     mu.x = x[2L]
@@ -1078,29 +721,6 @@ F_ij_cor <- function(x, X, Y, verbose=FALSE) {
     logl
 }
 #numDeriv:::grad(F_ij_corX, x=x.par)[-1]
-
-
-F_ij_pcX <- function(x, X, Y, eXo,  nth.x,  nth.y, verbose=FALSE) {
-
-    nexo <- ncol(eXo)
-
-    rho = x[1L]
-    th.x = x[1L + 1:nth.x]
-    th.y = x[1L + nth.x + 1:nth.y]
-    sl.x = x[1L + nth.x + nth.y + 1:nexo]
-    sl.y = x[1L + nth.x + nth.y + nexo + 1:nexo]
-
-    TH.x <- c(-Inf, th.x, +Inf); eta.x <- drop(eXo %*% sl.x)
-    x.z1 <- pmin( 100, TH.x[X+1L   ] - eta.x)
-    x.z2 <- pmax(-100, TH.x[X+1L-1L] - eta.x)
-    TH.y <- c(-Inf, th.y, +Inf); eta.y <- drop(eXo %*% sl.y)
-    y.z1 <- pmin( 100, TH.y[Y+1L   ] - eta.y)
-    y.z2 <- pmax(-100, TH.y[Y+1L-1L] - eta.y)
-
-    logl <- pcLogl_i(x.z1, x.z2, y.z1, y.z2, rho)
-    logl
-}
-#numDeriv:::grad(F_ij_pcX, x=x.par)[-1]
 
 F_ij_psX <- function(x, X, Y, eXo, nth.y, verbose=FALSE) {
 

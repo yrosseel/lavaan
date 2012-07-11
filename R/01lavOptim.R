@@ -5,10 +5,11 @@
 # super class -- virtual statistical model that needs to be optimized
 lavRefOptim <- setRefClass("lavOptim",
 
+# inherits
+contains = "lavModel",
+
 # fields
 fields = list(
-    npar            = "integer",     # number of free model parameters
-    theta           = "numeric",     # the model parameters (free only)
     theta.start     = "numeric",     # starting values
     optim.method    = "character",   # optimization method
     optim.control   = "list",        # control parameter for optimization method
@@ -18,32 +19,23 @@ fields = list(
 # methods
 methods = list(
 
-show = function() {
-    cat(class(.self), "model parameters (theta):\n")
-    print(theta)
+minObjective = function(x) {
+    cat("this is a dummy function [minObjective]\n")
+    return(Inf)
 },
 
-objective = function(x) {
-    cat("this is a dummy function\n")
-    return(as.numeric(NA))
-},
-
-gradient = function(x) {
-    cat("this is dummy function\n")
+minGradient = function(x) {
+    cat("this is dummy a function [minGradient]\n")
     return(rep(as.numeric(NA), npar))
 },
 
-hessian = function(x) {
-    cat("this is dummy function\n")
+minHessian = function(x) {
+    cat("this is dummy a function [minHessian]\n")
     return(matrix(as.numeric(NA), npar, npar))
 }, 
 
-start = function() {
-    rep(0, npar)    
-},
-
 optimize = function(method = "nlminb", control = list(), verbose = FALSE,
-                    start = NULL) {
+                    start.values = NULL) {
     method <- tolower(method)
     hessian <- FALSE
     if( method == "none" ) {
@@ -83,36 +75,34 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
         stop("unknown optim method: ", optim.method)
     }
 
-    # starting values
-    if(is.null(start)) {
-        theta.start <<- .self$start()
-    } else {
-        stopifnot(length(start) == npar)
-        theta.start <<- start
+    # user provided starting values?
+    if(!is.null(start.values)) { 
+        stopifnot(length(start.values) == npar)
+        theta.start <<- start.values
     }
 
     # run objective function to intialize (and see if starting values
     # are valid
-    tmp <- objective(theta.start)
+    tmp <- minObjective(theta.start)
 
     if(optim.method == "newton") {
         out <- lavOptimNewtonRaphson(object=.self, control = optim.control)
         optim.out <<- out
     } else if(optim.method == "nlminb") {
         if(!hessian) {
-            out <- nlminb(start = theta, objective = .self$objective,
-                          gradient = .self$gradient, control = optim.control)
+            out <- nlminb(start = theta, objective = .self$minObjective,
+                          gradient = .self$minGradient, control = optim.control)
         } else {
-            out <- nlminb(start = theta, objective = .self$objective,
-                          gradient = .self$gradient, 
-                          hessian = .self$hessian,
+            out <- nlminb(start = theta, objective = .self$minObjective,
+                          gradient = .self$minGradient, 
+                          hessian = .self$minHessian,
                           control = optim.control)
         }
         # FIXME: use generic fields
         optim.out <<- out
     }
     # just in case, a last call to objective() 
-    tmp <- objective()
+    tmp <- minObjective()
 
 }
 
@@ -141,8 +131,8 @@ lavOptimNewtonRaphson <- function(object,
     alpha_k <- 1
 
     # current estimates
-    fx.old <- object$objective()
-    gradient <- object$gradient()
+    fx.old <- object$minObjective()
+    gradient <- object$minGradient()
     norm.grad <- sqrt( crossprod(gradient) )
     max.grad <- max(abs(gradient))
 
@@ -165,12 +155,12 @@ lavOptimNewtonRaphson <- function(object,
         }
 
         # compute search direction 'p_k'
-        hessian <- object$hessian()
+        hessian <- object$minHessian()
         p_k <- as.numeric( solve(hessian, gradient) )
 
         # update theta and fx
         theta <- object$theta - alpha_k * p_k
-        fx.new <- object$objective(theta)
+        fx.new <- object$minObjective(theta)
 
         # check if we minimize
         if(fx.new > fx.old) {
@@ -179,7 +169,7 @@ lavOptimNewtonRaphson <- function(object,
                 inner <- inner + 1L
                 alpha_k <- alpha_k/2
                 theta <<- object$theta + alpha_k * p_k
-                fx.new <- object$objective(theta)
+                fx.new <- object$minObjective(theta)
                 if(fx.new < fx.old)
                     break
             }
@@ -194,7 +184,7 @@ lavOptimNewtonRaphson <- function(object,
         }
 
         # update
-        gradient <- object$gradient()
+        gradient <- object$minGradient()
         max.grad <- max(abs(gradient))
         norm.grad <- sqrt( crossprod(gradient) )
         fx.old <- fx.new
