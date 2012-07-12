@@ -14,9 +14,12 @@ lavOLS <- function(y, X = NULL,
     lavR <- lavRefOLS$new(y = y, X = X)
 
     # optimize
-    if(method != "none")
+    if(method != "none") {
         lavR$optimize(method = method, control = control, verbose = verbose,
                       start.values = start.values)
+    } else {
+        lavR$lik() # initialize
+    }
 
     lavR
 }
@@ -60,7 +63,11 @@ initialize = function(y, X = NULL, ...) {
     # set up for Optim
     npar  <<- 1L + nexo + 1L # intercept + slopes + var
     start(); theta <<- theta.start
-    theta.labels <<- c("int", paste("beta",seq_len(nexo),sep=""), "var.e")
+    if(nexo > 0L)
+        sl.lab <- paste("beta",seq_len(nexo),sep="")
+    else
+        sl.lab <- character(0)
+    theta.labels <<- c("int", sl.lab, "var.e")
 },
 
 start = function() {

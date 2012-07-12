@@ -141,45 +141,17 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     H22[pstar.idx,pstar.idx] <- sqrt(VAR[i]) * sqrt(VAR[j])
                 } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                     # polyserial
-                    if(nexo > 0L) {
-                        out <- pscorX_TS(X=Data[,i], Y=Data[,j], eXo=NULL,
-                                         mu.x=TH[[i]], var.x=VAR[i], 
-                                         eta.x=FIT[[i]]$yhat,
-                                         y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2,
-                                         scores=TRUE)
-                        SC.COR[,pstar.idx] <- attr(out, "scores")
-                    } else {
-                        out <- pscor_TS(X=Data[,i], Y=Data[,j], th.y=TH[[j]])
-                        COR[i,j] <- COR[j,i] <- out
-                        SC.COR[,pstar.idx] <- 
-                            scores_pscor(X=Data[,i], Y=Data[,j], rho=out,
-                                         mu.x=TH[[i]], var.x=VAR[i], th.y=TH[[j]])
-                    }
+                    out <- ps_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]])
                     COR[i,j] <- COR[j,i] <- out
                     H22[pstar.idx,pstar.idx] <- sqrt(VAR[i])
                 } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
                     # polyserial
-                    if(nexo > 0L) {
-                        out <- pscorX_TS(X=Data[,j], Y=Data[,i], eXo=NULL,
-                                         mu.x=TH[[j]], var.x=VAR[j],
-                                         eta.x=FIT[[j]]$yhat,
-                                         y.z1=FIT[[i]]$z1, y.z2=FIT[[i]]$z2,
-                                         scores=TRUE)
-                        SC.COR[,pstar.idx] <- attr(out, "scores")
-                    } else {
-                        out <- pscor_TS(X=Data[,j], Y=Data[,i], th.y=TH[[i]])
-                        SC.COR[,pstar.idx] <- 
-                        scores_pscor(X=Data[,j], Y=Data[,i], rho=out,
-                                     mu.x=TH[[j]], var.x=VAR[j], th.y=TH[[i]])
-                    }
+                    out <- ps_cor_TS(fit.y1=FIT[[j]], fit.y2=FIT[[i]])
                     COR[i,j] <- COR[j,i] <- out
                     H22[pstar.idx,pstar.idx] <- sqrt(VAR[j])
                 } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     # polychoric correlation
-                    out <- pc_cor_TS(Y1=Data[,i], Y2=Data[,j], eXo=eXo,
-                                     th.y1 = TH[[i]], th.y2 = TH[[j]],
-                                     y1.z1=FIT[[i]]$z1, y1.z2=FIT[[i]]$z2,
-                                     y2.z1=FIT[[j]]$z1, y2.z2=FIT[[j]]$z2)
+                    out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]])
                     COR[i,j] <- COR[j,i] <- out
                 }
             }
@@ -230,10 +202,6 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 th.idx_i <- th.start.idx[i]:th.end.idx[i]
                 th.idx_j <- th.start.idx[j]:th.end.idx[j]
                 if(nexo > 0L) {
-                    #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-                    #sl.idx_i <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
-                    #sl.end.idx <- (j*nexo); sl.start.idx <- (j-1L)*nexo + 1L
-                    #sl.idx_j <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
                     sl.idx_i <- ncol(SC.TH) + seq(i, by=nvar, length.out=nexo)
                     sl.idx_j <- ncol(SC.TH) + seq(j, by=nvar, length.out=nexo)
 
@@ -243,10 +211,6 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     var.idx_i <- ncol(SC.TH) + match(i, num.idx)
                     var.idx_j <- ncol(SC.TH) + match(j, num.idx)
                 }
-                #cat("i = ", i, " j = ", j, "\n")
-                #cat("ov.types[i] = ", ov.types[i], "\n",
-                #   "ov.types[j] = ", ov.types[j], "\n")
-                #cat("nexo = ", nexo, "\n")
                 if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
                     if(nexo > 0) {
                         SC.COR.UNI <-
@@ -276,80 +240,59 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     H21[pstar.idx, var.idx_j] <-
                         (sqrt(VAR[i]) * COR[i,j]) / (2*sqrt(VAR[j]))
                 } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
-                    # polyserial
-                    if(nexo > 0L) {
-                        SC.COR.UNI <-
-                            scores_pscorX_uni(X=Data[,i], Y=Data[,j], eXo=eXo,
-                                              rho=COR[i,j], th.y=TH[[j]],
-                                              eta.x=FIT[[i]]$yhat, var.x=VAR[i], 
-                                              y.z1=FIT[[j]]$z1, y.z2=FIT[[j]]$z2)
-                    } else {
-                        SC.COR.UNI <-
-                            scores_pscor_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j], 
-                                             mu.x=TH[[i]], var.x=VAR[i], 
-                                             th.y=TH[[j]])
-                    }
+                    SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
+                                                fit.y1=FIT[[i]], 
+                                                fit.y2=FIT[[j]])
+                    # RHO
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+
                     # TH
                     A21[pstar.idx, th.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.x)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
                     A21[pstar.idx, th.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                     # SL
                     if(nexo > 0L) {
                         A21[pstar.idx, sl.idx_i] <-
-                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.x)
+                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                         A21[pstar.idx, sl.idx_j] <-
-                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y)
+                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                     }
                     # VAR
                     A21[pstar.idx, var.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.x)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
                     # H21 only need for VAR
                     H21[pstar.idx,  var.idx_i] <- COR[i,j] / (2*sqrt(VAR[i]))
                 } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
-                    # polyserial
-                    if(nexo > 0L) {
-                        SC.COR.UNI <-
-                            scores_pscorX_uni(X=Data[,j], Y=Data[,i], eXo=eXo,
-                                              rho=COR[i,j], th.y=TH[[i]],
-                                              eta.x=FIT[[j]]$yhat, var.x=VAR[j], 
-                                              y.z1=FIT[[i]]$z1, y.z2=FIT[[i]]$z2)
-                    } else {
-                        SC.COR.UNI <-
-                            scores_pscor_uni(X=Data[,j], Y=Data[,i], rho=COR[i,j], 
-                                             mu.x=TH[[j]], var.x=VAR[j],
-                                             th.y=TH[[i]])
-                    }
+                    SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
+                                                fit.y1=FIT[[j]], 
+                                                fit.y2=FIT[[i]])
+                    # RHO
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+
                     # TH
                     A21[pstar.idx, th.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.x)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
                     A21[pstar.idx, th.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                     # SL
                     if(nexo > 0L) {
                         A21[pstar.idx, sl.idx_j] <-
-                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.x)
+                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                         A21[pstar.idx, sl.idx_i] <-
-                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y)
+                            crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                     }
                     # VAR
                     A21[pstar.idx, var.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.x)
+                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
                     # H21 only for VAR
                     H21[pstar.idx, var.idx_j] <- COR[i,j] / (2*sqrt(VAR[j]))
 
-                    UNI <- cbind(SC.COR.UNI$dx.mu.x,
-                                 SC.COR.UNI$dx.th.y,
-                                 SC.COR.UNI$dx.sl.x,
-                                 SC.COR.UNI$dx.sl.y,
-                                 SC.COR.UNI$dx.var.x)
-                    UNI1 <- apply(UNI, 2, sum)
                 } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     # polychoric correlation
-                    SC.COR.UNI <-
-                        pc_cor_scores(Y1=Data[,i], Y2=Data[,j], rho=COR[i,j],
-                                      eXo=eXo,
-                                      fit.y1=FIT[[i]], fit.y2=FIT[[i]])
+                    SC.COR.UNI <- pc_cor_scores(rho=COR[i,j], 
+                                                fit.y1=FIT[[i]], 
+                                                fit.y2=FIT[[i]])
                     # RHO
                     SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
                     
