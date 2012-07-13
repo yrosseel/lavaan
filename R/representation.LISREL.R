@@ -564,14 +564,15 @@ derivative.sigma.LISREL <- function(m="lambda",
         # since we depend on idx=m.el.idx
         # otherwise, we could simply postmultiply with the duplicationMatrix
 
-        ## FIXME!! find a more elegant solution here...
         # we sum up lower.tri + upper.tri (but not the diagonal elements!)
-        imatrix <- matrix(1:nfac^2,nfac,nfac)
-        lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
-        upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
+        #imatrix <- matrix(1:nfac^2,nfac,nfac)
+        #lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
+        #upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
+        lower.idx <- lavaan:::vech.idx(nfac, diag=FALSE)
+        upper.idx <- lavaan:::vechru.idx(nfac, diag=FALSE)
+        # NOTE YR: upper.idx (see 3 lines up) is wrong in MH patch!
+        # fixed again 13/06/2012 after bug report of Mijke Rhemtulla.
 
-        #MH: If I understand this correctly, because the upper and lower triangle elements are replaced by the sum, all elements will be equal.
-        #MH: Is a single assignment using a tiling of the off diagonal sum more elegant? :)
         offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
         DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
         if(delta.flag)
