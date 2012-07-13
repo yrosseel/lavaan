@@ -326,12 +326,12 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL) {
                 dnorm(fit.y2$z2) * pnorm( (fit.y1$z2-rho*fit.y2$z2)/R) )
     dx.th.y2 <- (fit.y2$Y1*y2.Z1 - fit.y2$Y2*y2.Z2) / lik
 
-    dx.sl.x <- dx.sl.y <- NULL
+    dx.sl.y1 <- dx.sl.y2 <- NULL
     if(length(fit.y1$slope.idx) > 0L) {
-        # sl.x
-        dx.sl.x <- (y1.Z2 - y1.Z1) * eXo / lik
-        # sl.y
-        dx.sl.y <- (y2.Z2 - y2.Z1) * eXo / lik
+        # sl.y1
+        dx.sl.y1 <- (y1.Z2 - y1.Z1) * eXo / lik
+        # sl.y2
+        dx.sl.y2 <- (y2.Z2 - y2.Z1) * eXo / lik
     }
 
     # rho
@@ -349,5 +349,5 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL) {
     dx.rho <- dx / lik
 
     list(dx.th.y1=dx.th.y1, dx.th.y2=dx.th.y2, 
-         dx.sl.x=dx.sl.x, dx.sl.y=dx.sl.y, dx.rho=dx.rho)
+         dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2, dx.rho=dx.rho)
 }

@@ -120,7 +120,7 @@ lavData <- function(data          = NULL,          # data.frame
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
-                       ov.naems.x  = ov.names.x,
+                       ov.names.x  = ov.names.x,
                        ov          = ov,
                        missing     = "listwise")
 

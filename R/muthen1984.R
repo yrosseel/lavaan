@@ -127,17 +127,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
                     if(nexo > 0L) {
                         Y1 <- Data[,i]-FIT[[i]]$yhat; Y2 <- Data[,j]-FIT[[j]]$yhat
-                        my1 <- FIT[[i]]$yhat; my2 <- FIT[[j]]$yhat
                     } else {
                         Y1 <- Data[,i]; Y2 <- Data[,j]
-                        my1 <- TH[[i]]; my2 <- TH[[j]]
                     }
                     COR[i,j] <- COR[j,i] <- cor(Y1, Y2, use="pairwise.complete.obs")
-                    
-                    SC.COR[,pstar.idx] <-
-                        scores_cor(X=Data[,i], Y=Data[,j], rho=COR[i,j],
-                                   mu.x=my1, var.x=VAR[i], 
-                                   mu.y=my2, var.y=VAR[j])
                     H22[pstar.idx,pstar.idx] <- sqrt(VAR[i]) * sqrt(VAR[j])
                 } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                     # polyserial
@@ -164,35 +157,11 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         print(COR)
     }
 
-    # stage three
-    SC <- cbind(SC.TH, SC.SL, SC.VAR, SC.COR)
-    INNER <- crossprod(SC)
-
-    # A11
-    # new approach (2 June 2012): A11 is just a 'sparse' version of 
-    # (the left upper block of) INNER
     A11.size <- ncol(SC.TH) + ncol(SC.SL) + ncol(SC.VAR)
-    A11 <- matrix(0, A11.size, A11.size)
-    for(i in 1:nvar) {
-        th.idx <- th.start.idx[i]:th.end.idx[i]
-        sl.idx <- integer(0L)
-        var.idx <- integer(0L)
-        if(nexo > 0L) {
-            sl.idx <- ncol(SC.TH) + seq(i, by=nvar, length.out=nexo)
-            #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-            #sl.idx <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
-        } 
-        if(ov.types[i] == "numeric") {
-            var.idx <- ncol(SC.TH) + ncol(SC.SL) + match(i, num.idx)
-        }
-        a11.idx <- c(th.idx, sl.idx, var.idx)
-        A11[a11.idx, a11.idx] <- INNER[a11.idx, a11.idx]
-    }
 
     # A21
-    A21 <- matrix(0, pstar, ncol(A11))
-    AA21 <- matrix(0, pstar, ncol(A11)) # debug only
-    H21 <- matrix(0, pstar, ncol(A11))
+    A21 <- matrix(0, pstar, A11.size)
+    H21 <- matrix(0, pstar, A11.size)
     # for this one, we need new scores: for each F_ij (cor), the
     # scores with respect to the TH, VAR, ...
     if(nvar > 1L) {
@@ -212,18 +181,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                     var.idx_j <- ncol(SC.TH) + match(j, num.idx)
                 }
                 if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
-                    if(nexo > 0) {
-                        SC.COR.UNI <-
-                            scores_corX_uni(X=Data[,i], Y=Data[,j], eXo=eXo,
-                                            rho=COR[i,j],
-                                            eta.x=FIT[[i]]$yhat, var.x=VAR[i],
-                                            eta.y=FIT[[j]]$yhat, var.y=VAR[j])
-                    } else {
-                        SC.COR.UNI <-
-                            scores_cor_uni(X=Data[,i], Y=Data[,j], rho=COR[i,j],
-                                           mu.x=TH[[i]], var.x=VAR[i], 
-                                           mu.y=TH[[j]], var.y=VAR[j])
-                    }
+                    SC.COR.UNI <- pp_cor_scores(rho=COR[i,j],
+                                                fit.y1=FIT[[i]],
+                                                fit.y2=FIT[[j]])
+
+                    # RHO
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+
                     # TH
                     A21[pstar.idx, th.idx_i] <-
                         crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.x)
@@ -313,7 +277,30 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             }
         }
     }
-       
+
+    # stage three
+    SC <- cbind(SC.TH, SC.SL, SC.VAR, SC.COR)
+    INNER <- crossprod(SC)
+
+    # A11
+    # new approach (2 June 2012): A11 is just a 'sparse' version of 
+    # (the left upper block of) INNER
+    A11 <- matrix(0, A11.size, A11.size)
+    for(i in 1:nvar) {
+        th.idx <- th.start.idx[i]:th.end.idx[i]
+        sl.idx <- integer(0L)
+        var.idx <- integer(0L)
+        if(nexo > 0L) {
+            sl.idx <- ncol(SC.TH) + seq(i, by=nvar, length.out=nexo)
+            #sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
+            #sl.idx <- ncol(SC.TH) + (sl.start.idx:sl.end.idx)
+        }
+        if(ov.types[i] == "numeric") {
+            var.idx <- ncol(SC.TH) + ncol(SC.SL) + match(i, num.idx)
+        }
+        a11.idx <- c(th.idx, sl.idx, var.idx)
+        A11[a11.idx, a11.idx] <- INNER[a11.idx, a11.idx]
+    }
 
     # A22
     A22 <- matrix(0, pstar, pstar)

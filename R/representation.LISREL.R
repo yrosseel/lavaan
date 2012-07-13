@@ -569,9 +569,9 @@ derivative.sigma.LISREL <- function(m="lambda",
         imatrix <- matrix(1:nfac^2,nfac,nfac)
         lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
         upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
-        
+
         #MH: If I understand this correctly, because the upper and lower triangle elements are replaced by the sum, all elements will be equal.
-        #MH: Is a single assignment using a tiling of the off diagonal sum more elegant? :) 
+        #MH: Is a single assignment using a tiling of the off diagonal sum more elegant? :)
         offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
         DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
         if(delta.flag)
@@ -610,6 +610,12 @@ derivative.mu.LISREL <- function(m="alpha",
        m == "tau" || m == "delta") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
+
+    # missing alpha
+    if(is.null(MLIST$alpha)) 
+        ALPHA <- matrix(0, nfac, 1L)
+    else
+        ALPHA  <- MLIST$alpha
  
 
     # beta?
@@ -621,7 +627,6 @@ derivative.mu.LISREL <- function(m="alpha",
     } else {
         IB.inv <- diag(nfac)
     }
-    ALPHA  <- MLIST$alpha
 
     if(m == "nu") {
         DX <- diag(nvar)
@@ -789,13 +794,14 @@ derivative.pi.LISREL <- function(m="lambda",
     DX
 }
 
-TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE,
-                                       pi=FALSE) {
+TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
+                                       th=FALSE, delta=FALSE, pi=FALSE) {
 
     if(is.null(MLIST)) {
         # create artificial matrices, compare 'numerical' vs 'analytical' 
         # derivatives
-        nvar <- 12; nfac <- 3; nexo <- 4
+        #nvar <- 12; nfac <- 3; nexo <- 4 # this combination is special?
+        nvar <- 20; nfac <- 6; nexo <- 5
         th.idx <- c(1,0,3,3,3,3,3,3,0,0,6,7,8,0,10,10,10,10,10,11,11,0)
         nth <- sum(th.idx > 0L)
 
@@ -804,8 +810,10 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, th=FALSE, delta=FALSE,
         MLIST$beta   <- matrix(0,nfac,nfac)
         MLIST$theta  <- matrix(0,nvar,nvar)
         MLIST$psi    <- matrix(0,nfac,nfac)
-        MLIST$alpha  <- matrix(0,nfac,1L)
-        MLIST$nu     <- matrix(0,nvar,1L)
+        if(meanstructure) {
+            MLIST$alpha  <- matrix(0,nfac,1L)
+            MLIST$nu     <- matrix(0,nvar,1L)
+        }
         if(th) MLIST$tau    <- matrix(0,nth,1L)
         if(delta) MLIST$delta  <- matrix(0,nvar,1L)
         MLIST$gamma <- matrix(0,nfac,nexo)
