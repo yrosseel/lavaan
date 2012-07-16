@@ -13,6 +13,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # Third success: Monday 2 July 2012: support for fixed.x covariates
     # 
     # Friday 13 July: merge exo + non-exo code
+    # Monday 16 July: fixed sign numeric in WLS.W; I think we got it right now
 
     nvar <- ncol(Data); N <- nrow(Data)
     nTH <- ov.levels - 1L; nTH[nTH == -1L] <- 1L
@@ -311,11 +312,6 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # A12
     A12 <- matrix(0, nrow(A11), ncol(A22))
 
- 
-    # debug ONLY
-    #A21[,c(1,2,3)] <- -A21[,c(1,2,3)]
-
-
     B <- rbind( cbind(A11,A12),
                 cbind(A21,A22) )
     B.inv <- solve(B)
@@ -340,8 +336,15 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         COV <- COR
           H <- diag(ncol(WLS.W))
     }
-    
 
+    # reverse sign numeric TH (because we provide -mu in WLS.obs)
+    # (WOW, it took me a LOOONGGG time to realize this!)
+    # YR 16 July 2012
+    if(length(num.idx) > 0L) {
+        WLS.W[num.idx,] <- -WLS.W[num.idx,]
+        WLS.W[,num.idx] <- -WLS.W[,num.idx]
+    }
+    
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 SC=SC, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
