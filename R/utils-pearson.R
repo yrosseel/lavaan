@@ -161,7 +161,8 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     z <- Y1c^2/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c^2/var.y2
     dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R^2)
 
-    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, dx.sl.y1=dx.sl.y1,
-         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, dx.sl.y2=dx.sl.y2,
+    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, 
+         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, 
+         dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2,
          dx.rho=dx.rho)
 }

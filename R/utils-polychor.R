@@ -335,7 +335,7 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL) {
     }
 
     # rho
-    if(length(fit.y1$slope.idx) > 0L) {
+    if(length(fit.y1$slope.idx) == 0L) {
         phi <- pc_PHI(rho, th.y1=fit.y1$theta[fit.y1$th.idx], 
                            th.y2=fit.y2$theta[fit.y2$th.idx])
         #PP <- phi/PI

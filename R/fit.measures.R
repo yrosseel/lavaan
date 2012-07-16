@@ -102,13 +102,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         if(estimator == "ML") {
             fit.measures <- c(chisq, baseline, cfi.tli, logl, rmsea.full, srmr)
         } else {
-            if(multigroup) {
-                fit.measures <- c(chisq, baseline, cfi.tli, 
-                                  rmsea.ci, srmr) 
-            } else {
-                fit.measures <- c(chisq, baseline, cfi.tli, 
-                                  rmsea.full, srmr)
-            }
+            fit.measures <- c(chisq, baseline, cfi.tli, rmsea.full, srmr)
         }
     }
     indices <- list()
@@ -328,7 +322,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         }
     }
 
-    N.RMSEA <- max(N, X2*2) # FIXME: good strategy??
+    N.RMSEA <- max(N, X2*4) # FIXME: good strategy??
     if(any(c("rmsea","rmsea.scaled") %in% fit.measures)) {
         # RMSEA
         if(df > 0) {

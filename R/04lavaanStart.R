@@ -102,9 +102,10 @@ StartingValues <- function(start.method = "default",
 
         # info from user model for this group
         if(categorical) {
-            ov.names    <- vnames(partable, "ov.nox", group=g)
+            ov.names     <- vnames(partable, "ov.nox", group=g)
+            ov.names.num <- vnames(partable, "ov.num", group=g)
         } else {
-            ov.names    <- vnames(partable, "ov",     group=g)
+            ov.names.num <- ov.names <- vnames(partable, "ov", group=g)
         }
         lv.names    <- vnames(partable, "lv",   group=g)
         ov.names.x  <- vnames(partable, "ov.x", group=g)
@@ -142,11 +143,11 @@ StartingValues <- function(start.method = "default",
         }
 
         # 2g) residual ov variances (including exo, to be overriden)
-        ov.var.idx <- which(partable$group == g         & 
-                            partable$op    == "~~"      & 
-                            partable$lhs %in% ov.names  & 
+        ov.var.idx <- which(partable$group == g             & 
+                            partable$op    == "~~"          & 
+                            partable$lhs %in% ov.names.num  & 
                             partable$lhs == partable$rhs)
-        sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names)
+        sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names.num)
         if(start.initial == "mplus") {
             #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
             start[ov.var.idx] <- 

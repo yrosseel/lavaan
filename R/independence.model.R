@@ -123,8 +123,8 @@ independence.model.fit <- function(object) {
     # - if estimator = WLSMV, baseline model is NOT using
     #   scaled.shifted, but mean.(var.)adusted!!
     test.options <- lavaanOptions
-    if(test.options$test == "scaled.shifted")
-        test.options$test <- "mean.var.adjusted"
+    #if(test.options$test == "scaled.shifted")
+    #    test.options$test <- "mean.var.adjusted"
     TEST <- computeTestStatistic(lavaanModel,
                                  partable      = lavaanParTable,
                                  samplestats   = lavaanSampleStats,

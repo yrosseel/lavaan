@@ -66,6 +66,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
         categorical <- FALSE
         ov.types  <- DataOv$type[ match(ov.names[[g]], DataOv$name) ]
         ov.levels <- DataOv$nlev[ match(ov.names[[g]], DataOv$name) ]
+        CAT <- list()
         if(!is.null(Data) && "ordered" %in% ov.types) {
             categorical <- TRUE
             CAT <- muthen1984(Data=X[[g]], 
