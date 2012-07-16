@@ -1224,7 +1224,8 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
     attr(x, "iterations") <- iterations
     attr(x, "control")    <- control
     attr(x, "fx")         <- fx
-    if(!is.null(optim.out$con.jac)) attr(x, "con.jac") <- optim.out$con.jac
+    if(!is.null(optim.out$con.jac)) attr(x, "con.jac")    <- optim.out$con.jac
+    if(!is.null(optim.out$lambda))  attr(x, "con.lambda") <- optim.out$lambda
 
     x
 

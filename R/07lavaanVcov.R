@@ -18,8 +18,6 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
                                         estimator=estimator)
     }
 
-    E.inv <- solve(E)
-    #E.inv <- MASS.ginv(E)
     if(nrow(object@con.jac) > 0L) {
         H <- object@con.jac
         inactive.idx <- attr(H, "inactive.idx")
@@ -27,14 +25,23 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
             H <- H[-inactive.idx,,drop=FALSE]
         }
         if(nrow(H) > 0L) {
-            NVarCov <- ( E.inv - E.inv %*% t(H) %*% 
-                                 solve(H %*% E.inv %*% t(H)) %*%
-                                 H %*% E.inv )
+            #NVarCov <- ( E.inv - E.inv %*% t(H) %*% 
+            #                     solve(H %*% E.inv %*% t(H)) %*%
+            #                     H %*% E.inv )
+            H1 <- matrix(0,ncol(E), ncol(E))
+            H0 <- matrix(0,nrow(H),nrow(H))
+            H10 <- matrix(0, ncol(E), nrow(H))
+            DL <- 2*diag(object@con.lambda, nrow(H),nrow(H)) # lagrangean coefs
+            E3 <- rbind( cbind(     E,  H10, t(H)),
+                         cbind(t(H10),   DL,  H0),
+                         cbind(     H,   H0,  H0)  )
+            NVarCov <- MASS.ginv(E3)[1:ncol(E), 1:ncol(E)]
+            # FIXME: better include inactive + slacks??
         } else {
-            NVarCov <- E.inv
+            NVarCov <- solve(E)
         }
     } else {
-        NVarCov <- E.inv
+        NVarCov <- solve(E)
     }
 
     NVarCov

@@ -96,6 +96,7 @@ setClass("Model",          # MATRIX representation of the sem model
         cin.function="function",
         cin.jacobian="function",
         con.jac="matrix",
+        con.lambda="numeric",
 
         nexo="integer",
         fixed.x="logical"

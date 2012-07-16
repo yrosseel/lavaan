@@ -411,6 +411,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
+        if(!is.null(attr(x, "con.lambda")))
+            lavaanModel@con.lambda <- attr(x, "con.lambda")
         # check if model has converged or not
         if(!attr(x, "converged") && lavaanOptions$warn) {
            warning("lavaan WARNING: model has NOT converged!")
