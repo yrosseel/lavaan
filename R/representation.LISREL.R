@@ -254,7 +254,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
 
 # compute SigmaHat for a single group
-computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE) {
+computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE, useSolve=FALSE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -267,9 +267,13 @@ computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                        PACKAGE = "base")
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                            PACKAGE = "base")
+        }
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -286,7 +290,7 @@ computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE) {
 }
 
 # compute MuHat for a single group
-computeMuHat.LISREL <- function(MLIST=NULL) {
+computeMuHat.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
 
     NU     <- MLIST$nu
     ALPHA  <- MLIST$alpha
@@ -302,9 +306,13 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                        PACKAGE = "base")
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                            PACKAGE = "base")
+        }
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
     
@@ -315,7 +323,7 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
 }
 
 # compute TH for a single group
-computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
+computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
 
     NU     <- MLIST$nu
     ALPHA  <- MLIST$alpha
@@ -334,7 +342,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
     }
 
     # shortcut
-    if(is.null(ALPHA) || is.null(NU)) return(matrix(0, nrow(LAMBDA), 1L))
+    if(is.null(ALPHA) || is.null(NU)) return(matrix(0, length(th.idx), 1L))
 
     # beta?
     if(is.null(BETA)) {
@@ -342,9 +350,13 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                        PACKAGE = "base")
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                            PACKAGE = "base")
+        }
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
    
@@ -365,11 +377,11 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
         TH <- TH * DELTA.star.diag
     }
 
-    as.numeric(TH)
+    as.vector(TH)
 }
 
 # compute PI for a single group
-computePI.LISREL <- function(MLIST=NULL) {
+computePI.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
 
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
@@ -384,9 +396,13 @@ computePI.LISREL <- function(MLIST=NULL) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
                         PACKAGE = "base")
+        }
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -665,7 +681,18 @@ derivative.th.LISREL <- function(m="tau",
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     TAU <- MLIST$tau; nth <- nrow(TAU)
-    ALPHA  <- MLIST$alpha; NU <- MLIST$nu
+
+    # missing alpha
+    if(is.null(MLIST$alpha))
+        ALPHA <- matrix(0, nfac, 1L)
+    else
+        ALPHA  <- MLIST$alpha
+
+    # missing nu
+    if(is.null(MLIST$nu))
+        NU <- matrix(0, nvar, 1L)
+    else
+        NU <- MLIST$nu
 
     # Delta?
     delta.flag <- FALSE
@@ -803,7 +830,11 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         # derivatives
         #nvar <- 12; nfac <- 3; nexo <- 4 # this combination is special?
         nvar <- 20; nfac <- 6; nexo <- 5
-        th.idx <- c(1,0,3,3,3,3,3,3,0,0,6,7,8,0,10,10,10,10,10,11,11,0)
+        th.idx <- rep(seq_len(nvar), times=sample(c(1,1,2,6),nvar,replace=TRUE))
+        # add some numeric
+        num.idx <- sample(seq_len(nvar), ceiling(nvar/2))
+        th.idx[ th.idx %in% num.idx & 
+               !th.idx %in% th.idx[duplicated(th.idx)] ] <- 0
         nth <- sum(th.idx > 0L)
 
         MLIST <- list()
@@ -837,7 +868,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        vech(computeSigmaHat.LISREL(mlist))
+        vech(computeSigmaHat.LISREL(mlist, useSolve=TRUE))
     }
 
     compute.mu <- function(x, mm="lambda", MLIST=NULL) {
@@ -847,17 +878,17 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        computeMuHat.LISREL(mlist)
+        computeMuHat.LISREL(mlist, useSolve=TRUE)
     }
 
-    compute.th2 <- function(x, mm="tau", MLIST=NULL) {
+    compute.th2 <- function(x, mm="tau", MLIST=NULL, th.idx) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
             mlist[[mm]] <- vech.reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
-        computeTH.LISREL(mlist, th.idx=th.idx)
+        computeTH.LISREL(mlist, th.idx=th.idx, useSolve=TRUE)
     }
 
     compute.pi <- function(x, mm="lambda", MLIST=NULL) {
@@ -867,7 +898,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        computePI.LISREL(mlist)
+        computePI.LISREL(mlist, useSolve=TRUE)
     } 
 
     for(mm in names(MLIST)) {
@@ -878,7 +909,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         }
 
         # 1. sigma
-        DX1 <- numDeriv::jacobian(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lavJacobianC(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
@@ -891,7 +922,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
             sprintf("%12.9f", max(DX1-DX2)), "\n")
 
         # 2. mu
-        DX1 <- numDeriv::jacobian(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lavJacobianC(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.mu.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
@@ -905,7 +936,8 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
 
         # 3. th
         if(th) {
-        DX1 <- numDeriv::jacobian(func=compute.th2, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lavJacobianC(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
+                            th.idx=th.idx)
         DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                     MLIST=MLIST, th.idx=th.idx)
         if(mm %in% c("psi","theta")) {
@@ -920,7 +952,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
 
         # 4. pi
         if(pi) {
-        DX1 <- numDeriv::jacobian(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lavJacobianC(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                     MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
