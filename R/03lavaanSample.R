@@ -9,7 +9,6 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    DataOv        = NULL,
                                    missing       = "listwise",
                                    rescale       = FALSE,
-                                   WLS.V         = NULL,
                                    missing.h1    = TRUE,
                                    estimator     = "ML",
                                    mimic         = "lavaan",
@@ -56,8 +55,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
-    if(is.null(WLS.V))
-        WLS.V <- vector("list", length=ngroups)
+    WLS.V          <- vector("list", length=ngroups)
     NACOV          <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
@@ -131,7 +129,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             WLS.obs[[g]] <- c(TH,
                               vec(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),
-                              vech(CAT$COV, diag=FALSE))
+                              vech(CAT$COV, diagonal=FALSE))
         } else if(!categorical && meanstructure) {
             WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
         } else {
@@ -253,8 +251,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       ov.names      = NULL,
                                       estimator     = "ML",
                                       mimic         = "lavaan",
-                                      meanstructure = FALSE,
-                                      WLS.V         = NULL) {
+                                      meanstructure = FALSE) {
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
@@ -278,12 +275,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     missing <- vector("list", length=ngroups)
 
     # WLS.V
-    if(is.null(WLS.V)) {
-        WLS.V <- vector("list", length=ngroups)
-    } else if(is.matrix(WLS.V)) {
-        tmp <- WLS.V; WLS.V <- vector("list", length=ngroups)
-        WLS.V[1:ngroups] <- list(tmp)
-    }
+    WLS.V <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
 

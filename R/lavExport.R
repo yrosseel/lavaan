@@ -16,7 +16,7 @@ lavExport <- function(object, target="lavaan", file=NULL) {
     if(target == "lavaan") {
         model <- export_lavaan(lav)
     } else if(target == "mplus") {
-        model <- export_Mplus(lav)
+        model <- export_mplus(lav)
     } else if(target == "lisrel") {
         model <- export_lisrel(lav)
     } else if(target == "eqs") {
@@ -76,15 +76,15 @@ export_lisrel <- function(lav) {
     stop("this function needs revision")
 }
 
-export.eqs <- function(lav) {
+export_eqs <- function(lav) {
     stop("this function needs revision")
 }
 
-export.sem <- function(lav) {
+export_sem <- function(lav) {
     stop("this function needs revision")
 }
 
-export.openmx <- function(lav) {
+export_openmx <- function(lav) {
     stop("this function needs revision")
 }
 

@@ -52,7 +52,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # estimation
                    estimator       = "default",
                    likelihood      = "default",
-                   WLS.V           = NULL,
                    information     = "default",
                    se              = "default",
                    test            = "default",
@@ -251,7 +250,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        Data          = lavaanData,
                        rescale       = (lavaanOptions$estimator == "ML" &&
                                         lavaanOptions$likelihood == "normal"),
-                       WLS.V         = WLS.V,
                        estimator     = lavaanOptions$estimator,
                        mimic         = lavaanOptions$mimic,
                        meanstructure = lavaanOptions$meanstructure,
@@ -268,8 +266,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
                            rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"),
-                           WLS.V       = WLS.V)
+                                          lavaanOptions$likelihood == "normal"))
+                           
     } else {
         # no data
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
@@ -487,7 +485,7 @@ cfa <- sem <- function(model = NULL,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
-    estimator = "default", likelihood = "default", WLS.V = NULL,
+    estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default", 
@@ -518,7 +516,7 @@ growth <- function(model = NULL,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
-    estimator = "default", likelihood = "default", WLS.V = NULL,
+    estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), start = "default",

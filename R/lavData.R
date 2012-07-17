@@ -252,7 +252,7 @@ getDataFull <- function(data          = NULL,          # data.frame
             ov.names <- list(ov.names)
         }
         if(is.list(ov.names.x)) {
-            if(length(ov.namesi.x) > 1L)
+            if(length(ov.names.x) > 1L)
                 stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
         } else {
             ov.names.x <- list(ov.names.x)
