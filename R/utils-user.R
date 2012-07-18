@@ -591,8 +591,8 @@ getLIST <- function(FLAT=NULL,
             ov.int <- ov.names
         }
         # auto-remove ordinal variables
-        #idx <- which(ov.int %in% ov.names.ord)
-        #if(length(idx)) ov.int <- ov.int[-idx]
+        idx <- which(ov.int %in% ov.names.ord)
+        if(length(idx)) ov.int <- ov.int[-idx]
 
         int.lhs <- c(ov.int, lv.names)
         lhs <- c(lhs, int.lhs)
