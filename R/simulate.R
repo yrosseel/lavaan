@@ -55,6 +55,14 @@ simulateData <- function(
                      auto.cov.lv.x=auto.cov.lv.x,
                      auto.cov.y=auto.cov.y)
 
+    # fill in any remaining NA values (needed for unstandardize)
+    # 1 for variances, 0 otherwise
+    idx <- which(lav$op == "~~" & is.na(lav$ustart) & lav$lhs == lav$rhs)
+    if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+    idx <- which(is.na(lav$ustart))
+    if(length(idx) > 0L) lav$ustart[idx] <- 0.0
+
+
     # unstandardize 
     if(!is.null(ov.var)) {
         # FIXME: if ov.var is named, check the order of the elements
