@@ -8,7 +8,7 @@ cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
     missing = "default", sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", constraints = '', 
+    group.equal = "", group.partial = "", cluster = NULL, constraints = '', 
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default", 
@@ -72,6 +72,7 @@ order as they appear in the data.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{cluster}{Not used yet.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{estimator}{The estimator to be used. Can be one of the following:

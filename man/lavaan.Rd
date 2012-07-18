@@ -8,15 +8,16 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     int.ov.free = FALSE, int.lv.free = FALSE, fixed.x = "default", 
     orthogonal = FALSE, std.lv = FALSE, auto.fix.first = FALSE, 
     auto.fix.single = FALSE, auto.var = FALSE, auto.cov.lv.x = FALSE, 
-    auto.cov.y = FALSE, data = NULL, std.ov = FALSE, missing = "default", 
+    auto.cov.y = FALSE, auto.th = FALSE, auto.delta = FALSE, 
+    data = NULL, std.ov = FALSE, missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.mean = NULL, sample.nobs = NULL, 
-    group = NULL, group.label = NULL, group.equal = "", group.partial = "",
-    constraints = '', estimator = "default", likelihood = "default", 
-    information = "default", se = "default",  test = "default", 
-    bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, control = list(), start = "default", 
-    slotOptions = NULL, slotParTable = NULL, slotSampleStats = NULL, 
-    slotData = NULL, slotModel = NULL,
+    group = NULL, group.label = NULL, group.equal = "", group.partial = "", 
+    cluster = NULL, constraints = "", estimator = "default", 
+    likelihood = "default", information = "default", 
+    se = "default", test = "default", bootstrap = 1000L, mimic = "default", 
+    representation = "default", do.fit = TRUE, control = list(), 
+    start = "default", slotOptions = NULL, slotParTable = NULL, 
+    slotSampleStats = NULL, slotData = NULL, slotModel = NULL, 
     verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -59,6 +60,10 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     variables are included in the model and set free.}
 \item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
     (both observed and latent) are included in the model and set free.}
+\item{auto.th}{If \code{TRUE}, thresholds for limited dependent variables
+    are included in the model and set free.}
+\item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
+    dependent variables are included in the model and set free.}
 \item{data}{An optional data frame containing the observed variables used in
     the model.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
@@ -71,6 +76,7 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     missing completely at random (MCAR) or missing at random (MAR). If
     \code{"default"}, the value is set depending on the estimator and the
     mimic option.}
+\item{ordered}{Not used yet.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
@@ -96,6 +102,7 @@ order as they appear in the data.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{cluster}{Not used yet.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{estimator}{The estimator to be used. Can be one of the following:

@@ -3,14 +3,13 @@
 \title{Simulate Data From a Lavaan Model Syntax}
 \description{Simulate data starting from a lavaan model syntax.}
 \usage{
-simulateData(model = NULL, model.type = "sem", meanstructure = "default", 
-             int.ov.free = TRUE, int.lv.free = FALSE, fixed.x = "default", 
-             orthogonal = FALSE, std.lv = FALSE, auto.fix.first = !std.lv, 
-             auto.fix.single = TRUE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
-             auto.cov.y = TRUE, ..., sample.nobs = 500L, 
-             group.label = paste("G", 1:ngroups, sep = ""),
-             skewness = NULL, kurtosis = NULL, seed = NULL, 
-             empirical = FALSE, return.type = "data.frame")
+simulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
+    int.ov.free = TRUE, int.lv.free = FALSE, fixed.x = FALSE, 
+    orthogonal = FALSE, std.lv = TRUE, auto.fix.first = FALSE, 
+    auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
+    auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
+    group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, return.type = "data.frame")
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -18,57 +17,58 @@ simulateData(model = NULL, model.type = "sem", meanstructure = "default",
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
-  \item{model.type}{Set the model type: possible values
+\item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology
     used in the summary output, or the layout of path diagrams that are
     based on a fitted lavaan object.}
-  \item{meanstructure}{If \code{TRUE}, the means of the observed
+\item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}
-  \item{int.ov.free}{If \code{FALSE}, the intercepts of the observed variables
+\item{int.ov.free}{If \code{FALSE}, the intercepts of the observed variables
     are fixed to zero.}
-  \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
+\item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
-  \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
+\item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
     random, and the means, variances and covariances are free parameters. If
     \code{"default"}, the value is set depending on the mimic option.}
-  \item{orthogonal}{If \code{TRUE}, the exogenous latent variables
+\item{orthogonal}{If \code{TRUE}, the exogenous latent variables
     are assumed to be uncorrelated.}
-  \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
+\item{std.lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
-  \item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
+\item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
-  \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
+\item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
-  \item{auto.var}{If \code{TRUE}, the residual variances and the variances
+\item{auto.var}{If \code{TRUE}, the residual variances and the variances
     of exogenous latent variables are included in the model and set free.}
-  \item{auto.cov.lv.x}{If \code{TRUE}, the covariances of exogenous latent
+\item{auto.cov.lv.x}{If \code{TRUE}, the covariances of exogenous latent
     variables are included in the model and set free.}
-  \item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
+\item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
     (both observed and latent) are included in the model and set free.}
-  \item{\dots}{additional arguments passed to the \code{\link{lavaan}}
+\item{\dots}{additional arguments passed to the \code{\link{lavaan}}
     function.}
-  \item{sample.nobs}{Number of observations. If a vector, multiple datasets
+\item{sample.nobs}{Number of observations. If a vector, multiple datasets
     are created. If \code{return.type = "matrix"} or 
     \code{return.type = "cov"}, a list of \code{length(sample.nobs)} 
     is returned, with either the data or covariance matrices, each one
     based on the number of observations as specified in \code{sample.nobs}.
     If \code{return.type = "data.frame"}, all datasets are merged and 
     a \code{group} variable is added to mimic a multiple group dataset.}
-  \item{group.label}{The group labels that should be used if multiple
+\item{ov.var}{The user-specified variances of the observed variables.}
+\item{group.label}{The group labels that should be used if multiple
     groups are created.}
-  \item{skewness}{Numeric vector. The skewness values for the observed variables. Defaults to zero.}
-  \item{kurtosis}{Numeric vector. The kurtosis values for the observed variables. Defaults to zero.}
-  \item{seed}{Set random seed.}
-  \item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
+\item{skewness}{Numeric vector. The skewness values for the observed variables. Defaults to zero.}
+\item{kurtosis}{Numeric vector. The kurtosis values for the observed variables. Defaults to zero.}
+\item{seed}{Set random seed.}
+\item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
     specify the empirical not population mean and covariance matrix.}
-  \item{return.type}{If \code{"data.frame"}, a data.frame is returned. If
+\item{return.type}{If \code{"data.frame"}, a data.frame is returned. If
     \code{"matrix"}, a numeric matrix is returned (without any variable names).
     If \code{"cov"}, a covariance matrix is returned (without any variable 
     names).}

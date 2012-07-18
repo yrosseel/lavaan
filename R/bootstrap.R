@@ -255,7 +255,6 @@ bootstrap.internal <- function(object       = NULL,
                                missing       = opt$missing,
                                rescale       = (opt$estimator == "ML" &&
                                                 opt$likelihood == "normal"),
-                               WLS.V         = NULL,
                                estimator     = opt$estimator,
                                mimic         = opt$mimic,
                                meanstructure = opt$meanstructure,

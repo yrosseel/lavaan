@@ -10,10 +10,11 @@ function \code{lavaanify} turns it into a list that represents the full
 model as specified by the user. We refer to this list as the parameter table.} 
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, fixed.x = TRUE, 
-    constraints = NULL, auto = FALSE, model.type = "sem",
-    auto.fix.first = FALSE, auto.fix.single = FALSE,  auto.var = FALSE, 
-    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, ngroups = 1L, group.equal = NULL,
+    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
+    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem", 
+    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
+    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
+    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
     group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 parseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
@@ -60,6 +61,12 @@ the model both for both observed and latent variables.}
     variables are included in the model and set free.}
 \item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
     (both observed and latent) are included in the model and set free.}
+\item{auto.th}{If \code{TRUE}, thresholds for limited dependent variables
+    are included in the model and set free.}
+\item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
+    dependent variables are included in the model and set free.}
+\item{varTable}{The variable table containing information about the
+    observed variables in the model.}
 \item{ngroups}{The number of (independent) groups.}
 \item{group.equal}{A vector of character strings. Only used in
     a multiple group analysis. Can be one or more of the following:

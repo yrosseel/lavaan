@@ -171,7 +171,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                missing       = h0@Options$missing,
                                rescale  = (h0@Options$estimator == "ML" && 
                                            h0@Options$likelihood =="normal"), 
-                               WLS.V    = NULL,
                                estimator     = h0@Options$estimator,
                                mimic         = h0@Options$mimic,
                                meanstructure = h0@Options$meanstructure,
