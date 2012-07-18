@@ -325,11 +325,21 @@ computeMuHat.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
 # compute TH for a single group
 computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
 
-    NU     <- MLIST$nu
-    ALPHA  <- MLIST$alpha
-    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     BETA   <- MLIST$beta
     TAU    <- MLIST$tau; nth <- nrow(TAU)
+
+    # missing alpha
+    if(is.null(MLIST$alpha))
+        ALPHA <- matrix(0, nfac, 1L)
+    else
+        ALPHA  <- MLIST$alpha
+
+    # missing nu
+    if(is.null(MLIST$nu))
+        NU <- matrix(0, nvar, 1L)
+    else
+        NU <- MLIST$nu
 
     if(is.null(th.idx)) {
         th.idx <- 1:nth
@@ -342,7 +352,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
     }
 
     # shortcut
-    if(is.null(ALPHA) || is.null(NU)) return(matrix(0, length(th.idx), 1L))
+    if(is.null(TAU)) return(matrix(0, length(th.idx), 1L))
 
     # beta?
     if(is.null(BETA)) {
