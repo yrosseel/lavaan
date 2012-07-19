@@ -577,7 +577,8 @@ getLIST <- function(FLAT=NULL,
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
 
     # LATENT RESPONSE SCALES (DELTA)
-    if(auto.delta && auto.th && length(ov.names.ord) > 0L && ngroups > 1L) {
+    if(auto.delta && auto.th && length(ov.names.ord) > 0L && 
+       (ngroups > 1L || any(FLAT$op == "~*~"))) {
         lhs <- c(lhs, ov.names.ord)
         rhs <- c(rhs, ov.names.ord)
          op <- c(op,  rep("~*~", length(ov.names.ord)))

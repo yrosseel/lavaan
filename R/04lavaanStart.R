@@ -24,6 +24,7 @@ StartingValues <- function(start.method = "default",
     if(start.method == "simple") {
         start <- numeric( length(partable$ustart) )
         start[ which(partable$op == "=~") ] <- 1.0    
+        start[ which(partable$op == "~*~") ] <- 1.0
         var.idx <- which(partable$op == "~~" & partable$lhs == partable$rhs)
         start[var.idx] <- 1.0
         user.idx <- which(!is.na(partable$ustart))

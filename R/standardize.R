@@ -363,9 +363,9 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
         #             partable$group == g)
 
         # 4c. "|" thresholds
-        #idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
-        #             partable$group == g)
-        #out[idx] <- out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
+        idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
 
         # 4d. "~*~" scales
         idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &

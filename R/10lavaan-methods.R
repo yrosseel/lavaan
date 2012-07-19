@@ -95,8 +95,13 @@ short.summary <- function(object) {
                                   "scaled.shifted") &&
        length(object@Fit@test) > 1L) {
         scaled <- TRUE
+        if(object@Options$test == "scaled.shifted")
+            shifted <- TRUE
+        else
+            shifted <- FALSE
     } else {
         scaled <- FALSE
+        shifted <- FALSE
     }
 
     # 0. heading
@@ -157,8 +162,36 @@ short.summary <- function(object) {
                 } else {
                     cat("    for the Satorra-Bentler correction\n")
                 }
+            } else if(object@Options$test == "mean.adjusted") {
+                if(object@Options$mimic == "Mplus" &&
+                   object@Options$estimator == "DWLS") {
+                    cat("    for the mean adjusted correction (WLSM)\n")
+                } else {
+                    cat("    for the mean adjusted correction\n")
+                }
+            } else if(object@Options$test == "mean.var.adjusted") {
+                if(object@Options$mimic == "Mplus" &&
+                   object@Options$estimator == "DWLS") {
+                    cat("    for the mean and variance adjusted correction (WLSMV)\n")
+                } else {
+                    cat("    for the mean and variance adjusted correction\n")
+                }
             }
-        } 
+        }
+
+        # 4b. Shift parameter?
+        if(shifted) {
+            t0.txt <- sprintf("  %-40s", "Shift parameter")
+            t1.txt <- sprintf("  %10s", "")
+            t2.txt <- sprintf("  %10.3f", object@Fit@test[[2]]$shift.parameter)
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            if(object@Options$mimic == "Mplus" &&
+                   object@Options$estimator == "DWLS") {
+                cat("    for simple second-order correction (WLSMV)\n")
+            } else {
+                cat("    for simple second-order correction (Mplus variant)\n")
+            }
+        }
 
         if(object@Data@ngroups > 1L) {
             cat("\n")

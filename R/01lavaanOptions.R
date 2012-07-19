@@ -321,7 +321,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `se' argument when estimator is ULS: ", 
                  opt$se, "\n")
         }
-        if(opt$test != "standard") {
+        if(!opt$test %in% c("standard","none","mean.adjusted",
+                            "mean.var.adjusted","scaled.shifted")) {
             stop("invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
         }
