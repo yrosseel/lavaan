@@ -428,6 +428,110 @@ computePI.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
     PI
 }
 
+# compute ETA: variances/covariances of latents
+computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
+                             useSolve=FALSE) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
+    PSI    <- MLIST$psi
+    THETA  <- MLIST$theta
+    BETA   <- MLIST$beta
+
+    # beta?
+    if(is.null(BETA)) {
+        SY <- PSI
+    } else {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                            PACKAGE = "base")
+        }
+        SY <- tcrossprod(IB.inv %*% PSI, IB.inv)
+    }
+
+    # if GAMMA, also x part
+    GAMMA <- MLIST$gamma
+    if(!is.null(GAMMA)) {
+        stopifnot(!is.null(cov.x))
+        if(is.null(BETA)) {
+            SX <- tcrossprod(GAMMA %*% cov.x, GAMMA)
+        } else {
+            IB.inv..GAMMA <- IB.inv %*% GAMMA
+            SX <- tcrossprod(IB.inv..GAMMA %*% cov.x, IB.inv..GAMMA)
+        }
+        SYX <- SX + SY
+    } else {
+        SYX <- SY
+    }
+
+    SYX
+}
+
+# compute the *un*conditional variance of y: V(Y) or V(Y*)
+computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
+                             useSolve=FALSE) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
+    PSI    <- MLIST$psi
+    THETA  <- MLIST$theta
+    BETA   <- MLIST$beta
+
+    # beta?
+    if(is.null(BETA)) {
+        LAMBDA..IB.inv <- LAMBDA
+    } else {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        if(useSolve) {
+            IB.inv <- solve(tmp)
+        } else {
+            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
+            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
+                            PACKAGE = "base")
+        }
+        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+
+    SY1 <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv)
+
+    # if TAU, we need to adjust the diagonal of THETA
+    TAU <- MLIST$tau
+    if(!is.null(TAU)) {
+        if(!is.null(MLIST$delta)) {
+            DELTA.inv2 <- 1/(MLIST$delta[,1L]*MLIST$delta[,1L]) 
+        } else {
+            DELTA.inv2 <- rep(1, nvar)
+        }    
+        THETA.diag <- DELTA.inv2 - diag(SY1)
+        # but not for continuous 
+        if(length(num.idx) > 0L)
+            THETA.diag[num.idx] <- diag(THETA)[num.idx]
+        # replace diagonal of THETA
+        diag(THETA) <- THETA.diag
+    }
+
+    # compute Sigma Hat
+    SY <- SY1 + THETA
+
+    # if GAMMA, also x part
+    GAMMA <- MLIST$gamma
+    if(!is.null(GAMMA)) {
+        stopifnot(!is.null(cov.x))
+        LAMBDA..IB.inv..GAMMA <- LAMBDA..IB.inv %*% GAMMA
+        SX <- tcrossprod(LAMBDA..IB.inv..GAMMA %*% cov.x, LAMBDA..IB.inv..GAMMA)
+        SYX <- SX + SY
+    } else {
+        SYX <- SY
+    }
+
+    # variances only
+    diag(SYX)
+}
+
 # derivative of the objective function
 derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
 

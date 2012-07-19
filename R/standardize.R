@@ -9,37 +9,25 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
 
     GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
+
+    # compute ETA
+    LV.ETA <- computeETA(object@Model, samplestats=object@SampleStats)
     
     for(g in 1:object@Data@ngroups) {
 
         ov.names <- vnames(object@ParTable, "ov", group=g) # not user, 
                                                        # which may be incomplete
         lv.names <- vnames(object@ParTable, "lv", group=g)
+       
+        # shortcut: no latents in this group, nothing to do
+        if(length(lv.names) == 0L)
+            next
 
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        if(object@Model@representation == "LISREL") {
-            # replace negative variances by 0
-            idx <- which(diag( MLIST$theta) < 0); diag(MLIST$theta)[idx] <- 0
-            # bug reported by Daniel Oberski:
-            # als er een negatieve psi is klopt de gestandaardiseerde waarde 
-            # niet omdat je hem op 0 zet. Dat hoeft echter niet want een i
-            # negatieve psi impliceert niet per se een negatieve variantie i
-            # van de latente variabele. 
-            #idx <- which(diag( MLIST$psi  ) < 0); diag(MLIST$psi)[idx] <- 0
-
-            if("beta" %in% names(MLIST)) {
-                tmp <- -1.0 * MLIST$beta; diag(tmp) <- 1.0
-                ibeta.inv <- solve(tmp)
-                LV <- (ibeta.inv %*% MLIST$psi %*% t(ibeta.inv))
-            } else {
-                LV <- MLIST$psi
-            }
-        }
-
-        ETA2 <- diag(LV)
+        ETA2 <- diag(LV.ETA[[g]])
         ETA  <- sqrt(ETA2)
 
         # 1a. "=~" regular indicators
@@ -152,15 +140,21 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
 
     GLIST <- object@Model@GLIST
 
-    Sigma.hat <- object@Fit@Sigma.hat
+    VY <- computeVY(object@Model, samplestats=object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
 
         ov.names <- vnames(object@ParTable, "ov", group=g) # not user
         lv.names <- vnames(object@ParTable, "lv", group=g)
 
-        OV2 <- diag(Sigma.hat[[g]])
-        OV  <- sqrt(OV2)
+        OV  <- sqrt(VY[[g]])
+
+        if(object@Model@categorical) {
+            # extend OV with ov.names.x
+            ov.names.x <- vnames(object@ParTable, "ov.x", group=g)
+            ov.names <- c(ov.names, ov.names.x)
+            OV <- c(OV, sqrt(diag(object@SampleStats@cov.x[[g]])))
+        }
 
         # 1a. "=~" regular indicators
         idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
@@ -229,6 +223,16 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
         #idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
         #             partable$group == g)
 
+        # 4c. "|" thresholds
+        idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
+
+        # 4d. "~*~" scales
+        idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- 1.0
+
         # 5a ":="
         idx <- which(partable$op == ":=" & partable$group == g)
         if(length(idx) > 0L) {
@@ -269,7 +273,7 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
 
     GLIST <- object@Model@GLIST
 
-    Sigma.hat <- object@Fit@Sigma.hat
+    VY <- computeVY(object@Model, samplestats=object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
 
@@ -278,8 +282,14 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
         ov.names.nox <- vnames(object@ParTable, "ov.nox", group=g)
         lv.names     <- vnames(object@ParTable, "lv",     group=g)
 
-        OV2 <- diag(Sigma.hat[[g]])
-        OV  <- sqrt(OV2)
+        OV  <- sqrt(VY[[g]])
+
+        if(object@Model@categorical) {
+            # extend OV with ov.names.x
+            ov.names.x <- vnames(object@ParTable, "ov.x", group=g)
+            ov.names <- c(ov.names, ov.names.x)
+            OV <- c(OV, sqrt(diag(object@SampleStats@cov.x[[g]])))
+        }
 
         # 1a. "=~" regular indicators
         idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
@@ -352,6 +362,16 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
         #idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
         #             partable$group == g)
 
+        # 4c. "|" thresholds
+        #idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
+        #             partable$group == g)
+        #out[idx] <- out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
+
+        # 4d. "~*~" scales
+        idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
+                     partable$group == g)
+        out[idx] <- 1.0
+
         # 5a ":="
         idx <- which(partable$op == ":=" & partable$group == g)
         if(length(idx) > 0L) {
@@ -392,13 +412,19 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
     N <- length(est)
     ngroups <- max(partable$group)
 
+    # if ov.var is NOT a list, make a list
+    if(!is.list(ov.var)) {
+        tmp <- ov.var
+        ov.var <- vector("list", length=ngroups)
+        ov.var[1:ngroups] <- list(tmp)
+    }
+
     for(g in 1:ngroups) {
 
         ov.names <- vnames(partable, "ov", group=g) # not user
         lv.names <- vnames(partable, "lv", group=g)
 
-        OV2 <- ov.var
-        OV  <- sqrt(OV2)
+        OV  <- sqrt(ov.var[[g]])
 
         # 1a. "=~" regular indicators
         idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &

@@ -265,6 +265,78 @@ computePI <- function(object, GLIST=NULL) {
     PI
 }
 
+# unconditional variances of Y
+#  - same as diag(Sigma.hat) if all Y are continuous)
+#  - 1.0 (or delta^2) if categorical
+#  - if also Gamma, cov.x is used (only if categorical)
+computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    VY <- vector("list", length=ngroups)
+
+    # compute TH for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        cov.x <- samplestats@cov.x[[g]]
+        num.idx <- object@num.idx[[g]]
+
+        if(representation == "LISREL") {
+            VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x,
+                                     num.idx = num.idx)
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        VY[[g]] <- VY.g
+    }
+
+    VY
+}
+
+# ETA: latent variances variances/covariances
+computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    ETA <- vector("list", length=ngroups)
+
+    # compute TH for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        cov.x <- samplestats@cov.x[[g]]
+        num.idx <- object@num.idx[[g]]
+
+        if(representation == "LISREL") {
+            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x,
+                                       num.idx = num.idx)
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        ETA[[g]] <- ETA.g
+    }
+
+    ETA
+}
+
+
 
 setMethod("computeObjective", "Model",
 function(object, GLIST=NULL, samplestats=NULL, estimator="ML", 

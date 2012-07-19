@@ -48,6 +48,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     th.idx      <- vector("list", length=ngroups)
     th.names    <- vector("list", length=ngroups)
     slopes      <- vector("list", length=ngroups)
+    cov.x       <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
@@ -91,6 +92,14 @@ lavSampleStatsFromData <- function(Data          = NULL,
             th.names[[g]] <- unlist(CAT$TH.NAMES)
 
             slopes[[g]] <- CAT$SLOPES
+            if(!is.null(Data@eXo[[g]])) {
+                cov.x[[g]] <- cov(Data@eXo[[g]], use="pairwise")
+                if(rescale) {
+                    # we 'transform' the sample cov (divided by n-1) 
+                    # to a sample cov divided by 'n'
+                    cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
+                }               
+            }
         } else {
             cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
             var[[g]]  <-   diag(cov[[g]])
@@ -221,6 +230,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        cov          = cov,
                        var          = var,
                        slopes       = slopes,
+                       cov.x        = cov.x,
  
                        # convenience
                        nobs         = nobs,

@@ -37,7 +37,8 @@ setClass("lavSampleStats",         # sample moments
         th.nox="list",             # thresholds ignoring eXo
         th.idx="list",
         th.names="list",           # threshold names
-        slopes="list",             # slopes
+        slopes="list",             # slopes exo
+        cov.x="list",              # variance/covariance exo
 
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
