@@ -1269,7 +1269,7 @@ function(object, ...) {
 
     # which models have used a `scaled' test statistic?
     mods.scaled <- unlist( lapply(mods, function(x) {
-        any(c("satorra.bentler", "yuan.bentler") %in% 
+        any(c("satorra.bentler", "yuan.bentler", "mean.adjust", "mean.var.adjusted", "scaled.shifted") %in% 
             unlist(sapply(slot(slot(x, "Fit"), "test"), "[", "test")) ) }))
 
     if(all(mods.scaled)) {
