@@ -65,7 +65,7 @@ estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
 }
 
 # Full Information ML estimator (FIML) handling the missing values 
-estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL) {
+estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
 
     npatterns <- length(M)
 
@@ -100,8 +100,13 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL) {
 
     fx <- weighted.mean(fx.p, w=w.p)
 
-    # no negative values
-    if(fx < 0.0) fx <- 0.0
+    # ajust for h1
+    if(!is.null(h1)) {
+        fx <- fx - h1
+
+        # no negative values
+        if(fx < 0.0) fx <- 0.0
+    }
 
     fx
 }

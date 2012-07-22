@@ -382,7 +382,8 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
 
                 group.fx <- estimator.FIML(Sigma.hat=Sigma.hat[[g]],
                                            Mu.hat=Mu.hat[[g]],
-                                           M=samplestats@missing[[g]])
+                                           M=samplestats@missing[[g]],
+                                           h1=samplestats@missing.h1[[g]]$h1)
             } else {
                 stop("this estimator: `", estimator, 
                      "' can not be used with incomplete data and the missing=\"ml\" option")
@@ -1280,17 +1281,6 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
 
     # transform variances back
     #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
-
-    # adjust fx if FIML (using h1 value)
-    if(samplestats@missing.flag) {
-        fx.group <- attr(fx,"fx.group") 
-        h1 <- lapply(samplestats@missing.h1, "[[", "h1")
-        # in case we have a complete group
-        #h1[unlist(lapply(h1, is.null))] <- 0.0
-        fx.group <- fx.group - unlist(h1)/2.0
-        fx <- sum(fx.group)
-        attr(fx, "fx.group") <- fx.group
-    }
 
     attr(x, "converged")  <- converged
     attr(x, "iterations") <- iterations
