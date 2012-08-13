@@ -254,7 +254,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
 
 # compute SigmaHat for a single group
-computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE, useSolve=FALSE) {
+computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -267,13 +267,7 @@ computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE, useSolve=FALSE) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                            PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -290,7 +284,7 @@ computeSigmaHat.LISREL <- function(MLIST=NULL, delta=TRUE, useSolve=FALSE) {
 }
 
 # compute MuHat for a single group
-computeMuHat.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
+computeMuHat.LISREL <- function(MLIST=NULL) {
 
     NU     <- MLIST$nu
     ALPHA  <- MLIST$alpha
@@ -306,13 +300,7 @@ computeMuHat.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                            PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
     
@@ -323,7 +311,7 @@ computeMuHat.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
 }
 
 # compute TH for a single group
-computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
+computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     BETA   <- MLIST$beta
@@ -360,13 +348,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                            PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
    
@@ -391,7 +373,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, useSolve=TRUE) {
 }
 
 # compute PI for a single group
-computePI.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
+computePI.LISREL <- function(MLIST=NULL) {
 
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
@@ -406,13 +388,7 @@ computePI.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                        PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -429,8 +405,7 @@ computePI.LISREL <- function(MLIST=NULL, useSolve=FALSE) {
 }
 
 # compute ETA: variances/covariances of latents
-computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
-                             useSolve=FALSE) {
+computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -443,13 +418,7 @@ computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                            PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         SY <- tcrossprod(IB.inv %*% PSI, IB.inv)
     }
 
@@ -472,8 +441,7 @@ computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
 }
 
 # compute the *un*conditional variance of y: V(Y) or V(Y*)
-computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
-                             useSolve=FALSE) {
+computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -486,13 +454,7 @@ computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL,
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        if(useSolve) {
-            IB.inv <- solve(tmp)
-        } else {
-            b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-            IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                            PACKAGE = "base")
-        }
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -546,9 +508,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
-        b <- matrix(0,nr,nr); b[cbind(i, i)] <- 1
-        IB.inv <- .Call("La_dgesv", tmp, b, tol=.Machine$double.eps,
-                        PACKAGE = "base")
+        IB.inv <- solve(tmp)
         LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -982,7 +942,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        vech(computeSigmaHat.LISREL(mlist, useSolve=TRUE))
+        vech(computeSigmaHat.LISREL(mlist))
     }
 
     compute.mu <- function(x, mm="lambda", MLIST=NULL) {
@@ -992,7 +952,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        computeMuHat.LISREL(mlist, useSolve=TRUE)
+        computeMuHat.LISREL(mlist)
     }
 
     compute.th2 <- function(x, mm="tau", MLIST=NULL, th.idx) {
@@ -1002,7 +962,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        computeTH.LISREL(mlist, th.idx=th.idx, useSolve=TRUE)
+        computeTH.LISREL(mlist, th.idx=th.idx)
     }
 
     compute.pi <- function(x, mm="lambda", MLIST=NULL) {
@@ -1012,7 +972,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
-        computePI.LISREL(mlist, useSolve=TRUE)
+        computePI.LISREL(mlist)
     } 
 
     for(mm in names(MLIST)) {
