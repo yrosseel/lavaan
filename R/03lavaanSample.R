@@ -270,22 +270,31 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
 
     # number of groups
     ngroups <- length(sample.cov)
-   
+
+
     # sample statistics per group
     cov         <- vector("list", length=ngroups)
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
-    nobs        <- as.list(as.integer(sample.nobs))
+    th          <- vector("list", length=ngroups)
+    th.nox      <- vector("list", length=ngroups)
+    th.idx      <- vector("list", length=ngroups)
+    th.names    <- vector("list", length=ngroups)
+    slopes      <- vector("list", length=ngroups)
+    cov.x       <- vector("list", length=ngroups)
     # extra sample statistics per group
-    icov        <- vector("list", length=ngroups)
-    cov.log.det <- vector("list", length=ngroups)
-    WLS.obs     <- vector("list", length=ngroups)
-    
-    # prepare empty list for missing data
-    missing <- vector("list", length=ngroups)
+    icov          <- vector("list", length=ngroups)
+    cov.log.det   <- vector("list", length=ngroups)
+    WLS.obs       <- vector("list", length=ngroups)
+    missing.      <- vector("list", length=ngroups)
+    missing.h1.   <- vector("list", length=ngroups)
+    missing.flag. <- FALSE
 
-    # WLS.V
-    WLS.V <- vector("list", length=ngroups)
+    WLS.V         <- vector("list", length=ngroups)
+    NACOV         <- vector("list", length=ngroups)
+
+    nobs    <- as.list(as.integer(sample.nobs))
+
 
     for(g in 1:ngroups) {
 
@@ -384,22 +393,33 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     lavSampleStats <- new("lavSampleStats",
 
                        # sample moments
-                       var         = var,
-                       cov         = cov,
-                       mean        = mean,
+                       th           = th,
+                       th.nox       = th.nox,
+                       th.idx       = th.idx,
+                       th.names     = th.names,
+                       mean         = mean,
+                       cov          = cov,
+                       var          = var,
+                       slopes       = slopes,
+                       cov.x        = cov.x,
 
                        # convenience
-                       nobs        = nobs,
-                       ntotal      = sum(unlist(nobs)),
-                       ngroups     = ngroups,
+                       nobs         = nobs,
+                       ntotal       = sum(unlist(nobs)),
+                       ngroups      = ngroups,
 
                        # extra sample statistics
-                       icov        = icov,
-                       cov.log.det = cov.log.det,
-                       WLS.obs     = WLS.obs,
-                       WLS.V       = WLS.V,
+                       icov         = icov,
+                       cov.log.det  = cov.log.det,
+                       WLS.obs      = WLS.obs,
+                       WLS.V        = WLS.V,
+                       NACOV        = NACOV,
 
-                       missing.flag = FALSE
+                       # missingness
+                       missing.flag = missing.flag.,
+                       missing      = missing.,
+                       missing.h1   = missing.h1.
+
                       )
 
     lavSampleStats
