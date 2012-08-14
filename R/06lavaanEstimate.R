@@ -118,8 +118,7 @@ x2GLIST <- function(object, x=NULL, type="free") {
     GLIST
 }
 
-setMethod("computeSigmaHat", "Model",
-function(object, GLIST=NULL, extra=FALSE) {
+computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -164,10 +163,9 @@ function(object, GLIST=NULL, extra=FALSE) {
     } # ngroups
 
     Sigma.hat
-})
+}
 
-setMethod("computeMuHat", "Model",
-function(object, GLIST=NULL) {
+computeMuHat <- function(object, GLIST=NULL) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -196,7 +194,7 @@ function(object, GLIST=NULL) {
     } # ngroups
 
     Mu.hat
-})
+}
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
@@ -338,9 +336,8 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
 
 
 
-setMethod("computeObjective", "Model",
-function(object, GLIST=NULL, samplestats=NULL, estimator="ML", 
-         verbose=FALSE, forcePD=TRUE) {
+computeObjective <- function(object, GLIST=NULL, samplestats=NULL, 
+                             estimator="ML", verbose=FALSE, forcePD=TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -454,7 +451,7 @@ function(object, GLIST=NULL, samplestats=NULL, estimator="ML",
     attr(fx, "fx.group") <- fx.group
 
     fx
-})
+}
 
 # for testing purposes only
 #computeDeltaNumerical <- function(object, GLIST=NULL, g=1) {
@@ -723,10 +720,9 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 
-setMethod("computeGradient", "Model",
-function(object, GLIST=NULL, samplestats=NULL, type="free", 
-         estimator="ML", verbose=FALSE, forcePD=TRUE, 
-         group.weight=TRUE, constraints=TRUE) {
+computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free", 
+                            estimator="ML", verbose=FALSE, forcePD=TRUE, 
+                            group.weight=TRUE, constraints=TRUE) {
 
     nmat           <- object@nmat
     representation <- object@representation
@@ -876,11 +872,11 @@ function(object, GLIST=NULL, samplestats=NULL, type="free",
     } # WLS
 
     dx
-})
+}
 
 
-setMethod("estimateModel", "Model",
-function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
+estimateModel <- function(object, samplestats=NULL, do.fit=TRUE, 
+                          options=NULL, control=list()) {
 
     estimator     <- options$estimator
     verbose       <- options$verbose
@@ -1291,6 +1287,6 @@ function(object, samplestats=NULL, do.fit=TRUE, options=NULL, control=list()) {
 
     x
 
-})
+}
 
 

@@ -2,13 +2,13 @@
 #
 # initial version: YR 25/03/2009
 
-setGeneric("computeMuHat", function(object, ...) standardGeneric("computeMuHat"))
+#setGeneric("computeMuHat", function(object, ...) standardGeneric("computeMuHat"))
 
-setGeneric("computeSigmaHat", function(object, ...) standardGeneric("computeSigmaHat"))
+#setGeneric("computeSigmaHat", function(object, ...) standardGeneric("computeSigmaHat"))
 
-setGeneric("computeObjective", function(object, ...) standardGeneric("computeObjective"))
+#setGeneric("computeObjective", function(object, ...) standardGeneric("computeObjective"))
 
-setGeneric("computeGradient", function(object, ...) standardGeneric("computeGradient"))
+#setGeneric("computeGradient", function(object, ...) standardGeneric("computeGradient"))
 
 #setGeneric("computeExpectedInformation", function(object, ...) standardGeneric("computeExpectedInformation"))
 
@@ -18,7 +18,7 @@ setGeneric("computeGradient", function(object, ...) standardGeneric("computeGrad
 
 #setGeneric("computeStdErrors", function(object, ...) standardGeneric("computeStdErrors"))
 
-setGeneric("estimateModel", function(object, ...) standardGeneric("estimateModel"))
+#setGeneric("estimateModel", function(object, ...) standardGeneric("estimateModel"))
 
 #setGeneric("estimateVCOV", function(object, ...) standardGeneric("estimateVCOV"))
 
