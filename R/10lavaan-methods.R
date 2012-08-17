@@ -1232,8 +1232,21 @@ function(object, ...) {
     modp <- if(length(dots))
         sapply(dots, is, "lavaan") else logical(0)
 
-    # single argument version is not supported (what should be display?)
-    if(!any(modp)) stop("lavaan ERROR: need at least two models to compare")
+    # shortcut for single argument (just plain LRT)
+    if(!any(modp)) {
+        val <- data.frame(Df = c(0, object@Fit@test[[1L]]$df),
+                          AIC = c(NA, AIC(object)),
+                          BIC = c(NA, BIC(object)),
+                          Chisq = c(0, object@Fit@test[[1L]]$stat),
+                          "Chisq diff" = c(NA, object@Fit@test[[1L]]$stat),
+                          "Df diff" = c(NA, object@Fit@test[[1L]]$df),
+                          "Pr(>Chisq)" = c(NA, object@Fit@test[[1L]]$pvalue),
+                          row.names = c("Saturated", "Model"),
+                          check.names = FALSE)
+        attr(val, "heading") <- "Chi Square Test Statistic\n"
+        class(val) <- c("anova", class(val))
+        return(val)
+    }
 
     # list of models
     mods <- c(list(object), dots[modp])
@@ -1269,7 +1282,7 @@ function(object, ...) {
 
     # which models have used a `scaled' test statistic?
     mods.scaled <- unlist( lapply(mods, function(x) {
-        any(c("satorra.bentler", "yuan.bentler", "mean.adjust", "mean.var.adjusted", "scaled.shifted") %in% 
+        any(c("satorra.bentler", "yuan.bentler", "mean.adjust") %in% 
             unlist(sapply(slot(slot(x, "Fit"), "test"), "[", "test")) ) }))
 
     if(all(mods.scaled)) {
