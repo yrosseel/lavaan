@@ -272,6 +272,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
+                                 cov.x=vector("list", length=lavaanData@ngroups),
                                  missing.flag=FALSE)
     } 
     timing$Sample <- (proc.time()[3] - start.time)
