@@ -1243,7 +1243,7 @@ function(object, ...) {
                           "Pr(>Chisq)" = c(NA, object@Fit@test[[1L]]$pvalue),
                           row.names = c("Saturated", "Model"),
                           check.names = FALSE)
-        attr(val, "heading") <- "Chi Square Test Statistic\n"
+        attr(val, "heading") <- "Chi Square Test Statistic (unscaled)\n"
         class(val) <- c("anova", class(val))
         return(val)
     }
@@ -1276,22 +1276,23 @@ function(object, ...) {
         # TODO!
         
         # 3. all meanstructure?
-
-        
     }
 
-    # which models have used a `scaled' test statistic?
+    # 
     mods.scaled <- unlist( lapply(mods, function(x) {
-        any(c("satorra.bentler", "yuan.bentler", "mean.adjust") %in% 
+        any(c("satorra.bentler", "yuan.bentler", "mean.adjusted", 
+              "mean.var.adjusted", "scaled.shifted") %in% 
             unlist(sapply(slot(slot(x, "Fit"), "test"), "[", "test")) ) }))
 
     if(all(mods.scaled)) {
         scaled <- TRUE
+        # which type?
+        TEST <- object@Fit@test[[2]]$test
     } else if(!all(mods.scaled)) {
         scaled <- FALSE
+        TEST <- "standard"
     } else {
-        warning("lavaan WARNING: some models (but not all) have scaled test statistics")
-        scaled <- FALSE
+        error("lavaan WARNING: some models (but not all) have scaled test statistics")
     }
 
     # which models have used a MEANSTRUCTURE?
@@ -1318,15 +1319,67 @@ function(object, ...) {
     
     # correction for scaled test statistics
     if(scaled) {
-        # use formula from mplus web note (www.statmodel.com)
-        scaling.factor <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"),
-                                     "test")[[2]]$scaling.factor))
-        cd <- c(NA, diff(scaling.factor * Df)/diff(Df))
-        Chisq.delta <- Chisq.delta/cd
+        if(TEST %in% c("satorra.bentler", 
+                       "yuan.bentler", 
+                       "mean.adjusted")) {
+            # use formula from mplus web note (www.statmodel.com)
+            scaling.factor <- unlist(lapply(mods, 
+                function(x) slot(slot(x, "Fit"), "test")[[2]]$scaling.factor))
+            cd <- c(NA, diff(scaling.factor * Df)/diff(Df))
+            Chisq.delta <- Chisq.delta/cd
 
-        # print out scaled Chisq for each model
-        Chisq <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"),
-                        "test")[[2]]$stat))
+            # extract scaled Chisq for each model
+            Chisq <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"),
+                            "test")[[2]]$stat))
+        } else if(TEST == "mean.var.adjusted") {
+            estimator <- mods[[m]]@Options$estimator
+            likelihood <- mods[[m]]@Options$likelihood
+            # see Mplus Web Note 10 (2006)
+            for(m in seq_len(length(mods) - 1L)) {
+                VCOV <- estimateVCOV(mods[[m]]@Model,
+                             samplestats  = mods[[m]]@SampleStats,
+                             options      = mods[[m]]@Options,
+                             data         = mods[[m]]@Data)
+                if(estimator == "ML" && likelihood == "normal") {
+                    N <- mods[[m]]@SampleStats@ntotal
+                } else {
+                    N <- (mods[[m]]@SampleStats@ntotal - 
+                          mods[[m]]@SampleStats@ngroups)
+                }
+                NVarCov <- N * VCOV
+                P1 <- computeExpectedInformation(mods[[m]]@Model,
+                              data=mods[[m]]@Data,
+                              Delta=delta,
+                              samplestats=mods[[m]]@SampleStats,
+                              estimator=mods[[m]]@Options$estimator)
+
+                # compute H for these two nested models
+                p1 <- mods[[m   ]]@ParTable # partable h1
+                p0 <- mods[[m+1L]]@ParTable # partable h0
+                p1.npar <- mods[[m   ]]@Fit@npar
+                p0.npar <- mods[[m+1L]]@Fit@npar
+                H <- matrix(0, nrow=p1.npar, ncol=p0.npar)
+                for(k in seq_len(p1.npar)) {
+                    ### FIXME!!!
+                    
+                }
+                
+                # compute M1
+                tHP1H.inv <- solve(t(H) %*% P1 %*% H)
+                M1 <- (P1 - P1 %*% H %*% tHP1H.inv %*% t(H) %*% P1) %*% NVarCov
+
+                # get T.scaled
+                tr.M1  <- sum(diag(M1))
+                tr2.M1 <- sum(diag(M1 %*% M1))
+                Df.delta[m+1L] <- floor((tr.M1^2 / tr2.M1) + 0.5)
+                scaling.factor <- tr.M1 / df
+                if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+                Chisq.delta[m+1L] <- Chisq.delta[m+1L]/scaling.factor
+            }
+        } else if(TEST == "scaled.shifted") {
+            # see 'Simple Second Order Chi-Square Correction' 2010 paper
+            # on www.statmodel.com, section 4
+        }
     }
 
     # Pvalue
