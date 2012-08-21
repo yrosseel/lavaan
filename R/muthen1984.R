@@ -1,5 +1,6 @@
 muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
-                       ov.names.x=character(0L), eXo=NULL, verbose=FALSE) {
+                       ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
+                       group=1L) { # group only for error messages
 
     require(mvtnorm)
 
@@ -86,9 +87,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             # FIXME: should we more tolerant here???
             y.freq <- tabulate(Data[,i], nbins=ov.levels[i])
             if(length(y.freq) != ov.levels[i])
-                stop("lavaan ERROR: variable", ov.names[i], "has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") (perhaps in this group only?)")
-            if(any(y.freq) == 0L)
-                stop("lavaan ERROR: variable", ov.names[i], "has some categories with zero counts (perhaps in this group only?)")
+                stop("lavaan ERROR: variable ", ov.names[i], " has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") in group ", group)
+            if(any(y.freq == 0L))
+                stop("lavaan ERROR: some categories of variable `", ov.names[i], "' are empty in group ", group, "; frequencies are [", paste(y.freq, collapse=" "), "]")
             fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()
             FIT[[i]] <- fit
             TH[[i]] <- fit$theta[fit$th.idx]

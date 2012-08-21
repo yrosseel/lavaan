@@ -74,6 +74,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               ov.levels=ov.levels,
                               ov.names.x=Data@ov.names.x[[g]],
                               eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
+                              group = g, # for error messages only
                               verbose=verbose)
         }
 

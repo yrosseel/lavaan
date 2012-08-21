@@ -45,7 +45,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # group.equal and group.partial
     if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {
-            opt$group.equal <- c("loadings", "intercepts")
+            if(opt$categorical) {
+                opt$group.equal <- c("loadings", "thresholds")
+            } else {
+                opt$group.equal <- c("loadings", "intercepts")
+            }
         } else {
             opt$group.equal <- character(0)
         }
@@ -98,7 +102,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
             # since version 5?
             opt$missing <- "ml" 
             # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
-            if(opt$estimator %in% c("mlm", "gls", "wls", "dwls", "uls")) {
+            if(opt$estimator %in% c("mlm", "gls", "wls", "dwls", "uls") ||
+               opt$categorical) {
                 opt$missing <- "listwise"
                 warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS, ULS, DWLS or WLS")
             }
