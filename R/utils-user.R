@@ -152,13 +152,14 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
 
     # threshold
     if(type == "th") {
+        ## FIXME!! do some elegantly!
         ord.names <- vnames(partable, "ov.ord", group=group)
         lhs <- partable$lhs[ partable$op == "|" ]
         rhs <- partable$rhs[ partable$op == "|" ]
         TH <- unique(paste(lhs, "|", rhs, sep=""))
         # return in the right order
         out <- unlist(lapply(ord.names, 
-                      function(x) paste(x, "|t", 1:length(grep(x,TH)), sep="")))
+                      function(x) paste(x, "|t", 1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")))
     } else
 
 
