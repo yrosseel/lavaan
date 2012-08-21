@@ -514,8 +514,8 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             for(j in 1:length(out)) {
         
                 # catch intercepts
-                if((op == "~" || op == "~1") && names(out)[j] == "intercept") {
-                    op <- "~1"
+                if(op == "~" && names(out)[j] == "intercept") {
+                    #op <- "~1"
                     rhs.name <- ""
                 } else {
                     rhs.name <- names(out)[j]
@@ -595,6 +595,11 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
                  fixed=FLAT.fixed, start=FLAT.start,
                  label=FLAT.label)
+
+    # change op for intercepts (for convenience only)
+    int.idx <- which(FLAT$op == "~" & FLAT$rhs == "")
+    if(length(int.idx) > 0L)
+        FLAT$op[int.idx] <- "~1"
   
     if(as.data.frame.) FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
   
