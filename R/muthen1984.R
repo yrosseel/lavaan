@@ -86,7 +86,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             # FIXME: should we more tolerant here???
             y.freq <- tabulate(Data[,i], nbins=ov.levels[i])
             if(length(y.freq) != ov.levels[i])
-                stop("lavaan ERROR: variable", ov.names[i], "has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") (perhaps in this group only?)"
+                stop("lavaan ERROR: variable", ov.names[i], "has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") (perhaps in this group only?)")
             if(any(y.freq) == 0L)
                 stop("lavaan ERROR: variable", ov.names[i], "has some categories with zero counts (perhaps in this group only?)")
             fit <- lavProbit(y=Data[,i], X=eXo); scores <- fit$scores()

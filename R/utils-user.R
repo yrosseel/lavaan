@@ -515,12 +515,18 @@ getLIST <- function(FLAT=NULL,
 
     # get 'ordered' variables, either from FLAT or varTable
     ov.names.ord1 <- vnames(FLAT, type="ov.ord")
-    if(!is.null(varTable))
+    if(!is.null(varTable)) {
         ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
-    else
+        # remove fixed.x variables
+        idx <- which(ov.names.ord2 %in% ov.names.x)
+        if(length(idx) > 0L)
+            ov.names.ord2 <- ov.names.ord2[-idx]
+    } else {
         ov.names.ord2 <- character(0)
+    }
     #### FIXME!!!!! ORDER!
     ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
+
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
     
