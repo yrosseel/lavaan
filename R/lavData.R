@@ -271,26 +271,9 @@ getDataFull <- function(data          = NULL,          # data.frame
     }
 
     # here, we now for sure all ov.names exist in the data.frame
-    OV <- lapply(data[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE], 
-                 function(x)
-              list(nobs=sum(!is.na(x)),
-                   type=class(x)[1],
-                   mean=ifelse(class(x)[1] == "numeric",
-                               mean(x, na.rm=TRUE), as.numeric(NA)),
-                   var=ifelse(class(x)[1] == "numeric",
-                              var(x, na.rm=TRUE), as.numeric(NA)),
-                   nlevels=nlevels(x),
-                   lnames=paste(levels(x),collapse="|")
-                  ))
-    ov <- list()
-    ov$name    <- names(OV)
-    ov$idx  <- match(ov$name, names(data))
-    ov$nobs <- unname(sapply(OV, "[[", "nobs"))
-    ov$type <- unname(sapply(OV, "[[", "type"))
-    ov$mean <- unname(sapply(OV, "[[", "mean"))
-    ov$var  <- unname(sapply(OV, "[[", "var"))
-    ov$nlev <- unname(sapply(OV, "[[", "nlevels"))
-    ov$lnam <- unname(sapply(OV, "[[", "lnames"))
+    # create varTable
+    ov <- varTable(data, ov.names=ov.names, ov.names.x=ov.names.x, 
+                   as.data.frame.=FALSE)
 
     # do some checking
     # check for unordered factors

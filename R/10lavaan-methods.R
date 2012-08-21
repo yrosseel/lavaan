@@ -970,11 +970,42 @@ parameterTable <- parametertable <- parTable <- partable <-
     inspect(object, "list")            
 }
 
-varTable <- vartable <- 
-    function(object) {
-    VAR <- as.data.frame(object@Data@ov, stringsAsFactors=FALSE,
-                         row.names=1:length(object@Data@ov$name))
-    class(VAR) <- c("lavaan.data.frame", "data.frame")
+varTable <- vartable <- function(object, ov.names=names(object), 
+                                 ov.names.x=NULL, as.data.frame.=TRUE) {
+
+    if(class(object) == "lavaan") {
+        VAR <- object@Data@ov
+    } else if(class(object) == "data.frame") {
+        OV <- lapply(object[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE],
+                     function(x)
+                  list(nobs=sum(!is.na(x)),
+                       type=class(x)[1],
+                       mean=ifelse(class(x)[1] == "numeric",
+                                   mean(x, na.rm=TRUE), as.numeric(NA)),
+                       var=ifelse(class(x)[1] == "numeric",
+                                  var(x, na.rm=TRUE), as.numeric(NA)),
+                       nlevels=nlevels(x),
+                       lnames=paste(levels(x),collapse="|")
+                      ))
+        VAR <- list()
+        VAR$name    <- names(OV)
+        VAR$idx  <- match(VAR$name, names(object))
+        VAR$nobs <- unname(sapply(OV, "[[", "nobs"))
+        VAR$type <- unname(sapply(OV, "[[", "type"))
+        VAR$mean <- unname(sapply(OV, "[[", "mean"))
+        VAR$var  <- unname(sapply(OV, "[[", "var"))
+        VAR$nlev <- unname(sapply(OV, "[[", "nlevels"))
+        VAR$lnam <- unname(sapply(OV, "[[", "lnames"))
+    } else {
+        stop("object must of class lavaan or a data.frame")
+    } 
+
+    if(as.data.frame.) {
+        VAR <- as.data.frame(VAR, stringsAsFactors=FALSE,
+                             row.names=1:length(VAR$name))
+        class(VAR) <- c("lavaan.data.frame", "data.frame")
+    }
+
     VAR
 }
 
