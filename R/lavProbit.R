@@ -8,18 +8,33 @@
 # - Newton-Raphson is much faster
 # - allow for empty X, just to get thresholds (and scores)
 # - however, we do NOT force thresholds to be strictly positive!
+#   (which is mainly a problem if you allow for 'zero' frequencies, I think)
 
 # NOTE: X should NOT contain a column of 1's for the intercept!!
 
 
 # wrapper function
-lavProbit <- function(y, X=NULL, weights = rep(1, length(y)),
+lavProbit <- function(y, X=NULL, y.levels=length(tabulate(y)), 
+                      weights = rep(1, length(y)),
                       offset = rep(0, length(y)), fast=FALSE, 
                       method = "nlminb.hessian", control = list(),
                       verbose = FALSE) {
 
+    # sanity check
+    y.freq <- tabulate(y, nbins=y.levels)
+    if(!missing(y.levels) && y.levels < length(y.freq))
+        stop("y.levels smaller than number of categories in y")
+    if(y.freq[1L] == 0L)
+        warning("first category of y has zero observations")
+    if(y.freq[y.levels] == 0L)
+        warning("last category of y has zero observations")
+    y.middle <- y.freq[-c(1L, y.levels)]
+    if(length(y.middle) > 0L && any(y.middle == 0L))
+        stop("zero counts in middle categories; please recode")
+
     # initialize ref class
-    lavR <- lavRefProbit$new(y = y, X = X, weights = weights, offset = offset)
+    lavR <- lavRefProbit$new(y = y, X = X, y.levels=y.levels, 
+                             weights = weights, offset = offset)
 
     # optimize (only if X)
     if(!is.null(X)) {
@@ -54,11 +69,11 @@ fields = list(y = "integer", X = "matrix",
 # methods
 methods = list(
 
-initialize = function(y, X=NULL,
+initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
                       weights = rep(1, length(y)),
                       offset = rep(0, length(y))) {
     # y
-    y <<- as.integer(y); nth <<- length(unique(.self$y)) - 1L
+    y <<- as.integer(y); nth <<- as.integer(y.levels - 1L)
     nobs <<- length(y)
     # X
     if(is.null(X)) { 
@@ -89,7 +104,7 @@ initialize = function(y, X=NULL,
 },
 
 start = function() {
-    th.start <- lavaan:::pc_th(freq=tabulate(y)) # unconditional th's
+    th.start <- lavaan:::pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
     beta.start <- rep(0, nexo)
     #Y <- as.numeric(y); range <- 16; Y <- Y*range/nexo
     #fit.ols <- lavOLS(y=Y, X=X, weights=weights, offset=offset)
