@@ -272,8 +272,8 @@ getDataFull <- function(data          = NULL,          # data.frame
 
     # here, we now for sure all ov.names exist in the data.frame
     # create varTable
-    ov <- varTable(data, ov.names=ov.names, ov.names.x=ov.names.x, 
-                   as.data.frame.=FALSE)
+    ov <- varTable(data, ov.names = ov.names, ov.names.x = ov.names.x, 
+                   as.data.frame. = FALSE)
 
     # do some checking
     # check for unordered factors

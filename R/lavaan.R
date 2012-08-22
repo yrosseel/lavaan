@@ -104,9 +104,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #    categorical <- TRUE
     #}
     if(!is.null(data)) {
-         ov.types <- sapply(data[,unlist(ov.names)], function(x) class(x)[1])
-         if("ordered" %in% ov.types) 
-             categorical <- TRUE
+        if(length(ordered) > 0L) {
+            data[,ordered] <- lapply(data[,ordered], ordered)
+            #
+            # NOTE: we coerce these variables to 'ordered' here in
+            # the 'data' data.frame; however, (at least in 2.15.1), this
+            # creates (at least) 3 copies of the full data.frame...
+            # 
+            # we should try not to 'touch' the data.frame at all (giving us
+            # a lot of housekeeping work in lavData) ... TODO!
+            categorical <- TRUE
+        } else {
+            ov.types <- sapply(data[,unlist(ov.names)], 
+                               function(x) class(x)[1])
+            if("ordered" %in% ov.types) 
+                categorical <- TRUE
+        }        
     }
 
     # if categorical, make a distinction between exo and the rest
@@ -501,7 +514,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 cfa <- sem <- function(model = NULL,
     meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", sample.cov = NULL, sample.mean = NULL,
+    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
@@ -532,7 +545,7 @@ cfa <- sem <- function(model = NULL,
 growth <- function(model = NULL,
     fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", sample.cov = NULL, sample.mean = NULL,
+    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 

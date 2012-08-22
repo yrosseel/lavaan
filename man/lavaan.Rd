@@ -76,7 +76,10 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     missing completely at random (MCAR) or missing at random (MAR). If
     \code{"default"}, the value is set depending on the estimator and the
     mimic option.}
-\item{ordered}{Not used yet.}
+\item{ordered}{Character vector. Only used if the data is in a data.frame. 
+    Treat these variables as ordered (ordinal) variables, if they are 
+    endogenous in the model. Importantly, all other variables will be treated 
+    as numeric (overriding any attributes in the original data.frame.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix

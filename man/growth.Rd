@@ -6,7 +6,7 @@ Fit a Growth Curve model.}
 \usage{
 growth(model = NULL, fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", sample.cov = NULL, sample.mean = NULL,
+    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = '', 
     estimator = "default", likelihood = "default", 
@@ -44,6 +44,10 @@ growth(model = NULL, fixed.x = "default",
     missing completely at random (MCAR) or missing at random (MAR). If
     \code{"default"}, the value is set depending on the estimator and the
     mimic option.}
+\item{ordered}{Character vector. Only used if the data is in a data.frame. 
+    Treat these variables as ordered (ordinal) variables, if they are 
+    endogenous in the model. Importantly, all other variables will be treated 
+    as numeric (overriding any attributes in the original data.frame.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
