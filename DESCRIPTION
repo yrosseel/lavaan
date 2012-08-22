@@ -1,10 +1,10 @@
 Package: lavaan
 Title: Latent Variable Analysis
 Version: 0.5-7
-Authors@R: person("Yves", "Rosseel", email="Yves.Rosseel@UGent.be")
-Author: Yves Rosseel <Yves.Rosseel@UGent.be> with contributions from 
-        many people. See the lavaan website for a list of contributors.
-Maintainer: Yves Rosseel <Yves.Rosseel@UGent.be>
+Authors@R: person("Yves", "Rosseel", 
+                   role = c("aut", "cre"),
+                   email ="Yves.Rosseel@UGent.be",
+                   comment = "With contributions from many people; see the lavaan website for a list of contributors")
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
              and latent growth curve models.

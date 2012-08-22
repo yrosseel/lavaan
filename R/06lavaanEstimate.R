@@ -407,10 +407,10 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
                 if(fixed.x) {
                     WLS.est <- c(TH[[g]],vec(PI[[g]]), 
                                  diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diag=FALSE))
+                                 vech(Sigma.hat[[g]], diagonal=FALSE))
                 } else {
                     WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diag=FALSE))
+                                 vech(Sigma.hat[[g]], diagonal=FALSE))
                 }
                 #cat("WLS.obs = \n")
                 #print(samplestats@WLS.obs[[g]])
@@ -840,10 +840,10 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
                 if(fixed.x) {
                     WLS.est <- c(TH[[g]],PI[[g]],
                                  diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diag=FALSE))
+                                 vech(Sigma.hat[[g]], diagonal=FALSE))
                 } else {
                     WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diag=FALSE))
+                                 vech(Sigma.hat[[g]], diagonal=FALSE))
                 }
             } else if(meanstructure) {                             
                 WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
@@ -1157,67 +1157,6 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
 
         #iterations <- optim.out$iterations
         iterations <- optim.out$counts[1]
-        x          <- optim.out$par
-        if(optim.out$convergence == 0L) {
-            converged <- TRUE
-        } else {
-            converged <- FALSE
-        }
-    } else if(OPTIMIZER == "BBoptim") {
-
-        trace <- FALSE; if(verbose) trace <- TRUE
-        optim.out <- BBoptim(par=start.x,
-                             fn=minimize.this.function,
-                             gr=first.derivative.param,
-                             control=list(maxit=iter.max, triter=1L,
-                                          trace=trace),
-                             quiet=TRUE
-                            )
-        if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("optim BBoptim message says: ", optim.out$message, "\n")
-            cat("number of iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective]: ",
-                optim.out$feval, "\n")
-        }
-
-        iterations <- as.integer(optim.out$iter)
-        x          <- optim.out$par
-        if(optim.out$convergence == 0L) {
-            converged <- TRUE
-        } else {
-            converged <- FALSE
-        }
-    } else if(OPTIMIZER == "ALABAMA") {
-        #require(alabama)
-        hin <- hin.jac <- heq <- heq.jac <- NULL
-        if(!is.null(body(object@cin.function))) hin     <- object@cin.function
-        if(!is.null(body(object@cin.jacobian))) hin.jac <- object@cin.jacobian
-        if(!is.null(body(object@ceq.function))) heq     <- object@ceq.function
-        if(!is.null(body(object@ceq.jacobian))) heq.jac <- object@ceq.jacobian
-        trace <- FALSE; if(verbose) trace <- TRUE
-        optim.out <- auglag(par=start.x,
-                            fn=minimize.this.function,
-                            gr=first.derivative.param,
-                            #hin=hin,
-                            #hin.jac=NULL,
-                            heq=heq,
-                            #heq.jac=heq.jac,
-                            control.outer=list(trace=trace, method="BFGS"),
-                            control.optim=list(maxit=iter.max, REPORT=1L,
-                                               parscale=SCALE,
-                                               trace=trace, reltol=1e-12),
-                           )
-        if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("optim auglag message says: ", optim.out$message, "\n")
-            cat("number of outer iterations: ", 
-                optim.out$outer.iterations, "\n")
-            cat("number of function evaluations [objective gradient]: ",
-                optim.out$counts, "\n")
-        }
-
-        iterations <- as.integer(optim.out$counts[1])
         x          <- optim.out$par
         if(optim.out$convergence == 0L) {
             converged <- TRUE

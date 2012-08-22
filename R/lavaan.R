@@ -356,7 +356,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 attr(x, "fx") <-
-                computeObjective(lavaanModel, samplestat = lavaanSampleStats,
+                computeObjective(lavaanModel, samplestats = lavaanSampleStats,
                                  estimator = lavaanOptions$estimator)
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
                 require(quadprog)
