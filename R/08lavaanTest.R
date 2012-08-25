@@ -403,7 +403,12 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         # see 'Simple Second Order Chi-Square Correction' 2010 www.statmodel.com
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
 
-        df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
+        if(mimic == "Mplus") {
+            df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
+        } else {
+            # more precise, fractional df
+            df <- sum(trace.UGamma)^2 / sum(trace.UGamma2)
+        }
 
         scaling.factor <- sum(trace.UGamma) / df
         if(scaling.factor < 0) scaling.factor <- as.numeric(NA)

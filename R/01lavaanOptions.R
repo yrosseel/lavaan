@@ -102,10 +102,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
             # since version 5?
             opt$missing <- "ml" 
             # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
-            if(opt$estimator %in% c("mlm", "gls", "wls", "dwls", "uls") ||
+            if(opt$estimator %in% c("mlm", "mlmv", 
+                                    "gls", "wls", "dwls", "uls") ||
                opt$categorical) {
                 opt$missing <- "listwise"
-                warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS, ULS, DWLS or WLS")
+                #warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS, ULS, DWLS or WLS")
             }
         } else {
             opt$missing <- "listwise"
@@ -113,7 +114,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
         if(opt$estimator %in% c("mlm", "gls", "wls", "uls")) {
-            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, GLS, ULS, DWLS or WLS")
+            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV")
         }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
         # nothing to do
@@ -224,7 +225,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
                  opt$se, "\n")
         }
 
-    } else if(opt$estimator == "mlm") {
+    } else if(opt$estimator == "mlm" || opt$estimator == "mlmv") {
         opt$estimator <- "ML"
         opt$information <- "expected"
         opt$meanstructure <- TRUE
@@ -232,7 +233,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se != "none") opt$se <- "robust.mlm"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         if(opt$missing == "ml") {
-            stop("the MLM estimator can not be used when data are incomplete\n")
+            stop("the MLM(V) estimators can not be used when data are incomplete\n")
         }
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"

@@ -125,9 +125,13 @@ short.summary <- function(object) {
 
         # 2. degrees of freedom
         t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-        t1.txt <- sprintf("  %10i", object@Fit@test[[1]]$df); 
+        t1.txt <- sprintf("  %10i",   object@Fit@test[[1]]$df)
         t2.txt <- ifelse(scaled, 
-                  sprintf("  %10i", object@Fit@test[[2]]$df), "")
+                         ifelse(round(object@Fit@test[[2]]$df) == 
+                                object@Fit@test[[2]]$df,
+                                sprintf("  %10i",   object@Fit@test[[2]]$df),
+                                sprintf("  %10.3f", object@Fit@test[[2]]$df)),
+                         "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 3. P-value
@@ -1256,18 +1260,28 @@ function(object, model, ..., evaluate = TRUE) {
 
 # this is based on the anova function in the lmer package
 setMethod("anova", signature(object = "lavaan"),
-function(object, ...) {
+function(object, ..., SB.classic = FALSE) {
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
     modp <- if(length(dots))
         sapply(dots, is, "lavaan") else logical(0)
 
+    # some general properties (taken from the first model)
+    estimator <- object@Options$estimator
+    likelihood <- object@Options$likelihood
+    ngroups <- object@Data@ngroups
+    nobs <- object@SampleStats@nobs
+    ntotal <- object@SampleStats@ntotal
+    npar <- object@Fit@npar
+
     # shortcut for single argument (just plain LRT)
     if(!any(modp)) {
         val <- data.frame(Df = c(0, object@Fit@test[[1L]]$df),
-                          AIC = c(NA, AIC(object)),
-                          BIC = c(NA, BIC(object)),
+                          AIC = ifelse(estimator == "ML",
+                                       c(NA, AIC(object)), c(NA, NA)),
+                          BIC = ifelse(estimator == "ML",
+                                       c(NA, BIC(object)), c(NA, NA)),
                           Chisq = c(0, object@Fit@test[[1L]]$stat),
                           "Chisq diff" = c(NA, object@Fit@test[[1L]]$stat),
                           "Df diff" = c(NA, object@Fit@test[[1L]]$df),
@@ -1284,7 +1298,7 @@ function(object, ...) {
     names(mods) <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], as.character)
 
     # put them in order (using number of free parameters)
-    nfreepar <- sapply(lapply(mods, logLik), attr, "df")
+    nfreepar <- sapply(mods, function(x) x@Fit@npar)
     if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
         # what, same number of free parameters?
         # maybe, we need to count number of constraints
@@ -1350,40 +1364,52 @@ function(object, ...) {
     
     # correction for scaled test statistics
     if(scaled) {
-        if(TEST %in% c("satorra.bentler", 
-                       "yuan.bentler", 
-                       "mean.adjusted")) {
-            # use formula from mplus web note (www.statmodel.com)
+        if(SB.classic && TEST %in% c("satorra.bentler", 
+                                    "yuan.bentler", "mean.adjusted")) {
+            # use formula from Satorra & Bentler 2001
             scaling.factor <- unlist(lapply(mods, 
                 function(x) slot(slot(x, "Fit"), "test")[[2]]$scaling.factor))
             cd <- c(NA, diff(scaling.factor * Df)/diff(Df))
+
+            # check for negative scaling factors
+            if(any(cd < 0)) {
+                warning("some scaling factors are negative: [",
+                        paste(round(cd[-1], 3), collapse=" "),"]; rerun with SB.classic=FALSE")
+                cd[cd < 0] <- NA
+            }
             Chisq.delta <- Chisq.delta/cd
 
             # extract scaled Chisq for each model
             Chisq <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"),
                             "test")[[2]]$stat))
-        } else if(TEST == "mean.var.adjusted") {
-            estimator <- mods[[m]]@Options$estimator
-            likelihood <- mods[[m]]@Options$likelihood
+        } else {
             # see Mplus Web Note 10 (2006)
             for(m in seq_len(length(mods) - 1L)) {
-                VCOV <- estimateVCOV(mods[[m]]@Model,
-                             samplestats  = mods[[m]]@SampleStats,
-                             options      = mods[[m]]@Options,
-                             data         = mods[[m]]@Data)
-                if(estimator == "ML" && likelihood == "normal") {
-                    N <- mods[[m]]@SampleStats@ntotal
-                } else {
-                    N <- (mods[[m]]@SampleStats@ntotal - 
-                          mods[[m]]@SampleStats@ngroups)
-                }
-                NVarCov <- N * VCOV
-                P1 <- computeExpectedInformation(mods[[m]]@Model,
-                              data=mods[[m]]@Data,
-                              Delta=delta,
-                              samplestats=mods[[m]]@SampleStats,
-                              estimator=mods[[m]]@Options$estimator)
 
+                # original M (Satorra)
+                Delta1 <- computeDelta(mods[[m]]@Model)
+                WLS.V <- getWLS.V(object)
+                Gamma <- getSampleStatsNACOV(object)
+
+                # weight WLS.V
+                for(g in 1:ngroups) {
+                    WLS.V[[g]] <- nobs[[g]]/ntotal * WLS.V[[g]]
+                }
+
+                # information matrix
+                P1 <- matrix(0, nrow=npar, ncol=npar)
+                for(g in 1:ngroups) {
+                     P1 <- P1 + (t(Delta1[[g]]) %*% WLS.V[[g]] %*% Delta1[[g]])
+                }
+                P1.inv <- solve(P1)
+
+                # NVarCov
+                V1 <- matrix(0, nrow=npar, ncol=npar)
+                for(g in 1:ngroups) {
+                     tmp <- WLS.V[[g]] %*% Delta1[[g]] %*% P1.inv
+                     V1 <- V1 + (t(tmp) %*% Gamma[[g]] %*% tmp)
+                }
+                
                 # compute H for these two nested models
                 p1 <- mods[[m   ]]@ParTable # partable h1
                 p0 <- mods[[m+1L]]@ParTable # partable h0
@@ -1391,34 +1417,75 @@ function(object, ...) {
                 p0.npar <- mods[[m+1L]]@Fit@npar
                 H <- matrix(0, nrow=p1.npar, ncol=p0.npar)
                 for(k in seq_len(p1.npar)) {
-                    ### FIXME!!!
-                    
-                }
-                
+                    ### FIXME!!! does this cover most restrictions???
+                    # search for corresponding parameter in p0 
+                    idx <- which(p1$free == k)[1]
+                    lhs <- p1$lhs[idx]; op <- p1$op[idx]; rhs <- p1$rhs[idx]
+                    p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs)
+                    if(length(p0.idx) == 0L)
+                        warning("couldn't find matching parameter in M0: ",
+                                paste(lhs,op,rhs,sep=""))
+                    if(p0$free[p0.idx] > 0L) {
+                        p0.parnumber <- p0$free[p0.idx]    
+                        H[k, p0.parnumber] <- 1
+                    }
+                }  
+
+                print(H)
+
                 # compute M1
                 tHP1H.inv <- solve(t(H) %*% P1 %*% H)
-                M1 <- (P1 - P1 %*% H %*% tHP1H.inv %*% t(H) %*% P1) %*% NVarCov
+                M1 <- (P1 - P1 %*% H %*% tHP1H.inv %*% t(H) %*% P1) %*% V1
 
                 # get T.scaled
+                cat("original Chisq.delta = ", Chisq.delta[m+1L], "\n")
                 tr.M1  <- sum(diag(M1))
                 tr2.M1 <- sum(diag(M1 %*% M1))
-                Df.delta[m+1L] <- floor((tr.M1^2 / tr2.M1) + 0.5)
-                scaling.factor <- tr.M1 / df
+                cat("tr.M1 = ", tr.M1, "tr2.M1 = ", tr2.M1, "\n")
+
+
+                trace.UGamma  <- numeric( ngroups )
+                trace.UGamma2 <- numeric( ngroups )
+                for(g in 1:ngroups) {
+                    U <- WLS.V[[g]]  %*% Delta1[[g]] %*%
+                         (P1.inv - H %*% tHP1H.inv %*% t(H)) %*%
+                         #(P1.inv %*% t(A) %*% solve(A %*% P1.inv %*% t(A)) %*% A %*% P1.inv) %*%
+                         t(Delta1[[g]]) %*% WLS.V[[g]]
+                    UG <- U %*% Gamma[[g]]; tUG <- t(UG)
+                    trace.UGamma[g]  <- ntotal/nobs[[g]] * sum( U * Gamma[[g]] )
+                    trace.UGamma2[g] <- ntotal/nobs[[g]] * sum( UG * tUG )
+                }
+
+
+                tr.M <- sum(trace.UGamma)
+                cat("tr.M (original) = ", tr.M, "\n")
+
+                # adjust Df.delta?
+                if(TEST == "mean.var.adjusted") {
+                    # NOT needed for scaled.shifted; see
+                    # see 'Simple Second Order Chi-Square Correction' 2010 paper
+                    # on www.statmodel.com, section 4
+                    # Df.delta[m+1L] <- floor((tr.M1^2 / tr2.M1) + 0.5)
+                    Df.delta[m+1L] <- tr.M1^2 / tr2.M1
+                } 
+                cat("Df.delta[m+1L] = ", Df.delta[m+1L], "\n")
+
+                scaling.factor <- tr.M1 / Df.delta[m+1L]
                 if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+                cat("scaling factor = ", scaling.factor, "\n")
                 Chisq.delta[m+1L] <- Chisq.delta[m+1L]/scaling.factor
             }
-        } else if(TEST == "scaled.shifted") {
-            # see 'Simple Second Order Chi-Square Correction' 2010 paper
-            # on www.statmodel.com, section 4
-        }
+        } 
     }
 
     # Pvalue
     Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower = FALSE)
 
     val <- data.frame(Df = Df,
-                      AIC = sapply(mods, AIC),
-                      BIC = sapply(mods, BIC),
+                      AIC = ifelse(estimator == "ML",
+                                   sapply(mods, AIC), rep(NA, length(mods))),
+                      BIC = ifelse(estimator == "ML",
+                                   sapply(mods, BIC), rep(NA, length(mods))),
                       Chisq = Chisq,
                       "Chisq diff" = Chisq.delta,
                       "Df diff" = Df.delta,
@@ -1437,3 +1504,69 @@ function(object, ...) {
 
 })
 
+getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
+
+    # shortcuts
+    samplestats = object@SampleStats
+    estimator   = object@Options$estimator
+
+    WLS.V       <- vector("list", length=samplestats@ngroups)
+    if(estimator == "GLS"  ||
+       estimator == "WLS"  ||
+       estimator == "DWLS" ||
+       estimator == "ULS") {
+        # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
+        # for WLS, the WLS.V22 part is: Gamma
+        WLS.V <- samplestats@WLS.V
+    } else if(estimator == "ML") {
+        Sigma.hat <- computeSigmaHat(object@Model)
+        if(object@Model@meanstructure) Mu.hat <- computeMuHat(object@Model)
+        for(g in 1:samplestats@ngroups) {
+            if(samplestats@missing.flag) {
+                WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
+                                            Mu.hat=Mu.hat[[g]],
+                                            samplestats=samplestats,
+                                            data=object@data, group=g,
+                                            information="expected")
+            } else {
+                # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
+                WLS.V[[g]] <-
+                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
+                                           meanstructure=object@Model@meanstructure)
+            }
+        }
+    } # ML
+
+    WLS.V
+}
+
+getSampleStatsNACOV <- function(object) {
+
+    if(object@Options$se == "robust.mlr")
+        stop("not done yet; FIX THIS!")
+
+    # shortcuts
+    samplestats = object@SampleStats
+    estimator   = object@Options$estimator
+
+    NACOV       <- vector("list", length=samplestats@ngroups)
+
+    if(estimator == "GLS"  ||
+       estimator == "WLS"  ||
+       estimator == "DWLS" ||
+       estimator == "ULS") {
+        NACOV <- samplestats@NACOV
+    } else if(estimator == "ML") {
+        for(g in 1:samplestats@ngroups) {
+            NACOV[[g]] <- 
+                compute.Gamma(object@Data@X[[g]], 
+                              meanstructure=object@Options$meanstructure)
+            if(object@Options$mimic == "Mplus") {
+                G11 <- ( samplestats@cov[[g]] * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] )
+                NACOV[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
+            }
+        }
+    }
+
+    NACOV
+}
