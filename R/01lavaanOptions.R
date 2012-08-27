@@ -43,7 +43,9 @@ setLavaanOptions <- function(opt = formals(lavaan))
     }
 
     # group.equal and group.partial
-    if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
+    if(opt$group.equal == "none") {
+        opt$group.equal <- character(0)
+    } else if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {
             if(opt$categorical) {
                 opt$group.equal <- c("loadings", "thresholds")

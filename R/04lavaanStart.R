@@ -150,9 +150,7 @@ StartingValues <- function(start.method = "default",
                             partable$lhs == partable$rhs)
         sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names.num)
         if(start.initial == "mplus") {
-            #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
-            start[ov.var.idx] <- 
-                (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
+            start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
         } else {
             #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[g]][sample.var.idx]
             start[ov.var.idx] <- 
