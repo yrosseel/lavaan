@@ -163,7 +163,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
         } 
 
-        # WLS.V
+        # WLS.V and NACOV (=GAMMA)
         if(estimator == "GLS") {
             if(meanstructure) {
                 V11 <- icov[[g]]
@@ -176,7 +176,10 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 WLS.V[[g]] <-
                     0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
             }
-        } else if(estimator == "WLS" && !categorical) {
+        } else if(estimator == "ML") {
+            # no WLS.V here, since function of model-implied moments
+            NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
+        } else if(estimator %in% c("WLS","DWLS","ULS") && !categorical) {
             # sample size large enough?
             nvar <- ncol(X[[g]])
             pstar <- nvar*(nvar+1)/2
@@ -195,14 +198,22 @@ lavSampleStatsFromData <- function(Data          = NULL,
             Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
                                    Mplus.WLS=(mimic=="Mplus"))
 
-            # Gamma should be po before we invert
-            ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-            if(is.complex(ev) || any(Re(ev) < 0)) {
-               stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+            if(estimator == "WLS") {
+                # Gamma should be po before we invert
+                ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
+                if(is.complex(ev) || any(Re(ev) < 0)) {
+                   stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
+                }
+                WLS.V[[g]] <- inv.chol(Gamma)
+                NACOV[[g]]  <- Gamma
+            } else if(estimator == "DWLS") {
+                dacov <- diag(Gamma)
+                WLS.V[[g]] <- diag(1/dacov, nrow=NROW(Gamma), ncol=NCOL(Gamma))
+                NACOV[[g]]  <- Gamma
+            } else if(estimator == "ULS") {
+                WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                NACOV[[g]]  <- Gamma
             }
-            #d.WLS.V[[g]] <- MASS.ginv(Gamma) # can we avoid ginv?
-            WLS.V[[g]] <- inv.chol(Gamma)
-            NACOV[[g]]  <- Gamma
         } else if(estimator == "WLS" && categorical) {
             WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
             NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)

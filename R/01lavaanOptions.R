@@ -98,22 +98,18 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # missing
     if(opt$missing == "default") {
-        if(opt$mimic == "Mplus") { 
+        if(opt$mimic == "Mplus" && 
+           opt$estimator %in% c("default", "ml", "mlr")) { 
             # since version 5?
             opt$missing <- "ml" 
-            # what if estimator=MLM, GLS, WLS: set 'listwise' and give a warning
-            if(opt$estimator %in% c("mlm", "mlmv", 
-                                    "gls", "wls", "dwls", "uls") ||
-               opt$categorical) {
-                opt$missing <- "listwise"
-                #warning("lavaan WARNING: changed default missing=\"ml\" to missing=\"listwise\" for estimator MLM, GLS, ULS, DWLS or WLS")
-            }
+            # check later if this is ok
         } else {
             opt$missing <- "listwise"
         }
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
-        if(opt$estimator %in% c("mlm", "gls", "wls", "uls")) {
+        if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
+                                "uls", "ulsm", "ulsmv")) {
             stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV")
         }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
@@ -143,7 +139,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
               opt$test == "m" ||
               opt$test == "mean.adjusted" ||
               opt$test == "mean-adjusted") {
-        opt$test <- "mean.adjusted"
+        opt$test <- "satorra.bentler"
     } else if(opt$test == "mean.var.adjusted" ||
               opt$test == "mean-var-adjusted" ||
               opt$test == "mv" ||
@@ -163,9 +159,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$test <- "bollen.stine"
     } else {
         stop("`test' argument must one of \"none\", \"standard\",
-             \"mean.adjusted\", \"mean.var.adjusted\", \"scaled.shifted\",
-             \"satorra.bentler\", \"yuan.bentler\", \"bollen.stine\",
-             or \"bootstrap\"")
+            \"satorra.bentler\", \"yuan.bentler\",
+            \"mean.var.adjusted\", \"scaled.shifted\",
+            \"bollen.stine\", or \"bootstrap\"")
+    }
+ 
+    # check missing
+    if(opt$missing == "ml" && 
+       opt$test %in% c("satorra.bentler", 
+                       "mean.var.adjusted", "scaled.shifted")) {
+        opt$missing <- "listwise"
     }
 
     # meanstructure
@@ -173,7 +176,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$meanstructure == FALSE) {
             # user explicitly wants meanstructure == FALSE
             # check for conflicting arguments
-            if(opt$estimator %in% c("mlm", "mlr", "mlf"))
+            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv"))
                 warning("lavaan WARNING: estimator forces meanstructure = TRUE")
             if(opt$missing == "ml")
                 warning("lavaan WARNING: missing argument forces meanstructure = TRUE")
@@ -226,15 +229,19 @@ setLavaanOptions <- function(opt = formals(lavaan))
         }
 
     } else if(opt$estimator == "mlm" || opt$estimator == "mlmv") {
+        if(opt$test != "none") {
+            if(opt$estimator == "mlm") {
+                opt$test <- "satorra.bentler"
+            } else if(opt$estimator == "mlmv") {          
+                opt$test <- "scaled.shifted"
+            }
+        }
         opt$estimator <- "ML"
         opt$information <- "expected"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.mlm"
-        if(opt$test != "none") opt$test <- "satorra.bentler"
-        if(opt$missing == "ml") {
-            stop("the MLM(V) estimators can not be used when data are incomplete\n")
-        }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
         opt$meanstructure <- TRUE
@@ -260,6 +267,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is GLS: ", 
                  opt$test, "\n")
         }
+        opt$missing <- "listwise"       
     } else if(opt$estimator == "wls") {
         opt$estimator <- "WLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -278,6 +286,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is WLS: ", 
                  opt$test, "\n")
         }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "dwls") {
         opt$estimator <- "DWLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -292,27 +301,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `se' argument when estimator is DWLS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none","mean.adjusted",
+        if(!opt$test %in% c("standard","none","satorra.bentler", 
+                            "mean.adjusted",
                             "mean.var.adjusted","scaled.shifted")) {
             stop("invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
         }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.wls"
-        if(opt$test != "none") opt$test <- "mean.adjusted"
-        if(opt$missing == "ml") {
-            stop("the WLSM estimator can not be used when data are incomplete\n")
-        }
+        if(opt$test != "none") opt$test <- "satorra.bentler"
+        opt$missing <- "listwise"
      } else if(opt$estimator == "wlsmv") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.wls"
         if(opt$test != "none") opt$test <- "scaled.shifted"
-        if(opt$missing == "ml") {
-            stop("the WLSMV estimator can not be used when data are incomplete\n")
-        }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -327,27 +334,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `se' argument when estimator is ULS: ", 
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none","mean.adjusted",
+        if(!opt$test %in% c("standard","none", "satorra.bentler",
+                            "mean.adjusted",
                             "mean.var.adjusted","scaled.shifted")) {
             stop("invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
         }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "ulsm") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.wls"
-        if(opt$test != "none") opt$test <- "mean.adjusted"
-        if(opt$missing == "ml") {
-            stop("the ULSM estimator can not be used when data are incomplete\n")
-        }
+        if(opt$test != "none") opt$test <- "satorra.bentler"
+        opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmv") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.wls"
         if(opt$test != "none") opt$test <- "scaled.shifted"
-        if(opt$missing == "ml") {
-            stop("the ULSMV estimator can not be used when data are incomplete\n")
-        }
+        opt$missing <- "listwise"
     } else {
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")
     }
@@ -417,6 +422,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(opt$se == "robust.mlr" || 
        opt$se == "robust.mlm" ||
        opt$test == "satorra.bentler" ||
+       opt$test == "mean.var.adjusted" ||
+       opt$test == "scaled.shifted" ||
        opt$test == "yuan.bentler") {
         opt$meanstructure <- TRUE
     }

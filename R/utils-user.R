@@ -1029,4 +1029,65 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
 
 }
 
+# given two models, M1 and M0, where M0 is nested in M1,
+# create a function 'af(x)' where 'x' is the full parameter vector of M1
+# and af(x) returns the evaluated restrictions under M0).
+# The 'jacobian' of this function 'A' will be used in the anova
+# anova() function, and elsewhere
+getConstraintsFunction <- function(p1, p0, ceq.function=NULL) {
+
+    npar.p1 <- max(p1$free)
+    npar.p0 <- max(p0$free)
+    npar.diff <- npar.p1 - npar.p0
+
+    con.function <- function() NULL
+    formals(con.function) <- alist(x=, ...=)
+    BODY.txt <- paste("{\nout <- rep(NA, ", npar.diff, ")\n", sep="")
+
+    # for each free parameter in p1, we 'check' is it is somehow 
+    # restricted in p0
+    ncon <- 0L; EQ.ID <- integer(); EQ.P1 <- integer()
+    for(i in seq_len(npar.p1)) {
+        idx <- which(p1$free == i)[1L]
+        lhs <- p1$lhs[idx]; op <- p1$op[idx]; rhs <- p1$rhs[idx]
+        group <- p1$group[idx]
+        p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
+                        p0$group == group)
+        if(length(p0.idx) == 0L)
+            warning("couldn't find matching parameter in M0: ",
+                    paste(lhs,op,rhs,sep=""))
+        if(p0$free[p0.idx] == 0L) {
+            ncon <- ncon + 1L
+            # simple fixed value
+            BODY.txt <- paste(BODY.txt,
+                "out[", ncon, "] = x[", i, "] - ",
+                                   p0$ustart[p0.idx], "\n", sep="")
+        } 
+        # how to deal with *new* equality constraints?
+        # check if p0 has an eq.id not yet in EQ.ID (while p1 eq.id is empty)
+        if(p0$eq.id[p0.idx] != 0 && p1$eq.id[idx] == 0) {
+            # if not in EQ.ID, put it there and continue
+            EQ <- p0$eq.id[p0.idx]
+            if(EQ %in% EQ.ID) {
+                # add constraint
+                ncon <- ncon + 1L
+                BODY.txt <- paste(BODY.txt,
+                                  "out[", ncon, "] = x[", EQ.P1[EQ.ID == EQ], 
+                                                "] - x[", i, "]\n", sep="")
+            } else {
+                EQ.ID <- c(EQ.ID, EQ)
+                EQ.P1 <- c(EQ.P1,  i)
+            }
+        }
+    }
+
+    # wrap function
+    BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
+    body(con.function) <- parse(file="", text=BODY.txt)
+
+    con.function
+}
+
+
+
 

@@ -1,11 +1,13 @@
 testStatisticSatorraBentler <- function(samplestats=samplestats, 
-                                        E.inv, Delta, WLS.V, Gamma, 
+                                        E.inv, Delta, WLS.V,
                                         x.idx=list(integer(0))) {
 
     # warn if fixed.x!
     #if(length(x.idx[[1L]] > 0L)) {
     #    warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
     #}
+
+    Gamma <- samplestats@NACOV
 
     trace.UGamma  <- numeric( samplestats@ngroups )
     trace.UGamma2 <- numeric( samplestats@ngroups )
@@ -27,10 +29,12 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
 
 
 testStatisticSatorraBentler.Mplus <- function(samplestats=samplestats, 
-                                              E.inv, Delta, WLS.V, Gamma,
+                                              E.inv, Delta, WLS.V,
                                               x.idx=list(integer(0))) {
+    Gamma <- samplestats@NACOV
     
     trace.UGamma <- numeric( samplestats@ngroups )
+    trace.UGamma2 <- numeric( samplestats@ngroups )
 
     for(g in 1:samplestats@ngroups) {
         A1 <- WLS.V[[g]]
@@ -48,11 +52,19 @@ testStatisticSatorraBentler.Mplus <- function(samplestats=samplestats,
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
         }
+        A1.inv <- solve(A1)
 
-        trace.h1     <- sum( B1 * t( solve(A1) ) )
-        trace.h0     <- sum( B0 * t(E.inv)       ) 
-        trace.UGamma[g] <- samplestats@ntotal/samplestats@nobs[[g]] * (trace.h1-trace.h0)
+        trace.h1     <- sum( B1 * t(A1.inv) )
+        trace.h0     <- sum( B0 * t(E.inv)  ) 
+        trace.UGamma[g] <- 
+            samplestats@ntotal/samplestats@nobs[[g]] * (trace.h1-trace.h0)
+        UG <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
+        tUG <- t(UG)
+        trace.UGamma2[g] <- 
+            samplestats@ntotal/samplestats@nobs[[g]] * sum( UG * tUG )
     }        
+
+    attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
 
     trace.UGamma
 }
@@ -153,6 +165,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     mimic       <- options$mimic
     test        <- options$test
     information <- options$information
+    estimator   <- options$estimator
 
 
     TEST <- list()
@@ -215,8 +228,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                       pvalue=pvalue) 
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
-                              "mean.adjusted", "mean.var.adjusted",
-                              "scaled.shifted")) {
+                              "mean.var.adjusted", "scaled.shifted")) {
         TEST[[2]] <- list(test=test,
                           stat=chisq, 
                           stat.group=chisq.group,
@@ -242,42 +254,32 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         }
     }
 
-    if(test == "satorra.bentler" && df > 0) {
+    if(test %in% c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
+       df > 0) {
         # try to extract attr from VCOV (if present)
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
         WLS.V <- attr(VCOV, "WLS.V")
-        Gamma <- attr(VCOV, "Gamma")
 
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
-            if(!mimic == "Mplus") {
-                E <- computeExpectedInformation(object, samplestats=samplestats,
-                                                data=data,
-                                                estimator="ML", #Delta=NULL,
-                                                extra=TRUE)
-                E.inv <- solve(E)
-                Delta <- attr(E, "Delta")
-                WLS.V <- attr(E, "WLS.V")
-            } else {
+            if(mimic == "Mplus" && estimator == "ML") {
                 # special treatment for Mplus
                 E <- computeExpectedInformationMLM(object, 
                                                    samplestats=samplestats)
-                E.inv <- solve(E)
-                Delta <- attr(E, "Delta")
-                WLS.V <- attr(E, "WLS.V")
+            } else {
+                E <- computeExpectedInformation(object, samplestats=samplestats,
+                                                data=data,
+                                                estimator=estimator,
+                                                extra=TRUE)
             }
+            E.inv <- solve(E)
+            Delta <- attr(E, "Delta")
+            WLS.V <- attr(E, "WLS.V")
         }
 
-        if(is.null(Gamma)) {
-            Gamma <- vector("list", length=samplestats@ngroups)
-            for(g in 1:samplestats@ngroups) {
-                Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
-            }
-        }
-        
-        if(mimic == "Mplus") {
+        if(mimic == "Mplus" && estimator == "ML") {
             ### TESTING ONLY FOR FIXED.X !!! ###
 #            if(length(x.idx) > 0L) {
 #                cat("\n\nDEBUG FIXED.X\n\n\n")
@@ -306,175 +308,61 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                                   E.inv       = E.inv, 
                                                   Delta       = Delta, 
                                                   WLS.V       = WLS.V, 
-                                                  Gamma       = Gamma,
                                                   x.idx       = x.idx)
-        } else if(test == "satorra.bentler" && mimic != "Mplus") {
+        } else {
             trace.UGamma <- 
                 testStatisticSatorraBentler(samplestats = samplestats,
                                             E.inv       = E.inv, 
                                             Delta       = Delta, 
                                             WLS.V       = WLS.V, 
-                                            Gamma       = Gamma,
                                             x.idx       = x.idx)
         }
 
-        scaling.factor <- sum(trace.UGamma) / df
-        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-        chisq.scaled         <- sum(chisq.group / scaling.factor)
-        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
-
-        TEST[[2]] <- list(test=test,
-                          stat=chisq.scaled,
-                          stat.group=(chisq.group / scaling.factor),
-                          df=df,
-                          pvalue=pvalue.scaled,
-                          scaling.factor=scaling.factor,
-                          trace.UGamma=trace.UGamma)
-
-    } else if(test == "mean.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
-        # try to extract attr from VCOV (if present)
-        E.inv <- attr(VCOV, "E.inv")
-        Delta <- attr(VCOV, "Delta")
-        WLS.V <- attr(VCOV, "WLS.V")
-        NACOV  <- samplestats@NACOV
-
-        # if not present (perhaps se.type="standard" or se.type="none")
-        #  we need to compute these again
-        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
-            E <- computeExpectedInformation(object, samplestats=samplestats,
-                                            data=data,
-                                            estimator="WLS", #Delta=NULL,
-                                            extra=TRUE)
-            E.inv <- solve(E)
-            Delta <- attr(E, "Delta")
-            WLS.V <- attr(E, "WLS.V")
-        }
-
-        trace.UGamma <- 
-            testStatisticSatorraBentler(samplestats = samplestats,
-                                        E.inv       = E.inv, 
-                                        Delta       = Delta, 
-                                        WLS.V       = WLS.V, 
-                                        Gamma       = NACOV,
-                                        x.idx       = x.idx)
-
-        scaling.factor <- sum(trace.UGamma) / df
-        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-        chisq.scaled         <- sum(chisq.group / scaling.factor)
-        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
-
-        TEST[[2]] <- list(test=test,
-                          stat=chisq.scaled,
-                          stat.group=(chisq.group / scaling.factor),
-                          df=df,
-                          pvalue=pvalue.scaled,
-                          scaling.factor=scaling.factor,
-                          trace.UGamma=trace.UGamma)
-
-    } else if(test == "mean.var.adjusted" && df > 0) { # for WLSM/ULSM only (for now)
-        # try to extract attr from VCOV (if present)
-        E.inv <- attr(VCOV, "E.inv")
-        Delta <- attr(VCOV, "Delta")
-        WLS.V <- attr(VCOV, "WLS.V")
-        NACOV  <- samplestats@NACOV
-
-        # if not present (perhaps se.type="standard" or se.type="none")
-        #  we need to compute these again
-        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
-            E <- computeExpectedInformation(object, samplestats=samplestats,
-                                            data=data,
-                                            estimator="WLS", #Delta=NULL,
-                                            extra=TRUE)
-            E.inv <- solve(E)
-            Delta <- attr(E, "Delta")
-            WLS.V <- attr(E, "WLS.V")
-        }
-
-        trace.UGamma <- 
-            testStatisticSatorraBentler(samplestats = samplestats,
-                                        E.inv       = E.inv, 
-                                        Delta       = Delta, 
-                                        WLS.V       = WLS.V, 
-                                        Gamma       = NACOV,
-                                        x.idx       = x.idx)
-
-        # note: this corresponds with Muthen 1997 and Mplus 4
-        # but Mplus 6 seems to do something different...
-        # see 'Simple Second Order Chi-Square Correction' 2010 www.statmodel.com
+        
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
+        attributes(trace.UGamma) <- NULL
 
-        if(mimic == "Mplus") {
-            df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
-        } else {
-            # more precise, fractional df
-            df <- sum(trace.UGamma)^2 / sum(trace.UGamma2)
+        # adjust df?
+        if(test == "mean.var.adjusted") {
+            if(mimic == "Mplus") {
+                df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
+            } else {
+                # more precise, fractional df
+                df <- sum(trace.UGamma)^2 / sum(trace.UGamma2)
+            }
+        } else if(test == "satorra.bentler") {
+            trace.UGamma2 <- as.numeric(NA)
         }
 
-        scaling.factor <- sum(trace.UGamma) / df
-        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-        chisq.scaled         <- sum(chisq.group / scaling.factor)
-        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
-
-        TEST[[2]] <- list(test=test,
-                          stat=chisq.scaled,
-                          stat.group=(chisq.group / scaling.factor),
-                          df=df,
-                          pvalue=pvalue.scaled,
-                          scaling.factor=scaling.factor,
-                          trace.UGamma=trace.UGamma,
-                          trace.UGamma2=trace.UGamma2)
-
-
-    } else if(test == "scaled.shifted" && df > 0) { # for WLSM/ULSM only (for now)
-        # try to extract attr from VCOV (if present)
-        E.inv <- attr(VCOV, "E.inv")
-        Delta <- attr(VCOV, "Delta")
-        WLS.V <- attr(VCOV, "WLS.V")
-        NACOV  <- samplestats@NACOV
-
-        # if not present (perhaps se.type="standard" or se.type="none")
-        #  we need to compute these again
-        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
-            E <- computeExpectedInformation(object, samplestats=samplestats,
-                                            data=data,
-                                            estimator="WLS", #Delta=NULL,
-                                            extra=TRUE)
-            E.inv <- solve(E)
-            Delta <- attr(E, "Delta")
-            WLS.V <- attr(E, "WLS.V")
-        }
-
-        trace.UGamma <- 
-            testStatisticSatorraBentler(samplestats = samplestats,
-                                        E.inv       = E.inv, 
-                                        Delta       = Delta, 
-                                        WLS.V       = WLS.V, 
-                                        Gamma       = NACOV,
-                                        x.idx       = x.idx)
-
-        # here we use the 'T3' statistic as used by Mplus 6 and higher
-        # see 'Simple Second Order Chi-Square Correction' 2010 www.statmodel.com
-        trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
-
-        scaling.factor <- sqrt(sum(trace.UGamma2) / df)
-        if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-        shift.parameter <- max(0, df - sqrt( df*sum(trace.UGamma)^2 / 
+        if(test == "scaled.shifted") {
+            # this is the T3 statistic as used by Mplus 6 and higher
+            # see 'Simple Second Order Chi-Square Correction' 2010
+            # www.statmodel.com
+            scaling.factor <- sqrt(sum(trace.UGamma2) /df)
+            if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+            shift.parameter <- max(0, df - sqrt( df*sum(trace.UGamma)^2 /
                                       sum(trace.UGamma2) ) )
-        chisq.scaled         <- sum(chisq.group / scaling.factor + 
-                                    shift.parameter)
-        pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
+            stat.group      <- (chisq.group / scaling.factor + shift.parameter)
+            chisq.scaled    <- sum(stat.group)
+            pvalue.scaled   <- 1 - pchisq(chisq.scaled, df)
+        } else {
+            scaling.factor <- sum(trace.UGamma) / df
+            if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
+            stat.group     <- chisq.group / scaling.factor
+            chisq.scaled   <- sum(stat.group)
+            pvalue.scaled  <- 1 - pchisq(chisq.scaled, df)
+            shift.parameter <- as.numeric(NA)
+        }
 
         TEST[[2]] <- list(test=test,
                           stat=chisq.scaled,
-                          stat.group=(chisq.group / scaling.factor + 
-                                      shift.parameter),
+                          stat.group=stat.group,
                           df=df,
                           pvalue=pvalue.scaled,
                           scaling.factor=scaling.factor,
                           shift.parameter=shift.parameter,
                           trace.UGamma=trace.UGamma,
                           trace.UGamma2=trace.UGamma2)
-
 
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)

@@ -144,15 +144,9 @@ Nvcov.robust.mlm <- function(object, samplestats=NULL, data=NULL) {
     E.inv <- solve(E)
     Delta <- attr(E, "Delta")
     WLS.V <- attr(E, "WLS.V")
-
-    # compute Gamma matrix (per group)
-    Gamma <- vector("list", length=samplestats@ngroups)
-    for(g in 1:samplestats@ngroups) {
-        Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
-    }
+    Gamma <- samplestats@NACOV
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-
     for(g in 1:samplestats@ngroups) {
         tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
         NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
@@ -165,7 +159,6 @@ Nvcov.robust.mlm <- function(object, samplestats=NULL, data=NULL) {
     attr(NVarCov, "E.inv") <- E.inv
     attr(NVarCov, "Delta") <- Delta
     attr(NVarCov, "WLS.V") <- WLS.V
-    attr(NVarCov, "Gamma") <- Gamma
 
     NVarCov
 }
@@ -178,12 +171,7 @@ Nvcov.robust.mlm.mplus <- function(object, samplestats=NULL, data=NULL) {
     E.inv <- solve(E)
     Delta <- attr(E, "Delta")
     WLS.V <- attr(E, "WLS.V")
-
-    # compute Gamma matrix (per group)
-    Gamma <- vector("list", length=samplestats@ngroups)
-    for(g in 1:samplestats@ngroups) {
-        Gamma[[g]] <- compute.Gamma(data@X[[g]], meanstructure=TRUE)
-    }
+    Gamma <- samplestats@NACOV
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
 
@@ -213,7 +201,6 @@ Nvcov.robust.mlm.mplus <- function(object, samplestats=NULL, data=NULL) {
     attr(NVarCov, "E.inv") <- E.inv
     attr(NVarCov, "Delta") <- Delta
     attr(NVarCov, "WLS.V") <- WLS.V
-    attr(NVarCov, "Gamma") <- Gamma
 
     NVarCov
 }
@@ -252,8 +239,6 @@ Nvcov.robust.wls <- function(object, samplestats=NULL) {
     E.inv <- solve(E)
     Delta <- attr(E, "Delta")
     WLS.V <- attr(E, "WLS.V")
-
-    # compute NACOV matrix (per group)
     NACOV <- samplestats@NACOV
 
     NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))

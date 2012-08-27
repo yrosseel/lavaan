@@ -30,7 +30,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     X2 <- object@Fit@test[[1]]$stat
     df <- object@Fit@test[[1]]$df
    
-    if(test %in% c("satorra.bentler", "yuan.bentler", "mean.adjusted",
+    if(test %in% c("satorra.bentler", "yuan.bentler", 
                    "mean.var.adjusted", "scaled.shifted")) {
         scaled <- TRUE
     } else {
@@ -374,7 +374,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.ci.lower.scaled" %in% fit.measures) {
-        if(test == "scaled.shifted" || test == "mean.adjusted") {
+        if(test == "scaled.shifted") {
             XX2 <- X2.scaled
             df2 <- df
         } else {
@@ -419,7 +419,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.ci.upper.scaled" %in% fit.measures) {
-        if(test == "scaled.shifted" ||  test == "mean.adjusted") {
+        if(test == "scaled.shifted") {
             XX2 <- X2.scaled
             df2 <- df
         } else {
@@ -463,7 +463,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     if("rmsea.pvalue.scaled" %in% fit.measures) {
-        if(test == "scaled.shifted" || test == "mean.adjusted") {
+        if(test == "scaled.shifted") {
             XX2 <- X2.scaled
             df2 <- df
         } else {

@@ -91,7 +91,7 @@ short.summary <- function(object) {
 
     # robust/scaled statistics?
     if(object@Options$test %in% c("satorra.bentler", "yuan.bentler",
-                                  "mean.adjusted", "mean.var.adjusted",
+                                  "mean.var.adjusted",
                                   "scaled.shifted") &&
        length(object@Fit@test) > 1L) {
         scaled <- TRUE
@@ -161,22 +161,28 @@ short.summary <- function(object) {
                     cat("    for the Yuan-Bentler correction\n")
                 }
             } else if(object@Options$test == "satorra.bentler") {
-                if(object@Options$mimic == "Mplus") {
+                if(object@Options$mimic == "Mplus" &&
+                   object@Options$estimator == "ML") {
                     cat("    for the Satorra-Bentler correction (Mplus variant)\n")
+                } else if(object@Options$mimic == "Mplus" &&
+                          object@Options$estimator == "DWLS") {
+                    cat("    for the Satorra-Bentler correction (WLSM)\n")
+                } else if(object@Options$mimic == "Mplus" &&
+                          object@Options$estimator == "ULS") {
+                    cat("    for the Satorra-Bentler correction (ULSM)\n")
                 } else {
                     cat("    for the Satorra-Bentler correction\n")
                 }
-            } else if(object@Options$test == "mean.adjusted") {
-                if(object@Options$mimic == "Mplus" &&
-                   object@Options$estimator == "DWLS") {
-                    cat("    for the mean adjusted correction (WLSM)\n")
-                } else {
-                    cat("    for the mean adjusted correction\n")
-                }
             } else if(object@Options$test == "mean.var.adjusted") {
                 if(object@Options$mimic == "Mplus" &&
-                   object@Options$estimator == "DWLS") {
+                   object@Options$estimator == "ML") {
+                    cat("    for the mean and variance adjusted correction (MLMV)\n")
+                } else if(object@Options$mimic == "Mplus" &&
+                          object@Options$estimator == "DWLS") {
                     cat("    for the mean and variance adjusted correction (WLSMV)\n")
+                } else if(object@Options$mimic == "Mplus" &&
+                          object@Options$estimator == "ULS") {
+                    cat("    for the mean and variance adjusted correction (ULSMV)\n")
                 } else {
                     cat("    for the mean and variance adjusted correction\n")
                 }
@@ -1260,10 +1266,27 @@ function(object, model, ..., evaluate = TRUE) {
 
 # this is based on the anova function in the lmer package
 setMethod("anova", signature(object = "lavaan"),
-function(object, ..., SB.classic = FALSE) {
+function(object, ...) {
+
+    # NOTE: if we add additional arguments, it is not the same generic
+    # anova() function anymore, and match.call will be screwed up
+
+    # default arguments
+    SB.classic <- FALSE
+    SB.H0      <- FALSE
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
+    arg.names <- names(dots)
+    arg.idx <- which(nchar(arg.names) > 0L)
+    if(length(arg.idx) > 0L) {
+        if(!is.null(dots$SB.classic))
+            SB.classic <- dots$SB.classic
+        if(!is.null(dots$SB.H0))
+            SB.H0 <- dots$SB.H0           
+        dots <- dots[-arg.idx]
+    }
+  
     modp <- if(length(dots))
         sapply(dots, is, "lavaan") else logical(0)
 
@@ -1277,11 +1300,15 @@ function(object, ..., SB.classic = FALSE) {
 
     # shortcut for single argument (just plain LRT)
     if(!any(modp)) {
+        aic <- bic <- c(NA, NA)
+        if(estimator == "ML") {
+            aic <- c(NA, AIC(object))
+            bic <- c(NA, BIC(object))
+        }
+
         val <- data.frame(Df = c(0, object@Fit@test[[1L]]$df),
-                          AIC = ifelse(estimator == "ML",
-                                       c(NA, AIC(object)), c(NA, NA)),
-                          BIC = ifelse(estimator == "ML",
-                                       c(NA, BIC(object)), c(NA, NA)),
+                          AIC = aic,
+                          BIC = bic,
                           Chisq = c(0, object@Fit@test[[1L]]$stat),
                           "Chisq diff" = c(NA, object@Fit@test[[1L]]$stat),
                           "Df diff" = c(NA, object@Fit@test[[1L]]$df),
@@ -1325,7 +1352,7 @@ function(object, ..., SB.classic = FALSE) {
 
     # 
     mods.scaled <- unlist( lapply(mods, function(x) {
-        any(c("satorra.bentler", "yuan.bentler", "mean.adjusted", 
+        any(c("satorra.bentler", "yuan.bentler", 
               "mean.var.adjusted", "scaled.shifted") %in% 
             unlist(sapply(slot(slot(x, "Fit"), "test"), "[", "test")) ) }))
 
@@ -1364,19 +1391,19 @@ function(object, ..., SB.classic = FALSE) {
     
     # correction for scaled test statistics
     if(scaled) {
-        if(SB.classic && TEST %in% c("satorra.bentler", 
-                                    "yuan.bentler", "mean.adjusted")) {
+        if(SB.classic && TEST %in% c("satorra.bentler", "yuan.bentler")) {
             # use formula from Satorra & Bentler 2001
             scaling.factor <- unlist(lapply(mods, 
                 function(x) slot(slot(x, "Fit"), "test")[[2]]$scaling.factor))
-            cd <- c(NA, diff(scaling.factor * Df)/diff(Df))
+            cd1 <- diff(scaling.factor * Df)/diff(Df)
 
             # check for negative scaling factors
-            if(any(cd < 0)) {
+            if(any(cd1 < 0)) {
                 warning("some scaling factors are negative: [",
-                        paste(round(cd[-1], 3), collapse=" "),"]; rerun with SB.classic=FALSE")
-                cd[cd < 0] <- NA
+                        paste(round(cd1, 3), collapse=" "),"]; rerun with SB.classic=FALSE")
+                cd1[cd1 < 0] <- NA
             }
+            cd <- c(NA, cd1)
             Chisq.delta <- Chisq.delta/cd
 
             # extract scaled Chisq for each model
@@ -1385,6 +1412,16 @@ function(object, ..., SB.classic = FALSE) {
         } else {
             # see Mplus Web Note 10 (2006)
             for(m in seq_len(length(mods) - 1L)) {
+
+                if(mods[[m]]@Fit@test[[1]]$df == mods[[m+1]]@Fit@test[[1]]$df) {
+                    warnings("some models have the same number of free parameters")
+                    next
+                }
+
+                if(SB.H0) {
+                    # evaluate under H0
+                    stop("SB.H0 has not been implemented yet. FIXME!")
+                }
 
                 # original M (Satorra)
                 Delta1 <- computeDelta(mods[[m]]@Model)
@@ -1403,62 +1440,24 @@ function(object, ..., SB.classic = FALSE) {
                 }
                 P1.inv <- solve(P1)
 
-                # NVarCov
-                V1 <- matrix(0, nrow=npar, ncol=npar)
-                for(g in 1:ngroups) {
-                     tmp <- WLS.V[[g]] %*% Delta1[[g]] %*% P1.inv
-                     V1 <- V1 + (t(tmp) %*% Gamma[[g]] %*% tmp)
-                }
-                
-                # compute H for these two nested models
+                # compute A for these two nested models
                 p1 <- mods[[m   ]]@ParTable # partable h1
                 p0 <- mods[[m+1L]]@ParTable # partable h0
-                p1.npar <- mods[[m   ]]@Fit@npar
-                p0.npar <- mods[[m+1L]]@Fit@npar
-                H <- matrix(0, nrow=p1.npar, ncol=p0.npar)
-                for(k in seq_len(p1.npar)) {
-                    ### FIXME!!! does this cover most restrictions???
-                    # search for corresponding parameter in p0 
-                    idx <- which(p1$free == k)[1]
-                    lhs <- p1$lhs[idx]; op <- p1$op[idx]; rhs <- p1$rhs[idx]
-                    p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs)
-                    if(length(p0.idx) == 0L)
-                        warning("couldn't find matching parameter in M0: ",
-                                paste(lhs,op,rhs,sep=""))
-                    if(p0$free[p0.idx] > 0L) {
-                        p0.parnumber <- p0$free[p0.idx]    
-                        H[k, p0.parnumber] <- 1
-                    }
-                }  
-
-                print(H)
-
-                # compute M1
-                tHP1H.inv <- solve(t(H) %*% P1 %*% H)
-                M1 <- (P1 - P1 %*% H %*% tHP1H.inv %*% t(H) %*% P1) %*% V1
-
-                # get T.scaled
-                cat("original Chisq.delta = ", Chisq.delta[m+1L], "\n")
-                tr.M1  <- sum(diag(M1))
-                tr2.M1 <- sum(diag(M1 %*% M1))
-                cat("tr.M1 = ", tr.M1, "tr2.M1 = ", tr2.M1, "\n")
-
+                af <- getConstraintsFunction(p1,p0)
+                A <- lavJacobianC(func=af, x=mods[[m   ]]@Fit@x)
 
                 trace.UGamma  <- numeric( ngroups )
                 trace.UGamma2 <- numeric( ngroups )
                 for(g in 1:ngroups) {
                     U <- WLS.V[[g]]  %*% Delta1[[g]] %*%
-                         (P1.inv - H %*% tHP1H.inv %*% t(H)) %*%
-                         #(P1.inv %*% t(A) %*% solve(A %*% P1.inv %*% t(A)) %*% A %*% P1.inv) %*%
-                         t(Delta1[[g]]) %*% WLS.V[[g]]
+                         (P1.inv %*% t(A) %*% solve(A %*% P1.inv %*% t(A)) %*% A %*% P1.inv) %*% t(Delta1[[g]]) %*% WLS.V[[g]]
                     UG <- U %*% Gamma[[g]]; tUG <- t(UG)
                     trace.UGamma[g]  <- ntotal/nobs[[g]] * sum( U * Gamma[[g]] )
                     trace.UGamma2[g] <- ntotal/nobs[[g]] * sum( UG * tUG )
                 }
 
-
-                tr.M <- sum(trace.UGamma)
-                cat("tr.M (original) = ", tr.M, "\n")
+                tr.M  <- sum(trace.UGamma)
+                tr2.M <- sum(trace.UGamma2)
 
                 # adjust Df.delta?
                 if(TEST == "mean.var.adjusted") {
@@ -1466,13 +1465,11 @@ function(object, ..., SB.classic = FALSE) {
                     # see 'Simple Second Order Chi-Square Correction' 2010 paper
                     # on www.statmodel.com, section 4
                     # Df.delta[m+1L] <- floor((tr.M1^2 / tr2.M1) + 0.5)
-                    Df.delta[m+1L] <- tr.M1^2 / tr2.M1
+                    Df.delta[m+1L] <- tr.M^2 / tr2.M
                 } 
-                cat("Df.delta[m+1L] = ", Df.delta[m+1L], "\n")
 
-                scaling.factor <- tr.M1 / Df.delta[m+1L]
+                scaling.factor <- tr.M / Df.delta[m+1L]
                 if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-                cat("scaling factor = ", scaling.factor, "\n")
                 Chisq.delta[m+1L] <- Chisq.delta[m+1L]/scaling.factor
             }
         } 
@@ -1481,11 +1478,15 @@ function(object, ..., SB.classic = FALSE) {
     # Pvalue
     Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower = FALSE)
 
+    aic <- bic <- rep(NA, length(mods))
+    if(estimator == "ML") {
+        aic <- sapply(mods, FUN=AIC)
+        bic <- sapply(mods, FUN=BIC)
+    }
+
     val <- data.frame(Df = Df,
-                      AIC = ifelse(estimator == "ML",
-                                   sapply(mods, AIC), rep(NA, length(mods))),
-                      BIC = ifelse(estimator == "ML",
-                                   sapply(mods, BIC), rep(NA, length(mods))),
+                      AIC = aic,
+                      BIC = bic,
                       Chisq = Chisq,
                       "Chisq diff" = Chisq.delta,
                       "Df diff" = Df.delta,
@@ -1494,7 +1495,9 @@ function(object, ..., SB.classic = FALSE) {
                       check.names = FALSE)
 
     if(scaled) {
-        attr(val, "heading") <- "Scaled Chi Square Difference Test\n"
+        attr(val, "heading") <- 
+            paste("Scaled Chi Square Difference Test (test = ",
+                  TEST, ")\n", sep="")
     } else {
         attr(val, "heading") <- "Chi Square Difference Test\n"
     }

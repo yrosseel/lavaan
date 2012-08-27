@@ -69,7 +69,8 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
     WLS.V <- vector("list", length=samplestats@ngroups)
     for(g in 1:samplestats@ngroups) {
         WLS.V[[g]] <- compute.A1.sample(samplestats=samplestats, group=g,
-                                        meanstructure=TRUE)
+                                        meanstructure=TRUE, 
+                                        information="expected")
         # the same as GLS... (except for the N/N-1 scaling)
     }
 
