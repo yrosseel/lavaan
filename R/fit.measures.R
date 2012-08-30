@@ -379,7 +379,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             df2 <- df
         } else {
             XX2 <- X2
-            df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+            if(test == "mean.var.adjusted") 
+                df2 <- df
+            else
+                df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
         }
         lower.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
@@ -588,7 +591,11 @@ print.fit.measures <- function(x) {
        t0.txt <- sprintf("  %-40s", "Degrees of freedom")
        t1.txt <- sprintf("  %10i", x["baseline.df"])
        t2.txt <- ifelse(scaled,
-                 sprintf("  %10i", x["baseline.df.scaled"]), "")
+                        ifelse(round(x["baseline.df.scaled"]) ==
+                               x["baseline.df.scaled"],
+                        sprintf("  %10i",   x["baseline.df.scaled"]),
+                        sprintf("  %10.3f", x["baseline.df.scaled"])),
+                        "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
        t0.txt <- sprintf("  %-40s", "P-value")

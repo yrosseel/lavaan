@@ -230,12 +230,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
                  opt$se, "\n")
         }
 
-    } else if(opt$estimator == "mlm" || opt$estimator == "mlmv") {
+    } else if(opt$estimator == "mlm"   || 
+              opt$estimator == "mlmv"  || 
+              opt$estimator == "mlmvs") {
         if(opt$test != "none") {
             if(opt$estimator == "mlm") {
                 opt$test <- "satorra.bentler"
             } else if(opt$estimator == "mlmv") {          
                 opt$test <- "scaled.shifted"
+            } else if(opt$estimator == "mlmvs") {
+                opt$test <- "mean.var.adjusted"
             }
         }
         opt$estimator <- "ML"
