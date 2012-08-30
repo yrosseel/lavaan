@@ -105,12 +105,12 @@ order as they appear in the data.}
 \item{se}{If \code{"standard"}, conventional standard errors 
     are computed based on inverting the (expected or observed) information 
     matrix. If \code{"first.order"}, standard errors are computed based on 
-    first-order derivatives. If \code{"robust.mlm"}, conventional robust 
+    first-order derivatives. If \code{"robust.sem"}, conventional robust 
     standard errors are computed.
-    If \code{"robust.mlr"},
+    If \code{"robust.huber.white"},
     standard errors are computed based on the `mlr' (aka pseudo ML, 
     Huber-White) approach.
-    If \code{"robust"}, either \code{"robust.mlm"} or \code{"robust.mlr"} is
+    If \code{"robust"}, either \code{"robust.sem"} or \code{"robust.huber.white"} is
     used depending on the estimator, the mimic option, and whether the data
     are complete or not.
     If \code{"boot"} or \code{"bootstrap"}, bootstrap standard errors are

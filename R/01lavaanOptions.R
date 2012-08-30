@@ -43,7 +43,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     }
 
     # group.equal and group.partial
-    if(opt$group.equal == "none") {
+    if(opt$group.equal[1] == "none") {
         opt$group.equal <- character(0)
     } else if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {
@@ -216,14 +216,14 @@ setLavaanOptions <- function(opt = formals(lavaan))
                   opt$se == "bootstrap"   ||
                   opt$se == "none"        || 
                   opt$se == "standard"    ||
-                  opt$se == "robust.mlr"  || 
-                  opt$se == "robust.mlm") {
+                  opt$se == "robust.huber.white"  || 
+                  opt$se == "robust.sem") {
             # nothing to do
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
-                opt$se <- "robust.mlr"
+                opt$se <- "robust.huber.white"
             } else {
-                opt$se <- "robust.mlm"
+                opt$se <- "robust.sem"
             }
         } else {
             stop("unknown value for `se' argument when estimator is ML: ", 
@@ -242,7 +242,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$information <- "expected"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.mlm"
+        if(opt$se != "none") opt$se <- "robust.sem"
         opt$missing <- "listwise"
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
@@ -252,7 +252,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.mlr"
+        if(opt$se != "none") opt$se <- "robust.huber.white"
         if(opt$test != "none") opt$test <- "yuan.bentler"
         opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
@@ -276,10 +276,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
-        } else if(opt$se == "robust.wls") {
+        } else if(opt$se == "robust.sem") {
             # nothing to do
         } else if(opt$se == "robust") {
-            opt$se <- "robust.wls"
+            opt$se <- "robust.sem"
         } else {
             stop("invalid value for `se' argument when estimator is WLS: ", 
                  opt$se, "\n")
@@ -295,10 +295,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
-        } else if(opt$se == "robust.wls") {
+        } else if(opt$se == "robust.sem") {
             # nothing to do
         } else if(opt$se == "robust") {
-            opt$se <- "robust.wls"
+            opt$se <- "robust.sem"
         } else {
             stop("invalid value for `se' argument when estimator is DWLS: ",
                  opt$se, "\n")
@@ -313,13 +313,13 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         opt$missing <- "listwise"
      } else if(opt$estimator == "wlsmv") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
@@ -328,10 +328,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         } else if(opt$se == "none" || opt$se == "bootstrap") {
             # nothing to do
-        } else if(opt$se == "robust.wls") {
+        } else if(opt$se == "robust.sem") {
             # nothing to do
         } else if(opt$se == "robust") {
-            opt$se <- "robust.wls"
+            opt$se <- "robust.sem"
         } else {
             stop("invalid value for `se' argument when estimator is ULS: ", 
                  opt$se, "\n")
@@ -346,13 +346,13 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$estimator == "ulsm") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmv") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.wls"
+        if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         opt$missing <- "listwise"
     } else {
@@ -383,7 +383,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     # information
     if(opt$information == "default") {
         if(opt$missing == "ml"     || 
-           opt$se == "robust.mlr"  || 
+           opt$se == "robust.huber.white"  || 
            opt$se == "first.order" ||
            nchar(opt$constraints) > 0L) {
             opt$information <- "observed"
@@ -421,8 +421,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
        "means" %in% opt$group.equal) {
         opt$meanstructure <- TRUE
     }
-    if(opt$se == "robust.mlr" || 
-       opt$se == "robust.mlm" ||
+    if(opt$se == "robust.huber.white" || 
+       opt$se == "robust.sem" ||
        opt$test == "satorra.bentler" ||
        opt$test == "mean.var.adjusted" ||
        opt$test == "scaled.shifted" ||

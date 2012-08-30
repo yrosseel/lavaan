@@ -128,6 +128,7 @@ lavaanify <- lavParTable <- function(
     if(n.group.flat > 0L) {
         # split the FLAT data.frame per `group', create LIST
         # for each `group', and bind them together
+        FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
         group.op.idx <- c(which(FLAT$op == ":"), nrow(FLAT)+1L)
         for(g in 1:n.group.flat) {
             FLAT.group <- FLAT[(group.op.idx[g]+1L):(group.op.idx[g+1]-1L),]    

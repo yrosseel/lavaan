@@ -277,8 +277,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
-        if(!is.null(sample.mean) && !is.list(sample.mean))
-            sample.mean <- list(sample.mean)
+    if(!is.null(sample.mean) && !is.list(sample.mean))
+        sample.mean <- list(sample.mean)
 
     # number of groups
     ngroups <- length(sample.cov)
@@ -347,8 +347,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             tmp.mean <- numeric(ncol(tmp.cov))
         } else {
             # extract only the part we need
-            tmp.mean <- sample.mean[[g]][idx]
-            names(tmp.mean) <- NULL
+            tmp.mean <- as.numeric(sample.mean[[g]][idx])
         }
 
         cov[[g]]  <- tmp.cov

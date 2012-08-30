@@ -136,66 +136,47 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL) {
     NVarCov
 }
 
-Nvcov.robust.mlm <- function(object, samplestats=NULL, data=NULL) {
+Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL,
+                             estimator = "ML", mimic = "lavaan") {
 
     # compute information matrix
-    E <- computeExpectedInformation(object, samplestats=samplestats, data=data,
-                                    estimator="ML", extra=TRUE) 
-    E.inv <- solve(E)
-    Delta <- attr(E, "Delta")
-    WLS.V <- attr(E, "WLS.V")
-    Gamma <- samplestats@NACOV
-
-    NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-    for(g in 1:samplestats@ngroups) {
-        tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
-        NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
-                              (t(tmp) %*% Gamma[[g]] %*% tmp) )
-    } # g
-
-    NVarCov <- NVarCov * (samplestats@ntotal-1)
-
-    # to be reused by lavaanTest
-    attr(NVarCov, "E.inv") <- E.inv
-    attr(NVarCov, "Delta") <- Delta
-    attr(NVarCov, "WLS.V") <- WLS.V
-
-    NVarCov
-}
-
-
-Nvcov.robust.mlm.mplus <- function(object, samplestats=NULL, data=NULL) {
-
-    # compute information matrix with custom WLS.V
-    E <- computeExpectedInformationMLM(object, samplestats=samplestats)
-    E.inv <- solve(E)
-    Delta <- attr(E, "Delta")
-    WLS.V <- attr(E, "WLS.V")
-    Gamma <- samplestats@NACOV
-
-    NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-
-    for(g in 1:samplestats@ngroups) {
+    if(estimator == "ML" && mimic == "Mplus") {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
         # - WLS.V is not based on Sigma.hat and Mu.hat (as it
         #   should be?), but on samplestats@cov and samplestats@mean...
         # - Gamma is not identical to what is used for WLS; closer to EQS
         # - N/N-1 bug in G11 for NVarCov (but not test statistic)
         # - we divide by N-1! (just like EQS)
+        E <- computeExpectedInformationMLM(object, samplestats=samplestats)
+        Gamma <- samplestats@NACOV
+        # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test 
+        # statistic
+        for(g in 1:samplestats@ngroups) {
+            gg1 <- (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]]
+            G11 <- gg1 * samplestats@cov[[g]]
+            Gamma[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
+        } # g
+    } else {
+        E <- computeExpectedInformation(object, samplestats=samplestats, 
+                                        data=data, estimator=estimator, 
+                                        extra=TRUE) 
+        Gamma <- samplestats@NACOV
+    }
+    E.inv <- solve(E)
+    Delta <- attr(E, "Delta")
+    WLS.V <- attr(E, "WLS.V")
 
-        tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
-
-        # should not be necessary, since already done!!
-        # but otherwise, the std.errs for the intercepts are off...
-        GAMMA <- Gamma[[g]]
-        G11 <- ( samplestats@cov[[g]] * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] ) 
-        GAMMA[1:nrow(G11), 1:nrow(G11)] <- G11
-
-        NVarCov <- ( NVarCov + (1/(samplestats@nobs[[g]]-1)) * 
-                               (t(tmp) %*% GAMMA %*% tmp) )
+    tDVGVD <- matrix(0, ncol=ncol(E), nrow=nrow(E))
+    for(g in 1:samplestats@ngroups) {
+        fg  <-  samplestats@nobs[[g]]   /samplestats@ntotal
+        fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
+        # fg twice for WLS.V, 1/fg1 once for GaMMA
+        # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
+        # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
+        WD <- WLS.V[[g]] %*% Delta[[g]]
+        tDVGVD <- tDVGVD + fg*fg/fg1 * crossprod(WD, Gamma[[g]] %*% WD)
     } # g
-
-    NVarCov <- NVarCov * samplestats@ntotal
+    NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
 
     # to be reused by lavaanTest
     attr(NVarCov, "E.inv") <- E.inv
@@ -205,7 +186,7 @@ Nvcov.robust.mlm.mplus <- function(object, samplestats=NULL, data=NULL) {
     NVarCov
 }
 
-Nvcov.robust.mlr <- function(object, samplestats=NULL, data=NULL,
+Nvcov.robust.huber.white <- function(object, samplestats=NULL, data=NULL,
                              information="observed") {
 
     # compute standard Nvcov
@@ -231,34 +212,6 @@ Nvcov.robust.mlr <- function(object, samplestats=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.robust.wls <- function(object, samplestats=NULL) {
-
-    # compute information matrix
-    E <- computeExpectedInformation(object, samplestats=samplestats, data=data,
-                                    estimator="WLS", extra=TRUE)
-    E.inv <- solve(E)
-    Delta <- attr(E, "Delta")
-    WLS.V <- attr(E, "WLS.V")
-    NACOV <- samplestats@NACOV
-
-    NVarCov <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-
-    for(g in 1:samplestats@ngroups) {
-        tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
-        NVarCov <- ( NVarCov +  (1/(samplestats@nobs[[g]]-1)) *
-                              (t(tmp) %*% NACOV[[g]] %*% tmp) )
-    } # g
-
-    NVarCov <- NVarCov * (samplestats@ntotal-1)
-
-    # to be reused by lavaanTest
-    attr(NVarCov, "E.inv") <- E.inv
-    attr(NVarCov, "Delta") <- Delta
-    attr(NVarCov, "WLS.V") <- WLS.V
-
-    NVarCov
-}
-           
 
 estimateVCOV <- function(object, samplestats, options=NULL, data=NULL, 
                          partable=NULL, control=list()) {
@@ -273,7 +226,7 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
     if(se == "none") return(NULL)
 
     # some require meanstructure (for now)
-    if(se %in% c("first.order", "robust.mlm", "robust.mlr") && 
+    if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 
        !options$meanstructure) {
         stop("se (", se, ") requires meanstructure (for now)")
     }
@@ -290,25 +243,18 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                           samplestats = samplestats,
                                           data        = data) )
 
-    } else if(se == "robust.mlm" && mimic == "Mplus") {
-        NVarCov <- try( Nvcov.robust.mlm.mplus(object      = object,
-                                               samplestats = samplestats,
-                                               data        = data) )
-
-    } else if(se == "robust.mlm" && mimic != "Mplus") {
-        NVarCov <- try( Nvcov.robust.mlm(object      = object,
+    } else if(se == "robust.sem") {
+        NVarCov <- try( Nvcov.robust.sem(object      = object,
                                          samplestats = samplestats,
+                                         estimator   = estimator,
+                                         mimic       = mimic,
                                          data        = data) )
 
-    } else if(se == "robust.mlr") {
-        NVarCov <- try( Nvcov.robust.mlr(object      = object,
+    } else if(se == "robust.huber.white") {
+        NVarCov <- try( Nvcov.robust.huber.white(object      = object,
                                          samplestats = samplestats,
                                          data        = data,
                                          information = information) )
-
-    } else if(se == "robust.wls") {
-        NVarCov <- try( Nvcov.robust.wls(object      = object,
-                                         samplestats = samplestats) )
 
     } else if(se == "bootstrap") {
         NVarCov <- try( Nvcov.bootstrap(object      = object,

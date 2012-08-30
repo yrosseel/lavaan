@@ -191,12 +191,24 @@ short.summary <- function(object) {
 
         # 4b. Shift parameter?
         if(shifted) {
-            t0.txt <- sprintf("  %-40s", "Shift parameter")
-            t1.txt <- sprintf("  %10s", "")
-            t2.txt <- sprintf("  %10.3f", object@Fit@test[[2]]$shift.parameter)
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            if(object@Data@ngroups == 1L) {
+                t0.txt <- sprintf("  %-40s", "Shift parameter")
+                t1.txt <- sprintf("  %10s", "")
+                t2.txt <- sprintf("  %10.3f", 
+                                  object@Fit@test[[2]]$shift.parameter)
+                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            } else { # multiple groups, multiple shift values!
+                cat("  Shift parameter for each group:\n")
+                for(g in 1:object@Data@ngroups) {
+                    t0.txt <- sprintf("    %-38s", object@Data@group.label[[g]])
+                    t1.txt <- sprintf("  %10s", "")
+                    t2.txt <- sprintf("  %10.3f",
+                                     object@Fit@test[[2]]$shift.parameter[g])
+                    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+                }
+            }
             if(object@Options$mimic == "Mplus" &&
-                   object@Options$estimator == "DWLS") {
+               object@Options$estimator == "DWLS") {
                 cat("    for simple second-order correction (WLSMV)\n")
             } else {
                 cat("    for simple second-order correction (Mplus variant)\n")

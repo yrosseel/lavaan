@@ -2,47 +2,34 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
                                         E.inv, Delta, WLS.V,
                                         x.idx=list(integer(0))) {
 
-    # warn if fixed.x!
-    #if(length(x.idx[[1L]] > 0L)) {
-    #    warning("lavaan WARNING: SB scaling factor may not be correct in the presence of exogenous fixed.x covariates; either use fixed.x=FALSE or mimic=Mplus to get better results")
-    #}
+    # UG = Gamma %*% [V - V %*% Delta %*% E.inv %*% tDelta %*% V]
+    #    = Gamma %*% V  - Gamma %*% V %*% Delta %*% E.inv %*% tDelta %*% V
+    #    = Gamma %*% A1 - Gamma %*% A1 %*% Delta %*% E.inv %*% tDelta %*% A1
+    # (B1 = A1 %*% Gamma %*% A1)
+    #    = B1 %*% A1.inv - B1 %*% A1.inv %*% Delta %*% E.inv %*% tDelta %*% A1
+    #    
+    # if only the trace is needed, we can use reduce the rhs (after the minus)
+    # to B1 %*% Delta %*% E.inv %*% tDelta (eliminating A1 and A1.inv)
+
+    # we write it like this to allow for fixed.x covariates which affect A1
+    # and B1
 
     Gamma <- samplestats@NACOV
+    nss <- ncol(Gamma[[1]])
 
-    trace.UGamma  <- numeric( samplestats@ngroups )
-    trace.UGamma2 <- numeric( samplestats@ngroups )
-
+    UG  <- matrix(0, nss, nss)
+    trace.UGamma2 <- numeric(samplestats@ngroups)
     for(g in 1:samplestats@ngroups) {
-        tmp <- WLS.V[[g]] %*% Delta[[g]] %*% E.inv
-        U <- WLS.V[[g]] - (tmp %*% t(Delta[[g]]) %*% WLS.V[[g]])
-        UG <- U %*% Gamma[[g]]; tUG <- t(UG)
-        trace.UGamma[g] <-
-                samplestats@ntotal/samplestats@nobs[[g]] * sum( U * Gamma[[g]] )
-        trace.UGamma2[g] <-
-                samplestats@ntotal/samplestats@nobs[[g]] * sum( UG * tUG )
-    }
+        fg  <-  samplestats@nobs[[g]]   /samplestats@ntotal
+        fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
+        WLS.Vg  <- WLS.V[[g]] * fg
+        Gamma.g <- Gamma[[g]] / fg  ## ?? check this
 
-    attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
+        # just for testing: regular UG:
+        UG1 <- Gamma.g %*% (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% WLS.Vg)
 
-    trace.UGamma
-}
-
-
-testStatisticSatorraBentler.Mplus <- function(samplestats=samplestats, 
-                                              E.inv, Delta, WLS.V,
-                                              x.idx=list(integer(0))) {
-    Gamma <- samplestats@NACOV
-    
-    trace.UGamma <- numeric( samplestats@ngroups )
-    trace.UGamma2 <- numeric( samplestats@ngroups )
-
-    for(g in 1:samplestats@ngroups) {
-        A1 <- WLS.V[[g]]
-        B1 <- A1 %*% Gamma[[g]] %*% A1
-
-        # A0 <- t(Delta) %*% A1 %*% Delta  ## A0 = E
-        B0 <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
-
+        A1      <- WLS.V[[g]] * fg
+        B1 <- A1 %*% Gamma.g %*% A1
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
@@ -54,17 +41,41 @@ testStatisticSatorraBentler.Mplus <- function(samplestats=samplestats,
         }
         A1.inv <- solve(A1)
 
-        trace.h1     <- sum( B1 * t(A1.inv) )
-        trace.h0     <- sum( B0 * t(E.inv)  ) 
-        trace.UGamma[g] <- 
-            samplestats@ntotal/samplestats@nobs[[g]] * (trace.h1-trace.h0)
-        UG <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
-        tUG <- t(UG)
-        trace.UGamma2[g] <- 
-            samplestats@ntotal/samplestats@nobs[[g]] * sum( UG * tUG )
-    }        
+        #B0 <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
+        #trace.h1     <- sum( B1 * t(A1.inv) )
+        #trace.h0     <- sum( B0 * t(E.inv)  ) 
+        #trace.UGamma[g] <- (trace.h1-trace.h0)
 
+        tmp <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
+        # sanity check 1: sum(diag(UG1)) - sum(diag(tmp))
+        # sanity check 2: sum(diag(UG1 %*% UG1)) - sum(diag(tmp %*% tmp))
+        trace.UGamma2[g] <- sum(tmp * t(tmp))
+ 
+        UG <- UG + tmp
+    }
+
+    # NOTE: if A, B, C are matrices
+    # tr(A+B+C) = tr(A) + tr(B) + tr(C)
+    #
+    # BUT:
+    # tr( (A+B+C)^2 ) != tr(A^2) + tr(B^2) + tr(C^2) 
+    # it would seem that we need the latter... (trace.UGamma3) for MLMV and
+    # friends
+
+    # trace
+    trace.UGamma <- sum(diag(UG))
+
+    # for mean and variance adjusted tr UG^2 (per group)
+    trace.UGamma4 <- trace.UGamma2
+    trace.UGamma2 <- sum(trace.UGamma2) # at least for MLMV in Mplus
+                                        # this is what is needed when multiple
+                                        # groups are used?? 
     attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
+    attr(trace.UGamma, "trace.UGamma4") <- trace.UGamma4
+
+    # testing only -- alternative interpretation of tr UG^2
+    tUG <- t(UG); trace.UGamma3 <- sum(UG * tUG) # seems wrong?
+    attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
 
     trace.UGamma
 }
@@ -97,11 +108,16 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
             B1 <- B1[idx,idx]
         }
 
-        trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
-        trace.h0[g]     <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% A1) * t( solve(A1) ) )
-                           
-        trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
+        trace.h1[g] <- sum( B1 * t( solve(A1) ) )
+        trace.h0[g] <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]])) )
+        #trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
+        UG <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
     }
+
+    # traces
+    trace.UGamma <- sum(diag(UG))
+    #tUG <- t(UG); trace.UGamma2 <- sum(UG * tUG)
+    #attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
 
     attr(trace.UGamma, "h1") <- trace.h1
     attr(trace.UGamma, "h0") <- trace.h0
@@ -148,6 +164,9 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
                              sum( B0.group[[g]] * t(E.inv) ) )
         trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
     }
+
+    # we take the sum here
+    trace.UGamma <- sum(trace.UGamma)
 
     attr(trace.UGamma, "h1") <- trace.h1
     attr(trace.UGamma, "h0") <- trace.h0
@@ -246,7 +265,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     # fixed.x idx
     x.idx <- vector("list", length=samplestats@ngroups)
     for(g in 1:samplestats@ngroups) {
-        if(options$fixed.x) {
+        if(options$fixed.x && estimator == "ML") {
             x.idx[[g]] <- match(vnames(partable, "ov.x", group=g), 
                                 data@ov.names[[g]])
         } else {
@@ -279,7 +298,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
             WLS.V <- attr(E, "WLS.V")
         }
 
-        if(mimic == "Mplus" && estimator == "ML") {
+#        if(mimic == "Mplus" && estimator == "ML") {
             ### TESTING ONLY FOR FIXED.X !!! ###
 #            if(length(x.idx) > 0L) {
 #                cat("\n\nDEBUG FIXED.X\n\n\n")
@@ -303,32 +322,26 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 #                E.inv <- solve(E)
 #                x.idx <- integer(0)
 #            }
-            trace.UGamma <-
-                testStatisticSatorraBentler.Mplus(samplestats = samplestats,
-                                                  E.inv       = E.inv, 
-                                                  Delta       = Delta, 
-                                                  WLS.V       = WLS.V, 
-                                                  x.idx       = x.idx)
-        } else {
-            trace.UGamma <- 
-                testStatisticSatorraBentler(samplestats = samplestats,
-                                            E.inv       = E.inv, 
-                                            Delta       = Delta, 
-                                            WLS.V       = WLS.V, 
-                                            x.idx       = x.idx)
-        }
+#        } 
 
-        
+        trace.UGamma <- 
+            testStatisticSatorraBentler(samplestats = samplestats,
+                                        E.inv       = E.inv, 
+                                        Delta       = Delta, 
+                                        WLS.V       = WLS.V, 
+                                        x.idx       = x.idx)
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
+        trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
+        trace.UGamma4 <- attr(trace.UGamma, "trace.UGamma4")
         attributes(trace.UGamma) <- NULL
 
         # adjust df?
         if(test == "mean.var.adjusted") {
             if(mimic == "Mplus") {
-                df <- floor((sum(trace.UGamma)^2 / sum(trace.UGamma2)) + 0.5)
+                df <- floor(trace.UGamma^2/trace.UGamma2 + 0.5)
             } else {
                 # more precise, fractional df
-                df <- sum(trace.UGamma)^2 / sum(trace.UGamma2)
+                df <- trace.UGamma^2 / trace.UGamma2
             }
         } else if(test == "satorra.bentler") {
             trace.UGamma2 <- as.numeric(NA)
@@ -338,15 +351,24 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
             # this is the T3 statistic as used by Mplus 6 and higher
             # see 'Simple Second Order Chi-Square Correction' 2010
             # www.statmodel.com
-            scaling.factor <- sqrt(sum(trace.UGamma2) /df)
-            if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-            shift.parameter <- max(0, df - sqrt( df*sum(trace.UGamma)^2 /
-                                      sum(trace.UGamma2) ) )
-            stat.group      <- (chisq.group / scaling.factor + shift.parameter)
+
+            # however, for multiple groups, Mplus reports something else
+            # YR. 30 Aug 2012 -- after much trial and error, it turns out
+            # that the shift-parameter (b) is weighted (while a is not)??
+            # however, the chisq.square per group are different; only
+            # the sum seems ok??
+            fg <- unlist(samplestats@nobs)/samplestats@ntotal
+           
+            a <- sqrt(df/trace.UGamma2)
+            #dprime <- trace.UGamma^2 / trace.UGamma2
+            #shift.parameter <- fg * (df - sqrt(df * dprime))
+            shift.parameter <- fg * (df - a*trace.UGamma)
+            scaling.factor  <- 1/a
+            stat.group      <- (chisq.group * a + shift.parameter)
             chisq.scaled    <- sum(stat.group)
             pvalue.scaled   <- 1 - pchisq(chisq.scaled, df)
         } else {
-            scaling.factor <- sum(trace.UGamma) / df
+            scaling.factor <- trace.UGamma/df
             if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
             stat.group     <- chisq.group / scaling.factor
             chisq.scaled   <- sum(stat.group)
@@ -362,6 +384,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           scaling.factor=scaling.factor,
                           shift.parameter=shift.parameter,
                           trace.UGamma=trace.UGamma,
+                          trace.UGamma4=trace.UGamma4,
                           trace.UGamma2=trace.UGamma2)
 
     } else if(test == "yuan.bentler" && df > 0) {

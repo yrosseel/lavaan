@@ -41,7 +41,7 @@ compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
     idx <- which(lower.tri(matrix(0,p,p), diag=TRUE))
     Z <- t(apply(zdata, 1, function(x) { tcrossprod(x)[idx]  }))
 
-    Gamma = (N-1)/N * cov(Z)
+    Gamma = (N-1)/N * cov(Z) # we divide by 'N'!
 
     # only to mimic Mplus WLS
     if(Mplus.WLS) {

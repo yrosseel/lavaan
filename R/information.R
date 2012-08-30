@@ -38,11 +38,10 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
     # compute Information per group
     Info.group  <- vector("list", length=samplestats@ngroups)
     for(g in 1:samplestats@ngroups) {
-        # take care of multiple groups
-        WLS.V[[g]] <- samplestats@nobs[[g]]/samplestats@ntotal * WLS.V[[g]]
-
+        # note LISREL documentation suggest (Ng - 1) instead of Ng...
+        fg <- samplestats@nobs[[g]]/samplestats@ntotal
         # compute information for this group
-        Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]] 
+        Info.group[[g]] <- fg * (t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]])
     }
 
     # assemble over groups
@@ -55,7 +54,7 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
 
     if(extra) {
         attr(Information, "Delta") <- Delta
-        attr(Information, "WLS.V") <- WLS.V
+        attr(Information, "WLS.V") <- WLS.V # unweighted
     }
 
     Information
@@ -77,12 +76,9 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
     # compute Information per group
     Info.group  <- vector("list", length=samplestats@ngroups)
     for(g in 1:samplestats@ngroups) {
-        # take care of multiple groups
-        WLS.V[[g]] <- samplestats@nobs[[g]]/samplestats@ntotal * WLS.V[[g]]
-
+        fg <- samplestats@nobs[[g]]/samplestats@ntotal
         # compute information for this group
-        Info.group[[g]] <- t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]]
-
+        Info.group[[g]] <- fg * (t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]])
     }
 
     # assemble over groups
@@ -95,7 +91,7 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
 
     # always
     attr(Information, "Delta") <- Delta
-    attr(Information, "WLS.V") <- WLS.V
+    attr(Information, "WLS.V") <- WLS.V # unweighted
 
     Information
 }
