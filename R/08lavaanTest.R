@@ -16,10 +16,11 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
 
     Gamma <- samplestats@NACOV
     nss <- ncol(Gamma[[1]])
+    ngroups <- samplestats@ngroups
 
-    UG  <- matrix(0, nss, nss)
-    trace.UGamma2 <- numeric(samplestats@ngroups)
-    for(g in 1:samplestats@ngroups) {
+    UG.group  <- vector("list", length=ngroups)
+    trace.UGamma2 <- numeric(ngroups)
+    for(g in 1:ngroups) {
         fg  <-  samplestats@nobs[[g]]   /samplestats@ntotal
         fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
         WLS.Vg  <- WLS.V[[g]] * fg
@@ -38,6 +39,7 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
                                        meanstructure=TRUE, type="all")
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
+            De <- Delta[[g]][idx,]
         }
         A1.inv <- solve(A1)
 
@@ -46,12 +48,12 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
         #trace.h0     <- sum( B0 * t(E.inv)  ) 
         #trace.UGamma[g] <- (trace.h1-trace.h0)
 
-        tmp <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
+        tmp <- (B1 %*% A1.inv) - (B1 %*% De %*% E.inv %*% t(De))
         # sanity check 1: sum(diag(UG1)) - sum(diag(tmp))
         # sanity check 2: sum(diag(UG1 %*% UG1)) - sum(diag(tmp %*% tmp))
         trace.UGamma2[g] <- sum(tmp * t(tmp))
- 
-        UG <- UG + tmp
+
+        UG.group[[g]] <- tmp
     }
 
     # NOTE: if A, B, C are matrices
@@ -61,6 +63,13 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
     # tr( (A+B+C)^2 ) != tr(A^2) + tr(B^2) + tr(C^2) 
     # it would seem that we need the latter... (trace.UGamma3) for MLMV and
     # friends
+
+    UG <- UG.group[[1]]
+    if(ngroups > 1L) {
+        for(g in 2:ngroups) {
+            UG <- UG + UG.group[[g]]
+        }
+    }
 
     # trace
     trace.UGamma <- sum(diag(UG))
