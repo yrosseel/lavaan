@@ -352,9 +352,13 @@ getDataFull <- function(data          = NULL,          # data.frame
         if(missing != "listwise") {
             # get missing patterns
             Mp[[g]] <- getMissingPatterns(X[[g]])
+            # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
                 warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+            }
+            if(any(Mp[[g]]$coverage < 0.1) {
+                warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
             }
             # in case we had observations with only missings
             nobs[[g]] <- Mp[[g]]$nobs
