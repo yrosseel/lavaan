@@ -45,6 +45,37 @@ pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
 
 
 
+
+# safe but extremely slow...
+pbinorm <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                    lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
+    p2_i <- function(lower.x, lower.y, upper.x, upper.y, rho) {
+        pmvnorm(lower=c(lower.x, lower.y),
+                upper=c(upper.x, upper.y),
+                corr=matrix(c(1,rho,rho,1),2L,2L))
+    }
+
+    N <- length(upper.x)
+    stopifnot(length(upper.y) == N)
+    if(N > 1L) {
+        if(length(rho) == 1L)
+            rho <- rep(rho, N)
+        if(length(lower.x) == 1L)
+            lower.x <- rep(lower.x, N) 
+        if(length(lower.y) == 1L)
+            lower.y <- rep(lower.y, N)
+    }
+
+    # vectorize (this would be faster if the loop is in the fortran code!) 
+    res <- sapply(seq_len(N), function(i)
+                      p2_i(lower.x[i], lower.y[i],
+                           upper.x[i], upper.y[i], 
+                           rho[i]))
+    res
+}
+
+
 # bivariate standard normal cdf  VECTORIZED!!
 # 
 # upper.xx and upper.y are the UPPER limits of the bivariate integral
@@ -54,57 +85,58 @@ pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
 # the overhead of pmvnorm
 #
 # YR 26 June 2012
-
-pbinorm <- function(upper.x=NULL, upper.y=NULL, rho=0.0, 
-                    lower.x=-Inf, lower.y=-Inf, check=FALSE) {
-
-    p2_i <- function(lower.x, lower.y, upper.x, upper.y, rho, infin) {
-        .Fortran("MVTDST", N=2L, NU=0L,
-                 lower=c(lower.x, lower.y), upper=c(upper.x, upper.y),
-                 infin=infin, correl=c(rho),
-                 delta=c(0,0), maxpts=25000L, abseps=0.001, releps=0,
-                 error=0, value=0, inform=0L, PACKAGE="mvtnorm")$value
-    }
-    
-    if(check) {
-        lower.x <- as.double(lower.x); lower.y <- as.double(lower.y)
-        upper.x <- as.double(upper.x); upper.y <- as.double(upper.y)
-        
-        rho <- as.double(rho)
-        stopifnot(any(abs(rho) < 1), length(lower.y) == N,
-              upper.x == N, upper.y == N)
-    }
-
-    N <- length(lower.x)
-    if(N > 1L && length(rho) == 1L)
-        rho <- rep(rho, N)
-
-    # set up infin
-    #INFIN  INTEGER, array of integration limits flags:
-    #         if INFIN(I) < 0, Ith limits are (-infinity, infinity);
-    #         if INFIN(I) = 0, Ith limits are (-infinity, UPPER(I)];
-    #         if INFIN(I) = 1, Ith limits are [LOWER(I), infinity);
-    #         if INFIN(I) = 2, Ith limits are [LOWER(I), UPPER(I)].
-    infin.x <- rep(2L, N); infin.y <- rep(2L, N)
-    infin.x[ lower.x < -10.0 & upper.x > +10.0 ] <- -1L
-    infin.x[ lower.x < -10.0 & upper.x < +10.0 ] <-  0L
-    infin.x[ lower.x > -10.0 & upper.x > +10.0 ] <-  1L
-    infin.y[ lower.y < -10.0 & upper.y > +10.0 ] <- -1L
-    infin.y[ lower.y < -10.0 & upper.y < +10.0 ] <-  0L
-    infin.y[ lower.y > -10.0 & upper.y > +10.0 ] <-  1L
-    lower.x[ !is.finite(lower.x) ] <- 0
-    lower.y[ !is.finite(lower.y) ] <- 0
-    upper.x[ !is.finite(upper.x) ] <- 0
-    upper.y[ !is.finite(upper.y) ] <- 0
-
-    # vectorize (this would be faster if the loop is in the fortran code!) 
-    res <- sapply(seq_len(N), function(i) 
-                      p2_i(lower.x[i], lower.y[i], 
-                           upper.x[i], upper.y[i], rho[i],
-                           infin=c(infin.x[i], infin.y[i])))
-
-    res
-}
+#
+# BUT: this one gets rejected by CRAN... due the the foreign call
+#pbinorm0 <- function(upper.x=NULL, upper.y=NULL, rho=0.0, 
+#                    lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+#
+#    p2_i <- function(lower.x, lower.y, upper.x, upper.y, rho, infin) {
+#        .Fortran("MVTDST", N=2L, NU=0L,
+#                 lower=c(lower.x, lower.y), upper=c(upper.x, upper.y),
+#                 infin=infin, correl=c(rho),
+#                 delta=c(0,0), maxpts=25000L, abseps=0.001, releps=0,
+#                 error=0, value=0, inform=0L, PACKAGE="mvtnorm")$value
+#    }
+#    
+#    if(check) {
+#        lower.x <- as.double(lower.x); lower.y <- as.double(lower.y)
+#        upper.x <- as.double(upper.x); upper.y <- as.double(upper.y)
+#        
+#        rho <- as.double(rho)
+#        stopifnot(any(abs(rho) < 1), length(lower.y) == N,
+#              upper.x == N, upper.y == N)
+#    }
+#
+#    N <- length(lower.x)
+#    if(N > 1L && length(rho) == 1L)
+#        rho <- rep(rho, N)
+#
+#    # set up infin
+#    #INFIN  INTEGER, array of integration limits flags:
+#    #         if INFIN(I) < 0, Ith limits are (-infinity, infinity);
+#    #         if INFIN(I) = 0, Ith limits are (-infinity, UPPER(I)];
+#    #         if INFIN(I) = 1, Ith limits are [LOWER(I), infinity);
+#    #         if INFIN(I) = 2, Ith limits are [LOWER(I), UPPER(I)].
+#    infin.x <- rep(2L, N); infin.y <- rep(2L, N)
+#    infin.x[ lower.x < -10.0 & upper.x > +10.0 ] <- -1L
+#    infin.x[ lower.x < -10.0 & upper.x < +10.0 ] <-  0L
+#    infin.x[ lower.x > -10.0 & upper.x > +10.0 ] <-  1L
+#    infin.y[ lower.y < -10.0 & upper.y > +10.0 ] <- -1L
+#    infin.y[ lower.y < -10.0 & upper.y < +10.0 ] <-  0L
+#    infin.y[ lower.y > -10.0 & upper.y > +10.0 ] <-  1L
+#    lower.x[ !is.finite(lower.x) ] <- 0
+#    lower.y[ !is.finite(lower.y) ] <- 0
+#    upper.x[ !is.finite(upper.x) ] <- 0
+#    upper.y[ !is.finite(upper.y) ] <- 0
+#
+#    # vectorize (this would be faster if the loop is in the fortran code!) 
+#    res <- sapply(seq_len(N), function(i) 
+#                      p2_i(lower.x[i], lower.y[i], 
+#                           upper.x[i], upper.y[i], rho[i],
+#                           infin=c(infin.x[i], infin.y[i])))
+#
+#    res
+#}
 
 pbinorm2 <- function(x, y, rho) {
 
