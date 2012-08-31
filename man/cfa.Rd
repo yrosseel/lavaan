@@ -96,10 +96,11 @@ order as they appear in the data.}
     for \code{"MLR"}, `Huber-White' robust standard errors are used 
     (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
     a Satorra-Bentler scaled (mean adjusted) test statistic 
-    (test="satorra.bentler") , \code{"MLMVS"} will compute a mean and variance
-    adjusted test statistic (Satterthwaite style) (test="mean.var.adjusted"),
-    \code{"MLMV"} will compute a mean and variance adjusted test statistic
-    (scaled and shifted) (test="scaled.shifted"), and \code={"MLR"} will
+    (\code{test="satorra.bentler"}) , \code{"MLMVS"} will compute a 
+    mean and variance adjusted test statistic (Satterthwaite style) 
+    (\code{test="mean.var.adjusted"}), \code{"MLMV"} will compute a mean 
+    and variance adjusted test statistic (scaled and shifted) 
+    (\code{test="scaled.shifted"}), and \code{"MLR"} will
     compute a test statistic which is asymptotically 
     equivalent to the Yuan-Bentler T2-star test statistic. Analogously,
     the estimators \code{"WLSM"} and \code{"WLSMV"} imply the \code{"DWLS"}

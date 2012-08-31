@@ -116,19 +116,20 @@ order as they appear in the data.}
     estimation), \code{"ULS"} for unweighted least squares and \code{"DWLS"} for
     diagonally weighted least squares. These are the main options that affect
     the estimation. For convenience, the \code{"ML"} option can be extended
-    as \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, \code{"MLF"}, and 
+    as \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, \code{"MLF"}, and
     \code{"MLR"}. The estimation will still be plain \code{"ML"}, but now
     with robust standard errors and a robust (scaled) test statistic. For
-    \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, classic robust standard 
+    \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, classic robust standard
     errors are used (\code{se="robust.sem"}); for \code{"MLF"}, standard
     errors are based on first-order derivatives (\code{se="first.order"});
-    for \code{"MLR"}, `Huber-White' robust standard errors are used 
+    for \code{"MLR"}, `Huber-White' robust standard errors are used
     (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
-    a Satorra-Bentler scaled (mean adjusted) test statistic 
-    (test="satorra.bentler") , \code{"MLMVS"} will compute a mean and variance
-    adjusted test statistic (Satterthwaite style) (test="mean.var.adjusted"),
-    \code{"MLMV"} will compute a mean and variance adjusted test statistic
-    (scaled and shifted) (test="scaled.shifted"), and \code={"MLR"} will
+    a Satorra-Bentler scaled (mean adjusted) test statistic
+    (\code{test="satorra.bentler"}) , \code{"MLMVS"} will compute a 
+    mean and variance adjusted test statistic (Satterthwaite style) 
+    (\code{test="mean.var.adjusted"}), \code{"MLMV"} will compute a mean 
+    and variance adjusted test statistic (scaled and shifted) 
+    (\code{test="scaled.shifted"}), and \code{"MLR"} will
     compute a test statistic which is asymptotically
     equivalent to the Yuan-Bentler T2-star test statistic. Analogously,
     the estimators \code{"WLSM"} and \code{"WLSMV"} imply the \code{"DWLS"}
