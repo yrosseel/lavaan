@@ -25,6 +25,7 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
         fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
         WLS.Vg  <- WLS.V[[g]] * fg
         Gamma.g <- Gamma[[g]] / fg  ## ?? check this
+        Delta.g <- Delta[[g]]
 
         # just for testing: regular UG:
         UG1 <- Gamma.g %*% (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% WLS.Vg)
@@ -37,10 +38,10 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
             nvar <- ncol(samplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
-            De <- Delta[[g]][idx,]
-        }
+            A1      <- A1[idx,idx]
+            B1      <- B1[idx,idx]
+            Delta.g <- Delta.g[idx,]
+        } 
         A1.inv <- solve(A1)
 
         #B0 <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
@@ -48,7 +49,7 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
         #trace.h0     <- sum( B0 * t(E.inv)  ) 
         #trace.UGamma[g] <- (trace.h1-trace.h0)
 
-        tmp <- (B1 %*% A1.inv) - (B1 %*% De %*% E.inv %*% t(De))
+        tmp <- (B1 %*% A1.inv) - (B1 %*% Delta.g %*% E.inv %*% t(Delta.g))
         # sanity check 1: sum(diag(UG1)) - sum(diag(tmp))
         # sanity check 2: sum(diag(UG1 %*% UG1)) - sum(diag(tmp %*% tmp))
         trace.UGamma2[g] <- sum(tmp * t(tmp))
@@ -116,6 +117,7 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
         }
+        A1.inv <- solve(A1)
 
         trace.h1[g] <- sum( B1 * t( solve(A1) ) )
         trace.h0[g] <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]])) )
