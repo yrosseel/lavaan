@@ -208,6 +208,10 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$estimator <- "ml"
     }
 
+    # backwards compatibility (0.5 -> 0.4)
+    if(opt$se == "robust.mlm") opt$se <- "robust.sem"
+    if(opt$se == "robust.mlr") opt$se <- "robust.huber.white"
+
     if(opt$estimator == "ml") {
         opt$estimator <- "ML"
         if(opt$se == "default") {

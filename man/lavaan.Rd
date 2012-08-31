@@ -65,7 +65,9 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
 \item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
 \item{data}{An optional data frame containing the observed variables used in
-    the model.}
+    the model. If some variables are declared as ordered factors, lavaan will
+    treat them as ordinal variables. This can be overriden by the \code{ordered}
+    argument.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed
@@ -97,7 +99,7 @@ order. If missing, all grouping levels are selected, in the
 order as they appear in the data.}
 \item{group.equal}{A vector of character strings. Only used in
     a multiple group analysis. Can be one or more of the following: 
-    \code{"loadings"}, \code{"intercepts"}, \code{"means"}, 
+    \code{"loadings"}, \code{"intercepts"}, \code{"means"},\code{"thresholds"}, 
     \code{"regressions"}, \code{"residuals"},
     \code{"residual.covariances"}, \code{"lv.variances"} or
     \code{"lv.covariances"}, specifying the pattern of equality
@@ -109,18 +111,32 @@ order as they appear in the data.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{estimator}{The estimator to be used. Can be one of the following:
-    \code{"ML"} for maximum likelihood, \code{"GLS"} for generalized least 
-    squares, \code{"WLS"} for weighted least squares (sometimes called ADF 
-    estimation), \code{"MLM"} for maximum likelihood estimation with robust
-    standard errors and a Satorra-Bentler scaled test statistic,
-    \code{"MLF"} for maximum likelihood estimation with standard errors 
-    based on first-order derivatives and a conventional test statistic,
-    \code{"MLR"} for maximum likelihood estimation with robust `Huber-White' 
-    standard errors and a scaled test statistic which is asymptotically 
-    equivalent to the Yuan-Bentler T2-star test statistic. Note that the 
-    \code{"MLM"}, \code{"MLF"} and \code{"MLR"} choices only affect the
-    standard errors and the test statistic. They also imply 
-    \code{mimic="Mplus"}.}
+    \code{"ML"} for maximum likelihood, \code{"GLS"} for generalized least
+    squares, \code{"WLS"} for weighted least squares (sometimes called ADF
+    estimation), \code{"ULS"} for unweighted least squares and \code{"DWLS"} for
+    diagonally weighted least squares. These are the main options that affect
+    the estimation. For convenience, the \code{"ML"} option can be extended
+    as \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, \code{"MLF"}, and 
+    \code{"MLR"}. The estimation will still be plain \code{"ML"}, but now
+    with robust standard errors and a robust (scaled) test statistic. For
+    \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, classic robust standard 
+    errors are used (\code{se="robust.sem"}); for \code{"MLF"}, standard
+    errors are based on first-order derivatives (\code{se="first.order"});
+    for \code{"MLR"}, `Huber-White' robust standard errors are used 
+    (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
+    a Satorra-Bentler scaled (mean adjusted) test statistic 
+    (test="satorra.bentler") , \code{"MLMVS"} will compute a mean and variance
+    adjusted test statistic (Satterthwaite style) (test="mean.var.adjusted"),
+    \code{"MLMV"} will compute a mean and variance adjusted test statistic
+    (scaled and shifted) (test="scaled.shifted"), and \code={"MLR"} will
+    compute a test statistic which is asymptotically
+    equivalent to the Yuan-Bentler T2-star test statistic. Analogously,
+    the estimators \code{"WLSM"} and \code{"WLSMV"} imply the \code{"DWLS"}
+    estimator (not the \code{"WLS"} estimator) with robust standard errors
+    and a mean or mean and variance adjusted test statistic. Estimators
+    \code{"ULSM"} and \code{"ULSMV"} imply the \code{"ULS"}
+    estimator with robust standard errors
+    and a mean or mean and variance adjusted test statistic.}
 \item{likelihood}{Only relevant for ML estimation. If \code{"wishart"},
     the wishart likelihood approach is used. In this approach, the covariance
     matrix has been divided by N-1, and both standard errors and test 
@@ -134,26 +150,29 @@ order as they appear in the data.}
     is used (to compute the standard errors). If \code{"observed"}, the
     observed information matrix is used. If \code{"default"}, the value is 
     set depending on the estimator and the mimic option.}
-\item{se}{If \code{"standard"}, conventional standard errors 
-    are computed based on inverting the (expected or observed) information 
-    matrix. If \code{"first.order"}, standard errors are computed based on 
-    first-order derivatives. If \code{"robust.sem"}, conventional robust 
-    standard errors are computed.
-    If \code{"robust.huber.white"},
-    standard errors are computed based on the `mlr' (aka pseudo ML, 
+\item{se}{If \code{"standard"}, conventional standard errors
+    are computed based on inverting the (expected or observed) information
+    matrix. If \code{"first.order"}, standard errors are computed based on
+    first-order derivatives. If \code{"robust.sem"}, conventional robust
+    standard errors are computed.  If \code{"robust.huber.white"},
+    standard errors are computed based on the `mlr' (aka pseudo ML,
     Huber-White) approach.
-    If \code{"robust"}, either \code{"robust.sem"} or \code{"robust.huber.white"} is
-    used depending on the estimator, the mimic option, and whether the data
-    are complete or not. 
+    If \code{"robust"}, either \code{"robust.sem"} or 
+    \code{"robust.huber.white"} is used depending on the estimator, 
+    the mimic option, and whether the data are complete or not.
     If \code{"boot"} or \code{"bootstrap"}, bootstrap standard errors are
     computed using standard bootstrapping (unless Bollen-Stine bootstrapping
-    is requested for the test statistic; in this case bootstrap standard 
+    is requested for the test statistic; in this case bootstrap standard
     errors are computed using model-based bootstrapping).
     If \code{"none"}, no standard errors are computed.}
 \item{test}{If \code{"standard"}, a conventional chi-square test is computed.
     If \code{"Satorra.Bentler"}, a Satorra-Bentler scaled test statistic is
     computed. If \code{"Yuan.Bentler"}, a Yuan-Bentler scaled test statistic
-    is computed. If \code{"boot"} or \code{"bootstrap"} or 
+    is computed. If \code{"mean.var.adjusted"} or \code{"Satterthwaite"}, a 
+    mean and variance adjusted test statistic is compute. 
+    If \code{"scaled.shifted"}, an alternative mean and variance adjusted test 
+    statistic is computed (as in Mplus version 6 or higher). 
+    If \code{"boot"} or \code{"bootstrap"} or
     \code{"Bollen.Stine"}, the Bollen-Stine bootstrap is used to compute
     the bootstrap probability value of the test statistic.
     If \code{"default"}, the value depends on the
