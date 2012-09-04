@@ -112,18 +112,20 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
         
-            # icov and cov.log.det
-            tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
-            if(inherits(tmp, "try-error")) {
-                if(ngroups > 1) {
-                    stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+            # icov and cov.log.det (but not if missing)
+            if(is.null(Mp[[g]])) {
+                tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
+                if(inherits(tmp, "try-error")) {
+                    if(ngroups > 1) {
+                        stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+                    } else {
+                        stop("lavaan ERROR: sample covariance can not be inverted")
+                    }
                 } else {
-                    stop("lavaan ERROR: sample covariance can not be inverted")
+                    cov.log.det[[g]] <- attr(tmp, "logdet")
+                    attr(tmp, "logdet") <- NULL
+                    icov[[g]]        <- tmp
                 }
-            } else {
-                cov.log.det[[g]] <- attr(tmp, "logdet")
-                attr(tmp, "logdet") <- NULL
-                icov[[g]]        <- tmp
             }
         }
 
