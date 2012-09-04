@@ -107,7 +107,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         idx.no.x <- which(ov.x %in% vars)
         if(length(idx.no.x)) {
             if(warn) {
-                warning("lavaan WARNING: model syntax contains variance/covariance/intercept of\n  exogenous variable(s) [", 
+                warning("lavaan WARNING: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [", 
                         paste(ov.x[idx.no.x], collapse=" "),
                         "];\n  Please use fixed.x=FALSE or leave them alone")
             } 
