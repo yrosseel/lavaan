@@ -21,8 +21,10 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
     if(nrow(object@con.jac) > 0L) {
         H <- object@con.jac
         inactive.idx <- attr(H, "inactive.idx")
+        lambda <- object@con.lambda # lagrangean coefs
         if(length(inactive.idx) > 0L) {
             H <- H[-inactive.idx,,drop=FALSE]
+            lambda <- lambda[-inactive.idx]
         }
         if(nrow(H) > 0L) {
             #NVarCov <- ( E.inv - E.inv %*% t(H) %*% 
@@ -31,7 +33,7 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
             H1 <- matrix(0,ncol(E), ncol(E))
             H0 <- matrix(0,nrow(H),nrow(H))
             H10 <- matrix(0, ncol(E), nrow(H))
-            DL <- 2*diag(object@con.lambda, nrow(H),nrow(H)) # lagrangean coefs
+            DL <- 2*diag(lambda, nrow(H), nrow(H))
             E3 <- rbind( cbind(     E,  H10, t(H)),
                          cbind(t(H10),   DL,  H0),
                          cbind(     H,   H0,  H0)  )
