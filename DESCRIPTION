@@ -1,16 +1,25 @@
 Package: lavaan
 Title: Latent Variable Analysis
 Version: 0.5-9
-Authors@R: person("Yves", "Rosseel", 
-                   role = c("aut", "cre"),
-                   email ="Yves.Rosseel@UGent.be",
-                   comment = "With contributions from many people; see the lavaan website for a list of contributors")
+Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
+                    email = "Yves.Rosseel@UGent.be"),
+             person("Daniel", "Oberski", role = "ctb",
+                    email = "daniel.oberski@gmail.com"),
+             person("Jarrett", "Byrnes", role = "ctb", 
+                    email = "byrnes@nceas.ucsb.edu"),
+             person("Leonard", "Vanbrabant", role = "ctb",
+                    email = "L.G.F.Vanbrabant@uu.nl"),
+             person("Victoria", "Savalei", role = "ctb",
+                    email = "vsavalei@ubc.ca"),
+             person("Ed", "Merkle", role = "ctb",
+                    email = "merklee@missouri.edu")
+            )  
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
              and latent growth curve models.
-Depends: methods, R(>= 2.14.0), mvtnorm
+Depends: methods, R(>= 2.14.0), MASS, boot, mvtnorm, quadprog
 Imports: stats4, stats, graphics
-Suggests: psych, qgraph, quadprog, boot
+Suggests: psych, qgraph
 License: GPL (>=2)
 LazyData: yes
 URL: http://lavaan.org

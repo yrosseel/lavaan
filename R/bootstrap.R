@@ -238,9 +238,9 @@ bootstrap.internal <- function(object       = NULL,
             }
         } else { # parametric!
             for(g in 1:samp@ngroups) {
-                dataX[[g]] <- MASS.mvrnorm(n     = samp@nobs[[g]],
-                                           Sigma = Sigma.hat[[g]],
-                                           mu    = Mu.hat[[g]])
+                dataX[[g]] <- MASS::mvrnorm(n     = samp@nobs[[g]],
+                                            Sigma = Sigma.hat[[g]],
+                                            mu    = Mu.hat[[g]])
             }
         }
 

@@ -642,12 +642,11 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
             if(attr(Sigma.hat[[g]], "po") == FALSE) {
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??
-                # CURRENTLY: force matrix to be POS DEFINITE if requested
-                # but with a warning
-                warning("computeGradient: Sigma.hat is not positive definite\n")
-                Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
-                Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet=TRUE)
-                Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+                # CURRENTLY: stop
+                stop("computeGradient: Sigma.hat is not positive definite\n")
+                #Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
+                #Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet=TRUE)
+                #Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
             } else {
                 Sigma.hat.inv <-  attr(Sigma.hat[[g]], "inv")
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")

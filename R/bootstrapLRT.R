@@ -153,9 +153,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             }
         } else { # parametric!
             for(g in 1:h0@Data@ngroups) {
-                dataX[[g]] <- MASS.mvrnorm(n     = h0@SampleStats@nobs[[g]], 
-                                           mu    = Mu.hat[[g]], 
-                                           Sigma = Sigma.hat[[g]])
+                dataX[[g]] <- MASS::mvrnorm(n     = h0@SampleStats@nobs[[g]], 
+                                            mu    = Mu.hat[[g]], 
+                                            Sigma = Sigma.hat[[g]])
             }
         }
 

@@ -90,10 +90,10 @@ simulateData <- function(
     for(g in 1:ngroups) {
         # FIXME: change to rmvnorm once we include the library?
         if(is.null(skewness) && is.null(kurtosis)) {
-            X[[g]] <- MASS.mvrnorm(n = sample.nobs[g],
-                                   mu = Mu.hat[[1L]],
-                                   Sigma = Sigma.hat[[1L]],
-                                   empirical = empirical)
+            X[[g]] <- MASS::mvrnorm(n = sample.nobs[g],
+                                    mu = Mu.hat[[1L]],
+                                    Sigma = Sigma.hat[[1L]],
+                                    empirical = empirical)
         } else {
             # first generate Z
             Z <- ValeMaurelli1983(n        = sample.nobs[g], 
@@ -264,7 +264,7 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis) {
     ICOR
 
     # generate Z ## FIXME: replace by rmvnorm once we use that package
-    X <- Z <- MASS.mvrnorm(n=n, mu=rep(0,nvar), Sigma=ICOR)
+    X <- Z <- MASS::mvrnorm(n=n, mu=rep(0,nvar), Sigma=ICOR)
 
     # transform Z using Fleishman constants
     for(i in 1:nvar) {

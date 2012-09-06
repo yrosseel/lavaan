@@ -38,8 +38,7 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
                 def.cov <- cov(BOOT.def )
             } else {
                 # regular delta method
-                JAC <- jacobian(func = model@def.function, x = x, 
-                                method = "Richardson")
+                JAC <- lavJacobianC(func = model@def.function, x = x)
                 def.cov <- JAC %*% VCOV %*% t(JAC)
             }
             se[def.idx] <- sqrt(diag(def.cov))

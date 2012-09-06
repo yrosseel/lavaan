@@ -376,11 +376,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                 A.ceq <- A.cin <- matrix(0, lavaanModel@nx.free, 0)
                 if(!is.null(body(lavaanModel@ceq.function)))
-                    A.ceq <- t(jacobian(func=lavaanModel@ceq.function, 
-                                        x=rep(0,lavaanModel@nx.free)))
+                    A.ceq <- t(lavJacobianC(func=lavaanModel@ceq.function, 
+                                            x=rep(0,lavaanModel@nx.free)))
                 if(!is.null(body(lavaanModel@cin.function)))
-                    A.cin <- t(jacobian(func=lavaanModel@cin.function, 
-                                        x=rep(0,lavaanModel@nx.free)))
+                    A.cin <- t(lavJacobianC(func=lavaanModel@cin.function, 
+                                            x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
                 # meanstructure? last row is intercept
                 if(lavaanOptions$meanstructure) {

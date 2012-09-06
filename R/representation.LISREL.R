@@ -744,14 +744,6 @@ derivative.th.LISREL <- function(m="tau",
                                  th.idx=NULL,
                                  MLIST=NULL) {
 
-    # for testing only
-    #compute.th2 <- function(x, mm="tau") {
-    #    mlist <- MLIST; mlist[[mm]][,] <- x
-    #    lavaan:::computeTH(fit@Model, GLIST=mlist)[[1]]
-    #}
-    #mm <- "tau"
-    #numDeriv::jacobian(func=compute.th2, x=rnorm(length(MLIST[[mm]])), mm=mm)
-
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     TAU <- MLIST$tau; nth <- nrow(TAU)

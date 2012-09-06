@@ -89,80 +89,6 @@ getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
     COV
 }
 
-# generalized inverse
-# MASS version for now
-MASS.ginv <-
-function (X., tol = sqrt(.Machine$double.eps))
-{
-    X <- X.
-    if (length(dim(X)) > 2L || !(is.numeric(X) || is.complex(X)))
-        stop("'X' must be a numeric or complex matrix")
-    if (!is.matrix(X))
-        X <- as.matrix(X)
-    Xsvd <- svd(X)
-    if (is.complex(X))
-        Xsvd$u <- Conj(Xsvd$u)
-    Positive <- Xsvd$d > max(tol * Xsvd$d[1L], 0)
-    if (all(Positive))
-        Xsvd$v %*% (1/Xsvd$d * t(Xsvd$u))
-    else if (!any(Positive))
-        array(0, dim(X)[2L:1L])
-    else Xsvd$v[, Positive, drop = FALSE] %*% ((1/Xsvd$d[Positive]) *
-        t(Xsvd$u[, Positive, drop = FALSE]))
-}
-
-# generate multivariate normal data
-# MASS version for now
-MASS.mvrnorm <-
-function (n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE) 
-{
-    p <- length(mu)
-    if (!all(dim(Sigma) == c(p, p))) 
-        stop("incompatible arguments")
-    eS <- eigen(Sigma, symmetric = TRUE, EISPACK = TRUE)
-    ev <- eS$values
-    if (!all(ev >= -tol * abs(ev[1L]))) 
-        stop("'Sigma' is not positive definite")
-    X <- matrix(rnorm(p * n), n)
-    if (empirical) {
-        X <- scale(X, TRUE, FALSE)
-        X <- X %*% svd(X, nu = 0)$v
-        X <- scale(X, FALSE, TRUE)
-    }
-    X <- drop(mu) + eS$vectors %*% diag(sqrt(pmax(ev, 0)), p) %*% 
-        t(X)
-    nm <- names(mu)
-    if (is.null(nm) && !is.null(dn <- dimnames(Sigma))) 
-        nm <- dn[[1L]]
-    dimnames(X) <- list(nm, NULL)
-    if (n == 1) 
-        drop(X)
-    else t(X)
-}
-
-
-
-# force positive definiteness
-# based on posdefify function in package sfsmisc
-force.pd <- function(S) {
-
-    eps.ev <- 0.0001  # must be smaller than, say, 0.001
-
-    ev <- eigen(S, symmetric=TRUE)
-    lambda <- ev$values
-    n <- length(lambda)
-    Eps <-  eps.ev * abs(lambda[1])
-    if(lambda[n] < Eps) {
-        lambda[lambda < Eps] <- Eps
-        Q <- ev$vectors
-        o.diag <- diag(S)
-        S <- Q %*% (lambda * t(Q))
-        D <- sqrt(pmax(Eps, o.diag)/diag(S))
-        S[] <- D * S * rep(D, each = n)
-    }
-    S
-}
-
 
 # translate row+col matrix indices to vec idx
 rowcol2vec <- function(row.idx, col.idx, nrow, symmetric=FALSE) {
@@ -363,6 +289,7 @@ bdiag <- function(...) {
     }
     ret
 }
+
 # rbind list of matrices (same number of columns)
 rbindlist <- function(...) {
      mlist <- list(...)

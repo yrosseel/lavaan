@@ -18,10 +18,6 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
     npatterns <- length(M)
     N <- nrow(X)
 
-    # starting values
-    #sigma0 <- force.pd(cov(X, use = "p")); dimnames(sigma0) <- NULL
-    #  mu0  <- apply(X, 2, mean, na.rm = TRUE); names(mu0) <- NULL
-
     # starting values as used by Mplus
     mu0  <- apply(X, 2, mean, na.rm = TRUE); names(mu0) <- NULL
     var0 <- apply(X, 2,  var, na.rm = TRUE); names(var0) <- NULL
@@ -222,7 +218,7 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
     nvar <- ncol(X); pstar <- nvar * (nvar + 1)/2
 
     # starting values
-    start.cov <- force.pd(cov(X, use = "p")); dimnames(start.cov) <- NULL
+    start.cov <- cov(X, use = "p"); dimnames(start.cov) <- NULL
     start.mean <- apply(X, 2, mean, na.rm = TRUE); names(start.mean) <- NULL
 
     # x2param

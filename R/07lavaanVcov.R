@@ -37,7 +37,7 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
             E3 <- rbind( cbind(     E,  H10, t(H)),
                          cbind(t(H10),   DL,  H0),
                          cbind(     H,   H0,  H0)  )
-            NVarCov <- MASS.ginv(E3)[1:ncol(E), 1:ncol(E)]
+            NVarCov <- MASS::ginv(E3)[1:ncol(E), 1:ncol(E)]
             # FIXME: better include inactive + slacks??
         } else {
             NVarCov <- solve(E)

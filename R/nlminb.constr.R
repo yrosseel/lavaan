@@ -27,9 +27,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
         if(is.null(ceq)) {
             ceq.jac <- function(x, ...) { matrix(0, nrow = 0L, ncol = length(x)) }
         } else {
-            #require(numDeriv)
-            ceq.jac <- function(x, ...) { jacobian(func = ceq, x = x,
-                                                   method = "simple", ...) }
+            ceq.jac <- function(x, ...) { lavJacobianC(func = ceq, x = x, ...) }
         }
     }
     if(is.null(cin.jac)) {
@@ -37,8 +35,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
             cin.jac <- function(x, ...) { matrix(0, nrow = 0L, ncol = length(x)) }
         } else {
             #require(numDeriv)
-            cin.jac <- function(x, ...) { jacobian(func = cin, x = x, 
-                                                   method = "simple", ...) }
+            cin.jac <- function(x, ...) { lavJacobianC(func = cin, x = x, ...) }
         }
     }
 
