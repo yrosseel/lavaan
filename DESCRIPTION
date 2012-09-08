@@ -12,7 +12,9 @@ Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
              person("Victoria", "Savalei", role = "ctb",
                     email = "vsavalei@ubc.ca"),
              person("Ed", "Merkle", role = "ctb",
-                    email = "merklee@missouri.edu")
+                    email = "merklee@missouri.edu"),
+             person("Michael", "Hallquist", role = "ctb",
+                    email = "michael.hallquist at gmail.com")
             )  
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
