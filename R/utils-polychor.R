@@ -218,6 +218,10 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     if(!exo) {
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         nr <- nrow(freq); nc <- ncol(freq)
+        # check for empty cells -- FIXME: make this an option!
+        if(any(freq == 0)) {
+            freq[freq == 0] <- 0.5
+        }
     }
 
     objectiveFunction <- function(x) {
@@ -265,7 +269,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     # starting value
 
     # catch tetrachoric case
-    if(!exo && (nr == 2L && nc == 2L)) {
+    if(!exo && (nr == 2L && nc == 2L) && !any(freq == 0)) {
        # Divgi 1979 initial value
         h <- max(abs(th.y1), abs(th.y2)); k <- min(abs(th.y1), abs(th.y2))
         R <- (freq[1,1]*freq[2,2])/(freq[1,2]*freq[2,1])
