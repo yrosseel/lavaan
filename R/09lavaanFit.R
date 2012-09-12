@@ -17,7 +17,10 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     # did we compute standard errors?
     se <- numeric( length(est) )
     if(!is.null(VCOV)) { 
-        x.se <- sqrt( diag(VCOV) )
+        x.var <- diag(VCOV)
+        # check for negative values (what to do: NA or 0.0?)
+        x.var[x.var < 0] <- as.numeric(NA)
+        x.se <- sqrt( x.var )
         GLIST <- x2GLIST(model, x=x.se, type="free")
         se <- getModelParameters(model, GLIST=GLIST, type="user", 
                                  extra=FALSE) # no def/cin/ceq entries!

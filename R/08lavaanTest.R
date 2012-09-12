@@ -203,18 +203,10 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     # degrees of freedom
     df <- getDF(partable)
 
-    # handle constraints
+    # handle equality constraints (note: we ignore inequality constraints, 
+    # active or not!)
     if(nrow(object@con.jac) > 0L) {
-        # Mplus seems to ignore inequality constraints
-        if(options$mimic == "Mplus") {
-            df <- ( df + length(attr(object@con.jac, "ceq.idx")) )
-        } else {
-            df <- ( df + length(attr(object@con.jac, "ceq.idx")) 
-                       + length(attr(object@con.jac, "cin.idx"))
-                       # FIXME:
-                       # we should not count inactive constraints?
-                       - length(attr(object@con.jac, "inactive.idx")) )
-        }
+        df <- ( df + length(attr(object@con.jac, "ceq.idx")) )
     }
 
     if(test == "none") {
