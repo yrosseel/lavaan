@@ -126,7 +126,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
-            #if(verbose) { cat(" i = ", i, " j = ", j, "\n") }
+            if(verbose) { cat(" i = ", i, " j = ", j, "\n") }
             pstar.idx <- PSTAR[i,j]
             COR.NAMES[pstar.idx] <- paste(ov.names[i],"~~",ov.names[j],sep="")
             if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {

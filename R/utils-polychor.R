@@ -269,19 +269,21 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     # starting value
 
     # catch tetrachoric case
-    if(!exo && (nr == 2L && nc == 2L) && !any(freq == 0)) {
-       # Divgi 1979 initial value
-        h <- max(abs(th.y1), abs(th.y2)); k <- min(abs(th.y1), abs(th.y2))
-        R <- (freq[1,1]*freq[2,2])/(freq[1,2]*freq[2,1])
-        D <- k*(.79289 + 4.28981/(1+3.30231*h));D <- D*sign(th.y1)*sign(th.y2)
-        C <- 0.07557*h + (h-k)^2 * (0.51141/(h+2.05793) - 0.07557/h)
-        B <- 0.5/(1 + (h^2 + k^2)*(0.82281-1.03514*(k/sqrt(h^2+k^2))))
-        A <- 0.5/(1 + (h^2 + k^2)*(0.12454-0.27102*(1-h/sqrt(h^2+k^2))))
-        alpha <- A + B*(-1 + 1/(1 + C*(log(R)-D)^2))
-        rho.init <- cos(pi/(1+R^alpha))
-    } else {
+    #if(!exo && (nr == 2L && nc == 2L) && !any(freq == 0)) {
+        # Divgi 1979 initial value
+    #    h <- max(abs(th.y1), abs(th.y2)); k <- min(abs(th.y1), abs(th.y2))
+        # h can not be zero;
+    #    if(h == 0) h <- 1e-5
+    #    R <- (freq[1,1]*freq[2,2])/(freq[1,2]*freq[2,1])
+    #    D <- k*(.79289 + 4.28981/(1+3.30231*h));D <- D*sign(th.y1)*sign(th.y2)
+    #    C <- 0.07557*h + (h-k)^2 * (0.51141/(h+2.05793) - 0.07557/h)
+    #    B <- 0.5/(1 + (h^2 + k^2)*(0.82281-1.03514*(k/sqrt(h^2+k^2))))
+    #    A <- 0.5/(1 + (h^2 + k^2)*(0.12454-0.27102*(1-h/sqrt(h^2+k^2))))
+    #    alpha <- A + B*(-1 + 1/(1 + C*(log(R)-D)^2))
+    #    rho.init <- cos(pi/(1+R^alpha))
+    #} else {
         rho.init <- cor(Y1,Y2)
-    }
+    #}
 
     if(method == "nlminb") {
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
