@@ -395,9 +395,11 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                 WLS.V[[g]] <-
                     0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
             }
-        } else if(estimator == "WLS") {
+        } else if(estimator == "ULS") {
+            WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+        } else if(estimator == "WLS" || estimator == "DWLS") {
             if(is.null(WLS.V[[g]]))
-                stop("lavaan ERROR: no WLS.V provided")
+                stop("lavaan ERROR: the (D)WLS estimator is only available with full data")
         }
 
     } # ngroups
