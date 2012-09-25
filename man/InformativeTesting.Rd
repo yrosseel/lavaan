@@ -1,7 +1,6 @@
 \name{InformativeTesting}
 \alias{InformativeTesting}
-\alias{print.InformativeTesting}
-\alias{summary.InformativeTesting}
+\alias{informativetesting}
 \title{Testing order Constrained Hypotheses in SEM}
 \description{Testing order constrained Hypotheses in SEM}
 \usage{
@@ -52,38 +51,34 @@ InformativeTesting(model = NULL, data, constraints = NULL,
     the function. For example \code{"group"} in a multiple group model.}
 }
 %\details{}
-\value{An object of class InformativeTesting for which a summary and a plot 
+\value{An object of class InformativeTesting for which a plot 
     method is available.}   
 %\seealso{}
 \examples{
-#Multiple regression model
+#Multiple group model for facial burns example.
 
-model  <- '
-          y1 ~ b1*x1 + b2*x2 + b3*x3 +
-          start(1.8)*x1 + start(0.017)*x2 + start(-0.31)*x3
-         
-          y1~~start(5.7)*y1
-          '
-      
-constraints  <-'
-              b2 < b1
-              b3 < b1
-              '
+#model syntax with starting values.
+burns.model <- 'Selfesteem ~ Age + c(m1, f1)*TBSA + HADS +
+                           start(-.10, -.20)*TBSA  
+                HADS ~ Age + c(m2, f2)*TBSA + RUM +
+                       start(.10, .20)*TBSA '
 
 
-#We only generate 5 bootstrap samples; 
-#in practice you may wish to use a much higher number.
+#constraints syntax.
+burns.constraints <- 'f2 > 0  ; m1 < 0
+                      m2 > 0  ; f1 < 0
+                      f2 > m2 ; f1 < m1'
 
-example <- InformativeTesting(model = model, data = PoliticalDemocracy, 
-                              constraints = constraints, R = 5) 
-                              
-example
-#summary(example)
 
-#The estimates for the unconstrained model and the fit measures.
-#summary(example, fit = "Hu", data = data, fitmeasures = TRUE)
+# we only generate 2 bootstrap samples in this example; in practice
+# you may wish to use a much higher number.
+example <- InformativeTesting(model = burns.model, data = FacialBurns,
+                              R = 2, constraints = burns.constraints,
+                              group = "Sex")
 
-#plot(example)
+#not run
+#example
+#plot(example, vline = TRUE, legend = TRUE)
 }
 
 \references{
