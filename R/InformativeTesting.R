@@ -57,7 +57,6 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
 
 
 
-
 print.InformativeTesting <- function(x, ...) {
   object <- x
   
@@ -71,127 +70,84 @@ print.InformativeTesting <- function(x, ...) {
   cat("  Estimator                     :", object$fitA1@Options$estimator, "\n")
   cat("  Missing data                  :", object$fitA1@Options$missing, "\n")
   cat("  Bootstrap method              :", object$type, "\n")
-  cat("  Double bootstrap method       :", object$double.bootstrap, "\n\n")
-  
-  cat("\n")
+  cat("  Double bootstrap method       :", object$double.bootstrap, "\n\n\n")
+
   p.A <- object$lrt.bootA[1]
   p.B <- object$lrt.bootB[1]
   sig.A <- sig.B <- "Non-significant"
+  a.A <- a.B <- object$double.bootstrap.alpha
  
+ if (object$double.bootstrap == "FDB" | object$double.bootstrap == "standard"){
   if (object$double.bootstrap == "FDB") {
-    p.A <- attr(object$lrt.bootA, "adj.pvalue")
-    p.B <- attr(object$lrt.bootB, "adj.pvalue")
+   adj.p.A <- attr(object$lrt.bootA, "adj.pvalue")
+   adj.p.B <- attr(object$lrt.bootB, "adj.pvalue")
   }
-  
   if (object$double.bootstrap == "standard") {
-    p.adj.A <- attr(object$lrt.bootA, "adj.pvalue")
-    p.adj.B <- attr(object$lrt.bootB, "adj.pvalue")
-    alpha.adj.A <- attr(object$lrt.bootA, "adj.alpha")
-    alpha.adj.B <- attr(object$lrt.bootB, "adj.alpha")
-    alpha.A <- alpha.B <- object$double.bootstrap.alpha
-    
+   adj.p.A <- attr(object$lrt.bootA, "adj.pvalue")
+   adj.p.B <- attr(object$lrt.bootB, "adj.pvalue")
+   adj.a.A <- attr(object$lrt.bootA, "adj.alpha")
+   adj.a.B <- attr(object$lrt.bootB, "adj.alpha")
+  }
     if (attr(object$lrt.bootA, "adj.pvalue") < object$double.bootstrap.alpha) 
       sig.A <- "Significant"
     if (attr(object$lrt.bootB, "adj.pvalue") < object$double.bootstrap.alpha) 
       sig.B <- "Significant"
-    
-    cat("Order Constrained Hypothesis Testing:\n\n")
-    h0.txt <- sprintf("  %-22s  %8s  %15s", "", "Type A", "Type B") 
-    cat(h0.txt, "\n")
-    cat("  -------------------------------------------------\n")
-    t0.txt <- sprintf("  %-22s", "LR statistic")
-    t1.txt <- sprintf("  %2s %05.2f", "", attr(object$lrt.bootA, "LRT.original"))
-    t2.txt <- sprintf("  %9s %05.2f", "", attr(object$lrt.bootB, "LRT.original"))
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Adjusted alpha")
-    t1.txt <- sprintf("  %3s %.2f", "", alpha.adj.A)
-    t2.txt <- sprintf("  %10s %.2f", "", alpha.adj.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-22s", "P-value")
-    t1.txt <- sprintf("  %3s %.2f", "", p.A)
-    t2.txt <- sprintf("  %10s %.2f", "", p.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Alpha")
-    t1.txt <- sprintf("  %3s %.2f", "", alpha.A)
-    t2.txt <- sprintf("  %10s %.2f", "", alpha.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Adjusted p-value")
-    t1.txt <- sprintf("  %3s %.2f", "", p.adj.A)
-    t2.txt <- sprintf("  %10s %.2f", "", p.adj.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %10s", "Significance")
-    t1.txt <- sprintf("  %18s", sig.A)
-    t2.txt <- sprintf("  %15s", sig.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+ }
+ else {
+   sig.A <- sig.B <- "Inconclusive*"
   }
-  else if (object$double.bootstrap == "FDB") {
-    cat("Order Constrained Hypothesis Testing:\n\n\n")
-    hd.txt <- sprintf(" %-16s %1s %-15s", "Double bootstrap", "=", 
-                      object$double.bootstrap)
-    ht.txt <- sprintf(" %-16s %1s %-15s", "Bootstrap type", "=", object$type)
-    cat(ht.txt,"\n")
-    cat(hd.txt,"\n\n")
-    p.A <- attr(object$lrt.bootA, "adj.pvalue")
-    p.B <- attr(object$lrt.bootB, "adj.pvalue")
-    alpha.A <- alpha.B <- object$double.bootstrap.alpha
-    
-    if (attr(object$lrt.bootA, "adj.pvalue") < object$double.bootstrap.alpha) { 
-      sig.A <- "Significant"
-    }
-    if (attr(object$lrt.bootB, "adj.pvalue") < object$double.bootstrap.alpha) { 
-      sig.B <- "Significant"
-    }
-    h0.txt <- sprintf("  %-22s  %8s  %15s", "", "Type A", "Type B") 
-    cat(h0.txt, "\n")
-    cat("  -------------------------------------------------\n")
-    t0.txt <- sprintf("  %-22s", "LR statistic")
-    t1.txt <- sprintf("  %2s %05.2f", "", attr(object$lrt.bootA, "LRT.original"))
-    t2.txt <- sprintf("  %9s %05.2f", "", attr(object$lrt.bootB, "LRT.original"))
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Alpha")
-    t1.txt <- sprintf("  %3s %.2f", "", alpha.A)
-    t2.txt <- sprintf("  %10s %.2f", "", alpha.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Adjusted p-value")
-    t1.txt <- sprintf("  %3s %.2f", "", p.A)
-    t2.txt <- sprintf("  %10s %.2f", "", p.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %10s", "Significance")
-    t1.txt <- sprintf("  %18s", sig.A)
-    t2.txt <- sprintf("  %15s", sig.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-  }
-  else if (object$double.bootstrap == "no") {
-    alpha.A <- alpha.B <- object$double.bootstrap.alpha
-    sig.A <- sig.B <- "Inconclusive*"
-    cat("Order Constrained Hypothesis Testing:\n\n\n")
-    hd.txt <- sprintf(" %-16s %1s %-15s", "Double bootstrap", "=", 
-                      object$double.bootstrap)
-    ht.txt <- sprintf(" %-16s %1s %-15s", "Bootstrap type", "=", object$type)
-    cat(ht.txt,"\n")
-    cat(hd.txt,"\n\n\n")
-    h0.txt <- sprintf("  %-22s  %8s  %15s", "", "Type A", "Type B") 
-    cat(h0.txt, "\n")
-    cat("  -------------------------------------------------\n")
-    t0.txt <- sprintf("  %-22s", "LR statistic")
-    t1.txt <- sprintf("  %2s %05.2f", "", attr(object$lrt.bootA, "LRT.original"))
-    t2.txt <- sprintf("  %9s %05.2f", "", attr(object$lrt.bootB, "LRT.original"))
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %-22s", "Alpha")
-    t1.txt <- sprintf("  %3s %.2f", "", alpha.A)
-    t2.txt <- sprintf("  %10s %.2f", "", alpha.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-22s", "P-value")
-    t1.txt <- sprintf("  %3s %.2f", "", p.A)
-    t2.txt <- sprintf("  %10s %.2f", "", p.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    t0.txt <- sprintf("  %10s", "Significance")
-    t1.txt <- sprintf("  %18s", sig.A)
-    t2.txt <- sprintf("  %15s", sig.B)
-    cat(t0.txt, t1.txt, t2.txt, "\n\n", sep="")
-    cat("  *For meaningfull results set double.bootstrap")
-  }  
+  
+ cat("Order Constrained Hypothesis Testing:\n\n")
+ h0.txt <- sprintf("  %-22s  %8s  %15s", "", "Type A", "Type B") 
+ cat(h0.txt, "\n")
+ cat("  -------------------------------------------------\n")
+ t00.txt <- sprintf("  %-22s", "LR statistic")
+ t01.txt <- sprintf("  %2s %05.2f", "", attr(object$lrt.bootA, "LRT.original"))
+ t02.txt <- sprintf("  %9s %05.2f", "", attr(object$lrt.bootB, "LRT.original"))
+
+ if (object$double.bootstrap == "standard"){
+  t10.txt <- sprintf("  %-22s", "Adjusted alpha")
+  t11.txt <- sprintf("  %3s %.2f", "", adj.a.A)
+  t12.txt <- sprintf("  %10s %.2f", "", adj.a.B)
+ }
+ if (object$double.bootstrap == "FDB" | object$double.bootstrap == "standard"){
+  t20.txt <- sprintf("  %-22s", "Adjusted p-value")
+  t21.txt <- sprintf("  %3s %.2f", "", adj.p.A)
+  t22.txt <- sprintf("  %10s %.2f", "", adj.p.B)
+ }
+ t30.txt <- sprintf("  %-22s", "P-value")
+ t31.txt <- sprintf("  %3s %.2f", "", p.A)
+ t32.txt <- sprintf("  %10s %.2f", "", p.B)
+ t40.txt <- sprintf("  %-22s", "Alpha")
+ t41.txt <- sprintf("  %3s %.2f", "", a.A)
+ t42.txt <- sprintf("  %10s %.2f", "", a.B)
+ t50.txt <- sprintf("  %10s", "Significance")
+ t51.txt <- sprintf("  %18s", sig.A)
+ t52.txt <- sprintf("  %15s", sig.B)
+
+ cat(t00.txt, t01.txt, t02.txt, "\n\n", sep="")
+ 
+ if (object$double.bootstrap == "FDB"){
+  cat(t30.txt, t31.txt, t32.txt, "\n", sep="")
+  cat(t20.txt, t21.txt, t22.txt, "\n\n", sep="")
+  cat(t40.txt, t41.txt, t42.txt, "\n\n", sep="") 
+  cat(t50.txt, t51.txt, t52.txt, "\n", sep="")
+  } 
+ else if(object$double.bootstrap == "standard"){
+  cat(t30.txt, t31.txt, t32.txt, "\n", sep="")
+  cat(t10.txt, t11.txt, t12.txt, "\n\n", sep="")
+  cat(t20.txt, t21.txt, t22.txt, "\n", sep="")
+  cat(t40.txt, t41.txt, t42.txt, "\n\n", sep="") 
+  cat(t50.txt, t51.txt, t52.txt, "\n", sep="")
+ }
+ else if(object$double.bootstrap == "no"){
+  cat(t30.txt, t31.txt, t32.txt, "\n", sep="")
+  cat(t40.txt, t41.txt, t42.txt, "\n\n", sep="") 
+  cat("  *For meaningfull results set double.bootstrap")
+ }
+
 }
+
 
 
 plot.InformativeTesting <- function(x, ..., 
