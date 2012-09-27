@@ -372,6 +372,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 computeObjective(lavaanModel, samplestats = lavaanSampleStats,
                                  estimator = lavaanOptions$estimator)
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
+
                 require(quadprog)
 
                 A.ceq <- A.cin <- matrix(0, lavaanModel@nx.free, 0)
