@@ -453,5 +453,24 @@ sqrtSymmetricMatrix <- function(S = matrix(0,0,0)) {
     S.sqrt
 }
 
+# orthogonal complement of a matrix A
+# see Satorra (1992). Sociological Methodology, 22, 249-278, footnote 3:
+#
+# To compute such an orthogonal matrix, consider the p* x p* matrix P = I -
+# A(A'A)^1A', which is idempotent of rank p* - q. Consider the singular value
+# decomposition P = HVH', where H is a p* x (p* - q) matrix of full column rank,
+# and V is a (p* - q) x (p* - q) diagonal matrix. It is obvious that H'A = 0;
+# hence, H is the desired orthogonal complement. This method of constructing an
+# orthogonal complement was proposed by Heinz Neudecker (1990, pers. comm.). 
+orthogonalComplement <- function(A = matrix(0,0,0)) {
+     n <- nrow(A)
+     ranK <- qr(A)$rank
+
+     P <- diag(n) - A %*% solve(crossprod(A)) %*% t(A)
+     H <- svd(P)$u[,1:(n-ranK),drop=FALSE]
+
+     H
+}
+
 
 
