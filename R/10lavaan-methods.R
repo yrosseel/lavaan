@@ -1412,7 +1412,7 @@ function(object, ...) {
         scaled <- FALSE
         TEST <- "standard"
     } else {
-        error("lavaan WARNING: some models (but not all) have scaled test statistics")
+        stop("lavaan WARNING: some models (but not all) have scaled test statistics")
     }
 
     # which models have used a MEANSTRUCTURE?
@@ -1524,7 +1524,7 @@ function(object, ...) {
     }
 
     # Pvalue
-    Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower = FALSE)
+    Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower.tail = FALSE)
 
     aic <- bic <- rep(NA, length(mods))
     if(estimator == "ML") {
