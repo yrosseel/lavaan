@@ -1090,6 +1090,7 @@ function(object, what="free") {
          modificationIndices(object)
     } else if(what == "samp" ||
               what == "sample" ||
+              what == "samplestatistics" ||
               what == "sampstat") {
         sampStat(object)
     } else if(what == "rsquare" || 
@@ -1122,6 +1123,29 @@ sampStat <- function(object, labels=TRUE) {
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
+
+        if(object@Model@categorical) {
+            OUT[[g]]$th <- as.numeric(object@SampleStats@th[[g]])
+            if(length(object@Model@num.idx[[g]]) > 0L) {
+                OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
+            }
+            if(labels) {
+                names(OUT[[g]]$th) <- 
+                    vnames(object@ParTable, type="th", group=g)
+            }
+            class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+        }
+
+        if(object@Model@categorical &&
+           object@Model@nexo > 0L) {
+            OUT[[g]]$slopes  <- object@SampleStats@slopes[[g]]
+            if(labels) {
+                rownames(OUT[[g]]$slopes) <- ov.names[[g]]
+                colnames(OUT[[g]]$slopes) <- 
+                    vnames(object@ParTable, type="ov.x", group=g)
+                class(OUT[[g]]$slopes) <- c("lavaan.matrix", "matrix")
+            }
+        }
     }
 
     if(G == 1) {
@@ -1152,6 +1176,18 @@ function(object, labels=TRUE) {
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
+
+        if(object@Model@categorical) {
+            OUT[[g]]$th <- as.numeric(object@Fit@TH[[g]])
+            if(length(object@Model@num.idx[[g]]) > 0L) {
+                OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
+            }
+            if(labels) {
+                names(OUT[[g]]$th) <-
+                    vnames(object@ParTable, type="th", group=g)
+            }
+            class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+        }
     }
 
     if(G == 1) {

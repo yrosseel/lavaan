@@ -96,6 +96,15 @@ function(object, type="raw", labels=TRUE) {
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
+        if(object@Model@categorical) {
+            R[[g]]$th <- object@SampleStats@th[[g]] - object@Fit@TH[[g]]
+            if(length(object@Model@num.idx[[g]]) > 0L) {
+                R[[g]]$th <- R[[g]]$th[-object@Model@num.idx[[g]]]
+            }
+            if(labels) {
+                names(R[[g]]$th) <- vnames(object@ParTable, type="th", group=g)
+            }
+        }
 
         if(type == "normalized" || type == "standardized") {
          

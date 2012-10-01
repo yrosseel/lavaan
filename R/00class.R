@@ -121,6 +121,7 @@ setClass("Fit",
         control="list",
         Sigma.hat="list",
         Mu.hat="list",
+        TH="list",
         test="list"
     )
 )
