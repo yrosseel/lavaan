@@ -66,19 +66,33 @@ setModelParameters <- function(object, x=NULL) {
     }
 
     # categorical? set theta elements (if any)
-    #if(object@categorical) {
-    #   if(object@representation == "LISREL") {
-    #       theta.idx <- which(names(tmp) == "theta")
-    #        Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
-    #        for(g in 1:object@ngroups) {
-    #            num.idx <- object@num.idx[[g]]
-    #            diag(tmp[[theta.idx[g]]])[-num.idx] <-
-    #                (1 - diag(Sigma.hat[[g]])[-num.idx])
-    #        }
-    #    } else {
-    #        cat("FIXME: deal with theta elements in the categorical case")
-    #    }
-    #}
+    if(object@categorical) {
+        nmat <- object@nmat
+        if(object@representation == "LISREL") {
+            theta.idx <- which(names(tmp) == "theta")
+            Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
+            for(g in 1:object@ngroups) {
+                # which mm belong to group g?
+                mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+                num.idx <- object@num.idx[[g]]
+                if(length(num.idx) > 0L) {
+                    diag(tmp[[theta.idx[g]]])[-num.idx] <- 0.0
+                } else {
+                    diag(tmp[[theta.idx[g]]]) <- 0.0
+                }
+                MLIST <- tmp[mm.in.group]
+                Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+                if(length(num.idx) > 0L) {
+                    diag(tmp[[theta.idx[g]]])[-num.idx] <-
+                        (1 - diag(Sigma.hat)[-num.idx])
+                } else {
+                    diag(tmp[[theta.idx[g]]]) <- (1 - diag(Sigma.hat))
+                }
+            }
+        } else {
+            cat("FIXME: deal with theta elements in the categorical case")
+        }
+    }
 
     object@GLIST <- tmp
 
