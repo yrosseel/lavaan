@@ -721,7 +721,8 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
 computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free", 
                             estimator="ML", verbose=FALSE, forcePD=TRUE, 
-                            group.weight=TRUE, constraints=TRUE) {
+                            group.weight=TRUE, constraints=TRUE,
+                            Delta=NULL) {
 
     nmat           <- object@nmat
     representation <- object@representation
@@ -825,9 +826,12 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
     if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS") {
 
         if(type != "free") {
-            stop("FIXME: WLS gradient with type != free needs fixing!")
+            if(is.null(Delta))
+                stop("FIXME: Delta should be given if type != free")
+            #stop("FIXME: WLS gradient with type != free needs fixing!")
+        } else {
+            Delta <- computeDelta(object, GLIST.=GLIST)
         }
-        Delta <- computeDelta(object, GLIST.=GLIST)
 
         for(g in 1:samplestats@ngroups) {
             if(categorical) {                                    

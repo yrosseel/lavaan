@@ -552,9 +552,8 @@ getLIST <- function(FLAT=NULL,
     if(auto.var) {
         ov.var <- ov.names.nox
         # auto-remove ordinal variables
-        idx <- match(ov.names.ord, ov.var)
-        if(length(idx)) ov.var <- ov.var[-idx]
-
+        #idx <- match(ov.names.ord, ov.var)
+        #if(length(idx)) ov.var <- ov.var[-idx]
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)
     }
