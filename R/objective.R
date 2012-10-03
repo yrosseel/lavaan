@@ -111,3 +111,10 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
     fx
 }
 
+# pairwise maximum likelihood
+estimator.PML <- function() {
+    fx <- 0.0
+
+    fx
+}
+

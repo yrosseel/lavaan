@@ -442,6 +442,9 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
             group.fx <- estimator.WLS(WLS.est = WLS.est,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
+        } else if(estimator == "PML") {
+            # Pairwise maximum likelihood
+            group.fx <- estimator.PML()
         } else {
             stop("unsupported estimator: ", estimator)
         }
@@ -887,6 +890,15 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
         }
 
     } # WLS
+
+    else if(estimator == "PML") {
+        dx <- numeric( nx.unco )
+    } 
+
+    else {
+        stop("lavaan ERROR: no analytical gradient available for estimator ",
+             estimator)
+    }
 
     dx
 }

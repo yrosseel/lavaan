@@ -118,6 +118,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # 
             # we should try not to 'touch' the data.frame at all (giving us
             # a lot of housekeeping work in lavData) ... TODO!
+            ov.types <- sapply(data[,unlist(ov.names)],
+                               function(x) class(x)[1])
             categorical <- TRUE
         } else {
             ov.types <- sapply(data[,unlist(ov.names)], 
@@ -170,6 +172,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
+
+    # some additional checks for estimator="PML"
+    if(lavaanOptions$estimator == "PML") {
+        # 0. at least some variables must be ordinal
+        if(!any(ov.types == "ordered")) {
+            stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
+        }
+        # 1. all variables must be ordinal (for now)
+        #    (the mixed continuous/ordinal case will be added later)
+        if(any(ov.types != "ordered")) {
+            stop("lavaan ERROR: estimator=\"PML\" can not handle mixed continuous and ordinal data (yet)")
+        }
+        
+        # 2. we can not handle exogenous covariates yet
+        if(length(ov.names.x) > 0L) {
+            stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
+        }
+    }
 
     # 1b. check data/sample.cov and get the number of groups
     if(!is.null(slotData)) {

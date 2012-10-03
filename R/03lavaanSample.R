@@ -68,6 +68,11 @@ lavSampleStatsFromData <- function(Data          = NULL,
         CAT <- list()
         if(!is.null(Data) && "ordered" %in% ov.types) {
             categorical <- TRUE
+            if(estimator %in% c("PML","ML")) {
+                WLS.W <- FALSE
+            } else {
+                WLS.W <- TRUE
+            }
             CAT <- muthen1984(Data=X[[g]], 
                               ov.names=ov.names[[g]], 
                               ov.types=ov.types,
@@ -75,6 +80,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               ov.names.x=Data@ov.names.x[[g]],
                               eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
                               group = g, # for error messages only
+                              WLS.W = WLS.W,
                               verbose=verbose)
         }
 
@@ -192,9 +198,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 } else {
                     txt <- "\n"
                 }
-                stop("lavaan ERROR: cannot compute Gamma: ",
-                     "number of observations (", nrow(X[[g]]), ") too small",
-                     txt)
+                warning("lavaan WARNING: number of observations (", 
+                        nrow(X[[g]]), ") too small to compute Gamma", txt)
             }
 
             Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
@@ -228,6 +233,9 @@ lavSampleStatsFromData <- function(Data          = NULL,
             DWLS <- diag(NROW(CAT$WLS.W))
             WLS.V[[g]] <- DWLS
             NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
+        } else if(estimator == "PML") {
+            # no WLS.V here
+            # no NACOV too...
         }
 
     } # ngroups

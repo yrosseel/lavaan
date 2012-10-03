@@ -111,8 +111,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         opt$missing <- "ml"
         if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
-                                "uls", "ulsm", "ulsmv")) {
-            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV")
+                                "uls", "ulsm", "ulsmv", "pml")) {
+            stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML")
         }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
         # nothing to do
@@ -178,7 +178,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$meanstructure == FALSE) {
             # user explicitly wants meanstructure == FALSE
             # check for conflicting arguments
-            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv"))
+            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv", "pml"))
                 warning("lavaan WARNING: estimator forces meanstructure = TRUE")
             if(opt$missing == "ml")
                 warning("lavaan WARNING: missing argument forces meanstructure = TRUE")
@@ -208,7 +208,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$estimator <- "ml"
     }
 
-    # backwards compatibility (0.5 -> 0.4)
+    # backwards compatibility (0.4 -> 0.5)
     if(opt$se == "robust.mlm") opt$se <- "robust.sem"
     if(opt$se == "robust.mlr") opt$se <- "robust.huber.white"
 
@@ -324,7 +324,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         opt$missing <- "listwise"
-     } else if(opt$estimator == "wlsmv") {
+    } else if(opt$estimator == "wlsmv") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
@@ -362,6 +362,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
+        opt$missing <- "listwise"
+    } else if(opt$estimator == "pml") {
+        opt$estimator <- "PML"
+        if(opt$se != "none") opt$se <- "robust.sem" # FIXME, or standard?
+        if(opt$test != "none") opt$test <- "standard"
         opt$missing <- "listwise"
     } else {
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")
