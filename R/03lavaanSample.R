@@ -73,6 +73,9 @@ lavSampleStatsFromData <- function(Data          = NULL,
             } else {
                 WLS.W <- TRUE
             }
+            if(verbose) {
+                cat("Estimating sample thresholds and correlations ... ")
+            }
             CAT <- muthen1984(Data=X[[g]], 
                               ov.names=ov.names[[g]], 
                               ov.types=ov.types,
@@ -81,7 +84,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
                               group = g, # for error messages only
                               WLS.W = WLS.W,
-                              verbose=verbose)
+                              verbose=FALSE)
+            if(verbose) cat("done\n")
         }
 
         # fill in the other slots

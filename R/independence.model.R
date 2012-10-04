@@ -109,6 +109,7 @@ independence.model.fit <- function(object) {
     if(do.fit) {
         x <- estimateModel(lavaanModel,
                            samplestats  = lavaanSampleStats,
+                           X            = object@Data@X,
                            options      = lavaanOptions)
                            # control???
         lavaanModel <- setModelParameters(lavaanModel, x = x)

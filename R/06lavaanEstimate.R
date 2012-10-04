@@ -348,9 +348,8 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     ETA
 }
 
-
-
-computeObjective <- function(object, GLIST=NULL, samplestats=NULL, 
+computeObjective <- function(object, GLIST=NULL, 
+                             samplestats=NULL, X = NULL,
                              estimator="ML", verbose=FALSE, forcePD=TRUE) {
 
     # state or final?
@@ -367,6 +366,7 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
     categorical   <- object@categorical
     fixed.x       <- object@fixed.x
     num.idx       <- object@num.idx
+    th.idx        <- object@th.idx
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
@@ -444,13 +444,19 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
                                       WLS.V=samplestats@WLS.V[[g]])  
         } else if(estimator == "PML") {
             # Pairwise maximum likelihood
-            group.fx <- estimator.PML()
+            group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                      TH        = TH[[g]],
+                                      th.idx    = th.idx[[g]],
+                                      num.idx   = num.idx[[g]],
+                                      X         = X[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
         }
 
         if(estimator == "ML") {
             group.fx <- 0.5 * group.fx
+        } else if(estimator == "PML") {
+            # do nothing
         } else {
             group.fx <- 0.5 * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] * group.fx
         }
@@ -736,7 +742,8 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 
-computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free", 
+computeGradient <- function(object, GLIST=NULL, samplestats=NULL, 
+                            X=NULL, type="free", 
                             estimator="ML", verbose=FALSE, forcePD=TRUE, 
                             group.weight=TRUE, constraints=TRUE,
                             Delta=NULL) {
@@ -892,7 +899,19 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
     } # WLS
 
     else if(estimator == "PML") {
-        dx <- numeric( nx.unco )
+
+        if(type != "free")
+            stop("FIXME: type != free in computeGradient for estimator PML")
+
+        for(g in 1:samplestats@ngroups) {
+            group.dx <- numeric( nx.unco )
+
+            if(g == 1) {
+                dx <- group.dx
+            } else {
+                dx <- dx + group.dx
+            }
+        } # g
     } 
 
     else {
@@ -904,7 +923,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
 }
 
 
-estimateModel <- function(object, samplestats=NULL, do.fit=TRUE, 
+estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
                           options=NULL, control=list()) {
 
     estimator     <- options$estimator
@@ -936,7 +955,8 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        fx <- computeObjective(object, GLIST=GLIST, samplestats,
+        fx <- computeObjective(object, GLIST=GLIST, 
+                               samplestats=samplestats, X=X,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
@@ -997,6 +1017,9 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
             fx.right2 <- minimize.this.function(x.right2)
             dx[i] <- (fx.left2 - 8*fx.left + 8*fx.right - fx.right2)/(12*h)
         }
+
+        #dx <- lavGradientC(func=minimize.this.function, x=x)
+        # does not work if pnorm is involved... (eg PML)
 
         if(debug) {
             cat("Gradient function (numerical) =\n"); print(dx); cat("\n")
@@ -1092,8 +1115,8 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            gradient=first.derivative.param,
-                            #gradient=first.derivative.param.numerical,
+                            #gradient=first.derivative.param,
+                            gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 

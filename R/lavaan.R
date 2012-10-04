@@ -452,6 +452,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 # regular estimation after all
                 x <- estimateModel(lavaanModel,
                                samplestats  = lavaanSampleStats,
+                               X            = lavaanData@X,
                                options      = lavaanOptions,
                                control      = control)
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -461,6 +462,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # regular estimation
             x <- estimateModel(lavaanModel,
                                samplestats  = lavaanSampleStats,
+                               X            = lavaanData@X,
                                options      = lavaanOptions,
                                control      = control)
             lavaanModel <- setModelParameters(lavaanModel, x = x)

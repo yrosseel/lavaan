@@ -112,8 +112,74 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
 }
 
 # pairwise maximum likelihood
-estimator.PML <- function() {
-    fx <- 0.0
+# this is adapted from code written by Myrsini Katsikatsou
+#
+# some changes:
+# - no distinction between x/y (ksi/eta)
+# - loglikelihoods are computed case-wise
+estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
+                          TH        = NULL,    # model-based thresholds + means
+                          th.idx    = NULL,    # threshold idx per variable
+                          num.idx   = NULL,    # which variables are numeric
+                          X  = NULL) {  # data
+
+    # YR 3 okt 2012
+    # the idea is to compute for each pair of variables, the model-based 
+    # probability (or likelihood in mixed case) (that we observe the data 
+    # for this pair under the model) for *each case* 
+    # after taking logs, the sum over the cases gives the probablity/likelihood 
+    # for this pair
+    # the sum over all pairs gives the final PML based logl
+
+    nvar <- nrow(Sigma.hat)
+    pstar <- nvar*(nvar-1)/2
+    ov.types <- rep("ordered", nvar)
+    if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
+
+    #print(Sigma.hat); print(TH); print(th.idx); print(num.idx); print(str(X))
+
+    LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
+    PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
+    PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
+
+    for(j in seq_len(nvar-1L)) {
+        for(i in (j+1L):nvar) {
+            # cat(" i = ", i, " j = ", j, "\n") # debug only
+            pstar.idx <- PSTAR[i,j]
+            if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
+                # ordinary pearson correlation
+                stop("not done yet")
+            } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
+                # polyserial correlation
+                stop("not done yet")
+            } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
+                # polyserial correlation
+                stop("not done yet")
+            } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
+                # polychoric correlation
+                PI <- pc_PI(rho   = Sigma.hat[i,j], 
+                            th.y1 = TH[ th.idx == i ],
+                            th.y2 = TH[ th.idx == j ])
+                LIK[,pstar.idx] <- PI[ cbind(X[,i], X[,j]) ]
+            }
+        }
+    }
+
+    # check for zero likelihoods/probabilities
+    # FIXME: or should we replace them with a tiny number?
+    if(any(LIK == 0.0)) return(Inf) # we minimize
+ 
+    # loglikelihood
+    LogLIK.cases <- log(LIK)
+
+    # sum over cases
+    LogLIK.pairs <- colSums(LogLIK.cases)
+
+    # sum over pairs
+    LogLik <- sum(LogLIK.pairs)
+
+    # function value as returned to the minimizer
+    fx <- -1 * LogLik
 
     fx
 }
