@@ -279,7 +279,7 @@ getDataFull <- function(data          = NULL,          # data.frame
     # check for unordered factors
     if("factor" %in%  ov$type) {
         f.names <- ov$name[ov$type == "factor"]
-        if(f.names %in% unlist(ov.names))
+        if(any(f.names %in% unlist(ov.names)))
             warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
     }
     # check for zero-cases

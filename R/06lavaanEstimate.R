@@ -754,6 +754,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
     categorical    <- object@categorical
     fixed.x        <- object@fixed.x
     num.idx        <- object@num.idx
+    th.idx         <- object@th.idx
     nx.unco        <- object@nx.unco
 
     # state or final?
@@ -900,12 +901,27 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     else if(estimator == "PML") {
 
-        if(type != "free")
+        if(type != "free") {
             stop("FIXME: type != free in computeGradient for estimator PML")
+        } else {
+            Delta <- computeDelta(object, GLIST.=GLIST)
+        }
 
         for(g in 1:samplestats@ngroups) {
-            group.dx <- numeric( nx.unco )
 
+            # compute partial derivative of logLik with respect to 
+            # thresholds/means, slopes, variances, correlations
+            d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                             TH        = TH[[g]],
+                             th.idx    = th.idx[[g]],
+                             num.idx   = num.idx[[g]],
+                             X         = X[[g]])
+
+            # chain rule
+            group.dx <- t(d1) %*% Delta[[g]]
+
+            # group weights (if any)
+            group.dx <- group.w[g] * group.dx
             if(g == 1) {
                 dx <- group.dx
             } else {
@@ -983,7 +999,8 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        dx <- computeGradient(object, GLIST=GLIST, samplestats,
+        dx <- computeGradient(object, GLIST=GLIST, samplestats=samplestats,
+                              X=X,
                               type="free", 
                               group.weight=group.weight, ### check me!!
                               estimator=estimator,
@@ -1115,8 +1132,8 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            #gradient=first.derivative.param,
-                            gradient=first.derivative.param.numerical,
+                            gradient=first.derivative.param,
+                            #gradient=first.derivative.param.numerical,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 
