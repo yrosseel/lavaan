@@ -104,7 +104,11 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
 },
 
 start = function() {
-    th.start <- lavaan:::pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
+    if(nth == 1L) {
+        th.start <- 0
+    } else {
+        th.start <- lavaan:::pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
+    }
     beta.start <- rep(0, nexo)
     #Y <- as.numeric(y); range <- 16; Y <- Y*range/nexo
     #fit.ols <- lavOLS(y=Y, X=X, weights=weights, offset=offset)

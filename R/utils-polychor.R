@@ -170,7 +170,7 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 }
 
 # loglikelihood (x-version)
-pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2) {
+pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2, freq=NULL) {
 
     nexo <- ifelse(is.null(eXo), 0L, ncol(eXo)); S <- seq_len
     stopifnot(length(x) == (1L + nth.y1 + nth.y2 + 2*nexo))
@@ -191,12 +191,13 @@ pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2) {
     fit.y2$theta[fit.y2$slope.idx] <- sl.y2
     fit.y2$lik()
 
-    pc_logl(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
+    pc_logl(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2,
+            freq=freq)
 }
 
 # polychoric correlation
 pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
-                      method="nlminb", verbose=FALSE) {
+                      method="nlminb", zerofreq=0.5, verbose=FALSE) {
 
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
@@ -219,13 +220,15 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         nr <- nrow(freq); nc <- ncol(freq)
         # check for empty cells -- FIXME: make this an option!
-        if(any(freq == 0)) {
-            freq[freq == 0] <- 0.5
+        if(any(freq == 0) && zerofreq > 0) {
+            #freq[freq == 0] <- zerofreq/length(fit.y1$y)
+            freq[freq == 0] <- zerofreq
         }
     }
 
     objectiveFunction <- function(x) {
-        logl <- pc_logl(rho=tanh(x[1L]), fit.y1=fit.y1, fit.y2=fit.y2)
+        logl <- pc_logl(rho=tanh(x[1L]), fit.y1=fit.y1, fit.y2=fit.y2,
+                        freq=freq)
         -logl # to minimize!
     }
 
@@ -244,6 +247,10 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
             dx.rho <- sum(dx)
         }
         -dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
+    }
+
+    hessianFunction2 <- function(x) {
+        numDeriv:::hessian(func=objectiveFunction, x=x)
     }
 
     # OLSSON 1979 A2 + A3 (no EXO!!)
@@ -295,8 +302,8 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         stopifnot(!exo)
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
                       gradient=gradientFunction,
-                      hessian=hessianFunction,
-                      scale=10, # not needed?
+                      hessian=hessianFunction2,
+                      scale=100, # not needed?
                       control=list(trace=ifelse(verbose,1L,0L),
                                    rel.tol=1e-7))
     }
