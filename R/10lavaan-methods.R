@@ -286,7 +286,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     print.estimate <- function(name="ERROR", i=1, z.stat=TRUE) {
        
         # cut name if (still) too long
-        name <- substr(name, 1, 13)
+        name <- strtrim(name, width=13L)
 
         if(!standardized) {
             if(is.na(se[i])) {
@@ -357,19 +357,35 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         makeNames <- function(NAMES, LABELS) {
+            multiB <- FALSE
+            if(any(nchar(NAMES) != nchar(NAMES, "bytes")))
+                multiB <- TRUE
+            if(any(nchar(LABELS) != nchar(LABELS, "bytes")))
+                multiB <- TRUE
             # labels?
             l.idx <- which(nchar(LABELS) > 0L)
             if(length(l.idx) > 0L) {
-                LABELS <- abbreviate(LABELS, 4)
-                LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep="")
-                MAX.L <- max(nchar(LABELS))
-                NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
-                                    strict = TRUE)
+                if(!multiB) {
+                    LABELS <- abbreviate(LABELS, 4)
+                    LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep="")
+                    MAX.L <- max(nchar(LABELS))
+                    NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
+                                        strict = TRUE)
+                } else {
+                    # do not abbreviate anything (eg in multi-byte locales)
+                    MAX.L <- 4L
+                }
                 NAMES <- sprintf(paste("%-", (13 - MAX.L), "s%", MAX.L, "s",
                                        sep=""), NAMES, LABELS)
             } else {
-                NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
+                if(!multiB) {
+                    NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
+                } else {
+                    NAMES <- sprintf(paste("%-", 13, "s", sep=""), NAMES)
+                }
             }
+
+            NAMES
         }
 
         NAMES <- object@ParTable$rhs
