@@ -3,7 +3,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        WLS.W=TRUE, # do we need asymptotic variance of stats?
                        group=1L) { # group only for error messages
 
-    require(mvtnorm)
+    #require(mvtnorm)
 
     # This function was written in January 2012 -- Yves Rosseel
     # First success: Friday 20 Jan 2012: the standard errors for

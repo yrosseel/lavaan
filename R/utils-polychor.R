@@ -161,7 +161,6 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
         #           pbivnorm(x=fit.y1$z1, y=fit.y2$z2, rho=rho) +
         #           pbivnorm(x=fit.y1$z2, y=fit.y2$z2, rho=rho)  )
 
-        # this uses mvtnorm
         lik <- pbinorm(upper.x=fit.y1$z1, upper.y=fit.y2$z1,
                        lower.x=fit.y1$z2, lower.y=fit.y2$z2, rho=rho)
     }

@@ -50,10 +50,62 @@ pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
 pbinorm <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
 
+    pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho,
+             lower.x=lower.x, lower.y=lower.y, check=check)
+
+}
+
+# using vectorized version (a la pbivnorm)
+pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
+    N <- length(upper.x)
+    stopifnot(length(upper.y) == N)
+    if(N > 1L) {
+        if(length(rho) == 1L)
+            rho <- rep(rho, N)
+        if(length(lower.x) == 1L)
+            lower.x <- rep(lower.x, N)
+        if(length(lower.y) == 1L)
+            lower.y <- rep(lower.y, N)
+    }    
+
+    upper.only <- all(lower.x == -Inf & lower.y == -Inf)
+    if(upper.only) {
+        res <- pbivnorm(upper.x, upper.y, rho=rho)
+    } else {
+        # pbivnorm does not handle -Inf well...
+        lower.x[lower.x == -Inf] <- -exp(10)
+        lower.y[lower.y == -Inf] <- -exp(10)
+        res <- pbivnorm(upper.x, upper.y, rho=rho) - 
+               pbivnorm(lower.x, upper.y, rho=rho) - 
+               pbivnorm(upper.x, lower.y, rho=rho) + 
+               pbivnorm(lower.x, lower.y, rho=rho)
+    }
+
+    res
+}
+
+
+# using non-vectorized version
+pbinorm1 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
     p2_i <- function(lower.x, lower.y, upper.x, upper.y, rho) {
-        pmvnorm(lower=c(lower.x, lower.y),
-                upper=c(upper.x, upper.y),
-                corr=matrix(c(1,rho,rho,1),2L,2L))
+        # MVTNORM
+        #pmvnorm(lower=c(lower.x, lower.y),
+        #        upper=c(upper.x, upper.y),
+        #        corr=matrix(c(1,rho,rho,1),2L,2L))
+
+        # MNORMT
+        biv.nt.prob(df=0, 
+                    lower=c(lower.x, lower.y),
+                    upper=c(upper.x, upper.y),
+                    mean=c(0,0),
+                    S=matrix(c(1,rho,rho,1),2L,2L))
+
+        # PBIVNORM
+        
     }
 
     N <- length(upper.x)

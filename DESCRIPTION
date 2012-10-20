@@ -23,7 +23,7 @@ Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
 Description: Fit a variety of latent variable models, including
              confirmatory factor analysis, structural equation modeling
              and latent growth curve models.
-Depends: methods, R(>= 2.14.0), MASS, boot, mvtnorm, quadprog
+Depends: methods, R(>= 2.14.0), MASS, boot, mnormt, quadprog
 Imports: stats4, stats, graphics
 Suggests: psych, qgraph, semTools, simsem
 License: GPL (>=2)
