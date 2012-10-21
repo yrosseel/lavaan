@@ -1,5 +1,10 @@
 fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
+    # has the model converged?
+    if(!object@Fit@converged) {
+        stop("lavaan ERROR: fit measures not available if model did not converge")
+    }
+
     # do we have a test statistic?
     if(object@Fit@test[[1]]$test == "none") {
         stop("lavaan ERROR: please refit the model with test=\"standard\"")

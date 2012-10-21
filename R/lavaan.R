@@ -488,7 +488,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
-    if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {
+    if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L &&
+       attr(x, "converged")) {
         VCOV <- estimateVCOV(lavaanModel,
                              samplestats  = lavaanSampleStats,
                              options      = lavaanOptions,
@@ -501,7 +502,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 8. compute test statistic (chi-square and friends)
     TEST <- NULL
-    if(lavaanOptions$test != "none") {
+    if(lavaanOptions$test != "none" && attr(x, "converged")) {
         TEST <- computeTestStatistic(lavaanModel,
                                      partable    = lavaanParTable,
                                      samplestats = lavaanSampleStats,
@@ -510,6 +511,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      VCOV     = VCOV,
                                      data     = lavaanData,
                                      control  = control)
+    } else {
+        TEST <- list(list(test="none", stat=NA, 
+                     stat.group=rep(NA, lavaanData@ngroups), df=NA, pvalue=NA))
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

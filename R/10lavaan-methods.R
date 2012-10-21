@@ -252,6 +252,8 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     if(fit.measures) {
         if(object@Options$test == "none") {
             cat("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+        } else if(!object@Fit@converged) {
+            cat("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
             print.fit.measures( fitMeasures(object) )
         }
