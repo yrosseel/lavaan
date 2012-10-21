@@ -467,6 +467,9 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             op.idx <- regexpr(op, x)
         }
         lhs <- substr(x, 1L, op.idx-1L)
+        # fix for 'NA' names in lhs; not likely to happen to ov.names
+        # since 'NA' is not a valid name for list elements/data.frame columns
+        if(lhs == "NA") lhs <- "NA."
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
     
         # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
