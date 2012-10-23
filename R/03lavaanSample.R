@@ -13,6 +13,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    estimator     = "ML",
                                    mimic         = "lavaan",
                                    meanstructure = FALSE,
+                                   WLS.V         = NULL,
+                                   NACOV         = NULL,
                                    verbose       = FALSE) {
 
     # get X and Mp
@@ -56,8 +58,46 @@ lavSampleStatsFromData <- function(Data          = NULL,
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
-    WLS.V          <- vector("list", length=ngroups)
-    NACOV          <- vector("list", length=ngroups)
+
+    if(is.null(WLS.V)) {
+        WLS.V      <- vector("list", length=ngroups)
+        WLS.V.user <- FALSE   
+    } else {
+        if(!is.list(WLS.V)) {
+            if(ngroups == 1L) {
+                WLS.V <- list(WLS.V)
+            } else {
+                stop("lavaan ERROR: WLS.V argument should be a list of length ",
+                     ngroups)
+            }
+        } else {
+            if(length(WLS.V) != ngroups)
+                stop("lavaan ERROR: WLS.V assumes ", length(WLS.V),
+                     " groups; data contains ", ngroups, " groups")
+        }
+        WLS.V.user <- TRUE
+        # FIXME: check dimension of WLS.V!!
+    }
+
+    if(is.null(NACOV)) {
+        NACOV      <- vector("list", length=ngroups)
+        NACOV.user <- FALSE
+    } else {
+        if(!is.list(NACOV)) {
+            if(ngroups == 1L) {
+                NACOV <- list(NACOV)
+            } else {
+                stop("lavaan ERROR: NACOV argument should be a list of length ",
+                     ngroups)
+            }
+        } else {
+            if(length(NACOV) != ngroups)
+                stop("lavaan ERROR: NACOV assumes ", length(NACOV),
+                     " groups; data contains ", ngroups, " groups")
+        }
+        NACOV.user <- TRUE
+        # FIXME: check dimension of NACOV!!
+    }
 
     for(g in 1:ngroups) {
 
@@ -175,73 +215,85 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
         } 
 
-        # WLS.V and NACOV (=GAMMA)
-        if(estimator == "GLS") {
-            if(meanstructure) {
-                V11 <- icov[[g]]
-                if(mimic == "Mplus") { # is this a bug in Mplus?
-                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+        # NACOV (=GAMMA)
+        if(!NACOV.user) {
+            if(estimator == "ML") {
+                NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
+            } else if(estimator %in% c("WLS","DWLS","ULS")) {
+                if(!categorical) {
+                    # sample size large enough?
+                    nvar <- ncol(X[[g]]); pstar <- nvar*(nvar+1)/2
+                    if(meanstructure) pstar <- pstar + nvar
+                    if(nrow(X[[g]]) < pstar) {
+                        if(ngroups > 1L) {
+                            txt <- cat(" in group: ", g, "\n", sep="")
+                        } else {
+                            txt <- "\n"
+                        }
+                        warning("lavaan WARNING: number of observations (", 
+                                nrow(X[[g]]), ") too small to compute Gamma", 
+                                txt)
+                    }
+                    NACOV[[g]] <- compute.Gamma(X[[g]], 
+                                                meanstructure=meanstructure,
+                                                Mplus.WLS=(mimic=="Mplus"))
+                } else { # categorical case
+                    NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
                 }
-                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
-                WLS.V[[g]] <- bdiag(V11,V22)
-            } else {
-                WLS.V[[g]] <-
-                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+            } else if(estimator == "PML") {
+                # no NACOV ... for now
             }
-        } else if(estimator == "ML") {
-            # no WLS.V here, since function of model-implied moments
-            NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
-        } else if(estimator %in% c("WLS","DWLS","ULS") && !categorical) {
-            # sample size large enough?
-            nvar <- ncol(X[[g]])
-            pstar <- nvar*(nvar+1)/2
-            if(meanstructure) pstar <- pstar + nvar
-            if(nrow(X[[g]]) < pstar) {
-                if(ngroups > 1L) {
-                    txt <- cat(" in group: ", g, "\n", sep="")
-                } else {
-                    txt <- "\n"
-                }
-                warning("lavaan WARNING: number of observations (", 
-                        nrow(X[[g]]), ") too small to compute Gamma", txt)
-            }
-
-            Gamma <- compute.Gamma(X[[g]], meanstructure=meanstructure,
-                                   Mplus.WLS=(mimic=="Mplus"))
-
-            if(estimator == "WLS") {
-                # Gamma should be po before we invert
-                ev <- eigen(Gamma, symmetric=FALSE, only.values=TRUE)$values
-                if(is.complex(ev) || any(Re(ev) < 0)) {
-                   stop("lavaan ERROR: Gamma (weight) matrix is not positive-definite")
-                }
-                WLS.V[[g]] <- inv.chol(Gamma)
-                NACOV[[g]]  <- Gamma
-            } else if(estimator == "DWLS") {
-                dacov <- diag(Gamma)
-                WLS.V[[g]] <- diag(1/dacov, nrow=NROW(Gamma), ncol=NCOL(Gamma))
-                NACOV[[g]]  <- Gamma
-            } else if(estimator == "ULS") {
-                WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
-                NACOV[[g]]  <- Gamma
-            }
-        } else if(estimator == "WLS" && categorical) {
-            WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
-            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
-        } else if(estimator == "DWLS" && categorical) {
-            dacov <- diag(CAT$WLS.W * nobs[[g]])
-            WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
-                                        ncol=NCOL(CAT$WLS.W))
-            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
-        } else if(estimator == "ULS" && categorical) {
-            DWLS <- diag(NROW(CAT$WLS.W))
-            WLS.V[[g]] <- DWLS
-            NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
-        } else if(estimator == "PML") {
-            # no WLS.V here
-            # no NACOV too...
         }
 
+        # WLS.V
+        if(!WLS.V.user) {
+            if(estimator == "GLS") {
+                if(meanstructure) {
+                    V11 <- icov[[g]]
+                    if(mimic == "Mplus") { # is this a bug in Mplus?
+                        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                    }
+                    V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                    WLS.V[[g]] <- bdiag(V11,V22)
+                } else {
+                    WLS.V[[g]] <-
+                        0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                }
+            } else if(estimator == "ML") {
+                # no WLS.V here, since function of model-implied moments
+            } else if(estimator %in% c("WLS","DWLS","ULS")) {
+                if(!categorical) {
+                    if(estimator == "WLS") {
+                        # Gamma should be po before we invert
+                        ev <- eigen(NACOV[[g]], symmetric=FALSE, 
+                                    only.values=TRUE)$values
+                        if(is.complex(ev) || any(Re(ev) < 0)) {
+                           stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
+                        }
+                        WLS.V[[g]] <- inv.chol(NACOV[[g]])
+                    } else if(estimator == "DWLS") {
+                        dacov <- diag(NACOV[[g]])
+                        WLS.V[[g]] <- diag(1/dacov, nrow=NROW(NACOV[[g]]), 
+                                                    ncol=NCOL(NACOV[[g]]))
+                    } else if(estimator == "ULS") {
+                        WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                    }
+                } else {
+                    if(estimator == "WLS") {
+                        WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
+                    } else if(estimator == "DWLS") {
+                        dacov <- diag(CAT$WLS.W * nobs[[g]])
+                        WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
+                                                    ncol=NCOL(CAT$WLS.W))
+                    } else if(estimator == "ULS") {
+                        DWLS <- diag(NROW(CAT$WLS.W))
+                        WLS.V[[g]] <- DWLS
+                    }
+                }
+            } else if(estimator == "PML") {
+                # no WLS.V here
+            }
+        }
     } # ngroups
 
     # construct SampleStats object
@@ -287,6 +339,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       ov.names      = NULL,
                                       estimator     = "ML",
                                       mimic         = "lavaan",
+                                      WLS.V         = NULL,
+                                      NACOV         = NULL,
                                       meanstructure = FALSE) {
 
     # matrix -> list
@@ -316,8 +370,45 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
 
-    WLS.V         <- vector("list", length=ngroups)
-    NACOV         <- vector("list", length=ngroups)
+    if(is.null(WLS.V)) {
+        WLS.V      <- vector("list", length=ngroups)
+        WLS.V.user <- FALSE
+    } else {
+        if(!is.list(WLS.V)) {
+            if(ngroups == 1L) {
+                WLS.V <- list(WLS.V)
+            } else {
+                stop("lavaan ERROR: WLS.V argument should be a list of length ",
+                     ngroups)
+            }
+        } else {
+            if(length(WLS.V) != ngroups)
+                stop("lavaan ERROR: WLS.V assumes ", length(WLS.V),
+                     " groups; data contains ", ngroups, " groups")
+        }
+        WLS.V.user <- TRUE
+        # FIXME: check dimension of WLS.V!!
+    }
+
+    if(is.null(NACOV)) {
+        NACOV      <- vector("list", length=ngroups)
+        NACOV.user <- FALSE
+    } else {
+        if(!is.list(NACOV)) {
+            if(ngroups == 1L) {
+                NACOV <- list(NACOV)
+            } else {
+                stop("lavaan ERROR: NACOV argument should be a list of length ",
+                     ngroups)
+            }
+        } else {
+            if(length(NACOV) != ngroups)
+                stop("lavaan ERROR: NACOV assumes ", length(NACOV),
+                     " groups; data contains ", ngroups, " groups")
+        }
+        NACOV.user <- TRUE
+        # FIXME: check dimension of NACOV!!
+    }
 
     nobs    <- as.list(as.integer(sample.nobs))
 
@@ -395,23 +486,32 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
         else
             WLS.obs[[g]] <- vech(cov[[g]])
 
-        if(estimator == "GLS") {
-            if(meanstructure) {
-                V11 <- icov[[g]]
-                if(mimic == "Mplus") { # is this a bug in Mplus?
-                    V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+        # NACOV
+        # NACOV (=GAMMA)
+        #if(!NACOV.user) {
+            # nothing to do here; only used if provided by user
+        #}
+
+        # WLS.V
+        if(!WLS.V.user) {
+            if(estimator == "GLS") {
+                if(meanstructure) {
+                    V11 <- icov[[g]]
+                    if(mimic == "Mplus") { # is this a bug in Mplus?
+                        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                    }
+                    V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                    WLS.V[[g]] <- bdiag(V11,V22)
+                } else {
+                    WLS.V[[g]] <-
+                        0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
                 }
-                V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
-                WLS.V[[g]] <- bdiag(V11,V22)
-            } else {
-                WLS.V[[g]] <-
-                    0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+            } else if(estimator == "ULS") {
+                WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+            } else if(estimator == "WLS" || estimator == "DWLS") {
+                if(is.null(WLS.V[[g]]))
+                    stop("lavaan ERROR: the (D)WLS estimator is only available with full data or with a user-provided WLS.V")
             }
-        } else if(estimator == "ULS") {
-            WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
-        } else if(estimator == "WLS" || estimator == "DWLS") {
-            if(is.null(WLS.V[[g]]))
-                stop("lavaan ERROR: the (D)WLS estimator is only available with full data")
         }
 
     } # ngroups

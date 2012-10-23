@@ -248,9 +248,9 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         -dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
     }
 
-    hessianFunction2 <- function(x) {
-        numDeriv:::hessian(func=objectiveFunction, x=x)
-    }
+    #hessianFunction2 <- function(x) {
+    #    numDeriv:::hessian(func=objectiveFunction, x=x)
+    #}
 
     # OLSSON 1979 A2 + A3 (no EXO!!)
     hessianFunction <- function(x) {

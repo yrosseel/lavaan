@@ -60,6 +60,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    representation  = "default",
                    do.fit          = TRUE,
                    control         = list(),
+                   WLS.V           = NULL,
+                   NACOV           = NULL,
 
                    # starting values
                    start           = "default",
@@ -292,6 +294,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        mimic         = lavaanOptions$mimic,
                        meanstructure = lavaanOptions$meanstructure,
                        missing.h1    = (lavaanOptions$missing != "listwise"),
+                       WLS.V         = WLS.V,
+                       NACOV         = NACOV,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
@@ -303,6 +307,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            estimator     = lavaanOptions$estimator,
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
+                           WLS.V         = WLS.V,
+                           NACOV         = NACOV,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"))
                            
@@ -552,8 +558,8 @@ cfa <- sem <- function(model = NULL,
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, control = list(), start = "default", 
-    verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
+    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
@@ -583,8 +589,8 @@ growth <- function(model = NULL,
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, control = list(), start = "default",
-    verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
+    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
