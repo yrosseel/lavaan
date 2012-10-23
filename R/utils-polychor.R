@@ -301,7 +301,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         stopifnot(!exo)
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
                       gradient=gradientFunction,
-                      hessian=hessianFunction2,
+                      hessian=hessianFunction,
                       scale=100, # not needed?
                       control=list(trace=ifelse(verbose,1L,0L),
                                    rel.tol=1e-7))

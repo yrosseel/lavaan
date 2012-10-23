@@ -104,7 +104,7 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
 },
 
 start = function() {
-    if(nth == 1L) {
+    if(nth == 1L && nexo > 0L) {
         th.start <- 0
     } else {
         th.start <- lavaan:::pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
