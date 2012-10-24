@@ -8,6 +8,7 @@ setClass("lavData",
     representation(
         data.type="character",     # "full", "moment" or "none"
         ngroups="integer",         # number of groups
+        group="character",         # group variable
         group.label="character",   # group labels
         std.ov="logical",          # standardize observed variables?
         nobs="list",               # effective number of observations

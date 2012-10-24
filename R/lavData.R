@@ -116,6 +116,7 @@ lavData <- function(data          = NULL,          # data.frame
         lavData <- new("lavData",
                        data.type   = "moment",
                        ngroups     = ngroups, 
+                       group       = character(0L),
                        group.label = group.label,
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
@@ -157,7 +158,8 @@ lavData <- function(data          = NULL,          # data.frame
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "none",
-                       ngroups     = ngroups, 
+                       ngroups     = ngroups,
+                       group       = character(0L),
                        group.label = group.label,
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
@@ -184,7 +186,7 @@ getDataFull <- function(data          = NULL,          # data.frame
                        )
 {
     # number of groups and group labels
-    if(!is.null(group)) {
+    if(!is.null(group) && length(group) > 0L) {
         if(!(group %in% names(data))) {
             stop("lavaan ERROR: grouping variable ", sQuote(group),
                  " not found;\n  ",
@@ -222,6 +224,7 @@ getDataFull <- function(data          = NULL,          # data.frame
                     " will be ignored if `group' argument is missing")
         ngroups <- 1L
         group.label <- character(0L)
+        group <- character(0L)
     }
 
     # ov.names
@@ -377,6 +380,7 @@ getDataFull <- function(data          = NULL,          # data.frame
     lavData <- new("lavData",
                       data.type       = "full",
                       ngroups         = ngroups,
+                      group           = group,
                       group.label     = group.label,
                       std.ov          = std.ov,
                       nobs            = nobs,
