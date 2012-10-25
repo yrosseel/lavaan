@@ -79,6 +79,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    debug           = FALSE
                   )
 {
+
+    # temporary block estimator = "PML"
+    if(estimator == "PML") stop("estimator PML is not available yet")
+
     # start timer
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
