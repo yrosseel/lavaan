@@ -586,8 +586,8 @@ print.fit.measures <- function(x) {
 
    # independence model
    if("baseline.chisq" %in% names(x)) {
-       cat("Chi-square test baseline model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Minimum Function Chi-square")
+       cat("Model test baseline model:\n\n")
+       t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
        t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["baseline.chisq.scaled"]), "")

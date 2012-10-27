@@ -117,7 +117,7 @@ short.summary <- function(object) {
     if(object@Options$test != "none") {
 
         # 1. chi-square values
-        t0.txt <- sprintf("  %-40s", "Minimum Function Chi-square")  
+        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")  
         t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$stat)
         t2.txt <- ifelse(scaled, 
                   sprintf("  %10.3f", object@Fit@test[[2]]$stat), "")
@@ -135,7 +135,14 @@ short.summary <- function(object) {
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 3. P-value
-        t0.txt <- sprintf("  %-40s", "P-value")
+        if(object@Fit@test[[1]]$refdistr == "chisq") {
+            t0.txt <- sprintf("  %-40s", "P-value (Chi-square)")
+        } else if(length(object@Fit@test) == 1L &&
+                  object@Fit@test[[1]]$refdistr == "unknown") {
+            t0.txt <- sprintf("  %-40s", "P-value (Unknown)")
+        } else {
+            t0.txt <- sprintf("  %-40s", "P-value")
+        }
         t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$pvalue)
         t2.txt <- ifelse(scaled,
                   sprintf("  %10.3f", object@Fit@test[[2]]$pvalue), "")

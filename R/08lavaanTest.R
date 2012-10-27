@@ -214,6 +214,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           stat=as.numeric(NA),
                           stat.group=as.numeric(NA),
                           df=df,
+                          refdist="unknown",
                           pvalue=as.numeric(NA))
         return(TEST)
     }    
@@ -256,13 +257,22 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     # global test statistic
     chisq <- sum(chisq.group)
 
-    # pvalue  ### FIXME: what if df=0? NA? or 1? or 0?
-    pvalue <- 1 - pchisq(chisq, df)
+    # reference distribution: always chi-square, except for the
+    # non-robust version of ULS
+    if(estimator == "ULS") {
+        refdistr <- "unknown"
+        pvalue <- as.numeric(NA)
+    } else {
+        refdistr <- "chisq"
+        # pvalue  ### FIXME: what if df=0? NA? or 1? or 0?
+        pvalue <- 1 - pchisq(chisq, df)
+    }
 
     TEST[[1]] <- list(test="standard",
                       stat=chisq, 
                       stat.group=chisq.group, 
-                      df=df, 
+                      df=df,
+                      refdistr=refdistr,
                       pvalue=pvalue) 
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
