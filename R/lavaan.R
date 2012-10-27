@@ -225,6 +225,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavaanData@data.type == "none") {
         do.fit <- FALSE; start <- "simple"
         lavaanOptions$se <- "none"; lavaanOptions$test <- "none"
+    } else if(lavaanData@data.type == "moment") {
+        # catch here some options that will not work with moments
+        if(estimator %in% c("MLM", "MLMV", "MLR", "ULSM", "ULSMV") &&
+           is.null(NACOV)) {
+            stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided NACOV")
+        }
+        if(estimator %in% c("WLS", "WLSM", "WLSMV", "DWLS") &&
+           is.null(WLS.V)) {
+            stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided WLS.V") 
+        }
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
