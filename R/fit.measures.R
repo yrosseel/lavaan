@@ -1,7 +1,7 @@
 fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # has the model converged?
-    if(!object@Fit@converged) {
+    if(object@Fit@npar > 0L && !object@Fit@converged) {
         stop("lavaan ERROR: fit measures not available if model did not converge")
     }
 

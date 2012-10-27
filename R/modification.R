@@ -1,6 +1,10 @@
 modificationIndices <- modificationindices <- modindices <- function(object, 
     standardized=TRUE, power=FALSE, delta=0.1, alpha=0.05, high.power=0.75) {
 
+    # check if model has converged
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+
     if(power) standardized <- TRUE
 
     # get LIST parameter list

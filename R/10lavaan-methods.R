@@ -258,9 +258,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     # only if requested, the fit measures
     if(fit.measures) {
         if(object@Options$test == "none") {
-            cat("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
-        } else if(!object@Fit@converged) {
-            cat("lavaan WARNING: fit measures not available if model did not converge\n\n")
+            warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+        } else if(object@Fit@npar > 0L && !object@Fit@converged) {
+            warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
             print.fit.measures( fitMeasures(object) )
         }
@@ -822,6 +822,7 @@ parameterEstimates <- parameterestimates <-
     FMI <- fmi
     if(fmi == "default") {
         if(object@SampleStats@missing.flag &&
+           object@Fit@converged &&
            object@Options$estimator == "ML" &&
            object@Options$se == "standard")
             FMI <- TRUE
@@ -1234,6 +1235,10 @@ function(object, labels=TRUE) {
 setMethod("vcov", "lavaan",
 function(object, labels=TRUE) {
 
+    # check for convergence first!
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+
     if(object@Fit@npar == 0) {
         VarCov <- matrix(0,0,0)
     } else {
@@ -1289,6 +1294,9 @@ function(object, ...) {
     if(object@Options$estimator != "ML") {
         stop("lavaan ERROR: logLik only available if estimator is ML")
     }
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+    
     logl.df <- fitMeasures(object, c("logl", "npar", "ntotal"))
     names(logl.df) <- NULL
     logl <- logl.df[1]
@@ -1340,6 +1348,9 @@ function(object, model, ..., evaluate = TRUE) {
 # this is based on the anova function in the lmer package
 setMethod("anova", signature(object = "lavaan"),
 function(object, ...) {
+
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
 
     # NOTE: if we add additional arguments, it is not the same generic
     # anova() function anymore, and match.call will be screwed up
@@ -1437,7 +1448,7 @@ function(object, ...) {
         scaled <- FALSE
         TEST <- "standard"
     } else {
-        stop("lavaan WARNING: some models (but not all) have scaled test statistics")
+        stop("lavaan ERROR: some models (but not all) have scaled test statistics")
     }
 
     # which models have used a MEANSTRUCTURE?
@@ -1472,7 +1483,7 @@ function(object, ...) {
 
             # check for negative scaling factors
             if(any(cd1 < 0)) {
-                warning("some scaling factors are negative: [",
+                warning("lavaan WARNING: some scaling factors are negative: [",
                         paste(round(cd1, 3), collapse=" "),"]; rerun with SB.classic=FALSE")
                 cd1[cd1 < 0] <- NA
             }
@@ -1487,7 +1498,7 @@ function(object, ...) {
             for(m in seq_len(length(mods) - 1L)) {
 
                 if(mods[[m]]@Fit@test[[1]]$df == mods[[m+1]]@Fit@test[[1]]$df) {
-                    warnings("some models have the same number of free parameters")
+                    warnings("lavaan WARNING: some models have the same number of free parameters")
                     next
                 }
 

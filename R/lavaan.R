@@ -533,7 +533,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      control  = control)
     } else {
         TEST <- list(list(test="none", stat=NA, 
-                     stat.group=rep(NA, lavaanData@ngroups), df=NA, pvalue=NA))
+                     stat.group=rep(NA, lavaanData@ngroups), df=NA, 
+                     refdistr="unknown", pvalue=NA))
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -546,6 +547,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                      VCOV     = VCOV,
                      TEST     = TEST)
     timing$total <- (proc.time()[3] - start.time0)
+
+    # 9b. check for Heywood cases, negative variances, ...
+    #if(attr(x, "converged")) { # only if estimation was successful
+    #    var.idx <- which(lavaanParTable$op == "~~" &
+    #                     lavaanParTable$lhs == lavaanParTable$lhs)
+    #   if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
+    #        warning("lavaan WARNING: some estimated variances are negative")
+    #}
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",

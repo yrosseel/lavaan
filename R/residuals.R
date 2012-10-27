@@ -2,10 +2,14 @@
 setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {
  
-    # check estimator
-    if(type %in% c("normalized", "standardized") && 
-       object@Options$estimator != "ML") {
-        stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
+    # checks
+    if(type %in% c("normalized", "standardized")) {
+        if(object@Options$estimator != "ML") {
+            stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
+        }
+        if(object@Fit@npar > 0L && !object@Fit@converged) {
+            stop("lavaan ERROR: model dit not converge")
+        }
     }
     # NOTE: for some reason, Mplus does not compute the normalized/standardized
     # residuals if estimator = MLM !!!
