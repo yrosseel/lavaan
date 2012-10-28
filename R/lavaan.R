@@ -551,7 +551,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 9b. check for Heywood cases, negative variances, ...
     if(attr(x, "converged")) { # only if estimation was successful
         var.idx <- which(lavaanParTable$op == "~~" &
-                         lavaanParTable$lhs == lavaanParTable$lhs)
+                         lavaanParTable$lhs == lavaanParTable$rhs)
        if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
     }
