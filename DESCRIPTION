@@ -25,7 +25,7 @@ Description: Fit a variety of latent variable models, including
              and latent growth curve models.
 Depends: methods, R(>= 2.14.0), MASS, boot, mnormt, quadprog
 Imports: stats4, stats, graphics
-Suggests: psych, qgraph, semTools, simsem
+Suggests: psych, qgraph, semTools, simsem, lavaan.survey
 License: GPL (>=2)
 LazyData: yes
 URL: http://lavaan.org
