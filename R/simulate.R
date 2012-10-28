@@ -56,7 +56,9 @@ simulateData <- function(
                      auto.cov.y=auto.cov.y)
 
     # fill in any remaining NA values (needed for unstandardize)
-    # 1 for variances, 0 otherwise
+    # 1 for variances and factor loadings, 0 otherwise
+    idx <- which(lav$op == "=~" & is.na(lav$ustart))
+    if(length(idx) > 0L) lav$ustart[idx] <- 1.0
     idx <- which(lav$op == "~~" & is.na(lav$ustart) & lav$lhs == lav$rhs)
     if(length(idx) > 0L) lav$ustart[idx] <- 1.0
     idx <- which(is.na(lav$ustart))
@@ -73,8 +75,13 @@ simulateData <- function(
         # 2. unstandardized latent variables
     }
 
-    # run lavaan to set up the model matrices
-    fit <- lavaan(model=lav, sample.nobs=sample.nobs, ...)
+
+    # basic fit (ignoring thresholds
+    ord.idx <- which(lav$op == "|")
+    if(length(ord.idx) > 0L) {
+        lav.no_ord <- lav[-ord.idx,]
+    }
+    fit <- lavaan(model=lav.no_ord, sample.nobs=sample.nobs,  ...)
 
     # the model-implied moments for the population
     Sigma.hat <- computeSigmaHat(fit@Model)
@@ -103,6 +110,19 @@ simulateData <- function(
             # rescale
             X[[g]] <- scale(Z, center = Mu.hat[[1L]],
                                scale  = 1/sqrt(diag(Sigma.hat[[1L]])))
+        }
+
+        # any categorical variables?
+        ov.ord <- vnames(lav, type="ov.ord", group=g)
+        if(length(ov.ord) > 0L) {
+            ov.names <- vnames(lav, type="ov", group=g)
+            # use thresholds to cut -- after standardization?
+            for(o in ov.ord) {
+                o.idx <- which(o == ov.names)
+                th.idx <- which(lav$op == "|" & lav$lhs == o)
+                th.val <- c(-Inf,sort(lav$ustar[th.idx]),+Inf)
+                X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
+            }
         }
 
         if(return.type == "data.frame") X[[g]] <- as.data.frame(X[[g]])
