@@ -365,7 +365,9 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {
         opt$estimator <- "PML"
-        if(opt$se != "none") opt$se <- "none" # should be "robust.huber.white"
+        opt$information <- "observed"
+        if(opt$se == "default")
+            opt$se <- "robust.huber.white"
         if(opt$test != "none") opt$test <- "standard"
         opt$missing <- "listwise"
     } else {

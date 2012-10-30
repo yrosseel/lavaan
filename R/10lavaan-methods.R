@@ -276,9 +276,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)), 
 			 	     substring(tmp.txt,2), sep=""))
     cat(t0.txt, t1.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-38s", "Standard Errors")
+    t0.txt <- sprintf("  %-31s", "Standard Errors")
     tmp.txt <- object@Options$se
-    t1.txt <- sprintf("  %12s", paste(toupper(substring(tmp.txt,1,1)),  
+    t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),  
                                       substring(tmp.txt,2), sep=""))
     cat(t0.txt, t1.txt, "\n", sep="")
     if(object@Options$se == "bootstrap") {
@@ -1244,8 +1244,10 @@ function(object, labels=TRUE) {
     } else {
         VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
                                options=object@Options,
-                               data=eval(object@call[["data"]], 
-                                         parent.frame()) )
+                               #data=eval(object@call[["data"]], 
+                               #          parent.frame()) 
+                               data=object@Data
+                              )
     }
 
     if(labels) {

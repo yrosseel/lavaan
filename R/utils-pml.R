@@ -12,7 +12,9 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        th.idx    = NULL,    # threshold idx per variable
                        num.idx   = NULL,    # which variables are numeric
                        X         = NULL,    # data
-                       eXo       = NULL) {  # external covariates
+                       eXo       = NULL,    # external covariates
+                       scores    = FALSE,   # return case-wise scores
+                       negative  = TRUE) {  # multiply by -1
 
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
@@ -33,7 +35,12 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # in this order: TH/MEANS + SLOPES + VAR + COR
     GRAD.size <- N.TH + N.SL + N.VAR + N.COR
 
-    GRAD <- matrix(0, pstar, GRAD.size) # each pair is a row
+    # scores or gradient?
+    if(scores) {
+        SCORES <- matrix(0, nrow(X), GRAD.size) # we will sum up over all pairs 
+    } else {
+        GRAD <- matrix(0, pstar, GRAD.size) # each pair is a row
+    }
     PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
     PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
 
@@ -76,44 +83,64 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                             sl.y1 = NULL,
                                             sl.y2 = NULL)
                 
-                # TH
-                if(length(th.idx_i) > 1L) {
-                    GRAD[pstar.idx, th.idx_i] <- colSums(SC.COR.UNI$dx.th.y1)
-                } else {
-                    GRAD[pstar.idx, th.idx_i] <- sum(SC.COR.UNI$dx.th.y1)
-                }
-                if(length(th.idx_j) > 1L) {
-                     GRAD[pstar.idx, th.idx_j] <- colSums(SC.COR.UNI$dx.th.y2)
-                } else {
-                     GRAD[pstar.idx, th.idx_j] <- sum(SC.COR.UNI$dx.th.y2)
-                }
+                if(scores) {
+                    # TH
+                    SCORES[,th.idx_i] <- SCORES[,th.idx_i] + SC.COR.UNI$dx.th.y1
+                    SCORES[,th.idx_j] <- SCORES[,th.idx_j] + SC.COR.UNI$dx.th.y2
 
-                # SL
-                if(nexo > 0L) {
-                    if(length(sl.idx_i) > 1L) {
-                        GRAD[pstar.idx, sl.idx_i] <- colSums(SC.COR.UNI$dx.sl.y1)
-                    } else {
-                        GRAD[pstar.idx, sl.idx_i] <- sum(SC.COR.UNI$dx.sl.y1)
+                    # SL
+                    if(nexo > 0L) {
+                        SCORES[,sl.idx_i] <- SCORES[,sl.idx_i] + SC.COR.UNI$dx.sl.y1
+                        SCORES[,sl.idx_j] <- SCORES[,sl.idx_j] + SC.COR.UNI$dx.sl.y2 
                     }
-                    if(length(sl.idx_j) > 1L) {
-                        GRAD[pstar.idx, sl.idx_j] <- colSums(SC.COR.UNI$dx.sl.y2)
+                    # NO VAR
+                    # RHO
+                    SCORES[,cor.idx] <- SCORES[,cor.idx] + SC.COR.UNI$dx.rho
+                } else {
+                    # TH
+                    if(length(th.idx_i) > 1L) {
+                        GRAD[pstar.idx, th.idx_i] <- colSums(SC.COR.UNI$dx.th.y1)
                     } else {
-                        GRAD[pstar.idx, sl.idx_j] <- sum(SC.COR.UNI$dx.sl.y2)
+                        GRAD[pstar.idx, th.idx_i] <- sum(SC.COR.UNI$dx.th.y1)
                     }
-                }
-                # NO VAR
+                    if(length(th.idx_j) > 1L) {
+                         GRAD[pstar.idx, th.idx_j] <- colSums(SC.COR.UNI$dx.th.y2)
+                    } else {
+                         GRAD[pstar.idx, th.idx_j] <- sum(SC.COR.UNI$dx.th.y2)
+                    }
+    
+                    # SL
+                    if(nexo > 0L) {
+                        if(length(sl.idx_i) > 1L) {
+                            GRAD[pstar.idx, sl.idx_i] <- colSums(SC.COR.UNI$dx.sl.y1)
+                        } else {
+                            GRAD[pstar.idx, sl.idx_i] <- sum(SC.COR.UNI$dx.sl.y1)
+                        }
+                        if(length(sl.idx_j) > 1L) {
+                            GRAD[pstar.idx, sl.idx_j] <- colSums(SC.COR.UNI$dx.sl.y2)
+                        } else {
+                            GRAD[pstar.idx, sl.idx_j] <- sum(SC.COR.UNI$dx.sl.y2)
+                        }
+                    }
+                    # NO VAR
 
-                # RHO
-                GRAD[pstar.idx,cor.idx] <- sum(SC.COR.UNI$dx.rho)
+                    # RHO
+                    GRAD[pstar.idx,cor.idx] <- sum(SC.COR.UNI$dx.rho)
+                }
             }
         }
     }
+
+    # do we need scores?
+    if(scores) return(SCORES)
 
     # gradient is sum over all pairs
     gradient <- colSums(GRAD)
 
     # we multiply by -1 because we minimize
-    gradient <- -1 * gradient
+    if(negative) {
+        gradient <- -1 * gradient
+    }
 
     gradient
 }

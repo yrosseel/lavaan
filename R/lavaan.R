@@ -510,12 +510,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     VCOV <- NULL
     if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L &&
        attr(x, "converged")) {
+        if(verbose) cat("Computing VCOV for se = ", lavaanOptions$se, "...")
         VCOV <- estimateVCOV(lavaanModel,
                              samplestats  = lavaanSampleStats,
                              options      = lavaanOptions,
                              data         = lavaanData,
                              partable = lavaanParTable,
                              control  = control)
+        cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -523,6 +525,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 8. compute test statistic (chi-square and friends)
     TEST <- NULL
     if(lavaanOptions$test != "none" && attr(x, "converged")) {
+        if(verbose) cat("Computing TEST for test = ", lavaanOptions$test, "...")
         TEST <- computeTestStatistic(lavaanModel,
                                      partable    = lavaanParTable,
                                      samplestats = lavaanSampleStats,
@@ -531,6 +534,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      VCOV     = VCOV,
                                      data     = lavaanData,
                                      control  = control)
+        cat(" done.\n")
     } else {
         TEST <- list(list(test="none", stat=NA, 
                      stat.group=rep(NA, lavaanData@ngroups), df=NA, 
