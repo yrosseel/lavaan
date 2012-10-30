@@ -247,8 +247,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         }
         chisq.group <- 2 * (fx.group - group.fx) # LRT per group
 
-        cat("model fx = \n"); print(fx.group)
-        cat("unres fx = \n"); print(group.fx)
+        #cat("model fx = \n"); print(fx.group)
+        #cat("unres fx = \n"); print(group.fx)
     }
 
     # check for negative values

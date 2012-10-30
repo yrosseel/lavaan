@@ -46,45 +46,49 @@ pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
 
 
 
-# safe but extremely slow...
+# switch between pbivnorm, mnormt, ...
 pbinorm <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
 
-    pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho,
+    pbinorm2(upper.x=upper.x, upper.y=upper.y, rho=rho,
              lower.x=lower.x, lower.y=lower.y, check=check)
 
 }
 
 # using vectorized version (a la pbivnorm)
-#pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
-#                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
-#
-#    N <- length(upper.x)
-#    stopifnot(length(upper.y) == N)
-#    if(N > 1L) {
-#        if(length(rho) == 1L)
-#            rho <- rep(rho, N)
-#        if(length(lower.x) == 1L)
-#            lower.x <- rep(lower.x, N)
-#        if(length(lower.y) == 1L)
-#            lower.y <- rep(lower.y, N)
-#    }    
-#
-#    upper.only <- all(lower.x == -Inf & lower.y == -Inf)
-#   if(upper.only) {
-#        res <- pbivnorm(upper.x, upper.y, rho=rho)
-#    } else {
-#        # pbivnorm does not handle -Inf well...
-#        lower.x[lower.x == -Inf] <- -exp(10)
-#        lower.y[lower.y == -Inf] <- -exp(10)
-#        res <- pbivnorm(upper.x, upper.y, rho=rho) - 
-#               pbivnorm(lower.x, upper.y, rho=rho) - 
-#               pbivnorm(upper.x, lower.y, rho=rho) + 
-#               pbivnorm(lower.x, lower.y, rho=rho)
-#    }
-#
-#    res
-#}
+pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
+    N <- length(upper.x)
+    stopifnot(length(upper.y) == N)
+    if(N > 1L) {
+        if(length(rho) == 1L)
+            rho <- rep(rho, N)
+        if(length(lower.x) == 1L)
+            lower.x <- rep(lower.x, N)
+        if(length(lower.y) == 1L)
+            lower.y <- rep(lower.y, N)
+    }    
+
+    upper.only <- all(lower.x == -Inf & lower.y == -Inf)
+   if(upper.only) {
+        upper.x[upper.x == +Inf] <-  exp(10) # better pnorm?
+        upper.y[upper.y == +Inf] <-  exp(10) 
+        upper.x[upper.x == -Inf] <- -exp(10)
+        upper.y[upper.y == -Inf] <- -exp(10)
+        res <- pbivnorm(upper.x, upper.y, rho=rho)
+    } else {
+        # pbivnorm does not handle -Inf well...
+        lower.x[lower.x == -Inf] <- -exp(10)
+        lower.y[lower.y == -Inf] <- -exp(10)
+        res <- pbivnorm(upper.x, upper.y, rho=rho) - 
+               pbivnorm(lower.x, upper.y, rho=rho) - 
+               pbivnorm(upper.x, lower.y, rho=rho) + 
+               pbivnorm(lower.x, lower.y, rho=rho)
+    }
+
+    res
+}
 
 
 # using non-vectorized version
@@ -118,6 +122,9 @@ pbinorm1 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
         if(length(lower.y) == 1L)
             lower.y <- rep(lower.y, N)
     }
+    # biv.nt.prob does not handle +Inf well for upper
+    upper.x[upper.x == +Inf] <- exp(10) # better pnorm?
+    upper.y[upper.y == +Inf] <- exp(10) # better pnorm?
 
     # vectorize (this would be faster if the loop is in the fortran code!) 
     res <- sapply(seq_len(N), function(i)

@@ -20,30 +20,33 @@ pc_th <- function(Y, freq=NULL, prop=NULL) {
 
 pc_PI <- function(rho, th.y1, th.y2) {
 
-    TH.Y1 <- c(-Inf, th.y1, Inf); TH.Y2 <- c(-Inf, th.y2, Inf)
-    pTH.Y1 <- pnorm(TH.Y1); rowPI <- pTH.Y1[-1L] - pTH.Y1[-length(TH.Y1)]
-    pTH.Y2 <- pnorm(TH.Y2); colPI <- pTH.Y2[-1L] - pTH.Y2[-length(TH.Y2)]
+    nth.y1 <- length(th.y1); nth.y2 <- length(th.y2)
+    pth.y1 <- pnorm(th.y1);  pth.y2 <- pnorm(th.y2)
 
     # catch special case: rho = 0.0
     if(rho == 0.0) {
+        rowPI <- diff(c(0,pth.y1,1))
+        colPI <- diff(c(0,pth.y2,1))
         PI.ij <- outer(rowPI, colPI)
         return(PI.ij)
     }
 
-    nr <- length(TH.Y1) - 1L; nc <- length(TH.Y2) - 1L
-    PI <- matrix(0, nr, nc)
-    for(i in seq_len(nr-1L)) {
-        for(j in seq_len(nc-1L)) {
-            PI[i,j] <- pbinorm(lower.x=TH.Y1[i-1L+1L], lower.y=TH.Y2[j-1L+1L],
-                               upper.x=TH.Y1[i   +1L], upper.y=TH.Y2[j   +1L],
-                               rho)
-        }
-    }
-    # add last col (rowSums(PI) must correspond with TH.Y1)
-    PI[,nc] <- rowPI - rowSums(PI[,1:(nc-1L),drop=FALSE])
-    # PI[nr,nc] will be wrong at this point, but gets overridden
-    # add last row (colSums(PI) must correspond with TH.Y2)
-    PI[nr,] <- colPI - colSums(PI[1:(nr-1L),,drop=FALSE])
+    # prepare for a single call to pbinorm
+    upper.y <- rep(th.y2, times=rep.int(nth.y1, nth.y2))
+    upper.x <- rep(th.y1, times=ceiling(length(upper.y))/nth.y1)
+    #rho <- rep(rho, length(upper.x))
+    BI <- numeric(length(upper.x))
+
+    BI <- pbivnorm:::pbivnorm(x=upper.x, y=upper.y, rho=rho)
+    dim(BI) <- c(nth.y1, nth.y2)
+    BI <- rbind(0, BI, pth.y2, deparse.level = 0)
+    BI <- cbind(0, BI, c(0, pth.y1, 1), deparse.level = 0)
+
+
+
+    # get probabilities
+    nr <- nrow(BI); nc <- ncol(BI)
+    PI <- BI[-1L,-1L] - BI[-1L,-nc] - BI[-nr,-1L] + BI[-nr,-nc]
 
     # all elements should be strictly positive
     PI[PI < .Machine$double.eps] <- .Machine$double.eps
