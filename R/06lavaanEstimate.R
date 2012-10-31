@@ -443,6 +443,12 @@ computeObjective <- function(object, GLIST=NULL,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
         } else if(estimator == "PML") {
+
+            #cat("DEBUG!\n")
+            #print(getModelParameters(object, GLIST=GLIST))
+            #print(Sigma.hat[[g]])
+            #print(TH[[g]])
+            #cat("*****\n")
             # Pairwise maximum likelihood
             group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
                                       TH        = TH[[g]],

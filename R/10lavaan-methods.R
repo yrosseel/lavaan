@@ -1659,3 +1659,31 @@ getSampleStatsNACOV <- function(object) {
 
     NACOV
 }
+
+getHessian <- function(object) {
+    # lazy approach: take -1 the observed information
+    E <- computeObservedInformation(object@Model, 
+                                    samplestats=object@SampleStats,
+                                    X=object@Data@X,
+                                    type="free",
+                                    estimator=object@Options$estimator,
+                                    group.weight=TRUE)
+
+    -E
+}
+
+getVariability <- function(object) {
+    # lazy approach: get it from Nvcov.first.order
+    NACOV <- Nvcov.first.order(object@Model,
+                               samplestats=object@SampleStats,
+                               data=object@Data,
+                               estimator=object@Options$estimator)
+
+    B0 <- attr(NACOV, "B0")
+
+    if(object@Options$estimator == "PML") {
+        B0 <- B0 * object@SampleStats@ntotal
+    }
+    
+    B0
+}

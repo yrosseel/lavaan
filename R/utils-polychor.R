@@ -38,6 +38,7 @@ pc_PI <- function(rho, th.y1, th.y2) {
     BI <- numeric(length(upper.x))
 
     BI <- pbivnorm:::pbivnorm(x=upper.x, y=upper.y, rho=rho)
+    #BI <- pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho)
     dim(BI) <- c(nth.y1, nth.y2)
     BI <- rbind(0, BI, pth.y2, deparse.level = 0)
     BI <- cbind(0, BI, c(0, pth.y1, 1), deparse.level = 0)

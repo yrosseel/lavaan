@@ -125,6 +125,8 @@ pbinorm1 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
     # biv.nt.prob does not handle +Inf well for upper
     upper.x[upper.x == +Inf] <- exp(10) # better pnorm?
     upper.y[upper.y == +Inf] <- exp(10) # better pnorm?
+    # biv.nt.prob does allow abs(rho) > 1
+    stopifnot(all(abs(rho) <= 1))
 
     # vectorize (this would be faster if the loop is in the fortran code!) 
     res <- sapply(seq_len(N), function(i)

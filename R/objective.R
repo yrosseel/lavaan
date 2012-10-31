@@ -131,11 +131,15 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # for this pair
     # the sum over all pairs gives the final PML based logl
 
+    # first of all: check if all correlations are within [-1,1]
+    # if not, return Inf; (at least with nlminb, this works well)
+    cors <- Sigma.hat[lower.tri(Sigma.hat)]
+    if(any(abs(cors) > 1)) return(+Inf) 
+
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
     if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
-
     #print(Sigma.hat); print(TH); print(th.idx); print(num.idx); print(str(X))
 
     LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
