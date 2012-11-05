@@ -117,7 +117,7 @@ short.summary <- function(object) {
     if(object@Options$test != "none") {
 
         # 1. chi-square values
-        t0.txt <- sprintf("  %-40s", "Minimum Function Chi-square")  
+        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")  
         t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$stat)
         t2.txt <- ifelse(scaled, 
                   sprintf("  %10.3f", object@Fit@test[[2]]$stat), "")
@@ -135,7 +135,14 @@ short.summary <- function(object) {
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 3. P-value
-        t0.txt <- sprintf("  %-40s", "P-value")
+        if(object@Fit@test[[1]]$refdistr == "chisq") {
+            t0.txt <- sprintf("  %-40s", "P-value (Chi-square)")
+        } else if(length(object@Fit@test) == 1L &&
+                  object@Fit@test[[1]]$refdistr == "unknown") {
+            t0.txt <- sprintf("  %-40s", "P-value (Unknown)")
+        } else {
+            t0.txt <- sprintf("  %-40s", "P-value")
+        }
         t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$pvalue)
         t2.txt <- ifelse(scaled,
                   sprintf("  %10.3f", object@Fit@test[[2]]$pvalue), "")
@@ -251,7 +258,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     # only if requested, the fit measures
     if(fit.measures) {
         if(object@Options$test == "none") {
-            cat("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+            warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+        } else if(object@Fit@npar > 0L && !object@Fit@converged) {
+            warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
             print.fit.measures( fitMeasures(object) )
         }
@@ -267,9 +276,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)), 
 			 	     substring(tmp.txt,2), sep=""))
     cat(t0.txt, t1.txt, "\n", sep="")
-    t0.txt <- sprintf("  %-38s", "Standard Errors")
+    t0.txt <- sprintf("  %-31s", "Standard Errors")
     tmp.txt <- object@Options$se
-    t1.txt <- sprintf("  %12s", paste(toupper(substring(tmp.txt,1,1)),  
+    t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),  
                                       substring(tmp.txt,2), sep=""))
     cat(t0.txt, t1.txt, "\n", sep="")
     if(object@Options$se == "bootstrap") {
@@ -286,7 +295,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     print.estimate <- function(name="ERROR", i=1, z.stat=TRUE) {
        
         # cut name if (still) too long
-        name <- substr(name, 1, 13)
+        name <- strtrim(name, width=13L)
 
         if(!standardized) {
             if(is.na(se[i])) {
@@ -357,19 +366,35 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         makeNames <- function(NAMES, LABELS) {
+            multiB <- FALSE
+            if(any(nchar(NAMES) != nchar(NAMES, "bytes")))
+                multiB <- TRUE
+            if(any(nchar(LABELS) != nchar(LABELS, "bytes")))
+                multiB <- TRUE
             # labels?
             l.idx <- which(nchar(LABELS) > 0L)
             if(length(l.idx) > 0L) {
-                LABELS <- abbreviate(LABELS, 4)
-                LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep="")
-                MAX.L <- max(nchar(LABELS))
-                NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
-                                    strict = TRUE)
+                if(!multiB) {
+                    LABELS <- abbreviate(LABELS, 4)
+                    LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep="")
+                    MAX.L <- max(nchar(LABELS))
+                    NAMES <- abbreviate(NAMES, minlength = (13 - MAX.L), 
+                                        strict = TRUE)
+                } else {
+                    # do not abbreviate anything (eg in multi-byte locales)
+                    MAX.L <- 4L
+                }
                 NAMES <- sprintf(paste("%-", (13 - MAX.L), "s%", MAX.L, "s",
                                        sep=""), NAMES, LABELS)
             } else {
-                NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
+                if(!multiB) {
+                    NAMES <- abbreviate(NAMES, minlength = 13, strict = TRUE)
+                } else {
+                    NAMES <- sprintf(paste("%-", 13, "s", sep=""), NAMES)
+                }
             }
+
+            NAMES
         }
 
         NAMES <- object@ParTable$rhs
@@ -797,6 +822,7 @@ parameterEstimates <- parameterestimates <-
     FMI <- fmi
     if(fmi == "default") {
         if(object@SampleStats@missing.flag &&
+           object@Fit@converged &&
            object@Options$estimator == "ML" &&
            object@Options$se == "standard")
             FMI <- TRUE
@@ -1090,6 +1116,7 @@ function(object, what="free") {
          modificationIndices(object)
     } else if(what == "samp" ||
               what == "sample" ||
+              what == "samplestatistics" ||
               what == "sampstat") {
         sampStat(object)
     } else if(what == "rsquare" || 
@@ -1122,6 +1149,29 @@ sampStat <- function(object, labels=TRUE) {
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
+
+        if(object@Model@categorical) {
+            OUT[[g]]$th <- as.numeric(object@SampleStats@th[[g]])
+            if(length(object@Model@num.idx[[g]]) > 0L) {
+                OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
+            }
+            if(labels) {
+                names(OUT[[g]]$th) <- 
+                    vnames(object@ParTable, type="th", group=g)
+            }
+            class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+        }
+
+        if(object@Model@categorical &&
+           object@Model@nexo > 0L) {
+            OUT[[g]]$slopes  <- object@SampleStats@slopes[[g]]
+            if(labels) {
+                rownames(OUT[[g]]$slopes) <- ov.names[[g]]
+                colnames(OUT[[g]]$slopes) <- 
+                    vnames(object@ParTable, type="ov.x", group=g)
+                class(OUT[[g]]$slopes) <- c("lavaan.matrix", "matrix")
+            }
+        }
     }
 
     if(G == 1) {
@@ -1152,6 +1202,18 @@ function(object, labels=TRUE) {
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
+
+        if(object@Model@categorical) {
+            OUT[[g]]$th <- as.numeric(object@Fit@TH[[g]])
+            if(length(object@Model@num.idx[[g]]) > 0L) {
+                OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
+            }
+            if(labels) {
+                names(OUT[[g]]$th) <-
+                    vnames(object@ParTable, type="th", group=g)
+            }
+            class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+        }
     }
 
     if(G == 1) {
@@ -1173,13 +1235,19 @@ function(object, labels=TRUE) {
 setMethod("vcov", "lavaan",
 function(object, labels=TRUE) {
 
+    # check for convergence first!
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+
     if(object@Fit@npar == 0) {
         VarCov <- matrix(0,0,0)
     } else {
         VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
                                options=object@Options,
-                               data=eval(object@call[["data"]], 
-                                         parent.frame()) )
+                               #data=eval(object@call[["data"]], 
+                               #          parent.frame()) 
+                               data=object@Data
+                              )
     }
 
     if(labels) {
@@ -1228,6 +1296,9 @@ function(object, ...) {
     if(object@Options$estimator != "ML") {
         stop("lavaan ERROR: logLik only available if estimator is ML")
     }
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+    
     logl.df <- fitMeasures(object, c("logl", "npar", "ntotal"))
     names(logl.df) <- NULL
     logl <- logl.df[1]
@@ -1279,6 +1350,9 @@ function(object, model, ..., evaluate = TRUE) {
 # this is based on the anova function in the lmer package
 setMethod("anova", signature(object = "lavaan"),
 function(object, ...) {
+
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
 
     # NOTE: if we add additional arguments, it is not the same generic
     # anova() function anymore, and match.call will be screwed up
@@ -1376,7 +1450,7 @@ function(object, ...) {
         scaled <- FALSE
         TEST <- "standard"
     } else {
-        error("lavaan WARNING: some models (but not all) have scaled test statistics")
+        stop("lavaan ERROR: some models (but not all) have scaled test statistics")
     }
 
     # which models have used a MEANSTRUCTURE?
@@ -1411,7 +1485,7 @@ function(object, ...) {
 
             # check for negative scaling factors
             if(any(cd1 < 0)) {
-                warning("some scaling factors are negative: [",
+                warning("lavaan WARNING: some scaling factors are negative: [",
                         paste(round(cd1, 3), collapse=" "),"]; rerun with SB.classic=FALSE")
                 cd1[cd1 < 0] <- NA
             }
@@ -1426,7 +1500,7 @@ function(object, ...) {
             for(m in seq_len(length(mods) - 1L)) {
 
                 if(mods[[m]]@Fit@test[[1]]$df == mods[[m+1]]@Fit@test[[1]]$df) {
-                    warnings("some models have the same number of free parameters")
+                    warnings("lavaan WARNING: some models have the same number of free parameters")
                     next
                 }
 
@@ -1488,7 +1562,7 @@ function(object, ...) {
     }
 
     # Pvalue
-    Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower = FALSE)
+    Pvalue.delta <- pchisq(Chisq.delta, Df.delta, lower.tail = FALSE)
 
     aic <- bic <- rep(NA, length(mods))
     if(estimator == "ML") {
@@ -1584,4 +1658,32 @@ getSampleStatsNACOV <- function(object) {
     }
 
     NACOV
+}
+
+getHessian <- function(object) {
+    # lazy approach: take -1 the observed information
+    E <- computeObservedInformation(object@Model, 
+                                    samplestats=object@SampleStats,
+                                    X=object@Data@X,
+                                    type="free",
+                                    estimator=object@Options$estimator,
+                                    group.weight=TRUE)
+
+    -E
+}
+
+getVariability <- function(object) {
+    # lazy approach: get it from Nvcov.first.order
+    NACOV <- Nvcov.first.order(object@Model,
+                               samplestats=object@SampleStats,
+                               data=object@Data,
+                               estimator=object@Options$estimator)
+
+    B0 <- attr(NACOV, "B0")
+
+    if(object@Options$estimator == "PML") {
+        B0 <- B0 * object@SampleStats@ntotal
+    }
+    
+    B0
 }

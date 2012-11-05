@@ -10,26 +10,35 @@
 ##        4) much more testing!
 
 setMethod("predict", "lavaan",
-function(object, data=NULL, ...) {
+function(object, newdata=NULL, ...) {
 
-    if(object@SampleStats@missing.flag) {
-        stop("FIXME: predict does not work with missing data (yet)!")
-    }
+    #if(object@SampleStats@missing.flag) {
+    #    stop("FIXME: predict does not work with missing data (yet)!")
+    #}
 
     G <- object@Data@ngroups
     nmat <- object@Model@nmat
     FS <- vector("list", length=G)
 
     # need full data set supplied
-    if(is.null(data)) {
-        # do we have an internal copy:
+    if(is.null(newdata)) {
+        # use internal copy:
         if(is.null(object@Data@X[[1]])) {
             stop("no local copy of data; FIXME!")
         } else {
             data.obs <- object@Data@X
         }
     } else { 
-        stop("this function needs revision!")
+        OV <- object@Data@ov
+        newData <- lavData(data        = newdata, 
+                           group       = object@Data@group, 
+                           group.label = object@Data@group.label,
+                           ov.names    = object@Data@ov.names,
+                           ordered     = OV$name[ OV$type == "ordered" ],
+                           ov.names.x  = object@Data@ov.names.x,
+                           std.ov      = object@Data@std.ov,
+                           missing     = object@Data@missing)
+        data.obs <- newData@X
     }
 
     for(g in 1:G) {

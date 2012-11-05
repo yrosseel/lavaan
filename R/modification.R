@@ -1,6 +1,10 @@
 modificationIndices <- modificationindices <- modindices <- function(object, 
     standardized=TRUE, power=FALSE, delta=0.1, alpha=0.05, high.power=0.75) {
 
+    # check if model has converged
+    if(object@Fit@npar > 0L && !object@Fit@converged)
+        stop("lavaan ERROR: model did not converge")
+
     if(power) standardized <- TRUE
 
     # get LIST parameter list
@@ -93,7 +97,8 @@ modificationIndices <- modificationindices <- modindices <- function(object,
                           samplestats=object@SampleStats,
                           type="allofthem", 
                           estimator=object@Options$estimator,
-                          group.weight=TRUE)
+                          group.weight=TRUE,
+                          Delta=Delta)
 
     # flatten list DX to a vector dx
     dx <- numeric(0)
@@ -198,6 +203,9 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     }
 
     LIST$mi <- mi
+    if(length(object@Fit@test) > 1L) {
+        LIST$mi.scaled <- mi / object@Fit@test[[2]]$scaling.factor
+    }
     LIST$epc <- epc
 
     # remove some rows

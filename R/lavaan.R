@@ -60,6 +60,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    representation  = "default",
                    do.fit          = TRUE,
                    control         = list(),
+                   WLS.V           = NULL,
+                   NACOV           = NULL,
 
                    # starting values
                    start           = "default",
@@ -77,6 +79,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    debug           = FALSE
                   )
 {
+
+    # temporary block estimator = "PML"
+    # if(estimator == "PML") stop("estimator PML is not available yet")
+
     # start timer
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
@@ -105,7 +111,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #}
     if(!is.null(data)) {
         if(length(ordered) > 0L) {
-            data[,ordered] <- lapply(data[,ordered], ordered)
+            # check 'ordered'
+            not.in.ov <- which(!ordered %in% unlist(ov.names))
+            if(length(not.in.ov) > 0L) {
+                stop("ordered argument contains variable name(s) not in model: ",                     paste(ordered[not.in.ov], collapse=" "))
+            }
+            data[,ordered] <- lapply(data[,ordered,drop=FALSE], base::ordered)
             #
             # NOTE: we coerce these variables to 'ordered' here in
             # the 'data' data.frame; however, (at least in 2.15.1), this
@@ -113,6 +124,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # 
             # we should try not to 'touch' the data.frame at all (giving us
             # a lot of housekeeping work in lavData) ... TODO!
+            ov.types <- sapply(data[,unlist(ov.names)],
+                               function(x) class(x)[1])
             categorical <- TRUE
         } else {
             ov.types <- sapply(data[,unlist(ov.names)], 
@@ -166,6 +179,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
+    # some additional checks for estimator="PML"
+    if(lavaanOptions$estimator == "PML") {
+        # 0. at least some variables must be ordinal
+        if(!any(ov.types == "ordered")) {
+            stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
+        }
+        # 1. all variables must be ordinal (for now)
+        #    (the mixed continuous/ordinal case will be added later)
+        if(any(ov.types != "ordered")) {
+            stop("lavaan ERROR: estimator=\"PML\" can not handle mixed continuous and ordinal data (yet)")
+        }
+        
+        # 2. we can not handle exogenous covariates yet
+        if(length(ov.names.x) > 0L) {
+            stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
+        }
+    }
+
     # 1b. check data/sample.cov and get the number of groups
     if(!is.null(slotData)) {
         lavaanData <- slotData
@@ -194,6 +225,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavaanData@data.type == "none") {
         do.fit <- FALSE; start <- "simple"
         lavaanOptions$se <- "none"; lavaanOptions$test <- "none"
+    } else if(lavaanData@data.type == "moment") {
+        # catch here some options that will not work with moments
+        if(estimator %in% c("MLM", "MLMV", "MLR", "ULSM", "ULSMV") &&
+           is.null(NACOV)) {
+            stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided NACOV")
+        }
+        if(estimator %in% c("WLS", "WLSM", "WLSMV", "DWLS") &&
+           is.null(WLS.V)) {
+            stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided WLS.V") 
+        }
     }
     timing$InitData <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -267,6 +308,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        mimic         = lavaanOptions$mimic,
                        meanstructure = lavaanOptions$meanstructure,
                        missing.h1    = (lavaanOptions$missing != "listwise"),
+                       WLS.V         = WLS.V,
+                       NACOV         = NACOV,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
@@ -278,6 +321,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            estimator     = lavaanOptions$estimator,
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
+                           WLS.V         = WLS.V,
+                           NACOV         = NACOV,
                            rescale     = (lavaanOptions$estimator == "ML" &&
                                           lavaanOptions$likelihood == "normal"))
                            
@@ -427,6 +472,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 # regular estimation after all
                 x <- estimateModel(lavaanModel,
                                samplestats  = lavaanSampleStats,
+                               X            = lavaanData@X,
                                options      = lavaanOptions,
                                control      = control)
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -436,6 +482,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # regular estimation
             x <- estimateModel(lavaanModel,
                                samplestats  = lavaanSampleStats,
+                               X            = lavaanData@X,
                                options      = lavaanOptions,
                                control      = control)
             lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -454,6 +501,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "control") <- control
         attr(x, "fx") <- 
             computeObjective(lavaanModel, samplestats = lavaanSampleStats, 
+                             X=lavaanData@X,
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -461,20 +509,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
-    if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L) {
+    if(lavaanOptions$se != "none" && lavaanModel@nx.free > 0L &&
+       attr(x, "converged")) {
+        if(verbose) cat("Computing VCOV for se =", lavaanOptions$se, "...")
         VCOV <- estimateVCOV(lavaanModel,
                              samplestats  = lavaanSampleStats,
                              options      = lavaanOptions,
                              data         = lavaanData,
                              partable = lavaanParTable,
                              control  = control)
+        if(verbose) cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     # 8. compute test statistic (chi-square and friends)
     TEST <- NULL
-    if(lavaanOptions$test != "none") {
+    if(lavaanOptions$test != "none" && attr(x, "converged")) {
+        if(verbose) cat("Computing TEST for test =", lavaanOptions$test, "...")
         TEST <- computeTestStatistic(lavaanModel,
                                      partable    = lavaanParTable,
                                      samplestats = lavaanSampleStats,
@@ -483,6 +535,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      VCOV     = VCOV,
                                      data     = lavaanData,
                                      control  = control)
+        if(verbose) cat(" done.\n")
+    } else {
+        TEST <- list(list(test="none", stat=NA, 
+                     stat.group=rep(NA, lavaanData@ngroups), df=NA, 
+                     refdistr="unknown", pvalue=NA))
     }
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -495,6 +552,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                      VCOV     = VCOV,
                      TEST     = TEST)
     timing$total <- (proc.time()[3] - start.time0)
+
+    # 9b. check for Heywood cases, negative variances, ...
+    if(attr(x, "converged")) { # only if estimation was successful
+        var.idx <- which(lavaanParTable$op == "~~" &
+                         lavaanParTable$lhs == lavaanParTable$rhs)
+       if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
+            warning("lavaan WARNING: some estimated variances are negative")
+    }
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
@@ -521,8 +586,8 @@ cfa <- sem <- function(model = NULL,
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, control = list(), start = "default", 
-    verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
+    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
@@ -552,8 +617,8 @@ growth <- function(model = NULL,
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
-    do.fit = TRUE, control = list(), start = "default",
-    verbose = FALSE, warn = TRUE, debug = FALSE) {
+    do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
+    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 

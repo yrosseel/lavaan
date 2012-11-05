@@ -1,8 +1,9 @@
 muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
+                       WLS.W=TRUE, # do we need asymptotic variance of stats?
                        group=1L) { # group only for error messages
 
-    require(mvtnorm)
+    #require(mvtnorm)
 
     # This function was written in January 2012 -- Yves Rosseel
     # First success: Friday 20 Jan 2012: the standard errors for
@@ -75,11 +76,15 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             TH[[i]] <- TH.NOX[[i]] <- fit$theta[1L]
             VAR[i] <- fit$theta[fit$npar]
             TH.NAMES[[i]] <- ov.names[i]; TH.IDX[[i]] <- 0L
-            SC.TH[,th.idx] <- scores[,1L]
-            SC.VAR[,i] <- scores[,fit$npar]
+            if(WLS.W) {
+                SC.TH[,th.idx] <- scores[,1L]
+                SC.VAR[,i] <- scores[,fit$npar]
+            }
             if(nexo > 0L) {
                 SLOPES[i,] <- fit$theta[-c(1L, fit$npar)]
-                SC.SL[,sl.idx] <- scores[,-c(1L, fit$npar),drop=FALSE]
+                if(WLS.W) {
+                    SC.SL[,sl.idx] <- scores[,-c(1L, fit$npar),drop=FALSE]
+                }
                 TH.NOX[[i]] <- mean(Data[,i], na.rm=TRUE)
             }
         } else if(ov.types[i] == "ordered") {
@@ -94,9 +99,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             FIT[[i]] <- fit
             TH[[i]] <- fit$theta[fit$th.idx]
             TH.NOX[[i]] <- pc_th(Y=Data[,i])
-            SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
+            if(WLS.W) {
+                SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
+            }
             SLOPES[i,] <- fit$theta[fit$slope.idx]
-            SC.SL[,sl.idx] <- scores[,fit$slope.idx,drop=FALSE]
+            if(WLS.W) {
+                SC.SL[,sl.idx] <- scores[,fit$slope.idx,drop=FALSE]
+            }
             VAR[i] <- 1.0
             TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
                                    sep="")
@@ -107,7 +116,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     }
 
     # rm VAR columns from ordinal variables
-    SC.VAR <- SC.VAR[,-ord.idx, drop=FALSE]
+    if(WLS.W) {
+        SC.VAR <- SC.VAR[,-ord.idx, drop=FALSE]
+    }
 
     if(verbose) {
         cat("STEP 1: univariate statistics\n")
@@ -151,11 +162,27 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             }
         }
     }
-    colnames(SC.COR) <- COR.NAMES
+
+    if(WLS.W) {
+        colnames(SC.COR) <- COR.NAMES
+    }
 
     if(verbose) {
         cat("\n\nSTEP 2: covariances/correlations:\n")
         print(COR)
+    }
+
+    if(!WLS.W) { # we do not need the asymptotic variance matrix
+        if(any("numeric" %in% ov.types)) {
+            COV <- cor2cov(R=COR, sds=sqrt(unlist(VAR)))
+        } else {
+            COV <- COR
+        }
+        out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
+                SC=NULL, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
+                INNER=NULL, A11=NULL, A12=NULL, A21=NULL, A22=NULL,
+                WLS.W=NULL, H=NULL)
+        return(out)
     }
 
     A11.size <- ncol(SC.TH) + ncol(SC.SL) + ncol(SC.VAR)

@@ -98,7 +98,7 @@ population.model <- ' f1 =~ x1 + 0.8*x2 + 1.2*x3
                     '
 
 # generate data
-myData <- simulateData(population.model, sample.nobs=1000L)
+myData <- simulateData(population.model, sample.nobs=100L)
 
 # population moments
 fitted(sem(population.model))

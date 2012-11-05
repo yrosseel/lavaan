@@ -58,6 +58,12 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     # for convenience: compute model-implied Sigma and Mu
     Sigma.hat <- computeSigmaHat(model)
        Mu.hat <-    computeMuHat(model)
+    if(model@categorical) {
+        TH <- computeTH(model)
+    } else {
+        TH <- list()
+    }
+
 
     # if bootstrapped parameters, add attr to 'est'
     if(!is.null(attr(VCOV, "BOOT.COEF"))) {
@@ -77,6 +83,7 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
         control    = control,
         Sigma.hat  = Sigma.hat,
         Mu.hat     = Mu.hat,
+        TH         = TH,
         test       = test
        )
 }

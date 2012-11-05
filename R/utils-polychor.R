@@ -20,30 +20,34 @@ pc_th <- function(Y, freq=NULL, prop=NULL) {
 
 pc_PI <- function(rho, th.y1, th.y2) {
 
-    TH.Y1 <- c(-Inf, th.y1, Inf); TH.Y2 <- c(-Inf, th.y2, Inf)
-    pTH.Y1 <- pnorm(TH.Y1); rowPI <- pTH.Y1[-1L] - pTH.Y1[-length(TH.Y1)]
-    pTH.Y2 <- pnorm(TH.Y2); colPI <- pTH.Y2[-1L] - pTH.Y2[-length(TH.Y2)]
+    nth.y1 <- length(th.y1); nth.y2 <- length(th.y2)
+    pth.y1 <- pnorm(th.y1);  pth.y2 <- pnorm(th.y2)
 
     # catch special case: rho = 0.0
     if(rho == 0.0) {
+        rowPI <- diff(c(0,pth.y1,1))
+        colPI <- diff(c(0,pth.y2,1))
         PI.ij <- outer(rowPI, colPI)
         return(PI.ij)
     }
 
-    nr <- length(TH.Y1) - 1L; nc <- length(TH.Y2) - 1L
-    PI <- matrix(0, nr, nc)
-    for(i in seq_len(nr-1L)) {
-        for(j in seq_len(nc-1L)) {
-            PI[i,j] <- pbinorm(lower.x=TH.Y1[i-1L+1L], lower.y=TH.Y2[j-1L+1L],
-                               upper.x=TH.Y1[i   +1L], upper.y=TH.Y2[j   +1L],
-                               rho)
-        }
-    }
-    # add last col (rowSums(PI) must correspond with TH.Y1)
-    PI[,nc] <- rowPI - rowSums(PI[,1:(nc-1L),drop=FALSE])
-    # PI[nr,nc] will be wrong at this point, but gets overridden
-    # add last row (colSums(PI) must correspond with TH.Y2)
-    PI[nr,] <- colPI - colSums(PI[1:(nr-1L),,drop=FALSE])
+    # prepare for a single call to pbinorm
+    upper.y <- rep(th.y2, times=rep.int(nth.y1, nth.y2))
+    upper.x <- rep(th.y1, times=ceiling(length(upper.y))/nth.y1)
+    #rho <- rep(rho, length(upper.x))
+    BI <- numeric(length(upper.x))
+
+    BI <- pbivnorm:::pbivnorm(x=upper.x, y=upper.y, rho=rho)
+    #BI <- pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho)
+    dim(BI) <- c(nth.y1, nth.y2)
+    BI <- rbind(0, BI, pth.y2, deparse.level = 0)
+    BI <- cbind(0, BI, c(0, pth.y1, 1), deparse.level = 0)
+
+
+
+    # get probabilities
+    nr <- nrow(BI); nc <- ncol(BI)
+    PI <- BI[-1L,-1L] - BI[-1L,-nc] - BI[-nr,-1L] + BI[-nr,-nc]
 
     # all elements should be strictly positive
     PI[PI < .Machine$double.eps] <- .Machine$double.eps
@@ -161,7 +165,6 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
         #           pbivnorm(x=fit.y1$z1, y=fit.y2$z2, rho=rho) +
         #           pbivnorm(x=fit.y1$z2, y=fit.y2$z2, rho=rho)  )
 
-        # this uses mvtnorm
         lik <- pbinorm(upper.x=fit.y1$z1, upper.y=fit.y2$z1,
                        lower.x=fit.y1$z2, lower.y=fit.y2$z2, rho=rho)
     }
@@ -170,7 +173,7 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 }
 
 # loglikelihood (x-version)
-pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2) {
+pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2, freq=NULL) {
 
     nexo <- ifelse(is.null(eXo), 0L, ncol(eXo)); S <- seq_len
     stopifnot(length(x) == (1L + nth.y1 + nth.y2 + 2*nexo))
@@ -191,12 +194,13 @@ pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2) {
     fit.y2$theta[fit.y2$slope.idx] <- sl.y2
     fit.y2$lik()
 
-    pc_logl(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
+    pc_logl(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2,
+            freq=freq)
 }
 
 # polychoric correlation
 pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
-                      method="nlminb", verbose=FALSE) {
+                      method="nlminb", zerofreq=0.5, verbose=FALSE) {
 
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
@@ -219,13 +223,15 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         nr <- nrow(freq); nc <- ncol(freq)
         # check for empty cells -- FIXME: make this an option!
-        if(any(freq == 0)) {
-            freq[freq == 0] <- 0.5
+        if(any(freq == 0) && zerofreq > 0) {
+            #freq[freq == 0] <- zerofreq/length(fit.y1$y)
+            freq[freq == 0] <- zerofreq
         }
     }
 
     objectiveFunction <- function(x) {
-        logl <- pc_logl(rho=tanh(x[1L]), fit.y1=fit.y1, fit.y2=fit.y2)
+        logl <- pc_logl(rho=tanh(x[1L]), fit.y1=fit.y1, fit.y2=fit.y2,
+                        freq=freq)
         -logl # to minimize!
     }
 
@@ -245,6 +251,10 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         }
         -dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
     }
+
+    #hessianFunction2 <- function(x) {
+    #    numDeriv:::hessian(func=objectiveFunction, x=x)
+    #}
 
     # OLSSON 1979 A2 + A3 (no EXO!!)
     hessianFunction <- function(x) {
@@ -296,7 +306,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
                       gradient=gradientFunction,
                       hessian=hessianFunction,
-                      scale=10, # not needed?
+                      scale=100, # not needed?
                       control=list(trace=ifelse(verbose,1L,0L),
                                    rel.tol=1e-7))
     }
@@ -306,11 +316,32 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     rho
 }
 
-pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL) {
+pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
+                          th.y1=NULL, th.y2=NULL,
+                          sl.y1=NULL, sl.y2=NULL) {
 
     R <- sqrt(1-rho^2)
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
+    y1.update <- y2.update <- FALSE
+    if(!is.null(th.y1)) { # update thresholds fit.y1
+        y1.update <- TRUE
+        fit.y1$theta[fit.y1$th.idx] <- th.y1
+    }
+    if(!is.null(th.y2)) { # update thresholds fit.y1
+        y2.update <- TRUE
+        fit.y2$theta[fit.y2$th.idx] <- th.y2
+    }
+    if(!is.null(sl.y1)) { # update slopes
+        y1.update <- TRUE
+        fit.y1$theta[fit.y1$slope.idx] <- sl.y1
+    }
+    if(!is.null(sl.y2)) { # update slopes
+        y2.update <- TRUE
+        fit.y2$theta[fit.y2$slope.idx] <- sl.y2
+    }
+    if(y1.update) tmp <- fit.y1$lik()
+    if(y2.update) tmp <- fit.y2$lik()
     if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(Y2)) Y2 <- fit.y2$y
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X

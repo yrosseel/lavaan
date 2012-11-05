@@ -1,5 +1,10 @@
 fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
+    # has the model converged?
+    if(object@Fit@npar > 0L && !object@Fit@converged) {
+        stop("lavaan ERROR: fit measures not available if model did not converge")
+    }
+
     # do we have a test statistic?
     if(object@Fit@test[[1]]$test == "none") {
         stop("lavaan ERROR: please refit the model with test=\"standard\"")
@@ -581,8 +586,8 @@ print.fit.measures <- function(x) {
 
    # independence model
    if("baseline.chisq" %in% names(x)) {
-       cat("Chi-square test baseline model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Minimum Function Chi-square")
+       cat("Model test baseline model:\n\n")
+       t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
        t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["baseline.chisq.scaled"]), "")

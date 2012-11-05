@@ -552,9 +552,8 @@ getLIST <- function(FLAT=NULL,
     if(auto.var) {
         ov.var <- ov.names.nox
         # auto-remove ordinal variables
-        idx <- match(ov.names.ord, ov.var)
-        if(length(idx)) ov.var <- ov.var[-idx]
-
+        #idx <- match(ov.names.ord, ov.var)
+        #if(length(idx)) ov.var <- ov.var[-idx]
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)
     }
@@ -1053,9 +1052,14 @@ getConstraintsFunction <- function(p1, p0, ceq.function=NULL) {
         group <- p1$group[idx]
         p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
                         p0$group == group)
-        if(length(p0.idx) == 0L)
-            warning("couldn't find matching parameter in M0: ",
-                    paste(lhs,op,rhs,sep=""))
+        if(length(p0.idx) == 0L) {
+            # this parameter is not to be found in M0, we will
+            # assume that is fixed to zero
+            ncon <- ncon + 1L 
+            BODY.txt <- paste(BODY.txt,
+                "out[", ncon, "] = x[", i, "] - 0\n", sep="")
+            next
+        }
         if(p0$free[p0.idx] == 0L) {
             ncon <- ncon + 1L
             # simple fixed value
@@ -1087,7 +1091,3 @@ getConstraintsFunction <- function(p1, p0, ceq.function=NULL) {
 
     con.function
 }
-
-
-
-

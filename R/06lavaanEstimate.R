@@ -66,19 +66,33 @@ setModelParameters <- function(object, x=NULL) {
     }
 
     # categorical? set theta elements (if any)
-    #if(object@categorical) {
-    #   if(object@representation == "LISREL") {
-    #       theta.idx <- which(names(tmp) == "theta")
-    #        Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
-    #        for(g in 1:object@ngroups) {
-    #            num.idx <- object@num.idx[[g]]
-    #            diag(tmp[[theta.idx[g]]])[-num.idx] <-
-    #                (1 - diag(Sigma.hat[[g]])[-num.idx])
-    #        }
-    #    } else {
-    #        cat("FIXME: deal with theta elements in the categorical case")
-    #    }
-    #}
+    if(object@categorical) {
+        nmat <- object@nmat
+        if(object@representation == "LISREL") {
+            theta.idx <- which(names(tmp) == "theta")
+            Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
+            for(g in 1:object@ngroups) {
+                # which mm belong to group g?
+                mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+                num.idx <- object@num.idx[[g]]
+                if(length(num.idx) > 0L) {
+                    diag(tmp[[theta.idx[g]]])[-num.idx] <- 0.0
+                } else {
+                    diag(tmp[[theta.idx[g]]]) <- 0.0
+                }
+                MLIST <- tmp[mm.in.group]
+                Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+                if(length(num.idx) > 0L) {
+                    diag(tmp[[theta.idx[g]]])[-num.idx] <-
+                        (1 - diag(Sigma.hat)[-num.idx])
+                } else {
+                    diag(tmp[[theta.idx[g]]]) <- (1 - diag(Sigma.hat))
+                }
+            }
+        } else {
+            cat("FIXME: deal with theta elements in the categorical case")
+        }
+    }
 
     object@GLIST <- tmp
 
@@ -334,9 +348,8 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     ETA
 }
 
-
-
-computeObjective <- function(object, GLIST=NULL, samplestats=NULL, 
+computeObjective <- function(object, GLIST=NULL, 
+                             samplestats=NULL, X = NULL,
                              estimator="ML", verbose=FALSE, forcePD=TRUE) {
 
     # state or final?
@@ -353,6 +366,7 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
     categorical   <- object@categorical
     fixed.x       <- object@fixed.x
     num.idx       <- object@num.idx
+    th.idx        <- object@th.idx
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
@@ -428,12 +442,27 @@ computeObjective <- function(object, GLIST=NULL, samplestats=NULL,
             group.fx <- estimator.WLS(WLS.est = WLS.est,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
+        } else if(estimator == "PML") {
+
+            #cat("DEBUG!\n")
+            #print(getModelParameters(object, GLIST=GLIST))
+            #print(Sigma.hat[[g]])
+            #print(TH[[g]])
+            #cat("*****\n")
+            # Pairwise maximum likelihood
+            group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                      TH        = TH[[g]],
+                                      th.idx    = th.idx[[g]],
+                                      num.idx   = num.idx[[g]],
+                                      X         = X[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
         }
 
         if(estimator == "ML") {
             group.fx <- 0.5 * group.fx
+        } else if(estimator == "PML") {
+            # do nothing
         } else {
             group.fx <- 0.5 * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] * group.fx
         }
@@ -719,9 +748,11 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 
-computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free", 
+computeGradient <- function(object, GLIST=NULL, samplestats=NULL, 
+                            X=NULL, type="free", 
                             estimator="ML", verbose=FALSE, forcePD=TRUE, 
-                            group.weight=TRUE, constraints=TRUE) {
+                            group.weight=TRUE, constraints=TRUE,
+                            Delta=NULL) {
 
     nmat           <- object@nmat
     representation <- object@representation
@@ -729,6 +760,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
     categorical    <- object@categorical
     fixed.x        <- object@fixed.x
     num.idx        <- object@num.idx
+    th.idx         <- object@th.idx
     nx.unco        <- object@nx.unco
 
     # state or final?
@@ -825,9 +857,12 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
     if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS") {
 
         if(type != "free") {
-            stop("FIXME: WLS gradient with type != free needs fixing!")
+            if(is.null(Delta))
+                stop("FIXME: Delta should be given if type != free")
+            #stop("FIXME: WLS gradient with type != free needs fixing!")
+        } else {
+            Delta <- computeDelta(object, GLIST.=GLIST)
         }
-        Delta <- computeDelta(object, GLIST.=GLIST)
 
         for(g in 1:samplestats@ngroups) {
             if(categorical) {                                    
@@ -870,11 +905,47 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL, type="free",
 
     } # WLS
 
+    else if(estimator == "PML") {
+
+        if(type != "free") {
+            stop("FIXME: type != free in computeGradient for estimator PML")
+        } else {
+            Delta <- computeDelta(object, GLIST.=GLIST)
+        }
+
+        for(g in 1:samplestats@ngroups) {
+
+            # compute partial derivative of logLik with respect to 
+            # thresholds/means, slopes, variances, correlations
+            d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                             TH        = TH[[g]],
+                             th.idx    = th.idx[[g]],
+                             num.idx   = num.idx[[g]],
+                             X         = X[[g]])
+
+            # chain rule
+            group.dx <- t(d1) %*% Delta[[g]]
+
+            # group weights (if any)
+            group.dx <- group.w[g] * group.dx
+            if(g == 1) {
+                dx <- group.dx
+            } else {
+                dx <- dx + group.dx
+            }
+        } # g
+    } 
+
+    else {
+        stop("lavaan ERROR: no analytical gradient available for estimator ",
+             estimator)
+    }
+
     dx
 }
 
 
-estimateModel <- function(object, samplestats=NULL, do.fit=TRUE, 
+estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
                           options=NULL, control=list()) {
 
     estimator     <- options$estimator
@@ -906,7 +977,8 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        fx <- computeObjective(object, GLIST=GLIST, samplestats,
+        fx <- computeObjective(object, GLIST=GLIST, 
+                               samplestats=samplestats, X=X,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
@@ -933,7 +1005,8 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
         # update GLIST (change `state') and make a COPY!
         GLIST <- x2GLIST(object, x=x)
 
-        dx <- computeGradient(object, GLIST=GLIST, samplestats,
+        dx <- computeGradient(object, GLIST=GLIST, samplestats=samplestats,
+                              X=X,
                               type="free", 
                               group.weight=group.weight, ### check me!!
                               estimator=estimator,
@@ -967,6 +1040,9 @@ estimateModel <- function(object, samplestats=NULL, do.fit=TRUE,
             fx.right2 <- minimize.this.function(x.right2)
             dx[i] <- (fx.left2 - 8*fx.left + 8*fx.right - fx.right2)/(12*h)
         }
+
+        #dx <- lavGradientC(func=minimize.this.function, x=x)
+        # does not work if pnorm is involved... (eg PML)
 
         if(debug) {
             cat("Gradient function (numerical) =\n"); print(dx); cat("\n")

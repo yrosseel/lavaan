@@ -25,13 +25,14 @@ pp_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
     eta.y1 <- fit.y1$yhat
     eta.y2 <- fit.y2$yhat
 
-    # lik -- using dmvnorm!!! (SLOW!!!)
+    # lik 
     cov.y12 <- rho*sqrt(var.y1)*sqrt(var.y2)
     sigma <- matrix(c(var.y1,cov.y12,cov.y12,var.y2), 2L, 2L)
-    lik <- numeric(length(Y1))
-    for(i in 1:length(Y1))
-        lik[i] <- dmvnorm(c(Y1[i],Y2[i]), mean=c(eta.y1[i], eta.y2[i]), 
-                          sigma=sigma)
+    #lik <- numeric(length(Y1))
+    #for(i in 1:length(Y1))
+    #    lik[i] <- dmvnorm(c(Y1[i],Y2[i]), mean=c(eta.y1[i], eta.y2[i]), 
+    #                      sigma=sigma)
+    lik <- dmnorm( cbind(Y1,Y2), mean=cbind(eta.y1, eta.y2), varcov=sigma)
 
     lik
 }

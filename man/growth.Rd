@@ -6,14 +6,15 @@ Fit a Growth Curve model.}
 \usage{
 growth(model = NULL, fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", cluster = NULL, constraints = '', 
+    missing = "default", ordered = NULL, sample.cov = NULL, 
+    sample.mean = NULL, sample.nobs = NULL, group = NULL, 
+    group.label = NULL, group.equal = "", group.partial = "", 
+    cluster = NULL, constraints = '', 
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default", 
-    do.fit = TRUE, control = list(), start = "default", 
-    verbose = FALSE, warn = TRUE, debug = FALSE)
+    do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
+    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -153,6 +154,23 @@ order as they appear in the data.}
     which is very close to\code{"Mplus"}.}
 \item{representation}{If \code{"LISREL"} the classical LISREL matrix 
     representation is used to represent the model (using the all-y variant).}
+\item{WLS.V}{A user provided weight matrix to be used by estimator \code{"WLS"};
+    if the estimator is \code{"DWLS"}, only the diagonal of this matrix will be
+    used. For a multiple group analysis, a list with a weight matrix
+    for each group. The elements of the weight matrix should be in the
+    following order (if all data is continuous): first the means (if a
+    meanstructure is involved), then the lower triangular elements of the
+    covariance matrix including the diagonal, ordered column by column. In
+    the categorical case: first the thresholds (including the means for
+    continuous variables), then the slopes (if any), the variances of
+    continuous variables (if any), and finally the lower triangular elements
+    of the correlation/covariance matrix excluding the diagonal, ordered
+    column by column.}
+\item{NACOV}{A user provided matrix containing the elements of (N times)
+    the asymptotic variance-covariance matrix of the sample statistics.
+    For a multiple group analysis, a list with an asymptotic
+    variance-covariance matrix for each group. See the \code{WLS.V}
+    argument for information about the order of the elements.}
 \item{start}{If it is a character string,
     the two options are currently \code{"simple"} and \code{"Mplus"}. 
     In the first
