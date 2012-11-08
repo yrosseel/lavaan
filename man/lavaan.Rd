@@ -4,12 +4,13 @@
 \description{
 Fit a latent variable model.}
 \usage{
-lavaan(model = NULL, model.type = "sem", meanstructure = "default",
+lavaan(model = NULL, data = NULL,
+    model.type = "sem", meanstructure = "default",
     int.ov.free = FALSE, int.lv.free = FALSE, fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, auto.fix.first = FALSE,
     auto.fix.single = FALSE, auto.var = FALSE, auto.cov.lv.x = FALSE,
     auto.cov.y = FALSE, auto.th = FALSE, auto.delta = FALSE,
-    data = NULL, std.ov = FALSE, missing = "default", ordered = NULL,
+    std.ov = FALSE, missing = "default", ordered = NULL,
     sample.cov = NULL, sample.mean = NULL, sample.nobs = NULL,
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
     cluster = NULL, constraints = "", estimator = "default",
@@ -27,6 +28,10 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
+\item{data}{An optional data frame containing the observed variables used in
+    the model. If some variables are declared as ordered factors, lavaan will
+    treat them as ordinal variables. This can be overriden by the \code{ordered}
+    argument.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology
@@ -65,10 +70,6 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     are included in the model and set free.}
 \item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
-\item{data}{An optional data frame containing the observed variables used in
-    the model. If some variables are declared as ordered factors, lavaan will
-    treat them as ordinal variables. This can be overriden by the \code{ordered}
-    argument.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed

@@ -8,6 +8,7 @@
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    model           = NULL,
+                   data            = NULL,  # second argument, most used!
                    model.type      = "sem",
                 
                    # model modifiers
@@ -27,7 +28,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    auto.delta      = FALSE,
                    
                    # full data
-                   data            = NULL,
                    std.ov          = FALSE,
                    missing         = "default",
                    ordered         = NULL,
@@ -577,9 +577,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 }
 
 # cfa + sem
-cfa <- sem <- function(model = NULL,
+cfa <- sem <- function(model = NULL, data = NULL,
     meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
@@ -608,9 +608,9 @@ cfa <- sem <- function(model = NULL,
 }
 
 # simple growth models
-growth <- function(model = NULL,
+growth <- function(model = NULL, data = NULL,
     fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",

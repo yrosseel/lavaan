@@ -4,8 +4,9 @@
 \description{
 Fit a Confirmatory Factor Analysis (CFA) model.}
 \usage{
-cfa(model = NULL, meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
+cfa(model = NULL, data = NULL,
+    meanstructure = "default", fixed.x = "default",
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, sample.cov = NULL, 
     sample.mean = NULL, sample.nobs = NULL, group = NULL, 
     group.label = NULL, group.equal = "", group.partial = "", 
@@ -22,6 +23,10 @@ cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
+\item{data}{An optional data frame containing the observed variables used in
+    the model. If some variables are declared as ordered factors, lavaan will
+    treat them as ordinal variables. This can be overriden by the \code{ordered}
+    argument.}
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}
@@ -36,10 +41,6 @@ cfa(model = NULL, meanstructure = "default", fixed.x = "default",
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
-\item{data}{An optional data frame containing the observed variables used in
-    the model. If some variables are declared as ordered factors, lavaan will
-    treat them as ordinal variables. This can be overriden by the \code{ordered}
-    argument.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed
