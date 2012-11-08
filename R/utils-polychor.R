@@ -30,12 +30,11 @@ pc_PI <- function(rho, th.y1, th.y2) {
         PI.ij <- outer(rowPI, colPI)
         return(PI.ij)
     }
-
+ 
     # prepare for a single call to pbinorm
     upper.y <- rep(th.y2, times=rep.int(nth.y1, nth.y2))
     upper.x <- rep(th.y1, times=ceiling(length(upper.y))/nth.y1)
-    #rho <- rep(rho, length(upper.x))
-    BI <- numeric(length(upper.x))
+    #rho <- rep(rho, length(upper.x)) # only one rho here
 
     BI <- pbivnorm:::pbivnorm(x=upper.x, y=upper.y, rho=rho)
     #BI <- pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho)
@@ -314,6 +313,31 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     rho <- tanh(out$par)
 
     rho
+}
+
+pc_cor_gradient_noexo <- function(Y1, Y2, rho, th.y1=NULL, th.y2=NULL, 
+                                  freq=NULL) {
+
+    R <- sqrt(1-rho^2)
+    TH.Y1 <- c(-Inf, th.y1, Inf); TH.Y2 <- c(-Inf, th.y2, Inf)
+    dth.y1 <- dnorm(th.y1); dth.y2 <- dnorm(th.y2)
+    if(is.null(freq)) freq <- pc_freq(Y1, Y2)
+
+    # rho
+    PI  <- pc_PI(rho, th.y1, th.y2)
+    phi <- pc_PHI(rho, th.y1, th.y2)
+    dx.rho <- sum(freq/PI * phi)
+
+    # th.y2
+    PI.XY.inv <- 1/PI[ cbind(Y1,Y2) ]
+    dx.th.y2 <- matrix(0, length(Y2), length(th.y2))
+    for(m in 1:length(th.y2)) {
+        ki  <- dth.y2[m] * pnorm((TH.Y1[Y1+1L   ]-rho*th.y2[m])/R)
+        ki1 <- dth.y2[m] * pnorm((TH.Y1[Y1+1L-1L]-rho*th.y2[m])/R)
+        DpiDth <- ifelse(Y2 == m, (ki - ki1), ifelse(Y2 == m+1, (-ki + ki1), 0))
+        dx.th.y2[,m] <- PI.XY.inv * DpiDth
+    }
+
 }
 
 pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,

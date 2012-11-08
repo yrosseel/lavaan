@@ -454,6 +454,7 @@ computeObjective <- function(object, GLIST=NULL,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
+                                      bifreq    = samplestats@bifreq[[g]],
                                       X         = X[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
@@ -921,10 +922,11 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
                              TH        = TH[[g]],
                              th.idx    = th.idx[[g]],
                              num.idx   = num.idx[[g]],
+                             bifreq    = samplestats@bifreq[[g]],
                              X         = X[[g]])
 
             # chain rule
-            group.dx <- t(d1) %*% Delta[[g]]
+            group.dx <- as.numeric(t(d1) %*% Delta[[g]])
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx
