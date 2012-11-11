@@ -135,7 +135,15 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # first of all: check if all correlations are within [-1,1]
     # if not, return Inf; (at least with nlminb, this works well)
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
-    if(any(abs(cors) > 1)) return(+Inf) 
+
+    #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
+    if(any(abs(cors) > 1)) {
+        # question: what is the best approach here??
+        return(+Inf) 
+        #idx <- which( abs(cors) > 0.99 )
+        #cors[idx] <- 0.99 # clip
+        #cat("CLIPPING!\n")
+    }
 
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
@@ -160,6 +168,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         PI <- pairwiseExpProbVec(x = LONG)
         # get frequency per table, per pair
         LogLik <- sum(bifreq * log(PI))
+
     } else {
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {

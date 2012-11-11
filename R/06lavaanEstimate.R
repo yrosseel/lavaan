@@ -916,6 +916,12 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
         for(g in 1:samplestats@ngroups) {
 
+            #print(GLIST)
+            #print(getModelParameters(object, GLIST=GLIST))
+            #print(Sigma.hat[[g]])
+            #print(TH[[g]])
+            #cat("*****\n")
+
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
             d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],

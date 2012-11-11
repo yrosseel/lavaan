@@ -18,6 +18,19 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        negative  = TRUE) {  # multiply by -1
 
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
+    if(any(abs(cors) > 1)) {
+        # what should we do now... force cov2cor?
+        #cat("FFFFOOOORRRRRCEEE PD!\n")
+        #Sigma.hat <- Matrix:::nearPD(Sigma.hat)
+        #Sigma.hat <- as.matrix(Sigma.hat$mat)
+        #Sigma.hat <- cov2cor(Sigma.hat)
+        #cors <- Sigma.hat[lower.tri(Sigma.hat)]
+        idx <- which( abs(cors) > 0.99 )
+        cors[idx] <- 0.99 # clip
+        #cat("CLIPPING!\n")
+    }
+
+    #cat("[DEBUG gradient]\n"); print(range(cors)); print(range(TH)); cat("\n")
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
@@ -455,7 +468,14 @@ pairwiseExpProbVec <- function(x) {
   cum.term4 <- prob.vec[!x$last.thres.var1.of.pair &
                        !x$last.thres.var2.of.pair]
 
-  cum.term1 - cum.term2 - cum.term3 + cum.term4
+  PI <- cum.term1 - cum.term2 - cum.term3 + cum.term4
+
+  # added by YR 11 nov 2012 to avoid Nan/-Inf
+  # log(.Machine$double.eps) = -36.04365
+  # all elements should be strictly positive
+  PI[PI < .Machine$double.eps] <- .Machine$double.eps
+
+  PI
 }
 
 #########################################################

@@ -39,7 +39,12 @@ compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
 
     # create Z where the rows z_i are vecs(zdata_i' %*% zdata_i)
     idx <- which(lower.tri(matrix(0,p,p), diag=TRUE))
-    Z <- t(apply(zdata, 1, function(x) { tcrossprod(x)[idx]  }))
+    Z <- apply(zdata, 1, function(x) { tcrossprod(x)[idx]  })
+    if(p > 1L) {
+        Z <- t(Z)
+    } else {
+        Z <- as.matrix(Z) # special case p = 1L
+    }
 
     Gamma = (N-1)/N * cov(Z) # we divide by 'N'!
 
