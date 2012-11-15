@@ -363,7 +363,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         lower.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.95)
         }
-        if(df < 1 || lower.lambda(0) < 0.0) {
+        if(is.na(X2)) {
+            indices["rmsea.ci.lower"] <- NA
+        } else if(df < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower"] <- 0
         } else {
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
@@ -392,7 +394,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         lower.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
         }
-        if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
+        if(is.na(XX2)) {
+            indices["rmsea.ci.lower.scaled"] <- NA
+        } else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower.scaled"] <- 0
         } else {
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root)
@@ -411,7 +415,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.05)
         }
-        if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
+        if(is.na(X2)) {
+            indices["rmsea.ci.upper"] <- NA
+        } else if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
             indices["rmsea.ci.upper"] <- 0
         } else {
             lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
@@ -437,8 +443,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.05)
         }
-        if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0 || 
-                                upper.lambda(0) < 0) {
+        if(is.na(XX2)) {
+            indices["rmsea.ci.upper.scaled"] <- NA
+        } else if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0 || 
+                                       upper.lambda(0) < 0) {
             indices["rmsea.ci.upper.scaled"] <- 0
         } else {
             lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)

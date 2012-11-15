@@ -129,7 +129,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
             if(verbose) cat("done\n")
             # if (and only if) all variables are ordinal, store pairwise
             # tables
-            if(all(ov.types == "ordered")) {
+            if(all(ov.types == "ordered") && estimator == "PML" &&
+               length(ov.types) > 1L) {
                 # pairwise tables, as a long vector
                 PW <- pairwiseTables(data=X[[g]], no.x=ncol(X[[g]]))$pairTables
                 # FIXME: handle zero cells here???
