@@ -397,7 +397,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # catch simple linear regression models
         if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
-           ! categorical &&
+           !categorical &&
+           !lavaanModel@eq.constraints &&
            length(lavaanData@X) > 0L &&
            lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&
@@ -418,18 +419,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
-                    x[lavaanParTable$free[lavaanParTable$op == "~~" &
-                                          lavaanParTable$free]] <- y.rvar
-                    x[lavaanParTable$free[lavaanParTable$op == "~" &
-                                          lavaanParTable$free]] <- x.beta[-1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                          lavaanParTable$unco]] <- y.rvar
+                    x[lavaanParTable$unco[lavaanParTable$op == "~" &
+                                          lavaanParTable$unco]] <- x.beta[-1L]
                 } else {
                     x <- numeric(1L + length(x.beta))
-                    x[lavaanParTable$free[lavaanParTable$op == "~~" &
-                                          lavaanParTable$free]] <- y.rvar
-                    x[lavaanParTable$free[lavaanParTable$op == "~" &
-                                          lavaanParTable$free]] <- x.beta[-1L]
-                    x[lavaanParTable$free[lavaanParTable$op == "~1" &
-                                          lavaanParTable$free]] <- x.beta[1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                          lavaanParTable$unco]] <- y.rvar
+                    x[lavaanParTable$unco[lavaanParTable$op == "~" &
+                                          lavaanParTable$unco]] <- x.beta[-1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~1" &
+                                          lavaanParTable$unco]] <- x.beta[1L]
                 }
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
