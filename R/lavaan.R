@@ -245,6 +245,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         lavaanParTable <- slotParTable
     } else if(is.character(model)) {
+
+        # check FLAT before we proceed
+        if(debug) print(as.data.frame(FLAT))
+
+        # check 1: catch ~~ of fixed.x covariates if categorical
+        if(lavaanOptions$categorical) {
+            tmp <- vnames(FLAT, type="ov.x", ov.x.fatal=TRUE)
+        }
+        # check 2: catch ~1 of ordered variables (unless they are fixed)
+        if(lavaanOptions$categorical) {
+            int.idx <- which(FLAT$op == "~1" & FLAT$fixed == "")
+            if(length(int.idx) > 0L) {
+                INT <- FLAT$lhs[int.idx]
+                ORD <- lavaanData@ov$name[ lavaanData@ov$type == "ordered" ]
+                if(any(INT %in% ORD))        
+                    stop("lavaan ERROR: model syntax contains free intercepts for ordinal dependent variable(s): [", paste(INT, collapse=" "), 
+                         "];\n  Please remove them and try again.")
+            }
+        }
+
         lavaanParTable <- 
             lavaanify(model           = FLAT,
                       meanstructure   = lavaanOptions$meanstructure, 
@@ -271,6 +291,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       warn            = lavaanOptions$warn,
 
                       as.data.frame.  = FALSE)
+
     } else if(is.list(model)) {
         # two possibilities: either model is already lavaanified
         # or it is something else...

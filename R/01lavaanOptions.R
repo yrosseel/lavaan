@@ -413,7 +413,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # fixed.x
     if(is.logical(opt$fixed.x)) {
-        # nothing to do
+        if(opt$estimator == "DWLS" && opt$fixed.x == FALSE)
+            stop("lavaan ERROR: fixed.x=FALSE is not supported for estimator DWLS")
     } else if(opt$fixed.x == "default") {
         if(opt$estimator == "ML" && (opt$mimic == "Mplus" || 
                                      opt$mimic == "lavaan")) {

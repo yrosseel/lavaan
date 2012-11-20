@@ -12,7 +12,8 @@ lavaanNames <- function(object, type="ov", group=NULL) {
 }
 
 # internal version
-vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
+vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
+                   ov.x.fatal=FALSE) {
 
     stopifnot(is.list(partable), !missing(type),
               type %in% c("lv",   "ov", "lv.regular",
@@ -106,6 +107,11 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE) {
         }
         idx.no.x <- which(ov.x %in% vars)
         if(length(idx.no.x)) {
+            if(ov.x.fatal) {
+                stop("lavaan ERROR: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [", 
+                        paste(ov.x[idx.no.x], collapse=" "),
+                        "];\n  Please remove them and try again.")
+            }
             if(warn) {
                 warning("lavaan WARNING: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [", 
                         paste(ov.x[idx.no.x], collapse=" "),
