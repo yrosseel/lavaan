@@ -1123,20 +1123,18 @@ function(object, what="free") {
               what == "r-square" ||
               what == "r2") {
          rsquare(object)
-    } else if(what == "WLS.V") {
+    } else if(what == "wls.v") {
         getWLS.V(object)
-    } else if(what == "NACOV") {
+    } else if(what == "nacov") {
         getSampleStatsNACOV(object)    
-    } else if(what == "modelCovLV"  ||
-              what == "modelCov.LV" ||
-              what == "modelCov.lv" ||
+    } else if(what == "modelcovlv"  ||
+              what == "modelcov.lv" ||
               what == "modelcovlv"  ||
               what == "modelcov.lv" ||
               what == "cov.lv") {
         getModelCovLV(object, correlation.metric=FALSE, labels=TRUE)
-    } else if(what == "modelCorLV"  ||
-              what == "modelCor.LV" ||
-              what == "modelCor.lv" ||
+    } else if(what == "modelcorlv"  ||
+              what == "modelcor.lv" ||
               what == "modelcorlv"  ||
               what == "modelcor.lv" ||
               what == "cor.lv") {
@@ -1616,6 +1614,7 @@ getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
     # shortcuts
     samplestats = object@SampleStats
     estimator   = object@Options$estimator
+    G           = object@Data@ngroups
 
     WLS.V       <- vector("list", length=samplestats@ngroups)
     if(estimator == "GLS"  ||
@@ -1644,7 +1643,15 @@ getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
         }
     } # ML
 
-    WLS.V
+
+    OUT <- WLS.V
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
 }
 
 getSampleStatsNACOV <- function(object) {
