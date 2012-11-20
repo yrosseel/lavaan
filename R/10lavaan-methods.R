@@ -1124,7 +1124,7 @@ function(object, what="free") {
               what == "r2") {
          rsquare(object)
     } else if(what == "wls.v") {
-        getWLS.V(object)
+        getWLS.V(object, drop.list.single.group=TRUE)
     } else if(what == "nacov") {
         getSampleStatsNACOV(object)    
     } else if(what == "modelcovlv"  ||
@@ -1613,7 +1613,8 @@ function(object, ...) {
 
 })
 
-getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
+getWLS.V <- function(object, Delta=computeDelta(object@Model), 
+                     drop.list.single.group=FALSE) {
 
     # shortcuts
     samplestats = object@SampleStats
@@ -1649,7 +1650,7 @@ getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
 
 
     OUT <- WLS.V
-    if(G == 1) {
+    if(G == 1 && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
         names(OUT) <- unlist(object@Data@group.label)
