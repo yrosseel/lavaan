@@ -326,18 +326,16 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     # return a list
     ETA <- vector("list", length=ngroups)
 
-    # compute TH for each group
+    # compute ETA for each group
     for(g in 1:ngroups) {
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
         cov.x <- samplestats@cov.x[[g]]
-        num.idx <- object@num.idx[[g]]
 
         if(representation == "LISREL") {
-            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x,
-                                       num.idx = num.idx)
+            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -346,6 +344,38 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     }
 
     ETA
+}
+
+# COV: observed+latent variances variances/covariances
+computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    COV <- vector("list", length=ngroups)
+
+    # compute COV for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        cov.x <- samplestats@cov.x[[g]]
+
+        if(representation == "LISREL") {
+            COV.g <- computeCOV.LISREL(MLIST = MLIST, cov.x = cov.x)
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        COV[[g]] <- COV.g
+    }
+
+    COV
 }
 
 computeObjective <- function(object, GLIST=NULL, 

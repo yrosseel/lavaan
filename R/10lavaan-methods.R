@@ -1129,16 +1129,20 @@ function(object, what="free") {
         getSampleStatsNACOV(object)    
     } else if(what == "modelcovlv"  ||
               what == "modelcov.lv" ||
-              what == "modelcovlv"  ||
-              what == "modelcov.lv" ||
               what == "cov.lv") {
         getModelCovLV(object, correlation.metric=FALSE, labels=TRUE)
     } else if(what == "modelcorlv"  ||
               what == "modelcor.lv" ||
-              what == "modelcorlv"  ||
-              what == "modelcor.lv" ||
               what == "cor.lv") {
         getModelCorLV(object, labels=TRUE)
+    } else if(what == "modelcovall"  ||
+              what == "modelcov.all" ||
+              what == "cov.all") {
+        getModelCov(object, correlation.metric=FALSE, labels=TRUE)
+    } else if(what == "modelcorall"  ||
+              what == "modelcor.all" ||
+              what == "cor.all") {
+        getModelCor(object, labels=TRUE)
     } else if(what == "converged") {
         object@Fit@converged
     } else {
@@ -1735,6 +1739,45 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
         for(g in 1:G) {
             psi.idx <- psi.group[g]
             NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+getModelCor <- function(object, labels=TRUE) {
+    getModelCov(object, correlation.metric=TRUE, labels=labels)
+}
+
+getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # compute extended model implied covariance matrix (both ov and lv)
+    OUT <- lavaan:::computeCOV(object@Model, samplestats=fit@SampleStats)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+
+    # we need lambda + psi matrix for labels
+    lambda.group <- which(names(object@Model@GLIST) == "lambda")
+    psi.group <- which(names(object@Model@GLIST) == "psi")
+    if(labels) {
+        for(g in 1:G) {
+            lambda.idx <- lambda.group[g]
+            psi.idx <- psi.group[g]
+            NAMES <- c(object@Model@dimNames[[lambda.idx]][[1L]],
+                       object@Model@dimNames[[psi.idx]][[1L]])
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
         }

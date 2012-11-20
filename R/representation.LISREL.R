@@ -405,7 +405,7 @@ computePI.LISREL <- function(MLIST=NULL) {
 }
 
 # compute ETA: variances/covariances of latents
-computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL) {
+computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -438,6 +438,56 @@ computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL) {
     }
 
     SYX
+}
+
+# compute Sigma/ETA: variances/covariances of BOTH observed and latent variables
+computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
+    PSI    <- MLIST$psi;    nlat <- nrow(PSI)
+    THETA  <- MLIST$theta
+    BETA   <- MLIST$beta
+
+    # 'extend' matrices
+    LAMBDA2 <- rbind(LAMBDA, diag(nlat))
+    THETA2  <- bdiag(THETA,  matrix(0,nlat,nlat))
+
+
+    # beta?
+    if(is.null(BETA)) {
+        LAMBDA..IB.inv <- LAMBDA2
+    } else {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        IB.inv <- solve(tmp)
+        LAMBDA..IB.inv <- LAMBDA2 %*% IB.inv
+    }
+
+    # compute augment COV matrix
+    COV <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA2
+
+    # if delta, scale
+    if(delta && !is.null(MLIST$delta)) {
+        DELTA <- diag(MLIST$delta[,1L], nrow=nvar, ncol=nvar)
+        COV[1:nvar,1:nvar] <- DELTA %*% COV[1:nvar,1:nvar] %*% DELTA
+    }
+
+
+    # if GAMMA, also x part
+    GAMMA <- MLIST$gamma
+    if(!is.null(GAMMA)) {
+        stopifnot(!is.null(cov.x))
+        if(is.null(BETA)) {
+            SX <- tcrossprod(GAMMA %*% cov.x, GAMMA)
+        } else {
+            IB.inv..GAMMA <- IB.inv %*% GAMMA
+            SX <- tcrossprod(IB.inv..GAMMA %*% cov.x, IB.inv..GAMMA)
+        }
+        COV[(nvar+1):(nvar+nlat),(nvar+1):(nvar+nlat)] <- 
+            COV[(nvar+1):(nvar+nlat),(nvar+1):(nvar+nlat)] + SX
+    }
+
+    COV
 }
 
 # compute the *un*conditional variance of y: V(Y) or V(Y*)
