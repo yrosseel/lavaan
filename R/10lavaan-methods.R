@@ -1123,6 +1123,24 @@ function(object, what="free") {
               what == "r-square" ||
               what == "r2") {
          rsquare(object)
+    } else if(what == "WLS.V") {
+        getWLS.V(object)
+    } else if(what == "NACOV") {
+        getSampleStatsNACOV(object)    
+    } else if(what == "modelCovLV"  ||
+              what == "modelCov.LV" ||
+              what == "modelCov.lv" ||
+              what == "modelcovlv"  ||
+              what == "modelcov.lv" ||
+              what == "cov.lv") {
+        getModelCovLV(object, correlation.metric=FALSE, labels=TRUE)
+    } else if(what == "modelCorLV"  ||
+              what == "modelCor.LV" ||
+              what == "modelCor.lv" ||
+              what == "modelcorlv"  ||
+              what == "modelcor.lv" ||
+              what == "cor.lv") {
+        getModelCorLV(object, labels=TRUE)
     } else if(what == "converged") {
         object@Fit@converged
     } else {
@@ -1687,3 +1705,40 @@ getVariability <- function(object) {
     
     B0
 }
+
+getModelCorLV <- function(object, labels=TRUE) {
+    getModelCovLV(object, correlation.metric=TRUE, labels=labels)
+}
+
+getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv covar
+    OUT <- lavaan:::computeETA(object@Model, samplestats=fit@SampleStats)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+    
+    # we need psi matrix for labels
+    psi.group <- which(names(object@Model@GLIST) == "psi")
+    if(labels) {
+        for(g in 1:G) {
+            psi.idx <- psi.group[g]
+            NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
