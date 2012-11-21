@@ -490,6 +490,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     computeObjective(lavaanModel, 
                                      samplestats = lavaanSampleStats,
                                      estimator = lavaanOptions$estimator)
+                con.jac <- t(A)
+                attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
+                attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
+                attr(con.jac, "ceq.idx") <- seq_len(ncol(A.ceq))
+                attr(x, "con.jac") <- con.jac
+                con.lambda <- rep(1, nrow(con.jac)) # FIXME!
+                attr(x, "con.lambda") <- con.lambda
             } else {
                 # regular estimation after all
                 x <- estimateModel(lavaanModel,

@@ -262,7 +262,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         } else if(object@Fit@npar > 0L && !object@Fit@converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
-            print.fit.measures( fitMeasures(object) )
+            print.fit.measures( fitMeasures(object, fit.measures="default") )
         }
     }
 
