@@ -450,6 +450,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     A.cin <- t(lavJacobianC(func=lavaanModel@cin.function, 
                                             x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
+                con.jac <- t(A)
+
                 # meanstructure? last row is intercept
                 if(lavaanOptions$meanstructure) {
                     A <- rbind(A[nrow(A),,drop=FALSE], A[-nrow(A),,drop=FALSE])
@@ -490,7 +492,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     computeObjective(lavaanModel, 
                                      samplestats = lavaanSampleStats,
                                      estimator = lavaanOptions$estimator)
-                con.jac <- t(A)
+                # for VCOV
                 attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
                 attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
                 attr(con.jac, "ceq.idx") <- seq_len(ncol(A.ceq))

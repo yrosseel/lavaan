@@ -127,14 +127,16 @@ function(object, type="raw", labels=TRUE) {
                 A1 <- compute.A1.sample(samplestats=object@SampleStats, group=g, 
                                         meanstructure=meanstructure,
                                         information=object@Options$information)
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
+                                        data=object@Data, group=g,
                                         meanstructure=meanstructure)
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
-                                       meanstructure=meanstructure)
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
+                                        data=object@Data, group=g,
+                                        meanstructure=meanstructure)
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
