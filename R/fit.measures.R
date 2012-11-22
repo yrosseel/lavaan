@@ -1,5 +1,4 @@
-fitMeasures <- fitmeasures <- function(object, fit.measures="all", 
-                                       display=TRUE) {
+fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # has the model converged?
     if(object@Fit@npar > 0L && !object@Fit@converged) {
@@ -73,7 +72,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     }
 
     # more incremental fit indices
-    fit.incremental <- c("cfi", "tli", "nnfi", "rfi", "nfi", "ifi", "rni")
+    fit.incremental <- c("cfi", "tli", "nnfi", "rfi", "nfi", "pnfi",
+                         "ifi", "rni")
     if(scaled) { 
         fit.incremental <- c(fit.incremental, "cfi.scaled", "tli.scaled", 
                              "nnfi.scaled", "rfi.scaled", "nfi.scaled", 
@@ -99,12 +99,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         fit.srmr <- character(0L)
         fit.srmr2 <- character(0L)
     } else {
-        fit.srmr <- c("srmr", "srmr_nomean")
+        fit.srmr <- c("srmr")
         fit.srmr2 <- c("rmr", "rmr_nomean", "srmr", "srmr_nomean")
     }
 
     # various
-    fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","ecvi")
+    fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi","ecvi")
 
 
     # select 'default' fit measures
@@ -155,7 +155,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
 
 
     if(any(c("cfi", "cfi.scaled", "tli", "tli.scaled",
-             "nnfi", "nnfi.scaled",
+             "nnfi", "nnfi.scaled", "pnfi", "pnfi.scaled",
              "rfi", "rfi.scaled", "nfi", "nfi.scaled",
              "ifi", "ifi.scaled", "rni", "rni.scaled",
              "baseline.chisq", "baseline.chisq.scaled",
@@ -327,6 +327,20 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
             t2 <- X2.null.scaled
             NFI <- t1/t2
             indices["nfi.scaled"] <- NFI
+        }
+
+        # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
+        if("pnfi" %in% fit.measures) {
+            t1 <- X2.null - X2
+            t2 <- X2.null
+            PNFI <- (df/df.null) * t1/t2
+            indices["pnfi"] <- PNFI
+        }
+        if("pnfi.scaled" %in% fit.measures) {
+            t1 <- X2.null.scaled - X2.scaled
+            t2 <- X2.null.scaled
+            PNFI <- (df/df.null) * t1/t2
+            indices["pnfi.scaled"] <- PNFI
         }
 
         # IFI - incremental fit index (Bollen, 1989; Joreskog & Sorbom, 1993)
@@ -717,9 +731,54 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         indices["cn_01"] <- CN_01
     }
 
-    if("gfi" %in% fit.measures) {
-        GFI <- NA
+    if(any(c("gfi","agfi","pgfi") %in% fit.measures)) {
+        gfi.group <- numeric(G)
+        WLS.obs <- object@SampleStats@WLS.obs
+        WLS.V   <- getWLS.V(object)
+        WLS.est <- getWLS.est(object)
+        for(g in 1:G) {
+            wls.obs <- WLS.obs[[g]]
+            wls.est <- WLS.est[[g]]
+            wls.v   <- WLS.V[[g]]
+            
+            wls.diff <- wls.obs - wls.est
+            t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
+            t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
+            gfi.group[g] <- 1 - t1/t2
+        }
+        if(G > 1) {
+            ## FIXME: get the scaling right
+            GFI <- as.numeric( (unlist(object@SampleStats@nobs) %*% gfi.group) / object@SampleStats@ntotal )
+        } else {
+            GFI <- gfi.group[1L]
+        }
         indices["gfi"] <- GFI
+        nel <- length(unlist(WLS.obs)) # total number of modeled sample stats
+        if(df > 0) {
+            indices["agfi"] <- 1 - (nel/df) * (1 - GFI)
+        } else {
+            indices["agfi"] <- as.numeric(NA)
+        }
+        # LISREL formula (Simplis book 2002, p. 126)
+        indices["pgfi"] <- (df/nel)*GFI 
+    }
+
+    # MFI - McDonald Fit Index (McDonald, 1989)
+    if("mfi" %in% fit.measures) { 
+        #MFI <- exp(-0.5 * (X2 - df)/(N-1)) # Hu & Bentler 1998 Table 1
+        MFI <- exp(-0.5 * (X2 - df)/N)
+        indices["mfi"] <- MFI
+    }
+
+    # ECVI - cross-validation index (Brown & Cudeck, 1989)
+    # not defined for multiple groups and/or models with meanstructures
+    if("ecvi" %in% fit.measures) {
+        if(G > 1 || meanstructure) {
+            ECVI <- as.numeric(NA)
+        } else {
+            ECVI <- X2/N + (2*npar)/N
+        }
+        indices["ecvi"] <- ECVI
     }
 
     if("ntotal" %in% fit.measures) {
@@ -742,22 +801,19 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         return( invisible(numeric(0)) )
     }
 
-    if(display) {
-        print.fit.measures(out)
-        return( invisible(out) )
-    }
-
     out
 }
 
 # print a nice summary of the fit measures
 print.fit.measures <- function(x) {
 
+   names.x <- names(x)
+
    # scaled?
-   scaled <- "chisq.scaled" %in% names(x)
+   scaled <- "chisq.scaled" %in% names.x
 
    # independence model
-   if("baseline.chisq" %in% names(x)) {
+   if("baseline.chisq" %in% names.x) {
        cat("Model test baseline model:\n\n")
        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
        t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
@@ -783,52 +839,59 @@ print.fit.measures <- function(x) {
     }
 
     # cfi/tli
-    if(any(c("cfi","tli","nnfi","rfi","nfi","ifi","rni") %in% names(x))) {
+    if(any(c("cfi","tli","nnfi","rfi","nfi","ifi","rni","pnfi") %in% names.x)) {
         cat("\nFull model versus baseline model:\n\n")
 
-        if("cfi" %in% names(x)) {
+        if("cfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
             t1.txt <- sprintf("  %10.3f", x["cfi"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
-        if("tli" %in% names(x)) {
+        if("tli" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI)")
             t1.txt <- sprintf("  %10.3f", x["tli"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
-        if("nnfi" %in% names(x)) {
+        if("nnfi" %in% names.x) {
             t0.txt <- sprintf("  %-42s", "Bentler-Bonett Non-normed Fit Index (NNFI)")
             t1.txt <- sprintf("  %8.3f", x["nnfi"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
  
-        if("nfi" %in% names(x)) {
+        if("nfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Bentler-Bonett Normed Fit Index (NFI)")
             t1.txt <- sprintf("  %10.3f", x["nfi"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nfi.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
+  
+        if("nfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Parsimony Normed Fit Index (PNFI)")
+            t1.txt <- sprintf("  %10.3f", x["pnfi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["pnfi.scaled"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
 
-        if("rfi" %in% names(x)) {
-            t0.txt <- sprintf("  %-40s", "Relative Fit Index (RFI)")
+        if("rfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Bollen's Relative Fit Index (RFI)")
             t1.txt <- sprintf("  %10.3f", x["rfi"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rfi.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
-        if("ifi" %in% names(x)) {
+        if("ifi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Bollen's Incremental Fit Index (IFI)")
             t1.txt <- sprintf("  %10.3f", x["ifi"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["ifi.scaled"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
-        if("rni" %in% names(x)) {
+        if("rni" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Relative Noncentrality Index (RNI)")
             t1.txt <- sprintf("  %10.3f", x["rni"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.scaled"]), "")
@@ -837,7 +900,7 @@ print.fit.measures <- function(x) {
     }
 
    # likelihood
-   if("logl" %in% names(x)) {
+   if("logl" %in% names.x) {
        cat("\nLoglikelihood and Information Criteria:\n\n")
        t0.txt <- sprintf("  %-40s", "Loglikelihood user model (H0)")
        t1.txt <- sprintf("  %10.3f", x["logl"])
@@ -896,14 +959,14 @@ print.fit.measures <- function(x) {
    }
 
    # RMSEA
-   if("rmsea" %in% names(x)) {
+   if("rmsea" %in% names.x) {
        cat("\nRoot Mean Square Error of Approximation:\n\n")
        t0.txt <- sprintf("  %-40s", "RMSEA")
        t1.txt <- sprintf("  %10.3f", x["rmsea"])
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["rmsea.scaled"]), "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       if("rmsea.ci.lower" %in% names(x)) {
+       if("rmsea.ci.lower" %in% names.x) {
            t0.txt <- sprintf("  %-38s", "90 Percent Confidence Interval")
            t1.txt <- sprintf("  %5.3f", x["rmsea.ci.lower"])
            t2.txt <- sprintf("  %5.3f", x["rmsea.ci.upper"])
@@ -912,7 +975,7 @@ print.fit.measures <- function(x) {
                                                x["rmsea.ci.upper.scaled"]), "")
            cat(t0.txt, t1.txt, t2.txt, t3.txt, "\n", sep="")
        }
-       if("rmsea.pvalue" %in% names(x)) {
+       if("rmsea.pvalue" %in% names.x) {
            t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
            t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
            t2.txt <- ifelse(scaled,
@@ -922,28 +985,28 @@ print.fit.measures <- function(x) {
    }
 
     # SRMR
-    if(any(c("rmr","srmr") %in% names(x))) {
+    if(any(c("rmr","srmr") %in% names.x)) {
         cat("\nStandardized Root Mean Square Residual:\n\n")
 
-        if("rmr" %in% names(x)) {
+        if("rmr" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "RMR")
             t1.txt <- sprintf("  %10.3f", x["rmr"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rmr"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
-        if("rmr_nomean" %in% names(x)) {
+        if("rmr_nomean" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "RMR (No Mean)")
             t1.txt <- sprintf("  %10.3f", x["rmr_nomean"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rmr_nomean"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
-        if("srmr" %in% names(x)) {
+        if("srmr" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "SRMR")
             t1.txt <- sprintf("  %10.3f", x["srmr"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
-        if("srmr_nomean" %in% names(x)) {
+        if("srmr_nomean" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "SRMR (No Mean)")
             t1.txt <- sprintf("  %10.3f", x["srmr_nomean"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_nomean"]), "")
@@ -951,22 +1014,62 @@ print.fit.measures <- function(x) {
         }
     }
 
-    # Critical N (CN)
-    if(any(c("cn_05","cn_01") %in% names(x))) {
+    # Other
+    if(any(c("cn_05","cn_01","gfi","agfi","pgfi","mfi") %in% names.x)) {
         cat("\nOther Fit Indices:\n\n")
 
-        if("cn_05" %in% names(x)) {
+        if("cn_05" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Hoelter Critical N (CN) alpha=0.05")
             t1.txt <- sprintf("  %10.3f", x["cn_05"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cn_05"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
-        if("cn_01" %in% names(x)) {
+        if("cn_01" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Hoelter Critical N (CN) alpha=0.01")
             t1.txt <- sprintf("  %10.3f", x["cn_01"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cn_01"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
+        if(any(c("cn_05", "cn_01") %in% names.x)) {
+            cat("\n")
+        }
+        if("gfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Goodness of Fit Index (GFI)")
+            t1.txt <- sprintf("  %10.3f", x["gfi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["gfi"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+        if("agfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Adjusted Goodness of Fit Index (AGFI)")
+            t1.txt <- sprintf("  %10.3f", x["agfi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["agfi"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+        if("pgfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Parsimony Goodness of Fit Index (PGFI)")
+            t1.txt <- sprintf("  %10.3f", x["pgfi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["pgfi"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+        if(any(c("gfi","agfi","pgfi") %in% names.x)) {
+            cat("\n")
+        }
+        if("mfi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "McDonald Fit Index (MFI)")
+            t1.txt <- sprintf("  %10.3f", x["mfi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["mfi"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+        if("mfi" %in% names.x) {
+            cat("\n")
+        }
+        if("ecvi" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Expected Cross-Validation Index (ECVI)")
+            t1.txt <- sprintf("  %10.3f", x["ecvi"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["ecvi"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+
     }
 
     cat("\n")
