@@ -1621,6 +1621,7 @@ getWLS.est <- function(object, drop.list.single.group=FALSE) {
     categorical   = object@Model@categorical
     meanstructure = object@Model@meanstructure
     fixed.x       = object@Model@fixed.x
+    num.idx       = object@Model@num.idx
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object@Model)

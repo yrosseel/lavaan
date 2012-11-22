@@ -104,7 +104,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     # various
-    fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi","ecvi")
+    fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")
+    if(!categorical && G == 1) {
+        fit.other <- c(fit.other, "ecvi")
+    }
 
 
     # select 'default' fit measures
@@ -757,7 +760,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         if(df > 0) {
             indices["agfi"] <- 1 - (nel/df) * (1 - GFI)
         } else {
-            indices["agfi"] <- as.numeric(NA)
+            indices["agfi"] <- 1
         }
         # LISREL formula (Simplis book 2002, p. 126)
         indices["pgfi"] <- (df/nel)*GFI 
