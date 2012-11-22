@@ -56,6 +56,8 @@ function(object, type="raw", labels=TRUE) {
                               representation = object@Options$representation,
                               debug          = object@Options$debug)
             VarCov <- estimateVCOV(augModel, samplestats = object@SampleStats,
+                                   data = object@Data,
+                                   partable = object@Partable,
                                    options = object@Options)
             # set cov between free and fixed.x elements to zero
             ###
@@ -69,7 +71,10 @@ function(object, type="raw", labels=TRUE) {
 
             Delta  <- computeDelta(augModel)
         } else {
-            VarCov <- estimateVCOV(object@Model, samplestats = object@SampleStats,
+            VarCov <- estimateVCOV(object@Model, 
+                                   data = object@Data,
+                                   partable = object@Partable,
+                                   samplestats = object@SampleStats,
                                    options = object@Options)
             Delta  <- computeDelta(object@Model)
         }   
