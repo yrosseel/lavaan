@@ -192,6 +192,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                  options=NULL, x=NULL, VCOV=NULL,
                                  data=NULL, control=list()) {
 
+
     mimic       <- options$mimic
     test        <- options$test
     information <- options$information

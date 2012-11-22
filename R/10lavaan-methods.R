@@ -1264,8 +1264,6 @@ function(object, labels=TRUE) {
     } else {
         VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
                                options=object@Options,
-                               #data=eval(object@call[["data"]], 
-                               #          parent.frame()) 
                                data=object@Data
                               )
     }

@@ -397,6 +397,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # catch simple linear regression models
         if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
+           #FALSE && # to debug
            !categorical &&
            !lavaanModel@eq.constraints &&
            length(lavaanData@X) > 0L &&
@@ -415,6 +416,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    length(lavaanModel@x.cin.idx)) == 0L) {
                 out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
                               y=YX[,ov.y.idx])
+
+                print(out)
+
                 x.beta <- out$coefficients
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
@@ -452,14 +456,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 A <- cbind(A.ceq, A.cin)
                 con.jac <- t(A)
 
-                # meanstructure? last row is intercept
+                # meanstructure?
+                rvar.idx <- lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                                lavaanParTable$unco]
                 if(lavaanOptions$meanstructure) {
-                    A <- rbind(A[nrow(A),,drop=FALSE], A[-nrow(A),,drop=FALSE])
+                    # where is the intercept?
+                    int.idx <- lavaanParTable$unco[lavaanParTable$op == "~1" &
+                                                   lavaanParTable$unco]
+                    # first intercept, then coefficients, remove resvar
+                    A <- rbind(A[int.idx,,drop=FALSE], 
+                               A[-c(int.idx,rvar.idx),,drop=FALSE])
                 } else {
-                    A <- rbind(rep(0,ncol(A)), A)
+                    # add intercept, then coefficients, remove resvar
+                    A <- rbind(rep(0,ncol(A)), A[-c(rvar.idx),,drop=FALSE])
                 }
-                # remove residual variance (last row)
-                A <- A[-nrow(A),,drop=FALSE]
                 #A <- matrix( c( 0, -1, 1,  0,
                 #                0, 0,  -1, 1), 4, 2)
                 X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
