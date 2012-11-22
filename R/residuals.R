@@ -51,7 +51,7 @@ function(object, type="raw", labels=TRUE) {
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
-            augModel <- Model(user           = augUser,
+            augModel <- Model(partable       = augUser,
                               start          = object@Fit@est,
                               representation = object@Options$representation,
                               debug          = object@Options$debug)
