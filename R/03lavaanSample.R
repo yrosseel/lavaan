@@ -216,6 +216,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 getMissingPatternStats(X  = X[[g]],
                                        Mp = Mp[[g]])
 
+            #cat("missing.h1 = "); print(missing.h1); cat("\n")
             if(missing.h1) {
                 # estimate moments unrestricted model
                 out <- estimate.moments.EM(X=X[[g]], M=missing.[[g]],
@@ -224,7 +225,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 missing.h1.[[g]]$mu    <- out$mu
                 missing.h1.[[g]]$h1    <- out$fx
             }
-        } 
+        }
 
         # NACOV (=GAMMA)
         if(!NACOV.user) {

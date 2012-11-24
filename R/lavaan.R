@@ -416,9 +416,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    length(lavaanModel@x.cin.idx)) == 0L) {
                 out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
                               y=YX[,ov.y.idx])
-
-                print(out)
-
                 x.beta <- out$coefficients
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
