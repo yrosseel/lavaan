@@ -591,12 +591,23 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                      TEST     = TEST)
     timing$total <- (proc.time()[3] - start.time0)
 
-    # 9b. check for Heywood cases, negative variances, ...
+    # 9b. post-fitting checks
     if(attr(x, "converged")) { # only if estimation was successful
+        # 1. check for Heywood cases, negative (residual) variances, ...
         var.idx <- which(lavaanParTable$op == "~~" &
                          lavaanParTable$lhs == lavaanParTable$rhs)
-       if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
+        if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
+        
+        # 2. is cov.lv (PSI) positive definite?
+        ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
+        for(g in 1:lavaanData@ngroups) {
+            txt.group <- ifelse(lavaanData@ngroups > 1L,
+                                paste("in group", g, ".", sep=""), ".")
+            eigvals <- eigen(ETA[[g]], symmetric=TRUE, only.values=TRUE)$values
+            if(any(eigvals < 0))
+                warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
+        }
     }
 
     # 10. construct lavaan object

@@ -8,6 +8,10 @@
 # return log determinant as an attribute
 inv.chol <- function(S, logdet=FALSE) {
     cS <- chol(S)
+    #if( inherits(cS, "try-error") ) {
+    #    print(S)
+    #    warning("lavaan WARNING: symmetric matrix is not positive symmetric!")
+    #}
     S.inv <- chol2inv( cS )
     if(logdet) {
         attr(S.inv, "logdet") <- sum(log(diag(cS)^2))

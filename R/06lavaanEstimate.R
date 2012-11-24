@@ -161,7 +161,7 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE) {
         if(extra) {
             # check if matrix is positive definite
             ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(ev < 0)) {
+            if(any(ev < 0) || sum(ev) == 0) {
                 attr(Sigma.hat[[g]], "po") <- FALSE
             } else {
                 ## FIXME
@@ -989,6 +989,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     estimator     <- options$estimator
     verbose       <- options$verbose
     debug         <- options$debug
+    ngroups       <- samplestats@ngroups
 
     if(samplestats@missing.flag) { 
         group.weight <- FALSE
@@ -1094,6 +1095,27 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     if(debug) {
         cat("start.unco = ", getModelParameters(object, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
+    }
+
+    # check if the initial values produce a positive definite Sigma
+    # to begin with -- but only for estimator="ML"
+    if(estimator == "ML") {
+        Sigma.hat <- computeSigmaHat(object, extra=TRUE)
+        for(g in 1:ngroups) {
+            if(!attr(Sigma.hat[[g]], "po")) {
+                group.txt <- ifelse(ngroups > 1, 
+                                    paste("in group",g,".",sep=""), ".")
+                warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite. Check your model and/or starting parameters", group.txt)
+            }
+            x <- start.x
+            fx <- as.numeric(NA)
+            attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
+            attr(x, "converged")  <- FALSE
+            attr(x, "iterations") <- 0L
+            attr(x, "control")    <- control
+            attr(x, "fx")         <- fx
+            return(x)
+        }
     }
 
     # scaling factors
