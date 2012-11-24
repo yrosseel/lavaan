@@ -1105,16 +1105,16 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1, 
                                     paste("in group",g,".",sep=""), ".")
-                warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite. Check your model and/or starting parameters", group.txt)
+                warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite; check your model and/or starting parameters", group.txt)
+                x <- start.x
+                fx <- as.numeric(NA)
+                attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
+                attr(x, "converged")  <- FALSE
+                attr(x, "iterations") <- 0L
+                attr(x, "control")    <- control
+                attr(x, "fx")         <- fx
+                return(x)
             }
-            x <- start.x
-            fx <- as.numeric(NA)
-            attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
-            attr(x, "converged")  <- FALSE
-            attr(x, "iterations") <- 0L
-            attr(x, "control")    <- control
-            attr(x, "fx")         <- fx
-            return(x)
         }
     }
 

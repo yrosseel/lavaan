@@ -728,7 +728,8 @@ derivative.sigma.LISREL <- function(m="lambda",
         DD <- diag(DELTA[,1], nvar, nvar)
         DD.Omega <- (DD %*% Omega)
         A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
-        DX <- A[,lavaan:::diag.idx(nvar)] + B[,lavaan:::diag.idx(nvar)]
+        DX <- A[,lavaan:::diag.idx(nvar),drop=FALSE] + 
+              B[,lavaan:::diag.idx(nvar),drop=FALSE]
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
