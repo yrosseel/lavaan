@@ -33,7 +33,8 @@ simulateData <- function(
                          seed = NULL,
                          empirical = FALSE,
 
-                         return.type = "data.frame"
+                         return.type = "data.frame",
+                         return.fit = FALSE
                         )
 {
     if(!is.null(seed)) set.seed(seed)
@@ -153,6 +154,9 @@ simulateData <- function(
         var.names <- vnames(fit@ParTable, type="ov", group=1L)
         if(ngroups > 1L) var.names <- c(var.names, "group")
         names(Data) <- var.names
+        if(return.fit) {
+            attr(Data, "fit") <- fit
+        }
         return(Data)
 
     } else if (return.type == "cov") {

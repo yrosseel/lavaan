@@ -600,13 +600,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             warning("lavaan WARNING: some estimated variances are negative")
         
         # 2. is cov.lv (PSI) positive definite?
-        ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
-        for(g in 1:lavaanData@ngroups) {
-            txt.group <- ifelse(lavaanData@ngroups > 1L,
-                                paste("in group", g, ".", sep=""), ".")
-            eigvals <- eigen(ETA[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(eigvals < 0))
-                warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
+        if(length(vnames(lavaanParTable, type="lv")) > 0L) {
+            ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
+            for(g in 1:lavaanData@ngroups) {
+                txt.group <- ifelse(lavaanData@ngroups > 1L,
+                                    paste("in group", g, ".", sep=""), ".")
+                eigvals <- eigen(ETA[[g]], symmetric=TRUE, 
+                                 only.values=TRUE)$values
+                if(any(eigvals < 0))
+                    warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
+            }
         }
     }
 

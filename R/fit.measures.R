@@ -34,6 +34,17 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     G <- object@Data@ngroups  # number of groups
     X2 <- object@Fit@test[[1]]$stat
     df <- object@Fit@test[[1]]$df
+
+    # fit stat and df are NA (perhaps test="none"?), try again:
+    if(is.na(df)) {
+        df <- getDF(object@ParTable)
+        if(nrow(object@Model@con.jac) > 0L) {
+            df <- ( df + length(attr(object@Model@con.jac, "ceq.idx")) )
+        }
+    }
+    #if(is.na(X2) && is.finite(fx)) {
+    #                
+    #}
    
     if(test %in% c("satorra.bentler", "yuan.bentler", 
                    "mean.var.adjusted", "scaled.shifted")) {
@@ -110,23 +121,28 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
 
-    # select 'default' fit measures
+    # lower case
     fit.measures <- tolower(fit.measures)
-    if(fit.measures == "default") {
-        if(estimator == "ML") {
-            fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, fit.logl, 
-                              fit.rmsea, fit.srmr)
-        } else {
-            fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
-                              fit.rmsea, fit.srmr)
-        }
-    } else if(fit.measures == "all") {
-        if(estimator == "ML") {
-            fit.measures <- c(fit.chisq, fit.baseline, fit.incremental, 
-                              fit.logl, fit.rmsea, fit.srmr2, fit.other)
-        } else {
-            fit.measures <- c(fit.chisq, fit.baseline, fit.incremental,
-                              fit.rmsea, fit.srmr2, fit.other)
+
+    # select 'default' fit measures
+    if(length(fit.measures) == 1L) {
+        if(fit.measures == "default") {
+            if(estimator == "ML") {
+                fit.measures <- c(fit.chisq, fit.baseline, 
+                                  fit.cfi.tli, fit.logl, 
+                                  fit.rmsea, fit.srmr)
+            } else {
+                fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
+                                  fit.rmsea, fit.srmr)
+            }
+        } else if(fit.measures == "all") {
+            if(estimator == "ML") {
+                fit.measures <- c(fit.chisq, fit.baseline, fit.incremental, 
+                                  fit.logl, fit.rmsea, fit.srmr2, fit.other)
+            } else {
+                fit.measures <- c(fit.chisq, fit.baseline, fit.incremental,
+                                  fit.rmsea, fit.srmr2, fit.other)
+            }
         }
     }
     
@@ -163,7 +179,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
              "ifi", "ifi.scaled", "rni", "rni.scaled",
              "baseline.chisq", "baseline.chisq.scaled",
              "baseline.pvalue", "baseline.pvalue.scaled") %in% fit.measures)) {
-
+        
         # call explicitly independence model
         # this is not strictly needed for ML, but it is for
         # GLS and WLS
@@ -207,188 +223,200 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             df.null.scaled <- fit.indep@Fit@test[[2]]$df
         } 
 
-        if("baseline.chisq" %in% fit.measures) {
-            indices["baseline.chisq"] <- X2.null
-            if(scaled) {
-                indices["baseline.chisq.scaled"] <- X2.null.scaled
-            } 
-        }
-        if("baseline.df" %in% fit.measures) {
-            indices["baseline.df"] <- df.null
-            if(scaled) {
-                indices["baseline.df.scaled"] <- df.null.scaled
-            }
-        }
-        if("baseline.pvalue" %in% fit.measures) {
-            indices["baseline.pvalue"] <- fit.indep@Fit@test[[1]]$pvalue
-            if(scaled) {
-                indices["baseline.pvalue.scaled"] <- 
-                    fit.indep@Fit@test[[2]]$pvalue
-            }
-        }
-        if("baseline.chisq.scaling.factor" %in% fit.measures) {
-            indices["baseline.chisq.scaling.factor"] <-
-                fit.indep@Fit@test[[2]]$scaling.factor
-        }
+        # check for NAs
+        if(is.na(X2) || is.na(df) || is.na(X2.null) || is.na(df.null)) {
+            indices[fit.incremental] <- as.numeric(NA)
+        } else {
 
-        # CFI - comparative fit index (Bentler, 1990) 
-        if("cfi" %in% fit.measures) {
-            t1 <- max( c(X2 - df, 0) )
-            t2 <- max( c(X2 - df, X2.null - df.null, 0) )
-            if(t1 == 0 && t2 == 0) {
-                indices["cfi"] <- 1
-            } else {
-                indices["cfi"] <- 1 - t1/t2
+            if("baseline.chisq" %in% fit.measures) {
+                indices["baseline.chisq"] <- X2.null
+                if(scaled) {
+                    indices["baseline.chisq.scaled"] <- X2.null.scaled
+                } 
             }
-        }
-        if("cfi.scaled" %in% fit.measures) {
-            t1 <- max( c(X2.scaled - df.scaled, 0) )
-            t2 <- max( c(X2.scaled - df.scaled,
-                         X2.null.scaled - df.null.scaled, 0) )
-            if(t1 == 0 && t2 == 0) {
-                indices["cfi.scaled"] <- 1
-            } else {
-                indices["cfi.scaled"] <- 1 - t1/t2
+            if("baseline.df" %in% fit.measures) {
+                indices["baseline.df"] <- df.null
+                if(scaled) {
+                    indices["baseline.df.scaled"] <- df.null.scaled
+                }
             }
-        }
+            if("baseline.pvalue" %in% fit.measures) {
+                indices["baseline.pvalue"] <- fit.indep@Fit@test[[1]]$pvalue
+                if(scaled) {
+                    indices["baseline.pvalue.scaled"] <- 
+                        fit.indep@Fit@test[[2]]$pvalue
+                }
+            }
+            if("baseline.chisq.scaling.factor" %in% fit.measures) {
+                indices["baseline.chisq.scaling.factor"] <-
+                    fit.indep@Fit@test[[2]]$scaling.factor
+            }
 
-        # TLI - Tucker-Lewis index (Tucker & Lewis, 1973)
-        # same as
-        # NNFI - nonnormed fit index (NNFI, Bentler & Bonett, 1980)
-        if("tli" %in% fit.measures || "nnfi" %in% fit.measures) {
-            if(df > 0) {
-                t1 <- X2.null/df.null - X2/df
-                t2 <- X2.null/df.null - 1 
-                # note: TLI original formula was in terms of fx/df, not X2/df
-                # then, t1 <- fx_0/df.null - fx/df
-                #       t2 <- fx_0/df.null - 1/N (or N-1 for wishart)
-                if(t1 < 0 && t2 < 0) {
+            # CFI - comparative fit index (Bentler, 1990) 
+            if("cfi" %in% fit.measures) {
+                t1 <- max( c(X2 - df, 0) )
+                t2 <- max( c(X2 - df, X2.null - df.null, 0) )
+                if(t1 == 0 && t2 == 0) {
+                    indices["cfi"] <- 1
+                } else {
+                    indices["cfi"] <- 1 - t1/t2
+                }
+            }
+            if("cfi.scaled" %in% fit.measures) {
+                t1 <- max( c(X2.scaled - df.scaled, 0) )
+                t2 <- max( c(X2.scaled - df.scaled,
+                             X2.null.scaled - df.null.scaled, 0) )
+                if(t1 == 0 && t2 == 0) {
+                    indices["cfi.scaled"] <- 1
+                } else {
+                    indices["cfi.scaled"] <- 1 - t1/t2
+                }
+            }
+
+            # TLI - Tucker-Lewis index (Tucker & Lewis, 1973)
+            # same as
+            # NNFI - nonnormed fit index (NNFI, Bentler & Bonett, 1980)
+            if("tli" %in% fit.measures || "nnfi" %in% fit.measures) {
+                if(df > 0) {
+                    t1 <- X2.null/df.null - X2/df
+                    t2 <- X2.null/df.null - 1 
+                    print(X2)
+                    print(df)
+                    print(X2.null)
+                    print(df.null)
+                    print(t1)
+                    print(t2)
+                    # note: TLI original formula was in terms of fx/df, not X2/df
+                    # then, t1 <- fx_0/df.null - fx/df
+                    #       t2 <- fx_0/df.null - 1/N (or N-1 for wishart)
+                    if(t1 < 0 && t2 < 0) {
+                        TLI <- 1
+                    } else {
+                        TLI <- t1/t2
+                    }
+                } else {
+                   TLI <- 1
+                }
+                indices["tli"] <- indices["nnfi"] <- TLI
+            }
+            if("tli.scaled" %in% fit.measures || "nnfi.scaled" %in% fit.measures) {
+                if(df > 0) {
+                    t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
+                    t2 <- X2.null.scaled/df.null.scaled - 1
+                    if(t1 < 0 && t2 < 0) {
+                        TLI <- 1
+                    } else {
+                        TLI <- t1/t2
+                    }
+                } else {
                     TLI <- 1
-                } else {
-                    TLI <- t1/t2
                 }
-            } else {
-               TLI <- 1
+                indices["tli.scaled"] <- indices["nnfi.scaled"] <- TLI
             }
-            indices["tli"] <- indices["nnfi"] <- TLI
-        }
-        if("tli.scaled" %in% fit.measures || "nnfi.scaled" %in% fit.measures) {
-            if(df > 0) {
-                t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
-                t2 <- X2.null.scaled/df.null.scaled - 1
-                if(t1 < 0 && t2 < 0) {
-                    TLI <- 1
+    
+    
+            # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
+            if("rfi" %in% fit.measures) {
+                if(df > 0) {
+                    t1 <- X2.null/df.null - X2/df
+                    t2 <- X2.null/df.null
+                    if(t1 < 0 || t2 < 0) {
+                        RLI <- 1
+                    } else {
+                        RLI <- t1/t2
+                    }
                 } else {
-                    TLI <- t1/t2
+                   RLI <- 1
                 }
-            } else {
-                TLI <- 1
+                indices["rfi"] <- RLI
             }
-            indices["tli.scaled"] <- indices["nnfi.scaled"] <- TLI
-        }
-
-
-        # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
-        if("rfi" %in% fit.measures) {
-            if(df > 0) {
-                t1 <- X2.null/df.null - X2/df
-                t2 <- X2.null/df.null
-                if(t1 < 0 || t2 < 0) {
-                    RLI <- 1
+            if("rfi.scaled" %in% fit.measures) {
+                if(df > 0) {
+                    t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
+                    t2 <- X2.null.scaled/df.null.scaled
+                    if(t1 < 0 || t2 < 0) {
+                        RLI <- 1
+                    }     else {
+                        RLI <- t1/t2
+                    }
                 } else {
-                    RLI <- t1/t2
+                   RLI <- 1
                 }
-            } else {
-               RLI <- 1
+                indices["rfi.scaled"] <- RLI
             }
-            indices["rfi"] <- RLI
-        }
-        if("rfi.scaled" %in% fit.measures) {
-            if(df > 0) {
-                t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
-                t2 <- X2.null.scaled/df.null.scaled
-                if(t1 < 0 || t2 < 0) {
-                    RLI <- 1
+
+            # NFI - normed fit index (Bentler & Bonett, 1980)
+            if("nfi" %in% fit.measures) {
+                t1 <- X2.null - X2
+                t2 <- X2.null
+                NFI <- t1/t2
+                indices["nfi"] <- NFI
+            }
+            if("nfi.scaled" %in% fit.measures) {
+                t1 <- X2.null.scaled - X2.scaled
+                t2 <- X2.null.scaled
+                NFI <- t1/t2
+                indices["nfi.scaled"] <- NFI
+            }
+
+            # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
+            if("pnfi" %in% fit.measures) {
+                t1 <- X2.null - X2
+                t2 <- X2.null
+                PNFI <- (df/df.null) * t1/t2
+                indices["pnfi"] <- PNFI
+            }
+            if("pnfi.scaled" %in% fit.measures) {
+                t1 <- X2.null.scaled - X2.scaled
+                t2 <- X2.null.scaled
+                PNFI <- (df/df.null) * t1/t2
+                indices["pnfi.scaled"] <- PNFI
+            }
+
+            # IFI - incremental fit index (Bollen, 1989; Joreskog & Sorbom, 1993)
+            if("ifi" %in% fit.measures) {
+                t1 <- X2.null - X2
+                t2 <- X2.null - df
+                if(t2 < 0) {
+                    IFI <- 1
                 } else {
-                    RLI <- t1/t2
+                    IFI <- t1/t2
                 }
-            } else {
-               RLI <- 1
+                indices["ifi"] <- IFI
             }
-            indices["rfi.scaled"] <- RLI
-        }
-
-        # NFI - normed fit index (Bentler & Bonett, 1980)
-        if("nfi" %in% fit.measures) {
-            t1 <- X2.null - X2
-            t2 <- X2.null
-            NFI <- t1/t2
-            indices["nfi"] <- NFI
-        }
-        if("nfi.scaled" %in% fit.measures) {
-            t1 <- X2.null.scaled - X2.scaled
-            t2 <- X2.null.scaled
-            NFI <- t1/t2
-            indices["nfi.scaled"] <- NFI
-        }
-
-        # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
-        if("pnfi" %in% fit.measures) {
-            t1 <- X2.null - X2
-            t2 <- X2.null
-            PNFI <- (df/df.null) * t1/t2
-            indices["pnfi"] <- PNFI
-        }
-        if("pnfi.scaled" %in% fit.measures) {
-            t1 <- X2.null.scaled - X2.scaled
-            t2 <- X2.null.scaled
-            PNFI <- (df/df.null) * t1/t2
-            indices["pnfi.scaled"] <- PNFI
-        }
-
-        # IFI - incremental fit index (Bollen, 1989; Joreskog & Sorbom, 1993)
-        if("ifi" %in% fit.measures) {
-            t1 <- X2.null - X2
-            t2 <- X2.null - df
-            if(t2 < 0) {
-                IFI <- 1
-            } else {
-                IFI <- t1/t2
+            if("ifi.scaled" %in% fit.measures) {
+                t1 <- X2.null.scaled - X2.scaled
+                t2 <- X2.null.scaled
+                if(t2 < 0) {
+                    IFI <- 1
+                } else {
+                    IFI <- t1/t2
+                }
+                indices["ifi.scaled"] <- IFI
             }
-            indices["ifi"] <- IFI
-        }
-        if("ifi.scaled" %in% fit.measures) {
-            t1 <- X2.null.scaled - X2.scaled
-            t2 <- X2.null.scaled
-            if(t2 < 0) {
-                IFI <- 1
-            } else {
-                IFI <- t1/t2
-            }
-            indices["ifi.scaled"] <- IFI
-        }
  
-        # RNI - relative noncentrality index (McDonald & Marsh, 1990)
-        if("rni" %in% fit.measures) {
-            t1 <- X2 - df
-            t2 <- X2.null - df.null
-            if(t1 < 0 || t2 < 0) {
-                RNI <- 1
-            } else {
-                RNI <- 1 - t1/t2
+            # RNI - relative noncentrality index (McDonald & Marsh, 1990)
+            if("rni" %in% fit.measures) {
+                t1 <- X2 - df
+                t2 <- X2.null - df.null
+                if(t1 < 0 || t2 < 0) {
+                    RNI <- 1
+                } else {
+                    RNI <- 1 - t1/t2
+                }
+                indices["rni"] <- RNI
             }
-            indices["rni"] <- RNI
-        }
-        if("rni.scaled" %in% fit.measures) {
-            t1 <- X2.scaled - df.scaled
-            t2 <- X2.null.scaled - df.null.scaled
-            t2 <- X2.null - df.null
-            if(t1 < 0 || t2 < 0) {
-                RNI <- 1
-            } else {
-                RNI <- 1 - t1/t2
+            if("rni.scaled" %in% fit.measures) {
+                t1 <- X2.scaled - df.scaled
+                t2 <- X2.null.scaled - df.null.scaled
+                t2 <- X2.null - df.null
+                if(t1 < 0 || t2 < 0) {
+                    RNI <- 1
+                } else {
+                    RNI <- 1 - t1/t2
+                }
+                indices["rni.scaled"] <- RNI
             }
-            indices["rni.scaled"] <- RNI
         }
     }
 
@@ -481,7 +509,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     N.RMSEA <- max(N, X2*4) # FIXME: good strategy??
     if(any(c("rmsea","rmsea.scaled") %in% fit.measures)) {
         # RMSEA
-        if(df > 0) {
+        if(is.na(X2) || is.na(df)) {
+            RMSEA <- RMSEA.scaled <- as.numeric(NA)
+        } else if(df > 0) {
             if(scaled) {
                 d <- sum(object@Fit@test[[2]]$trace.UGamma)
             } 
@@ -514,7 +544,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         lower.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.95)
         }
-        if(is.na(X2)) {
+        if(is.na(X2) || is.na(df)) {
             indices["rmsea.ci.lower"] <- NA
         } else if(df < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower"] <- 0
@@ -545,7 +575,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         lower.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
         }
-        if(is.na(XX2)) {
+        if(is.na(XX2) || is.na(df2)) {
             indices["rmsea.ci.lower.scaled"] <- NA
         } else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower.scaled"] <- 0
@@ -566,7 +596,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(X2, df=df, ncp=lambda) - 0.05)
         }
-        if(is.na(X2)) {
+        if(is.na(X2) || is.na(df)) {
             indices["rmsea.ci.upper"] <- NA
         } else if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
             indices["rmsea.ci.upper"] <- 0
@@ -594,7 +624,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         upper.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.05)
         }
-        if(is.na(XX2)) {
+        if(is.na(XX2) || is.na(df2)) {
             indices["rmsea.ci.upper.scaled"] <- NA
         } else if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0 || 
                                        upper.lambda(0) < 0) {
@@ -614,7 +644,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }    
 
     if("rmsea.pvalue" %in% fit.measures) {
-        if(df > 0) {
+        if(is.na(X2) || is.na(df)) {
+            indices["rmsea.pvalue"] <- as.numeric(NA)
+        } else if(df > 0) {
             if(object@Options$mimic %in% c("lavaan","Mplus")) {
                 GG <- 0
                 ncp <- (N-GG)*df*0.05^2/G
@@ -637,7 +669,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             XX2 <- X2
             df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
         }
-        if(df > 0) {
+        if(is.na(XX2) || is.na(df2)) {
+            indices["rmsea.pvalue.scaled"] <- as.numeric(NA)
+        } else if(df > 0) {
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 ncp <- (N-GG)*df2*0.05^2/G
@@ -757,7 +791,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         }
         indices["gfi"] <- GFI
         nel <- length(unlist(WLS.obs)) # total number of modeled sample stats
-        if(df > 0) {
+        if(is.na(df)) {
+            indices["agfi"] <- as.numeric(NA)
+        } else if(df > 0) {
             indices["agfi"] <- 1 - (nel/df) * (1 - GFI)
         } else {
             indices["agfi"] <- 1
