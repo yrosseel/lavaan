@@ -374,11 +374,14 @@ setLavaanOptions <- function(opt = formals(lavaan))
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")
     }
 
-    # likelihood approach (wishart or normal)
+    # likelihood approach (wishart or normal) + sample.cov.rescale
     if(opt$estimator != "ML") {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
         } 
+        if(opt$sample.cov.rescale != "default") {
+            stop("sample.cov.rescale argument is only relevant if estimator = ML")
+        }
     } else { # ml
         if(opt$likelihood == "default") {
            opt$likelihood <- "normal"
@@ -392,6 +395,17 @@ setLavaanOptions <- function(opt = formals(lavaan))
         } else {
             stop("invalid value for `likelihood' argument: ", 
                  opt$likelihood, "\n")
+        }
+
+        if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- FALSE
+            if(opt$likelihood == "normal") {
+                opt$sample.cov.rescale <- TRUE
+            }
+        } else if(!is.logical(opt$sample.cov.rescale)) {
+            stop("sample.cov.rescale must be either \"default\", TRUE, or FALSE")
+        } else {
+            # nothing to do
         }
     }
 

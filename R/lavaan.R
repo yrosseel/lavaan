@@ -7,76 +7,77 @@
 # YR 25/02/2012: changed data slot (from list() to S4); data@X contains data
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
-                   model           = NULL,
-                   data            = NULL,  # second argument, most used!
-                   model.type      = "sem",
+                   model              = NULL,
+                   data               = NULL,  # second argument, most used!
+                   model.type         = "sem",
                 
                    # model modifiers
-                   meanstructure   = "default",
-                   int.ov.free     = FALSE,
-                   int.lv.free     = FALSE,
-                   fixed.x         = "default", # or FALSE?
-                   orthogonal      = FALSE,
-                   std.lv          = FALSE,
+                   meanstructure      = "default",
+                   int.ov.free        = FALSE,
+                   int.lv.free        = FALSE,
+                   fixed.x            = "default", # or FALSE?
+                   orthogonal         = FALSE,
+                   std.lv             = FALSE,
 
-                   auto.fix.first  = FALSE,
-                   auto.fix.single = FALSE,
-                   auto.var        = FALSE,
-                   auto.cov.lv.x   = FALSE,
-                   auto.cov.y      = FALSE,
-                   auto.th         = FALSE,
-                   auto.delta      = FALSE,
+                   auto.fix.first     = FALSE,
+                   auto.fix.single    = FALSE,
+                   auto.var           = FALSE,
+                   auto.cov.lv.x      = FALSE,
+                   auto.cov.y         = FALSE,
+                   auto.th            = FALSE,
+                   auto.delta         = FALSE,
                    
                    # full data
-                   std.ov          = FALSE,
-                   missing         = "default",
-                   ordered         = NULL,
+                   std.ov             = FALSE,
+                   missing            = "default",
+                   ordered            = NULL,
 
                    # summary data
-                   sample.cov      = NULL,
-                   sample.mean     = NULL,
-                   sample.nobs     = NULL,
+                   sample.cov         = NULL,
+                   sample.cov.rescale = "default",
+                   sample.mean        = NULL,
+                   sample.nobs        = NULL,
 
                    # multiple groups
-                   group           = NULL,
-                   group.label     = NULL,
-                   group.equal     = '',
-                   group.partial   = '',
+                   group              = NULL,
+                   group.label        = NULL,
+                   group.equal        = '',
+                   group.partial      = '',
 
                    # clusters
-                   cluster         = NULL,
+                   cluster            = NULL,
              
                    # constraints
-                   constraints     = '',
+                   constraints        = '',
 
                    # estimation
-                   estimator       = "default",
-                   likelihood      = "default",
-                   information     = "default",
-                   se              = "default",
-                   test            = "default",
-                   bootstrap       = 1000L,
-                   mimic           = "default",
-                   representation  = "default",
-                   do.fit          = TRUE,
-                   control         = list(),
-                   WLS.V           = NULL,
-                   NACOV           = NULL,
+                   estimator          = "default",
+                   likelihood         = "default",
+                   information        = "default",
+                   se                 = "default",
+                   test               = "default",
+                   bootstrap          = 1000L,
+                   mimic              = "default",
+                   representation     = "default",
+                   do.fit             = TRUE,
+                   control            = list(),
+                   WLS.V              = NULL,
+                   NACOV              = NULL,
 
                    # starting values
-                   start           = "default",
+                   start              = "default",
 
                    # full slots from previous fits
-                   slotOptions     = NULL,
-                   slotParTable    = NULL,
-                   slotSampleStats = NULL,
-                   slotData        = NULL,
-                   slotModel       = NULL,
+                   slotOptions        = NULL,
+                   slotParTable       = NULL,
+                   slotSampleStats    = NULL,
+                   slotData           = NULL,
+                   slotModel          = NULL,
   
                    # verbosity
-                   verbose         = FALSE,
-                   warn            = TRUE,
-                   debug           = FALSE
+                   verbose            = FALSE,
+                   warn               = TRUE,
+                   debug              = FALSE
                   )
 {
 
@@ -169,7 +170,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             group = group, categorical = categorical,
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
-            estimator = estimator, likelihood = likelihood,
+            estimator = estimator, likelihood = likelihood, 
+            sample.cov.rescale = sample.cov.rescale,
             information = information, se = se, test = test, 
             bootstrap = bootstrap, mimic = mimic,
             representation = representation, do.fit = do.fit, verbose = verbose,
@@ -335,17 +337,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                  
     } else if(lavaanData@data.type == "moment") {
         lavaanSampleStats <- lavSampleStatsFromMoments(
-                           sample.cov  = sample.cov,
-                           sample.mean = sample.mean,
-                           sample.nobs = sample.nobs,
-                           ov.names    = ov.names,
+                           sample.cov    = sample.cov,
+                           sample.mean   = sample.mean,
+                           sample.nobs   = sample.nobs,
+                           ov.names      = ov.names,
                            estimator     = lavaanOptions$estimator,
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
-                           rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"))
+                           rescale       = lavaanOptions$sample.cov.rescale)
                            
     } else {
         # no data
@@ -632,7 +633,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 cfa <- sem <- function(model = NULL, data = NULL,
     meanstructure = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
+    missing = "default", ordered = NULL, 
+    sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
@@ -663,7 +665,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
 growth <- function(model = NULL, data = NULL,
     fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
+    missing = "default", ordered = NULL, 
+    sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 

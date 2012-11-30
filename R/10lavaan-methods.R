@@ -1775,7 +1775,7 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute lv covar
-    OUT <- lavaan:::computeETA(object@Model, samplestats=fit@SampleStats)
+    OUT <- lavaan:::computeETA(object@Model, samplestats=object@SampleStats)
 
     # correlation?
     if(correlation.metric) {
@@ -1811,7 +1811,7 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute extended model implied covariance matrix (both ov and lv)
-    OUT <- lavaan:::computeCOV(object@Model, samplestats=fit@SampleStats)
+    OUT <- lavaan:::computeCOV(object@Model, samplestats=object@SampleStats)
 
     # correlation?
     if(correlation.metric) {

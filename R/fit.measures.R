@@ -280,12 +280,6 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 if(df > 0) {
                     t1 <- X2.null/df.null - X2/df
                     t2 <- X2.null/df.null - 1 
-                    print(X2)
-                    print(df)
-                    print(X2.null)
-                    print(df.null)
-                    print(t1)
-                    print(t2)
                     # note: TLI original formula was in terms of fx/df, not X2/df
                     # then, t1 <- fx_0/df.null - fx/df
                     #       t2 <- fx_0/df.null - 1/N (or N-1 for wishart)
