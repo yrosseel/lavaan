@@ -7,76 +7,77 @@
 # YR 25/02/2012: changed data slot (from list() to S4); data@X contains data
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
-                   model           = NULL,
-                   model.type      = "sem",
+                   model              = NULL,
+                   data               = NULL,  # second argument, most used!
+                   model.type         = "sem",
                 
                    # model modifiers
-                   meanstructure   = "default",
-                   int.ov.free     = FALSE,
-                   int.lv.free     = FALSE,
-                   fixed.x         = "default", # or FALSE?
-                   orthogonal      = FALSE,
-                   std.lv          = FALSE,
+                   meanstructure      = "default",
+                   int.ov.free        = FALSE,
+                   int.lv.free        = FALSE,
+                   fixed.x            = "default", # or FALSE?
+                   orthogonal         = FALSE,
+                   std.lv             = FALSE,
 
-                   auto.fix.first  = FALSE,
-                   auto.fix.single = FALSE,
-                   auto.var        = FALSE,
-                   auto.cov.lv.x   = FALSE,
-                   auto.cov.y      = FALSE,
-                   auto.th         = FALSE,
-                   auto.delta      = FALSE,
+                   auto.fix.first     = FALSE,
+                   auto.fix.single    = FALSE,
+                   auto.var           = FALSE,
+                   auto.cov.lv.x      = FALSE,
+                   auto.cov.y         = FALSE,
+                   auto.th            = FALSE,
+                   auto.delta         = FALSE,
                    
                    # full data
-                   data            = NULL,
-                   std.ov          = FALSE,
-                   missing         = "default",
-                   ordered         = NULL,
+                   std.ov             = FALSE,
+                   missing            = "default",
+                   ordered            = NULL,
 
                    # summary data
-                   sample.cov      = NULL,
-                   sample.mean     = NULL,
-                   sample.nobs     = NULL,
+                   sample.cov         = NULL,
+                   sample.cov.rescale = "default",
+                   sample.mean        = NULL,
+                   sample.nobs        = NULL,
 
                    # multiple groups
-                   group           = NULL,
-                   group.label     = NULL,
-                   group.equal     = '',
-                   group.partial   = '',
+                   group              = NULL,
+                   group.label        = NULL,
+                   group.equal        = '',
+                   group.partial      = '',
 
                    # clusters
-                   cluster         = NULL,
+                   cluster            = NULL,
              
                    # constraints
-                   constraints     = '',
+                   constraints        = '',
 
                    # estimation
-                   estimator       = "default",
-                   likelihood      = "default",
-                   information     = "default",
-                   se              = "default",
-                   test            = "default",
-                   bootstrap       = 1000L,
-                   mimic           = "default",
-                   representation  = "default",
-                   do.fit          = TRUE,
-                   control         = list(),
-                   WLS.V           = NULL,
-                   NACOV           = NULL,
+                   estimator          = "default",
+                   likelihood         = "default",
+                   information        = "default",
+                   se                 = "default",
+                   test               = "default",
+                   bootstrap          = 1000L,
+                   mimic              = "default",
+                   representation     = "default",
+                   do.fit             = TRUE,
+                   control            = list(),
+                   WLS.V              = NULL,
+                   NACOV              = NULL,
 
                    # starting values
-                   start           = "default",
+                   start              = "default",
 
                    # full slots from previous fits
-                   slotOptions     = NULL,
-                   slotParTable    = NULL,
-                   slotSampleStats = NULL,
-                   slotData        = NULL,
-                   slotModel       = NULL,
+                   slotOptions        = NULL,
+                   slotParTable       = NULL,
+                   slotSampleStats    = NULL,
+                   slotData           = NULL,
+                   slotModel          = NULL,
   
                    # verbosity
-                   verbose         = FALSE,
-                   warn            = TRUE,
-                   debug           = FALSE
+                   verbose            = FALSE,
+                   warn               = TRUE,
+                   debug              = FALSE
                   )
 {
 
@@ -169,7 +170,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             group = group, categorical = categorical,
             group.equal = group.equal, group.partial = group.partial, 
             constraints = constraints,
-            estimator = estimator, likelihood = likelihood,
+            estimator = estimator, likelihood = likelihood, 
+            sample.cov.rescale = sample.cov.rescale,
             information = information, se = se, test = test, 
             bootstrap = bootstrap, mimic = mimic,
             representation = representation, do.fit = do.fit, verbose = verbose,
@@ -245,6 +247,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         lavaanParTable <- slotParTable
     } else if(is.character(model)) {
+
+        # check FLAT before we proceed
+        if(debug) print(as.data.frame(FLAT))
+
+        # check 1: catch ~~ of fixed.x covariates if categorical
+        if(lavaanOptions$categorical) {
+            tmp <- vnames(FLAT, type="ov.x", ov.x.fatal=TRUE)
+        }
+        # check 2: catch ~1 of ordered variables (unless they are fixed)
+        if(lavaanOptions$categorical) {
+            int.idx <- which(FLAT$op == "~1" & FLAT$fixed == "")
+            if(length(int.idx) > 0L) {
+                INT <- FLAT$lhs[int.idx]
+                ORD <- lavaanData@ov$name[ lavaanData@ov$type == "ordered" ]
+                if(any(INT %in% ORD))        
+                    stop("lavaan ERROR: model syntax contains free intercepts for ordinal dependent variable(s): [", paste(INT, collapse=" "), 
+                         "];\n  Please remove them and try again.")
+            }
+        }
+
         lavaanParTable <- 
             lavaanify(model           = FLAT,
                       meanstructure   = lavaanOptions$meanstructure, 
@@ -271,6 +293,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       warn            = lavaanOptions$warn,
 
                       as.data.frame.  = FALSE)
+
     } else if(is.list(model)) {
         # two possibilities: either model is already lavaanified
         # or it is something else...
@@ -314,17 +337,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                  
     } else if(lavaanData@data.type == "moment") {
         lavaanSampleStats <- lavSampleStatsFromMoments(
-                           sample.cov  = sample.cov,
-                           sample.mean = sample.mean,
-                           sample.nobs = sample.nobs,
-                           ov.names    = ov.names,
+                           sample.cov    = sample.cov,
+                           sample.mean   = sample.mean,
+                           sample.nobs   = sample.nobs,
+                           ov.names      = ov.names,
                            estimator     = lavaanOptions$estimator,
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
-                           rescale     = (lavaanOptions$estimator == "ML" &&
-                                          lavaanOptions$likelihood == "normal"))
+                           rescale       = lavaanOptions$sample.cov.rescale)
                            
     } else {
         # no data
@@ -376,7 +398,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # catch simple linear regression models
         if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
-           ! categorical &&
+           #FALSE && # to debug
+           !categorical &&
+           !lavaanModel@eq.constraints &&
            length(lavaanData@X) > 0L &&
            lavaanData@ngroups == 1L &&
            lavaanOptions$fixed &&
@@ -397,18 +421,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
-                    x[lavaanParTable$free[lavaanParTable$op == "~~" &
-                                          lavaanParTable$free]] <- y.rvar
-                    x[lavaanParTable$free[lavaanParTable$op == "~" &
-                                          lavaanParTable$free]] <- x.beta[-1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                          lavaanParTable$unco]] <- y.rvar
+                    x[lavaanParTable$unco[lavaanParTable$op == "~" &
+                                          lavaanParTable$unco]] <- x.beta[-1L]
                 } else {
                     x <- numeric(1L + length(x.beta))
-                    x[lavaanParTable$free[lavaanParTable$op == "~~" &
-                                          lavaanParTable$free]] <- y.rvar
-                    x[lavaanParTable$free[lavaanParTable$op == "~" &
-                                          lavaanParTable$free]] <- x.beta[-1L]
-                    x[lavaanParTable$free[lavaanParTable$op == "~1" &
-                                          lavaanParTable$free]] <- x.beta[1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                          lavaanParTable$unco]] <- y.rvar
+                    x[lavaanParTable$unco[lavaanParTable$op == "~" &
+                                          lavaanParTable$unco]] <- x.beta[-1L]
+                    x[lavaanParTable$unco[lavaanParTable$op == "~1" &
+                                          lavaanParTable$unco]] <- x.beta[1L]
                 }
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
@@ -428,14 +452,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     A.cin <- t(lavJacobianC(func=lavaanModel@cin.function, 
                                             x=rep(0,lavaanModel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
-                # meanstructure? last row is intercept
+                con.jac <- t(A)
+
+                # meanstructure?
+                rvar.idx <- lavaanParTable$unco[lavaanParTable$op == "~~" &
+                                                lavaanParTable$unco]
                 if(lavaanOptions$meanstructure) {
-                    A <- rbind(A[nrow(A),,drop=FALSE], A[-nrow(A),,drop=FALSE])
+                    # where is the intercept?
+                    int.idx <- lavaanParTable$unco[lavaanParTable$op == "~1" &
+                                                   lavaanParTable$unco]
+                    # first intercept, then coefficients, remove resvar
+                    A <- rbind(A[int.idx,,drop=FALSE], 
+                               A[-c(int.idx,rvar.idx),,drop=FALSE])
                 } else {
-                    A <- rbind(rep(0,ncol(A)), A)
+                    # add intercept, then coefficients, remove resvar
+                    A <- rbind(rep(0,ncol(A)), A[-c(rvar.idx),,drop=FALSE])
                 }
-                # remove residual variance (last row)
-                A <- A[-nrow(A),,drop=FALSE]
                 #A <- matrix( c( 0, -1, 1,  0,
                 #                0, 0,  -1, 1), 4, 2)
                 X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
@@ -468,6 +500,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     computeObjective(lavaanModel, 
                                      samplestats = lavaanSampleStats,
                                      estimator = lavaanOptions$estimator)
+                # for VCOV
+                attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
+                attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
+                attr(con.jac, "ceq.idx") <- seq_len(ncol(A.ceq))
+                attr(x, "con.jac") <- con.jac
+                con.lambda <- rep(1, nrow(con.jac)) # FIXME!
+                attr(x, "con.lambda") <- con.lambda
             } else {
                 # regular estimation after all
                 x <- estimateModel(lavaanModel,
@@ -553,12 +592,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                      TEST     = TEST)
     timing$total <- (proc.time()[3] - start.time0)
 
-    # 9b. check for Heywood cases, negative variances, ...
+    # 9b. post-fitting checks
     if(attr(x, "converged")) { # only if estimation was successful
+        # 1. check for Heywood cases, negative (residual) variances, ...
         var.idx <- which(lavaanParTable$op == "~~" &
                          lavaanParTable$lhs == lavaanParTable$rhs)
-       if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
+        if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
+        
+        # 2. is cov.lv (PSI) positive definite?
+        if(length(vnames(lavaanParTable, type="lv")) > 0L) {
+            ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
+            for(g in 1:lavaanData@ngroups) {
+                txt.group <- ifelse(lavaanData@ngroups > 1L,
+                                    paste("in group", g, ".", sep=""), ".")
+                eigvals <- eigen(ETA[[g]], symmetric=TRUE, 
+                                 only.values=TRUE)$values
+                if(any(eigvals < 0))
+                    warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
+            }
+        }
     }
 
     # 10. construct lavaan object
@@ -577,10 +630,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 }
 
 # cfa + sem
-cfa <- sem <- function(model = NULL,
+cfa <- sem <- function(model = NULL, data = NULL,
     meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
+    missing = "default", ordered = NULL, 
+    sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
@@ -608,10 +662,11 @@ cfa <- sem <- function(model = NULL,
 }
 
 # simple growth models
-growth <- function(model = NULL,
+growth <- function(model = NULL, data = NULL,
     fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, sample.mean = NULL,
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
+    missing = "default", ordered = NULL, 
+    sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 

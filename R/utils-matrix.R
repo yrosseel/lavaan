@@ -293,7 +293,7 @@ D.pre <- function(A = matrix(0,0,0)) {
     # dup idx
     idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
-    OUT <- A[idx1,] + A[idx2,]
+    OUT <- A[idx1,,drop=FALSE] + A[idx2,,drop=FALSE]
     u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0
     
     OUT
@@ -314,7 +314,7 @@ dup.pre2 <- function(A = matrix(0,0,0)) {
     # dup idx
     idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
-    OUT <- A[idx1,]
+    OUT <- A[idx1,,drop=FALSE]
     u <- which(!idx1 %in% idx2); OUT[u,] <- OUT[u,] + A[idx2[u],]
 
     OUT
@@ -359,9 +359,10 @@ D.pre.post <- function(A = matrix(0,0,0)) {
     # dup idx
     idx1 <- vech.idx(n); idx2 <- vechru.idx(n)
 
-    OUT <- A[idx1,] + A[idx2,]
+    OUT <- A[idx1,,drop=FALSE] + A[idx2,,drop=FALSE]
     u <- which(idx1 %in% idx2);     OUT[u,] <- OUT[u,] / 2.0
-    OUT <- OUT[,idx1] + OUT[,idx2]; OUT[,u] <- OUT[,u] / 2.0
+    OUT <- OUT[,idx1,drop=FALSE] + OUT[,idx2,drop=FALSE]
+    OUT[,u] <- OUT[,u] / 2.0
 
     OUT
 }
@@ -419,7 +420,7 @@ K.n.pre <- function(A) {
     # compute row indices
     row.idx <- as.integer(t(matrix(1:n2, n, n)))
 
-    OUT <- A[row.idx,]
+    OUT <- A[row.idx,,drop=FALSE]
     OUT   
 }
 
@@ -434,7 +435,7 @@ K.mn.pre <- function(A, m = 1L, n = 1L) {
     # compute row indices
     row.idx <- as.integer(t(matrix(1:mn, m, n)))
 
-    OUT <- A[row.idx,]
+    OUT <- A[row.idx,,drop=FALSE]
     OUT
 }
 

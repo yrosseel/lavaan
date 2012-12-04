@@ -121,6 +121,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                           TH        = NULL,    # model-based thresholds + means
                           th.idx    = NULL,    # threshold idx per variable
                           num.idx   = NULL,    # which variables are numeric
+                          bifreq    = NULL,    # bivariate frequency vector
                           X  = NULL) {  # data
 
     # YR 3 okt 2012
@@ -134,7 +135,15 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # first of all: check if all correlations are within [-1,1]
     # if not, return Inf; (at least with nlminb, this works well)
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
-    if(any(abs(cors) > 1)) return(+Inf) 
+
+    #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
+    if(any(abs(cors) > 1)) {
+        # question: what is the best approach here??
+        return(+Inf) 
+        #idx <- which( abs(cors) > 0.99 )
+        #cors[idx] <- 0.99 # clip
+        #cat("CLIPPING!\n")
+    }
 
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
@@ -148,49 +157,18 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     PROW <- row(PSTAR)
     PCOL <- col(PSTAR)
 
-    # shortcut for all ordered
+    # shortcut for all ordered - tablewise
     if(all(ov.types == "ordered")) {
-        PROW <- row(PSTAR)
-        PCOL <- col(PSTAR)
-        NTH <- tabulate(th.idx)
-        NCAT <- NTH + 1
-        PTH <- pnorm(TH)
- 
-        #cat("SHORTCUT for ordinal\n")
-        V12 <- as.matrix(expand.grid(th.idx, th.idx))
-        V34 <- as.matrix(expand.grid(TH, TH))
-        # remove vars and upper
-        idx <- which(V12[,1] > V12[,2])
-        V12 <- V12[idx,]; V34 <- V34[idx,]
-        V5  <- Sigma.hat[ as.matrix(V12) ]
-        B2 <- pbivnorm:::pbivnorm(V34[,1], V34[,2], rho=V5)
-        B1a <- pnorm(V34[,1])
-        B1b <- pnorm(V34[,2])
+        # prepare for Myrsini's vectorization scheme
+        LONG <- LongVecTH.Ind.Rho(no.x               = nvar,
+                                  all.thres          = TH,
+                                  index.var.of.thres = th.idx, 
+                                  rho.xixj           = cors)
+        # get expected probability per table, per pair
+        PI <- pairwiseExpProbVec(x = LONG)
+        # get frequency per table, per pair
+        LogLik <- sum(bifreq * log(PI))
 
-        # for all pairs, get table, get PI, get freq, get logl
-        res <- sapply(seq_len(pstar), function(x) {
-            m.idx <- which(PSTAR == x)
-            i <- PROW[m.idx]; j <- PCOL[m.idx]
-            idx <- which(V12[,1] == i & V12[,2] == j)
-            BI <- B2[idx]; dim(BI) <- c(NTH[i], NTH[j])
-            pth.y1 <- PTH[th.idx == i]
-            pth.y2 <- PTH[th.idx == j]
-            BI <- rbind(0, BI, pth.y2, deparse.level = 0)
-            BI <- cbind(0, BI, c(0, pth.y1, 1), deparse.level = 0)
-            # get probabilities
-            nr <- nrow(BI); nc <- ncol(BI)
-            PI <- BI[-1L,-1L] - BI[-1L,-nc] - BI[-nr,-1L] + BI[-nr,-nc]
-            PI[PI < .Machine$double.eps] <- .Machine$double.eps
-            LIK <- PI[ cbind(X[,i], X[,j]) ]
-            if(any(LIK == 0.0)) {
-                logl <- Inf
-            } else {
-                logl <- sum(log(LIK))
-            }
-        })
-        # sum over all pairs
-        LogLik <- sum(res) 
-    
     } else {
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {

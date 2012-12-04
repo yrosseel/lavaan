@@ -4,9 +4,11 @@
 \description{
 Fit a Structural Equation Model (SEM).}
 \usage{
-sem(model = NULL, meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, data = NULL, std.ov = FALSE,
-    missing = "default", ordered = NULL, sample.cov = NULL, 
+sem(model = NULL, data = NULL,
+    meanstructure = "default", fixed.x = "default",
+    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
+    missing = "default", ordered = NULL, 
+    sample.cov = NULL, sample.cov.rescale = "default",
     sample.mean = NULL, sample.nobs = NULL, group = NULL, 
     group.label = NULL, group.equal = "", group.partial = "", 
     cluster = NULL, constraints = '', 
@@ -22,6 +24,10 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
+\item{data}{An optional data frame containing the observed variables used in
+    the model. If some variables are declared as ordered factors, lavaan will
+    treat them as ordinal variables. This can be overriden by the \code{ordered}
+    argument.}
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}
@@ -36,10 +42,6 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
-\item{data}{An optional data frame containing the observed variables used in
-    the model. If some variables are declared as ordered factors, lavaan will
-    treat them as ordinal variables. This can be overriden by the \code{ordered}
-    argument.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed
@@ -55,9 +57,19 @@ sem(model = NULL, meanstructure = "default", fixed.x = "default",
     endogenous in the model. Importantly, all other variables will be treated 
     as numeric (overriding any attributes in the original data.frame.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
-    The rownames must contain the observed variable names.
+    The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
-    for each group.}
+    for each group. Note that if maximum likelihood estimation is used and 
+    \code{likelihood="normal"}, the user provided covariance matrix is
+    internally rescaled by multiplying it with a factor (N-1)/N, to ensure
+    that the covariance matrix has been divided by N. This can be turned off
+    by setting the \code{sample.cov.rescale} argument to \code{FALSE}.}
+\item{sample.cov.rescale}{If \code{TRUE}, the sample covariance matrix provided
+    by the user is internally rescaled by multiplying it with a factor (N-1)/N.
+    If \code{"default"}, the value is set depending on the estimator and the
+    likelihood option: it is set to \code{TRUE} if maximum likelihood 
+    estimation is used and \code{likelihood="normal"}, and \code{FALSE} 
+    otherwise.}
 \item{sample.mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
 \item{sample.nobs}{Number of observations if the full data frame is missing

@@ -161,7 +161,7 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE) {
         if(extra) {
             # check if matrix is positive definite
             ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(ev < 0)) {
+            if(any(ev < 0) || sum(ev) == 0) {
                 attr(Sigma.hat[[g]], "po") <- FALSE
             } else {
                 ## FIXME
@@ -326,18 +326,16 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     # return a list
     ETA <- vector("list", length=ngroups)
 
-    # compute TH for each group
+    # compute ETA for each group
     for(g in 1:ngroups) {
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
         cov.x <- samplestats@cov.x[[g]]
-        num.idx <- object@num.idx[[g]]
 
         if(representation == "LISREL") {
-            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x,
-                                       num.idx = num.idx)
+            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -346,6 +344,38 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
     }
 
     ETA
+}
+
+# COV: observed+latent variances variances/covariances
+computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    COV <- vector("list", length=ngroups)
+
+    # compute COV for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        cov.x <- samplestats@cov.x[[g]]
+
+        if(representation == "LISREL") {
+            COV.g <- computeCOV.LISREL(MLIST = MLIST, cov.x = cov.x)
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        COV[[g]] <- COV.g
+    }
+
+    COV
 }
 
 computeObjective <- function(object, GLIST=NULL, 
@@ -454,6 +484,7 @@ computeObjective <- function(object, GLIST=NULL,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
+                                      bifreq    = samplestats@bifreq[[g]],
                                       X         = X[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
@@ -915,16 +946,23 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
         for(g in 1:samplestats@ngroups) {
 
+            #print(GLIST)
+            #print(getModelParameters(object, GLIST=GLIST))
+            #print(Sigma.hat[[g]])
+            #print(TH[[g]])
+            #cat("*****\n")
+
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
             d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
                              TH        = TH[[g]],
                              th.idx    = th.idx[[g]],
                              num.idx   = num.idx[[g]],
+                             bifreq    = samplestats@bifreq[[g]],
                              X         = X[[g]])
 
             # chain rule
-            group.dx <- t(d1) %*% Delta[[g]]
+            group.dx <- as.numeric(t(d1) %*% Delta[[g]])
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx
@@ -951,6 +989,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     estimator     <- options$estimator
     verbose       <- options$verbose
     debug         <- options$debug
+    ngroups       <- samplestats@ngroups
 
     if(samplestats@missing.flag) { 
         group.weight <- FALSE
@@ -1056,6 +1095,27 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     if(debug) {
         cat("start.unco = ", getModelParameters(object, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
+    }
+
+    # check if the initial values produce a positive definite Sigma
+    # to begin with -- but only for estimator="ML"
+    if(estimator == "ML") {
+        Sigma.hat <- computeSigmaHat(object, extra=TRUE)
+        for(g in 1:ngroups) {
+            if(!attr(Sigma.hat[[g]], "po")) {
+                group.txt <- ifelse(ngroups > 1, 
+                                    paste("in group",g,".",sep=""), ".")
+                warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite; check your model and/or starting parameters", group.txt)
+                x <- start.x
+                fx <- as.numeric(NA)
+                attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
+                attr(x, "converged")  <- FALSE
+                attr(x, "iterations") <- 0L
+                attr(x, "control")    <- control
+                attr(x, "fx")         <- fx
+                return(x)
+            }
+        }
     }
 
     # scaling factors

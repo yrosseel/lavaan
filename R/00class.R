@@ -40,6 +40,7 @@ setClass("lavSampleStats",         # sample moments
         th.names="list",           # threshold names
         slopes="list",             # slopes exo
         cov.x="list",              # variance/covariance exo
+        bifreq="list",             # bivariate frequency tables
 
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)

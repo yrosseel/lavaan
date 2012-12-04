@@ -119,7 +119,7 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
         }
         A1.inv <- solve(A1)
 
-        trace.h1[g] <- sum( B1 * t( solve(A1) ) )
+        trace.h1[g] <- sum( B1 * t( A1.inv ) )
         trace.h0[g] <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]])) )
         #trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
         UG <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
@@ -191,6 +191,7 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
 computeTestStatistic <- function(object, partable=NULL, samplestats=NULL, 
                                  options=NULL, x=NULL, VCOV=NULL,
                                  data=NULL, control=list()) {
+
 
     mimic       <- options$mimic
     test        <- options$test
@@ -277,12 +278,10 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
                               "mean.var.adjusted", "scaled.shifted")) {
-        TEST[[2]] <- list(test=test,
-                          stat=chisq, 
-                          stat.group=chisq.group,
-                          df=df, 
-                          pvalue=pvalue,
+        TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
+                          df=df, refdistr=refdistr, pvalue=pvalue, 
                           scaling.factor=as.numeric(NA))
+        return(TEST)
     }
 
     # some require meanstructure (for now)
@@ -322,7 +321,15 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                                 estimator=estimator,
                                                 extra=TRUE)
             }
-            E.inv <- solve(E)
+            E.inv <- try(solve(E))
+            if(inherits(E.inv, "try-error")) {
+                TEST[[2]] <- list(test=test, stat=as.numeric(NA), 
+                    stat.group=rep(as.numeric(NA), samplestats@ngroups),
+                    df=df, refdistr=refdistr, pvalue=as.numeric(NA),
+                    scaling.factor=as.numeric(NA))
+                warning("lavaan WARNING: could not compute scaled test statistic\n")
+                return(TEST)                
+            }
             Delta <- attr(E, "Delta")
             WLS.V <- attr(E, "WLS.V")
         }
@@ -336,7 +343,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 #                augUser$exo[       idx ] <- 0L
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
 #                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-#                augModel <- Model(user           = augUser,
+#                augModel <- Model(partable       = augUser,
 #                                  start          = getModelParameters(object, type="user"),
 #                                  representation = object@representation,
 #                                  debug          = FALSE)

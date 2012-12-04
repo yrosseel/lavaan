@@ -258,7 +258,8 @@ bootstrap.internal <- function(object       = NULL,
                                estimator     = opt$estimator,
                                mimic         = opt$mimic,
                                meanstructure = opt$meanstructure,
-                               missing.h1    = (FUN != "coef"),
+                               #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
+                               missing.h1    = TRUE,
                                verbose       = FALSE)) 
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")

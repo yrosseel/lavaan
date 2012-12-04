@@ -1,21 +1,36 @@
-# pairwise maximum likelihood
-# this is adapted from code written by Myrsini Katsikatsou
-#
+# utility functions for pairwise maximum likelihood
+
+
+
 # the first derivative of the pairwise logLik function with respect to the
 # thresholds/slopes/var/correlations; together with DELTA, we can use the
 # chain rule to get the gradient
-#
+# this is adapted from code written by Myrsini Katsikatsou
 # first attempt - YR 5 okt 2012
-
 pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        TH        = NULL,    # model-based thresholds + means
                        th.idx    = NULL,    # threshold idx per variable
                        num.idx   = NULL,    # which variables are numeric
                        X         = NULL,    # data
                        eXo       = NULL,    # external covariates
+                       bifreq    = NULL,    # bivariate frequency vector
                        scores    = FALSE,   # return case-wise scores
                        negative  = TRUE) {  # multiply by -1
 
+    cors <- Sigma.hat[lower.tri(Sigma.hat)]
+    if(any(abs(cors) > 1)) {
+        # what should we do now... force cov2cor?
+        #cat("FFFFOOOORRRRRCEEE PD!\n")
+        #Sigma.hat <- Matrix:::nearPD(Sigma.hat)
+        #Sigma.hat <- as.matrix(Sigma.hat$mat)
+        #Sigma.hat <- cov2cor(Sigma.hat)
+        #cors <- Sigma.hat[lower.tri(Sigma.hat)]
+        idx <- which( abs(cors) > 0.99 )
+        cors[idx] <- 0.99 # clip
+        #cat("CLIPPING!\n")
+    }
+
+    #cat("[DEBUG gradient]\n"); print(range(cors)); print(range(TH)); cat("\n")
     nvar <- nrow(Sigma.hat)
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
@@ -31,6 +46,16 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     N.COR <- pstar
 
     #print(Sigma.hat); print(TH); print(th.idx); print(num.idx); print(str(X))
+
+    # shortcut for ordinal-only/no-exo case
+    if(!scores && all(ov.types == "ordered") && nexo == 0L) {
+        gradient <- grad_tau_rho(no.x               = nvar,
+                                 all.thres          = TH,
+                                 index.var.of.thres = th.idx,
+                                 rho.xixj           = cors,
+                                 n.xixj.vec         = bifreq)
+        if(negative) return(-1*gradient)
+    }
 
     # in this order: TH/MEANS + SLOPES + VAR + COR
     GRAD.size <- N.TH + N.SL + N.VAR + N.COR
@@ -72,18 +97,17 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                 stop("not done yet")
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
-                SC.COR.UNI <- pc_cor_scores(Y1  = X[,i],
-                                            Y2  = X[,j],
-                                            eXo = NULL,
-                                            rho = Sigma.hat[i,j],
-                                            fit.y1 = NULL, # fixme
-                                            fit.y2 = NULL, # fixme
-                                            th.y1 = TH[ th.idx == i ],
-                                            th.y2 = TH[ th.idx == j ],
-                                            sl.y1 = NULL,
-                                            sl.y2 = NULL)
-                
                 if(scores) {
+                    SC.COR.UNI <- pc_cor_scores(Y1  = X[,i],
+                                                Y2  = X[,j],
+                                                eXo = NULL,
+                                                rho = Sigma.hat[i,j],
+                                                fit.y1 = NULL, # fixme
+                                                fit.y2 = NULL, # fixme
+                                                th.y1 = TH[ th.idx == i ],
+                                                th.y2 = TH[ th.idx == j ],
+                                                sl.y1 = NULL,
+                                                sl.y2 = NULL)
                     # TH
                     SCORES[,th.idx_i] <- SCORES[,th.idx_i] + SC.COR.UNI$dx.th.y1
                     SCORES[,th.idx_j] <- SCORES[,th.idx_j] + SC.COR.UNI$dx.th.y2
@@ -91,11 +115,12 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                     # SL
                     if(nexo > 0L) {
                         SCORES[,sl.idx_i] <- SCORES[,sl.idx_i] + SC.COR.UNI$dx.sl.y1
-                        SCORES[,sl.idx_j] <- SCORES[,sl.idx_j] + SC.COR.UNI$dx.sl.y2 
+                        SCORES[,sl.idx_j] <- SCORES[,sl.idx_j] + SC.COR.UNI$dx.sl.y2
                     }
                     # NO VAR
                     # RHO
                     SCORES[,cor.idx] <- SCORES[,cor.idx] + SC.COR.UNI$dx.rho
+                
                 } else {
                     # TH
                     if(length(th.idx_i) > 1L) {
@@ -145,3 +170,467 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     gradient
 }
 
+
+### all code below written by Myrsini Katsikatsou
+
+
+# The function grad_tau_rho
+# input:
+# no.x -  is scalar, the number of ordinal variables
+# all.thres  - is vector containing the thresholds of all variables in the
+#              following order: thres_var1, thres_var2,..., thres_var_p
+#              within each variable the thresholds are in ascending order
+#              Note that all.thres do NOT contain tau_0=-Inf and tau_last=Inf
+#              for all variables.
+# index.var.of.thres - a vector keeping track to which variable the thresholds
+#                      in all.thres belongs to, it is of the form
+#                      (1,1,1..., 2,2,2,...,  p,p,p,...)
+# rho.xixj - is the vector of all correlations where j runs faster than i
+#            i.e. the order is rho_12, rho_13, ..., rho_1p, rho_23, ..., rho_2p,
+#            etc.
+# n.xixj.vec -  a vector with the observed frequency for every combination
+#               of categories and every pair. The frequencies are given in
+#               the same order as the expected probabilities in the output of
+#               pairwiseExpProbVec output
+# the output: it gives the elements of der.L.to.tau and der.L.to.rho in this
+#             order. The elements of der.L.to.tau where the elements are
+#             ordered as follows: the thresholds of each variable with respect
+#             to ascending order of the variable index (i.e. thres_var1,
+#             thres_var2, etc.) and within each variable the thresholds in
+#             ascending order.
+#             The elements of vector der.L.to.rho are der.Lxixj.to.rho.xixj
+#             where j runs faster than i.
+
+# The function depends on four other functions: LongVecTH.Ind.Rho,
+# pairwiseExpProbVec, derLtoRho, and derLtoTau, all given below.
+
+# if n.xixj.ab is either an array or a list the following should be done
+#n.xixj.vec <- if(is.array(n.xixj.ab)) {
+#                 c(n.xixj.ab)
+#              } else if(is.list(n.xixj.ab)){
+#                 unlist(n.xixj.ab)
+#              }
+
+grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
+                         n.xixj.vec) {
+
+  out.LongVecTH.Ind.Rho <- LongVecTH.Ind.Rho(no.x=no.x, all.thres=all.thres,
+                                          index.var.of.thres=index.var.of.thres,
+                                          rho.xixj=rho.xixj)
+  pi.xixj <- pairwiseExpProbVec(x=out.LongVecTH.Ind.Rho)
+
+  out.derLtoRho <- derLtoRho(x=out.LongVecTH.Ind.Rho, n.xixj=n.xixj.vec,
+                           pi.xixj=pi.xixj, no.x=no.x)
+
+  out.derLtoTau <- derLtoTau(x=out.LongVecTH.Ind.Rho, n.xixj=n.xixj.vec,
+                           pi.xixj=pi.xixj, no.x=no.x)
+
+  c(out.derLtoTau, out.derLtoRho)
+}
+
+
+
+# The input of the function  LongVecTH.Ind.Rho:
+
+# no.x is scalar, the number of ordinal variables
+
+# all.thres is vector containing the thresholds of all variables in the
+# following order: thres_var1, thres_var2,..., thres_var_p
+# within each variable the thresholds are in ascending order
+# Note that all.thres does NOT contain the first and the last threshold of the
+# variables, i.e. tau_0=-Inf and tau_last=Inf
+
+# index.var.of.thres is a vector keeping track to which variable the thresholds
+# in all.thres belongs to, it is of the form (1,1,1..., 2,2,2,...,  p,p,p,...)
+
+# rho.xixj is the vector of all corrlations where j runs faster than i
+# i.e. the order is rho_12, rho_13, ..., rho_1p, rho_23, ..., rho_2p, etc.
+
+# The output of the function:
+# it is a list of various vectors either vectors keeping track of indices or
+# vectors with thresholds and rho's duplicated appropriately, all needed for the
+# computation of expected probabilities, der.L.to.rho, and der.L.to.tau
+
+# all duplications below are done as follows: within each pair of variables,
+# xi-xj, if for example we want to duplicate their thresholds, tau^xi_a and
+# tau^xj_b, then index a runs faster than b, i.e. for each b we take all
+# different tau^xi's, and then we proceed to the next b and do the same.
+# In other words if it was tabulated we fill the table columnwise.
+
+# All pairs xi-xj are taken with index j running faster than i.
+
+# Note that each variable may have a different number of categories, that's why
+# for example we take lists below.
+
+LongVecTH.Ind.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
+ no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
+ index.pairs <- combn(no.x,2)
+ no.pairs <- ncol(index.pairs)
+
+ # create the long vectors needed for the computation of expected probabilities
+ # for each cell and each pair of variables. The vectors thres.var1.of.pair and
+ # thres.var2.of.pair together give all the possible combinations of the
+ # thresholds of any two variables. Note the combinations (-Inf, -Inf),
+ # (-Inf, Inf), (Inf, -Inf), (Inf, Inf) are NOT included. Only the combinations
+ # of the middle thresholds (tau_1 to tau_(last-1)).
+ # thres.var1.of.pair and thres.var2.of.pair give the first and the second
+ # argument, respectively, in functions pbivnorm and lavaan:::dbinorm
+ thres.var1.of.pair <- vector("list", no.pairs)
+ thres.var2.of.pair <- vector("list", no.pairs)
+
+ # Extending the rho.vector accordingly so that it will be the the third
+ # argument in pbivnorm and lavaan:::dbinorm functions. It is of same length as
+ # thres.var1.of.pair and thres.var2.of.pair.
+ rho.vector <- vector("list", no.pairs)
+
+ # index.thres.var1.of.pair and index.thres.var2.of.pair contain the indices of
+ # of all thresholds (from tau_0 which is -Inf to tau_last which is Inf)
+ # for any pair of variables appropriately duplicated so that the two vectors
+ # together give all possible combinations of thresholds indices
+ # Since here the threshold indices 0 and "last" are included, the vectors are
+ # longer than the vectors thres.var1.of.pair and thres.var2.of.pair above.
+ index.thres.var1.of.pair <- vector("list", no.pairs)
+ index.thres.var2.of.pair <- vector("list", no.pairs)
+
+ # index.var1.of.pair and index.var2.of.pair keep track the index of the
+ # variable that the thresholds in index.thres.var1.of.pair and
+ # index.thres.var2.of.pair belong to, respectively. So, these two variables
+ # are of same length as that of index.thres.var1.of.pair and
+ # index.thres.var2.of.pair
+ index.var1.of.pair <- vector("list", no.pairs)
+ index.var2.of.pair <- vector("list", no.pairs)
+
+ # index.pairs.extended gives the index of the pair for each pair of variables
+ # e.g. pair of variables 1-2 has index 1, variables 1-3 has index 2, etc.
+ # The vector is of the same length as index.thres.var1.of.pair,
+ # index.thres.var2.of.pair, index.var1.of.pair, and index.var2.of.pair
+ index.pairs.extended <- vector("list", no.pairs)
+
+ # thres.var1.for.dnorm.in.der.pi.to.tau.xi and
+ # thres.var2.for.dnorm.in.der.pi.to.tau.xj give the thresholds of almost
+ # all variables appropriately duplicated so that the vectors can be used
+ # as input in dnorm() to compute der.pi.xixj.to.tau.xi and
+ # der.pi.xixj.to.tau.xj.
+ # thres.var1.for.dnorm.in.der.pi.to.tau.xi does not contain the thresholds of
+ # the last variable and thres.var2.for.dnorm.in.der.pi.to.tau.xj those of
+ # the first variable
+ thres.var1.for.dnorm.in.der.pi.to.tau.xi <- vector("list", no.pairs)
+ thres.var2.for.dnorm.in.der.pi.to.tau.xj <- vector("list", no.pairs)
+
+ for (i in 1:no.pairs) {
+   single.thres.var1.of.pair <- all.thres[index.var.of.thres==index.pairs[1,i]]
+   single.thres.var2.of.pair <- all.thres[index.var.of.thres==index.pairs[2,i]]
+   # remember that the first (-Inf) and last (Inf) thresholds are not included
+   # so no.thres.var1.of.pair is equal to number of categories of var1 minus 1
+   # similarly for no.thres.var2.of.pair
+   no.thres.var1.of.pair <- no.thres.of.each.var[index.pairs[1,i]]
+   no.thres.var2.of.pair <- no.thres.of.each.var[index.pairs[2,i]]
+
+   thres.var1.of.pair[[i]] <- rep(single.thres.var1.of.pair,
+                                  times=no.thres.var2.of.pair )
+   thres.var2.of.pair[[i]] <- rep(single.thres.var2.of.pair,
+                                  each=no.thres.var1.of.pair)
+   rho.vector[[i]] <- rep(rho.xixj[i], length(thres.var1.of.pair[[i]]))
+
+   index.thres.var1.of.pair[[i]] <- rep(0:(no.thres.var1.of.pair+1),
+                                        times= (no.thres.var2.of.pair+2) )
+   index.thres.var2.of.pair[[i]] <- rep(0:(no.thres.var2.of.pair+1),
+                                        each= (no.thres.var1.of.pair+2) )
+   length.vec <- length(index.thres.var1.of.pair[[i]] )
+   index.var1.of.pair[[i]] <- rep(index.pairs[1,i], length.vec)
+   index.var2.of.pair[[i]] <- rep(index.pairs[2,i], length.vec)
+   index.pairs.extended[[i]] <- rep(i, length.vec)
+
+   thres.var1.for.dnorm.in.der.pi.to.tau.xi[[i]] <-
+            rep(single.thres.var1.of.pair, times=(no.thres.var2.of.pair+1))
+   thres.var2.for.dnorm.in.der.pi.to.tau.xj[[i]] <-
+            rep(single.thres.var2.of.pair, each=(no.thres.var1.of.pair+1))
+ }
+
+ thres.var1.of.pair <- unlist(thres.var1.of.pair)
+ thres.var2.of.pair <- unlist(thres.var2.of.pair)
+ rho.vector <- unlist(rho.vector)
+
+ index.thres.var1.of.pair <- unlist(index.thres.var1.of.pair)
+ index.thres.var2.of.pair <- unlist(index.thres.var2.of.pair)
+ index.var1.of.pair <- unlist(index.var1.of.pair)
+ index.var2.of.pair <- unlist(index.var2.of.pair)
+ index.pairs.extended <- unlist(index.pairs.extended)
+
+ thres.var1.for.dnorm.in.der.pi.to.tau.xi <-
+                               unlist(thres.var1.for.dnorm.in.der.pi.to.tau.xi)
+ thres.var2.for.dnorm.in.der.pi.to.tau.xj <-
+                               unlist(thres.var2.for.dnorm.in.der.pi.to.tau.xj)
+
+ # thres.var2.for.last.cat.var1 and thres.var1.for.last.cat.var2 are needed
+ # for the computation of expected probabilities. In the computation of
+ # \Phi_2(tau1, tau2; rho) when either tau1 or tau2 are Inf then it is enought
+ # to compute pnorm() with the non-infinite tau as an argument
+ # In particular when the first variable of the pair has tau_last= Inf
+ # and the second a non-infite threshold we compute
+ # pnorm(thres.var2.for.last.cat.var1). Similarly, when the second variable of
+ # the pair has tau_last=Inf and the first a non-infite threshold we compute
+ # pnorm(thres.var1.for.last.cat.var2).
+ thres.var2.for.last.cat.var1 <- vector("list", (no.x-1))
+ thres.var1.for.last.cat.var2 <- vector("list", (no.x-1))
+ for (i in 1:(no.x-1)) {
+   thres.var2.for.last.cat.var1[[i]] <-
+                                c(all.thres[index.var.of.thres %in% (i+1):no.x])
+   thres.var1.for.last.cat.var2[[i]] <- rep(all.thres[index.var.of.thres==i],
+                                            times=(no.x-i))
+ }
+ thres.var2.for.last.cat.var1 <- unlist(thres.var2.for.last.cat.var1)
+ thres.var1.for.last.cat.var2 <- unlist(thres.var1.for.last.cat.var2)
+
+ # indicator vector (T/F) showing which elements of index.thres.var1.of.pair
+ # correspond to the last thresholds of variables. The length is the same as
+ # that of index.thres.var1.of.pair.
+ last.thres.var1.of.pair <- index.var1.of.pair==1 &
+                           index.thres.var1.of.pair==(no.thres.of.each.var[1]+1)
+ # we consider up to variable (no.x-1) because in pairs xi-xj where j runs
+ # faster than i, the last variable is not included in the column of xi's
+ for(i in 2:(no.x-1)) {
+   new.condition <- index.var1.of.pair==i &
+                    index.thres.var1.of.pair==(no.thres.of.each.var[i]+1)
+   last.thres.var1.of.pair <- last.thres.var1.of.pair | new.condition
+ }
+
+ # indicator vector (T/F) showing which elements of index.thres.var2.of.pair
+ # correspond to the last thresholds of variables. Notet that in pairs xi-xj
+ # where j runs faster than i, the first variable is not included in the column
+ # of xj's. That's why we start with variable 2. The length is the same as
+ # that of index.thres.var1.of.pair.
+ last.thres.var2.of.pair <- index.var2.of.pair==2 &
+                           index.thres.var2.of.pair==(no.thres.of.each.var[2]+1)
+ for(i in 3:no.x) {
+   new.condition <- index.var2.of.pair==i &
+                    index.thres.var2.of.pair==(no.thres.of.each.var[i]+1)
+   last.thres.var2.of.pair <- last.thres.var2.of.pair | new.condition
+ }
+
+ list(thres.var1.of.pair = thres.var1.of.pair,  #these 3 of same length
+      thres.var2.of.pair = thres.var2.of.pair,
+      rho.vector = rho.vector,
+
+      #the following of same length
+      index.thres.var1.of.pair = index.thres.var1.of.pair,
+      index.thres.var2.of.pair = index.thres.var2.of.pair,
+      index.var1.of.pair = index.var1.of.pair,
+      index.var2.of.pair = index.var2.of.pair,
+      index.pairs.extended = index.pairs.extended,
+      last.thres.var1.of.pair = last.thres.var1.of.pair,
+      last.thres.var2.of.pair = last.thres.var2.of.pair,
+
+      #the following of length dependning on the number of categories
+      thres.var1.for.dnorm.in.der.pi.to.tau.xi =
+        thres.var1.for.dnorm.in.der.pi.to.tau.xi ,
+      thres.var2.for.dnorm.in.der.pi.to.tau.xj =
+        thres.var2.for.dnorm.in.der.pi.to.tau.xj ,
+      thres.var2.for.last.cat.var1=thres.var2.for.last.cat.var1,
+      thres.var1.for.last.cat.var2=thres.var1.for.last.cat.var2 )
+}
+#########################################################
+
+# The function  pairwiseExpProbVec
+# input: x - the output of LongVecTH.Ind.Rho
+# output: it gives the elements of pairwiseTablesExpected()$pi.tables
+# table-wise and column-wise within each table. In other words if
+# pi^xixj_ab is the expected probability for the pair of variables xi-xj
+# and categories a and b, then index a runs the fastest of all, followed by b,
+# then by j, and lastly by i.
+
+pairwiseExpProbVec <- function(x) {
+  prob.vec <- rep(NA, length(x$index.thres.var1.of.pair))
+
+  prob.vec[x$index.thres.var1.of.pair==0 | x$index.thres.var2.of.pair==0] <- 0
+
+  prob.vec[x$last.thres.var1.of.pair & x$last.thres.var2.of.pair] <- 1
+
+  prob.vec[x$last.thres.var1.of.pair & x$index.thres.var2.of.pair!=0 &
+           !x$last.thres.var2.of.pair] <- pnorm(x$thres.var2.for.last.cat.var1)
+
+  prob.vec[x$last.thres.var2.of.pair & x$index.thres.var1.of.pair!=0 &
+           !x$last.thres.var1.of.pair] <- pnorm(x$thres.var1.for.last.cat.var2)
+
+  prob.vec[is.na(prob.vec)] <- pbivnorm(x$thres.var1.of.pair,
+                                        x$thres.var2.of.pair,
+                                        x$rho.vector)
+
+  cum.term1 <- prob.vec[x$index.thres.var1.of.pair!=0 &
+                        x$index.thres.var2.of.pair!=0]
+
+  cum.term2 <- prob.vec[ x$index.thres.var1.of.pair!=0 &
+                       !x$last.thres.var2.of.pair]
+
+  cum.term3 <- prob.vec[ x$index.thres.var2.of.pair!=0 &
+                       !x$last.thres.var1.of.pair]
+
+  cum.term4 <- prob.vec[!x$last.thres.var1.of.pair &
+                       !x$last.thres.var2.of.pair]
+
+  PI <- cum.term1 - cum.term2 - cum.term3 + cum.term4
+
+  # added by YR 11 nov 2012 to avoid Nan/-Inf
+  # log(.Machine$double.eps) = -36.04365
+  # all elements should be strictly positive
+  PI[PI < .Machine$double.eps] <- .Machine$double.eps
+
+  PI
+}
+
+#########################################################
+
+# The function  pairwiseExpProbVec
+# input: x - the output of LongVecTH.Ind.Rho,
+#        n.xixj - a vector with the observed frequency for every combination
+#                 of categories and every pair. The frequencies are given in
+#                 the same order as the expected probabilities in the output of
+#                 pairwiseExpProbVec output
+#        pi.xixj - the output of pairwiseExpProbVec function
+#        no.x    - the number of ordinal variables
+# output: the vector of der.L.to.rho, each element corresponds to
+#         der.Lxixj.to.rho.xixj where j runs faster than i
+
+derLtoRho <- function(x, n.xixj, pi.xixj, no.x) {
+  prob.vec <- rep(NA, length(x$index.thres.var1.of.pair))
+
+  prob.vec[x$index.thres.var1.of.pair==0 | x$index.thres.var2.of.pair==0 |
+           x$last.thres.var1.of.pair | x$last.thres.var2.of.pair] <- 0
+
+  prob.vec[is.na(prob.vec)] <- lavaan:::dbinorm(x$thres.var1.of.pair,
+                                                x$thres.var2.of.pair,
+                                                rho=x$rho.vector)
+
+  den.term1 <- prob.vec[x$index.thres.var1.of.pair!=0 &
+                        x$index.thres.var2.of.pair!=0]
+
+  den.term2 <- prob.vec[ x$index.thres.var1.of.pair!=0 &
+                        !x$last.thres.var2.of.pair]
+
+  den.term3 <- prob.vec[ x$index.thres.var2.of.pair!=0 &
+                        !x$last.thres.var1.of.pair]
+
+  den.term4 <- prob.vec[!x$last.thres.var1.of.pair &
+                        !x$last.thres.var2.of.pair]
+
+  der.pi.xixj.to.rho.xixj <- den.term1 - den.term2 - den.term3 + den.term4
+  prod.terms <- (n.xixj/pi.xixj)*der.pi.xixj.to.rho.xixj
+
+  # to get der.Lxixj.to.rho.xixj we should all the elements of
+  # der.pi.xixj.to.rho.xixj which correspond to the pair xi-xj, to do so:
+  xnew <- lapply( x[c("index.pairs.extended")],
+                  function(y){y[x$index.thres.var1.of.pair!=0 &
+                                x$index.thres.var2.of.pair!=0]})
+  #der.L.to.rho is:
+  tapply(prod.terms, xnew$index.pairs.extended, sum)
+}
+###########################################################################
+
+
+# The function  pairwiseExpProbVec
+# input: x - the output of LongVecTH.Ind.Rho,
+#        n.xixj - a vector with the observed frequency for every combination
+#                 of categories and every pair. The frequencies are given in
+#                 the same order as the expected probabilities in the output of
+#                 pairwiseExpProbVec output
+#        pi.xixj - the output of pairwiseExpProbVec function
+# output: the vector of der.L.to.tau where the elements are ordered as follows:
+#         the thresholds of each variable with respect to ascending order of
+#         the variable index (i.e. thres_var1, thres_var2, etc.) and within
+#         each variable the thresholds in ascending order.
+
+
+derLtoTau <- function(x, n.xixj, pi.xixj, no.x) {
+  # to compute der.pi.xixj.to.tau.xi
+  xi <- lapply( x[c("index.thres.var2.of.pair",
+                    "last.thres.var2.of.pair")],
+                function(y){ y[!(x$index.thres.var1.of.pair==0 |
+                                 x$last.thres.var1.of.pair)] } )
+
+  cum.prob.vec <- rep(NA, length(xi$index.thres.var2.of.pair) )
+  cum.prob.vec[xi$index.thres.var2.of.pair==0] <- 0
+  cum.prob.vec[xi$last.thres.var2.of.pair] <- 1
+  denom <- (1-x$rho.vector^2)^0.5
+  cum.prob.vec[is.na(cum.prob.vec)] <-
+      pnorm( (x$thres.var2.of.pair - x$rho.vector* x$thres.var1.of.pair) /
+             denom)
+  den.prob.vec <- dnorm(x$thres.var1.for.dnorm.in.der.pi.to.tau.xi)
+  der.pi.xixj.to.tau.xi <-  den.prob.vec *
+                            (cum.prob.vec[ xi$index.thres.var2.of.pair!=0] -
+                             cum.prob.vec[!xi$last.thres.var2.of.pair] )
+
+  # to compute der.pi.xixj.to.tau.xj
+  xj <- lapply( x[c("index.thres.var1.of.pair",
+                    "last.thres.var1.of.pair")],
+                function(y){ y[!(x$index.thres.var2.of.pair==0 |
+                                 x$last.thres.var2.of.pair)] } )
+
+  cum.prob.vec <- rep(NA, length(xj$index.thres.var1.of.pair) )
+  cum.prob.vec[xj$index.thres.var1.of.pair==0] <- 0
+  cum.prob.vec[xj$last.thres.var1.of.pair] <- 1
+  denom <- (1-x$rho.vector^2)^0.5
+  cum.prob.vec[is.na(cum.prob.vec)] <-
+      pnorm( (x$thres.var1.of.pair - x$rho.vector* x$thres.var2.of.pair) /
+              denom)
+  den.prob.vec <- dnorm(x$thres.var2.for.dnorm.in.der.pi.to.tau.xj)
+  der.pi.xixj.to.tau.xj <-  den.prob.vec *
+                            (cum.prob.vec[ xj$index.thres.var1.of.pair!=0] -
+                             cum.prob.vec[!xj$last.thres.var1.of.pair] )
+
+  #to compute der.Lxixj.tau.xi and der.Lxixj.tau.xi
+  n.over.pi <- n.xixj/ pi.xixj
+  # get the appropriate differences of n.over.pi for der.Lxixj.to.tau.xi  and
+  # der.Lxixj.to.tau.xj
+  x3a <- lapply(x, function(y){ y[!(x$index.thres.var1.of.pair==0 |
+                                    x$index.thres.var2.of.pair==0) ] } )
+  diff.n.over.pi.to.xi <- n.over.pi[!x3a$last.thres.var1.of.pair] -
+                          n.over.pi[ x3a$index.thres.var1.of.pair!=1]
+  diff.n.over.pi.to.xj <- n.over.pi[!x3a$last.thres.var2.of.pair] -
+                          n.over.pi[ x3a$index.thres.var2.of.pair!=1]
+  # terms.der.Lxixj.to.tau.xi  and terms.der.Lxixj.to.tau.xj
+  terms.der.Lxixj.to.tau.xi <- diff.n.over.pi.to.xi * der.pi.xixj.to.tau.xi
+  terms.der.Lxixj.to.tau.xj <- diff.n.over.pi.to.xj * der.pi.xixj.to.tau.xj
+  # to add appropriately elements of terms.der.Lxixj.to.tau.xi
+  x3b <- lapply( x[c("index.pairs.extended",
+                    "index.thres.var1.of.pair")],
+                 function(y){ y[!(x$index.thres.var1.of.pair==0 |
+                                  x$last.thres.var1.of.pair |
+                                  x$index.thres.var2.of.pair==0) ] } )
+  # to add appropriately elements of terms.der.Lxixj.to.tau.xj
+  x4b <- lapply( x[c("index.pairs.extended",
+                    "index.thres.var2.of.pair")],
+                 function(y){ y[!(x$index.thres.var2.of.pair==0 |
+                                  x$last.thres.var2.of.pair |
+                                  x$index.thres.var1.of.pair==0) ] } )
+  ind.pairs <- combn(no.x,2)
+  # der.Lxixj.to.tau.xi is a matrix, nrow=no.pairs, ncol=max(no.of.free.thres)
+  # thus, there are NA's, similarly for der.Lxixj.to.tau.xj
+  der.Lxixj.to.tau.xi <- tapply(terms.der.Lxixj.to.tau.xi,
+                                list(x3b$index.pairs.extended,
+                                     x3b$index.thres.var1.of.pair),
+                                sum)
+  der.Lxixj.to.tau.xj <- tapply(terms.der.Lxixj.to.tau.xj,
+                                list(x4b$index.pairs.extended,
+                                     x4b$index.thres.var2.of.pair),
+                                sum)
+
+  # to add appropriately the terms of der.Lxixj.to.tau.xi and
+  # der.Lxixj.to.tau.xj
+  split.der.Lxixj.to.tau.xi <- split(as.data.frame(der.Lxixj.to.tau.xi),
+                                     ind.pairs[1,] )
+  sums.der.Lxixj.to.tau.xi <- lapply(split.der.Lxixj.to.tau.xi,
+                                     function(x){ y <- apply(x,2,sum)
+                                                  y[!is.na(y)] } )
+  # Note: NA exist in the case where the ordinal variables have different
+  # number of response categories
+  split.der.Lxixj.to.tau.xj <- split(as.data.frame(der.Lxixj.to.tau.xj),
+                                     ind.pairs[2,] )
+  sums.der.Lxixj.to.tau.xj <- lapply(split.der.Lxixj.to.tau.xj,
+                                     function(x){ y <- apply(x,2,sum)
+                                                  y[!is.na(y)] } )
+  # to get der.L.to.tau
+  c( sums.der.Lxixj.to.tau.xi[[1]],
+     c( unlist(sums.der.Lxixj.to.tau.xi[2:(no.x-1)]) +
+        unlist(sums.der.Lxixj.to.tau.xj[1:(no.x-2)]) ),
+     sums.der.Lxixj.to.tau.xj[[no.x-1]] )
+}

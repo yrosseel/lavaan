@@ -262,7 +262,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         } else if(object@Fit@npar > 0L && !object@Fit@converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
-            print.fit.measures( fitMeasures(object) )
+            print.fit.measures( fitMeasures(object, fit.measures="default") )
         }
     }
 
@@ -1123,6 +1123,26 @@ function(object, what="free") {
               what == "r-square" ||
               what == "r2") {
          rsquare(object)
+    } else if(what == "wls.v") {
+        getWLS.V(object, drop.list.single.group=TRUE)
+    } else if(what == "nacov") {
+        getSampleStatsNACOV(object)    
+    } else if(what == "modelcovlv"  ||
+              what == "modelcov.lv" ||
+              what == "cov.lv") {
+        getModelCovLV(object, correlation.metric=FALSE, labels=TRUE)
+    } else if(what == "modelcorlv"  ||
+              what == "modelcor.lv" ||
+              what == "cor.lv") {
+        getModelCorLV(object, labels=TRUE)
+    } else if(what == "modelcovall"  ||
+              what == "modelcov.all" ||
+              what == "cov.all") {
+        getModelCov(object, correlation.metric=FALSE, labels=TRUE)
+    } else if(what == "modelcorall"  ||
+              what == "modelcor.all" ||
+              what == "cor.all") {
+        getModelCor(object, labels=TRUE)
     } else if(what == "converged") {
         object@Fit@converged
     } else {
@@ -1244,8 +1264,6 @@ function(object, labels=TRUE) {
     } else {
         VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
                                options=object@Options,
-                               #data=eval(object@call[["data"]], 
-                               #          parent.frame()) 
                                data=object@Data
                               )
     }
@@ -1593,11 +1611,63 @@ function(object, ...) {
 
 })
 
-getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
+
+getWLS.est <- function(object, drop.list.single.group=FALSE) {
+
+    # shortcuts
+    samplestats   = object@SampleStats
+    estimator     = object@Options$estimator
+    G             = object@Data@ngroups
+    categorical   = object@Model@categorical
+    meanstructure = object@Model@meanstructure
+    fixed.x       = object@Model@fixed.x
+    num.idx       = object@Model@num.idx
+
+    # compute moments for all groups
+    Sigma.hat <- computeSigmaHat(object@Model)
+    if(meanstructure && !categorical) {
+        Mu.hat <- computeMuHat(object@Model)
+    } else if(categorical) {
+        TH <- computeTH(object@Model)
+        if(fixed.x)
+            PI <- computePI(object@Model)
+    }
+
+    WLS.est <- vector("list", length=samplestats@ngroups)
+    for(g in 1:samplestats@ngroups) {
+        if(categorical) {
+            if(fixed.x) {
+                WLS.est[[g]] <- c(TH[[g]],vec(PI[[g]]),
+                                  diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                  vech(Sigma.hat[[g]], diagonal=FALSE))
+            } else {
+                WLS.est[[g]] <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
+                                  vech(Sigma.hat[[g]], diagonal=FALSE))
+            }
+        } else if(meanstructure) {
+            WLS.est[[g]] <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
+        } else {
+            WLS.est[[g]] <- vech(Sigma.hat[[g]])
+        }
+    }
+
+    OUT <- WLS.est
+    if(G == 1 && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(G > 1) names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+getWLS.V <- function(object, Delta=computeDelta(object@Model), 
+                     drop.list.single.group=FALSE) {
 
     # shortcuts
     samplestats = object@SampleStats
     estimator   = object@Options$estimator
+    G           = object@Data@ngroups
 
     WLS.V       <- vector("list", length=samplestats@ngroups)
     if(estimator == "GLS"  ||
@@ -1626,7 +1696,15 @@ getWLS.V <- function(object, Delta=computeDelta(object@Model)) {
         }
     } # ML
 
-    WLS.V
+
+    OUT <- WLS.V
+    if(G == 1 && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(G > 1) names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
 }
 
 getSampleStatsNACOV <- function(object) {
@@ -1687,3 +1765,79 @@ getVariability <- function(object) {
     
     B0
 }
+
+getModelCorLV <- function(object, labels=TRUE) {
+    getModelCovLV(object, correlation.metric=TRUE, labels=labels)
+}
+
+getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv covar
+    OUT <- lavaan:::computeETA(object@Model, samplestats=object@SampleStats)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+    
+    # we need psi matrix for labels
+    psi.group <- which(names(object@Model@GLIST) == "psi")
+    if(labels) {
+        for(g in 1:G) {
+            psi.idx <- psi.group[g]
+            NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+getModelCor <- function(object, labels=TRUE) {
+    getModelCov(object, correlation.metric=TRUE, labels=labels)
+}
+
+getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # compute extended model implied covariance matrix (both ov and lv)
+    OUT <- lavaan:::computeCOV(object@Model, samplestats=object@SampleStats)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+
+    # we need lambda + psi matrix for labels
+    lambda.group <- which(names(object@Model@GLIST) == "lambda")
+    psi.group <- which(names(object@Model@GLIST) == "psi")
+    if(labels) {
+        for(g in 1:G) {
+            lambda.idx <- lambda.group[g]
+            psi.idx <- psi.group[g]
+            NAMES <- c(object@Model@dimNames[[lambda.idx]][[1L]],
+                       object@Model@dimNames[[psi.idx]][[1L]])
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+

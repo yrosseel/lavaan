@@ -51,6 +51,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
     th.names    <- vector("list", length=ngroups)
     slopes      <- vector("list", length=ngroups)
     cov.x       <- vector("list", length=ngroups)
+    bifreq      <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
@@ -126,6 +127,16 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               WLS.W = WLS.W,
                               verbose=FALSE)
             if(verbose) cat("done\n")
+            # if (and only if) all variables are ordinal, store pairwise
+            # tables
+            if(all(ov.types == "ordered") && estimator == "PML" &&
+               length(ov.types) > 1L) {
+                # pairwise tables, as a long vector
+                PW <- pairwiseTables(data=X[[g]], no.x=ncol(X[[g]]))$pairTables
+                # FIXME: handle zero cells here???
+                bifreq[[g]] <- as.numeric(unlist(PW)) 
+                #bifreq[[g]] <- PW
+            }
         }
 
         # fill in the other slots
@@ -205,6 +216,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 getMissingPatternStats(X  = X[[g]],
                                        Mp = Mp[[g]])
 
+            #cat("missing.h1 = "); print(missing.h1); cat("\n")
             if(missing.h1) {
                 # estimate moments unrestricted model
                 out <- estimate.moments.EM(X=X[[g]], M=missing.[[g]],
@@ -213,7 +225,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 missing.h1.[[g]]$mu    <- out$mu
                 missing.h1.[[g]]$h1    <- out$fx
             }
-        } 
+        }
 
         # NACOV (=GAMMA)
         if(!NACOV.user) {
@@ -309,6 +321,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        var          = var,
                        slopes       = slopes,
                        cov.x        = cov.x,
+                       bifreq       = bifreq,
  
                        # convenience
                        nobs         = nobs,
@@ -362,6 +375,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     th.names    <- vector("list", length=ngroups)
     slopes      <- vector("list", length=ngroups)
     cov.x       <- vector("list", length=ngroups)
+    bifreq      <- vector("list", length=ngroups)
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
@@ -529,6 +543,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                        var          = var,
                        slopes       = slopes,
                        cov.x        = cov.x,
+                       bifreq       = bifreq,
 
                        # convenience
                        nobs         = nobs,

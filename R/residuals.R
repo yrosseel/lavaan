@@ -51,11 +51,13 @@ function(object, type="raw", labels=TRUE) {
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
-            augModel <- Model(user           = augUser,
+            augModel <- Model(partable       = augUser,
                               start          = object@Fit@est,
                               representation = object@Options$representation,
                               debug          = object@Options$debug)
             VarCov <- estimateVCOV(augModel, samplestats = object@SampleStats,
+                                   data = object@Data,
+                                   partable = object@Partable,
                                    options = object@Options)
             # set cov between free and fixed.x elements to zero
             ###
@@ -69,7 +71,10 @@ function(object, type="raw", labels=TRUE) {
 
             Delta  <- computeDelta(augModel)
         } else {
-            VarCov <- estimateVCOV(object@Model, samplestats = object@SampleStats,
+            VarCov <- estimateVCOV(object@Model, 
+                                   data = object@Data,
+                                   partable = object@Partable,
+                                   samplestats = object@SampleStats,
                                    options = object@Options)
             Delta  <- computeDelta(object@Model)
         }   
@@ -127,14 +132,16 @@ function(object, type="raw", labels=TRUE) {
                 A1 <- compute.A1.sample(samplestats=object@SampleStats, group=g, 
                                         meanstructure=meanstructure,
                                         information=object@Options$information)
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
+                                        data=object@Data, group=g,
                                         meanstructure=meanstructure)
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, group=g,
-                                       meanstructure=meanstructure)
+                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
+                                        data=object@Data, group=g,
+                                        meanstructure=meanstructure)
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])

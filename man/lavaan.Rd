@@ -4,13 +4,15 @@
 \description{
 Fit a latent variable model.}
 \usage{
-lavaan(model = NULL, model.type = "sem", meanstructure = "default",
+lavaan(model = NULL, data = NULL,
+    model.type = "sem", meanstructure = "default",
     int.ov.free = FALSE, int.lv.free = FALSE, fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, auto.fix.first = FALSE,
     auto.fix.single = FALSE, auto.var = FALSE, auto.cov.lv.x = FALSE,
     auto.cov.y = FALSE, auto.th = FALSE, auto.delta = FALSE,
-    data = NULL, std.ov = FALSE, missing = "default", ordered = NULL,
-    sample.cov = NULL, sample.mean = NULL, sample.nobs = NULL,
+    std.ov = FALSE, missing = "default", ordered = NULL,
+    sample.cov = NULL, sample.cov.rescale = "default",
+    sample.mean = NULL, sample.nobs = NULL,
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
     cluster = NULL, constraints = "", estimator = "default",
     likelihood = "default", information = "default",
@@ -27,6 +29,10 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (eg. the output of the \code{lavaanify()} function) is also
     accepted.}
+\item{data}{An optional data frame containing the observed variables used in
+    the model. If some variables are declared as ordered factors, lavaan will
+    treat them as ordinal variables. This can be overriden by the \code{ordered}
+    argument.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology
@@ -65,10 +71,6 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     are included in the model and set free.}
 \item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
-\item{data}{An optional data frame containing the observed variables used in
-    the model. If some variables are declared as ordered factors, lavaan will
-    treat them as ordinal variables. This can be overriden by the \code{ordered}
-    argument.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed
@@ -84,9 +86,19 @@ lavaan(model = NULL, model.type = "sem", meanstructure = "default",
     endogenous in the model. Importantly, all other variables will be treated 
     as numeric (overriding any attributes in the original data.frame.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
-    The rownames must contain the observed variable names.
+    The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
-    for each group.}
+    for each group. Note that if maximum likelihood estimation is used and 
+    \code{likelihood="normal"}, the user provided covariance matrix is
+    internally rescaled by multiplying it with a factor (N-1)/N, to ensure
+    that the covariance matrix has been divided by N. This can be turned off
+    by setting the \code{sample.cov.rescale} argument to \code{FALSE}.}
+\item{sample.cov.rescale}{If \code{TRUE}, the sample covariance matrix provided
+    by the user is internally rescaled by multiplying it with a factor (N-1)/N.
+    If \code{"default"}, the value is set depending on the estimator and the
+    likelihood option: it is set to \code{TRUE} if maximum likelihood 
+    estimation is used and \code{likelihood="normal"}, and \code{FALSE} 
+    otherwise.}
 \item{sample.mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
 \item{sample.nobs}{Number of observations if the full data frame is missing
