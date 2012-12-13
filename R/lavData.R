@@ -266,12 +266,14 @@ getDataFull <- function(data          = NULL,          # data.frame
     for(g in 1:ngroups) {
         # does the data contain all the observed variables
         # needed in the user-specified model for this group
-        idx.missing <- which(!(ov.names[[g]] %in% names(data)))
+        ov.all <- unique(ov.names[[g]], ov.names.x[[g]]) # no overlap if categ
+        idx.missing <- which(!(ov.all %in% names(data)))
         if(length(idx.missing)) {
             stop("lavaan ERROR: missing observed variables in dataset: ",
-                 paste(ov.names[[g]][idx.missing], collapse=" "))
+                 paste(ov.all[idx.missing], collapse=" "))
         }
     }
+
 
     # here, we now for sure all ov.names exist in the data.frame
     # create varTable
@@ -310,12 +312,13 @@ getDataFull <- function(data          = NULL,          # data.frame
         # extract variables in correct order
         ov.idx  <- ov$idx[match(ov.names[[g]],   ov$name)]
         exo.idx <- ov$idx[match(ov.names.x[[g]], ov$name)] 
+        all.idx <- unique(c(ov.idx, exo.idx))
 
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(data[, group] == group.label[g] &
-                                       complete.cases(data[,ov.idx]))
+                                       complete.cases(data[,all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[, group] == group.label[g]))
             } else {
@@ -324,7 +327,7 @@ getDataFull <- function(data          = NULL,          # data.frame
             }
         } else {
             if(missing == "listwise") {
-                case.idx[[g]] <- which(complete.cases(data[,ov.idx]))
+                case.idx[[g]] <- which(complete.cases(data[,all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else {
