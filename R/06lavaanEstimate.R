@@ -132,7 +132,7 @@ x2GLIST <- function(object, x=NULL, type="free") {
     GLIST
 }
 
-computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE) {
+computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -157,6 +157,7 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE) {
         } else {
             stop("only representation LISREL has been implemented for now")
         }
+        if(debug) print(Sigma.hat[[g]])
 
         if(extra) {
             # check if matrix is positive definite
@@ -380,7 +381,8 @@ computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
 
 computeObjective <- function(object, GLIST=NULL, 
                              samplestats=NULL, X = NULL,
-                             estimator="ML", verbose=FALSE, forcePD=TRUE) {
+                             estimator="ML", verbose=FALSE, forcePD=TRUE,
+                             debug=FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -400,6 +402,7 @@ computeObjective <- function(object, GLIST=NULL,
 
     # compute moments for all groups
     Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
+    if(debug) print(Sigma.hat)
     if(meanstructure && !categorical) {
         Mu.hat <- computeMuHat(object, GLIST=GLIST)
     } else if(categorical) {
@@ -1100,7 +1103,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
     if(estimator == "ML") {
-        Sigma.hat <- computeSigmaHat(object, extra=TRUE)
+        Sigma.hat <- computeSigmaHat(object, extra=TRUE, debug=options$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1, 

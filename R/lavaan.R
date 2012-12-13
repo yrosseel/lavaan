@@ -415,9 +415,25 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # constraints?
             if(sum(length(lavaanModel@x.ceq.idx) + 
                    length(lavaanModel@x.cin.idx)) == 0L) {
-                out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
-                              y=YX[,ov.y.idx])
-                x.beta <- out$coefficients
+
+                # forced zero intercept?
+                yvar <- vnames(lavaanParTable, "ov.y")
+                int.y.idx <- which(lavaanParTable$lhs == yvar &
+                                   lavaanParTable$op == "~1")
+                if(length(int.y.idx) > 0L && 
+                   lavaanParTable$ustart[int.y.idx] == 0) {
+                    lm.intercept <- FALSE
+                } else {
+                    lm.intercept <- TRUE
+                }
+                if(lm.intercept) {
+                    out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
+                                  y=YX[,ov.y.idx])
+                    x.beta <- out$coefficients
+                } else {
+                     out <- lm.fit(x=YX[,ov.x.idx], y=YX[,ov.y.idx])
+                     x.beta <- c(0,out$coefficients)
+                }
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
@@ -468,10 +484,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     # add intercept, then coefficients, remove resvar
                     A <- rbind(rep(0,ncol(A)), A[-c(rvar.idx),,drop=FALSE])
                 }
-                #A <- matrix( c( 0, -1, 1,  0,
-                #                0, 0,  -1, 1), 4, 2)
-                X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
+
+                # forced zero intercept?
+                yvar <- vnames(lavaanParTable, "ov.y")
+                int.y.idx <- which(lavaanParTable$lhs == yvar &
+                                   lavaanParTable$op == "~1")
+                if(length(int.y.idx) > 0L &&
+                   lavaanParTable$ustart[int.y.idx] == 0) {
+                    lm.intercept <- FALSE
+                } else {
+                    lm.intercept <- TRUE
+                }
                 Y <- YX[,ov.y.idx]; X.Y <- crossprod(X, Y)
+                if(lm.intercept) {
+                    X <- cbind(1,YX[,ov.x.idx])
+                } else {
+                    X <- YX[,ov.x.idx]
+                }
+                X.X <- crossprod(X)
                 out <- solve.QP(Dmat=X.X, dvec=X.Y, Amat=A, 
                                 bvec=rep(0, NCOL(A)), 
                                 meq=length(lavaanModel@x.ceq.idx))
