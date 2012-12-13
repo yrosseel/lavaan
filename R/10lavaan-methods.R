@@ -1025,16 +1025,21 @@ varTable <- vartable <- function(object, ov.names=names(object),
         VAR <- object@Data@ov
     } else if(class(object) == "data.frame") {
         OV <- lapply(object[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE],
-                     function(x)
+               function(x) {
+                  type.x <- class(x)[1]
+                  # treat integer as numeric!
+                  if(type.x == "integer")
+                      type.x <- "numeric"
                   list(nobs=sum(!is.na(x)),
-                       type=class(x)[1],
-                       mean=ifelse(class(x)[1] == "numeric",
+                       type=type.x,
+                       mean=ifelse(type.x == "numeric",
                                    mean(x, na.rm=TRUE), as.numeric(NA)),
-                       var=ifelse(class(x)[1] == "numeric",
+                       var=ifelse(type.x == "numeric",
                                   var(x, na.rm=TRUE), as.numeric(NA)),
                        nlevels=nlevels(x),
                        lnames=paste(levels(x),collapse="|")
-                      ))
+                      ) 
+               })
         VAR <- list()
         VAR$name    <- names(OV)
         VAR$idx  <- match(VAR$name, names(object))
