@@ -197,6 +197,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(ov.names.x) > 0L) {
             stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
         }
+
+        # 3. warn that this is still experimental
+        message("Please note: the PML estimator is still under development.\n",
+                "Future releases will improve speed, and allow for mixed ord/cont variables.\n",
+                "Research on how to compute a proper goodness-of-fit test is ongoing.\n")
     }
 
     # 1b. check data/sample.cov and get the number of groups
@@ -392,6 +397,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         start.time <- proc.time()[3]
     }
 
+    # prepare cache -- stuff needed for estimation, but also post-estimation
+    lavaanCache <- vector("list", length=lavaanData@ngroups)
+    if(estimator == "PML") {
+        TH <- computeTH(lavaanModel)
+        for(g in 1:lavaanData@ngroups) {
+            nvar <- ncol(lavaanData@X[[g]])
+            th.idx <- lavaanModel@th.idx[[g]]
+            # pairwise tables, as a long vector
+            PW <- pairwiseTables(data=lavaanData@X[[g]], no.x=nvar)$pairTables
+            bifreq <- as.numeric(unlist(PW))
+            ### FIXME!!! Check for zero cells!!
+            #zero.idx <- which(bifreq == 0)
+            #bifreq[zero.idx] <- 0.001 ####????
+            LONG <- LongVecInd(no.x               = nvar,
+                               all.thres          = TH[[g]],
+                               index.var.of.thres = th.idx)
+            lavaanCache[[g]] <- list(bifreq=bifreq, LONG=LONG)
+        }
+    }
+
+
     # 6. estimate free parameters
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
@@ -547,6 +573,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                samplestats  = lavaanSampleStats,
                                X            = lavaanData@X,
                                options      = lavaanOptions,
+                               cache        = lavaanCache,
                                control      = control)
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
             }
@@ -557,6 +584,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                samplestats  = lavaanSampleStats,
                                X            = lavaanData@X,
                                options      = lavaanOptions,
+                               cache        = lavaanCache,
                                control      = control)
             lavaanModel <- setModelParameters(lavaanModel, x = x)
         }
@@ -589,8 +617,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                              samplestats  = lavaanSampleStats,
                              options      = lavaanOptions,
                              data         = lavaanData,
-                             partable = lavaanParTable,
-                             control  = control)
+                             partable     = lavaanParTable,
+                             cache        = lavaanCache,
+                             control      = control)
         if(verbose) cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
@@ -607,6 +636,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      x        = x,
                                      VCOV     = VCOV,
                                      data     = lavaanData,
+                                     cache    = lavaanCache,
                                      control  = control)
         if(verbose) cat(" done.\n")
     } else {
@@ -657,6 +687,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   Data         = lavaanData,             # S4 class
                   SampleStats  = lavaanSampleStats,      # S4 class
                   Model        = lavaanModel,            # S4 class
+                  Cache        = lavaanCache,            # list
                   Fit          = lavaanFit               # S4 class
                  )
 

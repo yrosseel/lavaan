@@ -121,8 +121,8 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                           TH        = NULL,    # model-based thresholds + means
                           th.idx    = NULL,    # threshold idx per variable
                           num.idx   = NULL,    # which variables are numeric
-                          bifreq    = NULL,    # bivariate frequency vector
-                          X  = NULL) {  # data
+                          X         = NULL,    # raw data
+                          cache     = NULL) {  # housekeeping stuff
 
     # YR 3 okt 2012
     # the idea is to compute for each pair of variables, the model-based 
@@ -160,14 +160,14 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # shortcut for all ordered - tablewise
     if(all(ov.types == "ordered")) {
         # prepare for Myrsini's vectorization scheme
-        LONG <- LongVecTH.Ind.Rho(no.x               = nvar,
-                                  all.thres          = TH,
-                                  index.var.of.thres = th.idx, 
-                                  rho.xixj           = cors)
+        LONG2 <- LongVecTH.Rho(no.x               = nvar,
+                               all.thres          = TH,
+                               index.var.of.thres = th.idx, 
+                               rho.xixj           = cors)
         # get expected probability per table, per pair
-        PI <- pairwiseExpProbVec(x = LONG)
+        PI <- pairwiseExpProbVec(ind.vec = cache$LONG, th.rho.vec=LONG2)
         # get frequency per table, per pair
-        LogLik <- sum(bifreq * log(PI))
+        LogLik <- sum(cache$bifreq * log(PI))
 
     } else {
         for(j in seq_len(nvar-1L)) {

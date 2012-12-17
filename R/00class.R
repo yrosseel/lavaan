@@ -137,6 +137,7 @@ setClass("lavaan",
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "Model",           # internal matrix representation
+        Cache       = "list",            # housekeeping stuff
         Fit         = "Fit"              # fitted results
     ) 
 )

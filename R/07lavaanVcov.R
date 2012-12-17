@@ -1,5 +1,5 @@
 Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML", 
-                           information="observed") {
+                           cache=NULL, information="observed") {
 
     # compute information matrix
     if(information == "observed") {
@@ -9,12 +9,12 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
             group.weight <- TRUE
         }
         E <- computeObservedInformation(object, samplestats=samplestats, 
-                                        X=data@X,
+                                        X=data@X, cache=cache,
                                         estimator=estimator, type="free",
                                         group.weight=group.weight)
     } else {
         E <- computeExpectedInformation(object, samplestats=samplestats, 
-                                        data=data,
+                                        data=data, cache=cache,
                                         estimator=estimator)
     }
 
@@ -51,7 +51,7 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
 }
 
 Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
-                            partable=NULL, control=list()) {
+                            cache=NULL, partable=NULL, control=list()) {
 
     # number of bootstrap draws
     if(!is.null(options$bootstrap)) {
@@ -94,7 +94,7 @@ Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
 }
 
 Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
-                              estimator="ML") {
+                              cache=NULL, estimator="ML") {
 
     B0.group <- vector("list", samplestats@ngroups)
 
@@ -115,6 +115,7 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
                              th.idx    = object@th.idx[[g]],
                              num.idx   = object@num.idx[[g]],
                              X         = data@X[[g]],
+                             cache     = cache,
                              scores    = TRUE,
                              negative  = FALSE)
 
@@ -194,7 +195,7 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL,
+Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL, cache=NULL,
                              estimator = "ML", mimic = "lavaan") {
 
     # compute information matrix
@@ -270,19 +271,22 @@ Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL,
 }
 
 Nvcov.robust.huber.white <- function(object, samplestats=NULL, data=NULL,
-                             information="observed", estimator="ML") {
+                                     information="observed", cache=NULL, 
+                                     estimator="ML") {
 
     # compute standard Nvcov
     E.inv <- Nvcov.standard(object      = object,
                             samplestats = samplestats,
                             data        = data,
                             estimator   = estimator,
+                            cache       = cache,
                             information = information)
 
     # compute first.order Nvcov
     Nvcov <- Nvcov.first.order(object      = object, 
                                samplestats = samplestats,
                                data        = data,
+                               cache       = cache,
                                estimator   = estimator)
     B0 <- attr(Nvcov, "B0")
     B0.group <- attr(Nvcov, "B0.group")
@@ -298,7 +302,7 @@ Nvcov.robust.huber.white <- function(object, samplestats=NULL, data=NULL,
 
 
 estimateVCOV <- function(object, samplestats, options=NULL, data=NULL, 
-                         partable=NULL, control=list()) {
+                         partable=NULL, cache=NULL, control=list()) {
 
     estimator   <- options$estimator
     likelihood  <- options$likelihood
@@ -320,12 +324,14 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                        samplestats = samplestats,
                                        data        = data,
                                        estimator   = estimator, 
+                                       cache       = cache,
                                        information = information) )
 
     } else if(se == "first.order") {
         NVarCov <- try( Nvcov.first.order(object      = object,
                                           samplestats = samplestats,
                                           data        = data,
+                                          cache       = cache,
                                           estimator   = estimator) )
 
     } else if(se == "robust.sem") {
@@ -333,6 +339,7 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                          samplestats = samplestats,
                                          estimator   = estimator,
                                          mimic       = mimic,
+                                         cache       = cache,
                                          data        = data) )
 
     } else if(se == "robust.huber.white") {
@@ -340,6 +347,7 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                          samplestats = samplestats,
                                          data        = data,
                                          information = information,
+                                         cache       = cache,
                                          estimator   = estimator) )
 
     } else if(se == "bootstrap") {
@@ -347,6 +355,7 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                         samplestats = samplestats,
                                         options     = options,
                                         data        = data,
+                                        cache       = cache,
                                         partable    = partable,
                                         control     = control) )
     }

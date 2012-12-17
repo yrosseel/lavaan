@@ -189,7 +189,7 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
            
 
 computeTestStatistic <- function(object, partable=NULL, samplestats=NULL, 
-                                 options=NULL, x=NULL, VCOV=NULL,
+                                 options=NULL, x=NULL, VCOV=NULL, cache=NULL,
                                  data=NULL, control=list()) {
 
 
@@ -238,18 +238,20 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     } else {
         # for estimator PML, we compute the loglikelihood for the 
         # `unrestricted' model, and then compute the LRT (-2 logl - logl_un)
-        group.fx <- numeric( samplestats@ngroups )
-        for(g in 1:samplestats@ngroups) {
-            group.fx <- estimator.PML(Sigma.hat = samplestats@cov[[g]],
-                                      TH        = samplestats@th[[g]],
-                                      th.idx    = object@th.idx[[g]],
-                                      num.idx   = object@num.idx[[g]],
-                                      X         = data@X[[g]])
-        }
-        chisq.group <- 2 * (fx.group - group.fx) # LRT per group
+        #group.fx <- numeric( samplestats@ngroups )
+        #for(g in 1:samplestats@ngroups) {
+        #    group.fx <- estimator.PML(Sigma.hat = samplestats@cov[[g]],
+        #                              TH        = samplestats@th[[g]],
+        #                              th.idx    = object@th.idx[[g]],
+        #                              num.idx   = object@num.idx[[g]],
+        #                              cache     = cache[[g]],
+        #                              X         = data@X[[g]])
+        #}
+        #chisq.group <- 2 * (fx.group - group.fx) # LRT per group
 
         #cat("model fx = \n"); print(fx.group)
         #cat("unres fx = \n"); print(group.fx)
+        chisq.group <- rep(as.numeric(NA),  samplestats@ngroups)
     }
 
     # check for negative values

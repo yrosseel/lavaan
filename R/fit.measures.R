@@ -772,10 +772,14 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             wls.est <- WLS.est[[g]]
             wls.v   <- WLS.V[[g]]
             
-            wls.diff <- wls.obs - wls.est
-            t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
-            t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
-            gfi.group[g] <- 1 - t1/t2
+            if(is.null(wls.v)) {
+                gfi.group[g] <- as.numeric(NA)
+            } else {
+                wls.diff <- wls.obs - wls.est
+                t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
+                t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
+                gfi.group[g] <- 1 - t1/t2
+            }
         }
         if(G > 1) {
             ## FIXME: get the scaling right

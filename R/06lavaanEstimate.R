@@ -381,6 +381,7 @@ computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
 
 computeObjective <- function(object, GLIST=NULL, 
                              samplestats=NULL, X = NULL,
+                             cache=NULL,
                              estimator="ML", verbose=FALSE, forcePD=TRUE,
                              debug=FALSE) {
 
@@ -487,8 +488,8 @@ computeObjective <- function(object, GLIST=NULL,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
-                                      bifreq    = samplestats@bifreq[[g]],
-                                      X         = X[[g]])
+                                      X         = X[[g]],
+                                      cache     = cache[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
         }
@@ -783,7 +784,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
 
 computeGradient <- function(object, GLIST=NULL, samplestats=NULL, 
-                            X=NULL, type="free", 
+                            X=NULL, cache=NULL, type="free", 
                             estimator="ML", verbose=FALSE, forcePD=TRUE, 
                             group.weight=TRUE, constraints=TRUE,
                             Delta=NULL) {
@@ -961,8 +962,8 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
                              TH        = TH[[g]],
                              th.idx    = th.idx[[g]],
                              num.idx   = num.idx[[g]],
-                             bifreq    = samplestats@bifreq[[g]],
-                             X         = X[[g]])
+                             X         = X[[g]],
+                             cache     = cache[[g]])
 
             # chain rule
             group.dx <- as.numeric(t(d1) %*% Delta[[g]])
@@ -987,7 +988,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
 
 estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
-                          options=NULL, control=list()) {
+                          options=NULL, cache=list(), control=list()) {
 
     estimator     <- options$estimator
     verbose       <- options$verbose
@@ -1021,6 +1022,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
         fx <- computeObjective(object, GLIST=GLIST, 
                                samplestats=samplestats, X=X,
+                               cache=cache,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
@@ -1049,6 +1051,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
         dx <- computeGradient(object, GLIST=GLIST, samplestats=samplestats,
                               X=X,
+                              cache=cache,
                               type="free", 
                               group.weight=group.weight, ### check me!!
                               estimator=estimator,

@@ -104,12 +104,16 @@ independence.model.fit <- function(object) {
               th.idx         = lavaanSampleStats@th.idx,
               debug          = lavaanOptions$debug)
 
+    # cache
+    lavaanCache <- object@Cache
+
     # 6.
     x <- VCOV <- TEST <- NULL
     if(do.fit) {
         x <- estimateModel(lavaanModel,
                            samplestats  = lavaanSampleStats,
                            X            = object@Data@X,
+                           cache        = lavaanCache,
                            options      = lavaanOptions)
                            # control???
         lavaanModel <- setModelParameters(lavaanModel, x = x)
@@ -132,6 +136,7 @@ independence.model.fit <- function(object) {
                                  options       = test.options,
                                  x             = x,
                                  VCOV          = VCOV,
+                                 cache         = lavaanCache,
                                  data          = lavaanData)
 
     # 9. collect information about model fit (S4)
@@ -151,6 +156,7 @@ independence.model.fit <- function(object) {
                   Data        = lavaanData,             # S3 class
                   SampleStats = lavaanSampleStats,      # S4 class
                   Model       = lavaanModel,            # S4 class
+                  Cache       = lavaanCache,
                   Fit         = lavaanFit               # S4 class
                  )
 

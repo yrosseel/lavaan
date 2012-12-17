@@ -4,6 +4,7 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
                                        # is no Delta is provided, we compute 
                                        # Delta for the free parameters only
                                        Delta=computeDelta(object), 
+                                       cache=NULL,
                                        extra=FALSE) {
 
     # compute WLS.V
@@ -102,6 +103,7 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
 
 computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
                                        type="free", estimator="ML", 
+                                       cache=NULL,
                                        group.weight=TRUE) {
 
     # computing the Richardson extrapolation
@@ -116,24 +118,24 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
 
         g.left <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.left), 
-                            samplestats=samplestats, X=X,
+                            samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator, 
                             group.weight=group.weight)
         g.left2 <-    
             computeGradient(object=object, GLIST=x2GLIST(object, x.left2),
-                            samplestats=samplestats, X=X,
+                            samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator, 
                             group.weight=group.weight)
 
         g.right <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.right),
-                            samplestats=samplestats, X=X,
+                            samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator,
                             group.weight=group.weight)
 
         g.right2 <- 
             computeGradient(object=object, GLIST=x2GLIST(object, x.right2),
-                            samplestats=samplestats, X=X,
+                            samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator,
                             group.weight=group.weight)
     
