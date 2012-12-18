@@ -162,8 +162,12 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
         if(extra) {
             # check if matrix is positive definite
             ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(ev < 0) || sum(ev) == 0) {
+            if(any(ev < .Machine$double.eps) || sum(ev) == 0) {
+                Sigma.hat.inv <-  MASS:::ginv(Sigma.hat[[g]])
+                Sigma.hat.log.det <- log(.Machine$double.eps)
                 attr(Sigma.hat[[g]], "po") <- FALSE
+                attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
+                attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
             } else {
                 ## FIXME
                 ## since we already do an 'eigen' decomposition, we should
@@ -707,10 +711,10 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
             if(attr(Sigma.hat[[g]], "po") == FALSE) {
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??
                 # CURRENTLY: stop
-                stop("computeGradient: Sigma.hat is not positive definite\n")
+                warning("computeGradient: Sigma.hat is not positive definite\n")
                 #Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
-                #Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet=TRUE)
-                #Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+                Sigma.hat.inv <- MASS:::ginv(Sigma.hat[[g]])
+                Sigma.hat.log.det <- log(.Machine$double.eps)
             } else {
                 Sigma.hat.inv <-  attr(Sigma.hat[[g]], "inv")
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
@@ -1111,7 +1115,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1, 
                                     paste("in group",g,".",sep=""), ".")
-                warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite; check your model and/or starting parameters", group.txt)
+                if(debug) print(Sigma.hat[[g]])
+                stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite; check your model and/or starting parameters", group.txt)
+                # FIXME: should we stop here?? or try anyway?
                 x <- start.x
                 fx <- as.numeric(NA)
                 attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)

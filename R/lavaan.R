@@ -482,9 +482,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
-                attr(x, "fx") <-
-                computeObjective(lavaanModel, samplestats = lavaanSampleStats,
-                                 estimator = lavaanOptions$estimator)
+                FX <- try(computeObjective(lavaanModel, 
+                                           samplestats = lavaanSampleStats,
+                                           estimator = lavaanOptions$estimator))
+                if(inherits(FX, "try-error")) {
+                    # eg non-full rank design matrix
+                    FX <- as.numeric(NA)
+                    attr(FX, "fx.group") <- rep(as.numeric(NA), 
+                                                lavaanData@ngroups)
+                    attr(x, "fx") <- as.numeric(NA)
+                } 
+                attr(x, "fx") <- FX
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
 
                 require(quadprog)

@@ -178,10 +178,13 @@ lavSampleStatsFromData <- function(Data          = NULL,
                 tmp <- try(inv.chol(cov[[g]], logdet=TRUE))
                 if(inherits(tmp, "try-error")) {
                     if(ngroups > 1) {
-                        stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+                        warning("lavaan WARNING sample covariance can not be inverted in group: ", g)
                     } else {
-                        stop("lavaan ERROR: sample covariance can not be inverted")
+                        warning("lavaan WARNING: sample covariance can not be inverted")
                     }
+                    # emergency values
+                    icov[[g]] <- MASS:::ginv(cov[[g]])
+                    cov.log.det[[g]] <- log(.Machine$double.eps)
                 } else {
                     cov.log.det[[g]] <- attr(tmp, "logdet")
                     attr(tmp, "logdet") <- NULL
