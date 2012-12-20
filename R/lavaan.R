@@ -484,7 +484,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "control") <- control
                 FX <- try(computeObjective(lavaanModel, 
                                            samplestats = lavaanSampleStats,
-                                           estimator = lavaanOptions$estimator))
+                                           estimator = lavaanOptions$estimator),
+                          silent=TRUE)
                 if(inherits(FX, "try-error")) {
                     # eg non-full rank design matrix
                     FX <- as.numeric(NA)

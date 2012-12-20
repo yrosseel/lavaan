@@ -325,14 +325,16 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                        data        = data,
                                        estimator   = estimator, 
                                        cache       = cache,
-                                       information = information) )
+                                       information = information),
+                         silent=TRUE )
 
     } else if(se == "first.order") {
         NVarCov <- try( Nvcov.first.order(object      = object,
                                           samplestats = samplestats,
                                           data        = data,
                                           cache       = cache,
-                                          estimator   = estimator) )
+                                          estimator   = estimator),
+                         silent=TRUE )
 
     } else if(se == "robust.sem") {
         NVarCov <- try( Nvcov.robust.sem(object      = object,
@@ -340,7 +342,8 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                          estimator   = estimator,
                                          mimic       = mimic,
                                          cache       = cache,
-                                         data        = data) )
+                                         data        = data),
+                        silent=TRUE )
 
     } else if(se == "robust.huber.white") {
         NVarCov <- try( Nvcov.robust.huber.white(object      = object,
@@ -348,7 +351,8 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                          data        = data,
                                          information = information,
                                          cache       = cache,
-                                         estimator   = estimator) )
+                                         estimator   = estimator),
+                        silent=TRUE )
 
     } else if(se == "bootstrap") {
         NVarCov <- try( Nvcov.bootstrap(object      = object,
@@ -357,7 +361,8 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
                                         data        = data,
                                         cache       = cache,
                                         partable    = partable,
-                                        control     = control) )
+                                        control     = control),
+                        silent=TRUE )
     }
 
     if(! inherits(NVarCov, "try-error") ) {

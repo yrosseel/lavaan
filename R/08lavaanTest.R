@@ -323,7 +323,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                                                 estimator=estimator,
                                                 extra=TRUE)
             }
-            E.inv <- try(solve(E))
+            E.inv <- try(solve(E), silent=TRUE)
             if(inherits(E.inv, "try-error")) {
                 TEST[[2]] <- list(test=test, stat=as.numeric(NA), 
                     stat.group=rep(as.numeric(NA), samplestats@ngroups),

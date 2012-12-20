@@ -543,7 +543,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower"] <- 0
         } else {
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
+            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root,
+                            silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -574,7 +575,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower.scaled"] <- 0
         } else {
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root)
+            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
+                            silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -595,7 +597,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
             indices["rmsea.ci.upper"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
+                            silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -624,7 +627,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                                        upper.lambda(0) < 0) {
             indices["rmsea.ci.upper.scaled"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
+                            silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
