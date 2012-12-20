@@ -37,6 +37,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    sample.cov.rescale = "default",
                    sample.mean        = NULL,
                    sample.nobs        = NULL,
+                   ridge              = 1e-5,
 
                    # multiple groups
                    group              = NULL,
@@ -338,6 +339,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        missing.h1    = (lavaanOptions$missing != "listwise"),
                        WLS.V         = WLS.V,
                        NACOV         = NACOV,
+                       ridge       = ridge,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
@@ -351,8 +353,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            meanstructure = lavaanOptions$meanstructure,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
+                           ridge       = ridge,
                            rescale       = lavaanOptions$sample.cov.rescale)
-                           
     } else {
         # no data
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
@@ -709,7 +711,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.label = NULL,
+    sample.nobs = NULL, ridge = 1e-5,
+    group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
@@ -741,7 +744,8 @@ growth <- function(model = NULL, data = NULL,
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.label = NULL,
+    sample.nobs = NULL, ridge = 1e-5,
+    group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",

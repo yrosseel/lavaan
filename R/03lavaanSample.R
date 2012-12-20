@@ -15,6 +15,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    meanstructure = FALSE,
                                    WLS.V         = NULL,
                                    NACOV         = NULL,
+                                   ridge         = 1e-5,
                                    verbose       = FALSE) {
 
     # get X and Mp
@@ -182,13 +183,24 @@ lavSampleStatsFromData <- function(Data          = NULL,
                     } else {
                         warning("lavaan WARNING: sample covariance can not be inverted")
                     }
-                    # emergency values
-                    icov[[g]] <- MASS:::ginv(cov[[g]])
-                    cov.log.det[[g]] <- log(.Machine$double.eps)
+                    # ok, try ridging for exogenous x only
+                    ## FIXME -- only x (but all for now)
+                    diag(cov[[g]])[2:6] <- diag(cov[[g]])[2:6] + ridge
+                    tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
+                    if(inherits(tmp, "try-error")) {
+                        # emergency values
+                        icov[[g]] <- MASS:::ginv(cov[[g]])
+                        cov.log.det[[g]] <- log(.Machine$double.eps)
+                    } else {
+                        cov.log.det[[g]] <- attr(tmp, "logdet")
+                        attr(tmp, "logdet") <- NULL
+                        icov[[g]]        <- tmp
+                    }
                 } else {
                     cov.log.det[[g]] <- attr(tmp, "logdet")
                     attr(tmp, "logdet") <- NULL
                     icov[[g]]        <- tmp
+                    ridge <- 0.0
                 }
             }
         }
@@ -334,6 +346,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
+                       ridge        = ridge,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,                     
                        NACOV        = NACOV,
@@ -357,6 +370,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       mimic         = "lavaan",
                                       WLS.V         = NULL,
                                       NACOV         = NULL,
+                                      ridge         = 1e-5,
                                       meanstructure = FALSE) {
 
     # matrix -> list
@@ -487,14 +501,28 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
         tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
         if(inherits(tmp, "try-error")) {
             if(ngroups > 1) {
-                stop("lavaan ERROR: sample covariance can not be inverted in group: ", g)
+                warning("lavaan WARNING sample covariance can not be inverted in group: ", g)
             } else {
-                stop("lavaan ERROR: sample covariance can not be inverted")
+                warning("lavaan WARNING: sample covariance can not be inverted")
+            }
+            # ok, try ridging for exogenous x only
+            ## FIXME -- only x (but all for now)
+            diag(cov[[g]])[2:6] <- diag(cov[[g]])[2:6] + ridge
+            tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
+            if(inherits(tmp, "try-error")) {
+                # emergency values
+                icov[[g]] <- MASS:::ginv(cov[[g]])
+                cov.log.det[[g]] <- log(.Machine$double.eps)
+            } else {
+                cov.log.det[[g]] <- attr(tmp, "logdet")
+                attr(tmp, "logdet") <- NULL
+                icov[[g]]        <- tmp
             }
         } else {
             cov.log.det[[g]] <- attr(tmp, "logdet")
             attr(tmp, "logdet") <- NULL
             icov[[g]]        <- tmp
+            ridge <- 0.0
         }
 
         # WLS.obs
@@ -556,6 +584,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
+                       ridge        = ridge,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,
                        NACOV        = NACOV,

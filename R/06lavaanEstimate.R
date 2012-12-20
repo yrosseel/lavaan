@@ -420,6 +420,11 @@ computeObjective <- function(object, GLIST=NULL,
     fx.group <- numeric( samplestats@ngroups )
     for(g in 1:samplestats@ngroups) {
 
+        # ridge?
+        if( samplestats@ridge > 0.0 ) {
+            diag(Sigma.hat[[g]]) <- diag(Sigma.hat[[g]]) + samplestats@ridge
+        }
+
         # incomplete data and fiml?
         if(samplestats@missing.flag) {
             if(estimator == "ML") {
