@@ -177,7 +177,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
         tmp <- lv.names[ !lv.names %in% c(v.ind, eqs.y) ]
         # make sure order is the same as lv.names
-        out <- lv.names[ match(tmp, lv.names) ]
+        out <- lv.names[ which(lv.names %in% tmp) ]
     } else
  
     # dependent ov (but not also indicator or x)
@@ -190,7 +190,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
         # make sure order is the same as ov.names
-        out <- ov.names[ match(tmp, ov.names) ]
+        out <- ov.names[ which(ov.names %in% tmp) ]
     } else
 
     # dependent lv (but not also indicator or x)
@@ -203,7 +203,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x) &
                        eqs.y %in% lv.names ]
         # make sure order is the same as lv.names
-        out <- lv.names[ match(tmp, lv.names) ]
+        out <- lv.names[ which(lv.names %in% tmp) ]
     }
 
     out
