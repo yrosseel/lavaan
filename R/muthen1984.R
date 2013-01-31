@@ -16,7 +16,6 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # 
     # Friday 13 July: merge exo + non-exo code
     # Monday 16 July: fixed sign numeric in WLS.W; I think we got it right now
-
     nvar <- ncol(Data); N <- nrow(Data)
     nTH <- ov.levels - 1L; nTH[nTH == -1L] <- 1L
     nth <- sum(nTH)
@@ -30,13 +29,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     pstar <- nvar*(nvar-1)/2
 
     if(verbose) {
-        cat("Preparing for WLS estimation -- STEP 1 + 2\n")
-        cat("  number of endo variables: ", nvar, "\n")
-        cat("  endo variable names:\n"); print(ov.names); cat("\n")
-        cat("  endo ov types:\n"); print(ov.types); cat("\n")
-        cat("  endo ov levels:\n "); print(ov.levels); cat("\n")
-        cat("  number of exo variables: ", nexo, "\n")
-        cat("  exo variable names:\n"); print(ov.names.x); cat("\n")
+        cat("\nPreparing for WLS estimation -- STEP 1 + 2\n")
+        cat("Number of endogenous variables: ", nvar, "\n")
+        cat("Endogenous variable names:\n"); print(ov.names); cat("\n")
+        cat("Endogenous ov types:\n"); print(ov.types); cat("\n")
+        cat("Endogenous ov levels:\n "); print(ov.levels); cat("\n")
+        cat("Number of exogenous variables: ", nexo, "\n")
+        cat("Exogenous variable names:\n"); print(ov.names.x); cat("\n")
     }
 
     # means and thresholds
@@ -123,21 +122,30 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     if(verbose) {
         cat("STEP 1: univariate statistics\n")
         cat("Threshold + means:\n")
-        print(unlist(TH))
+        TTHH <- unlist(TH)
+        names(TTHH) <- unlist(TH.NAMES)
+        print(TTHH)
         cat("Slopes (if any):\n")
+        colnames(SLOPES) <- ov.names.x
+        rownames(SLOPES) <- ov.names
         print(SLOPES)
         cat("Variances:\n")
+        names(VAR) <- ov.names
         print(unlist(VAR))
     }
 
     # stage two
+ 
+    if(verbose) cat("\n\nSTEP 2: covariances/correlations:\n")
 
     # LAVAAN style: col-wise! (LISREL style: row-wise using vechr.idx)
     PSTAR <- matrix(0, nvar, nvar)
     PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
-            if(verbose) { cat(" i = ", i, " j = ", j, "\n") }
+            if(verbose) { cat(" i = ", i, " j = ", j, 
+                              "[",ov.names[i], "-", ov.names[j], "] ",
+                              "(",ov.types[i], "-", ov.types[j], ")\n") }
             pstar.idx <- PSTAR[i,j]
             COR.NAMES[pstar.idx] <- paste(ov.names[i],"~~",ov.names[j],sep="")
             if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
@@ -168,7 +176,6 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     }
 
     if(verbose) {
-        cat("\n\nSTEP 2: covariances/correlations:\n")
         print(COR)
     }
 

@@ -340,6 +340,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        WLS.V         = WLS.V,
                        NACOV         = NACOV,
                        ridge         = ridge,
+                       debug         = lavaanOptions$debug,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
@@ -353,7 +354,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            meanstructure = lavaanOptions$meanstructure,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
-                           ridge       = ridge,
+                           ridge         = ridge,
                            rescale       = lavaanOptions$sample.cov.rescale)
     } else {
         # no data

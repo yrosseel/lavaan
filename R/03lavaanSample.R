@@ -16,6 +16,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    WLS.V         = NULL,
                                    NACOV         = NULL,
                                    ridge         = 1e-5,
+                                   debug         = FALSE,
                                    verbose       = FALSE) {
 
     # ridge default
@@ -129,7 +130,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
                               group = g, # for error messages only
                               WLS.W = WLS.W,
-                              verbose=FALSE)
+                              verbose=debug)
             if(verbose) cat("done\n")
             # if (and only if) all variables are ordinal, store pairwise
             # tables
