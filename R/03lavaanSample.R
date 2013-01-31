@@ -18,6 +18,9 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    ridge         = 1e-5,
                                    verbose       = FALSE) {
 
+    # ridge default
+    ridge.eps <- 0.0
+
     # get X and Mp
     if(!is.null(Data)) {
         X <- Data@X; Mp <- Data@Mp
@@ -185,7 +188,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                     }
                     # ok, try ridging for exogenous x only
                     ## FIXME -- only x (but all for now)
-                    diag(cov[[g]])[2:6] <- diag(cov[[g]])[2:6] + ridge
+                    ridge.eps <- ridge
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
                     tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
                     if(inherits(tmp, "try-error")) {
                         # emergency values
@@ -200,7 +204,6 @@ lavSampleStatsFromData <- function(Data          = NULL,
                     cov.log.det[[g]] <- attr(tmp, "logdet")
                     attr(tmp, "logdet") <- NULL
                     icov[[g]]        <- tmp
-                    ridge <- 0.0
                 }
             }
         }
@@ -346,7 +349,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
-                       ridge        = ridge,
+                       ridge        = ridge.eps,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,                     
                        NACOV        = NACOV,
@@ -372,6 +375,9 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       NACOV         = NULL,
                                       ridge         = 1e-5,
                                       meanstructure = FALSE) {
+
+    # ridge default
+    ridge.eps <- 0.0
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
@@ -507,7 +513,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             }
             # ok, try ridging for exogenous x only
             ## FIXME -- only x (but all for now)
-            diag(cov[[g]])[2:6] <- diag(cov[[g]])[2:6] + ridge
+            ridge.eps <- ridge
+            diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
             tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
             if(inherits(tmp, "try-error")) {
                 # emergency values
@@ -522,7 +529,6 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             cov.log.det[[g]] <- attr(tmp, "logdet")
             attr(tmp, "logdet") <- NULL
             icov[[g]]        <- tmp
-            ridge <- 0.0
         }
 
         # WLS.obs
@@ -584,7 +590,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
-                       ridge        = ridge,
+                       ridge        = ridge.eps,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,
                        NACOV        = NACOV,

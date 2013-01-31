@@ -1119,9 +1119,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1, 
-                                    paste("in group",g,".",sep=""), ".")
+                                    paste(" in group ",g,".",sep=""), ".")
                 if(debug) print(Sigma.hat[[g]])
-                stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite; check your model and/or starting parameters", group.txt)
+                stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
                 # FIXME: should we stop here?? or try anyway?
                 x <- start.x
                 fx <- as.numeric(NA)

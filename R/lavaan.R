@@ -339,7 +339,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        missing.h1    = (lavaanOptions$missing != "listwise"),
                        WLS.V         = WLS.V,
                        NACOV         = NACOV,
-                       ridge       = ridge,
+                       ridge         = ridge,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {

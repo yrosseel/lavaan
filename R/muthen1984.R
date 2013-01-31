@@ -350,6 +350,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     B <- rbind( cbind(A11,A12),
                 cbind(A21,A22) )
     B.inv <- solve(B)
+    ## FIXME: we need to invert B as a partioned matrix
 
     #  weight matrix (correlation metric)
     WLS.W <- B.inv %*% INNER %*% t(B.inv)
