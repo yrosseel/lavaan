@@ -66,15 +66,17 @@ setModelParameters <- function(object, x=NULL) {
     }
 
     # categorical? set theta elements (if any)
+    # TODO: if any of those is actually in PSI, move this
+    # element to PSI
     if(object@categorical) {
         nmat <- object@nmat
         if(object@representation == "LISREL") {
             theta.idx <- which(names(tmp) == "theta")
-            Sigma.hat <- computeSigmaHat(object, GLIST=tmp)
             for(g in 1:object@ngroups) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
                 num.idx <- object@num.idx[[g]]
+                TD.orig <- diag(tmp[[theta.idx[g]]])
                 if(length(num.idx) > 0L) {
                     diag(tmp[[theta.idx[g]]])[-num.idx] <- 0.0
                 } else {
@@ -82,12 +84,25 @@ setModelParameters <- function(object, x=NULL) {
                 }
                 MLIST <- tmp[mm.in.group]
                 Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+
+                ### FIXME, not ok for multigroup when delta neq I
+                ### use VY instead?
                 if(length(num.idx) > 0L) {
                     diag(tmp[[theta.idx[g]]])[-num.idx] <-
                         (1 - diag(Sigma.hat)[-num.idx])
                 } else {
                     diag(tmp[[theta.idx[g]]]) <- (1 - diag(Sigma.hat))
                 }
+                # if diagonal element is not in m.user.idx, leave it alone
+                # eg. indicator that is also dependent in other regression
+                # it should move to PSI
+                #nvar <- ncol(Sigma.hat)
+                #diag.idx <- seq.int(1L,nvar^2,nvar+1L)
+                #m.user.idx <- object@m.user.idx[[ theta.idx[g] ]]
+                #keep.idx <- which(is.na(match(diag.idx, m.user.idx)))
+                #if(length(keep.idx) > 0L) {
+                #    diag(tmp[[theta.idx[g]]])[keep.idx] <- TD.orig[keep.idx]
+                #}
             }
         } else {
             cat("FIXME: deal with theta elements in the categorical case")

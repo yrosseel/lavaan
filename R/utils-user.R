@@ -797,7 +797,7 @@ getLIST <- function(FLAT=NULL,
         ord.idx <- which(lhs %in% ov.names.ord &
                          op == "~~" &
                          lhs == rhs)
-        ustart[ord.idx] <- 1L
+        ustart[ord.idx] <- 0L
           free[ord.idx] <- 0L
     }
 
