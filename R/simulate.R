@@ -112,7 +112,7 @@ simulateData <- function(
                                   skewness = skewness,  # FIXME: per group?
                                   kurtosis = kurtosis)
             # rescale
-            X[[g]] <- scale(Z, center = Mu.hat[[g]],
+            X[[g]] <- scale(Z, center = -Mu.hat[[g]],
                                scale  = 1/sqrt(diag(Sigma.hat[[g]])))
         }
 
