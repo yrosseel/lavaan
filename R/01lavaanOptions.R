@@ -378,9 +378,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(opt$estimator != "ML") {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
-        } 
-        if(opt$sample.cov.rescale != "default") {
-            stop("sample.cov.rescale argument is only relevant if estimator = ML")
+        }
+        if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- FALSE
+        } else {
+            warning("sample.cov.rescale argument is only relevant if estimator = ML")
         }
     } else { # ml
         if(opt$likelihood == "default") {
