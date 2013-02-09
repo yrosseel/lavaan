@@ -45,7 +45,8 @@ export("lavaan",
        "fitMeasures", "fitmeasures",
        "inspectSampleCov",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
-       "simulateData"
+       "simulateData",
+       "estfun", "lavScores"
       )
 
 # export Classes

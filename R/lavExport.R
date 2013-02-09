@@ -17,7 +17,10 @@ lavExport <- function(object, target="lavaan", prefix="sem",
 
     # 2. create syntax file
     if(target == "lavaan") {
+        header <- ""
         syntax <- lav2lavaan(object)
+        footer <- ""
+        out <- paste(header, syntax, footer, sep="")
     } else if(target == "mplus") {
         header <- mplusHeader(data.file=data.file, 
                               group.label=object@Data@group.label,
@@ -44,11 +47,17 @@ lavExport <- function(object, target="lavaan", prefix="sem",
         dir.create(path=dir.name)
         input.file <- paste(dir.name, "/", prefix, ".", target, ".in", sep="")
         cat(out, file=input.file, sep="")
-        for(g in 1:ngroups) {
-            write.table(object@Data@X[[g]],
-                        file=paste(dir.name, "/", data.file[g], sep=""),
-                        na="-999999",
-                        col.names=FALSE, row.names=FALSE, quote=FALSE)
+
+        # write data (if available)
+        if(identical(object@Data@data.type, "full")) {
+            for(g in 1:ngroups) {
+                write.table(object@Data@X[[g]],
+                            file=paste(dir.name, "/", data.file[g], sep=""),
+                            na="-999999",
+                            col.names=FALSE, row.names=FALSE, quote=FALSE)
+            }
+        } else {
+            warning("raw data not available")
         }
         return(invisible(out))
     } else {
@@ -83,8 +92,8 @@ lav2check <- function(lav) {
 
     # if eq.id not all zero, create labels instead
     if(!is.null(lav$eq.id) && !all(lav$eq.id == 0L)) {
-        lav$label <- as.character(lav$eq.id)
-        lav$label[lav$label == "0"] <- ""
+        lav$label <- paster("p",as.character(lav$eq.id), sep="")
+        lav$label[lav$label == "p0"] <- ""
     }
  
     lav
