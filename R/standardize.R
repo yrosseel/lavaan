@@ -1,3 +1,24 @@
+standardize.est.lv.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.lv(object=object, partable=partable, est=x, cov.std=cov.std)
+}
+
+standardize.est.all.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.all(object=object, partable=partable, est=x, est.std=NULL,
+                        cov.std=cov.std)
+}
+
+standardize.est.all.nox.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.all.nox(object=object, partable=partable, est=x, 
+                            est.std=NULL, cov.std=cov.std)
+}
+
+unstandardize.est.ov.x <- function(x, object) {
+    partable <- object@ParTable
+    partable$ustart <- x
+    unstandardize.est.ov(partable=partable, ov.var=object@SampleStats@var, 
+                         cov.std=TRUE)
+}
+
 standardize.est.lv <- function(object, partable=NULL, est=NULL,
                                cov.std = TRUE) {
 

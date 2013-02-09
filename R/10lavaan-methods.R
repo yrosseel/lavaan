@@ -785,6 +785,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     LIST <- inspect(object, "list")
+    unco.idx <- which(LIST$unco > 0L)
     LIST <- LIST[,c("lhs", "op", "rhs", "group")]
 
     # add std and std.all columns
@@ -798,7 +799,25 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 
     # add 'se' for standardized parameters
     # TODO!!
+    if(type == "std.lv") {
+        JAC <- lavJacobianD(func=standardize.est.lv.x, x=object@Fit@est,
+                            object=object)
+    } else if(type == "std.all") {
+        JAC <- lavJacobianD(func=standardize.est.all.x, x=object@Fit@est,
+                            object=object)
+    } else if(type == "std.nox") {
+        JAC <- lavJacobianD(func=standardize.est.all.nox.x, x=object@Fit@est,
+                            object=object)
+    }
+    JAC <- JAC[unco.idx,unco.idx]
+    VCOV <- as.matrix(vcov(object, labels=FALSE))
+    # handle eq constraints in fit@Model@eq.constraints.K
+    if(object@Model@eq.constraints) {
+        JAC <- JAC %*% object@Model@eq.constraints.K       
+    }
+    COV <- JAC %*% VCOV %*% t(JAC)
     LIST$se <- rep(NA, length(LIST$lhs))
+    LIST$se[unco.idx] <- sqrt(diag(COV))
 
     # add 'z' column
     tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
