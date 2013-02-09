@@ -171,6 +171,14 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- 1L
 
+        # new 0.5-12: catch lower-elements in theta/psi
+        idx.lower <- which(tmp.mat %in% c("theta","psi") & tmp.row > tmp.col)
+        if(length(idx.lower) > 0L) {
+            tmp <- tmp.row[idx.lower]
+            tmp.row[idx.lower] <- tmp.col[idx.lower]
+            tmp.col[idx.lower] <- tmp
+        }
+
         if(extra) {
             # mRows
             mmRows <- list(tau    = nth,
