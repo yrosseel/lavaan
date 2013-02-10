@@ -66,6 +66,11 @@ simulateData <- function(
     idx <- which(is.na(lav$ustart))
     if(length(idx) > 0L) lav$ustart[idx] <- 0.0
 
+    # if some variances are still zero (ordinal variances), set them
+    # to 1.0
+    idx <- which(lav$op == "~~" & lav$ustart == 0 & lav$lhs == lav$rhs)
+    if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+
 
     # unstandardize 
     if(!is.null(ov.var)) {
