@@ -882,7 +882,8 @@ getLIST <- function(FLAT=NULL,
             }
 
             # latent response scaling
-            if(any(op == "~*~" & group == g)) {
+            if(any(op == "~*~" & group == g) &&
+               ("thresholds" %in% group.equal)) {
                 delta.idx <- which(op == "~*~" & group == g)
                   free[ delta.idx ] <- 1L
                 ustart[ delta.idx ] <- as.numeric(NA)
