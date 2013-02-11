@@ -836,7 +836,7 @@ getLIST <- function(FLAT=NULL,
         ord.idx <- which(lhs %in% ov.names.ord &
                          op == "~~" &
                          lhs == rhs)
-        ustart[ord.idx] <- 0L
+        ustart[ord.idx] <- 1L ## FIXME!! or 0?? (0 breaks ex3.12)
           free[ord.idx] <- 0L
     }
 
