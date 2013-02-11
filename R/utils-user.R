@@ -17,7 +17,8 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
     stopifnot(is.list(partable), !missing(type),
               type %in% c("lv",   "ov", "lv.regular",
-                          "lv.x", "ov.x", "ov.num", "ov.ord", "th",
+                          "lv.x", "ov.x", "ov.num",
+                          "ov.ord", "th", "th.mean",
                           "lv.y", "ov.y",
                           "ov.nox"))
 
@@ -168,6 +169,26 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
                       function(x) paste(x, "|t", 1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")))
     } else
 
+    # thresholds and mean/intercepts of numeric variables
+    if(type == "th.mean") {
+        ## FIXME!! do some elegantly!
+        ord.names <- vnames(partable, "ov.ord", group=group)
+        all.names <- vnames(partable, "ov.nox", group=group)
+        lhs <- partable$lhs[ partable$op == "|" ]
+        rhs <- partable$rhs[ partable$op == "|" ]
+        TH <- unique(paste(lhs, "|", rhs, sep=""))
+        # return in the right order
+        out <- unlist(lapply(all.names,
+                      function(x) {
+                      if(x %in% ord.names) {
+                            paste(x, "|t", 
+                                1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")
+                      } else {
+                          x
+                      }
+                      }))
+    } else
+
 
     # exogenous lv's
     if(type == "lv.x") {
@@ -204,6 +225,24 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
                        eqs.y %in% lv.names ]
         # make sure order is the same as lv.names
         out <- lv.names[ which(lv.names %in% tmp) ]
+    }
+
+    out
+}
+
+getIDX <- function(partable, type="th", group=NULL) {
+
+    stopifnot(is.list(partable), !missing(type),
+              type %in% c("th"))
+
+    if(type == "th") {
+        ovn <- vnames(partable, type="ov.nox", group=group)
+        ov.num <- vnames(partable, type="ov.num", group=group)
+        th  <- vnames(partable, type="th.mean", group=group)
+        th[th %in% ov.num] <- "__NUM__"
+        th1 <- gsub("\\|t[0-9]*","",th)
+        out <- match(th1, ovn)
+        out[is.na(out)] <- 0
     }
 
     out

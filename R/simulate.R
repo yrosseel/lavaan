@@ -131,7 +131,7 @@ simulateData <- function(
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
                 th.idx <- which(lav$op == "|" & lav$lhs == o)
-                th.val <- c(-Inf,sort(lav$ustar[th.idx]),+Inf)
+                th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
                 # scale!!
                 xz <- scale(X[[g]][,o.idx])
                 X[[g]][,o.idx] <- as.integer(cut(xz, th.val))

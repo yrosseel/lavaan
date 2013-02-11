@@ -358,11 +358,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            rescale       = lavaanOptions$sample.cov.rescale)
     } else {
         # no data
+        th.idx <- vector("list", length=lavaanData@ngroups)
+        for(g in 1:lavaanData@ngroups) {
+            th.idx[[g]] <- getIDX(lavaanParTable, type="th")
+        }
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
-                                 cov.x=vector("list", length=lavaanData@ngroups),
+                                 cov.x=vector("list",length=lavaanData@ngroups),
+                                 th.idx=th.idx,
                                  missing.flag=FALSE)
-    } 
+    }
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     if(debug) print(str(lavaanSampleStats))
@@ -398,6 +403,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   debug          = lavaanOptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
+  
+        # if no data, call setModelParameters once (for categorical case)
+        if(lavaanData@data.type == "none" && lavaanModel@categorical) {
+            lavaanModel <- setModelParameters(lavaanModel, 
+                                              x=getModelParameters(lavaanModel))
+        }
     }
 
     # prepare cache -- stuff needed for estimation, but also post-estimation
