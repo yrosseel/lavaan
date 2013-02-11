@@ -142,6 +142,15 @@ lav2mplus <- function(lav, group.label=NULL) {
     ngroups <- max(lav$group)
 
     lav_one_group <- function(lav) {
+ 
+        # extract contraints (:=, <, >, ==)
+        con.idx <- which(lav$op %in% c(":=", "<",">","=="))
+        if(length(con.idx) > 0L) {
+            warnings("lavaan WARNING: :=, <, >, == operators not converted")
+            lav.con <- lav[con.idx,]
+            lav <- lav[-con.idx,]
+        }
+
         # end of line
         lav$eol <- rep(";", length(lav$lhs))
         lav$ustart <- ifelse(is.na(lav$ustart), "", lav$ustart)
