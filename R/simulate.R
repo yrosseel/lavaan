@@ -68,10 +68,10 @@ simulateData <- function(
 
     # if some variances are still zero (ordinal variances only!), set them
     # to 1.0
-    ov.ord <- vnames(lav, type="ov.ord")
-    idx <- which(lav$op == "~~" & lav$lhs %in% ov.ord & 
-                 lav$ustart == 0 & lav$lhs == lav$rhs)
-    if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+    #ov.ord <- vnames(lav, type="ov.ord")
+    #idx <- which(lav$op == "~~" & lav$lhs %in% ov.ord & 
+    #             lav$ustart == 0 & lav$lhs == lav$rhs)
+    #if(length(idx) > 0L) lav$ustart[idx] <- 1.0
 
 
     # unstandardize 
@@ -86,13 +86,14 @@ simulateData <- function(
 
 
     # basic fit (ignoring thresholds
-    ord.idx <- which(lav$op == "|")
-    if(length(ord.idx) > 0L) {
-        lav.no_ord <- lav[-ord.idx,]
-    } else {
-        lav.no_ord <- lav
-    }
-    fit <- lavaan(model=lav.no_ord, sample.nobs=sample.nobs,  ...)
+    #ord.idx <- which(lav$op == "|")
+    #if(length(ord.idx) > 0L) {
+    #    lav.no_ord <- lav[-ord.idx,]
+    #} else {
+    #    lav.no_ord <- lav
+    #}
+    #fit <- lavaan(model=lav.no_ord, sample.nobs=sample.nobs,  ...)
+    fit <- lavaan(model=lav, sample.nobs=sample.nobs,  ...)
 
     # the model-implied moments for the population
     Sigma.hat <- computeSigmaHat(fit@Model)
@@ -133,8 +134,9 @@ simulateData <- function(
                 th.idx <- which(lav$op == "|" & lav$lhs == o)
                 th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
                 # scale!!
-                xz <- scale(X[[g]][,o.idx])
-                X[[g]][,o.idx] <- as.integer(cut(xz, th.val))
+                #xz <- scale(X[[g]][,o.idx])
+                #X[[g]][,o.idx] <- as.integer(cut(xz, th.val))
+                X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
             }
         }
 
