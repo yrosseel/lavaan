@@ -200,6 +200,14 @@ Model <- function(partable       = NULL,
             #    idx <- which(diag(tmp) == 0.0)
             #    diag(tmp)[idx] <- 1.0
             #}
+
+            # representation specific
+            if(representation == "LISREL" && mmNames[mm] == "delta") {
+                # only categorical values are listed in the parTable
+                # but all remaining values should be 1.0
+                idx <- which(tmp[,1L] == 0.0)
+                tmp[idx,1L] <- 1.0    
+            }
             
             # assign matrix to GLIST
             GLIST[[offset]] <- tmp
