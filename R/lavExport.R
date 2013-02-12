@@ -92,7 +92,7 @@ lav2check <- function(lav) {
 
     # if eq.id not all zero, create labels instead
     if(!is.null(lav$eq.id) && !all(lav$eq.id == 0L)) {
-        lav$label <- paster("p",as.character(lav$eq.id), sep="")
+        lav$label <- paste("p",as.character(lav$eq.id), sep="")
         lav$label[lav$label == "p0"] <- ""
     }
  

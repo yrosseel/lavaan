@@ -9,7 +9,8 @@ cfa(model = NULL, data = NULL,
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default",
-    sample.mean = NULL, sample.nobs = NULL, group = NULL, 
+    sample.mean = NULL, sample.nobs = NULL, 
+    ridge = 1e-05, group = NULL, 
     group.label = NULL, group.equal = "", group.partial = "", 
     cluster = NULL, constraints = '', 
     estimator = "default", likelihood = "default", 
@@ -75,6 +76,7 @@ cfa(model = NULL, data = NULL,
 \item{sample.nobs}{Number of observations if the full data frame is missing
     and only sample moments are given. For a multiple group analysis, a list
     or a vector with the number of observations for each group.}
+\item{ridge}{Numeric. Small constant used for ridging. Only used if the sample covariance matrix is non positive definite.}
 \item{group}{A variable name in the data frame defining the groups in a
     multiple group analysis.}
 \item{group.label}{A character vector. The user can specify which group (or

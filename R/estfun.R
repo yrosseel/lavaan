@@ -1,5 +1,7 @@
 # contributed by Ed Merkle (17 Jan 2013)
-estfun <- lavScores <- function(object)
+# small changes by YR (12 Feb 2013) to match the results
+# of computeGradient in the multiple group case
+estfun.lavaan <- lavScores <- function(object)
 {
   ## number variables/sample size
   samplestats <- object@SampleStats
@@ -24,7 +26,7 @@ estfun <- lavScores <- function(object)
         Sigma.inv <- lavaan:::inv.chol(Sigma.hat, logdet=FALSE)
 
         J <- matrix(1, 1L, ntab[g]) ## FIXME: needed? better maybe rowSums/colSums?
-        J2 <- matrix(1, nvar[g], nvar[g])
+        J2 <- matrix(1, nvar, nvar)
         diag(J2) <- 0.5
 
         ## scores.H1 (H1 = saturated model)
@@ -46,6 +48,7 @@ estfun <- lavScores <- function(object)
       M <- samplestats@missing[[g]]
       MP1 <- object@Data@Mp[[g]]
       pat.idx <- match(MP1$id, MP1$order)
+      group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
 
       Mu.hat <- moments$mean
       nvar <- ncol(samplestats@cov[[g]])
@@ -79,7 +82,8 @@ estfun <- lavScores <- function(object)
         score.sigma[pat.idx==p,Sigma.idx] <- t(apply(mean.diff, 1L,
           function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ) )
 
-        scores.H1 <- cbind(score.mu, score.sigma)
+        scores.H1 <- (group.w[g]^2) * cbind(score.mu, score.sigma)
+        ## FIXME??? Why do we need group.w[g]*group.w[g]??
 
         ## FIXME?: On the above line in computeOmega, Yves had W.tilde
         ##        (see below) instead of
@@ -98,7 +102,7 @@ estfun <- lavScores <- function(object)
     
     Delta <- lavaan:::computeDelta(object@Model)[[g]]
     wi <- object@Data@case.idx[[g]]
-    Score.mat[wi,] <- -scores.H1 %*% Delta
+    Score.mat[wi,] <- (1/nobs) * scores.H1 %*% Delta
   } # g
 
   Score.mat
