@@ -30,11 +30,13 @@ simulateData <- function(
                          kurtosis        = NULL,
 
                          # control
-                         seed = NULL,
-                         empirical = FALSE,
+                         seed            = NULL,
+                         empirical       = FALSE,
 
-                         return.type = "data.frame",
-                         return.fit = FALSE
+                         return.type     = "data.frame",
+                         return.fit      = FALSE,
+                         debug           = FALSE,
+                         standardized    = TRUE
                         )
 {
     if(!is.null(seed)) set.seed(seed)
@@ -57,6 +59,11 @@ simulateData <- function(
                      auto.cov.y=auto.cov.y,
                      ngroups=length(sample.nobs))
 
+    if(debug) {
+        cat("initial lav\n")
+        print(as.data.frame(lav))
+    }
+
     # fill in any remaining NA values (needed for unstandardize)
     # 1 for variances and factor loadings, 0 otherwise
     idx <- which(lav$op == "=~" & is.na(lav$ustart))
@@ -66,12 +73,34 @@ simulateData <- function(
     idx <- which(is.na(lav$ustart))
     if(length(idx) > 0L) lav$ustart[idx] <- 0.0
 
-    # if some variances are still zero (ordinal variances only!), set them
-    # to 1.0
-    #ov.ord <- vnames(lav, type="ov.ord")
-    #idx <- which(lav$op == "~~" & lav$lhs %in% ov.ord & 
-    #             lav$ustart == 0 & lav$lhs == lav$rhs)
-    #if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+    # set residual variances to enforce a standardized solution
+    # but only if no residual variances have been specified in the syntax
+    if(standardized) {
+        # for ordered observed variables, we will get '0.0', but that is ok
+        # so there is no need to make a distinction between numeric/ordered 
+        # here??
+        lav2 <- lav
+        ngroups <- max(lav$group)
+        ov.names <- vnames(lav, "ov")
+        ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.names & 
+                            lav$rhs == lav$lhs)
+        if(any(lav2$user[ov.var.idx] > 0L)) {
+            stop("lavaan ERROR: if residual variances are specified, please use standardized=FALSE")
+        }
+        lav2$ustart[ov.var.idx] <- 0.0
+        fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
+        Sigma.hat <- computeSigmaHat(fit@Model)
+        for(g in 1:ngroups) {
+            var.group <- which(lav$op == "~~" & lav$lhs %in% ov.names & 
+                               lav$rhs == lav$lhs & lav$group == g)
+            lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])
+        }
+
+        if(debug) {
+            cat("after standardisation lav\n")
+            print(as.data.frame(lav))
+        }    
+    }
 
 
     # unstandardize 
@@ -82,22 +111,28 @@ simulateData <- function(
         lav$ustart <- unstandardize.est.ov(partable=lav, ov.var=ov.var)
 
         # 2. unstandardized latent variables
+
+        if(debug) {
+            cat("after unstandardisation lav\n")
+            print(as.data.frame(lav))
+        }
     }
 
-
-    # basic fit (ignoring thresholds
-    #ord.idx <- which(lav$op == "|")
-    #if(length(ord.idx) > 0L) {
-    #    lav.no_ord <- lav[-ord.idx,]
-    #} else {
-    #    lav.no_ord <- lav
-    #}
-    #fit <- lavaan(model=lav.no_ord, sample.nobs=sample.nobs,  ...)
+    # fit the model without data
     fit <- lavaan(model=lav, sample.nobs=sample.nobs,  ...)
 
     # the model-implied moments for the population
     Sigma.hat <- computeSigmaHat(fit@Model)
        Mu.hat <- computeMuHat(fit@Model)
+    if(fit@Model@categorical) {
+       TH <- computeTH(fit@Model)
+    }
+
+    if(debug) {
+        print(Sigma.hat)
+        print(Mu.hat)
+        if(exists("TH")) print(TH)
+    }
 
     # ngroups
     ngroups <- length(sample.nobs)
@@ -128,14 +163,11 @@ simulateData <- function(
         ov.ord <- vnames(lav, type="ov.ord", group=g)
         if(length(ov.ord) > 0L) {
             ov.names <- vnames(lav, type="ov", group=g)
-            # use thresholds to cut -- after standardization?
+            # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(lav$op == "|" & lav$lhs == o)
+                th.idx <- which(lav$op == "|" & lav$lhs == o & lav$group == g)
                 th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
-                # scale!!
-                #xz <- scale(X[[g]][,o.idx])
-                #X[[g]][,o.idx] <- as.integer(cut(xz, th.val))
                 X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
             }
         }
