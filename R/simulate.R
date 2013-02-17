@@ -36,7 +36,7 @@ simulateData <- function(
                          return.type     = "data.frame",
                          return.fit      = FALSE,
                          debug           = FALSE,
-                         standardized    = TRUE
+                         standardized    = FALSE
                         )
 {
     if(!is.null(seed)) set.seed(seed)
