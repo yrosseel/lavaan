@@ -389,6 +389,14 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         print(model[idx.wrong])
         stop("lavaan ERROR: syntax error in lavaan model syntax")
     }
+
+    # but perhaps we have a '+' as the first character?
+    idx.wrong <- which(grepl("^\\+", model))
+    if(length(idx.wrong) > 0) {
+        cat("lavaan: some formula(s) start with a plus (+) sign:\n")
+        print(model[idx.wrong])
+        stop("lavaan ERROR: syntax error in lavaan model syntax")
+    }
   
   
     # main operation: flatten formulas into single bivariate pieces
