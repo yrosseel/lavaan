@@ -10,7 +10,8 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
     kurtosis = NULL, seed = NULL, empirical = FALSE, 
-    return.type = "data.frame", return.fit = FALSE)
+    return.type = "data.frame", return.fit = FALSE,
+    debug = FALSE, standardized = FALSE)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -76,6 +77,11 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{return.fit}{If \code{TRUE}, return the fitted model that has been used
     to generate the data as an attribute (called \code{"fit"}); this 
     may be useful for inspection.}
+\item{debug}{If \code{TRUE}, debugging information is displayed.}
+\item{standardized}{If \code{TRUE}, the residual variances of the observed
+    variables are set in such a way such that the model implied variances 
+    are unity. This allows regression coefficients and factor loadings 
+    (involving observed variables) to be specified in a standardized metric.}
 }
 \details{Model parameters can be specified by fixed values in the lavaan
 model syntax. If no fixed values are specified, the value zero will be 
@@ -94,11 +100,6 @@ population.model <- ' f1 =~ x1 + 0.8*x2 + 1.2*x3
                       f3 =~ x7 + 0.1*x8 + 0.9*x9
 
                       f3 ~ 0.5*f1 + 0.6*f2
-
-                      f3 ~~ 4*f3
-                      x1 ~~ 10*x1
-                      x2 ~~ 5*x2
-                      x3 ~~ 4*x3
                     '
 
 # generate data

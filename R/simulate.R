@@ -75,6 +75,7 @@ simulateData <- function(
 
     # set residual variances to enforce a standardized solution
     # but only if no residual variances have been specified in the syntax
+    
     if(standardized) {
         # for ordered observed variables, we will get '0.0', but that is ok
         # so there is no need to make a distinction between numeric/ordered 
@@ -85,7 +86,7 @@ simulateData <- function(
         ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.names & 
                             lav$rhs == lav$lhs)
         if(any(lav2$user[ov.var.idx] > 0L)) {
-            stop("lavaan ERROR: if residual variances are specified, please use standardized=FALSE")
+            warning("lavaan WARNING: if residual variances are specified, please use standardized=FALSE")
         }
         lav2$ustart[ov.var.idx] <- 0.0
         fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
