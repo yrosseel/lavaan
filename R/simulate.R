@@ -77,6 +77,18 @@ simulateData <- function(
     # but only if no residual variances have been specified in the syntax
     
     if(standardized) {
+        # check if factor loadings are smaller than 1.0
+        lambda.idx <- which(lav$op == "=~")
+        if(any(lav$ustart[lambda.idx] >= 1.0)) {
+            warning("lavaan WARNING: standardized=TRUE but factor loadings are >= 1.0")
+        }
+
+        # check if regression coefficients are smaller than 1.0
+        reg.idx <- which(lav$op == "~")
+        if(any(lav$ustart[reg.idx] >= 1.0)) {
+            warning("lavaan WARNING: standardized=TRUE but regression coefficients are >= 1.0")
+        }
+
         # for ordered observed variables, we will get '0.0', but that is ok
         # so there is no need to make a distinction between numeric/ordered 
         # here??
