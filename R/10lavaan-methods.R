@@ -1767,6 +1767,7 @@ getHessian <- function(object) {
     E <- computeObservedInformation(object@Model, 
                                     samplestats=object@SampleStats,
                                     X=object@Data@X,
+                                    cache=object@Cache,
                                     type="free",
                                     estimator=object@Options$estimator,
                                     group.weight=TRUE)
