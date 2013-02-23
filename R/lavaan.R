@@ -688,7 +688,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             warning("lavaan WARNING: some estimated variances are negative")
         
         # 2. is cov.lv (PSI) positive definite?
-        if(length(vnames(lavaanParTable, type="lv")) > 0L) {
+        if(length(vnames(lavaanParTable, type="lv.regular")) > 0L) {
             ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
             for(g in 1:lavaanData@ngroups) {
                 txt.group <- ifelse(lavaanData@ngroups > 1L,
