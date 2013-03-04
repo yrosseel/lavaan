@@ -235,6 +235,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanOptions$se <- "none"; lavaanOptions$test <- "none"
     } else if(lavaanData@data.type == "moment") {
         # catch here some options that will not work with moments
+        if(lavaanOptions$se == "bootstrap") {
+            stop("lavaan ERROR: bootstrapping requires full data")
+        }
         if(estimator %in% c("MLM", "MLMV", "MLR", "ULSM", "ULSMV") &&
            is.null(NACOV)) {
             stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided NACOV")
