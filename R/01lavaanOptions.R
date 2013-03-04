@@ -330,6 +330,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         opt$missing <- "listwise"
+    } else if(opt$estimator == "wlsmvs") {
+        opt$estimator <- "DWLS"
+        if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -362,6 +368,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
+        opt$missing <- "listwise"
+    } else if(opt$estimator == "ulsmvs") {
+        opt$estimator <- "ULS"
+        if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
         opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {
         opt$estimator <- "PML"
