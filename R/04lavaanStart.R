@@ -116,7 +116,7 @@ StartingValues <- function(start.method = "default",
         # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
-           !categorical &&
+           #!categorical &&
            sum( partable$ustart[ partable$op == "=~" & partable$group == g],
                                    na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
