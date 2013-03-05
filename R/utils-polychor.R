@@ -295,7 +295,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     #}
 
     # check range of rho.init is within [-1,+1]
-    if(abs(rho.init) > 1.0) {
+    if(abs(rho.init) >= 1.0) {
         rho.init <- 0.0
     }
 

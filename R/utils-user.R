@@ -166,7 +166,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
         TH <- unique(paste(lhs, "|", rhs, sep=""))
         # return in the right order
         out <- unlist(lapply(ord.names, 
-                      function(x) paste(x, "|t", 1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")))
+                      function(x) paste(x, "|t", 1:length(grep(paste("^",x,"\\|",sep=""),TH)), sep="")))
     } else
 
     # thresholds and mean/intercepts of numeric variables
@@ -182,7 +182,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
                       function(x) {
                       if(x %in% ord.names) {
                             paste(x, "|t", 
-                                1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")
+                                1:length(grep(paste("^",x,"\\|",sep=""),TH)), sep="")
                       } else {
                           x
                       }
