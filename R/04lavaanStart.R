@@ -23,7 +23,7 @@ StartingValues <- function(start.method = "default",
     # shortcut for 'simple'
     if(identical(start.method, "simple")) {
         start <- numeric( length(partable$ustart) )
-        start[ which(partable$op == "=~") ] <- 1.0    
+        start[ which(partable$op == "=~") ] <- 1.0
         start[ which(partable$op == "~*~") ] <- 1.0
         ov.names.ord <- vnames(partable, "ov.ord")
         var.idx <- which(partable$op == "~~" & partable$lhs == partable$rhs &
@@ -83,8 +83,14 @@ StartingValues <- function(start.method = "default",
     # 0. everyting is zero
     start <- numeric( length(partable$ustart) )
 
-    # 1. =~ factor loadings: 1.0 
-    start[ which(partable$op == "=~") ] <- 1.0
+    # 1. =~ factor loadings: 
+    if(categorical) {
+        # if std.lv=TRUE, more likely initial Sigma.hat is positive definite
+        # 0.8 is too large
+        start[ which(partable$op == "=~") ] <- 0.7
+    } else {
+        start[ which(partable$op == "=~") ] <- 1.0
+    }
 
     # 2. residual lv variances for latent variables
     lv.names    <- vnames(partable, "lv") # all groups

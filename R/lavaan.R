@@ -628,7 +628,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "control") <- control
         attr(x, "fx") <- 
             computeObjective(lavaanModel, samplestats = lavaanSampleStats, 
-                             X=lavaanData@X,
+                             X=lavaanData@X, cache = lavaanCache,
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)

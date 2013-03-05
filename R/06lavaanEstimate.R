@@ -1129,7 +1129,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
-    if(estimator == "ML") {
+    if(estimator %in% c("ML","PML")) {
         Sigma.hat <- computeSigmaHat(object, extra=TRUE, debug=options$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
