@@ -168,6 +168,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]])
                 COR[i,j] <- COR[j,i] <- out
             }
+            # check for near 1.0 correlations
+            if(abs(COR[i,j]) > 0.99) {
+                warning("lavaan WARNING: correlation between variables ", ov.names[i], " and ", ov.names[j], " is (nearly) 1.0")
+            }
         }
     }
 
