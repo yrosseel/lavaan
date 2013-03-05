@@ -1,26 +1,32 @@
 # functions to deal with bivariate normal distributions
 # YR
+# TODO: better handling of rho=1.0
 
 # density of a bivariate standard normal 
 dbinorm <- function(u, v, rho) {
+    # dirty hack to handle large values for rho
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1-rho^2
     1/(2*pi*sqrt(R)) * exp( - 0.5*(u^2 - 2*rho*u*v + v^2)/R )
 }
 
 # partial derivative - rho
 dbinorm_drho <- function(u, v, rho) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1 - rho^2
     dbinorm(u,v,rho) * (u*v*R -rho*(u^2 - 2*rho*u*v + v^2) + rho*R )/R^2
 }
 
 # partial derivative - u
 dbinorm_du <- function(u, v, rho) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1 - rho^2
     -dbinorm(u,v,rho) * (u - rho*v)/R
 }
 
 # partial derivative - v
 dbinorm_dv <- function(u, v, rho) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1 - rho^2
     -dbinorm(u,v,rho) * (v - rho*u)/R
 }
@@ -30,16 +36,19 @@ dbinorm_dv <- function(u, v, rho) {
 
 # partial derivative pbinorm - upper.x
 pbinorm_dupper.x <- function(upper.x, upper.y, rho=0.0) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1 - rho^2
     dnorm(upper.x) * pnorm( (upper.y - rho*upper.x)/R )
 }
 
 pbinorm_dupper.y <- function(upper.x, upper.y, rho=0.0) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     R <- 1 - rho^2
     dnorm(upper.y) * pnorm( (upper.x - rho*upper.y)/R )
 }
 
 pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
+    if(abs(rho) > 0.9999) rho <- sign(rho) * 0.9999
     dbinorm(upper.x, upper.y, rho)
 }
 
