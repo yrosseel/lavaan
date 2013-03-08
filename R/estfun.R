@@ -1,8 +1,10 @@
 # contributed by Ed Merkle (17 Jan 2013)
 # small changes by YR (12 Feb 2013) to match the results
 # of computeGradient in the multiple group case
-estfun.lavaan <- lavScores <- function(object, scaling=FALSE)
-{
+estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
+
+    stopifnot(class(object) == "lavaan")
+
   ## number variables/sample size
   samplestats <- object@SampleStats
   ntab <- unlist(samplestats@nobs)
@@ -17,9 +19,15 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE)
       moments <- fitted(object)
     }
     Sigma.hat <- moments$cov
+
+    if(object@Options$likelihood == "wishart") {
+        N1 <- samplestats@nobs[[g]]/(samplestats@nobs[[g]] - 1)
+    } else {
+        N1 <- 1
+    }
   
     if(!samplestats@missing.flag) { # complete data
-      if(object@Model@meanstructure) { # mean structure
+      #if(object@Model@meanstructure) { # mean structure
         nvar <- ncol(samplestats@cov[[g]])
         Mu.hat <- moments$mean
         X <- object@Data@X[[g]]
@@ -30,25 +38,32 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE)
         J2 <- matrix(1, nvar, nvar)
         diag(J2) <- 0.5
 
-        ## scores.H1 (H1 = saturated model)
-        mean.diff <- t(t(X) - Mu.hat %*% J)
+        if(object@Model@meanstructure) {
+            ## scores.H1 (H1 = saturated model)
+            mean.diff <- t(t(X) - Mu.hat %*% J)
 
-        dx.Mu <- -1 * mean.diff %*% Sigma.inv
+            dx.Mu <- -1 * mean.diff %*% Sigma.inv
 
-        dx.Sigma <- t(apply(mean.diff, 1L,
-           function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat) %*% Sigma.inv))))
+            dx.Sigma <- t(apply(mean.diff, 1L,
+               function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
 
-        scores.H1 <- cbind(dx.Mu, dx.Sigma)
+            scores.H1 <- cbind(dx.Mu, dx.Sigma)
+        } else {
+            mean.diff <- t(t(X) - samplestats@mean[[g]] %*% J)
+            dx.Sigma <- t(apply(mean.diff, 1L,
+               function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
+            scores.H1 <- dx.Sigma
+        }
         ## FIXME? Seems like we would need group.w even in the
         ##        complete-data case:
         ##if(scaling){
         ##  scores.H1 <- group.w[g] * scores.H1
         ##}
 
-      } else {
-        ## no mean structure
-        stop("Score calculation with no mean structure is not implemented.")
-      }
+      #} else {
+      #  ## no mean structure
+      #  stop("Score calculation with no mean structure is not implemented.")
+      #}
     } else { # incomplete data
       nsub <- ntab[g]
       M <- samplestats@missing[[g]]
