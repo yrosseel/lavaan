@@ -304,6 +304,16 @@ getDataFull <- function(data          = NULL,          # data.frame
         print(OV)
         stop("lavaan ERROR: some variables have no values (only missings) or no variance")
     }
+    # check for mix small/large variances
+    if(any(ov$type == "numeric")) {
+        num.idx <- which(ov$type == "numeric")
+        min.var <- min(ov$var[num.idx])
+        max.var <- max(ov$var[num.idx])
+        rel.var <- max.var/min.var
+        if(rel.var > 100 && !std.ov) {
+            warning("lavaan WARNING: some observed variances are (at least) a factor 100 times larger than others; please rescale")
+        }
+    }
 
     # prepare empty list for data.matrix per group
     case.idx <- vector("list", length=ngroups)
