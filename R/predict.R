@@ -15,6 +15,9 @@ function(object, newdata=NULL, ...) {
     #if(object@SampleStats@missing.flag) {
     #    stop("FIXME: predict does not work with missing data (yet)!")
     #}
+    if(object@Model@categorical) {
+        stop("lavaan ERROR: predict does not work (yet) for categorical data")
+    }
 
     G <- object@Data@ngroups
     nmat <- object@Model@nmat

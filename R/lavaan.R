@@ -414,6 +414,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
+    # check for categorical
+    if(lavaanModel@categorical && lavaanOptions$se == "bootstrap") {
+        stop("lavaan ERROR: bootstrap not supported (yet) for categorical data")
+    }
+
     # prepare cache -- stuff needed for estimation, but also post-estimation
     lavaanCache <- vector("list", length=lavaanData@ngroups)
     if(estimator == "PML") {
