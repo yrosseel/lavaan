@@ -352,8 +352,11 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- samplestats@cov.x[[g]]
-
+        cov.x <- NULL
+        if(!is.null(samplestats)) {
+            cov.x <- samplestats@cov.x[[g]]
+        }
+       
         if(representation == "LISREL") {
             ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x)
         } else {
