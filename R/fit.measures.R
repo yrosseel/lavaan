@@ -266,7 +266,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 t1 <- max( c(X2.scaled - df.scaled, 0) )
                 t2 <- max( c(X2.scaled - df.scaled,
                              X2.null.scaled - df.null.scaled, 0) )
-                if(t1 == 0 && t2 == 0) {
+                if(is.na(t1) || is.na(t2)){
+                    indices["cfi.scaled"] <- NA
+                } else if(t1 == 0 && t2 == 0) {
                     indices["cfi.scaled"] <- 1
                 } else {
                     indices["cfi.scaled"] <- 1 - t1/t2
@@ -328,9 +330,11 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 if(df > 0) {
                     t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
                     t2 <- X2.null.scaled/df.null.scaled
-                    if(t1 < 0 || t2 < 0) {
+                    if(is.na(t1) || is.na(t2)) {
+                        RLI <- NA
+                    } else if(t1 < 0 || t2 < 0) {
                         RLI <- 1
-                    }     else {
+                    } else {
                         RLI <- t1/t2
                     }
                 } else {
@@ -381,7 +385,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             if("ifi.scaled" %in% fit.measures) {
                 t1 <- X2.null.scaled - X2.scaled
                 t2 <- X2.null.scaled
-                if(t2 < 0) {
+                if(is.na(t2)) {
+                    IFI <- NA
+                } else if(t2 < 0) {
                     IFI <- 1
                 } else {
                     IFI <- t1/t2
@@ -404,7 +410,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 t1 <- X2.scaled - df.scaled
                 t2 <- X2.null.scaled - df.null.scaled
                 t2 <- X2.null - df.null
-                if(t1 < 0 || t2 < 0) {
+                if(is.na(t1) || is.na(t2)) {
+                    RNI <- NA
+                } else if(t1 < 0 || t2 < 0) {
                     RNI <- 1
                 } else {
                     RNI <- 1 - t1/t2
@@ -508,6 +516,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df > 0) {
             if(scaled) {
                 d <- sum(object@Fit@test[[2]]$trace.UGamma)
+                if(d==0) d <- NA
             } 
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 GG <- 0
