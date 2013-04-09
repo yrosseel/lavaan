@@ -40,7 +40,9 @@ function(object, newdata=NULL, ...) {
                            ordered     = OV$name[ OV$type == "ordered" ],
                            ov.names.x  = object@Data@ov.names.x,
                            std.ov      = object@Data@std.ov,
-                           missing     = object@Data@missing)
+                           missing     = object@Data@missing,
+                           # warn      = FALSE,
+                           allow.single.case = TRUE)
         data.obs <- newData@X
     }
 

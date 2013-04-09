@@ -20,7 +20,8 @@ lavData <- function(data          = NULL,          # data.frame
                     sample.cov    = NULL,          # sample covariance(s)
                     sample.mean   = NULL,          # sample mean vector(s)
                     sample.nobs   = NULL,          # sample nobs
-                    warn          = TRUE           # produce warnings?
+                    warn          = TRUE,          # produce warnings?
+                    allow.single.case = FALSE      # allow single case (for newdata in predict)
                    ) 
 {
 
@@ -32,16 +33,17 @@ lavData <- function(data          = NULL,          # data.frame
     # 1) full data
     if(!is.null(data)) {
         stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
-        lavData <- getDataFull(data        = data,
-                               group       = group,
-                               group.label = group.label,
-                               ov.names    = ov.names,
-                               ordered     = ordered,
-                               ov.names.x  = ov.names.x,
-                               std.ov      = std.ov,
-                               missing     = missing,
-                               warn        = warn)
-    } 
+        lavData <- getDataFull(data              = data,
+                               group             = group,
+                               group.label       = group.label,
+                               ov.names          = ov.names,
+                               ordered           = ordered,
+                               ov.names.x        = ov.names.x,
+                               std.ov            = std.ov,
+                               missing           = missing,
+                               warn              = warn,
+                               allow.single.case = allow.single.case)
+    }
     
     
     # 2) sample moments
@@ -182,7 +184,8 @@ getDataFull <- function(data          = NULL,          # data.frame
                         ov.names.x    = character(0),  # exo variables
                         std.ov        = FALSE,         # standardize ov's?
                         missing       = "listwise",    # remove missings?
-                        warn          = TRUE           # produce warnings?
+                        warn          = TRUE,          # produce warnings?
+                        allow.single.case = FALSE      # allow single case data?
                        )
 {
     # number of groups and group labels
@@ -306,7 +309,7 @@ getDataFull <- function(data          = NULL,          # data.frame
     }
     # check for single cases (no variance!)
     idx <- which(ov$nobs == 1L | !is.finite(ov$var)) 
-    if(length(idx) > 0L) {
+    if(!allow.single.case && length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
         rn[idx] <- paste(rn[idx], "***", sep="")
@@ -315,7 +318,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
     }
     # check for mix small/large variances (NOT including exo variables)
-    if(warn && any(ov$type == "numeric")) {
+    if(!allow.single.case && warn && any(ov$type == "numeric")) {
         num.idx <- which(ov$type == "numeric" &
                          !ov$name %in% unlist(ov.names.x))
         if(length(num.idx) > 0L) {
@@ -403,7 +406,8 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # warn if we have a small number of observations (but NO error!)
-        if( warn && nobs[[g]] < (nvar <- length(ov.idx)) ) {
+        if( !allow.single.case && warn && 
+            nobs[[g]] < (nvar <- length(ov.idx)) ) {
             txt <- ""
             if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
             warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,
