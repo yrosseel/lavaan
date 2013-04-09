@@ -295,7 +295,7 @@ getDataFull <- function(data          = NULL,          # data.frame
             warning(paste("lavaan WARNING: exogenous variable(s) declared as ordered in data:", paste(f.names, collapse=" ")))
     }
     # check for zero-cases
-    idx <- which(ov$nobs == 0L || ov$var == 0)
+    idx <- which(ov$nobs == 0L | ov$var == 0)
     if(length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
@@ -303,6 +303,16 @@ getDataFull <- function(data          = NULL,          # data.frame
         rownames(OV) <- rn
         print(OV)
         stop("lavaan ERROR: some variables have no values (only missings) or no variance")
+    }
+    # check for single cases (no variance!)
+    idx <- which(ov$nobs == 1L | !is.finite(ov$var)) 
+    if(length(idx) > 0L) {
+        OV <- as.data.frame(ov)
+        rn <- rownames(OV)
+        rn[idx] <- paste(rn[idx], "***", sep="")
+        rownames(OV) <- rn
+        print(OV)
+        stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
     }
     # check for mix small/large variances (NOT including exo variables)
     if(warn && any(ov$type == "numeric")) {
