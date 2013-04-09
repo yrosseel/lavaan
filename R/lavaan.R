@@ -116,7 +116,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # check 'ordered'
             not.in.ov <- which(!ordered %in% unlist(ov.names))
             if(length(not.in.ov) > 0L) {
-                stop("ordered argument contains variable name(s) not in model: ",                     paste(ordered[not.in.ov], collapse=" "))
+                warning("lavaan WARNING: ordered argument contains variable name(s) not in model: ",
+                     paste(ordered[not.in.ov], collapse=" "))
+                ordered <- ordered[-not.in.ov]
             }
             data[,ordered] <- lapply(data[,ordered,drop=FALSE], base::ordered)
             #
