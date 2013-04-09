@@ -151,8 +151,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                  function(x) vnames(FLAT, type="ov.x", group=x))
         }
     } else {
-        ov.names.x <- character(0)
-    } 
+        if(max(FLAT$group) < 2L) { # same model for all groups 
+            ov.names.x <- vnames(FLAT, type="ov.x")
+        } else { # different model per group
+            ov.names.x <- lapply(1:max(FLAT$group),
+                                 function(x) vnames(FLAT, type="ov.x", group=x))
+        }
+    }
 
     # 1a. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])

@@ -284,14 +284,14 @@ getDataFull <- function(data          = NULL,          # data.frame
     # check for unordered factors
     if("factor" %in%  ov$type) {
         f.names <- ov$name[ov$type == "factor"]
-        if(any(f.names %in% unlist(ov.names)))
+        if(warn && any(f.names %in% unlist(ov.names)))
             warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
     }
     # check for ordered exogenous variables
     if("ordered" %in% ov$type[ov$name %in% unlist(ov.names.x)]) {
         f.names <- ov$name[ov$type == "ordered" & 
                            ov$name %in% unlist(ov.names.x)]
-        if(any(f.names %in% unlist(ov.names.x)))
+        if(warn && any(f.names %in% unlist(ov.names.x)))
             warning(paste("lavaan WARNING: exogenous variable(s) declared as ordered in data:", paste(f.names, collapse=" ")))
     }
     # check for zero-cases
@@ -304,14 +304,17 @@ getDataFull <- function(data          = NULL,          # data.frame
         print(OV)
         stop("lavaan ERROR: some variables have no values (only missings) or no variance")
     }
-    # check for mix small/large variances
-    if(any(ov$type == "numeric")) {
-        num.idx <- which(ov$type == "numeric")
-        min.var <- min(ov$var[num.idx])
-        max.var <- max(ov$var[num.idx])
-        rel.var <- max.var/min.var
-        if(rel.var > 100 && !std.ov) {
-            warning("lavaan WARNING: some observed variances are (at least) a factor 100 times larger than others; please rescale")
+    # check for mix small/large variances (NOT including exo variables)
+    if(warn && any(ov$type == "numeric")) {
+        num.idx <- which(ov$type == "numeric" &
+                         !ov$name %in% unlist(ov.names.x))
+        if(length(num.idx) > 0L) {
+            min.var <- min(ov$var[num.idx])
+            max.var <- max(ov$var[num.idx])
+            rel.var <- max.var/min.var
+            if(rel.var > 1000 && !std.ov) {
+                warning("lavaan WARNING: some observed variances are (at least) a factor 1000 times larger than others; please rescale")
+            }
         }
     }
 
@@ -378,9 +381,11 @@ getDataFull <- function(data          = NULL,          # data.frame
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
-                warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+                if(warn) {
+                    warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+                }
             }
-            if(any(Mp[[g]]$coverage < 0.1)) {
+            if(warn && any(Mp[[g]]$coverage < 0.1)) {
                 warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
             }
             # in case we had observations with only missings
@@ -388,7 +393,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # warn if we have a small number of observations (but NO error!)
-        if( nobs[[g]] < (nvar <- length(ov.idx)) ) {
+        if( warn && nobs[[g]] < (nvar <- length(ov.idx)) ) {
             txt <- ""
             if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
             warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,
