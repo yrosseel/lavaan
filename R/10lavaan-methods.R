@@ -1040,9 +1040,9 @@ parameterTable <- parametertable <- parTable <- partable <-
 varTable <- vartable <- function(object, ov.names=names(object), 
                                  ov.names.x=NULL, as.data.frame.=TRUE) {
 
-    if(class(object) == "lavaan") {
+    if(inherits(object, "lavaan")) {
         VAR <- object@Data@ov
-    } else if(class(object) == "data.frame") {
+    } else if(inherits(object, "data.frame")) {
         OV <- lapply(object[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE],
                function(x) {
                   type.x <- class(x)[1]
