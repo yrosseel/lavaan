@@ -830,7 +830,12 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     # group.w
     if(group.weight) {
-        group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
+        if(estimator == "ML") {
+            group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
+        } else {
+            # FIXME: double check!
+            group.w <- ((unlist(samplestats@nobs)-1)/samplestats@ntotal)
+        }
     } else {
         group.w <- rep(1.0, samplestats@ngroups)
     }
