@@ -81,10 +81,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    debug              = FALSE
                   )
 {
-
-    # temporary block estimator = "PML"
-    # if(estimator == "PML") stop("estimator PML is not available yet")
-
     # start timer
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
@@ -101,62 +97,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     if(max(FLAT$group) < 2L) { # same model for all groups 
         ov.names   <- vnames(FLAT, type="ov")
+        ov.names.y <- vnames(FLAT, type="ov.nox")
+        ov.names.x <- vnames(FLAT, type="ov.x")
     } else { # different model per group
         ov.names <- lapply(1:max(FLAT$group),
                            function(x) vnames(FLAT, type="ov", group=x))
+        ov.names.y <- lapply(1:max(FLAT$group),
+                           function(x) vnames(FLAT, type="ov.nox", group=x))
+        ov.names.x <- lapply(1:max(FLAT$group),
+                           function(x) vnames(FLAT, type="ov.x", group=x))
     }
 
     # 0c categorical variables? -- needed for lavaanOptions
-    categorical <- any(FLAT$op == "|")
-    #if(!is.null(data) && length(ordered) > 0L) {
-    #    categorical <- TRUE
-    #}
-    if(!is.null(data)) {
-        if(length(ordered) > 0L) {
-            # check 'ordered'
-            not.in.ov <- which(!ordered %in% unlist(ov.names))
-            if(length(not.in.ov) > 0L) {
-                warning("lavaan WARNING: ordered argument contains variable name(s) not in model: ",
-                     paste(ordered[not.in.ov], collapse=" "))
-                ordered <- ordered[-not.in.ov]
-            }
-            data[,ordered] <- lapply(data[,ordered,drop=FALSE], base::ordered)
-            #
-            # NOTE: we coerce these variables to 'ordered' here in
-            # the 'data' data.frame; however, (at least in 2.15.1), this
-            # creates (at least) 3 copies of the full data.frame...
-            # 
-            # we should try not to 'touch' the data.frame at all (giving us
-            # a lot of housekeeping work in lavData) ... TODO!
-            ov.types <- sapply(data[,unlist(ov.names)],
-                               function(x) class(x)[1])
-            categorical <- TRUE
-        } else {
-            ov.types <- sapply(data[,unlist(ov.names)], 
-                               function(x) class(x)[1])
-            if("ordered" %in% ov.types) 
-                categorical <- TRUE
-        }        
-    }
-
-    # if categorical, make a distinction between exo and the rest
-    if(categorical) {
-        if(max(FLAT$group) < 2L) { # same model for all groups 
-            ov.names   <- vnames(FLAT, type="ov.nox")
-            ov.names.x <- vnames(FLAT, type="ov.x")
-        } else { # different model per group
-            ov.names <- lapply(1:max(FLAT$group),
-                               function(x) vnames(FLAT, type="ov.nox", group=x))
-            ov.names.x <- lapply(1:max(FLAT$group),
-                                 function(x) vnames(FLAT, type="ov.x", group=x))
-        }
+    if(any(FLAT$op == "|")) {
+        categorical <- TRUE
+    } else if(!is.null(data) && length(ordered) > 0L) {
+        categorical <- TRUE
+    } else if(lav_dataframe_check_ordered(frame=data, ov.names=ov.names.y)) {
+        categorical <- TRUE
     } else {
-        if(max(FLAT$group) < 2L) { # same model for all groups 
-            ov.names.x <- vnames(FLAT, type="ov.x")
-        } else { # different model per group
-            ov.names.x <- lapply(1:max(FLAT$group),
-                                 function(x) vnames(FLAT, type="ov.x", group=x))
-        }
+        categorical <- FALSE
     }
 
     # 1a. collect various options/flags and fill in `default' values
@@ -191,6 +151,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # some additional checks for estimator="PML"
     if(lavaanOptions$estimator == "PML") {
+        ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
         # 0. at least some variables must be ordinal
         if(!any(ov.types == "ordered")) {
             stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
@@ -216,6 +177,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotData)) {
         lavaanData <- slotData
     } else {
+        if(categorical) {
+            ov.names <- ov.names.y
+        } 
         lavaanData <- lavData(data        = data,
                               group       = group,
                               group.label = group.label,

@@ -24,7 +24,6 @@ lavData <- function(data          = NULL,          # data.frame
                     allow.single.case = FALSE      # allow single case (for newdata in predict)
                    ) 
 {
-
     # three scenarios:
     #    1) data is full data.frame
     #    2) data are sample statistics only
@@ -280,8 +279,9 @@ getDataFull <- function(data          = NULL,          # data.frame
 
     # here, we know for sure all ov.names exist in the data.frame
     # create varTable
-    ov <- varTable(data, ov.names = ov.names, ov.names.x = ov.names.x, 
-                   as.data.frame. = FALSE)
+    ov <- lav_dataframe_vartable(frame = data, ov.names = ov.names, 
+                                 ov.names.x = ov.names.x, ordered = ordered,
+                                 as.data.frame. = FALSE)
 
     # do some checking
     # check for unordered factors
@@ -308,7 +308,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         stop("lavaan ERROR: some variables have no values (only missings) or no variance")
     }
     # check for single cases (no variance!)
-    idx <- which(ov$nobs == 1L | !is.finite(ov$var)) 
+    idx <- which(ov$nobs == 1L | (ov$type == "numeric" & !is.finite(ov$var)))
     if(!allow.single.case && length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
@@ -318,14 +318,13 @@ getDataFull <- function(data          = NULL,          # data.frame
         stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
     }
     # check for mix small/large variances (NOT including exo variables)
-    if(!allow.single.case && warn && any(ov$type == "numeric")) {
-        num.idx <- which(ov$type == "numeric" &
-                         !ov$name %in% unlist(ov.names.x))
+    if(!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
+        num.idx <- which(ov$type == "numeric" & ov$exo == 1L)
         if(length(num.idx) > 0L) {
             min.var <- min(ov$var[num.idx])
             max.var <- max(ov$var[num.idx])
             rel.var <- max.var/min.var
-            if(rel.var > 1000 && !std.ov) {
+            if(rel.var > 1000) {
                 warning("lavaan WARNING: some observed variances are (at least) a factor 1000 times larger than others; please rescale")
             }
         }
@@ -371,7 +370,19 @@ getDataFull <- function(data          = NULL,          # data.frame
 
         # extract data
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop=FALSE] )
-        dimnames(X[[g]]) <- NULL
+        dimnames(X[[g]]) <- NULL ### copy?
+
+        # manually construct integers for user-declared 'ordered' factors
+        # FIXME: is this really (always) needed???
+        #  (but it is still better than doing lapply(data[,idx], ordered) which
+        #   generated even more copies)
+        user.ordered.names <- ov$name[ov$type == "ordered" &
+                                      ov$user == 1L]
+        user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
+        for(i in seq_len(length(user.ordered.idx))) {
+            X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
+        }
+
         if(length(exo.idx) > 0L) {
             eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx, drop=FALSE] )
             dimnames(eXo[[g]]) <- NULL

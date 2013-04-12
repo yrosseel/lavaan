@@ -1038,36 +1038,16 @@ parameterTable <- parametertable <- parTable <- partable <-
 }
 
 varTable <- vartable <- function(object, ov.names=names(object), 
-                                 ov.names.x=NULL, as.data.frame.=TRUE) {
+                                 ov.names.x=NULL, ordered = NULL, 
+                                 as.data.frame.=TRUE) {
 
     if(inherits(object, "lavaan")) {
         VAR <- object@Data@ov
     } else if(inherits(object, "data.frame")) {
-        OV <- lapply(object[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE],
-               function(x) {
-                  type.x <- class(x)[1]
-                  # treat integer as numeric!
-                  if(type.x == "integer")
-                      type.x <- "numeric"
-                  list(nobs=sum(!is.na(x)),
-                       type=type.x,
-                       mean=ifelse(type.x == "numeric",
-                                   mean(x, na.rm=TRUE), as.numeric(NA)),
-                       var=ifelse(type.x == "numeric",
-                                  var(x, na.rm=TRUE), as.numeric(NA)),
-                       nlevels=nlevels(x),
-                       lnames=paste(levels(x),collapse="|")
-                      ) 
-               })
-        VAR <- list()
-        VAR$name    <- names(OV)
-        VAR$idx  <- match(VAR$name, names(object))
-        VAR$nobs <- unname(sapply(OV, "[[", "nobs"))
-        VAR$type <- unname(sapply(OV, "[[", "type"))
-        VAR$mean <- unname(sapply(OV, "[[", "mean"))
-        VAR$var  <- unname(sapply(OV, "[[", "var"))
-        VAR$nlev <- unname(sapply(OV, "[[", "nlevels"))
-        VAR$lnam <- unname(sapply(OV, "[[", "lnames"))
+        VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names, 
+                                      ov.names.x = ov.names.x, 
+                                      ordered = ordered,
+                                      as.data.frame. = FALSE)
     } else {
         stop("object must of class lavaan or a data.frame")
     } 
