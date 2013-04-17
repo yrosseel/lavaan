@@ -836,12 +836,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     # do we have everything that we requested?
-    idx.missing <- which(is.na(match(fit.measures, names(indices))))
-    if(length(idx.missing) > 0L) {
-        cat("lavaan WARNING: some requested fit measure(s) are not available for this model:\n")
-        print( fit.measures[ idx.missing ] )
-        cat("\n")
-    }
+    #idx.missing <- which(is.na(match(fit.measures, names(indices))))
+    #if(length(idx.missing) > 0L) {
+    #    cat("lavaan WARNING: some requested fit measure(s) are not available for this model:\n")
+    #    print( fit.measures[ idx.missing ] )
+    #    cat("\n")
+    #}
     
     out <- unlist(indices[fit.measures])
 
