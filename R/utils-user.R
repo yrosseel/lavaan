@@ -560,6 +560,14 @@ getLIST <- function(FLAT=NULL,
 
     # get 'ordered' variables, either from FLAT or varTable
     ov.names.ord1 <- vnames(FLAT, type="ov.ord")
+    # check if we have "|" for exogenous variables
+    if(length(ov.names.ord1) > 0L) {
+        idx <- which(ov.names.ord1 %in% ov.names.x)
+        if(length(idx) > 0L) {
+            warning("lavaan WARNING: thresholds are defined for exogenous variables: ", paste(ov.names.ord1[idx], collapse=" "))
+        }
+    }
+ 
     if(!is.null(varTable)) {
         ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
         # remove fixed.x variables
@@ -574,8 +582,6 @@ getLIST <- function(FLAT=NULL,
 
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
-    
-
 
     lhs <- rhs <- character(0)
 
