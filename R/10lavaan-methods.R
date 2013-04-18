@@ -1038,7 +1038,8 @@ parameterTable <- parametertable <- parTable <- partable <-
 }
 
 varTable <- vartable <- function(object, ov.names=names(object), 
-                                 ov.names.x=NULL, ordered = NULL, 
+                                 ov.names.x=NULL, 
+                                 ordered = NULL, factor = NULL,
                                  as.data.frame.=TRUE) {
 
     if(inherits(object, "lavaan")) {
@@ -1046,7 +1047,7 @@ varTable <- vartable <- function(object, ov.names=names(object),
     } else if(inherits(object, "data.frame")) {
         VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names, 
                                       ov.names.x = ov.names.x, 
-                                      ordered = ordered,
+                                      ordered = ordered, factor = factor,
                                       as.data.frame. = FALSE)
     } else {
         stop("object must of class lavaan or a data.frame")

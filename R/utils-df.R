@@ -42,11 +42,12 @@ lav_dataframe_check_ordered <- function(frame = NULL, ov.names = character(0)) {
     FALSE
 }
 
-# construct vartable, but allow 'ordered' argument to intervene
+# construct vartable, but allow 'ordered/factor' argument to intervene
 # we do NOT change the data.frame
 lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL, 
                                    ov.names.x = NULL,
                                    ordered = NULL,
+                                   factor = NULL,
                                    as.data.frame. = FALSE) {
 
     if(missing(ov.names)) {
@@ -77,6 +78,12 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
             lev <- sort(unique(x)) # we assume integers!
             nlev[i] <- length(lev)
             lnam[i] <- paste(lev, collapse="|")   
+            user[i] <- 1L
+        } else if(!is.null(factor) && var.names[i] %in% factor) {
+            type.x <- "factor"
+            lev <- sort(unique(x)) # we assume integers!
+            nlev[i] <- length(lev)
+            lnam[i] <- paste(lev, collapse="|")
             user[i] <- 1L
         } else {
             nlev[i] <- nlevels(x)
