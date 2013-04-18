@@ -1,5 +1,5 @@
 # public version
-lavaanNames <- function(object, type="ov", group=NULL) {
+lavaanNames <- lavNames <- function(object, type="ov", group=NULL) {
 
     if(class(object) == "lavaan") {
          partable <- object@ParTable

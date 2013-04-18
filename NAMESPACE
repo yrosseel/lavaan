@@ -26,7 +26,7 @@ export("lavaan",
        "sem",
        "growth",
        "lavaanify",
-       "lavaanNames",
+       "lavaanNames", "lavNames",
        "parseModelString",
        #"lavData",
        #"setLavaanOptions",
@@ -46,7 +46,8 @@ export("lavaan",
        "inspectSampleCov",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
        "simulateData",
-       "estfun.lavaan", "lavScores"
+       "estfun.lavaan", "lavScores",
+       "lavTables"
       )
 
 # export Classes
