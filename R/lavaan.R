@@ -91,7 +91,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         FLAT <- slotParTable
     } else if(is.character(model)) {
-        FLAT <- parseModelString(model)
+        FLAT <- lavParseModelString(model)
     } else if(is.list(model)) {
         FLAT <- model
     }

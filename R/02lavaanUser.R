@@ -47,7 +47,7 @@ lavaanify <- lavParTable <- function(
     } else {
         # parse the model syntax and flatten the user-specified model
         # return a data.frame, where each line is a model element (rhs, op, lhs)
-        FLAT <- parseModelString(model.syntax=model, warn=warn, debug=FALSE)
+        FLAT <- lavParseModelString(model.syntax=model, warn=warn, debug=FALSE)
     }
     # user-specified *modifiers* are returned as an attribute
     MOD  <- attr(FLAT, "modifiers"); attr(FLAT, "modifiers") <- NULL
@@ -56,7 +56,7 @@ lavaanify <- lavParTable <- function(
 
     # extra constraints?
     if(!is.null(constraints) && nchar(constraints) > 0L) {
-        FLAT2 <- parseModelString(model.syntax=constraints, warn=warn)
+        FLAT2 <- lavParseModelString(model.syntax=constraints, warn=warn)
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
     }
@@ -342,7 +342,7 @@ lavaanify <- lavParTable <- function(
 }
 
 
-parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
+lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                              warn = TRUE, debug = FALSE) {
   
     # check for empty syntax
