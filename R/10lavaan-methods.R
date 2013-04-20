@@ -785,6 +785,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     LIST <- inspect(object, "list")
+    unco.idx <- which(LIST$unco > 0L)
     LIST <- LIST[,c("lhs", "op", "rhs", "group")]
 
     # add std and std.all columns
@@ -798,7 +799,25 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
 
     # add 'se' for standardized parameters
     # TODO!!
+    if(type == "std.lv") {
+        JAC <- lavJacobianD(func=standardize.est.lv.x, x=object@Fit@est,
+                            object=object)
+    } else if(type == "std.all") {
+        JAC <- lavJacobianD(func=standardize.est.all.x, x=object@Fit@est,
+                            object=object)
+    } else if(type == "std.nox") {
+        JAC <- lavJacobianD(func=standardize.est.all.nox.x, x=object@Fit@est,
+                            object=object)
+    }
+    JAC <- JAC[unco.idx,unco.idx]
+    VCOV <- as.matrix(vcov(object, labels=FALSE))
+    # handle eq constraints in fit@Model@eq.constraints.K
+    if(object@Model@eq.constraints) {
+        JAC <- JAC %*% object@Model@eq.constraints.K       
+    }
+    COV <- JAC %*% VCOV %*% t(JAC)
     LIST$se <- rep(NA, length(LIST$lhs))
+    LIST$se[unco.idx] <- sqrt(diag(COV))
 
     # add 'z' column
     tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
@@ -1019,31 +1038,17 @@ parameterTable <- parametertable <- parTable <- partable <-
 }
 
 varTable <- vartable <- function(object, ov.names=names(object), 
-                                 ov.names.x=NULL, as.data.frame.=TRUE) {
+                                 ov.names.x=NULL, 
+                                 ordered = NULL, factor = NULL,
+                                 as.data.frame.=TRUE) {
 
-    if(class(object) == "lavaan") {
+    if(inherits(object, "lavaan")) {
         VAR <- object@Data@ov
-    } else if(class(object) == "data.frame") {
-        OV <- lapply(object[,unique(unlist(c(ov.names,ov.names.x))),drop=FALSE],
-                     function(x)
-                  list(nobs=sum(!is.na(x)),
-                       type=class(x)[1],
-                       mean=ifelse(class(x)[1] == "numeric",
-                                   mean(x, na.rm=TRUE), as.numeric(NA)),
-                       var=ifelse(class(x)[1] == "numeric",
-                                  var(x, na.rm=TRUE), as.numeric(NA)),
-                       nlevels=nlevels(x),
-                       lnames=paste(levels(x),collapse="|")
-                      ))
-        VAR <- list()
-        VAR$name    <- names(OV)
-        VAR$idx  <- match(VAR$name, names(object))
-        VAR$nobs <- unname(sapply(OV, "[[", "nobs"))
-        VAR$type <- unname(sapply(OV, "[[", "type"))
-        VAR$mean <- unname(sapply(OV, "[[", "mean"))
-        VAR$var  <- unname(sapply(OV, "[[", "var"))
-        VAR$nlev <- unname(sapply(OV, "[[", "nlevels"))
-        VAR$lnam <- unname(sapply(OV, "[[", "lnames"))
+    } else if(inherits(object, "data.frame")) {
+        VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names, 
+                                      ov.names.x = ov.names.x, 
+                                      ordered = ordered, factor = factor,
+                                      as.data.frame. = FALSE)
     } else {
         stop("object must of class lavaan or a data.frame")
     } 
@@ -1743,6 +1748,7 @@ getHessian <- function(object) {
     E <- computeObservedInformation(object@Model, 
                                     samplestats=object@SampleStats,
                                     X=object@Data@X,
+                                    cache=object@Cache,
                                     type="free",
                                     estimator=object@Options$estimator,
                                     group.weight=TRUE)

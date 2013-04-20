@@ -31,7 +31,7 @@ lavGradientC <- function(func, x, h=1e-12, ..., check=FALSE) {
     dx
 }
 
-lavJacobianC <- function(func, x, h=1e-12, ...) {
+lavJacobianC <- function(func, x, h=(.Machine$double.eps)^(2/3), ...) {
 
     f0 <- func(x, ...)
     nres <- length(f0)
@@ -40,6 +40,10 @@ lavJacobianC <- function(func, x, h=1e-12, ...) {
     # determine 'h' per element of x
     h <- pmax(h, abs(h*x))
 
+    # get exact h, per x
+    tmp <- x + h
+    h <- (tmp - x)
+
     # simple 'forward' method
     dx <- matrix(as.numeric(NA), nres, nvar)
     for(p in seq_len(nvar))
@@ -47,3 +51,25 @@ lavJacobianC <- function(func, x, h=1e-12, ...) {
 
     dx
 }
+
+lavJacobianD <- function(func, x, h=sqrt(.Machine$double.eps), ...) {
+
+    f0 <- func(x, ...)
+    nres <- length(f0)
+    nvar <- length(x)
+
+    # determine 'h' per element of x
+    h <- pmax(h, abs(h*x))
+
+    # get exact h, per x
+    tmp <- x + h
+    h <- (tmp - x)
+
+    # simple 'forward' method
+    dx <- matrix(as.numeric(NA), nres, nvar)
+    for(p in seq_len(nvar))
+        dx[,p] <- (func(x + h*(seq.int(nvar) == p), ...) - func(x,...))/h[p]
+
+    dx
+}
+

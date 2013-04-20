@@ -260,7 +260,7 @@ bootstrap.internal <- function(object       = NULL,
                                meanstructure = opt$meanstructure,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,
-                               verbose       = FALSE)) 
+                               verbose       = FALSE), silent=TRUE) 
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) cat("     FAILED: creating sample statistics\n")
             options(old_options)
@@ -306,7 +306,7 @@ bootstrap.internal <- function(object       = NULL,
                 out <- c(fit.boot@Fit@x, fit.boot@Fit@test[[1L]]$stat)
             } 
         } else { # general use
-            out <- try(FUN(fit.boot, ...))
+            out <- try(FUN(fit.boot, ...), silent=TRUE)
         }
         if(inherits(out, "try-error")) {
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")

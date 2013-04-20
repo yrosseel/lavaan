@@ -42,3 +42,8 @@ print.lavaan.vector <- function(x, ..., nd=3) {
     invisible(x)
 }
 
+print.lavaan.character <- function(x) {
+    cat(x)
+    invisible(x)
+}
+

@@ -48,6 +48,7 @@ setClass("lavSampleStats",         # sample moments
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)
+        ridge="numeric",           # ridge constant
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
         NACOV="list",              # N times the asymptotic covariance matrix
@@ -137,6 +138,7 @@ setClass("lavaan",
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "Model",           # internal matrix representation
+        Cache       = "list",            # housekeeping stuff
         Fit         = "Fit"              # fitted results
     ) 
 )

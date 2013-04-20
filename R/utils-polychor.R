@@ -294,6 +294,11 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         rho.init <- cor(Y1,Y2)
     #}
 
+    # check range of rho.init is within [-1,+1]
+    if(abs(rho.init) >= 1.0) {
+        rho.init <- 0.0
+    }
+
     if(method == "nlminb") {
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
                       gradient=gradientFunction,
@@ -344,6 +349,8 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                           th.y1=NULL, th.y2=NULL,
                           sl.y1=NULL, sl.y2=NULL) {
 
+    # check if rho > 
+
     R <- sqrt(1-rho^2)
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
@@ -374,17 +381,27 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
     lik <- pc_lik(rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
 
     # th.y1
-    y1.Z1 <- ( dnorm(fit.y1$z1) * pnorm( (fit.y2$z1-rho*fit.y1$z1)/R) -
-               dnorm(fit.y1$z1) * pnorm( (fit.y2$z2-rho*fit.y1$z1)/R) )
-    y1.Z2 <- ( dnorm(fit.y1$z2) * pnorm( (fit.y2$z1-rho*fit.y1$z2)/R) -
-               dnorm(fit.y1$z2) * pnorm( (fit.y2$z2-rho*fit.y1$z2)/R) )
+    if(identical(R, 0.0)) {
+        y1.Z1 <- dnorm(fit.y1$z1) * 0.5
+        y1.Z2 <- dnorm(fit.y1$z2) * 0.5
+    } else {
+        y1.Z1 <- ( dnorm(fit.y1$z1) * pnorm( (fit.y2$z1-rho*fit.y1$z1)/R) -
+                   dnorm(fit.y1$z1) * pnorm( (fit.y2$z2-rho*fit.y1$z1)/R) )
+        y1.Z2 <- ( dnorm(fit.y1$z2) * pnorm( (fit.y2$z1-rho*fit.y1$z2)/R) -
+                   dnorm(fit.y1$z2) * pnorm( (fit.y2$z2-rho*fit.y1$z2)/R) )
+    }
     dx.th.y1 <- (fit.y1$Y1*y1.Z1 - fit.y1$Y2*y1.Z2) / lik
 
     # th.y2
-    y2.Z1  <- ( dnorm(fit.y2$z1) * pnorm( (fit.y1$z1-rho*fit.y2$z1)/R) -
-                dnorm(fit.y2$z1) * pnorm( (fit.y1$z2-rho*fit.y2$z1)/R) )
-    y2.Z2  <- ( dnorm(fit.y2$z2) * pnorm( (fit.y1$z1-rho*fit.y2$z2)/R) -
-                dnorm(fit.y2$z2) * pnorm( (fit.y1$z2-rho*fit.y2$z2)/R) )
+    if(identical(R, 0.0)) {
+        y2.Z1  <- dnorm(fit.y2$z1) * 0.5
+        y2.Z2  <- dnorm(fit.y2$z2) * 0.5
+    } else {
+        y2.Z1  <- ( dnorm(fit.y2$z1) * pnorm( (fit.y1$z1-rho*fit.y2$z1)/R) -
+                    dnorm(fit.y2$z1) * pnorm( (fit.y1$z2-rho*fit.y2$z1)/R) )
+        y2.Z2  <- ( dnorm(fit.y2$z2) * pnorm( (fit.y1$z1-rho*fit.y2$z2)/R) -
+                    dnorm(fit.y2$z2) * pnorm( (fit.y1$z2-rho*fit.y2$z2)/R) )
+    }
     dx.th.y2 <- (fit.y2$Y1*y2.Z1 - fit.y2$Y2*y2.Z2) / lik
 
     dx.sl.y1 <- dx.sl.y2 <- NULL

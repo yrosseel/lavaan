@@ -1,3 +1,24 @@
+standardize.est.lv.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.lv(object=object, partable=partable, est=x, cov.std=cov.std)
+}
+
+standardize.est.all.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.all(object=object, partable=partable, est=x, est.std=NULL,
+                        cov.std=cov.std)
+}
+
+standardize.est.all.nox.x <- function(x, object, partable=NULL, cov.std=TRUE) {
+    standardize.est.all.nox(object=object, partable=partable, est=x, 
+                            est.std=NULL, cov.std=cov.std)
+}
+
+unstandardize.est.ov.x <- function(x, object) {
+    partable <- object@ParTable
+    partable$ustart <- x
+    unstandardize.est.ov(partable=partable, ov.var=object@SampleStats@var, 
+                         cov.std=TRUE)
+}
+
 standardize.est.lv <- function(object, partable=NULL, est=NULL,
                                cov.std = TRUE) {
 
@@ -98,29 +119,27 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
         idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
                      partable$group == g)
         out[idx] <- out[idx] / ETA[ match(partable$lhs[idx], lv.names) ]
+    }
 
-        # 5a ":="
-        idx <- which(partable$op == ":=" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@def.function(x)
-        }
+    # 5a ":="
+    idx <- which(partable$op == ":=")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@def.function(x)
+    }
 
-        # 5b "=="
-        idx <- which(partable$op == "==" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@ceq.function(x)
-        }
+    # 5b "=="
+    idx <- which(partable$op == "==")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@ceq.function(x)
+    }
 
-        # 5c. "<" or ">"
-        idx <- which((partable$op == "<" | partable$op == ">") & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@cin.function(x)
-        }
-
-        
+    # 5c. "<" or ">"
+    idx <- which((partable$op == "<" | partable$op == ">"))
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@cin.function(x)
     }
 
     out
@@ -232,27 +251,27 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
         idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
                      partable$group == g)
         out[idx] <- 1.0
+    }
 
-        # 5a ":="
-        idx <- which(partable$op == ":=" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@def.function(x)
-        }
+    # 5a ":="
+    idx <- which(partable$op == ":=")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@def.function(x)
+    }
 
-        # 5b "=="
-        idx <- which(partable$op == "==" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@ceq.function(x)
-        }
+    # 5b "=="
+    idx <- which(partable$op == "==")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@ceq.function(x)
+    }
 
-        # 5c. "<" or ">"
-        idx <- which((partable$op == "<" | partable$op == ">") & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@cin.function(x)
-        }
+    # 5c. "<" or ">"
+    idx <- which((partable$op == "<" | partable$op == ">"))
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@cin.function(x)
     }
 
     out
@@ -371,27 +390,27 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
         idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
                      partable$group == g)
         out[idx] <- 1.0
+    }
 
-        # 5a ":="
-        idx <- which(partable$op == ":=" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@def.function(x)
-        }
+    # 5a ":="
+    idx <- which(partable$op == ":=")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@def.function(x)
+    }
 
-        # 5b "=="
-        idx <- which(partable$op == "==" & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@ceq.function(x)
-        }
+    # 5b "=="
+    idx <- which(partable$op == "==")
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@ceq.function(x)
+    }
 
-        # 5c. "<" or ">"
-        idx <- which((partable$op == "<" | partable$op == ">") & partable$group == g)
-        if(length(idx) > 0L) {
-            x <- out[ partable$free & !duplicated(partable$free) ]
-            out[idx] <- object@Model@cin.function(x)
-        }
+    # 5c. "<" or ">"
+    idx <- which((partable$op == "<" | partable$op == ">"))
+    if(length(idx) > 0L) {
+        x <- out[ partable$free & !duplicated(partable$free) ]
+        out[idx] <- object@Model@cin.function(x)
     }
 
     out
@@ -494,10 +513,11 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
         #idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
         #             partable$group == g)
 
-        # 5a ":="
-        # 5b "=="
-        # 5c. "<" or ">"
     }
+
+    # 5a ":="
+    # 5b "=="
+    # 5c. "<" or ">"
 
     out
 }

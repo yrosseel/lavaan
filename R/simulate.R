@@ -30,11 +30,13 @@ simulateData <- function(
                          kurtosis        = NULL,
 
                          # control
-                         seed = NULL,
-                         empirical = FALSE,
+                         seed            = NULL,
+                         empirical       = FALSE,
 
-                         return.type = "data.frame",
-                         return.fit = FALSE
+                         return.type     = "data.frame",
+                         return.fit      = FALSE,
+                         debug           = FALSE,
+                         standardized    = FALSE
                         )
 {
     if(!is.null(seed)) set.seed(seed)
@@ -57,14 +59,104 @@ simulateData <- function(
                      auto.cov.y=auto.cov.y,
                      ngroups=length(sample.nobs))
 
+    if(debug) {
+        cat("initial lav\n")
+        print(as.data.frame(lav))
+    }
+
     # fill in any remaining NA values (needed for unstandardize)
-    # 1 for variances and factor loadings, 0 otherwise
+    # 1 for variances and (unstandardized) factor loadings, 0 otherwise
     idx <- which(lav$op == "=~" & is.na(lav$ustart))
-    if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+    if(length(idx) > 0L) {
+        if(standardized) {
+             lav$ustart[idx] <- 0.7
+        } else {
+             lav$ustart[idx] <- 1.0
+        }
+    }
+
     idx <- which(lav$op == "~~" & is.na(lav$ustart) & lav$lhs == lav$rhs)
     if(length(idx) > 0L) lav$ustart[idx] <- 1.0
+
+    idx <- which(lav$op == "~" & is.na(lav$ustart)) 
+    if(length(idx) > 0L) {
+        warning("lavaan WARNING: some regression coefficients are unspecified and will be set to zero")
+    }
+
     idx <- which(is.na(lav$ustart))
     if(length(idx) > 0L) lav$ustart[idx] <- 0.0
+
+    if(debug) {
+        cat("lav + default values\n")
+        print(as.data.frame(lav))
+    }
+
+    # set residual variances to enforce a standardized solution
+    # but only if no *residual* variances have been specified in the syntax
+    
+    if(standardized) {
+        # check if factor loadings are smaller than 1.0
+        lambda.idx <- which(lav$op == "=~")
+        if(any(lav$ustart[lambda.idx] >= 1.0)) {
+            warning("lavaan WARNING: standardized=TRUE but factor loadings are >= 1.0")
+        }
+
+        # check if regression coefficients are smaller than 1.0
+        reg.idx <- which(lav$op == "~")
+        if(any(lav$ustart[reg.idx] >= 1.0)) {
+            warning("lavaan WARNING: standardized=TRUE but regression coefficients are >= 1.0")
+        }
+
+        # for ordered observed variables, we will get '0.0', but that is ok
+        # so there is no need to make a distinction between numeric/ordered 
+        # here??
+        lav2 <- lav
+        ngroups <- max(lav$group)
+        ov.names <- vnames(lav, "ov")
+        ov.nox   <- vnames(lav, "ov.nox")
+        lv.names <- vnames(lav, "lv")
+        lv.y     <- vnames(lav, "lv.y")
+        ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
+                            lav$rhs == lav$lhs)
+        lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.y &
+                            lav$rhs == lav$lhs)
+        if(any(lav2$user[c(ov.var.idx, lv.var.idx)] > 0L)) {
+            warning("lavaan WARNING: if residual variances are specified, please use standardized=FALSE")
+        }
+        lav2$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
+        fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
+        Sigma.hat <- computeSigmaHat(fit@Model)
+        ETA <- computeETA(fit@Model, samplestats=NULL)
+
+        if(debug) {
+            cat("Sigma.hat:\n"); print(Sigma.hat)
+            cat("Eta:\n"); print(ETA)
+        }
+
+        # standardized OV
+        for(g in 1:ngroups) {
+            var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
+                               lav$rhs == lav$lhs & lav$group == g)
+            ov.idx <- match(ov.nox, ov.names)
+            lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
+        }
+
+        # standardize LV
+        if(length(lv.y) > 0L) {
+            for(g in 1:ngroups) {
+                var.group <- which(lav$op == "~~" & lav$lhs %in% lv.y &
+                                   lav$rhs == lav$lhs & lav$group == g)
+                eta.idx <- match(lv.y, lv.names)
+                lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
+            }
+        }
+
+
+        if(debug) {
+            cat("after standardisation lav\n")
+            print(as.data.frame(lav))
+        }    
+    }
 
 
     # unstandardize 
@@ -75,21 +167,29 @@ simulateData <- function(
         lav$ustart <- unstandardize.est.ov(partable=lav, ov.var=ov.var)
 
         # 2. unstandardized latent variables
+
+        if(debug) {
+            cat("after unstandardisation lav\n")
+            print(as.data.frame(lav))
+        }
     }
 
-
-    # basic fit (ignoring thresholds
-    ord.idx <- which(lav$op == "|")
-    if(length(ord.idx) > 0L) {
-        lav.no_ord <- lav[-ord.idx,]
-    } else {
-        lav.no_ord <- lav
-    }
-    fit <- lavaan(model=lav.no_ord, sample.nobs=sample.nobs,  ...)
+    # fit the model without data
+    fit <- lavaan(model=lav, sample.nobs=sample.nobs,  ...)
 
     # the model-implied moments for the population
     Sigma.hat <- computeSigmaHat(fit@Model)
        Mu.hat <- computeMuHat(fit@Model)
+    if(fit@Model@categorical) {
+       TH <- computeTH(fit@Model)
+    }
+
+    if(debug) {
+        cat("\nModel-implied moments:\n")
+        print(Sigma.hat)
+        print(Mu.hat)
+        if(exists("TH")) print(TH)
+    }
 
     # ngroups
     ngroups <- length(sample.nobs)
@@ -99,35 +199,41 @@ simulateData <- function(
     out <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
+        COV <- Sigma.hat[[g]]
+       
+        # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML 
+        # returns exact results
+        if(empirical) {
+            COV <- COV * sample.nobs[g] / (sample.nobs[g] - 1)
+        }
+
         # FIXME: change to rmvnorm once we include the library?
         if(is.null(skewness) && is.null(kurtosis)) {
             X[[g]] <- MASS::mvrnorm(n = sample.nobs[g],
                                     mu = Mu.hat[[g]],
-                                    Sigma = Sigma.hat[[g]],
+                                    Sigma = COV,
                                     empirical = empirical)
         } else {
             # first generate Z
             Z <- ValeMaurelli1983(n        = sample.nobs[g], 
-                                  COR      = cov2cor(Sigma.hat[[g]]), 
+                                  COR      = cov2cor(COV),
                                   skewness = skewness,  # FIXME: per group?
                                   kurtosis = kurtosis)
             # rescale
-            X[[g]] <- scale(Z, center = Mu.hat[[g]],
-                               scale  = 1/sqrt(diag(Sigma.hat[[g]])))
+            X[[g]] <- scale(Z, center = -Mu.hat[[g]],
+                               scale  = 1/sqrt(diag(COV)))
         }
 
         # any categorical variables?
         ov.ord <- vnames(lav, type="ov.ord", group=g)
         if(length(ov.ord) > 0L) {
             ov.names <- vnames(lav, type="ov", group=g)
-            # use thresholds to cut -- after standardization?
+            # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(lav$op == "|" & lav$lhs == o)
-                th.val <- c(-Inf,sort(lav$ustar[th.idx]),+Inf)
-                # scale!!
-                xz <- scale(X[[g]][,o.idx])
-                X[[g]][,o.idx] <- as.integer(cut(xz, th.val))
+                th.idx <- which(lav$op == "|" & lav$lhs == o & lav$group == g)
+                th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
+                X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
             }
         }
 

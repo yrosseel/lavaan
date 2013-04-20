@@ -15,6 +15,9 @@ function(object, newdata=NULL, ...) {
     #if(object@SampleStats@missing.flag) {
     #    stop("FIXME: predict does not work with missing data (yet)!")
     #}
+    if(object@Model@categorical) {
+        stop("lavaan ERROR: predict does not work (yet) for categorical data")
+    }
 
     G <- object@Data@ngroups
     nmat <- object@Model@nmat
@@ -37,7 +40,9 @@ function(object, newdata=NULL, ...) {
                            ordered     = OV$name[ OV$type == "ordered" ],
                            ov.names.x  = object@Data@ov.names.x,
                            std.ov      = object@Data@std.ov,
-                           missing     = object@Data@missing)
+                           missing     = object@Data@missing,
+                           # warn      = FALSE,
+                           allow.single.case = TRUE)
         data.obs <- newData@X
     }
 

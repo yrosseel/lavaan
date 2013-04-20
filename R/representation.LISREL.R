@@ -51,6 +51,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
         # (only y if categorical)
+
+        # regression dummys
         if(categorical) {
             tmp.names <-
                 unique( partable$lhs[(partable$op == "~" | 
@@ -65,7 +67,18 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                         partable$op == "<~") & 
                                         partable$group == g]) )
         }
-        dummy.names <- tmp.names[ !tmp.names %in% lv.names ]
+        dummy.names1 <- tmp.names[ !tmp.names %in% lv.names ]
+
+        # covariances involving dummys
+        dummy.cov.idx <- which(partable$op == "~~" & partable$group == g &
+                               (partable$lhs %in% dummy.names1 |
+                                partable$rhs %in% dummy.names1))
+        dummy.names2 <- unique( c(partable$lhs[dummy.cov.idx],
+                                  partable$rhs[dummy.cov.idx]) )
+        # collect all dummy variables
+        dummy.names <- unique(c(dummy.names1, dummy.names2))
+
+
         if(length(dummy.names)) {
             # make sure order is the same as ov.names
             ov.dummy.names[[g]] <- ov.names[ ov.names %in% dummy.names ]
@@ -170,6 +183,14 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.mat[idx] <- "delta"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- 1L
+
+        # new 0.5-12: catch lower-elements in theta/psi
+        idx.lower <- which(tmp.mat %in% c("theta","psi") & tmp.row > tmp.col)
+        if(length(idx.lower) > 0L) {
+            tmp <- tmp.row[idx.lower]
+            tmp.row[idx.lower] <- tmp.col[idx.lower]
+            tmp.col[idx.lower] <- tmp
+        }
 
         if(extra) {
             # mRows

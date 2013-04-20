@@ -37,6 +37,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    sample.cov.rescale = "default",
                    sample.mean        = NULL,
                    sample.nobs        = NULL,
+                   ridge              = 1e-5,
 
                    # multiple groups
                    group              = NULL,
@@ -80,10 +81,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    debug              = FALSE
                   )
 {
-
-    # temporary block estimator = "PML"
-    # if(estimator == "PML") stop("estimator PML is not available yet")
-
     # start timer
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
@@ -94,62 +91,33 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         FLAT <- slotParTable
     } else if(is.character(model)) {
-        FLAT <- parseModelString(model)
+        FLAT <- lavParseModelString(model)
     } else if(is.list(model)) {
         FLAT <- model
     }
     if(max(FLAT$group) < 2L) { # same model for all groups 
         ov.names   <- vnames(FLAT, type="ov")
+        ov.names.y <- vnames(FLAT, type="ov.nox")
+        ov.names.x <- vnames(FLAT, type="ov.x")
     } else { # different model per group
         ov.names <- lapply(1:max(FLAT$group),
                            function(x) vnames(FLAT, type="ov", group=x))
+        ov.names.y <- lapply(1:max(FLAT$group),
+                           function(x) vnames(FLAT, type="ov.nox", group=x))
+        ov.names.x <- lapply(1:max(FLAT$group),
+                           function(x) vnames(FLAT, type="ov.x", group=x))
     }
 
     # 0c categorical variables? -- needed for lavaanOptions
-    categorical <- any(FLAT$op == "|")
-    #if(!is.null(data) && length(ordered) > 0L) {
-    #    categorical <- TRUE
-    #}
-    if(!is.null(data)) {
-        if(length(ordered) > 0L) {
-            # check 'ordered'
-            not.in.ov <- which(!ordered %in% unlist(ov.names))
-            if(length(not.in.ov) > 0L) {
-                stop("ordered argument contains variable name(s) not in model: ",                     paste(ordered[not.in.ov], collapse=" "))
-            }
-            data[,ordered] <- lapply(data[,ordered,drop=FALSE], base::ordered)
-            #
-            # NOTE: we coerce these variables to 'ordered' here in
-            # the 'data' data.frame; however, (at least in 2.15.1), this
-            # creates (at least) 3 copies of the full data.frame...
-            # 
-            # we should try not to 'touch' the data.frame at all (giving us
-            # a lot of housekeeping work in lavData) ... TODO!
-            ov.types <- sapply(data[,unlist(ov.names)],
-                               function(x) class(x)[1])
-            categorical <- TRUE
-        } else {
-            ov.types <- sapply(data[,unlist(ov.names)], 
-                               function(x) class(x)[1])
-            if("ordered" %in% ov.types) 
-                categorical <- TRUE
-        }        
-    }
-
-    # if categorical, make a distinction between exo and the rest
-    if(categorical) {
-        if(max(FLAT$group) < 2L) { # same model for all groups 
-            ov.names   <- vnames(FLAT, type="ov.nox")
-            ov.names.x <- vnames(FLAT, type="ov.x")
-        } else { # different model per group
-            ov.names <- lapply(1:max(FLAT$group),
-                               function(x) vnames(FLAT, type="ov.nox", group=x))
-            ov.names.x <- lapply(1:max(FLAT$group),
-                                 function(x) vnames(FLAT, type="ov.x", group=x))
-        }
+    if(any(FLAT$op == "|")) {
+        categorical <- TRUE
+    } else if(!is.null(data) && length(ordered) > 0L) {
+        categorical <- TRUE
+    } else if(lav_dataframe_check_ordered(frame=data, ov.names=ov.names.y)) {
+        categorical <- TRUE
     } else {
-        ov.names.x <- character(0)
-    } 
+        categorical <- FALSE
+    }
 
     # 1a. collect various options/flags and fill in `default' values
     #opt <- modifyList(formals(lavaan), as.list(mc)[-1])
@@ -183,6 +151,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # some additional checks for estimator="PML"
     if(lavaanOptions$estimator == "PML") {
+        ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
         # 0. at least some variables must be ordinal
         if(!any(ov.types == "ordered")) {
             stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
@@ -197,12 +166,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(ov.names.x) > 0L) {
             stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
         }
+
+        # 3. warn that this is still experimental
+        message("Please note: the PML estimator is still under development.\n",
+                "Future releases will improve speed, and allow for mixed ord/cont variables.\n",
+                "Research on how to compute a proper goodness-of-fit test is ongoing.\n")
     }
 
     # 1b. check data/sample.cov and get the number of groups
     if(!is.null(slotData)) {
         lavaanData <- slotData
     } else {
+        if(categorical) {
+            ov.names <- ov.names.y
+        } 
         lavaanData <- lavData(data        = data,
                               group       = group,
                               group.label = group.label,
@@ -229,6 +206,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavaanOptions$se <- "none"; lavaanOptions$test <- "none"
     } else if(lavaanData@data.type == "moment") {
         # catch here some options that will not work with moments
+        if(lavaanOptions$se == "bootstrap") {
+            stop("lavaan ERROR: bootstrapping requires full data")
+        }
         if(estimator %in% c("MLM", "MLMV", "MLR", "ULSM", "ULSMV") &&
            is.null(NACOV)) {
             stop("lavaan ERROR: estimator ", estimator, " requires full data or user-provided NACOV")
@@ -333,6 +313,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        missing.h1    = (lavaanOptions$missing != "listwise"),
                        WLS.V         = WLS.V,
                        NACOV         = NACOV,
+                       ridge         = ridge,
+                       debug         = lavaanOptions$debug,
                        verbose       = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
@@ -346,15 +328,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            meanstructure = lavaanOptions$meanstructure,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
+                           ridge         = ridge,
                            rescale       = lavaanOptions$sample.cov.rescale)
-                           
     } else {
         # no data
+        th.idx <- vector("list", length=lavaanData@ngroups)
+        for(g in 1:lavaanData@ngroups) {
+            th.idx[[g]] <- getIDX(lavaanParTable, type="th")
+        }
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),
-                                 cov.x=vector("list", length=lavaanData@ngroups),
+                                 cov.x=vector("list",length=lavaanData@ngroups),
+                                 th.idx=th.idx,
                                  missing.flag=FALSE)
-    } 
+    }
     timing$Sample <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     if(debug) print(str(lavaanSampleStats))
@@ -390,7 +377,39 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   debug          = lavaanOptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
+  
+        # if no data, call setModelParameters once (for categorical case)
+        if(lavaanData@data.type == "none" && lavaanModel@categorical) {
+            lavaanModel <- setModelParameters(lavaanModel, 
+                                              x=getModelParameters(lavaanModel))
+        }
     }
+
+    # check for categorical
+    if(lavaanModel@categorical && lavaanOptions$se == "bootstrap") {
+        stop("lavaan ERROR: bootstrap not supported (yet) for categorical data")
+    }
+
+    # prepare cache -- stuff needed for estimation, but also post-estimation
+    lavaanCache <- vector("list", length=lavaanData@ngroups)
+    if(estimator == "PML") {
+        TH <- computeTH(lavaanModel)
+        for(g in 1:lavaanData@ngroups) {
+            nvar <- ncol(lavaanData@X[[g]])
+            th.idx <- lavaanModel@th.idx[[g]]
+            # pairwise tables, as a long vector
+            PW <- pairwiseTables(data=lavaanData@X[[g]], no.x=nvar)$pairTables
+            bifreq <- as.numeric(unlist(PW))
+            ### FIXME!!! Check for zero cells!!
+            #zero.idx <- which(bifreq == 0)
+            #bifreq[zero.idx] <- 0.001 ####????
+            LONG <- LongVecInd(no.x               = nvar,
+                               all.thres          = TH[[g]],
+                               index.var.of.thres = th.idx)
+            lavaanCache[[g]] <- list(bifreq=bifreq, LONG=LONG)
+        }
+    }
+
 
     # 6. estimate free parameters
     x <- NULL
@@ -399,6 +418,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
            #FALSE && # to debug
+           sum(nchar(FLAT$fixed)) == 0 && # no fixed values in parTable
+                                          # this includes intercepts!!
            !categorical &&
            !lavaanModel@eq.constraints &&
            length(lavaanData@X) > 0L &&
@@ -415,9 +436,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # constraints?
             if(sum(length(lavaanModel@x.ceq.idx) + 
                    length(lavaanModel@x.cin.idx)) == 0L) {
-                out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
-                              y=YX[,ov.y.idx])
-                x.beta <- out$coefficients
+
+                ## forced zero intercept?
+                #yvar <- vnames(lavaanParTable, "ov.y")
+                #int.y.idx <- which(lavaanParTable$lhs == yvar &
+                #                   lavaanParTable$op == "~1")
+                #if(length(int.y.idx) > 0L && 
+                #   !is.na(lavaanParTable$ustart[int.y.idx]) &&
+                #   lavaanParTable$ustart[int.y.idx] == 0) {
+                #    lm.intercept <- FALSE
+                #} else {
+                #    lm.intercept <- TRUE
+                #}
+                #if(lm.intercept) {
+                    out <- lm.fit(x=cbind(1,YX[,ov.x.idx]), 
+                                  y=YX[,ov.y.idx])
+                    x.beta <- out$coefficients
+                #} else {
+                #     out <- lm.fit(x=YX[,ov.x.idx], y=YX[,ov.y.idx])
+                #     x.beta <- c(0,out$coefficients)
+                #}
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavaanOptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
@@ -437,9 +475,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
-                attr(x, "fx") <-
-                computeObjective(lavaanModel, samplestats = lavaanSampleStats,
-                                 estimator = lavaanOptions$estimator)
+                FX <- try(computeObjective(lavaanModel, 
+                                           samplestats = lavaanSampleStats,
+                                           estimator = lavaanOptions$estimator),
+                          silent=TRUE)
+                if(inherits(FX, "try-error")) {
+                    # eg non-full rank design matrix
+                    FX <- as.numeric(NA)
+                    attr(FX, "fx.group") <- rep(as.numeric(NA), 
+                                                lavaanData@ngroups)
+                    attr(x, "fx") <- as.numeric(NA)
+                } 
+                attr(x, "fx") <- FX
             } else if(checkLinearConstraints(lavaanModel) == TRUE) {
 
                 require(quadprog)
@@ -468,10 +515,25 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     # add intercept, then coefficients, remove resvar
                     A <- rbind(rep(0,ncol(A)), A[-c(rvar.idx),,drop=FALSE])
                 }
-                #A <- matrix( c( 0, -1, 1,  0,
-                #                0, 0,  -1, 1), 4, 2)
-                X <- cbind(1,YX[,ov.x.idx]); X.X <- crossprod(X)
+
+                ## forced zero intercept?
+                #yvar <- vnames(lavaanParTable, "ov.y")
+                #int.y.idx <- which(lavaanParTable$lhs == yvar &
+                #                   lavaanParTable$op == "~1")
+                #if(length(int.y.idx) > 0L &&
+                #   lavaanParTable$ustart[int.y.idx] == 0) {
+                #    lm.intercept <- FALSE
+                #} else {
+                #    lm.intercept <- TRUE
+                #}
+                X <- cbind(1,YX[,ov.x.idx])
                 Y <- YX[,ov.y.idx]; X.Y <- crossprod(X, Y)
+                #if(lm.intercept) {
+                    X <- cbind(1,YX[,ov.x.idx])
+                #} else {
+                #    X <- YX[,ov.x.idx]
+                #}
+                X.X <- crossprod(X)
                 out <- solve.QP(Dmat=X.X, dvec=X.Y, Amat=A, 
                                 bvec=rep(0, NCOL(A)), 
                                 meq=length(lavaanModel@x.ceq.idx))
@@ -513,6 +575,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                samplestats  = lavaanSampleStats,
                                X            = lavaanData@X,
                                options      = lavaanOptions,
+                               cache        = lavaanCache,
                                control      = control)
                 lavaanModel <- setModelParameters(lavaanModel, x = x)
             }
@@ -523,6 +586,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                samplestats  = lavaanSampleStats,
                                X            = lavaanData@X,
                                options      = lavaanOptions,
+                               cache        = lavaanCache,
                                control      = control)
             lavaanModel <- setModelParameters(lavaanModel, x = x)
         }
@@ -540,7 +604,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "control") <- control
         attr(x, "fx") <- 
             computeObjective(lavaanModel, samplestats = lavaanSampleStats, 
-                             X=lavaanData@X,
+                             X=lavaanData@X, cache = lavaanCache,
                              estimator = lavaanOptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -555,8 +619,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                              samplestats  = lavaanSampleStats,
                              options      = lavaanOptions,
                              data         = lavaanData,
-                             partable = lavaanParTable,
-                             control  = control)
+                             partable     = lavaanParTable,
+                             cache        = lavaanCache,
+                             control      = control)
         if(verbose) cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
@@ -573,6 +638,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      x        = x,
                                      VCOV     = VCOV,
                                      data     = lavaanData,
+                                     cache    = lavaanCache,
                                      control  = control)
         if(verbose) cat(" done.\n")
     } else {
@@ -601,7 +667,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             warning("lavaan WARNING: some estimated variances are negative")
         
         # 2. is cov.lv (PSI) positive definite?
-        if(length(vnames(lavaanParTable, type="lv")) > 0L) {
+        if(length(vnames(lavaanParTable, type="lv.regular")) > 0L) {
             ETA <- computeETA(lavaanModel, samplestats=lavaanSampleStats)
             for(g in 1:lavaanData@ngroups) {
                 txt.group <- ifelse(lavaanData@ngroups > 1L,
@@ -623,6 +689,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   Data         = lavaanData,             # S4 class
                   SampleStats  = lavaanSampleStats,      # S4 class
                   Model        = lavaanModel,            # S4 class
+                  Cache        = lavaanCache,            # list
                   Fit          = lavaanFit               # S4 class
                  )
 
@@ -635,7 +702,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.label = NULL,
+    sample.nobs = NULL, ridge = 1e-5,
+    group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
@@ -667,7 +735,8 @@ growth <- function(model = NULL, data = NULL,
     orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
-    sample.nobs = NULL, group = NULL, group.label = NULL,
+    sample.nobs = NULL, ridge = 1e-5,
+    group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",

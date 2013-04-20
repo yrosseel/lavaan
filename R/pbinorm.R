@@ -1,8 +1,15 @@
 # functions to deal with bivariate normal distributions
 # YR
+# TODO: better handling of rho=1.0
 
 # density of a bivariate standard normal 
 dbinorm <- function(u, v, rho) {
+    # dirty hack to handle extreme large values for rho
+    # note that u, v, and rho are vectorized!
+    RHO.limit <- 0.9999
+    abs.rho <- abs(rho); idx <- which(abs.rho > RHO.limit)
+    if(length(idx) > 0L) rho[idx] <- sign(rho[idx]) * RHO.limit
+
     R <- 1-rho^2
     1/(2*pi*sqrt(R)) * exp( - 0.5*(u^2 - 2*rho*u*v + v^2)/R )
 }

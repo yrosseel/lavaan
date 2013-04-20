@@ -175,7 +175,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                mimic         = h0@Options$mimic,
                                meanstructure = h0@Options$meanstructure,
                                missing.h1    = TRUE,
-                               verbose  = FALSE))
+                               verbose  = FALSE), silent=TRUE)
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")
             options(old_options)

@@ -266,7 +266,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 t1 <- max( c(X2.scaled - df.scaled, 0) )
                 t2 <- max( c(X2.scaled - df.scaled,
                              X2.null.scaled - df.null.scaled, 0) )
-                if(t1 == 0 && t2 == 0) {
+                if(is.na(t1) || is.na(t2)){
+                    indices["cfi.scaled"] <- NA
+                } else if(t1 == 0 && t2 == 0) {
                     indices["cfi.scaled"] <- 1
                 } else {
                     indices["cfi.scaled"] <- 1 - t1/t2
@@ -328,9 +330,11 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 if(df > 0) {
                     t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
                     t2 <- X2.null.scaled/df.null.scaled
-                    if(t1 < 0 || t2 < 0) {
+                    if(is.na(t1) || is.na(t2)) {
+                        RLI <- NA
+                    } else if(t1 < 0 || t2 < 0) {
                         RLI <- 1
-                    }     else {
+                    } else {
                         RLI <- t1/t2
                     }
                 } else {
@@ -381,7 +385,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             if("ifi.scaled" %in% fit.measures) {
                 t1 <- X2.null.scaled - X2.scaled
                 t2 <- X2.null.scaled
-                if(t2 < 0) {
+                if(is.na(t2)) {
+                    IFI <- NA
+                } else if(t2 < 0) {
                     IFI <- 1
                 } else {
                     IFI <- t1/t2
@@ -404,7 +410,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                 t1 <- X2.scaled - df.scaled
                 t2 <- X2.null.scaled - df.null.scaled
                 t2 <- X2.null - df.null
-                if(t1 < 0 || t2 < 0) {
+                if(is.na(t1) || is.na(t2)) {
+                    RNI <- NA
+                } else if(t1 < 0 || t2 < 0) {
                     RNI <- 1
                 } else {
                     RNI <- 1 - t1/t2
@@ -508,6 +516,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df > 0) {
             if(scaled) {
                 d <- sum(object@Fit@test[[2]]$trace.UGamma)
+                if(d==0) d <- NA
             } 
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 GG <- 0
@@ -543,7 +552,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower"] <- 0
         } else {
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root)
+            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root,
+                            silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -574,7 +584,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
             indices["rmsea.ci.lower.scaled"] <- 0
         } else {
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root)
+            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
+                            silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -595,7 +606,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         } else if(df < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
             indices["rmsea.ci.upper"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
+                            silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -624,7 +636,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                                        upper.lambda(0) < 0) {
             indices["rmsea.ci.upper.scaled"] <- 0
         } else {
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0, upper=N.RMSEA)$root)
+            lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
+                            silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
             if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
@@ -772,10 +785,14 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             wls.est <- WLS.est[[g]]
             wls.v   <- WLS.V[[g]]
             
-            wls.diff <- wls.obs - wls.est
-            t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
-            t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
-            gfi.group[g] <- 1 - t1/t2
+            if(is.null(wls.v)) {
+                gfi.group[g] <- as.numeric(NA)
+            } else {
+                wls.diff <- wls.obs - wls.est
+                t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
+                t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
+                gfi.group[g] <- 1 - t1/t2
+            }
         }
         if(G > 1) {
             ## FIXME: get the scaling right
@@ -819,12 +836,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     # do we have everything that we requested?
-    idx.missing <- which(is.na(match(fit.measures, names(indices))))
-    if(length(idx.missing) > 0L) {
-        cat("lavaan WARNING: some requested fit measure(s) are not available for this model:\n")
-        print( fit.measures[ idx.missing ] )
-        cat("\n")
-    }
+    #idx.missing <- which(is.na(match(fit.measures, names(indices))))
+    #if(length(idx.missing) > 0L) {
+    #    cat("lavaan WARNING: some requested fit measure(s) are not available for this model:\n")
+    #    print( fit.measures[ idx.missing ] )
+    #    cat("\n")
+    #}
     
     out <- unlist(indices[fit.measures])
 

@@ -20,10 +20,10 @@ lavData <- function(data          = NULL,          # data.frame
                     sample.cov    = NULL,          # sample covariance(s)
                     sample.mean   = NULL,          # sample mean vector(s)
                     sample.nobs   = NULL,          # sample nobs
-                    warn          = TRUE           # produce warnings?
+                    warn          = TRUE,          # produce warnings?
+                    allow.single.case = FALSE      # allow single case (for newdata in predict)
                    ) 
 {
-
     # three scenarios:
     #    1) data is full data.frame
     #    2) data are sample statistics only
@@ -32,16 +32,17 @@ lavData <- function(data          = NULL,          # data.frame
     # 1) full data
     if(!is.null(data)) {
         stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
-        lavData <- getDataFull(data        = data,
-                               group       = group,
-                               group.label = group.label,
-                               ov.names    = ov.names,
-                               ordered     = ordered,
-                               ov.names.x  = ov.names.x,
-                               std.ov      = std.ov,
-                               missing     = missing,
-                               warn        = warn)
-    } 
+        lavData <- getDataFull(data              = data,
+                               group             = group,
+                               group.label       = group.label,
+                               ov.names          = ov.names,
+                               ordered           = ordered,
+                               ov.names.x        = ov.names.x,
+                               std.ov            = std.ov,
+                               missing           = missing,
+                               warn              = warn,
+                               allow.single.case = allow.single.case)
+    }
     
     
     # 2) sample moments
@@ -182,7 +183,8 @@ getDataFull <- function(data          = NULL,          # data.frame
                         ov.names.x    = character(0),  # exo variables
                         std.ov        = FALSE,         # standardize ov's?
                         missing       = "listwise",    # remove missings?
-                        warn          = TRUE           # produce warnings?
+                        warn          = TRUE,          # produce warnings?
+                        allow.single.case = FALSE      # allow single case data?
                        )
 {
     # number of groups and group labels
@@ -266,27 +268,37 @@ getDataFull <- function(data          = NULL,          # data.frame
     for(g in 1:ngroups) {
         # does the data contain all the observed variables
         # needed in the user-specified model for this group
-        idx.missing <- which(!(ov.names[[g]] %in% names(data)))
+        ov.all <- unique(ov.names[[g]], ov.names.x[[g]]) # no overlap if categ
+        idx.missing <- which(!(ov.all %in% names(data)))
         if(length(idx.missing)) {
             stop("lavaan ERROR: missing observed variables in dataset: ",
-                 paste(ov.names[[g]][idx.missing], collapse=" "))
+                 paste(ov.all[idx.missing], collapse=" "))
         }
     }
 
-    # here, we now for sure all ov.names exist in the data.frame
+
+    # here, we know for sure all ov.names exist in the data.frame
     # create varTable
-    ov <- varTable(data, ov.names = ov.names, ov.names.x = ov.names.x, 
-                   as.data.frame. = FALSE)
+    ov <- lav_dataframe_vartable(frame = data, ov.names = ov.names, 
+                                 ov.names.x = ov.names.x, ordered = ordered,
+                                 as.data.frame. = FALSE)
 
     # do some checking
     # check for unordered factors
     if("factor" %in%  ov$type) {
         f.names <- ov$name[ov$type == "factor"]
-        if(any(f.names %in% unlist(ov.names)))
+        if(warn && any(f.names %in% unlist(ov.names)))
             warning(paste("lavaan WARNING: unordered factor(s) detected in data:", paste(f.names, collapse=" ")))
     }
+    # check for ordered exogenous variables
+    if("ordered" %in% ov$type[ov$name %in% unlist(ov.names.x)]) {
+        f.names <- ov$name[ov$type == "ordered" & 
+                           ov$name %in% unlist(ov.names.x)]
+        if(warn && any(f.names %in% unlist(ov.names.x)))
+            warning(paste("lavaan WARNING: exogenous variable(s) declared as ordered in data:", paste(f.names, collapse=" ")))
+    }
     # check for zero-cases
-    idx <- which(ov$nobs == 0L || ov$var == 0)
+    idx <- which(ov$nobs == 0L | ov$var == 0)
     if(length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
@@ -294,6 +306,28 @@ getDataFull <- function(data          = NULL,          # data.frame
         rownames(OV) <- rn
         print(OV)
         stop("lavaan ERROR: some variables have no values (only missings) or no variance")
+    }
+    # check for single cases (no variance!)
+    idx <- which(ov$nobs == 1L | (ov$type == "numeric" & !is.finite(ov$var)))
+    if(!allow.single.case && length(idx) > 0L) {
+        OV <- as.data.frame(ov)
+        rn <- rownames(OV)
+        rn[idx] <- paste(rn[idx], "***", sep="")
+        rownames(OV) <- rn
+        print(OV)
+        stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
+    }
+    # check for mix small/large variances (NOT including exo variables)
+    if(!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
+        num.idx <- which(ov$type == "numeric" & ov$exo == 1L)
+        if(length(num.idx) > 0L) {
+            min.var <- min(ov$var[num.idx])
+            max.var <- max(ov$var[num.idx])
+            rel.var <- max.var/min.var
+            if(rel.var > 1000) {
+                warning("lavaan WARNING: some observed variances are (at least) a factor 1000 times larger than others; please rescale")
+            }
+        }
     }
 
     # prepare empty list for data.matrix per group
@@ -310,12 +344,13 @@ getDataFull <- function(data          = NULL,          # data.frame
         # extract variables in correct order
         ov.idx  <- ov$idx[match(ov.names[[g]],   ov$name)]
         exo.idx <- ov$idx[match(ov.names.x[[g]], ov$name)] 
+        all.idx <- unique(c(ov.idx, exo.idx))
 
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(data[, group] == group.label[g] &
-                                       complete.cases(data[,ov.idx]))
+                                       complete.cases(data[,all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[, group] == group.label[g]))
             } else {
@@ -324,7 +359,7 @@ getDataFull <- function(data          = NULL,          # data.frame
             }
         } else {
             if(missing == "listwise") {
-                case.idx[[g]] <- which(complete.cases(data[,ov.idx]))
+                case.idx[[g]] <- which(complete.cases(data[,all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else {
@@ -335,7 +370,19 @@ getDataFull <- function(data          = NULL,          # data.frame
 
         # extract data
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop=FALSE] )
-        dimnames(X[[g]]) <- NULL
+        dimnames(X[[g]]) <- NULL ### copy?
+
+        # manually construct integers for user-declared 'ordered' factors
+        # FIXME: is this really (always) needed???
+        #  (but it is still better than doing lapply(data[,idx], ordered) which
+        #   generated even more copies)
+        user.ordered.names <- ov$name[ov$type == "ordered" &
+                                      ov$user == 1L]
+        user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
+        for(i in seq_len(length(user.ordered.idx))) {
+            X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
+        }
+
         if(length(exo.idx) > 0L) {
             eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx, drop=FALSE] )
             dimnames(eXo[[g]]) <- NULL
@@ -358,9 +405,11 @@ getDataFull <- function(data          = NULL,          # data.frame
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
-                warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+                if(warn) {
+                    warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+                }
             }
-            if(any(Mp[[g]]$coverage < 0.1)) {
+            if(warn && any(Mp[[g]]$coverage < 0.1)) {
                 warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
             }
             # in case we had observations with only missings
@@ -368,7 +417,8 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # warn if we have a small number of observations (but NO error!)
-        if( nobs[[g]] < (nvar <- length(ov.idx)) ) {
+        if( !allow.single.case && warn && 
+            nobs[[g]] < (nvar <- length(ov.idx)) ) {
             txt <- ""
             if(ngroups > 1L) txt <- paste(" in group ", g, sep="")
             warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,

@@ -330,6 +330,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         opt$missing <- "listwise"
+    } else if(opt$estimator == "wlsmvs") {
+        opt$estimator <- "DWLS"
+        if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -363,6 +369,12 @@ setLavaanOptions <- function(opt = formals(lavaan))
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         opt$missing <- "listwise"
+    } else if(opt$estimator == "ulsmvs") {
+        opt$estimator <- "ULS"
+        if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
+        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {
         opt$estimator <- "PML"
         opt$information <- "observed"
@@ -378,9 +390,11 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(opt$estimator != "ML") {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
-        } 
-        if(opt$sample.cov.rescale != "default") {
-            stop("sample.cov.rescale argument is only relevant if estimator = ML")
+        }
+        if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- FALSE
+        } else {
+            warning("sample.cov.rescale argument is only relevant if estimator = ML")
         }
     } else { # ml
         if(opt$likelihood == "default") {

@@ -42,6 +42,7 @@ about the data.}
       statistics}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the 
       internal (matrix) representation of the model}
+    \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
     \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the 
       results of fitting the model}
   }

@@ -21,17 +21,12 @@ if(getRversion() >= "2.13.0") {
 
 
 # export ordinary functions defined in this package
-export("lavaan",
-       "cfa",
-       "sem",
-       "growth",
-       "lavaanify",
-       "lavaanNames",
-       "parseModelString",
-       #"lavData",
-       #"setLavaanOptions",
-       # "export",
-       #"independence.model",
+export("lavaan", "cfa", "sem", "growth",
+       # new name           # old name
+       "lavParTable",       "lavaanify",
+       "lavNames",          "lavaanNames",
+       "lavParseModelString", # "parseModelString",
+       # utilities
        "getCov", "char2num", "cor2cov",
        "vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
        "vechr", "vechr.reverse", "vechu", "vechu.reverse", "upper2full", 
@@ -45,7 +40,10 @@ export("lavaan",
        "fitMeasures", "fitmeasures",
        "inspectSampleCov",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
-       "simulateData"
+       "simulateData",
+       "estfun.lavaan", "lavScores",
+       "lavTables", "lavExport",
+       "mplus2lavaan"
       )
 
 # export Classes

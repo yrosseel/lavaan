@@ -47,7 +47,7 @@ lavaanify <- lavParTable <- function(
     } else {
         # parse the model syntax and flatten the user-specified model
         # return a data.frame, where each line is a model element (rhs, op, lhs)
-        FLAT <- parseModelString(model.syntax=model, warn=warn, debug=FALSE)
+        FLAT <- lavParseModelString(model.syntax=model, warn=warn, debug=FALSE)
     }
     # user-specified *modifiers* are returned as an attribute
     MOD  <- attr(FLAT, "modifiers"); attr(FLAT, "modifiers") <- NULL
@@ -56,7 +56,7 @@ lavaanify <- lavParTable <- function(
 
     # extra constraints?
     if(!is.null(constraints) && nchar(constraints) > 0L) {
-        FLAT2 <- parseModelString(model.syntax=constraints, warn=warn)
+        FLAT2 <- lavParseModelString(model.syntax=constraints, warn=warn)
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
     }
@@ -342,7 +342,7 @@ lavaanify <- lavParTable <- function(
 }
 
 
-parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
+lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                              warn = TRUE, debug = FALSE) {
   
     # check for empty syntax
@@ -386,6 +386,14 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     idx.wrong <- which(!grepl("[~=<>:|]", model.simple))
     if(length(idx.wrong) > 0) {
         cat("lavaan: missing operator in formula(s):\n")
+        print(model[idx.wrong])
+        stop("lavaan ERROR: syntax error in lavaan model syntax")
+    }
+
+    # but perhaps we have a '+' as the first character?
+    idx.wrong <- which(grepl("^\\+", model))
+    if(length(idx.wrong) > 0) {
+        cat("lavaan: some formula(s) start with a plus (+) sign:\n")
         print(model[idx.wrong])
         stop("lavaan ERROR: syntax error in lavaan model syntax")
     }
@@ -508,6 +516,10 @@ parseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         }
     
         # 4. parse rhs (as rhs of a single-sided formula)
+
+        # new 0.5-12: before we do this, replace '0.2?' by 'start(0.2)*'
+        # requested by the simsem folks
+        rhs <- gsub('([0-9]*\\.*[0-9]*)\\?',"start(\\1)\\*",rhs)
         rhs.formula <- as.formula(paste("~",rhs))
         out <- parse.rhs(rhs=rhs.formula[[2L]],op=op)
     

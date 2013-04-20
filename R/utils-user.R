@@ -1,5 +1,5 @@
 # public version
-lavaanNames <- function(object, type="ov", group=NULL) {
+lavaanNames <- lavNames <- function(object, type="ov", group=NULL) {
 
     if(class(object) == "lavaan") {
          partable <- object@ParTable
@@ -17,7 +17,8 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
     stopifnot(is.list(partable), !missing(type),
               type %in% c("lv",   "ov", "lv.regular",
-                          "lv.x", "ov.x", "ov.num", "ov.ord", "th",
+                          "lv.x", "ov.x", "ov.num",
+                          "ov.ord", "th", "th.mean",
                           "lv.y", "ov.y",
                           "ov.nox"))
 
@@ -165,7 +166,27 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
         TH <- unique(paste(lhs, "|", rhs, sep=""))
         # return in the right order
         out <- unlist(lapply(ord.names, 
-                      function(x) paste(x, "|t", 1:length(grep(paste(x,"\\|",sep=""),TH)), sep="")))
+                      function(x) paste(x, "|t", 1:length(grep(paste("^",x,"\\|",sep=""),TH)), sep="")))
+    } else
+
+    # thresholds and mean/intercepts of numeric variables
+    if(type == "th.mean") {
+        ## FIXME!! do some elegantly!
+        ord.names <- vnames(partable, "ov.ord", group=group)
+        all.names <- vnames(partable, "ov.nox", group=group)
+        lhs <- partable$lhs[ partable$op == "|" ]
+        rhs <- partable$rhs[ partable$op == "|" ]
+        TH <- unique(paste(lhs, "|", rhs, sep=""))
+        # return in the right order
+        out <- unlist(lapply(all.names,
+                      function(x) {
+                      if(x %in% ord.names) {
+                            paste(x, "|t", 
+                                1:length(grep(paste("^",x,"\\|",sep=""),TH)), sep="")
+                      } else {
+                          x
+                      }
+                      }))
     } else
 
 
@@ -177,7 +198,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
         tmp <- lv.names[ !lv.names %in% c(v.ind, eqs.y) ]
         # make sure order is the same as lv.names
-        out <- lv.names[ match(tmp, lv.names) ]
+        out <- lv.names[ which(lv.names %in% tmp) ]
     } else
  
     # dependent ov (but not also indicator or x)
@@ -190,7 +211,7 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
 
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
         # make sure order is the same as ov.names
-        out <- ov.names[ match(tmp, ov.names) ]
+        out <- ov.names[ which(ov.names %in% tmp) ]
     } else
 
     # dependent lv (but not also indicator or x)
@@ -203,7 +224,25 @@ vnames <- function(partable, type=NULL, group=NULL, warn=FALSE,
         tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x) &
                        eqs.y %in% lv.names ]
         # make sure order is the same as lv.names
-        out <- lv.names[ match(tmp, lv.names) ]
+        out <- lv.names[ which(lv.names %in% tmp) ]
+    }
+
+    out
+}
+
+getIDX <- function(partable, type="th", group=NULL) {
+
+    stopifnot(is.list(partable), !missing(type),
+              type %in% c("th"))
+
+    if(type == "th") {
+        ovn <- vnames(partable, type="ov.nox", group=group)
+        ov.num <- vnames(partable, type="ov.num", group=group)
+        th  <- vnames(partable, type="th.mean", group=group)
+        th[th %in% ov.num] <- "__NUM__"
+        th1 <- gsub("\\|t[0-9]*","",th)
+        out <- match(th1, ovn)
+        out[is.na(out)] <- 0
     }
 
     out
@@ -521,6 +560,14 @@ getLIST <- function(FLAT=NULL,
 
     # get 'ordered' variables, either from FLAT or varTable
     ov.names.ord1 <- vnames(FLAT, type="ov.ord")
+    # check if we have "|" for exogenous variables
+    if(length(ov.names.ord1) > 0L) {
+        idx <- which(ov.names.ord1 %in% ov.names.x)
+        if(length(idx) > 0L) {
+            warning("lavaan WARNING: thresholds are defined for exogenous variables: ", paste(ov.names.ord1[idx], collapse=" "))
+        }
+    }
+ 
     if(!is.null(varTable)) {
         ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
         # remove fixed.x variables
@@ -535,8 +582,6 @@ getLIST <- function(FLAT=NULL,
 
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
-    
-
 
     lhs <- rhs <- character(0)
 
@@ -797,7 +842,7 @@ getLIST <- function(FLAT=NULL,
         ord.idx <- which(lhs %in% ov.names.ord &
                          op == "~~" &
                          lhs == rhs)
-        ustart[ord.idx] <- 1L
+        ustart[ord.idx] <- 1L ## FIXME!! or 0?? (0 breaks ex3.12)
           free[ord.idx] <- 0L
     }
 
@@ -843,7 +888,8 @@ getLIST <- function(FLAT=NULL,
             }
 
             # latent response scaling
-            if(any(op == "~*~" & group == g)) {
+            if(any(op == "~*~" & group == g) &&
+               ("thresholds" %in% group.equal)) {
                 delta.idx <- which(op == "~*~" & group == g)
                   free[ delta.idx ] <- 1L
                 ustart[ delta.idx ] <- as.numeric(NA)

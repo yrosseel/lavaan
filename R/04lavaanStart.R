@@ -21,11 +21,13 @@ StartingValues <- function(start.method = "default",
     #ord.names <- unique(partable$lhs[ partable$op == "|" ])
 
     # shortcut for 'simple'
-    if(start.method == "simple") {
+    if(identical(start.method, "simple")) {
         start <- numeric( length(partable$ustart) )
-        start[ which(partable$op == "=~") ] <- 1.0    
+        start[ which(partable$op == "=~") ] <- 1.0
         start[ which(partable$op == "~*~") ] <- 1.0
-        var.idx <- which(partable$op == "~~" & partable$lhs == partable$rhs)
+        ov.names.ord <- vnames(partable, "ov.ord")
+        var.idx <- which(partable$op == "~~" & partable$lhs == partable$rhs &
+                         !(partable$lhs %in% ov.names.ord))
         start[var.idx] <- 1.0
         user.idx <- which(!is.na(partable$ustart))
         start[user.idx] <- partable$ustart[user.idx]
@@ -58,19 +60,19 @@ StartingValues <- function(start.method = "default",
     }
     # check model list elements, if provided
     if(!is.null(start.user)) {
-        if(is.null(start.partable$lhs) ||
-           is.null(start.partable$op)  ||
-           is.null(start.partable$rhs)) {
+        if(is.null(start.user$lhs) ||
+           is.null(start.user$op)  ||
+           is.null(start.user$rhs)) {
             stop("lavaan ERROR: problem with start argument: model list does not contain all elements: lhs/op/rhs")
         }
-        if(!is.null(start.partable$est)) {
+        if(!is.null(start.user$est)) {
             # excellent, we got an est column; nothing to do
-        } else if(!is.null(start.partable$start)) {
+        } else if(!is.null(start.user$start)) {
             # no est column, but we use the start column
-            start.partable$est <- start.partable$start
-        } else if(!is.null(start.partable$ustart)) {
+            start.user$est <- start.user$start
+        } else if(!is.null(start.user$ustart)) {
             # no ideal, but better than nothing
-            start.partable$est <- start.partable$ustart
+            start.user$est <- start.user$ustart
         } else {
             stop("lavaan ERROR: problem with start argument: could not find est/start column in model list")
         }
@@ -81,8 +83,14 @@ StartingValues <- function(start.method = "default",
     # 0. everyting is zero
     start <- numeric( length(partable$ustart) )
 
-    # 1. =~ factor loadings: 1.0 
-    start[ which(partable$op == "=~") ] <- 1.0
+    # 1. =~ factor loadings: 
+    if(categorical) {
+        # if std.lv=TRUE, more likely initial Sigma.hat is positive definite
+        # 0.8 is too large
+        start[ which(partable$op == "=~") ] <- 0.7
+    } else {
+        start[ which(partable$op == "=~") ] <- 1.0
+    }
 
     # 2. residual lv variances for latent variables
     lv.names    <- vnames(partable, "lv") # all groups
@@ -114,7 +122,7 @@ StartingValues <- function(start.method = "default",
         # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
-           !categorical &&
+           #!categorical &&
            sum( partable$ustart[ partable$op == "=~" & partable$group == g],
                                    na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
@@ -224,12 +232,12 @@ StartingValues <- function(start.method = "default",
         for(i in 1:length(partable$lhs)) {
             # find corresponding parameters
             lhs <- partable$lhs[i]; op <- partable$op[i]; rhs <- partable$rhs[i]
-            start.user.idx <- which(start.partable$lhs == lhs &
-                                    start.partable$op  ==  op &
-                                    start.partable$rhs == rhs)
+            start.user.idx <- which(start.user$lhs == lhs &
+                                    start.user$op  ==  op &
+                                    start.user$rhs == rhs)
             if(length(start.user.idx) == 1L && 
-               is.finite(start.partable$est[start.user.idx])) {
-                start[i] <- start.partable$est[start.user.idx]
+               is.finite(start.user$est[start.user.idx])) {
+                start[i] <- start.user$est[start.user.idx]
             }
         }
     }

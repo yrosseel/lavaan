@@ -6,8 +6,8 @@
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
-function \code{lavaanify} turns it into a list that represents the full
-model as specified by the user. We refer to this list as the parameter table.} 
+function \code{lavaanify} turns it into a table that represents the full
+model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
@@ -24,7 +24,7 @@ lavaanNames(object, type = "ov", group = NULL)
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax; see details for more 
-    information. Alternatively, a parameter tablea (e.g., the output of 
+    information. Alternatively, a parameter table (e.g., the output of 
     \code{parseModelString} is also accepted.}
 \item{model.syntax}{The model syntax specifying the model. Must be a literal
 string.}
