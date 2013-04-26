@@ -23,7 +23,18 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     N <- object@SampleStats@ntotal
     #q <- length(vnames(object@ParTable, "ov.x"))
     #p <- nvar - q
+
+    # Change 0.5-13: take into account explicit equality constraints!!
+    # reported by Mark L. Taper (affects AIC and BIC)
     npar <- object@Fit@npar
+    if(nrow(object@Model@con.jac) > 0L) {
+        ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
+        if(length(ceq.idx) > 0L) {
+            neq <- qr(object@Model@con.jac[ceq.idx,,drop=FALSE])$rank
+            npar <- npar - neq
+        }
+    }
+
     fx <- object@Fit@fx
     fx.group <- object@Fit@fx.group
     meanstructure <- object@Model@meanstructure
