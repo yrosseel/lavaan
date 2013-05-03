@@ -1198,10 +1198,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     } else {
         if(is.null(control$optim.method)) {
             OPTIMIZER <- "NLMINB.CONSTR"
-            #OPTIMIZER <- "ALABAMA"
         } else {
             OPTIMIZER <- toupper(control$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "ALABAMA"))
+            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR"))
         }
     }
 
@@ -1340,6 +1339,10 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         }
     } else if(OPTIMIZER == "NLMINB.CONSTR") {
 
+        ocontrol <- list(verbose=verbose)
+        if(!is.null(control$control.outer)) {
+            ocontrol <- c(control$control.outer, verbose=verbose)
+        }
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
                                trace=0L,
@@ -1367,7 +1370,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                    verbose=verbose,
                                    cin = cin, cin.jac = cin.jac,
                                    ceq = ceq, ceq.jac = ceq.jac,
-                                   control.outer = list(verbose=verbose)
+                                   control.outer = ocontrol
                                   )
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")
