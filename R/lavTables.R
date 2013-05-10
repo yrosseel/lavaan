@@ -56,7 +56,7 @@ lavTables <- function(object, categorical=NULL, as.data.frame.=TRUE,
  
         # Joreskog & Moustaki equation 35
         if(fit) {
-            out$fit <- 2*out$nobs*(prop-pi)^2/pi
+            out$fit <- out$nobs*(prop-pi)^2/pi
             if(check) {
                 out$check <- ifelse(out$fit > 4.0, "***", "")
             }
