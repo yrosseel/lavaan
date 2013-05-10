@@ -51,7 +51,7 @@ syntax.independence.model <- function(ov.names=character(0),
 
     # latent *covariances* fixed to zero (= independence!)
     if(length(lv.names) > 1L) {
-        tmp <- combn(lv.names, 2)
+        tmp <- utils::combn(lv.names, 2)
         txt <- paste(txt, paste(tmp[1,], " ~~ 0*", tmp[2,], "\n", sep="", 
                                 collapse=""), sep="")
     }

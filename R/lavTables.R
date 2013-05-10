@@ -100,7 +100,7 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
     ngroups <- length(X)
 
     # pairwise tables
-    pairwise.tables <- combn(vartable$name[cat.idx], m=2L)
+    pairwise.tables <- utils::combn(vartable$name[cat.idx], m=2L)
     pairwise.tables <- rbind(pairwise.tables, seq_len(ncol(pairwise.tables)))
     ntables <- ncol(pairwise.tables)
 

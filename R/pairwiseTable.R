@@ -139,7 +139,7 @@ pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
  # Split first into two cases: a) only indicators of exogenous latent variables
  # b) otherwise
  if(is.null(no.x) || no.x==no.var) {
-    pairs.index <- combn(no.var,2)
+    pairs.index <- utils::combn(no.var,2)
     no.pairs <- dim(pairs.index)[2]
     res <- vector("list", no.pairs)
     for(i in 1:no.pairs ) {
@@ -147,8 +147,8 @@ pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
     }
  } else { 
     no.y <- no.var - no.x
-    pairs.xixj.index <- combn(no.x,2)  # row 1 gives i index, row 2 j index, j runs faster than i
-    pairs.yiyj.index <- combn(no.y,2)
+    pairs.xixj.index <- utils::combn(no.x,2)  # row 1 gives i index, row 2 j index, j runs faster than i
+    pairs.yiyj.index <- utils::combn(no.y,2)
     pairs.xiyj.index <- expand.grid(1:no.y, 1:no.x)
     pairs.xiyj.index <- rbind( pairs.xiyj.index[,2], pairs.xiyj.index[,1] ) # row 1 gives i index, row 2 j index, j runs faster than i
    

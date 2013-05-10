@@ -629,14 +629,14 @@ getLIST <- function(FLAT=NULL,
 
     # b) `independent` latent variable COVARIANCES (lv.names.x)
     if(auto.cov.lv.x && length(lv.names.x) > 1L) {
-        tmp <- combn(lv.names.x, 2)
+        tmp <- utils::combn(lv.names.x, 2)
         lhs <- c(lhs, tmp[1,]) # to fill upper.tri
         rhs <- c(rhs, tmp[2,])
     }
 
     # c) `dependent` latent variables COVARIANCES (lv.y.idx + ov.y.lv.idx)
     if(auto.cov.y && length(lvov.names.y) > 1L) {
-        tmp <- combn(lvov.names.y, 2L)
+        tmp <- utils::combn(lvov.names.y, 2L)
         lhs <- c(lhs, tmp[1,]) # to fill upper.tri
         rhs <- c(rhs, tmp[2,])
     }
