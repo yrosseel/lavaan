@@ -2,8 +2,8 @@
 \alias{bootstrapLavaan}
 \alias{bootstrapLRT}
 \title{Bootstrapping a Lavaan Model}
-\description{Bootstrap functions to get bootstrap standard errors and
-bootstrap test statistics}
+\description{Bootstrap the LRT, or any other statistic (or vector
+of statistics) you can extract from a fitted lavaan object.}
 \usage{
 bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 FUN = "coef", warn = -1L, return.boot = FALSE,
@@ -64,6 +64,19 @@ the double bootstrap.}
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted
 alpha based on the plugin p-values.}
 }
+\author{Yves Rosseel, Leonard Vanbrabant and Ed Merkle}
+\details{The FUN function can return either a scalar or a numeric vector.
+This function can be an existing function (for example \code{coef}) or
+can be a custom defined function. For example:
+\preformatted{
+myFUN <- function(x) {
+    # require(lavaan)
+    modelImpliedCov <- fitted(x)$cov
+    vech(modelImpliedCov)
+}
+}
+If \code{parallel="snow"}, it is imperative that the \code{require(lavaan)}
+is included in the custom function.}
 \references{
 Bollen, K. and Stine, R. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,

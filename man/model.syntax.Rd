@@ -1,8 +1,13 @@
 \name{model.syntax}
 \alias{model.syntax}
 \alias{lavaanify}
+\alias{lavParTable}
+\alias{lavpartable}
+\alias{lavPartable}
 \alias{parseModelString}
+\alias{lavParseModelString}
 \alias{lavaanNames}
+\alias{lavNames}
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
@@ -17,15 +22,23 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
     group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-parseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
+lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
+    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
+    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem",
+    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
+    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
+    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL,
+    group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-lavaanNames(object, type = "ov", group = NULL)
+lavParseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
+
+lavNames(object, type = "ov", group = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax; see details for more 
     information. Alternatively, a parameter table (e.g., the output of 
-    \code{parseModelString} is also accepted.}
+    \code{lavParseModelString} is also accepted.}
 \item{model.syntax}{The model syntax specifying the model. Must be a literal
 string.}
 \item{meanstructure}{If \code{TRUE}, intercepts/means will be added to
@@ -83,9 +96,9 @@ the model both for both observed and latent variables.}
 as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
 \item{object}{Either a list containing the parameter table, as 
-returned by \code{lavaanify} or \code{parseModelString}, or an 
+returned by \code{lavaanify} or \code{lavParseModelString}, or an 
 object of class \code{\linkS4class{lavaan}}.}
-\item{type}{Only used in the function \code{lavaanNames}. If type contains 
+\item{type}{Only used in the function \code{lavNames}. If type contains 
 \code{"ov"}, only observed variable names are returned. If type contains
 \code{"lv"}, only latent variable names are returned. The \code{"ov.x"}
 and \code{"lv.x"} types return exogenous variables only. The \code{"ov.y"}
@@ -93,7 +106,7 @@ and \code{"lv.y"} types return dependent variables only (in the regression
 sense, excluding the indicators of latent variables). The
 \code{"ov.nox"} type returns all observed variables, except the exogenous
 ones.}
-\item{group}{Only used in the function \code{lavaanNames}. If \code{NULL},
+\item{group}{Only used in the function \code{lavNames}. If \code{NULL},
 all groups (if any) are used. If an integer (vector), only names from those
 groups are extracted. The group numbers are found in the \code{group}
 column of the parameter table.}
@@ -104,7 +117,7 @@ describing a specific part of the model. The model syntax can be read from
 a file (using \code{\link{readLines}}), or can be specified as a literal
 string enclosed by single quotes as in the example below. 
 \preformatted{myModel <- '
-  # latent variable definitions
+  # 1. latent variable definitions
     f1 =~ y1 + y2 + y3
     f2 =~ y4 + y5 + y6
     f3 =~ y7 + y8 + 
@@ -113,18 +126,31 @@ string enclosed by single quotes as in the example below.
 
   ! this is also a comment
  
-  # regressions
+  # 2. regressions
     f1 ~ f3 + f4
     f2 ~ f4
     y1 + y2 ~ x1 + x2 + x3
 
-  # (co)variances
+  # 3. (co)variances
     y1 ~~ y1
     y2 ~~ y4 + y5 
     f1 ~~ f2
 
-  # intercepts
+  # 4. intercepts
     f1 ~ 1; y5 ~ 1
+
+  # 5. thresholds
+    y11 | t1 + t2 + t3
+    y12 | t1
+    y13 | t1 + t2
+
+  # 6. scaling factors
+    y11 ~*~ y11
+    y12 ~*~ y12
+    y13 ~*~ y13
+
+  # 7. formative factors
+    f5 <~ z1 + z2 + z3 + z4
 '
 }
 Blank lines and comments can be used in between the formulas, and formulas can
@@ -132,7 +158,7 @@ be split over multiple lines. Both the sharp (#) and the exclamation (!)
 characters can be used to start a comment. Multiple formulas can be placed
 on a single line if they are separated by a semicolon (;).
 
-There can be four types of formula-like expressions in the model syntax:
+There can be seven types of formula-like expressions in the model syntax:
 \enumerate{
 
     \item Latent variable definitions: The \code{"=~"} operator can be
@@ -165,12 +191,32 @@ There can be four types of formula-like expressions in the model syntax:
      only the number \code{"1"} representing the intercept. Including an intercept
      formula in the model automatically implies \code{meanstructure = TRUE}. The
      distinction between intercepts and means is made automatically.
+
+    \item Thresholds: The \code{"|"} operator can be used to define the 
+      thresholds of categorical endogenous variables (on the left hand side
+      of the operator). By convention, the
+      thresholds (on the right hand sided, separated by the \code{"+"} operator,
+      are named \code{"t1"}, \code{"t2"}, etcetera.
+
+    \item Scaling factors: The \code{"~*~"} operator defines a scale factor.
+      The variable name on the left hand side must be the same as the variable
+      name on the right hand side. Scale factors are used in the Delta
+      parameterization, in a multiple group analysis when factor indicators
+      are categorical.
+
+    \item Formative factors: The \code{"<~"} operator can be used to define
+      a formative factor (on the right hand side of the operator), in a
+      similar why as a reflexive factor is defined (using the \code{"=~"}
+      operator). This is just syntax sugar to define a phantom latent
+      variable (equivalent to using \code{"f =~ 0"}). And in addition, the
+      (residual) variance of the formative factor is fixed to zero.
 }
 Usually, only a single variable name appears on the left side of an
 operator. However, if multiple variable names are specified, 
 separated by the \code{"+"} operator, the formula is repeated for each
 element on the left side (as for example in the third regression 
-formula in the example above).
+formula in the example above). The only exception are scaling factors, where
+only a single element is allowed on the left hand side. 
 
 In the right-hand side of these formula-like expressions, each element can be
 modified (using the \code{"*"} operator) by either a numeric constant,
@@ -179,7 +225,8 @@ in a character vector, or one
 of three special functions: \code{start()}, \code{label()} and \code{equal()}.
 This provides the user with a mechanism to fix parameters, to provide
 alternative starting values, to label the parameters, and to define equality
-constraints among model parameters. This is explained in more detail in the
+constraints among model parameters. All \code{"*"} expressions are
+referred to as \emph{modifiers}. They are explained in more detail in the
 following sections.
 }
 
@@ -214,35 +261,38 @@ automatically considered to be free.
 
 \section{Parameter labels and equality constraints}{
 Each free parameter in a model is automatically given a name (or label).
-The name given to a model 
-parameter consists of three parts, coerced to a single character vector. 
-The first part is the name of the variable in the left-hand side of the 
+The name given to a model
+parameter consists of three parts, coerced to a single character vector.
+The first part is the name of the variable in the left-hand side of the
 formula where the parameter was
 implied. The middle part is based on the special `operator' used in the
 formula. This can be either one of \code{"=~"}, \code{"~"} or \code{"~~"}. The
 third part is the name of the variable in the right-hand side of the formula
 where the parameter was implied, or \code{"1"} if it is an intercept. The three
-parts are pasted together in a single string. For example, the name of the 
-fixed regression coefficient in the regression formula 
-\code{y ~ x1 + 2.4*x2 + x3} is the string \code{"y~x2"}. 
+parts are pasted together in a single string. For example, the name of the
+fixed regression coefficient in the regression formula
+\code{y ~ x1 + 2.4*x2 + x3} is the string \code{"y~x2"}.
 The name of the parameter
 corresponding to the covariance between two latent variables in the
 formula \code{f1 ~~ f2} is the string \code{"f1~~f2"}.
 
 Although this automatic labeling of parameters is convenient, the user may
-specify its own labels for specific parameters by using the \code{label()}
-modifier in a formula. For example, in the formula \code{f1 =~ x1 + x2 +
-label("mylabel")*x3}, the parameter corresponding with the factor loading of
-\code{x3} will be named \code{"mylabel"} instead of the default name
-\code{"f1=~x3"}. Since version 0.4-8, a more convenient way to specify
-the label is as follows: \code{f1 =~ x1 + x2 + mylabel*x3}: simply
-multiplying with a string literal is equivalent to the using the \code{"label"}
-modifier.
+specify its own labels for specific parameters simply by pre-multiplying
+the corresponding term (on the right hand side of the operator only) by
+a character string (starting with a letter).
+For example, in the formula \code{f1 =~ x1 + x2 + mylabelx3}, the parameter 
+corresponding with the factor loading of
+\code{x3} will be named \code{"mylabel"}.
+\code{"f1=~x3"}. An alternative way to specify
+the label is as follows: \code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
+where the label is the argument of special function \code{label()};
+this can be useful if the label contains a space, or an operator (like "~").
 
 To constrain a parameter
 to be equal to another target parameter, there are two ways. If you
-have specified your own labels, you can use the fact that equal labels
-imply equal parameter values. If you rely on automatic parameter labels, you
+have specified your own labels, you can use the fact that 
+\emph{equal labels imply equal parameter values}. 
+If you rely on automatic parameter labels, you
 can use the special function \code{equal()}. The argument of
 \code{equal()} is the (automatic or user-specified) name of the target
 parameter. For example, in the confirmatory factor analysis example below, the
@@ -263,9 +313,9 @@ names. For the last three, we have provided a custom label for the
 
   # intercepts constrained to be equal
   # using a custom label
-    y2a ~ int2 * 1
-    y2b ~ int2 * 1
-    y2c ~ int2 * 1
+    y2a ~ int2*1
+    y2b ~ int2*1
+    y2c ~ int2*1
 '
 }
 }
@@ -276,7 +326,7 @@ must be replaced by a vector, having the same length as the number
 of groups. The only exception are numerical constants (for fixing values): if
 you provide only a single number, the same number will be used for all groups.
 However, it is safer (and cleaner) to specify the same number of elements as
-you have groups. For example, if there are two groups:
+the number of groups. For example, if there are two groups:
 \preformatted{HS.model <- ' visual  =~             x1 +
                                  0.5*x2 +
                          c(0.6, 0.8)*x3

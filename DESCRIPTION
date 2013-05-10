@@ -20,12 +20,11 @@ Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
              person("Myrsini", "Katsikatsou", role = "ctb",
                     email = "mirtok2@gmail.com")
             )  
-Description: Fit a variety of latent variable models, including
-             confirmatory factor analysis, structural equation modeling
-             and latent growth curve models.
+Description: Fit a variety of latent variable models, including confirmatory
+    factor analysis, structural equation modeling and latent growth curve models.
 Depends: methods, R(>= 2.14.0), MASS, boot, mnormt, pbivnorm, quadprog
 Imports: stats4, stats, graphics
-Suggests: psych, qgraph, semTools, simsem, lavaan.survey
+Suggests: lavaan.survey, semPlot, semTools, simsem
 License: GPL (>=2)
 LazyData: yes
 URL: http://lavaan.org

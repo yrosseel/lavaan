@@ -1,4 +1,4 @@
-\name{parameterTable}
+\name{parTable}
 \alias{parameterTable}
 \alias{parametertable}
 \alias{parTable}
@@ -25,5 +25,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-parameterTable(fit)
+parTable(fit)
 }

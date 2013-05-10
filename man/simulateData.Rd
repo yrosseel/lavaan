@@ -90,9 +90,9 @@ by default. By default, multivariate normal data are generated. However,
 by providing skewness and/or kurtosis values, nonnormal multivariate data
 can be generated, using the Vale & Maurelli (1983) method.}
 \value{The generated data. Either as a data.frame 
-(if \code{return.type="data.frame"}, 
-a numeric matrix (if \code{return.type="matrix"},
-or a covariance matrix (if \code{return.type="cov"}.}
+(if \code{return.type="data.frame"}), 
+a numeric matrix (if \code{return.type="matrix"}),
+or a covariance matrix (if \code{return.type="cov"}).}
 \examples{
 # specify population model
 population.model <- ' f1 =~ x1 + 0.8*x2 + 1.2*x3

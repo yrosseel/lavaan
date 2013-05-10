@@ -42,7 +42,8 @@ export("lavaan", "cfa", "sem", "growth",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
        "simulateData",
        "estfun.lavaan", "lavScores",
-       "lavTables", "lavExport",
+       # "lavTables", 
+       "lavExport",
        "mplus2lavaan"
       )
 

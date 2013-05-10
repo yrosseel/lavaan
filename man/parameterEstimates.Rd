@@ -35,8 +35,9 @@ See references for more information.}
   estimates.
 }
 \references{
-Savalei, V. & Rhemtulla, M. (in press). On obtaining estimates of the fraction
-of missing information from FIML.
+Savalei, V. & Rhemtulla, M. (2012). On obtaining estimates of the fraction of
+missing information from FIML. Structural Equation Modeling: A
+Multidisciplinary Journal, 19(3), 477-494.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3

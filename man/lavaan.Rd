@@ -31,8 +31,7 @@ lavaan(model = NULL, data = NULL,
     accepted.}
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
-    treat them as ordinal variables. This can be overriden by the \code{ordered}
-    argument.}
+    treat them as ordinal variables.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
     how starting values are computed, and may be used to alter the terminology
@@ -84,7 +83,7 @@ lavaan(model = NULL, data = NULL,
 \item{ordered}{Character vector. Only used if the data is in a data.frame. 
     Treat these variables as ordered (ordinal) variables, if they are 
     endogenous in the model. Importantly, all other variables will be treated 
-    as numeric (overriding any attributes in the original data.frame.}
+    as numeric (unless they are declared as ordered in the original data.frame.)}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
@@ -159,8 +158,8 @@ order as they appear in the data.}
     If \code{"normal"}, the normal likelihood approach is used. Here,
     the covariance matrix has been divided by N, and both standard errors 
     and test statistics are based on N. If \code{"default"}, it depends
-    on the mimic option: if \code{mimic="Mplus"}, normal likelihood is used;
-    otherwise, wishart likelihood is used.}
+    on the mimic option: if \code{mimic="lavaan"} or \code{mimic="Mplus"}, 
+    normal likelihood is used; otherwise, wishart likelihood is used.}
 \item{information}{If \code{"expected"}, the expected information matrix
     is used (to compute the standard errors). If \code{"observed"}, the
     observed information matrix is used. If \code{"default"}, the value is 
