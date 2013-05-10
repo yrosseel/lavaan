@@ -148,6 +148,16 @@ StartingValues <- function(start.method = "default",
                     }
                     start[user.idx] <- fabin3.uni(COV)
                 }
+
+                # standardized?
+                var.f.idx <- which(partable$lhs == f & partable$op == "~~" &
+                                   partable$rhs == f)
+                if(partable$free[var.f.idx] == 0 &&
+                   partable$ustart[var.f.idx] == 1) {
+                   # make sure factor loadings are between -0.7 and 0.7
+                    x <- start[user.idx]
+                    start[user.idx] <- (x / max(abs(x))) * 0.7
+                }
             }
         }
 
