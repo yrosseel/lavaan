@@ -1243,3 +1243,27 @@ getConstraintsFunction <- function(p1, p0) {
 
     con.function
 }
+
+# user visible function to add 'matrix' entries in the parameter table
+lavMatrixRepresentation <- function(partable, representation = "LISREL",
+                                    as.data.frame. = TRUE) {
+
+    # get model matrices
+    if(representation == "LISREL") {
+        REP <- representation.LISREL(partable, target=NULL, extra=FALSE)
+    } else {
+        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+    }
+    
+    partable$mat <- REP$mat
+    partable$row <- REP$row
+    partable$col <- REP$col
+
+    if(as.data.frame.) {
+        partable <- as.data.frame(partable, stringsAsFactors=FALSE)
+        class(partable) <- c("lavaan.data.frame", "data.frame")
+    }
+
+    partable
+}
+

@@ -44,6 +44,7 @@ export("lavaan", "cfa", "sem", "growth",
        "estfun.lavaan", "lavScores",
        # "lavTables", 
        "lavExport",
+       "lavMatrixRepresentation",
        "mplus2lavaan"
       )
 
