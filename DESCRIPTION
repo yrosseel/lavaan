@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.5-13
+Version: 0.5-14
 Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
                     email = "Yves.Rosseel@UGent.be"),
              person("Daniel", "Oberski", role = "ctb",
