@@ -36,7 +36,7 @@ standardized residuals per pairwise table.}
   pairwise table.
 }
 \references{
-Jöreskog, K.G. & Moustaki, I. (2001). Factor analysis of ordinal variables: A
+Joreskog, K.G. & Moustaki, I. (2001). Factor analysis of ordinal variables: A
 comparison of three approaches. Multivariate Behavioral Research, 36, 347-387.
 }
 \seealso{\code{\link{varTable}}.}
