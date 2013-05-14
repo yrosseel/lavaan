@@ -272,7 +272,7 @@ grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
 
 LongVecInd <- function(no.x, all.thres, index.var.of.thres) {
  no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
- index.pairs <- combn(no.x,2)
+ index.pairs <- utils::combn(no.x,2)
  no.pairs <- ncol(index.pairs)
 
  # index.thres.var1.of.pair and index.thres.var2.of.pair contain the indices of
@@ -389,7 +389,7 @@ LongVecInd <- function(no.x, all.thres, index.var.of.thres) {
 
 LongVecTH.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
  no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
- index.pairs <- combn(no.x,2)
+ index.pairs <- utils::combn(no.x,2)
  no.pairs <- ncol(index.pairs)
 
  # create the long vectors needed for the computation of expected probabilities
@@ -676,7 +676,7 @@ derLtoTau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x=0L) {
                  function(y){ y[!(ind.vec$index.thres.var2.of.pair==0 |
                                   ind.vec$last.thres.var2.of.pair |
                                   ind.vec$index.thres.var1.of.pair==0) ] } )
-  ind.pairs <- combn(no.x,2)
+  ind.pairs <- utils::combn(no.x,2)
   # der.Lxixj.to.tau.xi is a matrix, nrow=no.pairs, ncol=max(no.of.free.thres)
   # thus, there are NA's, similarly for der.Lxixj.to.tau.xj
   der.Lxixj.to.tau.xi <- tapply(terms.der.Lxixj.to.tau.xi,

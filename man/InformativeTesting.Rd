@@ -94,6 +94,5 @@ International Journal of Behavioral Development 35(2), 180-190.
 
 \author{
 Leonard Vanbrabant
-\email{l.g.f.vanbrabant@hotmail.com}
 }
 

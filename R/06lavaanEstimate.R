@@ -1198,10 +1198,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     } else {
         if(is.null(control$optim.method)) {
             OPTIMIZER <- "NLMINB.CONSTR"
-            #OPTIMIZER <- "ALABAMA"
         } else {
             OPTIMIZER <- toupper(control$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "ALABAMA"))
+            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR"))
         }
     }
 
@@ -1227,14 +1226,10 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                iter.max=10000L,
                                trace=0L,
                                #abs.tol=1e-20, ### important!! fx never negative
-                               abs.tol=(.Machine$double.eps * 10),
-                               rel.tol=1e-10,
-                               x.tol=1.5e-8,
-                               step.min=2.2e-14)
+                               abs.tol=(.Machine$double.eps * 10))
         control.nlminb <- modifyList(control.nlminb, control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                    "abs.tol", "rel.tol", "x.tol",
-                                    "step.min")]
+                                    "abs.tol")]
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
@@ -1340,18 +1335,19 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         }
     } else if(OPTIMIZER == "NLMINB.CONSTR") {
 
+        ocontrol <- list(verbose=verbose)
+        if(!is.null(control$control.outer)) {
+            ocontrol <- c(control$control.outer, verbose=verbose)
+        }
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
                                trace=0L,
                                #abs.tol=1e-20,
                                abs.tol=(.Machine$double.eps * 10),
-                               rel.tol=1e-9, # 1e-10 seems 'too strict'
-                               x.tol=1.5e-8,
-                               step.min=2.2e-14)
+                               rel.tol=1e-9) # 1e-10 seems 'too strict'
         control.nlminb <- modifyList(control.nlminb, control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                    "abs.tol", "rel.tol", "x.tol",
-                                    "step.min")]
+                                    "abs.tol", "rel.tol")]
         cin <- cin.jac <- ceq <- ceq.jac <- NULL
         if(!is.null(body(object@cin.function))) cin     <- object@cin.function
         if(!is.null(body(object@cin.jacobian))) cin.jac <- object@cin.jacobian
@@ -1367,7 +1363,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                    verbose=verbose,
                                    cin = cin, cin.jac = cin.jac,
                                    ceq = ceq, ceq.jac = ceq.jac,
-                                   control.outer = list(verbose=verbose)
+                                   control.outer = ocontrol
                                   )
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")

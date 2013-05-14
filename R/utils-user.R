@@ -455,6 +455,7 @@ getUserListFull <- function(partable=NULL, group=NULL) {
     ov.names.y   <- vnames(partable, type="ov.y",group=group)   # dependent ov
     lv.names.y   <- vnames(partable, type="lv.y",group=group)   # dependent lv
     lvov.names.y <- c(ov.names.y, lv.names.y)
+    ov.names.ord <- vnames(partable, type="ov.ord", group=group)
 
 
     # 1 "=~"
@@ -502,10 +503,27 @@ getUserListFull <- function(partable=NULL, group=NULL) {
         int.op  <- rep("~1", length(int.lhs))
     }
 
+    # 5. thresholds
+    th.lhs <- th.rhs <- th.op <- character(0)
+    if(length(ov.names.ord) > 0L) {
+        tmp <- strsplit(vnames(partable, "th", group=group), "\\|")
+        th.lhs <- sapply(tmp, function(x) x[1])
+        th.rhs <- sapply(tmp, function(x) x[2])
+        th.op  <- rep("|", length(th.lhs))
+    }
+
+    # 6. scaling parameters
+    delta.lhs <- delta.rhs <- delta.op <- character(0)
+    if(ngroups > 1L && length(ov.names.ord) > 0L) {
+        delta.lhs <- ov.names.ord
+        delta.rhs <- ov.names.ord
+        delta.op  <- rep("~*~", length(delta.lhs))
+    }
+
     # combine
-    lhs <- c(l.lhs, ov.lhs, lv.lhs, r.lhs, int.lhs)
-    rhs <- c(l.rhs, ov.rhs, lv.rhs, r.rhs, int.rhs)
-     op <- c(l.op,  ov.op,  lv.op,  r.op,  int.op)
+    lhs <- c(l.lhs, ov.lhs, lv.lhs, r.lhs, int.lhs, th.lhs, delta.lhs)
+    rhs <- c(l.rhs, ov.rhs, lv.rhs, r.rhs, int.rhs, th.rhs, delta.rhs)
+     op <- c(l.op,  ov.op,  lv.op,  r.op,  int.op,  th.op,  delta.op)
 
 
     # multiple groups!
@@ -611,14 +629,14 @@ getLIST <- function(FLAT=NULL,
 
     # b) `independent` latent variable COVARIANCES (lv.names.x)
     if(auto.cov.lv.x && length(lv.names.x) > 1L) {
-        tmp <- combn(lv.names.x, 2)
+        tmp <- utils::combn(lv.names.x, 2)
         lhs <- c(lhs, tmp[1,]) # to fill upper.tri
         rhs <- c(rhs, tmp[2,])
     }
 
     # c) `dependent` latent variables COVARIANCES (lv.y.idx + ov.y.lv.idx)
     if(auto.cov.y && length(lvov.names.y) > 1L) {
-        tmp <- combn(lvov.names.y, 2L)
+        tmp <- utils::combn(lvov.names.y, 2L)
         lhs <- c(lhs, tmp[1,]) # to fill upper.tri
         rhs <- c(rhs, tmp[2,])
     }
@@ -1225,3 +1243,27 @@ getConstraintsFunction <- function(p1, p0) {
 
     con.function
 }
+
+# user visible function to add 'matrix' entries in the parameter table
+lavMatrixRepresentation <- function(partable, representation = "LISREL",
+                                    as.data.frame. = TRUE) {
+
+    # get model matrices
+    if(representation == "LISREL") {
+        REP <- representation.LISREL(partable, target=NULL, extra=FALSE)
+    } else {
+        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+    }
+    
+    partable$mat <- REP$mat
+    partable$row <- REP$row
+    partable$col <- REP$col
+
+    if(as.data.frame.) {
+        partable <- as.data.frame(partable, stringsAsFactors=FALSE)
+        class(partable) <- c("lavaan.data.frame", "data.frame")
+    }
+
+    partable
+}
+

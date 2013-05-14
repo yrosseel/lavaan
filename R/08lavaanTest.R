@@ -87,6 +87,9 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
     tUG <- t(UG); trace.UGamma3 <- sum(UG * tUG) # seems wrong?
     attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
 
+    # eigen values
+    attr(trace.UGamma, "eigenvalues") <-  Re(eigen(UG, only.values=TRUE)$values)
+
     trace.UGamma
 }
 
@@ -121,12 +124,11 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
         trace.h0[g] <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]])) )
-        #trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
-        UG <- (B1 %*% A1.inv) - (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]))
+        trace.UGamma[g] <- abs(trace.h1[g] - trace.h0[g])
     }
 
     # traces
-    trace.UGamma <- sum(diag(UG))
+    trace.UGamma <- sum(trace.UGamma)
     #tUG <- t(UG); trace.UGamma2 <- sum(UG * tUG)
     #attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
 
@@ -148,6 +150,7 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
 
     # we always assume a meanstructure
     meanstructure <- TRUE
+    ngroups <- samplestats@ngroups
 
     trace.UGamma <- numeric( samplestats@ngroups )
     trace.h1     <- numeric( samplestats@ngroups )
@@ -169,8 +172,9 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
             A1 <- A1[idx,idx]
             B1 <- B1[idx,idx]
         }
+        A1.inv <- solve(A1)
 
-        trace.h1[g]     <- sum( B1 * t( solve(A1) ) )
+        trace.h1[g]     <- sum( B1 * t( A1.inv ) )
         trace.h0[g]     <- ( samplestats@nobs[[g]]/samplestats@ntotal *
                              sum( B0.group[[g]] * t(E.inv) ) )
         trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
@@ -376,6 +380,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
         trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
         trace.UGamma4 <- attr(trace.UGamma, "trace.UGamma4")
+        UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
         attributes(trace.UGamma) <- NULL
 
         # adjust df?
@@ -428,7 +433,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           shift.parameter=shift.parameter,
                           trace.UGamma=trace.UGamma,
                           trace.UGamma4=trace.UGamma4,
-                          trace.UGamma2=trace.UGamma2)
+                          trace.UGamma2=trace.UGamma2,
+                          UGamma.eigenvalues=UGamma.eigenvalues)
 
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)

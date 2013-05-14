@@ -68,4 +68,5 @@
     \code{"bottomleft"}, \code{"left"}, \code{"topleft"}, \code{"top"}, 
     \code{"topright"}, \code{"right"} and \code{"center"}.}
 }
+\author{Leonard Vanbrabant}
 

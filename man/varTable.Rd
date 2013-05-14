@@ -8,14 +8,17 @@
 Summary information about the variables included in either a data.frame, 
 or a fitted lavaan object.}
 \usage{
-varTable(object, ov.names = names(object), ov.names.x = NULL,
-                 as.data.frame. = TRUE)
+varTable(object, ov.names = names(object), ov.names.x = NULL, 
+    ordered = NULL, factor = NULL, as.data.frame. = TRUE)
 }
 \arguments{
 \item{object}{Either a data.frame, or an object of class 
 \code{\linkS4class{lavaan}}.}
 \item{ov.names}{Only used if object is a data.frame. A character vector containing the variables that need to be summarized.}
 \item{ov.names.x}{Only used if object is a data.frame. A character vector containing additional variables that need to be summarized.}
+\item{ordered}{Character vector. Which variables should be treated as ordered
+factors}
+\item{factor}{Character vector. Which variables should be treated as (unordered) factors?}
 \item{as.data.frame.}{If TRUE, return the list as a data.frame.}
 }
 \value{

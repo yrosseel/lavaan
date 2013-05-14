@@ -1,12 +1,25 @@
 # construct pairwise frequency tables
+# YR. 10 April 2013
 # Notes:
 # - we do NOT make a distinction here between unordered and ordered categorical
 #   variables
 # - object can be a matrix (most likely with integers), a full data frame, 
 #   a fitted lavaan object, a varTable, or a lavData object
-# YR. 10 April 2013
-lavTables <- function(object, categorical=NULL, as.data.frame.=TRUE,
-                      fit=TRUE, check=TRUE, fit.average=FALSE) {
+# - 11 May 2013: added collapse=TRUE, min.std.resid options (suggested
+#   by Myrsini Katsikatsou
+
+lavTables <- function(object, categorical=NULL,
+                      std.resid=TRUE, min.std.resid = 0.0,
+                      average = FALSE, collapse = FALSE) {
+
+    showAsMatrix <- FALSE
+    if(!missing(collapse)) {
+        average <- TRUE
+        if(is.character(collapse) && tolower(collapse) == "matrix") {
+            collapse <- TRUE
+            showAsMatrix <- TRUE
+        }
+    }
 
     if(is.matrix(object)) {
         object <- as.data.frame(object, stringsAsFactors = FALSE)
@@ -44,36 +57,75 @@ lavTables <- function(object, categorical=NULL, as.data.frame.=TRUE,
     out <- lav_pairwise_tables_freq(vartable = vartable,
                                     X = X,
                                     ov.names = ov.names,
-                                    as.data.frame. = as.data.frame.)
+                                    as.data.frame. = TRUE)
 
     # add predicted frequencies, fit indices
     if(inherits(object, "lavaan")) {
         #out$pi <- unlist(lav_pairwise_tables_pi(object))
         #out$freq.est <- out$pi * out$nobs
-        prop <- out$freq/out$nobs
-        pi <- unlist(lav_pairwise_tables_pi(object))
-        out$freq.est <- unlist(lav_pairwise_tables_pi(object)) * out$nobs
+        obs.prop <- out$obs.freq/out$nobs
+        est.prop <- unlist(lav_pairwise_tables_pi(object))
+        out$est.freq <- est.prop * out$nobs
  
         # Joreskog & Moustaki equation 35
-        if(fit) {
-            out$fit <- 2*out$nobs*(prop-pi)^2/pi
-            if(check) {
-                out$check <- ifelse(out$fit > 4.0, "***", "")
-            }
+        if(std.resid) {
+            out$std.resid <- out$nobs*(obs.prop-est.prop)^2/est.prop
+            #if(check) {
+            #    out$check <- ifelse(out$std.resid > 4.0, "***", "")
+            #}
 
-            if(fit.average) {
+            if(average) {
                 # fit per table
-                table.average <- tapply(out$fit, INDEX=out$id, FUN=mean)
+                table.average <- tapply(out$std.resid, INDEX=out$id, FUN=mean)
+                table.percAboveMin <- tapply(out$std.resid, INDEX=out$id,
+                    FUN=function(x) {sum(x > min.std.resid)/length(x)})
+                table.numAboveMin <- tapply(out$std.resid, INDEX=out$id,
+                    FUN=function(x) {sum(x > min.std.resid)})
                 ntables <- length(table.average)
                 ncells <- tabulate(out$id)
-                out$fit.average <- unlist(lapply(seq_len(ntables), function(x)
-                                                 rep(table.average[x], 
-                                                     each=ncells[x])))
+                out$ncells <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(ncells[x], each=ncells[x])))
+                out$str.average <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.average[x], each=ncells[x])))
+                out$str.min <- rep(min.std.resid, length(out$id))
+                out$str.plarge <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.percAboveMin[x], each=ncells[x])))
+                out$str.nlarge <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.numAboveMin[x], each=ncells[x])))
+
+                if(collapse) {
+                    # only 1 row per table
+                    row.idx <- which(!duplicated(out$id))
+                    if(is.null(out$group)) {
+                        out <- out[row.idx, c("id","lhs","rhs","nobs",
+                                              "str.average", "str.min",
+                                              "ncells",
+                                              "str.nlarge","str.plarge")]
+                    } else {
+                        out <- out[row.idx, c("id","lhs","rhs","group",
+                                              "nobs", "ncells",
+                                              "str.average", "str.min",
+                                              "ncells",
+                                              "str.nlarge","str.plarge")]
+                    }
+                }
+            } else {
+                if(min.std.resid > 0.0) {
+                    # select only rows where std.resid >= min.std.resid
+                    idx <- which(out$std.resid >= min.std.resid)
+                    out <- out[idx,]
+                }
             }
         }
     }
 
-    class(out) <- c("lavaan.data.frame", "data.frame")
+    if(collapse && showAsMatrix) {
+        tmp <- out
+        out <- lavaan::getCov(out$str.average, names=unique(out$lhs))
+        class(out) <- c("lavaan.matrix.symmetric", "matrix")
+    } else {
+        class(out) <- c("lavaan.data.frame", "data.frame")
+    }
     out
 }
 
@@ -100,7 +152,7 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
     ngroups <- length(X)
 
     # pairwise tables
-    pairwise.tables <- combn(vartable$name[cat.idx], m=2L)
+    pairwise.tables <- utils::combn(vartable$name[cat.idx], m=2L)
     pairwise.tables <- rbind(pairwise.tables, seq_len(ncol(pairwise.tables)))
     ntables <- ncol(pairwise.tables)
 
@@ -124,13 +176,13 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
  
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(x[1], ncell), 
-                        op = rep.int("table", ncell), 
+                       # op = rep.int("table", ncell), 
                        rhs = rep.int(x[2], ncell),
                      group = rep.int(g, ncell),
                       nobs = rep.int(sum(FREQ), ncell),
                        row = rep.int(seq_len(ncol), times=nrow),
                        col = rep(seq_len(nrow), each=ncol),
-                      freq = vec(FREQ) # col by col!
+                      obs.freq = vec(FREQ) # col by col!
                     )
             })
     }
@@ -141,6 +193,8 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
             TABLE <- lapply(TABLE, as.data.frame, stringAsFactors=FALSE)
             if(g == 1) {
                 out <- do.call(rbind, TABLE)
+                # remove group column 
+                out$group <- NULL
             } else {
                 out <- rbind(out, do.call(rbind, TABLE))
             }

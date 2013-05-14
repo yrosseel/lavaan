@@ -28,7 +28,7 @@ lavExport <- function(object, target="lavaan", prefix="sem",
                               ov.ord.names=vnames(object@ParTable, "ov.ord"),
                               estimator=mplusEstimator(object))
         syntax <- lav2mplus(object, group.label=object@Data@group.label)
-        footer <- paste("OUTPUT:\n  sampstat standardized;\n")
+        footer <- paste("OUTPUT:\n  sampstat standardized tech1;\n")
         out <- paste(header, syntax, footer, sep="")
     } else if(target == "lisrel") {
         syntax <- lav2lisrel(object)
@@ -142,13 +142,22 @@ lav2mplus <- function(lav, group.label=NULL) {
     ngroups <- max(lav$group)
 
     lav_one_group <- function(lav) {
+
+        # mplus does not like variable names with a 'dot'
+        # replace them by an underscore '_'
+        lav$lhs <- gsub("\\.", "_", lav$lhs)
+        lav$rhs <- gsub("\\.", "_", lav$rhs)
  
-        # extract contraints (:=, <, >, ==)
+        # remove contraints (:=, <, >, ==) here
         con.idx <- which(lav$op %in% c(":=", "<",">","=="))
         if(length(con.idx) > 0L) {
-            warnings("lavaan WARNING: :=, <, >, == operators not converted")
-            lav.con <- lav[con.idx,]
             lav <- lav[-con.idx,]
+        }
+
+        # remove exogenous variances/covariances/intercepts...
+        exo.idx <- which(lav$exo == 1L)
+        if(length(exo.idx)) {
+            lav <- lav[-exo.idx,]
         }
 
         # end of line
@@ -219,8 +228,37 @@ lav2mplus <- function(lav, group.label=NULL) {
                           sep="")
         }
     }
+
+    # constraints go to a 'MODEL CONSTRAINTS' block
+    con.idx <- which(lav$op %in% c(":=", "<",">","=="))
+    if(length(con.idx) > 0L) {
+        ### FIXME: we need to convert the operator
+        ### eg b^2 --> b**2, others??
+        lav$lhs[con.idx] <- gsub("\\^","**",lav$lhs[con.idx])
+        lav$rhs[con.idx] <- gsub("\\^","**",lav$rhs[con.idx])
+
+        constraints <- "\nMODEL CONSTRAINT:\n"
+        # define 'new' variables
+        def.idx <- which(lav$op == ":=")
+        if(length(def.idx) > 0L) {
+            def <- paste(lav$lhs[def.idx], collapse= " ")
+            constraints <- paste(constraints, "NEW (", def, ");")
+            lav$op[def.idx] <- "="
+        }
+        # replace '==' by '='
+        eq.idx <- which(lav$op == "==")
+        if(length(eq.idx) > 0L) {
+            lav$op[eq.idx] <- "="
+        }
+        con <- paste(lav$lhs[con.idx], " ", lav$op[con.idx], " ", 
+                     lav$rhs[con.idx], ";", sep="")
+        con2 <- paste("  ", con, collapse="\n")
+        constraints <- paste(constraints, con2, sep="\n") 
+    } else {
+        constraints <- ""
+    }
   
-    out <- paste(header, body, footer, sep="")
+    out <- paste(header, body, constraints, footer, sep="")
     class(out) <- c("lavaan.character", "character")
     out
 }
@@ -275,6 +313,10 @@ mplusEstimator <- function(object) {
 
 mplusHeader <- function(data.file=NULL, group.label="", ov.names="",
                         ov.ord.names="", estimator="ML") {
+
+    # replace '.' by '_' in all variable names
+    ov.names     <- gsub("\\.", "_", ov.names)
+    ov.ord.names <- gsub("\\.", "_", ov.ord.names)
 
     ### FIXME!!
     ### this is old code from lavaan 0.3-1

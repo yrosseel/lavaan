@@ -230,7 +230,7 @@ eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0),
         stopifnot(min(el.idx) > 0 && max(el.idx) <= nvar)
     }
  
-    XX <- combn(1:(nvar+1),2)
+    XX <- utils::combn(1:(nvar+1),2)
     XX[2,] <- XX[2,] - 1
     
     if(type == "all") {
