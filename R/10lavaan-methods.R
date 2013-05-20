@@ -1431,7 +1431,7 @@ function(object, ...) {
 
     # list of models
     mods <- c(list(object), dots[modp])
-    names(mods) <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], as.character)
+    names(mods) <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
     # put them in order (using number of free parameters)
     nfreepar <- sapply(mods, function(x) x@Fit@npar)

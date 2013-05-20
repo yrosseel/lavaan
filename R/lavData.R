@@ -319,7 +319,7 @@ getDataFull <- function(data          = NULL,          # data.frame
     }
     # check for mix small/large variances (NOT including exo variables)
     if(!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
-        num.idx <- which(ov$type == "numeric" & ov$exo == 1L)
+        num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
         if(length(num.idx) > 0L) {
             min.var <- min(ov$var[num.idx])
             max.var <- max(ov$var[num.idx])
