@@ -79,6 +79,7 @@ function(object, newdata=NULL, ...) {
             V.eta <- PSI
         } 
 
+        # factor score coefficient matrix
         C = ( V.eta %*% t(LAMBDA) %*% 
               solve( LAMBDA %*% V.eta %*% t(LAMBDA) + THETA ) )
 

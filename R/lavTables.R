@@ -59,8 +59,35 @@ lavTables <- function(object, categorical=NULL,
                                     ov.names = ov.names,
                                     as.data.frame. = TRUE)
 
-    # add predicted frequencies, fit indices
-    if(inherits(object, "lavaan")) {
+    if(inherits(object, "data.frame") || inherits(object, "lavData")) {
+        # compute chisq test for independence for each table + p.value
+        # note: 'independent' tables (non-significant) are problematic here
+        if(collapse) {
+            ntables <- length(unique(out$id))
+            ncells <- tabulate(out$id)
+            out$ncells <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(ncells[x], each=ncells[x])))
+            tableList <- lapply(seq_len(ntables),
+                function(id) { matrix(out$obs.freq[     out$id == id ],
+                                      nrow=max(out$row[ out$id == id ]),
+                                      ncol=max(out$col[ out$id == id ]))  })
+            tableChisqTest <- lapply(tableList, stats::chisq.test)
+            table.chisq <- unlist(lapply(tableChisqTest, 
+                function(x) as.numeric(x$statistic)))
+            table.df <- unlist(lapply(tableChisqTest, 
+                function(x) as.numeric(x$parameter)))
+            table.pvalue <- unlist(lapply(tableChisqTest,   
+                function(x) as.numeric(x$p.value)))
+            out$chisq <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.chisq[x], each=ncells[x])))
+            out$df <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.df[x], each=ncells[x])))
+            out$pvalue <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.pvalue[x], each=ncells[x])))
+        }
+    } else if(inherits(object, "lavaan")) {
+        # add predicted frequencies, fit indices
+
         #out$pi <- unlist(lav_pairwise_tables_pi(object))
         #out$freq.est <- out$pi * out$nobs
         obs.prop <- out$obs.freq/out$nobs
@@ -93,22 +120,6 @@ lavTables <- function(object, categorical=NULL,
                 out$str.nlarge <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.numAboveMin[x], each=ncells[x])))
 
-                if(collapse) {
-                    # only 1 row per table
-                    row.idx <- which(!duplicated(out$id))
-                    if(is.null(out$group)) {
-                        out <- out[row.idx, c("id","lhs","rhs","nobs",
-                                              "str.average", "str.min",
-                                              "ncells",
-                                              "str.nlarge","str.plarge")]
-                    } else {
-                        out <- out[row.idx, c("id","lhs","rhs","group",
-                                              "nobs", "ncells",
-                                              "str.average", "str.min",
-                                              "ncells",
-                                              "str.nlarge","str.plarge")]
-                    }
-                }
             } else {
                 if(min.std.resid > 0.0) {
                     # select only rows where std.resid >= min.std.resid
@@ -119,9 +130,29 @@ lavTables <- function(object, categorical=NULL,
         }
     }
 
+    if(collapse) {
+        # only 1 row per table
+        row.idx <- which(!duplicated(out$id))
+        out <- out[row.idx,,drop=FALSE]
+
+        # remove some cell-specific columns
+        out$row <- NULL; out$col <- NULL
+        out$obs.freq <- NULL; out$est.freq <- NULL
+        out$std.resid <- NULL; # out$ncells <- NULL
+    }
+
     if(collapse && showAsMatrix) {
         tmp <- out
-        out <- lavaan::getCov(out$str.average, names=unique(out$lhs))
+        RN <- unique(out$rhs)
+        if(inherits(object, "lavaan")) {
+            out <- lavaan::getCov(out$str.average, lower=FALSE, 
+                                  names=unique(out$lhs))
+            rownames(out) <- RN
+        } else {
+            out <- lavaan::getCov(out$pvalue, lower=FALSE, 
+                                  names=unique(out$lhs))
+            rownames(out) <- RN
+        }
         class(out) <- c("lavaan.matrix.symmetric", "matrix")
     } else {
         class(out) <- c("lavaan.data.frame", "data.frame")
