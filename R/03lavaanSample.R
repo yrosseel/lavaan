@@ -382,8 +382,13 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
 
     # matrix -> list
     if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
-    if(!is.null(sample.mean) && !is.list(sample.mean))
+    if(!is.null(sample.mean) && !is.list(sample.mean)) {
+        # check if sample.mean is string (between single quotes)
+        if(is.character(sample.mean)) {
+            sample.mean <- char2num(sample.mean)
+        }
         sample.mean <- list(sample.mean)
+    }
 
     # number of groups
     ngroups <- length(sample.cov)

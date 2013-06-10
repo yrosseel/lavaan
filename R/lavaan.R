@@ -113,7 +113,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         categorical <- TRUE
     } else if(!is.null(data) && length(ordered) > 0L) {
         categorical <- TRUE
-    } else if(lav_dataframe_check_ordered(frame=data, ov.names=ov.names.y)) {
+    } else if(is.data.frame(data) && 
+              lav_dataframe_check_ordered(frame=data, ov.names=ov.names.y)) {
         categorical <- TRUE
     } else {
         categorical <- FALSE

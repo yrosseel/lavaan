@@ -31,7 +31,22 @@ lavData <- function(data          = NULL,          # data.frame
 
     # 1) full data
     if(!is.null(data)) {
-        stopifnot(is.data.frame(data)) ## FIXME!! we should also allow matrices
+        if(!is.data.frame(data)) {
+            # is it a matrix?
+            if(is.matrix(data)) {
+                if(nrow(data) == ncol(data)) {
+                    # perhaps it is a covariance matrix?
+                    error("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
+                } else {
+                    # or perhaps it is a data matrix?
+                    warning("lavaan WARNING: data argument has been coerced to a data.frame")
+                    ### FIXME, we should avoid as.data.frame() and handle
+                    ### data matrices directly
+                    data <- as.data.frame(data)
+                }
+            }
+        }
+
         lavData <- getDataFull(data              = data,
                                group             = group,
                                group.label       = group.label,
@@ -42,11 +57,12 @@ lavData <- function(data          = NULL,          # data.frame
                                missing           = missing,
                                warn              = warn,
                                allow.single.case = allow.single.case)
+        sample.cov <- NULL # not needed, but just in case
     }
     
     
     # 2) sample moments
-    else if(!is.null(sample.cov)) {
+    if(is.null(data) && !is.null(sample.cov)) {
         
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
@@ -126,10 +142,10 @@ lavData <- function(data          = NULL,          # data.frame
                        ov          = ov,
                        missing     = "listwise")
 
-
+    }
 
     # 3) data.type = "none":  both data and sample.cov are NULL
-    } else {
+    if(is.null(data) && is.null(sample.cov)) { 
         if(is.null(sample.nobs)) sample.nobs <- 0L
         sample.nobs <- as.list(sample.nobs)
         ngroups <- length(unlist(sample.nobs))
