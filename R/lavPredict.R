@@ -1,10 +1,9 @@
-# eventually, this will become a generic function to compute all sorts
-# of case-wise contributions (loglikelihoods, factor scores, residuals, 
-# EB, posteriors,...)
+# lavPredict() contains a collection of `predict' methods
+# the unifying theme is that they all rely on the factor scores
 #
 # fs: factor scores
 # mu: expectation of the response (eg mean or probability=1)
-# cdy: conditional density of y (given lv's and exo)
+# fy: conditional density of y (given lv's and exo) (under independence!)
 #
 # first version: YR 11 June 2013
 
@@ -15,7 +14,8 @@ function(object, newdata=NULL) {
 })
 
 # main function
-lavPredict <- function(object, newdata=NULL, type="FS", se.fit=FALSE) {
+lavPredict <- function(object, newdata=NULL, type="FS", se.fit=FALSE,
+                       label=TRUE) {
 
     stopifnot(inherits(object, "lavaan"))
     type <- tolower(type)
@@ -46,11 +46,16 @@ lavPredict <- function(object, newdata=NULL, type="FS", se.fit=FALSE) {
     }
 
     if(type == "fs") {
-        out <- lav_predict_eta(object = object, data.obs = data.obs)
+        out <- lav_predict_eta(object = object, data.obs = data.obs,
+                               label = label)
     } else if(type == "mu") {
-        out <- lav_predict_mu(object = object, data.obs = data.obs)
+        out <- lav_predict_mu(object = object, data.obs = data.obs,
+                              label = label)
+    } else if(type == "fy") {
+        out <- lav_predict_fy(object = object, data.obs = data.obs,
+                              label = label)
     } else {
-        stop("lavaan ERROR: type must be one of: FS")
+        stop("lavaan ERROR: type must be one of: FS MU FY")
     }
 
     if(object@Data@ngroups == 1L) {
@@ -67,7 +72,7 @@ lavPredict <- function(object, newdata=NULL, type="FS", se.fit=FALSE) {
 ## FIXME: 1) only works for LISREL representation for now!!!
 ##        2) if multiple group, return single data.frame with extra group col
 ##        3) only for continuous responses for now
-lav_predict_eta <- function(object = NULL, data.obs = NULL) {
+lav_predict_eta <- function(object = NULL, data.obs = NULL, label = FALSE) {
 
     #if(object@SampleStats@missing.flag) {
     #    stop("FIXME: predict does not work with missing data (yet)!")
@@ -81,8 +86,6 @@ lav_predict_eta <- function(object = NULL, data.obs = NULL) {
     FS <- vector("list", length=G)
 
     for(g in 1:G) {
-        lv.names <- vnames(object@ParTable, type="lv", group=g)
-
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]
 
@@ -122,10 +125,12 @@ lav_predict_eta <- function(object = NULL, data.obs = NULL) {
         tmp2 <- matrix(LAMBDA %*% E.eta, N, nvar, byrow=TRUE)
         tmp3 <- matrix(E.eta, N, NFAC, byrow=TRUE)
 
-        nfac <- length(lv.names)
         FS[[g]] <-
-            (tmp3 + t(C %*% t(data.obs[[g]]-tmp1-tmp2)))[,1:nfac,drop=FALSE]
-        colnames(FS[[g]]) <- lv.names
+            (tmp3 + t(C %*% t(data.obs[[g]]-tmp1-tmp2)))[,1:NFAC,drop=FALSE]
+
+        if(label) {
+            colnames(FS[[g]]) <- vnames(object@ParTable, type="lv", group=g)
+        }
 
         class(FS[[g]]) <- c("lavaan.matrix", "matrix")
     }
@@ -135,7 +140,8 @@ lav_predict_eta <- function(object = NULL, data.obs = NULL) {
 
 
 # expectation of the response, conditional on the latent variables
-lav_predict_mu <- function(object = NULL, data.obs = NULL) {
+lav_predict_mu <- function(object = NULL, data.obs = NULL,
+                           label = FALSE) {
 
     # measurement part
     # y*_i = nu + lambda eta_i + K x_i + epsilon_i
@@ -169,9 +175,60 @@ lav_predict_mu <- function(object = NULL, data.obs = NULL) {
         # measurement model
         MU[[g]] <- sweep(ETA[[g]] %*% t(LAMBDA), MARGIN=2, NU, "+")
 
+        if(label) {
+            colnames(MU[[g]]) <- vnames(object@ParTable, type="ov", group=g)
+        }
+
+        class(MU[[g]]) <- c("lavaan.matrix", "matrix")
+
     }
     
     MU
 }
 
-# conditional density y
+# conditional density y -- assuming independence!!
+# f(y_i | eta_i, x_i)
+lav_predict_fy <- function(object = NULL, data.obs = NULL,
+                           label = FALSE) {
+
+    if(is.null(data.obs)) {
+        data.obs <- object@Data@X
+    }
+    G <- object@Data@ngroups
+    nmat <- object@Model@nmat
+    FY <- vector("list", length=G)
+
+    # we need the MUs (per group)
+    MU <- lav_predict_mu(object = object, data.obs = data.obs)
+
+    # all normal?
+    NORMAL <- all(object@Data@ov$type == "numeric")
+
+    for(g in 1:G) {
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST     <- object@Model@GLIST[ mm.in.group ]
+
+        THETA <- MLIST$theta
+        theta <- diag(THETA)
+
+        if(NORMAL) {
+            tmp <-  (data.obs[[g]] - MU[[g]])^2 
+            tmp1 <- sweep(tmp, MARGIN=2, theta, "/")
+            tmp2 <- exp( -0.5 * tmp1 )
+            tmp3 <- sweep(tmp2, MARGIN=2, sqrt(2*pi*theta), "/")
+            FY[[g]] <- tmp3
+        } else {
+            stop("not ready yet")
+        }
+
+        if(label) {
+            colnames(FY[[g]]) <- vnames(object@ParTable, type="ov", group=g)
+        }
+
+        class(FY[[g]]) <- c("lavaan.matrix", "matrix")
+
+    }
+
+    FY
+}
+
