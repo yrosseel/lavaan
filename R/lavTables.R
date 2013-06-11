@@ -7,25 +7,24 @@
 #   a fitted lavaan object, a varTable, or a lavData object
 # - 11 May 2013: added collapse=TRUE, min.std.resid options (suggested
 #   by Myrsini Katsikatsou
+# - 11 June 2013: added dimension, to get one-way and two-way (three-way?)
+#   tables
 
-lavTables <- function(object, categorical=NULL,
+lavTables <- function(object, dimension=2L, categorical=NULL,
                       std.resid=TRUE, min.std.resid = 0.0,
                       average = FALSE, collapse = FALSE) {
 
-    showAsMatrix <- FALSE
-    if(!missing(collapse)) {
-        average <- TRUE
-        if(is.character(collapse) && tolower(collapse) == "matrix") {
-            collapse <- TRUE
-            showAsMatrix <- TRUE
-        }
-    }
-
+    # catch matrix
     if(is.matrix(object)) {
         object <- as.data.frame(object, stringsAsFactors = FALSE)
         if(is.null(categorical)) {
             object[,] <- lapply(object, base::factor)
         }
+    }
+
+    # check object class
+    if(!class(object) %in% c("data.frame", "lavData", "lavaan")) {
+        stop("lavaan ERROR: object must either be a matrix or a data.frame, or an object of class lavaan or class lavData")
     }
 
     if(inherits(object, "data.frame")) {
@@ -34,7 +33,7 @@ lavTables <- function(object, categorical=NULL,
                              as.data.frame.=FALSE)
         X <- data.matrix(object)
         # manually construct integers for user-declared categorical variables
-        user.categorical.names <- 
+        user.categorical.names <-
             vartable$name[vartable$type %in% c("ordered","factor") &
                           vartable$user == 1L]
         user.categorical.idx <- which(ov.names %in% user.categorical.names)
@@ -50,8 +49,92 @@ lavTables <- function(object, categorical=NULL,
         vartable <- object@Data@ov
         X <- object@Data@X
         ov.names <- object@Data@ov.names
+    }
+
+    if(dimension == 1L) {
+        out <- lav_oneway_tables(object = object, 
+                   vartable = vartable, X = X, ov.names = ov.names)
+    } else if(dimension == 2L) {
+        out <- lav_pairwise_tables(object = object,
+                   vartable = vartable, X = X, ov.names = ov.names,
+                   std.resid = std.resid, min.std.resid = min.std.resid,
+                   average = average, collapse = collapse)
     } else {
-        stop("lavaan ERROR: object must either be a matrix or a data.frame, or an object of class lavaan or class lavData")
+        stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
+    }
+
+    out
+}
+
+
+lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
+
+    # identify 'categorical' variables
+    cat.idx <- which(vartable$type %in% c("ordered","factor"))
+    ncat <- length(cat.idx)
+
+    # do we have any categorical variables?
+    if(length(cat.idx) == 0L) {
+        stop("lavaan ERROR: no categorical variables are found")
+    } else {
+        labels <- strsplit(vartable$lnam[cat.idx], "\\|")
+    }
+
+    # ok, we have an overview of all categorical variables in the data
+    ngroups <- length(X)
+
+    # for each group, for each categorical variable, collect information
+    TABLES <- vector("list", length=ngroups)
+    for(g in 1:ngroups) {
+        TABLES[[g]] <- lapply(seq_len(ncat),
+            FUN=function(x) {
+                idx <- cat.idx[x]
+                nrow <- vartable$nlev[idx]
+                ncell<- nrow
+
+                # compute observed frequencies
+                FREQ <- tabulate(X[[g]][,idx])
+
+                list(   id = rep.int(x, ncell),
+                       lhs = rep.int(vartable$name[idx], ncell),
+                       # op = rep.int("freq", ncell), 
+                       rhs = labels[[x]],
+                     group = rep.int(g, ncell),
+                      nobs = rep.int(sum(FREQ), ncell),
+                      obs.freq = FREQ,
+                      obs.prop = FREQ/sum(FREQ) 
+                    )
+            })
+    }
+
+    for(g in 1:ngroups) {
+        TABLE <- TABLES[[g]]
+        TABLE <- lapply(TABLE, as.data.frame, stringAsFactors=FALSE)
+        if(g == 1L) {
+            out <- do.call(rbind, TABLE)
+            # remove group column 
+            out$group <- NULL
+        } else {
+            out <- rbind(out, do.call(rbind, TABLE))
+        }
+    }
+
+    class(out) <- c("lavaan.data.frame", "data.frame")
+    out
+}
+
+lav_pairwise_tables <- function(object, 
+                                vartable=NULL, X=NULL, ov.names=NULL,
+                                std.resid=TRUE, min.std.resid = 0.0,
+                                average = FALSE, collapse = FALSE) {
+
+    showAsMatrix <- FALSE
+    if(! (is.logical(collapse) && !collapse) ) {
+        average <- TRUE
+        if(is.character(collapse) && tolower(collapse) == "matrix") {
+            collapse <- TRUE
+            showAsMatrix <- TRUE
+        }
     }
 
     out <- lav_pairwise_tables_freq(vartable = vartable,
