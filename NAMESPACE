@@ -45,7 +45,8 @@ export("lavaan", "cfa", "sem", "growth",
        "lavTables", 
        "lavExport",
        "lavMatrixRepresentation",
-       "mplus2lavaan"
+       "mplus2lavaan",
+       "lavPredict"
       )
 
 # export Classes
