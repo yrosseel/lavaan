@@ -425,8 +425,8 @@ computePI.LISREL <- function(MLIST=NULL) {
     PI
 }
 
-# compute ETA: variances/covariances of latents
-computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
+# compute V(ETA): variances/covariances of latents
+computeVETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -459,6 +459,44 @@ computeETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
     }
 
     SYX
+}
+
+# compute E(ETA): expected value of latents
+computeEETA.LISREL <- function(MLIST=NULL, x=NULL) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+    ALPHA <- MLIST$alpha
+    if(is.null(ALPHA)) {
+        eeta <- numeric(nfac)    
+    } else {
+        BETA   <- MLIST$beta
+        # beta?
+        if(is.null(BETA)) {
+            eeta <- ALPHA
+        } else {
+            tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+            tmp[cbind(i, i)] <- 1
+            IB.inv <- solve(tmp)
+            eeta <- IB.inv %*% ALPHA
+        }
+    }
+
+    # if GAMMA, also x part, and we return a matrix of (nfac x N)
+    GAMMA <- MLIST$gamma
+    if(!is.null(GAMMA)) {
+        stopifnot(!is.null(x))
+        if(is.null(BETA)) {
+            EX <- x %*% t(GAMMA)
+        } else {
+            IB.inv..GAMMA <- IB.inv %*% GAMMA
+            EX <- x %*% t(IB.inv..GAMMA)
+        }
+        EETA <- sweep(EX, MARGIN=2, STATS=eeta, FUN="+")
+    } else {
+        EETA <- eeta
+    }
+
+    EETA
 }
 
 # compute Sigma/ETA: variances/covariances of BOTH observed and latent variables

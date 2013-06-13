@@ -126,7 +126,7 @@ simulateData <- function(
         lav2$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
         fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
         Sigma.hat <- computeSigmaHat(fit@Model)
-        ETA <- computeETA(fit@Model, samplestats=NULL)
+        ETA <- computeVETA(fit@Model, samplestats=NULL)
 
         if(debug) {
             cat("Sigma.hat:\n"); print(Sigma.hat)

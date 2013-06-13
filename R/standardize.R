@@ -32,7 +32,7 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
     nmat <- object@Model@nmat
 
     # compute ETA
-    LV.ETA <- computeETA(object@Model, samplestats=object@SampleStats)
+    LV.ETA <- computeVETA(object@Model, samplestats=object@SampleStats)
     
     for(g in 1:object@Data@ngroups) {
 

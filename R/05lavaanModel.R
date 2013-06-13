@@ -87,6 +87,7 @@ Model <- function(partable       = NULL,
     nmat <- unlist(attr(REP, "mmNumber"))
     num.idx <- vector("list", length=ngroups)
     nexo <- integer(ngroups)
+    ov.dummy.row.idx <- ov.dummy.col.idx <- vector(mode="list", length=ngroups)
 
     offset <- 0L
     for(g in 1:ngroups) {
@@ -191,15 +192,10 @@ Model <- function(partable       = NULL,
                     row..idx <- match(ov.dummy.names, ov.names)
                     col..idx <- match(ov.dummy.names, LV.names)
                     tmp[ cbind(row..idx, col..idx)] <- 1.0
+                    ov.dummy.row.idx[[g]] <- row..idx
+                    ov.dummy.col.idx[[g]] <- col..idx
                 }
             }
-
-            # representation specific stuff (part 2)
-            #if(representation == "LISREL" && mmNames[mm] == "psi") {
-            #    # this only seems to happen in the categorical case
-            #    idx <- which(diag(tmp) == 0.0)
-            #    diag(tmp)[idx] <- 1.0
-            #}
 
             # representation specific
             if(representation == "LISREL" && mmNames[mm] == "delta") {
@@ -510,7 +506,9 @@ Model <- function(partable       = NULL,
                  cin.function=cin.function,
                  cin.jacobian=cin.jacobian, 
                  nexo=nexo,
-                 fixed.x=fixed.x)
+                 fixed.x=fixed.x,
+                 ov.dummy.row.idx=ov.dummy.row.idx,
+                 ov.dummy.col.idx=ov.dummy.col.idx)
 
     if(debug) {
          cat("lavaan DEBUG: lavaanModel\n")

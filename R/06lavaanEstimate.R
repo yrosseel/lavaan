@@ -72,26 +72,40 @@ setModelParameters <- function(object, x=NULL) {
         nmat <- object@nmat
         if(object@representation == "LISREL") {
             theta.idx <- which(names(tmp) == "theta")
+              psi.idx <- which(names(tmp) == "psi")
             for(g in 1:object@ngroups) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
                 num.idx <- object@num.idx[[g]]
                 TD.orig <- diag(tmp[[theta.idx[g]]])
+                PSI.orig <- diag(tmp[[psi.idx[g]]])
+                
+                # set theta diag elements to zero (just to get Sigma.hat)
                 if(length(num.idx) > 0L) {
                     diag(tmp[[theta.idx[g]]])[-num.idx] <- 0.0
                 } else {
                     diag(tmp[[theta.idx[g]]]) <- 0.0
                 }
+ 
+                # just in case we have dummy variables, they are in psi
+                # r.idx and c.idx -> check if cat, and set also to 0.0
+
                 MLIST <- tmp[mm.in.group]
                 Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
 
                 ### FIXME, not ok for multigroup when delta neq I
                 ### use VY instead?
-                if(length(num.idx) > 0L) {
-                    diag(tmp[[theta.idx[g]]])[-num.idx] <-
-                        (1 - diag(Sigma.hat)[-num.idx])
+                diag.Sigma <- diag(Sigma.hat)
+                if(is.null(MLIST$delta)) {
+                    delta <- rep(1, length(diag.Sigma))
                 } else {
-                    diag(tmp[[theta.idx[g]]]) <- (1 - diag(Sigma.hat))
+                    delta <- MLIST$delta
+                }
+                RESIDUAL <- 1/delta^2 * (1 - diag.Sigma)
+                if(length(num.idx) > 0L) {
+                    diag(tmp[[theta.idx[g]]])[-num.idx] <- RESIDUAL[-num.idx]
+                } else {
+                    diag(tmp[[theta.idx[g]]]) <- RESIDUAL
                 }
                 # if diagonal element is not in m.user.idx, leave it alone
                 # eg. indicator that is also dependent in other regression
@@ -334,8 +348,8 @@ computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
     VY
 }
 
-# ETA: latent variances variances/covariances
-computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
+# V(ETA): latent variances variances/covariances
+computeVETA <- function(object, GLIST=NULL, samplestats=NULL) {
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
 
@@ -358,7 +372,11 @@ computeETA <- function(object, GLIST=NULL, samplestats=NULL) {
         }
        
         if(representation == "LISREL") {
-            ETA.g <- computeETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+            ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+            c.idx <- object@ov.dummy.col.idx[[g]]
+            if(!is.null(c.idx)) {
+                ETA.g <- ETA.g[-c.idx,-c.idx,drop=FALSE]
+            }
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -400,6 +418,48 @@ computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
 
     COV
 }
+
+
+# E(ETA): expection (means) of latent variables
+computeEETA <- function(object, GLIST=NULL, eXo=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    EETA <- vector("list", length=ngroups)
+
+    # compute E(ETA) for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        x <- NULL
+        if(!is.null(eXo[[g]])) {
+            x <- eXo[[g]]
+        }
+       
+        if(representation == "LISREL") {
+            EETA.g <- computeEETA.LISREL(MLIST = MLIST, x = x)
+            c.idx <- object@ov.dummy.col.idx[[g]]
+            if(!is.null(c.idx)) {
+                EETA.g <- EETA.g[,-c.idx,drop=FALSE]
+            }
+
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        EETA[[g]] <- EETA.g
+    }
+
+    EETA
+}
+
 
 computeObjective <- function(object, GLIST=NULL, 
                              samplestats=NULL, X = NULL,
