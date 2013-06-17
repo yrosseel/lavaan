@@ -41,9 +41,15 @@ lavaanify <- lavParTable <- function(
                       
                       as.data.frame.   = TRUE) {
 
-    # check if model is already FLAT
+
+    # check if model is already FLAT or a full parameter table
     if(is.list(model) && !is.null(model$lhs)) {
-        FLAT <- model
+        if(is.null(model$mod.idx)) {
+            warning("lavaan WARNING: input already looks like a parameter table; returning as is")
+            return(model)
+        } else {
+            FLAT <- model
+        }
     } else {
         # parse the model syntax and flatten the user-specified model
         # return a data.frame, where each line is a model element (rhs, op, lhs)

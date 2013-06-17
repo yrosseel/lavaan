@@ -45,19 +45,30 @@ simulateData <- function(
     RNGstate <- .Random.seed
 
     # lavaanify
-    lav <- lavaanify(model = model, 
-                     meanstructure=meanstructure,
-                     int.ov.free=int.ov.free, 
-                     int.lv.free=int.lv.free,
-                     fixed.x=fixed.x,
-                     orthogonal=orthogonal,
-                     std.lv=std.lv,
-                     auto.fix.first=auto.fix.first,
-                     auto.fix.single=auto.fix.single,
-                     auto.var=auto.var,
-                     auto.cov.lv.x=auto.cov.lv.x,
-                     auto.cov.y=auto.cov.y,
-                     ngroups=length(sample.nobs))
+    if(is.list(model)) {
+        # two possibilities: either model is already lavaanified
+        # or it is something else...
+        if(!is.null(model$lhs) && !is.null(model$op)  &&
+           !is.null(model$rhs) && !is.null(model$free)) {
+            lav <- model
+        } else if(is.character(model[[1]])) {
+            stop("lavaan ERROR: model is a list, but not a parameterTable?")
+        }
+    } else {
+        lav <- lavaanify(model = model, 
+                         meanstructure=meanstructure,
+                         int.ov.free=int.ov.free, 
+                         int.lv.free=int.lv.free,
+                         fixed.x=fixed.x,
+                         orthogonal=orthogonal,
+                         std.lv=std.lv,
+                         auto.fix.first=auto.fix.first,
+                         auto.fix.single=auto.fix.single,
+                         auto.var=auto.var,
+                         auto.cov.lv.x=auto.cov.lv.x,
+                         auto.cov.y=auto.cov.y,
+                         ngroups=length(sample.nobs))
+    }
 
     if(debug) {
         cat("initial lav\n")
