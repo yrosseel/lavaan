@@ -488,7 +488,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     attr(x, "fx") <- as.numeric(NA)
                 } 
                 attr(x, "fx") <- FX
-            } else if(checkLinearConstraints(lavaanModel) == TRUE) {
+            } else if(lav_constraints_check_linear(lavaanModel) == TRUE) {
 
                 require(quadprog)
 

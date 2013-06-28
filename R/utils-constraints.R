@@ -1,5 +1,5 @@
 # FIXME: is there a more elegant/robust way to do this??
-checkLinearConstraints <- function(model) {
+lav_constraints_check_linear <- function(model) {
 
      # seed 1: rnorm
      A.ceq <- A.cin <- matrix(0, model@nx.free, 0)
@@ -23,3 +23,4 @@ checkLinearConstraints <- function(model) {
      else
          return(FALSE)
 }
+
