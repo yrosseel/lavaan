@@ -1258,7 +1258,7 @@ function(object, labels=TRUE) {
 
 
 setMethod("vcov", "lavaan",
-function(object, labels=TRUE) {
+function(object, labels=TRUE, attributes.=FALSE) {
 
     # check for convergence first!
     if(object@Fit@npar > 0L && !object@Fit@converged)
@@ -1268,14 +1268,25 @@ function(object, labels=TRUE) {
         VarCov <- matrix(0,0,0)
     } else {
         VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
-                               options=object@Options,
-                               data=object@Data
+                               options=object@Options, data=object@Data,
+                               partable=object@Partable, cache=object@Cache,
+                               control=list()
                               )
     }
 
     if(labels) {
         colnames(VarCov) <- rownames(VarCov) <- 
             getParameterLabels(object@ParTable, type="free")
+    }
+ 
+    if(!attributes.) {
+        attr(VarCov, "E.inv") <- NULL
+        attr(VarCov, "B0") <- NULL
+        attr(VarCov, "B0.group") <- NULL
+        attr(VarCov, "Delta") <- NULL
+        attr(VarCov, "WLS.V") <- NULL
+        attr(VarCov, "BOOT.COEF") <- NULL
+        attr(VarCov, "BOOT.TEST") <- NULL
     }
 
     class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")

@@ -153,6 +153,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # some additional checks for estimator="PML"
     if(lavaanOptions$estimator == "PML") {
         ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
+        # ordered argument?
+        if(length(ordered) > 0L) {
+            ord.idx <- which(ov.names.y %in% ordered)
+            ov.types[ord.idx] <- "ordered"
+        }
         # 0. at least some variables must be ordinal
         if(!any(ov.types == "ordered")) {
             stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
