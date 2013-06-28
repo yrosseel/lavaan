@@ -1433,16 +1433,18 @@ function(object, ...) {
     mods <- c(list(object), dots[modp])
     names(mods) <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    # put them in order (using number of free parameters)
-    nfreepar <- sapply(mods, function(x) x@Fit@npar)
-    if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
-        # what, same number of free parameters?
-        # maybe, we need to count number of constraints
-        ncon <- sapply(mods, function(x) { nrow(x@Model@con.jac) })
-        nfreepar <- nfreepar - ncon
-    }
+    ## put them in order (using number of free parameters)
+    #nfreepar <- sapply(mods, function(x) x@Fit@npar)
+    #if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
+    #    # what, same number of free parameters?
+    #    # maybe, we need to count number of constraints
+    #    ncon <- sapply(mods, function(x) { nrow(x@Model@con.jac) })
+    #    nfreepar <- nfreepar - ncon
+    #}
 
-    mods <- mods[order(nfreepar, decreasing = TRUE)]
+    # put them in order (using degrees of freedom)
+    ndf <- sapply(mods, function(x) x@Fit@test[[1]]$df)    
+    mods <- mods[order(ndf)]
 
     # here come the checks
     if(TRUE) {
