@@ -425,7 +425,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     CON.idx  <- 0L
     MOD <- vector("list", length=0L)
     CON <- vector("list", length=0L)
-    GRP <- 0L
+    GRP <- 1L
     for(i in 1:length(model)) {
         x <- model[i]
         if(debug) {
@@ -499,7 +499,6 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # 2c if operator is ":", put it in GRP
         if(op == ":") {
             FLAT.idx <- FLAT.idx + 1L
-            GRP <- GRP + 1L
             FLAT.lhs[FLAT.idx] <- lhs
             FLAT.op[ FLAT.idx] <- op
             FLAT.rhs[FLAT.idx] <- ""
@@ -508,6 +507,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             FLAT.label[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
             FLAT.group[FLAT.idx] <- GRP
+            GRP <- GRP + 1L
             next
         }
     
