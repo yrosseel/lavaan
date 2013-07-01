@@ -5,6 +5,26 @@
 #
 # YR. 29 june 2013 (as lav_partable)
 
+# return 'attributes' of a lavaan partable -- generate a new set if necessary
+lav_partable_attributes <- function(partable, pta=NULL) {
+
+    if(is.null(pta)) {
+        # attached to partable?
+        pta <- attributes(partable)
+        if(!is.null(pta$vnames)) {
+            return(pta)
+        } else {
+            pta <- list()
+        }
+    }
+
+    if(is.null(pta$vnames)) {
+        pta$vnames <- lav_partable_vnames(partable, type="all", group="list")
+    }
+
+    pta
+}
+
 
 getIDX <- function(partable, type="th", group=NULL) {
 
@@ -12,9 +32,9 @@ getIDX <- function(partable, type="th", group=NULL) {
               type %in% c("th"))
 
     if(type == "th") {
-        ovn <- lav_partable_names(partable, type="ov.nox", group=group)
-        ov.num <- lav_partable_names(partable, type="ov.num", group=group)
-        th  <- lav_partable_names(partable, type="th.mean", group=group)
+        ovn <- lav_partable_vnames(partable, type="ov.nox", group=group)
+        ov.num <- lav_partable_vnames(partable, type="ov.num", group=group)
+        th  <- lav_partable_vnames(partable, type="th.mean", group=group)
         th[th %in% ov.num] <- "__NUM__"
         th1 <- gsub("\\|t[0-9]*","",th)
         out <- match(th1, ovn)
@@ -33,9 +53,9 @@ getNDAT <- function(partable, group=NULL) {
     if(categorical) meanstructure <- TRUE
 
     if(categorical) {
-        ov.names <- lav_partable_names(partable, "ov.nox", group=group)
+        ov.names <- lav_partable_vnames(partable, "ov.nox", group=group)
     } else {
-        ov.names <- lav_partable_names(partable, "ov", group=group)
+        ov.names <- lav_partable_vnames(partable, "ov", group=group)
     }
     nvar <- length(ov.names)
 
@@ -44,7 +64,7 @@ getNDAT <- function(partable, group=NULL) {
 
     # correction for fixed.x?
     if(!categorical && fixed.x) {
-        ov.names.x <- lav_partable_names(partable, "ov.x", group=group)
+        ov.names.x <- lav_partable_vnames(partable, "ov.x", group=group)
         nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
         if(meanstructure) pstar.x <- pstar.x + nvar.x
@@ -53,11 +73,11 @@ getNDAT <- function(partable, group=NULL) {
 
     # correction for ordinal data?
     if(categorical) {
-        ov.names.x <- lav_partable_names(partable, "ov.x", group=group)
+        ov.names.x <- lav_partable_vnames(partable, "ov.x", group=group)
         nexo     <- length(ov.names.x)
-        ov.ord   <- lav_partable_names(partable, "ov.ord", group=group)
+        ov.ord   <- lav_partable_vnames(partable, "ov.ord", group=group)
         nvar.ord <- length(ov.ord)
-        th       <- lav_partable_names(partable, "th", group=group)
+        th       <- lav_partable_vnames(partable, "th", group=group)
         nth      <- length(th)
         # no variances
         ndat <- ndat - (ngroups * nvar.ord)
@@ -114,19 +134,19 @@ getParameterLabels <- function(partable, group.equal="", group.partial="",
            "residual.covariances" %in%  group.equal) {
             ov.names.nox <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                ov.names.nox[[g]] <- lav_partable_names(partable, "ov.nox", group=g)
+                ov.names.nox[[g]] <- lav_partable_vnames(partable, "ov.nox", group=g)
         }
         if("thresholds" %in% group.equal) {
             ov.names.ord <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                ov.names.ord[[g]] <- lav_partable_names(partable, "ov.ord", group=g)
+                ov.names.ord[[g]] <- lav_partable_vnames(partable, "ov.ord", group=g)
         }
         if("means" %in% group.equal ||
            "lv.variances" %in% group.equal ||
            "lv.covariances" %in% group.equal) {
             lv.names <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                lv.names[[g]] <- lav_partable_names(partable, "lv", group=g)
+                lv.names[[g]] <- lav_partable_vnames(partable, "lv", group=g)
         }
 
         # g1.flag: TRUE if included, FALSE if not
@@ -223,15 +243,15 @@ getUserListFull <- function(partable=NULL, group=NULL) {
     ngroups <- max(partable$group)
 
     # extract `names' of various types of variables:
-    lv.names     <- lav_partable_names(partable, type="lv",  group=group)   # latent variables
-    ov.names     <- lav_partable_names(partable, type="ov",  group=group)   # observed variables
-    ov.names.x   <- lav_partable_names(partable, type="ov.x",group=group)   # exogenous x covariates
-    ov.names.nox <- lav_partable_names(partable, type="ov.nox",group=group) # ov's without exo's
-    lv.names.x   <- lav_partable_names(partable, type="lv.x",group=group)   # exogenous lv
-    ov.names.y   <- lav_partable_names(partable, type="ov.y",group=group)   # dependent ov
-    lv.names.y   <- lav_partable_names(partable, type="lv.y",group=group)   # dependent lv
+    lv.names     <- lav_partable_vnames(partable, type="lv",  group=group)   # latent variables
+    ov.names     <- lav_partable_vnames(partable, type="ov",  group=group)   # observed variables
+    ov.names.x   <- lav_partable_vnames(partable, type="ov.x",group=group)   # exogenous x covariates
+    ov.names.nox <- lav_partable_vnames(partable, type="ov.nox",group=group) # ov's without exo's
+    lv.names.x   <- lav_partable_vnames(partable, type="lv.x",group=group)   # exogenous lv
+    ov.names.y   <- lav_partable_vnames(partable, type="ov.y",group=group)   # dependent ov
+    lv.names.y   <- lav_partable_vnames(partable, type="lv.y",group=group)   # dependent lv
     lvov.names.y <- c(ov.names.y, lv.names.y)
-    ov.names.ord <- lav_partable_names(partable, type="ov.ord", group=group)
+    ov.names.ord <- lav_partable_vnames(partable, type="ov.ord", group=group)
 
 
     # 1 "=~"
@@ -282,7 +302,7 @@ getUserListFull <- function(partable=NULL, group=NULL) {
     # 5. thresholds
     th.lhs <- th.rhs <- th.op <- character(0)
     if(length(ov.names.ord) > 0L) {
-        tmp <- strsplit(lav_partable_names(partable, "th", group=group), "\\|")
+        tmp <- strsplit(lav_partable_vnames(partable, "th", group=group), "\\|")
         th.lhs <- sapply(tmp, function(x) x[1])
         th.rhs <- sapply(tmp, function(x) x[2])
         th.op  <- rep("|", length(th.lhs))
@@ -340,20 +360,20 @@ getLIST <- function(FLAT=NULL,
     ###                   either free or fixed
 
     # extract `names' of various types of variables:
-    lv.names     <- lav_partable_names(FLAT, type="lv")     # latent variables
-    lv.names.r   <- lav_partable_names(FLAT, type="lv.regular") # regular latent variables
-    ov.names     <- lav_partable_names(FLAT, type="ov")     # observed variables
-    ov.names.x   <- lav_partable_names(FLAT, type="ov.x")   # exogenous x covariates 
-    ov.names.nox <- lav_partable_names(FLAT, type="ov.nox")
-    lv.names.x   <- lav_partable_names(FLAT, type="lv.x")   # exogenous lv
-    ov.names.y   <- lav_partable_names(FLAT, type="ov.y")   # dependent ov
-    lv.names.y   <- lav_partable_names(FLAT, type="lv.y")   # dependent lv
+    lv.names     <- lav_partable_vnames(FLAT, type="lv")     # latent variables
+    lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular") # regular latent variables
+    ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
+    ov.names.x   <- lav_partable_vnames(FLAT, type="ov.x")   # exogenous x covariates 
+    ov.names.nox <- lav_partable_vnames(FLAT, type="ov.nox")
+    lv.names.x   <- lav_partable_vnames(FLAT, type="lv.x")   # exogenous lv
+    ov.names.y   <- lav_partable_vnames(FLAT, type="ov.y")   # dependent ov
+    lv.names.y   <- lav_partable_vnames(FLAT, type="lv.y")   # dependent lv
     #lvov.names.y <- c(ov.names.y, lv.names.y)
     lvov.names.y <- c(lv.names.y, ov.names.y)
 
 
     # get 'ordered' variables, either from FLAT or varTable
-    ov.names.ord1 <- lav_partable_names(FLAT, type="ov.ord")
+    ov.names.ord1 <- lav_partable_vnames(FLAT, type="ov.ord")
     # check if we have "|" for exogenous variables
     if(length(ov.names.ord1) > 0L) {
         idx <- which(ov.names.ord1 %in% ov.names.x)
@@ -465,8 +485,8 @@ getLIST <- function(FLAT=NULL,
     rhs     <- FLAT$rhs
     mod.idx <- FLAT$mod.idx
 
-    lv.names     <- lav_partable_names(FLAT, type="lv")     # latent variables
-    ov.names     <- lav_partable_names(FLAT, type="ov")     # observed variables
+    lv.names     <- lav_partable_vnames(FLAT, type="lv")     # latent variables
+    ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
 
     # check order of covariances: we only fill the upper.tri!
     cov.idx <- which(op == "~~" & lhs != rhs)
