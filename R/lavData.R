@@ -395,8 +395,10 @@ getDataFull <- function(data          = NULL,          # data.frame
         user.ordered.names <- ov$name[ov$type == "ordered" &
                                       ov$user == 1L]
         user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
-        for(i in seq_len(length(user.ordered.idx))) {
-            X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
+        if(length(user.ordered.idx) > 0L) {
+            for(i in user.ordered.idx) {
+                X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
+            }
         }
 
         if(length(exo.idx) > 0L) {
