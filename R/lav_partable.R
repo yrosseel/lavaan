@@ -11,16 +11,25 @@ lav_partable_attributes <- function(partable, pta=NULL) {
     if(is.null(pta)) {
         # attached to partable?
         pta <- attributes(partable)
-        if(!is.null(pta$vnames)) {
+        if(!is.null(pta$vnames) && !is.null(pta$ngroups)) {
+            # looks like a pta
             return(pta)
         } else {
             pta <- list()
         }
     }
 
-    if(is.null(pta$vnames)) {
-        pta$vnames <- lav_partable_vnames(partable, type="all", group="list")
-    }
+    # vnames
+    pta$vnames <- lav_partable_vnames(partable, type="all", group="list")
+
+    # ngroups
+    pta$ngroups <- length(pta$vnames$ov)
+
+    # nvar
+    pta$nvar <- lapply(pta$vnames$ov, length)
+
+    # nfac
+    pta$nfac <- lapply(pta$vnames$lv, length)
 
     pta
 }
