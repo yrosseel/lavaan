@@ -1124,6 +1124,8 @@ function(object, what="free") {
               what == "samplestatistics" ||
               what == "sampstat") {
         sampStat(object)
+    } else if(what == "data") {
+        lav_inspect_data(object)
     } else if(what == "rsquare" || 
               what == "r-square" ||
               what == "r2") {
@@ -1852,6 +1854,26 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
                        object@Model@dimNames[[psi.idx]][[1L]])
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+lav_inspect_data <- function(object, labels = TRUE) {
+
+    G <- object@Data@ngroups
+    OUT <- object@Data@X
+
+    if(labels) {
+        for(g in 1:G) {
+            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
         }
     }
 
