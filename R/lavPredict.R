@@ -69,6 +69,9 @@ lavPredict <- function(object, newdata=NULL, type="FS", method="EBM",
         stop("lavaan ERROR: type must be one of: FS MU FY")
     }
 
+    # lavaan.matrix
+    out <- lapply(X, "class<-", c("lavaan.matrix", "matrix"))
+
     if(object@Data@ngroups == 1L) {
         out <- out[[1L]]
     } else {
@@ -146,7 +149,6 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
             colnames(FS[[g]]) <- vnames(object@ParTable, type="lv", group=g)
         }
 
-        class(FS[[g]]) <- c("lavaan.matrix", "matrix")        
     }
 
     FS
@@ -214,7 +216,6 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
             colnames(FS[[g]]) <- vnames(object@ParTable, type="lv", group=g)
         }
 
-        class(FS[[g]]) <- c("lavaan.matrix", "matrix")
     }
 
     FS
@@ -294,8 +295,6 @@ lav_predict_mu <- function(object = NULL, data.obs = NULL, eXo = NULL,
         if(label) {
             colnames(MU[[g]]) <- vnames(object@ParTable, type="ov", group=g)
         }
-
-        class(MU[[g]]) <- c("lavaan.matrix", "matrix")
 
     }
     
@@ -391,8 +390,6 @@ lav_predict_fy <- function(object = NULL, data.obs = NULL,
         if(label) {
             colnames(FY[[g]]) <- vnames(object@ParTable, type="ov", group=g)
         }
-
-        class(FY[[g]]) <- c("lavaan.matrix", "matrix")
 
     }
 

@@ -1,6 +1,11 @@
 
 setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {
+
+    # catch type="casewise"
+    if(type %in% c("casewise","case","obs","observations")) {
+        return( lav_residuals_casewise(object, labels = labels) )
+    }
  
     # checks
     if(type %in% c("normalized", "standardized")) {
@@ -16,8 +21,8 @@ function(object, type="raw", labels=TRUE) {
  
 
     # check type
-    if(!type %in% c("raw", "cor", "normalized", "standardized")) {
-        stop("type must be one of \"raw\", \"cor\", \"normalized\" or \"standardized\"")
+    if(!type %in% c("raw", "cor", "normalized", "standardized", "casewise")) {
+        stop("type must be one of \"raw\", \"cor\", \"normalized\" or \"standardized\" or \"casewise\"")
     }
 
     # check for 0 parameters if type == standardized
@@ -213,4 +218,34 @@ setMethod("resid", "lavaan",
 function(object, type="raw") {
     residuals(object, type=type)
 })
+
+lav_residuals_casewise <- function(object, labels = labels) {
+
+    G <- object@Data@ngroups
+    ov.names <- object@Data@ov.names
+
+    X <- object@Data@X
+    M <- lav_predict_mu(object)
+    # Note: if M has already class lavaan.matrix, print goes crazy
+    # with Error: C stack usage is too close to the limit
+    OUT <- lapply(seq_len(G), function(x) { 
+               out <- X[[x]] - M[[x]] 
+               class(out) <- c("lavaan.matrix", "matrix")
+               out
+           })
+
+    if(labels) {
+        for(g in 1:G) {
+            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
 
