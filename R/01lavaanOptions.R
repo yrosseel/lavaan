@@ -116,6 +116,8 @@ setLavaanOptions <- function(opt = formals(lavaan))
         }
     } else if(opt$missing %in% c("two.stage", "listwise")) {
         # nothing to do
+    } else if(opt$missing == "pairwise") {
+        # nothing to do
     } else {
         stop("unknown value for `missing' argument: ", opt$missing, "\n")
     }
@@ -296,7 +298,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is WLS: ", 
                  opt$test, "\n")
         }
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "dwls") {
         opt$estimator <- "DWLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -317,25 +319,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
         }
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsmv") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsmvs") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "mean.var.adjusted"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -356,25 +358,25 @@ setLavaanOptions <- function(opt = formals(lavaan))
             stop("invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
         }
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "ulsm") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmv") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmvs") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
         if(opt$se != "none") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "mean.var.adjusted"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {
         opt$estimator <- "PML"
         opt$information <- "observed"

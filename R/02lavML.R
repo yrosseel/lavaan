@@ -20,7 +20,7 @@ logl = function(x) {
     if(!missing(x)) theta <<- x
     likelihoods <- lik()
     # FIXME: handle zero/negative/small likelihood values
-    sum(log(likelihoods))
+    sum(log(likelihoods), na.rm=TRUE)
 },
 
 lik = function(x) {
@@ -37,7 +37,7 @@ scores = function(x) {
 
 gradient = function(x) {
     SCORES <- scores(x)
-    apply(SCORES, 2L, sum)
+    apply(SCORES, 2L, sum, na.rm=TRUE)
 }
 
 ))

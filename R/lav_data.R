@@ -417,7 +417,7 @@ getDataFull <- function(data          = NULL,          # data.frame
         }
 
         # missing data
-        if(missing != "listwise") {
+        if(missing == "ml") {
             # get missing patterns
             Mp[[g]] <- getMissingPatterns(X[[g]])
             # checking!

@@ -1,7 +1,29 @@
 muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
+                       missing="listwise",
                        WLS.W=TRUE, # do we need asymptotic variance of stats?
                        group=1L) { # group only for error messages
+
+    # internal function lav_crossprod2
+    if(missing == "listwise") {
+        lav_crossprod2 <- base::crossprod
+    } else { # pairwise, we can have missing values
+        lav_crossprod2 <- function(x, y) sum(x * y, na.rm = TRUE)
+    }
+
+    # pairwise version
+    # FIXME: surely a much better/faster solution is possible??
+    lav_crossprod_matrix <- function(A) {
+        ndim <- ncol(A)
+        # off-diagonal
+        upper <- apply(combn(ncol(A),2),2,
+                       function(x) sum(A[,x[1]] * A[,x[2]], na.rm=TRUE))
+        tmp <- diag(apply(A, 2, function(x) sum(x*x, na.rm=TRUE)))
+        tmp[ lavaan:::vechru.idx(ndim, diag=FALSE) ] <- upper
+        tmp[ lavaan:::vech.idx(  ndim, diag=FALSE) ] <- upper
+        tmp
+    }
+    
 
     #require(mvtnorm)
 
@@ -229,21 +251,21 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_j] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y2)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_i] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
                 A21[pstar.idx, var.idx_j] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y2)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y2)
                 # H21 only needed for VAR
                 H21[pstar.idx, var.idx_i] <-
                     (sqrt(VAR[j]) * COR[i,j]) / (2*sqrt(VAR[i]))
@@ -259,19 +281,19 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_j] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_i] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
                 # H21 only need for VAR
                 H21[pstar.idx,  var.idx_i] <- COR[i,j] / (2*sqrt(VAR[i]))
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[i])
@@ -284,19 +306,19 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_j] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_i] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_j] <-
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.var.y1)
                 # H21 only for VAR
                 H21[pstar.idx, var.idx_j] <- COR[i,j] / (2*sqrt(VAR[j]))
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[j])
@@ -310,15 +332,15 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <- 
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y1)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y1)
                 A21[pstar.idx, th.idx_j] <- 
-                    crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
+                    lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        crossprod(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
+                        lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.sl.y2)
                 }
                 # NO VAR
             }
@@ -327,7 +349,11 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     # stage three
     SC <- cbind(SC.TH, SC.SL, SC.VAR, SC.COR)
-    INNER <- crossprod(SC)
+    if(missing == "listwise") {
+        INNER <- crossprod(SC)
+    } else {
+        INNER <- lav_crossprod_matrix(SC)
+    }
 
     # A11
     # new approach (2 June 2012): A11 is just a 'sparse' version of 
@@ -352,7 +378,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # A22
     A22 <- matrix(0, pstar, pstar)
     for(i in seq_len(pstar)) {
-        A22[i,i] <- sum( SC.COR[,i]^2 )
+        A22[i,i] <- sum( SC.COR[,i]^2, na.rm=TRUE )
     }
 
     # A12

@@ -77,7 +77,7 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
             lower.y <- rep(lower.y, N)
     }    
 
-    upper.only <- all(lower.x == -Inf & lower.y == -Inf)
+   upper.only <- all(lower.x == -Inf & lower.y == -Inf)
    if(upper.only) {
         upper.x[upper.x == +Inf] <-  exp(10) # better pnorm?
         upper.y[upper.y == +Inf] <-  exp(10) 

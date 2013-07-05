@@ -51,7 +51,12 @@ lavExport <- function(object, target="lavaan", prefix="sem",
         # write data (if available)
         if(identical(object@Data@data.type, "full")) {
             for(g in 1:ngroups) {
-                write.table(object@Data@X[[g]],
+                if(is.null(object@Data@eXo[[g]])) {
+                    DATA <- object@Data@X[[g]]
+                } else {
+                    DATA <- cbind(object@Data@X[[g]], object@Data@eXo[[g]])
+                }
+                write.table(DATA,
                             file=paste(dir.name, "/", data.file[g], sep=""),
                             na="-999999",
                             col.names=FALSE, row.names=FALSE, quote=FALSE)

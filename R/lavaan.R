@@ -311,6 +311,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else if(lavaanData@data.type == "full") {
         lavaanSampleStats <- lavSampleStatsFromData(
                        Data          = lavaanData,
+                       missing       = lavaanOptions$missing,
                        rescale       = (lavaanOptions$estimator == "ML" &&
                                         lavaanOptions$likelihood == "normal"),
                        estimator     = lavaanOptions$estimator,

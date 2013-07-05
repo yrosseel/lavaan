@@ -134,8 +134,8 @@ pc_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL,
         else logl <- -Inf
     } else {
         lik <- pc_lik(Y1=Y1, Y2=Y2, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
-        if(all(lik > 0))
-            logl <- sum( log(lik) )
+        if(all(lik > 0, na.rm = TRUE))
+            logl <- sum( log(lik), na.rm = TRUE )
         else logl <- -Inf 
     }
 
@@ -164,8 +164,24 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
         #           pbivnorm(x=fit.y1$z1, y=fit.y2$z2, rho=rho) +
         #           pbivnorm(x=fit.y1$z2, y=fit.y2$z2, rho=rho)  )
 
-        lik <- pbinorm(upper.x=fit.y1$z1, upper.y=fit.y2$z1,
-                       lower.x=fit.y1$z2, lower.y=fit.y2$z2, rho=rho)
+        # take care of missing values
+        if(fit.y1$missing.values || fit.y2$missing.values) {
+            lik <- rep(as.numeric(NA), length(fit.y1$z1))
+            missing.idx <- unique(c(fit.y1$missing.idx,
+                                    fit.y2$missing.idx))
+            fit.y1.z1 <- fit.y1$z1; fit.y1.z1[missing.idx] <- 0
+            fit.y2.z1 <- fit.y2$z1; fit.y2.z1[missing.idx] <- 0
+            fit.y1.z2 <- fit.y1$z2; fit.y1.z2[missing.idx] <- 0
+            fit.y2.z2 <- fit.y2$z2; fit.y2.z2[missing.idx] <- 0
+
+            lik <- pbinorm(upper.x=fit.y1.z1, upper.y=fit.y2.z1,
+                           lower.x=fit.y1.z2, lower.y=fit.y2.z2, rho=rho)
+            lik[missing.idx] <- NA
+        } else {
+            lik <- pbinorm(upper.x=fit.y1$z1, upper.y=fit.y2$z1,
+                           lower.x=fit.y1$z2, lower.y=fit.y2$z2, rho=rho)
+        }
+        
     }
 
     lik
@@ -207,7 +223,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     if(missing(Y2)) Y2 <- fit.y2$y else as.integer(Y2)
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X
 
-    stopifnot(min(Y1) == 1L, min(Y2) == 1L,
+    stopifnot(min(Y1, na.rm=TRUE) == 1L, min(Y2, na.rm=TRUE) == 1L,
               method %in% c("nlminb", "nlminb.hessian"))
 
     # exo or not?
@@ -246,7 +262,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                     dbinorm(fit.y1$z2, fit.y2$z1, rho) -
                     dbinorm(fit.y1$z1, fit.y2$z2, rho) +
                     dbinorm(fit.y1$z2, fit.y2$z2, rho) ) / lik
-            dx.rho <- sum(dx)
+            dx.rho <- sum(dx, na.rm = TRUE)
         }
         -dx.rho * 1/cosh(x)^2 # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
     }
@@ -291,7 +307,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     #    alpha <- A + B*(-1 + 1/(1 + C*(log(R)-D)^2))
     #    rho.init <- cos(pi/(1+R^alpha))
     #} else {
-        rho.init <- cor(Y1,Y2)
+        rho.init <- cor(Y1,Y2, use="pairwise.complete.obs")
     #}
 
     # check range of rho.init is within [-1,+1]

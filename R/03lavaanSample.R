@@ -129,6 +129,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               ov.names.x=Data@ov.names.x[[g]],
                               eXo=Data@eXo[[g]], ## FIXME, will not work with bootstrap
                               group = g, # for error messages only
+                              missing = missing, # listwise or pairwise?
                               WLS.W = WLS.W,
                               verbose=debug)
             if(verbose) cat("done\n")
