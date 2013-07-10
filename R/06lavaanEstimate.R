@@ -66,7 +66,7 @@ setModelParameters <- function(object, x=NULL) {
     }
 
     # categorical? set theta elements (if any)
-    # TODO: if any of those is actually in PSI, move this
+    # TODO: if any of those are actually in PSI, move this
     # element to PSI
     if(object@categorical) {
         nmat <- object@nmat
@@ -88,7 +88,7 @@ setModelParameters <- function(object, x=NULL) {
                 }
  
                 # just in case we have dummy variables, they are in psi
-                # r.idx and c.idx -> check if cat, and set also to 0.0
+                # ov.*.dummy.ov.idx -> check if cat, and set also to 0.0
 
                 MLIST <- tmp[mm.in.group]
                 Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
@@ -261,6 +261,12 @@ computeTH <- function(object, GLIST=NULL) {
 
     # compute TH for each group
     for(g in 1:ngroups) {
+
+        if(length(th.idx[[g]]) == 0) {
+            TH[[g]] <- numeric(0L)
+            next
+        }
+   
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
@@ -373,9 +379,11 @@ computeVETA <- function(object, GLIST=NULL, samplestats=NULL) {
        
         if(representation == "LISREL") {
             ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
-            c.idx <- object@ov.dummy.col.idx[[g]]
-            if(!is.null(c.idx)) {
-                ETA.g <- ETA.g[-c.idx,-c.idx,drop=FALSE]
+            # remove all dummy latent variables
+            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                        object@ov.x.dummy.lv.idx[[g]])
+            if(!is.null(lv.idx)) {
+                ETA.g <- ETA.g[-lv.idx, -lv.idx, drop=FALSE]
             }
         } else {
             stop("only representation LISREL has been implemented for now")
@@ -445,9 +453,11 @@ computeEETA <- function(object, GLIST=NULL, eXo=NULL) {
        
         if(representation == "LISREL") {
             EETA.g <- computeEETA.LISREL(MLIST = MLIST, x = x)
-            c.idx <- object@ov.dummy.col.idx[[g]]
-            if(!is.null(c.idx)) {
-                EETA.g <- EETA.g[,-c.idx,drop=FALSE]
+            # remove all dummy latent variables
+            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                        object@ov.x.dummy.lv.idx[[g]])
+            if(!is.null(lv.idx)) {
+                EETA.g <- EETA.g[-lv.idx]
             }
 
         } else {

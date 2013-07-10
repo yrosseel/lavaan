@@ -1,7 +1,7 @@
 # lavPredict() contains a collection of `predict' methods
 # the unifying theme is that they all rely on the factor scores
 #
-# fs: factor scores
+# lv: factor scores
 # mu: expectation of the response (eg mean or probability=1)
 # fy: conditional density of y (given lv's and exo) (under independence!)
 #
@@ -10,18 +10,20 @@
 # overload standard R function `predict'
 setMethod("predict", "lavaan",
 function(object, newdata=NULL) {
-    lavPredict(object = object, newdata = newdata, type="FS", method="EBM")
+    lavPredict(object = object, newdata = newdata, type="lv", method="EBM")
 })
 
 # main function
-lavPredict <- function(object, newdata=NULL, type="FS", method="EBM",
+lavPredict <- function(object, newdata=NULL, type="lv", method="EBM",
                        se.fit=FALSE,
                        label=TRUE) {
 
     stopifnot(inherits(object, "lavaan"))
     type <- tolower(type)
-    if(type %in% c("factor", "factor.score", "factorscore"))
-        type <- "fs"
+    if(type %in% c("latent", "lv", "factor", "factor.score", "factorscore"))
+        type <- "lv"
+    if(type %in% c("ov","mu")) 
+        type <- "mu"
 
     # need full data set supplied
     if(is.null(newdata)) {
@@ -51,7 +53,7 @@ lavPredict <- function(object, newdata=NULL, type="FS", method="EBM",
     # normal case?
     NORMAL <- all(object@Data@ov$type == "numeric")
 
-    if(type == "fs") {
+    if(type == "lv") {
         if(NORMAL && method == "EBM") {
             out <- lav_predict_eta_normal(object = object, 
                 data.obs = data.obs, eXo = eXo, label = label)
@@ -66,11 +68,11 @@ lavPredict <- function(object, newdata=NULL, type="FS", method="EBM",
         out <- lav_predict_fy(object = object, data.obs = data.obs,
                               eXo = eXo, label = label)
     } else {
-        stop("lavaan ERROR: type must be one of: FS MU FY")
+        stop("lavaan ERROR: type must be one of: lv mu fy")
     }
 
     # lavaan.matrix
-    out <- lapply(X, "class<-", c("lavaan.matrix", "matrix"))
+    out <- lapply(out, "class<-", c("lavaan.matrix", "matrix"))
 
     if(object@Data@ngroups == 1L) {
         out <- out[[1L]]
@@ -97,9 +99,7 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
     nmat <- object@Model@nmat
     FS <- vector("list", length=G)
     VETA <- computeVETA(object=object@Model, samplestats=object@SampleStats)
-    VETA.inv <- lapply(VETA, solve)
     EETA <- computeEETA(object=object@Model, eXo=eXo)
-    nfac <- ncol(VETA[[1]])
     TH <- computeTH(object@Model)
     th.idx <- object@Model@th.idx
 
@@ -109,14 +109,18 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
                                        eta.i = x, group = g, 
                                        TH = TH[[g]], th.idx = th.idx[[g]],
                                        log = TRUE)
-        tmp <- as.numeric(0.5 * t(x - mu.i) %*% VETA.inv[[g]] %*% (x - mu.i))
+        tmp <- as.numeric(0.5 * t(x - mu.i) %*% VETA.inv.g %*% (x - mu.i))
         out <- tmp - sum(log.fy)
         #print(out)
         out
     }
 
     for(g in 1:G) {
+        nfac <- length(vnames(object@ParTable, type="lv", group=g))
         FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
+        if(nfac == 0L) next
+
+        VETA.inv.g <- solve(VETA[[g]])
         # if no eXo, only one mu.i per group
         if(is.null(eXo[[g]])) {
             mu.i <- as.numeric(EETA[[g]])
@@ -170,6 +174,13 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
     FS <- vector("list", length=G)
 
     for(g in 1:G) {
+        # only 'real' latent variables
+        #nfac <- length(vnames(object@ParTable, type="lv", group=g))
+        #if(nfac == 0L) {
+        #    FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
+        #    next
+        #}
+
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]
 
@@ -211,6 +222,14 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
 
         FS[[g]] <-
             (tmp3 + t(FSC %*% t(data.obs[[g]]-tmp1-tmp2)))[,1:nfac,drop=FALSE]
+
+        # remove dummy latent variables
+        # remove all dummy latent variables
+        lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                    object@Model@ov.x.dummy.lv.idx[[g]])
+        if(!is.null(lv.idx)) {
+            FS[[g]] <- FS[[g]][-lv.idx, -lv.idx, drop=FALSE]
+        }
 
         if(label) {
             colnames(FS[[g]]) <- vnames(object@ParTable, type="lv", group=g)
@@ -265,7 +284,10 @@ lav_predict_mu <- function(object = NULL, data.obs = NULL, eXo = NULL,
          GAMMA <- MLIST$gamma
          DELTA <- MLIST$delta
 
-        # remove dummy's from LAMBDA
+        # handle 'dummy' latent variables
+        # - dummy 'y' already taken care of in ETA
+        # - dummy 'y' + dummy 'x': remove from LAMBDA columns
+        # - dummy 'x': remove from LAMBDA rows (always last!!)
         r.idx <- object@Model@ov.dummy.row.idx[[g]]
         c.idx <- object@Model@ov.dummy.col.idx[[g]]
         if(!is.null(c.idx)) {

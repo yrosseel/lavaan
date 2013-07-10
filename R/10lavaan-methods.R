@@ -1809,9 +1809,11 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
         for(g in 1:G) {
             psi.idx <- psi.group[g]
             NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
-            c.idx <- object@Model@ov.dummy.col.idx[[g]]
-            if(!is.null(c.idx)) {
-                NAMES <- NAMES[-c.idx]
+            # remove all dummy latent variables
+            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                        object@Model@ov.x.dummy.lv.idx[[g]])
+            if(!is.null(lv.idx)) {
+                NAMES <- NAMES[-lv.idx]
             }
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")

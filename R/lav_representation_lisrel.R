@@ -25,7 +25,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
     # number of groups
     ngroups <- max(partable$group)
-    ov.dummy.names <- vector("list", ngroups)
+    ov.dummy.names.nox <- vector("list", ngroups)
+    ov.dummy.names.x   <- vector("list", ngroups)
     if(extra) {
         REP.mmNames     <- vector("list", ngroups)
         REP.mmNumber    <- vector("list", ngroups)
@@ -47,6 +48,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         lv.names   <- vnames(partable, "lv",  group=g); nfac <- length(lv.names)
         ov.th      <- vnames(partable, "th",  group=g); nth  <- length(ov.th)
         ov.names.x <- vnames(partable, "ov.x",group=g); nexo <- length(ov.names.x)
+        ov.names.nox <- vnames(partable, "ov.nox",group=g)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
@@ -81,16 +83,23 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
         if(length(dummy.names)) {
             # make sure order is the same as ov.names
-            ov.dummy.names[[g]] <- ov.names[ ov.names %in% dummy.names ]
+            ov.dummy.names.nox[[g]] <-
+                ov.names.nox[ ov.names.nox %in% dummy.names ]
+            ov.dummy.names.x[[g]]   <- 
+                ov.names.x[     ov.names.x %in% dummy.names ]
+
+            # combine them, make sure order is identical to ov.names
+            tmp <-  ov.names[ ov.names %in% dummy.names ]
 
             # extend lv.names
-            lv.names <- c(lv.names, ov.dummy.names[[g]])
+            lv.names <- c(lv.names, tmp)
             nfac <- length(lv.names)
 
             # add 'dummy' =~ entries
             dummy.mat <- rep("lambda", length(dummy.names))
         } else {
-            ov.dummy.names[[g]] <- character(0)
+            ov.dummy.names.nox[[g]] <- character(0)
+            ov.dummy.names.x[[g]]   <- character(0)
         }
 
         # 1a. "=~" regular indicators
@@ -258,8 +267,9 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                 row = tmp.row,
                 col = tmp.col)
 
-    # always add 'ov.dummy.names' attribute
-    attr(REP, "ov.dummy.names") <- ov.dummy.names
+    # always add 'ov.dummy.*.names' attributes
+    attr(REP, "ov.dummy.names.nox") <- ov.dummy.names.nox
+    attr(REP, "ov.dummy.names.x")   <- ov.dummy.names.x
 
     if(extra) {
         attr(REP, "mmNames")     <- REP.mmNames

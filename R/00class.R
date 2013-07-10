@@ -104,8 +104,10 @@ setClass("Model",          # MATRIX representation of the sem model
 
         nexo="integer",
         fixed.x="logical",
-        ov.dummy.row.idx="list",
-        ov.dummy.col.idx="list"
+        ov.x.dummy.ov.idx="list",
+        ov.x.dummy.lv.idx="list",
+        ov.y.dummy.ov.idx="list",
+        ov.y.dummy.lv.idx="list"
 
     )
 )
