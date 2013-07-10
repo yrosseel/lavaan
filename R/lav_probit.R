@@ -82,7 +82,7 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
     } else {
         X <<- unname(X); nexo <<- ncol(X)
     }
-    if(any(is.na(y)) || any(is.na(X))) {
+    if(any(is.na(y)) || (!is.null(X) && any(is.na(X)) )) {
         missing.values <<- TRUE
         missing.idx <<- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
     } else {

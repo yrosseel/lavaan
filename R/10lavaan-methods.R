@@ -1150,6 +1150,11 @@ function(object, what="free") {
               what == "modelcor.all" ||
               what == "cor.all") {
         getModelCor(object, labels=TRUE)
+    } else if(what == "theta" ||
+              what == "cov.ov") {
+        getModelTheta(object, labels=TRUE)
+    } else if(what == "cor.ov") {
+        getModelTheta(object, correlation.metric=TRUE, labels=TRUE)
     } else if(what == "converged") {
         object@Fit@converged
     } else {
@@ -1867,6 +1872,40 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
 
     OUT
 }
+
+
+getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # get residual covariances
+    OUT <- lavaan:::computeTHETA(object@Model)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+
+    # we need lambda for labels
+    lambda.group <- which(names(object@Model@GLIST) == "lambda")
+    if(labels) {
+        for(g in 1:G) {
+            lambda.idx <- lambda.group[g]
+            NAMES <- object@Model@dimNames[[lambda.idx]][[1L]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
 
 lav_inspect_data <- function(object, labels = TRUE) {
 

@@ -297,15 +297,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 2b. change meanstructure flag?
     if(any(lavaanParTable$op == "~1")) lavaanOptions$meanstructure <- TRUE
 
-    # 2c. prepare constraints functions
+    # 2c. get partable attributes
+    pta <- lav_partable_attributes(lavaanParTable)
     timing$ParTable <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     # 3. get sample statistics
-    # here we know the number of groups!
-    ov.names <- lapply(as.list(1:lavaanData@ngroups),
-                       function(x) vnames(lavaanParTable, type="ov", x))
-
     if(!is.null(slotSampleStats)) {
         lavaanSampleStats <- slotSampleStats
     } else if(lavaanData@data.type == "full") {
@@ -329,7 +326,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
                            sample.nobs   = sample.nobs,
-                           ov.names      = ov.names,
+                           ov.names      = pta$vnames$ov,
                            estimator     = lavaanOptions$estimator,
                            mimic         = lavaanOptions$mimic,
                            meanstructure = lavaanOptions$meanstructure,
@@ -669,6 +666,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(attr(x, "converged")) { # only if estimation was successful
         # 1. check for Heywood cases, negative (residual) variances, ...
         var.idx <- which(lavaanParTable$op == "~~" &
+                         !lavaanParTable$lhs %in% unlist(pta$vnames$ov.ord) &
                          lavaanParTable$lhs == lavaanParTable$rhs)
         if(length(var.idx) > 0L && any(lavaanFit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
@@ -678,13 +676,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ETA <- computeVETA(lavaanModel, samplestats=lavaanSampleStats)
             for(g in 1:lavaanData@ngroups) {
                 txt.group <- ifelse(lavaanData@ngroups > 1L,
-                                    paste("in group", g, ".", sep=""), ".")
+                                    paste("in group", g, ".", sep=""), "")
                 eigvals <- eigen(ETA[[g]], symmetric=TRUE, 
                                  only.values=TRUE)$values
                 if(any(eigvals < 0))
                     warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
             }
         }
+
+        # 3. is THETA positive definite
+        THETA <- computeTHETA(lavaanModel)
+        for(g in 1:lavaanData@ngroups) {
+                txt.group <- ifelse(lavaanData@ngroups > 1L,
+                                    paste("in group", g, ".", sep=""), "")
+                eigvals <- eigen(THETA[[g]], symmetric=TRUE,
+                                 only.values=TRUE)$values
+                if(any(eigvals < 0))
+                    warning("lavaan WARNING: residual covariance matrix is not positive definite;", txt.group, " use inspect(fit,\"cov.ov\") to investigate.")
+            }
     }
 
     # 10. construct lavaan object

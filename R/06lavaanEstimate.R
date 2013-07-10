@@ -354,6 +354,36 @@ computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
     VY
 }
 
+# THETA: observed (residual) variances
+computeTHETA <- function(object, GLIST=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    THETA <- vector("list", length=ngroups)
+
+    # compute THETA for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(representation == "LISREL") {
+            THETA.g <- MLIST$theta
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        THETA[[g]] <- THETA.g
+    }
+
+    THETA
+}
+
 # V(ETA): latent variances variances/covariances
 computeVETA <- function(object, GLIST=NULL, samplestats=NULL) {
     # state or final?
