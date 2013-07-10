@@ -333,6 +333,16 @@ getDataFull <- function(data          = NULL,          # data.frame
         print(OV)
         stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
     }
+    # check for ordered variables with only 1 level
+    idx <- which(ov$type == "ordered" & ov$nlev == 1L)
+    if(length(idx) > 0L) {
+        OV <- as.data.frame(ov)
+        rn <- rownames(OV)
+        rn[idx] <- paste(rn[idx], "***", sep="")
+        rownames(OV) <- rn
+        print(OV)
+        stop("lavaan ERROR: ordered variable(s) has/have only 1 level")
+    }
     # check for mix small/large variances (NOT including exo variables)
     if(!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
         num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
