@@ -411,6 +411,8 @@ getDataFull <- function(data          = NULL,          # data.frame
             }
         }
 
+        ## FIXME: 
+        ## - why also in X? (for samplestats, for now)
         if(length(exo.idx) > 0L) {
             eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx, drop=FALSE] )
             dimnames(eXo[[g]]) <- NULL

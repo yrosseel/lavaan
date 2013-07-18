@@ -225,7 +225,7 @@ lav_residuals_casewise <- function(object, labels = labels) {
     ov.names <- object@Data@ov.names
 
     X <- object@Data@X
-    M <- lav_predict_mu(object)
+    M <- lav_predict_yhat(object)
     # Note: if M has already class lavaan.matrix, print goes crazy
     # with Error: C stack usage is too close to the limit
     OUT <- lapply(seq_len(G), function(x) { 

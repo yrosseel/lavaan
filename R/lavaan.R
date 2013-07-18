@@ -702,6 +702,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   timing       = timing,                 # list
                   Options      = lavaanOptions,          # list
                   ParTable     = lavaanParTable,         # list
+                  pta          = pta,                    # list
                   Data         = lavaanData,             # S4 class
                   SampleStats  = lavaanSampleStats,      # S4 class
                   Model        = lavaanModel,            # S4 class

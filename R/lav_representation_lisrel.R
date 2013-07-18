@@ -435,78 +435,284 @@ computePI.LISREL <- function(MLIST=NULL) {
     PI
 }
 
-# compute V(ETA): variances/covariances of latents
+computeLAMBDA.LISREL <- function(MLIST=NULL) {
+    return(MLIST$lambda)
+}
+
+# compute V(ETA): variances/covariances of latent variables
+# - if no eXo (and GAMMA): 
+#     V(ETA) = (I-B)^-1 PSI (I-B)^-T
+# - if eXo and GAMMA: (cfr lisrel submodel 3a with ksi=x)
+#     V(ETA) = (I-B)^-1 [ GAMMA  cov.x t(GAMMA) + PSI] (I-B)^-T
 computeVETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
     THETA  <- MLIST$theta
     BETA   <- MLIST$beta
+    GAMMA  <- MLIST$gamma
+
+    if(!is.null(GAMMA)) {
+        stopifnot(!is.null(cov.x))
+        # we treat 'x' as 'ksi' in the LISREL model; cov.x is PHI
+        PSI <- tcrossprod(GAMMA %*% cov.x, GAMMA) + PSI
+    }
 
     # beta?
     if(is.null(BETA)) {
-        SY <- PSI
+        VETA <- PSI
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
         IB.inv <- solve(tmp)
-        SY <- tcrossprod(IB.inv %*% PSI, IB.inv)
+        VETA <- tcrossprod(IB.inv %*% PSI, IB.inv)
     }
 
-    # if GAMMA, also x part
-    GAMMA <- MLIST$gamma
-    if(!is.null(GAMMA)) {
-        stopifnot(!is.null(cov.x))
-        if(is.null(BETA)) {
-            SX <- tcrossprod(GAMMA %*% cov.x, GAMMA)
-        } else {
-            IB.inv..GAMMA <- IB.inv %*% GAMMA
-            SX <- tcrossprod(IB.inv..GAMMA %*% cov.x, IB.inv..GAMMA)
-        }
-        SYX <- SX + SY
-    } else {
-        SYX <- SY
-    }
-
-    SYX
+    VETA
 }
 
-# compute E(ETA): expected value of latents
-computeEETA.LISREL <- function(MLIST=NULL, x=NULL) {
+# compute E(ETA): expected value of latent variables
+# - if no eXo (and GAMMA): 
+#     E(ETA) = (I-B)^-1 ALPHA 
+# - if eXo and GAMMA:
+#     E(ETA) = (I-B)^-1 ALPHA + (I-B)^-1 GAMMA mean.x
+computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL, 
+                               sample.mean=NULL,
+                               ov.dummy.idx=NULL, lv.dummy.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
-    ALPHA <- MLIST$alpha
+    BETA <- MLIST$beta; ALPHA <- MLIST$alpha; GAMMA <- MLIST$gamma
+
     if(is.null(ALPHA)) {
-        eeta <- numeric(nfac)    
+       if(length(ov.dummy.idx) > 0L) {
+           eeta <- matrix(0, nfac, 1)
+           eeta[lv.dummy.idx] <- sample.mean[ov.dummy.idx]
+       } else {
+           eeta <- matrix(0, nfac, 1)
+       }
     } else {
-        BETA   <- MLIST$beta
-        # beta?
-        if(is.null(BETA)) {
-            eeta <- ALPHA
-        } else {
-            tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
-            tmp[cbind(i, i)] <- 1
-            IB.inv <- solve(tmp)
-            eeta <- IB.inv %*% ALPHA
+       eeta <- ALPHA
+    }
+
+    # IB.inv
+    if(!is.null(BETA)) {
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        IB.inv <- solve(tmp)
+ 
+        eeta <- as.numeric(IB.inv %*% eeta)
+        if(!is.null(GAMMA))
+            eeta <- eeta + as.numeric( IB.inv %*% GAMMA %*% mean.x )
+    } else {
+        if(!is.null(GAMMA))
+            eeta <- eeta + as.numeric( GAMMA %*% mean.x )
+    }
+        
+    eeta
+}
+
+# compute E(Y): expected value of observed
+# E(Y) = nu + lambda * E(eta) 
+# if delta -> E(Y) = delta * E(Y)
+computeEY.LISREL <- function(MLIST=NULL, mean.x=NULL, sample.mean=NULL) {
+
+    # E(Y) = nu + lambda * E(eta) 
+    # if delta -> E(Y) = delta * E(Y)
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+    NU <- MLIST$nu; ALPHA <- MLIST$alpha
+
+    # compute E(ETA)
+    EETA <- computeEETA.LISREL(MLIST = MLIST, mean.x = mean.x)
+
+    # EY
+    EY <- as.numeric(LAMBDA %*% EETA)
+
+    # nu?
+    if(!is.null(NU)) {
+        EY <- EY + as.numeric(NU)
+    } else {
+        # use sample mean
+        EY <- EY + sample.mean
+    }
+
+    # if delta, scale
+    if(!is.null(MLIST$delta)) {
+        EY <- EY * as.numeric(MLIST$delta)
+    }
+
+    EY
+}
+
+
+# deal with 'dummy' OV.X latent variables 
+# create additional matrices (eg GAMMA), and resize
+# remove all ov.x related entries
+MLIST2MLISTX <- function(MLIST=NULL,
+                         ov.x.dummy.ov.idx = NULL,
+                         ov.x.dummy.lv.idx = NULL) {
+
+    lv.idx <- ov.x.dummy.lv.idx
+    ov.idx <- ov.x.dummy.ov.idx
+    if(length(lv.idx) == 0L) return(MLIST)
+    if(!is.null(MLIST$gamma)) {
+        nexo <- ncol(MLIST$gamma)
+    } else {
+        nexo <- length(ov.x.dummy.ov.idx)
+    }
+    nvar <- nrow(MLIST$lambda)
+    nfac <- ncol(MLIST$lambda) - length(lv.idx)
+
+    # copy
+    MLISTX <- MLIST
+
+    # fix LAMBDA: 
+    # - remove all ov.x related columns/rows
+    MLISTX$lambda <- MLIST$lambda[-ov.idx, -lv.idx,drop=FALSE]
+
+    # fix THETA:
+    # - remove ov.x related columns/rows
+    MLISTX$theta <- MLIST$theta[-ov.idx, -ov.idx, drop=FALSE]
+
+    # fix PSI:
+    # - remove ov.x related columns/rows
+    MLISTX$psi <- MLIST$psi[-lv.idx, -lv.idx, drop=FALSE]
+
+    # create GAMMA
+    if(length(ov.x.dummy.lv.idx) > 0L) {
+        MLISTX$gamma <- MLIST$beta[-lv.idx, lv.idx, drop=FALSE]
+    }
+
+    # fix BETA (remove if empty)
+    if(!is.null(MLIST$beta)) {
+        MLISTX$beta <- MLIST$beta[-lv.idx, -lv.idx, drop=FALSE]
+        if(ncol(MLISTX$beta) == 0L) MLISTX$beta <- NULL
+    }
+
+    # fix NU
+    if(!is.null(MLIST$nu)) {
+        MLISTX$nu <- MLIST$nu[-ov.idx, 1L, drop=FALSE]
+    }
+    
+    # fix ALPHA
+    if(!is.null(MLIST$alpha)) {
+        MLISTX$alpha <- MLIST$alpha[-lv.idx, 1L, drop=FALSE]
+    }
+
+    MLISTX
+}
+
+
+# create MLIST from MLISTX
+MLISTX2MLIST <- function(MLISTX=NULL,
+                         ov.x.dummy.ov.idx = NULL,
+                         ov.x.dummy.lv.idx = NULL,
+                         mean.x=NULL,
+                         cov.x=NULL) {
+
+    lv.idx <- ov.x.dummy.lv.idx; ndum <- length(lv.idx)
+    ov.idx <- ov.x.dummy.ov.idx
+    if(length(lv.idx) == 0L) return(MLISTX)
+    stopifnot(!is.null(cov.x), !is.null(mean.x))
+    nvar <- nrow(MLISTX$lambda); nfac <- ncol(MLISTX$lambda)
+
+    # copy
+    MLIST <- MLISTX
+
+    # resize matrices
+    MLIST$lambda <- rbind(cbind(MLISTX$lambda, matrix(0, nvar, ndum)),
+                          matrix(0, ndum, nfac+ndum))
+    MLIST$psi <- rbind(cbind(MLISTX$psi, matrix(0, nfac, ndum)),
+                       matrix(0, ndum, nfac+ndum))
+    MLIST$theta <- rbind(cbind(MLISTX$theta, matrix(0, nvar, ndum)),
+                         matrix(0, ndum, nvar+ndum))
+    if(!is.null(MLISTX$beta)) {
+        MLIST$beta <- rbind(cbind(MLISTX$beta, matrix(0, nfac, ndum)),
+                            matrix(0, ndum, nfac+ndum))
+    }
+    if(!is.null(MLISTX$alpha)) {
+        MLIST$alpha <- rbind(MLISTX$alpha, matrix(0, ndum, 1))
+    }
+    if(!is.null(MLISTX$nu)) {
+        MLIST$nu <- rbind(MLISTX$nu, matrix(0, ndum, 1))
+    }
+
+    # fix LAMBDA: 
+    # - add columns for all dummy latent variables
+    MLIST$lambda[ cbind(ov.idx, lv.idx) ] <- 1
+
+    # fix PSI
+    # - move cov.x elements to PSI
+    MLIST$psi[lv.idx, lv.idx] <- cov.x
+
+    # move (ov.x.dummy elements of) GAMMA to BETA
+    MLIST$beta[1:nfac, ov.x.dummy.lv.idx] <- MLISTX$gamma
+    MLIST$gamma <- NULL
+
+    # fix ALPHA
+    if(!is.null(MLIST$alpha)) {
+        MLIST$alpha[lv.idx] <- mean.x
+    }
+    
+    MLIST
+}
+
+# if DELTA parameterization, compute residual elements (in theta, or psi)
+# of observed categorical variables, as a function of other model parameters
+setResidualElements.LISREL <- function(MLIST=NULL,
+                                       num.idx=NULL,
+                                       ov.y.dummy.ov.idx=NULL,
+                                       ov.y.dummy.lv.idx=NULL) {
+
+    # remove num.idx from ov.y.dummy.*
+    if(length(num.idx) > 0L && length(ov.y.dummy.ov.idx) > 0L) {
+        n.idx <- which(ov.y.dummy.ov.idx %in% num.idx)
+        if(length(n.idx) > 0L) {
+            ov.y.dummy.ov.idx <- ov.y.dummy.ov.idx[-n.idx]
+            ov.y.dummy.lv.idx <- ov.y.dummy.lv.idx[-n.idx]
         }
     }
 
-    # if GAMMA, also x part, and we return a matrix of (nfac x N)
-    GAMMA <- MLIST$gamma
-    if(!is.null(GAMMA)) {
-        stopifnot(!is.null(x))
-        if(is.null(BETA)) {
-            EX <- x %*% t(GAMMA)
-        } else {
-            IB.inv..GAMMA <- IB.inv %*% GAMMA
-            EX <- x %*% t(IB.inv..GAMMA)
-        }
-        EETA <- sweep(EX, MARGIN=2, STATS=eeta, FUN="+")
+    # force non-numeric theta elements to be zero
+    if(length(num.idx) > 0L) {
+        diag(MLIST$theta)[-num.idx] <- 0.0
     } else {
-        EETA <- eeta
+        diag(MLIST$theta) <- 0.0
+    }
+    if(length(ov.y.dummy.ov.idx) > 0L) {
+        MLIST$psi[ov.y.dummy.lv.idx, ov.y.dummy.lv.idx] <- 0.0
     }
 
-    EETA
+    # special case: PSI=0, and lambda=I (eg ex3.12)
+    if(sum(diag(MLIST$psi)) == 0.0 && all(diag(MLIST$lambda) == 1)) {
+        ### FIXME: more elegant/general solution??
+        diag(MLIST$psi) <- 1
+        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+        diag.Sigma <- diag(Sigma.hat) - 1.0
+    } else {
+        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+        diag.Sigma <- diag(Sigma.hat)
+    }
+
+    if(is.null(MLIST$delta)) {
+        delta <- rep(1, length(diag.Sigma))
+    } else {
+        delta <- MLIST$delta
+    }
+    RESIDUAL <- 1/delta^2 * (1 - diag.Sigma)
+    if(length(num.idx) > 0L) {
+        diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
+    } else {
+        diag(MLIST$theta) <- RESIDUAL
+    }
+
+    # move ov.y.dummy elements from THETA to PSI
+    if(length(ov.y.dummy.ov.idx) > 0L) {
+        MLIST$psi[ov.y.dummy.lv.idx, ov.y.dummy.lv.idx] <- 
+            MLIST$theta[ov.y.dummy.ov.idx, ov.y.dummy.ov.idx]
+        MLIST$theta[ov.y.dummy.ov.idx, ov.y.dummy.ov.idx] <- 0.0
+    }
+
+    MLIST
 }
 
 # compute Sigma/ETA: variances/covariances of BOTH observed and latent variables

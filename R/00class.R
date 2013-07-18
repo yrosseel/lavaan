@@ -39,6 +39,7 @@ setClass("lavSampleStats",         # sample moments
         th.idx="list",
         th.names="list",           # threshold names
         slopes="list",             # slopes exo
+        mean.x="list",             # mean exo
         cov.x="list",              # variance/covariance exo
         bifreq="list",             # bivariate frequency tables
 
@@ -139,6 +140,7 @@ setClass("lavaan",
         timing      = "list",            # timing information
         Options     = "list",            # lavaanOptions
         ParTable    = "list",            # parameter table user-specified model
+        pta         = "list",            # parameter table attributes
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "Model",           # internal matrix representation
