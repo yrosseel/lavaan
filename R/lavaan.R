@@ -679,7 +679,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                     paste("in group", g, ".", sep=""), "")
                 eigvals <- eigen(ETA[[g]], symmetric=TRUE, 
                                  only.values=TRUE)$values
-                if(any(eigvals < 0))
+                if(any(eigvals < -1 * .Machine$double.eps^(3/4)))
                     warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
             }
         }
@@ -691,7 +691,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                     paste("in group", g, ".", sep=""), "")
                 eigvals <- eigen(THETA[[g]], symmetric=TRUE,
                                  only.values=TRUE)$values
-                if(any(eigvals < 0))
+                if(any(eigvals < -1 * .Machine$double.eps^(3/4)))
                     warning("lavaan WARNING: residual covariance matrix is not positive definite;", txt.group, " use inspect(fit,\"cov.ov\") to investigate.")
             }
     }
