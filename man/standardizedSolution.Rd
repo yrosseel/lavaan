@@ -18,8 +18,7 @@ on both the variances of both (continuous) observed and latent variables,
 but not the variances of exogenous covariates.}
 }
 \value{
-  A data.frame containing both unstandardized and standardized model 
-  parameters.
+  A data.frame containing standardized model parameters.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
