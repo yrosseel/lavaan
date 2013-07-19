@@ -1,9 +1,8 @@
 # lavPredict() contains a collection of `predict' methods
-# the unifying theme is that they all rely on the factor scores
+# the unifying theme is that they all estimate or rely on the factor scores
 #
 # lv: factor scores
 # ov: predict linear part of y_i
-# fy: conditional density of y (given lv's and exo) (under independence!)
 #
 # first version: YR 11 June 2013
 
@@ -98,8 +97,10 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
     G <- object@Data@ngroups
     nmat <- object@Model@nmat
     FS <- vector("list", length=G)
-    VETA <- computeVETA(object=object@Model, samplestats=object@SampleStats)
-    EETAx <- computeEETAx(object=object@Model, eXo=eXo, nobs=object@Data@nobs)
+    VETAx <- computeVETAx(object=object@Model)
+    VETAx.inv <- lapply(VETAx, solve)
+    EETAx <- computeEETAx(object=object@Model, samplestats=object@SampleStats,
+                          eXo=eXo, remove.dummy.lv=TRUE)
     TH <- computeTH(object@Model)
     th.idx <- object@Model@th.idx
 
@@ -109,33 +110,30 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
                                        eta.i = x, group = g, 
                                        TH = TH[[g]], th.idx = th.idx[[g]],
                                        log = TRUE)
-        tmp <- as.numeric(0.5 * t(x - mu.i) %*% VETA.inv.g %*% (x - mu.i))
+        tmp <- as.numeric(0.5 * t(x - mu.i) %*% VETAx.inv[[g]] %*% (x - mu.i))
         out <- tmp - sum(log.fy)
         #print(out)
         out
     }
 
     for(g in 1:G) {
-        nfac <- length(vnames(object@ParTable, type="lv", group=g))
+        nfac <- length(object@pta$vnames$lv[[g]])
         FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
         if(nfac == 0L) next
-
-        VETA.inv.g <- solve(VETA[[g]])
-        # if no eXo, only one mu.i per group
-        if(is.null(eXo[[g]])) {
-            mu.i <- as.numeric(EETAx[[g]])
-            x.i <- NULL
-        }
 
         # casewise for now
         N <- nrow(data.obs[[g]])
         for(i in 1:N) {
+
+            # eXo?
             if(!is.null(eXo[[g]])) {
-                mu.i <- EETAx[[g]][i,]
                  x.i <- eXo[[g]][i,]
+            } else {
+                 x.i <- NULL
             }
+            mu.i <- EETAx[[g]][i,]
             y.i <- data.obs[[g]][i,]
-            
+
             # find best values for eta.i
             out <- nlminb(start=numeric(nfac), objective=f.eta.i,
                             gradient=NULL, # for now
@@ -150,7 +148,7 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
         }
 
         if(label) {
-            colnames(FS[[g]]) <- vnames(object@ParTable, type="lv", group=g)
+            colnames(FS[[g]]) <- object@pta$vnames$lv[[g]]
         }
 
     }
@@ -224,6 +222,7 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
 # variable scores
 # for all y*_i -> return [nobs x nvar] matrix per group
 lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
+                             ETA = NULL,
                              method = "EBM", label = FALSE) {
 
     # measurement part
@@ -248,158 +247,80 @@ lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
     NORMAL <- all(object@Data@ov$type == "numeric")
 
     # we need the factor scores (per groups)
-    if(NORMAL && method == "EBM") {
-        ETA <- lav_predict_eta_normal(object = object,
-            data.obs = data.obs, eXo = eXo, label = label,
-            remove.dummy.lv=TRUE)
-    } else if(method == "EBM") {
-        ETA <- lav_predict_eta_ebm(object = object,
-            data.obs = data.obs, eXo = eXo, label = label,
-            remove.dummy.lv=TRUE)
+    if(is.null(ETA)) {
+        if(NORMAL && method == "EBM") {
+            ETA <- lav_predict_eta_normal(object = object,
+                data.obs = data.obs, eXo = eXo, label = label,
+                remove.dummy.lv=TRUE)
+        } else if(method == "EBM") {
+            ETA <- lav_predict_eta_ebm(object = object,
+                 data.obs = data.obs, eXo = eXo, label = label,
+                remove.dummy.lv=TRUE)
+        } else {
+            stop("lavaan ERROR: method ", method, " not (yet) supported of factor score prediction")
+        }
     } else {
-        stop("lavaan ERROR: method ", method, " not (yet) supported of factor score prediction")
+        # check dimensions first group
+        stopifnot( nrow(data.obs) == nrow(ETA) )
     }
 
     for(g in 1:G) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- object@Model@GLIST[ mm.in.group ]
-        DELTA <- MLIST$delta
 
-        lv.dummy.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                          object@Model@ov.x.dummy.lv.idx[[g]])
-        ov.dummy.idx <- c(object@Model@ov.y.dummy.ov.idx[[g]],
-                          object@Model@ov.x.dummy.ov.idx[[g]])
-
-        # exogenous variables?
-        if(is.null(eXo[[g]])) {
-            nexo <- 0L
+        if(object@Options$representation == "LISREL") {
+            YHAT.g <- computeYHATx.LISREL(MLIST=MLIST,
+                          eXo=fit@Data@eXo[[g]], 
+                          ETA=ETA[[g]], 
+                          sample.mean=object@SampleStats@mean[[g]],
+                          ov.y.dummy.ov.idx=object@Model@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx=object@Model@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx=object@Model@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx=object@Model@ov.x.dummy.lv.idx[[g]])
         } else {
-            nexo <- ncol(eXo[[g]])
-        }
-        nvar <- nrow(MLIST$lambda)
-
-        # fix NU
-        NU <- MLIST$nu
-        if(!is.null(NU)) {
-            if(length(lv.dummy.idx) > 0L) {
-                NU[ov.dummy.idx, 1L] <- MLIST$alpha[lv.dummy.idx, 1L]
-            }
-        } else {
-            # if nexo == 0L, fill in unrestricted mean
-            NU <- object@SampleStats@mean[[g]]
-            # if nexo > 0, substract lambda %*% EETA
-            if(nexo > 0L) {
-                ov.idx <- which(object@pta$vnames$ov[[1]] %in% 
-                                object@pta$vnames$ov.nox[[1]])
-                LAMBDA.X <- MLIST$lambda
-                if(length(object@Model@ov.y.dummy.ov.idx[[g]]) > 0L) {
-                    LAMBDA.X[object@Model@ov.y.dummy.ov.idx[[g]],] <-
-                        MLIST$beta[object@Model@ov.y.dummy.lv.idx[[g]],
-                                   ,drop=FALSE]
-                }
-                # we need LAMBDA with the dummy variables
-                NU[ov.idx] <- (NU - LAMBDA.X %*% EETA[[g]])[ov.idx]
-            }
-        }
-
-        # fix LAMBDA
-        LAMBDA <- MLIST$lambda
-        if(length(lv.dummy.idx) > 0L) {
-            LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
-            nfac <- ncol(LAMBDA)
-            LAMBDA[object@Model@ov.y.dummy.ov.idx[[g]],] <-
-                MLIST$beta[object@Model@ov.y.dummy.lv.idx[[g]],
-                           1:nfac, drop=FALSE]
-        }
-
-        # compute YHAT
-        YHAT[[g]] <- sweep(ETA[[g]] %*% t(LAMBDA), MARGIN=2, NU, "+")
-
-        # Kappa + eXo?
-        # note: Kappa elements are either in Gamma or in Beta
-        if(nexo > 0L) {
-            KAPPA <- matrix(0, nvar, nexo)
-            if(!is.null(MLIST$gamma)) {
-                KAPPA[object@Model@ov.y.dummy.ov.idx[[g]],] <- 
-                    MLIST$gamma[object@Model@ov.x.dummy.lv.idx[[g]],,drop=FALSE]
-            } else if(length(object@Model@ov.x.dummy.ov.idx[[g]]) > 0L) {
-                KAPPA[object@Model@ov.y.dummy.ov.idx[[g]],] <-
-                    MLIST$beta[object@Model@ov.y.dummy.lv.idx[[g]],
-                               object@Model@ov.x.dummy.lv.idx[[g]], drop=FALSE]
-            }
-
-            # add fixed part
-            YHAT[[g]] <- YHAT[[g]] + (eXo[[g]] %*% t(KAPPA))
-
-            # put back eXo
-            if(length(object@Model@ov.x.dummy.ov.idx[[g]]) > 0L) {
-                YHAT[[g]][, object@Model@ov.x.dummy.ov.idx[[g]]] <- eXo[[g]]
-            }
-        }
-
-        # delta?
-        if(!is.null(DELTA)) {
-            YHAT[[g]] <- sweep(YHAT[[g]], MARGIN=2, DELTA, "*")
+            stop("lavaan ERROR: representation ", object@options$representation,                 " not supported yet.")
         }
 
         if(label) {
-            colnames(YHAT[[g]]) <- vnames(object@ParTable, type="ov", group=g)
+            colnames(YHAT.g) <- object@pta$vnames$ov[[g]]
         }
 
+        YHAT[[g]] <- YHAT.g
     }
     
     YHAT
 }
 
 # expectation of the response, conditional on the latent variables
-# for given values 'eta' of a single observation (i) (eta.i)
-lav_predict_mu_eta.i <- function(object = NULL, eta.i = NULL, x.i = NULL, 
-                                 group = 1L) {
+# for given values 'eta' (eta.i)    
+# for given values 'x' of the covariates (x.i)
+lav_predict_yhat.i <- function(object = NULL, eta.i = NULL, x.i = NULL, 
+                               group = 1L) {
 
-    # measurement part
-    # y*_i = nu + lambda eta_i + K x_i + epsilon_i
-    # 
-    # where eta_i = predict(fit) = factor scores
-
-    g <- group
-    nmat <- object@Model@nmat
-    nvar <- object@Model@nvar[g]
+    g = group; nmat <- object@Model@nmat
     mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-    MLIST     <- object@Model@GLIST[ mm.in.group ]
-        NU <- MLIST$nu
-    LAMBDA <- MLIST$lambda
-     GAMMA <- MLIST$gamma
-     DELTA <- MLIST$delta
+    MLIST <- object@Model@GLIST[ mm.in.group ]
 
-    # remove dummy's from LAMBDA
-    r.idx <- object@Model@ov.dummy.row.idx[[g]]
-    c.idx <- object@Model@ov.dummy.col.idx[[g]]
-    if(!is.null(c.idx)) {
-        LAMBDA <- LAMBDA[,-c.idx,drop=FALSE]
+    # make sure eta.i and x.i are of type matrix
+    if(!is.matrix(eta.i)) {
+        eta.i <- t(eta.i)
+    }
+    if(!is.null(x.i) && !is.matrix(x.i)) {
+        x.i <- t(x.i)
+        stopifnot( nrow(x.i) == nrow(eta.i) )
     }
 
-    # nu? if not, set to sample means
-    if( is.null(NU) ) {
-        NU <- object@SampleStats@mean[[g]]
-    }
+    yhat <- computeYHATx.LISREL(MLIST=MLIST,
+                eXo=x.i,
+                ETA=eta.i,
+                sample.mean=fit@SampleStats@mean[[g]],
+                ov.y.dummy.ov.idx=fit@Model@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=fit@Model@ov.x.dummy.ov.idx[[g]],
+                ov.y.dummy.lv.idx=fit@Model@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=fit@Model@ov.x.dummy.lv.idx[[g]])
 
-    # measurement model
-    MU <- as.numeric(NU + LAMBDA %*% eta.i)
-
-    # K + eXo?
-    # note: K elements are in Gamma
-    if(!is.null(x.i) && !is.null(GAMMA)) {
-        MU.x <- numeric(nvar)
-        MU.x[r.idx] <- (GAMMA[c.idx,,drop=FALSE] %*% x.i)
-        MU <- MU + MU.x
-    }
-
-    # Delta?
-    if(!is.null(DELTA)) {
-        MU <- DELTA * MU
-    }
+   yhat
     
-    MU
 }
 
 # conditional density y -- assuming independence!!
@@ -457,9 +378,9 @@ lav_predict_fy_eta.i <- function(object = NULL, y.i = NULL, x.i = NULL,
     nvar <- object@Model@nvar[g]
     nmat <- object@Model@nmat
 
-    # we need the MU
-    MU <- lav_predict_mu_eta.i(object = object, eta.i = eta.i, x.i = x.i,
-                               group = group)
+    # we need the MU (yhat)
+    MU <- lav_predict_yhat.i(object = object, eta.i = eta.i, x.i = x.i,
+                             group = group)
 
     # all normal?
     NORMAL <- all(object@Data@ov$type == "numeric")
@@ -467,7 +388,16 @@ lav_predict_fy_eta.i <- function(object = NULL, y.i = NULL, x.i = NULL,
     mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
     MLIST     <- object@Model@GLIST[ mm.in.group ]
 
+    # fix theta
     THETA <- MLIST$theta
+
+    lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                object@Model@ov.x.dummy.lv.idx[[g]])
+    ov.idx <- c(object@Model@ov.y.dummy.ov.idx[[g]],
+                object@Model@ov.x.dummy.ov.idx[[g]])
+    if(length(ov.idx) > 0L) {
+        THETA[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
+    }
     theta <- sqrt(diag(THETA))
 
     if(NORMAL) {
@@ -484,6 +414,9 @@ lav_predict_fy_eta.i <- function(object = NULL, y.i = NULL, x.i = NULL,
                 p1 <- pnorm( (TH.Y[ k + 1 ] - MU[v])/theta[v] )
                 p2 <- pnorm( (TH.Y[ k     ] - MU[v])/theta[v] )
                 prob <- (p1 - p2)
+                if(prob < .Machine$double.eps) {
+                   prob <- .Machine$double.eps
+                }
                 if(log) {
                     FY[v] <- log(prob)
                 } else {

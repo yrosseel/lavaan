@@ -348,6 +348,7 @@ computeTHETA <- function(object, GLIST=NULL) {
 }
 
 # V(ETA): latent variances variances/covariances
+# - if conditional=TRUE, ignore all ov.dummy. * and GAMMA
 computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE, 
                         samplestats=NULL) {
     # state or final?
@@ -373,6 +374,7 @@ computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE,
        
         if(representation == "LISREL") {
             ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+
             if(remove.dummy.lv) {
                 # remove all dummy latent variables
                 lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
@@ -381,6 +383,40 @@ computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE,
                     ETA.g <- ETA.g[-lv.idx, -lv.idx, drop=FALSE]
                 }
             }
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        ETA[[g]] <- ETA.g
+    }
+
+    ETA
+}
+
+# V(ETA|x_i): latent variances variances/covariances, conditional on x_
+# - this is always (I-B)^-1 PSI (I-B)^-T, after REMOVING lv dummies
+computeVETAx <- function(object, GLIST=NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    ETA <- vector("list", length=ngroups)
+
+    # compute ETA for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(representation == "LISREL") {
+            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                        object@ov.x.dummy.lv.idx[[g]])
+            ETA.g <- computeVETAx.LISREL(MLIST = MLIST, 
+                                         lv.dummy.idx = lv.idx)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -445,17 +481,17 @@ computeEETA <- function(object, GLIST=NULL, samplestats=NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                              object@ov.x.dummy.lv.idx[[g]])
-            ov.dummy.idx <- c(object@ov.y.dummy.ov.idx[[g]],
-                              object@ov.x.dummy.ov.idx[[g]])
             EETA.g <- computeEETA.LISREL(MLIST, 
                 mean.x=samplestats@mean.x[[g]],
                 sample.mean=samplestats@mean[[g]],
-                ov.dummy.idx=ov.dummy.idx,
-                lv.dummy.idx=lv.dummy.idx)
+                ov.y.dummy.lv.idx=object@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=object@ov.x.dummy.lv.idx[[g]],
+                ov.y.dummy.ov.idx=object@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=object@ov.x.dummy.ov.idx[[g]])
             if(remove.dummy.lv) {
                 # remove dummy
+                lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                                  object@ov.x.dummy.lv.idx[[g]])
                 if(length(lv.dummy.idx) > 0L) {
                     EETA.g <- EETA.g[-lv.dummy.idx]
                 }
@@ -468,6 +504,60 @@ computeEETA <- function(object, GLIST=NULL, samplestats=NULL,
     }
 
     EETA
+}
+
+# E(ETA|x_i): conditional expectation (means) of latent variables
+# for a given value of x_i (instead of E(x_i))
+computeEETAx <- function(object, GLIST=NULL, samplestats=NULL, eXo=NULL,
+                         remove.dummy.lv=FALSE) {
+  
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+
+    # return a list
+    EETAx <- vector("list", length=ngroups)
+
+    # compute E(ETA) for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        EXO <- eXo[[g]]
+        if(is.null(EXO)) {
+            # create empty matrix
+            EXO <- matrix(0, samplestats@nobs[[g]], 0L)
+        }
+
+        if(representation == "LISREL") {
+            EETAx.g <- computeEETAx.LISREL(MLIST, 
+                eXo=EXO,
+                sample.mean=samplestats@mean[[g]],
+                ov.y.dummy.lv.idx=object@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=object@ov.x.dummy.lv.idx[[g]],
+                ov.y.dummy.ov.idx=object@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=object@ov.x.dummy.ov.idx[[g]])
+
+            if(remove.dummy.lv) {
+                # remove dummy
+                lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                                  object@ov.x.dummy.lv.idx[[g]])
+                if(length(lv.dummy.idx) > 0L) {
+                    EETAx.g <- EETAx.g[ ,-lv.dummy.idx, drop=FALSE]
+                }
+            }
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        EETAx[[g]] <- EETAx.g
+    }
+
+    EETAx
 }
 
 # return 'regular' LAMBDA
