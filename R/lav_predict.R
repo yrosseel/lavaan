@@ -116,10 +116,16 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
         out
     }
 
+    # check for delta
+    if(any( names(object@Model@GLIST) == "delta")) {
+        warning("lavaan WARNING: factor scores may not be correct if delta elements are not equal to 1")
+    }
+
     for(g in 1:G) {
         nfac <- length(object@pta$vnames$lv[[g]])
         FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
         if(nfac == 0L) next
+
 
         # casewise for now
         N <- nrow(data.obs[[g]])
