@@ -723,9 +723,10 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
     }
 
     # delta?
-    if(!is.null(DELTA)) {
-        YHAT <- sweep(YHAT, MARGIN=2, DELTA, "*")
-    }
+    # FIXME: not used here?
+    #if(!is.null(DELTA)) {
+    #    YHAT <- sweep(YHAT, MARGIN=2, DELTA, "*")
+    #}
 
     YHAT
 }
@@ -905,10 +906,10 @@ setResidualElements.LISREL <- function(MLIST=NULL,
     if(sum(diag(MLIST$psi)) == 0.0 && all(diag(MLIST$lambda) == 1)) {
         ### FIXME: more elegant/general solution??
         diag(MLIST$psi) <- 1
-        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
         diag.Sigma <- diag(Sigma.hat) - 1.0
     } else {
-        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST)
+        Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
         diag.Sigma <- diag(Sigma.hat)
     }
 
@@ -917,7 +918,8 @@ setResidualElements.LISREL <- function(MLIST=NULL,
     } else {
         delta <- MLIST$delta
     }
-    RESIDUAL <- 1/delta^2 * (1 - diag.Sigma)
+    # theta = DELTA^(-1/2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
+    RESIDUAL <- as.numeric(1/delta^2 - diag.Sigma)
     if(length(num.idx) > 0L) {
         diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
     } else {

@@ -107,7 +107,7 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
     f.eta.i <- function(x, y.i, x.i, mu.i, g) {
         # conditional density of y, given eta.i(=x)
         log.fy <- lav_predict_fy_eta.i(object = object, y.i = y.i, x.i = x.i,
-                                       eta.i = x, group = g, 
+                                       eta.i = x, group = g, theta = theta.g,
                                        TH = TH[[g]], th.idx = th.idx[[g]],
                                        log = TRUE)
         tmp <- as.numeric(0.5 * t(x - mu.i) %*% VETAx.inv[[g]] %*% (x - mu.i))
@@ -116,16 +116,26 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
         out
     }
 
-    # check for delta
-    if(any( names(object@Model@GLIST) == "delta")) {
-        warning("lavaan WARNING: factor scores may not be correct if delta elements are not equal to 1")
-    }
-
     for(g in 1:G) {
         nfac <- length(object@pta$vnames$lv[[g]])
         FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
         if(nfac == 0L) next
 
+
+        ## FIXME: factor scores not identical (but close) to Mplus
+        #         if delta elements not equal to 1??
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST     <- object@Model@GLIST[ mm.in.group ]
+        # fix theta
+        THETA <- MLIST$theta
+        lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                    object@Model@ov.x.dummy.lv.idx[[g]])
+        ov.idx <- c(object@Model@ov.y.dummy.ov.idx[[g]],
+                    object@Model@ov.x.dummy.ov.idx[[g]])
+        if(length(ov.idx) > 0L) {
+            THETA[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
+        }
+        theta.g <- sqrt(diag(THETA))
 
         # casewise for now
         N <- nrow(data.obs[[g]])
@@ -377,7 +387,7 @@ lav_predict_fy <- function(object = NULL, data.obs = NULL,
 # f(y_i | eta_i, x_i)
 # but for a single observation y_i (and x_i), for given values of eta_i
 lav_predict_fy_eta.i <- function(object = NULL, y.i = NULL, x.i = NULL,
-                                 eta.i = NULL, group = 1L, 
+                                 eta.i = NULL, theta=NULL, group = 1L, 
                                  TH = NULL, th.idx = NULL, log = TRUE) {
 
     g <- group
@@ -390,21 +400,6 @@ lav_predict_fy_eta.i <- function(object = NULL, y.i = NULL, x.i = NULL,
 
     # all normal?
     NORMAL <- all(object@Data@ov$type == "numeric")
-
-    mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-    MLIST     <- object@Model@GLIST[ mm.in.group ]
-
-    # fix theta
-    THETA <- MLIST$theta
-
-    lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                object@Model@ov.x.dummy.lv.idx[[g]])
-    ov.idx <- c(object@Model@ov.y.dummy.ov.idx[[g]],
-                object@Model@ov.x.dummy.ov.idx[[g]])
-    if(length(ov.idx) > 0L) {
-        THETA[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
-    }
-    theta <- sqrt(diag(THETA))
 
     if(NORMAL) {
         FY <- dnorm(y.i, mean=MU, sd=theta, log = log)
