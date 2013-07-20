@@ -4,12 +4,14 @@
 \description{
 Pairwise tables for categorical variables.}
 \usage{
-lavTables(object, categorical = NULL, std.resid = TRUE, 
+lavTables(object, dimension = 2L, categorical = NULL, std.resid = TRUE, 
           min.std.resid = 0.0, average = FALSE, collapse = FALSE) 
 }
 \arguments{
 \item{object}{Either a \code{data.frame}, or an object of class 
 \code{\linkS4class{lavaan}}.}
+\item{dimension}{Integer. If 1L, compute one-dimensional tables; if 2L compute
+two-dimensional (pairwise) tables.}
 \item{categorical}{Only used if \code{object} is a \code{data.frame}. Specify
 variables that need to be treated as categorical.}
 \item{std.resid}{If \code{TRUE} and object is a lavaan object, add a column

@@ -4,8 +4,8 @@
 ps_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     lik <- ps_lik(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
-    if(all(lik > 0)) 
-        logl <- sum(log(lik))
+    if(all(lik > 0, na.rm = TRUE)) 
+        logl <- sum(log(lik), na.rm = TRUE)
     else
         logl <- -Inf
     logl
@@ -102,7 +102,7 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
         # rho
         TAUj  <- y.Z1 * (fit.y2$z1*rho - Z)
         TAUj1 <- y.Z2 * (fit.y2$z2*rho - Z)
-        dx.rho <- sum( pyx.inv * 1/R^3 * (TAUj - TAUj1) )
+        dx.rho <- sum( pyx.inv * 1/R^3 * (TAUj - TAUj1), na.rm = TRUE )
 
         # tanh + minimize
         -dx.rho * 1/cosh(x)^2
@@ -115,10 +115,12 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
     # starting value -- Olsson 1982 eq 38
     if(length(fit.y2$slope.idx) > 0L) {
         # exo
-        rho.init <- cor(Z,Y2)*sd(Y2) /  sum(dnorm(fit.y2$theta[fit.y2$th.idx]))
+        rho.init <- ( cor(Z,Y2,use="pairwise.complete.obs")*sd(Y2,na.rm=TRUE) /
+                      sum(dnorm(fit.y2$theta[fit.y2$th.idx])) )
     } else {
         # no exo
-        rho.init <- cor(Y1,Y2)*sd(Y2) / sum(dnorm(fit.y2$theta[fit.y2$th.idx]))
+        rho.init <- ( cor(Y1,Y2,use="pairwise.complete.obs")*sd(Y2,na.rm=TRUE) /
+                      sum(dnorm(fit.y2$theta[fit.y2$th.idx])) )
     }
 
     # check range of rho.init is within [-1,+1]

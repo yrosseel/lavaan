@@ -36,7 +36,7 @@ lavData <- function(data          = NULL,          # data.frame
             if(is.matrix(data)) {
                 if(nrow(data) == ncol(data)) {
                     # perhaps it is a covariance matrix?
-                    error("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
+                    stop("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
                 } else {
                     # or perhaps it is a data matrix?
                     warning("lavaan WARNING: data argument has been coerced to a data.frame")

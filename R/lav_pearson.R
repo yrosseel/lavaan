@@ -4,8 +4,8 @@
 pp_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     lik <- pp_lik(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
-    if(all(lik > 0)) 
-        logl <- sum(log(lik))
+    if(all(lik > 0, na.rm = TRUE)) 
+        logl <- sum(log(lik), na.rm = TRUE)
     else
         logl <- -Inf
     logl
@@ -93,7 +93,8 @@ pp_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
         rho = tanh(x[1L])
         R <- (1-rho^2)
         z <- Y1c^2/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c^2/var.y2
-        dx.rho <- sum( rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R^2) )
+        dx.rho <- sum( rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R^2), 
+                       na.rm = TRUE )
 
         # tanh + minimize
         -dx.rho * 1/cosh(x)^2

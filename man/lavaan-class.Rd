@@ -36,6 +36,7 @@ Objects can be created via the
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
     \item{\code{ParTable}:}{Named list describing the model parameters. Can be coerced to a data.frame. In the documentation, this is called the `parameter table'.}
+    \item{\code{pta}:}{Named list containing parameter table attributes.}
     \item{\code{Data}:}{Object of internal class \code{"Data"}: information
 about the data.}
     \item{\code{SampleStats}:}{Object of internal class \code{"SampleStats"}: sample 

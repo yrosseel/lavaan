@@ -270,8 +270,7 @@ lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
                 remove.dummy.lv=TRUE)
         } else if(method == "EBM") {
             ETA <- lav_predict_eta_ebm(object = object,
-                 data.obs = data.obs, eXo = eXo, label = label,
-                remove.dummy.lv=TRUE)
+                 data.obs = data.obs, eXo = eXo, label = label)
         } else {
             stop("lavaan ERROR: method ", method, " not (yet) supported of factor score prediction")
         }
@@ -286,7 +285,7 @@ lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
 
         if(object@Options$representation == "LISREL") {
             YHAT.g <- computeYHATx.LISREL(MLIST=MLIST,
-                          eXo=fit@Data@eXo[[g]], 
+                          eXo=object@Data@eXo[[g]], 
                           ETA=ETA[[g]], 
                           sample.mean=object@SampleStats@mean[[g]],
                           ov.y.dummy.ov.idx=object@Model@ov.y.dummy.ov.idx[[g]],
@@ -329,11 +328,11 @@ lav_predict_yhat.i <- function(object = NULL, eta.i = NULL, x.i = NULL,
     yhat <- computeYHATx.LISREL(MLIST=MLIST,
                 eXo=x.i,
                 ETA=eta.i,
-                sample.mean=fit@SampleStats@mean[[g]],
-                ov.y.dummy.ov.idx=fit@Model@ov.y.dummy.ov.idx[[g]],
-                ov.x.dummy.ov.idx=fit@Model@ov.x.dummy.ov.idx[[g]],
-                ov.y.dummy.lv.idx=fit@Model@ov.y.dummy.lv.idx[[g]],
-                ov.x.dummy.lv.idx=fit@Model@ov.x.dummy.lv.idx[[g]])
+                sample.mean=object@SampleStats@mean[[g]],
+                ov.y.dummy.ov.idx=object@Model@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=object@Model@ov.x.dummy.ov.idx[[g]],
+                ov.y.dummy.lv.idx=object@Model@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=object@Model@ov.x.dummy.lv.idx[[g]])
 
    yhat
     
@@ -341,18 +340,25 @@ lav_predict_yhat.i <- function(object = NULL, eta.i = NULL, x.i = NULL,
 
 # conditional density y -- assuming independence!!
 # f(y_i | eta_i, x_i)
-lav_predict_fy <- function(object = NULL, data.obs = NULL,
+#
+# FIXME: check!
+#
+lav_predict_fy <- function(object = NULL, data.obs = NULL, eXo = NULL,
                            label = FALSE) {
 
     if(is.null(data.obs)) {
         data.obs <- object@Data@X
+    }
+    if(is.null(eXo)) {
+        eXo <- object@Data@eXo
     }
     G <- object@Data@ngroups
     nmat <- object@Model@nmat
     FY <- vector("list", length=G)
 
     # we need the MUs (per group)
-    MU <- lav_predict_mu(object = object, data.obs = data.obs)
+    MU <- lav_predict_yhat(object = object, data.obs = data.obs, eXo = eXo,
+                           label = FALSE)
 
     # all normal?
     NORMAL <- all(object@Data@ov$type == "numeric")
@@ -361,7 +367,15 @@ lav_predict_fy <- function(object = NULL, data.obs = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST     <- object@Model@GLIST[ mm.in.group ]
 
+        # fix theta
         THETA <- MLIST$theta
+        lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                    object@Model@ov.x.dummy.lv.idx[[g]])
+        ov.idx <- c(object@Model@ov.y.dummy.ov.idx[[g]],
+                    object@Model@ov.x.dummy.ov.idx[[g]])
+        if(length(ov.idx) > 0L) {
+            THETA[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
+        }
         theta <- diag(THETA)
 
         if(NORMAL) {
