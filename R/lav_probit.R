@@ -210,11 +210,11 @@ hessian = function(x) {
     if(nexo == 0L) return(dx2.alpha)
 
     dxb <-  .X*.p1 - .X*.p2
-    dx2.beta <- -1 * (crossprod(.dxb, (.dxb * .wtpr / .probits)) -
+    dx2.beta <- -1 * (crossprod(dxb, (dxb * .wtpr / .probits)) -
                        ( crossprod(.X * gnorm(.z1) * .wtpr, .X) - 
                          crossprod(.X * gnorm(.z2) * .wtpr, .X) ) )
 
-    dx.ab <- crossprod(.dxa, (.dxb * .wtpr / .probits)) -
+    dx.ab <- crossprod(.dxa, (dxb * .wtpr / .probits)) -
                ( crossprod(.Y1 * gnorm(.z1) * .wtpr, .X) -
                  crossprod(.Y2 * gnorm(.z2) * .wtpr, .X) )
 

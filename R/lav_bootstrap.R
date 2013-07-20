@@ -236,6 +236,8 @@ bootstrap.internal <- function(object       = NULL,
                 boot.idx <- sample(x=samp@nobs[[g]],
                                    size=samp@nobs[[g]], replace=TRUE)
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
+                if(!is.null(dataeXo[[g]]))
+                    dataeXo[[g]] <- dataeXo[[g]][boot.idx,,drop=FALSE]
             }
         } else { # parametric!
             for(g in 1:samp@ngroups) {
@@ -254,6 +256,7 @@ bootstrap.internal <- function(object       = NULL,
                                DataeXo       = dataeXo,
                                DataOv        = data@ov,
                                DataOvnames   = data@ov.names,
+                               DataOvnamesx  = data@ov.names.x,
                                missing       = opt$missing,
                                rescale       = (opt$estimator == "ML" &&
                                                 opt$likelihood == "normal"),

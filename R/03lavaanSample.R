@@ -7,6 +7,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                                    DataX         = NULL,
                                    DataeXo       = NULL,
                                    DataOvnames   = NULL,
+                                   DataOvnamesx  = NULL,
                                    DataOv        = NULL,
                                    missing       = "listwise",
                                    rescale       = FALSE,
@@ -29,6 +30,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
         ngroups <- Data@ngroups
         nobs <- Data@nobs
         ov.names <- Data@ov.names
+        ov.names.x <- Data@ov.names.x
         DataOv <- Data@ov
         eXo <- Data@eXo
     } else if(!is.null(DataX)) {
@@ -44,7 +46,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
             }
             nobs[[g]] <- nrow(X[[g]])
         }
-        ov.names <- DataOvnames
+        ov.names   <- DataOvnames
+        ov.names.x <- DataOvnamesx
     } else {
         stop("both Data and DataX argument are NULL")
     }
@@ -116,7 +119,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
         ov.types  <- DataOv$type[ match(ov.names[[g]], DataOv$name) ]
         ov.levels <- DataOv$nlev[ match(ov.names[[g]], DataOv$name) ]
         CAT <- list()
-        if(!is.null(Data) && "ordered" %in% ov.types) {
+        if("ordered" %in% ov.types) {
             categorical <- TRUE
             if(estimator %in% c("PML","ML")) {
                 WLS.W <- FALSE
@@ -130,7 +133,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               ov.names=ov.names[[g]], 
                               ov.types=ov.types,
                               ov.levels=ov.levels,
-                              ov.names.x=Data@ov.names.x[[g]],
+                              ov.names.x=ov.names.x[[g]],
                               eXo=eXo[[g]],
                               group = g, # for error messages only
                               missing = missing, # listwise or pairwise?
