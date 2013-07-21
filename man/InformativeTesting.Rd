@@ -54,7 +54,6 @@ InformativeTesting(model = NULL, data, constraints = NULL,
     method is available.}   
 %\seealso{}
 \examples{
-\dontrun{
 #path model facial burns example
 
 #model syntax with starting values
@@ -70,15 +69,15 @@ burns.constraints <- 'f2 > 0  ; m1 < 0
                       f2 > m2 ; f1 < m1'
 
 
-# we only generate 2 (double) bootstrap samples in this example; in practice
+# we only generate 1 (double) bootstrap samples in this example; in practice
 # you may wish to use a much higher number
 
 example <- InformativeTesting(model = burns.model, data = FacialBurns,
-                              R = 2, double.bootstrap.R = 2, constraints = 
+                              R = 1, double.bootstrap.R = 1, constraints = 
                               burns.constraints, group = "Sex")
 
-plot(example)
-}
+# dontrun
+# plot(example)
 }
 
 \references{
