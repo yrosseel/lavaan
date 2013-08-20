@@ -426,6 +426,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     MOD <- vector("list", length=0L)
     CON <- vector("list", length=0L)
     GRP <- 1L
+    GRP_OP <- FALSE
     for(i in 1:length(model)) {
         x <- model[i]
         if(debug) {
@@ -506,8 +507,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             FLAT.start[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
+            if(GRP_OP) {
+                GRP <- GRP + 1L
+            }
             FLAT.group[FLAT.idx] <- GRP
-            GRP <- GRP + 1L
+            GRP_OP <- TRUE
             next
         }
     

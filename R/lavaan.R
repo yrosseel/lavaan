@@ -741,7 +741,7 @@ cfa <- sem <- function(model = NULL, data = NULL,
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
     mc$auto.delta      = TRUE
-    mc[[1L]] <- as.name("lavaan")
+    mc[[1L]] <- quote(lavaan::lavaan)
 
     eval(mc, parent.frame())
 }
@@ -773,7 +773,7 @@ growth <- function(model = NULL, data = NULL,
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
     mc$auto.delta      = TRUE
-    mc[[1L]] <- as.name("lavaan")
+    mc[[1L]] <- quote(lavaan::lavaan)
 
     eval(mc, parent.frame())
 }
