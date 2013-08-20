@@ -183,10 +183,12 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
             NVarCov <- MASS::ginv(E3)[1:ncol(E), 1:ncol(E)]
             # FIXME: better include inactive + slacks??
         } else {
-            NVarCov <- solve(E)
+            #NVarCov <- solve(E)
+            NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
         }
     } else {
-        NVarCov <- solve(E)
+        # NVarCov <- solve(E)
+        NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
     }
 
     attr(NVarCov, "B0") <- B0
