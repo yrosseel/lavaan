@@ -544,7 +544,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     if(op == "~") {
                         rhs.name <- ""
                     } else {
-                        stop("lavaan ERROR: right-hand side of formula is an intercept, but operator is \"", op, "\" in: ", x)
+                        stop("lavaan ERROR: right-hand side of formula contains a constant, but operator is \"", op, "\" in: ", x)
                     }
                 } else {
                     rhs.name <- names(out)[j]
