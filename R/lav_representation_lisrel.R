@@ -903,11 +903,14 @@ setResidualElements.LISREL <- function(MLIST=NULL,
     }
 
     # special case: PSI=0, and lambda=I (eg ex3.12)
-    if(sum(diag(MLIST$psi)) == 0.0 && all(diag(MLIST$lambda) == 1)) {
+    if(ncol(MLIST$psi) > 0L && 
+       sum(diag(MLIST$psi)) == 0.0 && all(diag(MLIST$lambda) == 1)) {
         ### FIXME: more elegant/general solution??
         diag(MLIST$psi) <- 1
         Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
         diag.Sigma <- diag(Sigma.hat) - 1.0
+    } else if(ncol(MLIST$psi) == 0L) {
+        diag.Sigma <- rep(0, ncol(MLIST$theta))
     } else {
         Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
         diag.Sigma <- diag(Sigma.hat)
