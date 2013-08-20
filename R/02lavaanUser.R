@@ -536,9 +536,12 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             for(j in 1:length(out)) {
         
                 # catch intercepts
-                if(op == "~" && names(out)[j] == "intercept") {
-                    #op <- "~1"
-                    rhs.name <- ""
+                if(names(out)[j] == "intercept") {
+                    if(op == "~") {
+                        rhs.name <- ""
+                    } else {
+                        stop("lavaan ERROR: right-hand side of formula is an intercept, but operator is \"", op, "\" in: ", x)
+                    }
                 } else {
                     rhs.name <- names(out)[j]
                 }
