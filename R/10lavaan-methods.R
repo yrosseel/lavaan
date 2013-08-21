@@ -1155,6 +1155,10 @@ function(object, what="free") {
         getModelTheta(object, labels=TRUE)
     } else if(what == "cor.ov") {
         getModelTheta(object, correlation.metric=TRUE, labels=TRUE)
+    } else if(what == "coverage") {
+        getDataMissingCoverage(object, labels=TRUE)
+    } else if(what %in% c("patterns", "pattern")) {
+        getDataMissingPatterns(object, labels=TRUE)
     } else if(what == "converged") {
         object@Fit@converged
     } else {
@@ -1894,6 +1898,69 @@ getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
             NAMES <- object@Model@dimNames[[lambda.idx]][[1L]]
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+getDataMissingCoverage <- function(object, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # get missing covarage
+    OUT <- vector("list", G)
+   
+    for(g in 1:G) {
+        if(!is.null(object@Data@Mp[[g]])) {
+            OUT[[g]] <- object@Data@Mp[[g]]$coverage
+        } else {
+            nvar <- length(object@Data@ov.names[[g]])
+            OUT[[g]] <- matrix(1.0, nvar, nvar)
+        }
+
+        if(labels) {
+            NAMES <- object@Data@ov.names[[g]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
+}
+
+getDataMissingPatterns <- function(object, labels = TRUE) {
+
+    G <- object@Data@ngroups
+
+    # get missing covarage
+    OUT <- vector("list", G)
+   
+    for(g in 1:G) {
+        if(!is.null(object@Data@Mp[[g]])) {
+            OUT[[g]] <- object@Data@Mp[[g]]$pat
+        } else {
+            nvar <- length(object@Data@ov.names[[g]])
+            OUT[[g]] <- matrix(TRUE, 1L, nvar)
+            rownames(OUT[[g]]) <- object@Data@nobs[[g]]
+        }
+
+        if(labels) {
+            NAMES <- object@Data@ov.names[[g]]
+            colnames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
         }
     }
 
