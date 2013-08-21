@@ -188,7 +188,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
             mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
         
             # icov and cov.log.det (but not if missing)
-            if(is.null(Mp[[g]])) {
+            if(missing != "ml") {
                 tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
                 if(inherits(tmp, "try-error")) {
                     if(ngroups > 1) {
@@ -238,7 +238,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
         }
 
         # if missing = "fiml", sample statistics per pattern
-        if(!is.null(Mp[[g]])) {
+        if(missing == "ml") {
             missing.flag. <- TRUE
             missing.[[g]] <- 
                 getMissingPatternStats(X  = X[[g]],
