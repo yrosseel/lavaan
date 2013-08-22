@@ -196,7 +196,7 @@ simulateData <- function(
     }
 
     if(debug) {
-        cat("\nModel-implied moments:\n")
+        cat("\nModel-implied moments (before Vale-Maurelli):\n")
         print(Sigma.hat)
         print(Mu.hat)
         if(exists("TH")) print(TH)
@@ -229,7 +229,8 @@ simulateData <- function(
             Z <- ValeMaurelli1983(n        = sample.nobs[g], 
                                   COR      = cov2cor(COV),
                                   skewness = skewness,  # FIXME: per group?
-                                  kurtosis = kurtosis)
+                                  kurtosis = kurtosis,
+                                  debug    = debug)
             # rescale
             X[[g]] <- scale(Z, center = -Mu.hat[[g]],
                                scale  = 1/sqrt(diag(COV)))
@@ -329,7 +330,7 @@ fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
     Y
 }
 
-ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis) {
+ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
 
     fleishman1978_abcd <- function(skewness, kurtosis) {
         system.function <- function(x, skewness, kurtosis) {
@@ -407,7 +408,14 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis) {
         }
     }
 
-    ICOR
+    if(debug) {
+         cat("\nOriginal correlations (for Vale-Maurelli):\n")
+         print(COR)
+         cat("\nIntermediate correlations (for Vale-Maurelli):\n")
+         print(ICOR)
+         cat("\nEigen values ICOR:\n")
+         print( eigen(ICOR)$values )
+    }
 
     # generate Z ## FIXME: replace by rmvnorm once we use that package
     X <- Z <- MASS::mvrnorm(n=n, mu=rep(0,nvar), Sigma=ICOR)
