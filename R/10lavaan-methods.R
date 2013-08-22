@@ -797,32 +797,34 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         LIST$est.std <- standardize.est.all.nox(object)
     }
 
-    # add 'se' for standardized parameters
-    # TODO!!
-    if(type == "std.lv") {
-        JAC <- lavJacobianD(func=standardize.est.lv.x, x=object@Fit@est,
-                            object=object)
-    } else if(type == "std.all") {
-        JAC <- lavJacobianD(func=standardize.est.all.x, x=object@Fit@est,
-                            object=object)
-    } else if(type == "std.nox") {
-        JAC <- lavJacobianD(func=standardize.est.all.nox.x, x=object@Fit@est,
-                            object=object)
-    }
-    JAC <- JAC[unco.idx,unco.idx]
-    VCOV <- as.matrix(vcov(object, labels=FALSE))
-    # handle eq constraints in fit@Model@eq.constraints.K
-    if(object@Model@eq.constraints) {
-        JAC <- JAC %*% object@Model@eq.constraints.K       
-    }
-    COV <- JAC %*% VCOV %*% t(JAC)
-    LIST$se <- rep(NA, length(LIST$lhs))
-    LIST$se[unco.idx] <- sqrt(diag(COV))
+    if(object@Options$se != "none") {
+        # add 'se' for standardized parameters
+        # TODO!!
+        if(type == "std.lv") {
+            JAC <- lavJacobianD(func=standardize.est.lv.x, x=object@Fit@est,
+                                object=object)
+        } else if(type == "std.all") {
+            JAC <- lavJacobianD(func=standardize.est.all.x, x=object@Fit@est,
+                                object=object)
+        } else if(type == "std.nox") {
+            JAC <- lavJacobianD(func=standardize.est.all.nox.x, x=object@Fit@est,
+                                object=object)
+        }
+        JAC <- JAC[unco.idx,unco.idx]
+        VCOV <- as.matrix(vcov(object, labels=FALSE))
+        # handle eq constraints in fit@Model@eq.constraints.K
+        if(object@Model@eq.constraints) {
+            JAC <- JAC %*% object@Model@eq.constraints.K       
+        }
+        COV <- JAC %*% VCOV %*% t(JAC)
+        LIST$se <- rep(NA, length(LIST$lhs))
+        LIST$se[unco.idx] <- sqrt(diag(COV))
 
-    # add 'z' column
-    tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
-    LIST$z <- LIST$est.std / tmp.se
-    LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+        # add 'z' column
+        tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+        LIST$z <- LIST$est.std / tmp.se
+        LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+    }
 
     # if single group, remove group column
     if(object@Data@ngroups == 1L) LIST$group <- NULL
@@ -1274,6 +1276,10 @@ function(object, labels=TRUE, attributes.=FALSE) {
     # check for convergence first!
     if(object@Fit@npar > 0L && !object@Fit@converged)
         stop("lavaan ERROR: model did not converge")
+
+    if(object@Options$se == "none") {
+        stop("lavaan ERROR: vcov not available if se=\"none\"")
+    }
 
     if(object@Fit@npar == 0) {
         VarCov <- matrix(0,0,0)
