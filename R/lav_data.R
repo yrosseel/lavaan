@@ -363,6 +363,7 @@ getDataFull <- function(data          = NULL,          # data.frame
     Mp       <- vector("list", length=ngroups)
     X        <- vector("list", length=ngroups)
     eXo      <- vector("list", length=ngroups)
+    Rp       <- vector("list", length=ngroups)
 
     # for each group
     for(g in 1:ngroups) {
@@ -446,6 +447,12 @@ getDataFull <- function(data          = NULL,          # data.frame
             nobs[[g]] <- Mp[[g]]$nobs
         }
 
+        # response patterns (categorical only, no exogenous variables)
+        all.ordered <- all(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
+        if(length(exo.idx) == 0L && all.ordered) {
+            Rp[[g]] <- lav_data_resppatterns(X[[g]])
+        }
+
         # warn if we have a small number of observations (but NO error!)
         if( !allow.single.case && warn && 
             nobs[[g]] < (nvar <- length(ov.idx)) ) {
@@ -474,7 +481,34 @@ getDataFull <- function(data          = NULL,          # data.frame
                       missing         = missing,
                       X               = X,
                       eXo             = eXo,
-                      Mp              = Mp
+                      Mp              = Mp,
+                      Rp              = Rp
                      )
     lavData                     
+}
+
+# get response patterns (empty records have already been removed!)
+lav_data_resppatterns <- function(X) {
+
+    ntotal <- nrow(X); nvar <- ncol(X)
+
+    # identify, label and sort response patterns 
+    id <- apply(X, MARGIN = 1, paste, collapse = "")
+
+    # sort patterns (from high occurence to low occurence)
+    TABLE <- sort(table(id), decreasing = TRUE)
+    order <- names(TABLE)
+    npatterns <- length(TABLE)
+    pat <- X[match(order, id), , drop = FALSE]
+    row.names(pat) <- as.character(TABLE)
+
+    # return a list
+    #out <- list(nobs=ntotal, nvar=nvar,
+    #            id=id, npatterns=npatterns,
+    #            order=order, pat=pat)
+
+    # only return pat
+    out <- list(npatterns=npatterns, pat=pat)
+
+    out
 }

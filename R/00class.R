@@ -22,6 +22,7 @@ setClass("lavData",
         missing="character",       # "listwise" or not?
         Mp="list",                 # if not complete, missing patterns
                                    # we need this here, to get nobs right!
+        Rp="list",                 # response patterns (categorical only)
         eXo="list",                # local copy exo only
         X="list"                   # local copy
     )
