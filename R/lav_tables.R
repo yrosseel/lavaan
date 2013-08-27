@@ -1,4 +1,4 @@
-# construct pairwise frequency tables
+# construct 1D or 2D frequency tables
 # YR. 10 April 2013
 # Notes:
 # - we do NOT make a distinction here between unordered and ordered categorical
@@ -11,7 +11,7 @@
 #   tables
 
 lavTables <- function(object, dimension=2L, categorical=NULL,
-                      std.resid=TRUE, min.std.resid = 0.0,
+                      std.resid=TRUE, min.std.resid = 0.0, method = "GF",
                       average = FALSE, collapse = FALSE) {
 
     # catch matrix
@@ -57,8 +57,8 @@ lavTables <- function(object, dimension=2L, categorical=NULL,
     } else if(dimension == 2L) {
         out <- lav_pairwise_tables(object = object,
                    vartable = vartable, X = X, ov.names = ov.names,
-                   std.resid = std.resid, min.std.resid = min.std.resid,
-                   average = average, collapse = collapse)
+                   average = average,
+                   std.resid = std.resid, collapse = collapse, method = method)
     } else {
         stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
     }
@@ -66,6 +66,95 @@ lavTables <- function(object, dimension=2L, categorical=NULL,
     out
 }
 
+# always collapse, 1 statistic per table
+lavTablesFit <- function(object, dimension=2L, statistic="LR",
+                         showAsMatrix = FALSE) {
+
+    # check object class
+    if(!class(object) %in% c("lavaan")) {
+        stop("lavaan ERROR: object must either an object of class lavaan")
+    }
+
+    vartable <- object@Data@ov
+    X <- object@Data@X
+    ov.names <- object@Data@ov.names
+
+    if(dimension == 1L) {
+        out <- lav_oneway_tables(object = object,
+                   vartable = vartable, X = X, ov.names = ov.names)
+    } else if(dimension == 2L) {
+        if(statistic == "LR") {
+            std.resid <- TRUE; method <- "LR"
+        } else if(statistic == "GF") {
+            std.resid <- TRUE; method <- "GF"
+        } else {
+            stop("lavaan ERROR: can not handle statistic ", statistic)
+        }
+        out <- lav_pairwise_tables(object = object,
+                   vartable = vartable, X = X, ov.names = ov.names,
+                   average = TRUE,
+                   std.resid = std.resid, method = method, collapse = TRUE)
+        if(statistic == "LR") {
+            out$LR <- out$str.sum
+            STAT <- out$LR
+        } else if(statistic == "GF") {
+            out$GF <- out$str.sum
+            STAT <- out$GF
+        }
+        out$id <- out$nobs <- out$nrow <- out$ncol <- NULL
+        out$str.average <- out$str.sum <- NULL
+        out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
+
+        if(showAsMatrix) {
+            RN <- unique(out$rhs)
+            out <- lavaan::getCov(STAT, lower=FALSE,
+                                  names=unique(out$lhs))
+            rownames(out) <- RN
+            class(out) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+
+    } else {
+        stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
+    }
+
+    out
+}
+
+# Mariska Barendse Cp statistic
+lavTablesFitCp <- function(object, alpha = 0.05) {
+
+    # check object class
+    if(!class(object) %in% c("lavaan")) {
+        stop("lavaan ERROR: object must either an object of class lavaan")
+    }
+
+    vartable <- object@Data@ov
+    X <- object@Data@X
+    ov.names <- object@Data@ov.names
+
+    std.resid <- TRUE; method <- "LR"
+    out <- lav_pairwise_tables(object = object,
+               vartable = vartable, X = X, ov.names = ov.names,
+               average = TRUE,
+               std.resid = std.resid, method = method, collapse = TRUE)
+    out$LR <- out$str.sum
+    out$id <- out$nobs <- NULL
+    out$str.average <- out$str.sum <- NULL
+    out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
+
+    # df 
+    #out$df <- out$nrow*out$ncol - (out$nrow-1L) - (out$ncol-1L)
+    out$df <- out$nrow*out$ncol - (out$nrow-1L)*(out$ncol-1L) - 2L
+
+    # p-value
+    out$p.value <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
+
+    # Bonferroni alpha
+    ntests <- length(out$p.value)
+    out$alpha.star <- rep(alpha / ntests, length(out$p.value))
+
+    out
+}
 
 lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
 
@@ -123,10 +212,12 @@ lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
     out
 }
 
+# YR: - 23 Aug 2013: added Mariska Barendse Cp fit index
 lav_pairwise_tables <- function(object, 
                                 vartable=NULL, X=NULL, ov.names=NULL,
                                 std.resid=TRUE, min.std.resid = 0.0,
-                                average = FALSE, collapse = FALSE) {
+                                average = FALSE, collapse = FALSE,
+                                method="GF") {
 
     showAsMatrix <- FALSE
     if(! (is.logical(collapse) && !collapse) ) {
@@ -177,26 +268,37 @@ lav_pairwise_tables <- function(object,
         est.prop <- unlist(lav_pairwise_tables_pi(object))
         out$est.freq <- est.prop * out$nobs
  
-        # Joreskog & Moustaki equation 35
+        # Joreskog & Moustaki equation 34/35
         if(std.resid) {
-            out$std.resid <- out$nobs*(obs.prop-est.prop)^2/est.prop
-            #if(check) {
-            #    out$check <- ifelse(out$std.resid > 4.0, "***", "")
-            #}
+            if(method == "GF") {
+                out$std.resid <- out$nobs*(obs.prop-est.prop)^2/est.prop
+            } else if(method == "LR") {
+                out$std.resid <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
+            }
 
             if(average) {
                 # fit per table
                 table.average <- tapply(out$std.resid, INDEX=out$id, FUN=mean)
+                table.sum <- tapply(out$std.resid, INDEX=out$id, FUN=sum)
                 table.percAboveMin <- tapply(out$std.resid, INDEX=out$id,
                     FUN=function(x) {sum(x > min.std.resid)/length(x)})
                 table.numAboveMin <- tapply(out$std.resid, INDEX=out$id,
                     FUN=function(x) {sum(x > min.std.resid)})
                 ntables <- length(table.average)
                 ncells <- tabulate(out$id)
-                out$ncells <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(ncells[x], each=ncells[x])))
+                nrow <- tapply(out$row, INDEX=out$id, FUN=max)
+                ncol <- tapply(out$col, INDEX=out$id, FUN=max)
+
+                out$nrow <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(nrow[x], each=ncells[x])))
+                out$ncol <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(ncol[x], each=ncells[x])))
+                #out$ncells <- unlist(lapply(seq_len(ntables),
+                #    function(x) rep(ncells[x], each=ncells[x])))
                 out$str.average <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.average[x], each=ncells[x])))
+                out$str.sum <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.sum[x], each=ncells[x])))
                 out$str.min <- rep(min.std.resid, length(out$id))
                 out$str.plarge <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.percAboveMin[x], each=ncells[x])))
