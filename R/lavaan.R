@@ -413,6 +413,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavaanCache[[g]] <- list(bifreq=bifreq, LONG=LONG)
         }
     }
+    # copy response patterns to cache
+    if(!is.null(lavaanData@Rp[[1L]])) {
+        for(g in 1:lavaanData@ngroups) {
+            lavaanCache[[g]]$pat <- lavaanData@Rp[[g]]$pat
+        }
+    }
 
 
     # 6. estimate free parameters

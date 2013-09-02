@@ -737,7 +737,6 @@ computeObjective <- function(object, GLIST=NULL,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
         } else if(estimator == "PML") {
-
             #cat("DEBUG!\n")
             #print(getModelParameters(object, GLIST=GLIST))
             #print(Sigma.hat[[g]])
@@ -750,13 +749,21 @@ computeObjective <- function(object, GLIST=NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = X[[g]],
                                       cache     = cache[[g]])
+        } else if(estimator == "FML") { 
+            # Full maximum likelihood (underlying multivariate normal)
+            group.fx <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
+                                      TH        = TH[[g]],
+                                      th.idx    = th.idx[[g]],
+                                      num.idx   = num.idx[[g]],
+                                      X         = X[[g]],
+                                      cache     = cache[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
         }
 
         if(estimator == "ML") {
             group.fx <- 0.5 * group.fx
-        } else if(estimator == "PML") {
+        } else if(estimator == "PML" || estimator == "FML") {
             # do nothing
         } else {
             group.fx <- 0.5 * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] * group.fx
@@ -1205,7 +1212,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     } # WLS
 
-    else if(estimator == "PML") {
+    else if(estimator == "PML" || estimator == "FML") {
 
         if(type != "free") {
             stop("FIXME: type != free in computeGradient for estimator PML")
@@ -1223,12 +1230,21 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
-            d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
-                             TH        = TH[[g]],
-                             th.idx    = th.idx[[g]],
-                             num.idx   = num.idx[[g]],
-                             X         = X[[g]],
-                             cache     = cache[[g]])
+            if(estimator == "PML") {
+                d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                                 TH        = TH[[g]],
+                                 th.idx    = th.idx[[g]],
+                                 num.idx   = num.idx[[g]],
+                                 X         = X[[g]],
+                                 cache     = cache[[g]])
+            } else {
+                d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                                 TH        = TH[[g]],
+                                 th.idx    = th.idx[[g]],
+                                 num.idx   = num.idx[[g]],
+                                 X         = X[[g]],
+                                 cache     = cache[[g]])
+            }
 
             # chain rule
             group.dx <- as.numeric(t(d1) %*% Delta[[g]])
@@ -1370,7 +1386,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
-    if(estimator %in% c("ML","PML")) {
+    if(estimator %in% c("ML","PML","FML")) {
         Sigma.hat <- computeSigmaHat(object, extra=TRUE, debug=options$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
@@ -1466,8 +1482,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            gradient=first.derivative.param,
+                            #gradient=first.derivative.param,
                             #gradient=first.derivative.param.numerical,
+                            gradient=NULL,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 

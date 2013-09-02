@@ -215,3 +215,64 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     fx
 }
 
+# full information maximum likelihood
+# underlying multivariate normal approach (see Joreskog & Moustaki, 2001)
+#
+estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
+                          TH        = NULL,    # model-based thresholds + means
+                          th.idx    = NULL,    # threshold idx per variable
+                          num.idx   = NULL,    # which variables are numeric
+                          X         = NULL,    # raw data
+                          cache     = NULL) {  # patterns
+
+    # YR 27 aug 2013
+    # just for fun, and to compare with PML for small models
+
+    # first of all: check if all correlations are within [-1,1]
+    # if not, return Inf; (at least with nlminb, this works well)
+    cors <- Sigma.hat[lower.tri(Sigma.hat)]
+
+    if(any(abs(cors) > 1)) {
+        return(+Inf) 
+    }
+
+    nvar <- nrow(Sigma.hat)
+    pstar <- nvar*(nvar-1)/2
+    ov.types <- rep("ordered", nvar)
+    if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
+    MEAN <- rep(0, nvar)
+
+    # shortcut for all ordered - per pattern
+    if(all(ov.types == "ordered")) {
+        PAT <- cache$pat; npatterns <- nrow(PAT)
+        freq <- as.numeric( rownames(PAT) )
+        PI <- numeric(npatterns)
+        TH.VAR <- lapply(1:nvar, function(x) c(-Inf, TH[th.idx==x], +Inf))
+        # FIXME!!! ok to set diagonal to 1.0?
+        diag(Sigma.hat) <- 1.0
+        for(r in 1:npatterns) {
+            # compute probability for each pattern
+            lower <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x]      ])
+            upper <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x] + 1L ])
+            PI[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigma.hat)
+        }
+        # sum (log)likelihood over all patterns
+        LogLik <- sum(log(PI) * freq)
+
+    } else { # case-wise
+        PI <- numeric(nobs)
+        for(i in 1:nobs) {
+            # compute probability for each case
+            PI[i] <- stop("not implemented")
+        }
+        # sum (log)likelihood over all observations
+        LogLik <- sum(log(PI) * freq)
+        stop("not implemented")
+    }
+
+    # function value as returned to the minimizer
+    fx <- -1 * LogLik
+
+    fx
+}
+

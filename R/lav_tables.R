@@ -143,8 +143,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {
     out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
 
     # df 
-    #out$df <- out$nrow*out$ncol - (out$nrow-1L) - (out$ncol-1L)
-    out$df <- out$nrow*out$ncol - (out$nrow-1L)*(out$ncol-1L) - 2L
+    out$df <- out$nrow*out$ncol - out$nrow - out$ncol
 
     # p-value
     out$p.value <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
