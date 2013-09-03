@@ -68,7 +68,9 @@ lavTables <- function(object, dimension=2L, categorical=NULL,
 
 # always collapse, 1 statistic per table
 lavTablesFit <- function(object, dimension=2L, statistic="LR",
-                         showAsMatrix = FALSE) {
+                         p.value = FALSE, showAsMatrix = FALSE) {
+
+    statistic <- toupper(statistic)
 
     # check object class
     if(!class(object) %in% c("lavaan")) {
@@ -87,6 +89,8 @@ lavTablesFit <- function(object, dimension=2L, statistic="LR",
             std.resid <- TRUE; method <- "LR"
         } else if(statistic == "GF") {
             std.resid <- TRUE; method <- "GF"
+        } else if(statistic == "RMSEA") {
+            std.resid <- TRUE; method <- "LR"
         } else {
             stop("lavaan ERROR: can not handle statistic ", statistic)
         }
@@ -94,13 +98,36 @@ lavTablesFit <- function(object, dimension=2L, statistic="LR",
                    vartable = vartable, X = X, ov.names = ov.names,
                    average = TRUE,
                    std.resid = std.resid, method = method, collapse = TRUE)
+
+        # df
+        out$df <- out$nrow*out$ncol - out$nrow - out$ncol
+
+        # stat
         if(statistic == "LR") {
             out$LR <- out$str.sum
             STAT <- out$LR
+            if(p.value) {
+                out$p.value <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
+            }
         } else if(statistic == "GF") {
             out$GF <- out$str.sum
             STAT <- out$GF
+            if(p.value) {
+                out$p.value <- pchisq(out$GF, df=out$df, lower.tail = FALSE)
+            }
+        } else if(statistic == "RMSEA") {
+            out$RMSEA <- sqrt( pmax(0, (out$str.sum - out$df)/
+                                       (2*out$nobs*out$df)     ) )
+            STAT <- out$RMSEA
+
+            if(p.value) {
+                out$p.value <- pchisq(out$str.sum, 
+                                      ncp = 0.1^2*out$nobs*out$df, 
+                                      df=out$df, lower.tail = FALSE)
+            }
         }
+
+        # remove columns
         out$id <- out$nobs <- out$nrow <- out$ncol <- NULL
         out$str.average <- out$str.sum <- NULL
         out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
@@ -249,14 +276,14 @@ lav_pairwise_tables <- function(object,
                 function(x) as.numeric(x$statistic)))
             table.df <- unlist(lapply(tableChisqTest, 
                 function(x) as.numeric(x$parameter)))
-            table.pvalue <- unlist(lapply(tableChisqTest,   
+            table.p.value <- unlist(lapply(tableChisqTest,   
                 function(x) as.numeric(x$p.value)))
             out$chisq <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.chisq[x], each=ncells[x])))
             out$df <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.df[x], each=ncells[x])))
-            out$pvalue <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(table.pvalue[x], each=ncells[x])))
+            out$p.value <- unlist(lapply(seq_len(ntables),
+                    function(x) rep(table.p.value[x], each=ncells[x])))
         }
     } else if(inherits(object, "lavaan")) {
         # add predicted frequencies, fit indices
@@ -272,6 +299,10 @@ lav_pairwise_tables <- function(object,
             if(method == "GF") {
                 out$std.resid <- out$nobs*(obs.prop-est.prop)^2/est.prop
             } else if(method == "LR") {
+                # not defined if out$obs.prop is (close to) zero
+                # we use freq=0.5 for these empty cells
+                zero.idx <- which(obs.prop < .Machine$double.eps)
+                obs.prop[zero.idx] <- 0.5/out$nobs[zero.idx]
                 out$std.resid <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
             }
 
@@ -333,7 +364,7 @@ lav_pairwise_tables <- function(object,
                                   names=unique(out$lhs))
             rownames(out) <- RN
         } else {
-            out <- lavaan::getCov(out$pvalue, lower=FALSE, 
+            out <- lavaan::getCov(out$p.value, lower=FALSE, 
                                   names=unique(out$lhs))
             rownames(out) <- RN
         }
