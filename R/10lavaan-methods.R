@@ -1433,7 +1433,6 @@ function(object, ...) {
     ngroups <- object@Data@ngroups
     nobs <- object@SampleStats@nobs
     ntotal <- object@SampleStats@ntotal
-    npar <- object@Fit@npar
 
     # shortcut for single argument (just plain LRT)
     if(!any(modp)) {
@@ -1564,8 +1563,10 @@ function(object, ...) {
 
                 # original M (Satorra)
                 Delta1 <- computeDelta(mods[[m]]@Model)
+                npar <- ncol(Delta1[[1]])
                 WLS.V <- getWLS.V(object)
                 Gamma <- getSampleStatsNACOV(object)
+                
 
                 # weight WLS.V
                 for(g in 1:ngroups) {
