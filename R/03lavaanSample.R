@@ -121,7 +121,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
         CAT <- list()
         if("ordered" %in% ov.types) {
             categorical <- TRUE
-            if(estimator %in% c("PML","ML")) {
+            if(estimator %in% c("ML","PML","FML")) {
                 WLS.W <- FALSE
             } else {
                 WLS.W <- TRUE
@@ -330,7 +330,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                         WLS.V[[g]] <- DWLS
                     }
                 }
-            } else if(estimator == "PML") {
+            } else if(estimator == "PML" || estimator == "FML") {
                 # no WLS.V here
             }
         }

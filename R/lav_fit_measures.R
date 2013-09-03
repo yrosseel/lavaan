@@ -20,9 +20,16 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # collect info from the lavaan slots
     GLIST <- object@Model@GLIST
-    N <- object@SampleStats@ntotal
-    #q <- length(vnames(object@ParTable, "ov.x"))
-    #p <- nvar - q
+
+    # N versus N-1
+    # this affects BIC, RMSEA, cn_01/05, MFI and ECVI
+    # Changed 0.5-15: suggestion by Mark Seeto
+    if(object@Options$estimator %in% c("ML","PML","FML") && 
+       object@Options$likelihood == "normal") {
+        N <- object@SampleStats@ntotal
+    } else {
+        N <- object@SampleStats@ntotal - object@SampleStats@ngroups
+    }
 
     # Change 0.5-13: take into account explicit equality constraints!!
     # reported by Mark L. Taper (affects AIC and BIC)

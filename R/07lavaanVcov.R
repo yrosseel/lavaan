@@ -370,7 +370,8 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
     if(! inherits(NVarCov, "try-error") ) {
 
         # denominator!
-        if(estimator == "ML" && likelihood == "normal") {
+        if(estimator %in% c("ML","PML","FML") && 
+           likelihood == "normal") {
             N <- samplestats@ntotal
         } else {
             N <- samplestats@ntotal - samplestats@ngroups
