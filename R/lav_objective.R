@@ -266,7 +266,7 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
             PI[i] <- stop("not implemented")
         }
         # sum (log)likelihood over all observations
-        LogLik <- sum(log(PI) * freq)
+        LogLik <- sum(log(PI))
         stop("not implemented")
     }
 

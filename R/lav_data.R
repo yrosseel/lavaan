@@ -502,13 +502,16 @@ lav_data_resppatterns <- function(X) {
     pat <- X[match(order, id), , drop = FALSE]
     row.names(pat) <- as.character(TABLE)
 
+    total.patterns <- prod(apply(X, 2, max))
+    empty.patterns <- total.patterns - npatterns
     # return a list
     #out <- list(nobs=ntotal, nvar=nvar,
     #            id=id, npatterns=npatterns,
     #            order=order, pat=pat)
 
     # only return pat
-    out <- list(npatterns=npatterns, pat=pat)
+    out <- list(npatterns=npatterns, pat=pat, total.patterns=total.patterns,
+                empty.patterns=empty.patterns)
 
     out
 }

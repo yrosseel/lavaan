@@ -125,11 +125,22 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # srmr
     if(categorical) {
-        fit.srmr <- character(0L)
-        fit.srmr2 <- character(0L)
+        fit.srmr <- c("wrmr")
+        fit.srmr2 <- c("wrmr")
     } else {
         fit.srmr <- c("srmr")
         fit.srmr2 <- c("rmr", "rmr_nomean", "srmr", "srmr_nomean")
+    }
+
+    # table
+    if(categorical) {
+        # FIXME: Cp: no exo, all ordinal!
+        fit.table <- c("C_p", "C_p.df", "C_p.p.value",
+                       "C_F", "C_F.df", "C_F.p.value",
+                       "rpat.observed", "rpat.total", "rpat.empty",
+                       "C_M", "C_M.df", "C_M.p.value")
+    } else {
+        fit.table <- character(0L)
     }
 
     # various
@@ -151,7 +162,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                                   fit.rmsea, fit.srmr)
             } else {
                 fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
-                                  fit.rmsea, fit.srmr)
+                                  fit.rmsea, fit.srmr, fit.table)
             }
         } else if(fit.measures == "all") {
             if(estimator == "ML") {
@@ -159,7 +170,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
                                   fit.logl, fit.rmsea, fit.srmr2, fit.other)
             } else {
                 fit.measures <- c(fit.chisq, fit.baseline, fit.incremental,
-                                  fit.rmsea, fit.srmr2, fit.other)
+                                  fit.rmsea, fit.srmr2, fit.other, fit.table)
             }
         }
     }
@@ -793,6 +804,36 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         indices["cn_01"] <- CN_01
     }
 
+    if("wrmr" %in% fit.measures) {
+        # RMR and SRMR
+        wrmr.group <- numeric(G)
+        for(g in 1:G) {
+            # observed sample statistics
+            obs <- object@SampleStats@WLS.obs[[g]]
+
+            # estimated
+            est <- obs
+
+            # diag of W
+            dw <- diag(object@SampleStats@WLS.V[[g]])
+
+            # e = number of elements
+            e <- length(obs)
+
+            wrmr.group <- sqrt( sum( (obs-est)/dw ) / e )
+        }
+
+        
+        if(G > 1) {
+            ## FIXME: get the scaling right
+            WRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% wrmr.group) / object@SampleStats@ntotal )
+        } else {
+            WRMR <- wrmr.group[1]
+        }
+
+        indices["wrmr"] <- WRMR
+    }
+
     if(any(c("gfi","agfi","pgfi") %in% fit.measures)) {
         gfi.group <- numeric(G)
         WLS.obs <- object@SampleStats@WLS.obs
@@ -849,6 +890,39 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         indices["ecvi"] <- ECVI
     }
 
+
+    # C_p
+    if("C_p" %in% fit.measures) {
+        out <- lavTablesFitCpMax(object)
+        indices["C_p"] <- out$LR
+        indices["C_p.df"] <- out$df
+        indices["C_p.p.value"] <- out$p.value.Bonferroni
+    }
+
+    # C_F
+    if("C_F" %in% fit.measures) {
+        CF <- lavTablesFitCF(object)
+        DF <- attr(CF, "DF.group")[[1L]]
+        attributes(CF) <- NULL
+        indices["C_F"] <- CF
+        indices["C_F.df"] <- DF
+        indices["C_F.p.value"] <- pchisq(CF, DF, lower.tail=FALSE)
+        indices["rpat.observed"] <- object@Data@Rp[[1L]]$npatterns
+        indices["rpat.total"] <- object@Data@Rp[[1L]]$total.patterns
+        indices["rpat.empty"] <- object@Data@Rp[[1L]]$empty.patterns
+    }
+
+
+    # C_M
+    if("C_M" %in% fit.measures) {
+        CM <- lavTablesFitCM(object)
+        DF <- attr(CM, "DF.group")[[1L]]
+        attributes(CM) <- NULL
+        indices["C_M"] <- CM
+        indices["C_M.df"] <- DF
+        indices["C_M.p.value"] <- pchisq(CM, DF, lower.tail=FALSE)
+    }
+
     if("ntotal" %in% fit.measures) {
         indices["ntotal"] <- object@SampleStats@ntotal
     }
@@ -879,6 +953,67 @@ print.fit.measures <- function(x) {
 
    # scaled?
    scaled <- "chisq.scaled" %in% names.x
+
+   # table fit measures
+   if("C_F" %in% names.x) {
+       cat("\nFull response patterns fit statistics:\n\n")
+
+       t0.txt <- sprintf("  %-40s", "Observed response patterns (1st group):")
+       t1.txt <- sprintf("  %10i", x["rpat.observed"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Total response patterns (1st group):")
+       t1.txt <- sprintf("  %10i", x["rpat.total"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Empty response patterns (1st group):")
+       t1.txt <- sprintf("  %10i", x["rpat.empty"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       cat("\n")
+
+       t0.txt <- sprintf("  %-40s", "C_F Test Statistic")
+       t1.txt <- sprintf("  %10.3f", x["C_F"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
+       t1.txt <- sprintf("  %10i", x["C_F.df"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "P-value")
+       t1.txt <- sprintf("  %10.3f", x["C_F.p.value"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       cat("\n")
+       t0.txt <- sprintf("  %-40s", "C_M Test Statistic")
+       t1.txt <- sprintf("  %10.3f", x["C_M"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
+       t1.txt <- sprintf("  %10i", x["C_M.df"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "P-value")
+       t1.txt <- sprintf("  %10.3f", x["C_M.p.value"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+   }
+
+   if("C_p" %in% names.x) {
+       cat("Pairwise tables summary statistic:\n\n")
+       t0.txt <- sprintf("  %-40s", "C_P Test Statistic")
+       t1.txt <- sprintf("  %10.3f", x["C_p"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
+       t1.txt <- sprintf("  %10i", x["C_p.df"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       t0.txt <- sprintf("  %-40s", "Bonferroni corrected P-value")
+       t1.txt <- sprintf("  %10.3f", x["C_p.p.value"])
+       t2.txt <- ""
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+   }
 
    # independence model
    if("baseline.chisq" %in% names.x) {

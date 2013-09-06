@@ -8,6 +8,7 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     converged  = attr(x, "converged")
     fx         = attr(x, "fx")
     fx.group   = attr(fx, "fx.group")
+    print(fx.group)
     control    = attr(x, "control")
     attributes(fx) <- NULL
     x.copy <- x # we are going to change it (remove attributes)

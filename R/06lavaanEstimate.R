@@ -736,6 +736,7 @@ computeObjective <- function(object, GLIST=NULL,
             group.fx <- estimator.WLS(WLS.est = WLS.est,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
+            attr(group.fx, "WLS.est") <- WLS.est
         } else if(estimator == "PML") {
             #cat("DEBUG!\n")
             #print(getModelParameters(object, GLIST=GLIST))

@@ -173,14 +173,138 @@ lavTablesFitCp <- function(object, alpha = 0.05) {
     out$df <- out$nrow*out$ncol - out$nrow - out$ncol
 
     # p-value
-    out$p.value <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
+    ntests <- length(out$p.value)
+    out$p.value.adj <- pchisq(out$LR, 
+                              df=out$df,
+                              lower.tail = FALSE) * ntests
 
     # Bonferroni alpha
-    ntests <- length(out$p.value)
-    out$alpha.star <- rep(alpha / ntests, length(out$p.value))
+    #ntests <- length(out$p.value)
+    #out$alpha.star <- rep(alpha / ntests, length(out$p.value))
 
     out
 }
+
+lavTablesFitCpMax <- function(object, alpha = 0.05) {
+    out <- lavTablesFitCp(object = object, alpha = alpha)
+
+    # find largest LR
+    max.idx <- which(out$LR == max(out$LR))
+
+    list(LR=out$LR[max.idx], df=out$df[max.idx], 
+         p.value=out$p.value[max.idx], alpha.star=out$alpha.star[max.idx],
+         p.value.Bonferroni=out$p.value[max.idx]*length(out$LR))
+}
+
+# Mariska Barendse CF statistic
+lavTablesFitCF <- function(object) {
+
+    # check object class
+    if(!class(object) %in% c("lavaan")) {
+        stop("lavaan ERROR: object must either an object of class lavaan")
+    }
+
+    ngroups <- length( object@Data@X )
+
+    CF.group <- numeric(ngroups)
+    DF.group <- numeric(ngroups)
+
+    for(g in 1:ngroups) {
+        logLik.group <- estimator.FML(Sigma.hat = object@Fit@Sigma.hat[[g]],
+                                      TH        = object@Fit@TH[[g]],
+                                      th.idx    = object@Model@th.idx[[g]],
+                                      num.idx   = object@Model@num.idx[[g]],
+                                      X         = object@Model@X[[g]],
+                                      cache     = object@Cache[[g]])
+
+        freq <- as.numeric( rownames(object@Data@Rp[[g]]$pat) )
+        CF.group[g] <- 2*logLik.group + 2*sum(freq*log(freq/sum(freq)))
+
+
+        # ord var in this group
+        ov.ord <- object@pta$vnames$ov.ord[[g]]
+        ov.idx <- which(ov.ord %in% object@Data@ov$name)
+        ov.nlev <- object@Data@ov$nlev[ ov.idx ]
+
+        DF.group[g] <- prod(ov.nlev) - object@Fit@npar - 1L
+    }
+
+    # check for negative values
+    CF.group[CF.group < 0] <- 0.0
+
+    # global test statistic
+    CF <- sum(CF.group)
+
+    attr(CF, "CF.group") <- CF.group
+    attr(CF, "DF.group") <- DF.group
+
+    CF
+}
+
+lavTablesFitCF.h1 <- function(object) {
+
+    # check object class
+    if(!class(object) %in% c("lavaan")) {
+        stop("lavaan ERROR: object must either an object of class lavaan")
+    }
+
+    ngroups <- length( object@Data@X )
+
+    CF.group <- numeric(ngroups)
+    DF.group <- numeric(ngroups)
+
+    for(g in 1:ngroups) {
+        logLik.group <- estimator.FML(Sigma.hat = object@SampleStats@cov[[g]],
+                                      TH        = object@SampleStats@th[[g]],
+                                      th.idx    = object@Model@th.idx[[g]],
+                                      num.idx   = object@Model@num.idx[[g]],
+                                      X         = object@Model@X[[g]],
+                                      cache     = object@Cache[[g]])
+
+        freq <- as.numeric( rownames(object@Data@Rp[[g]]$pat) )
+        CF.group[g] <- 2*logLik.group + 2*sum(freq*log(freq/sum(freq)))
+
+
+        # ord var in this group
+        ov.ord <- object@pta$vnames$ov.ord[[g]]
+        ov.idx <- which(ov.ord %in% object@Data@ov$name)
+        ov.nlev <- object@Data@ov$nlev[ ov.idx ]
+
+        DF.group[g] <- prod(ov.nlev) - getNDAT(object@ParTable) - 1L
+    }
+
+    # check for negative values
+    CF.group[CF.group < 0] <- 0.0
+
+    # global test statistic
+    CF <- sum(CF.group)
+
+    attr(CF, "CF.group") <- CF.group
+    attr(CF, "DF.group") <- DF.group
+
+    CF
+}
+
+lavTablesFitCM <- function(object) {
+
+   CF.h0 <- lavTablesFitCF(object)
+   CF.h1 <- lavTablesFitCF.h1(object)
+
+   CF.h0.group <- attr(CF.h0, "CF.group")
+   CF.h1.group <- attr(CF.h1, "CF.group")
+   DF.h0.group <- attr(CF.h0, "DF.group")
+   DF.h1.group <- attr(CF.h1, "DF.group")
+
+   attributes(CF.h0) <- NULL
+   attributes(CF.h1) <- NULL
+
+   CM <- CF.h0 - CF.h1
+   attr(CM, "CM.group") <- CF.h0.group - CF.h1.group
+   attr(CM, "DF.group") <- DF.h0.group - DF.h1.group
+
+   CM
+}
+
 
 lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
 
