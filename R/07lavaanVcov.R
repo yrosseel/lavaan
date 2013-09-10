@@ -43,9 +43,9 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
         NVarCov <- solve(E)
     }
 
-    if(estimator == "PML") {
-        NVarCov <- NVarCov * samplestats@ntotal
-    }
+    #if(estimator == "PML") {
+    #    NVarCov <- NVarCov * samplestats@ntotal
+    #}
 
     NVarCov
 }

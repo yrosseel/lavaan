@@ -400,6 +400,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         TH <- computeTH(lavaanModel)
         for(g in 1:lavaanData@ngroups) {
             nvar <- ncol(lavaanData@X[[g]])
+            nobs <- nrow(lavaanData@X[[g]])
             th.idx <- lavaanModel@th.idx[[g]]
             # pairwise tables, as a long vector
             PW <- pairwiseTables(data=lavaanData@X[[g]], no.x=nvar)$pairTables
@@ -410,7 +411,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             LONG <- LongVecInd(no.x               = nvar,
                                all.thres          = TH[[g]],
                                index.var.of.thres = th.idx)
-            lavaanCache[[g]] <- list(bifreq=bifreq, LONG=LONG)
+            lavaanCache[[g]] <- list(bifreq=bifreq, nobs=nobs, LONG=LONG)
         }
     }
     # copy response patterns to cache

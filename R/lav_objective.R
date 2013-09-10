@@ -167,7 +167,17 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         # get expected probability per table, per pair
         PI <- pairwiseExpProbVec(ind.vec = cache$LONG, th.rho.vec=LONG2)
         # get frequency per table, per pair
-        LogLik <- sum(cache$bifreq * log(PI))
+        #LogLik <- sum(cache$bifreq * log(PI))
+    
+        # more convenient fit function
+        prop <- cache$bifreq / cache$nobs
+        # remove zero props # FIXME!!! or add 0.5???
+        zero.idx <- which(prop == 0.0)
+        if(length(zero.idx) > 0L) {
+            prop <- prop[-zero.idx]
+            PI   <- PI[-zero.idx]
+        }
+        Fmin <- sum( prop*log(prop/PI) )
 
     } else {
         # # order! first i, then j, vec(table)!
@@ -210,7 +220,8 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     }
 
     # function value as returned to the minimizer
-    fx <- -1 * LogLik
+    #fx <- -1 * LogLik
+    fx <- Fmin
 
     fx
 }

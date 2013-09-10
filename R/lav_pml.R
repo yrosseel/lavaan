@@ -55,7 +55,11 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                  rho.xixj           = cors,
                                  n.xixj.vec         = cache$bifreq,
                                  out.LongVecInd     = cache$LONG)
-        if(negative) return(-1*gradient)
+
+        if(negative) {
+            gradient <- -1 * gradient
+        }
+        return(gradient)
     }
 
     # in this order: TH/MEANS + SLOPES + VAR + COR
@@ -232,7 +236,10 @@ grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
                              n.xixj=n.xixj.vec, pi.xixj=pi.xixj,
                              no.x=no.x)
 
-  c(out.derLtoTau, out.derLtoRho)
+  grad <- c(out.derLtoTau, out.derLtoRho)
+  attr(grad, "pi.xixj") <- pi.xixj
+
+  grad
 }
 ################################################################################
 

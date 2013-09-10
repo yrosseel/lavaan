@@ -1247,8 +1247,12 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
                                  cache     = cache[[g]])
             }
 
-            # chain rule
-            group.dx <- as.numeric(t(d1) %*% Delta[[g]])
+            # chain rule (logLik)
+            #group.dx <- as.numeric(t(d1) %*% Delta[[g]])
+
+            # chain rule (fmin)
+            ### FIXME why -1L ???
+            group.dx <- as.numeric(t(d1) %*% Delta[[g]]) / (samplestats@nobs[[g]] - 1L)
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx
@@ -1308,7 +1312,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                estimator=estimator, verbose=verbose,
                                forcePD=forcePD)	
         if(debug || verbose) { 
-            cat("Objective function  = ", sprintf("%12.10f", fx), "\n", sep="") 
+            cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
         }
         if(debug) {
             cat("Current unconstrained parameter values =\n")
@@ -1434,6 +1438,30 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         INIT_NELDER_MEAD <- control$init_nelder_mead
     }
 
+    # gradient: analytic, numerical or NULL?
+    if(is.null(control$gradient)) {
+        GRADIENT <- first.derivative.param
+    } else {
+        if(is.logical(control$gradient)) {
+            if(control$gradient) {
+                GRADIENT <- first.derivative.param
+            } else {
+                GRADIENT <- NULL
+            }
+        } else if(is.character(control$gradient)) {
+            if(control$gradient == "analytic") {
+                GRADIENT <- first.derivative.param
+            } else if(control$gradient == "numerical") {
+                GRADIENT <- first.derivative.param.numerical
+            } else if(control$gradient == "NULL") {
+                GRADIENT <- NULL
+            } else {
+                warning("lavaan WARNING: control$gradient should be analytic, numerical or NULL")
+                GRADIENT <- NULL
+            }
+        }
+    }
+
     # optimizer
     if(is.null(body(object@ceq.function)) && 
        is.null(body(object@cin.function)) ) {
@@ -1476,16 +1504,17 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                iter.max=10000L,
                                trace=0L,
                                #abs.tol=1e-20, ### important!! fx never negative
-                               abs.tol=(.Machine$double.eps * 10))
+                               abs.tol=(.Machine$double.eps * 10),
+                               rel.tol=1e-10,
+                               x.tol=1.5e-8,
+                               xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                    "abs.tol")]
-        #cat("DEBUG: control = ", unlist(control.nlminb), "\n")
+                                    "abs.tol", "rel.tol", "x.tol", "xf.tol")]
+        #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
         optim.out <- nlminb(start=start.x,
                             objective=minimize.this.function,
-                            #gradient=first.derivative.param,
-                            #gradient=first.derivative.param.numerical,
-                            gradient=NULL,
+                            gradient=GRADIENT,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 
@@ -1523,7 +1552,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         #trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
-                           gr=first.derivative.param,
+                           gr=GRADIENT,
                            method="BFGS",
                            control=control,
                            hessian=FALSE,
@@ -1562,7 +1591,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                                     "factr", "pgtol")]
         optim.out <- optim(par=start.x,
                            fn=minimize.this.function,
-                           gr=first.derivative.param,
+                           gr=GRADIENT,
                            method="L-BFGS-B",
                            control=control,
                            hessian=FALSE,
@@ -1607,8 +1636,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         trace <- FALSE; if(verbose) trace <- TRUE
         optim.out <- nlminb.constr(start = start.x,
                                    objective=minimize.this.function,
-                                   gradient=first.derivative.param,
-                                   #gradient=first.derivative.param.numerical,
+                                   gradient=GRADIENT,
                                    control=control,
                                    scale=SCALE,
                                    verbose=verbose,
