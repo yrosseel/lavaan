@@ -738,11 +738,6 @@ computeObjective <- function(object, GLIST=NULL,
                                       WLS.V=samplestats@WLS.V[[g]])  
             attr(group.fx, "WLS.est") <- WLS.est
         } else if(estimator == "PML") {
-            #cat("DEBUG!\n")
-            #print(getModelParameters(object, GLIST=GLIST))
-            #print(Sigma.hat[[g]])
-            #print(TH[[g]])
-            #cat("*****\n")
             # Pairwise maximum likelihood
             group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
                                       TH        = TH[[g]],
@@ -763,7 +758,7 @@ computeObjective <- function(object, GLIST=NULL,
         }
 
         if(estimator == "ML") {
-            group.fx <- 0.5 * group.fx
+            group.fx <- 0.5 * group.fx ## FIXME
         } else if(estimator == "PML" || estimator == "FML") {
             # do nothing
         } else {
@@ -1071,7 +1066,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     # group.w
     if(group.weight) {
-        if(estimator == "ML") {
+        if(estimator %in% c("ML","PML","FML")) {
             group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
         } else {
             # FIXME: double check!
@@ -1252,7 +1247,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
             # chain rule (fmin)
             ### FIXME why -1L ???
-            group.dx <- as.numeric(t(d1) %*% Delta[[g]]) / (samplestats@nobs[[g]] - 1L)
+            group.dx <- as.numeric(t(d1) %*% Delta[[g]])/samplestats@nobs[[g]]
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx

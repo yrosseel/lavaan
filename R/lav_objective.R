@@ -268,7 +268,17 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
             PI[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigma.hat)
         }
         # sum (log)likelihood over all patterns
-        LogLik <- sum(log(PI) * freq)
+        #LogLik <- sum(log(PI) * freq)
+
+        # more convenient fit function
+        prop <- freq/npatterns
+        # remove zero props # FIXME!!! or add 0.5???
+        zero.idx <- which(prop == 0.0)
+        if(length(zero.idx) > 0L) {
+            prop <- prop[-zero.idx]
+            PI   <- PI[-zero.idx]
+        }
+        Fmin <- sum( prop*log(prop/PI) )
 
     } else { # case-wise
         PI <- numeric(nobs)
@@ -282,7 +292,8 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     }
 
     # function value as returned to the minimizer
-    fx <- -1 * LogLik
+    #fx <- -1 * LogLik
+    fx <- Fmin
 
     fx
 }

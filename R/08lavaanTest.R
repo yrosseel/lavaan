@@ -233,35 +233,16 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     fx <- attr(x, "fx")
     fx.group <- attr(fx, "fx.group")
 
-    if(estimator != "PML") {
-        # always compute `standard' test statistic
-        ## FIXME: the NFAC is now implicit in the computation of fx...
-        NFAC <- 2 * unlist(samplestats@nobs)
-        if(options$estimator == "ML" && options$likelihood == "wishart") {
-            # first divide by two
-            NFAC <- NFAC / 2
-            NFAC <- NFAC - 1
-            NFAC <- NFAC * 2
-        }
-        chisq.group <- fx.group * NFAC
-    } else {
-        # for estimator PML, we compute the loglikelihood for the 
-        # `unrestricted' model, and then compute the LRT (-2 logl - logl_un)
-        #group.fx <- numeric( samplestats@ngroups )
-        #for(g in 1:samplestats@ngroups) {
-        #    group.fx <- estimator.PML(Sigma.hat = samplestats@cov[[g]],
-        #                              TH        = samplestats@th[[g]],
-        #                              th.idx    = object@th.idx[[g]],
-        #                              num.idx   = object@num.idx[[g]],
-        #                              cache     = cache[[g]],
-        #                              X         = data@X[[g]])
-        #}
-        #chisq.group <- 2 * (fx.group - group.fx) # LRT per group
-
-        #cat("model fx = \n"); print(fx.group)
-        #cat("unres fx = \n"); print(group.fx)
-        chisq.group <- rep(as.numeric(NA),  samplestats@ngroups)
+    # always compute `standard' test statistic
+    ## FIXME: the NFAC is now implicit in the computation of fx...
+    NFAC <- 2 * unlist(samplestats@nobs)
+    if(options$estimator == "ML" && options$likelihood == "wishart") {
+        # first divide by two
+        NFAC <- NFAC / 2
+        NFAC <- NFAC - 1
+        NFAC <- NFAC * 2
     }
+    chisq.group <- fx.group * NFAC
 
     # check for negative values
     chisq.group[which(chisq.group < 0)] <- 0.0
@@ -271,7 +252,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
     # reference distribution: always chi-square, except for the
     # non-robust version of ULS
-    if(estimator == "ULS") {
+    if(estimator == "ULS" || estimator == "PML") {
         refdistr <- "unknown"
         pvalue <- as.numeric(NA)
     } else {
