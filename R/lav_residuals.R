@@ -221,6 +221,11 @@ function(object, type="raw") {
 
 lav_residuals_casewise <- function(object, labels = labels) {
 
+    # check if we have full data
+    if(object@Data@data.type != "full") {
+        stop("lavaan ERROR: casewise residuals not available if sample statistics were used for fitting the model")
+    }
+
     G <- object@Data@ngroups
     ov.names <- object@Data@ov.names
 

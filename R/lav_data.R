@@ -140,6 +140,7 @@ lavData <- function(data          = NULL,          # data.frame
                        ov.names    = ov.names, 
                        ov.names.x  = ov.names.x,
                        ov          = ov,
+                       std.ov      = FALSE,
                        missing     = "listwise")
 
     }

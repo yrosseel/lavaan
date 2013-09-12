@@ -17,6 +17,9 @@ lavPredict <- function(object, type="lv", newdata=NULL, method="EBM",
                        se.fit=FALSE, label=TRUE) {
 
     stopifnot(inherits(object, "lavaan"))
+    #if(object@Data@data.type != "full") {
+    #    stop("lavaan ERROR: predict is only available if full data was used to fit the model")
+    #}
     type <- tolower(type)
     if(type %in% c("latent", "lv", "factor", "factor.score", "factorscore"))
         type <- "lv"
@@ -26,8 +29,10 @@ lavPredict <- function(object, type="lv", newdata=NULL, method="EBM",
     # need full data set supplied
     if(is.null(newdata)) {
         # use internal copy:
-        if(is.null(object@Data@X[[1]])) {
-            stop("no local copy of data; FIXME!")
+        if(object@Data@data.type != "full") {
+            stop("lavaan ERROR: sample statistics were used for fitting and newdata is empty")
+        } else if(is.null(object@Data@X[[1]])) {
+            stop("lavaan ERROR: no local copy of data; FIXME!")
         } else {
             data.obs <- object@Data@X
         }
