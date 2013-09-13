@@ -1043,7 +1043,7 @@ print.fit.measures <- function(x) {
 
     # cfi/tli
     if(any(c("cfi","tli","nnfi","rfi","nfi","ifi","rni","pnfi") %in% names.x)) {
-        cat("\nFull model versus baseline model:\n\n")
+        cat("\nUser model versus baseline model:\n\n")
 
         if("cfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
