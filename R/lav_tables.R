@@ -121,9 +121,11 @@ lavTablesFit <- function(object, dimension=2L, statistic="LR",
             STAT <- out$RMSEA
 
             if(p.value) {
-                out$p.value <- pchisq(out$str.sum, 
-                                      ncp = 0.1^2*out$nobs*out$df, 
-                                      df=out$df, lower.tail = FALSE)
+                # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
+                # because for ncp > 80, routine only computes lower tail
+                out$p.value <- 1.0 - pchisq(out$str.sum, 
+                                            ncp = 0.1^2*out$nobs*out$df, 
+                                            df=out$df, lower.tail = TRUE)
             }
         }
 
