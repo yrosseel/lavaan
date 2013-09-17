@@ -13,43 +13,12 @@
 lavTables <- function(object, dimension=2L, categorical=NULL,
                       std.resid=TRUE, min.std.resid = 0.0, method = "GF",
                       average = FALSE, collapse = FALSE) {
-
-    # catch matrix
-    if(is.matrix(object)) {
-        object <- as.data.frame(object, stringsAsFactors = FALSE)
-        if(is.null(categorical)) {
-            object[,] <- lapply(object, base::factor)
-        }
-    }
-
-    # check object class
-    if(!class(object) %in% c("data.frame", "lavData", "lavaan")) {
-        stop("lavaan ERROR: object must either be a matrix or a data.frame, or an object of class lavaan or class lavData")
-    }
-
-    if(inherits(object, "data.frame")) {
-        ov.names <- names(object)
-        vartable <- varTable(object, ov.names=ov.names, factor=categorical,
-                             as.data.frame.=FALSE)
-        X <- data.matrix(object)
-        # manually construct integers for user-declared categorical variables
-        user.categorical.names <-
-            vartable$name[vartable$type %in% c("ordered","factor") &
-                          vartable$user == 1L]
-        user.categorical.idx <- which(ov.names %in% user.categorical.names)
-        for(i in seq_len(length(user.categorical.idx))) {
-            X[,i] <- as.numeric(as.factor(X[,i]))
-        }
-        X <- list(X); ov.names <- list(ov.names)
-    } else if(inherits(object, "lavData")) {
-        vartable <- object@ov
-        X <- object@X
-        ov.names <- object@ov.names
-    } else if(inherits(object, "lavaan")) {
-        vartable <- object@Data@ov
-        X <- object@Data@X
-        ov.names <- object@Data@ov.names
-    }
+    
+    # extract data
+    lav_data <- lav_data_extract(object = object, categorical = categorial)
+    vartable <- lav_data$vartable
+    X        <- lav_data$X
+    ov.names <- lav_data$ov.names
 
     if(dimension == 1L) {
         out <- lav_oneway_tables(object = object, 

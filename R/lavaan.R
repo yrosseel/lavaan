@@ -547,7 +547,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 #}
                 X.X <- crossprod(X)
                 out <- solve.QP(Dmat=X.X, dvec=X.Y, Amat=A, 
-                                bvec=rep(0, NCOL(A)), 
+                                bvec=rep(0, NCOL(A)), ### FIXME!!! always zero
                                 meq=length(lavaanModel@x.ceq.idx))
                 x.beta <- out$solution
                 residuals <- Y - (X %*% x.beta)

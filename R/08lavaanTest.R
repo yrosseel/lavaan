@@ -219,7 +219,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         }
     }
 
-    if(test == "none") {
+    if(test == "none" || df < 0L) {
         TEST[[1]] <- list(test=test,
                           stat=as.numeric(NA),
                           stat.group=as.numeric(NA),

@@ -45,7 +45,8 @@ export("lavaan", "cfa", "sem", "growth",
        "lavTables", "lavTablesFit",
        "lavExport",
        "lavMatrixRepresentation",
-       "mplus2lavaan" #,
+       "mplus2lavaan",
+       "lavCor" #,
        #"lavPredict"
       )
 

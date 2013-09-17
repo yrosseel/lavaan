@@ -532,6 +532,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         rhs <- gsub('([0-9]*\\.*[0-9]*)\\?',"start(\\1)\\*",rhs)
         rhs.formula <- as.formula(paste("~",rhs))
         out <- parse.rhs(rhs=rhs.formula[[2L]],op=op)
+
+        if(debug) print(out)
     
         # for each lhs element
         for(l in 1:length(lhs.names)) {
@@ -544,7 +546,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     if(op == "~") {
                         rhs.name <- ""
                     } else {
-                        stop("lavaan ERROR: right-hand side of formula contains a constant, but operator is \"", op, "\" in: ", x)
+                        stop("lavaan ERROR: right-hand side of formula contains an intercept, but operator is \"", op, "\" in: ", x)
                     }
                 } else {
                     rhs.name <- names(out)[j]
@@ -702,10 +704,16 @@ parse.rhs <- function(rhs, op="") {
             NAME <- all.vars(rhs)
             if(length(NAME) > 0L) {
                 names(out)[1L] <- NAME
-            } else { # intercept
-                names(out)[1L] <- "intercept"
-                if(as.character(rhs) == "0")
+            } else { # intercept or zero?
+                if(as.character(rhs) == "1") {
+                    names(out)[1L] <- "intercept"
+                } else if(as.character(rhs) == "0") {
+                    names(out)[1L] <- "zero"
                     out[[1L]]$fixed <- 0
+                } else {
+                    names(out)[1L] <- "constant"
+                    out[[1L]]$fixed <- 0 
+                }
             }
             break
         } else if(rhs[[1L]] == "*") { # last one, but with modifier

@@ -356,6 +356,10 @@ getDataFull <- function(data          = NULL,          # data.frame
             }
         }
     }
+    # check for all-exogenous variables (eg in f <~ x1 + x2 + x3)
+    if(all(ov$exo == 1L)) {
+        warning("lavaan WARNING: all observed variables are exogenous; model may not be identified")
+    }
 
     # prepare empty list for data.matrix per group
     case.idx <- vector("list", length=ngroups)
@@ -516,3 +520,69 @@ lav_data_resppatterns <- function(X) {
 
     out
 }
+
+# extract data from either a data.frame, lavData or lavaan object
+lav_data_extract <- function(object, ordered = NULL, categorical = NULL, 
+                             ov.names.x = NULL) {
+  
+    # catch matrix
+    if(is.matrix(object)) {
+        object <- as.data.frame(object, stringsAsFactors = FALSE)
+        if(is.logical(categorical) && categorical) {
+            object[,] <- lapply(object, base::factor)
+        } else if(is.logical(ordered) && ordered) {
+            object[,] <- lapply(object, base::ordered)
+        }
+    }
+
+    # check object class
+    if(!class(object) %in% c("data.frame", "lavData", "lavaan")) {
+        stop("lavaan ERROR: object must either be a matrix or a data.frame, or an object of class lavaan or class lavData")
+    }
+
+    if(inherits(object, "data.frame")) {
+        ov.names <- names(object)
+        vartable <- lav_dataframe_vartable(frame = object, ov.names=ov.names,
+                                           ov.names.x = ov.names.x,
+                                           ordered = ordered,
+                                           factor = categorical,
+                                           as.data.frame.=FALSE)
+        X <- data.matrix(object)
+        # manually construct integers for user-declared categorical variables
+        user.categorical.names <-
+            vartable$name[vartable$type %in% c("ordered","factor") &
+                          vartable$user == 1L]
+        user.categorical.idx <- which(ov.names %in% user.categorical.names)
+        for(i in seq_len(length(user.categorical.idx))) {
+            X[,i] <- as.numeric(as.factor(X[,i]))
+        }
+        # what about eXo? duplicate for now
+        eXo <- NULL
+        if(length(ov.names.x) > 0L) {
+            x.idx <- which(ov.names.x %in% ov.names)
+            eXo <- X[,x.idx,drop=FALSE]
+        }
+        X <- list(X); ov.names <- list(ov.names)
+        ov.names.x <- list(ov.names.x)
+        eXo <- list(eXo)
+    } else if(inherits(object, "lavData")) {
+        vartable <- object@ov
+        X <- object@X
+        ov.names <- object@ov.names
+        eXo <- object@eXo
+        ov.names.x <- object@ov.names.x
+    } else if(inherits(object, "lavaan")) {
+        vartable <- object@Data@ov
+        X <- object@Data@X
+        ov.names <- object@Data@ov.names
+        eXo <- object@eXo
+        ov.names.x <- object@ov.names.x
+    }
+
+    list(vartable   = vartable,
+         X          = X,
+         ov.names   = ov.names,
+         eXo        = eXo,
+         ov.names.x = ov.names.x)
+}
+
