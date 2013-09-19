@@ -1828,8 +1828,9 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
             # remove all dummy latent variables
             lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
                         object@Model@ov.x.dummy.lv.idx[[g]])
-            if(!is.null(lv.idx)) {
+            if(length(lv.idx) > 0L) {
                 NAMES <- NAMES[-lv.idx]
+                OUT[[g]] <- OUT[[g]][-lv.idx, -lv.idx, drop=FALSE]
             }
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")

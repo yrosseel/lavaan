@@ -42,7 +42,7 @@ lavData <- function(data          = NULL,          # data.frame
                     warning("lavaan WARNING: data argument has been coerced to a data.frame")
                     ### FIXME, we should avoid as.data.frame() and handle
                     ### data matrices directly
-                    data <- as.data.frame(data)
+                    data <- as.data.frame(data, stringsAsFactors = FALSE)
                 }
             }
         }
@@ -575,8 +575,8 @@ lav_data_extract <- function(object, ordered = NULL, categorical = NULL,
         vartable <- object@Data@ov
         X <- object@Data@X
         ov.names <- object@Data@ov.names
-        eXo <- object@eXo
-        ov.names.x <- object@ov.names.x
+        eXo <- object@Data@eXo
+        ov.names.x <- object@Data@ov.names.x
     }
 
     list(vartable   = vartable,

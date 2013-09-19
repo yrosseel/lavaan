@@ -11,6 +11,7 @@
 #   tables
 
 lavTables <- function(object, dimension=2L, categorical=NULL,
+                      model.based = TRUE,
                       std.resid=TRUE, min.std.resid = 0.0, method = "GF",
                       average = FALSE, collapse = FALSE) {
     
@@ -26,7 +27,7 @@ lavTables <- function(object, dimension=2L, categorical=NULL,
     } else if(dimension == 2L) {
         out <- lav_pairwise_tables(object = object,
                    vartable = vartable, X = X, ov.names = ov.names,
-                   average = average,
+                   average = average, model.based = model.based,
                    std.resid = std.resid, collapse = collapse, method = method)
     } else {
         stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
@@ -36,7 +37,8 @@ lavTables <- function(object, dimension=2L, categorical=NULL,
 }
 
 # always collapse, 1 statistic per table
-lavTablesFit <- function(object, dimension=2L, statistic="LR",
+lavTablesFit <- function(object, dimension=2L, statistic="LR", 
+                         model.based = TRUE,
                          p.value = FALSE, showAsMatrix = FALSE) {
 
     statistic <- toupper(statistic)
@@ -65,7 +67,7 @@ lavTablesFit <- function(object, dimension=2L, statistic="LR",
         }
         out <- lav_pairwise_tables(object = object,
                    vartable = vartable, X = X, ov.names = ov.names,
-                   average = TRUE,
+                   average = TRUE, model.based = model.based,
                    std.resid = std.resid, method = method, collapse = TRUE)
 
         # df
@@ -338,6 +340,7 @@ lav_pairwise_tables <- function(object,
                                 vartable=NULL, X=NULL, ov.names=NULL,
                                 std.resid=TRUE, min.std.resid = 0.0,
                                 average = FALSE, collapse = FALSE,
+                                model.based = TRUE,
                                 method="GF") {
 
     showAsMatrix <- FALSE
@@ -386,7 +389,15 @@ lav_pairwise_tables <- function(object,
         #out$pi <- unlist(lav_pairwise_tables_pi(object))
         #out$freq.est <- out$pi * out$nobs
         obs.prop <- out$obs.freq/out$nobs
-        est.prop <- unlist(lav_pairwise_tables_pi(object))
+        if(model.based) {
+            est.prop <- unlist(lav_pairwise_tables_model_pi(object))
+        } else {
+            COR <- object@SampleStats@cov
+            TH  <- object@SampleStats@th
+            th.idx <- object@SampleStats@th.idx
+            est.prop <- unlist(lav_pairwise_tables_sample_pi(COR = COR, TH = TH,
+                                                             th.idx = th.idx))
+        }
         out$est.freq <- est.prop * out$nobs
  
         # Joreskog & Moustaki equation 34/35
@@ -534,11 +545,13 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
             TABLE <- lapply(TABLE, as.data.frame, stringAsFactors=FALSE)
             if(g == 1) {
                 out <- do.call(rbind, TABLE)
-                # remove group column 
-                out$group <- NULL
             } else {
                 out <- rbind(out, do.call(rbind, TABLE))
             }
+        }
+        if(g == 1) {
+            # remove group column 
+            out$group <- NULL
         }
     } else {
         if(ngroups == 1L) {
@@ -552,8 +565,9 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
 }
 
 
-# low-level function to compute expected proportions per
-lav_pairwise_tables_pi <- function(object) {
+# low-level function to compute expected proportions per cell
+# object
+lav_pairwise_tables_model_pi <- function(object) {
 
     stopifnot(class(object) == "lavaan", object@Model@categorical)
     ngroups <- object@Data@ngroups
@@ -561,8 +575,14 @@ lav_pairwise_tables_pi <- function(object) {
 
     th.idx <- object@Model@th.idx
     num.idx <- object@Model@num.idx
-    Sigma.hat <- computeSigmaHat(object@Model)
-    TH <- computeTH(object@Model)
+
+    #if(model.based) {
+        Sigma.hat <- computeSigmaHat(object@Model)
+        TH <- computeTH(object@Model)
+    #} else {
+    #    Sigma.hat <- object@SampleStats@cov
+    #    TH <- object@SampleStats@th
+    #}
 
     PI <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
@@ -599,6 +619,45 @@ lav_pairwise_tables_pi <- function(object) {
             PI[[g]] <- PI.group
         }
 
+    } # g
+    
+    PI
+}
+
+# low-level function to compute expected proportions per cell
+# no object!
+lav_pairwise_tables_sample_pi <- function(COR = NULL, TH = NULL, 
+                                          th.idx = NULL) {
+
+    ngroups <- length(COR)
+
+    PI <- vector("list", length=ngroups)
+    for(g in 1:ngroups) {
+        Sigmahat <- COR[[g]]
+        cors <- Sigmahat[lower.tri(Sigmahat)]
+        if(any(abs(cors) > 1)) {
+            warning("lavaan WARNING: some model-implied correlations are larger than 1.0")
+        }
+        nvar <- nrow(Sigmahat)
+
+        # reconstruct ov.types
+        ov.types <- rep("numeric", nvar)
+        ord.idx <- unique(which(th.idx[[g]] > 0))
+        ov.types[ord.idx] <- "ordered"
+
+        PI.group <- integer(0)
+        # order! first i, then j, vec(table)!
+        for(i in seq_len(nvar-1L)) {
+            for(j in (i+1L):nvar) {
+                if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
+                    PI.table <- pc_PI(rho   = Sigmahat[i,j],
+                                      th.y1 = TH[[g]][ th.idx[[g]] == i ],
+                                      th.y2 = TH[[g]][ th.idx[[g]] == j ])
+                    PI.group <- c(PI.group, vec(PI.table))
+                }
+            }
+        }
+        PI[[g]] <- PI.group
     } # g
     
     PI

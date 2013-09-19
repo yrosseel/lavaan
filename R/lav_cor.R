@@ -3,33 +3,58 @@
 #
 # YR 17 Sept 2013
 
-lavCor <- function(object, ordered = NULL, # method="two.step", 
-                   missing = "listwise",
+lavCor <- function(object, ordered = NULL, ov.names.x = NULL, 
+                   # method="two.step", 
+                   group = NULL, missing = "listwise",
                    WLS.W = FALSE, details = FALSE,
                    labels = TRUE, verbose = FALSE) {
 
-    lav_data <- lav_data_extract(object = object, ordered = ordered)
-    vartable   <- lav_data$vartable
-    X          <- lav_data$X
-    ov.names   <- lav_data$ov.names
-    eXo        <- lav_data$eXo
-    ov.names.x <- lav_data$ov.names.x
+    # check object class
+    if(inherits(object, "lavaan")) {
+        lav.data <- object@lavData
+    } else if(inherits(object, "lavData")) {
+        lav.data <- object
+    } else if(inherits(object, "data.frame")) {
+        NAMES <- names(object)
+        if(!is.null(group)) {
+            NAMES <- NAMES[- match(group, NAMES)]
+        }
+        lav.data <- lavData(data = object, group = group, 
+                            ov.names = NAMES, ordered = ordered,
+                            ov.names.x = ov.names.x,
+                            missing = missing)
+    } else {
+        stop("lavaan ERROR: lavCor can not handle objects of class ", 
+             class(object))
+    }
 
-    # number of groups
-    ngroups <- length(X)
+    out <- lav_cor(lav.data = lav.data, WLS.W = WLS.W, details = details, 
+                   labels = labels, verbose = verbose)
+
+    out
+}
+
+# internal version
+lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE, 
+                    labels = FALSE, verbose = FALSE) {
+
+    # shortcuts
+    vartable   <- lav.data@ov
+    ov.names   <- lav.data@ov.names
+    ngroups    <- lav.data@ngroups
 
     COR <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
         ov.types  <- vartable$type[ match(ov.names[[g]], vartable$name) ]
         ov.levels <- vartable$nlev[ match(ov.names[[g]], vartable$name) ]
-        CAT <- muthen1984(Data       = X[[g]],
+        CAT <- muthen1984(Data       = lav.data@X[[g]],
                           ov.names   = ov.names[[g]],
                           ov.types   = ov.types,
                           ov.levels  = ov.levels,
-                          ov.names.x = ov.names.x[[g]],
-                          eXo        = eXo[[g]],
+                          ov.names.x = lav.data@ov.names.x[[g]],
+                          eXo        = lav.data@eXo[[g]],
                           group      = g, # for error messages only
-                          missing    = missing, # listwise or pairwise?
+                          missing    = lav.data@missing, # listwise or pairwise?
                           WLS.W      = WLS.W,
                           verbose    = verbose)
         COR[[g]] <- unname(CAT$COV)
@@ -37,10 +62,11 @@ lavCor <- function(object, ordered = NULL, # method="two.step",
             attr(COR[[g]], "ov.names") <- ov.names[[g]]
             attr(COR[[g]], "ov.types") <- ov.types
             attr(COR[[g]], "TH")       <- CAT$TH
-            attr(COR[[g]], "TH.names") <- CAT$TH.NAMES
-            attr(COR[[g]], "slopes")   <- CAT$SLOPES
-            attr(COR[[g]], "var")      <- CAT$VAR
-            attr(COR[[g]], "cov")      <- CAT$COV
+            attr(COR[[g]], "TH.IDX")   <- CAT$TH.IDX
+            attr(COR[[g]], "TH.NAMES") <- CAT$TH.NAMES
+            attr(COR[[g]], "SLOPES")   <- CAT$SLOPES
+            attr(COR[[g]], "VAR")      <- CAT$VAR
+            attr(COR[[g]], "COV")      <- CAT$COV
         }
         if(WLS.W) {
             th <- unlist(CAT$TH)
@@ -64,6 +90,106 @@ lavCor <- function(object, ordered = NULL, # method="two.step",
     } else {
         out <- COR
     }
+
+    out
+}
+
+# test for bivariate normality
+lavCorCellFit <- function(object, ordered = NULL, group = NULL, 
+                          ov.names.x = NULL, missing = "listwise") {
+
+    # check object class
+    if(inherits(object, "lavaan")) {
+        lav.data <- object@lavData
+    } else if(inherits(object, "lavData")) {
+        lav.data <- object
+    } else if(inherits(object, "data.frame")) {
+        NAMES <- names(object)
+        if(!is.null(group)) {
+            NAMES <- NAMES[- match(group, NAMES)]
+        }
+        lav.data <- lavData(data = object, group = group,
+                            ov.names = NAMES, ordered = ordered,
+                            ov.names.x = ov.names.x,
+                            missing = missing)
+    } else {
+        stop("lavaan ERROR: lavCor can not handle objects of class ",
+             class(object))
+    }
+
+    COR <- lav_cor(lav.data = lav.data, WLS.W = FALSE, details = TRUE,
+                   labels = FALSE, verbose = FALSE)
+
+    # relist
+    if(!is.list(COR)) {
+        COR <- list(COR)
+    }
+    TH <- lapply(lapply(COR, attr, "TH"), unlist)
+    TH.IDX <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
+
+    out <- lav_pairwise_tables_freq(vartable = lav.data@ov, 
+                                    X        = lav.data@X, 
+                                    ov.names = lav.data@ov.names, 
+                                    as.data.frame. = TRUE)
+
+    PI <- lav_pairwise_tables_sample_pi(COR = COR, TH = TH, th.idx = TH.IDX)
+    out$est.freq <- unlist(PI) * out$nobs
+
+    out
+}
+
+# test for bivariate normality
+lavCorTableFit <- function(object, ordered = NULL, group = NULL, 
+                           ov.names.x = NULL, missing = "listwise") {
+
+    # check object class
+    if(inherits(object, "lavaan")) {
+        lav.data <- object@lavData
+    } else if(inherits(object, "lavData")) {
+        lav.data <- object
+    } else if(inherits(object, "data.frame")) {
+        NAMES <- names(object)
+        if(!is.null(group)) {
+            NAMES <- NAMES[- match(group, NAMES)]
+        }
+        lav.data <- lavData(data = object, group = group,
+                            ov.names = NAMES, ordered = ordered,
+                            ov.names.x = ov.names.x,
+                            missing = missing)
+    } else {
+        stop("lavaan ERROR: lavCor can not handle objects of class ",
+             class(object))
+    }
+
+    COR <- lav_cor(lav.data = lav.data, WLS.W = FALSE, details = TRUE,
+                   labels = FALSE, verbose = FALSE)
+
+    # relist
+    if(!is.list(COR)) {
+        COR <- list(COR)
+    }
+    TH <- lapply(lapply(COR, attr, "TH"), unlist)
+    TH.IDX <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
+
+    out <- lav_pairwise_tables_freq(vartable = lav.data@ov,
+                                    X        = lav.data@X,
+                                    ov.names = lav.data@ov.names,
+                                    as.data.frame. = TRUE)
+
+    # LR
+    
+
+    # only 1 row per table
+    row.idx <- which(!duplicated(out$id))
+    out <- out[row.idx,,drop=FALSE]
+
+    # remove some cell-specific columns
+    out$row <- NULL; out$col <- NULL
+    out$obs.freq <- NULL; out$est.freq <- NULL
+
+    # add table-wise info
+    # FIXME: we need to filter out 'numeric' variables
+    #out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
 
     out
 }
