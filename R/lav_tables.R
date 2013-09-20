@@ -4,282 +4,325 @@
 # - we do NOT make a distinction here between unordered and ordered categorical
 #   variables
 # - object can be a matrix (most likely with integers), a full data frame, 
-#   a fitted lavaan object, a varTable, or a lavData object
+#   a fitted lavaan object, or a lavData object
 # - 11 May 2013: added collapse=TRUE, min.std.resid options (suggested
 #   by Myrsini Katsikatsou
 # - 11 June 2013: added dimension, to get one-way and two-way (three-way?)
 #   tables
+# - 20 Sept 2013: allow for sample-based or model-based cell probabilities
+#                 re-organize/re-name to provide a more consistent interface
+#                 rows in the output can be either: cells, tables or patterns
 
-lavTables <- function(object, dimension=2L, categorical=NULL,
-                      model.based = TRUE,
-                      std.resid=TRUE, min.std.resid = 0.0, method = "GF",
-                      average = FALSE, collapse = FALSE) {
-    
-    # extract data
-    lav_data <- lav_data_extract(object = object, categorical = categorial)
-    vartable <- lav_data$vartable
-    X        <- lav_data$X
-    ov.names <- lav_data$ov.names
+lavTables <- function(object,
+                      # what type of table?
+                      dimension    = 2L, 
+                      type         = "table",
+                      # if raw data, additional attributes
+                      categorical  = NULL,
+                      # which statistics / fit indices?
+                      statistic    = "default",
+                      # if lavobject, which freq/prop estimates?
+                      est          = "default",
+                      # pvalues for statistics?
+                      p.value      = FALSE,
+                      # select columns
+                      col.filter   = "default",
+                      # select rows
+                      row.filter   = "default",
+                      showAsMatrix = FALSE) {
 
-    if(dimension == 1L) {
-        out <- lav_oneway_tables(object = object, 
-                   vartable = vartable, X = X, ov.names = ov.names)
-    } else if(dimension == 2L) {
-        out <- lav_pairwise_tables(object = object,
-                   vartable = vartable, X = X, ov.names = ov.names,
-                   average = average, model.based = model.based,
-                   std.resid = std.resid, collapse = collapse, method = method)
-    } else {
-        stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
+    # check input
+    if(! (dimension == 1L || dimension == 2L) ) {
+        stop("lavaan ERROR: dimension must be 1 or 2 for one-way or two-way tables")
     }
-
-    out
-}
-
-# always collapse, 1 statistic per table
-lavTablesFit <- function(object, dimension=2L, statistic="LR", 
-                         model.based = TRUE,
-                         p.value = FALSE, showAsMatrix = FALSE) {
-
+    stopifnot(type %in% c("cells", "table", "pattern"))
     statistic <- toupper(statistic)
+    est <- tolower(est)
 
-    # check object class
-    if(!class(object) %in% c("lavaan")) {
-        stop("lavaan ERROR: object must either an object of class lavaan")
+    # showAsMatrix
+    if(showAsMatrix) {
+       stopifnot(dimension == 2L, length(est) == 1L, length(statistic) == 1L,
+                 type == "table")
     }
 
-    vartable <- object@Data@ov
-    X <- object@Data@X
-    ov.names <- object@Data@ov.names
+    # extract or create lavdata
+    lavdata <- lavData(object, ordered = categorical)
+
+    # identify 'categorical' variables
+    cat.idx <- which(lavdata@ov$type %in% c("ordered","factor"))
+
+    # is 'object' a lavaan object?
+    lavobject <- NULL
+    if(inherits(object, "lavaan")) {
+        lavobject <- object
+        if(length(est) == 1L && est == "default") {
+            est <- c("h0","h1")
+        } else {
+            stopifnot(est %in% c("h0","h1"))
+        }
+    } else {
+        if(length(est) == 1L && est == "default") {
+            est <- "h1"
+        } else {
+            stopifnot(est %in% c("h1"))
+        } 
+    }
 
     if(dimension == 1L) {
-        out <- lav_oneway_tables(object = object,
-                   vartable = vartable, X = X, ov.names = ov.names)
+        # only cells
+        if(length(cat.idx) == 0L) {
+            stop("lavaan ERROR: no categorical variables are found")
+        }
+        out <- lav_tables_oneway(lavdata = lavdata)
     } else if(dimension == 2L) {
-        if(statistic == "LR") {
-            std.resid <- TRUE; method <- "LR"
-        } else if(statistic == "GF") {
-            std.resid <- TRUE; method <- "GF"
-        } else if(statistic == "RMSEA") {
-            std.resid <- TRUE; method <- "LR"
+        if(type == "cells") {
+            if(length(cat.idx) == 0L) {
+                stop("lavaan ERROR: no categorical variables are found")
+            } else if(length(cat.idx) == 1L) {
+                stop("lavaan ERROR: at least two categorical variables are needed")
+            }
+            if(length(statistic) == 1L && statistic == "DEFAULT") {
+                statistic <- c("GF", "LR")
+            } else {
+                stopifnot(statistic %in% c("GF","LR"))
+            }
+            out <- lav_tables_pairwise_cells(lavobject = lavobject, 
+                                             lavdata   = lavdata,
+                                             statistic = statistic, 
+                                             est       = est)
+        } else if(type == "table" || type == "tables") {
+            if(length(statistic) == 1L && statistic == "DEFAULT") {
+                statistic <- c("GF", "LR")
+            } else {
+                stopifnot(statistic %in% c("GF","LR","RMSEA"))
+            }
+            out <- lav_tables_pairwise_table(lavobject = lavobject, 
+                                             lavdata   = lavdata,
+                                             statistic = statistic, 
+                                             est       = est,
+                                             p.value   = p.value)
+        } else if(type == "pattern") {
+            stop("not implemented yet")
+        }
+    }
+
+    # showAsMatrix?
+    if(showAsMatrix) {
+        # determine column we need
+        NAMES <- names(out)
+        stat.idx <- which(NAMES %in% c("LR.h1","LR.h0","GF.h1","GF.h0",
+                                       "RMSEA.h0", "RMSEA.h1"))
+        if(length(stat.idx) == 0) {
+            stop("lavaan ERROR: no statistic found in table for showAsMatrix")
+        } else if(length(stat.idx) > 1) {
+            stop("lavaan ERROR: more than one statistic found for showAsMatrix")
+        } 
+        OUT <- vector("list", length=lavdata@ngroups)
+        for(g in 1:lavdata@ngroups) {
+            if(lavdata@ngroups == 1L) { # no group column
+                STAT <- out[[stat.idx]]
+                RN <- unique(out$lhs)
+            } else {
+                STAT <- out[[stat.idx]][ out$group == g ]
+                RN <- unique(out$lhs[ out$group == g ])
+            }
+            OUT[[g]] <- getCov(STAT, lower = FALSE, names = RN)
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+        if(lavdata@ngroups > 1L) {
+            names(OUT) <- lavdata@group.label
+            out <- OUT
         } else {
-            stop("lavaan ERROR: can not handle statistic ", statistic)
+            out <- OUT[[1]]      
         }
-        out <- lav_pairwise_tables(object = object,
-                   vartable = vartable, X = X, ov.names = ov.names,
-                   average = TRUE, model.based = model.based,
-                   std.resid = std.resid, method = method, collapse = TRUE)
-
-        # df
-        out$df <- out$nrow*out$ncol - out$nrow - out$ncol
-
-        # stat
-        if(statistic == "LR") {
-            out$LR <- out$str.sum
-            STAT <- out$LR
-            if(p.value) {
-                out$p.value <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
-            }
-        } else if(statistic == "GF") {
-            out$GF <- out$str.sum
-            STAT <- out$GF
-            if(p.value) {
-                out$p.value <- pchisq(out$GF, df=out$df, lower.tail = FALSE)
-            }
-        } else if(statistic == "RMSEA") {
-            out$RMSEA <- sqrt( pmax(0, (out$str.sum - out$df)/
-                                       (2*out$nobs*out$df)     ) )
-            STAT <- out$RMSEA
-
-            if(p.value) {
-                # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
-                # because for ncp > 80, routine only computes lower tail
-                out$p.value <- 1.0 - pchisq(out$str.sum, 
-                                            ncp = 0.1^2*out$nobs*out$df, 
-                                            df=out$df, lower.tail = TRUE)
-            }
-        }
-
-        # remove columns
-        out$id <- out$nobs <- out$nrow <- out$ncol <- NULL
-        out$str.average <- out$str.sum <- NULL
-        out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
-
-        if(showAsMatrix) {
-            RN <- unique(out$rhs)
-            out <- lavaan::getCov(STAT, lower=FALSE,
-                                  names=unique(out$lhs))
-            rownames(out) <- RN
-            class(out) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-
     } else {
-        stop("lavaan ERROR: dimension must be 1 or 2 of one-way or two-way tables")
+        class(out) <- c("lavaan.data.frame", "data.frame")
     }
 
     out
 }
 
-# Mariska Barendse Cp statistic
-lavTablesFitCp <- function(object, alpha = 0.05) {
+# shortcut
+lavTablesFit <- function(object,
+                         # what type of table?
+                         dimension    = 2L,
+                         # if raw data, additional attributes
+                         categorical  = NULL,
+                         # which statistics / fit indices?
+                         statistic    = c("LR", "RMSEA"),
+                         # if lavobject, which freq/prop estimates?
+                         est          = "default",
+                         # pvalues for statistics?
+                         p.value      = FALSE,
+                         # select columns
+                         col.filter   = "default",
+                         # select rows
+                         row.filter   = "default",
+                         showAsMatrix = FALSE) {
 
-    # check object class
-    if(!class(object) %in% c("lavaan")) {
-        stop("lavaan ERROR: object must either an object of class lavaan")
+    lavTables(object = object, dimension = dimension, categorical = categorical,
+              statistic = statistic, est = est, p.value = p.value, 
+              col.filter = col.filter, row.filter = row.filter,
+              showAsMatrix = showAsMatrix)
+}
+
+
+# pairwise tables, rows = table cells
+lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL, 
+                                      statistic = c("GF","LR"), 
+                                      est = c("h0", "h1")) {
+
+    # initial table, observed cell frequencies
+    out <- lav_tables_pairwise_freq_cell(lavdata = lavdata, 
+                                         as.data.frame. = TRUE)
+    out$obs.prop <- out$obs.freq/out$nobs
+    if("h1" %in% est) {
+        PI <- lav_tables_pairwise_sample_pi(lavobject = lavobject,
+                                            lavdata   = lavdata)
+        out$est.prop.h1 <- unlist(PI)
+        if("LR" %in% statistic) {
+            out$LR.h1 <- lav_tables_stat_LR(out$obs.prop, out$est.prop.h1, 
+                                            out$nobs)
+        }
+        if("GF" %in% statistic) {
+            out$GF.h1 <- lav_tables_stat_GF(out$obs.prop, out$est.prop.h1, 
+                                            out$nobs)
+        }
     }
-
-    vartable <- object@Data@ov
-    X <- object@Data@X
-    ov.names <- object@Data@ov.names
-
-    std.resid <- TRUE; method <- "LR"
-    out <- lav_pairwise_tables(object = object,
-               vartable = vartable, X = X, ov.names = ov.names,
-               average = TRUE,
-               std.resid = std.resid, method = method, collapse = TRUE)
-    out$LR <- out$str.sum
-    out$id <- out$nobs <- NULL
-    out$str.average <- out$str.sum <- NULL
-    out$str.min <- out$str.plarge <- out$str.nlarge <- NULL
-
-    # df 
-    out$df <- out$nrow*out$ncol - out$nrow - out$ncol
-
-    # p-value
-    ntests <- length(out$p.value)
-    out$p.value.adj <- pchisq(out$LR, 
-                              df=out$df,
-                              lower.tail = FALSE) * ntests
-
-    # Bonferroni alpha
-    #ntests <- length(out$p.value)
-    #out$alpha.star <- rep(alpha / ntests, length(out$p.value))
+    if("h0" %in% est) {
+        PI <- lav_tables_pairwise_model_pi(lavobject = lavobject)
+        out$est.prop.h0 <- unlist(PI)
+        if("LR" %in% statistic) {
+            out$LR.h0 <- lav_tables_stat_LR(out$obs.prop, out$est.prop.h0, 
+                                            out$nobs)
+        }
+        if("GF" %in% statistic) {
+            out$GF.h0 <- lav_tables_stat_GF(out$obs.prop, out$est.prop.h0,
+                                            out$nobs)
+        }
+    }
 
     out
 }
 
-lavTablesFitCpMax <- function(object, alpha = 0.05) {
-    out <- lavTablesFitCp(object = object, alpha = alpha)
-
-    # find largest LR
-    max.idx <- which(out$LR == max(out$LR))
-
-    list(LR=out$LR[max.idx], df=out$df[max.idx], 
-         p.value=out$p.value[max.idx], alpha.star=out$alpha.star[max.idx],
-         p.value.Bonferroni=out$p.value[max.idx]*length(out$LR))
+# LR statistic
+lav_tables_stat_LR <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
+    # not defined if out$obs.prop is (close to) zero
+    # we use freq=0.5 for these empty cells
+    zero.idx <- which(obs.prop < .Machine$double.eps)
+    obs.prop[zero.idx] <- 0.5/nobs[zero.idx]
+    LR <- 2*nobs*(obs.prop*log(obs.prop/est.prop))
+    LR
 }
 
-# Mariska Barendse CF statistic
-lavTablesFitCF <- function(object) {
-
-    # check object class
-    if(!class(object) %in% c("lavaan")) {
-        stop("lavaan ERROR: object must either an object of class lavaan")
-    }
-
-    ngroups <- length( object@Data@X )
-
-    CF.group <- numeric(ngroups)
-    DF.group <- numeric(ngroups)
-
-    for(g in 1:ngroups) {
-        logLik.group <- estimator.FML(Sigma.hat = object@Fit@Sigma.hat[[g]],
-                                      TH        = object@Fit@TH[[g]],
-                                      th.idx    = object@Model@th.idx[[g]],
-                                      num.idx   = object@Model@num.idx[[g]],
-                                      X         = object@Model@X[[g]],
-                                      cache     = object@Cache[[g]])
-
-        freq <- as.numeric( rownames(object@Data@Rp[[g]]$pat) )
-        CF.group[g] <- 2*logLik.group + 2*sum(freq*log(freq/sum(freq)))
-
-
-        # ord var in this group
-        ov.ord <- object@pta$vnames$ov.ord[[g]]
-        ov.idx <- which(ov.ord %in% object@Data@ov$name)
-        ov.nlev <- object@Data@ov$nlev[ ov.idx ]
-
-        DF.group[g] <- prod(ov.nlev) - object@Fit@npar - 1L
-    }
-
-    # check for negative values
-    CF.group[CF.group < 0] <- 0.0
-
-    # global test statistic
-    CF <- sum(CF.group)
-
-    attr(CF, "CF.group") <- CF.group
-    attr(CF, "DF.group") <- DF.group
-
-    CF
+# GF (aka X2) statistic
+lav_tables_stat_GF <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
+    GF <- nobs*(obs.prop-est.prop)^2/est.prop
+    GF
 }
 
-lavTablesFitCF.h1 <- function(object) {
+# pairwise tables, rows = tables
+lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
+                                      statistic = c("GF","LR"), 
+                                      est = c("h0", "h1"),
+                                      p.value = FALSE) {
 
-    # check object class
-    if(!class(object) %in% c("lavaan")) {
-        stop("lavaan ERROR: object must either an object of class lavaan")
+    # identify 'categorical' variables
+    #cat.idx <- which(lavdata@ov$type %in% c("ordered","factor"))
+
+    # pairwise tables
+    #pairwise.tables <- utils::combn(vartable$name[cat.idx], m=2L)
+    #pairwise.tables <- rbind(seq_len(ncol(pairwise.tables)), 
+    #                         pairwise.tables)
+    #ntables <- ncol(pairwise.tables)
+
+    # initial table, observed cell frequencies
+    #out <- as.data.frame(t(pairwise.tables))
+    #names(out) <- c("id", "lhs", "rhs")
+
+    # collapse approach
+    stat.cell <- character(0)
+    if("GF" %in% statistic) {
+        stat.cell <- c(stat.cell, "GF")
+    }
+    if("LR" %in% statistic || "RMSEA" %in% statistic) {
+        stat.cell <- c(stat.cell, "LR")
     }
 
-    ngroups <- length( object@Data@X )
+    # get table with table cells
+    out.cell <- lav_tables_pairwise_cells(lavobject = lavobject,
+                                          lavdata   = lavdata,
+                                          statistic = stat.cell,
+                                          est       = est)
+    # only 1 row per table
+    row.idx <- which(!duplicated(out.cell$id))
+    out <- out.cell[row.idx,c("lhs","rhs","nobs"),drop=FALSE]
 
-    CF.group <- numeric(ngroups)
-    DF.group <- numeric(ngroups)
+    # df
+    nrow <- tapply(out.cell$row, INDEX=out.cell$id, FUN=max)
+    ncol <- tapply(out.cell$col, INDEX=out.cell$id, FUN=max)
+    out$df <- nrow*ncol - nrow - ncol
 
-    for(g in 1:ngroups) {
-        logLik.group <- estimator.FML(Sigma.hat = object@SampleStats@cov[[g]],
-                                      TH        = object@SampleStats@th[[g]],
-                                      th.idx    = object@Model@th.idx[[g]],
-                                      num.idx   = object@Model@num.idx[[g]],
-                                      X         = object@Model@X[[g]],
-                                      cache     = object@Cache[[g]])
-
-        freq <- as.numeric( rownames(object@Data@Rp[[g]]$pat) )
-        CF.group[g] <- 2*logLik.group + 2*sum(freq*log(freq/sum(freq)))
-
-
-        # ord var in this group
-        ov.ord <- object@pta$vnames$ov.ord[[g]]
-        ov.idx <- which(ov.ord %in% object@Data@ov$name)
-        ov.nlev <- object@Data@ov$nlev[ ov.idx ]
-
-        DF.group[g] <- prod(ov.nlev) - getNDAT(object@ParTable) - 1L
+    # GF
+    if("GF" %in% statistic && "h1" %in% est) {
+        out$GF.h1 <- tapply(out.cell$GF.h1, INDEX=out.cell$id, FUN=sum)
+        if(p.value) {
+            out$GF.h1.pval <- pchisq(out$GF.h1, df=out$df, lower.tail=FALSE)
+        }
+    }
+    if("GF" %in% statistic && "h0" %in% est) {
+        out$GF.h0 <- tapply(out.cell$GF.h0, INDEX=out.cell$id, FUN=sum)
+        if(p.value) {
+            out$GF.h0.pval <- pchisq(out$GF.h0, df=out$df, lower.tail=FALSE)
+        }
+    }
+ 
+    # LR
+    if("LR" %in% statistic && "h1" %in% est) {
+        out$LR.h1 <- tapply(out.cell$LR.h1, INDEX=out.cell$id, FUN=sum)
+        if(p.value) {
+            out$LR.h1.pval <- pchisq(out$LR.h1, df=out$df, lower.tail=FALSE)
+        }
+    }
+    if("LR" %in% statistic && "h0" %in% est) {
+        out$LR.h0 <- tapply(out.cell$LR.h0, INDEX=out.cell$id, FUN=sum)
+        if(p.value) {
+            out$LR.h0.pval <- pchisq(out$LR.h0, df=out$df, lower.tail=FALSE)
+        }
     }
 
-    # check for negative values
-    CF.group[CF.group < 0] <- 0.0
-
-    # global test statistic
-    CF <- sum(CF.group)
-
-    attr(CF, "CF.group") <- CF.group
-    attr(CF, "DF.group") <- DF.group
-
-    CF
-}
-
-lavTablesFitCM <- function(object) {
-
-   CF.h0 <- lavTablesFitCF(object)
-   CF.h1 <- lavTablesFitCF.h1(object)
-
-   CF.h0.group <- attr(CF.h0, "CF.group")
-   CF.h1.group <- attr(CF.h1, "CF.group")
-   DF.h0.group <- attr(CF.h0, "DF.group")
-   DF.h1.group <- attr(CF.h1, "DF.group")
-
-   attributes(CF.h0) <- NULL
-   attributes(CF.h1) <- NULL
-
-   CM <- CF.h0 - CF.h1
-   attr(CM, "CM.group") <- CF.h0.group - CF.h1.group
-   attr(CM, "DF.group") <- DF.h0.group - DF.h1.group
-
-   CM
+    if("RMSEA" %in% statistic && "h1" %in% est) {
+        LR <- tapply(out.cell$LR.h1, INDEX=out.cell$id, FUN=sum)
+        out$RMSEA.h1 <- sqrt( pmax(0, (LR - out$df)/ (2*out$nobs*out$df) ) )
+        if(p.value) {
+            # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
+            # because for ncp > 80, routine only computes lower tail
+            out$RMSEA.h1.pval <- 1.0 - pchisq(LR,
+                                              ncp = 0.1^2*out$nobs*out$df,
+                                              df=out$df, lower.tail = TRUE)
+        }
+    }
+    if("RMSEA" %in% statistic && "h0" %in% est) {
+        LR <- tapply(out.cell$LR.h0, INDEX=out.cell$id, FUN=sum)
+        out$RMSEA.h0 <- sqrt( pmax(0, (LR - out$df)/ (2*out$nobs*out$df) ) )
+        if(p.value) {
+            # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
+            # because for ncp > 80, routine only computes lower tail
+            out$RMSEA.h0.pval <- 1.0 - pchisq(LR,
+                                              ncp = 0.1^2*out$nobs*out$df,
+                                              df=out$df, lower.tail = TRUE)
+        }
+    }
+    
+    out
 }
 
 
-lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
+lav_tables_oneway <- function(lavdata = NULL) {
+
+    # shortcuts
+    vartable <- lavdata@ov
+    X        <- lavdata@X
 
     # identify 'categorical' variables
     cat.idx <- which(vartable$type %in% c("ordered","factor"))
@@ -335,14 +378,14 @@ lav_oneway_tables <- function(object, vartable=NULL, X=NULL, ov.names=NULL) {
     out
 }
 
-# YR: - 23 Aug 2013: added Mariska Barendse Cp fit index
-lav_pairwise_tables <- function(object, 
-                                vartable=NULL, X=NULL, ov.names=NULL,
-                                std.resid=TRUE, min.std.resid = 0.0,
+# YR: - 20 Sept 2013, argument PI must be given
+lav_tables_pairwise_OLD <- function(lavdata = NULL,
+                                PI      = NULL, # fitted cell probabilities
+                                min.std.resid = 0.0,
                                 average = FALSE, collapse = FALSE,
-                                model.based = TRUE,
                                 method="GF") {
 
+    # check input
     showAsMatrix <- FALSE
     if(! (is.logical(collapse) && !collapse) ) {
         average <- TRUE
@@ -352,12 +395,10 @@ lav_pairwise_tables <- function(object,
         }
     }
 
-    out <- lav_pairwise_tables_freq(vartable = vartable,
-                                    X = X,
-                                    ov.names = ov.names,
+    out <- lav_tables_pairwise_freq_cell(lavdata = lavdata,
                                     as.data.frame. = TRUE)
 
-    if(inherits(object, "data.frame") || inherits(object, "lavData")) {
+    if(is.null(PI)) {
         # compute chisq test for independence for each table + p.value
         # note: 'independent' tables (non-significant) are problematic here
         if(collapse) {
@@ -383,70 +424,57 @@ lav_pairwise_tables <- function(object,
             out$p.value <- unlist(lapply(seq_len(ntables),
                     function(x) rep(table.p.value[x], each=ncells[x])))
         }
-    } else if(inherits(object, "lavaan")) {
+    } else {
         # add predicted frequencies, fit indices
-
-        #out$pi <- unlist(lav_pairwise_tables_pi(object))
-        #out$freq.est <- out$pi * out$nobs
         obs.prop <- out$obs.freq/out$nobs
-        if(model.based) {
-            est.prop <- unlist(lav_pairwise_tables_model_pi(object))
-        } else {
-            COR <- object@SampleStats@cov
-            TH  <- object@SampleStats@th
-            th.idx <- object@SampleStats@th.idx
-            est.prop <- unlist(lav_pairwise_tables_sample_pi(COR = COR, TH = TH,
-                                                             th.idx = th.idx))
-        }
+        est.prop <- PI
         out$est.freq <- est.prop * out$nobs
  
         # Joreskog & Moustaki equation 34/35
-        if(std.resid) {
-            if(method == "GF") {
-                out$std.resid <- out$nobs*(obs.prop-est.prop)^2/est.prop
-            } else if(method == "LR") {
-                # not defined if out$obs.prop is (close to) zero
-                # we use freq=0.5 for these empty cells
-                zero.idx <- which(obs.prop < .Machine$double.eps)
-                obs.prop[zero.idx] <- 0.5/out$nobs[zero.idx]
-                out$std.resid <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
-            }
+        if(method == "GF") {
+            out$GF <- out$nobs*(obs.prop-est.prop)^2/est.prop
+        } else if(method == "LR") {
+            # not defined if out$obs.prop is (close to) zero
+            # we use freq=0.5 for these empty cells
+            zero.idx <- which(obs.prop < .Machine$double.eps)
+            obs.prop[zero.idx] <- 0.5/out$nobs[zero.idx]
+            out$LR <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
+        }
 
-            if(average) {
-                # fit per table
-                table.average <- tapply(out$std.resid, INDEX=out$id, FUN=mean)
-                table.sum <- tapply(out$std.resid, INDEX=out$id, FUN=sum)
-                table.percAboveMin <- tapply(out$std.resid, INDEX=out$id,
-                    FUN=function(x) {sum(x > min.std.resid)/length(x)})
-                table.numAboveMin <- tapply(out$std.resid, INDEX=out$id,
-                    FUN=function(x) {sum(x > min.std.resid)})
-                ntables <- length(table.average)
-                ncells <- tabulate(out$id)
-                nrow <- tapply(out$row, INDEX=out$id, FUN=max)
-                ncol <- tapply(out$col, INDEX=out$id, FUN=max)
+        if(average) {
+            # fit per table
+            table.average <- tapply(out$std.resid, INDEX=out$id, FUN=mean)
+            table.sum <- tapply(out$std.resid, INDEX=out$id, FUN=sum)
+            table.percAboveMin <- tapply(out$std.resid, INDEX=out$id,
+                FUN=function(x) {sum(x > min.std.resid)/length(x)})
+            table.numAboveMin <- tapply(out$std.resid, INDEX=out$id,
+                FUN=function(x) {sum(x > min.std.resid)})
+            ntables <- length(table.average)
+            ncells <- tabulate(out$id)
+            nrow <- tapply(out$row, INDEX=out$id, FUN=max)
+            ncol <- tapply(out$col, INDEX=out$id, FUN=max)
 
-                out$nrow <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(nrow[x], each=ncells[x])))
-                out$ncol <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(ncol[x], each=ncells[x])))
-                #out$ncells <- unlist(lapply(seq_len(ntables),
-                #    function(x) rep(ncells[x], each=ncells[x])))
-                out$str.average <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(table.average[x], each=ncells[x])))
-                out$str.sum <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(table.sum[x], each=ncells[x])))
-                out$str.min <- rep(min.std.resid, length(out$id))
-                out$str.plarge <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(table.percAboveMin[x], each=ncells[x])))
-                out$str.nlarge <- unlist(lapply(seq_len(ntables),
-                    function(x) rep(table.numAboveMin[x], each=ncells[x])))
+            out$nrow <- unlist(lapply(seq_len(ntables),
+                function(x) rep(nrow[x], each=ncells[x])))
+            out$ncol <- unlist(lapply(seq_len(ntables),
+                function(x) rep(ncol[x], each=ncells[x])))
+            #out$ncells <- unlist(lapply(seq_len(ntables),
+            #    function(x) rep(ncells[x], each=ncells[x])))
+            out$str.average <- unlist(lapply(seq_len(ntables),
+                function(x) rep(table.average[x], each=ncells[x])))
+            out$str.sum <- unlist(lapply(seq_len(ntables),
+                function(x) rep(table.sum[x], each=ncells[x])))
+            out$str.min <- rep(min.std.resid, length(out$id))
+            out$str.plarge <- unlist(lapply(seq_len(ntables),
+                function(x) rep(table.percAboveMin[x], each=ncells[x])))
+            out$str.nlarge <- unlist(lapply(seq_len(ntables),
+                function(x) rep(table.numAboveMin[x], each=ncells[x])))
 
-            } else {
-                if(min.std.resid > 0.0) {
-                    # select only rows where std.resid >= min.std.resid
-                    idx <- which(out$std.resid >= min.std.resid)
-                    out <- out[idx,]
-                }
+        } else {
+            if(min.std.resid > 0.0) {
+                # select only rows where std.resid >= min.std.resid
+                idx <- which(out$std.resid >= min.std.resid)
+                out <- out[idx,]
             }
         }
     }
@@ -459,7 +487,6 @@ lav_pairwise_tables <- function(object,
         # remove some cell-specific columns
         out$row <- NULL; out$col <- NULL
         out$obs.freq <- NULL; out$est.freq <- NULL
-        out$std.resid <- NULL; # out$ncells <- NULL
     }
 
     if(collapse && showAsMatrix) {
@@ -481,14 +508,15 @@ lav_pairwise_tables <- function(object,
     out
 }
 
-# internal function - X is a list of matrices!
-lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
-                                     as.data.frame. = TRUE) {
+# compute pairwise (two-way) frequency tables
+lav_tables_pairwise_freq_cell <- function(lavdata = NULL, 
+                                          as.data.frame. = TRUE) {
 
-    stopifnot(is.list(X))
-
-    # construct data.frame
-    vartable <- as.data.frame(vartable, stringsAsFactors = FALSE)
+    # shortcuts
+    vartable <- as.data.frame(lavdata@ov, stringsAsFactors = FALSE)
+    X        <- lavdata@X
+    ov.names <- lavdata@ov.names
+    ngroups  <- lavdata@ngroups
 
     # identify 'categorical' variables
     cat.idx <- which(vartable$type %in% c("ordered","factor"))
@@ -499,9 +527,6 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
     } else if(length(cat.idx) == 1L) {
         stop("lavaan ERROR: at least two categorical variables are needed")
     }
-
-    # ok, we have an overview of all categorical variables in the data
-    ngroups <- length(X)
 
     # pairwise tables
     pairwise.tables <- utils::combn(vartable$name[cat.idx], m=2L)
@@ -567,22 +592,17 @@ lav_pairwise_tables_freq <- function(vartable = NULL, X = NULL, ov.names = NULL,
 
 # low-level function to compute expected proportions per cell
 # object
-lav_pairwise_tables_model_pi <- function(object) {
+lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
 
-    stopifnot(class(object) == "lavaan", object@Model@categorical)
-    ngroups <- object@Data@ngroups
-    ov.types <- object@Data@ov$type
+    stopifnot(lavobject@Model@categorical)
 
-    th.idx <- object@Model@th.idx
-    num.idx <- object@Model@num.idx
-
-    #if(model.based) {
-        Sigma.hat <- computeSigmaHat(object@Model)
-        TH <- computeTH(object@Model)
-    #} else {
-    #    Sigma.hat <- object@SampleStats@cov
-    #    TH <- object@SampleStats@th
-    #}
+    # shortcuts
+    ngroups   <- lavobject@Data@ngroups
+    ov.types  <- lavobject@Data@ov$type
+    th.idx    <- lavobject@Model@th.idx
+    num.idx   <- lavobject@Model@num.idx
+    Sigma.hat <- lavobject@Fit@Sigma.hat
+    TH        <- lavobject@Fit@TH
 
     PI <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
@@ -594,14 +614,14 @@ lav_pairwise_tables_model_pi <- function(object) {
         nvar <- nrow(Sigmahat)
 
         # shortcut for all ordered - tablewise
-        if(all(ov.types == "ordered") && !is.null(object@Cache[[g]]$LONG)) {
-            #FREQ.OBS <- c(FREQ.OBS, object@Cache[[g]]$bifreq)
+        if(all(ov.types == "ordered") && !is.null(lavobject@Cache[[g]]$LONG)) {
+            #FREQ.OBS <- c(FREQ.OBS, lavobject@Cache[[g]]$bifreq)
             LONG2 <- LongVecTH.Rho(no.x               = nvar,
                                    all.thres          = TH[[g]],
                                    index.var.of.thres = th.idx[[g]],
                                    rho.xixj           = cors)
             # get expected probability per table, per pair
-            PI[[g]] <- pairwiseExpProbVec(ind.vec = object@Cache[[g]]$LONG, 
+            PI[[g]] <- pairwiseExpProbVec(ind.vec = lavobject@Cache[[g]]$LONG, 
                                           th.rho.vec=LONG2)
         } else {
             PI.group <- integer(0)
@@ -625,9 +645,36 @@ lav_pairwise_tables_model_pi <- function(object) {
 }
 
 # low-level function to compute expected proportions per cell
-# no object!
-lav_pairwise_tables_sample_pi <- function(COR = NULL, TH = NULL, 
-                                          th.idx = NULL) {
+# using sample-based correlations + thresholds
+#
+# object can be either lavData or lavaan class
+lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
+
+    # get COR, TH and th.idx
+    if(!is.null(lavobject)) {
+        COR    <- lavobject@SampleStats@cov
+        TH     <- lavobject@SampleStats@th
+        th.idx <- lavobject@SampleStats@th.idx
+    } else if(!is.null(lavdata)) {
+        COR <- lav_cor(lav.data = lavdata, WLS.W = FALSE, details = TRUE,
+                       labels = FALSE, verbose = FALSE)
+        # relist
+        if(!is.list(COR)) {
+            COR <- list(COR)
+        }
+        TH <- lapply(lapply(COR, attr, "TH"), unlist)
+        th.idx <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
+    } else {
+        stop("lavaan ERROR: both lavobject and lavdata are NULL")
+    }
+
+    lav_tables_pairwise_sample_pi_cor(COR = COR, TH = TH,
+                                      th.idx = th.idx)
+}
+
+# low-level function to compute expected proportions per cell
+lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL, 
+                                              th.idx = NULL) {
 
     ngroups <- length(COR)
 

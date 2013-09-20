@@ -893,7 +893,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_p
     if("C_p" %in% fit.measures) {
-        out <- lavTablesFitCpMax(object)
+        out <- lav_tables_CpMax(object)
         indices["C_p"] <- out$LR
         indices["C_p.df"] <- out$df
         indices["C_p.p.value"] <- out$p.value.Bonferroni
@@ -901,7 +901,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_F
     if("C_F" %in% fit.measures) {
-        CF <- lavTablesFitCF(object)
+        CF <- lav_tables_fit_CF(object)
         DF <- attr(CF, "DF.group")[[1L]]
         attributes(CF) <- NULL
         indices["C_F"] <- CF
@@ -915,7 +915,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_M
     if("C_M" %in% fit.measures) {
-        CM <- lavTablesFitCM(object)
+        CM <- lav_tables_fit_CM(object)
         DF <- attr(CM, "DF.group")[[1L]]
         attributes(CM) <- NULL
         indices["C_M"] <- CM

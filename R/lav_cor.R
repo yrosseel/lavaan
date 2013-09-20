@@ -117,23 +117,19 @@ lavCorCellFit <- function(object, ordered = NULL, group = NULL,
              class(object))
     }
 
-    COR <- lav_cor(lav.data = lav.data, WLS.W = FALSE, details = TRUE,
-                   labels = FALSE, verbose = FALSE)
+    PI <- unlist(lav_pairwise_tables_sample_pi(object = lav.data))
 
-    # relist
-    if(!is.list(COR)) {
-        COR <- list(COR)
-    }
-    TH <- lapply(lapply(COR, attr, "TH"), unlist)
-    TH.IDX <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
+    out <- lav_pairwise_tables(object    = object,
+                               vartable  = vartable,
+                               X         = lav.data@X, 
+                               ov.names  = lav.data@ov.names, 
+                               Pi        = PI,
+                               average   = TRUE,
+                               std.resid = TRUE,
+                               method    = "LR",
+                               collapse  = FALSE)
 
-    out <- lav_pairwise_tables_freq(vartable = lav.data@ov, 
-                                    X        = lav.data@X, 
-                                    ov.names = lav.data@ov.names, 
-                                    as.data.frame. = TRUE)
-
-    PI <- lav_pairwise_tables_sample_pi(COR = COR, TH = TH, th.idx = TH.IDX)
-    out$est.freq <- unlist(PI) * out$nobs
+    #out$est.freq <- unlist(PI) * out$nobs
 
     out
 }
@@ -177,6 +173,11 @@ lavCorTableFit <- function(object, ordered = NULL, group = NULL,
                                     as.data.frame. = TRUE)
 
     # LR
+    # not defined if out$obs.prop is (close to) zero
+    # we use freq=0.5 for these empty cells
+    zero.idx <- which(obs.prop < .Machine$double.eps)
+    obs.prop[zero.idx] <- 0.5/out$nobs[zero.idx]
+    out$std.resid <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
     
 
     # only 1 row per table

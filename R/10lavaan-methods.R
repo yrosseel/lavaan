@@ -1046,6 +1046,8 @@ varTable <- vartable <- function(object, ov.names=names(object),
 
     if(inherits(object, "lavaan")) {
         VAR <- object@Data@ov
+    } else if(inherits(object, "lavData")) {
+        VAR <- object@ov
     } else if(inherits(object, "data.frame")) {
         VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names, 
                                       ov.names.x = ov.names.x, 

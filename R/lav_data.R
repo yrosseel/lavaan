@@ -1,7 +1,8 @@
 # constructor for the 'lavData' class
 #
 # the lavData class describes how the data looks like
-#  - do we have a full data frame, or only sample statistics
+#  - do we have a full data frame, or only sample statistics?
+#    (TODO: allow for patterns + freq, if data is categorical)
 #  - variable type ("numeric", "ordered", ...)
 #  - how many groups, how many observations, ...
 #  - what about missing patterns?
@@ -24,13 +25,23 @@ lavData <- function(data          = NULL,          # data.frame
                     allow.single.case = FALSE      # allow single case (for newdata in predict)
                    ) 
 {
-    # three scenarios:
-    #    1) data is full data.frame
+    # four scenarios:
+    #    0) data is already a lavData object: do nothing
+    #    1) data is full data.frame (or a matrix)
     #    2) data are sample statistics only
     #    3) no data at all
 
     # 1) full data
     if(!is.null(data)) {
+ 
+       # catch lavaan/lavData objects
+        if(inherits(data, "lavData")) {
+            return(data)
+        } else if(inherits(data, "lavaan")) {
+            return(data@Data)
+        }
+
+        # catch matrix 
         if(!is.data.frame(data)) {
             # is it a matrix?
             if(is.matrix(data)) {
@@ -44,6 +55,8 @@ lavData <- function(data          = NULL,          # data.frame
                     ### data matrices directly
                     data <- as.data.frame(data, stringsAsFactors = FALSE)
                 }
+            } else {
+                stop("lavaan ERROR: data object of class ", class(data))
             }
         }
 
@@ -521,68 +534,62 @@ lav_data_resppatterns <- function(X) {
     out
 }
 
-# extract data from either a data.frame, lavData or lavaan object
-lav_data_extract <- function(object, ordered = NULL, categorical = NULL, 
-                             ov.names.x = NULL) {
-  
-    # catch matrix
-    if(is.matrix(object)) {
-        object <- as.data.frame(object, stringsAsFactors = FALSE)
-        if(is.logical(categorical) && categorical) {
-            object[,] <- lapply(object, base::factor)
-        } else if(is.logical(ordered) && ordered) {
-            object[,] <- lapply(object, base::ordered)
+setMethod("show", "lavData",
+function(object) {
+    # print 'lavData' object
+    lav_data_print_short(object)
+})
+
+lav_data_print_short <- function(object) {
+     # flag
+     listwise <- object@missing == "listwise"
+
+     if(object@ngroups == 1L) {
+        if(listwise) {
+            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
+                                        sprintf("  %10s", "Total"),
+                "\n", sep="")
+        }
+        t0.txt <- sprintf("  %-40s", "Number of observations")
+        t1.txt <- sprintf("  %10i", object@nobs[[1L]])
+        t2.txt <- ifelse(listwise,
+                  sprintf("  %10i", object@norig[[1L]]), "")
+        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    } else {
+        if(listwise) {
+            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
+                                        sprintf("  %10s", "Total"),
+                "\n", sep="")
+        }
+        t0.txt <- sprintf("  %-40s", "Number of observations per group")
+        cat(t0.txt, "\n")
+        for(g in 1:object@ngroups) {
+            t.txt <- sprintf("  %-40s  %10i", object@group.label[[g]],
+                                              object@nobs[[g]])
+            t2.txt <- ifelse(listwise,
+                      sprintf("  %10i", object@norig[[g]]), "")
+            cat(t.txt, t2.txt, "\n", sep="")
         }
     }
+    cat("\n")
 
-    # check object class
-    if(!class(object) %in% c("data.frame", "lavData", "lavaan")) {
-        stop("lavaan ERROR: object must either be a matrix or a data.frame, or an object of class lavaan or class lavData")
-    }
-
-    if(inherits(object, "data.frame")) {
-        ov.names <- names(object)
-        vartable <- lav_dataframe_vartable(frame = object, ov.names=ov.names,
-                                           ov.names.x = ov.names.x,
-                                           ordered = ordered,
-                                           factor = categorical,
-                                           as.data.frame.=FALSE)
-        X <- data.matrix(object)
-        # manually construct integers for user-declared categorical variables
-        user.categorical.names <-
-            vartable$name[vartable$type %in% c("ordered","factor") &
-                          vartable$user == 1L]
-        user.categorical.idx <- which(ov.names %in% user.categorical.names)
-        for(i in seq_len(length(user.categorical.idx))) {
-            X[,i] <- as.numeric(as.factor(X[,i]))
+    # missing patterns?
+    if(!is.null(object@Mp[[1L]])) {
+        if(object@ngroups == 1L) {
+            t0.txt <- sprintf("  %-40s", "Number of missing patterns")
+            t1.txt <- sprintf("  %10i",
+                              object@Mp[[1L]]$npatterns)
+            cat(t0.txt, t1.txt, "\n\n", sep="")
+        } else {
+            t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
+            cat(t0.txt, "\n")
+            for(g in 1:object@ngroups) {
+                t.txt <- sprintf("  %-40s  %10i", object@group.label[[g]],
+                                 object@Mp[[g]]$npatterns)
+                cat(t.txt, "\n", sep="")
+            }
+            cat("\n")
         }
-        # what about eXo? duplicate for now
-        eXo <- NULL
-        if(length(ov.names.x) > 0L) {
-            x.idx <- which(ov.names.x %in% ov.names)
-            eXo <- X[,x.idx,drop=FALSE]
-        }
-        X <- list(X); ov.names <- list(ov.names)
-        ov.names.x <- list(ov.names.x)
-        eXo <- list(eXo)
-    } else if(inherits(object, "lavData")) {
-        vartable <- object@ov
-        X <- object@X
-        ov.names <- object@ov.names
-        eXo <- object@eXo
-        ov.names.x <- object@ov.names.x
-    } else if(inherits(object, "lavaan")) {
-        vartable <- object@Data@ov
-        X <- object@Data@X
-        ov.names <- object@Data@ov.names
-        eXo <- object@Data@eXo
-        ov.names.x <- object@Data@ov.names.x
     }
-
-    list(vartable   = vartable,
-         X          = X,
-         ov.names   = ov.names,
-         eXo        = eXo,
-         ov.names.x = ov.names.x)
 }
 
