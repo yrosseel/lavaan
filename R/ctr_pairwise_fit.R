@@ -11,11 +11,11 @@
 # Mariska Barendse Cp statistic
 lav_tables_fit_Cp <- function(object) {
 
-    out <- lavTablesFit(object, est = "h0", stat = "LR", p.value = TRUE)
+    out <- lavTablesFit(object, stat = "LR", p.value = TRUE)
 
     # Bonferonni adjusted p-value
     ntests <- length(out$lhs)
-    out$pval.adj <- pchisq(out$LR.h0, df=out$df, lower.tail = FALSE) * ntests
+    out$pval.adj <- pchisq(out$LR, df=out$df, lower.tail = FALSE) * ntests
 
     # remove LR.h0.pval
     #out$LR.h0.pval <- NULL
@@ -27,11 +27,11 @@ lav_tables_fit_CpMax <- function(object) {
     out <- lav_tables_fit_Cp(object = object)
 
     # find largest LR
-    max.idx <- which(out$LR.h0 == max(out$LR.h0))
+    max.idx <- which(out$LR == max(out$LR))
 
-    list(LR=out$LR.h0[max.idx], df=out$df[max.idx], 
-         p.value=out$LR.h0.pval[max.idx],
-         p.value.Bonferroni=out$LR.h0.pval[max.idx]*length(out$lhs))
+    list(LR=unname(out$LR[max.idx]), df=unname(out$df[max.idx]), 
+         p.value=unname(out$LR.pval[max.idx]),
+         p.value.Bonferroni=unname(out$LR.pval[max.idx]*length(out$lhs)))
 }
 
 # Mariska Barendse CF statistic

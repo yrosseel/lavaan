@@ -22,16 +22,20 @@ lavTables <- function(object,
                       group        = NULL,
                       # which statistics / fit indices?
                       statistic    = "default",
+                      GF.min       = 3.0,        # needed for GF.{p/n}large
                       # pvalues for statistics?
                       p.value      = FALSE,
                       # output format
                       showAsMatrix = FALSE) {
 
     # check input
-    if(! (dimension == 1L || dimension == 2L) ) {
-        stop("lavaan ERROR: dimension must be 1 or 2 for one-way or two-way tables")
+    if(! (dimension == 0L || dimension == 1L || dimension == 2L) ) {
+        stop("lavaan ERROR: dimension must be 0, 1 or 2 for pattern, one-way or two-way tables")
     }
     stopifnot(type %in% c("cells", "table", "pattern"))
+    if(type == "pattern") {
+        dimension <- 0L
+    }
     statistic  <- toupper(statistic)
 
     # showAsMatrix
@@ -51,7 +55,27 @@ lavTables <- function(object,
         lavobject <- object
     }
 
-    if(dimension == 1L) {
+    if(dimension == 0L) {
+        #if(inherits(object, "lavaan")) {
+        #} else {
+            for(g in 1:lavdata@ngroups) {
+                pat <- lav_data_resppatterns(lavdata@X[[g]])$pat
+                pat <- as.data.frame(pat, stringsAsFactors=FALSE)
+                names(pat) <- lavdata@ov.names[[g]]
+                #pat$id <- 1:nrow(pat)
+                if(lavdata@ngroups > 1L) {
+                    pat$group <- rep(g, nrow(pat))
+                }
+                pat$freq <- as.integer( rownames(pat) )
+                rownames(pat) <- NULL
+                if(g == 1L) {
+                    out <- pat
+                } else {
+                    out <- rbind(out, pat)
+                }
+            }
+        #}
+    } else if(dimension == 1L) {
         # only cells
         if(length(cat.idx) == 0L) {
             stop("lavaan ERROR: no categorical variables are found")
@@ -134,7 +158,7 @@ lavTables <- function(object,
             # default statistics
             if(inherits(object, "lavaan")) {
                 if(length(statistic) == 1L && statistic == "DEFAULT") {
-                    statistic <- c("GF", "LR")
+                    statistic <- c("GF")
                 } else {
                     stopifnot(statistic %in% c("GF","LR","GF.BVN","LR.BVN"))
                 }
@@ -157,7 +181,10 @@ lavTables <- function(object,
                     statistic <- c("LR")
                 } else {
                     stopifnot(statistic %in% c("GF","LR","GF.BVN","LR.BVN",
-                                               "RMSEA.BVN", "RMSEA"))
+                                               "RMSEA.BVN", "RMSEA",
+                                               "GF.AVERAGE",
+                                               "GF.NLARGE",
+                                               "GF.PLARGE"))
                 }
             } else {
                 if(length(statistic) == 1L && statistic == "DEFAULT") {
@@ -171,9 +198,10 @@ lavTables <- function(object,
             out <- lav_tables_pairwise_table(lavobject = lavobject, 
                                              lavdata   = lavdata,
                                              statistic = statistic,
+                                             GF.min    = GF.min,
                                              p.value   = p.value)
         } else if(type == "pattern") {
-            stop("not implemented yet")
+            stop("use dimension = 0")
         }
     }
 
@@ -214,23 +242,22 @@ lavTables <- function(object,
     out
 }
 
-# shortcut
+# shortcut, always dim=2, type="cells"
 lavTablesFit <- function(object,
-                         # what type of table?
-                         dimension    = 2L,
                          # if raw data, additional attributes
                          categorical  = NULL,
                          group        = NULL,
                          # which statistics / fit indices?
                          statistic    = "default",
+                         GF.min       = 3.0,
                          # pvalues for statistics?
                          p.value      = FALSE,
                          # output format
                          showAsMatrix = FALSE) {
 
-    lavTables(object = object, dimension = dimension, 
+    lavTables(object = object, dimension = 2L, type = "table",
               categorical = categorical, group = group,
-              statistic = statistic, p.value = p.value, 
+              statistic = statistic, GF.min = GF.min, p.value = p.value, 
               showAsMatrix = showAsMatrix)
 }
 
@@ -304,6 +331,7 @@ lav_tables_stat_GF <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
 # pairwise tables, rows = tables
 lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
                                       statistic = character(0L),
+                                      GF.min = 3.0,
                                       p.value = FALSE) {
 
     # identify 'categorical' variables
@@ -321,7 +349,7 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
 
     # collapse approach
     stat.cell <- character(0)
-    if("GF" %in% statistic) {
+    if(any(c("GF","GF.AVERAGE","GF.PLARGE","GF.NLARGE") %in% statistic)) {
         stat.cell <- c(stat.cell, "GF")
     }
     if("LR" %in% statistic || "RMSEA" %in% statistic) {
@@ -396,6 +424,22 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
                                                ncp = 0.1^2*out$nobs*out$df,
                                                df=out$df, lower.tail = TRUE)
         }
+    }
+
+    if("GF.AVERAGE" %in% statistic) {
+        out$GF.average <- tapply(out.cell$GF, INDEX=out.cell$id, FUN=mean)
+    }
+
+    if("GF.NLARGE" %in% statistic) {
+         out$GF.min <- rep(GF.min, length(out$lhs))
+         out$GF.nlarge <- tapply(out.cell$GF, INDEX=out.cell$id, 
+                                 FUN=function(x) sum(x > GF.min) )   
+    }
+
+    if("GF.PLARGE" %in% statistic) {
+         out$GF.min <- rep(GF.min, length(out$lhs))
+         out$GF.plarge <- tapply(out.cell$GF, INDEX=out.cell$id,
+                                 FUN=function(x) sum(x > GF.min)/length(x) )
     }
     
     out

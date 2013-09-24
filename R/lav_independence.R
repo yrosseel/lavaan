@@ -63,13 +63,13 @@ independence.model.fit <- function(object) {
     #}
 
     # what with fixed.x?
-    if(object@Optiones$mimic %in% c("lavaan", "Mplus")) {
+    if(object@Options$mimic %in% c("lavaan", "Mplus")) {
         FIXED.X = object@Model@fixed.x
-    } else if(object@Optiones$mimic == "EQS") {
+    } else if(object@Options$mimic == "EQS") {
         # always ignore fixed.x
         OV.X = NULL
         FIXED.X = FALSE
-    } else if(object@Optiones$mimic == "LISREL") {
+    } else if(object@Options$mimic == "LISREL") {
         # always ignore fixed.x??? CHECKME!!
         OV.X = NULL
         FIXED.X = FALSE
