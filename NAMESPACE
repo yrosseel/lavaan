@@ -42,13 +42,13 @@ export("lavaan", "cfa", "sem", "growth",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
        "simulateData",
        "estfun.lavaan", "lavScores",
-       "lavTables", "lavTablesFit",
+       "lavTables", "lavTablesFit", "lavTables1D",
        "lavExport",
        "lavMatrixRepresentation",
        "mplus2lavaan",
        "prelav",
        "lavData",
-       "lavCor" #,
+       "lavCor", "lavCorFit" #,
        #"lavPredict"
       )
 

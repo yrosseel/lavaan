@@ -95,102 +95,29 @@ lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE,
 }
 
 # test for bivariate normality
-lavCorCellFit <- function(object, ordered = NULL, group = NULL, 
-                          ov.names.x = NULL, missing = "listwise") {
+lavCorFit <- function(object,
+                         # if raw data, additional attributes
+                         categorical  = NULL,
+                         # which statistics / fit indices?
+                         statistic    = c("LR", "RMSEA"),
+                         # if lavobject, which freq/prop estimates?
+                         est          = "h1",
+                         # pvalues for statistics?
+                         p.value      = FALSE,
+                         # select columns
+                         col.filter   = "default",
+                         # select rows
+                         row.filter   = "default",
+                         showAsMatrix = FALSE) {
 
-    # check object class
-    if(inherits(object, "lavaan")) {
-        lav.data <- object@lavData
-    } else if(inherits(object, "lavData")) {
-        lav.data <- object
-    } else if(inherits(object, "data.frame")) {
-        NAMES <- names(object)
-        if(!is.null(group)) {
-            NAMES <- NAMES[- match(group, NAMES)]
-        }
-        lav.data <- lavData(data = object, group = group,
-                            ov.names = NAMES, ordered = ordered,
-                            ov.names.x = ov.names.x,
-                            missing = missing)
-    } else {
-        stop("lavaan ERROR: lavCor can not handle objects of class ",
-             class(object))
-    }
-
-    PI <- unlist(lav_pairwise_tables_sample_pi(object = lav.data))
-
-    out <- lav_pairwise_tables(object    = object,
-                               vartable  = vartable,
-                               X         = lav.data@X, 
-                               ov.names  = lav.data@ov.names, 
-                               Pi        = PI,
-                               average   = TRUE,
-                               std.resid = TRUE,
-                               method    = "LR",
-                               collapse  = FALSE)
-
-    #out$est.freq <- unlist(PI) * out$nobs
-
-    out
-}
-
-# test for bivariate normality
-lavCorTableFit <- function(object, ordered = NULL, group = NULL, 
-                           ov.names.x = NULL, missing = "listwise") {
-
-    # check object class
-    if(inherits(object, "lavaan")) {
-        lav.data <- object@lavData
-    } else if(inherits(object, "lavData")) {
-        lav.data <- object
-    } else if(inherits(object, "data.frame")) {
-        NAMES <- names(object)
-        if(!is.null(group)) {
-            NAMES <- NAMES[- match(group, NAMES)]
-        }
-        lav.data <- lavData(data = object, group = group,
-                            ov.names = NAMES, ordered = ordered,
-                            ov.names.x = ov.names.x,
-                            missing = missing)
-    } else {
-        stop("lavaan ERROR: lavCor can not handle objects of class ",
-             class(object))
-    }
-
-    COR <- lav_cor(lav.data = lav.data, WLS.W = FALSE, details = TRUE,
-                   labels = FALSE, verbose = FALSE)
-
-    # relist
-    if(!is.list(COR)) {
-        COR <- list(COR)
-    }
-    TH <- lapply(lapply(COR, attr, "TH"), unlist)
-    TH.IDX <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
-
-    out <- lav_pairwise_tables_freq(vartable = lav.data@ov,
-                                    X        = lav.data@X,
-                                    ov.names = lav.data@ov.names,
-                                    as.data.frame. = TRUE)
-
-    # LR
-    # not defined if out$obs.prop is (close to) zero
-    # we use freq=0.5 for these empty cells
-    zero.idx <- which(obs.prop < .Machine$double.eps)
-    obs.prop[zero.idx] <- 0.5/out$nobs[zero.idx]
-    out$std.resid <- 2*out$nobs*(obs.prop*log(obs.prop/est.prop))
-    
-
-    # only 1 row per table
-    row.idx <- which(!duplicated(out$id))
-    out <- out[row.idx,,drop=FALSE]
-
-    # remove some cell-specific columns
-    out$row <- NULL; out$col <- NULL
-    out$obs.freq <- NULL; out$est.freq <- NULL
+    out <- lavTables(object = object, dimension = 2L, categorical = categorical,
+              statistic = statistic, est = est, p.value = p.value,
+              col.filter = col.filter, row.filter = row.filter,
+              showAsMatrix = showAsMatrix)
 
     # add table-wise info
     # FIXME: we need to filter out 'numeric' variables
-    #out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
+    out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
 
     out
 }

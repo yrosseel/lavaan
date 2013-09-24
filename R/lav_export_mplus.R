@@ -161,7 +161,8 @@ lav_mplus_estimator <- function(object) {
 }
 
 lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
-                             ov.ord.names="", estimator="ML") {
+                             ov.ord.names="", estimator="ML", 
+                             data.type="full", nobs=NULL) {
 
     # replace '.' by '_' in all variable names
     ov.names     <- gsub("\\.", "_", ov.names)
@@ -189,6 +190,14 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
                             data.file[g], ";\n", sep="")
         }
     }
+    if(data.type == "full") {
+        c.DATA <- paste(c.DATA, "  type is individual;\n", sep="")
+    } else if(data.type == "moment") {
+        c.DATA <- paste(c.DATA, "  type is fullcov;\n", sep="")
+        c.DATA <- paste(c.DATA, "  nobservations are ", nobs, ";\n", sep="")
+    } else {
+        stop("lavaan ERROR: data.type must be full or moment")
+    }
     
     # VARIABLE command
     c.VARIABLE <- "VARIABLE:\n"
@@ -199,8 +208,12 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
         c.VARIABLE <- paste(c.VARIABLE, ov.names[i], sep=" ")
         tmp <- tmp+1
     }
-    c.VARIABLE <- paste(c.VARIABLE,
-                        ";\n  missing are all (-999999);\n",sep="")
+    c.VARIABLE <- paste(c.VARIABLE, ";\n", sep="")
+    # missing
+    if(data.type == "full") {
+        c.VARIABLE <- paste(c.VARIABLE,
+                            "  missing are all (-999999);\n",sep="")
+    }
     # categorical?
     if(length(ov.ord.names)) {
         c.VARIABLE <- paste(c.VARIABLE, "  categorical are", sep="")

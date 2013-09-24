@@ -26,7 +26,10 @@ lavExport <- function(object, target="lavaan", prefix="sem",
             group.label=object@Data@group.label,
             ov.names=vnames(object@ParTable, "ov"),
             ov.ord.names=vnames(object@ParTable, "ov.ord"),
-            estimator=lav_mplus_estimator(object))
+            estimator=lav_mplus_estimator(object), 
+            data.type=object@Data@data.type,
+            nobs=object@Data@nobs[[1L]]
+            )
         syntax <- lav2mplus(object, group.label=object@Data@group.label)
         footer <- paste("OUTPUT:\n  sampstat standardized tech1;\n")
         out <- paste(header, syntax, footer, sep="")
@@ -61,8 +64,16 @@ lavExport <- function(object, target="lavaan", prefix="sem",
                             na="-999999",
                             col.names=FALSE, row.names=FALSE, quote=FALSE)
             }
+        } else if(identical(object@Data@data.type, "moment")) {
+            for(g in 1:ngroups) {
+                DATA <- object@SampleStats@cov[[g]]
+                write.table(DATA,
+                            file=paste(dir.name, "/", data.file[g], sep=""),
+                            na="-999999",
+                            col.names=FALSE, row.names=FALSE, quote=FALSE)
+            }
         } else {
-            warning("raw data not available")
+            warning("lavaan WARNING: not data available")
         }
         return(invisible(out))
     } else {

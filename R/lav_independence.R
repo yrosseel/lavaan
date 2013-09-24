@@ -62,6 +62,19 @@ independence.model.fit <- function(object) {
     #    OV.X <- NULL
     #}
 
+    # what with fixed.x?
+    if(object@Optiones$mimic %in% c("lavaan", "Mplus")) {
+        FIXED.X = object@Model@fixed.x
+    } else if(object@Optiones$mimic == "EQS") {
+        # always ignore fixed.x
+        OV.X = NULL
+        FIXED.X = FALSE
+    } else if(object@Optiones$mimic == "LISREL") {
+        # always ignore fixed.x??? CHECKME!!
+        OV.X = NULL
+        FIXED.X = FALSE
+    }
+
     # construct
     lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
                                         ov         = object@Data@ov,
@@ -70,7 +83,7 @@ independence.model.fit <- function(object) {
                                     meanstructure = object@Model@meanstructure,
                                     sample.mean = object@SampleStats@mean,
                                     sample.th   = object@SampleStats@th,
-                                    fixed.x    = object@Model@fixed.x)
+                                    fixed.x    = FIXED.X)
    
     # fit?
     do.fit <- TRUE
