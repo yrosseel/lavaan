@@ -554,22 +554,24 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         
                 # check if we not already have this combination (in this group)
                 # 1. asymmetric (=~, ~, ~1)
-                idx <- which(FLAT.lhs == lhs.names[l] &
-                             FLAT.op  == op &
-                             FLAT.group == GRP &
-                             FLAT.rhs == rhs.name)
-                if(length(idx) > 0L) {
-                    stop("lavaan ERROR: duplicate model element in: ", model[i])
+                if(op != "~~") {
+                    idx <- which(FLAT.lhs == lhs.names[l] &
+                                 FLAT.op  == op &
+                                 FLAT.group == GRP &
+                                 FLAT.rhs == rhs.name)
+                    if(length(idx) > 0L) {
+                        stop("lavaan ERROR: duplicate model element in: ", model[i])
+                    }
+                } else {
+                    # 2. symmetric (~~)
+                    idx <- which(FLAT.lhs == rhs.name &
+                                 FLAT.op  == "~~" &
+                                 FLAT.group == GRP &
+                                 FLAT.rhs == lhs.names[l])
+                    if(length(idx) > 0L) {
+                        stop("lavaan ERROR: duplicate model element in: ", model[i])
+                    }
                 }
-                # 2. symmetric (~~)
-                idx <- which(FLAT.lhs == rhs.name &
-                             FLAT.op  == "~~" &
-                             FLAT.group == GRP &
-                             FLAT.rhs == lhs.names[l])
-                if(length(idx) > 0L) {
-                    stop("lavaan ERROR: duplicate model element in: ", model[i])
-                }
-        
                 FLAT.idx <- FLAT.idx + 1L
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
                 FLAT.op[ FLAT.idx] <- op
