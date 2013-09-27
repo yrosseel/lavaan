@@ -8,6 +8,8 @@
 # - CF
 # - CM
 
+# FIXME: how to handle multiple groups??
+
 # Mariska Barendse Cp statistic
 lav_tables_fit_Cp <- function(object) {
 
@@ -24,6 +26,12 @@ lav_tables_fit_Cp <- function(object) {
 }
 
 lav_tables_fit_CpMax <- function(object) {
+
+    if(!all(object@Data@ov$type == "ordered")) {
+        return(list(LR=as.numeric(NA), df=as.numeric(NA), 
+               p.value=as.numeric(NA), p.value.Bonferroni=as.numeric(NA)))
+    }
+
     out <- lav_tables_fit_Cp(object = object)
 
     # find largest LR
@@ -42,9 +50,16 @@ lav_tables_fit_CF <- function(object, est = "h0") {
         stop("lavaan ERROR: object must be an object of class lavaan")
     }
     ngroups <- length( object@Data@X )
+    CF.group <- rep(as.numeric(NA), ngroups)
+    DF.group <- rep(as.numeric(NA), ngroups)
 
-    CF.group <- numeric(ngroups)
-    DF.group <- numeric(ngroups)
+    # check if all ordered
+    if(!all(object@Data@ov$type == "ordered")) {
+        CF <- as.numeric(NA)
+        attr(CF, "CF.group") <- CF.group
+        attr(CF, "DF.group") <- DF.group
+        return(CF)
+    }
 
     # h0 or h1?
     if(est == "h0") {

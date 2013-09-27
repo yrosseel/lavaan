@@ -427,7 +427,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     x <- NULL
     if(do.fit && lavaanModel@nx.free > 0L) {
         # catch simple linear regression models
-        if(length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
+        if(lavaanData@data.type == "full" &&
+           length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 
            length(vnames(lavaanParTable,   "lv")) == 0L &&
            #FALSE && # to debug
            sum(nchar(FLAT$fixed)) == 0 && # no fixed values in parTable

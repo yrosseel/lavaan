@@ -811,7 +811,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # observed sample statistics
             obs <- object@SampleStats@WLS.obs[[g]]
 
-            # estimated
+            # estimated FFFFFFIXME!!!!
             est <- obs
 
             # diag of W
@@ -820,7 +820,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             # e = number of elements
             e <- length(obs)
 
-            wrmr.group <- sqrt( sum( (obs-est)/dw ) / e )
+            #wrmr.group[g] <- sqrt( sum( (obs-est)/dw ) / e )
+            wrmr.group[g] <- as.numeric(NA)
         }
 
         
@@ -893,7 +894,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_p
     if("C_p" %in% fit.measures) {
-        out <- lav_tables_CpMax(object)
+        out <- lav_tables_fit_CpMax(object)
         indices["C_p"] <- out$LR
         indices["C_p.df"] <- out$df
         indices["C_p.p.value"] <- out$p.value.Bonferroni
