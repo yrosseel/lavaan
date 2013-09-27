@@ -396,12 +396,18 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
                                           statistic = stat.cell)
     # only 1 row per table
     row.idx <- which(!duplicated(out.cell$id))
-    out <- out.cell[row.idx,c("lhs","rhs","nobs"),drop=FALSE]
+    if(is.null(out.cell$group)) {
+        out <- out.cell[row.idx,c("lhs","rhs","nobs"),drop=FALSE]
+    } else {
+        out <- out.cell[row.idx,c("lhs","rhs","group", "nobs"),drop=FALSE]
+    }
 
     # df
-    nrow <- tapply(out.cell$row, INDEX=out.cell$id, FUN=max)
-    ncol <- tapply(out.cell$col, INDEX=out.cell$id, FUN=max)
-    out$df <- nrow*ncol - nrow - ncol
+    if(length(statistic) > 0L) {
+        nrow <- tapply(out.cell$row, INDEX=out.cell$id, FUN=max)
+        ncol <- tapply(out.cell$col, INDEX=out.cell$id, FUN=max)
+        out$df <- nrow*ncol - nrow - ncol
+    }
 
     # GF
     if("GF" %in% statistic) {
@@ -918,38 +924,50 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
                                    "LR.AVERAGE", "LR.PLARGE", "LR.NLARGE",
                                    "GF.AVERAGE", "GF.PLARGE", "GF.NLARGE"))
     if(length(stat.idx) == 0) {
-        STAT <- out$obs.freq
+        if(!is.null(out$obs.freq)) {
+            stat.idx <- which(NAMES == "OBS.FREQ")
+        } else if(!is.null(out$nobs)) {
+            stat.idx <- which(NAMES == "NOBS")
+        }
+        UNI <- NULL
     } else if(length(stat.idx) > 1) {
         stop("lavaan ERROR: more than one statistic for table output: ", 
               paste(NAMES[stat.idx], collapse=" "))
+    } else {
+        # univariate version of same statistic
+        if(NAMES[stat.idx] == "LR.AVERAGE") {
+            UNI <- lavTables1D(lavobject, stat="LR")
+        } else if(NAMES[stat.idx] == "GF.AVERAGE") {
+            UNI <- lavTables1D(lavobject, stat="GF")
+        } else {
+            UNI <- NULL
+        }
     }
 
-    # univariate version of same statistic
-    if(NAMES[stat.idx] == "LR.AVERAGE") {
-        UNI <- lavTables1D(lavobject, stat="LR")
-    } else if(NAMES[stat.idx] == "GF.AVERAGE") {
-        UNI <- lavTables1D(lavobject, stat="GF")
-    } else {
-        UNI <- FALSE
-    }
     OUT <- vector("list", length=lavdata@ngroups)
     for(g in 1:lavdata@ngroups) {
         if(lavdata@ngroups == 1L) { # no group column
             STAT <- out[[stat.idx]]
-            RN <- lavdata@ov.names[[g]]
         } else {
             STAT <- out[[stat.idx]][ out$group == g ]
-            RN <- unique(out$lhs[ out$group == g ])
         }
+        RN <- lavdata@ov.names[[g]]
         OUT[[g]] <- getCov(STAT, diag = FALSE, lower = FALSE, names = RN)
         # change diagonal elements: replace by univariate stat
         # if possible
         diag(OUT[[g]]) <- as.numeric(NA)
         if(!is.null(UNI)) {
+            if(!is.null(UNI$group)) {
+                idx <- which( UNI$group == g )
+            } else {
+                idx <- 1:length(UNI$lhs)
+            }
             if(NAMES[stat.idx] == "LR.AVERAGE") { 
-                diag(OUT[[g]]) <- tapply(UNI$LR, INDEX=UNI$id, FUN=mean)
+                diag(OUT[[g]]) <- tapply(UNI$LR[idx], INDEX=UNI$id[idx], 
+                                         FUN=mean)
             } else if(NAMES[stat.idx] == "GF.AVERAGE") {
-                diag(OUT[[g]]) <- tapply(UNI$GF, INDEX=UNI$id, FUN=mean)
+                diag(OUT[[g]]) <- tapply(UNI$GF[idx], INDEX=UNI$id[idx], 
+                                         FUN=mean)
             }
         }
         class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
@@ -988,7 +1006,9 @@ lav_tables_cells_format <- function(out, lavdata = lavdata) {
     }
 
     for(g in 1:lavdata@ngroups) {
-        TMP <-lapply(1:max(out$id), function(x) {
+        case.idx <- which( out$group == g )
+        ID.group <- unique( out$id[ out$group == g] )
+        TMP <-lapply(ID.group, function(x) {
                   Tx <- out[out$id == x,]
                   M <- matrix(Tx[,statistic],
                               max(Tx$row), max(Tx$col))
@@ -996,11 +1016,13 @@ lav_tables_cells_format <- function(out, lavdata = lavdata) {
                   colnames(M) <- unique(Tx$col)
                   class(M) <- c("lavaan.matrix", "matrix")
                   M })
-        names(TMP) <- unique(paste(out$lhs, out$rhs, sep="_"))
+        names(TMP) <- unique(paste(out$lhs[case.idx], out$rhs[case.idx], 
+                                   sep="_"))
         OUT[[g]] <- TMP
     }
     if(lavdata@ngroups > 1L) {
         out <- OUT
+        names(out) <- lavdata@group.label
     } else {
         out <- OUT[[1L]]
     }
