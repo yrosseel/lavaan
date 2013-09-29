@@ -271,7 +271,7 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         #LogLik <- sum(log(PI) * freq)
 
         # more convenient fit function
-        prop <- freq/npatterns
+        prop <- freq/sum(freq)
         # remove zero props # FIXME!!! or add 0.5???
         zero.idx <- which(prop == 0.0)
         if(length(zero.idx) > 0L) {
