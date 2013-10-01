@@ -391,6 +391,13 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         if(opt$test != "none") opt$test <- "standard"
         #opt$missing <- "listwise"
+    } else if(opt$estimator %in% c("mml")) {
+        opt$estimator <- "MML"
+        opt$information <- "observed"
+        if(opt$se == "default")
+            opt$se <- "standard"
+        if(opt$test != "none") opt$test <- "standard"
+        #opt$missing <- "listwise"
     } else {
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")
     }

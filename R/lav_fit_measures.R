@@ -1001,7 +1001,7 @@ print.fit.measures <- function(x) {
    }
 
    if("C_p" %in% names.x) {
-       cat("Pairwise tables summary statistic:\n\n")
+       cat("\nPairwise tables summary statistic:\n\n")
        t0.txt <- sprintf("  %-40s", "C_P Test Statistic")
        t1.txt <- sprintf("  %10.3f", x["C_p"])
        t2.txt <- ""
@@ -1018,7 +1018,7 @@ print.fit.measures <- function(x) {
 
    # independence model
    if("baseline.chisq" %in% names.x) {
-       cat("Model test baseline model:\n\n")
+       cat("\nModel test baseline model:\n\n")
        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
        t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
        t2.txt <- ifelse(scaled,
@@ -1276,7 +1276,7 @@ print.fit.measures <- function(x) {
 
     }
 
-    cat("\n")
+    #cat("\n")
 }
 
 

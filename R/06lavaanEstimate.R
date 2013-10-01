@@ -753,13 +753,22 @@ computeObjective <- function(object, GLIST=NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = X[[g]],
                                       cache     = cache[[g]])
+        } else if(estimator == "MML") { 
+            # marginal maximum likelihood
+            group.fx <- estimator.MML(Sigma.hat = Sigma.hat[[g]],
+                                      TH        = TH[[g]],
+                                      th.idx    = th.idx[[g]],
+                                      num.idx   = num.idx[[g]],
+                                      X         = X[[g]],
+                                      cache     = cache[[g]])
         } else {
             stop("unsupported estimator: ", estimator)
         }
 
         if(estimator == "ML") {
             group.fx <- 0.5 * group.fx ## FIXME
-        } else if(estimator == "PML" || estimator == "FML") {
+        } else if(estimator == "PML" || estimator == "FML" || 
+                  estimator == "MML") {
             # do nothing
         } else {
             group.fx <- 0.5 * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] * group.fx
@@ -1066,7 +1075,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     # group.w
     if(group.weight) {
-        if(estimator %in% c("ML","PML","FML")) {
+        if(estimator %in% c("ML","PML","FML","MML")) {
             group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
         } else {
             # FIXME: double check!
@@ -1208,7 +1217,8 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     } # WLS
 
-    else if(estimator == "PML" || estimator == "FML") {
+    else if(estimator == "PML" || estimator == "FML" ||
+            estimator == "MML") {
 
         if(type != "free") {
             stop("FIXME: type != free in computeGradient for estimator PML")
@@ -1386,7 +1396,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
-    if(estimator %in% c("ML","PML","FML")) {
+    if(estimator %in% c("ML","PML","FML","MML")) {
         Sigma.hat <- computeSigmaHat(object, extra=TRUE, debug=options$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {

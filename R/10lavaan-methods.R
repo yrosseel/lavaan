@@ -235,7 +235,7 @@ short.summary <- function(object) {
         } 
     } # test != none
 
-    cat("\n")
+    #cat("\n")
 }
 
 setMethod("show", "lavaan",
@@ -270,7 +270,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     if(estimates) {
 
     # main part: parameter estimates
-    cat("Parameter estimates:\n\n")
+    cat("\nParameter estimates:\n\n")
     t0.txt <- sprintf("  %-40s", "Information")
     tmp.txt <- object@Options$information
     t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)), 
