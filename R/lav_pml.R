@@ -1,6 +1,17 @@
 # utility functions for pairwise maximum likelihood
 
-
+# stub for fml_deriv1
+fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
+                       TH        = NULL,    # model-based thresholds + means
+                       th.idx    = NULL,    # threshold idx per variable
+                       num.idx   = NULL,    # which variables are numeric
+                       X         = NULL,    # data
+                       eXo       = NULL,    # external covariates
+                       cache     = NULL,    # housekeeping stuff
+                       scores    = FALSE,   # return case-wise scores
+                       negative  = TRUE) { 
+    stop("not implemented") 
+}
 
 # the first derivative of the pairwise logLik function with respect to the
 # thresholds/slopes/var/correlations; together with DELTA, we can use the
@@ -21,7 +32,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     if(any(abs(cors) > 1)) {
         # what should we do now... force cov2cor?
         #cat("FFFFOOOORRRRRCEEE PD!\n")
-        #Sigma.hat <- Matrix:::nearPD(Sigma.hat)
+        #Sigma.hat <- Matrix::nearPD(Sigma.hat)
         #Sigma.hat <- as.matrix(Sigma.hat$mat)
         #Sigma.hat <- cov2cor(Sigma.hat)
         #cors <- Sigma.hat[lower.tri(Sigma.hat)]
@@ -72,7 +83,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         GRAD <- matrix(0, pstar, GRAD.size) # each pair is a row
     }
     PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
-    PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
+    PSTAR[vech.idx(nvar, diagonal=FALSE)] <- 1:pstar
 
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
@@ -406,12 +417,12 @@ LongVecTH.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
  # (-Inf, Inf), (Inf, -Inf), (Inf, Inf) are NOT included. Only the combinations
  # of the middle thresholds (tau_1 to tau_(last-1)).
  # thres.var1.of.pair and thres.var2.of.pair give the first and the second
- # argument, respectively, in functions pbivnorm and lavaan:::dbinorm
+ # argument, respectively, in functions pbivnorm and dbinorm
  thres.var1.of.pair <- vector("list", no.pairs)
  thres.var2.of.pair <- vector("list", no.pairs)
 
  # Extending the rho.vector accordingly so that it will be the the third
- # argument in pbivnorm and lavaan:::dbinorm functions. It is of same length as
+ # argument in pbivnorm and dbinorm functions. It is of same length as
  # thres.var1.of.pair and thres.var2.of.pair.
  rho.vector <- vector("list", no.pairs)
 
@@ -574,7 +585,7 @@ derLtoRho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
            ind.vec$last.thres.var1.of.pair |
            ind.vec$last.thres.var2.of.pair] <- 0
 
-  prob.vec[is.na(prob.vec)] <- lavaan:::dbinorm(th.rho.vec$thres.var1.of.pair,
+  prob.vec[is.na(prob.vec)] <- dbinorm(th.rho.vec$thres.var1.of.pair,
                                                 th.rho.vec$thres.var2.of.pair,
                                                 rho=th.rho.vec$rho.vector)
 

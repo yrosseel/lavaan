@@ -100,7 +100,7 @@ pp_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
         -dx.rho * 1/cosh(x)^2
     }
 
-    # FIXME::: TODO!!!
+    # FIXME:: TODO!!!
     hessianFunction <- function(x) {
     }
 

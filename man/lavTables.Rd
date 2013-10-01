@@ -1,33 +1,43 @@
 \name{lavTables}
+\alias{lavTables1D}
 \alias{lavTables}
 \title{lavaan Tables}
 \description{
 Pairwise tables for categorical variables.}
 \usage{
-lavTables(object, dimension = 2L, categorical = NULL, std.resid = TRUE, 
-          min.std.resid = 0.0, average = FALSE, collapse = FALSE) 
+lavTables(object, dimension = 2L, type = "cells", categorical = NULL,
+    group = NULL, statistic = "default", LR.min = 3, GF.min = 3,
+    p.value = FALSE, output = "data.frame", patternAsString = TRUE)
 }
 \arguments{
 \item{object}{Either a \code{data.frame}, or an object of class 
 \code{\linkS4class{lavaan}}.}
-\item{dimension}{Integer. If 1L, compute one-dimensional tables; if 2L compute
-two-dimensional (pairwise) tables.}
+\item{dimension}{Integer. If 0L, display all response patterns. If 1L, 
+display one-dimensional tables; if 2L, display two-dimensional (pairwise) 
+tables.}
+\item{type}{If \code{"cells"}, display information for each cell in the\
+(one-way or two-way) table. If \code{"table"}, display information per
+table. If \code{"pattern"}, display response patterns (implying \code{"dimension = 0L"}).}
 \item{categorical}{Only used if \code{object} is a \code{data.frame}. Specify
 variables that need to be treated as categorical.}
-\item{std.resid}{If \code{TRUE} and object is a lavaan object, add a column
-containing the standardized residuals per cell (see equation 35 
-in the reference).}
-\item{min.std.resid}{Numeric. If larger than zero, show only those cells
-which have a standardized residual larger than \code{min.std.resid}.}
-\item{average}{If \code{TRUE}, add columns for the average standardized
-residual per table (\code{str.average}), and for the number 
-(\code{str.nlarge}) and proportion (\code{str.plarge}) of cells for
-which the standardized residual is larger than \code{min.std.resid}.
-Is set to \code{TRUE} if \code{collapse} is no longer \code{FALSE}.}
-\item{collapse}{Either a logical, or the string \code{"matrix"}. If
-\code{TRUE}, only one row per table is shown. If \code{"matrix"}, the
-output is a symmetric matrix; the elements of the matrix are the
-standardized residuals per pairwise table.}
+\item{group}{Only used if \code{object} is a \code{data.frame}. Specify
+a grouping variable.}
+\item{statistic}{Either a character string, or a vector of character
+strings requesting various statistics for each cell, pattern or table.}
+\item{LR.min}{Numeric. All cells with a LR statistic larger than this number
+are considered `large', as reflected in the \code{"LR.plarge"} and
+\code{"LR.nlarge"} columns.}
+\item{GF.min}{Numeric. All cells with a GF statistic larger than this number
+are considered `large', as reflected in the (optional) \code{"GF.plarge"} and
+\code{"GF.nlarge"} columns.}
+\item{p.value}{Logical. If \code{"TRUE"}, p-values are computed for 
+requested statistics (eg LR or GF) if possible.}
+\item{output}{If \code{"data.frame"}, the output is presented as a data.frame
+where each row is either a cell, a table, or a response pattern, depending
+on the \code{"type"} argument. If \code{"table"}, the output is presented
+as a table (or matrix) or a list of tables.}
+\item{patternAsString}{Logical. Only used for response patterns (dimension = 0L). If \code{"TRUE"}, response patterns are displayed as a compact string. 
+If \code{"FALSE"}, as many columns as observed variables are displayed.}
 }
 \value{
   If \code{collapse = FALSE}, a \code{data.frame} where each row corresponds
@@ -51,6 +61,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HSbinary, ordered=names(HSbinary))
-lavTables(fit, min.std.resid=1.0)
-lavTables(fit, collapse="matrix")
+lavTables(fit, 1L)
+lavTables(fit, 2L, type="cells")
+lavTables(fit, 2L, type="table")
+lavTables(fit, 2L, type="table", output="table", stat="GF")
 }

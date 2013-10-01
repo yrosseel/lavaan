@@ -13,7 +13,7 @@
 # Mariska Barendse Cp statistic
 lav_tables_fit_Cp <- function(object) {
 
-    out <- lavTablesFit(object, stat = "LR", p.value = TRUE)
+    out <- lavTablesFit(object, statistic = "LR", p.value = TRUE)
 
     # Bonferonni adjusted p-value
     ntests <- length(out$lhs)

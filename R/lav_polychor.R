@@ -36,7 +36,7 @@ pc_PI <- function(rho, th.y1, th.y2) {
     upper.x <- rep(th.y1, times=ceiling(length(upper.y))/nth.y1)
     #rho <- rep(rho, length(upper.x)) # only one rho here
 
-    BI <- pbivnorm:::pbivnorm(x=upper.x, y=upper.y, rho=rho)
+    BI <- pbivnorm::pbivnorm(x=upper.x, y=upper.y, rho=rho)
     #BI <- pbinorm1(upper.x=upper.x, upper.y=upper.y, rho=rho)
     dim(BI) <- c(nth.y1, nth.y2)
     BI <- rbind(0, BI, pth.y2, deparse.level = 0)
@@ -268,7 +268,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     }
 
     #hessianFunction2 <- function(x) {
-    #    numDeriv:::hessian(func=objectiveFunction, x=x)
+    #    numDeriv::hessian(func=objectiveFunction, x=x)
     #}
 
     # OLSSON 1979 A2 + A3 (no EXO!!)

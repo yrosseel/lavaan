@@ -894,7 +894,7 @@ parameterEstimates <- parameterestimates <-
                 alpha <- (1 + c(level, -level))/2
 
                 # free.idx only
-                qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
+                qq <- apply(BOOT, 2, norm.inter, alpha)
                 free.idx <- which(object@ParTable$free & 
                                   !duplicated(object@ParTable$free))
                 ci[free.idx,] <- 2*ci[free.idx,] - t(qq[c(3,4),])
@@ -908,7 +908,7 @@ parameterEstimates <- parameterestimates <-
                     } else {
                         BOOT.def <- t(BOOT.def)
                     }
-                    qq <- apply(BOOT.def, 2, boot:::norm.inter, alpha)
+                    qq <- apply(BOOT.def, 2, norm.inter, alpha)
                     ci[def.idx,] <- 2*ci[def.idx,] - t(qq[c(3,4),])
                 }
 
@@ -919,7 +919,7 @@ parameterEstimates <- parameterestimates <-
                 alpha <- (1 + c(-level, level))/2
 
                 # free.idx only
-                qq <- apply(BOOT, 2, boot:::norm.inter, alpha)
+                qq <- apply(BOOT, 2, norm.inter, alpha)
                 free.idx <- which(object@ParTable$free & 
                                   !duplicated(object@ParTable$free))
                 ci[free.idx,] <- t(qq[c(3,4),])
@@ -933,7 +933,7 @@ parameterEstimates <- parameterestimates <-
                     } else {
                         BOOT.def <- t(BOOT.def)
                     }
-                    qq <- apply(BOOT.def, 2, boot:::norm.inter, alpha)
+                    qq <- apply(BOOT.def, 2, norm.inter, alpha)
                     def.idx <- which(object@ParTable$op == ":=")
                     ci[def.idx,] <- t(qq[c(3,4),])
                 }
@@ -955,7 +955,7 @@ parameterEstimates <- parameterestimates <-
                    w <- qnorm(sum(t < t0)/length(t))
                    a <- 0.0 #### !!! ####
                    adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
-                   qq <- boot:::norm.inter(t, adj.alpha)
+                   qq <- norm.inter(t, adj.alpha)
                    ci[free.idx[i],] <- qq[,2]
                }
 
@@ -974,7 +974,7 @@ parameterEstimates <- parameterestimates <-
                        w <- qnorm(sum(t < t0)/length(t))
                        a <- 0.0 #### !!! ####
                        adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
-                       qq <- boot:::norm.inter(t, adj.alpha)
+                       qq <- norm.inter(t, adj.alpha)
                        ci[def.idx[i],] <- qq[,2]
                    }
                }
@@ -1814,7 +1814,7 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute lv covar
-    OUT <- lavaan:::computeVETA(object@Model, samplestats=object@SampleStats)
+    OUT <- computeVETA(object@Model, samplestats=object@SampleStats)
 
     # correlation?
     if(correlation.metric) {
@@ -1857,7 +1857,7 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute extended model implied covariance matrix (both ov and lv)
-    OUT <- lavaan:::computeCOV(object@Model, samplestats=object@SampleStats)
+    OUT <- computeCOV(object@Model, samplestats=object@SampleStats)
 
     # correlation?
     if(correlation.metric) {
@@ -1893,7 +1893,7 @@ getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # get residual covariances
-    OUT <- lavaan:::computeTHETA(object@Model)
+    OUT <- computeTHETA(object@Model)
 
     # correlation?
     if(correlation.metric) {

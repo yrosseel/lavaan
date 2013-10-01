@@ -936,9 +936,9 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
     } else {
         # univariate version of same statistic
         if(NAMES[stat.idx] == "LR.AVERAGE") {
-            UNI <- lavTables1D(lavobject, stat="LR")
+            UNI <- lavTables1D(lavobject, statistic="LR")
         } else if(NAMES[stat.idx] == "GF.AVERAGE") {
-            UNI <- lavTables1D(lavobject, stat="GF")
+            UNI <- lavTables1D(lavobject, statistic="GF")
         } else {
             UNI <- NULL
         }
@@ -952,7 +952,7 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
             STAT <- out[[stat.idx]][ out$group == g ]
         }
         RN <- lavdata@ov.names[[g]]
-        OUT[[g]] <- getCov(STAT, diag = FALSE, lower = FALSE, names = RN)
+        OUT[[g]] <- getCov(STAT, diagonal = FALSE, lower = FALSE, names = RN)
         # change diagonal elements: replace by univariate stat
         # if possible
         diag(OUT[[g]]) <- as.numeric(NA)

@@ -100,24 +100,15 @@ lavCorFit <- function(object,
                          categorical  = NULL,
                          # which statistics / fit indices?
                          statistic    = c("LR", "RMSEA"),
-                         # if lavobject, which freq/prop estimates?
-                         est          = "h1",
                          # pvalues for statistics?
-                         p.value      = FALSE,
-                         # select columns
-                         col.filter   = "default",
-                         # select rows
-                         row.filter   = "default",
-                         showAsMatrix = FALSE) {
+                         p.value      = FALSE) {
 
     out <- lavTables(object = object, dimension = 2L, categorical = categorical,
-              statistic = statistic, est = est, p.value = p.value,
-              col.filter = col.filter, row.filter = row.filter,
-              showAsMatrix = showAsMatrix)
+              statistic = statistic, p.value = p.value)
 
     # add table-wise info
     # FIXME: we need to filter out 'numeric' variables
-    out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
+    #out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
 
     out
 }

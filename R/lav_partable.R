@@ -805,7 +805,7 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
                  free <- c(free, rep(1L, nel))
                   exo <- c(exo, rep(0L, nel))
                th.start <- rep(0, nel)
-               #th.start <- sample.th[[g]] ### FIXME::: ORDER??? ONLY ORD!!!
+               #th.start <- sample.th[[g]] ### FIXME:: ORDER??? ONLY ORD!!!
                ustart <- c(ustart, th.start)
             }
         }

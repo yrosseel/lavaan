@@ -126,7 +126,7 @@ scores = function(x) {
 
 hessian = function(x) {
     if(!missing(x)) { lik(x); gradient() }
-    #cat("hessian num = \n"); print(round(numDeriv:::hessian(func=.self$logl, x=x),3))
+    #cat("hessian num = \n"); print(round(numDeriv::hessian(func=.self$logl, x=x),3))
     e.var <- theta[npar]
 
     # beta - beta

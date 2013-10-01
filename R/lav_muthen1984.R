@@ -19,8 +19,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         upper <- apply(combn(ncol(A),2),2,
                        function(x) sum(A[,x[1]] * A[,x[2]], na.rm=TRUE))
         tmp <- diag(apply(A, 2, function(x) sum(x*x, na.rm=TRUE)))
-        tmp[ lavaan:::vechru.idx(ndim, diag=FALSE) ] <- upper
-        tmp[ lavaan:::vech.idx(  ndim, diag=FALSE) ] <- upper
+        tmp[ vechru.idx(ndim, diagonal=FALSE) ] <- upper
+        tmp[ vech.idx(  ndim, diagonal=FALSE) ] <- upper
         tmp
     }
     
@@ -162,7 +162,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     # LAVAAN style: col-wise! (LISREL style: row-wise using vechr.idx)
     PSTAR <- matrix(0, nvar, nvar)
-    PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
+    PSTAR[vech.idx(nvar, diagonal=FALSE)] <- 1:pstar
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
             if(verbose) { cat(" i = ", i, " j = ", j, 

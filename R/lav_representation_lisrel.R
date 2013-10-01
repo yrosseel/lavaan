@@ -1151,7 +1151,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     PSI    <- MLIST$psi
  
     # only lower.tri part of sigma (not same order as elimination matrix?)
-    v.idx <- lavaan:::vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
+    v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
     # shortcut for gamma, nu, alpha and tau: empty matrix
     if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma") {
@@ -1194,7 +1194,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     } else if(m == "beta") {
         DX <- IK %*% ( t(IB.inv..PSI..tIB.inv..tLAMBDA) %x% LAMBDA..IB.inv )
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        DX[,diag.idx(nfac)] <- 0.0
         if(delta.flag) 
              DX <- DX * as.numeric(DELTA %x% DELTA)
     } else if(m == "psi") {
@@ -1207,8 +1207,8 @@ derivative.sigma.LISREL <- function(m="lambda",
         #imatrix <- matrix(1:nfac^2,nfac,nfac)
         #lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
         #upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
-        lower.idx <- lavaan:::vech.idx(nfac, diag=FALSE)
-        upper.idx <- lavaan:::vechru.idx(nfac, diag=FALSE)
+        lower.idx <- vech.idx(nfac, diagonal=FALSE)
+        upper.idx <- vechru.idx(nfac, diagonal=FALSE)
         # NOTE YR: upper.idx (see 3 lines up) is wrong in MH patch!
         # fixed again 13/06/2012 after bug report of Mijke Rhemtulla.
 
@@ -1227,8 +1227,8 @@ derivative.sigma.LISREL <- function(m="lambda",
         DD <- diag(DELTA[,1], nvar, nvar)
         DD.Omega <- (DD %*% Omega)
         A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
-        DX <- A[,lavaan:::diag.idx(nvar),drop=FALSE] + 
-              B[,lavaan:::diag.idx(nvar),drop=FALSE]
+        DX <- A[,diag.idx(nvar),drop=FALSE] + 
+              B[,diag.idx(nvar),drop=FALSE]
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -1276,7 +1276,7 @@ derivative.mu.LISREL <- function(m="alpha",
     } else if(m == "beta") {
         DX <- t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        DX[,diag.idx(nfac)] <- 0.0
     } else if(m == "alpha") {
         DX <- LAMBDA %*% IB.inv
     } else {
@@ -1359,7 +1359,7 @@ derivative.th.LISREL <- function(m="tau",
     } else if(m == "beta") {
         DX <- (-1) * t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        DX[,diag.idx(nfac)] <- 0.0
         DX <- K_nu %*% DX
         if(delta.flag)
             DX <- DX * as.numeric(K_nu %*% DELTA)
@@ -1420,7 +1420,7 @@ derivative.pi.LISREL <- function(m="lambda",
     } else if(m == "beta") {
         DX <- t(IB.inv %*% GAMMA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,lavaan:::diag.idx(nfac)] <- 0.0
+        DX[,diag.idx(nfac)] <- 0.0
         if(delta.flag)
             DX <- DX * DELTA.diag
     } else if(m == "gamma") {
@@ -1470,10 +1470,10 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
         # fix
         diag(MLIST$beta) <- 0.0
-        MLIST$psi[ lavaan:::vechru.idx(nfac) ] <-  
-            MLIST$psi[ lavaan:::vech.idx(nfac) ]
-        MLIST$theta[ lavaan:::vechru.idx(nvar) ] <-  
-            MLIST$theta[ lavaan:::vech.idx(nvar) ]
+        MLIST$psi[ vechru.idx(nfac) ] <-  
+            MLIST$psi[ vech.idx(nfac) ]
+        MLIST$theta[ vechru.idx(nvar) ] <-  
+            MLIST$theta[ vech.idx(nvar) ]
         if(delta) MLIST$delta[,] <- abs(MLIST$delta)*10
     }
 
@@ -1519,9 +1519,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
 
     for(mm in names(MLIST)) {
         if(mm %in% c("psi", "theta")) {
-            x <- lavaan:::vech(MLIST[[mm]])
+            x <- vech(MLIST[[mm]])
         } else {
-            x <- lavaan:::vec(MLIST[[mm]])
+            x <- vec(MLIST[[mm]])
         }
 
         # 1. sigma
@@ -1530,7 +1530,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
             DX2 <- DX2[,-idx]
         }
         cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "sum delta = ", 
@@ -1543,7 +1543,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
             DX2 <- DX2[,-idx]
         }
         cat("[MU   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
@@ -1558,7 +1558,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
                                     MLIST=MLIST, th.idx=th.idx)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
             DX2 <- DX2[,-idx]
         }
         cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
@@ -1573,7 +1573,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
                                     MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- lavaan:::vechru.idx(sqrt(ncol(DX2)), diag=FALSE)
+            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
             DX2 <- DX2[,-idx]
         }
         cat("[PI   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",

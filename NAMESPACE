@@ -9,6 +9,18 @@ importFrom("stats",
            update,
            anova,
            vcov)
+importFrom("graphics",
+           plot)
+importFrom("methods",
+           show)
+
+importFrom("quadprog",
+           solve.QP)
+importFrom("mnormt",
+           dmnorm,
+           sadmvn)
+importFrom("pbivnorm",
+           pbivnorm)
 
 # AIC and friends...
 if(getRversion() >= "2.13.0") {

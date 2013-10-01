@@ -153,7 +153,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 
     LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
     PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
-    PSTAR[lavaan:::vech.idx(nvar, diag=FALSE)] <- 1:pstar
+    PSTAR[vech.idx(nvar, diagonal=FALSE)] <- 1:pstar
     PROW <- row(PSTAR)
     PCOL <- col(PSTAR)
 

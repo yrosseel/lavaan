@@ -502,8 +502,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "fx") <- FX
             } else if(lav_constraints_check_linear(lavaanModel) == TRUE) {
 
-                require(quadprog)
-
                 A.ceq <- A.cin <- matrix(0, lavaanModel@nx.free, 0)
                 if(!is.null(body(lavaanModel@ceq.function)))
                     A.ceq <- t(lavJacobianC(func=lavaanModel@ceq.function, 

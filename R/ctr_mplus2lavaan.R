@@ -616,7 +616,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 }
 
 mplus2lavaan <- function(inpfile) {
-  require(lavaan)
+  #require(lavaan)
   
   if (!file.exists(inpfile)) stop("Could not find file: ", inpfile)
   

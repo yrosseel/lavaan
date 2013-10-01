@@ -203,7 +203,7 @@ lavSampleStatsFromData <- function(Data          = NULL,
                     tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
                     if(inherits(tmp, "try-error")) {
                         # emergency values
-                        icov[[g]] <- MASS:::ginv(cov[[g]])
+                        icov[[g]] <- MASS::ginv(cov[[g]])
                         cov.log.det[[g]] <- log(.Machine$double.eps)
                     } else {
                         cov.log.det[[g]] <- attr(tmp, "logdet")
@@ -535,7 +535,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
             if(inherits(tmp, "try-error")) {
                 # emergency values
-                icov[[g]] <- MASS:::ginv(cov[[g]])
+                icov[[g]] <- MASS::ginv(cov[[g]])
                 cov.log.det[[g]] <- log(.Machine$double.eps)
             } else {
                 cov.log.det[[g]] <- attr(tmp, "logdet")

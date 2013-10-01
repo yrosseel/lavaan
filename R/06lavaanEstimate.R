@@ -154,7 +154,7 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
             # check if matrix is positive definite
             ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
             if(any(ev < .Machine$double.eps) || sum(ev) == 0) {
-                Sigma.hat.inv <-  MASS:::ginv(Sigma.hat[[g]])
+                Sigma.hat.inv <-  MASS::ginv(Sigma.hat[[g]])
                 Sigma.hat.log.det <- log(.Machine$double.eps)
                 attr(Sigma.hat[[g]], "po") <- FALSE
                 attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
@@ -175,7 +175,7 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
     Sigma.hat
 }
 
-### FIXME::: replace by computeEY (to allow for GAMMA in continuous case)?
+### FIXME:: replace by computeEY (to allow for GAMMA in continuous case)?
 computeMuHat <- function(object, GLIST=NULL) {
 
     # state or final?
@@ -917,8 +917,8 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                  MLIST=GLIST[ mm.in.group ])
                 if(categorical) {
                     # reorder: first variances (of numeric), then covariances
-                    cov.idx  <- lavaan:::vech.idx(nvar[g])
-                    covd.idx <- lavaan:::vech.idx(nvar[g], diag=FALSE)
+                    cov.idx  <- vech.idx(nvar[g])
+                    covd.idx <- vech.idx(nvar[g], diagonal=FALSE)
 
                     var.idx <- which(is.na(match(cov.idx, 
                                                  covd.idx)))[num.idx[[g]]]
@@ -981,7 +981,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 # CURRENTLY: stop
                 warning("computeGradient: Sigma.hat is not positive definite\n")
                 #Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
-                Sigma.hat.inv <- MASS:::ginv(Sigma.hat[[g]])
+                Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
                 Sigma.hat.log.det <- log(.Machine$double.eps)
             } else {
                 Sigma.hat.inv <-  attr(Sigma.hat[[g]], "inv")

@@ -31,7 +31,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         nvar <- ncol(samplestats@cov[[g]])
         Mu.hat <- moments$mean
         X <- object@Data@X[[g]]
-        Sigma.inv <- lavaan:::inv.chol(Sigma.hat, logdet=FALSE)
+        Sigma.inv <- inv.chol(Sigma.hat, logdet=FALSE)
         group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
 
         J <- matrix(1, 1L, ntab[g]) ## FIXME: needed? better maybe rowSums/colSums?
@@ -45,13 +45,13 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
             dx.Mu <- -1 * mean.diff %*% Sigma.inv
 
             dx.Sigma <- t(apply(mean.diff, 1L,
-               function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
+               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
 
             scores.H1 <- cbind(dx.Mu, dx.Sigma)
         } else {
             mean.diff <- t(t(X) - samplestats@mean[[g]] %*% J)
             dx.Sigma <- t(apply(mean.diff, 1L,
-               function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
+               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
             scores.H1 <- dx.Sigma
         }
         ## FIXME? Seems like we would need group.w even in the
@@ -89,7 +89,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         J <- matrix(1, 1L, nobs) #[var.idx]
         J2 <- matrix(1, nvar, nvar)[var.idx, var.idx]
         diag(J2) <- 0.5
-        Sigma.inv <- lavaan:::inv.chol(Sigma.hat[var.idx, var.idx],
+        Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx],
                                        logdet=FALSE)
         Mu <- Mu.hat[var.idx]
         mean.diff <- t(t(X) - Mu %*% J)
@@ -97,7 +97,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         ## Scores for missing pattern p within group g
         score.mu[pat.idx==p,var.idx] <- -1 * mean.diff %*% Sigma.inv
         score.sigma[pat.idx==p,Sigma.idx] <- t(apply(mean.diff, 1L,
-          function(x) lavaan:::vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ) )
+          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ) )
 
       }
 
@@ -107,7 +107,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
       }
     } # missing
     
-    Delta <- lavaan:::computeDelta(object@Model)[[g]]
+    Delta <- computeDelta(object@Model)[[g]]
     wi <- object@Data@case.idx[[g]]
     Score.mat[wi,] <- -scores.H1 %*% Delta
     if(scaling){

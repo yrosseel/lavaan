@@ -267,7 +267,7 @@ dup3 <- function(n = 1L) {
 #    tmp[vech.idx(n)] <- 1:nstar
 #    tmp[vechru.idx(n)] <- 1:nstar
 #
-#    x <- Matrix:::sparseMatrix(i = 1:(n*n), j = vec(tmp), x = 1.0)
+#    x <- Matrix::sparseMatrix(i = 1:(n*n), j = vec(tmp), x = 1.0)
 #
 #    x
 #}

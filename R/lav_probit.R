@@ -2,7 +2,7 @@
 # 
 # YR 21 June 2012
 #
-# why not using MASS:::polr?
+# why not using MASS::polr?
 # - it does not deal with binary responses (must use glm.fit instead)
 # - we need scores
 # - Newton-Raphson is much faster
@@ -114,7 +114,7 @@ start = function() {
     if(nth == 1L && nexo > 0L) {
         th.start <- 0
     } else {
-        th.start <- lavaan:::pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
+        th.start <- pc_th(freq=tabulate(y, nbins=nth+1L)) # unconditional th's
     }
     beta.start <- rep(0, nexo)
     #Y <- as.numeric(y); range <- 16; Y <- Y*range/nexo
@@ -170,7 +170,7 @@ scores = function(x) {
 
 hessian = function(x) {
     if(!missing(x)) { lik(x); gradient() }
-    #cat("hessian num = \n"); print(round(numDeriv:::hessian(func=.self$objective, x=x),3))
+    #cat("hessian num = \n"); print(round(numDeriv::hessian(func=.self$objective, x=x),3))
     if(length(probits) == 0L) lik(); scores() # not initialized
     gnorm <- function(x) { -x * dnorm(x) }
     wtpr <- weights/probits
