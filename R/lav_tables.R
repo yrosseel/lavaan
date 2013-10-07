@@ -844,7 +844,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
     # shortcuts
     ngroups <- lavdata@ngroups
 
-    # h0 or h1?
+    # h0 or unrestricted?
     if(est == "h0") {
         Sigma.hat <- lavobject@Fit@Sigma.hat
         TH        <- lavobject@Fit@TH
@@ -862,7 +862,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
             TH.IDX <- lapply(lapply(Sigma.hat, attr, "TH.IDX"), unlist)
         } else {
             Sigma.hat <- lavobject@SampleStats@cov
-            TH        <- lavobject@Fit@TH
+            TH        <- lavobject@SampleStats@th
             TH.IDX    <- lavobject@SampleStats@th.idx
         }
     }

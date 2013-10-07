@@ -3,7 +3,7 @@
 \alias{lavTables}
 \title{lavaan Tables}
 \description{
-Pairwise tables for categorical variables.}
+Tables for categorical variables.}
 \usage{
 lavTables(object, dimension = 2L, type = "cells", categorical = NULL,
     group = NULL, statistic = "default", LR.min = 3, GF.min = 3,

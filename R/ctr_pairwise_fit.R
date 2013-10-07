@@ -67,20 +67,18 @@ lav_tables_fit_CF <- function(object, est = "h0") {
         TH        <- object@Fit@TH
     } else {
         Sigma.hat <- object@SampleStats@cov
-        TH        <- object@Fit@TH
+        TH        <- object@SampleStats@th
     }
 
     for(g in 1:ngroups) {
-        logLik.group <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
+        F.group <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
                                       TH        = TH[[g]],
                                       th.idx    = object@Model@th.idx[[g]],
                                       num.idx   = object@Model@num.idx[[g]],
                                       X         = object@Model@X[[g]],
                                       cache     = object@Cache[[g]])
 
-        freq <- as.numeric( rownames(object@Data@Rp[[g]]$pat) )
-        CF.group[g] <- 2*logLik.group + 2*sum(freq*log(freq/sum(freq)))
-
+        CF.group[g] <- 2*object@Data@nobs[[g]]*F.group
 
         # ord var in this group
         ov.ord <- object@pta$vnames$ov.ord[[g]]
