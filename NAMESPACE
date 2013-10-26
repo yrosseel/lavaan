@@ -58,7 +58,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavExport",
        "lavMatrixRepresentation",
        "mplus2lavaan",
-       "prelav",
+       #"prelav",
        "lavData",
        "lavCor", "lavCorFit" #,
        #"lavPredict"
@@ -88,7 +88,7 @@ S3method(print, lavaan.data.frame)
 S3method(print, lavaan.matrix)
 S3method(print, lavaan.matrix.symmetric)
 S3method(print, lavaan.vector)
-S3method(print, prelav)
+#S3method(print, prelav)
 S3method(pairs, lavaan)
 S3method(print, InformativeTesting)
 S3method(plot, InformativeTesting)
