@@ -114,6 +114,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
       Score.mat[wi,] <- (-1/ntot) * Score.mat[wi,]
     }
   } # g
+  
+  # provide column names
+  colnames(Score.mat) <- names(coef(object))
 
   Score.mat
 }
