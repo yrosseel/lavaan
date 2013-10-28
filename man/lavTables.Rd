@@ -1,5 +1,4 @@
 \name{lavTables}
-\alias{lavTables1D}
 \alias{lavTables}
 \title{lavaan Tables}
 \description{

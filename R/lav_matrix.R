@@ -448,6 +448,9 @@ sqrtSymmetricMatrix <- function(S = matrix(0,0,0)) {
     S.eigen <- eigen(S)
     V <- S.eigen$vectors; d <- S.eigen$values
 
+    # 'fix' slightly negative tiny numbers
+    d[d < 0] <- 0.0
+
     # sqrt the eigenvalues and reconstruct
     S.sqrt <- V %*% diag(sqrt(d), n, n) %*% t(V)
 

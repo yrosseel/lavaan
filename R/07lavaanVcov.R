@@ -183,11 +183,21 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
             NVarCov <- MASS::ginv(E3)[1:ncol(E), 1:ncol(E)]
             # FIXME: better include inactive + slacks??
         } else {
-            #NVarCov <- solve(E)
+            # check if E is pd 
+            eigvals <- eigen(E, symmetric = TRUE, only.values = TRUE)$values
+            if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
+                warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be thrustworthy")
+            }
             NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
         }
     } else {
         # NVarCov <- solve(E)
+        # check if E is pd 
+        eigvals <- eigen(E, symmetric = TRUE, only.values = TRUE)$values
+        if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
+            warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be thrustworthy")
+        }
+
         NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
     }
 

@@ -135,10 +135,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     # table
     if(categorical) {
         # FIXME: Cp: no exo, all ordinal!
-        fit.table <- c("C_p", "C_p.df", "C_p.p.value",
-                       "C_F", "C_F.df", "C_F.p.value",
+        fit.table <- c("c_p", "c_p.df", "c_p.p.value",
+                       "c_f", "c_f.df", "c_f.p.value",
                        "rpat.observed", "rpat.total", "rpat.empty",
-                       "C_M", "C_M.df", "C_M.p.value")
+                       "c_m", "c_m.df", "c_m.p.value")
     } else {
         fit.table <- character(0L)
     }
@@ -174,7 +174,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
             }
         }
     }
-    
+
     # main container
     indices <- list()
 
@@ -893,21 +893,22 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
 
     # C_p
-    if("C_p" %in% fit.measures) {
-        out <- lav_tables_fit_CpMax(object)
-        indices["C_p"] <- out$LR
-        indices["C_p.df"] <- out$df
-        indices["C_p.p.value"] <- out$p.value.Bonferroni
+    if("c_p" %in% fit.measures) {
+        out <- lav_tables_fit_Cp(object)
+        CpMax <- attr(out, "CpMax")
+        indices["c_p"] <- CpMax$LR
+        indices["c_p.df"] <- CpMax$df
+        indices["c_p.p.value"] <- CpMax$p.value.Bonferroni
     }
 
     # C_F
-    if("C_F" %in% fit.measures) {
+    if("c_f" %in% fit.measures) {
         CF <- lav_tables_fit_CF(object)
-        DF <- attr(CF, "DF.group")[[1L]]
+        DF <- attr(CF, "DF")
         attributes(CF) <- NULL
-        indices["C_F"] <- CF
-        indices["C_F.df"] <- DF
-        indices["C_F.p.value"] <- pchisq(CF, DF, lower.tail=FALSE)
+        indices["c_f"] <- CF
+        indices["c_f.df"] <- DF
+        indices["c_f.p.value"] <- pchisq(CF, DF, lower.tail=FALSE)
         indices["rpat.observed"] <- object@Data@Rp[[1L]]$npatterns
         indices["rpat.total"] <- object@Data@Rp[[1L]]$total.patterns
         indices["rpat.empty"] <- object@Data@Rp[[1L]]$empty.patterns
@@ -915,13 +916,13 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
 
     # C_M
-    if("C_M" %in% fit.measures) {
+    if("c_m" %in% fit.measures) {
         CM <- lav_tables_fit_CM(object)
-        DF <- attr(CM, "DF.group")[[1L]]
+        DF <- attr(CM, "DF")
         attributes(CM) <- NULL
-        indices["C_M"] <- CM
-        indices["C_M.df"] <- DF
-        indices["C_M.p.value"] <- pchisq(CM, DF, lower.tail=FALSE)
+        indices["c_m"] <- CM
+        indices["c_m.df"] <- DF
+        indices["c_m.p.value"] <- pchisq(CM, DF, lower.tail=FALSE)
     }
 
     if("ntotal" %in% fit.measures) {

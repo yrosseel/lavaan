@@ -54,20 +54,21 @@ export("lavaan", "cfa", "sem", "growth",
        "bootstrapLavaan", "bootstrapLRT", "InformativeTesting",
        "simulateData",
        "estfun.lavaan", "lavScores",
-       "lavTables", "lavTablesFit", "lavTables1D",
+       "lavTables", 
+       "lav_tables_fit_Cp", "lav_tables_fit_CF", "lav_tables_fit_CM",
        "lavExport",
        "lavMatrixRepresentation",
-       "mplus2lavaan",
-       "prelav",
-       "lavData",
-       "lavCor", "lavCorFit" #,
+       "mplus2lavaan" #,
+       #"prelav",
+       #"lavData",
+       #"lavCor", "lavCorFit" #,
        #"lavPredict"
       )
 
 # export Classes
 exportClasses(
-              "lavaan",
-              "lavData"
+              "lavaan" #,
+              #"lavData"
              )
 
 # export Methods
@@ -92,4 +93,6 @@ S3method(print, prelav)
 S3method(pairs, lavaan)
 S3method(print, InformativeTesting)
 S3method(plot, InformativeTesting)
+S3method(print, lavaan.tables.fit.CF)
+S3method(print, lavaan.tables.fit.Cp)
 #S3method(summary, lavaan.boot)

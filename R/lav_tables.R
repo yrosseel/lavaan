@@ -31,6 +31,8 @@ lavTables <- function(object,
                       GF.min       = 3.0,        # needed for GF.{p/n}large
                       # pvalues for statistics?
                       p.value      = FALSE,
+                      # Bonferonni
+                      # alpha.adj    = FALSE,
                       # output format
                       output       = "data.frame",
                       patternAsString = TRUE) {
