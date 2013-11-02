@@ -128,8 +128,8 @@ StartingValues <- function(start.method = "default",
             # only if all latent variables have a reference item,
             # we use the fabin3 estimator (2sls) of Hagglund (1982)
             # per factor
-            # 9 Okt 2013: if only 2 indicators, we use the correlation for
-            # the second indicator
+            # 9 Okt 2013: if only 2 indicators, we use the regression
+            # coefficient (y=marker, x=2nd indicator)
             for(f in lv.names) {
                 free.idx <- which( partable$lhs == f & partable$op == "=~"
                                                  & partable$group == g
@@ -150,10 +150,9 @@ StartingValues <- function(start.method = "default",
                     }
                     start[user.idx] <- fabin3.uni(COV)
                 } else if(length(free.idx) == 1L && length(ov.idx) == 2L) {
-                    COR12 <- ( samplestats@cov[[g]][ov.idx[1],ov.idx[2]] /
-                               sqrt(samplestats@var[[g]][ov.idx[1]]) *
-                               sqrt(samplestats@var[[g]][ov.idx[2]]) )
-                    start[free.idx] <- COR12
+                    REG2 <- ( samplestats@cov[[g]][ov.idx[1],ov.idx[2]] /
+                              samplestats@cov[[g]][ov.idx[1],ov.idx[1]] )
+                    start[free.idx] <- REG2
                 }
 
                 # standardized?
