@@ -13,7 +13,6 @@ importFrom("graphics",
            plot)
 importFrom("methods",
            show)
-
 importFrom("quadprog",
            solve.QP)
 importFrom("mnormt",

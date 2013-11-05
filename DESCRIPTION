@@ -18,13 +18,17 @@ Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
              person("Mijke", "Rhemtulla", role = "ctb",
                     email = "mijke@ku.edu"),
              person("Myrsini", "Katsikatsou", role = "ctb",
-                    email = "mirtok2@gmail.com")
+                    email = "mirtok2@gmail.com"),
+             person("Mariska", "Barendse", role = "ctb",
+                    email = "m.t.barendse@rug.nl")
             )  
 Description: Fit a variety of latent variable models, including confirmatory
-    factor analysis, structural equation modeling and latent growth curve models.
+   factor analysis, structural equation modeling and latent growth curve models.
+   Provides an easy to use syntax, and many extractor functions. Support for
+   missing data, non-normal continuous, binary and ordered data.
 Depends: R(>= 2.14.0), methods
-Imports: stats4, stats, graphics, MASS, boot, mnormt, pbivnorm, quadprog
+Imports: stats4, stats, graphics, MASS, mnormt, pbivnorm, quadprog
 Suggests: lavaan.survey, semPlot, semTools, simsem
-License: GPL (>=2)
+License: GPL-2 | GPL-3
 LazyData: yes
 URL: http://lavaan.org

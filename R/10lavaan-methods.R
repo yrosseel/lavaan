@@ -878,6 +878,30 @@ parameterEstimates <- parameterestimates <-
             fac <- qnorm(a)
             ci <- LIST$est + LIST$se %o% fac
         } else if(object@Options$se == "bootstrap") {
+
+            # local copy of 'norm.inter' from boot package (not exported!)
+            norm.inter <- function(t, alpha)  {
+                t <- t[is.finite(t)]; R <- length(t); rk <- (R + 1) * alpha
+                if (!all(rk > 1 & rk < R)) 
+                     warning("extreme order statistics used as endpoints")
+                k <- trunc(rk); inds <- seq_along(k)
+                out <- inds; kvs <- k[k > 0 & k < R]
+                tstar <- sort(t, partial = sort(union(c(1, R), c(kvs, kvs+1))))
+                ints <- (k == rk)
+                if (any(ints)) out[inds[ints]] <- tstar[k[inds[ints]]]
+                out[k == 0] <- tstar[1L]
+                out[k == R] <- tstar[R]
+                not <- function(v) xor(rep(TRUE,length(v)),v)
+                temp <- inds[not(ints) & k != 0 & k != R]
+                temp1 <- qnorm(alpha[temp])
+                temp2 <- qnorm(k[temp]/(R+1))
+                temp3 <- qnorm((k[temp]+1)/(R+1))
+                tk <- tstar[k[temp]]
+                tk1 <- tstar[k[temp]+1L]
+                out[temp] <- tk + (temp1-temp2)/(temp3-temp2)*(tk1 - tk)
+                cbind(round(rk, 2), out)
+            }
+
             stopifnot(!is.null(BOOT))
             stopifnot(boot.ci.type %in% c("norm","basic","perc","bca.simple"))
             if(boot.ci.type == "norm") {
