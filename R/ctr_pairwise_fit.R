@@ -26,7 +26,7 @@
 #    out
 #}
 
-lav_tables_fit_Cp <- function(object, alpha = 0.05) {
+lavTablesFitCp <- function(object, alpha = 0.05) {
 
     if(!all(object@Data@ov$type == "ordered")) {
         return(list(LR=as.numeric(NA), df=as.numeric(NA), 
@@ -60,15 +60,14 @@ lav_tables_fit_Cp <- function(object, alpha = 0.05) {
 }
 
 print.lavaan.tables.fit.Cp <- function(x, ...) {
-   cat("Hier komt de header:\n")
+   cat("CP-values that are significant at a Bonferroni adjusted level of significance\n")
    tmp <- x
    class(tmp) <- c("lavaan.data.frame", "data.frame")
    print(tmp)
-   cat("blah blah blah\n")
 }
 
 # Mariska Barendse CF statistic
-lav_tables_fit_CF <- function(object, est = "h0") {
+lavTablesFitCf <- function(object, est = "h0") {
 
     # check object class
     if(!class(object) %in% c("lavaan")) {
@@ -128,31 +127,62 @@ lav_tables_fit_CF <- function(object, est = "h0") {
     attr(CF, "rpat.total") <- sapply(object@Data@Rp, "[[", "total.patterns")
     attr(CF, "rpat.empty") <- sapply(object@Data@Rp, "[[", "empty.patterns") 
 
-    class(CF) <- c("lavaan.tables.fit.CF", "numeric")
+    class(CF) <- c("lavaan.tables.fit.Cf", "numeric")
 
     CF
 }
 
-print.lavaan.tables.fit.CF <- function(x, ...) {
-    cat("This is CF:", x, "\n")
+print.lavaan.tables.fit.Cf <- function(x, ...) {
+    cat("Total response patterns: ", attr(x, "rpat.total"), "\n")
+    cat("Observed response patterns: ", attr(x, "rpat.observed"), "\n")
+    cat("Empty response patterns: ", attr(x, "rpat.empty"), "\n")
+    cat("Cf results may be biased because of large numbers of empty cells in the multivariate contingency table\n")
+    cat("Cf-value, overall:\n")
+    CF <- unclass(x); attributes(CF) <- NULL
+    print(CF)
+    CF.group <- attr(x, "CF.group")
+    if(length(CF.group) > 1L) {
+        cat("Cf-value, per group:\n")
+        print(CF.group)
+    }
+    cat("Degrees of freedom\n")
+    print(attr(x, "DF"))
 }
 
-lav_tables_fit_CM <- function(object) {
+lavTablesFitCm <- function(object) {
 
-   CF.h0 <- lav_tables_fit_CF(object, est = "h0")
-   CF.h1 <- lav_tables_fit_CF(object, est = "h1")
+    CF.h0 <- lavTablesFitCf(object, est = "h0")
+    CF.h1 <- lavTablesFitCf(object, est = "h1")
 
-   CF.h0.group <- attr(CF.h0, "CF.group")
-   CF.h1.group <- attr(CF.h1, "CF.group")
-   DF.h0 <- attr(CF.h0, "DF")
-   DF.h1 <- attr(CF.h1, "DF")
+    CF.h0.group <- attr(CF.h0, "CF.group")
+    CF.h1.group <- attr(CF.h1, "CF.group")
+    DF.h0 <- attr(CF.h0, "DF")
+    DF.h1 <- attr(CF.h1, "DF")
 
-   attributes(CF.h0) <- NULL
-   attributes(CF.h1) <- NULL
+    attributes(CF.h0) <- NULL
+    attributes(CF.h1) <- NULL
 
-   CM <- CF.h0 - CF.h1
-   attr(CM, "CM.group") <- CF.h0.group - CF.h1.group
-   attr(CM, "DF") <- DF.h0 - DF.h1
+    CM <- CF.h0 - CF.h1
+    attr(CM, "CM.group") <- CF.h0.group - CF.h1.group
+    attr(CM, "DF") <- DF.h0 - DF.h1
 
-   CM
+    class(CM) <- c("lavaan.tables.fit.Cm", "numeric")
+
+    CM
 }
+
+print.lavaan.tables.fit.Cm <- function(x, ...) {
+    #cat("The percentage of empty cells\n") #weet niet goed want FML werkt niet
+    #cat("CM results may be a little biased because of large numbers of empty cells in the multivariate contingency table\n")
+    cat("Cm-value, overall:\n")
+    CM <- unclass(x); attributes(CM) <- NULL
+    print(CM)
+    CM.group <- attr(x, "CM.group")
+    if(length(CM.group) > 1L) {
+        cat("Cm-value, per group:\n")
+        print(CM.group)
+    }
+    cat("Degrees of freedom:\n")
+    print(attr(x, "DF"))
+}
+

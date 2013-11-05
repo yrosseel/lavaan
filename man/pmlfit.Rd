@@ -1,7 +1,7 @@
-\name{lav_tables_fit}
-\alias{lav_tables_fit_Cp}
-\alias{lav_tables_fit_Cf}
-\alias{lav_tables_fit_Cm}
+\name{lavTablesFitCp}
+\alias{lavTablesFitCp}
+\alias{lavTablesFitCf}
+\alias{lavTablesFitCm}
 \title{Pairwise maximum likelihood fit statistics}
 
 \description{
@@ -13,9 +13,9 @@ a comparison of model-implied proportions of pairs of item responses with the ob
 }
 
 \usage{
-lav_tables_fit_Cf(object, est = "h0")
-lav_tables_fit_Cp(object, alpha = 0.05)
-lav_tables_fit_Cm(object)
+lavTablesFitCf(object, est = "h0")
+lavTablesFitCp(object, alpha = 0.05)
+lavTablesFitCm(object)
 }
 
 \arguments{
@@ -105,30 +105,30 @@ HSbinary$school <- HolzingerSwineford1939$school
 #Single group example with one latent factor
 HS.model1 <- ' trait =~ x1 + x2 + x3 + x4 + x5 + x6 '
 fit <- cfa(HS.model1, data=HSbinary[,1:6], ordered=names(HSbinary))
-lavaan:::lav_tables_fit_CM(fit)
-lavaan:::lav_tables_fit_Cp(fit)
-lavaan:::lav_tables_fit_CF(fit, est="h0")
+lavTablesFitCm(fit)
+lavTablesFitCp(fit)
+lavTablesFitCf(fit, est="h0")
 
 #Single group example with a two latent factors
 #HS.model2 <- ' visual  =~ x1 + x2 + x3
 #              textual =~ x4 + x5 + x6'
 #fit2 <- cfa(HS.model2, data=HSbinary[,1:6], ordered=names(HSbinary), estimator="PML")
 #Fit statistics
-#lav_tables_fit_Cm(fit2)
-#lav_tables_fit_Cp(fit2)
-#lav_tables_fit_Cf(fit2)
+#lavTablesFitCm(fit2)
+#lavTablesFitCp(fit2)
+#lavTablesFitCf(fit2)
 
 #model comparison between the two different models
-#anova(lav_tables_fit_Cf(fit1),lav_tables_fit_Cf(fit2))
+#anova(lavTablesFitCf(fit1), lavTablesFitCf(fit2))
 
 #Multigroup example
 #HS.model <- ' visual  =~ x1 + x2 + x3
 #              textual =~ x4 + x5 + x6
 #              speed   =~ x7 + x8 + x9 '
 #fit <- cfa(HS.model, data=HSbinary, ordered=names(HSbinary),group = "school", estimator="PML")
-#lav_tables_fit_CM(fit)
-#lav_tables_fit_Cp(fit)
-#lav_tables_fit_CF(fit)
+#lavTablesFitCm(fit)
+#lavTablesFitCp(fit)
+#lavTablesFitCf(fit)
 }
 
 \keyword{

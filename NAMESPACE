@@ -54,7 +54,7 @@ export("lavaan", "cfa", "sem", "growth",
        "simulateData",
        "estfun.lavaan", "lavScores",
        "lavTables", 
-       "lav_tables_fit_Cp", "lav_tables_fit_CF", "lav_tables_fit_CM",
+       "lavTablesFitCp", "lavTablesFitCf", "lavTablesFitCm",
        "lavExport",
        "lavMatrixRepresentation",
        "mplus2lavaan" #,
@@ -92,6 +92,7 @@ S3method(print, prelav)
 S3method(pairs, lavaan)
 S3method(print, InformativeTesting)
 S3method(plot, InformativeTesting)
-S3method(print, lavaan.tables.fit.CF)
+S3method(print, lavaan.tables.fit.Cf)
 S3method(print, lavaan.tables.fit.Cp)
+S3method(print, lavaan.tables.fit.Cm)
 #S3method(summary, lavaan.boot)

@@ -894,7 +894,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_p
     if("c_p" %in% fit.measures) {
-        out <- lav_tables_fit_Cp(object)
+        out <- lavTablesFitCp(object)
         CpMax <- attr(out, "CpMax")
         indices["c_p"] <- CpMax$LR
         indices["c_p.df"] <- CpMax$df
@@ -903,7 +903,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_F
     if("c_f" %in% fit.measures) {
-        CF <- lav_tables_fit_CF(object)
+        CF <- lavTablesFitCf(object)
         DF <- attr(CF, "DF")
         attributes(CF) <- NULL
         indices["c_f"] <- CF
@@ -917,7 +917,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # C_M
     if("c_m" %in% fit.measures) {
-        CM <- lav_tables_fit_CM(object)
+        CM <- lavTablesFitCm(object)
         DF <- attr(CM, "DF")
         attributes(CM) <- NULL
         indices["c_m"] <- CM
