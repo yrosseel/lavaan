@@ -441,7 +441,10 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
 
     if("RMSEA" %in% statistic) {
         LR <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=sum)
-        out$RMSEA <- sqrt( pmax(0, (LR - out$df)/ (2*out$nobs*out$df) ) )
+        # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
+        # SSI paper (2005) 'SEM with ordinal variables using LISREL'
+        # 2*N*d should N*d
+        out$RMSEA <- sqrt( pmax(0, (LR - out$df)/ (out$nobs*out$df) ) )
         if(p.value) {
             # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
             # because for ncp > 80, routine only computes lower tail
@@ -452,7 +455,10 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
     }
     if("RMSEA.BVN" %in% statistic) {
         LR <- tapply(out.cell$LR.BVN, INDEX=out.cell$id, FUN=sum)
-        out$RMSEA.BVN <- sqrt( pmax(0, (LR - out$df)/ (2*out$nobs*out$df) ) )
+        # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
+        # SSI paper (2005) 'SEM with ordinal variables using LISREL'
+        # 2*N*d should N*d
+        out$RMSEA.BVN <- sqrt( pmax(0, (LR - out$df)/ (out$nobs*out$df) ) )
         if(p.value) {
             # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
             # because for ncp > 80, routine only computes lower tail
