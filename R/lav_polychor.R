@@ -214,8 +214,14 @@ pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2, freq=NULL) {
 }
 
 # polychoric correlation
+#
+# zero.add is a vector: first element is for 2x2 tables only, second element
+#                       for general tables
+# zero.keep.margins is only used for 2x2 tables
 pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
-                      method="nlminb", zerofreq=0.5, verbose=FALSE) {
+                      method="nlminb", zero.add = c(0.5, 0.0), 
+                      zero.keep.margins = TRUE,
+                      verbose=FALSE) {
 
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
@@ -237,10 +243,55 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     if(!exo) {
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         nr <- nrow(freq); nc <- ncol(freq)
+
         # check for empty cells -- FIXME: make this an option!
-        if(any(freq == 0) && zerofreq > 0) {
-            #freq[freq == 0] <- zerofreq/length(fit.y1$y)
-            freq[freq == 0] <- zerofreq
+
+        # treat 2x2 tables 
+        if(nr == 2L && nc == 2L) {
+            idx <- which(freq == 0L)
+            # catch 2 empty cells: perfect correlation!
+            if(length(idx) == 2L) {
+                warning("lavaan WARNING: two empty cells in 2x2 table")
+                if(freq[1,1] > 0L) {
+                    return(1.0)
+                } else {
+                    return(-1.0)
+                }
+            } else if(length(idx) == 1L && zero.add[1] > 0.0) {
+                if(zero.keep.margins) {
+                    # add + compensate to preserve margins
+                    if(idx == 1L || idx == 4L) { # main diagonal
+                        freq <- freq + zero.add[1]
+                        freq[2,1] <- freq[2,1] - 1
+                        freq[1,2] <- freq[1,2] - 1
+                    } else {
+                        freq <- freq + zero.add[1]
+                        freq[1,1] <- freq[1,1] - 1
+                        freq[2,2] <- freq[2,2] - 1
+                    }
+                } else {
+                    freq[idx] <- freq[idx] + zero.add[1]
+                }
+            }
+        # general table
+        } else {
+            if(any(freq == 0L) && zero.add[2] > 0.0) {
+                # general table: just add zero.add to the empty cell(s)
+                freq[freq == 0] <- zero.add[2]
+            }
+        }
+
+        # catch special cases for 2x2 tables
+        if(nr == 2L && nc == 2L) {
+            # 1. a*d == c*d
+            if(freq[1,1]*freq[2,2] == freq[1,2]*freq[2,1]) {
+                return(0.0)
+            }
+            # 2. equal margins (th1 = th2 = 0)
+            if(th.y1[1] == th.y2[1]) {
+                # see eg Brown & Benedetti 1977 eq 2
+                return( - cos( 2*pi*freq[1,1]/sum(freq) ) )
+            }
         }
     }
 

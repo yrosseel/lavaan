@@ -497,6 +497,35 @@ setLavaanOptions <- function(opt = formals(lavaan))
         opt$verbose <- opt$warn <- TRUE
     }
 
+    # zero cell frequencies
+    if(is.character(opt$zero.add) && opt$zero.add == "default") {
+        # default: c(0.5, 0.0)
+        opt$zero.add <- c(0.5, 0.0)
+        # FIXME: TODO: mimic EQS , LISREL (0.0, 0.0)
+    } else if(is.numeric(opt$zero.add)) {
+        if(length(opt$zero.add) == 1L) {
+            opt$zero.add <- c(opt$zero.add, opt$zero.add)
+        } else if(length(opt$zero.add) > 2L) {
+            warning("lavaan WARNING: argument `zero.add' only uses the first two numbers")
+            opt$zero.add <- opt$zero.add[1:2]
+        }
+    } else {
+       stop("lavaan ERROR: argument `zero.add' must be numeric or \"default\"")
+    }
+
+    if(is.character(opt$zero.keep.margins) && 
+       opt$zero.keep.margins == "default") {
+        if(opt$mimic %in% c("lavaan", "Mplus")) {
+            opt$zero.keep.margins <- TRUE
+        } else {
+            opt$zero.keep.margins <- FALSE
+        }
+    } else if(is.logical(opt$zero.keep.margins)) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: argument `zero.keep.margins' must be logical or \"default\"")
+    }
+
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 
     opt

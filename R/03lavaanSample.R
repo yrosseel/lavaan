@@ -3,23 +3,25 @@
 # initial version: YR 25/03/2009
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 
-lavSampleStatsFromData <- function(Data          = NULL,
-                                   DataX         = NULL,
-                                   DataeXo       = NULL,
-                                   DataOvnames   = NULL,
-                                   DataOvnamesx  = NULL,
-                                   DataOv        = NULL,
-                                   missing       = "listwise",
-                                   rescale       = FALSE,
-                                   missing.h1    = TRUE,
-                                   estimator     = "ML",
-                                   mimic         = "lavaan",
-                                   meanstructure = FALSE,
-                                   WLS.V         = NULL,
-                                   NACOV         = NULL,
-                                   ridge         = 1e-5,
-                                   debug         = FALSE,
-                                   verbose       = FALSE) {
+lavSampleStatsFromData <- function(Data              = NULL,
+                                   DataX             = NULL,
+                                   DataeXo           = NULL,
+                                   DataOvnames       = NULL,
+                                   DataOvnamesx      = NULL,
+                                   DataOv            = NULL,
+                                   missing           = "listwise",
+                                   rescale           = FALSE,
+                                   missing.h1        = TRUE,
+                                   estimator         = "ML",
+                                   mimic             = "lavaan",
+                                   meanstructure     = FALSE,
+                                   WLS.V             = NULL,
+                                   NACOV             = NULL,
+                                   ridge             = 1e-5,
+                                   zero.add          = c(0.5, 0.0),
+                                   zero.keep.margins = TRUE,
+                                   debug             = FALSE,
+                                   verbose           = FALSE) {
 
     # ridge default
     ridge.eps <- 0.0
@@ -138,6 +140,8 @@ lavSampleStatsFromData <- function(Data          = NULL,
                               group = g, # for error messages only
                               missing = missing, # listwise or pairwise?
                               WLS.W = WLS.W,
+                              zero.add = zero.add,
+                              zero.keep.margins = zero.keep.margins,
                               verbose=debug)
             if(verbose) cat("done\n")
             # if (and only if) all variables are ordinal, store pairwise

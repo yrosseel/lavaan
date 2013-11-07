@@ -2,6 +2,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
                        missing="listwise",
                        WLS.W=TRUE, # do we need asymptotic variance of stats?
+                       zero.add = c(0.5, 0.0),
+                       zero.keep.margins = TRUE,
                        group=1L) { # group only for error messages
 
     # internal function lav_crossprod2
@@ -187,7 +189,9 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 COR[i,j] <- COR[j,i] <- out
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
-                out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]])
+                out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]],
+                                 zero.add = zero.add, 
+                                 zero.keep.margins = zero.keep.marings)
                 COR[i,j] <- COR[j,i] <- out
             }
             # check for near 1.0 correlations

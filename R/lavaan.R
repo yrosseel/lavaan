@@ -65,6 +65,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    WLS.V              = NULL,
                    NACOV              = NULL,
 
+                   # zero values
+                   zero.add           = "default",
+                   zero.keep.margins  = "default",
+
                    # starting values
                    start              = "default",
 
@@ -143,6 +147,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             sample.cov.rescale = sample.cov.rescale,
             information = information, se = se, test = test, 
             bootstrap = bootstrap, mimic = mimic,
+            zero.add = zero.add, zero.keep.margins = zero.keep.margins,
             representation = representation, do.fit = do.fit, verbose = verbose,
             warn = warn, debug = debug)
         lavaanOptions <- setLavaanOptions(opt)
@@ -315,11 +320,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        mimic         = lavaanOptions$mimic,
                        meanstructure = lavaanOptions$meanstructure,
                        missing.h1    = (lavaanOptions$missing != "listwise"),
-                       WLS.V         = WLS.V,
-                       NACOV         = NACOV,
-                       ridge         = ridge,
-                       debug         = lavaanOptions$debug,
-                       verbose       = lavaanOptions$verbose)
+                       WLS.V             = WLS.V,
+                       NACOV             = NACOV,
+                       ridge             = ridge,
+                       zero.add          = lavaanOptions$zero.add,
+                       zero.keep.margins = lavaanOptions$zero.keep.margins,
+                       debug             = lavaanOptions$debug,
+                       verbose           = lavaanOptions$verbose)
                                                  
     } else if(lavaanData@data.type == "moment") {
         lavaanSampleStats <- lavSampleStatsFromMoments(
@@ -733,7 +740,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
+    start = "default", zero.add = "default", zero.keep.margins = "default",
+    verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
@@ -766,7 +774,8 @@ growth <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE) {
+    start = "default", zero.add = "default", zero.keep.margins = "default",
+    verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
 
