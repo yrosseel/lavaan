@@ -18,7 +18,8 @@ lavaan(model = NULL, data = NULL,
     likelihood = "default", information = "default",
     se = "default", test = "default", bootstrap = 1000L, mimic = "default",
     representation = "default", do.fit = TRUE, control = list(),
-    WLS.V = NULL, NACOV = NULL, start = "default",
+    WLS.V = NULL, NACOV = NULL, 
+    zero.add = "default", zero.keep.margins = "default", start = "default", 
     slotOptions = NULL, slotParTable = NULL,
     slotSampleStats = NULL, slotData = NULL, slotModel = NULL,
     verbose = FALSE, warn = TRUE, debug = FALSE)
@@ -227,6 +228,19 @@ order as they appear in the data.}
     For a multiple group analysis, a list with an asymptotic
     variance-covariance matrix for each group. See the \code{WLS.V}
     argument for information about the order of the elements.}
+\item{zero.add}{A numeric vector containing two values. These values affect the
+    calculation of polychoric correlations when some frequencies in the 
+    bivariate table are zero.
+    The first value only applies for 2x2 tables. The second value for larger 
+    tables. This value is added to the zero frequency in the bivariate table.
+    If \code{"default"}, the value is set depending on the \code{"mimic"} 
+    option. By default, lavaan uses \code{zero.add = c(0.5. 0.0)}.}
+\item{zero.keep.margings}{Logical. This argument only affects the computation
+    of polychoric correlations for 2x2 tables with an empty cell, and where a
+    value is added to the empty cell. If \code{TRUE}, the other values of the
+    frequency table are adjusted so that all margins are unaffected. If 
+    \code{"default"}, the value is set depending on the \code{"mimic"}. The
+    default is \code{TRUE}.}
 \item{start}{If it is a character string,
     the two options are currently \code{"simple"} and \code{"Mplus"}. 
     In the first
