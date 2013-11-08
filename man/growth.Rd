@@ -191,7 +191,7 @@ order as they appear in the data.}
     tables. This value is added to the zero frequency in the bivariate table.
     If \code{"default"}, the value is set depending on the \code{"mimic"}
     option. By default, lavaan uses \code{zero.add = c(0.5. 0.0)}.}
-\item{zero.keep.margings}{Logical. This argument only affects the computation
+\item{zero.keep.margins}{Logical. This argument only affects the computation
     of polychoric correlations for 2x2 tables with an empty cell, and where a
     value is added to the empty cell. If \code{TRUE}, the other values of the
     frequency table are adjusted so that all margins are unaffected. If

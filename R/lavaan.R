@@ -740,7 +740,7 @@ cfa <- sem <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    start = "default", zero.add = "default", zero.keep.margins = "default",
+    zero.add = "default", zero.keep.margins = "default", start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -774,7 +774,7 @@ growth <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    start = "default", zero.add = "default", zero.keep.margins = "default",
+    zero.add = "default", zero.keep.margins = "default", start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()

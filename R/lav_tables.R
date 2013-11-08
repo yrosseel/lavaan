@@ -17,6 +17,7 @@
 #                 - changed names of statistics: std.resid is now GR.average
 #                 - added many more statistics; some based on the model, some
 #                   on the unrestricted model
+# - 8 Nov 2013:   - skip empty cells for LR, instead of adding 0.5 to obs
 
 lavTables <- function(object,
                       # what type of table?
@@ -317,9 +318,11 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
 # LR statistic
 lav_tables_stat_LR <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
     # not defined if out$obs.prop is (close to) zero
-    # we use freq=0.5 for these empty cells
     zero.idx <- which(obs.prop < .Machine$double.eps)
-    obs.prop[zero.idx] <- 0.5/nobs[zero.idx]
+    if(length(zero.idx)) {
+        obs.prop[zero.idx] <- as.numeric(NA)
+    }
+    # the usual LR formula
     LR <- 2*nobs*(obs.prop*log(obs.prop/est.prop))
     LR
 }
@@ -413,13 +416,15 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
 
     # GF
     if("GF" %in% statistic) {
-        out$GF <- tapply(out.cell$GF, INDEX=out.cell$id, FUN=sum)
+        out$GF <- tapply(out.cell$GF, INDEX=out.cell$id, FUN=sum, 
+                         na.rm=TRUE)
         if(p.value) {
             out$GF.pval <- pchisq(out$GF, df=out$df, lower.tail=FALSE)
         }
     }
     if("GF.BVN" %in% statistic) {
-        out$GF.BVN <- tapply(out.cell$GF.BVN, INDEX=out.cell$id, FUN=sum)
+        out$GF.BVN <- tapply(out.cell$GF.BVN, INDEX=out.cell$id, FUN=sum,
+                             na.rm=TRUE)
         if(p.value) {
             out$GF.BVN.pval <- pchisq(out$GF.BVN, df=out$df, lower.tail=FALSE)
         }
@@ -427,20 +432,22 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
  
     # LR
     if("LR" %in% statistic) {
-        out$LR <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=sum)
+        out$LR <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=sum,
+                         na.rm=TRUE)
         if(p.value) {
             out$LR.pval <- pchisq(out$LR, df=out$df, lower.tail=FALSE)
         }
     }
     if("LR.BVN" %in% statistic) {
-        out$LR.BVN <- tapply(out.cell$LR.BVN, INDEX=out.cell$id, FUN=sum)
+        out$LR.BVN <- tapply(out.cell$LR.BVN, INDEX=out.cell$id, FUN=sum,
+                             na.rm=TRUE)
         if(p.value) {
             out$LR.BVN.pval <- pchisq(out$LR.BVN, df=out$df, lower.tail=FALSE)
         }
     }
 
     if("RMSEA" %in% statistic) {
-        LR <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=sum)
+        LR <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=sum, na.rm=TRUE)
         # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
         # SSI paper (2005) 'SEM with ordinal variables using LISREL'
         # 2*N*d should N*d
@@ -454,7 +461,8 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
         }
     }
     if("RMSEA.BVN" %in% statistic) {
-        LR <- tapply(out.cell$LR.BVN, INDEX=out.cell$id, FUN=sum)
+        LR <- tapply(out.cell$LR.BVN, INDEX=out.cell$id, FUN=sum,
+                     na.rm=TRUE)
         # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
         # SSI paper (2005) 'SEM with ordinal variables using LISREL'
         # 2*N*d should N*d
@@ -469,35 +477,38 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
     }
 
     if("LR.AVERAGE" %in% statistic) {
-        out$LR.average <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=mean)
+        out$LR.average <- tapply(out.cell$LR, INDEX=out.cell$id, FUN=mean,
+                                 na.rm=TRUE)
     }
 
     if("LR.NLARGE" %in% statistic) {
          out$LR.min <- rep(LR.min, length(out$lhs))
          out$LR.nlarge <- tapply(out.cell$LR, INDEX=out.cell$id,
-                                 FUN=function(x) sum(x > LR.min) )
+                                 FUN=function(x) sum(x > LR.min, na.rm=TRUE) )
     }
 
     if("LR.PLARGE" %in% statistic) {
          out$LR.min <- rep(LR.min, length(out$lhs))
          out$LR.plarge <- tapply(out.cell$LR, INDEX=out.cell$id,
-                                 FUN=function(x) sum(x > LR.min)/length(x) )
+                                 FUN=function(x) sum(x > LR.min, na.rm=TRUE)/length(x) )
     }
 
     if("GF.AVERAGE" %in% statistic) {
-        out$GF.average <- tapply(out.cell$GF, INDEX=out.cell$id, FUN=mean)
+        out$GF.average <- tapply(out.cell$GF, INDEX=out.cell$id, FUN=mean,
+                                 na.rm=TRUE)
+
     }
 
     if("GF.NLARGE" %in% statistic) {
          out$GF.min <- rep(GF.min, length(out$lhs))
          out$GF.nlarge <- tapply(out.cell$GF, INDEX=out.cell$id, 
-                                 FUN=function(x) sum(x > GF.min) )   
+                                 FUN=function(x) sum(x > GF.min, na.rm=TRUE) )   
     }
 
     if("GF.PLARGE" %in% statistic) {
          out$GF.min <- rep(GF.min, length(out$lhs))
          out$GF.plarge <- tapply(out.cell$GF, INDEX=out.cell$id,
-                                 FUN=function(x) sum(x > GF.min)/length(x) )
+                                 FUN=function(x) sum(x > GF.min, na.rm=TRUE)/length(x) )
     }
     
     out

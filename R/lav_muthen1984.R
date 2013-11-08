@@ -191,7 +191,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 # polychoric correlation
                 out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]],
                                  zero.add = zero.add, 
-                                 zero.keep.margins = zero.keep.marings)
+                                 zero.keep.margins = zero.keep.margins)
                 COR[i,j] <- COR[j,i] <- out
             }
             # check for near 1.0 correlations

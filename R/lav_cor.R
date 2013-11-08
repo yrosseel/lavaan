@@ -5,6 +5,8 @@
 
 lavCor <- function(object, ordered = NULL, ov.names.x = NULL, 
                    # method="two.step", 
+                   zero.add = c(0.5, 0.0),
+                   zero.keep.margins = TRUE,
                    group = NULL, missing = "listwise",
                    WLS.W = FALSE, details = FALSE,
                    labels = TRUE, verbose = FALSE) {
@@ -29,13 +31,15 @@ lavCor <- function(object, ordered = NULL, ov.names.x = NULL,
     }
 
     out <- lav_cor(lav.data = lav.data, WLS.W = WLS.W, details = details, 
+                   zero.add = zero.add, zero.keep.margins = zero.keep.margins,
                    labels = labels, verbose = verbose)
 
     out
 }
 
 # internal version
-lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE, 
+lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE,
+                    zero.add = c(0.5, 0.0), zero.keep.margins = TRUE,
                     labels = FALSE, verbose = FALSE) {
 
     # shortcuts
@@ -56,6 +60,8 @@ lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE,
                           group      = g, # for error messages only
                           missing    = lav.data@missing, # listwise or pairwise?
                           WLS.W      = WLS.W,
+                          zero.add   = zero.add,
+                          zero.keep.margins = zero.keep.margins,
                           verbose    = verbose)
         COR[[g]] <- unname(CAT$COV)
         if(details) {
@@ -95,20 +101,20 @@ lav_cor <- function(lav.data = NULL, WLS.W = FALSE, details = FALSE,
 }
 
 # test for bivariate normality
-lavCorFit <- function(object,
-                         # if raw data, additional attributes
-                         categorical  = NULL,
-                         # which statistics / fit indices?
-                         statistic    = c("LR", "RMSEA"),
-                         # pvalues for statistics?
-                         p.value      = FALSE) {
-
-    out <- lavTables(object = object, dimension = 2L, categorical = categorical,
-              statistic = statistic, p.value = p.value)
-
-    # add table-wise info
-    # FIXME: we need to filter out 'numeric' variables
-    #out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
-
-    out
-}
+#lavCorFit <- function(object,
+#                         # if raw data, additional attributes
+#                         categorical  = NULL,
+#                         # which statistics / fit indices?
+#                         statistic    = c("LR", "RMSEA"),
+#                         # pvalues for statistics?
+#                         p.value      = FALSE) {
+#
+#    out <- lavTables(object = object, dimension = 2L, categorical = categorical,
+#              statistic = statistic, p.value = p.value)
+#
+#    # add table-wise info
+#    # FIXME: we need to filter out 'numeric' variables
+#    #out$cors <- unlist( lapply(COR, vech, diag=FALSE) )
+#
+#    out
+#}
