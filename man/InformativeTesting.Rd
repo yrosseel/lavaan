@@ -58,9 +58,16 @@ InformativeTesting(model = NULL, data, constraints = NULL,
 
 #model syntax with starting values
 burns.model <- 'Selfesteem ~ Age + c(m1, f1)*TBSA + HADS +
-                           start(-.10, -.20)*TBSA  
+                           start(-.15, -.25)*TBSA + start(-0.5, -0.5)*HADS 
                 HADS ~ Age + c(m2, f2)*TBSA + RUM +
-                       start(.10, .20)*TBSA '
+                       start(.15, .25)*TBSA + start(1.0, -0.6)*RUM
+                # optional starting values only to get < 5s
+                Selfesteem ~ start(37, 35)*1
+                HADS       ~ start(-4, 17)*1
+                Selfesteem ~~ c(18, 14)*Selfesteem
+                HADS       ~~ c(31, 50)*HADS
+'
+
 
 
 #constraints syntax
@@ -73,8 +80,8 @@ burns.constraints <- 'f2 > 0  ; m1 < 0
 # you may wish to use a much higher number
 
 example <- InformativeTesting(model = burns.model, data = FacialBurns,
-                              R = 1, double.bootstrap.R = 1, constraints = 
-                              burns.constraints, group = "Sex")
+                              R = 1, double.bootstrap.R = 1, 
+                              constraints = burns.constraints, group = "Sex")
 
 # dontrun
 # plot(example)

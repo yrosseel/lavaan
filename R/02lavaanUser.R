@@ -233,6 +233,7 @@ lavaanify <- lavParTable <- function(
     # FIXME!!!
     # b1 == b3
     # b2 == b3 does not work
+    # better a general approach for linear constraints!
     #if(length(CON) > 0L) {
     #    el.idx <- integer(0L)
     #    for(el in 1:length(CON)) {
@@ -249,6 +250,8 @@ lavaanify <- lavParTable <- function(
     #                    LIST$label[rhs.idx] <- LIST$label[lhs.idx]
     #                }
     #                LIST$free[ rhs.idx] <- 0L
+                     # FIXME: what is needed is to replace all occurences
+                     #        of rhs.idx by lhs.idx in CON!!!
     #            }
     #        }
     #    }

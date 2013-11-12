@@ -167,14 +167,14 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
         if(length(statistic) == 1L && statistic == "default") {
             statistic <- c("G2", "X2")
         } else {
-            stopifnot(statistic %in% c("G2.bvn", "X2.bvn", "G2", "X2"))
+            stopifnot(statistic %in% c("G2.un", "X2.un", "G2", "X2"))
         }  
     } else {
         if(length(statistic) == 1L && statistic == "default") {
             # if data, none by default
             statistic <- character(0L)
         } else {
-            stopifnot(statistic %in% c("G2.bvn", "X2.bvn"))
+            stopifnot(statistic %in% c("G2.un", "X2.un"))
         }
     }
 
@@ -205,19 +205,19 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 
     out$obs.prop <- out$obs.freq/out$nobs
 
-    if(any(c("X2.bvn", "G2.bvn") %in% statistic)) {
+    if(any(c("X2.un", "G2.un") %in% statistic)) {
         # not a good statistic... we only have uni+bivariate information
         warning("lavaan WARNING: limited information used for thresholds and correlations; but X2/G2 assumes full information")
         PI <- lav_tables_resp_pi(lavobject = lavobject, lavdata = lavdata,
                                  est = "h1")
 
-        out$est.prop.bvn <- unlist(PI)
-        if("G2.bvn" %in% statistic) {
-            out$G2.bvn <- lav_tables_stat_G2(out$obs.prop, out$est.prop.bvn,
+        out$est.prop.un <- unlist(PI)
+        if("G2.un" %in% statistic) {
+            out$G2.un <- lav_tables_stat_G2(out$obs.prop, out$est.prop.un,
                                              out$nobs)
         }
-        if("X2.bvn" %in% statistic) {
-            out$X2.bvn <- lav_tables_stat_X2(out$obs.prop, out$est.prop.bvn,
+        if("X2.un" %in% statistic) {
+            out$X2.un <- lav_tables_stat_X2(out$obs.prop, out$est.prop.un,
                                              out$nobs)
         }
     }
@@ -270,14 +270,14 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
             statistic <- c("X2")
         } else {
             stopifnot(statistic %in% c("cor", "th", "X2","G2",
-                                       "cor.bvn", "th.bvn", "X2.bvn","G2.bvn"))
+                                       "cor.un", "th.un", "X2.un","G2.un"))
         }
     } else {
         if(length(statistic) == 1L && statistic == "default") {
             # if data, none by default
             statistic <- character(0L)
         } else {
-            stopifnot(statistic %in% c("cor.bvn", "th.bvn", "X2.bvn","G2.bvn"))
+            stopifnot(statistic %in% c("cor.un", "th.un", "X2.un","G2.un"))
         }
     }
 
@@ -285,24 +285,24 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     out <- lav_tables_pairwise_freq_cell(lavdata = lavdata, 
                                          as.data.frame. = TRUE)
     out$obs.prop <- out$obs.freq/out$nobs
-    if(any(c("cor.bvn", "th.bvn", "X2.bvn", "G2.bvn") %in% statistic)) {
+    if(any(c("cor.un", "th.un", "X2.un", "G2.un") %in% statistic)) {
         PI <- lav_tables_pairwise_sample_pi(lavobject = lavobject,
                                             lavdata   = lavdata)
-        out$est.prop.bvn <- unlist(PI)
-        if("G2.bvn" %in% statistic) {
-            out$G2.bvn <- lav_tables_stat_G2(out$obs.prop, out$est.prop.bvn, 
+        out$est.prop.un <- unlist(PI)
+        if("G2.un" %in% statistic) {
+            out$G2.un <- lav_tables_stat_G2(out$obs.prop, out$est.prop.un, 
                                              out$nobs)
         }
-        if("X2.bvn" %in% statistic) {
-            out$X2.bvn <- lav_tables_stat_X2(out$obs.prop, out$est.prop.bvn, 
+        if("X2.un" %in% statistic) {
+            out$X2.un <- lav_tables_stat_X2(out$obs.prop, out$est.prop.un, 
                                              out$nobs)
         }
 
-        if("cor.bvn" %in% statistic) {
+        if("cor.un" %in% statistic) {
             COR <- attr(PI, "COR")
             cor.all <- unlist(lapply(COR, function(x) 
                                               x[lower.tri(x, diag=FALSE)]))
-            out$cor.bvn <- cor.all[out$id]
+            out$cor.un <- cor.all[out$id]
         }
     }
     if(any(c("cor", "th", "X2", "G2") %in% statistic)) {
@@ -357,9 +357,9 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
         if(length(statistic) == 1L && statistic == "default") {
             statistic <- c("X2", "X2.average")
         } else {
-            stopifnot(statistic %in% c("X2","G2","X2.bvn","G2.bvn",
-                                       "cor", "cor.bvn",
-                                       "RMSEA.bvn", "RMSEA",
+            stopifnot(statistic %in% c("X2","G2","X2.un","G2.un",
+                                       "cor", "cor.un",
+                                       "RMSEA.un", "RMSEA",
                                        "G2.average",
                                        "G2.nlarge",
                                        "G2.plarge",
@@ -372,8 +372,8 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
             # if data, none by default
             statistic <- character(0L)
         } else {
-            stopifnot(statistic %in% c("cor.bvn", "X2.bvn","G2.bvn",
-                                       "RMSEA.bvn"))
+            stopifnot(statistic %in% c("cor.un", "X2.un","G2.un",
+                                       "RMSEA.un"))
         }
     }
 
@@ -401,14 +401,14 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
     if("G2" %in% statistic || "RMSEA" %in% statistic) {
         stat.cell <- c(stat.cell, "G2")
     }
-    if("X2.bvn" %in% statistic) {
-        stat.cell <- c(stat.cell, "X2.bvn")
+    if("X2.un" %in% statistic) {
+        stat.cell <- c(stat.cell, "X2.un")
     }
-    if("G2.bvn" %in% statistic || "RMSEA.bvn" %in% statistic) {
-        stat.cell <- c(stat.cell, "G2.bvn")
+    if("G2.un" %in% statistic || "RMSEA.un" %in% statistic) {
+        stat.cell <- c(stat.cell, "G2.un")
     }
-    if("cor.bvn" %in% statistic) {
-        stat.cell <- c(stat.cell, "cor.bvn")
+    if("cor.un" %in% statistic) {
+        stat.cell <- c(stat.cell, "cor.un")
     }
     if("cor" %in% statistic) {
         stat.cell <- c(stat.cell, "cor")
@@ -438,9 +438,9 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
         out$cor <- out.cell[row.idx, "cor"]
     }
 
-    # cor.bvn
-    if("cor.bvn" %in% statistic) {
-        out$cor.bvn <- out.cell[row.idx, "cor.bvn"]
+    # cor.un
+    if("cor.un" %in% statistic) {
+        out$cor.un <- out.cell[row.idx, "cor.un"]
     }
 
     # X2
@@ -451,11 +451,11 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
             out$X2.pval <- pchisq(out$X2, df=out$df, lower.tail=FALSE)
         }
     }
-    if("X2.bvn" %in% statistic) {
-        out$X2.bvn <- tapply(out.cell$X2.bvn, INDEX=out.cell$id, FUN=sum,
+    if("X2.un" %in% statistic) {
+        out$X2.un <- tapply(out.cell$X2.un, INDEX=out.cell$id, FUN=sum,
                              na.rm=TRUE)
         if(p.value) {
-            out$X2.bvn.pval <- pchisq(out$X2.bvn, df=out$df, lower.tail=FALSE)
+            out$X2.un.pval <- pchisq(out$X2.un, df=out$df, lower.tail=FALSE)
         }
     }
  
@@ -467,11 +467,11 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
             out$G2.pval <- pchisq(out$G2, df=out$df, lower.tail=FALSE)
         }
     }
-    if("G2.bvn" %in% statistic) {
-        out$G2.bvn <- tapply(out.cell$G2.bvn, INDEX=out.cell$id, FUN=sum,
+    if("G2.un" %in% statistic) {
+        out$G2.un <- tapply(out.cell$G2.un, INDEX=out.cell$id, FUN=sum,
                              na.rm=TRUE)
         if(p.value) {
-            out$G2.bvn.pval <- pchisq(out$G2.bvn, df=out$df, lower.tail=FALSE)
+            out$G2.un.pval <- pchisq(out$G2.un, df=out$df, lower.tail=FALSE)
         }
     }
 
@@ -489,17 +489,17 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
                                            df=out$df, lower.tail = TRUE)
         }
     }
-    if("RMSEA.bvn" %in% statistic) {
-        G2 <- tapply(out.cell$G2.bvn, INDEX=out.cell$id, FUN=sum,
+    if("RMSEA.un" %in% statistic) {
+        G2 <- tapply(out.cell$G2.un, INDEX=out.cell$id, FUN=sum,
                      na.rm=TRUE)
         # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
         # SSI paper (2005) 'SEM with ordinal variables using LISREL'
         # 2*N*d should N*d
-        out$RMSEA.bvn <- sqrt( pmax(0, (G2 - out$df)/ (out$nobs*out$df) ) )
+        out$RMSEA.un <- sqrt( pmax(0, (G2 - out$df)/ (out$nobs*out$df) ) )
         if(p.value) {
             # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
             # because for ncp > 80, routine only computes lower tail
-            out$RMSEA.bvn.pval <- 1.0 - pchisq(G2,
+            out$RMSEA.un.pval <- 1.0 - pchisq(G2,
                                                ncp = 0.1^2*out$nobs*out$df,
                                                df=out$df, lower.tail = TRUE)
         }
@@ -610,13 +610,13 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
         if(length(statistic) == 1L && statistic == "default") {
             statistic <- c("X2")
         } else {
-            stopifnot(statistic %in% c("th.uvn", 
+            stopifnot(statistic %in% c("th.un", 
                                        "th", "G2", "X2"))
         }
 
         # sample based
-        # note, there is no G2.UVN or X2.UVN: always saturated!
-        if("th.uvn" %in% statistic) {
+        # note, there is no G2.un or X2.un: always saturated!
+        if("th.un" %in% statistic) {
             # sample based
             th <- unlist(lapply(1:lavdata@ngroups, function(x) {
                   unname(unlist(tapply(lavobject@SampleStats@th[[x]],
@@ -629,7 +629,7 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
                                FUN=function(x) (pnorm(c(x,Inf)) -    
                                   pnorm(c(-Inf,x)))[-(length(x)+1)]  )))
 
-            out$th.uvn <- th
+            out$th.un <- th
         }
         
         # model based
@@ -663,11 +663,11 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
             # if data, none by default
             statistic <- character(0L)
         } else {
-            stopifnot(statistic %in% c("th.uvn"))
+            stopifnot(statistic %in% c("th.un"))
         }
 
-        if("th.uvn" %in% statistic) {
-            out$th.uvn <- unlist(tapply(out$obs.prop, INDEX=out$id,
+        if("th.un" %in% statistic) {
+            out$th.un <- unlist(tapply(out$obs.prop, INDEX=out$id,
                                  FUN=function(x) qnorm(cumsum(x))))
         }
     }
@@ -976,10 +976,10 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
 
     # determine column we need
     NAMES <- names(out)
-    stat.idx <- which(NAMES %in% c("cor",      "cor.bvn",
-                                   "G2",        "G2.bvn",
-                                   "X2",        "X2.bvn",
-                                   "RMSEA",  "RMSEA.bvn",
+    stat.idx <- which(NAMES %in% c("cor",      "cor.un",
+                                   "G2",        "G2.un",
+                                   "X2",        "X2.un",
+                                   "RMSEA",  "RMSEA.un",
                                    "G2.average", "G2.plarge", "G2.nlarge",
                                    "X2.average", "X2.plarge", "X2.nlarge"))
     if(length(stat.idx) == 0) {
@@ -995,9 +995,9 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
     } else {
         # univariate version of same statistic
         if(NAMES[stat.idx] == "G2.average") {
-            UNI <- lavTables(lavobject, dim = 1L, statistic="G2")
+            UNI <- lavTables(lavobject, dimension = 1L, statistic="G2")
         } else if(NAMES[stat.idx] == "X2.average") {
-            UNI <- lavTables(lavobject, dim = 1L, statistic="X2")
+            UNI <- lavTables(lavobject, dimension = 1L, statistic="X2")
         } else {
             UNI <- NULL
         }
@@ -1028,7 +1028,7 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
                 diag(OUT[[g]]) <- tapply(UNI$X2[idx], INDEX=UNI$id[idx], 
                                          FUN=mean)
             }
-        } else if(NAMES[stat.idx] %in% c("cor", "cor.bvn")) {
+        } else if(NAMES[stat.idx] %in% c("cor", "cor.un")) {
             diag(OUT[[g]]) <- 1
         }
         class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
@@ -1052,10 +1052,10 @@ lav_tables_cells_format <- function(out, lavdata = lavdata) {
     # do we have a statistic?
     # determine column we need
     NAMES <- names(out)
-    stat.idx <- which(NAMES %in% c("cor",     "cor.bvn", 
-                                   "G2",       "G2.bvn",
-                                   "X2",       "X2.bvn",
-                                   "RMSEA", "RMSEA.bvn",
+    stat.idx <- which(NAMES %in% c("cor",     "cor.un", 
+                                   "G2",       "G2.un",
+                                   "X2",       "X2.un",
+                                   "RMSEA", "RMSEA.un",
                                    "G2.average", "G2.plarge", "G2.nlarge",
                                    "X2.average", "X2.plarge", "X2.nlarge"))
     if(length(stat.idx) == 0) {

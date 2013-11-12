@@ -13,15 +13,15 @@
 # Mariska Barendse Cp statistic
 #lav_tables_fit_Cp <- function(object, alpha = 0.05) {
 #
-#    out <- lavTablesFit(object, statistic = "LR", p.value = TRUE)
+#    out <- lavTablesFit(object, statistic = "G2", p.value = TRUE)
 #
 #    # Bonferonni adjusted p-value
 #    ntests <- length(out$lhs)
 #    out$alpha.adj <- alpha / ntests
-#    #out$pval <- pchisq(out$LR, df=out$df, lower.tail = FALSE)
+#    #out$pval <- pchisq(out$G2, df=out$df, lower.tail = FALSE)
 #
-#    # remove LR.h0.pval
-#    #out$LR.h0.pval <- NULL
+#    # remove G2.h0.pval
+#    #out$G2.h0.pval <- NULL
 #
 #    out
 #}
@@ -29,28 +29,29 @@
 lavTablesFitCp <- function(object, alpha = 0.05) {
 
     if(!all(object@Data@ov$type == "ordered")) {
-        return(list(LR=as.numeric(NA), df=as.numeric(NA), 
+        return(list(G2=as.numeric(NA), df=as.numeric(NA), 
                p.value=as.numeric(NA), p.value.Bonferroni=as.numeric(NA)))
     }
 
-    TF <- lavTablesFit(object, statistic = "LR", p.value = TRUE)
+    TF <- lavTables(object, dimension = 2L, type = "table", 
+                    statistic = "G2", p.value = TRUE)
 
     # Bonferonni adjusted p-value
     ntests <- length(TF$lhs)
     TF$alpha.adj <- alpha / ntests
 
-    out <- subset(TF, TF$LR.pval < TF$alpha.adj)
+    out <- subset(TF, TF$G2.pval < TF$alpha.adj)
 
-    # find largest LR
-    max.idx <- which(TF$LR == max(TF$LR))
+    # find largest G2
+    max.idx <- which(TF$G2 == max(TF$G2))
 
-    extra <- list(LR=unname(TF$LR[max.idx]), df=unname(TF$df[max.idx]), 
+    extra <- list(G2=unname(TF$G2[max.idx]), df=unname(TF$df[max.idx]), 
                   lhs=TF$lhs[max.idx],
                   rhs=TF$rhs[max.idx],
                   group=TF$group[max.idx],
-                  p.value=unname(TF$LR.pval[max.idx]),
+                  p.value=unname(TF$G2.pval[max.idx]),
                   ntests=ntests,
-                  p.value.Bonferroni=unname(TF$LR.pval[max.idx]*length(TF$lhs)))
+                  p.value.Bonferroni=unname(TF$G2.pval[max.idx]*length(TF$lhs)))
 
     attr(out, "CpMax") <- extra
 
