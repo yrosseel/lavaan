@@ -522,17 +522,20 @@ computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL,
             # fill in exo values
             eeta[lv.dummy.idx] <- sample.mean[ov.dummy.idx]
  
-            # Note: instead of sample.mean, we need 
-            # sample.mean - lambda %*% eta (ie intercepts, not means)
-            # otherwise, ov.y.dummy elements are off
-            # (ignored, since they are not used??)
+            # Note: instead of sample.mean, we need 'intercepts'
+            # sample.mean = NU + LAMBDA..IB.inv %*% ALPHA
+            # so,
+            # solve(LAMBDA..IB.inv) %*% (sample.mean - NU) = ALPHA
+            # where
+            # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
+            # - NU elements are not needed (since not in ov.dummy.idx)
             tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
-            tmp[cbind(i, i)] <- 1
-            IB.inv <- solve(tmp)       
-            eeta1 <- IB.inv %*% eeta # to get 1:nfac elements
-            eeta[c(3,4)] <- eeta[c(3,4)] - BETA[c(3,4),] %*% eeta1
-        
-        } else {
+            tmp[cbind(i, i)] <- 1; IB.inv <- solve(tmp)
+            LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+            LAMBDA..IB.inv.dummy <- LAMBDA..IB.inv[ov.dummy.idx, lv.dummy.idx]
+            eeta[lv.dummy.idx] <- ( solve(LAMBDA..IB.inv.dummy) %*% 
+                                    sample.mean[ov.dummy.idx] )
+        } else { 
             eeta <- matrix(0, nfac, 1)
         }
     } else {
@@ -587,15 +590,19 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL,
             eeta <- matrix(0, nfac, 1)
             eeta[lv.dummy.idx] <- sample.mean[ov.dummy.idx]
 
-            # Note: instead of sample.mean, we need 
-            # sample.mean - lambda %*% eta (ie intercepts, not means)
-            # otherwise, ov.y.dummy elements are off
-            # (ignored, since they are not used??)
+            # Note: instead of sample.mean, we need 'intercepts'
+            # sample.mean = NU + LAMBDA..IB.inv %*% ALPHA
+            # so,
+            # solve(LAMBDA..IB.inv) %*% (sample.mean - NU) = ALPHA
+            # where
+            # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
+            # - NU elements are not needed (since not in ov.dummy.idx)
             tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
-            tmp[cbind(i, i)] <- 1
-            IB.inv <- solve(tmp)
-            eeta1 <- IB.inv %*% eeta # to get 1:nfac elements
-            eeta[c(3,4)] <- eeta[c(3,4)] - BETA[c(3,4),] %*% eeta1
+            tmp[cbind(i, i)] <- 1; IB.inv <- solve(tmp)
+            LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+            LAMBDA..IB.inv.dummy <- LAMBDA..IB.inv[ov.dummy.idx, lv.dummy.idx]
+            eeta[lv.dummy.idx] <- ( solve(LAMBDA..IB.inv.dummy) %*%
+                                    sample.mean[ov.dummy.idx] )
         } else {
             eeta <- matrix(0, nfac, 1)
         }

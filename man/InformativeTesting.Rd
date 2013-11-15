@@ -54,36 +54,36 @@ InformativeTesting(model = NULL, data, constraints = NULL,
     method is available.}   
 %\seealso{}
 \examples{
-#path model facial burns example
+# Simple ANOVA model with 3 groups (N=20 per group) (artifical data)
+set.seed(1234)
+Y <- cbind(c(rnorm(20,0,1), rnorm(20,0.5,1), rnorm(20,1,1)))
+grp <- c(rep("1", 20), rep("2", 20), rep("3", 20))
+Data <- data.frame(Y, grp)
 
-#model syntax with starting values
-burns.model <- 'Selfesteem ~ Age + c(m1, f1)*TBSA + HADS +
-                           start(-.15, -.25)*TBSA + start(-0.5, -0.5)*HADS 
-                HADS ~ Age + c(m2, f2)*TBSA + RUM +
-                       start(.15, .25)*TBSA + start(1.0, -0.6)*RUM
-                # optional starting values only to get < 5s
-                Selfesteem ~ start(37, 35)*1
-                HADS       ~ start(-4, 17)*1
-                Selfesteem ~~ c(18, 14)*Selfesteem
-                HADS       ~~ c(31, 50)*HADS
-'
+#create model matrix
+fit.lm <- lm(Y ~ grp, data = Data)
+mfit <- fit.lm$model
+mm <- model.matrix(mfit)
 
+Y <- model.response(mfit)
+X <- data.frame(mm[,2:3])
+names(X) <- c("d1", "d2")
+Data.new <- data.frame(Y, X)
 
+# model
+model <- 'Y ~ 1 + a1*d1 + a2*d2'
 
-#constraints syntax
-burns.constraints <- 'f2 > 0  ; m1 < 0
-                      m2 > 0  ; f1 < 0
-                      f2 > m2 ; f1 < m1'
+# constraints syntax: mu1 < mu2 < mu3
+constraints <- ' a1 > 0
+                 a1 < a2 '
 
-
-# we only generate 1 (double) bootstrap samples in this example; in practice
-# you may wish to use a much higher number
-
-example <- InformativeTesting(model = burns.model, data = FacialBurns,
-                              R = 1, double.bootstrap.R = 1, 
-                              constraints = burns.constraints, group = "Sex")
-
-# dontrun
+# we only generate 10 bootstrap samples in this example; in practice
+# you may wish to use a much higher number, say > 10.000. The double bootstrap
+# is not necessary in case of an univariate ANOVA model.
+example <- InformativeTesting(model = model, data = Data.new, 
+                              R = 10L, double.bootstrap = "no",
+                              constraints = constraints)
+example
 # plot(example)
 }
 

@@ -135,7 +135,7 @@ print.InformativeTesting <- function(x, ...) {
   else if(object$double.bootstrap == "no"){
     cat(t30.txt, t31.txt, t32.txt, "\n", sep="")
     cat(t40.txt, t41.txt, t42.txt, "\n\n", sep="") 
-    cat("  *For meaningfull results set double.bootstrap")
+    cat("  *For meaningfull results set double.bootstrap\n\n")
   }
   
 }
