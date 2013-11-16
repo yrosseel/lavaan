@@ -1,7 +1,6 @@
-Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
+Fit <- function(partable=NULL, model, x=NULL, VCOV=NULL, TEST=NULL) {
 
-    stopifnot(is.list(partable), length(partable$lhs) == length(start),
-              class(model) == "Model")
+    stopifnot(is.list(partable), class(model) == "Model")
 
     # extract information from 'x'
     iterations = attr(x, "iterations")
@@ -78,7 +77,7 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
     new("Fit",
         npar       = max(partable$free),
         x          = x.copy,
-        start      = start,
+        start      = partable$start,
         est        = est,
         se         = se,
         fx         = fx,

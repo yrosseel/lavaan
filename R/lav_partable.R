@@ -98,6 +98,11 @@ getNDAT <- function(partable, group=NULL) {
         ndat <- ndat + (ngroups * nvar * nexo)
     }
 
+    # correction for group proportions?
+    group.idx <- which(partable$lhs == "group" & 
+                       partable$op == "%")
+    ndat <- ndat + (length(group.idx) - 1L) # G - 1 (sum to one)
+
     ndat
 }
 
@@ -360,6 +365,7 @@ getLIST <- function(FLAT=NULL,
                     auto.delta      = FALSE,
                     varTable        = NULL,
                     group.equal     = NULL,
+                    group.w.free    = FALSE,
                     ngroups         = 1L) {
 
     categorical <- FALSE
@@ -482,6 +488,12 @@ getLIST <- function(FLAT=NULL,
         op  <- c(op,  rep("~1", length(int.lhs)))
     }
 
+    # free group weights
+    if(group.w.free) {
+        lhs <- c(lhs, "group")
+        rhs <- c(rhs, "w")
+         op <- c(op,  "%") 
+    }
 
     DEFAULT <- data.frame(lhs=lhs, op=op, rhs=rhs,
                           mod.idx=rep(0L, length(lhs)),
@@ -676,6 +688,18 @@ getLIST <- function(FLAT=NULL,
           free[delta.idx] <- 0L
     }
 
+    # group proportions (group 1L)
+    if(group.w.free) {
+        group.idx <- which(lhs == "group" & op == "%")
+        if(ngroups > 1L) {
+              free[ group.idx ] <- 1L
+            ustart[ group.idx ] <- as.numeric(NA)
+        } else {
+              free[ group.idx ] <- 0L
+            ustart[ group.idx ] <- 0.0 # last group
+        }
+    }
+
     # 6. multiple groups?
     group <- rep(1L, length(lhs))
     if(ngroups > 1) {
@@ -716,6 +740,18 @@ getLIST <- function(FLAT=NULL,
                 delta.idx <- which(op == "~*~" & group == g)
                   free[ delta.idx ] <- 1L
                 ustart[ delta.idx ] <- as.numeric(NA)
+            }
+
+            # group proportions
+            if(group.w.free) {
+                group.idx <- which(lhs == "group" & op == "%" & group == g)
+                if(g == ngroups) {
+                      free[ group.idx ] <- 0L
+                    ustart[ group.idx ] <- 0.0 # last group
+                } else {
+                      free[ group.idx ] <- 1L
+                    ustart[ group.idx ] <- as.numeric(NA)
+                }
             }
         } # g
     } # ngroups
@@ -763,7 +799,7 @@ independenceModel <- function(ov.names=NULL, ov=NULL,
         nvar  <- length(ov.names.nox[[g]])
         lhs   <- c(lhs, ov.names.nox[[g]])
          op   <- c(op, rep("~~", nvar))
-        rhs   <- c(rhs, ov.names.nox[[g]])
+            rhs   <- c(rhs, ov.names.nox[[g]])
         group <- c(group, rep(g,  nvar))
         free  <- c(free,  rep(1L, nvar))
         exo   <- c(exo,   rep(0L, nvar))

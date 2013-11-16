@@ -4,7 +4,6 @@
 
 # construct MATRIX representation of the model
 Model <- function(partable       = NULL,
-                  start          = NULL, 
                   representation = "LISREL",
                   th.idx         = list(),
                   debug          = FALSE) {
@@ -14,13 +13,14 @@ Model <- function(partable       = NULL,
     meanstructure <- any(partable$op == "~1")
     categorical <- any(partable$op == "|")
     if(categorical) meanstructure <- TRUE
+    group.w <- any(partable$lhs == "group" & partable$op == "%")
 
 
     # what if no starting values are provided? 
-    if(is.null(start)) 
+    if(is.null(partable$start))
         startValues <- StartingValues(start.method="simple", partable=partable)
     else
-        startValues <- start
+        startValues <- partable$start
  
     # check start length
     stopifnot(length(startValues) == nrow(partable))
@@ -490,6 +490,7 @@ Model <- function(partable       = NULL,
                  meanstructure=meanstructure,
                  categorical=categorical,
                  ngroups=ngroups,
+                 group.w=group.w,
                  nmat=nmat,
                  nvar=nvar,
                  num.idx=num.idx,

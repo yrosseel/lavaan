@@ -108,11 +108,11 @@ independence.model.fit <- function(object) {
                        samplestats = lavaanSampleStats,
                        model.type  = lavaanOptions$model.type,
                        debug       = lavaanOptions$debug)
+    lavaanParTable$start <- lavaanStart
 
     # 5. 
     lavaanModel <-
         Model(partable       = lavaanParTable,
-              start          = lavaanStart,
               representation = lavaanOptions$representation,
               th.idx         = lavaanSampleStats@th.idx,
               debug          = lavaanOptions$debug)
@@ -154,7 +154,6 @@ independence.model.fit <- function(object) {
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(partable = lavaanParTable,
-                     start    = lavaanStart,
                      model    = lavaanModel,
                      x        = x,
                      VCOV     = VCOV,

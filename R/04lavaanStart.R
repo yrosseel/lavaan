@@ -224,6 +224,13 @@ StartingValues <- function(start.method = "default",
         }
     }
 
+    # group weights
+    group.idx <- which(partable$lhs == "group" &
+                       partable$op  == "%")
+    if(length(group.idx) > 0L) {
+        start[group.idx] <- 1/ngroups
+    }
+
     # growth models:
     # - compute starting values for mean latent variables
     # - compute starting values for variance latent variables

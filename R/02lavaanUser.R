@@ -36,6 +36,7 @@ lavaanify <- lavParTable <- function(
                       ngroups         = 1L,
                       group.equal     = NULL,
                       group.partial   = NULL,
+                      group.w.free    = FALSE,
                       debug           = FALSE,
                       warn            = TRUE,
                       
@@ -111,15 +112,6 @@ lavaanify <- lavParTable <- function(
         }
     }
 
-    # check for `empty' model
-    #if(!any(c(FLAT$op == "=~", FLAT$op == "~"))) {
-    #    # empty model; abort or warning??
-    #    #stop("lavaan ERROR: model does not contain a measurement model",
-    #    #     "or at least one regression formula")
-    #    warning("lavaan WARNING: model does not contain a measurement model",
-    #          " or at least one regression formula")
-    #}
-
     # check for meanstructure
     if(any(FLAT$op == "~1")) meanstructure <- TRUE
 
@@ -146,7 +138,8 @@ lavaanify <- lavParTable <- function(
                 auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
                 auto.cov.y = auto.cov.y, auto.th = auto.th, 
                 auto.delta = auto.delta, 
-                varTable = varTable, group.equal = NULL, ngroups = 1L)
+                varTable = varTable, group.equal = NULL, 
+                group.w.free = group.w.free, ngroups = 1L)
             LIST.group <- as.data.frame(LIST.group, stringsAsFactors=FALSE)
             if(g == 1L) {
                 LIST <- LIST.group
@@ -166,6 +159,7 @@ lavaanify <- lavParTable <- function(
             auto.cov.y = auto.cov.y, auto.th = auto.th, 
             auto.delta = auto.delta,
             varTable = varTable, group.equal = group.equal, 
+            group.w.free = group.w.free,
             ngroups = ngroups)
     }        
     if(debug) {

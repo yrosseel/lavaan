@@ -73,6 +73,8 @@ lavSampleStatsFromData <- function(Data              = NULL,
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
+    # group weights
+    group.w       <- vector("list", length=ngroups)
 
     if(is.null(WLS.V)) {
         WLS.V      <- vector("list", length=ngroups)
@@ -115,6 +117,9 @@ lavSampleStatsFromData <- function(Data              = NULL,
     }
 
     for(g in 1:ngroups) {
+
+        # group weight
+        group.w[[g]] <- nobs[[g]] / sum(unlist(nobs))
 
         # check if we have categorical data in this group
         categorical <- FALSE
@@ -355,6 +360,7 @@ lavSampleStatsFromData <- function(Data              = NULL,
                        mean.x       = mean.x,
                        cov.x        = cov.x,
                        bifreq       = bifreq,
+                       group.w      = group.w,
  
                        # convenience
                        nobs         = nobs,

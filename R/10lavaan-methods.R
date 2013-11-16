@@ -533,6 +533,20 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
             cat("\n")
         }
 
+        # 7. group weight
+        group.idx <- which(object@ParTable$lhs == "group" &
+                           object@ParTable$op == "%" &
+                           object@ParTable$group == g)
+        if(length(group.idx) > 0) {
+            cat("Group weight:\n")
+            NAMES[group.idx] <- makeNames(  object@ParTable$rhs[group.idx],
+                                            object@ParTable$label[group.idx])
+            for(i in group.idx) {
+                print.estimate(name=NAMES[i], i, z.stat=TRUE)
+            }
+            cat("\n")
+        }
+
     } # ngroups
 
     # 6. variable definitions
@@ -1060,7 +1074,9 @@ parameterEstimates <- parameterestimates <-
 
 parameterTable <- parametertable <- parTable <- partable <-
         function(object) {
-    inspect(object, "list")            
+    out <- inspect(object, "list")            
+    class(out) <- c("lavaan.data.frame", "data.frame")
+    out
 }
 
 varTable <- vartable <- function(object, ov.names=names(object), 
@@ -1234,6 +1250,14 @@ sampStat <- function(object, labels=TRUE) {
                 colnames(OUT[[g]]$slopes) <- 
                     vnames(object@ParTable, type="ov.x", group=g)
                 class(OUT[[g]]$slopes) <- c("lavaan.matrix", "matrix")
+            }
+        }
+
+        if(object@Model@group.w) {
+            OUT[[g]]$group.w <- object@SampleStats@group.w[[g]]
+            if(labels) {
+                names(OUT[[g]]$group.w) <- "w"
+                class(OUT[[g]]$group.w) <- c("lavaan.vector", "numeric")
             }
         }
     }

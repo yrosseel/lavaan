@@ -44,6 +44,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    group.label        = NULL,
                    group.equal        = '',
                    group.partial      = '',
+                   group.w.free       = FALSE,
 
                    # clusters
                    cluster            = NULL,
@@ -142,6 +143,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             auto.delta = auto.delta, missing = missing, 
             group = group, categorical = categorical,
             group.equal = group.equal, group.partial = group.partial, 
+            group.w.free = group.w.free,
             constraints = constraints,
             estimator = estimator, likelihood = likelihood, 
             sample.cov.rescale = sample.cov.rescale,
@@ -280,6 +282,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       ngroups         = lavaanData@ngroups,
                       group.equal     = lavaanOptions$group.equal, 
                       group.partial   = lavaanOptions$group.partial,
+                      group.w.free    = lavaanOptions$group.w.free,
                       debug           = lavaanOptions$debug,
                       warn            = lavaanOptions$warn,
 
@@ -361,6 +364,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotModel)) {
         lavaanModel <- slotModel
         lavaanStart <- getModelParameters(lavaanModel, type="user")
+        lavaanParTable$start <- lavaanStart
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
         timing$Model <- (proc.time()[3] - start.time)
@@ -376,13 +380,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
-        #lavaanParTable$start <- lavaanStart
+        lavaanParTable$start <- lavaanStart
         #print(as.data.frame(lavaanParTable))
 
         # 5. construct internal model (S4) representation
         lavaanModel <- 
             Model(partable       = lavaanParTable, 
-                  start          = lavaanStart, 
                   representation = lavaanOptions$representation,
                   th.idx         = lavaanSampleStats@th.idx,
                   debug          = lavaanOptions$debug)
@@ -669,7 +672,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 9. collect information about model fit (S4)
     lavaanFit <- Fit(partable = lavaanParTable, 
-                     start    = lavaanStart, 
                      model    = lavaanModel,
                      x        = x, 
                      VCOV     = VCOV,
@@ -735,7 +737,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, ridge = 1e-5,
     group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", cluster = NULL, constraints = "",
+    group.equal = "", group.partial = "", group.w.free = FALSE,
+    cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
@@ -769,7 +772,8 @@ growth <- function(model = NULL, data = NULL,
     sample.cov = NULL, sample.cov.rescale = "default", sample.mean = NULL,
     sample.nobs = NULL, ridge = 1e-5,
     group = NULL, group.label = NULL,
-    group.equal = "", group.partial = "", cluster = NULL, constraints = "",
+    group.equal = "", group.partial = "", group.w.free = FALSE,
+    cluster = NULL, constraints = "",
     estimator = "default", likelihood = "default", 
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",

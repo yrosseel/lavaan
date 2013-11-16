@@ -224,7 +224,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           stat=as.numeric(NA),
                           stat.group=as.numeric(NA),
                           df=df,
-                          refdist="unknown",
+                          refdistr="unknown",
                           pvalue=as.numeric(NA))
         return(TEST)
     }    
