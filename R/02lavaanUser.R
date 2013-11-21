@@ -375,7 +375,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     # to avoid confusion with for example equal("f1=~x1") statements
     model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
   
-    start.idx <- grep("[~=<>:|]", model.simple)
+    start.idx <- grep("[~=<>:|%]", model.simple)
     end.idx <- c( start.idx[-1]-1, length(model) )
     model.orig    <- model
     model <- character( length(start.idx) )
@@ -386,7 +386,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     # ok, in all remaining lines, we should have a '~' operator
     # OR one of '=', '<', '>', '|' outside the ""
     model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
-    idx.wrong <- which(!grepl("[~=<>:|]", model.simple))
+    idx.wrong <- which(!grepl("[~=<>:|%]", model.simple))
     if(length(idx.wrong) > 0) {
         cat("lavaan: missing operator in formula(s):\n")
         print(model[idx.wrong])
@@ -461,8 +461,12 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # ":" operator?
         } else if(grepl(":", line.simple, fixed=TRUE)) {
             op <- ":"
+        # "|" operator?
         } else if(grepl("|", line.simple, fixed=TRUE)) {
             op <- "|"
+        # "%" operator?
+        } else if(grepl("%", line.simple, fixed=TRUE)) {
+            op <- "%"
         } else {
             stop("unknown operator in ", model[i])
         }
