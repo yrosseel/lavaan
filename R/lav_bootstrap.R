@@ -263,6 +263,7 @@ bootstrap.internal <- function(object       = NULL,
                                estimator     = opt$estimator,
                                mimic         = opt$mimic,
                                meanstructure = opt$meanstructure,
+                               group.w.free  = opt$group.w.free,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,
                                verbose       = FALSE), silent=TRUE) 

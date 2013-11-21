@@ -228,7 +228,9 @@ StartingValues <- function(start.method = "default",
     group.idx <- which(partable$lhs == "group" &
                        partable$op  == "%")
     if(length(group.idx) > 0L) {
-        start[group.idx] <- 1/ngroups
+        prop <- rep(1/ngroups, ngroups)
+        # use last group as reference
+        start[group.idx] <- log(prop/prop[ngroups])
     }
 
     # growth models:

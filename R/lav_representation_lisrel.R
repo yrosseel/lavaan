@@ -21,6 +21,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     # global settings
     meanstructure <- any(partable$op == "~1")
     categorical   <- any(partable$op == "|")
+    group.w       <- any(partable$lhs == "group" & partable$op == "%")
     gamma <- categorical
 
     # number of groups
@@ -201,6 +202,13 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             tmp.col[idx.lower] <- tmp
         }
 
+        # new 0.5-16: group weights
+        idx <- which(target$group == g & target$lhs == "group" &
+                     target$op == "%")
+        tmp.mat[idx] <- "gw"
+        tmp.row[idx] <- 1L
+        tmp.col[idx] <- 1L
+
         if(extra) {
             # mRows
             mmRows <- list(tau    = nth,
@@ -211,6 +219,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            alpha  = nfac,
                            beta   = nfac,
                            gamma  = nfac,
+                           gw     = 1L,
                            psi    = nfac)
 
             # mCols
@@ -222,6 +231,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            alpha  = 1L,
                            beta   = nfac,
                            gamma  = nexo,
+                           gw     = 1L,
                            psi    = nfac)
 
             # dimNames for LISREL model matrices
@@ -233,6 +243,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                alpha  = list( lv.names, "intercept"),
                                beta   = list( lv.names,    lv.names),
                                gamma  = list( lv.names,  ov.names.x),
+                               gw     = list( "group",     "weight"),
                                psi    = list( lv.names,    lv.names))
     
             # isSymmetric
@@ -244,6 +255,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                 alpha  = FALSE,
                                 beta   = FALSE,
                                 gamma  = FALSE,
+                                gw     = FALSE,
                                 psi    = TRUE)
     
             # which mm's do we need? (always include lambda, theta and psi)
@@ -253,6 +265,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             if("tau" %in% tmp.mat) mmNames <- c(mmNames, "tau")
             if("delta" %in% tmp.mat) mmNames <- c(mmNames, "delta")
             if("gamma" %in% tmp.mat) mmNames <- c(mmNames, "gamma")
+            if("gw" %in% tmp.mat) mmNames <- c(mmNames, "gw")
 
             REP.mmNames[[g]]     <- mmNames
             REP.mmNumber[[g]]    <- length(mmNames)
@@ -1071,6 +1084,9 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
     # meanstructure?
     meanstructure <- FALSE; if(!is.null(Omega.mu)) meanstructure <- TRUE
 
+    # group weight?
+    group.w <- FALSE; if(!is.null(MLIST$gw)) group.w <- TRUE
+
     # pre-compute some values
     tLAMBDA..IB.inv <- t(LAMBDA..IB.inv)
     if(!is.null(BETA)) {
@@ -1133,12 +1149,19 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
         ALPHA.deriv <- NULL
     }
 
+    if(group.w) {
+        GROUP.W.deriv <- 0.0
+    } else {
+        GROUP.W.deriv <- NULL
+    }
+
     list(lambda = LAMBDA.deriv,
          beta   = BETA.deriv,
          theta  = THETA.deriv,
          psi    = PSI.deriv,
          nu     = NU.deriv,
-         alpha  = ALPHA.deriv)
+         alpha  = ALPHA.deriv,
+         gw     = GROUP.W.deriv)
 }
 
 # dSigma/dx -- per model matrix
@@ -1161,7 +1184,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
 
     # shortcut for gamma, nu, alpha and tau: empty matrix
-    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma") {
+    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
@@ -1255,7 +1278,7 @@ derivative.mu.LISREL <- function(m="alpha",
 
     # shortcut for empty matrices
     if(m == "gamma" || m == "psi" || m == "theta" || 
-       m == "tau" || m == "delta") {
+       m == "tau" || m == "delta"|| m == "gw") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
 
@@ -1335,7 +1358,7 @@ derivative.th.LISREL <- function(m="tau",
     }
 
     # shortcut for empty matrices
-    if(m == "gamma" || m == "psi" || m == "theta") {
+    if(m == "gamma" || m == "psi" || m == "theta" || m == "gw") {
         return( matrix(0.0, nrow=length(th.idx), ncol=length(idx) ) )
     }
 
@@ -1406,7 +1429,8 @@ derivative.pi.LISREL <- function(m="lambda",
     }
 
     # shortcut for empty matrices
-    if(m == "tau" || m == "nu" || m == "alpha" || m == "psi" || m == "theta") {
+    if(m == "tau" || m == "nu" || m == "alpha" || m == "psi" || 
+       m == "theta" || m == "gw") {
         return( matrix(0.0, nrow=nvar*nexo, ncol=length(idx) ) )
     }
 
@@ -1445,8 +1469,27 @@ derivative.pi.LISREL <- function(m="lambda",
     DX
 }
 
+# dGW/dx -- per model matrix
+derivative.gw.LISREL <- function(m="gw", 
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]), 
+                                 MLIST=NULL) {
+
+    # shortcut for empty matrices
+    if(m != "gw") {
+        return( matrix(0.0, nrow=1L, ncol=length(idx) ) )
+    } else {
+        # m == "gw"
+        DX <- matrix(1.0, 1, 1)
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
 TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
-                                       th=FALSE, delta=FALSE, pi=FALSE) {
+                                       th=FALSE, delta=FALSE, pi=FALSE,
+                                       gw=FALSE) {
 
     if(is.null(MLIST)) {
         # create artificial matrices, compare 'numerical' vs 'analytical' 
@@ -1472,6 +1515,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         if(th) MLIST$tau    <- matrix(0,nth,1L)
         if(delta) MLIST$delta  <- matrix(0,nvar,1L)
         MLIST$gamma <- matrix(0,nfac,nexo)
+        if(gw) MLIST$gw <- matrix(0, 1L, 1L)
 
         # feed random numbers
         MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
@@ -1522,7 +1566,17 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
             mlist[[mm]][,] <- x
         }
         computePI.LISREL(mlist)
-    } 
+    }
+
+    compute.gw <- function(x, mm="gw", MLIST=NULL) {
+        mlist <- MLIST
+        if(mm %in% c("psi", "theta")) {
+            mlist[[mm]] <- vech.reverse(x)
+        } else {
+            mlist[[mm]][,] <- x
+        }
+        mlist$gw[1,1]
+    }
 
     for(mm in names(MLIST)) {
         if(mm %in% c("psi", "theta")) {
@@ -1584,6 +1638,21 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
             DX2 <- DX2[,-idx]
         }
         cat("[PI   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+            sprintf("%12.9f", max(DX1-DX2)), "\n")
+        }
+
+        # 5. gw
+        if(gw) {
+        DX1 <- lavJacobianC(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
+        DX2 <- derivative.gw.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                    MLIST=MLIST)
+        if(mm %in% c("psi","theta")) {
+            # remove duplicated columns of symmetric matrices 
+            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+            DX2 <- DX2[,-idx]
+        }
+        cat("[GW   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
             sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
             sprintf("%12.9f", max(DX1-DX2)), "\n")
         }

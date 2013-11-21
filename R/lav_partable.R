@@ -101,7 +101,9 @@ getNDAT <- function(partable, group=NULL) {
     # correction for group proportions?
     group.idx <- which(partable$lhs == "group" & 
                        partable$op == "%")
-    ndat <- ndat + (length(group.idx) - 1L) # G - 1 (sum to one)
+    if(length(group.idx) > 0L) {
+        ndat <- ndat + (length(group.idx) - 1L) # G - 1 (sum to one)
+    }
 
     ndat
 }

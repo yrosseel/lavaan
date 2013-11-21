@@ -15,6 +15,7 @@ lavSampleStatsFromData <- function(Data              = NULL,
                                    estimator         = "ML",
                                    mimic             = "lavaan",
                                    meanstructure     = FALSE,
+                                   group.w.free      = FALSE,
                                    WLS.V             = NULL,
                                    NACOV             = NULL,
                                    ridge             = 1e-5,
@@ -245,6 +246,9 @@ lavSampleStatsFromData <- function(Data              = NULL,
         } else {
             WLS.obs[[g]] <- vech(cov[[g]])
         }
+        if(group.w.free) {
+            WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
+        }
 
         # if missing = "fiml", sample statistics per pattern
         if(missing == "ml") {
@@ -342,6 +346,13 @@ lavSampleStatsFromData <- function(Data              = NULL,
             } else if(estimator == "PML" || estimator == "FML") {
                 # no WLS.V here
             }
+
+            # group.w.free
+            if(!is.null(WLS.V[[g]]) && group.w.free) {
+                # FIXME!!!
+                WLS.V[[g]] <- bdiag( matrix(1, 1, 1), WLS.V[[g]] )
+            }
+
         }
     } # ngroups
 
@@ -395,7 +406,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                                       WLS.V         = NULL,
                                       NACOV         = NULL,
                                       ridge         = 1e-5,
-                                      meanstructure = FALSE) {
+                                      meanstructure = FALSE,
+                                      group.w.free  = FALSE) {
 
     # ridge default
     ridge.eps <- 0.0
@@ -433,6 +445,8 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
     missing.      <- vector("list", length=ngroups)
     missing.h1.   <- vector("list", length=ngroups)
     missing.flag. <- FALSE
+    # group weights
+    group.w       <- vector("list", length=ngroups)
 
     if(is.null(WLS.V)) {
         WLS.V      <- vector("list", length=ngroups)
@@ -478,6 +492,9 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
 
 
     for(g in 1:ngroups) {
+
+        # group weight
+        group.w[[g]] <- nobs[[g]] / sum(unlist(nobs))
 
         tmp.cov <- sample.cov[[g]]
 
@@ -563,6 +580,9 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
             WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
         else
             WLS.obs[[g]] <- vech(cov[[g]])
+        if(group.w.free) {
+            WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
+        }
 
         # NACOV
         # NACOV (=GAMMA)
@@ -590,6 +610,13 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                 if(is.null(WLS.V[[g]]))
                     stop("lavaan ERROR: the (D)WLS estimator is only available with full data or with a user-provided WLS.V")
             }
+
+            # group.w.free
+            if(!is.null(WLS.V[[g]]) && group.w.free) {
+                # FIXME!!!
+                WLS.V[[g]] <- bdiag( matrix(1, 1, 1), WLS.V[[g]] )
+            }
+
         }
 
     } # ngroups
@@ -609,6 +636,7 @@ lavSampleStatsFromMoments <- function(sample.cov    = NULL,
                        mean.x       = mean.x,
                        cov.x        = cov.x,
                        bifreq       = bifreq,
+                       group.w      = group.w,
 
                        # convenience
                        nobs         = nobs,

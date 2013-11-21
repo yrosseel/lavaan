@@ -280,6 +280,49 @@ computePI <- function(object, GLIST=NULL) {
     PI
 }
 
+
+# GW = group weight
+computeGW <- function(object, GLIST=NULL) {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups        <- object@ngroups
+    nmat           <- object@nmat
+    representation <- object@representation
+    group.w        <- object@group.w
+
+    # return a list
+    GW <- vector("list", length=ngroups)
+
+    # compute GW for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(!group.w) {
+            GW.g <- 0.0 # FIXME
+        } else
+        if(representation == "LISREL") {
+            GW.g <- as.numeric(MLIST$gw[1,1])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        GW[[g]] <- GW.g
+    }
+
+    # transform to proportions
+    gw <- unlist(GW)
+    gw <- exp(gw) / sum(exp(gw))
+    for(g in 1:ngroups) {
+        GW[[g]] <- gw[g]
+    }
+
+    GW
+}
+
 # unconditional variances of Y
 #  - same as diag(Sigma.hat) if all Y are continuous)
 #  - 1.0 (or delta^2) if categorical
@@ -652,6 +695,7 @@ computeObjective <- function(object, GLIST=NULL,
 
     meanstructure <- object@meanstructure
     categorical   <- object@categorical
+    group.w       <- object@group.w
     fixed.x       <- object@fixed.x
     num.idx       <- object@num.idx
     th.idx        <- object@th.idx
@@ -665,6 +709,9 @@ computeObjective <- function(object, GLIST=NULL,
         TH <- computeTH(object, GLIST=GLIST)
         if(fixed.x) 
             PI <- computePI(object, GLIST=GLIST)
+    }
+    if(group.w) {
+        GW <- computeGW(object, GLIST=GLIST)
     }
  
     fx <- 0.0
@@ -778,10 +825,31 @@ computeObjective <- function(object, GLIST=NULL,
     } # g
 
     if(samplestats@ngroups > 1) {
-        nobs <- unlist(samplestats@nobs)
+        ## FIXME: if group.w, should we use group.w or nobs???
+        #if(group.w) {
+        #    nobs <- unlist(GW) * samplestats@ntotal
+        #} else {
+            nobs <- unlist(samplestats@nobs)
+        #}
         fx <- weighted.mean(fx.group, w=nobs)
     } else { # single group
         fx <- fx.group[1]
+    }
+
+    # penalty for group.w 
+    if(group.w) {
+        obs.prop <- unlist(samplestats@group.w)
+        est.prop <- unlist(GW)
+        # if(estimator %in% c("WLS", "GLS", ...) {
+        #    # X2 style discrepancy measures (aka GLS/WLS!!)
+        #    fx.w <- sum ( (obs.prop-est.prop)^2/est.prop )
+        # } else {
+        #    # G2 style discrepancy measures (aka ML)
+        #    # deriv is here -2 * (obs.prop - est.prop)
+        fx.w <- 2 * sum(obs.prop * log(obs.prop/est.prop) )
+        # }
+
+        fx <- fx + fx.w
     }
 
     attr(fx, "fx.group") <- fx.group
@@ -822,6 +890,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
     representation <- object@representation
     categorical    <- object@categorical
+    group.w        <- object@group.w
     nmat           <- object@nmat
     ngroups        <- object@ngroups
     nvar           <- object@nvar
@@ -860,6 +929,9 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
             if(nexo[g] > 0L)
                 pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
+        }
+        if(group.w) {
+            pstar[g] <- pstar[g] + 1L # add group weight
         }
     }
 
@@ -945,6 +1017,12 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                     } else {
                         DELTA <- rbind(DELTA.th, DELTA)
                     }
+                }
+                if(group.w) {
+                    DELTA.gw <- derivative.gw.LISREL(m=mname,
+                                                     idx=m.el.idx[[mm]],
+                                                     MLIST=GLIST[ mm.in.group ])
+                    DELTA <- rbind(DELTA.gw, DELTA)
                 }
             } else {
                 stop("representation", representation, "not implemented yet")
@@ -1196,6 +1274,9 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
             } else {                                           
                 WLS.est <- vech(Sigma.hat[[g]])                
             }
+            if(object@group.w) {
+                WLS.est <- c(group.w[g], WLS.est)
+            }
             WLS.obs <- samplestats@WLS.obs[[g]]
             diff <- as.matrix(WLS.obs - WLS.est)
             group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
@@ -1267,7 +1348,22 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
                 dx <- dx + group.dx
             }
         } # g
-    } 
+    }
+
+    if(object@group.w) {
+        est.prop <- unlist( computeGW(object, GLIST=GLIST) )
+        obs.prop <- unlist(samplestats@group.w)
+        # FIXME: G2 based -- ML and friends only!!
+        dx.GW <- -2 * (obs.prop - est.prop)
+     
+        # remove last element (fixed LAST group to zero)
+        dx.GW <- dx.GW[-length(obs.prop)]
+        
+        # fill in in dx
+        gw.mat.idx <- which(names(object@GLIST) == "gw")
+        gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )
+        dx[gw.x.idx] <- dx.GW
+    }
 
     else {
         stop("lavaan ERROR: no analytical gradient available for estimator ",
@@ -1454,9 +1550,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                 GRADIENT <- NULL
             }
         } else if(is.character(control$gradient)) {
-            if(control$gradient == "analytic") {
+            if(control$gradient %in% c("analytic","analytica")) {
                 GRADIENT <- first.derivative.param
-            } else if(control$gradient == "numerical") {
+            } else if(control$gradient %in% c("numerical","numeric")) {
                 GRADIENT <- first.derivative.param.numerical
             } else if(control$gradient == "NULL") {
                 GRADIENT <- NULL

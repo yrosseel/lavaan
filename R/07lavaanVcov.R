@@ -39,13 +39,22 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
         } else {
             NVarCov <- solve(E)
         }
+    } else if(object@group.w) {
+        ## TESTING ONLY!!  should be combined with con.jac above...
+        gw.mat.idx <- which(names(object@GLIST) == "gw")
+        gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )
+        prop <- diag( E[gw.x.idx, gw.x.idx] )
+        x.prop <- numeric( ncol(E) ); x.prop[gw.x.idx] <- prop
+        p11 <- matrix(1,1,1)
+        p12 <- matrix(x.prop, 1, ncol(E))
+        p21 <- matrix(x.prop, nrow(E), 1)
+        Eplus <- rbind( cbind( p11, p12),
+                        cbind( p21, E)    )
+        Eplus.inv <- solve(Eplus)
+        NVarCov <- Eplus.inv[-1, -1]
     } else {
         NVarCov <- solve(E)
     }
-
-    #if(estimator == "PML") {
-    #    NVarCov <- NVarCov * samplestats@ntotal
-    #}
 
     NVarCov
 }

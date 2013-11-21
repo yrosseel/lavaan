@@ -174,6 +174,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                estimator     = h0@Options$estimator,
                                mimic         = h0@Options$mimic,
                                meanstructure = h0@Options$meanstructure,
+                               group.w.free  = h0@Options$group.w.free,
                                missing.h1    = TRUE,
                                verbose  = FALSE), silent=TRUE)
         if (inherits(bootSampleStats, "try-error")) {
