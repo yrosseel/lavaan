@@ -3,7 +3,7 @@
 # of computeGradient in the multiple group case
 estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
-    stopifnot(class(object) == "lavaan")
+    stopifnot(inherits(object, "lavaan"))
 
   ## number variables/sample size
   samplestats <- object@SampleStats

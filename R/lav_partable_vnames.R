@@ -8,10 +8,10 @@
 # public version
 lavNames <- function(object, type = "ov", group = NULL) {
 
-    if(class(object) == "lavaan") {
+    if(inherits(object, "lavaan")) {
          partable <- object@ParTable
     } else if(class(object) == "list" ||
-              class(object) == "data.frame") {
+              inherits(object, "data.frame")) {
         partable <- object
     }
 

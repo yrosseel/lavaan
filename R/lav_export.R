@@ -4,7 +4,7 @@
 lavExport <- function(object, target="lavaan", prefix="sem", 
                       dir.name="lavExport", export=TRUE) {
 
-    stopifnot(class(object) == "lavaan")
+    stopifnot(inherits(object, "lavaan"))
     target <- tolower(target)
 
     ngroups <- object@Data@ngroups
@@ -86,7 +86,7 @@ lavExport <- function(object, target="lavaan", prefix="sem",
 
 
 lav2check <- function(lav) {
-    if("lavaan" %in% class(lav)) {
+    if(inherits(lav, "lavaan")) {
         lav <- lav@ParTable
     } else if(is.list(lav)) {
         # nothing to do

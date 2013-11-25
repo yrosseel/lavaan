@@ -55,7 +55,7 @@ StartingValues <- function(start.method = "default",
         }
     } else if(is.list(start.method)) {
         start.user <- start.method
-    } else if(class(start.method) == "lavaan") {
+    } else if(inherits(start.method, "lavaan")) {
         start.user <- parameterEstimates(start.method)
     }
     # check model list elements, if provided

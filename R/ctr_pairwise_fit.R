@@ -71,7 +71,7 @@ print.lavaan.tables.fit.Cp <- function(x, ...) {
 lavTablesFitCf <- function(object, est = "h0") {
 
     # check object class
-    if(!class(object) %in% c("lavaan")) {
+    if(!inherits(object, "lavaan")) {
         stop("lavaan ERROR: object must be an object of class lavaan")
     }
     ngroups <- length( object@Data@X )

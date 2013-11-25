@@ -9,8 +9,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 {
     # checks
     type <- tolower(type)
-    stopifnot(class(h0) == "lavaan", 
-              class(h1) == "lavaan", 
+    stopifnot(inherits(h0, "lavaan"), 
+              inherits(h1, "lavaan"), 
               type %in% c("bollen.stine", "parametric", "yuan"), 
               double.bootstrap %in% c("no", "FDB", "standard"))
   

@@ -34,7 +34,7 @@ bootstrapLavaan <- function(object,
 
     # checks
     type. <- tolower(type) # overwritten if nonparametric
-    stopifnot(class(object) == "lavaan",
+    stopifnot(inherits(object, "lavaan"),
               type. %in% c("nonparametric", "ordinary",
                           "bollen.stine", "parametric", "yuan"))
     if(type. == "nonparametric") type. <- "ordinary"
