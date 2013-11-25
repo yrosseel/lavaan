@@ -213,8 +213,8 @@ JoreskogLawley1968.COR <- matrix(c(
 0.411,  0.324,  0.307, 0.256, 0.324, 0.294,  0.446, 0.630, 1.000),
 9, 9, byrow=TRUE)
 
-round(fabin2(JoreskogLawley1968.COR, ref.idx=c(1,4,7)), 3)
-round(fabin3(JoreskogLawley1968.COR, ref.idx=c(1,4,7)), 3)
+# round(fabin2(JoreskogLawley1968.COR, ref.idx=c(1,4,7)), 3)
+# round(fabin3(JoreskogLawley1968.COR, ref.idx=c(1,4,7)), 3)
 
 
 
@@ -232,5 +232,5 @@ Emmett.1949 <- matrix(c(
 9, 9, byrow=TRUE)
 colnames(Emmett.1949) <- rownames(Emmett.1949) <- paste("x",1:9,sep="")
 
-round( fabin3(Emmett.1949, ref.idx=c(1,4,7)), 3) 
+# round( fabin3(Emmett.1949, ref.idx=c(1,4,7)), 3) 
 

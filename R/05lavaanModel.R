@@ -13,7 +13,7 @@ Model <- function(partable       = NULL,
     meanstructure <- any(partable$op == "~1")
     categorical <- any(partable$op == "|")
     if(categorical) meanstructure <- TRUE
-    group.w <- any(partable$lhs == "group" & partable$op == "%")
+    group.w.free <- any(partable$lhs == "group" & partable$op == "%")
 
 
     # what if no starting values are provided? 
@@ -490,7 +490,7 @@ Model <- function(partable       = NULL,
                  meanstructure=meanstructure,
                  categorical=categorical,
                  ngroups=ngroups,
-                 group.w=group.w,
+                 group.w.free=group.w.free,
                  nmat=nmat,
                  nvar=nvar,
                  num.idx=num.idx,

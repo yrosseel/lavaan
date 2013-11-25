@@ -18,7 +18,7 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
         WLS.V <- samplestats@WLS.V
     } else if(estimator == "ML") {
         Sigma.hat <- computeSigmaHat(object)
-        if(object@group.w) {
+        if(object@group.w.free) {
             PROP <- unlist(computeGW(object))
         }
         if(samplestats@missing.flag) Mu.hat <- computeMuHat(object)
@@ -35,7 +35,7 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
                     compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
                                            meanstructure=object@meanstructure)
             }
-            if(object@group.w) {
+            if(object@group.w.free) {
                 # unweight!!
                 a <- PROP[g] * samplestats@ntotal / samplestats@nobs[[g]]
                 WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
@@ -75,7 +75,7 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
 
     # compute WLS.V 
     WLS.V <- vector("list", length=samplestats@ngroups)
-    if(object@group.w) {
+    if(object@group.w.free) {
         PROP <- unlist(computeGW(object))
     }
     for(g in 1:samplestats@ngroups) {
@@ -83,8 +83,10 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
                                         meanstructure=TRUE, 
                                         information="expected")
         # the same as GLS... (except for the N/N-1 scaling)
-        if(object@group.w) {
-            WLS.V[[g]] <- bdiag( matrix(sqrt(PROP),1,1), WLS.V[[g]])
+        if(object@group.w.free) {
+            # unweight!!
+            a <- PROP[g] * samplestats@ntotal / samplestats@nobs[[g]]
+            WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
         }
     }
 

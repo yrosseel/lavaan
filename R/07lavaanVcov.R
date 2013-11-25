@@ -39,7 +39,7 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
         } else {
             NVarCov <- solve(E)
         }
-    } else if(object@group.w) {
+    } else if(object@group.w.free) {
         ## TESTING ONLY!!  should be combined with con.jac above...
         gw.mat.idx <- which(names(object@GLIST) == "gw")
         gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )

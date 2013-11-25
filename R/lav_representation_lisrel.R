@@ -21,7 +21,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     # global settings
     meanstructure <- any(partable$op == "~1")
     categorical   <- any(partable$op == "|")
-    group.w       <- any(partable$lhs == "group" & partable$op == "%")
+    group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
     gamma <- categorical
 
     # number of groups
@@ -1085,7 +1085,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
     meanstructure <- FALSE; if(!is.null(Omega.mu)) meanstructure <- TRUE
 
     # group weight?
-    group.w <- FALSE; if(!is.null(MLIST$gw)) group.w <- TRUE
+    group.w.free <- FALSE; if(!is.null(MLIST$gw)) group.w.free <- TRUE
 
     # pre-compute some values
     tLAMBDA..IB.inv <- t(LAMBDA..IB.inv)
@@ -1149,7 +1149,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
         ALPHA.deriv <- NULL
     }
 
-    if(group.w) {
+    if(group.w.free) {
         GROUP.W.deriv <- 0.0
     } else {
         GROUP.W.deriv <- NULL

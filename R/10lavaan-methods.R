@@ -1253,7 +1253,7 @@ sampStat <- function(object, labels=TRUE) {
             }
         }
 
-        if(object@Model@group.w) {
+        if(object@Model@group.w.free) {
             OUT[[g]]$group.w <- object@SampleStats@group.w[[g]]
             if(labels) {
                 names(OUT[[g]]$group.w) <- "w"

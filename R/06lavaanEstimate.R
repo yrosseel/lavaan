@@ -290,7 +290,7 @@ computeGW <- function(object, GLIST=NULL) {
     ngroups        <- object@ngroups
     nmat           <- object@nmat
     representation <- object@representation
-    group.w        <- object@group.w
+    group.w.free   <- object@group.w.free
 
     # return a list
     GW <- vector("list", length=ngroups)
@@ -301,7 +301,7 @@ computeGW <- function(object, GLIST=NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        if(!group.w) {
+        if(!group.w.free) {
             GW.g <- 0.0 # FIXME
         } else
         if(representation == "LISREL") {
@@ -695,7 +695,7 @@ computeObjective <- function(object, GLIST=NULL,
 
     meanstructure <- object@meanstructure
     categorical   <- object@categorical
-    group.w       <- object@group.w
+    group.w.free  <- object@group.w.free
     fixed.x       <- object@fixed.x
     num.idx       <- object@num.idx
     th.idx        <- object@th.idx
@@ -710,7 +710,7 @@ computeObjective <- function(object, GLIST=NULL,
         if(fixed.x) 
             PI <- computePI(object, GLIST=GLIST)
     }
-    if(group.w) {
+    if(group.w.free) {
         GW <- computeGW(object, GLIST=GLIST)
     }
  
@@ -780,6 +780,11 @@ computeObjective <- function(object, GLIST=NULL,
             } else {
                 WLS.est <- vech(Sigma.hat[[g]])
             }
+            if(group.w.free) {
+                #WLS.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), WLS.est)
+                 WLS.est <- c(GW[[g]], WLS.est)
+
+            }
             group.fx <- estimator.WLS(WLS.est = WLS.est,
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
@@ -825,7 +830,7 @@ computeObjective <- function(object, GLIST=NULL,
     } # g
 
     if(samplestats@ngroups > 1) {
-        ## FIXME: if group.w, should we use group.w or nobs???
+        ## FIXME: if group.w.free, should we use group.w or nobs???
         #if(group.w) {
         #    nobs <- unlist(GW) * samplestats@ntotal
         #} else {
@@ -836,8 +841,8 @@ computeObjective <- function(object, GLIST=NULL,
         fx <- fx.group[1]
     }
 
-    # penalty for group.w 
-    if(group.w) {
+    # penalty for group.w + ML
+    if(group.w.free && estimator %in% c("ML","MML","FML","PML")) {
         obs.prop <- unlist(samplestats@group.w)
         est.prop <- unlist(GW)
         # if(estimator %in% c("WLS", "GLS", ...) {
@@ -890,7 +895,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
     representation <- object@representation
     categorical    <- object@categorical
-    group.w        <- object@group.w
+    group.w.free   <- object@group.w.free
     nmat           <- object@nmat
     ngroups        <- object@ngroups
     nvar           <- object@nvar
@@ -930,7 +935,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             if(nexo[g] > 0L)
                 pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
         }
-        if(group.w) {
+        if(group.w.free) {
             pstar[g] <- pstar[g] + 1L # add group weight
         }
     }
@@ -1018,7 +1023,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                         DELTA <- rbind(DELTA.th, DELTA)
                     }
                 }
-                if(group.w) {
+                if(group.w.free) {
                     DELTA.gw <- derivative.gw.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],
                                                      MLIST=GLIST[ mm.in.group ])
@@ -1143,6 +1148,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
     representation <- object@representation
     meanstructure  <- object@meanstructure
     categorical    <- object@categorical
+    group.w.free   <- object@group.w.free
     fixed.x        <- object@fixed.x
     num.idx        <- object@num.idx
     th.idx         <- object@th.idx
@@ -1151,7 +1157,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
 
-    # group.w
+    # group.weight
     if(group.weight) {
         if(estimator %in% c("ML","PML","FML","MML")) {
             group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
@@ -1171,6 +1177,9 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         TH <- computeTH(object, GLIST=GLIST)
         if(fixed.x)
             PI <- computePI(object, GLIST=GLIST)
+    }
+    if(group.w.free) {
+        GW <- computeGW(object, GLIST=GLIST)
     }
     
 
@@ -1274,14 +1283,14 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
             } else {                                           
                 WLS.est <- vech(Sigma.hat[[g]])                
             }
-            if(object@group.w) {
-                WLS.est <- c(group.w[g], WLS.est)
+            if(object@group.w.free) {
+                #WLS.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), WLS.est)
+                WLS.est <- c(GW[[g]], WLS.est)
             }
             WLS.obs <- samplestats@WLS.obs[[g]]
             diff <- as.matrix(WLS.obs - WLS.est)
             group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
-
             if(g == 1) {
                 dx <- group.dx
             } else {
@@ -1348,14 +1357,19 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
                 dx <- dx + group.dx
             }
         } # g
+    } else {
+        stop("lavaan ERROR: no analytical gradient available for estimator ",
+             estimator)
     }
 
-    if(object@group.w) {
+
+    # group.w.free for ML
+    if(object@group.w.free && estimator %in% c("ML","MML","FML","PML")) {
         est.prop <- unlist( computeGW(object, GLIST=GLIST) )
         obs.prop <- unlist(samplestats@group.w)
         # FIXME: G2 based -- ML and friends only!!
         dx.GW <- -2 * (obs.prop - est.prop)
-     
+
         # remove last element (fixed LAST group to zero)
         dx.GW <- dx.GW[-length(obs.prop)]
         
@@ -1363,11 +1377,6 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         gw.mat.idx <- which(names(object@GLIST) == "gw")
         gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )
         dx[gw.x.idx] <- dx.GW
-    }
-
-    else {
-        stop("lavaan ERROR: no analytical gradient available for estimator ",
-             estimator)
     }
 
     dx

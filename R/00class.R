@@ -72,7 +72,7 @@ setClass("Model",          # MATRIX representation of the sem model
         representation="character",  # stub, until we define more classes
         meanstructure="logical",
         categorical="logical",
-        group.w="logical",
+        group.w.free="logical",
 
         ngroups="integer",
         nmat="integer",

@@ -247,6 +247,8 @@ lavSampleStatsFromData <- function(Data              = NULL,
             WLS.obs[[g]] <- vech(cov[[g]])
         }
         if(group.w.free) {
+            #group.w.last <- nobs[[ngroups]] / sum(unlist(nobs))
+            #WLS.obs[[g]] <- c(log(group.w[[g]]/group.w.last), WLS.obs[[g]])
             WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
         }
 
@@ -349,8 +351,16 @@ lavSampleStatsFromData <- function(Data              = NULL,
 
             # group.w.free
             if(!is.null(WLS.V[[g]]) && group.w.free) {
-                # FIXME!!!
-                WLS.V[[g]] <- bdiag( matrix(1, 1, 1), WLS.V[[g]] )
+                # unweight!!
+                #a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                # always 1!!!
+                ### FIXME: this is consistent with expected information
+                ###        but why not group.w[[g]] * (1 - group.w[[g]])?
+                #a <- 1
+                a <- group.w[[g]] * (1 - group.w[[g]]) * sum(unlist(nobs)) / nobs[[g]]
+                # invert
+                a <- 1/a
+                WLS.V[[g]] <- bdiag( matrix(a, 1, 1), WLS.V[[g]] )
             }
 
         }
