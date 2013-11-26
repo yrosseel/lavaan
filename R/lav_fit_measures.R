@@ -133,15 +133,15 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
     }
 
     # table
-    if(categorical) {
-        # FIXME: Cp: no exo, all ordinal!
-        fit.table <- c("c_p", "c_p.df", "c_p.p.value",
-                       "c_f", "c_f.df", "c_f.p.value",
-                       "rpat.observed", "rpat.total", "rpat.empty",
-                       "c_m", "c_m.df", "c_m.p.value")
-    } else {
+    #if(categorical) {
+    #    # FIXME: Cp: no exo, all ordinal!
+    #    fit.table <- c("c_p", "c_p.df", "c_p.p.value",
+    #                   "c_f", "c_f.df", "c_f.p.value",
+    #                   "rpat.observed", "rpat.total", "rpat.empty",
+    #                   "c_m", "c_m.df", "c_m.p.value")
+    #} else {
         fit.table <- character(0L)
-    }
+    #}
 
     # various
     fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")

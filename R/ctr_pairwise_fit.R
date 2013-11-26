@@ -155,7 +155,8 @@ lavTablesFitCm <- function(object) {
     CF.h0 <- lavTablesFitCf(object)
 
     # fit unrestricted model
-    h1 <- lavCor(object@Data, estimator = object@Options$estimator)
+    h1 <- lavCor(object@Data, estimator = object@Options$estimator,
+                 output = "lavaan")
     CF.h1 <- lavTablesFitCf(h1)
 
     CF.h0.group <- attr(CF.h0, "CF.group")
