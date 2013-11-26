@@ -8,7 +8,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     if(power) standardized <- TRUE
 
     # get LIST parameter list
-    LIST <- getUserListFull(object@ParTable)
+    LIST <- lav_partable_full(object@ParTable)
     LIST$free <- 0L; LIST$eq.id <- 0L; LIST$unco <- 0L
     LIST <- as.data.frame(LIST)
 

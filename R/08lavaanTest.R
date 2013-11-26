@@ -206,7 +206,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
     TEST <- list()
 
     # degrees of freedom
-    df <- getDF(partable)
+    df <- lav_partable_df(partable)
 
     # handle equality constraints (note: we ignore inequality constraints, 
     # active or not!)
@@ -484,8 +484,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         chisq.scaled         <- sum(chisq.group / scaling.factor)
         pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
 
-        ndat <- getNDAT(partable)
-        npar <- getNPAR(partable)
+        ndat <- lav_partable_ndat(partable)
+        npar <- lav_partable_npar(partable)
 
         scaling.factor.h1    <- sum( attr(trace.UGamma, "h1") ) / ndat
         scaling.factor.h0    <- sum( attr(trace.UGamma, "h0") ) / npar

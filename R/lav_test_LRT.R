@@ -35,6 +35,9 @@ lavTestLRT <- function(object, ..., SB.classic = FALSE, SB.H0 = FALSE,
 
     # shortcut for single argument (just plain LRT)
     if(!any(modp)) {
+        if(type == "cf") {
+            warning("lavaan WARNING: `type' argument is ignored for a single model")
+        }
         aic <- bic <- c(NA, NA)
         if(estimator == "ML") {
             aic <- c(NA, AIC(object))
@@ -192,7 +195,7 @@ lavTestLRT <- function(object, ..., SB.classic = FALSE, SB.H0 = FALSE,
                 # compute A for these two nested models
                 p1 <- mods[[m   ]]@ParTable # partable h1
                 p0 <- mods[[m+1L]]@ParTable # partable h0
-                af <- getConstraintsFunction(p1,p0)
+                af <- lav_partable_constraints_function(p1,p0)
                 A <- lavJacobianC(func=af, x=mods[[m   ]]@Fit@x)
 
                 trace.UGamma  <- numeric( ngroups )

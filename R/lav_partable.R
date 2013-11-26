@@ -5,6 +5,30 @@
 #
 # YR. 29 june 2013 (as lav_partable)
 
+# user visible function to add 'matrix' entries in the parameter table
+lavMatrixRepresentation <- function(partable, representation = "LISREL",
+                                    as.data.frame. = TRUE) {
+
+    # get model matrices
+    if(representation == "LISREL") {
+        REP <- representation.LISREL(partable, target=NULL, extra=FALSE)
+    } else {
+        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+    }
+
+    partable$mat <- REP$mat
+    partable$row <- REP$row
+    partable$col <- REP$col
+
+    if(as.data.frame.) {
+        partable <- as.data.frame(partable, stringsAsFactors=FALSE)
+        class(partable) <- c("lavaan.data.frame", "data.frame")
+    }
+
+    partable
+}
+
+
 # return 'attributes' of a lavaan partable -- generate a new set if necessary
 lav_partable_attributes <- function(partable, pta=NULL) {
 
@@ -35,7 +59,7 @@ lav_partable_attributes <- function(partable, pta=NULL) {
 }
 
 
-getIDX <- function(partable, type="th", group=NULL) {
+lav_partable_ov_idx <- function(partable, type="th", group=NULL) {
 
     stopifnot(is.list(partable), !missing(type),
               type %in% c("th"))
@@ -53,7 +77,7 @@ getIDX <- function(partable, type="th", group=NULL) {
     out
 }
 
-getNDAT <- function(partable, group=NULL) {
+lav_partable_ndat <- function(partable, group=NULL) {
 
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
@@ -108,15 +132,15 @@ getNDAT <- function(partable, group=NULL) {
     ndat
 }
 
-getNPAR <- function(partable) {
+lav_partable_npar <- function(partable) {
     npar <- max(partable$free)
     npar
 }
 
-getDF <- function(partable, group=NULL) {
+lav_partable_df <- function(partable, group=NULL) {
 
-    npar <- getNPAR(partable)
-    ndat <- getNDAT(partable, group=group)
+    npar <- lav_partable_npar(partable)
+    ndat <- lav_partable_ndat(partable, group=group)
 
     # degrees of freedom
     df <- ndat - npar
@@ -124,7 +148,7 @@ getDF <- function(partable, group=NULL) {
     as.integer(df)
 }
 
-getParameterLabels <- function(partable, group.equal="", group.partial="", 
+lav_partable_labels <- function(partable, group.equal="", group.partial="", 
                                type="user") {
     # default labels
     label <- paste(partable$lhs, partable$op, partable$rhs, sep="")
@@ -252,7 +276,7 @@ getParameterLabels <- function(partable, group.equal="", group.partial="",
 }
 
 
-getUserListFull <- function(partable=NULL, group=NULL) {
+lav_partable_full <- function(partable=NULL, group=NULL) {
 
     # meanstructure + number of groups
     meanstructure <- any(partable$op == "~1")
@@ -351,7 +375,7 @@ getUserListFull <- function(partable=NULL, group=NULL) {
                        stringsAsFactors=FALSE)
 }
 
-getLIST <- function(FLAT=NULL,
+lav_partable_flat <- function(FLAT=NULL,
                     meanstructure   = FALSE,
                     int.ov.free     = FALSE,
                     int.lv.free     = FALSE,
@@ -777,336 +801,5 @@ getLIST <- function(FLAT=NULL,
     #                   stringsAsFactors=FALSE)
 
     LIST
-}
-
-independenceModel <- function(ov.names=NULL, ov=NULL, 
-                              ov.names.x=NULL, sample.cov=NULL,
-                              meanstructure=FALSE, sample.mean=NULL,
-                              sample.th=NULL,
-                              fixed.x=TRUE) {
-
-    ngroups <- length(ov.names)
-    ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
-                    ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
-
-    lhs <- rhs <- op <- character(0)
-    group <- free <- exo <- integer(0)
-    ustart <- numeric(0)
-
-    categorical <- any(ov$type == "ordered")
-
-    for(g in 1:ngroups) {
-
-        # a) VARIANCES (all ov's, except exo's)
-        nvar  <- length(ov.names.nox[[g]])
-        lhs   <- c(lhs, ov.names.nox[[g]])
-         op   <- c(op, rep("~~", nvar))
-            rhs   <- c(rhs, ov.names.nox[[g]])
-        group <- c(group, rep(g,  nvar))
-        free  <- c(free,  rep(1L, nvar))
-        exo   <- c(exo,   rep(0L, nvar))
-
-        # starting values
-        if(!is.null(sample.cov)) {
-            sample.var.idx <- match(ov.names.nox[[g]], ov.names[[g]])
-            ustart <- c(ustart, diag(sample.cov[[g]])[sample.var.idx])
-        } else {
-            ustart <- c(ustart, rep(as.numeric(NA), nvar))
-        }
-
-        # ordered? fix variances, add thresholds
-        ord.names <- character(0L)
-        if(categorical) {
-            ord.names <- ov$name[ ov$type == "ordered" ]
-            # only for this group
-            ord.names <- ov.names[[g]][ which(ov.names[[g]] %in% ord.names) ]
-            
-            if(length(ord.names) > 0L) {
-                # fix variances to 1.0
-                idx <- which(lhs %in% ord.names & op == "~~" & lhs == rhs)
-                ustart[idx] <- 1.0
-                free[idx] <- 0L
-
-                # add thresholds
-                lhs.th <- character(0); rhs.th <- character(0)
-                for(o in ord.names) {
-                    nth  <- ov$nlev[ ov$name == o ] - 1L
-                    if(nth < 1L) next
-                    lhs.th <- c(lhs.th, rep(o, nth))
-                    rhs.th <- c(rhs.th, paste("t", seq_len(nth), sep=""))
-                }
-                nel   <- length(lhs.th)
-                lhs   <- c(lhs, lhs.th)
-                rhs   <- c(rhs, rhs.th)
-                 op   <- c(op, rep("|", nel))
-                group <- c(group, rep(g, nel))
-                 free <- c(free, rep(1L, nel))
-                  exo <- c(exo, rep(0L, nel))
-               th.start <- rep(0, nel)
-               #th.start <- sample.th[[g]] ### FIXME:: ORDER??? ONLY ORD!!!
-               ustart <- c(ustart, th.start)
-            }
-        }
-        # meanstructure?
-        if(meanstructure) {
-            # auto-remove ordinal variables
-            ov.int <- ov.names.nox[[g]]
-            idx <- which(ov.int %in% ord.names)
-            if(length(idx)) ov.int <- ov.int[-idx]
-
-            nel <- length(ov.int)
-            lhs   <- c(lhs, ov.int)
-             op   <- c(op, rep("~1", nel))
-            rhs   <- c(rhs, rep("", nel))
-            group <- c(group, rep(g,  nel))
-            free  <- c(free,  rep(1L, nel))
-            exo   <- c(exo,   rep(0L, nel))
-            # starting values
-            if(!is.null(sample.mean)) {
-                sample.int.idx <- match(ov.int, ov.names[[g]])
-                ustart <- c(ustart, sample.mean[[g]][sample.int.idx])
-            } else {
-                ustart <- c(ustart, rep(as.numeric(NA), length(ov.int)))
-            }
-        }
-
-        # fixed.x exogenous variables?
-        if(!categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
-            idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
-            nel <- sum(idx)
-            lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
-             op    <- c(op, rep("~~", nel))
-            rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
-            if(fixed.x) {
-                free   <- c(free,  rep(0L, nel))
-            } else {
-                free   <- c(free,  rep(1L, nel))
-            }
-            exo    <- c(exo,   rep(1L, nel))
-            group  <- c(group, rep(g,  nel))
-            ustart <- c(ustart, rep(as.numeric(NA), nel))
-
-            # meanstructure?
-            if(meanstructure) {
-                lhs    <- c(lhs,    ov.names.x[[g]])
-                 op    <- c(op,     rep("~1", nx))
-                rhs    <- c(rhs,    rep("", nx))
-                group  <- c(group,  rep(g,  nx))
-                if(fixed.x) {
-                    free   <- c(free,   rep(0L, nx))
-                } else {
-                    free   <- c(free,   rep(1L, nx))
-                }
-                exo    <- c(exo,    rep(1L, nx))
-                ustart <- c(ustart, rep(as.numeric(NA), nx))
-            }
-        }
-
-        if(categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
-            # add regressions
-            lhs <- c(lhs, rep("dummy", nx))
-             op <- c( op, rep("~", nx))
-            rhs <- c(rhs, ov.names.x[[g]])
-            # add 3 dummy lines
-            lhs <- c(lhs, "dummy"); op <- c(op, "=~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~1"); rhs <- c(rhs, "")
-
-            exo    <- c(exo,   rep(0L, nx + 3L))
-            group  <- c(group, rep(g,  nx + 3L))
-            free   <- c(free,  rep(0L, nx + 3L))
-            ustart <- c(ustart, rep(0, nx)); ustart <- c(ustart, c(0,1,0))
-        }
-
-    } # ngroups
-
-    # free counter
-    idx.free <- which(free > 0)
-    free[idx.free] <- 1:length(idx.free)
-
-    LIST   <- list(     id          = 1:length(lhs),
-                        lhs         = lhs,
-                        op          = op,
-                        rhs         = rhs,
-                        user        = rep(1L,  length(lhs)),
-                        group       = group,
-                        mod.idx     = rep(0L,  length(lhs)),
-                        free        = free,
-                        ustart      = ustart,
-                        exo         = exo,
-                        label       = rep("",  length(lhs)),
-                        eq.id       = rep(0L,  length(lhs)),
-                        unco        = free
-                   )
-    LIST
-
-}
-
-# given two models, M1 and M0, where M0 is nested in M1,
-# create a function 'af(x)' where 'x' is the full parameter vector of M1
-# and af(x) returns the evaluated restrictions under M0).
-# The 'jacobian' of this function 'A' will be used in the anova
-# anova() function, and elsewhere
-getConstraintsFunction <- function(p1, p0) {
-
-    # check for inequality constraints
-    if(any(c(p0$op,p1$op) %in% c(">","<"))) 
-        stop("lavaan ERROR: anova() can not handle inequality constraints; use InformativeTesting() instead")
-
-    npar.p1 <- max(p1$free)
-    npar.p0 <- max(p0$free)
-    npar.diff <- npar.p1 - npar.p0
-
-    con.function <- function() NULL
-    formals(con.function) <- alist(x=, ...=)
-    BODY.txt <- paste("{\nout <- rep(NA, ", npar.diff, ")\n", sep="")
-
-    # for each free parameter in p1, we 'check' is it is somehow 
-    # restricted in p0
-    ncon <- 0L; EQ.ID <- integer(); EQ.P1 <- integer()
-    for(i in seq_len(npar.p1)) {
-        idx <- which(p1$free == i)[1L]
-        lhs <- p1$lhs[idx]; op <- p1$op[idx]; rhs <- p1$rhs[idx]
-        group <- p1$group[idx]
-        p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
-                        p0$group == group)
-        if(length(p0.idx) == 0L) {
-            # this parameter is not to be found in M0, we will
-            # assume that is fixed to zero
-            ncon <- ncon + 1L 
-            BODY.txt <- paste(BODY.txt,
-                "out[", ncon, "] = x[", i, "] - 0\n", sep="")
-            next
-        }
-        if(p0$free[p0.idx] == 0L) {
-            ncon <- ncon + 1L
-            # simple fixed value
-            BODY.txt <- paste(BODY.txt,
-                "out[", ncon, "] = x[", i, "] - ",
-                                   p0$ustart[p0.idx], "\n", sep="")
-        } 
-        # how to deal with *new* equality constraints?
-        # check if p0 has an eq.id not yet in EQ.ID (while p1 eq.id is empty)
-        if(p0$eq.id[p0.idx] != 0 && p1$eq.id[idx] == 0) {
-            # if not in EQ.ID, put it there and continue
-            EQ <- p0$eq.id[p0.idx]
-            if(EQ %in% EQ.ID) {
-                # add constraint
-                ncon <- ncon + 1L
-                BODY.txt <- paste(BODY.txt,
-                                  "out[", ncon, "] = x[", EQ.P1[EQ.ID == EQ], 
-                                                "] - x[", i, "]\n", sep="")
-            } else {
-                EQ.ID <- c(EQ.ID, EQ)
-                EQ.P1 <- c(EQ.P1,  i)
-            }
-        }
-    }
-
-    # add all NEW constraints using "==" (not already in p1)
-    p0.con.idx <- which(p0$op == "==")
-    if(length(p0.con.idx) > 0L) {
-        # first, remove those also present in p1
-        del.idx <- integer(0L)
-        for(con in 1:length(p0.con.idx)) {
-            p0.idx <- p0.con.idx[con]
-            p1.idx <- which(p1$op == "==" &
-                            p1$lhs == p0$lhs[p0.idx] &
-                            p1$rhs == p0$rhs[p0.idx])
-            if(length(p1.idx) > 0L)
-                del.idx <- c(del.idx, con)
-        }
-        if(length(del.idx) > 0L)
-            p0.con.idx <- p0.con.idx[-del.idx]   
-    }
-    eq.idx <- p0.con.idx
-    if(length(eq.idx) > 0L) {
-        def.idx <- which(p0$op == ":=")
-        # first come the variable definitions
-        if(length(def.idx) > 0L) {
-            for(i in 1:length(def.idx)) {
-                lhs <- p0$lhs[ def.idx[i] ]
-                rhs <- p0$rhs[ def.idx[i] ]
-                def.string <- rhs
-                # coerce to expression to extract variable names
-                def.labels <- all.vars( parse(file="", text=def.string) )
-                # get corresponding 'x' indices
-                def.x.idx  <- p0$free[match(def.labels, p0$label)]
-                def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
-                # put both the labels and the expression in the function BODY
-                BODY.txt <- paste(BODY.txt,
-                    paste(def.labels, "=",def.x.lab, collapse=";"),"\n",
-                    lhs, " = ", def.string, "\n", sep="")
-            }
-        }
-
-        for(i in 1:length(eq.idx)) {
-            lhs <- p0$lhs[ eq.idx[i] ]
-            rhs <- p0$rhs[ eq.idx[i] ]
-            if(rhs == "0") {
-                eq.string <- lhs
-            } else {
-                eq.string <- paste(lhs, "- (", rhs, ")", sep="")
-            }
-            # coerce to expression to extract variable names
-            eq.labels <- all.vars( parse(file="", text=eq.string) )
-            # get corresponding 'x' indices
-            if(length(def.idx) > 0L) {
-                # remove def.names from ineq.labels
-                def.names <- as.character(p0$lhs[def.idx])
-                d.idx <- which(eq.labels %in% def.names)
-                if(length(d.idx) > 0) eq.labels <- eq.labels[-d.idx]
-            }
-            if(length(eq.labels) > 0L) {
-                eq.x.idx  <- p0$free[match(eq.labels, p0$label)]
-                if(any(is.na(eq.x.idx))) {
-                    stop("lavaan ERROR: unknown label(s) in equality constraint: ",
-                         paste(eq.labels[which(is.na(eq.x.idx))], collapse=" "))
-                }
-                if(any(eq.x.idx == 0)) {
-                    stop("lavaan ERROR: non-free parameter(s) in inequality constraint: ",
-                        paste(eq.labels[which(eq.x.idx == 0)], collapse=" "))
-                }
-                eq.x.lab  <- paste("x[", eq.x.idx, "]",sep="")
-                # put both the labels and the expression in the function BODY
-                BODY.txt <- paste(BODY.txt,
-                    paste(eq.labels, "=", eq.x.lab, collapse=";"),"\n",
-                    "out[", i, "] = ", eq.string, "\n", sep="")
-            } else {
-                BODY.txt <- paste(BODY.txt,
-                    "out[", i, "] = ", eq.string, "\n", sep="")
-            }
-        }
-               
-    }
-
-    # wrap function
-    BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
-    body(con.function) <- parse(file="", text=BODY.txt)
-
-    con.function
-}
-
-# user visible function to add 'matrix' entries in the parameter table
-lavMatrixRepresentation <- function(partable, representation = "LISREL",
-                                    as.data.frame. = TRUE) {
-
-    # get model matrices
-    if(representation == "LISREL") {
-        REP <- representation.LISREL(partable, target=NULL, extra=FALSE)
-    } else {
-        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
-    }
-    
-    partable$mat <- REP$mat
-    partable$row <- REP$row
-    partable$col <- REP$col
-
-    if(as.data.frame.) {
-        partable <- as.data.frame(partable, stringsAsFactors=FALSE)
-        class(partable) <- c("lavaan.data.frame", "data.frame")
-    }
-
-    partable
 }
 

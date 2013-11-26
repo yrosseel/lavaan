@@ -786,7 +786,7 @@ function(object, type="free", labels=TRUE) {
     cof <- object@Fit@est[idx]
   
     # labels?
-    if(labels) names(cof) <- getParameterLabels(object@ParTable, type=type)
+    if(labels) names(cof) <- lav_partable_labels(object@ParTable, type=type)
 
     # class
     class(cof) <- c("lavaan.vector", "numeric")
@@ -1343,7 +1343,7 @@ function(object, labels=TRUE, attributes.=FALSE) {
 
     if(labels) {
         colnames(VarCov) <- rownames(VarCov) <- 
-            getParameterLabels(object@ParTable, type="free")
+            lav_partable_labels(object@ParTable, type="free")
     }
  
     if(!attributes.) {

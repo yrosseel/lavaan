@@ -55,7 +55,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
 
     # fit stat and df are NA (perhaps test="none"?), try again:
     if(is.na(df)) {
-        df <- getDF(object@ParTable)
+        df <- lav_partable_df(object@ParTable)
         if(nrow(object@Model@con.jac) > 0L) {
             df <- ( df + length(attr(object@Model@con.jac, "ceq.idx")) )
         }

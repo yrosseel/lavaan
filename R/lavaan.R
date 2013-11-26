@@ -350,7 +350,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         th.idx <- vector("list", length=lavaanData@ngroups)
         for(g in 1:lavaanData@ngroups) {
-            th.idx[[g]] <- getIDX(lavaanParTable, type="th")
+            th.idx[[g]] <- lav_partable_ov_idx(lavaanParTable, type="th")
         }
         lavaanSampleStats <- new("lavSampleStats", ngroups=lavaanData@ngroups,
                                  nobs=as.list(rep(0L, lavaanData@ngroups)),

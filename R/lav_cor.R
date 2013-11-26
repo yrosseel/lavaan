@@ -2,14 +2,27 @@
 # compute polychoric/polyserial/... correlations
 #
 # YR 17 Sept 2013
+# 
+# - YR 26 Nov 2013: big change - make it wrapper around lavaan()
+#                   estimator = "none" means two.step (starting values)
 
-lavCor <- function(object, ordered = NULL, ov.names.x = NULL, 
-                   # method="two.step", 
-                   zero.add = c(0.5, 0.0),
-                   zero.keep.margins = TRUE,
-                   group = NULL, missing = "listwise",
-                   WLS.W = FALSE, details = FALSE,
-                   labels = TRUE, verbose = FALSE) {
+lavCor <- function(object, 
+                   # lav.data options
+                   ordered    = NULL, 
+                   group      = NULL, 
+                   missing    = "listwise",
+                   ov.names.x = NULL, 
+                   # lavaan options
+                   se         = "none", 
+                   estimator  = "two.step", 
+                   # other options (for lavaan)
+                   ...) {
+
+    # check estimator
+    estimator <- tolower(estimator)
+    if(estimator %in% c("two.step", "two.stage")) {
+        estimator <- "none"
+    }
 
     # check object class
     if(inherits(object, "lavaan")) {
@@ -30,9 +43,11 @@ lavCor <- function(object, ordered = NULL, ov.names.x = NULL,
              class(object))
     }
 
-    out <- lav_cor(lav.data = lav.data, WLS.W = WLS.W, details = details, 
-                   zero.add = zero.add, zero.keep.margins = zero.keep.margins,
-                   labels = labels, verbose = verbose)
+    # generate partable for unrestricted model
+    PT.un <- lav_partable_unrestricted(lav.data = lav.data)
+
+    out <- lavaan(slotParTable = PT.un, slotData = lav.data, se = se,
+                  estimator = estimator, ...)
 
     out
 }

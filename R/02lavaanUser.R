@@ -130,7 +130,7 @@ lavaanify <- lavParTable <- function(
         group.op.idx <- c(which(FLAT$op == ":"), nrow(FLAT)+1L)
         for(g in 1:n.group.flat) {
             FLAT.group <- FLAT[(group.op.idx[g]+1L):(group.op.idx[g+1]-1L),]    
-            LIST.group <- getLIST(FLAT.group, meanstructure = meanstructure, 
+            LIST.group <- lav_partable_flat(FLAT.group, meanstructure = meanstructure, 
                 int.ov.free = int.ov.free, int.lv.free = int.lv.free,
                 orthogonal = orthogonal, std.lv = std.lv, fixed.x = fixed.x,
                 auto.fix.first = auto.fix.first, 
@@ -151,7 +151,7 @@ lavaanify <- lavParTable <- function(
         }
         LIST <- as.list(LIST)
     } else {
-        LIST <- getLIST(FLAT, meanstructure = meanstructure, 
+        LIST <- lav_partable_flat(FLAT, meanstructure = meanstructure, 
             int.ov.free = int.ov.free, int.lv.free = int.lv.free,
             orthogonal = orthogonal, std.lv = std.lv, fixed.x = fixed.x,
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
@@ -253,9 +253,9 @@ lavaanify <- lavParTable <- function(
     #}
 
     # get 'virtual' parameter labels
-    LABEL <- getParameterLabels(partable=LIST, group.equal=group.equal,
+    LABEL <- lav_partable_labels(partable=LIST, group.equal=group.equal,
                                 group.partial=group.partial)
-    #cat("DEBUG: label after getParameterLabels:\n"); print(LABEL); cat("\n")
+    #cat("DEBUG: label after lav_partable_labels:\n"); print(LABEL); cat("\n")
     #cat("DEBUG: eq.id after group.equal:\n"); print(LIST$eq.id); cat("\n")
     #cat("DEBUG: LIST$label:\n"); print(LIST$label); cat("\n")
 

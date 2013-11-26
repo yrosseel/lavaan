@@ -76,14 +76,15 @@ independence.model.fit <- function(object) {
     }
 
     # construct
-    lavaanParTable <- independenceModel(ov.names   = object@Data@ov.names,
-                                        ov         = object@Data@ov,
-                                    ov.names.x = OV.X,
-                                    sample.cov = object@SampleStats@cov,
-                                    meanstructure = object@Model@meanstructure,
-                                    sample.mean = object@SampleStats@mean,
-                                    sample.th   = object@SampleStats@th,
-                                    fixed.x    = FIXED.X)
+    lavaanParTable <- 
+        lav_partable_independence(ov.names      = object@Data@ov.names,
+                                  ov            = object@Data@ov,
+                                  ov.names.x    = OV.X,
+                                  sample.cov    = object@SampleStats@cov,
+                                  meanstructure = object@Model@meanstructure,
+                                  sample.mean   = object@SampleStats@mean,
+                                  sample.th     = object@SampleStats@th,
+                                  fixed.x       = FIXED.X)
    
     # fit?
     do.fit <- TRUE
