@@ -686,8 +686,8 @@ computeObjective <- function(object, GLIST=NULL,
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
 
-    # shortcut for data.type == "none"
-    if(length(samplestats@cov) == 0L) {
+    # shortcut for data.type == "none" or estimator == "none"
+    if(estimator == "none" || length(samplestats@cov) == 0L) {
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), samplestats@ngroups)
         return(fx)

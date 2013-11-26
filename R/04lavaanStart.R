@@ -167,18 +167,34 @@ StartingValues <- function(start.method = "default",
             }
         }
 
+        if(model.type == "unrestricted") {
+           # fill in 'covariances' from samplestats
+            cov.idx <- which(partable$group == g             &
+                             partable$op    == "~~"          &
+                             partable$lhs != partable$rhs)
+            lhs.idx <- match(partable$lhs[cov.idx], ov.names)
+            rhs.idx <- match(partable$rhs[cov.idx], ov.names)
+            start[cov.idx] <- samplestats@cov[[g]][ cbind(lhs.idx, rhs.idx) ]
+        }
+
         # 2g) residual ov variances (including exo, to be overriden)
         ov.var.idx <- which(partable$group == g             & 
                             partable$op    == "~~"          & 
                             partable$lhs %in% ov.names.num  & 
                             partable$lhs == partable$rhs)
         sample.var.idx <- match(partable$lhs[ov.var.idx], ov.names.num)
-        if(start.initial == "mplus") {
-            start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
+        if(model.type == "unrestricted") {
+            start[ov.var.idx] <- diag(samplestats@cov[[g]])[sample.var.idx]
         } else {
-            #start[ov.var.idx] <- (1.0 - 0.50)*samplestats@var[[g]][sample.var.idx]
-            start[ov.var.idx] <- 
-                (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
+            if(start.initial == "mplus") {
+                start[ov.var.idx] <- 
+                    (1.0 - 0.50)*samplestats@var[[1L]][sample.var.idx]
+            } else {
+                # start[ov.var.idx] <- 
+                #     (1.0 - 0.50)*samplestats@var[[g]][sample.var.idx]
+                start[ov.var.idx] <- 
+                    (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
+            }
         }
 
         # 3g) intercepts

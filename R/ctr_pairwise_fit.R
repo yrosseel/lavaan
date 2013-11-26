@@ -68,7 +68,7 @@ print.lavaan.tables.fit.Cp <- function(x, ...) {
 }
 
 # Mariska Barendse CF statistic
-lavTablesFitCf <- function(object, est = "h0") {
+lavTablesFitCf <- function(object) {
 
     # check object class
     if(!inherits(object, "lavaan")) {
@@ -92,18 +92,18 @@ lavTablesFitCf <- function(object, est = "h0") {
     ov.nlev <- object@Data@ov$nlev[ ov.idx ]
 
     # h0 or h1?
-    if(est == "h0") {
+    #if(est == "h0") {
         Sigma.hat <- object@Fit@Sigma.hat
         TH        <- object@Fit@TH
         DF        <- prod(ov.nlev) - object@Fit@npar - 1L
-    } else {
-        ## FIXME: npar should be extract from 'saturated' fit
-        Sigma.hat <- object@SampleStats@cov
-        TH        <- object@SampleStats@th
-        nvar      <- length(ov.ord)
-        npar      <- (sum(ov.nlev - 1) + nvar*(nvar-1)/2)*object@Data@ngroups
-        DF        <- prod(ov.nlev) - npar - 1L
-    }
+    #} else {
+    #    ## FIXME: npar should be extract from 'saturated' fit
+    #    Sigma.hat <- object@SampleStats@cov
+    #    TH        <- object@SampleStats@th
+    #    nvar      <- length(ov.ord)
+    #    npar      <- (sum(ov.nlev - 1) + nvar*(nvar-1)/2)*object@Data@ngroups
+    #    DF        <- prod(ov.nlev) - npar - 1L
+    #}
 
     for(g in 1:ngroups) {
         F.group <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
@@ -152,8 +152,11 @@ print.lavaan.tables.fit.Cf <- function(x, ...) {
 
 lavTablesFitCm <- function(object) {
 
-    CF.h0 <- lavTablesFitCf(object, est = "h0")
-    CF.h1 <- lavTablesFitCf(object, est = "h1")
+    CF.h0 <- lavTablesFitCf(object)
+
+    # fit unrestricted model
+    h1 <- lavCor(object@Data, estimator = object@Options$estimator)
+    CF.h1 <- lavTablesFitCf(h1)
 
     CF.h0.group <- attr(CF.h0, "CF.group")
     CF.h1.group <- attr(CF.h1, "CF.group")

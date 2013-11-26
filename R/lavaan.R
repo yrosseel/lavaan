@@ -159,7 +159,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # some additional checks for estimator="PML"
     if(lavaanOptions$estimator == "PML") {
-        ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
+        if(!is.null(slotData)) {
+            ov.types <- slotData@ov$type[ slotData@ov$name %in% ov.names.y ]
+        } else {
+            ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
+        }
         # ordered argument?
         if(length(ordered) > 0L) {
             ord.idx <- which(ov.names.y %in% ordered)
@@ -301,6 +305,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         cat("model type: ", class(model), "\n")
         stop("lavaan ERROR: model is not of type character or list")
     }
+    if(debug) print(as.data.frame(lavaanParTable))
 
     # 2b. change meanstructure flag?
     if(any(lavaanParTable$op == "~1")) lavaanOptions$meanstructure <- TRUE
@@ -408,7 +413,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # prepare cache -- stuff needed for estimation, but also post-estimation
     lavaanCache <- vector("list", length=lavaanData@ngroups)
-    if(estimator == "PML") {
+    if(lavaanOptions$estimator == "PML") {
         TH <- computeTH(lavaanModel)
         for(g in 1:lavaanData@ngroups) {
             nvar <- ncol(lavaanData@X[[g]])
@@ -437,7 +442,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 6. estimate free parameters
     x <- NULL
-    if(do.fit && lavaanModel@nx.free > 0L) {
+    if(do.fit && lavaanOptions$estimator != "none" && 
+       lavaanModel@nx.free > 0L) {
         # catch simple linear regression models
         if(lavaanData@data.type == "full" &&
            length(unique(lavaanParTable$lhs[lavaanParTable$op == "~"])) == 1L && 

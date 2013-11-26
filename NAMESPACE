@@ -54,21 +54,21 @@ export("lavaan", "cfa", "sem", "growth",
        "simulateData",
        "estfun.lavaan", "lavScores",
        "lavTables", 
-       # "lavTablesFitCp", "lavTablesFitCf", "lavTablesFitCm",
+       "lavTablesFitCp", "lavTablesFitCf", "lavTablesFitCm",
        "lavExport",
        "lavTestLRT", # "lavTestWald", "lavTestScore",
        "lavMatrixRepresentation",
-       "mplus2lavaan" #,
+       "mplus2lavaan",
        #"prelav",
-       #"lavData",
-       #"lavCor", "lavCorFit" #,
-       #"lavPredict"
+       "lavData",
+       "lavPredict",
+       "lavCor"
       )
 
 # export Classes
 exportClasses(
-              "lavaan" #,
-              #"lavData"
+              "lavaan",
+              "lavData"
              )
 
 # export Methods
