@@ -297,7 +297,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # or it is something else...
         if(!is.null(model$lhs) && !is.null(model$op)  &&
            !is.null(model$rhs) && !is.null(model$free)) {
-            lavaanParTable <- model
+            lavaanParTable <- as.list(model)
         } else if(is.character(model[[1]])) {
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
