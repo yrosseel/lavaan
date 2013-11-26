@@ -20,7 +20,7 @@ lavCor <- function(object,
                    estimator  = "two.step", 
                    # other options (for lavaan)
                    ...,
-                   return.type = "cor") {
+                   output = "cor") {
 
     # check estimator
     estimator <- tolower(estimator)
@@ -62,17 +62,24 @@ lavCor <- function(object,
                   model.type = "unrestricted",
                   se = se, estimator = estimator, ...)
 
-    # check return.type
-    if(return.type %in% c("cor","cov")) {
+    # check output
+    if(output %in% c("cor","cov")) {
         out <- inspect(fit, "sampstat")
         if(fit@Data@ngroups == 1L) {
             out <- out$cov
         } else {
             out <- lapply(out, "[[", "cov")
         }
-    } else if(return.type %in% c("sampstat")) {
+    } else if(output %in% c("th","thresholds")) {
         out <- inspect(fit, "sampstat")
-    } else if(return.type %in% c("parameterEstimates", "pe", 
+        if(fit@Data@ngroups == 1L) {
+            out <- out$th
+        } else {
+            out <- lapply(out, "[[", "th")
+        }
+    } else if(output %in% c("sampstat")) {
+        out <- inspect(fit, "sampstat")
+    } else if(output %in% c("parameterEstimates", "pe", 
               "parameterestimates", "est")) {
         out <- parameterEstimates(fit)
     } else {
