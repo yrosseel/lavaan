@@ -172,6 +172,7 @@ lavTablesFitCm <- function(object) {
     CM
 }
 
+
 print.lavaan.tables.fit.Cm <- function(x, ...) {
     #cat("The percentage of empty cells\n") #weet niet goed want FML werkt niet
     #cat("CM results may be a little biased because of large numbers of empty cells in the multivariate contingency table\n")
