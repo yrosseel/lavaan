@@ -14,21 +14,27 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
     ustart <- numeric(0)
 
     categorical <- any(ov$type == "ordered")
+    if(categorical) {
+        OV <- ov.names.nox
+    } else {
+        OV <- ov.names
+    }
+    
 
     for(g in 1:ngroups) {
 
-        # a) VARIANCES (all ov's, except exo's)
-        nvar  <- length(ov.names.nox[[g]])
-        lhs   <- c(lhs, ov.names.nox[[g]])
+        # a) VARIANCES (all ov's, if !categorical, also exo's)
+        nvar  <- length(OV[[g]])
+        lhs   <- c(lhs, OV[[g]])
          op   <- c(op, rep("~~", nvar))
-        rhs   <- c(rhs, ov.names.nox[[g]])
+        rhs   <- c(rhs, OV[[g]])
         group <- c(group, rep(g,  nvar))
         free  <- c(free,  rep(1L, nvar))
         exo   <- c(exo,   rep(0L, nvar))
 
         # starting values -- variances
         if(!is.null(sample.cov)) {
-            sample.var.idx <- match(ov.names.nox[[g]], ov.names[[g]])
+            sample.var.idx <- match(OV[[g]], ov.names[[g]])
             ustart <- c(ustart, diag(sample.cov[[g]])[sample.var.idx])
         } else {
             ustart <- c(ustart, rep(as.numeric(NA), nvar))
@@ -36,7 +42,7 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
 
         # COVARIANCES!
         pstar <- nvar*(nvar-1)/2
-        tmp <- utils::combn(ov.names.nox[[g]], 2)
+        tmp <- utils::combn(OV[[g]], 2)
         lhs <- c(lhs, tmp[1,]) # to fill upper.tri
          op <- c(op,   rep("~~", pstar))
         rhs <- c(rhs, tmp[2,])
@@ -46,7 +52,7 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
 
         # starting values -- variances
         if(!is.null(sample.cov)) {
-            sample.var.idx <- match(ov.names.nox[[g]], ov.names[[g]])
+            sample.var.idx <- match(OV[[g]], ov.names[[g]])
             COV <-  sample.cov[[g]][sample.var.idx, sample.var.idx]
             ### CHECK ME!!! upper tri??
             ustart <- c(ustart, COV[upper.tri(COV, diag=FALSE)])
@@ -88,10 +94,11 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
                ustart <- c(ustart, rep(as.numeric(NA), nel))
             }
         }
+
         # meanstructure?
         if(meanstructure) {
             # auto-remove ordinal variables
-            ov.int <- ov.names.nox[[g]]
+            ov.int <- OV[[g]]
             idx <- which(ov.int %in% ord.names)
             if(length(idx)) ov.int <- ov.int[-idx]
 
@@ -112,37 +119,6 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
         }
 
         # fixed.x exogenous variables?
-        if(!categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
-            idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
-            nel <- sum(idx)
-            lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
-             op    <- c(op, rep("~~", nel))
-            rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
-            if(fixed.x) {
-                free   <- c(free,  rep(0L, nel))
-            } else {
-                free   <- c(free,  rep(1L, nel))
-            }
-            exo    <- c(exo,   rep(1L, nel))
-            group  <- c(group, rep(g,  nel))
-            ustart <- c(ustart, rep(as.numeric(NA), nel))
-
-            # meanstructure?
-            if(meanstructure) {
-                lhs    <- c(lhs,    ov.names.x[[g]])
-                 op    <- c(op,     rep("~1", nx))
-                rhs    <- c(rhs,    rep("", nx))
-                group  <- c(group,  rep(g,  nx))
-                if(fixed.x) {
-                    free   <- c(free,   rep(0L, nx))
-                } else {
-                    free   <- c(free,   rep(1L, nx))
-                }
-                exo    <- c(exo,    rep(1L, nx))
-                ustart <- c(ustart, rep(as.numeric(NA), nx))
-            }
-        }
-
         if(categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
             # add regressions
             lhs <- c(lhs, rep("dummy", nx))

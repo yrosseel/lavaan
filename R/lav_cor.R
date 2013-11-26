@@ -19,7 +19,8 @@ lavCor <- function(object,
                    se         = "none", 
                    estimator  = "two.step", 
                    # other options (for lavaan)
-                   ...) {
+                   ...,
+                   return.type = "cor") {
 
     # check estimator
     estimator <- tolower(estimator)
@@ -57,9 +58,26 @@ lavCor <- function(object,
                                   sample.th     = NULL,
                                   fixed.x       = fixed.x)
 
-    out <- lavaan(slotParTable = PT.un, slotData = lav.data,
+    fit <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
                   se = se, estimator = estimator, ...)
+
+    # check return.type
+    if(return.type %in% c("cor","cov")) {
+        out <- inspect(fit, "sampstat")
+        if(fit@Data@ngroups == 1L) {
+            out <- out$cov
+        } else {
+            out <- lapply(out, "[[", "cov")
+        }
+    } else if(return.type %in% c("sampstat")) {
+        out <- inspect(fit, "sampstat")
+    } else if(return.type %in% c("parameterEstimates", "pe", 
+              "parameterestimates", "est")) {
+        out <- parameterEstimates(fit)
+    } else {
+        out <- fit
+    }
 
     out
 }
