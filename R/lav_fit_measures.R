@@ -1,4 +1,5 @@
-fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
+fitMeasures <- fitmeasures <- function(object, fit.measures="all", 
+                                       baseline.model = NULL) {
 
     # has the model converged?
     if(object@Fit@npar > 0L && !object@Fit@converged) {
@@ -243,7 +244,11 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all") {
         #fit.indep <- do.call("lavaan", args=CALL, envir=object@call$env)
         #fit.indep <- do.call("lavaan", args=CALL)
 
-        fit.indep <- independence.model.fit(object)
+        if (!is.null(baseFit) & is(baseline.model, "lavaan")) {
+            fit.indep <- baseline.model
+        } else {
+            fit.indep <- independence.model.fit(object)
+        }
                             
         X2.null <- fit.indep@Fit@test[[1]]$stat
         df.null <- fit.indep@Fit@test[[1]]$df

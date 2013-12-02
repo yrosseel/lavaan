@@ -12,12 +12,9 @@ lavCor <- function(object,
                    group      = NULL, 
                    missing    = "listwise",
                    ov.names.x = NULL, 
-                   # partable options
-                   meanstructure = FALSE,
-                   fixed.x       = TRUE,
                    # lavaan options
                    se         = "none", 
-                   estimator  = "two.step", 
+                   estimator  = "none",
                    # other options (for lavaan)
                    ...,
                    output = "cor") {
@@ -26,6 +23,15 @@ lavCor <- function(object,
     estimator <- tolower(estimator)
     if(estimator %in% c("two.step", "two.stage")) {
         estimator <- "none"
+    }
+
+    # se?
+    se <- tolower(se); output <- tolower(output)
+    if(se != "none") {
+        if(output %in% c("cor","cov","sampstat","th","thresholds")) {
+            warning("lavaan WARNING: argument `se' is ignored since they are not needed for the requested `output'")
+            se <- "none"
+        }
     }
 
     # check object class
@@ -43,8 +49,28 @@ lavCor <- function(object,
                             ov.names.x = ov.names.x,
                             missing = missing)
     } else {
-        stop("lavaan ERROR: lavCor can not handle objects of class ", 
-             class(object))
+        stop("lavaan ERROR: lavCor can not handle objects of class ",
+             paste(class(object), collapse= " "))
+    }
+
+    # set default estimator if se != "none"
+    categorical <- any(lav.data@ov$type == "ordered")
+    if(se != "none" && estimator == "none") {
+        if(categorical) {
+            estimator <- "WLSMV"
+        } else {
+            estimator <- "ML"
+        }
+    }
+
+    # extract partable options from dots
+    dots <- list(...)
+    meanstructure <- FALSE; fixed.x <- FALSE
+    if(!is.null(dots$meanstructure)) {
+        meanstructure <- dots$meanstructure
+    }
+    if(!is.null(dots$fixed.x)) {
+        fixed.x <- dots$fixed.x
     }
 
     # generate partable for unrestricted model
@@ -67,8 +93,14 @@ lavCor <- function(object,
         out <- inspect(fit, "sampstat")
         if(fit@Data@ngroups == 1L) {
             out <- out$cov
+            if(output == "cor") {
+                out <- cov2cor(out)
+            }
         } else {
             out <- lapply(out, "[[", "cov")
+            if(output == "cor") {
+                out <- lapply(out, cov2cor)
+            }
         }
     } else if(output %in% c("th","thresholds")) {
         out <- inspect(fit, "sampstat")

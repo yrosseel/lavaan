@@ -123,14 +123,23 @@ lavTestLRT <- function(object, ..., SB.classic = FALSE, SB.H0 = FALSE,
     }
 
     # collect statistics for each model
-    Df    <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"), 
-                        "test")[[1]]$df))
+    if(type == "chisq") {
+        Df <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"), 
+                            "test")[[1]]$df))
+    } else if(type == "cf") {
+        Df <- rep(as.numeric(NA), length(mods))
+    } else {
+        stop("lavaan ERROR: test type unknown: ", type)
+    }
+    
 
     if(type == "chisq") {
         STAT <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"), 
                             "test")[[1]]$stat))
     } else if(type == "cf") {
-        STAT <- unlist(lapply(mods, lavTablesFitCf, est = "h0"))
+        tmp <- lapply(mods, lavTablesFitCf)
+        STAT <- unlist(tmp)
+        Df  <- unlist(lapply(tmp, attr, "DF"))
     } else {
         stop("lavaan ERROR: test type unknown: ", type)
     }

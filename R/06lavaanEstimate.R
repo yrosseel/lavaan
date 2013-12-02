@@ -831,8 +831,9 @@ computeObjective <- function(object, GLIST=NULL,
 
     if(samplestats@ngroups > 1) {
         ## FIXME: if group.w.free, should we use group.w or nobs???
-        #if(group.w) {
-        #    nobs <- unlist(GW) * samplestats@ntotal
+        ##  - if we use estimated group.w, gradient changes!!!!
+        #if(group.w.free) {
+            nobs <- unlist(GW) * samplestats@ntotal
         #} else {
             nobs <- unlist(samplestats@nobs)
         #}
@@ -843,16 +844,23 @@ computeObjective <- function(object, GLIST=NULL,
 
     # penalty for group.w + ML
     if(group.w.free && estimator %in% c("ML","MML","FML","PML")) {
-        obs.prop <- unlist(samplestats@group.w)
-        est.prop <- unlist(GW)
+        #obs.prop <- unlist(samplestats@group.w)
+        #est.prop <- unlist(GW)
         # if(estimator %in% c("WLS", "GLS", ...) {
         #    # X2 style discrepancy measures (aka GLS/WLS!!)
         #    fx.w <- sum ( (obs.prop-est.prop)^2/est.prop )
         # } else {
         #    # G2 style discrepancy measures (aka ML)
         #    # deriv is here -2 * (obs.prop - est.prop)
-        fx.w <- 2 * sum(obs.prop * log(obs.prop/est.prop) )
+        #fx.w <- sum(obs.prop * log(obs.prop/est.prop) )
         # }
+        
+        # poisson kernel
+        obs.freq <- unlist(samplestats@group.w) * samplestats@ntotal
+        est.freq <- unlist(GW) * samplestats@ntotal
+        fx.w <- -1 * sum( obs.freq * log(est.freq) - est.freq ) 
+        # saturated - poisson
+        #fx.w <- sum(obs.freq * log(obs.freq/est.freq))
 
         fx <- fx + fx.w
     }
@@ -1365,13 +1373,18 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
 
     # group.w.free for ML
     if(object@group.w.free && estimator %in% c("ML","MML","FML","PML")) {
-        est.prop <- unlist( computeGW(object, GLIST=GLIST) )
-        obs.prop <- unlist(samplestats@group.w)
+        #est.prop <- unlist( computeGW(object, GLIST=GLIST) )
+        #obs.prop <- unlist(samplestats@group.w)
         # FIXME: G2 based -- ML and friends only!!
-        dx.GW <- -2 * (obs.prop - est.prop)
+        #dx.GW <- - (obs.prop - est.prop)
+
+        # poisson version
+        est.freq <- unlist(computeGW(object, GLIST=GLIST)) * samplestats@ntotal
+        obs.freq <- unlist(samplestats@group.w) * samplestats@ntotal
+        dx.GW <- - (obs.freq - est.freq)
 
         # remove last element (fixed LAST group to zero)
-        dx.GW <- dx.GW[-length(obs.prop)]
+        dx.GW <- dx.GW[-length(dx.GW)]
         
         # fill in in dx
         gw.mat.idx <- which(names(object@GLIST) == "gw")

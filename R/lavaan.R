@@ -159,14 +159,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # some additional checks for estimator="PML"
     if(lavaanOptions$estimator == "PML") {
+        ovy <- unique( unlist(ov.names.y) )
+        ovx <- unique( unlist(ov.names.x) )
         if(!is.null(slotData)) {
-            ov.types <- slotData@ov$type[ slotData@ov$name %in% ov.names.y ]
+            ov.types <- slotData@ov$type[ slotData@ov$name %in% ovy ]
         } else {
             ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
         }
         # ordered argument?
         if(length(ordered) > 0L) {
-            ord.idx <- which(ov.names.y %in% ordered)
+            ord.idx <- which(ovy %in% ordered)
             ov.types[ord.idx] <- "ordered"
         }
         # 0. at least some variables must be ordinal
@@ -180,7 +182,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         
         # 2. we can not handle exogenous covariates yet
-        if(length(ov.names.x) > 0L) {
+        if(length(ovx) > 0L) {
             stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
         }
 
