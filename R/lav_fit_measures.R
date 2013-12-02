@@ -244,7 +244,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         #fit.indep <- do.call("lavaan", args=CALL, envir=object@call$env)
         #fit.indep <- do.call("lavaan", args=CALL)
 
-        if (!is.null(baseFit) & is(baseline.model, "lavaan")) {
+        if (!is.null(baseline.model) & is(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
         } else {
             fit.indep <- independence.model.fit(object)
