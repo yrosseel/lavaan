@@ -151,6 +151,10 @@ lav_partable_df <- function(partable, group=NULL) {
 
 lav_partable_labels <- function(partable, group.equal="", group.partial="", 
                                type="user") {
+
+    # catch empty partable
+    if(length(partable$lhs) == 0L) return(character(0L))
+
     # default labels
     label <- paste(partable$lhs, partable$op, partable$rhs, sep="")
     
@@ -785,7 +789,7 @@ lav_partable_flat <- function(FLAT=NULL,
 
     # construct LIST
     #LIST  <- data.frame(
-    LIST   <- list(     id          = 1:length(lhs),
+    LIST   <- list(     id          = seq_along(lhs),
                         lhs         = lhs,
                         op          = op,
                         rhs         = rhs,

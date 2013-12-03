@@ -29,6 +29,9 @@ lavaanNames <- lavNames
 lav_partable_vnames <- function(partable, type = NULL, group = NULL, 
                                 warn = FALSE, ov.x.fatal = FALSE) {
 
+    # check for empy table
+    if(length(partable$lhs) == 0) return(character(0L))
+
     type.list <- c("ov",          # observed variables (ov)
                    "ov.x",        # (pure) exogenous observed variables
                    "ov.nox",      # non-exogenous observed variables

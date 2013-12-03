@@ -297,7 +297,7 @@ lavaanify <- lavParTable <- function(
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
-    LIST$free[idx.free] <- 1:length(idx.free)
+    LIST$free[idx.free] <- seq_along(idx.free)
 
     # 2. add free counter to this element
     idx.equal <- which(LIST$eq.id > 0)
@@ -305,7 +305,7 @@ lavaanify <- lavParTable <- function(
 
     # 3. which parameters would be free without equality constraints?
     idx.unco <- which(LIST$free > 0)
-    LIST$unco[idx.unco] <- 1:length(idx.unco)
+    LIST$unco[idx.unco] <- seq_along(idx.unco)
 
 
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
@@ -314,7 +314,7 @@ lavaanify <- lavParTable <- function(
         lhs = unlist(lapply(CON, "[[", "lhs"))
          op = unlist(lapply(CON, "[[",  "op"))
         rhs = unlist(lapply(CON, "[[", "rhs"))
-        LIST$id         <- c(LIST$id,         max(LIST$id) + 1:length(lhs) )
+        LIST$id         <- c(LIST$id,         length(LIST$id) + seq_along(lhs) )
         LIST$lhs        <- c(LIST$lhs,        lhs)
         LIST$op         <- c(LIST$op,         op)
         LIST$rhs        <- c(LIST$rhs,        rhs)
