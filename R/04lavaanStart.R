@@ -244,9 +244,12 @@ StartingValues <- function(start.method = "default",
     group.idx <- which(partable$lhs == "group" &
                        partable$op  == "%")
     if(length(group.idx) > 0L) {
-        prop <- rep(1/ngroups, ngroups)
+        #prop <- rep(1/ngroups, ngroups)
         # use last group as reference
-        start[group.idx] <- log(prop/prop[ngroups])
+        #start[group.idx] <- log(prop/prop[ngroups])
+
+        # poisson version
+        start[group.idx] <- log( rep(samplestats@ntotal/ngroups, ngroups) )
     }
 
     # growth models:

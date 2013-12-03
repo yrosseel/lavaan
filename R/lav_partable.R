@@ -126,7 +126,8 @@ lav_partable_ndat <- function(partable, group=NULL) {
     group.idx <- which(partable$lhs == "group" & 
                        partable$op == "%")
     if(length(group.idx) > 0L) {
-        ndat <- ndat + (length(group.idx) - 1L) # G - 1 (sum to one)
+        # ndat <- ndat + (length(group.idx) - 1L) # G - 1 (sum to one)
+        ndat <- ndat + length(group.idx) # poisson: each cell a parameter
     }
 
     ndat
@@ -717,13 +718,13 @@ lav_partable_flat <- function(FLAT=NULL,
     # group proportions (group 1L)
     if(group.w.free) {
         group.idx <- which(lhs == "group" & op == "%")
-        if(ngroups > 1L) {
+        #if(ngroups > 1L) {
               free[ group.idx ] <- 1L
             ustart[ group.idx ] <- as.numeric(NA)
-        } else {
-              free[ group.idx ] <- 0L
-            ustart[ group.idx ] <- 0.0 # last group
-        }
+        #} else {
+        #      free[ group.idx ] <- 0L
+        #    ustart[ group.idx ] <- 0.0 # last group
+        #}
     }
 
     # 6. multiple groups?
@@ -771,13 +772,13 @@ lav_partable_flat <- function(FLAT=NULL,
             # group proportions
             if(group.w.free) {
                 group.idx <- which(lhs == "group" & op == "%" & group == g)
-                if(g == ngroups) {
-                      free[ group.idx ] <- 0L
-                    ustart[ group.idx ] <- 0.0 # last group
-                } else {
+                #if(g == ngroups) {
+                #      free[ group.idx ] <- 0L
+                #    ustart[ group.idx ] <- 0.0 # last group
+                #} else {
                       free[ group.idx ] <- 1L
                     ustart[ group.idx ] <- as.numeric(NA)
-                }
+                #}
             }
         } # g
     } # ngroups

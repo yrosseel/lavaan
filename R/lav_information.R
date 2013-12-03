@@ -19,7 +19,7 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
     } else if(estimator == "ML") {
         Sigma.hat <- computeSigmaHat(object)
         if(object@group.w.free) {
-            PROP <- unlist(computeGW(object))
+            GW <- unlist(computeGW(object))
         }
         if(samplestats@missing.flag) Mu.hat <- computeMuHat(object)
         for(g in 1:samplestats@ngroups) {
@@ -37,7 +37,8 @@ computeExpectedInformation <- function(object, samplestats=NULL, data=NULL,
             }
             if(object@group.w.free) {
                 # unweight!!
-                a <- PROP[g] * samplestats@ntotal / samplestats@nobs[[g]]
+                a <- exp(GW[g]) / samplestats@nobs[[g]]
+                # a <- exp(GW[g]) * samplestats@ntotal / samplestats@nobs[[g]]
                 WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
             }
         }
@@ -76,7 +77,7 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
     # compute WLS.V 
     WLS.V <- vector("list", length=samplestats@ngroups)
     if(object@group.w.free) {
-        PROP <- unlist(computeGW(object))
+        GW <- unlist(computeGW(object))
     }
     for(g in 1:samplestats@ngroups) {
         WLS.V[[g]] <- compute.A1.sample(samplestats=samplestats, group=g,
@@ -85,7 +86,8 @@ computeExpectedInformationMLM <- function(object, samplestats = NULL,
         # the same as GLS... (except for the N/N-1 scaling)
         if(object@group.w.free) {
             # unweight!!
-            a <- PROP[g] * samplestats@ntotal / samplestats@nobs[[g]]
+            a <- exp(GW[g]) / samplestats@nobs[[g]]
+            # a <- exp(GW[g]) * samplestats@ntotal / samplestats@nobs[[g]]
             WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
         }
     }
@@ -163,11 +165,12 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
     #cat("Hessian 1:\n")
     #print(Hessian)
 
-    #x <- getModelParameters(object, type="free")
+    #x <- lavaan:::getModelParameters(object, type="free")
     #compute.fx <- function(x) {
-    #    GLIST <- x2GLIST(object, x=x)
-    #    fx <- computeObjective(object, GLIST=GLIST, samplestats=samplestats,
-    #                           estimator=estimator)
+    #    GLIST <- lavaan:::x2GLIST(object, x=x)
+    #    fx <- lavaan:::computeObjective(object, GLIST=GLIST, 
+    #                                    samplestats=samplestats,
+    #                                    estimator=estimator)
     #    fx
     #}
     #Hessian <- - numDeriv::hessian(func=compute.fx, x=x)

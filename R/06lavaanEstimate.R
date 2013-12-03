@@ -314,11 +314,11 @@ computeGW <- function(object, GLIST=NULL) {
     }
 
     # transform to proportions
-    gw <- unlist(GW)
-    gw <- exp(gw) / sum(exp(gw))
-    for(g in 1:ngroups) {
-        GW[[g]] <- gw[g]
-    }
+    #gw <- unlist(GW)
+    #gw <- exp(gw) / sum(exp(gw))
+    #for(g in 1:ngroups) {
+    #    GW[[g]] <- gw[g]
+    #}
 
     GW
 }
@@ -832,10 +832,13 @@ computeObjective <- function(object, GLIST=NULL,
     if(samplestats@ngroups > 1) {
         ## FIXME: if group.w.free, should we use group.w or nobs???
         ##  - if we use estimated group.w, gradient changes!!!!
+        ##  - but, if group models are misspecified, the group weights
+        ##    will be affected too... which is unwanted (I think)
         #if(group.w.free) {
-            nobs <- unlist(GW) * samplestats@ntotal
+           # nobs <- unlist(GW) * samplestats@ntotal
+        #   nobs <- exp(unlist(GW))
         #} else {
-            nobs <- unlist(samplestats@nobs)
+           nobs <- unlist(samplestats@nobs)
         #}
         fx <- weighted.mean(fx.group, w=nobs)
     } else { # single group
@@ -857,12 +860,19 @@ computeObjective <- function(object, GLIST=NULL,
         
         # poisson kernel
         obs.freq <- unlist(samplestats@group.w) * samplestats@ntotal
-        est.freq <- unlist(GW) * samplestats@ntotal
-        fx.w <- -1 * sum( obs.freq * log(est.freq) - est.freq ) 
+        est.freq <- exp(unlist(GW))
+        fx.w <- -1 * sum( obs.freq * log(est.freq) - est.freq )
+        # divide by N (to be consistent with the rest of lavaan)
+        fx.w <- fx.w / samplestats@ntotal
+
+        fx.sat <- sum( obs.freq * log(obs.freq) - obs.freq )
+        fx.sat <- fx.sat / samplestats@ntotal
+
         # saturated - poisson
         #fx.w <- sum(obs.freq * log(obs.freq/est.freq))
+        # does not work without constraints?
 
-        fx <- fx + fx.w
+        fx <- fx + (fx.w + fx.sat)
     }
 
     attr(fx, "fx.group") <- fx.group
@@ -1379,12 +1389,14 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         #dx.GW <- - (obs.prop - est.prop)
 
         # poisson version
-        est.freq <- unlist(computeGW(object, GLIST=GLIST)) * samplestats@ntotal
+        est.freq <- exp(unlist(computeGW(object, GLIST=GLIST)))
         obs.freq <- unlist(samplestats@group.w) * samplestats@ntotal
         dx.GW <- - (obs.freq - est.freq)
+        # divide by N (to be consistent with the rest of lavaan)
+        dx.GW <- dx.GW / samplestats@ntotal
 
         # remove last element (fixed LAST group to zero)
-        dx.GW <- dx.GW[-length(dx.GW)]
+        # dx.GW <- dx.GW[-length(dx.GW)]
         
         # fill in in dx
         gw.mat.idx <- which(names(object@GLIST) == "gw")
