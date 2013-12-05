@@ -125,7 +125,33 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     Q11 <- Q[nonfree.idx, nonfree.idx]
     Q12 <- Q[nonfree.idx,    free.idx]
     Q21 <- Q[free.idx,    nonfree.idx]
-    Q22 <- Q[free.idx,       free.idx]; Q22.inv <- solve(Q22)
+    Q22 <- Q[free.idx,       free.idx]
+
+    # take care of constraints (if any)
+    # handle constraints
+    if(nrow(object@Model@con.jac) > 0L) {
+        H <- object@Model@con.jac
+        inactive.idx <- attr(H, "inactive.idx")
+        lambda <- object@Model@con.lambda # lagrangean coefs
+        if(length(inactive.idx) > 0L) {
+            H <- H[-inactive.idx,,drop=FALSE]
+            lambda <- lambda[-inactive.idx]
+        }
+        if(nrow(H) > 0L) {
+            H0 <- matrix(0,nrow(H),nrow(H))
+            H10 <- matrix(0, ncol(Q22), nrow(H))
+            DL <- 2*diag(lambda, nrow(H), nrow(H))
+            E3 <- rbind( cbind(     Q22,  H10, t(H)),
+                         cbind(t(H10),     DL,  H0),
+                         cbind(     H,     H0,  H0)  )
+            Q22.inv <- MASS::ginv(E3)[1:ncol(Q22), 1:ncol(Q22)]
+            # FIXME: better include inactive + slacks??
+        } else {
+            Q22.inv <- solve(Q22)
+        }
+    } else {
+        Q22.inv <- solve(Q22)
+    }
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
     V.diag <- diag(V)
