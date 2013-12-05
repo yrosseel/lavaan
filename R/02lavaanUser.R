@@ -549,6 +549,10 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     } else {
                         stop("lavaan ERROR: right-hand side of formula contains an intercept, but operator is \"", op, "\" in: ", x)
                     }
+                } else if(names(out)[j] == "zero") {
+                    if(op == "~") rhs.name <- ""
+                } else if(names(out)[j] == "constant") {
+                    if(op == "~") rhs.name <- ""
                 } else {
                     rhs.name <- names(out)[j]
                 }
@@ -599,11 +603,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     FLAT.label[FLAT.idx] <- paste(mod$label, collapse=";")
                     rhs.mod <- 1L
                 }
-                if(op == "~1" && rhs == "0") {
-                    mod$fixed <- 0
-                    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
-                    rhs.mod <- 1L
-                }
+                #if(op == "~1" && rhs == "0") {
+                #    mod$fixed <- 0
+                #    FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
+                #    rhs.mod <- 1L
+                #}
                 if(op == "=~" && rhs == "0") {
                     mod$fixed <- 0
                     FLAT.rhs[FLAT.idx] <- FLAT.lhs[FLAT.idx]
