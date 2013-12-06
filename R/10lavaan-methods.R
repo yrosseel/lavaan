@@ -470,9 +470,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         }
 
         # 4. intercepts/means
-        ord.names <- vnames(object@ParTable, type="ov.ord", group=g)
+        #ord.names <- vnames(object@ParTable, type="ov.ord", group=g)
         int.idx <- which(object@ParTable$op == "~1" & 
-                         !object@ParTable$lhs %in% ord.names &
+                         #!object@ParTable$lhs %in% ord.names &
                          !object@ParTable$exo &
                          object@ParTable$group == g)
         if(length(int.idx) > 0) {

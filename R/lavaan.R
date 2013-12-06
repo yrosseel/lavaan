@@ -18,6 +18,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    fixed.x            = "default", # or FALSE?
                    orthogonal         = FALSE,
                    std.lv             = FALSE,
+                   parameterization   = "default",
 
                    auto.fix.first     = FALSE,
                    auto.fix.single    = FALSE,
@@ -255,16 +256,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             tmp <- vnames(FLAT, type="ov.x", ov.x.fatal=TRUE)
         }
         # check 2: catch ~1 of ordered variables (unless they are fixed)
-        if(lavaanOptions$categorical) {
-            int.idx <- which(FLAT$op == "~1" & FLAT$fixed == "")
-            if(length(int.idx) > 0L) {
-                INT <- FLAT$lhs[int.idx]
-                ORD <- lavaanData@ov$name[ lavaanData@ov$type == "ordered" ]
-                if(any(INT %in% ORD))        
-                    stop("lavaan ERROR: model syntax contains free intercepts for ordinal dependent variable(s): [", paste(INT, collapse=" "), 
-                         "];\n  Please remove them and try again.")
-            }
-        }
+        #if(lavaanOptions$categorical) {
+        #    int.idx <- which(FLAT$op == "~1" & FLAT$fixed == "")
+        #    if(length(int.idx) > 0L) {
+        #        INT <- FLAT$lhs[int.idx]
+        #        ORD <- lavaanData@ov$name[ lavaanData@ov$type == "ordered" ]
+        #        if(any(INT %in% ORD))        
+        #            stop("lavaan ERROR: model syntax contains free intercepts for ordinal dependent variable(s): [", paste(INT, collapse=" "), 
+        #                 "];\n  Please remove them and try again.")
+        #    }
+        #}
 
         lavaanParTable <- 
             lavaanify(model           = FLAT,
