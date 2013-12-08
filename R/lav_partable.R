@@ -380,24 +380,25 @@ lav_partable_full <- function(partable=NULL, group=NULL) {
                        stringsAsFactors=FALSE)
 }
 
-lav_partable_flat <- function(FLAT=NULL,
-                    meanstructure   = FALSE,
-                    int.ov.free     = FALSE,
-                    int.lv.free     = FALSE,
-                    orthogonal      = FALSE,
-                    std.lv          = FALSE,
-                    fixed.x         = TRUE,
-                    auto.fix.first  = FALSE,
-                    auto.fix.single = FALSE,
-                    auto.var        = FALSE,
-                    auto.cov.lv.x   = FALSE,
-                    auto.cov.y      = FALSE,
-                    auto.th         = FALSE,
-                    auto.delta      = FALSE,
-                    varTable        = NULL,
-                    group.equal     = NULL,
-                    group.w.free    = FALSE,
-                    ngroups         = 1L) {
+lav_partable_flat <- function(FLAT = NULL,
+                              meanstructure    = FALSE,
+                              int.ov.free      = FALSE,
+                              int.lv.free      = FALSE,
+                              orthogonal       = FALSE,
+                              std.lv           = FALSE,
+                              fixed.x          = TRUE,
+                              parameterization = "delta",
+                              auto.fix.first   = FALSE,
+                              auto.fix.single  = FALSE,
+                              auto.var         = FALSE,
+                              auto.cov.lv.x    = FALSE,
+                              auto.cov.y       = FALSE,
+                              auto.th          = FALSE,
+                              auto.delta       = FALSE,
+                              varTable         = NULL,
+                              group.equal      = NULL,
+                              group.w.free     = FALSE,
+                              ngroups          = 1L) {
 
     categorical <- FALSE
 
@@ -766,11 +767,24 @@ lav_partable_flat <- function(FLAT=NULL,
             }
 
             # latent response scaling
-            if(any(op == "~*~" & group == g) &&
-               ("thresholds" %in% group.equal)) {
-                delta.idx <- which(op == "~*~" & group == g)
-                  free[ delta.idx ] <- 1L
-                ustart[ delta.idx ] <- as.numeric(NA)
+            if(parameterization == "delta") {
+                if(any(op == "~*~" & group == g) &&
+                   ("thresholds" %in% group.equal)) {
+                    delta.idx <- which(op == "~*~" & group == g)
+                      free[ delta.idx ] <- 1L
+                    ustart[ delta.idx ] <- as.numeric(NA)
+                }
+            } else if(parameterization == "theta") {
+                if(any(op == "~*~" & group == g) &&
+                   ("thresholds" %in% group.equal)) {
+                    var.ord.idx <- which(op == "~~" & group == g &
+                                         lhs %in% ov.names.ord & lhs == rhs)
+                      free[ var.ord.idx ] <- 1L
+                    ustart[ var.ord.idx ] <- as.numeric(NA)
+                }
+            } else {
+                stop("lavaan ERROR: parameterization ", parameterization,
+                     " not supported")
             }
 
             # group proportions

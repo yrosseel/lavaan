@@ -959,6 +959,29 @@ setResidualElements.LISREL <- function(MLIST=NULL,
     MLIST
 }
 
+# if THETA parameterization, compute delta elements 
+# of observed categorical variables, as a function of other model parameters
+setDeltaElements.LISREL <- function(MLIST=NULL,
+                                    num.idx=NULL,
+                                    ov.y.dummy.ov.idx=NULL,
+                                    ov.y.dummy.lv.idx=NULL) {
+
+    Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
+    diag.Sigma <- diag(Sigma.hat)
+
+    # (1/delta^2) = diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) ) + THETA
+    #tmp <- diag.Sigma + THETA
+    tmp <- diag.Sigma
+    MLIST$delta[, 1L] <- sqrt(1/tmp)
+
+    # numeric delta's stay 1.0
+    if(length(num.idx) > 0L) {
+        MLIST$delta[num.idx] <- 1.0
+    }
+
+    MLIST
+}
+
 # compute Sigma/ETA: variances/covariances of BOTH observed and latent variables
 computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
 

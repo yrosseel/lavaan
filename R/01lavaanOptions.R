@@ -533,6 +533,16 @@ setLavaanOptions <- function(opt = formals(lavaan))
         stop("lavaan ERROR: argument `zero.keep.margins' must be logical or \"default\"")
     }
 
+    # parameterization
+    if(opt$parameterization == "default") {
+        # for now, default is always delta
+        opt$parameterization <- "delta"
+    } else if(opt$parameterization %in% c("delta", "theta")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: argument `parameterization' should be `delta' or `theta'")
+    }
+
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 
     opt

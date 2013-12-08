@@ -73,11 +73,19 @@ setModelParameters <- function(object, x=NULL) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
-                tmp[mm.in.group] <- 
-                    setResidualElements.LISREL(MLIST = tmp[mm.in.group],
-                    num.idx = num.idx <- object@num.idx[[g]],
-                    ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
-                    ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+                if(object@parameterization == "delta") {
+                    tmp[mm.in.group] <- 
+                        setResidualElements.LISREL(MLIST = tmp[mm.in.group],
+                            num.idx = object@num.idx[[g]],
+                            ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
+                            ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+                } else if(object@parameterization == "theta") {
+                    tmp[mm.in.group] <-
+                        setDeltaElements.LISREL(MLIST = tmp[mm.in.group],
+                            num.idx = object@num.idx[[g]],
+                            ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
+                            ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+                }
             }
         } else {
             cat("FIXME: deal with theta elements in the categorical case")
@@ -91,7 +99,7 @@ setModelParameters <- function(object, x=NULL) {
 
 # create a standalone GLIST, filled with (new) x values
 # (avoiding a copy of object)
-x2GLIST <- function(object, x=NULL, type="free") {
+x2GLIST <- function(object, x=NULL, type="free", setDelta = TRUE) {
 
     GLIST <- object@GLIST
     for(mm in 1:length(GLIST)) {
@@ -119,11 +127,85 @@ x2GLIST <- function(object, x=NULL, type="free") {
         }
     }
 
+    # theta parameterization: delta must be reset!
+    if(setDelta && object@parameterization == "theta") {
+        nmat <- object@nmat
+        # not in reference group ## FIXME!!!!
+        for(g in 1:object@ngroups) {
+            # which mm belong to group g?
+            mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+            GLIST[mm.in.group] <-
+                setDeltaElements.LISREL(MLIST = GLIST[mm.in.group],
+                    num.idx = object@num.idx[[g]],
+                    ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
+                    ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+        }
+    }
+
     GLIST
 }
 
+# compute WLS.est (as a list per group)
+lav_model_wls_est <- function(object, GLIST = NULL) {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    ngroups       <- object@ngroups
+    meanstructure <- object@meanstructure
+    categorical   <- object@categorical
+    group.w.free  <- object@group.w.free
+    fixed.x       <- object@fixed.x
+    num.idx       <- object@num.idx
+
+    # compute moments for all groups
+    Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=FALSE)
+    if(meanstructure && !categorical) {
+        Mu.hat <- computeMuHat(object, GLIST=GLIST)
+    } else if(categorical) {
+        TH <- computeTH(object, GLIST=GLIST)
+        if(fixed.x)
+            PI <- computePI(object, GLIST=GLIST)
+    }
+    if(group.w.free) {
+        GW <- computeGW(object, GLIST=GLIST)
+    }
+
+    WLS.est <- vector("list", length=ngroups)
+    for(g in 1:ngroups) {
+        if(categorical) {
+            # order of elements is important here:
+            # 1. thresholds + means (interleaved)
+            # 2. slopes (if any, columnwise per exo)
+            # 3. variances (if any)
+            # 4. correlations (no diagonal!)
+            if(fixed.x) {
+                wls.est <- c(TH[[g]],vec(PI[[g]]),
+                             diag(Sigma.hat[[g]])[num.idx[[g]]],
+                             vech(Sigma.hat[[g]], diagonal=FALSE))
+            } else {
+                wls.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
+                             vech(Sigma.hat[[g]], diagonal=FALSE))
+            }
+        } else if(meanstructure) {
+            wls.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
+        } else {
+            wls.est <- vech(Sigma.hat[[g]])
+        }
+        if(group.w.free) {
+            #wls.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), wls.est)
+             wls.est <- c(GW[[g]], wls.est)
+        }
+
+        WLS.est[[g]] <- wls.est
+    }
+
+    WLS.est
+}
+
 ## FIXME: allow for GAMMA in continuous case
-computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
+computeSigmaHat <- function(object, GLIST = NULL, extra = FALSE, 
+                            delta = TRUE, debug = FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST
@@ -144,7 +226,8 @@ computeSigmaHat <- function(object, GLIST=NULL, extra=FALSE, debug=FALSE) {
         MLIST <- GLIST[mm.in.group]
 
         if(representation == "LISREL") {
-            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST)
+            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST, 
+                                                     delta = delta)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -700,18 +783,26 @@ computeObjective <- function(object, GLIST=NULL,
     num.idx       <- object@num.idx
     th.idx        <- object@th.idx
 
-    # compute moments for all groups
-    Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator=="ML"))
-    if(debug) print(Sigma.hat)
-    if(meanstructure && !categorical) {
-        Mu.hat <- computeMuHat(object, GLIST=GLIST)
-    } else if(categorical) {
-        TH <- computeTH(object, GLIST=GLIST)
-        if(fixed.x) 
-            PI <- computePI(object, GLIST=GLIST)
-    }
-    if(group.w.free) {
-        GW <- computeGW(object, GLIST=GLIST)
+    # do we need WLS.est?
+    if(estimator == "GLS"  || estimator == "WLS"  || 
+       estimator == "DWLS" || estimator == "ULS") {
+        WLS.est <- lav_model_wls_est(object = object, GLIST = GLIST)
+        if(debug) print(WLS.est)
+    } else {
+        # compute moments for all groups
+        Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, 
+                                     extra=(estimator=="ML"))
+        if(debug) print(Sigma.hat)
+        if(meanstructure && !categorical) {
+            Mu.hat <- computeMuHat(object, GLIST=GLIST)
+        } else if(categorical) {
+            TH <- computeTH(object, GLIST=GLIST)
+            if(fixed.x) 
+                 PI <- computePI(object, GLIST=GLIST)
+        }
+        if(group.w.free) {
+            GW <- computeGW(object, GLIST=GLIST)
+        }
     }
  
     fx <- 0.0
@@ -727,11 +818,7 @@ computeObjective <- function(object, GLIST=NULL,
         if(samplestats@missing.flag) {
             if(estimator == "ML") {
                 # FIML
-
-                # catch non-pd Sigma.hat
-                # 0.4-5: instead of using force.pd, we return Inf
                 if(!attr(Sigma.hat[[g]], "po")) return(Inf)
-
                 group.fx <- estimator.FIML(Sigma.hat=Sigma.hat[[g]],
                                            Mu.hat=Mu.hat[[g]],
                                            M=samplestats@missing[[g]],
@@ -749,46 +836,12 @@ computeObjective <- function(object, GLIST=NULL,
                                      data.mean=samplestats@mean[[g]], 
                                      data.cov.log.det=samplestats@cov.log.det[[g]],
                                      meanstructure=meanstructure)
-        } else if(estimator == "GLS"  || 
-                  estimator == "WLS"  || 
-                  estimator == "DWLS" ||
-                  estimator == "ULS") {
-            if(categorical) {
-                # order of elements is important here:
-                # 1. thresholds + means (interleaved)
-                # 2. slopes (if any, columnwise per exo)
-                # 3. variances (if any)
-                # 4. correlations (no diagonal!)
-                if(fixed.x) {
-                    WLS.est <- c(TH[[g]],vec(PI[[g]]), 
-                                 diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diagonal=FALSE))
-                } else {
-                    WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diagonal=FALSE))
-                }
-                #cat("WLS.obs = \n")
-                #print(samplestats@WLS.obs[[g]])
-                #cat("WLS.est = \n")
-                #print(WLS.est)
-                #cat("TH = \n"); print(TH[[g]])
-                #cat("PI = \n"); print(PI[[g]])
-                #cat("VAR = \n"); print(diag(Sigma.hat[[g]])[num.idx[[g]]])
-                #cat("COR = \n"); print(vech(Sigma.hat[[g]], diag=FALSE))
-            } else if(meanstructure) {
-                WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
-            } else {
-                WLS.est <- vech(Sigma.hat[[g]])
-            }
-            if(group.w.free) {
-                #WLS.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), WLS.est)
-                 WLS.est <- c(GW[[g]], WLS.est)
-
-            }
-            group.fx <- estimator.WLS(WLS.est = WLS.est,
+        } else if(estimator == "GLS"  || estimator == "WLS"  || 
+                  estimator == "DWLS" || estimator == "ULS") {
+            group.fx <- estimator.WLS(WLS.est = WLS.est[[g]],
                                       WLS.obs = samplestats@WLS.obs[[g]], 
                                       WLS.V=samplestats@WLS.V[[g]])  
-            attr(group.fx, "WLS.est") <- WLS.est
+            attr(group.fx, "WLS.est") <- WLS.est[[g]]
         } else if(estimator == "PML") {
             # Pairwise maximum likelihood
             group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
@@ -1187,19 +1240,25 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         group.w <- rep(1.0, samplestats@ngroups)
     }
 
-    # Sigma.hat + Mu.hat
-    Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=(estimator == "ML"))
-    if(meanstructure && !categorical) {
-        Mu.hat <- computeMuHat(object, GLIST=GLIST)
-    } else if(categorical) {
-        TH <- computeTH(object, GLIST=GLIST)
-        if(fixed.x)
-            PI <- computePI(object, GLIST=GLIST)
+    # do we need WLS.est?
+    if(estimator == "GLS"  || estimator == "WLS"  ||
+       estimator == "DWLS" || estimator == "ULS") {
+        WLS.est <- lav_model_wls_est(object = object, GLIST = GLIST)
+    } else {
+        # compute moments for all groups
+        Sigma.hat <- computeSigmaHat(object, GLIST=GLIST,
+                                     extra=(estimator=="ML"))
+        if(meanstructure && !categorical) {
+            Mu.hat <- computeMuHat(object, GLIST=GLIST)
+        } else if(categorical) {
+            TH <- computeTH(object, GLIST=GLIST)
+            if(fixed.x)
+                 PI <- computePI(object, GLIST=GLIST)
+        }
+        if(group.w.free) {
+            GW <- computeGW(object, GLIST=GLIST)
+        }
     }
-    if(group.w.free) {
-        GW <- computeGW(object, GLIST=GLIST)
-    }
-    
 
     # two approaches:
     # - ML/GLS approach: using Omega (and Omega.mu)
@@ -1246,7 +1305,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
             }
         }
 
-        # extract free parameters + weight by group
+        # extract free parameters
         if(type == "free") {
             dx <- numeric( nx.unco )
             for(g in 1:samplestats@ngroups) {
@@ -1282,31 +1341,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         }
 
         for(g in 1:samplestats@ngroups) {
-            if(categorical) {                                    
-                # order of elements is important here:
-                # 1. thresholds + means (interleaved)
-                # 2. slopes (if any)
-                # 3. variances (if any)
-                # 4. correlations (no diagonal!)
-                if(fixed.x) {
-                    WLS.est <- c(TH[[g]],PI[[g]],
-                                 diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diagonal=FALSE))
-                } else {
-                    WLS.est <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                 vech(Sigma.hat[[g]], diagonal=FALSE))
-                }
-            } else if(meanstructure) {                             
-                WLS.est <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))    
-            } else {                                           
-                WLS.est <- vech(Sigma.hat[[g]])                
-            }
-            if(object@group.w.free) {
-                #WLS.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), WLS.est)
-                WLS.est <- c(GW[[g]], WLS.est)
-            }
-            WLS.obs <- samplestats@WLS.obs[[g]]
-            diff <- as.matrix(WLS.obs - WLS.est)
+            diff <- as.matrix(samplestats@WLS.obs[[g]]  - WLS.est[[g]])
             group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
             group.dx <- group.w[g] * group.dx
             if(g == 1) {

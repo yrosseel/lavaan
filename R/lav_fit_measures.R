@@ -810,33 +810,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     }
 
     if("wrmr" %in% fit.measures) {
-        # RMR and SRMR
-        wrmr.group <- numeric(G)
-        for(g in 1:G) {
-            # observed sample statistics
-            obs <- object@SampleStats@WLS.obs[[g]]
-
-            # estimated FFFFFFIXME!!!!
-            est <- obs
-
-            # diag of W
-            dw <- diag(object@SampleStats@WLS.V[[g]])
-
-            # e = number of elements
-            e <- length(obs)
-
-            #wrmr.group[g] <- sqrt( sum( (obs-est)/dw ) / e )
-            wrmr.group[g] <- as.numeric(NA)
-        }
-
-        
-        if(G > 1) {
-            ## FIXME: get the scaling right
-            WRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% wrmr.group) / object@SampleStats@ntotal )
-        } else {
-            WRMR <- wrmr.group[1]
-        }
-
+        # we use the definition: wrmr = sqrt ( 2*N*F / e )
+        e <- length(object@SampleStats@WLS.obs[[1]]) ### only first group???
+        WRMR <- sqrt( X2 / e )
         indices["wrmr"] <- WRMR
     }
 

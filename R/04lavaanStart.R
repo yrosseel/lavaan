@@ -113,6 +113,7 @@ StartingValues <- function(start.method = "default",
         if(categorical) {
             ov.names     <- vnames(partable, "ov.nox", group=g)
             ov.names.num <- vnames(partable, "ov.num", group=g)
+            ov.names.ord <- vnames(partable, "ov.ord", group=g)
         } else {
             ov.names.num <- ov.names <- vnames(partable, "ov", group=g)
         }
@@ -196,6 +197,13 @@ StartingValues <- function(start.method = "default",
                     (1.0 - 0.50)*diag(samplestats@cov[[g]])[sample.var.idx]
             }
         }
+
+        # variances of ordinal variables - set to 1.0     
+        ov.var.ord.idx <- which(partable$group == g            &
+                                partable$op    == "~~"         &
+                                partable$lhs %in% ov.names.ord &
+                                partable$lhs == partable$rhs)
+        start[ov.var.ord.idx] <- 1.0
 
         # 3g) intercepts
         ov.int.idx <- which(partable$group == g         &

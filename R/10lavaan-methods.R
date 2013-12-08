@@ -1470,44 +1470,9 @@ function(object, ...) {
 
 getWLS.est <- function(object, drop.list.single.group=FALSE) {
 
-    # shortcuts
-    samplestats   = object@SampleStats
-    estimator     = object@Options$estimator
-    G             = object@Data@ngroups
-    categorical   = object@Model@categorical
-    meanstructure = object@Model@meanstructure
-    fixed.x       = object@Model@fixed.x
-    num.idx       = object@Model@num.idx
+    G <- object@Data@ngroups
+    OUT <- lav_model_wls_est(object@Model)
 
-    # compute moments for all groups
-    Sigma.hat <- computeSigmaHat(object@Model)
-    if(meanstructure && !categorical) {
-        Mu.hat <- computeMuHat(object@Model)
-    } else if(categorical) {
-        TH <- computeTH(object@Model)
-        if(fixed.x)
-            PI <- computePI(object@Model)
-    }
-
-    WLS.est <- vector("list", length=samplestats@ngroups)
-    for(g in 1:samplestats@ngroups) {
-        if(categorical) {
-            if(fixed.x) {
-                WLS.est[[g]] <- c(TH[[g]],vec(PI[[g]]),
-                                  diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                  vech(Sigma.hat[[g]], diagonal=FALSE))
-            } else {
-                WLS.est[[g]] <- c(TH[[g]],diag(Sigma.hat[[g]])[num.idx[[g]]],
-                                  vech(Sigma.hat[[g]], diagonal=FALSE))
-            }
-        } else if(meanstructure) {
-            WLS.est[[g]] <- c(Mu.hat[[g]], vech(Sigma.hat[[g]]))
-        } else {
-            WLS.est[[g]] <- vech(Sigma.hat[[g]])
-        }
-    }
-
-    OUT <- WLS.est
     if(G == 1 && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {

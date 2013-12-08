@@ -223,9 +223,24 @@ Model <- function(partable       = NULL,
     fixed.x <- any(partable$exo > 0L & partable$free == 0L) 
     
     # second check (categorical)
-    if(categorical)
+    if(categorical) {
         fixed.x <- TRUE
+        parameterization <- "delta"
 
+        if(ngroups > 1L && any(partable$op == "~*~")) {
+            # theta or delta?
+            ov.ord.names <- vnames(partable, "ov.ord", group=g)
+            ov.ord.var.idx <- which( partable$group > 1L &
+                                     partable$op == "~~" &
+                                     partable$lhs %in% ov.ord.names &
+                                     partable$lhs == partable$rhs )
+            if(any( partable$free[ov.ord.var.idx] > 0L )) {
+                parameterization <- "theta"
+            } 
+        }
+    }
+
+     
 
 
     # constraints
@@ -300,6 +315,7 @@ Model <- function(partable       = NULL,
                  cin.jacobian=cin.jacobian, 
                  nexo=nexo,
                  fixed.x=fixed.x,
+                 parameterization=parameterization,
                  ov.x.dummy.ov.idx=ov.x.dummy.ov.idx,
                  ov.x.dummy.lv.idx=ov.x.dummy.lv.idx,
                  ov.y.dummy.ov.idx=ov.y.dummy.ov.idx,
