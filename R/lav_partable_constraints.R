@@ -1,5 +1,6 @@
 # build def function from partable
-lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE) {
+lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
+                                         defTxtOnly = FALSE) {
 
     # empty function
     def.function <- function() NULL
@@ -15,7 +16,11 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE) {
     def.idx <- which(partable$op == ":=")
     if(length(def.idx) > 0L) {
         formals(def.function) <- alist(x=, ...=)
-        BODY.txt <- paste("{\n# parameter definitions\n\n")
+        if(defTxtOnly) {
+            BODY.txt <- ""
+        } else {
+            BODY.txt <- paste("{\n# parameter definitions\n\n")
+        }
 
         lhs.names <- partable$lhs[def.idx]
         def.labels <- all.vars( parse(file="", text=partable$rhs[def.idx]) )
@@ -47,6 +52,8 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE) {
             BODY.txt <- paste(BODY.txt,
                 lhs.names[i], " <- ", partable$rhs[def.idx[i]], "\n", sep="")
         }
+
+        if(defTxtOnly) return(BODY.txt)
 
         # put the results in 'out'
         BODY.txt <- paste(BODY.txt, "\nout <- ",
@@ -95,32 +102,9 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
         BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
 
         # first come the variable definitions
+        DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
         def.idx <- which(partable$op == ":=")
-        def.names <- unique(partable$lhs[ def.idx ])
-        if(length(def.idx) > 0L) {
-            for(i in 1:length(def.idx)) {
-                lhs <- partable$lhs[ def.idx[i] ]
-                rhs <- partable$rhs[ def.idx[i] ]
-                def.string <- rhs
-                # coerce to expression to extract variable names
-                def.labels <- all.vars( parse(file="", text=def.string) )
-                # remove def.labels in def.names
-                dd.idx <- which(def.labels %in% def.names)
-                if(length(dd.idx)) {
-                    def.labels <- def.labels[-dd.idx]
-                }
-                if(length(def.labels) > 0L) {
-                    # get corresponding 'x' indices
-                    def.x.idx <- partable$free[match(def.labels, 
-                                                     partable$label)]
-                    def.x.lab <- paste("x[", def.x.idx, "]",sep="")
-                    # put both the labels + expression in the function BODY
-                    BODY.txt <- paste(BODY.txt,
-                        paste(def.labels, "=",def.x.lab, collapse=";"),"\n",
-                        lhs, " = ", def.string, "\n", sep="")
-                }
-            }
-        }
+        BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
 
         for(i in 1:length(eq.idx)) {
             lhs <- partable$lhs[ eq.idx[i] ]
@@ -199,32 +183,9 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
         BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
 
         # first come the variable definitions
+        DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
         def.idx <- which(partable$op == ":=")
-        def.names <- unique(partable$lhs[ def.idx ])
-        if(length(def.idx) > 0L) {
-            for(i in 1:length(def.idx)) {
-                lhs <- partable$lhs[ def.idx[i] ]
-                rhs <- partable$rhs[ def.idx[i] ]
-                def.string <- rhs
-                # coerce to expression to extract variable names
-                def.labels <- all.vars( parse(file="", text=def.string) )
-                # remove def.labels in def.names
-                dd.idx <- which(def.labels %in% def.names)
-                if(length(dd.idx)) {
-                    def.labels <- def.labels[-dd.idx]
-                }
-                if(length(def.labels) > 0L) {
-                    # get corresponding 'x' indices
-                    def.x.idx <- partable$free[match(def.labels, 
-                                                     partable$label)]
-                    def.x.lab <- paste("x[", def.x.idx, "]",sep="")
-                    # put both the labels + expression in the function BODY
-                    BODY.txt <- paste(BODY.txt,
-                        paste(def.labels, "=",def.x.lab, collapse=";"),"\n",
-                        lhs, " = ", def.string, "\n", sep="")
-                }
-            }
-        }
+        BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
 
         for(i in 1:length(ineq.idx)) {
             lhs <- partable$lhs[ ineq.idx[i] ]

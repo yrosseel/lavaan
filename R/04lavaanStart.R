@@ -199,11 +199,13 @@ StartingValues <- function(start.method = "default",
         }
 
         # variances of ordinal variables - set to 1.0     
-        ov.var.ord.idx <- which(partable$group == g            &
-                                partable$op    == "~~"         &
-                                partable$lhs %in% ov.names.ord &
-                                partable$lhs == partable$rhs)
-        start[ov.var.ord.idx] <- 1.0
+        if(categorical) {
+            ov.var.ord.idx <- which(partable$group == g            &
+                                    partable$op    == "~~"         &
+                                    partable$lhs %in% ov.names.ord &
+                                    partable$lhs == partable$rhs)
+            start[ov.var.ord.idx] <- 1.0
+        }
 
         # 3g) intercepts
         ov.int.idx <- which(partable$group == g         &

@@ -223,10 +223,9 @@ Model <- function(partable       = NULL,
     fixed.x <- any(partable$exo > 0L & partable$free == 0L) 
     
     # second check (categorical)
+    parameterization <- "delta"
     if(categorical) {
         fixed.x <- TRUE
-        parameterization <- "delta"
-
         if(ngroups > 1L && any(partable$op == "~*~")) {
             # theta or delta?
             ov.ord.names <- vnames(partable, "ov.ord", group=g)
@@ -239,8 +238,6 @@ Model <- function(partable       = NULL,
             } 
         }
     }
-
-     
 
 
     # constraints
