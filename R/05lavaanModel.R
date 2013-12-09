@@ -3,10 +3,11 @@
 # initial version: YR 22/11/2010
 
 # construct MATRIX representation of the model
-Model <- function(partable       = NULL,
-                  representation = "LISREL",
-                  th.idx         = list(),
-                  debug          = FALSE) {
+Model <- function(partable         = NULL,
+                  representation   = "LISREL",
+                  th.idx           = list(),
+                  parameterization = "delta",
+                  debug            = FALSE) {
 
     # global info from user model
     ngroups <- max(partable$group)
@@ -221,25 +222,10 @@ Model <- function(partable       = NULL,
 
     # fixed.x parameters?
     fixed.x <- any(partable$exo > 0L & partable$free == 0L) 
-    
-    # second check (categorical)
-    parameterization <- "delta"
     if(categorical) {
         fixed.x <- TRUE
-        if(ngroups > 1L && any(partable$op == "~*~")) {
-            # theta or delta?
-            ov.ord.names <- vnames(partable, "ov.ord", group=g)
-            ov.ord.var.idx <- which( partable$group > 1L &
-                                     partable$op == "~~" &
-                                     partable$lhs %in% ov.ord.names &
-                                     partable$lhs == partable$rhs )
-            if(any( partable$free[ov.ord.var.idx] > 0L )) {
-                parameterization <- "theta"
-            } 
-        }
     }
-
-
+    
     # constraints
 
     # 1. simple equality constraints (eg b1 == b2)

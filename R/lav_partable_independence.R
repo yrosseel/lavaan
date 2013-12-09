@@ -1,7 +1,7 @@
 lav_partable_independence <- function(ov.names=NULL, ov=NULL, 
                               ov.names.x=NULL, sample.cov=NULL,
                               meanstructure=FALSE, sample.mean=NULL,
-                              sample.th=NULL,
+                              sample.th=NULL, parameterization = "delta",
                               fixed.x=TRUE) {
 
     ngroups <- length(ov.names)
@@ -64,6 +64,21 @@ lav_partable_independence <- function(ov.names=NULL, ov=NULL,
                th.start <- rep(0, nel)
                #th.start <- sample.th[[g]] ### FIXME:: ORDER??? ONLY ORD!!!
                ustart <- c(ustart, th.start)
+
+                # add delta
+                if(parameterization == "theta") {
+                   lhs.delta <- character(0); rhs.delta <- character(0)
+                   lhs.delta <- ov.names.nox[[g]]
+                   nel   <- length(lhs.delta)
+                   lhs   <- c(lhs, lhs.delta)
+                   rhs   <- c(rhs, lhs.delta)
+                    op   <- c(op, rep("~*~", nel))
+                   group <- c(group, rep(g, nel))
+                    free <- c(free, rep(0L, nel))
+                     exo <- c(exo, rep(0L, nel))
+                  delta.start <- rep(1, nel)
+                  ustart <- c(ustart, delta.start)
+                }
             }
         }
         # meanstructure?

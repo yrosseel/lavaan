@@ -397,10 +397,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 5. construct internal model (S4) representation
         lavaanModel <- 
-            Model(partable       = lavaanParTable, 
-                  representation = lavaanOptions$representation,
-                  th.idx         = lavaanSampleStats@th.idx,
-                  debug          = lavaanOptions$debug)
+            Model(partable         = lavaanParTable,
+                  representation   = lavaanOptions$representation,
+                  th.idx           = lavaanSampleStats@th.idx,
+                  parameterization = lavaanOptions$parameterization,
+                  debug            = lavaanOptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
   

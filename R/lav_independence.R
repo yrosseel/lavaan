@@ -84,6 +84,7 @@ independence.model.fit <- function(object) {
                                   meanstructure = object@Model@meanstructure,
                                   sample.mean   = object@SampleStats@mean,
                                   sample.th     = object@SampleStats@th,
+                                  parameterization = object@Options$parameterization,
                                   fixed.x       = FIXED.X)
    
     # fit?
@@ -113,10 +114,11 @@ independence.model.fit <- function(object) {
 
     # 5. 
     lavaanModel <-
-        Model(partable       = lavaanParTable,
-              representation = lavaanOptions$representation,
-              th.idx         = lavaanSampleStats@th.idx,
-              debug          = lavaanOptions$debug)
+        Model(partable         = lavaanParTable,
+              representation   = lavaanOptions$representation,
+              th.idx           = lavaanSampleStats@th.idx,
+              parameterization = lavaanOptions$parameterization,
+              debug            = lavaanOptions$debug)
 
     # cache
     lavaanCache <- object@Cache

@@ -496,8 +496,8 @@ lav_partable_flat <- function(FLAT = NULL,
 
     # LATENT RESPONSE SCALES (DELTA)
     if(auto.delta && auto.th && length(ov.names.ord) > 0L && 
-       length(lv.names) > 0L &&
-       (ngroups > 1L || any(FLAT$op == "~*~"))) {
+       # length(lv.names) > 0L &&
+       (ngroups > 1L || any(FLAT$op == "~*~") || parameterization == "theta")) {
         lhs <- c(lhs, ov.names.ord)
         rhs <- c(rhs, ov.names.ord)
          op <- c(op,  rep("~*~", length(ov.names.ord)))

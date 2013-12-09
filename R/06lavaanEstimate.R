@@ -1013,18 +1013,16 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             # 3. Sigma.hat
             Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = TRUE)
             # reorder: first variances (of numeric), then covariances
-            cov.idx  <- vech.idx(nvar[g])
-            covd.idx <- vech.idx(nvar[g], diagonal=FALSE)
-            var.idx <- which(is.na(match(cov.idx, covd.idx)))[num.idx[[g]]]
-            cor.idx <- match(covd.idx, cov.idx)
-            out <- c(out, Sigma.hat[var.idx], Sigma.hat[cor.idx])
+            var.num <- diag(Sigma.hat)[num.idx[[g]]]    
+            COR <- Sigma.hat[ vech.idx(nvar[g], diagonal=FALSE) ]
+            out <- c(out, var.num, COR)
 
             out
         }
  
         Delta <- vector("list", length=ngroups)    
         for(g in 1:ngroups) {
-            x <- getModelParameters(object, type="free")
+            x <- getModelParameters(object, GLIST=GLIST, type="free")
             Delta[[g]] <- numDeriv::jacobian(func=compute.moments, x=x, g=g) 
         }        
  
