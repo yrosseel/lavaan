@@ -14,60 +14,69 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
 
     # get := definitions
     def.idx <- which(partable$op == ":=")
-    if(length(def.idx) > 0L) {
-        formals(def.function) <- alist(x=, ...=)
+    
+    # catch empty def
+    if(length(def.idx) == 0L) {
         if(defTxtOnly) {
-            BODY.txt <- ""
+            return(character(0L))
         } else {
-            BODY.txt <- paste("{\n# parameter definitions\n\n")
+            return(def.function)
         }
-
-        lhs.names <- partable$lhs[def.idx]
-        def.labels <- all.vars( parse(file="", text=partable$rhs[def.idx]) )
-        # remove the ones in lhs.names
-        idx <- which(def.labels %in% lhs.names)
-        if(length(idx) > 0L) def.labels <- def.labels[-idx]
-
-        # get corresponding 'x' indices
-        def.x.idx  <- partable$free[match(def.labels, partable$label)]
-        if(any(is.na(def.x.idx))) {
-            stop("lavaan ERROR: unknown label(s) in variable definitions: ",
-                 paste(def.labels[which(is.na(def.x.idx))], collapse=" "))
-        }
-        if(any(def.x.idx == 0)) {
-            stop("lavaan ERROR: non-free parameter(s) in variable definitions: ",
-                paste(def.labels[which(def.x.idx == 0)], collapse=" "))
-        }
-        def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
-        # put both the labels the function BODY
-        if(length(def.x.idx) > 0L) {
-            BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-                paste(def.labels, " <- ",def.x.lab, collapse="\n"),
-                "\n", sep="")
-        }
-
-        # write the definitions literally
-        BODY.txt <- paste(BODY.txt, "\n# parameter definitions\n", sep="")
-        for(i in 1:length(def.idx)) {
-            BODY.txt <- paste(BODY.txt,
-                lhs.names[i], " <- ", partable$rhs[def.idx[i]], "\n", sep="")
-        }
-
-        if(defTxtOnly) return(BODY.txt)
-
-        # put the results in 'out'
-        BODY.txt <- paste(BODY.txt, "\nout <- ",
-            paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
-        # what to do with NA values? -> return +Inf???
-        BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep="")
-        BODY.txt <- paste(BODY.txt, "names(out) <- ",
-            paste("c(\"", paste(lhs.names, collapse="\",\""), "\")\n", sep=""),
-            sep="")
-        BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
-
-        body(def.function) <- parse(file="", text=BODY.txt)
-        if(debug) { cat("def.function = \n"); print(def.function); cat("\n") }
     }
+
+    # create function
+    formals(def.function) <- alist(x=, ...=)
+    if(defTxtOnly) {
+        BODY.txt <- ""
+    } else {
+        BODY.txt <- paste("{\n# parameter definitions\n\n")
+    }
+
+    lhs.names <- partable$lhs[def.idx]
+    def.labels <- all.vars( parse(file="", text=partable$rhs[def.idx]) )
+    # remove the ones in lhs.names
+    idx <- which(def.labels %in% lhs.names)
+    if(length(idx) > 0L) def.labels <- def.labels[-idx]
+
+    # get corresponding 'x' indices
+    def.x.idx  <- partable$free[match(def.labels, partable$label)]
+    if(any(is.na(def.x.idx))) {
+        stop("lavaan ERROR: unknown label(s) in variable definitions: ",
+         paste(def.labels[which(is.na(def.x.idx))], collapse=" "))
+    }
+    if(any(def.x.idx == 0)) {
+        stop("lavaan ERROR: non-free parameter(s) in variable definitions: ",
+            paste(def.labels[which(def.x.idx == 0)], collapse=" "))
+    }
+    def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
+    # put both the labels the function BODY
+    if(length(def.x.idx) > 0L) {
+        BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+            paste(def.labels, " <- ",def.x.lab, collapse="\n"),
+            "\n", sep="")
+    }
+
+    # write the definitions literally
+    BODY.txt <- paste(BODY.txt, "\n# parameter definitions\n", sep="")
+    for(i in 1:length(def.idx)) {
+        BODY.txt <- paste(BODY.txt,
+            lhs.names[i], " <- ", partable$rhs[def.idx[i]], "\n", sep="")
+    }
+
+    if(defTxtOnly) return(BODY.txt)
+
+    # put the results in 'out'
+    BODY.txt <- paste(BODY.txt, "\nout <- ",
+        paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
+    # what to do with NA values? -> return +Inf???
+    BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep="")
+    BODY.txt <- paste(BODY.txt, "names(out) <- ",
+        paste("c(\"", paste(lhs.names, collapse="\",\""), "\")\n", sep=""),
+        sep="")
+    BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
+
+    body(def.function) <- parse(file="", text=BODY.txt)
+    if(debug) { cat("def.function = \n"); print(def.function); cat("\n") }
 
     def.function
 }

@@ -1241,8 +1241,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
     }
 
     # do we need WLS.est?
-    if(estimator == "GLS"  || estimator == "WLS"  ||
-       estimator == "DWLS" || estimator == "ULS") {
+    if(estimator == "WLS"  || estimator == "DWLS" || estimator == "ULS") {
         WLS.est <- lav_model_wls_est(object = object, GLIST = GLIST)
     } else {
         # compute moments for all groups
