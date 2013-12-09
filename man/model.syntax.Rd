@@ -16,19 +16,23 @@ model as specified by the user. We refer to this table as the parameter table.}
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
-    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem", 
+    fixed.x = TRUE, parameterization = "delta", 
+    constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
-    group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    group.partial = NULL, group.w.free = FALSE,
+    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
-    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem",
+    fixed.x = TRUE, parameterization = "delta", 
+    constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL,
-    group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    group.partial = NULL, group.w.free = FALSE,
+    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
 
@@ -57,6 +61,9 @@ the model both for both observed and latent variables.}
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
     random, and the means, variances and covariances are free parameters.}
+\item{parameterization}{Currently only used if data is categorical. If
+    \code{"delta"}, the delta parameterization is used. If \code{"theta"},
+    the theta parameterization is used.}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
 \item{auto}{If \code{TRUE}, the default values are used for the auto.*
@@ -90,6 +97,11 @@ the model both for both observed and latent variables.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{group.w.free}{Logical. If \code{TRUE}, the group frequencies are
+    considered to be free parameters in the model. In this case, a
+    Poisson model is fitted to estimate the group frequencies. If
+    \code{FALSE} (the default), the group frequencies are fixed to their
+    observed values.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
 \item{as.data.frame.}{If \code{TRUE}, return the list of model parameters

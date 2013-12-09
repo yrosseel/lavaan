@@ -40,14 +40,14 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     }
 
     if(verbose) {
-        cat("Restriction matrix (jacobian):\n"); print(JAC)
+        cat("Restriction matrix (jacobian):\n"); print(JAC); cat("\n")
     }
 
     # linear restriction
     theta.r <- ceq.function( theta )
 
     if(verbose) {
-        cat("Restricted theta values:\n"); print(theta.r)
+        cat("Restricted theta values:\n"); print(theta.r); cat("\n")
     }
 
     # get VCOV

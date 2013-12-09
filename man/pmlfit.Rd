@@ -13,7 +13,7 @@ a comparison of model-implied proportions of pairs of item responses with the ob
 }
 
 \usage{
-lavTablesFitCf(object, est = "h0")
+lavTablesFitCf(object)
 lavTablesFitCp(object, alpha = 0.05)
 lavTablesFitCm(object)
 }
@@ -21,8 +21,6 @@ lavTablesFitCm(object)
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{alpha}{The nominal level of signifiance of global fit.}
-\item{est}{If \code{"h0"}, a user-specified model is used; if \code{"h1"},
-the unrestricted model of multivariate normality is used.}
 }
 
 \references{
@@ -30,7 +28,7 @@ Barendse, M. T., Ligtvoet, R., Timmerman, M. E., & Oort, F. J. (under review). S
 Model Fit after Pairwise Maximum Likelihood.
 
 Joreskog, K. G., & Moustaki, I. (2001). Factor analysis of ordinal variables: A comparison of three approaches. 
-\emph{Mulitvariate Behavioral Research, 36}, 347-387. 
+\emph{Multivariate Behavioral Research, 36}, 347-387. 
 }
 
 \details{
@@ -94,42 +92,20 @@ and \eqn{df_P = 0}, so that hypothesis can not be tested.
 }
 
 \examples{
-#Data
+# Data
 HS9 <- HolzingerSwineford1939[,c("x1","x2","x3","x4","x5",
                                  "x6","x7","x8","x9")]
 HSbinary <- as.data.frame( lapply(HS9, cut, 2, labels=FALSE) )
-HSbinary$school <- HolzingerSwineford1939$school
 
-#Single group example with one latent factor
-HS.model1 <- ' trait =~ x1 + x2 + x3 + x4 + x5 + x6 '
-fit <- cfa(HS.model1, data=HSbinary[,1:6], ordered=names(HSbinary))
+# Single group example with one latent factor
+HS.model <- ' trait =~ x1 + x2 + x3 + x4 + x5 + x6 '
+fit <- cfa(HS.model, data=HSbinary[,1:6], ordered=names(HSbinary))
 lavTablesFitCm(fit)
 lavTablesFitCp(fit)
-lavTablesFitCf(fit, est="h0")
-
-#Single group example with a two latent factors
-#HS.model2 <- ' visual  =~ x1 + x2 + x3
-#              textual =~ x4 + x5 + x6'
-#fit2 <- cfa(HS.model2, data=HSbinary[,1:6], ordered=names(HSbinary), estimator="PML")
-#Fit statistics
-#lavTablesFitCm(fit2)
-#lavTablesFitCp(fit2)
-#lavTablesFitCf(fit2)
-
-#model comparison between the two different models
-#anova(lavTablesFitCf(fit1), lavTablesFitCf(fit2))
-
-#Multigroup example
-#HS.model <- ' visual  =~ x1 + x2 + x3
-#              textual =~ x4 + x5 + x6
-#              speed   =~ x7 + x8 + x9 '
-#fit <- cfa(HS.model, data=HSbinary, ordered=names(HSbinary),group = "school", estimator="PML")
-#lavTablesFitCm(fit)
-#lavTablesFitCp(fit)
-#lavTablesFitCf(fit)
+lavTablesFitCf(fit)
 }
 
 \keyword{
-pairwise maximum likelihood analysis, discrete data, goodness of fit, lavaan
+pairwise maximum likelihood, discrete data, goodness of fit
 }
 

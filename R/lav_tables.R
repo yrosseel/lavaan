@@ -828,14 +828,10 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
         TH     <- lavobject@SampleStats@th
         TH.IDX <- lavobject@SampleStats@th.idx
     } else if(!is.null(lavdata)) {
-        COR <- lav_cor(lav.data = lavdata, WLS.W = FALSE, details = TRUE,
-                       labels = FALSE, verbose = FALSE)
-        # relist
-        if(!is.list(COR)) {
-            COR <- list(COR)
-        }
-        TH <- lapply(lapply(COR, attr, "TH"), unlist)
-        TH.IDX <- lapply(lapply(COR, attr, "TH.IDX"), unlist)
+        fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
+        COR    <- fit.un@SampleStats@cov
+        TH     <- fit.un@SampleStats@th
+        TH.IDX <- fit.un@SampleStats@th.idx
     } else {
         stop("lavaan ERROR: both lavobject and lavdata are NULL")
     }
@@ -909,15 +905,10 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
         TH.IDX    <- lavobject@SampleStats@th.idx
     } else {
         if(is.null(lavobject)) {
-            Sigma.hat <- lav_cor(lav.data = lavdata, WLS.W = FALSE, 
-                                 details = TRUE, labels = FALSE, 
-                                 verbose = FALSE)
-            # relist
-            if(!is.list(Sigma.hat)) {
-                Sigma.hat <- list(Sigma.hat)
-            }
-            TH <- lapply(lapply(Sigma.hat, attr, "TH"), unlist)
-            TH.IDX <- lapply(lapply(Sigma.hat, attr, "TH.IDX"), unlist)
+            fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
+            Sigma.hat  <- fit.un@Fit@Sigma.hat
+            TH         <- fit.un@Fit@TH
+            TH.IDX     <- fit.un@SampleStats@th.idx
         } else {
             Sigma.hat <- lavobject@SampleStats@cov
             TH        <- lavobject@SampleStats@th

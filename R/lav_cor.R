@@ -14,7 +14,7 @@ lavCor <- function(object,
                    ov.names.x = NULL, 
                    # lavaan options
                    se         = "none", 
-                   estimator  = "none",
+                   estimator  = "two.step",
                    # other options (for lavaan)
                    ...,
                    output = "cor") {

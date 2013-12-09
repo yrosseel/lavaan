@@ -60,15 +60,15 @@ export("lavaan", "cfa", "sem", "growth",
        "lavMatrixRepresentation",
        "mplus2lavaan",
        #"prelav",
-       "lavData",
-       "lavPredict",
+       #"lavData",
+       #"lavPredict",
        "lavCor"
       )
 
 # export Classes
 exportClasses(
-              "lavaan",
-              "lavData"
+              "lavaan" #,
+              #"lavData"
              )
 
 # export Methods

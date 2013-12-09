@@ -7,14 +7,16 @@ Fit a latent variable model.}
 lavaan(model = NULL, data = NULL,
     model.type = "sem", meanstructure = "default",
     int.ov.free = FALSE, int.lv.free = FALSE, fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, auto.fix.first = FALSE,
+    orthogonal = FALSE, std.lv = FALSE, 
+    parameterization = "default", auto.fix.first = FALSE,
     auto.fix.single = FALSE, auto.var = FALSE, auto.cov.lv.x = FALSE,
     auto.cov.y = FALSE, auto.th = FALSE, auto.delta = FALSE,
     std.ov = FALSE, missing = "default", ordered = NULL,
     sample.cov = NULL, sample.cov.rescale = "default",
     sample.mean = NULL, sample.nobs = NULL, ridge = 1e-05,
     group = NULL, group.label = NULL, group.equal = "", group.partial = "",
-    cluster = NULL, constraints = "", estimator = "default",
+    group.w.free = FALSE, cluster = NULL, 
+    constraints = "", estimator = "default",
     likelihood = "default", information = "default",
     se = "default", test = "default", bootstrap = 1000L, mimic = "default",
     representation = "default", do.fit = TRUE, control = list(),
@@ -56,6 +58,9 @@ lavaan(model = NULL, data = NULL,
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
+\item{parameterization}{Currently only used if data is categorical. If 
+    \code{"delta"}, the delta parameterization is used. If \code{"theta"},
+    the theta parameterization is used.}
 \item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
 \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
@@ -121,6 +126,11 @@ order as they appear in the data.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{group.w.free}{Logical. If \code{TRUE}, the group frequencies are
+    considered to be free parameters in the model. In this case, a 
+    Poisson model is fitted to estimate the group frequencies. If 
+    \code{FALSE} (the default), the group frequencies are fixed to their
+    observed values.}
 \item{cluster}{Not used yet.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}

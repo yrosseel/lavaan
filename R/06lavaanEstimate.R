@@ -989,6 +989,52 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     if(is.null(m.el.idx) && is.null(x.el.idx)) 
          type <- "free"
 
+    ################################################## 
+    ##################################################
+    # special treatment: parameterization == "theta"
+    # we do it numerically (for now) -- FIXME!!!
+    if(object@parameterization == "theta") {
+        compute.moments <- function(x, g=1L) {
+
+            # which mm belong to group g?
+            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+            GLIST <- x2GLIST(object, x=x, type="free")
+            MLIST <- GLIST[mm.in.group]
+
+            # 1. TH
+            out <- computeTH.LISREL(MLIST = MLIST, th.idx = th.idx[[g]])
+ 
+            # 2. PI
+            if(object@nexo[g] > 0L) {
+                PI <- computePI.LISREL(MLIST = MLIST)
+                out <- c(out, as.numeric(PI))
+            }
+
+            # 3. Sigma.hat
+            Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = TRUE)
+            # reorder: first variances (of numeric), then covariances
+            cov.idx  <- vech.idx(nvar[g])
+            covd.idx <- vech.idx(nvar[g], diagonal=FALSE)
+            var.idx <- which(is.na(match(cov.idx, covd.idx)))[num.idx[[g]]]
+            cor.idx <- match(covd.idx, cov.idx)
+            out <- c(out, Sigma.hat[var.idx], Sigma.hat[cor.idx])
+
+            out
+        }
+ 
+        Delta <- vector("list", length=ngroups)    
+        for(g in 1:ngroups) {
+            x <- getModelParameters(object, type="free")
+            Delta[[g]] <- numDeriv::jacobian(func=compute.moments, x=x, g=g) 
+        }        
+ 
+        return(Delta)
+    }
+    ################################################## 
+    ##################################################
+
+
+
     # number of rows in DELTA.group
     pstar <- integer(ngroups)
     for(g in 1:ngroups) {
