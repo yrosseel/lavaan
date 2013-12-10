@@ -82,9 +82,7 @@ setModelParameters <- function(object, x=NULL) {
                 } else if(object@parameterization == "theta") {
                     tmp[mm.in.group] <-
                         setDeltaElements.LISREL(MLIST = tmp[mm.in.group],
-                            num.idx = object@num.idx[[g]],
-                            ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
-                            ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+                            num.idx = object@num.idx[[g]])
                 }
             }
         } else {
@@ -130,15 +128,12 @@ x2GLIST <- function(object, x=NULL, type="free", setDelta = TRUE) {
     # theta parameterization: delta must be reset!
     if(setDelta && object@parameterization == "theta") {
         nmat <- object@nmat
-        # not in reference group ## FIXME!!!!
         for(g in 1:object@ngroups) {
             # which mm belong to group g?
             mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
             GLIST[mm.in.group] <-
                 setDeltaElements.LISREL(MLIST = GLIST[mm.in.group],
-                    num.idx = object@num.idx[[g]],
-                    ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
-                    ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
+                    num.idx = object@num.idx[[g]])
         }
     }
 

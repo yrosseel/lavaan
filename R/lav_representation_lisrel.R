@@ -961,10 +961,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
 
 # if THETA parameterization, compute delta elements 
 # of observed categorical variables, as a function of other model parameters
-setDeltaElements.LISREL <- function(MLIST=NULL,
-                                    num.idx=NULL,
-                                    ov.y.dummy.ov.idx=NULL,
-                                    ov.y.dummy.lv.idx=NULL) {
+setDeltaElements.LISREL <- function(MLIST=NULL, num.idx=NULL) {
 
     Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta=FALSE)
     diag.Sigma <- diag(Sigma.hat)
@@ -1198,7 +1195,8 @@ derivative.sigma.LISREL <- function(m="lambda",
                                     # (nvar*nvar) (but already correct for 
                                     # symmetry)
                                     idx=1:length(MLIST[[m]]),
-                                    MLIST=NULL) {
+                                    MLIST=NULL,
+                                    delta = TRUE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     PSI    <- MLIST$psi
@@ -1213,7 +1211,7 @@ derivative.sigma.LISREL <- function(m="lambda",
 
     # Delta?
     delta.flag <- FALSE
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         DELTA <- MLIST$delta
         delta.flag <- TRUE
     }
