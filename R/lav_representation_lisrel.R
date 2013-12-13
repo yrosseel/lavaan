@@ -1343,27 +1343,30 @@ derivative.th.LISREL <- function(m="tau",
                                  # all model matrix elements, or only a few?
                                  idx=1:length(MLIST[[m]]),
                                  th.idx=NULL,
-                                 MLIST=NULL) {
+                                 MLIST=NULL,
+                                 delta = TRUE) {
 
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     TAU <- MLIST$tau; nth <- nrow(TAU)
 
     # missing alpha
-    if(is.null(MLIST$alpha))
+    if(is.null(MLIST$alpha)) {
         ALPHA <- matrix(0, nfac, 1L)
-    else
+    } else {
         ALPHA  <- MLIST$alpha
+    }
 
     # missing nu
-    if(is.null(MLIST$nu))
+    if(is.null(MLIST$nu)) {
         NU <- matrix(0, nvar, 1L)
-    else
+    } else {
         NU <- MLIST$nu
+    }
 
     # Delta?
     delta.flag <- FALSE
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         DELTA <- MLIST$delta
         delta.flag <- TRUE
     }
@@ -1508,20 +1511,46 @@ derivative.gw.LISREL <- function(m="gw",
     DX
 }
 
-TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
-                                       th=FALSE, delta=FALSE, pi=FALSE,
-                                       gw=FALSE) {
+
+# MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
+# vech.idx <- lavaan:::vech.idx; vechru.idx <- lavaan:::vechru.idx
+# vec <- lavaan:::vec; lavJacobianC <- lavaan:::lavJacobianC
+# computeSigmaHat.LISREL <- lavaan:::computeSigmaHat.LISREL
+# setDeltaElements.LISREL <- lavaan:::setDeltaElements.LISREL
+TESTING_derivatives.LISREL <- function(MLIST = NULL,
+                                       nvar = NULL, nfac = NULL, nexo = NULL,
+                                       th.idx = NULL, num.idx = NULL,
+                                       meanstructure = TRUE,
+                                       th = TRUE, delta = TRUE, pi = TRUE,
+                                       gw = FALSE, theta = FALSE,
+                                       debug = FALSE) {
 
     if(is.null(MLIST)) {
         # create artificial matrices, compare 'numerical' vs 'analytical' 
         # derivatives
         #nvar <- 12; nfac <- 3; nexo <- 4 # this combination is special?
-        nvar <- 20; nfac <- 6; nexo <- 5
-        th.idx <- rep(seq_len(nvar), times=sample(c(1,1,2,6),nvar,replace=TRUE))
-        # add some numeric
-        num.idx <- sample(seq_len(nvar), ceiling(nvar/2))
-        th.idx[ th.idx %in% num.idx & 
-               !th.idx %in% th.idx[duplicated(th.idx)] ] <- 0
+        if(is.null(nvar)) {
+            nvar <- 20
+        }
+        if(is.null(nfac)) {
+            nfac <- 6
+        }
+        if(is.null(nexo)) {
+            nexo <- 5
+        }
+        if(is.null(num.idx)) {
+            num.idx <- sort(sample(seq_len(nvar), ceiling(nvar/2)))
+        }
+        if(is.null(th.idx)) {
+            th.idx <- integer(0L)
+            for(i in 1:nvar) {
+                if(i %in% num.idx) {
+                    th.idx <- c(th.idx, 0)
+                } else {
+                    th.idx <- c(th.idx, rep(i, sample(c(1,1,2,6), 1L)))
+                }
+            }
+        }
         nth <- sum(th.idx > 0L)
 
         MLIST <- list()
@@ -1542,11 +1571,15 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
         # fix
         diag(MLIST$beta) <- 0.0
+        diag(MLIST$theta) <- diag(MLIST$theta)^2 * 10 
+        diag(MLIST$psi)   <- diag(MLIST$psi)^2 * 10
         MLIST$psi[ vechru.idx(nfac) ] <-  
             MLIST$psi[ vech.idx(nfac) ]
         MLIST$theta[ vechru.idx(nvar) ] <-  
             MLIST$theta[ vech.idx(nvar) ]
         if(delta) MLIST$delta[,] <- abs(MLIST$delta)*10
+    } else {
+        nvar <- nrow(MLIST$lambda)
     }
 
     compute.sigma <- function(x, mm="lambda", MLIST=NULL) {
@@ -1555,6 +1588,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
             mlist[[mm]] <- vech.reverse(x)
         } else {
             mlist[[mm]][,] <- x
+        }
+        if(theta) {
+            mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
         }
         vech(computeSigmaHat.LISREL(mlist))
     }
@@ -1566,6 +1602,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
+        if(theta) {
+            mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+        }
         computeMuHat.LISREL(mlist)
     }
 
@@ -1575,6 +1614,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
             mlist[[mm]] <- vech.reverse(x)
         } else {
             mlist[[mm]][,] <- x
+        }
+        if(theta) {
+            mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
         }
         computeTH.LISREL(mlist, th.idx=th.idx)
     }
@@ -1586,6 +1628,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
+        if(theta) {
+            mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+        }
         computePI.LISREL(mlist)
     }
 
@@ -1596,7 +1641,15 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             mlist[[mm]][,] <- x
         }
+        if(theta) {
+            mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+        }
         mlist$gw[1,1]
+    }
+
+    # if theta, set MLIST$delta
+    if(theta) {
+        MLIST <- setDeltaElements.LISREL(MLIST = MLIST, num.idx = num.idx)
     }
 
     for(mm in names(MLIST)) {
@@ -1605,17 +1658,36 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         } else {
             x <- vec(MLIST[[mm]])
         }
+        if(mm == "delta" && theta) next
+        if(debug) {
+            cat("### mm = ", mm, "\n")
+        }
 
         # 1. sigma
         DX1 <- lavJacobianC(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
-                                       MLIST=MLIST)
+                                       MLIST=MLIST, delta = !theta)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
             idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
-            DX2 <- DX2[,-idx]
+            if(length(idx) > 0L) DX2 <- DX2[,-idx]
         }
-        cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "sum delta = ", 
+        if(theta) {
+            sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
+            R <- lav_deriv_cov2cor(sigma.hat, num.idx = num.idx)
+            
+            DX3 <- DX2
+            DX2 <- R %*% DX2
+        }
+        if(debug) {
+            cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n");
+            print(zapsmall(DX1)); cat("\n")
+            cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX2 (analytical):\n");
+            print(DX2); cat("\n")
+            cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX3 (analytical):\n");
+            print(DX3); cat("\n")
+        }
+        cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "sum delta = ",
             sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
             sprintf("%12.9f", max(DX1-DX2)), "\n")
 
@@ -1626,58 +1698,140 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL, meanstructure=TRUE,
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
             idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
-            DX2 <- DX2[,-idx]
+            if(length(idx) > 0L) DX2 <- DX2[,-idx]
         }
         cat("[MU   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
             sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
             sprintf("%12.9f", max(DX1-DX2)), "\n")
+        if(debug) {
+            cat("[MU   ] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n");
+            print(zapsmall(DX1)); cat("\n")
+            cat("[MU   ] mm = ", sprintf("%-8s:", mm), "DX2 (analytical):\n");
+            print(DX2); cat("\n")
+        }
 
         # 3. th
         if(th) {
-        DX1 <- lavJacobianC(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
-                            th.idx=th.idx)
-        DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
-                                    MLIST=MLIST, th.idx=th.idx)
-        if(mm %in% c("psi","theta")) {
-            # remove duplicated columns of symmetric matrices 
-            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
-            DX2 <- DX2[,-idx]
-        }
-        cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
-            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
-            sprintf("%12.9f", max(DX1-DX2)), "\n")
+            DX1 <- lavJacobianC(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
+                                th.idx=th.idx)
+            DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                        MLIST=MLIST, th.idx=th.idx,
+                                        delta=TRUE)
+            if(theta) {
+                # 1. compute dDelta.dx
+                dxSigma <- 
+                    derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                            MLIST=MLIST, delta = !theta)
+                var.idx <- which(!lavaan:::vech.idx(nvar) %in% 
+                                  lavaan:::vech.idx(nvar, diag=FALSE))
+                sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
+                dsigma <- diag(sigma.hat)
+                # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
+                dDelta.dx <- dxSigma[var.idx,] * -0.5 / (dsigma*sqrt(dsigma))
+
+                # 2. compute dth.dDelta
+                dth.dDelta <- 
+                    derivative.th.LISREL(m="delta", 
+                                         idx=1:length(MLIST[["delta"]]),
+                                         MLIST=MLIST, th.idx=th.idx)
+
+                # 3. add dth.dDelta %*% dDelta.dx
+                no.num.idx <- which(th.idx > 0)
+                DX2[no.num.idx,] <- DX2[no.num.idx,,drop=FALSE] + 
+                                    (dth.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
+                #DX2 <- DX2 + dth.dDelta %*% dDelta.dx
+            }
+            if(mm %in% c("psi","theta")) {
+                # remove duplicated columns of symmetric matrices 
+                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                if(length(idx) > 0L) DX2 <- DX2[,-idx]
+            }
+            cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+                sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+                sprintf("%12.9f", max(DX1-DX2)), "\n")
+            if(debug) {
+                cat("[TH   ] mm = ",sprintf("%-8s:", mm),"DX1 (numerical):\n")
+                print(zapsmall(DX1)); cat("\n")
+                cat("[TH   ] mm = ",sprintf("%-8s:", mm),"DX2 (analytical):\n")
+                print(DX2); cat("\n")
+            }
         }
 
         # 4. pi
         if(pi) {
-        DX1 <- lavJacobianC(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
-        DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
-                                    MLIST=MLIST)
-        if(mm %in% c("psi","theta")) {
-            # remove duplicated columns of symmetric matrices 
-            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
-            DX2 <- DX2[,-idx]
-        }
-        cat("[PI   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
-            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
-            sprintf("%12.9f", max(DX1-DX2)), "\n")
+            DX1 <- lavJacobianC(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
+            DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                        MLIST=MLIST)
+            if(mm %in% c("psi","theta")) {
+                # remove duplicated columns of symmetric matrices 
+                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                if(length(idx) > 0L) DX2 <- DX2[,-idx]
+            }
+            if(theta) {
+                # 1. compute dDelta.dx
+                dxSigma <- 
+                    derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                                            MLIST=MLIST, delta = !theta)
+                if(mm %in% c("psi","theta")) {
+                    # remove duplicated columns of symmetric matrices 
+                    idx <- vechru.idx(sqrt(ncol(dxSigma)), diagonal=FALSE)
+                    if(length(idx) > 0L) dxSigma <- dxSigma[,-idx]
+                }
+                var.idx <- which(!lavaan:::vech.idx(nvar) %in% 
+                                  lavaan:::vech.idx(nvar, diag=FALSE))
+                sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
+                dsigma <- diag(sigma.hat)
+                # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
+                dDelta.dx <- dxSigma[var.idx,] * -0.5 / (dsigma*sqrt(dsigma))
+
+                # 2. compute dpi.dDelta
+                dpi.dDelta <- 
+                    derivative.pi.LISREL(m="delta", 
+                                         idx=1:length(MLIST[["delta"]]),
+                                         MLIST=MLIST)
+
+                # 3. add dpi.dDelta %*% dDelta.dx
+                no.num.idx <- which(! seq.int(1L, nvar) %in% num.idx )
+                no.num.idx <- rep(seq.int(0,nexo-1) * nvar, 
+                                  each=length(no.num.idx)) + no.num.idx
+                DX2[no.num.idx,] <- DX2[no.num.idx,,drop=FALSE] + 
+                                    (dpi.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
+            }
+            cat("[PI   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+                sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+                sprintf("%12.9f", max(DX1-DX2)), "\n")
+            if(debug) {
+                cat("[PI   ] mm = ",sprintf("%-8s:", mm),"DX1 (numerical):\n")
+                print(zapsmall(DX1)); cat("\n")
+                cat("[PI   ] mm = ",sprintf("%-8s:", mm),"DX2 (analytical):\n")
+                print(DX2); cat("\n")
+            }
         }
 
         # 5. gw
         if(gw) {
-        DX1 <- lavJacobianC(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
-        DX2 <- derivative.gw.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+            DX1 <- lavJacobianC(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
+            DX2 <- derivative.gw.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                     MLIST=MLIST)
-        if(mm %in% c("psi","theta")) {
-            # remove duplicated columns of symmetric matrices 
-            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
-            DX2 <- DX2[,-idx]
-        }
-        cat("[GW   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
-            sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
-            sprintf("%12.9f", max(DX1-DX2)), "\n")
+            if(mm %in% c("psi","theta")) {
+                # remove duplicated columns of symmetric matrices 
+                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                if(length(idx) > 0L) DX2 <- DX2[,-idx]
+            }
+            cat("[GW   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
+                sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
+                sprintf("%12.9f", max(DX1-DX2)), "\n")
+            if(debug) {
+                cat("[GW   ] mm = ",sprintf("%-8s:", mm),"DX1 (numerical):\n")
+                print(DX1); cat("\n\n")
+                cat("[GW   ] mm = ",sprintf("%-8s:", mm),"DX2 (analytical):\n")
+                print(DX2); cat("\n\n")
+            }
         }
     }
+
+    MLIST$th.idx <- th.idx
+    MLIST$num.idx <- num.idx
 
     MLIST
 }

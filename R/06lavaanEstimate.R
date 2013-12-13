@@ -959,15 +959,16 @@ computeObjective <- function(object, GLIST=NULL,
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
-    representation <- object@representation
-    categorical    <- object@categorical
-    group.w.free   <- object@group.w.free
-    nmat           <- object@nmat
-    ngroups        <- object@ngroups
-    nvar           <- object@nvar
-    num.idx        <- object@num.idx
-    th.idx         <- object@th.idx
-    nexo           <- object@nexo
+    representation   <- object@representation
+    categorical      <- object@categorical
+    group.w.free     <- object@group.w.free
+    nmat             <- object@nmat
+    ngroups          <- object@ngroups
+    nvar             <- object@nvar
+    num.idx          <- object@num.idx
+    th.idx           <- object@th.idx
+    nexo             <- object@nexo
+    parameterization <- object@parameterization
 
     # number of thresholds per group (if any)
     nth <- sapply(th.idx, function(x) sum(x > 0L))
@@ -988,41 +989,43 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     ##################################################
     # special treatment: parameterization == "theta"
     # we do it numerically (for now) -- FIXME!!!
-    if(object@parameterization == "theta") {
-        compute.moments <- function(x, g=1L) {
+#    if(object@parameterization == "theta") {
+#        compute.moments <- function(x, g=1L) {
 
-            # which mm belong to group g?
-            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-            GLIST <- x2GLIST(object, x=x, type="free")
-            MLIST <- GLIST[mm.in.group]
-
-            # 1. TH
-            out <- computeTH.LISREL(MLIST = MLIST, th.idx = th.idx[[g]])
- 
-            # 2. PI
-            if(object@nexo[g] > 0L) {
-                PI <- computePI.LISREL(MLIST = MLIST)
-                out <- c(out, as.numeric(PI))
-            }
-
-            # 3. Sigma.hat
-            Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = TRUE)
-            # reorder: first variances (of numeric), then covariances
-            var.num <- diag(Sigma.hat)[num.idx[[g]]]    
-            COR <- Sigma.hat[ vech.idx(nvar[g], diagonal=FALSE) ]
-            out <- c(out, var.num, COR)
-
-            out
-        }
- 
-        Delta <- vector("list", length=ngroups)    
-        for(g in 1:ngroups) {
-            x <- getModelParameters(object, GLIST=GLIST, type="free")
-            Delta[[g]] <- numDeriv::jacobian(func=compute.moments, x=x, g=g) 
-        }        
- 
-        return(Delta)
-    }
+#            # which mm belong to group g?
+#            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+#            GLIST <- x2GLIST(object, x=x, type="free")
+#            MLIST <- GLIST[mm.in.group]
+    
+   
+#            # 1. TH
+#            out <- computeTH.LISREL(MLIST = MLIST, th.idx = th.idx[[g]])
+     
+#            # 2. PI
+#            if(object@nexo[g] > 0L) {
+#                PI <- computePI.LISREL(MLIST = MLIST)
+#                out <- c(out, as.numeric(PI))
+#            }
+    
+#           # 3. Sigma.hat
+#            Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = TRUE)
+#            # reorder: first variances (of numeric), then covariances
+#            var.num <- diag(Sigma.hat)[num.idx[[g]]]    
+#            COR <- Sigma.hat[ vech.idx(nvar[g], diagonal=FALSE) ]
+#            out <- c(out, var.num, COR)
+#    
+#           out
+#       }
+# 
+#        Delta <- vector("list", length=ngroups)    
+#        for(g in 1:ngroups) {
+#            x <- getModelParameters(object, GLIST=GLIST, type="free")
+#            #Delta[[g]] <- numDeriv::jacobian(func=compute.moments, x=x, g=g) 
+#            Delta[[g]] <- lavJacobianC(func=compute.moments, x=x, g=g)
+#        }        
+#     
+#        return(Delta)
+#    }
     ################################################## 
     ##################################################
 
@@ -1091,6 +1094,18 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
+        # if theta, do some preparation
+        if(parameterization == "theta") {
+            sigma.hat <- computeSigmaHat.LISREL(MLIST=GLIST[mm.in.group], 
+                                                delta=FALSE)
+            dsigma <- diag(sigma.hat)
+            # dcor/dcov for sigma
+            R <- lav_deriv_cov2cor(sigma.hat, num.idx = object@num.idx[[g]])
+
+            theta.var.idx <- which(!vech.idx(nvar[g]) %in%
+                                    vech.idx(nvar[g], diag=FALSE))
+        }
+
         for(mm in mm.in.group) {
             mname <- names(object@GLIST)[mm]
 
@@ -1099,9 +1114,17 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
             # get Delta columns for this model matrix
             if(representation == "LISREL") {
-                DELTA <- derivative.sigma.LISREL(m=mname,
-                                                 idx=m.el.idx[[mm]],
-                                                 MLIST=GLIST[ mm.in.group ])
+
+                # Sigma
+                DELTA <- dxSigma <-
+                    derivative.sigma.LISREL(m = mname,
+                                            idx = m.el.idx[[mm]],
+                                            MLIST = GLIST[ mm.in.group ],
+                                            delta = parameterization == "delta")
+                if(categorical && parameterization == "theta") {
+                    DELTA <- R %*% DELTA
+                }
+                
                 if(categorical) {
                     # reorder: first variances (of numeric), then covariances
                     cov.idx  <- vech.idx(nvar[g])
@@ -1123,11 +1146,42 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                     DELTA.th <- derivative.th.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],
                                                      th.idx=th.idx[[g]],
-                                                     MLIST=GLIST[ mm.in.group ])
+                                                     MLIST=GLIST[ mm.in.group ],
+                                                     delta = TRUE)
+                    if(parameterization == "theta") {
+                        # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
+                        dDelta.dx <- 
+                            ( dxSigma[theta.var.idx,,drop=FALSE] * 
+                              -0.5 / (dsigma*sqrt(dsigma)) )
+                        dth.dDelta <- 
+                            derivative.th.LISREL(m = "delta",
+                                                 idx = 1:nvar[g],
+                                                 MLIST = GLIST[ mm.in.group ],
+                                                 th.idx = th.idx[[g]])
+                        # add dth.dDelta %*% dDelta.dx
+                        no.num.idx <- which(th.idx[[g]] > 0)
+                        DELTA.th[no.num.idx,] <- 
+                            DELTA.th[no.num.idx,,drop=FALSE] +
+                            (dth.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
+                    }
                     if(object@nexo[g] > 0L) {
-                        DELTA.pi <- derivative.pi.LISREL(m=mname,
-                                                         idx=m.el.idx[[mm]],
-                                                         MLIST=GLIST[ mm.in.group ])
+                        DELTA.pi <- 
+                            derivative.pi.LISREL(m=mname,
+                                                 idx=m.el.idx[[mm]],
+                                                 MLIST=GLIST[ mm.in.group ])
+                        if(parameterization == "theta") {
+                            dpi.dDelta <-
+                                derivative.pi.LISREL(m = "delta",
+                                    idx = 1:nvar[g],
+                                    MLIST = GLIST[ mm.in.group ])
+                            # add dpi.dDelta %*% dDelta.dx
+                            no.num.idx <- which(!seq.int(1L,nvar) %in% num.idx)
+                            no.num.idx <- rep(seq.int(0,nexo-1) * nvar,
+                                          each=length(no.num.idx)) + no.num.idx
+                            DELTA.pi[no.num.idx,] <- 
+                                DELTA.pi[no.num.idx,,drop=FALSE] +
+                                (dpi.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
+                        }
                         DELTA <- rbind(DELTA.th, DELTA.pi, DELTA)
                     } else {
                         DELTA <- rbind(DELTA.th, DELTA)
@@ -1146,10 +1200,15 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             Delta.group[ ,x.el.idx[[mm]]] <- DELTA
         } # mm
 
+        save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
+
         # if type == "free" take care of equality constraints
         if(type == "free" && object@eq.constraints) {
             Delta.group <- Delta.group %*% object@eq.constraints.K
         }
+  
+        Delta.eq <- Delta.group
+        save(Delta.eq, file=paste0("delta_NO_EQ",g,".Rdata"))
 
         Delta[[g]] <- Delta.group
 

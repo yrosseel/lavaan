@@ -74,8 +74,10 @@ lavJacobianD <- function(func, x, h=sqrt(.Machine$double.eps), ...) {
 }
 
 # quick and dirty (FIXME!!!) way to get
+# surely there must be a more elegant way?
 # dCor/dCov
-lav_deriv_cov2cor <- function(COV = NULL) {
+# vech.idx <- lavaan:::vech.idx; diag.idx <- lavaan:::diag.idx
+lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
 
     # dCor/dvar1 = - cov / (2*var1 * sqrt(var1) * sqrt(var2))
     # dCor/dvar2 = - cov / (2*var2 * sqrt(var1) * sqrt(var2))
@@ -85,8 +87,14 @@ lav_deriv_cov2cor <- function(COV = NULL) {
 
     nvar <- ncol(COV);  pstar <- nvar*(nvar+1)/2
     delta <- sqrt(diag(COV))
+    if(length(num.idx) > 0L) {
+        delta[num.idx] <- 1.0
+    }
 
     A <- COV * -1/( 2*delta^2*tcrossprod(delta) )
+    if(length(num.idx) > 0L) {
+        A[num.idx,] <- 0; A[cbind(num.idx, num.idx)] <- 1
+    }
     A2 <- diag(nvar) %x% t(A)
 
     OUT <- diag( pstar )
@@ -94,17 +102,26 @@ lav_deriv_cov2cor <- function(COV = NULL) {
     var.idx <- which(!vech.idx(nvar) %in% vech.idx(nvar, diagonal=FALSE))
     DUP <- duplicationMatrix(nvar)
     OUT[,var.idx] <- t(DUP) %*% A2[,diag.idx(nvar)]
+
+    if(length(num.idx) > 0L) {
+        var.idx <- var.idx[-num.idx]
+    }
     OUT[var.idx, var.idx] <- 0
 
     OUT
 }
 
 
-lav_deriv_cov2cor_numerical <- function(COV) {
+lav_deriv_cov2cor_numerical <- function(COV, num.idx=integer(0)) {
 
     compute.R <- function(x) {
         S <- vech.reverse(x)
-        R <- cov2cor(S)
+        diagS <- diag(S); delta <- 1/sqrt(diagS)
+        if(length(num.idx) > 0L) {
+            delta[num.idx] <- 1.0
+        }
+        R <- diag(delta) %*% S %*% diag(delta)
+        #R <- cov2cor(S)
         R.vec <- lavaan:::vech(R, diagonal = TRUE)
         R.vec
     }
