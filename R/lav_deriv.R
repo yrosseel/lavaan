@@ -127,7 +127,7 @@ lav_deriv_cov2cor_numerical <- function(COV, num.idx=integer(0)) {
     }
 
     x <- vech(COV, diagonal = TRUE)
-    dx <- numDeriv::jacobian(func=compute.R, x=x)
+    dx <- lavJacobianC(func=compute.R, x=x)
 
     dx
 }

@@ -948,7 +948,7 @@ computeObjective <- function(object, GLIST=NULL,
 #    }
 #
 #    x <- getModelParameters(object, GLIST=GLIST, type="free")
-#    Delta <- numDeriv::jacobian(func=compute.moments, x=x)
+#    Delta <- lavJacobianC(func=compute.moments, x = x)
 #
 #    Delta
 #}
@@ -1020,7 +1020,6 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 #        Delta <- vector("list", length=ngroups)    
 #        for(g in 1:ngroups) {
 #            x <- getModelParameters(object, GLIST=GLIST, type="free")
-#            #Delta[[g]] <- numDeriv::jacobian(func=compute.moments, x=x, g=g) 
 #            Delta[[g]] <- lavJacobianC(func=compute.moments, x=x, g=g)
 #        }        
 #     
@@ -1103,7 +1102,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             R <- lav_deriv_cov2cor(sigma.hat, num.idx = object@num.idx[[g]])
 
             theta.var.idx <- which(!vech.idx(nvar[g]) %in%
-                                    vech.idx(nvar[g], diag=FALSE))
+                                    vech.idx(nvar[g], diagonal=FALSE))
         }
 
         for(mm in mm.in.group) {
