@@ -436,6 +436,11 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                        complete.cases(data[,all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[, group] == group.label[g]))
+            } else if(missing == "pairwise" && length(exo.idx) > 0L) {
+                case.idx[[g]] <- which(data[, group] == group.label[g] &
+                                       complete.cases(data[,exo.idx]))
+                nobs[[g]] <- length(case.idx[[g]])
+                norig[[g]] <- length(which(data[, group] == group.label[g]))    
             } else {
                 case.idx[[g]] <- which(data[, group] == group.label[g])
                 nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])
@@ -443,6 +448,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
         } else {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(complete.cases(data[,all.idx]))
+                nobs[[g]] <- length(case.idx[[g]])
+                norig[[g]] <- nrow(data)
+            } else if(missing == "pairwise" && length(exo.idx) > 0L) {
+                case.idx[[g]] <- which(complete.cases(data[,exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else {

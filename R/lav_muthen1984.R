@@ -390,7 +390,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     B <- rbind( cbind(A11,A12),
                 cbind(A21,A22) )
-    B.inv <- solve(B)
+    # B.inv <- solve(B)
+    B.inv <- MASS::ginv(B)
     ## FIXME: we need to invert B as a partioned matrix
 
     #  weight matrix (correlation metric)

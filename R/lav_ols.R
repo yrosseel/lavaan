@@ -36,6 +36,7 @@ contains = "lavML",
 fields = list(X = "matrix", nexo = "integer", 
               # housekeeping
               int.idx = "integer", slope.idx = "integer", var.idx = "integer",
+              missing.values = "logical", missing.idx = "integer",
               # internal
               yhat = "numeric"),
 
@@ -53,6 +54,12 @@ initialize = function(y, X = NULL, ...) {
     } else {
         nexo <<- 0L
         X <<- matrix(1, nobs, 1L)
+    }
+    if(any(is.na(y)) || (!is.null(X) && any(is.na(X)) )) {
+        missing.values <<- TRUE
+        missing.idx <<- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
+    } else {
+        missing.values <<- FALSE
     }
 
     # indices of free parameters
@@ -72,7 +79,11 @@ initialize = function(y, X = NULL, ...) {
 
 start = function() {
     if(nexo > 0L) {
-        fit.lm <- lm.fit(y=y, x=X)
+        if(length(missing.idx) > 0L) {
+            fit.lm <- lm.fit(y=y[-missing.idx], x=X[-missing.idx,,drop=FALSE])
+        } else {
+            fit.lm <- lm.fit(y=y, x=X)
+        }
         #fit.lm <- lm.wfit(y=y, x=X, w=weights)
         beta.start <- fit.lm$coef
          var.start <- crossprod(fit.lm$residual)/nobs
