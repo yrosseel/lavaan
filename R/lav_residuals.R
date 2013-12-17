@@ -2,6 +2,9 @@
 setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {
 
+    # lowercase type
+    type <- tolower(type)
+
     # catch type="casewise"
     if(type %in% c("casewise","case","obs","observations")) {
         return( lav_residuals_casewise(object, labels = labels) )
@@ -21,8 +24,19 @@ function(object, type="raw", labels=TRUE) {
  
 
     # check type
-    if(!type %in% c("raw", "cor", "normalized", "standardized", "casewise")) {
-        stop("type must be one of \"raw\", \"cor\", \"normalized\" or \"standardized\" or \"casewise\"")
+    if(!type %in% c("raw", "cor",
+        "cor.bollen", "cor.bentler", "cor.eqs",
+        "normalized", "standardized", "casewise")) {
+        stop("type must be one of \"raw\", \"cor\", \"cor.bollen\", \"cor.bentler\", \"normalized\" or \"standardized\" or \"casewise\"")
+    }
+    
+    # if cor, choose 'default'
+    if(type == "cor") {
+        if(object@Options$mimic == "EQS") {
+            type <- "cor.bentler"
+        } else {
+            type <- "cor.bollen"
+        }
     }
 
     # check for 0 parameters if type == standardized
@@ -100,13 +114,22 @@ function(object, type="raw", labels=TRUE) {
         }
         nvar <- ncol(S)
 
-        # raw residuals (for this group
-        if(type == "cor") {
+        # residuals (for this group)
+        if(type == "cor.bollen") {
             R[[g]]$cov  <- cov2cor(S) - cov2cor(object@Fit@Sigma.hat[[g]])
+            R[[g]]$mean <- ( M/sqrt(diag(S)) -
+                object@Fit@Mu.hat[[g]]/sqrt(diag(object@Fit@Sigma.hat[[g]])) )
+        } else if(type == "cor.bentler" || type == "cor.eqs") {
+            # Bentler EQS manual: divide by (sqrt of) OBSERVED variances
+            delta <- 1/sqrt(diag(S))
+            DELTA <- diag(delta, nrow=nvar, ncol=nvar)
+            R[[g]]$cov  <- DELTA %*% (S - object@Fit@Sigma.hat[[g]]) %*% DELTA
+            R[[g]]$mean <- (M - object@Fit@Mu.hat[[g]])/sqrt(diag(S))
         } else {
+            # covariance/raw residuals
             R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]
+            R[[g]]$mean <- M - object@Fit@Mu.hat[[g]]
         }
-        R[[g]]$mean <- M - object@Fit@Mu.hat[[g]]
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
@@ -200,10 +223,9 @@ function(object, type="raw", labels=TRUE) {
     }
 
     # replace 'cov' by 'cor' if type == "cor"
-    if(type == "cor") {
+    if(type %in% c("cor","cor.bollen","cor.eqs","cor.bentler")) {
         R <- lapply(R, "names<-", c("cor", "mean") )
     }
-
 
     if(G == 1) {
         R <- R[[1]]

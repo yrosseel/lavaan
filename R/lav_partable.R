@@ -280,6 +280,9 @@ lav_partable_labels <- function(partable, group.equal="", group.partial="",
     label[idx]
 }
 
+# only for simsem ....
+getParameterLabels <- lav_partable_labels
+
 
 lav_partable_full <- function(partable=NULL, group=NULL) {
 

@@ -100,7 +100,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
 
     # missing
     if(opt$missing == "default") {
-        if(opt$mimic == "Mplus" && 
+        if(opt$mimic == "Mplus" && !opt$categorical &&
            opt$estimator %in% c("default", "ml", "mlr")) { 
             # since version 5?
             opt$missing <- "ml" 

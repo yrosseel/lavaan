@@ -130,7 +130,11 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         fit.srmr2 <- c("wrmr")
     } else {
         fit.srmr <- c("srmr")
-        fit.srmr2 <- c("rmr", "rmr_nomean", "srmr", "srmr_nomean")
+        fit.srmr2 <- c("rmr", "rmr_nomean", 
+                       "srmr", # the default
+                       "srmr_bentler", "srmr_bentler_nomean",
+                       "srmr_bollen", "srmr_bollen_nomean",
+                       "srmr_mplus", "srmr_mplus_nomean")
     }
 
     # table
@@ -164,6 +168,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
             } else {
                 fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
                                   fit.rmsea, fit.srmr, fit.table)
+                if(object@Options$mimic == "Mplus") {
+                    fit.measures <- c(fit.measures, "wrmr")
+                }
             }
         } else if(fit.measures == "all") {
             if(estimator == "ML") {
@@ -731,8 +738,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         # RMR and SRMR
         rmr.group <- numeric(G)
         rmr_nomean.group <- numeric(G)
-        srmr.group <- numeric(G)
-        srmr_nomean.group <- numeric(G)
+        srmr_bentler.group <- numeric(G)
+        srmr_bentler_nomean.group <- numeric(G)
+        srmr_bollen.group <- numeric(G)
+        srmr_bollen_nomean.group <- numeric(G)
+        srmr_mplus.group <- numeric(G)
+        srmr_mplus_nomean.group <- numeric(G)
         for(g in 1:G) {
             # observed
             if(!object@SampleStats@missing.flag) {
@@ -749,57 +760,110 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
             Sigma.hat <- object@Fit@Sigma.hat[[g]]
             Mu.hat    <- object@Fit@Mu.hat[[g]]
 
+            # unstandardized residuals
+            RR <- (S - Sigma.hat)
+
             # standardized residual covariance matrix
             # this is the Hu and Bentler definition, not the Bollen one!
+            # this one is used by EQS 
+            # and Mplus, but only if information=expected (god knows why)
             sqrt.d <- 1/sqrt(diag(S))
             D <- diag(sqrt.d, ncol=length(sqrt.d))
             R <- D %*% (S - Sigma.hat) %*% D
-            RR <- (S - Sigma.hat) # not standardized
 
-            # this is what the Mplus documentation suggest, 
-            # but is not what is used!
-            #sqrt.d2 <- 1/sqrt(diag(Sigma.hat))
-            #D2 <- diag(sqrt.d2, ncol=length(sqrt.d2))
-            #R <- D %*% S %*% D   - D2 %*% Sigma.hat %*% D2
+            # Bollen approach: simply using cov2cor ('residual correlations')
+            S.cor <- cov2cor(S)
+            Sigma.cor <- cov2cor(Sigma.hat)
+            R.cor <- (S.cor - Sigma.cor)
 
             if(meanstructure) {
                 # standardized residual mean vector
-                R.mean <- D %*% (M - Mu.hat)
+                R.mean <- D %*% (M - Mu.hat) # EQS approach!
                 RR.mean <- (M - Mu.hat) # not standardized
-                #R.mean <-  D %*% M - D2 %*% Mu.hat
+                R.cor.mean <- M/sqrt(diag(S)) - Mu.hat/sqrt(diag(Sigma.hat))
+
                 e <- nvar*(nvar+1)/2 + nvar
-                srmr.group[g] <- sqrt( (sum(R[lower.tri(R, diag=TRUE)]^2) +
-                                        sum(R.mean^2))/ e )
+                srmr_bentler.group[g] <- 
+                    sqrt( (sum(R[lower.tri(R, diag=TRUE)]^2) +
+                           sum(R.mean^2))/ e )
                 rmr.group[g] <- sqrt( (sum(RR[lower.tri(RR, diag=TRUE)]^2) +
                                        sum(RR.mean^2))/ e )
+                srmr_bollen.group[g] <- 
+                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2)  +
+                           sum(R.cor.mean^2)) / e )
+                # see http://www.statmodel.com/download/SRMR.pdf
+                srmr_mplus.group[g] <-
+                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
+                           sum(R.cor.mean^2) +
+                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
+
                 e <- nvar*(nvar+1)/2
-                srmr_nomean.group[g] <- sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
-                rmr_nomean.group[g] <- sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
+                srmr_bentler_nomean.group[g] <- 
+                    sqrt(  sum( R[lower.tri( R, diag=TRUE)]^2) / e )
+                rmr_nomean.group[g] <- 
+                    sqrt(  sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
+                srmr_bollen_nomean.group[g] <- 
+                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / e )
+                srmr_mplus_nomean.group[g] <-
+                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
+                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
             } else {
                 e <- nvar*(nvar+1)/2
-                srmr_nomean.group[g] <- srmr.group[g] <- sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
-                rmr_nomean.group[g] <- rmr.group[g] <- sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                
+                srmr_bentler_nomean.group[g] <- srmr_bentler.group[g] <- 
+                    sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
+                rmr_nomean.group[g] <- rmr.group[g] <- 
+                    sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
+                srmr_bollen_nomean.group[g] <- srmr_bollen.group[g] <-
+                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / e )
+                srmr_mplus_nomean.group[g] <- srmr_mplus.group[g] <-
+                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
+                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
             }
         }
         
         if(G > 1) {
             ## FIXME: get the scaling right
-            SRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr.group) / object@SampleStats@ntotal )
-            SRMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_nomean.group) / object@SampleStats@ntotal )
+            SRMR_BENTLER <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler.group) / object@SampleStats@ntotal )
+            SRMR_BENTLER_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler_nomean.group) / object@SampleStats@ntotal )
+            SRMR_BOLLEN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bollen.group) / object@SampleStats@ntotal )
+            SRMR_BOLLEN_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bollen_nomean.group) / object@SampleStats@ntotal )
+            SRMR_MPLUS <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus.group) / object@SampleStats@ntotal )
+            SRMR_MPLUS_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus_nomean.group) / object@SampleStats@ntotal )
             RMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr.group) / object@SampleStats@ntotal )
             RMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr_nomean.group) / object@SampleStats@ntotal )
         } else {
-            SRMR <- srmr.group[1]
-            SRMR_NOMEAN <- srmr_nomean.group[1]
+            SRMR_BENTLER <- srmr_bentler.group[1]
+            SRMR_BENTLER_NOMEAN <- srmr_bentler_nomean.group[1]
+            SRMR_BOLLEN <- srmr_bollen.group[1]
+            SRMR_BOLLEN_NOMEAN <- srmr_bollen_nomean.group[1]
+            SRMR_MPLUS <- srmr_mplus.group[1]
+            SRMR_MPLUS_NOMEAN <- srmr_mplus_nomean.group[1]
             RMR <- rmr.group[1]
             RMR_NOMEAN <- rmr_nomean.group[1]
         }
 
-        indices["srmr"] <- SRMR
-        indices["srmr_nomean"] <- SRMR_NOMEAN
-        indices["rmr"] <- RMR
-        indices["rmr_nomean"] <- RMR_NOMEAN
+        # the default!
+        if(object@Options$mimic == "lavaan") {
+            indices["srmr"] <- SRMR_BENTLER
+        } else if(object@Options$mimic == "EQS") {
+            indices["srmr"] <- SRMR_BENTLER
+        } else if(object@Options$mimic == "Mplus") {
+            if(object@Options$information == "expected") {
+                indices["srmr"] <- SRMR_BENTLER
+            } else {
+                indices["srmr"] <- SRMR_MPLUS
+            }
+        }
+
+        # the others
+        indices["srmr_bentler"]        <- SRMR_BENTLER
+        indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
+        indices["srmr_bollen"]         <- SRMR_BOLLEN
+        indices["srmr_bollen_nomean"]  <- SRMR_BOLLEN_NOMEAN
+        indices["srmr_mplus"]          <- SRMR_MPLUS
+        indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
+        indices["rmr"]                 <- RMR
+        indices["rmr_nomean"]          <- RMR_NOMEAN
     }
 
     if(any(c("cn_05", "cn_01") %in% fit.measures)) {
@@ -1196,6 +1260,18 @@ print.fit.measures <- function(x) {
             t0.txt <- sprintf("  %-40s", "SRMR (No Mean)")
             t1.txt <- sprintf("  %10.3f", x["srmr_nomean"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_nomean"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+    }
+
+    # WRMR
+    if("wrmr" %in% names.x) {
+        cat("\nWeighted Root Mean Square Residual:\n\n")
+
+        if("wrmr" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "WRMR")
+            t1.txt <- sprintf("  %10.3f", x["wrmr"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["wrmr"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
     }
