@@ -652,7 +652,8 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL,
 #
 # y*_i = nu + lambda eta_i + K x_i + epsilon_i
 # 
-# where eta_i = predict(fit) = factor scores
+# where eta_i = predict(fit) = factor scores OR specific values for eta_i
+# (as in GH integration)
 #
 computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
                                 sample.mean=NULL,

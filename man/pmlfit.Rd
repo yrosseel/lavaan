@@ -98,8 +98,9 @@ HS9 <- HolzingerSwineford1939[,c("x1","x2","x3","x4","x5",
 HSbinary <- as.data.frame( lapply(HS9, cut, 2, labels=FALSE) )
 
 # Single group example with one latent factor
-HS.model <- ' trait =~ x1 + x2 + x3 + x4 + x5 + x6 '
-fit <- cfa(HS.model, data=HSbinary[,1:6], ordered=names(HSbinary))
+HS.model <- ' trait =~ x1 + x2 + x3 + x4 '
+fit <- cfa(HS.model, data=HSbinary[,1:4], ordered=names(HSbinary),
+           estimator="PML")
 lavTablesFitCm(fit)
 lavTablesFitCp(fit)
 lavTablesFitCf(fit)

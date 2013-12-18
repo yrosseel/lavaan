@@ -265,7 +265,11 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
             # compute probability for each pattern
             lower <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x]      ])
             upper <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x] + 1L ])
-            PI[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigma.hat)
+
+
+            # how accurate must we be here???
+            PI[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigma.hat,
+                            maxpts=10000*nvar, abseps = 1e-07)
         }
         # sum (log)likelihood over all patterns
         #LogLik <- sum(log(PI) * freq)
@@ -298,71 +302,100 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     fx
 }
 
-estimator.MML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
+estimator.MML <- function(object    = NULL,    # object
+                          GLIST     = NULL,
+                          g         = 1L,      # group
+                          link      = "logit",
+                          #link      = "probit",
+                          sample.mean = NULL,
                           TH        = NULL,    # model-based thresholds + means
                           th.idx    = NULL,    # threshold idx per variable
                           num.idx   = NULL,    # which variables are numeric
                           X         = NULL,    # raw data
                           cache     = NULL) {  # patterns
 
-    # YR 1 okt 2013
+    # YR 18 dec 2013
     # marginal maximum likelihood
 
-    # first of all: check if all correlations are within [-1,1]
-    # if not, return Inf; (at least with nlminb, this works well)
-    cors <- Sigma.hat[lower.tri(Sigma.hat)]
-
-    if(any(abs(cors) > 1)) {
-        return(+Inf) 
+    nobs <- nrow(X); nvar <- ncol(X)
+    GH <- lav_gauss_hermite_xw_dnorm(n=21, revert=FALSE)
+    nmat <- object@nmat
+    mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+    MLIST <- GLIST[ mm.in.group ]
+    THETA <- computeTHETA(object)[[g]]
+  
+    if(ncol(MLIST$lambda) > 1L) {
+        stop("only 1 factor is allowed for now")
     }
 
-    nvar <- nrow(Sigma.hat)
-    pstar <- nvar*(nvar-1)/2
-    ov.types <- rep("ordered", nvar)
-    if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
-    MEAN <- rep(0, nvar)
+    # for now, we only do the NO-X version
+    #
+    # 1) compute per variable, per category, the LOG probability P(Y = c | eta)
+    #    for a range of values for eta (given by the GH nodes)
+    # 2) for each obs/pattern, SUM the log prob for the observed categories 
+    #    for all eta values (GH points)
+    # 3) exponentiate again, and integrate
+    # 4) take log, sum, minus...
 
-    # shortcut for all ordered - per pattern
-    if(all(ov.types == "ordered")) {
-        PAT <- cache$pat; npatterns <- nrow(PAT)
-        freq <- as.numeric( rownames(PAT) )
-        PI <- numeric(npatterns)
-        TH.VAR <- lapply(1:nvar, function(x) c(-Inf, TH[th.idx==x], +Inf))
-        # FIXME!!! ok to set diagonal to 1.0?
-        diag(Sigma.hat) <- 1.0
-        for(r in 1:npatterns) {
-            # compute probability for each pattern
-            lower <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x]      ])
-            upper <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x] + 1L ])
-            PI[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigma.hat)
-        }
-        # sum (log)likelihood over all patterns
-        #LogLik <- sum(log(PI) * freq)
 
-        # more convenient fit function
-        prop <- freq/sum(freq)
-        # remove zero props # FIXME!!! or add 0.5???
-        zero.idx <- which(prop == 0.0)
-        if(length(zero.idx) > 0L) {
-            prop <- prop[-zero.idx]
-            PI   <- PI[-zero.idx]
-        }
-        Fmin <- sum( prop*log(prop/PI) )
+    # 1a compute yhat* for several values of eta
+    # yhat*_i = nu + lambda eta_i + Kappa x_i + epsilon_i
+    # YHAT = [ GH points x nvar ]
+    YHAT <- computeYHATx.LISREL(MLIST  = MLIST, 
+                eXo    = NULL,  # must be NULL, since no X!!
+                ETA    = matrix(GH$x, ncol=1L),
+                sample.mean = sample.mean, 
+                ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx = object@ov.x.dummy.ov.idx[[g]],
+                ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx = object@ov.x.dummy.lv.idx[[g]])
 
-    } else { # case-wise
-        PI <- numeric(nobs)
-        for(i in 1:nobs) {
-            # compute probability for each case
-            PI[i] <- stop("not implemented")
+    # 1b compute Prob for each category
+    PC <- vector("list", length=nvar)
+    for(v in seq_len(nvar)) {
+        th.y <- TH[ th.idx == v]; TH.Y <- c(-Inf, th.y, Inf)
+        ncat <- length(th.y) + 1L
+        PK <- matrix(0, nrow=length(GH$x), ncol=ncat)
+
+        # for each category
+        for(k in seq_len(ncat)) {
+            # note: change to plogis for logit link
+            if(link == "probit") {
+                PK[,k ] = pnorm( (TH.Y[k+1] - YHAT[,v]) / THETA[v,v]) -
+                          pnorm( (TH.Y[k  ] - YHAT[,v]) / THETA[v,v])
+            } else if(link == "logit") {
+                PK[,k ] = plogis( (TH.Y[k+1] - YHAT[,v]) / THETA[v,v]) -
+                          plogis( (TH.Y[k  ] - YHAT[,v]) / THETA[v,v])
+            } else {
+                stop("lavaan ERROR: link must be probit or logit")
+            }
+            # underflow
+            idx <- which(PK < .Machine$double.eps)
+            if(length(idx) > 0L) {
+                PK[idx] <- .Machine$double.eps
+            }
         }
-        # sum (log)likelihood over all observations
-        LogLik <- sum(log(PI))
-        stop("not implemented")
+        # take log
+        PC[[v]] <- log(PK)
     }
+
+    # 2. SUM the LOG probabilities for all observations/patterns
+    PAT <- cache$pat; npatterns <- nrow(PAT)
+    freq <- as.numeric( rownames(PAT) )
+
+    SUM_PC <- 0 # [ nGH x npatterns ]
+    for(v in seq_len(nvar)) {
+        SUM_PC <- SUM_PC + PC[[v]][, PAT[,v]]
+    }
+
+    # 3. exponentiate + integrate
+    p.pattern <- rep(GH$w %*% exp(SUM_PC), freq)
+
+    # 4. take sum, log, ...
+    logl <- sum(log(p.pattern))
 
     # function value as returned to the minimizer
-    #fx <- -1 * LogLik
-    fx <- Fmin
+    fx <- -logl
 
     fx
 }

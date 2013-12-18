@@ -855,7 +855,10 @@ computeObjective <- function(object, GLIST=NULL,
                                       cache     = cache[[g]])
         } else if(estimator == "MML") { 
             # marginal maximum likelihood
-            group.fx <- estimator.MML(Sigma.hat = Sigma.hat[[g]],
+            group.fx <- estimator.MML(object    = object,
+                                      g         = g,
+                                      GLIST     = GLIST,
+                                  sample.mean = samplestats@sample.mean[[g]],
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],

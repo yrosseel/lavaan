@@ -72,7 +72,7 @@ lavPredict <- function(object, type="lv", newdata=NULL, method="EBM",
         out <- lav_predict_fy(object = object, data.obs = data.obs,
                               eXo = eXo, label = label)
     } else {
-        stop("lavaan ERROR: type must be one of: lv mu fy")
+        stop("lavaan ERROR: type must be one of: lv yhat fy")
     }
 
     # lavaan.matrix
