@@ -170,7 +170,8 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
     #    GLIST <- lavaan:::x2GLIST(object, x=x)
     #    fx <- lavaan:::computeObjective(object, GLIST=GLIST, 
     #                                    samplestats=samplestats,
-    #                                    estimator=estimator)
+    #                                    estimator=estimator,
+    #                                    link=link)
     #    fx
     #}
     #Hessian <- - numDeriv::hessian(func=compute.fx, x=x)

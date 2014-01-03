@@ -56,6 +56,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # estimation
                    estimator          = "default",
                    likelihood         = "default",
+                   link               = "default",
                    information        = "default",
                    se                 = "default",
                    test               = "default",
@@ -147,7 +148,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             group.equal = group.equal, group.partial = group.partial, 
             group.w.free = group.w.free,
             constraints = constraints,
-            estimator = estimator, likelihood = likelihood, 
+            estimator = estimator, likelihood = likelihood, link = link,
             sample.cov.rescale = sample.cov.rescale,
             information = information, se = se, test = test, 
             bootstrap = bootstrap, mimic = mimic,
@@ -407,8 +408,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
   
         # if no data, call setModelParameters once (for categorical case)
         if(lavaanData@data.type == "none" && lavaanModel@categorical) {
-            lavaanModel <- setModelParameters(lavaanModel, 
-                                              x=getModelParameters(lavaanModel))
+            lavaanModel <- setModelParameters(lavaanModel,
+                                              x=getModelParameters(lavaanModel),                                              estimator=lavaanOptions$estimator)
         }
     }
 
@@ -445,6 +446,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
+    # If estimator = MML, store Gauss-Hermite nodes/weights
+    if(lavaanOptions$estimator == "MML") {
+        if(!is.null(control$nGH)) {
+            nGH <- control$nGH
+        } else {
+            nGH <- 21L
+        }
+        for(g in 1:lavaanData@ngroups) {
+            # count only the ones with non-normal indicators
+            #nfac <- pta$nfac.nonnormal[[g]]
+            nfac <- pta$nfac[[g]]
+            lavaanCache[[g]]$GH <- 
+                lav_gauss_hermite_xw_dnorm(n=nGH, revert=FALSE, ndim = nfac)
+        }
+    }
 
     # 6. estimate free parameters
     x <- NULL
@@ -509,12 +525,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     x[lavaanParTable$unco[lavaanParTable$op == "~1" &
                                           lavaanParTable$unco]] <- x.beta[1L]
                 }
-                lavaanModel <- setModelParameters(lavaanModel, x = x)
+                lavaanModel <- setModelParameters(lavaanModel, x = x,
+                                           estimator=lavaanOptions$estimator)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 FX <- try(computeObjective(lavaanModel, 
                                            samplestats = lavaanSampleStats,
-                                           estimator = lavaanOptions$estimator),
+                                           estimator = lavaanOptions$estimator,
+                                           link = lavaanOptions$link),
                           silent=TRUE)
                 if(inherits(FX, "try-error")) {
                     # eg non-full rank design matrix
@@ -590,13 +608,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     x[lavaanParTable$free[lavaanParTable$op == "~1" &
                                           lavaanParTable$free]] <- x.beta[1L]
                 }
-                lavaanModel <- setModelParameters(lavaanModel, x = x)
+                lavaanModel <- setModelParameters(lavaanModel, x = x,
+                                       estimator=lavaanOptions$estimator)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 attr(x, "fx") <-
                     computeObjective(lavaanModel, 
                                      samplestats = lavaanSampleStats,
-                                     estimator = lavaanOptions$estimator)
+                                     estimator = lavaanOptions$estimator,
+                                     link = lavaanOptions$link)
                 # for VCOV
                 attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
                 attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
@@ -612,7 +632,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                options      = lavaanOptions,
                                cache        = lavaanCache,
                                control      = control)
-                lavaanModel <- setModelParameters(lavaanModel, x = x)
+                lavaanModel <- setModelParameters(lavaanModel, x = x,
+                     estimator=lavaanOptions$estimator)
             }
         } else {
             #cat("REGULAR\n")
@@ -623,7 +644,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                options      = lavaanOptions,
                                cache        = lavaanCache,
                                control      = control)
-            lavaanModel <- setModelParameters(lavaanModel, x = x)
+            lavaanModel <- setModelParameters(lavaanModel, x = x,
+                             estimator=lavaanOptions$estimator)
         }
         if(!is.null(attr(x, "con.jac"))) 
             lavaanModel@con.jac <- attr(x, "con.jac")
@@ -640,7 +662,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "fx") <- 
             computeObjective(lavaanModel, samplestats = lavaanSampleStats, 
                              X=lavaanData@X, cache = lavaanCache,
-                             estimator = lavaanOptions$estimator)
+                             estimator = lavaanOptions$estimator,
+                             link = lavaanOptions$link)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -714,16 +737,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
         }
 
-        # 3. is THETA positive definite
+        # 3. is THETA positive definite (but only for numeric variables)
         THETA <- computeTHETA(lavaanModel)
-        for(g in 1:lavaanData@ngroups) {
-                txt.group <- ifelse(lavaanData@ngroups > 1L,
-                                    paste("in group", g, ".", sep=""), "")
-                eigvals <- eigen(THETA[[g]], symmetric=TRUE,
-                                 only.values=TRUE)$values
-                if(any(eigvals < -1 * .Machine$double.eps^(3/4)))
-                    warning("lavaan WARNING: residual covariance matrix is not positive definite;", txt.group, " use inspect(fit,\"cov.ov\") to investigate.")
-            }
+        for(g in 1:lavaanData@ngroups) { 
+                num.idx <- lavaanModel@num.idx[[g]]
+                if(length(num.idx) > 0L) {
+                    txt.group <- ifelse(lavaanData@ngroups > 1L,
+                                        paste("in group", g, ".", sep=""), "")
+                    eigvals <- eigen(THETA[[g]][num.idx,num.idx,drop=FALSE], 
+                                     symmetric=TRUE,
+                                     only.values=TRUE)$values
+                    if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
+                        warning("lavaan WARNING: residual covariance matrix is not positive definite;", txt.group, " use inspect(fit,\"cov.ov\") to investigate.")
+                    }
+                }
+        }
     }
 
     # 10. construct lavaan object
@@ -754,7 +782,7 @@ cfa <- sem <- function(model = NULL, data = NULL,
     group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", group.w.free = FALSE,
     cluster = NULL, constraints = "",
-    estimator = "default", likelihood = "default", 
+    estimator = "default", likelihood = "default", link = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
@@ -790,7 +818,7 @@ growth <- function(model = NULL, data = NULL,
     group = NULL, group.label = NULL,
     group.equal = "", group.partial = "", group.w.free = FALSE,
     cluster = NULL, constraints = "",
-    estimator = "default", likelihood = "default", 
+    estimator = "default", likelihood = "default", link = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,

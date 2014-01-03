@@ -398,6 +398,19 @@ setLavaanOptions <- function(opt = formals(lavaan))
             opt$se <- "standard"
         if(opt$test != "none") opt$test <- "standard"
         #opt$missing <- "listwise"
+        if(opt$link == "default") {
+            opt$link <- "logit"
+        } else if(opt$link %in% c("logit","probit")) {
+            # nothing to do
+        } else {
+            stop("lavaan ERROR: link must be `logit' or `probit'")    
+        }
+        # check for parameterization
+        if(opt$parameterization == "default") {
+            opt$parameterization <- "mml"
+        } else {
+            stop("lavaan WARNING: parameterization argument is ignored if estimator = MML")
+        }
     } else if(opt$estimator == "none") {
         if(opt$se == "default") {
             opt$se <- "none"
@@ -537,7 +550,7 @@ setLavaanOptions <- function(opt = formals(lavaan))
     if(opt$parameterization == "default") {
         # for now, default is always delta
         opt$parameterization <- "delta"
-    } else if(opt$parameterization %in% c("delta", "theta")) {
+    } else if(opt$parameterization %in% c("delta", "theta", "mml")) {
         # nothing to do
     } else {
         stop("lavaan ERROR: argument `parameterization' should be `delta' or `theta'")

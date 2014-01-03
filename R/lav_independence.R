@@ -132,7 +132,8 @@ independence.model.fit <- function(object) {
                            cache        = lavaanCache,
                            options      = lavaanOptions)
                            # control???
-        lavaanModel <- setModelParameters(lavaanModel, x = x)
+        lavaanModel <- setModelParameters(lavaanModel, x = x,
+                          estimator=lavaanOptions$estimator)
         if(!is.null(attr(x, "con.jac")))
             lavaanModel@con.jac <- attr(x, "con.jac")
     }

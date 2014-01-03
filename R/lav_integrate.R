@@ -55,7 +55,7 @@ lav_gauss_hermite_xw <- function(n = 100L, revert = FALSE) {
 # sum( f(XW$x) * XW$w ) = 0.2227559
 #
 lav_gauss_hermite_xw_dnorm <- function(n = 100L, revert = FALSE, 
-                                       mean = 0, sd = 1) {
+                                       mean = 0, sd = 1, ndim = 1L) {
     XW <- lav_gauss_hermite_xw(n = n, revert = revert)
 
     # scale/shift x
@@ -63,6 +63,16 @@ lav_gauss_hermite_xw_dnorm <- function(n = 100L, revert = FALSE,
 
     # scale w
     w <- XW$w / sqrt(pi)
- 
+
+    if(ndim > 1L) {
+        # cartesian product
+        x <- as.matrix(expand.grid(rep(list(x), ndim), KEEP.OUT.ATTRS = FALSE))
+        w <- as.matrix(expand.grid(rep(list(w), ndim), KEEP.OUT.ATTRS = FALSE))
+        w <- apply(w, 1, prod)
+    } else {
+        x <- as.matrix(x)
+        w <- as.matrix(w)
+    }
+
     list(x=x, w=w)
 }

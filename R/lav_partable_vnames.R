@@ -46,6 +46,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                    "lv.x",        # (pure) exogenous variables
                    "lv.y",        # (pure) endogenous variables
                    "lv.nox",      # non-exogenous latent variables
+                   "lv.nonnormal",# latent variables with non-normal indicators
      
                    "eqs.y",       # y's in regression
                    "eqs.x"        # x's in regression
@@ -91,6 +92,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     OUT$lv.x         <- vector("list", length=ngroups)
     OUT$lv.y         <- vector("list", length=ngroups)
     OUT$lv.nox       <- vector("list", length=ngroups)
+    OUT$lv.nonnormal <- vector("list", length=ngroups)
 
     OUT$eqs.y        <- vector("list", length=ngroups)
     OUT$eqs.x        <- vector("list", length=ngroups)
@@ -115,7 +117,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # eqs.y
-        if(!(length(type) == 1L && type %in% c("lv", "lv.regular"))) {
+        if(!(length(type) == 1L && 
+           type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
             eqs.y <- unique( partable$lhs[ partable$group == g  &
                                            partable$op == "~"     ] )
         }
@@ -126,7 +129,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
        
         # eqs.x
-        if(!(length(type) == 1L && type %in% c("lv", "lv.regular", "lv.x"))) {
+        if(!(length(type) == 1L && 
+           type %in% c("lv", "lv.regular", "lv.nonnormal","lv.x"))) {
             eqs.x <- unique( partable$rhs[ partable$group == g  &
                                            (partable$op == "~"  |
                                             partable$op == "<~")  ] )
@@ -138,14 +142,15 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # v.ind -- indicators of latent variables
-        if(!(length(type) == 1L && type %in% c("lv", "lv.regular"))) {
+        if(!(length(type) == 1L && 
+           type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
             v.ind <- unique( partable$rhs[ partable$group == g  &
                                            partable$op == "=~"    ] )
         }
 
         # ov.*
         if(!(length(type) == 1L && 
-             type %in% c("lv", "lv.regular", "lv.x","lv.y"))) {
+             type %in% c("lv", "lv.regular", "lv.nonnormal", "lv.x","lv.y"))) {
             # 1. indicators, which are not latent variables themselves
             ov.ind <- v.ind[ !v.ind %in% lv.names ]
             # 2. dependent ov's
@@ -159,7 +164,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         # but the main purpose here is to 'order' the observed variables
         # according to 'type' (indicators, ov.y, ov.x, orphans)
         if(!(length(type) == 1L &&
-             type %in% c("lv", "lv.regular", "lv.x","lv.y"))) {
+             type %in% c("lv", "lv.regular", "lv.nonnormal", "lv.x","lv.y"))) {
 
             # 4. orphaned covariances
             ov.cov <- c(partable$lhs[ partable$group == g &
@@ -185,7 +190,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # exogenous `x' covariates
-        if(any(c("ov.x","ov.nox","ov.num","th.mean") %in% type)) {
+        if(any(type %in% c("ov.x","ov.nox","ov.num",
+                           "th.mean","lv.nonnormal"))) {
             # correction: is any of these ov.names.x mentioned as a variance,
             #             covariance, or intercept? 
             # this should trigger a warning in lavaanify()
@@ -241,7 +247,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # ov's withouth ov.x
-        if(any(c("ov.nox", "ov.num", "th.mean") %in% type)) {
+        if(any(type %in% c("ov.nox", "ov.num", "th.mean", "lv.nonnormal"))) {
             ov.names.nox <- ov.names[! ov.names %in% ov.names.x ]
         }
 
@@ -251,7 +257,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         } 
 
         # ov's strictly ordered
-        if(any(c("ov.ord", "th", "th.mean", "ov.num") %in% type)) {
+        if(any(type %in% c("ov.ord", "th", "th.mean", 
+                           "ov.num", "lv.nonnormal"))) {
             tmp <- unique(partable$lhs[ partable$group == g &
                                         partable$op == "|" ])
             ord.names <- ov.names[ ov.names %in% tmp ]
@@ -262,8 +269,31 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # ov's strictly numeric (but no x)
+        if(any(type %in% c("ov.num", "lv.nonnormal"))) {
+            ov.num <- ov.names.nox[! ov.names.nox %in% ord.names ]
+        }
+
         if("ov.num" %in% type) {
-            OUT$ov.num[[g]] <-  ov.names.nox[! ov.names.nox %in% ord.names ]
+            OUT$ov.num[[g]] <- ov.num
+        }
+
+        # nonnormal lv's
+        if("lv.nonnormal" %in% type) {
+            # regular lv's
+            lv.reg <- unique( partable$lhs[ partable$group == g &
+                                            partable$op == "=~"   ] )
+            out <- unlist( lapply(lv.reg, function(x) {
+                # get indicators for this lv
+                tmp.ind <- unique( partable$rhs[ partable$group == g &
+                                                 partable$op == "=~" &
+                                                 partable$lhs == x     ] )
+                if(!all(tmp.ind %in% ov.num)) {
+                    return(x)
+                } else {
+                    return(character(0))
+                }
+                }) )
+            OUT$lv.nonnormal[[g]] <- out
         }
 
         if(any(c("th","th.mean") %in% type)) {

@@ -17,8 +17,6 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
        class.flag <- FALSE
     }
 
-    # reference: Muthen technical Appendix 5
-
     # collect info from the lavaan slots
     GLIST <- object@Model@GLIST
 

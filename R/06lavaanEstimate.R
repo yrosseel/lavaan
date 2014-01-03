@@ -56,7 +56,7 @@ getModelParameters <- function(object, GLIST=NULL, type="free",
 }
 
 # warning: this will make a copy of object
-setModelParameters <- function(object, x=NULL) {
+setModelParameters <- function(object, x=NULL, estimator = "ML") {
 
     tmp <- object@GLIST
     for(mm in 1:length(object@GLIST)) {
@@ -73,16 +73,25 @@ setModelParameters <- function(object, x=NULL) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
-                if(object@parameterization == "delta") {
-                    tmp[mm.in.group] <- 
+                if(estimator %in% c("WLS","DWLS","ULS","PML")) {
+                    if(object@parameterization == "delta") {
+                        tmp[mm.in.group] <- 
                         setResidualElements.LISREL(MLIST = tmp[mm.in.group],
                             num.idx = object@num.idx[[g]],
                             ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
                             ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]])
-                } else if(object@parameterization == "theta") {
-                    tmp[mm.in.group] <-
+                    } else if(object@parameterization == "theta") {
+                        tmp[mm.in.group] <-
                         setDeltaElements.LISREL(MLIST = tmp[mm.in.group],
                             num.idx = object@num.idx[[g]])
+                    }
+                } else if(estimator %in% c("MML", "FML")) {
+                    ttt <- diag(tmp[mm.in.group]$theta)
+                    diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
+                    if(length(object@num.idx[[g]]) > 0L) {
+                        diag(tmp[mm.in.group]$theta)[ object@num.idx[[g]] ] <-
+                            ttt[ object@num.idx[[g]] ]
+                    }
                 }
             }
         } else {
@@ -758,7 +767,8 @@ computeEY <- function(object, GLIST=NULL, samplestats=NULL) {
 computeObjective <- function(object, GLIST=NULL, 
                              samplestats=NULL, X = NULL,
                              cache=NULL,
-                             estimator="ML", verbose=FALSE, forcePD=TRUE,
+                             estimator="ML", link="logit",
+                             verbose=FALSE, forcePD=TRUE,
                              debug=FALSE) {
 
     # state or final?
@@ -858,7 +868,10 @@ computeObjective <- function(object, GLIST=NULL,
             group.fx <- estimator.MML(object    = object,
                                       g         = g,
                                       GLIST     = GLIST,
-                                  sample.mean = samplestats@sample.mean[[g]],
+                                      Sigma.hat = Sigma.hat[[g]],
+                                      Mu.hat    = Mu.hat[[g]],
+                                      sample.mean = samplestats@mean[[g]],
+                                      link      = link,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
@@ -1546,6 +1559,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
                           options=NULL, cache=list(), control=list()) {
 
     estimator     <- options$estimator
+    link          <- options$link
     verbose       <- options$verbose
     debug         <- options$debug
     ngroups       <- samplestats@ngroups
@@ -1578,8 +1592,8 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         fx <- computeObjective(object, GLIST=GLIST, 
                                samplestats=samplestats, X=X,
                                cache=cache,
-                               estimator=estimator, verbose=verbose,
-                               forcePD=forcePD)	
+                               estimator=estimator, link = link,
+                               verbose=verbose, forcePD=forcePD)	
         if(debug || verbose) { 
             cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
         }
