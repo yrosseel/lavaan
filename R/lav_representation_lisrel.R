@@ -1512,6 +1512,46 @@ derivative.gw.LISREL <- function(m="gw",
     DX
 }
 
+# dlambda/dx -- per model matrix
+derivative.lambda.LISREL <- function(m="lambda", 
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]), 
+                                 MLIST=NULL) {
+
+    LAMBDA <- MLIST$lambda
+
+    # shortcut for empty matrices
+    if(m != "lambda") {
+        return( matrix(0.0, nrow=length(LAMBDA), ncol=length(idx) ) )
+    } else {
+        # m == "lambda"
+        DX <- diag(1, nrow=length(LAMBDA), ncol=length(LAMBDA))
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
+# dtheta/dx -- per model matrix
+derivative.theta.LISREL <- function(m="theta", 
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]), 
+                                 MLIST=NULL) {
+
+    THETA <- MLIST$theta
+
+    # shortcut for empty matrices
+    if(m != "theta") {
+        return( matrix(0.0, nrow=length(THETA), ncol=length(idx) ) )
+    } else {
+        # m == "theta"
+        DX <- diag(1, nrow=length(THETA), ncol=length(THETA))
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
 
 # MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
 # vech.idx <- lavaan:::vech.idx; vechru.idx <- lavaan:::vechru.idx

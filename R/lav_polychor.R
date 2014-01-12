@@ -290,7 +290,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                 return(0.0)
             }
             # 2. equal margins (th1 = th2 = 0)
-            if(th.y1[1] == th.y2[1]) {
+            if(th.y1[1] == 0L && th.y2[1] == 0L) {
                 # see eg Brown & Benedetti 1977 eq 2
                 return( - cos( 2*pi*freq[1,1]/sum(freq) ) )
             }

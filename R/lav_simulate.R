@@ -306,7 +306,19 @@ Kurtosis <- function(x., N1=TRUE) {
     kurtosis
 }
 
-fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
+# NOTE: as pointed out in Fleishman (1978), a real solution does not 
+# always exist (for a/b/c/d) for all values of skew/kurtosis
+#
+# for example: skew = 3, only valid if kurtosis > 14 (approximately)
+#
+# fleishman eq 21 suggests: skew^2 < 0.0629576*kurtosis + 0.0717247
+# see figure 1 page 527 
+#
+# note also that the a/b/c/d solution is not unique, although this seems
+# not to matter for generating the data
+
+# Fleishman (1978) cubic transformation method
+lav_fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
 
     system.function <- function(x, skewness, kurtosis) {
         b=x[1L]; c=x[2L]; d=x[3L]
@@ -320,7 +332,7 @@ fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
 
     out <- nlminb(start=c(1,0,0), objective=system.function,
                   scale=10,
-                  control=list(trace=ifelse(verbose,1,0)),
+                  control=list(trace=ifelse(verbose,1,0), rel.tol=1e-10),
                   skewness=skewness, kurtosis=kurtosis)
     if(out$convergence != 0) warning("no convergence")
     b <- out$par[1L]; c <- out$par[2L]; d <- out$par[3L]; a <- -c
@@ -375,17 +387,21 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
     # number of variables
     nvar <- ncol(COR)
     # check skewness
-    if(length(skewness) == nvar) {
+    if(is.null(skewness)) {
+        SK <- rep(0, nvar)
+    } else if(length(skewness) == nvar) {
         SK <- skewness
-    } else if(length(skewness == 1L)) {
+    } else if(length(skewness) == 1L) {
         SK <- rep(skewness, nvar)
     } else {
         stop("skewness has wrong length")
     }
 
-    if(length(kurtosis) == nvar) {
+    if(is.null(kurtosis)) {
+        KU <- rep(0, nvar)
+    } else if(length(kurtosis) == nvar) {
         KU <- kurtosis
-    } else if(length(skewness == 1L)) {
+    } else if(length(kurtosis) == 1L) {
         KU <- rep(kurtosis, nvar)
     } else {
         stop("kurtosis has wrong length")

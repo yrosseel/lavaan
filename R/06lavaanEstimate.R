@@ -868,13 +868,8 @@ computeObjective <- function(object, GLIST=NULL,
             group.fx <- estimator.MML(object    = object,
                                       g         = g,
                                       GLIST     = GLIST,
-                                      Sigma.hat = Sigma.hat[[g]],
-                                      Mu.hat    = Mu.hat[[g]],
                                       sample.mean = samplestats@mean[[g]],
                                       link      = link,
-                                      TH        = TH[[g]],
-                                      th.idx    = th.idx[[g]],
-                                      num.idx   = num.idx[[g]],
                                       X         = X[[g]],
                                       cache     = cache[[g]])
         } else {
@@ -1215,18 +1210,104 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
             Delta.group[ ,x.el.idx[[mm]]] <- DELTA
         } # mm
 
-        save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
+        # save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
 
         # if type == "free" take care of equality constraints
         if(type == "free" && object@eq.constraints) {
             Delta.group <- Delta.group %*% object@eq.constraints.K
         }
   
-        Delta.eq <- Delta.group
-        save(Delta.eq, file=paste0("delta_NO_EQ",g,".Rdata"))
+        #Delta.eq <- Delta.group
+        # save(Delta.eq, file=paste0("delta_NO_EQ",g,".Rdata"))
 
         Delta[[g]] <- Delta.group
 
+    } # g
+
+    Delta
+}
+
+computeDeltaDx <- function(object, GLIST=NULL, target="lambda") {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- object@GLIST
+
+    representation   <- object@representation
+    nmat             <- object@nmat
+    ngroups          <- object@ngroups
+    num.idx          <- object@num.idx
+    th.idx           <- object@th.idx
+
+    # number of columns in DELTA + m.el.idx/x.el.idx
+    type <- "free"
+    #if(type == "free") {
+        NCOL <- object@nx.unco
+        m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
+        for(mm in 1:length(GLIST)) {
+            m.el.idx[[mm]] <- object@m.unco.idx[[mm]]
+            x.el.idx[[mm]] <- object@x.unco.idx[[mm]]
+            # handle symmetric matrices
+            if(object@isSymmetric[mm]) {
+                # since we use 'x.unco.idx', only symmetric elements
+                # are duplicated (not the equal ones, only in x.free.unco)
+                dix <- duplicated(x.el.idx[[mm]])
+                if(any(dix)) {
+                    m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]
+                    x.el.idx[[mm]] <- x.el.idx[[mm]][!dix]
+                }
+            }
+        }
+    #} else {
+    #    NCOL <- sum(unlist(lapply(x.el.idx, function(x) length(unique(x)))))
+    #}
+
+    # compute Delta per group
+    Delta <- vector("list", length=ngroups)
+    for(g in 1:ngroups) {
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        Delta.group <- NULL
+        for(mm in mm.in.group) {
+            mname <- names(object@GLIST)[mm]
+
+            # skip empty ones
+            if(!length(m.el.idx[[mm]])) next
+
+            # get Delta columns for this model matrix
+            if(representation == "LISREL") {
+                if(target == "lambda") {
+                    DELTA <- derivative.lambda.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "th") {
+                    DELTA <- derivative.th.LISREL(m=mname, th.idx = th.idx[[g]],
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ],
+                               delta=TRUE)
+                } else if(target == "mu") {
+                    DELTA <- derivative.mu.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "theta") {
+                    DELTA <- derivative.theta.LISREL(m=mname, 
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "sigma") {
+                    DELTA <- derivative.sigma.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ],
+                               delta=TRUE)
+                } else {
+                    stop("lavaan ERROR: target ", target, " not implemented yet")
+                }
+
+                # initialize?
+                if(is.null(Delta.group)) {
+                    Delta.group <- matrix(0, nrow=nrow(DELTA), ncol=NCOL)
+                }
+                Delta.group[ ,x.el.idx[[mm]]] <- DELTA
+            }
+        } # mm
+
+        if(type == "free" && object@eq.constraints) {
+            Delta.group <- Delta.group %*% object@eq.constraints.K
+        }
+
+        Delta[[g]] <- Delta.group
     } # g
 
     Delta

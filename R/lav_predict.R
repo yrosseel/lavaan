@@ -1,7 +1,8 @@
 # lavPredict() contains a collection of `predict' methods
-# the unifying theme is that they all estimate or rely on the factor scores
+# the unifying theme is that they all rely on the (unknown, to be estimated)
+# or (known, apriori specified) values for the latent variables
 #
-# lv: factor scores
+# lv: lavtent variables (aka `factor scores')
 # ov: predict linear part of y_i
 #
 # first version: YR 11 June 2013
@@ -58,7 +59,7 @@ lavPredict <- function(object, type="lv", newdata=NULL, method="EBM",
 
     if(type == "lv") {
         if(NORMAL && method == "EBM") {
-            out <- lav_predict_eta_normal(object = object, 
+            out <- lav_predict_eta_normal(lavobject = object, 
                 data.obs = data.obs, eXo = eXo, label = label,
                 remove.dummy.lv = TRUE)
         } else {
@@ -178,32 +179,41 @@ lav_predict_eta_ebm <- function(object = NULL, data.obs = NULL,
 }
 
 ## factor scores - normal case
-lav_predict_eta_normal <- function(object = NULL, data.obs = NULL, 
-                                   eXo = NULL, label = FALSE,
-                                   remove.dummy.lv = FALSE) {
+lav_predict_eta_normal <- function(lavobject = NULL, 
+                                   # sub objects
+                                   lavmodel = NULL, lavdata = NULL, 
+                                   lavsamplestats = NULL,
+                                   # new data
+                                   data.obs = NULL, eXo = NULL, 
+                                   # options
+                                   label = FALSE, remove.dummy.lv = FALSE) {
+
+    # full object?
+    if(inherits(lavobject, "lavaan")) {
+        lavmodel       <- lavobject@Model
+        lavdata        <- lavobject@Data
+        lavsamplestats <- lavobject@SampleStats
+    }
 
     if(is.null(data.obs)) {
-        data.obs <- object@Data@X
+        data.obs <- lavdata@X
     }
     if(is.null(eXo)) {
-        eXo <- object@Data@eXo
+        eXo <- lavdata@eXo
     }
 
-    G <- object@Data@ngroups
-    nmat <- object@Model@nmat
-    FS <- vector("list", length=G)
-   
-    Sigma.hat <- computeSigmaHat(object@Model)
+    Sigma.hat <- computeSigmaHat(lavmodel)
     Sigma.hat.inv <- lapply(Sigma.hat, solve)
-    VETA <- computeVETA(object@Model, samplestats=object@SampleStats)
-    EETA <- computeEETA(object@Model, samplestats=object@SampleStats)
-    EY <- computeEY(object@Model, samplestats=object@SampleStats)
-    LAMBDA <- computeLAMBDA(object@Model, remove.dummy.lv=FALSE)
+    VETA   <- computeVETA(  lavmodel, samplestats = lavsamplestats)
+    EETA   <- computeEETA(  lavmodel, samplestats = lavsamplestats)
+    EY     <- computeEY(    lavmodel, samplestats = lavsamplestats)
+    LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
      
-    for(g in 1:G) {
+    FS <- vector("list", length=lavdata@ngroups)
+    for(g in 1:lavdata@ngroups) {
         nfac <- ncol(VETA[[g]])
         if(nfac == 0L) {
-            FS[[g]] <- matrix(0, object@Data@nobs[[g]], nfac)
+            FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
             next
         }
 
@@ -214,25 +224,23 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
         # factor score coefficient matrix 'C'
         FSC = VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]]
 
-        RES <- sweep(data.obs[[g]], 2, STATS=EY[[g]], FUN="-")
-        FS.g <- sweep(RES %*% t(FSC), 2, STATS=EETA[[g]], FUN="+")
+        RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
+        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
 
         if(label) {
-            lambda.idx <- which(names(object@Model@GLIST) == "lambda")[g]
-            colnames(FS.g) <- object@Model@dimNames[[lambda.idx]][[2]]
+            lambda.idx <- which(names(lavmodel@GLIST) == "lambda")[g]
+            colnames(FS.g) <- lavmodel@dimNames[[lambda.idx]][[2]]
         }
 
         if(remove.dummy.lv) {
             # remove dummy latent variables
-            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                        object@Model@ov.x.dummy.lv.idx[[g]])
+            lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                        lavmodel@ov.x.dummy.lv.idx[[g]])
             if(length(lv.idx) > 0L) {
                 FS.g <- FS.g[, -lv.idx, drop=FALSE]
             }
         }
-
         FS[[g]] <- FS.g
-
     }
 
     FS
@@ -242,35 +250,36 @@ lav_predict_eta_normal <- function(object = NULL, data.obs = NULL,
 # predicted value for response y*_i, conditional on the predicted latent
 # variable scores
 # for all y*_i -> return [nobs x nvar] matrix per group
-lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
+lav_predict_yhat <- function(lavobject = NULL,
+                             # sub objects
+                             lavmodel = NULL, lavdata = NULL,
+                             lavsamplestats = NULL,
+                             # new data
+                             data.obs = NULL, eXo = NULL,
+                             # ETA values
                              ETA = NULL,
+                             # options
                              method = "EBM", label = FALSE) {
-
     # measurement part
     # y*_i = nu + lambda eta_i + K x_i + epsilon_i
     # 
-    # where eta_i = predict(fit) = factor scores
+    # where eta_i = latent variable value for i (either given or from predict)
 
-    if(is.null(data.obs)) {
-        data.obs <- object@Data@X
+    # full object?
+    if(inherits(lavobject, "lavaan")) {
+        lavmodel       <- lavobject@Model
+        lavdata        <- lavobject@Data
+        lavsamplestats <- lavobject@SampleStats
     }
-    if(is.null(eXo)) {
-        eXo <- object@Data@eXo
-    }
-    G <- object@Data@ngroups
-    nmat <- object@Model@nmat
-    YHAT <- vector("list", length=G)
 
-    # EETA only needed if meanstructure=FALSE
-    EETA <- computeEETA(object@Model, samplestats=object@SampleStats)
-
-    # normal case?
-    NORMAL <- all(object@Data@ov$type == "numeric")
-
-    # we need the factor scores (per groups)
+    # do we get value for ETA? If not, we use `predict' to compute
+    # plausible values
     if(is.null(ETA)) {
+        # normal case?
+        NORMAL <- all(lavdata@ov$type == "numeric")
+ 
         if(NORMAL && method == "EBM") {
-            ETA <- lav_predict_eta_normal(object = object,
+            ETA <- lav_predict_eta_normal(lavobject = object,
                 data.obs = data.obs, eXo = eXo, label = label,
                 remove.dummy.lv=TRUE)
         } else if(method == "EBM") {
@@ -284,19 +293,20 @@ lav_predict_yhat <- function(object = NULL, data.obs = NULL, eXo = NULL,
         stopifnot( nrow(data.obs) == nrow(ETA) )
     }
 
-    for(g in 1:G) {
-        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-        MLIST <- object@Model@GLIST[ mm.in.group ]
+    YHAT <- vector("list", length=lavdata@ngroups)
+    for(g in 1:lavdata@ngroups) {
+        mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
+        MLIST <- lavmodel@GLIST[ mm.in.group ]
 
         if(object@Options$representation == "LISREL") {
             YHAT.g <- computeYHATx.LISREL(MLIST=MLIST,
-                          eXo=object@Data@eXo[[g]], 
+                          eXo=lavdata@eXo[[g]], 
                           ETA=ETA[[g]], 
-                          sample.mean=object@SampleStats@mean[[g]],
-                          ov.y.dummy.ov.idx=object@Model@ov.y.dummy.ov.idx[[g]],
-                          ov.x.dummy.ov.idx=object@Model@ov.x.dummy.ov.idx[[g]],
-                          ov.y.dummy.lv.idx=object@Model@ov.y.dummy.lv.idx[[g]],
-                          ov.x.dummy.lv.idx=object@Model@ov.x.dummy.lv.idx[[g]])
+                          sample.mean=lavsamplestats@mean[[g]],
+                          ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx=lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]])
         } else {
             stop("lavaan ERROR: representation ", object@options$representation,                 " not supported yet.")
         }

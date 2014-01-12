@@ -148,6 +148,14 @@ diag.idx <- function(n = 1L) {
     1L + 0L:(n-1L)*(n+1L)
 }
 
+# return the *vector* indices of the diagonal elements of the LOWER part
+# of a symmatrix matrix of size 'n'
+diagh.idx <- function(n = 1L) {
+    if(n < 1L) return(integer(0L))
+    if(n == 1L) return(1L)
+    c(1L, cumsum(n:2L) + 1L)
+}
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)

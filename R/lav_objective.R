@@ -303,165 +303,20 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 }
 
 estimator.MML <- function(object    = NULL,    # object
-                          Sigma.hat = NULL,
-                          Mu.hat    = NULL,
                           GLIST     = NULL,
                           g         = 1L,      # group
                           link      = "logit",
                           sample.mean = NULL,
-                          TH        = NULL,    # model-based thresholds + means
-                          th.idx    = NULL,    # threshold idx per variable
-                          num.idx   = NULL,    # which variables are numeric
                           X         = NULL,    # raw data
                           cache     = NULL) {  # patterns
 
-    # YR 18 dec 2013
-    # marginal maximum likelihood
-    #  - 18 dec 2013: 1 factor only, ordered only, patterned only (=basic IRT)
-    #  - 19 dec 2013: mix numeric + ordered items
-    #  - 23 dec 2013: multiple (correlated) factors
 
-    nobs <- nrow(X); nvar <- ncol(X)
-    GH <- cache$GH; nGH <- nrow(GH$x)
-    nmat <- object@nmat
-    mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-    MLIST <- GLIST[ mm.in.group ]
-    THETA <- computeTHETA(object, GLIST=GLIST)[[g]]
-
-    # ordered?
-    ord.idx <- unique( th.idx[th.idx > 0L] )
-
-    # pattern or observations?
-    patterns <- FALSE
-    if(length(num.idx) == 0L && !is.null(cache$pat)) {
-        PAT <- cache$pat; npatterns <- nrow(PAT)
-        freq <- as.numeric( rownames(PAT) )
-        patterns <- TRUE
-        SUM.LOG.FY <- matrix(0, nrow=nGH, ncol=npatterns)
-    } else {
-        SUM.LOG.FY <- matrix(0, nrow=nGH, ncol=nobs)
-    }
-  
-
-    # for now, we only do the NO-X version
-    #
-    # 1) compute per variable, per category, the LOG probability P(Y = c | eta)
-    #    for a range of values for eta (given by the GH nodes)
-    # 2) for each obs/pattern, SUM the log prob for the observed categories 
-    #    for all eta values (GH points)
-    # 3) exponentiate again, and integrate
-    # 4) take log, sum, minus...
-
-
-    # 1a compute yhat* for several values of eta
-    # yhat*_i = nu + lambda eta_i + Kappa x_i + epsilon_i
-    # YHAT = [ GH points x nvar ]
-    nfac <- ncol(GH$x)
-    if(nfac > 1L) {
-        # whitening
-        VETA <- computeVETA.LISREL(MLIST = MLIST)
-        chol.VETA <- chol(VETA)
-        GHx <- GH$x %*% chol.VETA
-    } else {
-        GHx <- GH$x
-    }
-    # the linear predictor (or y*)
-    YHAT <- computeYHATx.LISREL(MLIST  = MLIST, 
-                eXo    = NULL,  # must be NULL, since no X!!
-                ETA    = GHx,
-                sample.mean = sample.mean, 
-                ov.y.dummy.ov.idx = object@ov.y.dummy.ov.idx[[g]],
-                ov.x.dummy.ov.idx = object@ov.x.dummy.ov.idx[[g]],
-                ov.y.dummy.lv.idx = object@ov.y.dummy.lv.idx[[g]],
-                ov.x.dummy.lv.idx = object@ov.x.dummy.lv.idx[[g]])
-
-    # 1b compute LOG Prob/density per variable
-
-    # first, NUMERIC variables
-    if(length(num.idx) > 0L) {
-
-        # no integration needed; we can compute the densities per observation
-        # directly; but how combine with the ordinal?
-        #p.num <- dmnorm(X[,num.idx], mean=sample.mean[num.idx], 
-        #                varcov=Sigma.hat[num.idx, num.idx])
-
-        # use explicit integratation (for now)
-          
-
-
-        #for(n in 1:nGH) {
-        #    # multivariate (slower if THETA is diagonal!)
-        #    log.fy <- dmnorm(X[,num.idx], mean=YHAT[n,num.idx], 
-        #                 varcov=THETA[num.idx, num.idx], log=TRUE)
-        #    SUM.LOG.FY[n,] <- log.fy
-        #}
-        XX <- do.call("rbind", rep(list(X[,num.idx]), nGH))
-        YHH <- matrix(apply(YHAT[,num.idx], 1L, rep, nobs), 
-                      ncol=length(num.idx), byrow=TRUE)
-        TMP <- dmnorm(XX, mean=YHH,varcov=THETA[num.idx, num.idx], log=TRUE)
-        SUM.LOG.FY <- matrix(TMP, nrow=nGH, byrow=TRUE)
-        #SUM.LOG.FY <- matrix(0, nrow=nGH, ncol=nobs)
-
-        #SUM.LOG.FY <- dmnorm(X[,num.idx], mean=YHAT[,num.idx],
-        #                     varcov=THETA[num.idx, num.idx], log=TRUE)
-        #
-        #    # univariate
-        #    #for(v in num.idx) {
-        #    #    theta.v <- sqrt(THETA[v,v])
-        #    #    log.fy <- dnorm(X[,v], mean=YHAT[n,v], sd=theta.v, log=TRUE)
-        #    #    SUM.LOG.FY[n,] <- SUM.LOG.FY[n,] + log.fy
-        #    #}
-        #}
-    }
-
-    # second, ORDERED variables
-    p.ord <- 0
-    for(v in ord.idx) {
-        th.y <- TH[ th.idx == v]; TH.Y <- c(-Inf, th.y, Inf)
-        ncat <- length(th.y) + 1L
-        fy <- matrix(0, nrow=nGH, ncol=ncat)
-        # note: THETA not needed: always 1.0   
-        theta.v <- sqrt(THETA[v,v])
-
-        # for each category
-        for(k in seq_len(ncat)) {
-            if(link == "probit") {
-                fy[, k] = pnorm( (TH.Y[k+1] - YHAT[,v]) / theta.v) -
-                          pnorm( (TH.Y[k  ] - YHAT[,v]) / theta.v)
-            } else if(link == "logit") {
-                fy[, k] = plogis( (TH.Y[k+1] - YHAT[,v]) / theta.v) -
-                          plogis( (TH.Y[k  ] - YHAT[,v]) / theta.v)
-            } else {
-                stop("lavaan ERROR: link must be probit or logit")
-            }
-            # underflow
-            idx <- which(fy < .Machine$double.eps)
-            if(length(idx) > 0L) {
-                fy[idx] <- .Machine$double.eps
-            }
-        }
-        # take log
-        log.fy <- log(fy)
-
-        # now compute for each obs/pat and add
-        # [ nGH x npatter/nobs ]
-        if(patterns) {
-             SUM.LOG.FY <- SUM.LOG.FY + log.fy[, PAT[,v]]
-        } else {
-             SUM.LOG.FY <- SUM.LOG.FY + log.fy[, X[,v]]
-        }
-
-        # 3. exponentiate + integrate
-        if(patterns) {
-            p.all <- rep(t(GH$w) %*% exp(SUM.LOG.FY), freq)
-        } else {
-            p.all <- t(GH$w) %*% exp(SUM.LOG.FY)
-        }
-    } # ordinal
+    # compute likelihood for every observation
+    lik <- lav_est_MML(object = object, GLIST = GLIST, g = g, link = link, 
+                       sample.mean = sample.mean, X = X, cache = cache)
 
     # log + sum over observations
-    logl <- sum( log(p.all) )
-    #logl <- sum( log(p.num * p.all) )
+    logl <- sum( log(lik) )
 
     # function value as returned to the minimizer
     fx <- -logl
