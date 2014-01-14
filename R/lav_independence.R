@@ -76,7 +76,7 @@ independence.model.fit <- function(object) {
     }
 
     # construct
-    lavaanParTable <- 
+    lavpartable <- 
         lav_partable_independence(ov.names      = object@Data@ov.names,
                                   ov            = object@Data@ov,
                                   ov.names.x    = OV.X,
@@ -90,52 +90,53 @@ independence.model.fit <- function(object) {
     # fit?
     do.fit <- TRUE
 
-    # 1. lavaanOptions
-    lavaanOptions <- object@Options
-    lavaanOptions$se      <- "none"
-    lavaanOptions$do.fit  <- do.fit
-    lavaanOptions$verbose <- FALSE
-    lavaanOptions$warn    <- FALSE
+    # 1. lavoptions
+    lavoptions <- object@Options
+    lavoptions$se      <- "none"
+    lavoptions$do.fit  <- do.fit
+    lavoptions$verbose <- FALSE
+    lavoptions$warn    <- FALSE
 
     # 2b. change meanstructure flag?
-    if(any(lavaanParTable$op == "~1")) lavaanOptions$meanstructure <- TRUE
+    if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
     # 3. 
-    lavaanData             <- object@Data
-    lavaanSampleStats      <- object@SampleStats
+    lavdata             <- object@Data
+    lavsamplestats      <- object@SampleStats
 
     # 4. 
     lavaanStart <-
-        lav_start(partable    = lavaanParTable,
-                  samplestats = lavaanSampleStats,
-                  model.type  = lavaanOptions$model.type,
-                  debug       = lavaanOptions$debug)
-    lavaanParTable$start <- lavaanStart
+        lav_start(start.method   = "default",
+                  lavpartable    = lavpartable,
+                  lavsamplestats = lavsamplestats,
+                  model.type     = lavoptions$model.type,
+                  debug          = lavoptions$debug)
+    lavpartable$start <- lavaanStart
 
     # 5. 
-    lavaanModel <-
-        lav_model(partable         = lavaanParTable,
-                  representation   = lavaanOptions$representation,
-                  th.idx           = lavaanSampleStats@th.idx,
-                  parameterization = lavaanOptions$parameterization,
-                  debug            = lavaanOptions$debug)
+    lavmodel <-
+        lav_model(lavpartable      = lavpartable,
+                  representation   = lavoptions$representation,
+                  th.idx           = lavsamplestats@th.idx,
+                  parameterization = lavoptions$parameterization,
+                  debug            = lavoptions$debug)
 
     # cache
-    lavaanCache <- object@Cache
+    lavcache <- object@Cache
 
     # 6.
     x <- VCOV <- TEST <- NULL
     if(do.fit) {
-        x <- lav_model_estimate(lavaanModel,
-                           samplestats  = lavaanSampleStats,
-                           X            = object@Data@X,
-                           cache        = lavaanCache,
-                           options      = lavaanOptions)
-                           # control???
-        lavaanModel <- lav_model_set_parameters(lavaanModel, x = x,
-                          estimator=lavaanOptions$estimator)
+        x <- lav_model_estimate(lavmodel        = lavmodel,
+                                lavsamplestats  = lavsamplestats,
+                                lavdata         = lavdata,
+                                lavcache        = lavcache,
+                                lavoptions      = lavoptions)
+                                # control???
+        lavmodel <- lav_model_set_parameters(lavmodel, x = x,
+                          estimator = lavoptions$estimator)
         if(!is.null(attr(x, "con.jac")))
-            lavaanModel@con.jac <- attr(x, "con.jac")
+            lavmodel@con.jac <- attr(x, "con.jac")
     }
 
     # 7.
@@ -144,36 +145,36 @@ independence.model.fit <- function(object) {
     # NOTE: Mplus 6 BUG??
     # - if estimator = WLSMV, baseline model is NOT using
     #   scaled.shifted, but mean.(var.)adusted!!
-    test.options <- lavaanOptions
+    test.options <- lavoptions
     #if(test.options$test == "scaled.shifted")
     #    test.options$test <- "mean.var.adjusted"
-    TEST <- computeTestStatistic(lavaanModel,
-                                 partable      = lavaanParTable,
-                                 samplestats   = lavaanSampleStats,
-                                 options       = test.options,
-                                 x             = x,
-                                 VCOV          = VCOV,
-                                 cache         = lavaanCache,
-                                 data          = lavaanData)
+    TEST <- lav_model_test(lavmodel         = lavmodel,
+                           lavpartable      = lavpartable,
+                           lavsamplestats   = lavsamplestats,
+                           lavoptions       = test.options,
+                           x                = x,
+                           VCOV             = VCOV,
+                           lavcache         = lavcache,
+                           lavdata          = lavdata)
 
     # 9. collect information about model fit (S4)
-    lavaanFit <- Fit(partable = lavaanParTable,
-                     model    = lavaanModel,
-                     x        = x,
-                     VCOV     = VCOV,
-                     TEST     = TEST)
+    lavfit <- lav_model_fit(lavpartable = lavpartable,
+                            lavmodel    = lavmodel,
+                            x           = x,
+                            VCOV        = VCOV,
+                            TEST        = TEST)
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
                   call        = mc,                     # match.call
                   timing      = timing,                 # list
-                  Options     = lavaanOptions,          # list
-                  ParTable    = lavaanParTable,         # list
-                  Data        = lavaanData,             # S3 class
-                  SampleStats = lavaanSampleStats,      # S4 class
-                  Model       = lavaanModel,            # S4 class
-                  Cache       = lavaanCache,
-                  Fit         = lavaanFit               # S4 class
+                  Options     = lavoptions,          # list
+                  ParTable    = lavpartable,         # list
+                  Data        = lavdata,             # S3 class
+                  SampleStats = lavsamplestats,      # S4 class
+                  Model       = lavmodel,            # S4 class
+                  Cache       = lavcache,
+                  Fit         = lavfit               # S4 class
                  )
 
     lavaan

@@ -1,15 +1,15 @@
 ## FIXME: allow for GAMMA in continuous case
-computeSigmaHat <- function(object, GLIST = NULL, extra = FALSE, 
+computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE, 
                             delta = TRUE, debug = FALSE) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    nmat           <- object@nmat
-    nvar           <- object@nvar
-    ngroups        <- object@ngroups
-    representation <- object@representation
-    categorical    <- object@categorical
+    nmat           <- lavmodel@nmat
+    nvar           <- lavmodel@nvar
+    ngroups        <- lavmodel@ngroups
+    representation <- lavmodel@representation
+    categorical    <- lavmodel@categorical
 
     # return a list
     Sigma.hat <- vector("list", length=ngroups)
@@ -54,15 +54,15 @@ computeSigmaHat <- function(object, GLIST = NULL, extra = FALSE,
 }
 
 ### FIXME:: replace by computeEY (to allow for GAMMA in continuous case)?
-computeMuHat <- function(object, GLIST=NULL) {
+computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    nmat           <- object@nmat
-    ngroups        <- object@ngroups
-    representation <- object@representation
-    meanstructure  <- object@meanstructure
+    nmat           <- lavmodel@nmat
+    ngroups        <- lavmodel@ngroups
+    representation <- lavmodel@representation
+    meanstructure  <- lavmodel@meanstructure
 
     # return a list
     Mu.hat <- vector("list", length=ngroups)
@@ -73,7 +73,7 @@ computeMuHat <- function(object, GLIST=NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
         if(!meanstructure) {
-            Mu.hat[[g]] <- numeric( object@nvar[g] )
+            Mu.hat[[g]] <- numeric( lavmodel@nvar[g] )
         } else
         if(representation == "LISREL") {
             Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = GLIST[ mm.in.group ])
@@ -87,15 +87,15 @@ computeMuHat <- function(object, GLIST=NULL) {
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
-computeTH <- function(object, GLIST=NULL) {
+computeTH <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups <- object@ngroups
-    nmat    <- object@nmat
-    representation <- object@representation
-    th.idx  <- object@th.idx
+    ngroups <- lavmodel@ngroups
+    nmat    <- lavmodel@nmat
+    representation <- lavmodel@representation
+    th.idx  <- lavmodel@th.idx
 
     # return a list
     TH <- vector("list", length=ngroups)
@@ -124,15 +124,15 @@ computeTH <- function(object, GLIST=NULL) {
 
 # PI = slope structure
 # see Muthen 1984 eq 12
-computePI <- function(object, GLIST=NULL) {
+computePI <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
-    fixed.x        <- object@fixed.x
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
+    fixed.x        <- lavmodel@fixed.x
 
     # return a list
     PI <- vector("list", length=ngroups)
@@ -144,7 +144,7 @@ computePI <- function(object, GLIST=NULL) {
         MLIST <- GLIST[ mm.in.group ]
 
         if(!fixed.x) {
-            PI.g <- numeric( object@nvar[g] )
+            PI.g <- numeric( lavmodel@nvar[g] )
         } else
         if(representation == "LISREL") {
             PI.g <- computePI.LISREL(MLIST = MLIST)
@@ -160,15 +160,15 @@ computePI <- function(object, GLIST=NULL) {
 
 
 # GW = group weight
-computeGW <- function(object, GLIST=NULL) {
+computeGW <- function(lavmodel = NULL, GLIST=NULL) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
-    group.w.free   <- object@group.w.free
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
+    group.w.free   <- lavmodel@group.w.free
 
     # return a list
     GW <- vector("list", length=ngroups)
@@ -205,13 +205,13 @@ computeGW <- function(object, GLIST=NULL) {
 #  - same as diag(Sigma.hat) if all Y are continuous)
 #  - 1.0 (or delta^2) if categorical
 #  - if also Gamma, cov.x is used (only if categorical)
-computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
+computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     VY <- vector("list", length=ngroups)
@@ -222,8 +222,8 @@ computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- samplestats@cov.x[[g]]
-        num.idx <- object@num.idx[[g]]
+        cov.x <- lavsamplestats@cov.x[[g]]
+        num.idx <- lavmodel@num.idx[[g]]
 
         if(representation == "LISREL") {
             VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x,
@@ -239,13 +239,13 @@ computeVY <- function(object, GLIST=NULL, samplestats=NULL) {
 }
 
 # THETA: observed (residual) variances
-computeTHETA <- function(object, GLIST=NULL) {
+computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     THETA <- vector("list", length=ngroups)
@@ -259,10 +259,10 @@ computeTHETA <- function(object, GLIST=NULL) {
         if(representation == "LISREL") {
             THETA.g <- MLIST$theta
             # fix theta
-            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                        object@ov.x.dummy.lv.idx[[g]])
-            ov.idx <- c(object@ov.y.dummy.ov.idx[[g]],
-                        object@ov.x.dummy.ov.idx[[g]])
+            lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                        lavmodel@ov.x.dummy.lv.idx[[g]])
+            ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
+                        lavmodel@ov.x.dummy.ov.idx[[g]])
             if(length(ov.idx) > 0L) {
                 THETA.g[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
             }
@@ -279,14 +279,14 @@ computeTHETA <- function(object, GLIST=NULL) {
 
 # V(ETA): latent variances variances/covariances
 # - if conditional=TRUE, ignore all ov.dummy. * and GAMMA
-computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE, 
-                        samplestats=NULL) {
+computeVETA <- function(lavmodel = NULL, GLIST = NULL, 
+                        remove.dummy.lv = FALSE, lavsamplestats = NULL) {
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     ETA <- vector("list", length=ngroups)
@@ -298,8 +298,8 @@ computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE,
         MLIST <- GLIST[ mm.in.group ]
 
         cov.x <- NULL
-        if(!is.null(samplestats)) {
-            cov.x <- samplestats@cov.x[[g]]
+        if(!is.null(lavsamplestats)) {
+            cov.x <- lavsamplestats@cov.x[[g]]
         }
        
         if(representation == "LISREL") {
@@ -307,8 +307,8 @@ computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE,
 
             if(remove.dummy.lv) {
                 # remove all dummy latent variables
-                lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                            object@ov.x.dummy.lv.idx[[g]])
+                lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                            lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(!is.null(lv.idx)) {
                     ETA.g <- ETA.g[-lv.idx, -lv.idx, drop=FALSE]
                 }
@@ -325,13 +325,13 @@ computeVETA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE,
 
 # V(ETA|x_i): latent variances variances/covariances, conditional on x_
 # - this is always (I-B)^-1 PSI (I-B)^-T, after REMOVING lv dummies
-computeVETAx <- function(object, GLIST=NULL) {
+computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     ETA <- vector("list", length=ngroups)
@@ -343,8 +343,8 @@ computeVETAx <- function(object, GLIST=NULL) {
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                        object@ov.x.dummy.lv.idx[[g]])
+            lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                        lavmodel@ov.x.dummy.lv.idx[[g]])
             ETA.g <- computeVETAx.LISREL(MLIST = MLIST, 
                                          lv.dummy.idx = lv.idx)
         } else {
@@ -358,13 +358,13 @@ computeVETAx <- function(object, GLIST=NULL) {
 }
 
 # COV: observed+latent variances variances/covariances
-computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
+computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     COV <- vector("list", length=ngroups)
@@ -375,7 +375,7 @@ computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- samplestats@cov.x[[g]]
+        cov.x <- lavsamplestats@cov.x[[g]]
 
         if(representation == "LISREL") {
             COV.g <- computeCOV.LISREL(MLIST = MLIST, cov.x = cov.x)
@@ -391,15 +391,15 @@ computeCOV <- function(object, GLIST=NULL, samplestats=NULL) {
 
 
 # E(ETA): expectation (means) of latent variables (return vector)
-computeEETA <- function(object, GLIST=NULL, samplestats=NULL, 
-                        remove.dummy.lv=FALSE) {
+computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+                        remove.dummy.lv = FALSE) {
   
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     EETA <- vector("list", length=ngroups)
@@ -412,16 +412,16 @@ computeEETA <- function(object, GLIST=NULL, samplestats=NULL,
 
         if(representation == "LISREL") {
             EETA.g <- computeEETA.LISREL(MLIST, 
-                mean.x=samplestats@mean.x[[g]],
-                sample.mean=samplestats@mean[[g]],
-                ov.y.dummy.lv.idx=object@ov.y.dummy.lv.idx[[g]],
-                ov.x.dummy.lv.idx=object@ov.x.dummy.lv.idx[[g]],
-                ov.y.dummy.ov.idx=object@ov.y.dummy.ov.idx[[g]],
-                ov.x.dummy.ov.idx=object@ov.x.dummy.ov.idx[[g]])
+                mean.x=lavsamplestats@mean.x[[g]],
+                sample.mean=lavsamplestats@mean[[g]],
+                ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]],
+                ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=lavmodel@ov.x.dummy.ov.idx[[g]])
             if(remove.dummy.lv) {
                 # remove dummy
-                lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                                  object@ov.x.dummy.lv.idx[[g]])
+                lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                                  lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(length(lv.dummy.idx) > 0L) {
                     EETA.g <- EETA.g[-lv.dummy.idx]
                 }
@@ -438,15 +438,15 @@ computeEETA <- function(object, GLIST=NULL, samplestats=NULL,
 
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
-computeEETAx <- function(object, GLIST=NULL, samplestats=NULL, eXo=NULL,
-                         remove.dummy.lv=FALSE) {
+computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+                         eXo = NULL, remove.dummy.lv = FALSE) {
   
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     EETAx <- vector("list", length=ngroups)
@@ -460,22 +460,22 @@ computeEETAx <- function(object, GLIST=NULL, samplestats=NULL, eXo=NULL,
         EXO <- eXo[[g]]
         if(is.null(EXO)) {
             # create empty matrix
-            EXO <- matrix(0, samplestats@nobs[[g]], 0L)
+            EXO <- matrix(0, lavsamplestats@nobs[[g]], 0L)
         }
 
         if(representation == "LISREL") {
             EETAx.g <- computeEETAx.LISREL(MLIST, 
                 eXo=EXO,
-                sample.mean=samplestats@mean[[g]],
-                ov.y.dummy.lv.idx=object@ov.y.dummy.lv.idx[[g]],
-                ov.x.dummy.lv.idx=object@ov.x.dummy.lv.idx[[g]],
-                ov.y.dummy.ov.idx=object@ov.y.dummy.ov.idx[[g]],
-                ov.x.dummy.ov.idx=object@ov.x.dummy.ov.idx[[g]])
+                sample.mean=lavsamplestats@mean[[g]],
+                ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
+                ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]],
+                ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
+                ov.x.dummy.ov.idx=lavmodel@ov.x.dummy.ov.idx[[g]])
 
             if(remove.dummy.lv) {
                 # remove dummy
-                lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                                  object@ov.x.dummy.lv.idx[[g]])
+                lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                                  lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(length(lv.dummy.idx) > 0L) {
                     EETAx.g <- EETAx.g[ ,-lv.dummy.idx, drop=FALSE]
                 }
@@ -491,14 +491,15 @@ computeEETAx <- function(object, GLIST=NULL, samplestats=NULL, eXo=NULL,
 }
 
 # return 'regular' LAMBDA
-computeLAMBDA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE) {
+computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL, 
+                          remove.dummy.lv = FALSE) {
   
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     LAMBDA <- vector("list", length=ngroups)
@@ -513,8 +514,8 @@ computeLAMBDA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE) {
             LAMBDA.g <- computeLAMBDA.LISREL(MLIST)
             if(remove.dummy.lv) {
                 # remove dummy
-                lv.dummy.idx <- c(object@ov.y.dummy.lv.idx[[g]],
-                                  object@ov.x.dummy.lv.idx[[g]])
+                lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                                  lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(length(lv.dummy.idx) > 0L) {
                     LAMBDA.g <- LAMBDA.g[,-lv.dummy.idx,drop=FALSE]
                 }
@@ -531,14 +532,14 @@ computeLAMBDA <- function(object, GLIST=NULL, remove.dummy.lv=FALSE) {
 
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
-computeEY <- function(object, GLIST=NULL, samplestats=NULL) {
+computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
   
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups        <- object@ngroups
-    nmat           <- object@nmat
-    representation <- object@representation
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
 
     # return a list
     EY <- vector("list", length=ngroups)
@@ -551,8 +552,8 @@ computeEY <- function(object, GLIST=NULL, samplestats=NULL) {
 
         if(representation == "LISREL") {
             EY.g <- computeEY.LISREL(MLIST = MLIST, 
-                                     mean.x=samplestats@mean.x[[g]],
-                                     sample.mean=samplestats@mean[[g]])
+                                     mean.x=lavsamplestats@mean.x[[g]],
+                                     sample.mean=lavsamplestats@mean[[g]])
         } else {
             stop("only representation LISREL has been implemented for now")
         }

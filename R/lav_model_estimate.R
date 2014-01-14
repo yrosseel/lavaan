@@ -1,15 +1,20 @@
 # model estimation
 
-lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
-                          options=NULL, cache=list(), control=list()) {
+lav_model_estimate <- function(lavmodel       = NULL,
+                               lavsamplestats = NULL,
+                               lavdata        = NULL,
+                               lavoptions     = NULL,
+                               lavcache       = list(),
+                               do.fit         = TRUE,
+                               control        = list()) {
 
-    estimator     <- options$estimator
-    link          <- options$link
-    verbose       <- options$verbose
-    debug         <- options$debug
-    ngroups       <- samplestats@ngroups
+    estimator     <- lavoptions$estimator
+    link          <- lavoptions$link
+    verbose       <- lavoptions$verbose
+    debug         <- lavoptions$debug
+    ngroups       <- lavsamplestats@ngroups
 
-    if(samplestats@missing.flag) { 
+    if(lavsamplestats@missing.flag) {
         group.weight <- FALSE
     } else {
         group.weight <- TRUE
@@ -22,29 +27,33 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
         # current strategy: forcePD is by default FALSE, except
         # if missing patterns are used
-        #if(any(samplestats@missing.flag)) {
+        #if(any(lavsamplestats@missing.flag)) {
         #    forcePD <- TRUE
         #} else {
             forcePD <- FALSE
         #}
 
         # transform variances back
-        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
-        GLIST <- lav_model_x2GLIST(object, x=x)
+        GLIST <- lav_model_x2GLIST(lavmodel, x=x)
 
-        fx <- lav_model_objective(object, GLIST=GLIST, 
-                               samplestats=samplestats, X=X,
-                               cache=cache,
-                               estimator=estimator, link = link,
-                               verbose=verbose, forcePD=forcePD)	
+        fx <- lav_model_objective(lavmodel       = lavmodel, 
+                                  GLIST          = GLIST, 
+                                  lavsamplestats = lavsamplestats, 
+                                  lavdata        = lavdata,
+                                  lavcache       = lavcache,
+                                  estimator      = estimator, 
+                                  link           = link,
+                                  verbose        = verbose, 
+                                  forcePD        = forcePD)
         if(debug || verbose) { 
             cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
         }
         if(debug) {
             cat("Current unconstrained parameter values =\n")
-            tmp.x <- lav_model_get_parameters(object, GLIST=GLIST, type="unco")
+            tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
             print(tmp.x); cat("\n")
             cat("Current free parameter values =\n"); print(x); cat("\n")
         }
@@ -58,18 +67,21 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     first.derivative.param <- function(x, verbose=FALSE, infToMax=FALSE) {
 
         # transform variances back
-        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
-        GLIST <- lav_model_x2GLIST(object, x=x)
+        GLIST <- lav_model_x2GLIST(lavmodel, x=x)
 
-        dx <- computeGradient(object, GLIST=GLIST, samplestats=samplestats,
-                              X=X,
-                              cache=cache,
-                              type="free", 
-                              group.weight=group.weight, ### check me!!
-                              estimator=estimator,
-                              verbose=verbose, forcePD=TRUE)
+        dx <- lav_model_gradient(lavmodel       = lavmodel, 
+                                 GLIST          = GLIST, 
+                                 lavsamplestats = lavsamplestats,
+                                 lavdata        = lavdata,
+                                 lavcache       = lavcache,
+                                 type           = "free", 
+                                 group.weight   = group.weight, ### check me!!
+                                 estimator      = estimator,
+                                 verbose        = verbose, 
+                                 forcePD        = TRUE)
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
@@ -81,7 +93,7 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     first.derivative.param.numerical <- function(x, verbose=FALSE) {
 
         # transform variances back
-        #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
         # numerical approximation using the Richardson method
         npar <- length(x)
@@ -111,16 +123,16 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     }
  
     # starting values
-    start.x <- lav_model_get_parameters(object)
+    start.x <- lav_model_get_parameters(lavmodel)
     if(debug) {
-        cat("start.unco = ", lav_model_get_parameters(object, type="unco"), "\n")
+        cat("start.unco = ", lav_model_get_parameters(lavmodel, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
     }
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
     if(estimator %in% c("ML","PML","FML","MML")) {
-        Sigma.hat <- computeSigmaHat(object, extra=TRUE, debug=options$debug)
+        Sigma.hat <- computeSigmaHat(lavmodel, extra=TRUE, debug=lavoptions$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1, 
@@ -156,7 +168,7 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
     # transforming variances using atan (or another sigmoid function?)
     # FIXME: better approach?
-    #start.x[object@x.free.var.idx] <- atan(start.x[object@x.free.var.idx])
+    #start.x[lavmodel@x.free.var.idx] <- atan(start.x[lavmodel@x.free.var.idx])
 
 
     # first some nelder mead steps? (default = FALSE)
@@ -191,8 +203,8 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     }
 
     # optimizer
-    if(is.null(body(object@ceq.function)) && 
-       is.null(body(object@cin.function)) ) {
+    if(is.null(body(lavmodel@ceq.function)) && 
+       is.null(body(lavmodel@cin.function)) ) {
         if(is.null(control$optim.method)) {
             OPTIMIZER <- "NLMINB"
             #OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
@@ -357,10 +369,10 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                     "abs.tol", "rel.tol")]
         cin <- cin.jac <- ceq <- ceq.jac <- NULL
-        if(!is.null(body(object@cin.function))) cin     <- object@cin.function
-        if(!is.null(body(object@cin.jacobian))) cin.jac <- object@cin.jacobian
-        if(!is.null(body(object@ceq.function))) ceq     <- object@ceq.function
-        if(!is.null(body(object@ceq.jacobian))) ceq.jac <- object@ceq.jacobian
+        if(!is.null(body(lavmodel@cin.function))) cin     <- lavmodel@cin.function
+        if(!is.null(body(lavmodel@cin.jacobian))) cin.jac <- lavmodel@cin.jacobian
+        if(!is.null(body(lavmodel@ceq.function))) ceq     <- lavmodel@ceq.function
+        if(!is.null(body(lavmodel@ceq.jacobian))) ceq.jac <- lavmodel@ceq.jacobian
         trace <- FALSE; if(verbose) trace <- TRUE
         optim.out <- nlminb.constr(start = start.x,
                                    objective=minimize.this.function,
@@ -393,7 +405,7 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     fx <- minimize.this.function(x) # to get "fx.group" attribute
 
     # transform variances back
-    #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
+    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
     attr(x, "converged")  <- converged
     attr(x, "iterations") <- iterations

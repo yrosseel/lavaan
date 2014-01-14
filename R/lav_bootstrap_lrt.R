@@ -164,7 +164,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
         #Get sample statistics
         bootSampleStats <- try(lav_samplestats_from_data(
-                               Data     = NULL, 
+                               lavdata  = NULL, 
                                DataX    = dataX,
                                DataOv        = data@ov,
                                DataOvnames   = data@ov.names,

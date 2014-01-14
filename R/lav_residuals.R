@@ -70,14 +70,15 @@ function(object, type="raw", labels=TRUE) {
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
-            augModel <- lav_model(partable       = augUser,
+            augModel <- lav_model(lavpartable    = augUser,
                                   start          = object@Fit@est,
                                   representation = object@Options$representation,
                                   debug          = object@Options$debug)
-            VarCov <- estimateVCOV(augModel, samplestats = object@SampleStats,
-                                   data = object@Data,
-                                   partable = object@Partable,
-                                   options = object@Options)
+            VarCov <- lav_model_vcov(lavmodel       = augModel, 
+                                     lavsamplestats = object@SampleStats,
+                                     lavdata        = object@Data,
+                                     lavpartable    = object@Partable,
+                                     lavoptions     = object@Options)
             # set cov between free and fixed.x elements to zero
             ###
             ### FIXME: should we not do this on the information level,
@@ -90,11 +91,11 @@ function(object, type="raw", labels=TRUE) {
 
             Delta  <- computeDelta(augModel)
         } else {
-            VarCov <- estimateVCOV(object@Model, 
-                                   data = object@Data,
-                                   partable = object@Partable,
-                                   samplestats = object@SampleStats,
-                                   options = object@Options)
+            VarCov <- lav_model_vcov(lavmodel       = object@Model,
+                                     lavdata        = object@Data,
+                                     lavpartable    = object@Partable,
+                                     lavsamplestats = object@SampleStats,
+                                     lavoptions     = object@Options)
             Delta  <- computeDelta(object@Model)
         }   
     }

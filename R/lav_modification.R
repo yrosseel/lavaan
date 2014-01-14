@@ -93,7 +93,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     Q <- (1/object@SampleStats@ntotal) * E
 
     # list!
-    DX <- computeGradient(object@Model, GLIST=NULL, 
+    DX <- lav_model_gradient(object@Model, GLIST=NULL, 
                           samplestats=object@SampleStats,
                           type="allofthem", 
                           estimator=object@Options$estimator,

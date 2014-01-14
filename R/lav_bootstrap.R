@@ -66,7 +66,7 @@ bootstrapLavaan <- function(object,
                        ...)
 }
 
-# we need an internal version to be called from VCOV and computeTestStatistic
+# we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!
 bootstrap.internal <- function(object       = NULL,
                                data.        = NULL,
@@ -251,7 +251,7 @@ bootstrap.internal <- function(object       = NULL,
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
 
         bootSampleStats <- try(lav_samplestats_from_data(
-                               Data          = NULL,
+                               lavdata       = NULL,
                                DataX         = dataX,
                                DataeXo       = dataeXo,
                                DataOv        = data@ov,

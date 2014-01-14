@@ -1,4 +1,4 @@
-testStatisticSatorraBentler <- function(samplestats=samplestats, 
+testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats, 
                                         E.inv, Delta, WLS.V,
                                         x.idx=list(integer(0))) {
 
@@ -14,15 +14,15 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
     # we write it like this to allow for fixed.x covariates which affect A1
     # and B1
 
-    Gamma <- samplestats@NACOV
+    Gamma <- lavsamplestats@NACOV
     nss <- ncol(Gamma[[1]])
-    ngroups <- samplestats@ngroups
+    ngroups <- lavsamplestats@ngroups
 
     UG.group  <- vector("list", length=ngroups)
     trace.UGamma2 <- numeric(ngroups)
     for(g in 1:ngroups) {
-        fg  <-  samplestats@nobs[[g]]   /samplestats@ntotal
-        fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
+        fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
+        fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
         WLS.Vg  <- WLS.V[[g]] * fg
         Gamma.g <- Gamma[[g]] / fg  ## ?? check this
         Delta.g <- Delta[[g]]
@@ -35,7 +35,7 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(samplestats@cov[[g]])
+            nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
             A1      <- A1[idx,idx]
@@ -93,7 +93,7 @@ testStatisticSatorraBentler <- function(samplestats=samplestats,
     trace.UGamma
 }
 
-testStatisticYuanBentler <- function(samplestats=samplestats,
+testStatisticYuanBentler <- function(lavsamplestats=lavsamplestats,
                                      A1.group=NULL,
                                      B1.group=NULL,
                                      Delta=NULL,
@@ -103,18 +103,18 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
     # we always assume a meanstructure
     meanstructure <- TRUE
 
-    trace.UGamma <- numeric( samplestats@ngroups )
-    trace.h1     <- numeric( samplestats@ngroups )
-    trace.h0     <- numeric( samplestats@ngroups )
+    trace.UGamma <- numeric( lavsamplestats@ngroups )
+    trace.h1     <- numeric( lavsamplestats@ngroups )
+    trace.h0     <- numeric( lavsamplestats@ngroups )
 
-    for(g in 1:samplestats@ngroups) {
+    for(g in 1:lavsamplestats@ngroups) {
         A1 <- A1.group[[g]]
         B1 <- B1.group[[g]]
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(samplestats@cov[[g]])
+            nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
@@ -138,8 +138,8 @@ testStatisticYuanBentler <- function(samplestats=samplestats,
     trace.UGamma
 }
 
-testStatisticYuanBentler.Mplus <- function(samplestats=samplestats, 
-                                           data=data,
+testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats, 
+                                           lavdata=lavdata,
                                            information="observed",
                                            B0.group=NULL,
                                            E.inv=NULL,
@@ -150,23 +150,23 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
 
     # we always assume a meanstructure
     meanstructure <- TRUE
-    ngroups <- samplestats@ngroups
+    ngroups <- lavsamplestats@ngroups
 
-    trace.UGamma <- numeric( samplestats@ngroups )
-    trace.h1     <- numeric( samplestats@ngroups )
-    trace.h0     <- numeric( samplestats@ngroups )
+    trace.UGamma <- numeric( lavsamplestats@ngroups )
+    trace.h1     <- numeric( lavsamplestats@ngroups )
+    trace.h0     <- numeric( lavsamplestats@ngroups )
 
-    for(g in 1:samplestats@ngroups) {
-        # if data is complete, A1.22 is simply 0.5*D'(S.inv x S.inv)D
-        A1 <- compute.A1.sample(samplestats=samplestats, group=g,
+    for(g in 1:lavsamplestats@ngroups) {
+        # if lavdata is complete, A1.22 is simply 0.5*D'(S.inv x S.inv)D
+        A1 <- compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
                                meanstructure=meanstructure,
                                information=information)
-        B1 <- compute.B1.sample(samplestats=samplestats, data=data, group=g)
+        B1 <- compute.B1.sample(lavsamplestats=lavsamplestats, lavdata=lavdata, group=g)
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(samplestats@cov[[g]])
+            nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
             A1 <- A1[idx,idx]
@@ -175,7 +175,7 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
         A1.inv <- solve(A1)
 
         trace.h1[g]     <- sum( B1 * t( A1.inv ) )
-        trace.h0[g]     <- ( samplestats@nobs[[g]]/samplestats@ntotal *
+        trace.h0[g]     <- ( lavsamplestats@nobs[[g]]/lavsamplestats@ntotal *
                              sum( B0.group[[g]] * t(E.inv) ) )
         trace.UGamma[g] <- (trace.h1[g] - trace.h0[g])
     }
@@ -192,29 +192,35 @@ testStatisticYuanBentler.Mplus <- function(samplestats=samplestats,
 
            
 
-computeTestStatistic <- function(object, partable=NULL, samplestats=NULL, 
-                                 options=NULL, x=NULL, VCOV=NULL, cache=NULL,
-                                 data=NULL, control=list()) {
+lav_model_test <- function(lavmodel       = NULL, 
+                           lavpartable    = NULL, 
+                           lavsamplestats = NULL, 
+                           lavoptions     = NULL, 
+                           x              = NULL, 
+                           VCOV           = NULL, 
+                           lavcache       = NULL,
+                           lavdata        = NULL, 
+                           control        = list()) {
 
 
-    mimic       <- options$mimic
-    test        <- options$test
-    information <- options$information
-    estimator   <- options$estimator
+    mimic       <- lavoptions$mimic
+    test        <- lavoptions$test
+    information <- lavoptions$information
+    estimator   <- lavoptions$estimator
 
 
     TEST <- list()
 
     # degrees of freedom
-    df <- lav_partable_df(partable)
+    df <- lav_partable_df(lavpartable)
 
     # handle equality constraints (note: we ignore inequality constraints, 
     # active or not!)
     # we use the rank of con.jac (even if the constraints are nonlinear)
-    if(nrow(object@con.jac) > 0L) {
-        ceq.idx <- attr(object@con.jac, "ceq.idx")
+    if(nrow(lavmodel@con.jac) > 0L) {
+        ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
         if(length(ceq.idx) > 0L) {
-            neq <- qr(object@con.jac[ceq.idx,,drop=FALSE])$rank
+            neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
             df <- df + neq
         }
     }
@@ -235,8 +241,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
     # always compute `standard' test statistic
     ## FIXME: the NFAC is now implicit in the computation of fx...
-    NFAC <- 2 * unlist(samplestats@nobs)
-    if(options$estimator == "ML" && options$likelihood == "wishart") {
+    NFAC <- 2 * unlist(lavsamplestats@nobs)
+    if(lavoptions$estimator == "ML" && lavoptions$likelihood == "wishart") {
         # first divide by two
         NFAC <- NFAC / 2
         NFAC <- NFAC - 1
@@ -278,16 +284,16 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 
     # some require meanstructure (for now)
     if(test %in% c("satorra.bentler", "yuan.bentler") &&
-       !options$meanstructure) {
+       !lavoptions$meanstructure) {
         stop("test (", test, ") requires meanstructure (for now)")
     }
 
     # fixed.x idx
-    x.idx <- vector("list", length=samplestats@ngroups)
-    for(g in 1:samplestats@ngroups) {
-        if(options$fixed.x && estimator == "ML") {
-            x.idx[[g]] <- match(vnames(partable, "ov.x", group=g), 
-                                data@ov.names[[g]])
+    x.idx <- vector("list", length=lavsamplestats@ngroups)
+    for(g in 1:lavsamplestats@ngroups) {
+        if(lavoptions$fixed.x && estimator == "ML") {
+            x.idx[[g]] <- match(vnames(lavpartable, "ov.x", group=g), 
+                                lavdata@ov.names[[g]])
         } else {
             x.idx[[g]] <- integer(0L)
         }
@@ -305,18 +311,17 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
             if(mimic == "Mplus" && estimator == "ML") {
                 # special treatment for Mplus
-                E <- computeExpectedInformationMLM(object, 
-                                                   samplestats=samplestats)
+                E <- computeExpectedInformationMLM(lavmodel = lavmodel,
+                    lavsamplestats=lavsamplestats)
             } else {
-                E <- computeExpectedInformation(object, samplestats=samplestats,
-                                                data=data,
-                                                estimator=estimator,
-                                                extra=TRUE)
+                E <- computeExpectedInformation(lavmodel = lavmodel, 
+                    lavsamplestats = lavsamplestats, lavdata = lavdata,
+                    estimator = estimator, extra = TRUE)
             }
             E.inv <- try(solve(E), silent=TRUE)
             if(inherits(E.inv, "try-error")) {
                 TEST[[2]] <- list(test=test, stat=as.numeric(NA), 
-                    stat.group=rep(as.numeric(NA), samplestats@ngroups),
+                    stat.group=rep(as.numeric(NA), lavsamplestats@ngroups),
                     df=df, refdistr=refdistr, pvalue=as.numeric(NA),
                     scaling.factor=as.numeric(NA))
                 warning("lavaan WARNING: could not compute scaled test statistic\n")
@@ -335,16 +340,16 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 #                augUser$exo[       idx ] <- 0L
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
 #                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-#                augModel <- lav_model(partable       = augUser,
+#                augModel <- lav_model(lavlavpartable       = augUser,
 #                                  start          = lav_model_get_parameters(object, type="user"),
-#                                  representation = object@representation,
+#                                  representation = lavmodel@representation,
 #                                  debug          = FALSE)
 #
 #                Delta <- computeDelta(augModel)
-#                E <- computeExpectedInformationMLM(object, samplestats=samplestats,
+#                E <- computeExpectedInformationMLM(object, lavsamplestats=lavsamplestats,
 #                                                   Delta=Delta)
-#                fixed.x.idx <- max(partable$free) + 1:length(idx)
-#                free.idx    <- 1:max(partable$free)
+#                fixed.x.idx <- max(lavpartable$free) + 1:length(idx)
+#                free.idx    <- 1:max(lavpartable$free)
 #                E[free.idx, fixed.x.idx] <- 0.0
 #                E[fixed.x.idx, free.idx] <- 0.0
 #                E.inv <- solve(E)
@@ -353,7 +358,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 #        } 
 
         trace.UGamma <- 
-            testStatisticSatorraBentler(samplestats = samplestats,
+            testStatisticSatorraBentler(lavsamplestats = lavsamplestats,
                                         E.inv       = E.inv, 
                                         Delta       = Delta, 
                                         WLS.V       = WLS.V, 
@@ -386,7 +391,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
             # that the shift-parameter (b) is weighted (while a is not)??
             # however, the chisq.square per group are different; only
             # the sum seems ok??
-            fg <- unlist(samplestats@nobs)/samplestats@ntotal
+            fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
            
             a <- sqrt(df/trace.UGamma2)
             #dprime <- trace.UGamma^2 / trace.UGamma2
@@ -425,40 +430,42 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         if(is.null(E.inv)) {
             # if se="standard", information is probably expected
             # change it to observed
-            if(options$se != "robust.mlr") information <- "observed"
-            E.inv <- Nvcov.standard(object      = object,
-                                    samplestats = samplestats,
-                                    data        = data,
-                                    estimator   = "ML",
-                                    information = information)
+            if(lavoptions$se != "robust.mlr") information <- "observed"
+            E.inv <- Nvcov.standard(lavmodel       = lavmodel,
+                                    lavsamplestats = lavsamplestats,
+                                    lavdata        = lavdata,
+                                    estimator      = "ML",
+                                    information    = information)
         }
 
         if(mimic == "Mplus" || mimic == "lavaan") {
             if(is.null(B0.group)) {
-                Nvcov <- Nvcov.first.order(object      = object, 
-                                           samplestats = samplestats,
-                                           data        = data)
+                Nvcov <- Nvcov.first.order(lavmodel       = lavmodel,
+                                           lavsamplestats = lavsamplestats,
+                                           lavdata        = lavdata)
                 B0.group <- attr(Nvcov, "B0.group")
             } 
             trace.UGamma <- 
-                testStatisticYuanBentler.Mplus(samplestats = samplestats,
-                                               data        = data,
+                testStatisticYuanBentler.Mplus(lavsamplestats = lavsamplestats,
+                                               lavdata        = lavdata,
                                                information = information,
                                                B0.group    = B0.group,
                                                E.inv       = E.inv,
                                                x.idx       = x.idx)
         } else {
-            Delta <- computeDelta(object)
-            Sigma.hat <- computeSigmaHat(object)
-            if(object@meanstructure) Mu.hat <- computeMuHat(object)
-            A1.group <- vector("list", length=samplestats@ngroups)
-            B1.group <- vector("list", length=samplestats@ngroups)
-            for(g in 1:samplestats@ngroups) {
-                if(samplestats@missing.flag) {
+            Delta <- computeDelta(lavmodel = lavmodel)
+            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+            if(lavmodel@meanstructure) {
+                Mu.hat <- computeMuHat(lavmodel = lavmodel)
+            }
+            A1.group <- vector("list", length=lavsamplestats@ngroups)
+            B1.group <- vector("list", length=lavsamplestats@ngroups)
+            for(g in 1:lavsamplestats@ngroups) {
+                if(lavsamplestats@missing.flag) {
                     X <- NULL
-                    M <- samplestats@missing[[g]]
+                    M <- lavsamplestats@missing[[g]]
                 } else {
-                    X <- data@X[[g]]
+                    X <- lavdata@X[[g]]
                     M <- NULL
                 }
                 out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat[[g]], 
@@ -471,7 +478,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                 B1.group[[g]] <- out$Bbeta
             }
             trace.UGamma <-
-                testStatisticYuanBentler(samplestats=samplestats,
+                testStatisticYuanBentler(lavsamplestats=lavsamplestats,
                                          A1.group=A1.group,
                                          B1.group=B1.group,
                                          Delta=Delta,
@@ -484,8 +491,8 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
         chisq.scaled         <- sum(chisq.group / scaling.factor)
         pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
 
-        ndat <- lav_partable_ndat(partable)
-        npar <- lav_partable_npar(partable)
+        ndat <- lav_partable_ndat(lavpartable)
+        npar <- lav_partable_npar(lavpartable)
 
         scaling.factor.h1    <- sum( attr(trace.UGamma, "h1") ) / ndat
         scaling.factor.h0    <- sum( attr(trace.UGamma, "h0") ) / npar
@@ -501,21 +508,22 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
                           trace.UGamma=trace.UGamma)
 
     } else if(test == "bootstrap" || test == "bollen.stine") {
-        # check if we have bootstrap data
+        # check if we have bootstrap lavdata
         BOOT.TEST <- attr(VCOV, "BOOT.TEST")
         if(is.null(BOOT.TEST)) {
-            if(!is.null(options$bootstrap)) {
-                R <- options$bootstrap
+            if(!is.null(lavoptions$bootstrap)) {
+                R <- lavoptions$bootstrap
             } else {
                 R <- 1000L
             }
             boot.type <- "bollen.stine"
             BOOT.TEST <- 
                 bootstrap.internal(object=NULL,
-                                   model.=object, samplestats.=samplestats, 
-                                   partable.=partable,
-                                   options.=options, data.=data,
-                                   R=R, verbose=options$verbose,
+                                   lavmodel. = lavobject, 
+                                   lavsamplestats.=lavsamplestats, 
+                                   lavpartable.=lavpartable,
+                                   lavoptions.=lavoptions, lavdata.=lavdata,
+                                   R=R, verbose=lavoptions$verbose,
                                    type=boot.type,
                                    FUN ="test",
                                    warn=-1L,

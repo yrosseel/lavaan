@@ -40,19 +40,19 @@ prelav <- function(object = NULL, ordered = NULL, ov.names.x = NULL,
                         ov.names.x = ov.names.x,
                         missing = missing)
 
-    lav.stats <- lav_samplestats_from_data(Data          = lav.data,
-                                        missing       = missing,
-                                        rescale       = FALSE,
-                                        estimator     = "ML",
-                                        mimic         = mimic,
-                                        meanstructure = TRUE,
-                                        group.w.free  = FALSE,
-                                        missing.h1    = FALSE,
-                                        WLS.V         = NULL,
-                                        NACOV         = NULL,
-                                        ridge         = 1e-5,
-                                        debug         = FALSE,
-                                        verbose       = FALSE)
+    lav.stats <- lav_samplestats_from_data(lavdata    = lav.data,
+                                           missing       = missing,
+                                           rescale       = FALSE,
+                                           estimator     = "ML",
+                                           mimic         = mimic,
+                                           meanstructure = TRUE,
+                                           group.w.free  = FALSE,
+                                           missing.h1    = FALSE,
+                                           WLS.V         = NULL,
+                                           NACOV         = NULL,
+                                           ridge         = 1e-5,
+                                           debug         = FALSE,
+                                           verbose       = FALSE)
 
     out <- list(lav.data=lav.data, lav.stats=lav.stats, OU=OU)
 

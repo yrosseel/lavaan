@@ -1,6 +1,6 @@
 # contributed by Ed Merkle (17 Jan 2013)
 # small changes by YR (12 Feb 2013) to match the results
-# of computeGradient in the multiple group case
+# of lav_model_gradient in the multiple group case
 estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
     stopifnot(inherits(object, "lavaan"))

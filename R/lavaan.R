@@ -326,7 +326,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavsamplestats <- slotSampleStats
     } else if(lavdata@data.type == "full") {
         lavsamplestats <- lav_samplestats_from_data(
-                       Data          = lavdata,
+                       lavdata       = lavdata,
                        missing       = lavoptions$missing,
                        rescale       = (lavoptions$estimator == "ML" &&
                                         lavoptions$likelihood == "normal"),
@@ -385,11 +385,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         lavaanStart <- 
             lav_start(start.method = start,
-                           partable     = lavpartable, 
-                           samplestats  = lavsamplestats,
-                           model.type   = lavoptions$model.type,
-                           mimic        = lavoptions$mimic,
-                           debug        = lavoptions$debug)
+                      lavpartable     = lavpartable, 
+                      lavsamplestats  = lavsamplestats,
+                      model.type   = lavoptions$model.type,
+                      mimic        = lavoptions$mimic,
+                      debug        = lavoptions$debug)
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
@@ -398,7 +398,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 5. construct internal model (S4) representation
         lavmodel <- 
-            lav_model(partable         = lavpartable,
+            lav_model(lavpartable      = lavpartable,
                       representation   = lavoptions$representation,
                       th.idx           = lavsamplestats@th.idx,
                       parameterization = lavoptions$parameterization,
@@ -408,8 +408,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
   
         # if no data, call lav_model_set_parameters once (for categorical case)
         if(lavdata@data.type == "none" && lavmodel@categorical) {
-            lavmodel <- lav_model_set_parameters(lavmodel,
-                                              x=lav_model_get_parameters(lavmodel),                                              estimator=lavoptions$estimator)
+            lavmodel <- 
+                lav_model_set_parameters(lavmodel = lavmodel, 
+                                         x = lav_model_get_parameters(lavmodel), 
+                                         estimator =lavoptions$estimator)
         }
     }
 
@@ -529,10 +531,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            estimator=lavoptions$estimator)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
-                FX <- try(lav_model_objective(lavmodel, 
-                                           samplestats = lavsamplestats,
-                                           estimator = lavoptions$estimator,
-                                           link = lavoptions$link),
+                FX <- try(lav_model_objective(lavmodel = lavmodel, 
+                                              lavsamplestats = lavsamplestats,
+                                              estimator = lavoptions$estimator,
+                                              link = lavoptions$link),
                           silent=TRUE)
                 if(inherits(FX, "try-error")) {
                     # eg non-full rank design matrix
@@ -614,9 +616,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "control") <- control
                 attr(x, "fx") <-
                     lav_model_objective(lavmodel, 
-                                     samplestats = lavsamplestats,
-                                     estimator = lavoptions$estimator,
-                                     link = lavoptions$link)
+                                        lavsamplestats = lavsamplestats,
+                                        estimator = lavoptions$estimator,
+                                        link = lavoptions$link)
                 # for VCOV
                 attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
                 attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
@@ -626,26 +628,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "con.lambda") <- con.lambda
             } else {
                 # regular estimation after all
-                x <- lav_model_estimate(lavmodel,
-                               samplestats  = lavsamplestats,
-                               X            = lavdata@X,
-                               options      = lavoptions,
-                               cache        = lavcache,
-                               control      = control)
+                x <- lav_model_estimate(lavmodel        = lavmodel,
+                                        lavsamplestats  = lavsamplestats,
+                                        lavdata         = lavdata,
+                                        lavoptions      = lavoptions,
+                                        lavcache        = lavcache,
+                                        control         = control)
                 lavmodel <- lav_model_set_parameters(lavmodel, x = x,
-                     estimator=lavoptions$estimator)
+                     estimator = lavoptions$estimator)
             }
         } else {
             #cat("REGULAR\n")
             # regular estimation
-            x <- lav_model_estimate(lavmodel,
-                               samplestats  = lavsamplestats,
-                               X            = lavdata@X,
-                               options      = lavoptions,
-                               cache        = lavcache,
-                               control      = control)
+            x <- lav_model_estimate(lavmodel        = lavmodel,
+                                    lavsamplestats  = lavsamplestats,
+                                    lavdata         = lavdata,
+                                    lavoptions      = lavoptions,
+                                    lavcache        = lavcache,
+                                    control         = control)
             lavmodel <- lav_model_set_parameters(lavmodel, x = x,
-                             estimator=lavoptions$estimator)
+                estimator = lavoptions$estimator)
         }
         if(!is.null(attr(x, "con.jac"))) 
             lavmodel@con.jac <- attr(x, "con.jac")
@@ -660,10 +662,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "control") <- control
         attr(x, "fx") <- 
-            lav_model_objective(lavmodel, samplestats = lavsamplestats, 
-                             X=lavdata@X, cache = lavcache,
-                             estimator = lavoptions$estimator,
-                             link = lavoptions$link)
+            lav_model_objective(lavmodel = lavmodel, 
+                lavsamplestats = lavsamplestats, lavdata = lavdata, 
+                lavcache = lavcache, estimator = lavoptions$estimator,
+                link = lavoptions$link)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -673,13 +675,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$se != "none" && lavmodel@nx.free > 0L &&
        attr(x, "converged")) {
         if(verbose) cat("Computing VCOV for se =", lavoptions$se, "...")
-        VCOV <- estimateVCOV(lavmodel,
-                             samplestats  = lavsamplestats,
-                             options      = lavoptions,
-                             data         = lavdata,
-                             partable     = lavpartable,
-                             cache        = lavcache,
-                             control      = control)
+        VCOV <- lav_model_vcov(lavmodel        = lavmodel,
+                               lavsamplestats  = lavsamplestats,
+                               lavoptions      = lavoptions,
+                               lavdata         = lavdata,
+                               lavpartable     = lavpartable,
+                               lavcache        = lavcache,
+                               control         = control)
         if(verbose) cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
@@ -689,15 +691,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     TEST <- NULL
     if(lavoptions$test != "none" && attr(x, "converged")) {
         if(verbose) cat("Computing TEST for test =", lavoptions$test, "...")
-        TEST <- computeTestStatistic(lavmodel,
-                                     partable    = lavpartable,
-                                     samplestats = lavsamplestats,
-                                     options  = lavoptions,
-                                     x        = x,
-                                     VCOV     = VCOV,
-                                     data     = lavdata,
-                                     cache    = lavcache,
-                                     control  = control)
+        TEST <- lav_model_test(lavmodel       = lavmodel,
+                               lavpartable    = lavpartable,
+                               lavsamplestats = lavsamplestats,
+                               lavoptions     = lavoptions,
+                               x              = x,
+                               VCOV           = VCOV,
+                               lavdata        = lavdata,
+                               lavcache       = lavcache,
+                               control        = control)
         if(verbose) cat(" done.\n")
     } else {
         TEST <- list(list(test="none", stat=NA, 
@@ -708,11 +710,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
     # 9. collect information about model fit (S4)
-    lavfit <- Fit(partable = lavpartable, 
-                     model    = lavmodel,
-                     x        = x, 
-                     VCOV     = VCOV,
-                     TEST     = TEST)
+    lavfit <- lav_model_fit(lavpartable = lavpartable, 
+                            lavmodel    = lavmodel,
+                            x           = x, 
+                            VCOV        = VCOV,
+                            TEST        = TEST)
     timing$total <- (proc.time()[3] - start.time0)
 
     # 9b. post-fitting checks
@@ -726,7 +728,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         
         # 2. is cov.lv (PSI) positive definite?
         if(length(vnames(lavpartable, type="lv.regular")) > 0L) {
-            ETA <- computeVETA(lavmodel, samplestats=lavsamplestats)
+            ETA <- computeVETA(lavmodel, lavsamplestats = lavsamplestats)
             for(g in 1:lavdata@ngroups) {
                 txt.group <- ifelse(lavdata@ngroups > 1L,
                                     paste("in group", g, ".", sep=""), "")

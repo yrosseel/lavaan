@@ -747,7 +747,7 @@ parameter.list <- function(object) {
 
 derivatives <- function(object) {
  
-    GLIST <- computeGradient(object@Model, GLIST=NULL, 
+    GLIST <- lav_model_gradient(object@Model, GLIST=NULL, 
                              samplestats=object@SampleStats, type="allofthem",
                              estimator=object@Options$estimator, 
                              verbose=FALSE, forcePD=TRUE,
@@ -1334,11 +1334,14 @@ function(object, labels=TRUE, attributes.=FALSE) {
     if(object@Fit@npar == 0) {
         VarCov <- matrix(0,0,0)
     } else {
-        VarCov <- estimateVCOV(object@Model, samplestats=object@SampleStats, 
-                               options=object@Options, data=object@Data,
-                               partable=object@Partable, cache=object@Cache,
-                               control=list()
-                              )
+        VarCov <- lav_model_vcov(lavmodel       = object@Model, 
+                                 lavsamplestats = object@SampleStats, 
+                                 lavoptions     = object@Options, 
+                                 lavdata        = object@Data,
+                                 lavpartable    = object@Partable, 
+                                 lavcache       = object@Cache,
+                                 control=list()
+                                )
     }
 
     if(labels) {

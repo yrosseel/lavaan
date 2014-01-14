@@ -1,17 +1,257 @@
 # model gradient
 
+lav_model_gradient <- function(lavmodel       = NULL, 
+                               GLIST          = NULL, 
+                               lavsamplestats = NULL, 
+                               lavdata        = NULL,
+                               lavcache       = NULL, 
+                               type           = "free", 
+                               estimator      = "ML", 
+                               verbose        = FALSE, 
+                               forcePD        = TRUE, 
+                               group.weight   = TRUE, 
+                               constraints    = TRUE,
+                               Delta          = NULL) {
+
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
+    meanstructure  <- lavmodel@meanstructure
+    categorical    <- lavmodel@categorical
+    group.w.free   <- lavmodel@group.w.free
+    fixed.x        <- lavmodel@fixed.x
+    num.idx        <- lavmodel@num.idx
+    th.idx         <- lavmodel@th.idx
+    nx.unco        <- lavmodel@nx.unco
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    # group.weight
+    if(group.weight) {
+        if(estimator %in% c("ML","PML","FML","MML")) {
+            group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
+        } else {
+            # FIXME: double check!
+            group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
+        }
+    } else {
+        group.w <- rep(1.0, lavsamplestats@ngroups)
+    }
+
+    # do we need WLS.est?
+    if(estimator == "WLS"  || estimator == "DWLS" || estimator == "ULS") {
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
+    } else {
+        # compute moments for all groups
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                                     extra = (estimator == "ML"))
+        if(meanstructure && !categorical) {
+            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+        } else if(categorical) {
+            TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
+            if(fixed.x)
+                 PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+        }
+        if(group.w.free) {
+            GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+        }
+    }
+
+    # two approaches:
+    # - ML/GLS approach: using Omega (and Omega.mu)
+    # - WLS: using Delta
+
+    # 1. ML/GLS approach
+    if(estimator == "ML" || estimator == "GLS") {
+        if(meanstructure) {
+            Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
+                                  lavsamplestats=lavsamplestats, estimator=estimator, 
+                                  meanstructure=TRUE)
+            Omega.mu <- attr(Omega, "mu")
+        } else {
+            Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=NULL,
+                                  lavsamplestats=lavsamplestats, estimator=estimator,
+                                  meanstructure=FALSE)
+            Omega.mu <- vector("list", length=lavsamplestats@ngroups)
+        }
+
+        # compute DX (for all elements in every model matrix)
+        DX <- vector("list", length=length(GLIST))
+      
+        for(g in 1:lavsamplestats@ngroups) {
+            # which mm belong to group g?
+            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+            mm.names <- names( GLIST[mm.in.group] )
+
+            if(representation == "LISREL") {
+                DX.group <- derivative.F.LISREL(GLIST[mm.in.group], 
+                                                Omega[[g]],
+                                                Omega.mu[[g]])
+
+                # only save what we need
+                DX[mm.in.group] <- DX.group[ mm.names ] 
+            } else {
+                stop("only representation LISREL has been implemented for now")
+            }
+
+            # weight by group
+            if(lavsamplestats@ngroups > 1L) {
+                for(mm in mm.in.group) {
+                    DX[[mm]] <- group.w[g] * DX[[mm]]
+                }
+            }
+        }
+
+        # extract free parameters
+        if(type == "free") {
+            dx <- numeric( nx.unco )
+            for(g in 1:lavsamplestats@ngroups) {
+                mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+                for(mm in mm.in.group) {
+                      m.unco.idx  <- lavmodel@m.unco.idx[[mm]]
+                         x.unco.idx  <- lavmodel@x.unco.idx[[mm]]
+                      dx[x.unco.idx] <- DX[[mm]][m.unco.idx]
+                }
+            }
+
+            # handle equality constraints
+            if(lavmodel@eq.constraints && constraints) {
+                dx <- as.numeric( t(lavmodel@eq.constraints.K) %*% dx )
+            }
+        } else {
+            dx <- DX
+            # handle equality constraints
+            ### FIXME!!!! TODO!!!!
+        } 
+
+    } else # ML/GLS
+
+    # 2. WLS approach
+    if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS") {
+
+        if(type != "free") {
+            if(is.null(Delta))
+                stop("FIXME: Delta should be given if type != free")
+            #stop("FIXME: WLS gradient with type != free needs fixing!")
+        } else {
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+        }
+
+        for(g in 1:lavsamplestats@ngroups) {
+            diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
+            group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
+            group.dx <- group.w[g] * group.dx
+            if(g == 1) {
+                dx <- group.dx
+            } else {
+                dx <- dx + group.dx
+            }
+        } # g
+
+        if(type == "free") {
+            # nothing to do
+        } else {
+            # make a GLIST
+            dx <- lav_model_lav_model_x2GLIST(lavmodel = lavmodel, x = dx, 
+                                              type = "full")
+        }
+
+    } # WLS
+
+    else if(estimator == "PML" || estimator == "FML" ||
+            estimator == "MML") {
+
+        if(type != "free") {
+            stop("FIXME: type != free in lav_model_gradient for estimator PML")
+        } else {
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+        }
+
+        for(g in 1:lavsamplestats@ngroups) {
+
+            #print(GLIST)
+            #print(lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST))
+            #print(Sigma.hat[[g]])
+            #print(TH[[g]])
+            #cat("*****\n")
+
+            # compute partial derivative of logLik with respect to 
+            # thresholds/means, slopes, variances, correlations
+            if(estimator == "PML") {
+                d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                                 TH        = TH[[g]],
+                                 th.idx    = th.idx[[g]],
+                                 num.idx   = num.idx[[g]],
+                                 X         = lavdata@X[[g]],
+                                 lavcache  = lavcache[[g]])
+            } else {
+                d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
+                                 TH        = TH[[g]],
+                                 th.idx    = th.idx[[g]],
+                                 num.idx   = num.idx[[g]],
+                                 X         = lavdata@X[[g]],
+                                 lavcache     = lavcache[[g]])
+            }
+
+            # chain rule (logLik)
+            #group.dx <- as.numeric(t(d1) %*% Delta[[g]])
+
+            # chain rule (fmin)
+            ### FIXME why -1L ???
+            group.dx <- as.numeric(t(d1) %*% Delta[[g]])/lavsamplestats@nobs[[g]]
+
+            # group weights (if any)
+            group.dx <- group.w[g] * group.dx
+            if(g == 1) {
+                dx <- group.dx
+            } else {
+                dx <- dx + group.dx
+            }
+        } # g
+    } else {
+        stop("lavaan ERROR: no analytical gradient available for estimator ",
+             estimator)
+    }
+
+
+    # group.w.free for ML
+    if(lavmodel@group.w.free && estimator %in% c("ML","MML","FML","PML")) {
+        #est.prop <- unlist( computeGW(lavmodel = lavmodel, GLIST = GLIST) )
+        #obs.prop <- unlist(lavsamplestats@group.w)
+        # FIXME: G2 based -- ML and friends only!!
+        #dx.GW <- - (obs.prop - est.prop)
+
+        # poisson version
+        est.freq <- exp(unlist(computeGW(lavmodel = lavmodel, GLIST = GLIST)))
+        obs.freq <- unlist(lavsamplestats@group.w) * lavsamplestats@ntotal
+        dx.GW <- - (obs.freq - est.freq)
+        # divide by N (to be consistent with the rest of lavaan)
+        dx.GW <- dx.GW / lavsamplestats@ntotal
+
+        # remove last element (fixed LAST group to zero)
+        # dx.GW <- dx.GW[-length(dx.GW)]
+        
+        # fill in in dx
+        gw.mat.idx <- which(names(lavmodel@GLIST) == "gw")
+        gw.x.idx <- unlist( lavmodel@x.free.idx[gw.mat.idx] )
+        dx[gw.x.idx] <- dx.GW
+    }
+
+    dx
+}
+
 # for testing purposes only
-#computeDeltaNumerical <- function(object, GLIST=NULL, g=1) {
+#computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 #
 #    # state or final?
-#   if(is.null(GLIST)) GLIST <- object@GLIST
+#   if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 #   
 #   compute.moments <- function(x) {
-#       GLIST <- lav_model_lav_model_x2GLIST(object, x=x, type="free")
-#       Sigma.hat <- computeSigmaHat(object, GLIST=GLIST)
+#       GLIST <- lav_model_lav_model_x2GLIST(lavmodel = NULL, x=x, type="free")
+#       Sigma.hat <- computeSigmaHat(lavmodel = NULL, GLIST = GLIST)
 #        S.vec <- vech(Sigma.hat[[g]])
-#        if(object@meanstructure) {
-#            Mu.hat <- computeMuHat(object, GLIST=GLIST)
+#        if(lavmodel@meanstructure) {
+#            Mu.hat <- computeMuHat(lavmodel = NULL, GLIST=GLIST)
 #            out <- c(Mu.hat[[g]], S.vec)
 #        } else {   
 #            out <- S.vec
@@ -19,7 +259,7 @@
 #        out
 #    }
 #
-#    x <- lav_model_get_parameters(object, GLIST=GLIST, type="free")
+#    x <- lav_model_get_parameters(lavmodel = NULL, GLIST=GLIST, type="free")
 #    Delta <- lavJacobianC(func=compute.moments, x = x)
 #
 #    Delta
@@ -29,25 +269,26 @@
 ### FIXME: should we here also:
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
-computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
+computeDelta <- function(lavmodel = NULL, GLIST. = NULL, 
+                         m.el.idx. = NULL, x.el.idx. = NULL) {
 
-    representation   <- object@representation
-    categorical      <- object@categorical
-    group.w.free     <- object@group.w.free
-    nmat             <- object@nmat
-    ngroups          <- object@ngroups
-    nvar             <- object@nvar
-    num.idx          <- object@num.idx
-    th.idx           <- object@th.idx
-    nexo             <- object@nexo
-    parameterization <- object@parameterization
+    representation   <- lavmodel@representation
+    categorical      <- lavmodel@categorical
+    group.w.free     <- lavmodel@group.w.free
+    nmat             <- lavmodel@nmat
+    ngroups          <- lavmodel@ngroups
+    nvar             <- lavmodel@nvar
+    num.idx          <- lavmodel@num.idx
+    th.idx           <- lavmodel@th.idx
+    nexo             <- lavmodel@nexo
+    parameterization <- lavmodel@parameterization
 
     # number of thresholds per group (if any)
     nth <- sapply(th.idx, function(x) sum(x > 0L))
 
     # state or final?
     if(is.null(GLIST.)) 
-        GLIST <- object@GLIST
+        GLIST <- lavmodel@GLIST
     else
         GLIST <- GLIST.
 
@@ -57,56 +298,11 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     if(is.null(m.el.idx) && is.null(x.el.idx)) 
          type <- "free"
 
-    ################################################## 
-    ##################################################
-    # special treatment: parameterization == "theta"
-    # we do it numerically (for now) -- FIXME!!!
-#    if(object@parameterization == "theta") {
-#        compute.moments <- function(x, g=1L) {
-
-#            # which mm belong to group g?
-#            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-#            GLIST <- lav_model_lav_model_x2GLIST(object, x=x, type="free")
-#            MLIST <- GLIST[mm.in.group]
-    
-   
-#            # 1. TH
-#            out <- computeTH.LISREL(MLIST = MLIST, th.idx = th.idx[[g]])
-     
-#            # 2. PI
-#            if(object@nexo[g] > 0L) {
-#                PI <- computePI.LISREL(MLIST = MLIST)
-#                out <- c(out, as.numeric(PI))
-#            }
-    
-#           # 3. Sigma.hat
-#            Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = TRUE)
-#            # reorder: first variances (of numeric), then covariances
-#            var.num <- diag(Sigma.hat)[num.idx[[g]]]    
-#            COR <- Sigma.hat[ vech.idx(nvar[g], diagonal=FALSE) ]
-#            out <- c(out, var.num, COR)
-#    
-#           out
-#       }
-# 
-#        Delta <- vector("list", length=ngroups)    
-#        for(g in 1:ngroups) {
-#            x <- lav_model_get_parameters(object, GLIST=GLIST, type="free")
-#            Delta[[g]] <- lavJacobianC(func=compute.moments, x=x, g=g)
-#        }        
-#     
-#        return(Delta)
-#    }
-    ################################################## 
-    ##################################################
-
-
-
     # number of rows in DELTA.group
     pstar <- integer(ngroups)
     for(g in 1:ngroups) {
         pstar[g] <- as.integer(nvar[g] * (nvar[g] + 1) / 2)
-        if(object@meanstructure) {
+        if(lavmodel@meanstructure) {
             pstar[g] <- nvar[g] + pstar[g]  # first the means, then sigma
         }
         if(categorical) {
@@ -126,13 +322,13 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
     # number of columns in DELTA + m.el.idx/x.el.idx
     if(type == "free") {
-        NCOL <- object@nx.unco
+        NCOL <- lavmodel@nx.unco
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
-            m.el.idx[[mm]] <- object@m.unco.idx[[mm]]
-            x.el.idx[[mm]] <- object@x.unco.idx[[mm]]
+            m.el.idx[[mm]] <- lavmodel@m.unco.idx[[mm]]
+            x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
             # handle symmetric matrices
-            if(object@isSymmetric[mm]) {
+            if(lavmodel@isSymmetric[mm]) {
                 # since we use 'x.unco.idx', only symmetric elements
                 # are duplicated (not the equal ones, only in x.free.unco)
                 dix <- duplicated(x.el.idx[[mm]])
@@ -171,14 +367,14 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                                                 delta=FALSE)
             dsigma <- diag(sigma.hat)
             # dcor/dcov for sigma
-            R <- lav_deriv_cov2cor(sigma.hat, num.idx = object@num.idx[[g]])
+            R <- lav_deriv_cov2cor(sigma.hat, num.idx = lavmodel@num.idx[[g]])
 
             theta.var.idx <- which(!vech.idx(nvar[g]) %in%
                                     vech.idx(nvar[g], diagonal=FALSE))
         }
 
         for(mm in mm.in.group) {
-            mname <- names(object@GLIST)[mm]
+            mname <- names(lavmodel@GLIST)[mm]
 
             # skip empty ones
             if(!length(m.el.idx[[mm]])) next
@@ -208,7 +404,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                     DELTA <- rbind(DELTA[var.idx,,drop=FALSE], 
                                    DELTA[cor.idx,,drop=FALSE])
                 }
-                if(object@meanstructure && !categorical) {
+                if(lavmodel@meanstructure && !categorical) {
                     DELTA.mu <- derivative.mu.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],
                                                      MLIST=GLIST[ mm.in.group ])
@@ -235,7 +431,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
                             DELTA.th[no.num.idx,,drop=FALSE] +
                             (dth.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
                     }
-                    if(object@nexo[g] > 0L) {
+                    if(lavmodel@nexo[g] > 0L) {
                         DELTA.pi <- 
                             derivative.pi.LISREL(m=mname,
                                                  idx=m.el.idx[[mm]],
@@ -274,8 +470,8 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
         # save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
 
         # if type == "free" take care of equality constraints
-        if(type == "free" && object@eq.constraints) {
-            Delta.group <- Delta.group %*% object@eq.constraints.K
+        if(type == "free" && lavmodel@eq.constraints) {
+            Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
         }
   
         #Delta.eq <- Delta.group
@@ -288,27 +484,27 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
     Delta
 }
 
-computeDeltaDx <- function(object, GLIST=NULL, target="lambda") {
+computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    representation   <- object@representation
-    nmat             <- object@nmat
-    ngroups          <- object@ngroups
-    num.idx          <- object@num.idx
-    th.idx           <- object@th.idx
+    representation   <- lavmodel@representation
+    nmat             <- lavmodel@nmat
+    ngroups          <- lavmodel@ngroups
+    num.idx          <- lavmodel@num.idx
+    th.idx           <- lavmodel@th.idx
 
     # number of columns in DELTA + m.el.idx/x.el.idx
     type <- "free"
     #if(type == "free") {
-        NCOL <- object@nx.unco
+        NCOL <- lavmodel@nx.unco
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
-            m.el.idx[[mm]] <- object@m.unco.idx[[mm]]
-            x.el.idx[[mm]] <- object@x.unco.idx[[mm]]
+            m.el.idx[[mm]] <- lavmodel@m.unco.idx[[mm]]
+            x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
             # handle symmetric matrices
-            if(object@isSymmetric[mm]) {
+            if(lavmodel@isSymmetric[mm]) {
                 # since we use 'x.unco.idx', only symmetric elements
                 # are duplicated (not the equal ones, only in x.free.unco)
                 dix <- duplicated(x.el.idx[[mm]])
@@ -328,7 +524,7 @@ computeDeltaDx <- function(object, GLIST=NULL, target="lambda") {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         Delta.group <- NULL
         for(mm in mm.in.group) {
-            mname <- names(object@GLIST)[mm]
+            mname <- names(lavmodel@GLIST)[mm]
 
             # skip empty ones
             if(!length(m.el.idx[[mm]])) next
@@ -364,8 +560,8 @@ computeDeltaDx <- function(object, GLIST=NULL, target="lambda") {
             }
         } # mm
 
-        if(type == "free" && object@eq.constraints) {
-            Delta.group <- Delta.group %*% object@eq.constraints.K
+        if(type == "free" && lavmodel@eq.constraints) {
+            Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
         }
 
         Delta[[g]] <- Delta.group
@@ -375,12 +571,12 @@ computeDeltaDx <- function(object, GLIST=NULL, target="lambda") {
 }
 
 computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,  
-                         samplestats=NULL, estimator="ML", meanstructure=FALSE) {
+                         lavsamplestats=NULL, estimator="ML", meanstructure=FALSE) {
 
-    Omega    <- vector("list", length=samplestats@ngroups)
-    Omega.mu <- vector("list", length=samplestats@ngroups)
+    Omega    <- vector("list", length=lavsamplestats@ngroups)
+    Omega.mu <- vector("list", length=lavsamplestats@ngroups)
 
-    for(g in 1:samplestats@ngroups) {
+    for(g in 1:lavsamplestats@ngroups) {
 
         # ML
         if(estimator == "ML") {
@@ -388,7 +584,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
             if(attr(Sigma.hat[[g]], "po") == FALSE) {
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??
                 # CURRENTLY: stop
-                warning("computeGradient: Sigma.hat is not positive definite\n")
+                warning("lav_model_gradient: Sigma.hat is not positive definite\n")
                 #Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
                 Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
                 Sigma.hat.log.det <- log(.Machine$double.eps)
@@ -397,25 +593,25 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
-            if(!samplestats@missing.flag) { # complete data
+            if(!lavsamplestats@missing.flag) { # complete data
                 if(meanstructure) {
-                    diff <- samplestats@mean[[g]] - Mu.hat[[g]]
-                    W.tilde <- samplestats@cov[[g]] + tcrossprod(diff)
+                    diff <- lavsamplestats@mean[[g]] - Mu.hat[[g]]
+                    W.tilde <- lavsamplestats@cov[[g]] + tcrossprod(diff)
                     # Browne 1995 eq 4.55
                     Omega.mu[[g]] <- t(t(diff) %*% Sigma.hat.inv)
                     Omega[[g]] <- 
                         ( Sigma.hat.inv %*% (W.tilde - Sigma.hat[[g]]) %*%
                           Sigma.hat.inv )
                 } else {
-                    W.tilde <- samplestats@cov[[g]]
+                    W.tilde <- lavsamplestats@cov[[g]]
                     Omega[[g]] <- 
                         ( Sigma.hat.inv %*% (W.tilde - Sigma.hat[[g]]) %*%
                           Sigma.hat.inv )
                 }
             } else { # missing data
-                M <- samplestats@missing[[g]]
+                M <- lavsamplestats@missing[[g]]
 
-                nvar <- ncol(samplestats@cov[[g]])
+                nvar <- ncol(lavsamplestats@cov[[g]])
                 OMEGA    <- matrix(0, nvar, nvar)
                 OMEGA.MU <- matrix(0, nvar, 1)
 
@@ -431,11 +627,11 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                     W.tilde <- SX + tcrossprod(MX - Mu)
 
                     OMEGA.MU[var.idx, 1] <-
-                        ( OMEGA.MU[var.idx, 1] + nobs/samplestats@ntotal *
+                        ( OMEGA.MU[var.idx, 1] + nobs/lavsamplestats@ntotal *
                           t(t(MX - Mu) %*% Sigma.inv) )
 
                     OMEGA[var.idx, var.idx] <-
-                        ( OMEGA[var.idx, var.idx] + nobs/samplestats@ntotal *
+                        ( OMEGA[var.idx, var.idx] + nobs/lavsamplestats@ntotal *
                           (Sigma.inv %*%
                            (W.tilde - Sigma.hat[[g]][var.idx,var.idx]) %*%
                            Sigma.inv ) )
@@ -446,12 +642,12 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
         # GLS
         } else if(estimator == "GLS") {
-            W.inv <- samplestats@icov[[g]]
-            W     <- samplestats@cov[[g]]
-            Omega[[g]] <- (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] *
+            W.inv <- lavsamplestats@icov[[g]]
+            W     <- lavsamplestats@cov[[g]]
+            Omega[[g]] <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] *
                               (W.inv %*% (W - Sigma.hat[[g]]) %*% W.inv)
             if(meanstructure) {
-                diff <- as.matrix(samplestats@mean[[g]] - Mu.hat[[g]])
+                diff <- as.matrix(lavsamplestats@mean[[g]] - Mu.hat[[g]])
                 Omega.mu[[g]] <- t( t(diff) %*% W.inv )
             }
         }
@@ -462,237 +658,3 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     Omega
 }
-
-
-computeGradient <- function(object, GLIST=NULL, samplestats=NULL, 
-                            X=NULL, cache=NULL, type="free", 
-                            estimator="ML", verbose=FALSE, forcePD=TRUE, 
-                            group.weight=TRUE, constraints=TRUE,
-                            Delta=NULL) {
-
-    nmat           <- object@nmat
-    representation <- object@representation
-    meanstructure  <- object@meanstructure
-    categorical    <- object@categorical
-    group.w.free   <- object@group.w.free
-    fixed.x        <- object@fixed.x
-    num.idx        <- object@num.idx
-    th.idx         <- object@th.idx
-    nx.unco        <- object@nx.unco
-
-    # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
-
-    # group.weight
-    if(group.weight) {
-        if(estimator %in% c("ML","PML","FML","MML")) {
-            group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
-        } else {
-            # FIXME: double check!
-            group.w <- ((unlist(samplestats@nobs)-1)/samplestats@ntotal)
-        }
-    } else {
-        group.w <- rep(1.0, samplestats@ngroups)
-    }
-
-    # do we need WLS.est?
-    if(estimator == "WLS"  || estimator == "DWLS" || estimator == "ULS") {
-        WLS.est <- lav_model_wls_est(object = object, GLIST = GLIST)
-    } else {
-        # compute moments for all groups
-        Sigma.hat <- computeSigmaHat(object, GLIST=GLIST,
-                                     extra=(estimator=="ML"))
-        if(meanstructure && !categorical) {
-            Mu.hat <- computeMuHat(object, GLIST=GLIST)
-        } else if(categorical) {
-            TH <- computeTH(object, GLIST=GLIST)
-            if(fixed.x)
-                 PI <- computePI(object, GLIST=GLIST)
-        }
-        if(group.w.free) {
-            GW <- computeGW(object, GLIST=GLIST)
-        }
-    }
-
-    # two approaches:
-    # - ML/GLS approach: using Omega (and Omega.mu)
-    # - WLS: using Delta
-
-    # 1. ML/GLS approach
-    if(estimator == "ML" || estimator == "GLS") {
-        if(meanstructure) {
-            Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
-                                  samplestats=samplestats, estimator=estimator, 
-                                  meanstructure=TRUE)
-            Omega.mu <- attr(Omega, "mu")
-        } else {
-            Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=NULL,
-                                  samplestats=samplestats, estimator=estimator,
-                                  meanstructure=FALSE)
-            Omega.mu <- vector("list", length=samplestats@ngroups)
-        }
-
-        # compute DX (for all elements in every model matrix)
-        DX <- vector("list", length=length(GLIST))
-      
-        for(g in 1:samplestats@ngroups) {
-            # which mm belong to group g?
-            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-            mm.names <- names( GLIST[mm.in.group] )
-
-            if(representation == "LISREL") {
-                DX.group <- derivative.F.LISREL(GLIST[mm.in.group], 
-                                                Omega[[g]],
-                                                Omega.mu[[g]])
-
-                # only save what we need
-                DX[mm.in.group] <- DX.group[ mm.names ] 
-            } else {
-                stop("only representation LISREL has been implemented for now")
-            }
-
-            # weight by group
-            if(samplestats@ngroups > 1L) {
-                for(mm in mm.in.group) {
-                    DX[[mm]] <- group.w[g] * DX[[mm]]
-                }
-            }
-        }
-
-        # extract free parameters
-        if(type == "free") {
-            dx <- numeric( nx.unco )
-            for(g in 1:samplestats@ngroups) {
-                mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-                for(mm in mm.in.group) {
-                      m.unco.idx  <- object@m.unco.idx[[mm]]
-                         x.unco.idx  <- object@x.unco.idx[[mm]]
-                      dx[x.unco.idx] <- DX[[mm]][m.unco.idx]
-                }
-            }
-
-            # handle equality constraints
-            if(object@eq.constraints && constraints) {
-                dx <- as.numeric( t(object@eq.constraints.K) %*% dx )
-            }
-        } else {
-            dx <- DX
-            # handle equality constraints
-            ### FIXME!!!! TODO!!!!
-        } 
-
-    } else # ML/GLS
-
-    # 2. WLS approach
-    if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS") {
-
-        if(type != "free") {
-            if(is.null(Delta))
-                stop("FIXME: Delta should be given if type != free")
-            #stop("FIXME: WLS gradient with type != free needs fixing!")
-        } else {
-            Delta <- computeDelta(object, GLIST.=GLIST)
-        }
-
-        for(g in 1:samplestats@ngroups) {
-            diff <- as.matrix(samplestats@WLS.obs[[g]]  - WLS.est[[g]])
-            group.dx <- -1 * ( t(Delta[[g]]) %*% samplestats@WLS.V[[g]] %*% diff)
-            group.dx <- group.w[g] * group.dx
-            if(g == 1) {
-                dx <- group.dx
-            } else {
-                dx <- dx + group.dx
-            }
-        } # g
-
-        if(type == "free") {
-            # nothing to do
-        } else {
-            # make a GLIST
-            dx <- lav_model_lav_model_x2GLIST(object, x=dx, type="full")
-        }
-
-    } # WLS
-
-    else if(estimator == "PML" || estimator == "FML" ||
-            estimator == "MML") {
-
-        if(type != "free") {
-            stop("FIXME: type != free in computeGradient for estimator PML")
-        } else {
-            Delta <- computeDelta(object, GLIST.=GLIST)
-        }
-
-        for(g in 1:samplestats@ngroups) {
-
-            #print(GLIST)
-            #print(lav_model_get_parameters(object, GLIST=GLIST))
-            #print(Sigma.hat[[g]])
-            #print(TH[[g]])
-            #cat("*****\n")
-
-            # compute partial derivative of logLik with respect to 
-            # thresholds/means, slopes, variances, correlations
-            if(estimator == "PML") {
-                d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
-                                 TH        = TH[[g]],
-                                 th.idx    = th.idx[[g]],
-                                 num.idx   = num.idx[[g]],
-                                 X         = X[[g]],
-                                 cache     = cache[[g]])
-            } else {
-                d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
-                                 TH        = TH[[g]],
-                                 th.idx    = th.idx[[g]],
-                                 num.idx   = num.idx[[g]],
-                                 X         = X[[g]],
-                                 cache     = cache[[g]])
-            }
-
-            # chain rule (logLik)
-            #group.dx <- as.numeric(t(d1) %*% Delta[[g]])
-
-            # chain rule (fmin)
-            ### FIXME why -1L ???
-            group.dx <- as.numeric(t(d1) %*% Delta[[g]])/samplestats@nobs[[g]]
-
-            # group weights (if any)
-            group.dx <- group.w[g] * group.dx
-            if(g == 1) {
-                dx <- group.dx
-            } else {
-                dx <- dx + group.dx
-            }
-        } # g
-    } else {
-        stop("lavaan ERROR: no analytical gradient available for estimator ",
-             estimator)
-    }
-
-
-    # group.w.free for ML
-    if(object@group.w.free && estimator %in% c("ML","MML","FML","PML")) {
-        #est.prop <- unlist( computeGW(object, GLIST=GLIST) )
-        #obs.prop <- unlist(samplestats@group.w)
-        # FIXME: G2 based -- ML and friends only!!
-        #dx.GW <- - (obs.prop - est.prop)
-
-        # poisson version
-        est.freq <- exp(unlist(computeGW(object, GLIST=GLIST)))
-        obs.freq <- unlist(samplestats@group.w) * samplestats@ntotal
-        dx.GW <- - (obs.freq - est.freq)
-        # divide by N (to be consistent with the rest of lavaan)
-        dx.GW <- dx.GW / samplestats@ntotal
-
-        # remove last element (fixed LAST group to zero)
-        # dx.GW <- dx.GW[-length(dx.GW)]
-        
-        # fill in in dx
-        gw.mat.idx <- which(names(object@GLIST) == "gw")
-        gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )
-        dx[gw.x.idx] <- dx.GW
-    }
-
-    dx
-}
-

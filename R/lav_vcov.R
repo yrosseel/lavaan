@@ -1,28 +1,29 @@
-Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML", 
-                           cache=NULL, information="observed") {
+Nvcov.standard <- function(lavmodel = lavmodel, lavsamplestats = NULL, 
+                           lavdata = NULL, estimator = "ML", 
+                           lavcache = NULL, information = "observed") {
 
     # compute information matrix
     if(information == "observed") {
-        if(samplestats@missing.flag) {
+        if(lavsamplestats@missing.flag) {
             group.weight <- FALSE
         } else {
             group.weight <- TRUE
         }
-        E <- computeObservedInformation(object, samplestats=samplestats, 
-                                        X=data@X, cache=cache,
-                                        estimator=estimator, type="free",
-                                        group.weight=group.weight)
+        E <- computeObservedInformation(lavmodel = lavmodel, 
+            lavsamplestats = lavsamplestats, lavdata = lavdata, 
+            lavcache = lavcache, estimator = estimator, type = "free",
+            group.weight = group.weight)
     } else {
-        E <- computeExpectedInformation(object, samplestats=samplestats, 
-                                        data=data, cache=cache,
-                                        estimator=estimator)
+        E <- computeExpectedInformation(lavmodel = lavmodel, 
+            lavsamplestats = lavsamplestats, lavdata = lavdata, 
+            lavcache = lavcache, estimator = estimator)
     }
 
     # handle constraints
-    if(nrow(object@con.jac) > 0L) {
-        H <- object@con.jac
+    if(nrow(lavmodel@con.jac) > 0L) {
+        H <- lavmodel@con.jac
         inactive.idx <- attr(H, "inactive.idx")
-        lambda <- object@con.lambda # lagrangean coefs
+        lambda <- lavmodel@con.lambda # lagrangean coefs
         if(length(inactive.idx) > 0L) {
             H <- H[-inactive.idx,,drop=FALSE]
             lambda <- lambda[-inactive.idx]
@@ -39,13 +40,13 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
         } else {
             NVarCov <- solve(E)
         }
-    #} else if(object@group.w.free) {
+    #} else if(lavmodel@group.w.free) {
         ## TESTING ONLY!!  should be combined with con.jac above...
-        #gw.mat.idx <- which(names(object@GLIST) == "gw")
-        #gw.x.idx <- unlist( object@x.free.idx[gw.mat.idx] )
+        #gw.mat.idx <- which(names(lavmodel@GLIST) == "gw")
+        #gw.x.idx <- unlist( lavmodel@x.free.idx[gw.mat.idx] )
 
         # divide by N (FIXME: why: the group weight?)
-        #E[gw.x.idx, gw.x.idx] <- E[gw.x.idx, gw.x.idx] / samplestats@ntotal
+        #E[gw.x.idx, gw.x.idx] <- E[gw.x.idx, gw.x.idx] / lavsamplestats@ntotal
         #prop <- diag( E[gw.x.idx, gw.x.idx] )
         #x.prop <- numeric( ncol(E) ); x.prop[gw.x.idx] <- prop
         #p11 <- matrix(1,1,1)
@@ -63,25 +64,28 @@ Nvcov.standard <- function(object, samplestats=NULL, data=NULL, estimator="ML",
     NVarCov
 }
 
-Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
-                            cache=NULL, partable=NULL, control=list()) {
+Nvcov.bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL, 
+                            lavoptions = NULL, lavdata = NULL,
+                            lavcache = NULL, lavpartable = NULL, 
+                            control=list()) {
 
     # number of bootstrap draws
-    if(!is.null(options$bootstrap)) {
-        R <- options$bootstrap
+    if(!is.null(lavoptions$bootstrap)) {
+        R <- lavoptions$bootstrap
     } else {
         R <- 1000L
     }
   
     boot.type <- "ordinary"
-    if(options$test == "bollen.stine") boot.type <- "bollen.stine"
+    if(lavoptions$test == "bollen.stine") boot.type <- "bollen.stine"
 
     TEST <- NULL
     COEF <- bootstrap.internal(object=NULL,
-                               model.=object, samplestats.=samplestats, 
-                               partable.=partable, 
-                               options.=options, data.=data,
-                               R=R, verbose=options$verbose,
+                               lavmodel.=lavmodel, 
+                               lavsamplestats.=lavsamplestats, 
+                               lavpartable.=lavpartable, 
+                               lavoptions.=lavoptions, lavdata.=lavdata,
+                               R=R, verbose=lavoptions$verbose,
                                type=boot.type,
                                FUN=ifelse(boot.type == "bollen.stine",
                                           "coeftest", "coef"),
@@ -97,7 +101,7 @@ Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
 
     # FIXME: cov rescale? Yes for now
     nboot <- nrow(COEF)
-    NVarCov <- samplestats@ntotal * (cov(COEF) * (nboot-1)/nboot )
+    NVarCov <- lavsamplestats@ntotal * (cov(COEF) * (nboot-1)/nboot )
 
     # save COEF and TEST (if any)
     attr(NVarCov, "BOOT.COEF") <- COEF
@@ -106,29 +110,31 @@ Nvcov.bootstrap <- function(object, samplestats=NULL, options=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
-                              cache=NULL, estimator="ML") {
+Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL, 
+                              lavdata = NULL, lavcache = NULL, 
+                              estimator = "ML") {
 
-    B0.group <- vector("list", samplestats@ngroups)
+    B0.group <- vector("list", lavsamplestats@ngroups)
 
     if(estimator == "PML") {
-        Delta <- computeDelta(object)
-        Sigma.hat <- computeSigmaHat(object)
-        TH <- computeTH(object)
+        Delta <- computeDelta(lavmodel = lavmodel)
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+        TH <- computeTH(lavmodel = lavmodel)
     } else {
-        Sigma.hat <- computeSigmaHat(object); Mu.hat <- computeMuHat(object)
-        Delta <- computeDelta(object)
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+        Mu.hat <- computeMuHat(lavmodel = lavmodel)
+        Delta <- computeDelta(lavmodel = lavmodel)
     }
 
-    for(g in 1:samplestats@ngroups) {
+    for(g in 1:lavsamplestats@ngroups) {
         if(estimator == "PML") {
             # slow approach: compute outer product of case-wise scores
             SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
                              TH        = TH[[g]],
-                             th.idx    = object@th.idx[[g]],
-                             num.idx   = object@num.idx[[g]],
-                             X         = data@X[[g]],
-                             cache     = cache,
+                             th.idx    = lavmodel@th.idx[[g]],
+                             num.idx   = lavmodel@num.idx[[g]],
+                             X         = lavdata@X[[g]],
+                             lavcache     = lavcache,
                              scores    = TRUE,
                              negative  = FALSE)
 
@@ -139,18 +145,18 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
             B0.group[[g]] <- crossprod(group.SC)
 
             # to get NACOV instead of ACOV
-            B0.group[[g]] <- B0.group[[g]] / samplestats@ntotal
+            B0.group[[g]] <- B0.group[[g]] / lavsamplestats@ntotal
 
             # group weights (if any)
             #group.dx <- group.w[g] * group.dx 
         } else {
             B1 <- compute.Bbeta(Sigma.hat=Sigma.hat[[g]], 
                                 Mu.hat=Mu.hat[[g]],
-                                samplestats=samplestats, data=data, group=g)
+                                lavsamplestats=lavsamplestats, lavdata=lavdata, group=g)
 
             B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]] 
 
-            #if(type=="free.fixed.x" && object@fixed.x && length(object@x.idx)>0) {
+            #if(type=="free.fixed.x" && lavmodel@fixed.x && length(lavmodel@x.idx)>0) {
             #    # for resid(., type="standardized")
             #    idx.all <- which(object$free > 0 | (object$fixed.x > 0 &
             #                     object$row >= object$col))
@@ -166,11 +172,11 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
         }
     } # g
 
-    if(samplestats@ngroups > 1L) {
+    if(lavsamplestats@ngroups > 1L) {
         # groups weights
-        B0 <- (samplestats@nobs[[1]]/samplestats@ntotal) * B0.group[[1]]
-        for(g in 2:samplestats@ngroups) {
-            B0 <- B0 + (samplestats@nobs[[g]]/samplestats@ntotal) * B0.group[[g]]
+        B0 <- (lavsamplestats@nobs[[1]]/lavsamplestats@ntotal) * B0.group[[1]]
+        for(g in 2:lavsamplestats@ngroups) {
+            B0 <- B0 + (lavsamplestats@nobs[[g]]/lavsamplestats@ntotal) * B0.group[[g]]
         }
     } else {
         B0 <- B0.group[[1]]
@@ -178,10 +184,10 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
 
     # handle constraints
     E <- B0
-    if(nrow(object@con.jac) > 0L) {
-        H <- object@con.jac
+    if(nrow(lavmodel@con.jac) > 0L) {
+        H <- lavmodel@con.jac
         inactive.idx <- attr(H, "inactive.idx")
-        lambda <- object@con.lambda # lagrangean coefs
+        lambda <- lavmodel@con.lambda # lagrangean coefs
         if(length(inactive.idx) > 0L) {
             H <- H[-inactive.idx,,drop=FALSE]
             lambda <- lambda[-inactive.idx]
@@ -220,38 +226,42 @@ Nvcov.first.order <- function(object, samplestats=NULL, data=NULL,
     NVarCov
 }
 
-Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL, cache=NULL,
+Nvcov.robust.sem <- function(lavmodel = NULL, lavsamplestats = NULL, 
+                             lavdata = NULL, lavcache = NULL,
                              estimator = "ML", mimic = "lavaan") {
 
     # compute information matrix
     if(estimator == "ML" && mimic == "Mplus") {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
         # - WLS.V is not based on Sigma.hat and Mu.hat (as it
-        #   should be?), but on samplestats@cov and samplestats@mean...
+        #   should be?), but on lavsamplestats@cov and lavsamplestats@mean...
         # - Gamma is not identical to what is used for WLS; closer to EQS
         # - N/N-1 bug in G11 for NVarCov (but not test statistic)
         # - we divide by N-1! (just like EQS)
-        E <- computeExpectedInformationMLM(object, samplestats=samplestats)
-        Gamma <- samplestats@NACOV
+        E <- computeExpectedInformationMLM(lavmodel = lavmodel, 
+                                           lavsamplestats = lavsamplestats)
+        Gamma <- lavsamplestats@NACOV
         # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test 
         # statistic
-        for(g in 1:samplestats@ngroups) {
-            gg1 <- (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]]
-            G11 <- gg1 * samplestats@cov[[g]]
+        for(g in 1:lavsamplestats@ngroups) {
+            gg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]]
+            G11 <- gg1 * lavsamplestats@cov[[g]]
             Gamma[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
         } # g
     } else {
-        E <- computeExpectedInformation(object, samplestats=samplestats, 
-                                        data=data, estimator=estimator, 
-                                        extra=TRUE) 
-        Gamma <- samplestats@NACOV
+        E <- computeExpectedInformation(lavmodel = lavmodel, 
+                                        lavsamplestats = lavsamplestats, 
+                                        lavdata = lavdata, 
+                                        estimator = estimator, 
+                                        extra = TRUE) 
+        Gamma <- lavsamplestats@NACOV
     }
 
     # handle constraints
-    if(nrow(object@con.jac) > 0L) {
-        H <- object@con.jac
+    if(nrow(lavmodel@con.jac) > 0L) {
+        H <- lavmodel@con.jac
         inactive.idx <- attr(H, "inactive.idx")
-        lambda <- object@con.lambda # lagrangean coefs
+        lambda <- lavmodel@con.lambda # lagrangean coefs
         if(length(inactive.idx) > 0L) {
             H <- H[-inactive.idx,,drop=FALSE]
             lambda <- lambda[-inactive.idx]
@@ -276,9 +286,9 @@ Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL, cache=NULL,
     WLS.V <- attr(E, "WLS.V")
 
     tDVGVD <- matrix(0, ncol=ncol(E), nrow=nrow(E))
-    for(g in 1:samplestats@ngroups) {
-        fg  <-  samplestats@nobs[[g]]   /samplestats@ntotal
-        fg1 <- (samplestats@nobs[[g]]-1)/samplestats@ntotal
+    for(g in 1:lavsamplestats@ngroups) {
+        fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
+        fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
         # fg twice for WLS.V, 1/fg1 once for GaMMA
         # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
         # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
@@ -295,24 +305,27 @@ Nvcov.robust.sem <- function(object, samplestats=NULL, data=NULL, cache=NULL,
     NVarCov
 }
 
-Nvcov.robust.huber.white <- function(object, samplestats=NULL, data=NULL,
-                                     information="observed", cache=NULL, 
+Nvcov.robust.huber.white <- function(lavmodel = lavmodel, 
+                                     lavsamplestats = NULL, 
+                                     lavdata = NULL,
+                                     information = "observed", 
+                                     lavcache = NULL, 
                                      estimator="ML") {
 
     # compute standard Nvcov
-    E.inv <- Nvcov.standard(object      = object,
-                            samplestats = samplestats,
-                            data        = data,
-                            estimator   = estimator,
-                            cache       = cache,
-                            information = information)
+    E.inv <- Nvcov.standard(lavmodel       = lavmodel,
+                            lavsamplestats = lavsamplestats,
+                            lavdata        = lavdata,
+                            estimator      = estimator,
+                            lavcache       = lavcache,
+                            information    = information)
 
     # compute first.order Nvcov
-    Nvcov <- Nvcov.first.order(object      = object, 
-                               samplestats = samplestats,
-                               data        = data,
-                               cache       = cache,
-                               estimator   = estimator)
+    Nvcov <- Nvcov.first.order(lavmodel       = lavmodel,
+                               lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
+                               lavcache       = lavcache,
+                               estimator      = estimator)
     B0 <- attr(Nvcov, "B0")
     B0.group <- attr(Nvcov, "B0.group")
 
@@ -326,67 +339,72 @@ Nvcov.robust.huber.white <- function(object, samplestats=NULL, data=NULL,
 }
 
 
-estimateVCOV <- function(object, samplestats, options=NULL, data=NULL, 
-                         partable=NULL, cache=NULL, control=list()) {
+lav_model_vcov <- function(lavmodel       = NULL, 
+                           lavsamplestats = NULL, 
+                           lavoptions     = NULL, 
+                           lavdata        = NULL, 
+                           lavpartable    = NULL, 
+                           lavcache       = NULL, 
+                           control=list()) {
 
-    estimator   <- options$estimator
-    likelihood  <- options$likelihood
-    information <- options$information
-    se     <- options$se
-    verbose     <- options$verbose
-    mimic       <- options$mimic
+    estimator   <- lavoptions$estimator
+    likelihood  <- lavoptions$likelihood
+    information <- lavoptions$information
+    se          <- lavoptions$se
+    verbose     <- lavoptions$verbose
+    mimic       <- lavoptions$mimic
   
     if(se == "none") return(NULL)
 
     # some require meanstructure (for now)
     if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 
-       !options$meanstructure) {
+       !lavoptions$meanstructure) {
         stop("se (", se, ") requires meanstructure (for now)")
     }
 
     if(se == "standard") {
-        NVarCov <- try( Nvcov.standard(object      = object, 
-                                       samplestats = samplestats,
-                                       data        = data,
-                                       estimator   = estimator, 
-                                       cache       = cache,
-                                       information = information),
+        NVarCov <- try( Nvcov.standard(lavmodel       = lavmodel,
+                                       lavsamplestats = lavsamplestats,
+                                       lavdata        = lavdata,
+                                       estimator      = estimator, 
+                                       lavcache       = lavcache,
+                                       information    = information),
                          silent=TRUE )
 
     } else if(se == "first.order") {
-        NVarCov <- try( Nvcov.first.order(object      = object,
-                                          samplestats = samplestats,
-                                          data        = data,
-                                          cache       = cache,
-                                          estimator   = estimator),
+        NVarCov <- try( Nvcov.first.order(lavmodel       = lavmodel,
+                                          lavsamplestats = lavsamplestats,
+                                          lavdata        = lavdata,
+                                          lavcache       = lavcache,
+                                          estimator      = estimator),
                          silent=TRUE )
 
     } else if(se == "robust.sem") {
-        NVarCov <- try( Nvcov.robust.sem(object      = object,
-                                         samplestats = samplestats,
-                                         estimator   = estimator,
-                                         mimic       = mimic,
-                                         cache       = cache,
-                                         data        = data),
+        NVarCov <- try( Nvcov.robust.sem(lavmodel       = lavmodel,
+                                         lavsamplestats = lavsamplestats,
+                                         estimator      = estimator,
+                                         mimic          = mimic,
+                                         lavcache       = lavcache,
+                                         lavdata        = lavdata),
                         silent=TRUE )
 
     } else if(se == "robust.huber.white") {
-        NVarCov <- try( Nvcov.robust.huber.white(object      = object,
-                                         samplestats = samplestats,
-                                         data        = data,
-                                         information = information,
-                                         cache       = cache,
-                                         estimator   = estimator),
+        NVarCov <- try( Nvcov.robust.huber.white(lavmodel = lavmodel,
+                                           lavsamplestats = lavsamplestats,
+                                           lavdata        = lavdata,
+                                           information    = information,
+                                           lavcache       = lavcache,
+                                           estimator      = estimator),
                         silent=TRUE )
 
     } else if(se == "bootstrap") {
-        NVarCov <- try( Nvcov.bootstrap(object      = object,
-                                        samplestats = samplestats,
-                                        options     = options,
-                                        data        = data,
-                                        cache       = cache,
-                                        partable    = partable,
-                                        control     = control),
+        NVarCov <- try( Nvcov.bootstrap(lavmodel       = lavmodel,
+                                        lavsamplestats = lavsamplestats,
+                                        lavoptions     = lavoptions,
+                                        lavdata        = lavdata,
+                                        lavcache       = lavcache,
+                                        lavpartable    = lavpartable,
+                                        control        = control),
                         silent=TRUE )
     }
 
@@ -395,9 +413,9 @@ estimateVCOV <- function(object, samplestats, options=NULL, data=NULL,
         # denominator!
         if(estimator %in% c("ML","PML","FML") && 
            likelihood == "normal") {
-            N <- samplestats@ntotal
+            N <- lavsamplestats@ntotal
         } else {
-            N <- samplestats@ntotal - samplestats@ngroups
+            N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }
 
         VarCov <- 1/N * NVarCov

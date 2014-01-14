@@ -4,28 +4,29 @@
 # - YR 14 Jan 2014: moved to lav_model.R
 
 # construct MATRIX representation of the model
-lav_model <- function(partable         = NULL,
+lav_model <- function(lavpartable      = NULL,
                       representation   = "LISREL",
                       th.idx           = list(),
                       parameterization = "delta",
                       debug            = FALSE) {
 
     # global info from user model
-    ngroups <- max(partable$group)
-    meanstructure <- any(partable$op == "~1")
-    categorical <- any(partable$op == "|")
+    ngroups <- max(lavpartable$group)
+    meanstructure <- any(lavpartable$op == "~1")
+    categorical <- any(lavpartable$op == "|")
     if(categorical) meanstructure <- TRUE
-    group.w.free <- any(partable$lhs == "group" & partable$op == "%")
+    group.w.free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
 
 
     # what if no starting values are provided? 
-    if(is.null(partable$start))
-        startValues <- lav_start(start.method="simple", partable=partable)
+    if(is.null(lavpartable$start))
+        startValues <- lav_start(start.method = "simple", 
+                                 lavpartable=lavpartable)
     else
-        startValues <- partable$start
+        startValues <- lavpartable$start
  
     # check start length
-    stopifnot(length(startValues) == nrow(partable))
+    stopifnot(length(startValues) == nrow(lavpartable))
 
     # only representation = "LISREL" for now
     stopifnot(representation == "LISREL")
@@ -33,8 +34,8 @@ lav_model <- function(partable         = NULL,
 
     # capture equality constraints in 'K' matrix
     # rows are the unconstrained parameters, cols are the unique parameters
-    n.unco <- max(partable$unco)
-    n.free       <- max(partable$free)
+    n.unco <- max(lavpartable$unco)
+    n.free       <- max(lavpartable$free)
     if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
@@ -43,7 +44,7 @@ lav_model <- function(partable         = NULL,
         #####
         #####     FIXME !
         #####
-        idx.free <- partable$free[ partable$free > 0 ]
+        idx.free <- lavpartable$free[ lavpartable$free > 0 ]
         for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
@@ -54,8 +55,8 @@ lav_model <- function(partable         = NULL,
     # Ku matrix (relation th and ov.ord)
     # FIXME (not for mixed!)
     #if(categorical) {
-    #    th <- vnames(partable, "th")
-    #    ov <- vnames(partable, "ov")
+    #    th <- vnames(lavpartable, "th")
+    #    ov <- vnames(lavpartable, "ov")
     #    Ku <- t(sapply(ov, grepl, th) + 0L)
     #} else {
     #    Ku <- matrix(0,0,0)
@@ -65,7 +66,7 @@ lav_model <- function(partable         = NULL,
 
     # select model matrices
     if(representation == "LISREL") {
-        REP <- representation.LISREL(partable, target=NULL, extra=TRUE)
+        REP <- representation.LISREL(lavpartable, target=NULL, extra=TRUE)
     } else {
         stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
     }
@@ -98,11 +99,11 @@ lav_model <- function(partable         = NULL,
     for(g in 1:ngroups) {
 
         # observed and latent variables for this group
-        ov.names <- vnames(partable, "ov", group=g)
-        ov.names.nox <- vnames(partable, "ov.nox", group=g)
-        ov.names.x <- vnames(partable, "ov.x", group=g)
+        ov.names <- vnames(lavpartable, "ov", group=g)
+        ov.names.nox <- vnames(lavpartable, "ov.nox", group=g)
+        ov.names.x <- vnames(lavpartable, "ov.x", group=g)
         nexo[g] <- length(ov.names.x)
-        ov.num <- vnames(partable, "ov.num", group=g)
+        ov.num <- vnames(lavpartable, "ov.num", group=g)
         if(categorical) {
             nvar[g] <- length(ov.names.nox)
         } else {
@@ -135,7 +136,7 @@ lav_model <- function(partable         = NULL,
             dimNames[[offset]] <- mmDimNames[[mm]]
 
             # select elements for this matrix
-            idx <- which(partable$group == g & REP$mat == mmNames[mm]) 
+            idx <- which(lavpartable$group == g & REP$mat == mmNames[mm]) 
 
             # create empty `pattern' matrix
             # FIXME: one day, we may want to use sparse matrices...
@@ -145,7 +146,7 @@ lav_model <- function(partable         = NULL,
 
             # 1. first assign free values only, to get vector index
             #    -> to be used in lav_model_objective
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- partable$free[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$free[idx]
             if(mmSymmetric[mm]) {
                 # NOTE: we assume everything is in the UPPER tri!
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -154,10 +155,10 @@ lav_model <- function(partable         = NULL,
             x.free.idx[[offset]] <- tmp[which(tmp > 0)]
 
             # 2. if equality constraints, unconstrained free parameters
-            #    -> to be used in computeGradient
+            #    -> to be used in lav_model_gradient
             if(eq.constraints) {
                 tmp[ cbind(REP$row[idx], 
-                           REP$col[idx]) ] <- partable$unco[idx]
+                           REP$col[idx]) ] <- lavpartable$unco[idx]
                 if(mmSymmetric[mm]) {
                     # NOTE: we assume everything is in the UPPER tri!
                     T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
@@ -170,7 +171,7 @@ lav_model <- function(partable         = NULL,
             }
 
             # 3. general mapping between user and GLIST
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- partable$id[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$id[idx]
             if(mmSymmetric[mm]) {
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
             }
@@ -210,7 +211,7 @@ lav_model <- function(partable         = NULL,
 
             # representation specific
             if(representation == "LISREL" && mmNames[mm] == "delta") {
-                # only categorical values are listed in the parTable
+                # only categorical values are listed in the lavpartable
                 # but all remaining values should be 1.0
                 idx <- which(tmp[,1L] == 0.0)
                 tmp[idx,1L] <- 1.0    
@@ -222,7 +223,7 @@ lav_model <- function(partable         = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(partable$exo > 0L & partable$free == 0L) 
+    fixed.x <- any(lavpartable$exo > 0L & lavpartable$free == 0L) 
     if(categorical) {
         fixed.x <- TRUE
     }
@@ -232,14 +233,14 @@ lav_model <- function(partable         = NULL,
     # 1. simple equality constraints (eg b1 == b2)
     #    capture equality constraints in 'K' matrix
     #    rows are the unconstrained parameters, cols are the unique parameters
-    n.unco <- max(partable$unco)
-    n.free       <- max(partable$free)
+    n.unco <- max(lavpartable$unco)
+    n.free       <- max(lavpartable$free)
     if(n.free == n.unco) {
         eq.constraints <- FALSE
         K <- matrix(0, 0, 0)
     } else {
         K <- matrix(0, nrow=n.unco, ncol=n.free)
-        idx.free <- partable$free[ partable$free > 0 ]
+        idx.free <- lavpartable$free[ lavpartable$free > 0 ]
         for(k in 1:n.unco) {
             c <- idx.free[k]
             K[k, c] <- 1
@@ -248,16 +249,16 @@ lav_model <- function(partable         = NULL,
     }
 
     # 2. variable definitions
-    def.function <- lav_partable_constraints_def(partable, con = NULL,
+    def.function <- lav_partable_constraints_def(lavpartable, con = NULL,
                                                  debug = debug)
     # 3a. non-trivial equality constraints (linear or nonlinear)
-    ceq.function <- lav_partable_constraints_ceq(partable, con = NULL, 
+    ceq.function <- lav_partable_constraints_ceq(lavpartable, con = NULL, 
                                                  debug = debug)
     # 3b. construct jacobian function  TODO!!!
     ceq.jacobian <- function() NULL
    
     # 4a. non-trivial inequality constraints (linear or nonlinear)
-    cin.function <- lav_partable_constraints_ciq(partable, con = NULL,
+    cin.function <- lav_partable_constraints_ciq(lavpartable, con = NULL,
                                                  debug = debug)
     # 4b. construct jacobian function  TODO!!
     cin.jacobian <- function() NULL
@@ -278,18 +279,18 @@ lav_model <- function(partable         = NULL,
                  nvar=nvar,
                  num.idx=num.idx,
                  th.idx=th.idx,
-                 nx.free=max(partable$free),
-                 nx.unco=max(partable$unco),
-                 nx.user=max(partable$id),
+                 nx.free=max(lavpartable$free),
+                 nx.unco=max(lavpartable$unco),
+                 nx.user=max(lavpartable$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,
                  m.unco.idx=m.unco.idx,
                  x.unco.idx=x.unco.idx,
                  m.user.idx=m.user.idx,
                  x.user.idx=x.user.idx,
-                 x.def.idx=which(partable$op == ":="),
-                 x.ceq.idx=which(partable$op == "=="),
-                 x.cin.idx=which(partable$op == ">" | partable$op == "<"),
+                 x.def.idx=which(lavpartable$op == ":="),
+                 x.ceq.idx=which(lavpartable$op == "=="),
+                 x.cin.idx=which(lavpartable$op == ">" | lavpartable$op == "<"),
                  eq.constraints=eq.constraints,
                  eq.constraints.K=K,
                  def.function=def.function,

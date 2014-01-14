@@ -1,27 +1,28 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(object, GLIST = NULL) {
+lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
-    if(is.null(GLIST)) GLIST <- object@GLIST
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    ngroups       <- object@ngroups
-    meanstructure <- object@meanstructure
-    categorical   <- object@categorical
-    group.w.free  <- object@group.w.free
-    fixed.x       <- object@fixed.x
-    num.idx       <- object@num.idx
+    ngroups       <- lavmodel@ngroups
+    meanstructure <- lavmodel@meanstructure
+    categorical   <- lavmodel@categorical
+    group.w.free  <- lavmodel@group.w.free
+    fixed.x       <- lavmodel@fixed.x
+    num.idx       <- lavmodel@num.idx
 
     # compute moments for all groups
-    Sigma.hat <- computeSigmaHat(object, GLIST=GLIST, extra=FALSE)
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                                 extra = FALSE)
     if(meanstructure && !categorical) {
-        Mu.hat <- computeMuHat(object, GLIST=GLIST)
+        Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
     } else if(categorical) {
-        TH <- computeTH(object, GLIST=GLIST)
+        TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         if(fixed.x)
-            PI <- computePI(object, GLIST=GLIST)
+            PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
     }
     if(group.w.free) {
-        GW <- computeGW(object, GLIST=GLIST)
+        GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
     }
 
     WLS.est <- vector("list", length=ngroups)
