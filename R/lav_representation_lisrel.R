@@ -655,12 +655,16 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL,
 # where eta_i = predict(fit) = factor scores OR specific values for eta_i
 # (as in GH integration)
 #
+# if nexo = 0, YHAT is the same for each observation
+# in this case, we return a single row, unless Nobs > 1L, in which case
+# we return Nobs identical rows
 computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
                                 sample.mean=NULL,
                                 ov.y.dummy.ov.idx=NULL,
                                 ov.x.dummy.ov.idx=NULL,
                                 ov.y.dummy.lv.idx=NULL,
-                                ov.x.dummy.lv.idx=NULL) {
+                                ov.x.dummy.lv.idx=NULL,
+                                Nobs = 1L) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     BETA <- MLIST$beta; ALPHA <- MLIST$alpha; GAMMA <- MLIST$gamma
@@ -740,6 +744,10 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
         # put back eXo
         if(length(ov.x.dummy.ov.idx) > 0L) {
             YHAT[, ov.x.dummy.ov.idx] <- eXo
+        }
+    } else {
+        if(is.numeric(Nobs) && Nobs > 1L && nrow(YHAT) == 1L) {
+            YHAT <- YHAT[ rep(1L, Nobs), ]
         }
     }
 

@@ -467,6 +467,15 @@ computeTHETA <- function(object, GLIST=NULL) {
 
         if(representation == "LISREL") {
             THETA.g <- MLIST$theta
+            # fix theta
+            lv.idx <- c(object@ov.y.dummy.lv.idx[[g]],
+                        object@ov.x.dummy.lv.idx[[g]])
+            ov.idx <- c(object@ov.y.dummy.ov.idx[[g]],
+                        object@ov.x.dummy.ov.idx[[g]])
+            if(length(ov.idx) > 0L) {
+                THETA.g[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
+            }
+
         } else {
             stop("only representation LISREL has been implemented for now")
         }
