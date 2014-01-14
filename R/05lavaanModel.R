@@ -19,7 +19,7 @@ Model <- function(partable         = NULL,
 
     # what if no starting values are provided? 
     if(is.null(partable$start))
-        startValues <- StartingValues(start.method="simple", partable=partable)
+        startValues <- lav_start(start.method="simple", partable=partable)
     else
         startValues <- partable$start
  

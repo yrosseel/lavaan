@@ -1,12 +1,13 @@
-# StartingValues.R
+# lav_start.R: provide starting values for model parameters
 #
 # YR 30/11/2010: initial version
 # YR 08/06/2011: add fabin3 start values for factor loadings
+# YR 14 Jan 2014: moved to lav_start.R
 
 # fill in the 'ustart' column in a User data.frame with reasonable
 # starting values, using the sample data
 
-StartingValues <- function(start.method = "default",
+lav_start <- StartingValues <- function(start.method = "default",
                            partable     = NULL, 
                            samplestats  = NULL,
                            model.type   = "sem",

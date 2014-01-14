@@ -384,7 +384,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         start.time <- proc.time()[3]
     } else {
         lavaanStart <- 
-            StartingValues(start.method = start,
+            lav_start(start.method = start,
                            partable     = lavpartable, 
                            samplestats  = lavsamplestats,
                            model.type   = lavoptions$model.type,

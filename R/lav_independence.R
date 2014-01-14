@@ -106,10 +106,10 @@ independence.model.fit <- function(object) {
 
     # 4. 
     lavaanStart <-
-        StartingValues(partable    = lavaanParTable,
-                       samplestats = lavaanSampleStats,
-                       model.type  = lavaanOptions$model.type,
-                       debug       = lavaanOptions$debug)
+        lav_start(partable    = lavaanParTable,
+                  samplestats = lavaanSampleStats,
+                  model.type  = lavaanOptions$model.type,
+                  debug       = lavaanOptions$debug)
     lavaanParTable$start <- lavaanStart
 
     # 5. 
