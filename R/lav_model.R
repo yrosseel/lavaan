@@ -1,6 +1,7 @@
 # constructor of the matrix representation
 #
 # initial version: YR 22/11/2010
+# - YR 14 Jan 2014: moved to lav_model.R
 
 # construct MATRIX representation of the model
 lav_model <- function(partable         = NULL,
