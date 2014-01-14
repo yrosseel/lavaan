@@ -136,8 +136,8 @@ simulateData <- function(
         }
         lav2$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
         fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
-        Sigma.hat <- computeSigmaHat(fit@Model)
-        ETA <- computeVETA(fit@Model, samplestats=NULL)
+        Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+        ETA <- computeVETA(lavmodel = fit@Model, lavsamplestats = NULL)
 
         if(debug) {
             cat("Sigma.hat:\n"); print(Sigma.hat)
@@ -189,10 +189,10 @@ simulateData <- function(
     fit <- lavaan(model=lav, sample.nobs=sample.nobs,  ...)
 
     # the model-implied moments for the population
-    Sigma.hat <- computeSigmaHat(fit@Model)
-       Mu.hat <- computeMuHat(fit@Model)
+    Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+       Mu.hat <- computeMuHat(lavmodel = fit@Model)
     if(fit@Model@categorical) {
-       TH <- computeTH(fit@Model)
+       TH <- computeTH(lavmodel = fit@Model)
     }
 
     if(debug) {

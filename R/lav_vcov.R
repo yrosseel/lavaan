@@ -80,19 +80,21 @@ Nvcov.bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL,
     if(lavoptions$test == "bollen.stine") boot.type <- "bollen.stine"
 
     TEST <- NULL
-    COEF <- bootstrap.internal(object=NULL,
-                               lavmodel.=lavmodel, 
-                               lavsamplestats.=lavsamplestats, 
-                               lavpartable.=lavpartable, 
-                               lavoptions.=lavoptions, lavdata.=lavdata,
-                               R=R, verbose=lavoptions$verbose,
-                               type=boot.type,
-                               FUN=ifelse(boot.type == "bollen.stine",
+    COEF <- bootstrap.internal(object          = NULL,
+                               lavmodel.       = lavmodel, 
+                               lavsamplestats. = lavsamplestats, 
+                               lavpartable.    = lavpartable, 
+                               lavoptions.     = lavoptions, 
+                               lavdata.        = lavdata,
+                               R               = R, 
+                               verbose         = lavoptions$verbose,
+                               type            = boot.type,
+                               FUN  = ifelse(boot.type == "bollen.stine",
                                           "coeftest", "coef"),
-                               warn=-1L,
-                               parallel=control$parallel,
-                               ncpus=control$ncpus,
-                               cl=control$cl)
+                               warn            = -1L,
+                               parallel        = control$parallel,
+                               ncpus           = control$ncpus,
+                               cl              = control$cl)
     if(boot.type == "bollen.stine") {
         nc <- ncol(COEF)
         TEST <- COEF[,nc]
@@ -152,7 +154,8 @@ Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL,
         } else {
             B1 <- compute.Bbeta(Sigma.hat=Sigma.hat[[g]], 
                                 Mu.hat=Mu.hat[[g]],
-                                lavsamplestats=lavsamplestats, lavdata=lavdata, group=g)
+                                lavsamplestats=lavsamplestats, 
+                                lavdata=lavdata, group=g)
 
             B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]] 
 

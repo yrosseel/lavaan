@@ -159,9 +159,10 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
     for(g in 1:lavsamplestats@ngroups) {
         # if lavdata is complete, A1.22 is simply 0.5*D'(S.inv x S.inv)D
         A1 <- compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
-                               meanstructure=meanstructure,
-                               information=information)
-        B1 <- compute.B1.sample(lavsamplestats=lavsamplestats, lavdata=lavdata, group=g)
+                                meanstructure=meanstructure,
+                                information=information)
+        B1 <- compute.B1.sample(lavsamplestats=lavsamplestats, 
+                                lavdata=lavdata, group=g)
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
@@ -312,11 +313,11 @@ lav_model_test <- function(lavmodel       = NULL,
             if(mimic == "Mplus" && estimator == "ML") {
                 # special treatment for Mplus
                 E <- computeExpectedInformationMLM(lavmodel = lavmodel,
-                    lavsamplestats=lavsamplestats)
+                         lavsamplestats=lavsamplestats)
             } else {
                 E <- computeExpectedInformation(lavmodel = lavmodel, 
-                    lavsamplestats = lavsamplestats, lavdata = lavdata,
-                    estimator = estimator, extra = TRUE)
+                         lavsamplestats = lavsamplestats, lavdata = lavdata,
+                         estimator = estimator, extra = TRUE)
             }
             E.inv <- try(solve(E), silent=TRUE)
             if(inherits(E.inv, "try-error")) {
@@ -345,7 +346,7 @@ lav_model_test <- function(lavmodel       = NULL,
 #                                  representation = lavmodel@representation,
 #                                  debug          = FALSE)
 #
-#                Delta <- computeDelta(augModel)
+#                Delta <- computeDelta(lavmodel = augModel)
 #                E <- computeExpectedInformationMLM(object, lavsamplestats=lavsamplestats,
 #                                                   Delta=Delta)
 #                fixed.x.idx <- max(lavpartable$free) + 1:length(idx)
@@ -518,18 +519,20 @@ lav_model_test <- function(lavmodel       = NULL,
             }
             boot.type <- "bollen.stine"
             BOOT.TEST <- 
-                bootstrap.internal(object=NULL,
-                                   lavmodel. = lavobject, 
-                                   lavsamplestats.=lavsamplestats, 
-                                   lavpartable.=lavpartable,
-                                   lavoptions.=lavoptions, lavdata.=lavdata,
-                                   R=R, verbose=lavoptions$verbose,
-                                   type=boot.type,
-                                   FUN ="test",
-                                   warn=-1L,
-                                   parallel=control$parallel,
-                                   ncpus=control$ncpus,
-                                   cl=control$cl)
+                bootstrap.internal(object          = NULL,
+                                   lavmodel.       = lavmodel, 
+                                   lavsamplestats. = lavsamplestats, 
+                                   lavpartable.    = lavpartable,
+                                   lavoptions.     = lavoptions, 
+                                   lavdata.        = lavdata,
+                                   R               = R, 
+                                   verbose         = lavoptions$verbose,
+                                   type            = boot.type,
+                                   FUN             = "test",
+                                   warn            = -1L,
+                                   parallel        = control$parallel,
+                                   ncpus           = control$ncpus,
+                                   cl              = control$cl)
             BOOT.TEST <- drop(BOOT.TEST)
         }
 

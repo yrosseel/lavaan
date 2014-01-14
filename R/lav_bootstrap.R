@@ -47,43 +47,43 @@ bootstrapLavaan <- function(object,
     if(object@Options$test == "bollen.stine")
         stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
 
-    bootstrap.internal(object       = object,
-                       data.        = NULL,
-                       model.       = NULL,
-                       samplestats. = NULL,
-                       options.     = NULL,
-                       partable.    = NULL,
-                       R            = R,
-                       type         = type.,
-                       verbose      = verbose,
-                       FUN          = FUN,
-                       warn         = warn,
-                       return.boot  = return.boot,
-                       parallel     = parallel,
-                       ncpus        = ncpus,
-                       cl           = cl,
-                       h0.rmsea     = h0.rmsea,
+    bootstrap.internal(object          = object,
+                       lavdata.        = NULL,
+                       lavmodel.       = NULL,
+                       lavsamplestats. = NULL,
+                       lavoptions.     = NULL,
+                       lavpartable.    = NULL,
+                       R               = R,
+                       type            = type.,
+                       verbose         = verbose,
+                       FUN             = FUN,
+                       warn            = warn,
+                       return.boot     = return.boot,
+                       parallel        = parallel,
+                       ncpus           = ncpus,
+                       cl              = cl,
+                       h0.rmsea        = h0.rmsea,
                        ...)
 }
 
 # we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!
-bootstrap.internal <- function(object       = NULL,
-                               data.        = NULL,
-                               model.       = NULL,
-                               samplestats. = NULL,
-                               options.     = NULL,
-                               partable.    = NULL,
-                               R            = 1000L,
-                               type         = "ordinary",
-                               verbose      = FALSE,
-                               FUN          = "coef",
-                               warn         = 0L,
-                               return.boot  = FALSE,
-                               parallel     = c("no", "multicore", "snow"),
-                               ncpus        = 1L,
-                               cl           = NULL,
-                               h0.rmsea     = NULL,
+bootstrap.internal <- function(object          = NULL,
+                               lavdata.        = NULL,
+                               lavmodel.       = NULL,
+                               lavsamplestats. = NULL,
+                               lavoptions.     = NULL,
+                               lavpartable.    = NULL,
+                               R               = 1000L,
+                               type            = "ordinary",
+                               verbose         = FALSE,
+                               FUN             = "coef",
+                               warn            = 0L,
+                               return.boot     = FALSE,
+                               parallel        = c("no", "multicore", "snow"),
+                               ncpus           = 1L,
+                               cl              = NULL,
+                               h0.rmsea        = NULL,
                                ...) {
 
     # warning: avoid use of 'options', 'sample' (both are used as functions
@@ -94,25 +94,31 @@ bootstrap.internal <- function(object       = NULL,
 
     # object slots
     if(!is.null(object)) {
-        data <- object@Data; model <- object@Model; samp <- object@SampleStats
-        opt <- object@Options; partable <- object@ParTable
+        lavdata        <- object@Data
+        lavmodel       <- object@Model
+        lavsamplestats <- object@SampleStats
+        lavoptions     <- object@Options
+        lavpartable    <- object@ParTable
         FUN <- match.fun(FUN)
         t0 <- FUN(object, ...)
         t.star <- matrix(as.numeric(NA), R, length(t0))
         colnames(t.star) <- names(t0)
     } else {
         # internal version!
-        data <- data.; model <- model.; samp <- samplestats.
-        opt <- options.; partable <- partable.
-        opt$se <- "none"; opt$test <- "standard"
-        opt$verbose <- FALSE
+        lavdata        <- lavdata.
+        lavmodel       <- lavmodel.
+        lavsamplestats <- lavsamplestats.
+        lavoptions     <- lavoptions.
+        lavpartable    <- lavpartable.
+        lavoptions$se <- "none"; lavoptions$test <- "standard"
+        lavoptions$verbose <- FALSE
         if(FUN == "coef") {
-            t.star <- matrix(as.numeric(NA), R, model@nx.free)
-            opt$test <- "none"
+            t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free)
+            lavoptions$test <- "none"
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
         } else if(FUN == "coeftest") {
-            t.star <- matrix(as.numeric(NA), R, model@nx.free + 1L)
+            t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
         }
     }
 
@@ -135,35 +141,35 @@ bootstrap.internal <- function(object       = NULL,
 
     # bollen.stine, yuan, or parametric: we need the Sigma.hat values
     if(type == "bollen.stine" || type == "parametric" || type == "yuan") {
-        Sigma.hat <- computeSigmaHat(model)
-        Mu.hat <- computeMuHat(model)
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+        Mu.hat <- computeMuHat(lavmodel = lavmodel)
     }
 
     # can we use the original data, or do we need to transform it first?
     if(type == "bollen.stine" || type == "yuan") {
         # check if data is complete
-        if(opt$missing != "listwise")
+        if(lavoptions$missing != "listwise")
             stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
-        dataX <- vector("list", length=data@ngroups)
+        dataX <- vector("list", length=lavdata@ngroups)
     } else {
-        dataX <- data@X
+        dataX <- lavdata@X
     }
-    dataeXo <- data@eXo
+    dataeXo <- lavdata@eXo
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
-        for(g in 1:samp@ngroups) {
+        for(g in 1:lavsamplestats@ngroups) {
             sigma.sqrt <- sqrtSymmetricMatrix(Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(samp@icov[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(lavsamplestats@icov[[g]])
 
             # center (needed???)
-            X <- scale(data@X[[g]], center=TRUE, scale=FALSE)
+            X <- scale(lavdata@X[[g]], center=TRUE, scale=FALSE)
 
             # transform
             X <- X %*% S.inv.sqrt %*% sigma.sqrt
 
             # add model-based mean
-            if(model@meanstructure)
+            if(lavmodel@meanstructure)
                 X <- scale(X, center=(-1*Mu.hat[[g]]), scale=FALSE)
 
             # transformed data
@@ -187,15 +193,15 @@ bootstrap.internal <- function(object       = NULL,
         }
       
         # Now use g.a within each group
-        for(g in 1:samp@ngroups) {
-            S <- samp@cov[[g]]
+        for(g in 1:lavsamplestats@ngroups) {
+            S <- lavsamplestats@cov[[g]]
             # test is in Fit slot
             ghat <- object@Fit@test[[1]]$stat.group[[g]]
             df <- object@Fit@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
             Sigmahat.inv <- inv.chol(Sigmahat)
             nmv <- nrow(Sigmahat)
-            n <- data@nobs[[g]]
+            n <- lavdata@nobs[[g]]
 
             # Calculate tauhat_1, middle p. 267.
             # Yuan et al note that tauhat_1 could be negative;
@@ -217,9 +223,9 @@ bootstrap.internal <- function(object       = NULL,
 
             # Transform the data (p. 263)
             S.a.sqrt <- sqrtSymmetricMatrix(S.a)
-            S.inv.sqrt <- sqrtSymmetricMatrix(samp@icov[[g]])
+            S.inv.sqrt <- sqrtSymmetricMatrix(lavsamplestats@icov[[g]])
 
-            X <- data@X[[g]]
+            X <- lavdata@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            
 
             # transformed data
@@ -231,17 +237,17 @@ bootstrap.internal <- function(object       = NULL,
     fn <- function(b) {
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
-            for(g in 1:samp@ngroups) {
-                stopifnot(samp@nobs[[g]] > 1L)
-                boot.idx <- sample(x=samp@nobs[[g]],
-                                   size=samp@nobs[[g]], replace=TRUE)
+            for(g in 1:lavsamplestats@ngroups) {
+                stopifnot(lavsamplestats@nobs[[g]] > 1L)
+                boot.idx <- sample(x=lavsamplestats@nobs[[g]],
+                                   size=lavsamplestats@nobs[[g]], replace=TRUE)
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
                 if(!is.null(dataeXo[[g]]))
                     dataeXo[[g]] <- dataeXo[[g]][boot.idx,,drop=FALSE]
             }
         } else { # parametric!
-            for(g in 1:samp@ngroups) {
-                dataX[[g]] <- MASS::mvrnorm(n     = samp@nobs[[g]],
+            for(g in 1:lavsamplestats@ngroups) {
+                dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
                                             Sigma = Sigma.hat[[g]],
                                             mu    = Mu.hat[[g]])
             }
@@ -254,16 +260,16 @@ bootstrap.internal <- function(object       = NULL,
                                lavdata       = NULL,
                                DataX         = dataX,
                                DataeXo       = dataeXo,
-                               DataOv        = data@ov,
-                               DataOvnames   = data@ov.names,
-                               DataOvnamesx  = data@ov.names.x,
-                               missing       = opt$missing,
-                               rescale       = (opt$estimator == "ML" &&
-                                                opt$likelihood == "normal"),
-                               estimator     = opt$estimator,
-                               mimic         = opt$mimic,
-                               meanstructure = opt$meanstructure,
-                               group.w.free  = opt$group.w.free,
+                               DataOv        = lavdata@ov,
+                               DataOvnames   = lavdata@ov.names,
+                               DataOvnamesx  = lavdata@ov.names.x,
+                               missing       = lavoptions$missing,
+                               rescale       = (lavoptions$estimator == "ML" &&
+                                                lavoptions$likelihood == "normal"),
+                               estimator     = lavoptions$estimator,
+                               mimic         = lavoptions$mimic,
+                               meanstructure = lavoptions$meanstructure,
+                               group.w.free  = lavoptions$group.w.free,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,
                                verbose       = FALSE), silent=TRUE) 
@@ -274,28 +280,28 @@ bootstrap.internal <- function(object       = NULL,
         }
 
         # just in case we need the new X in the data slot (lm!)
-        data@X <- dataX
+        lavdata@X <- dataX
 
         # adjust model slot if fixed.x variances/covariances
         # have changed:
       ### FIXME #####
-        #if(model@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
-        #    for(g in 1:samp@ngroups) {
+        #if(lavmodel@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
+        #    for(g in 1:lavsamplestats@ngroups) {
         #        
         #    }
         #}
-        if(model@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
+        if(lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
             model.boot <- NULL
         } else {
-            model.boot <- model
+            model.boot <- lavmodel
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions     = opt,
-                           slotParTable    = partable,
+        fit.boot <- lavaan(slotOptions     = lavoptions,
+                           slotParTable    = lavpartable,
                            slotModel       = model.boot,
                            slotSampleStats = bootSampleStats,
-                           slotData        = data)
+                           slotData        = lavdata)
         if(!fit.boot@Fit@converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)

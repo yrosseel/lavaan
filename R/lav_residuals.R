@@ -89,14 +89,14 @@ function(object, type="raw", labels=TRUE) {
             VarCov[free.idx, fixed.x.idx] <- 0.0
             VarCov[fixed.x.idx, free.idx] <- 0.0
 
-            Delta  <- computeDelta(augModel)
+            Delta  <- computeDelta(lavmodel = augModel)
         } else {
             VarCov <- lav_model_vcov(lavmodel       = object@Model,
                                      lavdata        = object@Data,
                                      lavpartable    = object@Partable,
                                      lavsamplestats = object@SampleStats,
                                      lavoptions     = object@Options)
-            Delta  <- computeDelta(object@Model)
+            Delta  <- computeDelta(lavmodel = object@Model)
         }   
     }
 

@@ -747,11 +747,18 @@ parameter.list <- function(object) {
 
 derivatives <- function(object) {
  
-    GLIST <- lav_model_gradient(object@Model, GLIST=NULL, 
-                             samplestats=object@SampleStats, type="allofthem",
-                             estimator=object@Options$estimator, 
-                             verbose=FALSE, forcePD=TRUE,
-                             group.weight=TRUE, constraints=FALSE)
+    GLIST <- lav_model_gradient(lavmodel       = object@Model, 
+                                GLIST          = NULL, 
+                                lavlamplestats = object@SampleStats, 
+                                lavdata        = object@Data,
+                                lavcache       = object@Cache,
+                                type           = "allofthem",
+                                estimator      = object@Options$estimator, 
+                                verbose        = FALSE, 
+                                forcePD        = TRUE,
+                                group.weight   = TRUE, 
+                                constraints    = FALSE,
+                                Delta          = NULL)
     names(GLIST) <- names(object@Model@GLIST)
 
     for(mm in 1:length(GLIST)) {
@@ -1177,7 +1184,7 @@ function(object, what="free") {
     } else if(what == "wls.v") {
         getWLS.V(object, drop.list.single.group=TRUE)
     } else if(what == "nacov") {
-        getSampleStatsNACOV(object)    
+        getlavsamplestatsNACOV(object)    
     } else if(what == "modelcovlv"  ||
               what == "modelcov.lv" ||
               what == "cov.lv") {
@@ -1485,31 +1492,33 @@ getWLS.est <- function(object, drop.list.single.group=FALSE) {
     OUT
 }
 
-getWLS.V <- function(object, Delta=computeDelta(object@Model), 
+getWLS.V <- function(object, Delta=computeDelta(lavmodel = object@Model), 
                      drop.list.single.group=FALSE) {
 
     # shortcuts
-    samplestats = object@SampleStats
+    lavsamplestats = object@SampleStats
     estimator   = object@Options$estimator
     G           = object@Data@ngroups
 
-    WLS.V       <- vector("list", length=samplestats@ngroups)
+    WLS.V       <- vector("list", length=lavsamplestats@ngroups)
     if(estimator == "GLS"  ||
        estimator == "WLS"  ||
        estimator == "DWLS" ||
        estimator == "ULS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
-        WLS.V <- samplestats@WLS.V
+        WLS.V <- lavsamplestats@WLS.V
     } else if(estimator == "ML") {
-        Sigma.hat <- computeSigmaHat(object@Model)
-        if(object@Model@meanstructure) Mu.hat <- computeMuHat(object@Model)
-        for(g in 1:samplestats@ngroups) {
-            if(samplestats@missing.flag) {
+        Sigma.hat <- computeSigmaHat(lavmodel = object@Model)
+        if(object@Model@meanstructure) {
+            Mu.hat <- computeMuHat(lavmodel = object@Model)
+        }
+        for(g in seq_len(lavsamplestats@ngroups)) {
+            if(lavsamplestats@missing.flag) {
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
-                                            samplestats=samplestats,
-                                            data=object@data, group=g,
+                                            lavsamplestats=lavsamplestats,
+                                            lavdata=object@Data, group=g,
                                             information="expected")
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
@@ -1531,29 +1540,29 @@ getWLS.V <- function(object, Delta=computeDelta(object@Model),
     OUT
 }
 
-getSampleStatsNACOV <- function(object) {
+getlavsamplestatsNACOV <- function(object) {
 
     if(object@Options$se == "robust.mlr")
         stop("not done yet; FIX THIS!")
 
     # shortcuts
-    samplestats = object@SampleStats
+    lavsamplestats = object@SampleStats
     estimator   = object@Options$estimator
 
-    NACOV       <- vector("list", length=samplestats@ngroups)
+    NACOV       <- vector("list", length=lavsamplestats@ngroups)
 
     if(estimator == "GLS"  ||
        estimator == "WLS"  ||
        estimator == "DWLS" ||
        estimator == "ULS") {
-        NACOV <- samplestats@NACOV
+        NACOV <- lavsamplestats@NACOV
     } else if(estimator == "ML") {
-        for(g in 1:samplestats@ngroups) {
+        for(g in 1:lavsamplestats@ngroups) {
             NACOV[[g]] <- 
                 compute.Gamma(object@Data@X[[g]], 
                               meanstructure=object@Options$meanstructure)
             if(object@Options$mimic == "Mplus") {
-                G11 <- ( samplestats@cov[[g]] * (samplestats@nobs[[g]]-1)/samplestats@nobs[[g]] )
+                G11 <- ( lavsamplestats@cov[[g]] * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] )
                 NACOV[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
             }
         }
@@ -1564,23 +1573,23 @@ getSampleStatsNACOV <- function(object) {
 
 getHessian <- function(object) {
     # lazy approach: take -1 the observed information
-    E <- computeObservedInformation(object@Model, 
-                                    samplestats=object@SampleStats,
-                                    X=object@Data@X,
-                                    cache=object@Cache,
-                                    type="free",
-                                    estimator=object@Options$estimator,
-                                    group.weight=TRUE)
+    E <- computeObservedInformation(lavmodel       = object@Model, 
+                                    lavsamplestats = object@SampleStats,
+                                    lavdata        = object@Data,
+                                    lavcache       = object@Cache,
+                                    type           = "free",
+                                    estimator      = object@Options$estimator,
+                                    group.weight   = TRUE)
 
     -E
 }
 
 getVariability <- function(object) {
     # lazy approach: get it from Nvcov.first.order
-    NACOV <- Nvcov.first.order(object@Model,
-                               samplestats=object@SampleStats,
-                               data=object@Data,
-                               estimator=object@Options$estimator)
+    NACOV <- Nvcov.first.order(lavmodel       = object@Model,
+                               lavsamplestats = object@SampleStats,
+                               lavdata        = object@Data,
+                               estimator      = object@Options$estimator)
 
     B0 <- attr(NACOV, "B0")
 
@@ -1600,7 +1609,8 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute lv covar
-    OUT <- computeVETA(object@Model, samplestats=object@SampleStats)
+    OUT <- computeVETA(lavmodel       = object@Model, 
+                       lavsamplestats = object@SampleStats)
 
     # correlation?
     if(correlation.metric) {
@@ -1643,7 +1653,8 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # compute extended model implied covariance matrix (both ov and lv)
-    OUT <- computeCOV(object@Model, samplestats=object@SampleStats)
+    OUT <- computeCOV(lavmodel = object@Model, 
+                      lavsamplestats = object@SampleStats)
 
     # correlation?
     if(correlation.metric) {
@@ -1679,7 +1690,7 @@ getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
     G <- object@Data@ngroups
 
     # get residual covariances
-    OUT <- computeTHETA(object@Model)
+    OUT <- computeTHETA(lavmodel = object@Model)
 
     # correlation?
     if(correlation.metric) {

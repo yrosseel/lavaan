@@ -5,6 +5,7 @@
 
 # construct MATRIX representation of the model
 lav_model <- function(lavpartable      = NULL,
+                      start            = NULL,
                       representation   = "LISREL",
                       th.idx           = list(),
                       parameterization = "delta",
@@ -19,11 +20,14 @@ lav_model <- function(lavpartable      = NULL,
 
 
     # what if no starting values are provided? 
-    if(is.null(lavpartable$start))
+    #if(is.null(lavpartable$start)) {
+    if(is.null(start)) {
         startValues <- lav_start(start.method = "simple", 
-                                 lavpartable=lavpartable)
-    else
-        startValues <- lavpartable$start
+                                 lavpartable = lavpartable)
+    } else {
+        #startValues <- lavpartable$start
+        startValues <- start
+    }
  
     # check start length
     stopifnot(length(startValues) == nrow(lavpartable))

@@ -5,40 +5,45 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
     stopifnot(inherits(object, "lavaan"))
 
+  # shortcuts
+  lavdata        <- object@Data
+  lavmodel       <- object@Model
+  lavsamplestats <- object@SampleStats
+  lavoptions     <- object@Options
+
   ## number variables/sample size
-  samplestats <- object@SampleStats
-  ntab <- unlist(samplestats@nobs)
-  ntot <- samplestats@ntotal
+  ntab <- unlist(lavsamplestats@nobs)
+  ntot <- lavsamplestats@ntotal
 
   Score.mat <- matrix(NA, ntot, length(coef(object)))
   
-  for(g in 1:samplestats@ngroups) {
-    if (samplestats@ngroups > 1){
+  for(g in 1:lavsamplestats@ngroups) {
+    if (lavsamplestats@ngroups > 1){
       moments <- fitted(object)[[g]]
     } else {
       moments <- fitted(object)
     }
     Sigma.hat <- moments$cov
 
-    if(object@Options$likelihood == "wishart") {
-        N1 <- samplestats@nobs[[g]]/(samplestats@nobs[[g]] - 1)
+    if(lavoptions$likelihood == "wishart") {
+        N1 <- lavsamplestats@nobs[[g]]/(lavsamplestats@nobs[[g]] - 1)
     } else {
         N1 <- 1
     }
   
-    if(!samplestats@missing.flag) { # complete data
-      #if(object@Model@meanstructure) { # mean structure
-        nvar <- ncol(samplestats@cov[[g]])
+    if(!lavsamplestats@missing.flag) { # complete data
+      #if(lavmodel@meanstructure) { # mean structure
+        nvar <- ncol(lavsamplestats@cov[[g]])
         Mu.hat <- moments$mean
-        X <- object@Data@X[[g]]
+        X <- lavdata@X[[g]]
         Sigma.inv <- inv.chol(Sigma.hat, logdet=FALSE)
-        group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
+        group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
 
         J <- matrix(1, 1L, ntab[g]) ## FIXME: needed? better maybe rowSums/colSums?
         J2 <- matrix(1, nvar, nvar)
         diag(J2) <- 0.5
 
-        if(object@Model@meanstructure) {
+        if(lavmodel@meanstructure) {
             ## scores.H1 (H1 = saturated model)
             mean.diff <- t(t(X) - Mu.hat %*% J)
 
@@ -49,7 +54,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
             scores.H1 <- cbind(dx.Mu, dx.Sigma)
         } else {
-            mean.diff <- t(t(X) - samplestats@mean[[g]] %*% J)
+            mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
             dx.Sigma <- t(apply(mean.diff, 1L,
                function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
             scores.H1 <- dx.Sigma
@@ -66,13 +71,13 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
       #}
     } else { # incomplete data
       nsub <- ntab[g]
-      M <- samplestats@missing[[g]]
-      MP1 <- object@Data@Mp[[g]]
+      M <- lavsamplestats@missing[[g]]
+      MP1 <- lavdata@Mp[[g]]
       pat.idx <- match(MP1$id, MP1$order)
-      group.w <- (unlist(samplestats@nobs)/samplestats@ntotal)
+      group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
 
       Mu.hat <- moments$mean
-      nvar <- ncol(samplestats@cov[[g]])
+      nvar <- ncol(lavsamplestats@cov[[g]])
       score.sigma   <- matrix(0, nsub, nvar*(nvar+1)/2)
       score.mu <- matrix(0, nsub, nvar)
     
@@ -107,8 +112,8 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
       }
     } # missing
     
-    Delta <- computeDelta(object@Model)[[g]]
-    wi <- object@Data@case.idx[[g]]
+    Delta <- computeDelta(lavmodel = lavmodel)[[g]]
+    wi <- lavdata@case.idx[[g]]
     Score.mat[wi,] <- -scores.H1 %*% Delta
     if(scaling){
       Score.mat[wi,] <- (-1/ntot) * Score.mat[wi,]

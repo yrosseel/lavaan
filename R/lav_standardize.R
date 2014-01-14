@@ -32,7 +32,8 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
     nmat <- object@Model@nmat
 
     # compute ETA
-    LV.ETA <- computeVETA(object@Model, samplestats=object@SampleStats)
+    LV.ETA <- computeVETA(lavmodel       = object@Model, 
+                          lavsamplestats = object@SampleStats)
     
     for(g in 1:object@Data@ngroups) {
 
@@ -159,7 +160,8 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
 
     GLIST <- object@Model@GLIST
 
-    VY <- computeVY(object@Model, samplestats=object@SampleStats)
+    VY <- computeVY(lavmodel = object@Model, 
+                    lavsamplestats = object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
 
@@ -292,7 +294,8 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
 
     GLIST <- object@Model@GLIST
 
-    VY <- computeVY(object@Model, samplestats=object@SampleStats)
+    VY <- computeVY(lavmodel = object@Model, 
+                    lavsamplestats = object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
 

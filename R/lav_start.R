@@ -15,7 +15,7 @@ lav_start <- function(start.method = "default",
                       debug        = FALSE) {
 
     # check arguments
-    stopifnot(is.list(lavpartable), class(lavsamplestats) == "lavSampleStats")
+    stopifnot(is.list(lavpartable))
 
     # categorical?
     categorical <- any(lavpartable$op == "|")

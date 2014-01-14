@@ -83,22 +83,27 @@ modificationIndices <- modificationindices <- modindices <- function(object,
             x.el.idx[[offset]] <- tmp[which(tmp > 0)]
         }
     }
-    Delta <- computeDelta(object@Model, m.el.idx.=m.el.idx, x.el.idx.=x.el.idx)
+    Delta <- computeDelta(lavmodel = object@Model, 
+                          m.el.idx. = m.el.idx, x.el.idx. = x.el.idx)
 
     # compute information matrix
-    E <- computeExpectedInformation(object@Model, 
-                                    samplestats=object@SampleStats,
-                                    estimator=object@Options$estimator,
-                                    Delta=Delta)
+    E <- computeExpectedInformation(lavmodel       = object@Model, 
+                                    lavsamplestats = object@SampleStats,
+                                    estimator      = object@Options$estimator,
+                                    Delta          = Delta)
     Q <- (1/object@SampleStats@ntotal) * E
 
     # list!
-    DX <- lav_model_gradient(object@Model, GLIST=NULL, 
-                          samplestats=object@SampleStats,
-                          type="allofthem", 
-                          estimator=object@Options$estimator,
-                          group.weight=TRUE,
-                          Delta=Delta)
+    DX <- lav_model_gradient(lavmodel       = object@Model, 
+                             GLIST          = NULL, 
+                             lavsamplestats = object@SampleStats,
+                             lavdata        = object@Data,
+                             lavcache       = object@Cache,
+                             type           = "allofthem", 
+                             estimator      = object@Options$estimator,
+                             group.weight   = TRUE,
+                             constraints    = TRUE, #### FIXME???
+                             Delta          = Delta)
 
     # flatten list DX to a vector dx
     dx <- numeric(0)

@@ -179,12 +179,12 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     }
     # eXo not needed
 
-    Sigma.hat <- computeSigmaHat(lavmodel)
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
     Sigma.hat.inv <- lapply(Sigma.hat, solve)
-    VETA   <- computeVETA(  lavmodel, samplestats = lavsamplestats)
-    EETA   <- computeEETA(  lavmodel, samplestats = lavsamplestats)
-    EY     <- computeEY(    lavmodel, samplestats = lavsamplestats)
-    LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
+    VETA   <- computeVETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+    EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+    EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+    LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
      
     FS <- vector("list", length=lavdata@ngroups)
     for(g in 1:lavdata@ngroups) {
@@ -235,11 +235,12 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
         eXo <- lavdata@eXo
     }
 
-    VETAx <- computeVETAx(object=lavmodel); VETAx.inv <- lapply(VETAx, solve)
-    EETAx <- computeEETAx(object=lavmodel, samplestats=lavsamplestats,
-                          eXo=eXo, remove.dummy.lv=TRUE) ## FIXME? always TRUE?
-    TH    <- computeTH(lavmodel)
-    THETA <- computeTHETA(lavmodel)
+    VETAx <- computeVETAx(lavmodel = lavmodel)
+    VETAx.inv <- lapply(VETAx, solve)
+    EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
+                          eXo = eXo, remove.dummy.lv = TRUE) ## FIXME? 
+    TH    <- computeTH(   lavmodel = lavmodel)
+    THETA <- computeTHETA(lavmodel = lavmodel)
 
     # local objective function: x = lv values
     f.eta.i <- function(x, y.i, x.i, mu.i) {
@@ -432,8 +433,8 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                 data.obs = data.obs, eXo = eXo, ETA = ETA, method = method,
                 duplicate = FALSE)
 
-    THETA <- computeTHETA(lavmodel)
-    TH    <- computeTH(lavmodel)
+    THETA <- computeTHETA(lavmodel = lavmodel)
+    TH    <- computeTH(   lavmodel = lavmodel)
 
     # all normal?
     NORMAL <- all(lavdata@ov$type == "numeric")

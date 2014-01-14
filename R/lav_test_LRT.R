@@ -183,7 +183,7 @@ lavTestLRT <- function(object, ..., SB.classic = FALSE, SB.H0 = FALSE,
                 }
 
                 # original M (Satorra)
-                Delta1 <- computeDelta(mods[[m]]@Model)
+                Delta1 <- computeDelta(lavmodel = mods[[m]]@Model)
                 npar <- ncol(Delta1[[1]])
                 WLS.V <- getWLS.V(object)
                 Gamma <- getSampleStatsNACOV(object)

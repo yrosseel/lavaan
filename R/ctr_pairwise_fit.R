@@ -28,7 +28,9 @@
 
 lavTablesFitCp <- function(object, alpha = 0.05) {
 
-    if(!all(object@Data@ov$type == "ordered")) {
+    lavdata <- object@Data  
+
+    if(!all(lavdata@ov$type == "ordered")) {
         return(list(G2=as.numeric(NA), df=as.numeric(NA), 
                p.value=as.numeric(NA), p.value.Bonferroni=as.numeric(NA)))
     }
@@ -74,12 +76,17 @@ lavTablesFitCf <- function(object) {
     if(!inherits(object, "lavaan")) {
         stop("lavaan ERROR: object must be an object of class lavaan")
     }
-    ngroups <- length( object@Data@X )
-    CF.group <- rep(as.numeric(NA), ngroups)
-    DF.group <- rep(as.numeric(NA), ngroups)
+    lavdata  <- object@Data
+    lavpta   <- object@pta
+    lavfit   <- object@Fit
+    lavmodel <- object@Model
+    lavcache <- object@Cache
+
+    CF.group <- rep(as.numeric(NA), lavdata@ngroups)
+    DF.group <- rep(as.numeric(NA), lavdata@ngroups)
 
     # check if all ordered
-    if(!all(object@Data@ov$type == "ordered")) {
+    if(!all(lavdata@ov$type == "ordered")) {
         CF <- as.numeric(NA)
         attr(CF, "CF.group") <- CF.group
         attr(CF, "DF.group") <- DF.group
@@ -87,33 +94,22 @@ lavTablesFitCf <- function(object) {
     }
 
     # ord var in this group
-    ov.ord <- unique(unlist(object@pta$vnames$ov.ord))
-    ov.idx <- which(ov.ord %in% object@Data@ov$name)
-    ov.nlev <- object@Data@ov$nlev[ ov.idx ]
+    ov.ord <- unique(unlist(lavpta$vnames$ov.ord))
+    ov.idx <- which(ov.ord %in% lavdata@ov$name)
+    ov.nlev <- lavdata@ov$nlev[ ov.idx ]
 
-    # h0 or h1?
-    #if(est == "h0") {
-        Sigma.hat <- object@Fit@Sigma.hat
-        TH        <- object@Fit@TH
-        DF        <- prod(ov.nlev) - object@Fit@npar - 1L
-    #} else {
-    #    ## FIXME: npar should be extract from 'saturated' fit
-    #    Sigma.hat <- object@SampleStats@cov
-    #    TH        <- object@SampleStats@th
-    #    nvar      <- length(ov.ord)
-    #    npar      <- (sum(ov.nlev - 1) + nvar*(nvar-1)/2)*object@Data@ngroups
-    #    DF        <- prod(ov.nlev) - npar - 1L
-    #}
+    Sigma.hat <- lavfit@Sigma.hat
+    TH        <- lavfit@TH
+    DF        <- prod(ov.nlev) - lavfit@npar - 1L
 
-    for(g in 1:ngroups) {
+    for(g in seq_len(lavdata@ngroups)) {
         F.group <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
-                                      TH        = TH[[g]],
-                                      th.idx    = object@Model@th.idx[[g]],
-                                      num.idx   = object@Model@num.idx[[g]],
-                                      X         = object@Model@X[[g]],
-                                      cache     = object@Cache[[g]])
-
-        CF.group[g] <- 2*object@Data@nobs[[g]]*F.group
+                                 TH        = TH[[g]],
+                                 th.idx    = lavmodel@th.idx[[g]],
+                                 num.idx   = lavmodel@num.idx[[g]],
+                                 X         = lavdata@X[[g]],
+                                 cache     = lavcache[[g]])
+        CF.group[g] <- 2*lavdata@nobs[[g]]*F.group
     }
 
     # check for negative values
@@ -123,10 +119,10 @@ lavTablesFitCf <- function(object) {
     CF <- sum(CF.group)
 
     attr(CF, "CF.group") <- CF.group
-    attr(CF, "DF") <- DF
-    attr(CF, "rpat.observed") <- sapply(object@Data@Rp, "[[", "npatterns")
-    attr(CF, "rpat.total") <- sapply(object@Data@Rp, "[[", "total.patterns")
-    attr(CF, "rpat.empty") <- sapply(object@Data@Rp, "[[", "empty.patterns") 
+    attr(CF, "DF")       <- DF
+    attr(CF, "rpat.observed") <- sapply(lavdata@Rp, "[[", "npatterns")
+    attr(CF, "rpat.total")    <- sapply(lavdata@Rp, "[[", "total.patterns")
+    attr(CF, "rpat.empty")    <- sapply(lavdata@Rp, "[[", "empty.patterns") 
 
     class(CF) <- c("lavaan.tables.fit.Cf", "numeric")
 
@@ -152,10 +148,13 @@ print.lavaan.tables.fit.Cf <- function(x, ...) {
 
 lavTablesFitCm <- function(object) {
 
+    lavdata    <- object@Data
+    lavoptions <- object@Options
+
     CF.h0 <- lavTablesFitCf(object)
 
     # fit unrestricted model
-    h1 <- lavCor(object@Data, estimator = object@Options$estimator,
+    h1 <- lavCor(lavdata, estimator = lavoptions$estimator,
                  output = "lavaan")
     CF.h1 <- lavTablesFitCf(h1)
 

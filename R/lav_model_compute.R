@@ -205,9 +205,17 @@ computeGW <- function(lavmodel = NULL, GLIST=NULL) {
 #  - same as diag(Sigma.hat) if all Y are continuous)
 #  - 1.0 (or delta^2) if categorical
 #  - if also Gamma, cov.x is used (only if categorical)
-computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
+
+# only for semTools compatibility
+computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+                      samplestats = NULL) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    # backwards compatibility (semTools!)
+    if(!is.null(samplestats)) {
+        lavsamplestats <- samplestats
+    }
 
     ngroups        <- lavmodel@ngroups
     nmat           <- lavmodel@nmat

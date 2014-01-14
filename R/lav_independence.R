@@ -111,7 +111,7 @@ independence.model.fit <- function(object) {
                   lavsamplestats = lavsamplestats,
                   model.type     = lavoptions$model.type,
                   debug          = lavoptions$debug)
-    lavpartable$start <- lavaanStart
+    # lavpartable$start <- lavaanStart # not yet, break semTools
 
     # 5. 
     lavmodel <-
@@ -159,6 +159,7 @@ independence.model.fit <- function(object) {
 
     # 9. collect information about model fit (S4)
     lavfit <- lav_model_fit(lavpartable = lavpartable,
+                            start       = lavaanStart,
                             lavmodel    = lavmodel,
                             x           = x,
                             VCOV        = VCOV,
