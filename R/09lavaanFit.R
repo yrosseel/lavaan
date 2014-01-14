@@ -12,7 +12,7 @@ Fit <- function(partable=NULL, model, x=NULL, VCOV=NULL, TEST=NULL) {
     attributes(fx) <- NULL
     x.copy <- x # we are going to change it (remove attributes)
     attributes(x.copy) <- NULL
-    est <- getModelParameters(model, type="user")
+    est <- lav_model_get_parameters(model, type="user")
 
     # did we compute standard errors?
     se <- numeric( length(est) )
@@ -21,8 +21,8 @@ Fit <- function(partable=NULL, model, x=NULL, VCOV=NULL, TEST=NULL) {
         # check for negative values (what to do: NA or 0.0?)
         x.var[x.var < 0] <- as.numeric(NA)
         x.se <- sqrt( x.var )
-        GLIST <- x2GLIST(model, x=x.se, type="free")
-        se <- getModelParameters(model, GLIST=GLIST, type="user", 
+        GLIST <- lav_model_x2GLIST(model, x=x.se, type="free")
+        se <- lav_model_get_parameters(model, GLIST=GLIST, type="user", 
                                  extra=FALSE) # no def/cin/ceq entries!
         # fixed parameters -> se = 0.0
         se[ which(partable$unco == 0L) ] <- 0.0

@@ -1,6 +1,6 @@
 # model estimation
 
-estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
+lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE, 
                           options=NULL, cache=list(), control=list()) {
 
     estimator     <- options$estimator
@@ -32,9 +32,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
-        GLIST <- x2GLIST(object, x=x)
+        GLIST <- lav_model_x2GLIST(object, x=x)
 
-        fx <- computeObjective(object, GLIST=GLIST, 
+        fx <- lav_model_objective(object, GLIST=GLIST, 
                                samplestats=samplestats, X=X,
                                cache=cache,
                                estimator=estimator, link = link,
@@ -44,7 +44,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         }
         if(debug) {
             cat("Current unconstrained parameter values =\n")
-            tmp.x <- getModelParameters(object, GLIST=GLIST, type="unco")
+            tmp.x <- lav_model_get_parameters(object, GLIST=GLIST, type="unco")
             print(tmp.x); cat("\n")
             cat("Current free parameter values =\n"); print(x); cat("\n")
         }
@@ -61,7 +61,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         #x[object@x.free.var.idx] <- tan(x[object@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
-        GLIST <- x2GLIST(object, x=x)
+        GLIST <- lav_model_x2GLIST(object, x=x)
 
         dx <- computeGradient(object, GLIST=GLIST, samplestats=samplestats,
                               X=X,
@@ -88,7 +88,7 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
         h <- 10e-6
         dx <- numeric( npar )
  
-        ## FIXME: call computeObjective directly!!
+        ## FIXME: call lav_model_objective directly!!
         for(i in 1:npar) {
             x.left <- x.left2 <- x.right <- x.right2 <- x
             x.left[i]  <- x[i] - h; x.left2[i]  <- x[i] - 2*h
@@ -111,9 +111,9 @@ estimateModel <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
     }
  
     # starting values
-    start.x <- getModelParameters(object)
+    start.x <- lav_model_get_parameters(object)
     if(debug) {
-        cat("start.unco = ", getModelParameters(object, type="unco"), "\n")
+        cat("start.unco = ", lav_model_get_parameters(object, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
     }
 

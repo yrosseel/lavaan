@@ -7,7 +7,7 @@
 #   if(is.null(GLIST)) GLIST <- object@GLIST
 #   
 #   compute.moments <- function(x) {
-#       GLIST <- x2GLIST(object, x=x, type="free")
+#       GLIST <- lav_model_lav_model_x2GLIST(object, x=x, type="free")
 #       Sigma.hat <- computeSigmaHat(object, GLIST=GLIST)
 #        S.vec <- vech(Sigma.hat[[g]])
 #        if(object@meanstructure) {
@@ -19,7 +19,7 @@
 #        out
 #    }
 #
-#    x <- getModelParameters(object, GLIST=GLIST, type="free")
+#    x <- lav_model_get_parameters(object, GLIST=GLIST, type="free")
 #    Delta <- lavJacobianC(func=compute.moments, x = x)
 #
 #    Delta
@@ -66,7 +66,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 
 #            # which mm belong to group g?
 #            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-#            GLIST <- x2GLIST(object, x=x, type="free")
+#            GLIST <- lav_model_lav_model_x2GLIST(object, x=x, type="free")
 #            MLIST <- GLIST[mm.in.group]
     
    
@@ -91,7 +91,7 @@ computeDelta <- function(object, GLIST.=NULL, m.el.idx.=NULL, x.el.idx.=NULL) {
 # 
 #        Delta <- vector("list", length=ngroups)    
 #        for(g in 1:ngroups) {
-#            x <- getModelParameters(object, GLIST=GLIST, type="free")
+#            x <- lav_model_get_parameters(object, GLIST=GLIST, type="free")
 #            Delta[[g]] <- lavJacobianC(func=compute.moments, x=x, g=g)
 #        }        
 #     
@@ -609,7 +609,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
             # nothing to do
         } else {
             # make a GLIST
-            dx <- x2GLIST(object, x=dx, type="full")
+            dx <- lav_model_lav_model_x2GLIST(object, x=dx, type="full")
         }
 
     } # WLS
@@ -626,7 +626,7 @@ computeGradient <- function(object, GLIST=NULL, samplestats=NULL,
         for(g in 1:samplestats@ngroups) {
 
             #print(GLIST)
-            #print(getModelParameters(object, GLIST=GLIST))
+            #print(lav_model_get_parameters(object, GLIST=GLIST))
             #print(Sigma.hat[[g]])
             #print(TH[[g]])
             #cat("*****\n")

@@ -1,11 +1,11 @@
 # model objective
 
-computeObjective <- function(object, GLIST=NULL, 
-                             samplestats=NULL, X = NULL,
-                             cache=NULL,
-                             estimator="ML", link="logit",
-                             verbose=FALSE, forcePD=TRUE,
-                             debug=FALSE) {
+lav_model_objective <- function(object, GLIST=NULL, 
+                                samplestats=NULL, X = NULL,
+                                cache=NULL,
+                                estimator="ML", link="logit",
+                                verbose=FALSE, forcePD=TRUE,
+                                debug=FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- object@GLIST

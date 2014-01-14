@@ -3,7 +3,7 @@
 #
 # initial version: YR 25/03/2009: `methods' for the Model class
 
-getModelParameters <- function(object, GLIST=NULL, type="free",
+lav_model_get_parameters <- function(object, GLIST=NULL, type="free",
                                extra=TRUE) {
 
     # type == "free": only non-redundant free parameters (x)
@@ -40,7 +40,7 @@ getModelParameters <- function(object, GLIST=NULL, type="free",
                                       object@x.ceq.idx, 
                                       object@x.cin.idx) > 0L) {
         # we need 'free' x
-        x.free <- getModelParameters(object, GLIST=GLIST, type="free")
+        x.free <- lav_model_get_parameters(object, GLIST=GLIST, type="free")
         if(length(object@x.def.idx) > 0L) {
             x[object@x.def.idx] <- object@def.function(x.free)
         }
@@ -56,7 +56,7 @@ getModelParameters <- function(object, GLIST=NULL, type="free",
 }
 
 # warning: this will make a copy of object
-setModelParameters <- function(object, x=NULL, estimator = "ML") {
+lav_model_set_parameters <- function(object, x=NULL, estimator = "ML") {
 
     tmp <- object@GLIST
     for(mm in 1:length(object@GLIST)) {
@@ -106,7 +106,7 @@ setModelParameters <- function(object, x=NULL, estimator = "ML") {
 
 # create a standalone GLIST, filled with (new) x values
 # (avoiding a copy of object)
-x2GLIST <- function(object, x=NULL, type="free", setDelta = TRUE) {
+lav_model_x2GLIST <- function(object, x=NULL, type="free", setDelta = TRUE) {
 
     GLIST <- object@GLIST
     for(mm in 1:length(GLIST)) {

@@ -144,7 +144,7 @@ lav_model <- function(partable         = NULL,
                               ncol=mmCols[mm])
 
             # 1. first assign free values only, to get vector index
-            #    -> to be used in computeObjective
+            #    -> to be used in lav_model_objective
             tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- partable$free[idx]
             if(mmSymmetric[mm]) {
                 # NOTE: we assume everything is in the UPPER tri!

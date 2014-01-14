@@ -922,8 +922,8 @@ parameterEstimates <- parameterestimates <-
                 fac <- qnorm(a)
                 boot.x <- colMeans(BOOT)
                 boot.est <- 
-                    getModelParameters(object@Model, 
-                                       GLIST=x2GLIST(object@Model, boot.x), 
+                    lav_model_get_parameters(object@Model, 
+                                       GLIST=lav_model_x2GLIST(object@Model, boot.x), 
                                        type="user", extra=TRUE)
                 bias.est <- (boot.est - LIST$est)
                 ci <- (LIST$est - bias.est) + LIST$se %o% fac

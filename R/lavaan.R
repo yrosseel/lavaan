@@ -376,7 +376,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 4. compute some reasonable starting values 
     if(!is.null(slotModel)) {
         lavmodel <- slotModel
-        lavaanStart <- getModelParameters(lavmodel, type="user")
+        lavaanStart <- lav_model_get_parameters(lavmodel, type="user")
         lavpartable$start <- lavaanStart
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
@@ -406,10 +406,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
   
-        # if no data, call setModelParameters once (for categorical case)
+        # if no data, call lav_model_set_parameters once (for categorical case)
         if(lavdata@data.type == "none" && lavmodel@categorical) {
-            lavmodel <- setModelParameters(lavmodel,
-                                              x=getModelParameters(lavmodel),                                              estimator=lavoptions$estimator)
+            lavmodel <- lav_model_set_parameters(lavmodel,
+                                              x=lav_model_get_parameters(lavmodel),                                              estimator=lavoptions$estimator)
         }
     }
 
@@ -525,11 +525,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     x[lavpartable$unco[lavpartable$op == "~1" &
                                           lavpartable$unco]] <- x.beta[1L]
                 }
-                lavmodel <- setModelParameters(lavmodel, x = x,
+                lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                                            estimator=lavoptions$estimator)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
-                FX <- try(computeObjective(lavmodel, 
+                FX <- try(lav_model_objective(lavmodel, 
                                            samplestats = lavsamplestats,
                                            estimator = lavoptions$estimator,
                                            link = lavoptions$link),
@@ -608,12 +608,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     x[lavpartable$free[lavpartable$op == "~1" &
                                           lavpartable$free]] <- x.beta[1L]
                 }
-                lavmodel <- setModelParameters(lavmodel, x = x,
+                lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                                        estimator=lavoptions$estimator)
                 attr(x, "iterations") <- 1L; attr(x, "converged") <- TRUE
                 attr(x, "control") <- control
                 attr(x, "fx") <-
-                    computeObjective(lavmodel, 
+                    lav_model_objective(lavmodel, 
                                      samplestats = lavsamplestats,
                                      estimator = lavoptions$estimator,
                                      link = lavoptions$link)
@@ -626,25 +626,25 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "con.lambda") <- con.lambda
             } else {
                 # regular estimation after all
-                x <- estimateModel(lavmodel,
+                x <- lav_model_estimate(lavmodel,
                                samplestats  = lavsamplestats,
                                X            = lavdata@X,
                                options      = lavoptions,
                                cache        = lavcache,
                                control      = control)
-                lavmodel <- setModelParameters(lavmodel, x = x,
+                lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                      estimator=lavoptions$estimator)
             }
         } else {
             #cat("REGULAR\n")
             # regular estimation
-            x <- estimateModel(lavmodel,
+            x <- lav_model_estimate(lavmodel,
                                samplestats  = lavsamplestats,
                                X            = lavdata@X,
                                options      = lavoptions,
                                cache        = lavcache,
                                control      = control)
-            lavmodel <- setModelParameters(lavmodel, x = x,
+            lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                              estimator=lavoptions$estimator)
         }
         if(!is.null(attr(x, "con.jac"))) 
@@ -660,7 +660,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "control") <- control
         attr(x, "fx") <- 
-            computeObjective(lavmodel, samplestats = lavsamplestats, 
+            lav_model_objective(lavmodel, samplestats = lavsamplestats, 
                              X=lavdata@X, cache = lavcache,
                              estimator = lavoptions$estimator,
                              link = lavoptions$link)

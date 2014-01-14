@@ -126,13 +126,13 @@ independence.model.fit <- function(object) {
     # 6.
     x <- VCOV <- TEST <- NULL
     if(do.fit) {
-        x <- estimateModel(lavaanModel,
+        x <- lav_model_estimate(lavaanModel,
                            samplestats  = lavaanSampleStats,
                            X            = object@Data@X,
                            cache        = lavaanCache,
                            options      = lavaanOptions)
                            # control???
-        lavaanModel <- setModelParameters(lavaanModel, x = x,
+        lavaanModel <- lav_model_set_parameters(lavaanModel, x = x,
                           estimator=lavaanOptions$estimator)
         if(!is.null(attr(x, "con.jac")))
             lavaanModel@con.jac <- attr(x, "con.jac")

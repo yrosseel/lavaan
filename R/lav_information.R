@@ -127,7 +127,7 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
     # computing the Richardson extrapolation
     # (note that this matrix is not fully symmetric --> do not use chol)
     Hessian <- matrix(0, object@nx.free, object@nx.free)
-    x <- getModelParameters(object)
+    x <- lav_model_get_parameters(object)
     for(j in 1:object@nx.free) {
         h.j <- 10e-6
         x.left <- x.left2 <- x.right <- x.right2 <- x
@@ -135,24 +135,24 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
         x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
 
         g.left <- 
-            computeGradient(object=object, GLIST=x2GLIST(object, x.left), 
+            computeGradient(object=object, GLIST=lav_model_x2GLIST(object, x.left), 
                             samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator, 
                             group.weight=group.weight)
         g.left2 <-    
-            computeGradient(object=object, GLIST=x2GLIST(object, x.left2),
+            computeGradient(object=object, GLIST=lav_model_x2GLIST(object, x.left2),
                             samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator, 
                             group.weight=group.weight)
 
         g.right <- 
-            computeGradient(object=object, GLIST=x2GLIST(object, x.right),
+            computeGradient(object=object, GLIST=lav_model_x2GLIST(object, x.right),
                             samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator,
                             group.weight=group.weight)
 
         g.right2 <- 
-            computeGradient(object=object, GLIST=x2GLIST(object, x.right2),
+            computeGradient(object=object, GLIST=lav_model_x2GLIST(object, x.right2),
                             samplestats=samplestats, X=X, cache=cache,
                             type="free", estimator=estimator,
                             group.weight=group.weight)
@@ -165,13 +165,13 @@ computeObservedInformation <- function(object, samplestats=NULL, X=NULL,
     #cat("Hessian 1:\n")
     #print(Hessian)
 
-    #x <- lavaan:::getModelParameters(object, type="free")
+    #x <- lav_model_get_parameters(object, type="free")
     #compute.fx <- function(x) {
-    #    GLIST <- lavaan:::x2GLIST(object, x=x)
-    #    fx <- lavaan:::computeObjective(object, GLIST=GLIST, 
-    #                                    samplestats=samplestats,
-    #                                    estimator=estimator,
-    #                                    link=link)
+    #    GLIST <- lav_model_x2GLIST(object, x=x)
+    #    fx <- lav_model_objective(object, GLIST=GLIST, 
+    #                              samplestats=samplestats,
+    #                              estimator=estimator,
+    #                              link=link)
     #    fx
     #}
     #Hessian <- - numDeriv::hessian(func=compute.fx, x=x)
