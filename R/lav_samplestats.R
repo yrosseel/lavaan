@@ -3,7 +3,7 @@
 # initial version: YR 25/03/2009
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 
-lavSampleStatsFromData <- function(Data              = NULL,
+lav_samplestats_from_data <- function(Data              = NULL,
                                    DataX             = NULL,
                                    DataeXo           = NULL,
                                    DataOvnames       = NULL,
@@ -406,7 +406,7 @@ lavSampleStatsFromData <- function(Data              = NULL,
 }
 
 
-lavSampleStatsFromMoments <- function(sample.cov    = NULL,
+lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                       sample.mean   = NULL,
                                       sample.nobs   = NULL,
                                       rescale       = FALSE,

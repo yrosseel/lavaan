@@ -40,7 +40,7 @@ prelav <- function(object = NULL, ordered = NULL, ov.names.x = NULL,
                         ov.names.x = ov.names.x,
                         missing = missing)
 
-    lav.stats <- lavSampleStatsFromData(Data          = lav.data,
+    lav.stats <- lav_samplestats_from_data(Data          = lav.data,
                                         missing       = missing,
                                         rescale       = FALSE,
                                         estimator     = "ML",

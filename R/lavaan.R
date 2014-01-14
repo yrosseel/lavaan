@@ -325,7 +325,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotSampleStats)) {
         lavsamplestats <- slotSampleStats
     } else if(lavdata@data.type == "full") {
-        lavsamplestats <- lavSampleStatsFromData(
+        lavsamplestats <- lav_samplestats_from_data(
                        Data          = lavdata,
                        missing       = lavoptions$missing,
                        rescale       = (lavoptions$estimator == "ML" &&
@@ -344,7 +344,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        verbose           = lavoptions$verbose)
                                                  
     } else if(lavdata@data.type == "moment") {
-        lavsamplestats <- lavSampleStatsFromMoments(
+        lavsamplestats <- lav_samplestats_from_moments(
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
                            sample.nobs   = sample.nobs,

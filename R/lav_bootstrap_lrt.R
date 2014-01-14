@@ -163,7 +163,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         if (verbose) cat("  ... bootstrap draw number: ", b, "\n")
 
         #Get sample statistics
-        bootSampleStats <- try(lavSampleStatsFromData(
+        bootSampleStats <- try(lav_samplestats_from_data(
                                Data     = NULL, 
                                DataX    = dataX,
                                DataOv        = data@ov,
