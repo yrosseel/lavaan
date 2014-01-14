@@ -335,7 +335,7 @@ computeTestStatistic <- function(object, partable=NULL, samplestats=NULL,
 #                augUser$exo[       idx ] <- 0L
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
 #                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-#                augModel <- Model(partable       = augUser,
+#                augModel <- lav_model(partable       = augUser,
 #                                  start          = getModelParameters(object, type="user"),
 #                                  representation = object@representation,
 #                                  debug          = FALSE)

@@ -70,10 +70,10 @@ function(object, type="raw", labels=TRUE) {
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
-            augModel <- Model(partable       = augUser,
-                              start          = object@Fit@est,
-                              representation = object@Options$representation,
-                              debug          = object@Options$debug)
+            augModel <- lav_model(partable       = augUser,
+                                  start          = object@Fit@est,
+                                  representation = object@Options$representation,
+                                  debug          = object@Options$debug)
             VarCov <- estimateVCOV(augModel, samplestats = object@SampleStats,
                                    data = object@Data,
                                    partable = object@Partable,

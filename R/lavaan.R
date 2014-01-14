@@ -398,11 +398,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 5. construct internal model (S4) representation
         lavmodel <- 
-            Model(partable         = lavpartable,
-                  representation   = lavoptions$representation,
-                  th.idx           = lavsamplestats@th.idx,
-                  parameterization = lavoptions$parameterization,
-                  debug            = lavoptions$debug)
+            lav_model(partable         = lavpartable,
+                      representation   = lavoptions$representation,
+                      th.idx           = lavsamplestats@th.idx,
+                      parameterization = lavoptions$parameterization,
+                      debug            = lavoptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
   

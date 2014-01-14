@@ -114,11 +114,11 @@ independence.model.fit <- function(object) {
 
     # 5. 
     lavaanModel <-
-        Model(partable         = lavaanParTable,
-              representation   = lavaanOptions$representation,
-              th.idx           = lavaanSampleStats@th.idx,
-              parameterization = lavaanOptions$parameterization,
-              debug            = lavaanOptions$debug)
+        lav_model(partable         = lavaanParTable,
+                  representation   = lavaanOptions$representation,
+                  th.idx           = lavaanSampleStats@th.idx,
+                  parameterization = lavaanOptions$parameterization,
+                  debug            = lavaanOptions$debug)
 
     # cache
     lavaanCache <- object@Cache
