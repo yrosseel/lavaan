@@ -6,8 +6,7 @@
 #
 # returns a list with the named options 
 
-setLavaanOptions <- function(opt = formals(lavaan))
-{
+lav_options_set <- function(opt = formals(lavaan)) {
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
 

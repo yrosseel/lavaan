@@ -155,7 +155,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             zero.add = zero.add, zero.keep.margins = zero.keep.margins,
             representation = representation, do.fit = do.fit, verbose = verbose,
             warn = warn, debug = debug)
-        lavoptions <- setLavaanOptions(opt)
+        lavoptions <- lav_options_set(opt)
     }
     timing$InitOptions <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -203,17 +203,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.names <- ov.names.y
         } 
         lavdata <- lavData(data        = data,
-                              group       = group,
-                              group.label = group.label,
-                              ov.names    = ov.names,
-                              ordered     = ordered,
-                              ov.names.x  = ov.names.x,
-                              std.ov      = std.ov,
-                              missing     = lavoptions$missing,
-                              sample.cov  = sample.cov,
-                              sample.mean = sample.mean,
-                              sample.nobs = sample.nobs,
-                              warn        = lavoptions$warn)
+                           group       = group,
+                           group.label = group.label,
+                           ov.names    = ov.names,
+                           ordered     = ordered,
+                           ov.names.x  = ov.names.x,
+                           std.ov      = std.ov,
+                           missing     = lavoptions$missing,
+                           sample.cov  = sample.cov,
+                           sample.mean = sample.mean,
+                           sample.nobs = sample.nobs,
+                           warn        = lavoptions$warn)
 
         # what have we learned from the data?
         if("ordered" %in% lavdata@ov$type) {
@@ -317,7 +317,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
     # 2c. get partable attributes
-    pta <- lav_partable_attributes(lavpartable)
+    lavpta <- lav_partable_attributes(lavpartable)
     timing$ParTable <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -348,7 +348,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
                            sample.nobs   = sample.nobs,
-                           ov.names      = pta$vnames$ov,
+                           ov.names      = lavpta$vnames$ov,
                            estimator     = lavoptions$estimator,
                            mimic         = lavoptions$mimic,
                            meanstructure = lavoptions$meanstructure,
@@ -455,8 +455,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         for(g in 1:lavdata@ngroups) {
             # count only the ones with non-normal indicators
-            #nfac <- pta$nfac.nonnormal[[g]]
-            nfac <- pta$nfac[[g]]
+            #nfac <- lavpta$nfac.nonnormal[[g]]
+            nfac <- lavpta$nfac[[g]]
             lavcache[[g]]$GH <- 
                 lav_gauss_hermite_xw_dnorm(n=nGH, revert=FALSE, ndim = nfac)
         }
@@ -719,7 +719,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(attr(x, "converged")) { # only if estimation was successful
         # 1. check for Heywood cases, negative (residual) variances, ...
         var.idx <- which(lavpartable$op == "~~" &
-                         !lavpartable$lhs %in% unlist(pta$vnames$ov.ord) &
+                         !lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
                          lavpartable$lhs == lavpartable$rhs)
         if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
@@ -756,11 +756,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 10. construct lavaan object
     lavaan <- new("lavaan",
-                  call         = mc,                     # match.call
-                  timing       = timing,                 # list
+                  call         = mc,                  # match.call
+                  timing       = timing,              # list
                   Options      = lavoptions,          # list
                   ParTable     = lavpartable,         # list
-                  pta          = pta,                    # list
+                  pta          = lavpta,              # list
                   Data         = lavdata,             # S4 class
                   SampleStats  = lavsamplestats,      # S4 class
                   Model        = lavmodel,            # S4 class
