@@ -149,3 +149,7 @@ lav_model_x2GLIST <- function(object, x=NULL, type="free", setDelta = TRUE) {
     GLIST
 }
 
+# backwards compatibility
+# getModelParameters <- lav_model_get_parameters
+# setModelParameters <- lav_model_set_parameters
+# x2GLIST            <- lav_model_x2GLIST

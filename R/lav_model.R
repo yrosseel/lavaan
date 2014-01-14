@@ -315,4 +315,4 @@ lav_model <- function(partable         = NULL,
 }
 
 # for backwards compatibility
-Model <- lav_model
+# Model <- lav_model

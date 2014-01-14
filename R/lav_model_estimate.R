@@ -406,4 +406,6 @@ lav_model_estimate <- function(object, samplestats=NULL, X=NULL, do.fit=TRUE,
 
 }
 
+# backwards compatibility
+# estimateModel <- lav_model_estimate
 
