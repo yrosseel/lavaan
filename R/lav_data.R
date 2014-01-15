@@ -501,6 +501,9 @@ lav_data_full <- function(data          = NULL,          # data.frame
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                if(length(exo.idx) > 0L) {
+                    eXo[[g]] <- eXo[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                }
                 if(warn) {
                     warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
                 }
