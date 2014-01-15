@@ -572,3 +572,45 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
     EY
 }
 
+
+# E(Y | ETA, x_i): conditional expectation (means) of observed variables
+# for a given value of x_i AND eta_i
+computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+                        eXo = NULL, ETA = NULL, duplicate = FALSE) {
+  
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    # return a list
+    YHAT <- vector("list", length=lavsamplestats@ngroups)
+
+    # compute YHAT for each group
+    for(g in group) {
+        # which mm belong to group g?
+        mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0L,lavmodel@nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(is.null(eXo[[g]]) && duplicate) {
+            Nobs <- lavsamplestats@nobs[[g]]
+        } else {
+            Nobs <- 1L
+        }
+
+        if(lavmodel@representation == "LISREL") {
+            YHAT[[g]] <- computeYHATx.LISREL(MLIST = MLIST,
+                          eXo = eXo[[g]], ETA = ETA[[g]],
+                          sample.mean = lavsamplestats@mean[[g]],
+                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                          Nobs = Nobs)
+        } else {
+            stop("lavaan ERROR: representation ", lavmodel@representation,
+                 " not supported yet.")
+        }
+    }
+
+    YHAT
+}
+

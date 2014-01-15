@@ -302,18 +302,19 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     fx
 }
 
-estimator.MML <- function(object    = NULL,    # object
-                          GLIST     = NULL,
-                          g         = 1L,      # group
-                          link      = "logit",
+estimator.MML <- function(lavmodel    = NULL,
+                          GLIST       = NULL,
+                          group       = 1L,
+                          lavdata     = NULL,
                           sample.mean = NULL,
-                          X         = NULL,    # raw data
-                          cache     = NULL) {  # patterns
-
+                          link        = "logit",
+                          lavcache    = NULL) {
 
     # compute likelihood for every observation
-    lik <- lav_est_MML(object = object, GLIST = GLIST, g = g, link = link, 
-                       sample.mean = sample.mean, X = X, cache = cache)
+    lik <- lav_est_MML(lavmodel = lavmodel, GLIST = GLIST, g = group, 
+                       link = link, sample.mean = sample.mean, 
+                       X = lavdata@X[[group]],
+                       cache = lavcache[[group]])
 
     # log + sum over observations
     logl <- sum( log(lik) )

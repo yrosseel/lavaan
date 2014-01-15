@@ -363,33 +363,11 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
             stopifnot(lavdata@ngroups == length(ETA))
         }
     }
+  
+    YHAT <- computeYHAT(lavmodel = lavmodel, GLIST = NULL,
+                        lavsamplestats = lavsamplestats, eXo = eXo,
+                        ETA = ETA, duplicate = duplicate)
 
-    YHAT <- vector("list", length=lavdata@ngroups)
-    for(g in seq_len(lavdata@ngroups)) {
-        mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
-        MLIST <- lavmodel@GLIST[ mm.in.group ]
-
-        if(is.null(lavdata@eXo[[g]]) && duplicate) {
-            Nobs <- nrow( data.obs[[g]] )
-        } else {
-            Nobs <- 1L
-        }
-
-        if(lavmodel@representation == "LISREL") {
-            YHAT[[g]] <- computeYHATx.LISREL(MLIST = MLIST,
-                          eXo = lavdata@eXo[[g]], ETA = ETA[[g]],
-                          sample.mean = lavsamplestats@mean[[g]],
-                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-                          Nobs = Nobs)
-        } else {
-            stop("lavaan ERROR: representation ", lavmodel@representation,
-                 " not supported yet.")
-        }
-    }
-    
     YHAT
 }
 
@@ -441,8 +419,6 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
 
     FY <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
-        mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
-        MLIST     <- lavmodel@GLIST[ mm.in.group ]
  
         # shortcuts
         theta.var <- diag(THETA[[g]])

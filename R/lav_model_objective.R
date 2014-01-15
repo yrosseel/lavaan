@@ -33,11 +33,20 @@ lav_model_objective <- function(lavmodel       = NULL,
        estimator == "DWLS" || estimator == "ULS") {
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
         if(debug) print(WLS.est)
-    } else {
+    } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, 
                                      extra = (estimator == "ML"))
+
+        # ridge?
+        if( lavsamplestats@ridge > 0.0 ) {
+            for(g in 1:lavsamplestats@ngroups) {
+                diag(Sigma.hat[[g]]) <- diag(Sigma.hat[[g]]) + 
+                                            lavsamplestats@ridge
+            }
+        }
         if(debug) print(Sigma.hat)
+
         if(meanstructure && !categorical) {
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST=GLIST)
         } else if(categorical) {
@@ -48,16 +57,15 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST=GLIST)
         }
+    } else if(estimator == "MML") {
+        TH <- computeTH(lavmodel = lavmodel, GLIST=GLIST)
+        THETA <- computeTHETA(lavmodel = lavmodel, GLIST=GLIST)
+        GW <- computeGW(lavmodel = lavmodel, GLIST=GLIST)
     }
  
     fx <- 0.0
     fx.group <- numeric( lavsamplestats@ngroups )
     for(g in 1:lavsamplestats@ngroups) {
-
-        # ridge?
-        if( lavsamplestats@ridge > 0.0 ) {
-            diag(Sigma.hat[[g]]) <- diag(Sigma.hat[[g]]) + lavsamplestats@ridge
-        }
 
         # incomplete data and fiml?
         if(lavsamplestats@missing.flag) {
@@ -87,6 +95,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       WLS.obs = lavsamplestats@WLS.obs[[g]], 
                                       WLS.V=lavsamplestats@WLS.V[[g]])  
             attr(group.fx, "WLS.est") <- WLS.est[[g]]
+
         } else if(estimator == "PML") {
             # Pairwise maximum likelihood
             group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
@@ -95,6 +104,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = X[[g]],
                                       lavcache     = lavcache[[g]])
+
         } else if(estimator == "FML") { 
             # Full maximum likelihood (underlying multivariate normal)
             group.fx <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
@@ -103,15 +113,16 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = X[[g]],
                                       lavcache     = lavcache[[g]])
+
         } else if(estimator == "MML") { 
             # marginal maximum likelihood
             group.fx <- estimator.MML(lavmodel    = lavmodel,
-                                      g         = g,
-                                      GLIST     = GLIST,
+                                      GLIST       = GLIST,
+                                      group       = g,
+                                      lavdata     = lavdata,
                                       sample.mean = lavsamplestats@mean[[g]],
-                                      link      = link,
-                                      X         = X[[g]],
-                                      lavcache     = lavcache[[g]])
+                                      link        = link,
+                                      lavcache    = lavcache)
         } else {
             stop("unsupported estimator: ", estimator)
         }
