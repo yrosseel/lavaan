@@ -118,6 +118,8 @@ lav_model_objective <- function(lavmodel       = NULL,
             # marginal maximum likelihood
             group.fx <- estimator.MML(lavmodel    = lavmodel,
                                       GLIST       = GLIST,
+                                      THETA       = THETA[[g]],
+                                      TH          = TH[[g]],
                                       group       = g,
                                       lavdata     = lavdata,
                                       sample.mean = lavsamplestats@mean[[g]],

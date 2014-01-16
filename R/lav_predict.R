@@ -419,109 +419,117 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
 
     FY <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
- 
-        # shortcuts
-        theta.var <- diag(THETA[[g]])
-        X <- data.obs[[g]]
-        yhat <- YHAT[[g]]
-        
-
-        # check size YHAT (either 1L or Nobs rows)
-        if(! (nrow(yhat) == 1L || nrow(yhat) == nrow(X)) ) {
-            stop("lavaan ERROR: nrow(YHAT[[g]]) not 1L and not nrow(X))")
-        }
-
-        FY.group <- matrix(0, nrow(X), ncol(X))
-        #if(NORMAL) {
-        #    if(nrow(yhat) == nrow(X)) {
-        #        tmp <- (X - yhat)^2
-        #    } else {
-        #        tmp <- sweep(X, MARGIN=2, STATS=yhat, FUN="-")^2
-        #    } 
-        #    tmp1 <- sweep(tmp, MARGIN=2, theta.var, "/")
-        #    tmp2 <- exp( -0.5 * tmp1 )
-        #    tmp3 <- sweep(tmp2, MARGIN=2, sqrt(2*pi*theta.var), "/")
-        #    if(log.) {
-        #        FY.group <- log(tmp3)
-        #    } else {
-        #        FY.group <- tmp3
-        #    }
-        #} else {
-            # mixed items
-
-        num.idx <- lavmodel@num.idx[[g]]
-         th.idx <- lavmodel@th.idx[[g]]
-        ord.idx <- unique( th.idx[th.idx > 0L] )
-
-        # first, NUMERIC variables
-        if(length(num.idx) > 0L) {
-            # multivariate
-            # FY.group[,num.idx] <- 
-            #    dmnorm(X[,num.idx], 
-            #           mean = yhat[n,num.idx], 
-            #           varcov = THETA[[g]][num.idx, num.idx], log = log.)
-            for(v in num.idx) {
-                FY.group[,v] <- dnorm(X[,v], 
-                                      # YHAT may change or not per case
-                                      mean = yhat[,v], 
-                                      sd   = sqrt(theta.var[v]), 
-                                      log  = log.)
-            }
-        }
-
-        # second, ORDERED variables
-        for(v in ord.idx) {
-            th.y <- TH[[g]][ th.idx == v]; TH.Y <- c(-Inf, th.y, Inf)
-            ncat <- length(th.y) + 1L
-            fy <- numeric(ncat)
-            # note: THETA not needed: always 1.0
-            theta.v <- sqrt(THETA[[g]][v,v])
-            yhat.v  <- yhat[,v]
-
-            # two cases: yhat.v is a scalar, or has length = nobs
-            fy <- matrix(0, nrow=length(yhat.v), ncol=ncat)
-
-            # for each category
-            for(k in seq_len(ncat)) {
-                if(link == "probit") {
-                    fy[,k] = pnorm(  (TH.Y[k+1] - yhat.v) / theta.v) -
-                             pnorm(  (TH.Y[k  ] - yhat.v) / theta.v)
-                } else if(link == "logit") {
-                    fy[,k] = plogis( (TH.Y[k+1] - yhat.v) / theta.v) -
-                             plogis( (TH.Y[k  ] - yhat.v) / theta.v)
-                } else {
-                    stop("lavaan ERROR: link must be probit or logit")
-                }
-            }
-
-            # underflow
-            idx <- which(fy < .Machine$double.eps)
-            if(length(idx) > 0L) {
-                fy[idx] <- .Machine$double.eps
-            }
-            
-            # log?
-            if(log.) {
-                fy <- log(fy)
-            }
-
-            # case-wise expansion/selection
-            if(length(yhat.v) == 1L) {
-                # expand category probabilities for all observations
-                FY.group[,v] <- fy[1L, X[,v]]
-            } else {
-                # select correct category probability per observation
-                FY.group[,v] <- fy[ cbind(seq_len(nrow(fy)), X[,v]) ]
-            }
-        } # ord
-
-    #}
-
-        FY[[g]] <- FY.group
+        FY[[g]] <- lav_predict_fy_internal(X = data.obs[[g]], yhat = YHAT[[g]],
+                       TH = TH[[g]], THETA = THETA[[g]], 
+                       num.idx = lavmodel@num.idx[[g]],
+                       th.idx  = lavmodel@th.idx[[g]], 
+                       link = link, log. = log.)
     }
 
     FY
 }
+
+
+# single group, internal function
+lav_predict_fy_internal <- function(X = NULL, yhat = NULL, 
+                                    TH = NULL, THETA = NULL,
+                                    num.idx = NULL, th.idx = NULL, 
+                                    link = NULL, log. = FALSE) {
+
+    
+    # shortcuts
+    theta.var <- diag(THETA)
+
+    # check size YHAT (either 1L or Nobs rows)
+    if(! (nrow(yhat) == 1L || nrow(yhat) == nrow(X)) ) {
+        stop("lavaan ERROR: nrow(YHAT[[g]]) not 1L and not nrow(X))")
+    }
+
+    FY.group <- matrix(0, nrow(X), ncol(X))
+    #if(NORMAL) {
+    #    if(nrow(yhat) == nrow(X)) {
+    #        tmp <- (X - yhat)^2
+    #    } else {
+    #        tmp <- sweep(X, MARGIN=2, STATS=yhat, FUN="-")^2
+    #    } 
+    #    tmp1 <- sweep(tmp, MARGIN=2, theta.var, "/")
+    #    tmp2 <- exp( -0.5 * tmp1 )
+    #    tmp3 <- sweep(tmp2, MARGIN=2, sqrt(2*pi*theta.var), "/")
+    #    if(log.) {
+    #        FY.group <- log(tmp3)
+    #    } else {
+    #        FY.group <- tmp3
+    #    }
+    #} else {
+        # mixed items
+
+    ord.idx <- unique( th.idx[th.idx > 0L] )
+
+    # first, NUMERIC variables
+    if(length(num.idx) > 0L) {
+        # multivariate
+        # FY.group[,num.idx] <- 
+        #    dmnorm(X[,num.idx], 
+        #           mean = yhat[n,num.idx], 
+            #           varcov = THETA[[g]][num.idx, num.idx], log = log.)
+        for(v in num.idx) {
+            FY.group[,v] <- dnorm(X[,v], 
+                                  # YHAT may change or not per case
+                                  mean = yhat[,v], 
+                                  sd   = sqrt(theta.var[v]), 
+                                  log  = log.)
+        }
+    }
+
+    # second, ORDERED variables
+    for(v in ord.idx) {
+        th.y <- TH[ th.idx == v ]; TH.Y <- c(-Inf, th.y, Inf)
+        ncat <- length(th.y) + 1L
+        fy <- numeric(ncat)
+        theta.v <- sqrt(theta.var[v])
+        yhat.v  <- yhat[,v]
+
+        # two cases: yhat.v is a scalar, or has length = nobs
+        fy <- matrix(0, nrow=length(yhat.v), ncol=ncat)
+
+        # for each category
+        for(k in seq_len(ncat)) {
+            if(link == "probit") {
+                fy[,k] = pnorm(  (TH.Y[k+1] - yhat.v) / theta.v) -
+                         pnorm(  (TH.Y[k  ] - yhat.v) / theta.v)
+            } else if(link == "logit") {
+                fy[,k] = plogis( (TH.Y[k+1] - yhat.v) / theta.v) -
+                         plogis( (TH.Y[k  ] - yhat.v) / theta.v)
+            } else {
+                stop("lavaan ERROR: link must be probit or logit")
+            }
+        }
+
+        # underflow
+        idx <- which(fy < .Machine$double.eps)
+        if(length(idx) > 0L) {
+            fy[idx] <- .Machine$double.eps
+        }
+        
+        # log?
+        if(log.) {
+            fy <- log(fy)
+        }
+
+        # case-wise expansion/selection
+        if(length(yhat.v) == 1L) {
+            # expand category probabilities for all observations
+            FY.group[,v] <- fy[1L, X[,v]]
+        } else {
+            # select correct category probability per observation
+            FY.group[,v] <- fy[ cbind(seq_len(nrow(fy)), X[,v]) ]
+        }
+    } # ord
+
+    FY.group
+}
+
+                                    
 
 # conditional density y -- assuming independence!!
 # f(y_i | eta_i, x_i)

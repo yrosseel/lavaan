@@ -585,7 +585,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     YHAT <- vector("list", length=lavsamplestats@ngroups)
 
     # compute YHAT for each group
-    for(g in group) {
+    for(g in seq_len(lavsamplestats@ngroups)) {
         # which mm belong to group g?
         mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0L,lavmodel@nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
