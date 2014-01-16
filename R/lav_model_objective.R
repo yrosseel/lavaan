@@ -58,9 +58,9 @@ lav_model_objective <- function(lavmodel       = NULL,
             GW <- computeGW(lavmodel = lavmodel, GLIST=GLIST)
         }
     } else if(estimator == "MML") {
-        TH <- computeTH(lavmodel = lavmodel, GLIST=GLIST)
+        TH    <- computeTH(   lavmodel = lavmodel, GLIST=GLIST)
         THETA <- computeTHETA(lavmodel = lavmodel, GLIST=GLIST)
-        GW <- computeGW(lavmodel = lavmodel, GLIST=GLIST)
+        GW    <- computeGW(   lavmodel = lavmodel, GLIST=GLIST)
     }
  
     fx <- 0.0

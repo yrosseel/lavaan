@@ -7,6 +7,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                lavcache       = NULL, 
                                type           = "free", 
                                estimator      = "ML", 
+                               link           = "logit",
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE, 
@@ -39,12 +40,15 @@ lav_model_gradient <- function(lavmodel       = NULL,
     }
 
     # do we need WLS.est?
-    if(estimator == "WLS"  || estimator == "DWLS" || estimator == "ULS") {
+    if(estimator == "GLS"  || estimator == "WLS"  ||
+       estimator == "DWLS" || estimator == "ULS") {
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
-    } else {
+    } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
                                      extra = (estimator == "ML"))
+
+        # ridge here?
         if(meanstructure && !categorical) {
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         } else if(categorical) {
@@ -55,11 +59,16 @@ lav_model_gradient <- function(lavmodel       = NULL,
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }
+    } else if(estimator == "MML") {
+        TH    <- computeTH(   lavmodel = lavmodel, GLIST = GLIST)
+        THETA <- computeTHETA(lavmodel = lavmodel, GLIST = GLIST)
+        GW    <- computeGW(   lavmodel = lavmodel, GLIST = GLIST)
     }
 
-    # two approaches:
+    # three approaches (FIXME!!!! merge this!)
     # - ML/GLS approach: using Omega (and Omega.mu)
     # - WLS: using Delta
+    # - PML/FML/MML: custom
 
     # 1. ML/GLS approach
     if(estimator == "ML" || estimator == "GLS") {
@@ -184,21 +193,36 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                  num.idx   = num.idx[[g]],
                                  X         = lavdata@X[[g]],
                                  lavcache  = lavcache[[g]])
-            } else {
+
+                # chain rule (fmin)
+                ### FIXME why -1L ???
+                group.dx <- 
+                    as.numeric(t(d1) %*% Delta[[g]])/lavsamplestats@nobs[[g]]
+
+            } else if(estimator == "FML") {
                 d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
                                  TH        = TH[[g]],
                                  th.idx    = th.idx[[g]],
                                  num.idx   = num.idx[[g]],
                                  X         = lavdata@X[[g]],
                                  lavcache     = lavcache[[g]])
+
+                # chain rule (fmin)
+                group.dx <- 
+                    as.numeric(t(d1) %*% Delta[[g]])/lavsamplestats@nobs[[g]]
+
+            } else if(estimator == "MML") {
+                group.dx <- 
+                    lav_model_gradient_mml(lavmodel    = lavmodel,
+                                    GLIST       = GLIST,
+                                    THETA       = THETA[[g]],
+                                    TH          = TH[[g]],
+                                    group       = g,
+                                    lavdata     = lavdata,
+                                    sample.mean = lavsamplestats@mean[[g]],
+                                    link        = link,
+                                    lavcache    = lavcache)
             }
-
-            # chain rule (logLik)
-            #group.dx <- as.numeric(t(d1) %*% Delta[[g]])
-
-            # chain rule (fmin)
-            ### FIXME why -1L ???
-            group.dx <- as.numeric(t(d1) %*% Delta[[g]])/lavsamplestats@nobs[[g]]
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx

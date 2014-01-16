@@ -80,6 +80,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
                                  estimator      = estimator,
+                                 link           = link,
                                  verbose        = verbose, 
                                  forcePD        = TRUE)
 
