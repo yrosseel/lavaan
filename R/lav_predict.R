@@ -384,7 +384,6 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                            ETA = NULL,
                            # options
                            method = "EBM",
-                           link = "probit",
                            log. = FALSE) {
 
     # full object?
@@ -423,7 +422,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                        TH = TH[[g]], THETA = THETA[[g]], 
                        num.idx = lavmodel@num.idx[[g]],
                        th.idx  = lavmodel@th.idx[[g]], 
-                       link = link, log. = log.)
+                       link    = lavmodel@link, log. = log.)
     }
 
     FY

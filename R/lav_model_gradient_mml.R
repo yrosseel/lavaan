@@ -5,8 +5,10 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                                    group       = 1L,
                                    lavdata     = NULL,
                                    sample.mean = NULL,
-                                   link        = "logit",
                                    lavcache    = NULL) {
+
+    if(lavmodel@link == "logit") 
+        stop("logit link not implemented yet; use probit")
 
     # data for this group
     X <- lavdata@X[[group]]; nobs <- nrow(X); nvar <- ncol(X)
@@ -33,7 +35,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     # compute case-wise likelihoods 
     lik <- lav_model_lik_mml(lavmodel = lavmodel, THETA = THETA, TH = TH,
                GLIST = GLIST, group = group, lavdata = lavdata,
-               sample.mean = sample.mean, link = link, lavcache = lavcache)
+               sample.mean = sample.mean, lavcache = lavcache)
 
     # chol.VETA? we need EETAx (only if eXo!!)
     if(!is.null(chol.VETA) && !is.null(eXo)) {
@@ -68,7 +70,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                           TH = TH, THETA = THETA,
                           num.idx = lavmodel@num.idx[[group]],
                           th.idx  = lavmodel@th.idx[[group]],
-                          link = link, log. = TRUE)
+                          link = lavmodel@link, log. = TRUE)
 
         dFYp <- dFYp_x(X = X, yhat = yhat, MLIST = MLIST,
                     THETA = THETA, TH = TH,
@@ -77,8 +79,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                     EETAx = EETAx,
                     FY = exp(log.fy.var), ## FIXME log/exp/log/...
                     num.idx = lavmodel@num.idx[[group]],
-                    th.idx  = lavmodel@th.idx[[group]],
-                    link = link)
+                    th.idx  = lavmodel@th.idx[[group]])
 
         dLdx[q,] <- apply(1/lik * dFYp, 2, sum)
     }
@@ -104,8 +105,7 @@ dFYp_x <- function(X         = NULL,
                    EETAx     = NULL,
                    FY        = NULL,
                    num.idx   = NULL,
-                   th.idx    = NULL,
-                   link      = NULL) {
+                   th.idx    = NULL) {
 
     nobs <- nrow(X); nvar <- ncol(X)
 
@@ -121,14 +121,17 @@ dFYp_x <- function(X         = NULL,
     }
 
     # fix Lambda?
-    LAMBDA <- MLIST$lambda
+    LAMBDA <- computeLAMBDA.LISREL(MLIST = MLIST, 
+                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
 
     Delta.lambda <- computeDeltaDx(lavmodel, target="lambda")[[g]]
     Delta.th     <- computeDeltaDx(lavmodel, target="th"    )[[g]]
     Delta.mu     <- computeDeltaDx(lavmodel, target="mu"    )[[g]]
     #Delta.sigma  <- computeDeltaDx(lavmodel, target="sigma" )[[g]]
     Delta.theta  <- computeDeltaDx(lavmodel, target="theta" )[[g]]
-    Delta.psi    <- computeDeltaDx(lavmodel, target="psi" )[[g]]
 
     x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)
     dVetadx <- function(x, lavmodel = fit@Model, g = 1L) {
@@ -137,7 +140,7 @@ dFYp_x <- function(X         = NULL,
         S <- chol(VETA)
         S
     }
-    Delta.psi <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel, 
+    Delta.S <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel, 
                                        g= g)
 
     
@@ -150,9 +153,8 @@ dFYp_x <- function(X         = NULL,
 
         nfac <- nrow(Delta.lambda)/nvar
         lambda.idx <- nvar*((1:nfac) - 1L) + p
-        theta.idx <- diag.idx(nvar)[p]
+        theta.idx <- diagh.idx(nvar)[p]
         nu.idx <- p
-        psi.idx <- vech.idx(nfac)
 
         # prod minus p itself
         FYp <- as.numeric(apply(FY[,-p], 1L, prod))
@@ -162,25 +164,27 @@ dFYp_x <- function(X         = NULL,
             y <- X[,p]
             sd.v <- sqrt(THETA[p,p])
             dy <- dnorm(y, mean=yhat[,p], sd=sd.v)
+
+            pre <- 
+
             # lambda
-            dlambda <- 1/sd.v^2 * ((y - yhat[,p]) %*% ETA) * dy
+            dlambda <- dy * 1/sd.v^2 * ((y - yhat[,p]) %*% ETA)
+            dFYp <- dFYp +
+                ( (dlambda %*% Delta.lambda[lambda.idx,,drop=FALSE]) * FYp)
+
             # theta
-            dsigma2 <- (1/(2*sd.v^4)*(y - yhat[,p])^2 - 1/(2*sd.v^2)) * dy
+            dsigma2 <- dy * (1/(2*sd.v^4)*(y - yhat[,p])^2 - 1/(2*sd.v^2))
+            dFYp <- dFYp +
+                ( (dsigma2 %*% Delta.theta[theta.idx,,drop=FALSE]) * FYp)
+
             # nu
-            dnu <-  1/sd.v^2 * (y - yhat[,p]) * dy
+            dnu <-  dy * 1/sd.v^2 * (y - yhat[,p])
+            dFYp <- dFYp +
+               ( (dnu %*% Delta.mu[nu.idx,,drop=FALSE]) * FYp)
+
             # psi
             dpsi <- 0 # FIXME
 
-            dFYp <- dFYp +
-                ( (dlambda %*% Delta.lambda[lambda.idx,,drop=FALSE]) * FYp)
-            # FIXME: sigma[j,j] or THETA[j,j] ????
-            #sigma.idx <- lavaan:::diagh.idx(nvar)[p]
-            #dFYp <- dFYp +
-            #    ( (dsigma2 %*% Delta.sigma[sigma.idx,,drop=FALSE]) * FYp)
-            dFYp <- dFYp +
-                ( (dsigma2 %*% Delta.theta[theta.idx,,drop=FALSE]) * FYp)
-            dFYp <- dFYp +
-               ( (dnu %*% Delta.mu[nu.idx,,drop=FALSE]) * FYp)
         }
 
         # ordinal
@@ -210,11 +214,11 @@ dFYp_x <- function(X         = NULL,
             dFYp <- dFYp +
                 ( (dlambda %*% Delta.lambda[lambda.idx,,drop=FALSE]) * FYp)
 
-            # d psi
+            # d S (=chol psi)
             dpsi <- (-1*(p1-p2)*sd.v.inv) %*% 
                         kronecker(LAMBDA[p,,drop=FALSE], KSI)
             dFYp <- dFYp +
-                ( (dpsi %*% Delta.psi) * FYp)
+                ( (dpsi %*% Delta.S) * FYp)
         }
     }
 

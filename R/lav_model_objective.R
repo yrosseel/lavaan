@@ -6,7 +6,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                 lavdata        = NULL,
                                 lavcache       = NULL,
                                 estimator      = "ML",
-                                link           = "logit",
                                 verbose        = FALSE,
                                 forcePD        = TRUE,
                                 debug          = FALSE) {
@@ -123,7 +122,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       group       = g,
                                       lavdata     = lavdata,
                                       sample.mean = lavsamplestats@mean[[g]],
-                                      link        = link,
                                       lavcache    = lavcache)
         } else {
             stop("unsupported estimator: ", estimator)

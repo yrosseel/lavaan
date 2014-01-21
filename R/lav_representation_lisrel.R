@@ -448,8 +448,26 @@ computePI.LISREL <- function(MLIST=NULL) {
     PI
 }
 
-computeLAMBDA.LISREL <- function(MLIST=NULL) {
-    return(MLIST$lambda)
+computeLAMBDA.LISREL <- function(MLIST=NULL,
+                                 ov.y.dummy.ov.idx=NULL,
+                                 ov.x.dummy.ov.idx=NULL,
+                                 ov.y.dummy.lv.idx=NULL,
+                                 ov.x.dummy.lv.idx=NULL) {
+
+    ov.dummy.idx = c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
+    lv.dummy.idx = c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
+
+    # fix LAMBDA
+    LAMBDA <- MLIST$lambda
+    if(length(lv.dummy.idx) > 0L) {
+        LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
+        nfac <- ncol(LAMBDA)
+        LAMBDA[ov.y.dummy.ov.idx,] <-
+            MLIST$beta[ov.y.dummy.lv.idx,
+                       1:nfac, drop=FALSE]
+    }
+
+    LAMBDA
 }
 
 # compute V(ETA): variances/covariances of latent variables

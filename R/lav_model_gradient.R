@@ -7,7 +7,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                lavcache       = NULL, 
                                type           = "free", 
                                estimator      = "ML", 
-                               link           = "logit",
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE, 
@@ -220,7 +219,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                     group       = g,
                                     lavdata     = lavdata,
                                     sample.mean = lavsamplestats@mean[[g]],
-                                    link        = link,
                                     lavcache    = lavcache)
             }
 

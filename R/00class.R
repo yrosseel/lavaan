@@ -73,6 +73,7 @@ setClass("Model",          # MATRIX representation of the sem model
         meanstructure="logical",
         categorical="logical",
         group.w.free="logical",
+        link="character",
 
         ngroups="integer",
         nmat="integer",

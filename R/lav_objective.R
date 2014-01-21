@@ -309,13 +309,12 @@ estimator.MML <- function(lavmodel    = NULL,
                           group       = 1L,
                           lavdata     = NULL,
                           sample.mean = NULL,
-                          link        = "logit",
                           lavcache    = NULL) {
 
     # compute case-wise likelihoods 
     lik <- lav_model_lik_mml(lavmodel = lavmodel, THETA = THETA, TH = TH,
                GLIST = GLIST, group = group, lavdata = lavdata, 
-               sample.mean = sample.mean, link = link, lavcache = lavcache)
+               sample.mean = sample.mean, lavcache = lavcache)
 
     # log + sum over observations
     logl <- sum( log(lik) )

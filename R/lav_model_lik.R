@@ -7,7 +7,6 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
                               group       = 1L,
                               lavdata     = NULL,
                               sample.mean = NULL,
-                              link        = "logit",
                               lavcache    = NULL) {
 
     # data for this group
@@ -65,7 +64,7 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
                           TH = TH, THETA = THETA,
                           num.idx = lavmodel@num.idx[[group]],
                           th.idx  = lavmodel@th.idx[[group]],
-                          link = link, log. = TRUE)
+                          link    = lavmodel@link, log. = TRUE)
 
         # if log, fy is just the sum of log.fy.var
         log.fy <- apply(log.fy.var, 1L, sum)

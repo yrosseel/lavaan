@@ -9,7 +9,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                control        = list()) {
 
     estimator     <- lavoptions$estimator
-    link          <- lavoptions$link
     verbose       <- lavoptions$verbose
     debug         <- lavoptions$debug
     ngroups       <- lavsamplestats@ngroups
@@ -45,7 +44,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
                                   estimator      = estimator, 
-                                  link           = link,
                                   verbose        = verbose, 
                                   forcePD        = forcePD)
         if(debug || verbose) { 
@@ -80,7 +78,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
                                  estimator      = estimator,
-                                 link           = link,
                                  verbose        = verbose, 
                                  forcePD        = TRUE)
 

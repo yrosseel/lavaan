@@ -403,6 +403,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       representation   = lavoptions$representation,
                       th.idx           = lavsamplestats@th.idx,
                       parameterization = lavoptions$parameterization,
+                      link             = lavoptions$link,
                       debug            = lavoptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]

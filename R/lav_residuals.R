@@ -73,6 +73,7 @@ function(object, type="raw", labels=TRUE) {
             augModel <- lav_model(lavpartable    = augUser,
                                   start          = object@Fit@est,
                                   representation = object@Options$representation,
+                                  link           = object@Options$link,
                                   debug          = object@Options$debug)
             VarCov <- lav_model_vcov(lavmodel       = augModel, 
                                      lavsamplestats = object@SampleStats,

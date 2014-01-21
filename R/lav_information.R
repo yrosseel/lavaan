@@ -199,8 +199,7 @@ computeObservedInformation <- function(lavmodel       = NULL,
     #    GLIST <- lav_model_x2GLIST(object, x=x)
     #    fx <- lav_model_objective(lavmodel, GLIST=GLIST, 
     #                              lavlavsamplestats=lavlavsamplestats,
-    #                              estimator=estimator,
-    #                              link=link)
+    #                              estimator=estimator)
     #    fx
     #}
     #Hessian <- - numDeriv::hessian(func=compute.fx, x=x)

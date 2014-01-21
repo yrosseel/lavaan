@@ -119,6 +119,7 @@ independence.model.fit <- function(object) {
                   representation   = lavoptions$representation,
                   th.idx           = lavsamplestats@th.idx,
                   parameterization = lavoptions$parameterization,
+                  link             = lavoptions$link,
                   debug            = lavoptions$debug)
 
     # cache

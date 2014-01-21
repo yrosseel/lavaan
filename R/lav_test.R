@@ -344,6 +344,7 @@ lav_model_test <- function(lavmodel       = NULL,
 #                augModel <- lav_model(lavlavpartable       = augUser,
 #                                  start          = lav_model_get_parameters(object, type="user"),
 #                                  representation = lavmodel@representation,
+#                                  link           = lavmodel@link,
 #                                  debug          = FALSE)
 #
 #                Delta <- computeDelta(lavmodel = augModel)
