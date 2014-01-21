@@ -88,12 +88,12 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL,
                             num.idx = lavmodel@num.idx[[g]])
                     }
                 } else if(estimator %in% c("MML", "FML")) {
-                    ttt <- diag(tmp[mm.in.group]$theta)
-                    diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
-                    if(length(lavmodel@num.idx[[g]]) > 0L) {
-                        diag(tmp[mm.in.group]$theta)[ lavmodel@num.idx[[g]] ] <-
-                            ttt[ lavmodel@num.idx[[g]] ]
-                    }
+                  #  ttt <- diag(tmp[mm.in.group]$theta)
+                  #  diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
+                  #  if(length(lavmodel@num.idx[[g]]) > 0L) {
+                  #      diag(tmp[mm.in.group]$theta)[ lavmodel@num.idx[[g]] ] <-
+                  #          ttt[ lavmodel@num.idx[[g]] ]
+                  #  }
                 }
             }
         } else {

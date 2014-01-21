@@ -27,9 +27,22 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         # whitening
         VETA <- computeVETA.LISREL(MLIST = MLIST)
         chol.VETA <- chol(VETA)
-        GHx <- GH$x %*% chol.VETA
+        #GHx <- GH$x %*% chol.VETA
     } else {
-        GHx <- GH$x
+        #GHx <- GH$x
+        chol.VETA <- NULL
+    }
+
+    # chol.VETA? we need EETAx (only if eXo!!)
+    if(!is.null(chol.VETA) && !is.null(eXo)) {
+        EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo,
+            sample.mean = sample.mean,
+            ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+            ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+            ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+            ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+    } else {
+        EETAx <- NULL
     }
 
     # compute (log)lik for each node, for each observation
@@ -39,7 +52,8 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         # first, compute yhat for this node (eta)
         yhat <- computeYHATx.LISREL(MLIST  = MLIST,
                     eXo    = eXo,
-                    ETA    = GHx[q,,drop=FALSE],
+                    ETA    = GH$x[q,,drop=FALSE], # whitened!
+                    chol.VETA = chol.VETA, EETAx = EETAx,
                     sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                     ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],

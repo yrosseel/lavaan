@@ -568,6 +568,9 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
                 } else if(target == "theta") {
                     DELTA <- derivative.theta.LISREL(m=mname, 
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "psi") {
+                    DELTA <- derivative.psi.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
                 } else if(target == "sigma") {
                     DELTA <- derivative.sigma.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ],

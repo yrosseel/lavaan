@@ -226,7 +226,7 @@ lav_model_test <- function(lavmodel       = NULL,
         }
     }
 
-    if(test == "none" || df < 0L) {
+    if(test == "none" || df < 0L || estimator == "MML") {
         TEST[[1]] <- list(test=test,
                           stat=as.numeric(NA),
                           stat.group=as.numeric(NA),

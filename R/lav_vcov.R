@@ -421,7 +421,11 @@ lav_model_vcov <- function(lavmodel       = NULL,
             N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }
 
-        VarCov <- 1/N * NVarCov
+        if(estimator == "MML") {
+            VarCov <- NVarCov
+        } else {
+            VarCov <- 1/N * NVarCov
+        }
 
     } else {
         warning("lavaan WARNING: could not compute standard errors!\n")

@@ -114,7 +114,7 @@ short.summary <- function(object) {
     cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
     # check if test == "none"
-    if(object@Options$test != "none") {
+    if(object@Options$test != "none" && object@Options$estimator != "MML") {
 
         # 1. chi-square values
         t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")  
@@ -234,6 +234,11 @@ short.summary <- function(object) {
             }
         } 
     } # test != none
+
+    if(object@Options$estimator == "MML") {
+        fm <- fitMeasures(fit, c("logl", "npar", "aic", "bic", "bic2"))
+        print.fit.measures(fm)
+    }
 
     #cat("\n")
 }

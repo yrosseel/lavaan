@@ -109,8 +109,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     }
     
     # likelihood based measures
-    fit.logl <- c("logl", "unrestricted.logl", "npar", "aic", "bic",
-                  "ntotal", "bic2")
+    if(estimator == "MML") {
+        fit.logl <- c("logl", "npar", "aic", "bic", "ntotal", "bic2")
+    } else {
+        fit.logl <- c("logl", "unrestricted.logl", "npar", "aic", "bic",
+                      "ntotal", "bic2")
+    }
     if(scaled && object@Options$test == "yuan.bentler") {
         fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
     }
@@ -163,6 +167,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                 fit.measures <- c(fit.chisq, fit.baseline, 
                                   fit.cfi.tli, fit.logl, 
                                   fit.rmsea, fit.srmr)
+            } else if(estimator == "MML") {
+                fit.measures <- c(fit.logl)
             } else {
                 fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
                                   fit.rmsea, fit.srmr, fit.table)
@@ -461,7 +467,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         }
     }
 
-    if(estimator == "ML") {
+    if(estimator == "ML" || estimator == "MML") {
         if("logl" %in% fit.measures ||
            "unrestricted.logl" %in% fit.measures ||
            "npar" %in% fit.measures ||
@@ -470,28 +476,32 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
 
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
-            for(g in 1:G) {
-                nvar <- ncol(object@SampleStats@cov[[g]])
-                if(!object@SampleStats@missing.flag) {
-                    Ng <- object@SampleStats@nobs[[g]]
-                    c <- Ng*nvar/2 * log(2 * pi)
-                    logl.H1.group[g] <- ( -c -(Ng/2) *
+            if(all(object@Data@ov$type == "numeric")) {
+                for(g in 1:G) {
+                    nvar <- ncol(object@SampleStats@cov[[g]])
+                    if(!object@SampleStats@missing.flag) {
+                        Ng <- object@SampleStats@nobs[[g]]
+                        c <- Ng*nvar/2 * log(2 * pi)
+                        logl.H1.group[g] <- ( -c -(Ng/2) *
                                           object@SampleStats@cov.log.det[[g]]
                                           - (Ng/2)*nvar )
-                } else { # missing patterns case
-                    pat <- object@Data@Mp[[g]]$pat
-                    Ng <- object@Data@nobs[[g]]
-                    ni <- as.numeric(apply(pat, 1, sum) %*% 
-                                     as.integer(rownames(pat)))
-                    fx.full <- object@SampleStats@missing.h1[[g]]$h1
-                    logl.H1.group[g] <- - (ni/2 * log(2 * pi)) - 
-                                              (Ng/2 * fx.full)
+                    } else { # missing patterns case
+                        pat <- object@Data@Mp[[g]]$pat
+                        Ng <- object@Data@nobs[[g]]
+                        ni <- as.numeric(apply(pat, 1, sum) %*% 
+                                          as.integer(rownames(pat)))
+                        fx.full <- object@SampleStats@missing.h1[[g]]$h1
+                        logl.H1.group[g] <- - (ni/2 * log(2 * pi)) - 
+                                                  (Ng/2 * fx.full)
+                    }
                 }
-            }
-            if(G > 1) {
-                logl.H1 <- sum(logl.H1.group)
+                if(G > 1) {
+                    logl.H1 <- sum(logl.H1.group)
+                } else {
+                    logl.H1 <- logl.H1.group[1]
+                }
             } else {
-                logl.H1 <- logl.H1.group[1]
+                logl.H1.group <- as.numeric(NA)
             }
 
             if("unrestricted.logl" %in% fit.measures) {
@@ -500,15 +510,20 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
 
             # logl H0
             logl.H0.group <- numeric(G)
-            for(g in 1:G) {
-                Ng <- object@SampleStats@nobs[[g]]
-                logl.H0.group[g] <- -Ng * (fx.group[g] - logl.H1.group[g]/Ng)
-            }
-            if(G > 1) {
-                logl.H0 <- sum(logl.H0.group)
-            } else {
-                logl.H0 <- logl.H0.group[1]
-            }
+            if(all(object@Data@ov$type == "numeric")) {
+                for(g in 1:G) {
+                    Ng <- object@SampleStats@nobs[[g]]
+                    logl.H0.group[g] <- -Ng * (fx.group[g] - 
+                                               logl.H1.group[g]/Ng)
+                }
+                if(G > 1) {
+                    logl.H0 <- sum(logl.H0.group)
+                } else {
+                    logl.H0 <- logl.H0.group[1]
+                }
+            } else if(object@Options$estimator == "MML") {
+                logl.H0 <- -1 * fx
+            }             
            
             if("logl" %in% fit.measures) {
                 indices["logl"] <- logl.H0
@@ -1164,18 +1179,20 @@ print.fit.measures <- function(x) {
            cat("    for the MLR correction\n")
        }
 
-       t0.txt <- sprintf("  %-40s", "Loglikelihood unrestricted model (H1)")
-       t1.txt <- sprintf("  %10.3f", x["unrestricted.logl"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["unrestricted.logl"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       #cat(t0.txt, t1.txt, "\n", sep="")
-       if(!is.na(x["scaling.factor.h1"])) {
-           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-           t1.txt <- sprintf("  %10s", "")
-           t2.txt <- sprintf("  %10.3f", x["scaling.factor.h1"])
+       if("unrestricted.logl" %in% names.x) {
+           t0.txt <- sprintf("  %-40s", "Loglikelihood unrestricted model (H1)")
+           t1.txt <- sprintf("  %10.3f", x["unrestricted.logl"])
+           t2.txt <- ifelse(scaled,
+                     sprintf("  %10.3f", x["unrestricted.logl"]), "")
            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-           cat("    for the MLR correction\n")
+           #cat(t0.txt, t1.txt, "\n", sep="")
+           if(!is.na(x["scaling.factor.h1"])) {
+               t0.txt <- sprintf("  %-40s", "Scaling correction factor")
+               t1.txt <- sprintf("  %10s", "")
+               t2.txt <- sprintf("  %10.3f", x["scaling.factor.h1"])
+               cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+              cat("    for the MLR correction\n")
+           }
        }
 
        cat("\n")

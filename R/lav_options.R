@@ -395,7 +395,8 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$information <- "observed"
         if(opt$se == "default")
             opt$se <- "standard"
-        if(opt$test != "none") opt$test <- "standard"
+        if(opt$test == "default")
+            opt$test <- "none"
         #opt$missing <- "listwise"
         if(opt$link == "default") {
             opt$link <- "logit"

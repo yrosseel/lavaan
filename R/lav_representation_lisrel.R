@@ -658,7 +658,12 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL,
 # if nexo = 0, YHAT is the same for each observation
 # in this case, we return a single row, unless Nobs > 1L, in which case
 # we return Nobs identical rows
+#
+# if chol.VETA is not NULL, we assume the ETA values are orthongal, and
+# we need chol.VETA to compensate
+#
 computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
+                                chol.VETA = NULL, EETAx = NULL,
                                 sample.mean=NULL,
                                 ov.y.dummy.ov.idx=NULL,
                                 ov.x.dummy.ov.idx=NULL,
@@ -723,7 +728,11 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
     }
 
     # compute YHAT
-    YHAT <- sweep(ETA %*% t(LAMBDA), MARGIN=2, NU, "+")
+    if(is.null(chol.VETA)) {
+        YHAT <- sweep(ETA %*% t(LAMBDA), MARGIN=2, NU, "+")
+    } else {
+        YHAT <- sweep((ETA %*% chol.VETA) %*% t(LAMBDA), MARGIN=2, NU, "+")
+    }
 
     # Kappa + eXo?
     # note: Kappa elements are either in Gamma or in Beta
@@ -741,11 +750,29 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
         # add fixed part
         YHAT <- YHAT + (eXo %*% t(KAPPA))
 
+        # chol.VETA?
+        if(!is.null(chol.VETA) && !is.null(EETAx)) {
+            YHAT <- YHAT + EETAx %*% t(LAMBDA)
+        }
+
         # put back eXo
         if(length(ov.x.dummy.ov.idx) > 0L) {
             YHAT[, ov.x.dummy.ov.idx] <- eXo
         }
     } else {
+
+        # chol.VETA
+        if(!is.null(chol.VETA)) {
+            EETA <- computeEETA.LISREL(MLIST = MLIST, mean.x = NULL,
+                         sample.mean = sample.mean,
+                         ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                         ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                         ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                         ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+            YHAT <- YHAT + t(EETA) %*% t(LAMBDA)
+        }
+
+        # duplicate?
         if(is.numeric(Nobs) && Nobs > 1L && nrow(YHAT) == 1L) {
             YHAT <- YHAT[ rep(1L, Nobs), ]
         }
@@ -1540,23 +1567,47 @@ derivative.lambda.LISREL <- function(m="lambda",
     DX
 }
 
+# dpsi/dx -- per model matrix - FIXME!!!!!
+derivative.psi.LISREL <- function(m="psi", 
+                                  # all model matrix elements, or only a few?
+                                  idx=1:length(MLIST[[m]]), 
+                                  MLIST=NULL) {
+
+    PSI <- MLIST$psi; nfac <- nrow(PSI)
+    v.idx <- vech.idx( nfac  )
+
+    # shortcut for empty matrices
+    if(m != "psi") {
+        DX <- matrix(0.0, nrow=length(PSI), ncol=length(idx))
+        return(DX[v.idx,,drop=FALSE])
+    } else {
+        # m == "psi"
+        DX <- diag(1, nrow=length(PSI), ncol=length(PSI))
+    }
+
+    DX <- DX[v.idx, idx, drop=FALSE]
+    DX
+}
+
 # dtheta/dx -- per model matrix
 derivative.theta.LISREL <- function(m="theta", 
                                  # all model matrix elements, or only a few?
                                  idx=1:length(MLIST[[m]]), 
                                  MLIST=NULL) {
 
-    THETA <- MLIST$theta
+    THETA <- MLIST$theta; nvar <- nrow(THETA)
+    v.idx <- vech.idx( nvar)
 
     # shortcut for empty matrices
     if(m != "theta") {
-        return( matrix(0.0, nrow=length(THETA), ncol=length(idx) ) )
+        DX <- matrix(0.0, nrow=length(THETA), ncol=length(idx))
+        return(DX[v.idx,,drop=FALSE])
     } else {
         # m == "theta"
         DX <- diag(1, nrow=length(THETA), ncol=length(THETA))
     }
 
-    DX <- DX[, idx, drop=FALSE]
+    DX <- DX[v.idx, idx, drop=FALSE]
     DX
 }
 
