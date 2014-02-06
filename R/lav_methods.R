@@ -1189,7 +1189,7 @@ function(object, what="free") {
     } else if(what == "wls.v") {
         getWLS.V(object, drop.list.single.group=TRUE)
     } else if(what == "nacov") {
-        getlavsamplestatsNACOV(object)    
+        getSampleStatsNACOV(object)    
     } else if(what == "modelcovlv"  ||
               what == "modelcov.lv" ||
               what == "cov.lv") {
@@ -1545,7 +1545,7 @@ getWLS.V <- function(object, Delta=computeDelta(lavmodel = object@Model),
     OUT
 }
 
-getlavsamplestatsNACOV <- function(object) {
+getSampleStatsNACOV <- function(object) {
 
     if(object@Options$se == "robust.mlr")
         stop("not done yet; FIX THIS!")

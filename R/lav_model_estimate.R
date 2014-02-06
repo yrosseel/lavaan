@@ -44,7 +44,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
                                   estimator      = estimator, 
-                                  verbose        = verbose, 
+                                  verbose        = verbose,
+                                  control        = control,
                                   forcePD        = forcePD)
         if(debug || verbose) { 
             cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
@@ -78,7 +79,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
                                  estimator      = estimator,
-                                 verbose        = verbose, 
+                                 verbose        = verbose,
+                                 control        = control,
                                  forcePD        = TRUE)
 
         if(debug) {

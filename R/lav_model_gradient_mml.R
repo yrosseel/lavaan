@@ -5,6 +5,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                                    group       = 1L,
                                    lavdata     = NULL,
                                    sample.mean = NULL,
+                                   control     = list(),
                                    lavcache    = NULL) {
 
     if(lavmodel@link == "logit") 
@@ -20,46 +21,125 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
 
     # quadrature points
     GH <- lavcache[[group]]$GH; nGH <- nrow(GH$x)
-
-    # whitening?
     nfac <- ncol(GH$x)
-    if(nfac > 1L) {
-        # whitening
-        VETA <- computeVETA.LISREL(MLIST = MLIST)
-        chol.VETA <- chol(VETA)
-        #GHx <- GH$x %*% chol.VETA
+
+    # compute VETAx (latent lv only)
+    lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[group]],
+                      lavmodel@ov.x.dummy.lv.idx[[group]])
+    VETAx <- computeVETAx.LISREL(MLIST = MLIST,
+                                 lv.dummy.idx = lv.dummy.idx)
+    # check for negative values?
+    if(any(diag(VETAx) < 0)) {
+        warning("lavaan WARNING: --- VETAx contains negative values")
+        print(VETAx)
+        return(0)
+    }
+
+    # cholesky?
+    if(is.null(control$cholesky)) {
+        CHOLESKY <- TRUE
     } else {
-        chol.VETA <- NULL
+        CHOLESKY <- control$cholesky
+        if(nfac > 1L && !CHOLESKY) {
+            warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
+        }
+    }
+
+    if(!CHOLESKY) {
+        # we should still 'scale' the factors, if std.lv=FALSE
+        ETA.sd <- sqrt( diag(VETAx) )
+    } else {
+        # cholesky takes care of scaling
+        ETA.sd <- rep(1, nfac)
+        chol.VETA <- try(chol(VETAx), silent = TRUE)
+        if(inherits(chol.VETA, "try-error")) {
+            warning("lavaan WARNING: --- VETAx not positive definite")
+            print(VETAx)
+            return(0)
+        }
     }
 
     # compute case-wise likelihoods 
     lik <- lav_model_lik_mml(lavmodel = lavmodel, THETA = THETA, TH = TH,
                GLIST = GLIST, group = group, lavdata = lavdata,
-               sample.mean = sample.mean, lavcache = lavcache)
+               sample.mean = sample.mean, control = control, 
+               lavcache = lavcache)
 
-    # chol.VETA? we need EETAx (only if eXo!!)
-    if(!is.null(chol.VETA) && !is.null(eXo)) {
-        EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo,
-            sample.mean = sample.mean,
-            ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-            ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-            ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-            ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
-    } else {
-        EETAx <- NULL
-    }
+    # prepare common stuff
+    # fix Lambda?
+    LAMBDA <- computeLAMBDA.LISREL(MLIST = MLIST,
+                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+
+    Delta.lambda <- computeDeltaDx(lavmodel, target="lambda")[[group]]
+    Delta.th     <- computeDeltaDx(lavmodel, target="th"    )[[group]] ## FIXME? tau?
+    Delta.mu     <- computeDeltaDx(lavmodel, target="mu"    )[[group]] ## FIXME? nu?
+    Delta.theta  <- computeDeltaDx(lavmodel, target="theta" )[[group]]
+    Delta.beta   <- computeDeltaDx(lavmodel, target="beta"  )[[group]]
+    Delta.psi    <- computeDeltaDx(lavmodel, target="psi"   )[[group]]
+    Delta.alpha  <- computeDeltaDx(lavmodel, target="alpha" )[[group]]
+    Delta.gamma  <- computeDeltaDx(lavmodel, target="gamma" )[[group]]
+
+    ## FIXME!!! do this analytically...
+    #if(!is.null(chol.VETA)) {
+        x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)
+        dVetadx <- function(x, lavmodel = fit@Model, g = 1L) {
+            GLIST <- lavaan:::lav_model_x2GLIST(lavmodel, x=x, type="free")
+            VETAx <- lavaan:::computeVETAx(lavmodel, GLIST = GLIST)[[g]]
+            S <- chol(VETAx)
+            S
+        }
+        Delta.S <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel,
+                                         g = group)
+    #} else {
+
+    # remove dummy lv's from Delta.psi
+    #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[group]],
+    #                  lavmodel@ov.x.dummy.lv.idx[[group]])
+    #if(length(lv.dummy.idx) > 0L) {
+    #    pstar <- nfac*(nfac+1)/2
+    #    idx <- 1:pstar
+    #    Delta.psi <- Delta.psi[idx,,drop=FALSE]
+    #}
+
+    #Delta.S <- Delta.psi
+    # remove dummy lv's from Delta.psi
+    #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[group]],
+    #                  lavmodel@ov.x.dummy.lv.idx[[group]])
+    #if(length(lv.dummy.idx) > 0L) {
+    #    pstar <- nfac*(nfac+1)/2
+    #    idx <- 1:pstar
+    #    Delta.S <- Delta.S[idx,,drop=FALSE]
+    #}
+    #}
 
     # compute dL/dx for each node
     dLdx <-  matrix(0, nGH, lavmodel@nx.free)
     for(q in 1:nGH) {
 
+        # current value(s) for ETA
+        eta <- GH$x[q,,drop=FALSE]
+
+        # rescale/unwhiten
+        if(CHOLESKY) {
+            eta <- eta %*% chol.VETA
+        } else {
+            # no unit scale? (un-standardize)
+            eta <- sweep(eta, MARGIN=2, STATS=ETA.sd, FUN="*")
+        }
+
+        # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
+        eta <- computeETAx.LISREL(MLIST = MLIST, eXo = eXo, ETA = eta,
+                   remove.dummy.lv = TRUE,
+                   ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                   ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]],
+                   Nobs = 1L)
+
         # again, compute yhat for this node (eta)
-        yhat <- computeYHATx.LISREL(MLIST  = MLIST,
-                    eXo               = eXo,
-                    ETA               = GH$x[q,,drop=FALSE],
-                    chol.VETA         = chol.VETA,
-                    EETAx             = EETAx,
-                    sample.mean       = sample.mean,
+        yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,
+                    ETA = eta, sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                     ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
                     ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
@@ -72,14 +152,31 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                           th.idx  = lavmodel@th.idx[[group]],
                           link = lavmodel@link, log. = TRUE)
 
-        dFYp <- dFYp_x(X = X, yhat = yhat, MLIST = MLIST,
-                    THETA = THETA, TH = TH,
-                    lavmodel = lavmodel, g = group, # for computeDeltaDx
-                    KSI = GH$x[q,,drop=FALSE], chol.VETA = chol.VETA,
+        # FYp: FY prod minus p itself
+        FY <- exp(log.fy.var) ### FIXME log/exp/log/...
+        FYp <- matrix(0, nrow(FY), ncol(FY))
+        for(p in 1:ncol(log.fy.var)) {
+            FYp[,p] <- apply(FY[,-p], 1L, prod)
+        }
+
+        dFYp <- dFYp_x(X = X, eXo = eXo, yhat = yhat, MLIST = MLIST,
+                       THETA = THETA, TH = TH, LAMBDA = LAMBDA,
+                       Delta.lambda = Delta.lambda, 
+                       Delta.th = Delta.th, Delta.mu = Delta.mu,
+                       Delta.theta = Delta.theta, Delta.S = Delta.S,
+                       Delta.psi = Delta.psi, Delta.beta = Delta.beta,
+                       Delta.alpha = Delta.alpha, Delta.gamma = Delta.gamma,
+                    ETA = eta, 
+                    KSI = GH$x[q,,drop=FALSE],
+                    chol.VETA = chol.VETA,
                     EETAx = EETAx,
-                    FY = exp(log.fy.var), ## FIXME log/exp/log/...
+                    FYp = FYp,
                     num.idx = lavmodel@num.idx[[group]],
-                    th.idx  = lavmodel@th.idx[[group]])
+                    th.idx  = lavmodel@th.idx[[group]],
+                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
 
         dLdx[q,] <- apply(1/lik * dFYp, 2, sum)
     }
@@ -94,70 +191,127 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
 }
 
 dFYp_x <- function(X         = NULL,
+                   eXo       = NULL,
                    yhat      = NULL,
                    MLIST     = NULL,
                    THETA     = NULL, 
                    TH        = NULL,
-                   lavmodel  = NULL,
-                   g         = NULL,
+                   LAMBDA    = NULL,
+                   Delta.lambda = NULL,
+                   Delta.th     = NULL,
+                   Delta.mu     = NULL,
+                   Delta.theta  = NULL,
+                   Delta.S      = NULL,
+                   Delta.psi    = NULL,
+                   Delta.beta   = NULL,
+                   Delta.alpha  = NULL,
+                   Delta.gamma  = NULL,
+                   ETA       = NULL,
                    KSI       = NULL,
                    chol.VETA = NULL,
                    EETAx     = NULL,
-                   FY        = NULL,
+                   FYp       = NULL,
                    num.idx   = NULL,
-                   th.idx    = NULL) {
+                   th.idx    = NULL,
+                   ov.y.dummy.ov.idx = NULL,
+                   ov.x.dummy.ov.idx = NULL,
+                   ov.y.dummy.lv.idx = NULL,
+                   ov.x.dummy.lv.idx = NULL) {
 
+    ov.dummy.idx <- c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
+    lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
     nobs <- nrow(X); nvar <- ncol(X)
 
+    # 'true' latent variables
+    nfac <- ncol(MLIST$psi)
+    if(length(lv.dummy.idx) > 0L) {
+        nfac <- nfac - length(lv.dummy.idx)
+    }
+
     # chol.VETA?
-    if(is.null(chol.VETA)) {
-        ETA <- KSI
+    #if(is.null(chol.VETA)) {
+    #    ETA <- KSI
+    #} else {
+    #    ETA <- (KSI %*% chol.VETA)
+    #    if(!is.null(EETAx)) {
+    #        #ETA <- ETA + EETAx  ### FIXME? dim!!
+    #        ETA <- sweep(EETAx, MARGIN=1, STATS=ETA, FUN="+")
+    #    }
+    #}
+
+    # Beta?
+    BETA <- MLIST$beta
+    if(is.null(BETA)) {
+        LAMBDA..IB.inv <- LAMBDA   
     } else {
-        ETA <- (KSI %*% chol.VETA)
-        if(!is.null(EETAx)) {
-            #ETA <- ETA + EETAx  ### FIXME? dim!!
-            ETA <- sweep(EETAx, MARGIN=1, STATS=ETA, FUN="+")
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        IB.inv <- solve(tmp)
+        LAMBDA..IB.inv <- MLIST$lambda %*% IB.inv ## no need to FIX???
+        if(length(lv.dummy.idx) > 0L) {
+            LAMBDA..IB.inv <- LAMBDA..IB.inv[,-lv.dummy.idx,drop=FALSE]
         }
     }
-
-    # fix Lambda?
-    LAMBDA <- computeLAMBDA.LISREL(MLIST = MLIST, 
-                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
-
-    Delta.lambda <- computeDeltaDx(lavmodel, target="lambda")[[g]]
-    Delta.th     <- computeDeltaDx(lavmodel, target="th"    )[[g]]
-    Delta.mu     <- computeDeltaDx(lavmodel, target="mu"    )[[g]]
-    #Delta.sigma  <- computeDeltaDx(lavmodel, target="sigma" )[[g]]
-    Delta.theta  <- computeDeltaDx(lavmodel, target="theta" )[[g]]
-
-    x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)
-    dVetadx <- function(x, lavmodel = fit@Model, g = 1L) {
-        GLIST <- lavaan:::lav_model_x2GLIST(lavmodel, x=x, type="free")
-        VETA <- lavaan:::computeVETA(lavmodel, GLIST = GLIST)[[g]]
-        S <- chol(VETA)
-        S
-    }
-    Delta.S <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel, 
-                                       g= g)
-
-    
 
     # ordered?
     ord.idx <- unique( th.idx[th.idx > 0L] )
 
-    dFYp <- matrix(0, nobs, lavmodel@nx.free)
+    dFYp <- matrix(0, nobs, ncol(Delta.lambda))
     for(p in 1:nvar) {
 
-        nfac <- nrow(Delta.lambda)/nvar
-        lambda.idx <- nvar*((1:nfac) - 1L) + p
+        
         theta.idx <- diagh.idx(nvar)[p]
-        nu.idx <- p
 
-        # prod minus p itself
-        FYp <- as.numeric(apply(FY[,-p], 1L, prod))
+        # nu.idx
+        nu.idx <- p
+        D.mu <- Delta.mu[nu.idx,,drop=FALSE]
+
+        # kappa idx
+        if(p %in% ov.y.dummy.ov.idx) {
+            nr <- nrow(MLIST$gamma); nc <- ncol(MLIST$gamma)
+            ov.idx <- match(p, ov.y.dummy.ov.idx)
+            pp <- ov.y.dummy.lv.idx[ov.idx]
+            kappa.idx <- nr*((1:nc) - 1L) + pp
+            D.kappa <- Delta.gamma[kappa.idx,,drop=FALSE]
+        }
+
+        # gamma.idx -- FIXME!!!!
+        if(!is.null(MLIST$gamma)) {
+            nr <- nrow(MLIST$gamma); nc <- ncol(MLIST$gamma)
+            lv.idx <- 1:nfac
+            gamma.idx <- nr*((1:nc) - 1L) + lv.idx
+            D.gamma <- Delta.gamma[gamma.idx,,drop=FALSE]
+        }
+
+        # lambda idx
+        if(p %in% ov.y.dummy.ov.idx) {
+            nr <- nrow(MLIST$beta); nc <- nfac # only the first 1:nfac columns
+            ov.idx <- match(p, ov.y.dummy.ov.idx)
+            pp <- ov.y.dummy.lv.idx[ov.idx]
+            beta.idx <- nr*((1:nc) - 1L) + pp
+            D.lambda <- Delta.beta[beta.idx,,drop=FALSE]
+        } else {
+            lambda.idx <- nvar*((1:nfac) - 1L) + p
+            D.lambda <- Delta.lambda[lambda.idx,,drop=FALSE]
+        }
+
+        # theta idx
+        if(p %in% num.idx) {
+            if(p %in% ov.y.dummy.ov.idx) {
+                ov.idx <- match(p, ov.y.dummy.ov.idx)
+                pp <- ov.y.dummy.lv.idx[ov.idx]
+                psi.idx <- diagh.idx( ncol(MLIST$psi) )[pp]
+                D.theta <- Delta.psi[psi.idx,,drop=FALSE]
+            } else {
+                theta.idx <- diagh.idx(nvar)[p]
+                D.theta <-  Delta.theta[theta.idx,,drop=FALSE]
+            }
+        }
+
+      
+
+        # FYp
+        fyp <- FYp[,p]
 
         # numeric
         if(p %in% num.idx) {
@@ -165,26 +319,46 @@ dFYp_x <- function(X         = NULL,
             sd.v <- sqrt(THETA[p,p])
             dy <- dnorm(y, mean=yhat[,p], sd=sd.v)
 
-            pre <- 
+            # [nobs x 1]
+            pre <- dy * 1/sd.v^2 * (y - yhat[,p])
 
             # lambda
-            dlambda <- dy * 1/sd.v^2 * ((y - yhat[,p]) %*% ETA)
-            dFYp <- dFYp +
-                ( (dlambda %*% Delta.lambda[lambda.idx,,drop=FALSE]) * FYp)
+            if(nrow(ETA) == 1L) {
+                dlambda <- pre %*% ETA
+            } else {
+                dlambda <- pre * ETA
+            }
+            dFYp <- dFYp + ( (dlambda %*% D.lambda) * fyp)
 
             # theta
             dsigma2 <- dy * (1/(2*sd.v^4)*(y - yhat[,p])^2 - 1/(2*sd.v^2))
-            dFYp <- dFYp +
-                ( (dsigma2 %*% Delta.theta[theta.idx,,drop=FALSE]) * FYp)
+            dFYp <- dFYp + ( (dsigma2 %*% D.theta) * fyp)
 
             # nu
-            dnu <-  dy * 1/sd.v^2 * (y - yhat[,p])
-            dFYp <- dFYp +
-               ( (dnu %*% Delta.mu[nu.idx,,drop=FALSE]) * FYp)
+            dnu <- pre
+            dFYp <- dFYp + ( (dnu %*% D.mu) * fyp)
 
             # psi
-            dpsi <- 0 # FIXME
+            if(nrow(ETA) == 1L) {
+                dpsi <- pre %*% kronecker(LAMBDA[p,,drop=FALSE], KSI)
+            } else {
+                dpsi <- pre * kronecker(LAMBDA[p,,drop=FALSE], KSI)
+            }
+            dFYp <- dFYp + ( (dpsi %*% Delta.S) * fyp)
+            
+            # kappa
+            if(p %in% ov.y.dummy.ov.idx) {
+                dkappa <- pre * eXo # [nobs x nexo]
+                dFYp <- dFYp + ( (dkappa %*% D.kappa) * fyp)
+            }
 
+            # gamma
+            if(!is.null(eXo)) {
+                dgamma <- pre * kronecker(LAMBDA..IB.inv[p,,drop=FALSE], eXo)
+                dFYp <- dFYp + ( (dgamma %*% D.gamma) * fyp)
+            }
+
+            # beta
         }
 
         # ordinal
@@ -204,21 +378,45 @@ dFYp_x <- function(X         = NULL,
             p1 <- dnorm(z1)
             p2 <- dnorm(z2)
 
+            # numeric(nobs)
+            pre <- -1 * (p1 - p2) * sd.v.inv 
+
             # d tau
+            # [nobx * n.th]
             dth <- -1 * (Y2*p2 - Y1*p1) * sd.v.inv
             dFYp <- dFYp +
-                ( (dth %*% Delta.th[th.idx==p,,drop=FALSE]) * FYp)
+                ( (dth %*% Delta.th[th.idx==p,,drop=FALSE]) * fyp)
 
             # d lambda
-            dlambda <- (-1 * (p1 - p2) * sd.v.inv) %*% ETA
-            dFYp <- dFYp +
-                ( (dlambda %*% Delta.lambda[lambda.idx,,drop=FALSE]) * FYp)
+            # lambda
+            if(nrow(ETA) == 1L) {
+                dlambda <- pre %*% ETA
+            } else {
+                dlambda <- pre * ETA
+            }
+            dFYp <- dFYp + ( (dlambda %*% D.lambda) * fyp)
 
             # d S (=chol psi)
-            dpsi <- (-1*(p1-p2)*sd.v.inv) %*% 
-                        kronecker(LAMBDA[p,,drop=FALSE], KSI)
-            dFYp <- dFYp +
-                ( (dpsi %*% Delta.S) * FYp)
+            if(nrow(ETA) == 1L) {
+                dpsi <- pre %*% kronecker(LAMBDA[p,,drop=FALSE], KSI)
+            } else {
+                dpsi <- pre * kronecker(LAMBDA[p,,drop=FALSE], KSI)
+            }
+            dFYp <- dFYp + ( (dpsi %*% Delta.S) * fyp)
+
+            # kappa
+            if(p %in% ov.y.dummy.ov.idx) {
+                dkappa <- pre * eXo
+                dFYp <- dFYp + ( (dkappa %*% D.kappa) * fyp)
+            }
+
+            # gamma
+            if(!is.null(eXo)) {
+                dgamma <- pre * kronecker(LAMBDA..IB.inv[p,,drop=FALSE], eXo)
+                dFYp <- dFYp + ( (dgamma %*% D.gamma) * fyp)
+            }
+
+            # beta
         }
     }
 

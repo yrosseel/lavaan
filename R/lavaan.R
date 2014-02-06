@@ -535,8 +535,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "control") <- control
                 FX <- try(lav_model_objective(lavmodel = lavmodel, 
                                               lavsamplestats = lavsamplestats,
-                                              estimator = lavoptions$estimator,
-                                              link = lavoptions$link),
+                                              estimator = lavoptions$estimator),
                           silent=TRUE)
                 if(inherits(FX, "try-error")) {
                     # eg non-full rank design matrix
@@ -619,8 +618,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 attr(x, "fx") <-
                     lav_model_objective(lavmodel, 
                                         lavsamplestats = lavsamplestats,
-                                        estimator = lavoptions$estimator,
-                                        link = lavoptions$link)
+                                        estimator = lavoptions$estimator)
                 # for VCOV
                 attr(con.jac, "inactive.idx") <- integer(0) # FIXME!!
                 attr(con.jac, "cin.idx") <- seq_len(ncol(A.cin)) + ncol(A.ceq)
@@ -666,8 +664,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "fx") <- 
             lav_model_objective(lavmodel = lavmodel, 
                 lavsamplestats = lavsamplestats, lavdata = lavdata, 
-                lavcache = lavcache, estimator = lavoptions$estimator,
-                link = lavoptions$link)
+                lavcache = lavcache, estimator = lavoptions$estimator)
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

@@ -184,7 +184,7 @@ lav_start <- function(start.method = "default",
                             lavpartable$op    == "~~"          & 
                             lavpartable$lhs %in% ov.names.num  & 
                             lavpartable$lhs == lavpartable$rhs)
-        sample.var.idx <- match(lavpartable$lhs[ov.var.idx], ov.names.num)
+        sample.var.idx <- match(lavpartable$lhs[ov.var.idx], ov.names)
         if(model.type == "unrestricted") {
             start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
         } else {

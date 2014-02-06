@@ -246,45 +246,6 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     VY
 }
 
-# THETA: observed (residual) variances
-computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
-    # state or final?
-    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
-
-    ngroups        <- lavmodel@ngroups
-    nmat           <- lavmodel@nmat
-    representation <- lavmodel@representation
-
-    # return a list
-    THETA <- vector("list", length=ngroups)
-
-    # compute THETA for each group
-    for(g in 1:ngroups) {
-        # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-        MLIST <- GLIST[ mm.in.group ]
-
-        if(representation == "LISREL") {
-            THETA.g <- MLIST$theta
-            # fix theta
-            lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                        lavmodel@ov.x.dummy.lv.idx[[g]])
-            ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
-                        lavmodel@ov.x.dummy.ov.idx[[g]])
-            if(length(ov.idx) > 0L) {
-                THETA.g[ov.idx, ov.idx] <- MLIST$psi[lv.idx, lv.idx]
-            }
-
-        } else {
-            stop("only representation LISREL has been implemented for now")
-        }
-
-        THETA[[g]] <- THETA.g
-    }
-
-    THETA
-}
-
 # V(ETA): latent variances variances/covariances
 # - if conditional=TRUE, ignore all ov.dummy. * and GAMMA
 computeVETA <- function(lavmodel = NULL, GLIST = NULL, 
@@ -305,10 +266,7 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- NULL
-        if(!is.null(lavsamplestats)) {
-            cov.x <- lavsamplestats@cov.x[[g]]
-        }
+        cov.x <- lavsamplestats@cov.x[[g]]
        
         if(representation == "LISREL") {
             ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
@@ -519,15 +477,12 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            LAMBDA.g <- computeLAMBDA.LISREL(MLIST)
-            if(remove.dummy.lv) {
-                # remove dummy
-                lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                                  lavmodel@ov.x.dummy.lv.idx[[g]])
-                if(length(lv.dummy.idx) > 0L) {
-                    LAMBDA.g <- LAMBDA.g[,-lv.dummy.idx,drop=FALSE]
-                }
-            }
+            LAMBDA.g <- computeLAMBDA.LISREL(MLIST = MLIST,
+                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                          remove.dummy.lv = remove.dummy.lv)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -536,6 +491,40 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
     }
 
     LAMBDA
+}
+
+# THETA: observed (residual) variances
+computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    ngroups        <- lavmodel@ngroups
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
+
+    # return a list
+    THETA <- vector("list", length=ngroups)
+
+    # compute THETA for each group
+    for(g in 1:ngroups) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(representation == "LISREL") {
+            THETA.g <- computeTHETA.LISREL(MLIST = MLIST,
+                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        THETA[[g]] <- THETA.g
+    }
+
+    THETA
 }
 
 # E(Y): expectation (mean) of observed variables

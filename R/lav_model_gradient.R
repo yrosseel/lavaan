@@ -9,7 +9,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                estimator      = "ML", 
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
-                               group.weight   = TRUE, 
+                               control        = list(),
+                               group.weight   = TRUE,
                                constraints    = TRUE,
                                Delta          = NULL) {
 
@@ -213,13 +214,14 @@ lav_model_gradient <- function(lavmodel       = NULL,
             } else if(estimator == "MML") {
                 group.dx <- 
                     lav_model_gradient_mml(lavmodel    = lavmodel,
-                                    GLIST       = GLIST,
-                                    THETA       = THETA[[g]],
-                                    TH          = TH[[g]],
-                                    group       = g,
-                                    lavdata     = lavdata,
-                                    sample.mean = lavsamplestats@mean[[g]],
-                                    lavcache    = lavcache)
+                                    GLIST          = GLIST,
+                                    THETA          = THETA[[g]],
+                                    TH             = TH[[g]],
+                                    group          = g,
+                                    lavdata        = lavdata,
+                                    sample.mean    = lavsamplestats@mean[[g]],
+                                    control        = control,
+                                    lavcache       = lavcache)
             }
 
             # group weights (if any)
@@ -565,6 +567,15 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
                 } else if(target == "theta") {
                     DELTA <- derivative.theta.LISREL(m=mname, 
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "gamma") {
+                    DELTA <- derivative.gamma.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "beta") {
+                    DELTA <- derivative.beta.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "alpha") {
+                    DELTA <- derivative.alpha.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
                 } else if(target == "psi") {
                     DELTA <- derivative.psi.LISREL(m=mname,

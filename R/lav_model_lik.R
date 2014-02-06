@@ -7,6 +7,7 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
                               group       = 1L,
                               lavdata     = NULL,
                               sample.mean = NULL,
+                              control     = list(),
                               lavcache    = NULL) {
 
     # data for this group
@@ -19,41 +20,69 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
 
     # quadrature points
     GH <- lavcache[[group]]$GH; nGH <- nrow(GH$x)
-
-    # whitening?
     nfac <- ncol(GH$x)
-    if(nfac > 1L) {
-        # whitening
-        VETA <- computeVETA.LISREL(MLIST = MLIST)
-        chol.VETA <- chol(VETA)
-        #GHx <- GH$x %*% chol.VETA
-    } else {
-        #GHx <- GH$x
-        chol.VETA <- NULL
+
+    # compute VETAx (latent lv only)
+    lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[group]],
+                      lavmodel@ov.x.dummy.lv.idx[[group]])
+    VETAx <- computeVETAx.LISREL(MLIST = MLIST,
+                                 lv.dummy.idx = lv.dummy.idx)
+    # check for negative values?
+    if(any(diag(VETAx) < 0)) {
+        warning("lavaan WARNING: --- VETAx contains negative values")
+        print(VETAx)
+        return(0)
     }
 
-    # chol.VETA? we need EETAx (only if eXo!!)
-    if(!is.null(chol.VETA) && !is.null(eXo)) {
-        EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo,
-            sample.mean = sample.mean,
-            ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-            ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-            ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-            ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+    # cholesky?
+    if(is.null(control$cholesky)) {
+        CHOLESKY <- TRUE    
     } else {
-        EETAx <- NULL
+        CHOLESKY <- control$cholesky
+        if(nfac > 1L && !CHOLESKY) {
+            warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
+        }
+    }
+
+    if(!CHOLESKY) {
+        # we should still 'scale' the factors, if std.lv=FALSE
+        ETA.sd <- sqrt( diag(VETAx) )
+    } else {
+        # cholesky takes care of scaling
+        ETA.sd <- rep(1, nfac)
+        chol.VETA <- try(chol(VETAx), silent = TRUE)
+        if(inherits(chol.VETA, "try-error")) {
+            warning("lavaan WARNING: --- VETAx not positive definite")
+            print(VETAx)
+            return(0)
+        }
     }
 
     # compute (log)lik for each node, for each observation
     SUM.LOG.FY <- matrix(0, nrow=nGH, ncol=nobs)
     for(q in 1:nGH) {
 
-        # first, compute yhat for this node (eta)
-        yhat <- computeYHATx.LISREL(MLIST  = MLIST,
-                    eXo    = eXo,
-                    ETA    = GH$x[q,,drop=FALSE], # whitened!
-                    chol.VETA = chol.VETA, EETAx = EETAx,
-                    sample.mean = sample.mean,
+        # current value(s) for ETA
+        eta <- GH$x[q,,drop=FALSE]
+
+        # rescale/unwhiten
+        if(CHOLESKY) {
+            eta <- eta %*% chol.VETA
+        } else {
+            # no unit scale? (un-standardize)
+            eta <- sweep(eta, MARGIN=2, STATS=ETA.sd, FUN="*")
+        }
+
+        # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
+        eta <- computeETAx.LISREL(MLIST = MLIST, eXo = eXo, ETA = eta,
+                   remove.dummy.lv = TRUE,
+                   ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                   ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]],
+                   Nobs = 1L)
+
+        # compute yhat for this node (eta)
+        yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,
+                    ETA = eta, sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                     ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
                     ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
@@ -71,11 +100,16 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
 
         # store log likelihoods for this node
         SUM.LOG.FY[q,] <- log.fy
-        SUM.LOG.FY[q,] <- log.fy
     }
 
     # integration
     lik <- as.numeric( t(GH$w) %*% exp(SUM.LOG.FY) )
+
+    # avoid underflow
+    idx <- which(lik < exp(-600))
+    if(length(idx) > 0L) {
+        lik[idx] <- exp(-600)
+    }
 
     lik
 }
