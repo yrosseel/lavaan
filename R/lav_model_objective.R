@@ -8,7 +8,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                 estimator      = "ML",
                                 verbose        = FALSE,
                                 forcePD        = TRUE,
-                                control        = list(),
                                 debug          = FALSE) {
 
     # state or final?
@@ -123,7 +122,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       group       = g,
                                       lavdata     = lavdata,
                                       sample.mean = lavsamplestats@mean[[g]],
-                                      control     = control,
                                       lavcache    = lavcache)
         } else {
             stop("unsupported estimator: ", estimator)

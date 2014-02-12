@@ -404,6 +404,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       th.idx           = lavsamplestats@th.idx,
                       parameterization = lavoptions$parameterization,
                       link             = lavoptions$link,
+                      control          = control,
                       debug            = lavoptions$debug)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
@@ -632,8 +633,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                         lavsamplestats  = lavsamplestats,
                                         lavdata         = lavdata,
                                         lavoptions      = lavoptions,
-                                        lavcache        = lavcache,
-                                        control         = control)
+                                        lavcache        = lavcache)
                 lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                      estimator = lavoptions$estimator)
             }
@@ -644,8 +644,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                     lavsamplestats  = lavsamplestats,
                                     lavdata         = lavdata,
                                     lavoptions      = lavoptions,
-                                    lavcache        = lavcache,
-                                    control         = control)
+                                    lavcache        = lavcache)
             lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                 estimator = lavoptions$estimator)
         }
@@ -679,8 +678,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavoptions      = lavoptions,
                                lavdata         = lavdata,
                                lavpartable     = lavpartable,
-                               lavcache        = lavcache,
-                               control         = control)
+                               lavcache        = lavcache)
         if(verbose) cat(" done.\n")
     }
     timing$VCOV <- (proc.time()[3] - start.time)
@@ -697,8 +695,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                x              = x,
                                VCOV           = VCOV,
                                lavdata        = lavdata,
-                               lavcache       = lavcache,
-                               control        = control)
+                               lavcache       = lavcache)
         if(verbose) cat(" done.\n")
     } else {
         TEST <- list(list(test="none", stat=NA, 

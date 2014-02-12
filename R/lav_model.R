@@ -10,6 +10,7 @@ lav_model <- function(lavpartable      = NULL,
                       th.idx           = list(),
                       parameterization = "delta",
                       link             = "logit",
+                      control          = list(),
                       debug            = FALSE) {
 
     # global info from user model
@@ -279,6 +280,7 @@ lav_model <- function(lavpartable      = NULL,
                  meanstructure=meanstructure,
                  categorical=categorical,
                  link=link,
+                 control=control,
                  ngroups=ngroups,
                  group.w.free=group.w.free,
                  nmat=nmat,

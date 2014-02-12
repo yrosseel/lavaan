@@ -5,7 +5,6 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                                    group       = 1L,
                                    lavdata     = NULL,
                                    sample.mean = NULL,
-                                   control     = list(),
                                    lavcache    = NULL) {
 
     if(lavmodel@link == "logit") 
@@ -36,13 +35,13 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     }
 
     # cholesky?
-    if(is.null(control$cholesky)) {
+    if(is.null(lavmodel@control$cholesky)) {
         CHOLESKY <- TRUE
     } else {
-        CHOLESKY <- control$cholesky
-        if(nfac > 1L && !CHOLESKY) {
-            warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
-        }
+        CHOLESKY <- as.logical(lavmodel@control$cholesky)
+        #if(nfac > 1L && !CHOLESKY) {
+        #    warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
+        #}
     }
 
     if(!CHOLESKY) {
@@ -57,13 +56,23 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
             print(VETAx)
             return(0)
         }
+        if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
+            EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo, N = nobs,
+                        sample.mean = sample.mean,
+                        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+            if(length(lv.dummy.idx) > 0L) {
+                EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
+            }
+        }
     }
 
     # compute case-wise likelihoods 
     lik <- lav_model_lik_mml(lavmodel = lavmodel, THETA = THETA, TH = TH,
                GLIST = GLIST, group = group, lavdata = lavdata,
-               sample.mean = sample.mean, control = control, 
-               lavcache = lavcache)
+               sample.mean = sample.mean, lavcache = lavcache)
 
     # prepare common stuff
     # fix Lambda?
@@ -73,11 +82,17 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                     ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
                     ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
 
+    #### FIX th + mu!!!!!
     Delta.lambda <- computeDeltaDx(lavmodel, target="lambda")[[group]]
-    Delta.th     <- computeDeltaDx(lavmodel, target="th"    )[[group]] ## FIXME? tau?
+    if(!is.null(lavmodel@th.idx[[group]])) {
+        Delta.th     <- computeDeltaDx(lavmodel, target="th"    )[[group]] ## FIXME? tau?
+    }
     Delta.mu     <- computeDeltaDx(lavmodel, target="mu"    )[[group]] ## FIXME? nu?
     Delta.theta  <- computeDeltaDx(lavmodel, target="theta" )[[group]]
     Delta.beta   <- computeDeltaDx(lavmodel, target="beta"  )[[group]]
+    ### FIXME -1?
+    #Delta.beta <- -1*Delta.beta
+
     Delta.psi    <- computeDeltaDx(lavmodel, target="psi"   )[[group]]
     Delta.alpha  <- computeDeltaDx(lavmodel, target="alpha" )[[group]]
     Delta.gamma  <- computeDeltaDx(lavmodel, target="gamma" )[[group]]
@@ -88,12 +103,17 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         dVetadx <- function(x, lavmodel = fit@Model, g = 1L) {
             GLIST <- lavaan:::lav_model_x2GLIST(lavmodel, x=x, type="free")
             VETAx <- lavaan:::computeVETAx(lavmodel, GLIST = GLIST)[[g]]
-            S <- chol(VETAx)
+            if(CHOLESKY) {
+                S <- chol(VETAx)
+            } else {
+                S <- diag( sqrt(diag(VETAx)) )
+            }
             S
         }
         Delta.S <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel,
                                          g = group)
     #} else {
+
 
     # remove dummy lv's from Delta.psi
     #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[group]],
@@ -131,11 +151,12 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         }
 
         # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
-        eta <- computeETAx.LISREL(MLIST = MLIST, eXo = eXo, ETA = eta,
-                   remove.dummy.lv = TRUE,
-                   ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-                   ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]],
-                   Nobs = 1L)
+        #
+        # - direct effect of BETA is already in VETAx, and hence chol.VETA
+        # - need to add alpha, and GAMMA eta_i
+        if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
+            eta <- sweep(EETAx, MARGIN=2, STATS=eta, FUN="+")
+        }
 
         # again, compute yhat for this node (eta)
         yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,
@@ -239,10 +260,18 @@ dFYp_x <- function(X         = NULL,
     #    }
     #}
 
+    # fix ALPHA
+    ALPHA <- MLIST$alpha
+    if(is.null(ALPHA)) {
+        ALPHA <- numeric( nfac )
+    } else if(length(lv.dummy.idx)) {
+        ALPHA <- ALPHA[-lv.dummy.idx,,drop=FALSE]
+    }
+
     # Beta?
     BETA <- MLIST$beta
     if(is.null(BETA)) {
-        LAMBDA..IB.inv <- LAMBDA   
+        LAMBDA..IB.inv <- LAMBDA
     } else {
         tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
         tmp[cbind(i, i)] <- 1
@@ -251,6 +280,24 @@ dFYp_x <- function(X         = NULL,
         if(length(lv.dummy.idx) > 0L) {
             LAMBDA..IB.inv <- LAMBDA..IB.inv[,-lv.dummy.idx,drop=FALSE]
         }
+
+        # fix BETA
+        if(length(lv.dummy.idx)) {
+            BETA <- MLIST$beta[-lv.dummy.idx, -lv.dummy.idx, drop=FALSE]
+        }
+        tmp <- -BETA; nr <- nrow(BETA); i <- seq_len(nr);
+        tmp[cbind(i, i)] <- 1
+        IB.inv <- solve(tmp)
+    }
+
+    # fix GAMMA
+    GAMMA <- MLIST$gamma
+    if(is.null(GAMMA)) {
+        ALPHA.GAMMA.eXo <- matrix(as.numeric(ALPHA), nobs, nfac, byrow=TRUE)
+    } else if(length(lv.dummy.idx)) {
+        GAMMA <- GAMMA[-lv.dummy.idx,,drop=FALSE]
+        ALPHA.GAMMA.eXo <- sweep(eXo %*% t(GAMMA),
+                               MARGIN=2 ,STATS=as.numeric(ALPHA), FUN="+")
     }
 
     # ordered?
@@ -279,8 +326,19 @@ dFYp_x <- function(X         = NULL,
         if(!is.null(MLIST$gamma)) {
             nr <- nrow(MLIST$gamma); nc <- ncol(MLIST$gamma)
             lv.idx <- 1:nfac
-            gamma.idx <- nr*((1:nc) - 1L) + lv.idx
+            # MUST BE ROWWISE!
+            gamma.idx <- rep(nr*((1:nc) - 1L), times=length(lv.idx)) + rep(lv.idx, each=nc)
             D.gamma <- Delta.gamma[gamma.idx,,drop=FALSE]
+        }
+
+        # beta.idx
+        if(!is.null(MLIST$beta)) {
+            nr <- nc <- nrow(MLIST$beta)
+            lv.idx <- 1:nfac
+            # MUST BE ROWWISE!
+            beta.idx <- rep(nr*((1:nfac) - 1L), times=nfac) + rep(lv.idx, each=nfac) 
+            #beta.idx <- rep(nr*((1:nfac) - 1L), each=nfac) + lv.idx
+            D.beta <- Delta.beta[beta.idx,,drop=FALSE]
         }
 
         # lambda idx
@@ -339,13 +397,24 @@ dFYp_x <- function(X         = NULL,
             dFYp <- dFYp + ( (dnu %*% D.mu) * fyp)
 
             # psi
-            if(nrow(ETA) == 1L) {
+            if(nrow(KSI) == 1L) {
                 dpsi <- pre %*% kronecker(LAMBDA[p,,drop=FALSE], KSI)
             } else {
                 dpsi <- pre * kronecker(LAMBDA[p,,drop=FALSE], KSI)
             }
             dFYp <- dFYp + ( (dpsi %*% Delta.S) * fyp)
             
+            # beta
+            if(!is.null(BETA)) {
+                tmp <- kronecker(LAMBDA[p,,drop=FALSE], ALPHA.GAMMA.eXo) %*%
+                         t( kronecker(t(IB.inv), IB.inv) )
+                         # kronecker(t(IB.inv), IB.inv)
+                dbeta <- pre * tmp
+
+                #dFYp <- dFYp + ((dpsi %*% Delta.S - dbeta %*% D.beta) * fyp)
+                #dFYp <- dFYp - ((dpsi %*% Delta.S) * fyp)
+                dFYp <- dFYp + ( (dbeta %*% D.beta) * fyp)
+            }
             # kappa
             if(p %in% ov.y.dummy.ov.idx) {
                 dkappa <- pre * eXo # [nobs x nexo]
@@ -357,8 +426,6 @@ dFYp_x <- function(X         = NULL,
                 dgamma <- pre * kronecker(LAMBDA..IB.inv[p,,drop=FALSE], eXo)
                 dFYp <- dFYp + ( (dgamma %*% D.gamma) * fyp)
             }
-
-            # beta
         }
 
         # ordinal
@@ -397,12 +464,42 @@ dFYp_x <- function(X         = NULL,
             dFYp <- dFYp + ( (dlambda %*% D.lambda) * fyp)
 
             # d S (=chol psi)
-            if(nrow(ETA) == 1L) {
+            if(nrow(KSI) == 1L) {
                 dpsi <- pre %*% kronecker(LAMBDA[p,,drop=FALSE], KSI)
             } else {
                 dpsi <- pre * kronecker(LAMBDA[p,,drop=FALSE], KSI)
             }
             dFYp <- dFYp + ( (dpsi %*% Delta.S) * fyp)
+
+            # beta
+            #if(!is.null(BETA)) {
+            #    if(nrow(KSI) == 1L) {
+            #        tmp.S <- kronecker(LAMBDA[p,,drop=FALSE], KSI) %*% Delta.S
+            #        tmp1 <- kronecker(IB.inv, t(IB.inv))
+            #        tmp2 <- kronecker(LAMBDA[p,,drop=FALSE], ALPHA.GAMMA.eXo)
+            #        tmp.B <- tmp2 %*% t(tmp1)
+            #        #tmp.B <- tmp2 %*% tmp1
+            #    } else {
+            #        stop("fix me!")
+            #    }
+            #    BB <- sweep(-(tmp.B %*% D.beta), MARGIN=2, 
+            #                STATS=as.numeric(tmp.S %*% Delta.S), FUN="+")
+            #    dFYp <- dFYp + ( pre * BB * fyp)
+            #}
+
+            # beta2
+            if(!is.null(BETA)) {
+                tmp <- kronecker(LAMBDA[p,,drop=FALSE], ALPHA.GAMMA.eXo) %*%
+                        t( kronecker(t(IB.inv), IB.inv) )
+                        # kronecker(t(IB.inv), IB.inv)
+                dbeta <- pre * tmp
+
+                #dFYp <- dFYp + ((dpsi %*% Delta.S - dbeta %*% D.beta) * fyp)
+                #dFYp <- dFYp - ((dpsi %*% Delta.S) * fyp)
+                dFYp <- dFYp + ( (dbeta %*% D.beta) * fyp)
+            }
+
+
 
             # kappa
             if(p %in% ov.y.dummy.ov.idx) {
@@ -415,8 +512,6 @@ dFYp_x <- function(X         = NULL,
                 dgamma <- pre * kronecker(LAMBDA..IB.inv[p,,drop=FALSE], eXo)
                 dFYp <- dFYp + ( (dgamma %*% D.gamma) * fyp)
             }
-
-            # beta
         }
     }
 

@@ -9,7 +9,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                estimator      = "ML", 
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
-                               control        = list(),
                                group.weight   = TRUE,
                                constraints    = TRUE,
                                Delta          = NULL) {
@@ -161,8 +160,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # nothing to do
         } else {
             # make a GLIST
-            dx <- lav_model_lav_model_x2GLIST(lavmodel = lavmodel, x = dx, 
-                                              type = "full")
+            dx <- lav_model_x2GLIST(lavmodel = lavmodel, x = dx, type = "full")
         }
 
     } # WLS
@@ -220,7 +218,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                     group          = g,
                                     lavdata        = lavdata,
                                     sample.mean    = lavsamplestats@mean[[g]],
-                                    control        = control,
                                     lavcache       = lavcache)
             }
 
@@ -271,7 +268,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 #   if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 #   
 #   compute.moments <- function(x) {
-#       GLIST <- lav_model_lav_model_x2GLIST(lavmodel = NULL, x=x, type="free")
+#       GLIST <- lav_model_x2GLIST(lavmodel = NULL, x=x, type="free")
 #       Sigma.hat <- computeSigmaHat(lavmodel = NULL, GLIST = GLIST)
 #        S.vec <- vech(Sigma.hat[[g]])
 #        if(lavmodel@meanstructure) {

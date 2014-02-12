@@ -1351,8 +1351,7 @@ function(object, labels=TRUE, attributes.=FALSE) {
                                  lavoptions     = object@Options, 
                                  lavdata        = object@Data,
                                  lavpartable    = object@Partable, 
-                                 lavcache       = object@Cache,
-                                 control=list()
+                                 lavcache       = object@Cache
                                 )
     }
 

@@ -7,7 +7,6 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
                               group       = 1L,
                               lavdata     = NULL,
                               sample.mean = NULL,
-                              control     = list(),
                               lavcache    = NULL) {
 
     # data for this group
@@ -35,13 +34,13 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
     }
 
     # cholesky?
-    if(is.null(control$cholesky)) {
+    if(is.null(lavmodel@control$cholesky)) {
         CHOLESKY <- TRUE    
     } else {
-        CHOLESKY <- control$cholesky
-        if(nfac > 1L && !CHOLESKY) {
-            warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
-        }
+        CHOLESKY <- as.logical(lavmodel@control$cholesky)
+        #if(nfac > 1L && !CHOLESKY) {
+        #    warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
+        #}
     }
 
     if(!CHOLESKY) {
@@ -49,12 +48,22 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         ETA.sd <- sqrt( diag(VETAx) )
     } else {
         # cholesky takes care of scaling
-        ETA.sd <- rep(1, nfac)
         chol.VETA <- try(chol(VETAx), silent = TRUE)
         if(inherits(chol.VETA, "try-error")) {
             warning("lavaan WARNING: --- VETAx not positive definite")
             print(VETAx)
             return(0)
+        }
+        if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
+            EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo, N = nobs,
+                        sample.mean = sample.mean,
+                        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+            if(length(lv.dummy.idx) > 0L) {
+                EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
+            }
         }
     }
 
@@ -67,6 +76,7 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
 
         # rescale/unwhiten
         if(CHOLESKY) {
+            # un-orthogonalize
             eta <- eta %*% chol.VETA
         } else {
             # no unit scale? (un-standardize)
@@ -74,11 +84,12 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         }
 
         # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
-        eta <- computeETAx.LISREL(MLIST = MLIST, eXo = eXo, ETA = eta,
-                   remove.dummy.lv = TRUE,
-                   ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-                   ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]],
-                   Nobs = 1L)
+        #
+        # - direct effect of BETA is already in VETAx, and hence chol.VETA
+        # - need to add alpha, and GAMMA eta_i
+        if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
+            eta <- sweep(EETAx, MARGIN=2, STATS=eta, FUN="+")
+        }
 
         # compute yhat for this node (eta)
         yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,

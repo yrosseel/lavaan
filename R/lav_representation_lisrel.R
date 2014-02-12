@@ -768,7 +768,7 @@ computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL,
 #     E(ETA|x_i) = (I-B)^-1 ALPHA + (I-B)^-1 GAMMA x_i
 #     we return  a matrix of size [nobs x nfac]
 #
-computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL, 
+computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL, N=nrow(eXo),
                                 sample.mean=NULL,
                                 ov.y.dummy.ov.idx=NULL,
                                 ov.x.dummy.ov.idx=NULL,
@@ -776,7 +776,11 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL,
                                 ov.x.dummy.lv.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; BETA <- MLIST$beta; GAMMA <- MLIST$gamma
-    N <- nrow(eXo); nfac <- ncol(LAMBDA)
+    nfac <- ncol(LAMBDA)
+    # if eXo, N must be nrow(eXo)
+    if(!is.null(eXo)) {
+        N <- nrow(eXo)
+    }
 
     # ALPHA?
     ALPHA <- .internal_get_ALPHA(MLIST = MLIST, sample.mean = sample.mean,
@@ -996,7 +1000,7 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL,
     }
 
     # compute EETAx
-    EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo,
+    EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo, N=Nobs,
                                  sample.mean = sample.mean,
                                  ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                                  ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,

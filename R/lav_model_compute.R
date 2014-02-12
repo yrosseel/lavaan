@@ -431,7 +431,7 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
         if(representation == "LISREL") {
             EETAx.g <- computeEETAx.LISREL(MLIST, 
-                eXo=EXO,
+                eXo=EXO, N=lavsamplestats@nobs[[g]],
                 sample.mean=lavsamplestats@mean[[g]],
                 ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
                 ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]],
