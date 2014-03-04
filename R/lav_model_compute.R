@@ -590,7 +590,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
 
         if(lavmodel@representation == "LISREL") {
-            YHAT[[g]] <- computeYHATx.LISREL(MLIST = MLIST,
+            YHAT[[g]] <- computeYHATetax.LISREL(MLIST = MLIST,
                           eXo = eXo[[g]], ETA = ETA[[g]],
                           sample.mean = lavsamplestats@mean[[g]],
                           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],

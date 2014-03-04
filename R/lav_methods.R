@@ -236,7 +236,7 @@ short.summary <- function(object) {
     } # test != none
 
     if(object@Options$estimator == "MML") {
-        fm <- fitMeasures(fit, c("logl", "npar", "aic", "bic", "bic2"))
+        fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"))
         print.fit.measures(fm)
     }
 
@@ -754,7 +754,7 @@ derivatives <- function(object) {
  
     GLIST <- lav_model_gradient(lavmodel       = object@Model, 
                                 GLIST          = NULL, 
-                                lavlamplestats = object@SampleStats, 
+                                lavsamplestats = object@SampleStats, 
                                 lavdata        = object@Data,
                                 lavcache       = object@Cache,
                                 type           = "allofthem",

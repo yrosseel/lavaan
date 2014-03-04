@@ -132,9 +132,9 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
 
     ## FIXME!!! do this analytically...
     x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)
-    dVetadx <- function(x, lavmodel = fit@Model, g = 1L) {
-        GLIST <- lavaan:::lav_model_x2GLIST(lavmodel, x=x, type="free")
-        VETAx <- lavaan:::computeVETAx(lavmodel, GLIST = GLIST)[[g]]
+    dVetadx <- function(x, lavmodel = lavmodel, g = 1L) {
+        GLIST <- lav_model_x2GLIST(lavmodel, x=x, type="free")
+        VETAx <- computeVETAx(lavmodel, GLIST = GLIST)[[g]]
         if(CHOLESKY) {
             S <- chol(VETAx)
         } else {
@@ -142,8 +142,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         }
         S
     }
-    Delta.S <- lavaan:::lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel,
-                                         g = group)
+    Delta.S <- lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel, g = group)
     DD$S <- Delta.S
 
     # compute dL/dx for each node

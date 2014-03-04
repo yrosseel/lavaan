@@ -41,7 +41,18 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # do we need WLS.est?
     if(estimator == "GLS"  || estimator == "WLS"  ||
        estimator == "DWLS" || estimator == "ULS") {
+
+        # always compute WLS.est
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
+
+        # only for GLS
+        if(estimator == "GLS") {
+            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
+            if(meanstructure) {
+                Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+            }
+        }
+
     } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,

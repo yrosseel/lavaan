@@ -116,6 +116,7 @@ independence.model.fit <- function(object) {
     # 5. 
     lavmodel <-
         lav_model(lavpartable      = lavpartable,
+                  start            = lavaanStart,
                   representation   = lavoptions$representation,
                   th.idx           = lavsamplestats@th.idx,
                   parameterization = lavoptions$parameterization,

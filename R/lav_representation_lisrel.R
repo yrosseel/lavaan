@@ -1064,6 +1064,7 @@ computeYHATx.LISREL.OLD <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
     DELTA <- MLIST$delta
     N <- nrow(ETA)
     lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
+    ov.dummy.idx <- c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
 
     # exogenous variables?
     if(is.null(eXo)) {
@@ -2277,8 +2278,8 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                 dxSigma <- 
                     derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                             MLIST=MLIST, delta = !theta)
-                var.idx <- which(!lavaan:::vech.idx(nvar) %in% 
-                                  lavaan:::vech.idx(nvar, diag=FALSE))
+                var.idx <- which(!vech.idx(nvar) %in% 
+                                  vech.idx(nvar, diagonal=FALSE))
                 sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
                 dsigma <- diag(sigma.hat)
                 # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
@@ -2332,8 +2333,8 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                     idx <- vechru.idx(sqrt(ncol(dxSigma)), diagonal=FALSE)
                     if(length(idx) > 0L) dxSigma <- dxSigma[,-idx]
                 }
-                var.idx <- which(!lavaan:::vech.idx(nvar) %in% 
-                                  lavaan:::vech.idx(nvar, diag=FALSE))
+                var.idx <- which(!vech.idx(nvar) %in% 
+                                  vech.idx(nvar, diagonal=FALSE))
                 sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
                 dsigma <- diag(sigma.hat)
                 # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))

@@ -122,7 +122,7 @@ lav_deriv_cov2cor_numerical <- function(COV, num.idx=integer(0)) {
         }
         R <- diag(delta) %*% S %*% diag(delta)
         #R <- cov2cor(S)
-        R.vec <- lavaan:::vech(R, diagonal = TRUE)
+        R.vec <- vech(R, diagonal = TRUE)
         R.vec
     }
 

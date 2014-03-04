@@ -341,7 +341,7 @@ lav_model_test <- function(lavmodel       = NULL,
 #                augUser$exo[       idx ] <- 0L
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
 #                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-#                augModel <- lav_model(lavlavpartable       = augUser,
+#                augModel <- lav_model(lavpartable       = augUser,
 #                                  start          = lav_model_get_parameters(object, type="user"),
 #                                  representation = lavmodel@representation,
 #                                  link           = lavmodel@link,

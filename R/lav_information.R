@@ -194,11 +194,11 @@ computeObservedInformation <- function(lavmodel       = NULL,
     #cat("Hessian 1:\n")
     #print(Hessian)
 
-    #x <- lav_model_get_parameters(object, type="free")
+    #x <- lav_model_get_parameters(lavmodel, type="free")
     #compute.fx <- function(x) {
-    #    GLIST <- lav_model_x2GLIST(object, x=x)
+    #    GLIST <- lav_model_x2GLIST(lavmodel, x=x)
     #    fx <- lav_model_objective(lavmodel, GLIST=GLIST, 
-    #                              lavlavsamplestats=lavlavsamplestats,
+    #                              lavsamplestats=lavsamplestats,
     #                              estimator=estimator)
     #    fx
     #}
@@ -215,42 +215,42 @@ computeObservedInformation <- function(lavmodel       = NULL,
 
     # augmented Information matrix (only for fixed.x)
     # FIXME: what to do here if estimator = PML???
-    if(type == "free.fixed.x" && lavmodel@fixed.x && 
-       length(lavmodel@x.idx) > 0 && estimator != "PML") {
-        idx.all <- which(object$free > 0 | (object$fixed.x > 0 &
-                         object$row >= object$col))
-        idx.free <- which(object$free > 0)
-        idx.x <- which(object$fixed.x > 0 & object$row >= object$col)
-
-        info.free.idx  <- idx.all %in% idx.free
-        info.fixed.idx <- idx.all %in% idx.x
-
-        Information.big <- matrix(0, nrow=length(idx.all), ncol=length(idx.all))
-        Information.big[info.free.idx, info.free.idx] <- Information
-
-        #### FIXME FOR MULTIPLE GROUPS !!!!!
-        x.idx <- lavmodel@x.idx
-        A1.group <- vector("list", lavsamplestats@ngroups)
-        for(g in 1:lavsamplestats@ngroups) {
-            A1.group[[g]] <- 
-                compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
-                                  meanstructure=lavmodel@meanstructure,
-                                  idx=x.idx)
-        }
-        if(lavmodel@multigroup) {
-            # groups weights
-            A1 <- (lavsamplestats@nobs[[1L]]/lavsamplestats@ntotal) * A1.group[[1L]]
-            for(g in 2:lavsamplestats@ngroups) {
-                A1 <- A1 + (lavsamplestats@nobs[[g]]/lavsamplestats@ntotal) * A1.group[[g]]
-            }
-        } else {
-            A1 <- A1.group[[1L]]
-        }
-
-        Information.big[info.fixed.idx, info.fixed.idx] <- A1
-        
-        Information <- Information.big
-    }
+    #if(type == "free.fixed.x" && lavmodel@fixed.x && 
+    #   length(lavmodel@x.idx) > 0 && estimator != "PML") {
+    #    idx.all <- which(object$free > 0 | (object$fixed.x > 0 &
+    #                     object$row >= object$col))
+    #    idx.free <- which(object$free > 0)
+    #    idx.x <- which(object$fixed.x > 0 & object$row >= object$col)
+    #
+    #    info.free.idx  <- idx.all %in% idx.free
+    #    info.fixed.idx <- idx.all %in% idx.x
+    #
+    #    Information.big <- matrix(0, nrow=length(idx.all), ncol=length(idx.all))
+    #    Information.big[info.free.idx, info.free.idx] <- Information
+    #
+    #    #### FIXME FOR MULTIPLE GROUPS !!!!!
+    #    x.idx <- lavmodel@x.idx
+    #    A1.group <- vector("list", lavsamplestats@ngroups)
+    #    for(g in 1:lavsamplestats@ngroups) {
+    #        A1.group[[g]] <- 
+    #            compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
+    #                              meanstructure=lavmodel@meanstructure,
+    #                              idx=x.idx)
+    #    }
+    #    if(lavmodel@multigroup) {
+    #        # groups weights
+    #        A1 <- (lavsamplestats@nobs[[1L]]/lavsamplestats@ntotal) * A1.group[[1L]]
+    #        for(g in 2:lavsamplestats@ngroups) {
+    #            A1 <- A1 + (lavsamplestats@nobs[[g]]/lavsamplestats@ntotal) * A1.group[[g]]
+    #        }
+    #    } else {
+    #        A1 <- A1.group[[1L]]
+    #    }
+    #
+    #    Information.big[info.fixed.idx, info.fixed.idx] <- A1
+    #    
+    #    Information <- Information.big
+    #}
 
     Information
 }

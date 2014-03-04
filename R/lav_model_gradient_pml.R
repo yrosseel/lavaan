@@ -7,7 +7,7 @@ fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        num.idx   = NULL,    # which variables are numeric
                        X         = NULL,    # data
                        eXo       = NULL,    # external covariates
-                       lavlavcache  = NULL,    # housekeeping stuff
+                       lavcache  = NULL,    # housekeeping stuff
                        scores    = FALSE,   # return case-wise scores
                        negative  = TRUE) { 
     stop("not implemented") 
