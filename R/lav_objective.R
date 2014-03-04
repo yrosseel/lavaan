@@ -122,7 +122,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                           th.idx    = NULL,    # threshold idx per variable
                           num.idx   = NULL,    # which variables are numeric
                           X         = NULL,    # raw data
-                          cache     = NULL) {  # housekeeping stuff
+                          lavcache     = NULL) {  # housekeeping stuff
 
     # YR 3 okt 2012
     # the idea is to compute for each pair of variables, the model-based 
@@ -165,12 +165,12 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                index.var.of.thres = th.idx, 
                                rho.xixj           = cors)
         # get expected probability per table, per pair
-        PI <- pairwiseExpProbVec(ind.vec = cache$LONG, th.rho.vec=LONG2)
+        PI <- pairwiseExpProbVec(ind.vec = lavcache$LONG, th.rho.vec=LONG2)
         # get frequency per table, per pair
-        #LogLik <- sum(cache$bifreq * log(PI))
+        #LogLik <- sum(lavcache$bifreq * log(PI))
     
         # more convenient fit function
-        prop <- cache$bifreq / cache$nobs
+        prop <- lavcache$bifreq / lavcache$nobs
         # remove zero props # FIXME!!! or add 0.5???
         zero.idx <- which(prop == 0.0)
         if(length(zero.idx) > 0L) {
@@ -234,7 +234,7 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                           th.idx    = NULL,    # threshold idx per variable
                           num.idx   = NULL,    # which variables are numeric
                           X         = NULL,    # raw data
-                          cache     = NULL) {  # patterns
+                          lavcache  = NULL) {  # patterns
 
     # YR 27 aug 2013
     # just for fun, and to compare with PML for small models
@@ -255,7 +255,7 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 
     # shortcut for all ordered - per pattern
     if(all(ov.types == "ordered")) {
-        PAT <- cache$pat; npatterns <- nrow(PAT)
+        PAT <- lavcache$pat; npatterns <- nrow(PAT)
         freq <- as.numeric( rownames(PAT) )
         PI <- numeric(npatterns)
         TH.VAR <- lapply(1:nvar, function(x) c(-Inf, TH[th.idx==x], +Inf))
@@ -321,7 +321,6 @@ estimator.MML <- function(lavmodel    = NULL,
 
     # function value as returned to the minimizer
     fx <- -logl
-
 
     fx
 }

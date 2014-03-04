@@ -7,7 +7,7 @@ fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        num.idx   = NULL,    # which variables are numeric
                        X         = NULL,    # data
                        eXo       = NULL,    # external covariates
-                       cache     = NULL,    # housekeeping stuff
+                       lavlavcache  = NULL,    # housekeeping stuff
                        scores    = FALSE,   # return case-wise scores
                        negative  = TRUE) { 
     stop("not implemented") 
@@ -24,7 +24,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                        num.idx   = NULL,    # which variables are numeric
                        X         = NULL,    # data
                        eXo       = NULL,    # external covariates
-                       cache     = NULL,    # housekeeping stuff
+                       lavcache     = NULL,    # housekeeping stuff
                        scores    = FALSE,   # return case-wise scores
                        negative  = TRUE) {  # multiply by -1
 
@@ -64,8 +64,8 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                  all.thres          = TH,
                                  index.var.of.thres = th.idx,
                                  rho.xixj           = cors,
-                                 n.xixj.vec         = cache$bifreq,
-                                 out.LongVecInd     = cache$LONG)
+                                 n.xixj.vec         = lavcache$bifreq,
+                                 out.LongVecInd     = lavcache$LONG)
 
         if(negative) {
             gradient <- -1 * gradient

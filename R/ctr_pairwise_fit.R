@@ -108,7 +108,7 @@ lavTablesFitCf <- function(object) {
                                  th.idx    = lavmodel@th.idx[[g]],
                                  num.idx   = lavmodel@num.idx[[g]],
                                  X         = lavdata@X[[g]],
-                                 cache     = lavcache[[g]])
+                                 lavcache  = lavcache[[g]])
         CF.group[g] <- 2*lavdata@nobs[[g]]*F.group
     }
 

@@ -464,6 +464,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             nfac <- lavpta$nfac[[g]]
             lavcache[[g]]$GH <- 
                 lav_gauss_hermite_xw_dnorm(n=nGH, revert=FALSE, ndim = nfac)
+            #lavcache[[g]]$DD <- lav_model_gradient_DD(lavmodel, group = g)
         }
     }
 

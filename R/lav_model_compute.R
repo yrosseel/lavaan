@@ -550,7 +550,11 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
         if(representation == "LISREL") {
             EY.g <- computeEY.LISREL(MLIST = MLIST, 
                                      mean.x=lavsamplestats@mean.x[[g]],
-                                     sample.mean=lavsamplestats@mean[[g]])
+                                     sample.mean=lavsamplestats@mean[[g]],
+                             ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
+                             ov.x.dummy.ov.idx=lavmodel@ov.x.dummy.ov.idx[[g]],
+                             ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
+                             ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]])
         } else {
             stop("only representation LISREL has been implemented for now")
         }

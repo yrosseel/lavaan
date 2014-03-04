@@ -203,7 +203,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                  th.idx    = th.idx[[g]],
                                  num.idx   = num.idx[[g]],
                                  X         = lavdata@X[[g]],
-                                 lavcache     = lavcache[[g]])
+                                 lavcache  = lavcache[[g]])
 
                 # chain rule (fmin)
                 group.dx <- 
@@ -562,6 +562,12 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
                 } else if(target == "mu") {
                     DELTA <- derivative.mu.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "nu") {
+                    DELTA <- derivative.nu.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                } else if(target == "tau") {
+                    DELTA <- derivative.tau.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
                 } else if(target == "theta") {
                     DELTA <- derivative.theta.LISREL(m=mname, 
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
@@ -691,3 +697,114 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     Omega
 }
+
+lav_model_gradient_DD <- function(lavmodel, GLIST = NULL, group = 1L) {
+
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    #### FIX th + mu!!!!!
+    Delta.lambda <- computeDeltaDx(lavmodel, GLIST=GLIST, target="lambda")[[group]]
+    Delta.tau    <- computeDeltaDx(lavmodel, GLIST=GLIST, target="tau"   )[[group]]
+    Delta.nu     <- computeDeltaDx(lavmodel, GLIST=GLIST, target="nu"    )[[group]]
+    Delta.theta  <- computeDeltaDx(lavmodel, GLIST=GLIST, target="theta" )[[group]]
+    Delta.beta   <- computeDeltaDx(lavmodel, GLIST=GLIST, target="beta"  )[[group]]
+    Delta.psi    <- computeDeltaDx(lavmodel, GLIST=GLIST, target="psi"   )[[group]]
+    Delta.alpha  <- computeDeltaDx(lavmodel, GLIST=GLIST, target="alpha" )[[group]]
+    Delta.gamma  <- computeDeltaDx(lavmodel, GLIST=GLIST, target="gamma" )[[group]]
+
+    ov.y.dummy.ov.idx <- lavmodel@ov.y.dummy.ov.idx[[group]]
+    ov.x.dummy.ov.idx <- lavmodel@ov.x.dummy.ov.idx[[group]]
+    ov.y.dummy.lv.idx <- lavmodel@ov.y.dummy.lv.idx[[group]]
+    ov.x.dummy.lv.idx <- lavmodel@ov.x.dummy.lv.idx[[group]]
+    ov.dummy.idx <- c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
+    lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
+    th.idx <- lavmodel@th.idx[[group]]
+    num.idx <- lavmodel@num.idx[[group]]
+    ord.idx <- unique( th.idx[th.idx > 0L] )
+
+    # fix Delta's...
+    mm.in.group <- 1:lavmodel@nmat[group] + cumsum(c(0,lavmodel@nmat))[group]
+    MLIST <- GLIST[ mm.in.group ]
+    
+    DD <- list()
+    nvar <- lavmodel@nvar
+    nfac <- ncol(MLIST$lambda) - length(lv.dummy.idx)
+
+    # DD$theta
+    theta.idx <- diagh.idx(nvar)
+    DD$theta <-  Delta.theta[theta.idx,,drop=FALSE]
+    if(length(ov.dummy.idx) > 0L) {
+        psi.idx <- diagh.idx( ncol(MLIST$psi)   )[lv.dummy.idx]
+        DD$theta[ov.dummy.idx,] <- Delta.psi[psi.idx,,drop=FALSE]
+    }
+    # num only? FIXME or just all of them?
+    DD$theta <- DD$theta[num.idx,,drop=FALSE]
+
+    # DD$nu
+    DD$nu <- Delta.nu
+    if(length(ov.dummy.idx) > 0L) {
+        DD$nu[ov.dummy.idx,] <- Delta.alpha[lv.dummy.idx,]
+    }
+    DD$nu <- DD$nu[num.idx,,drop=FALSE] # needed?
+
+    # DD$lambda
+    nr <- nvar; nc <- nfac
+    lambda.idx <- nr*((1:nc) - 1L) + rep(1:nvar, each=nc)
+    DD$lambda <- Delta.lambda[lambda.idx,,drop=FALSE]
+    if(length(ov.dummy.idx) > 0L) {
+
+        nr <- nrow(MLIST$beta); nc <- nfac # only the first 1:nfac columns
+        # beta.idx <- rep(nr*((1:nc) - 1L), each=length(lv.dummy.idx)) + rep(lv.dummy.idx, times=nc) ## FIXME
+        beta.idx <- rep(nr*((1:nc) - 1L), times=length(lv.dummy.idx)) + rep(lv.dummy.idx, each=nc)
+
+        #l.idx <- inr*((1:nc) - 1L) + rep(ov.dummy.idx, each=nc) ## FIXME
+        # l.idx <- rep(nr*((1:nc) - 1L), each=length(ov.dummy.idx)) + rep(ov.dummy.idx, times=nc) 
+        l.idx <- rep(nr*((1:nc) - 1L), times=length(ov.dummy.idx)) + rep(ov.dummy.idx, each=nc)
+        DD$lambda[match(l.idx, lambda.idx),] <- Delta.beta[beta.idx,,drop=FALSE]
+    }
+
+    # DD$KAPPA
+    DD$kappa <- Delta.gamma
+    if(length(ov.dummy.idx) > 0L) {
+        nr <- nrow(MLIST$gamma); nc <- ncol(MLIST$gamma)
+        kappa.idx <- nr*((1:nc) - 1L) + rep(lv.dummy.idx, each=nc)
+       DD$kappa <- DD$kappa[kappa.idx,,drop=FALSE]
+    }
+
+    # DD$GAMMA
+    if(!is.null(MLIST$gamma)) {
+        nr <- nrow(MLIST$gamma); nc <- ncol(MLIST$gamma)
+        lv.idx <- 1:nfac
+        # MUST BE ROWWISE!
+        gamma.idx <- rep(nr*((1:nc) - 1L), times=length(lv.idx)) + rep(lv.idx, each=nc)
+        DD$gamma <- Delta.gamma[gamma.idx,,drop=FALSE]
+    }
+
+    # DD$BETA
+    if(!is.null(MLIST$beta)) {
+        nr <- nc <- nrow(MLIST$beta)
+        lv.idx <- 1:nfac
+        # MUST BE ROWWISE!
+        beta.idx <- rep(nr*((1:nfac) - 1L), times=nfac) + rep(lv.idx, each=nfac) 
+        DD$beta <- Delta.beta[beta.idx,,drop=FALSE]
+    }
+
+    ## DD$psi
+    DD$psi <- Delta.psi
+    if(length(lv.dummy.idx) > 0L) {
+        nr <- nc <- nrow(MLIST$psi)
+        lv.idx <- 1:nfac
+        # MUST BE ROWWISE!
+        psi.idx <- rep(nr*((1:nfac) - 1L), times=nfac) + rep(lv.idx, each=nfac)
+
+        DD$psi <- DD$psi[psi.idx,,drop=FALSE]
+    }
+
+    ## DD$tau
+    if(!is.null(MLIST$tau)) {
+        DD$tau <- Delta.tau
+    }
+
+    DD
+}
+

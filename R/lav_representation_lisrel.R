@@ -975,6 +975,7 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL,
                                    Nobs = 1L) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+    lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
     # exogenous variables?
     if(is.null(eXo)) {
@@ -1062,6 +1063,7 @@ computeYHATx.LISREL.OLD <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
     BETA <- MLIST$beta; ALPHA <- MLIST$alpha; GAMMA <- MLIST$gamma
     DELTA <- MLIST$delta
     N <- nrow(ETA)
+    lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
     # exogenous variables?
     if(is.null(eXo)) {
@@ -1185,7 +1187,13 @@ computeYHATx.LISREL.OLD <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
 # compute E(Y): expected value of observed
 # E(Y) = NU + LAMBDA E(eta) + KAPPA mean.x
 # if DELTA -> E(Y) = delta * E(Y)
-computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL) {
+computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
+                             ov.y.dummy.ov.idx=NULL,
+                             ov.x.dummy.ov.idx=NULL,
+                             ov.y.dummy.lv.idx=NULL,
+                             ov.x.dummy.lv.idx=NULL) {
+
+    lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
     # fix NU
     NU <- .internal_get_NU(MLIST = MLIST, sample.mean = sample.mean,
@@ -1996,6 +2004,48 @@ derivative.gamma.LISREL <- function(m="gamma",
     DX <- DX[, idx, drop=FALSE]
     DX
 }
+
+# dnu/dx -- per model matrix
+derivative.nu.LISREL <- function(m="nu",
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]),
+                                 MLIST=NULL) {
+
+    NU <- MLIST$nu
+
+    # shortcut for empty matrices
+    if(m != "nu") {
+        return( matrix(0.0, nrow=length(NU), ncol=length(idx)) )
+    } else {
+        # m == "nu"
+        DX <- diag(1, nrow=length(NU), ncol=length(NU))
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
+# dtau/dx -- per model matrix
+derivative.tau.LISREL <- function(m="tau",
+                                 # all model matrix elements, or only a few?
+                                 idx=1:length(MLIST[[m]]),
+                                 MLIST=NULL) {
+
+    TAU <- MLIST$tau
+
+    # shortcut for empty matrices
+    if(m != "tau") {
+        return( matrix(0.0, nrow=length(TAU), ncol=length(idx)) )
+    } else {
+        # m == "tau"
+        DX <- diag(1, nrow=length(TAU), ncol=length(TAU))
+    }
+
+    DX <- DX[, idx, drop=FALSE]
+    DX
+}
+
+
 
 # dalpha/dx -- per model matrix
 derivative.alpha.LISREL <- function(m="alpha",

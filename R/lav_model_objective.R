@@ -101,8 +101,8 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
-                                      X         = X[[g]],
-                                      lavcache     = lavcache[[g]])
+                                      X         = lavdata@X[[g]],
+                                      lavcache  = lavcache[[g]])
 
         } else if(estimator == "FML") { 
             # Full maximum likelihood (underlying multivariate normal)
@@ -110,8 +110,8 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       TH        = TH[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
-                                      X         = X[[g]],
-                                      lavcache     = lavcache[[g]])
+                                      X         = lavdata@X[[g]],
+                                      lavcache  = lavcache[[g]])
 
         } else if(estimator == "MML") { 
             # marginal maximum likelihood
