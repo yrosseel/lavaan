@@ -1477,7 +1477,7 @@ function(object, ...) {
     mods <- c(list(object), dots[modp])
     NAMES <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    lavTestLRT(object = object, ..., SB.classic = FALSE, SB.H0 = FALSE,
+    lavTestLRT(object = object, ..., SB.classic = TRUE, SB.H0 = FALSE,
                model.names = NAMES)
 })
 

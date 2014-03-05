@@ -156,7 +156,15 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
             # use formula from Satorra & Bentler 2001
             scaling.factor <- unlist(lapply(mods, 
                 function(x) slot(slot(x, "Fit"), "test")[[2]]$scaling.factor))
+ 
+            # saturated model? (has NA scaling.factor)
+            sat.idx <- which(Df == 0)
+            if(length(sat.idx) > 0L) {
+                scaling.factor[sat.idx] <- 1
+            }
+
             cd1 <- diff(scaling.factor * Df)/diff(Df)
+
 
             # check for negative scaling factors
             if(any(cd1 < 0)) {
