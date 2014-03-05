@@ -212,6 +212,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 } else {
                     rhs.name <- names(out)[j]
                 }
+
+                # catch lhs = rhs and op = "=~"
+                if(op == "=~" && lhs.names[l] == names(out)[j]) {
+                    stop("lavaan ERROR: latent variable `", lhs.names[l], "' can not be measured by itself")
+                }
         
                 # check if we not already have this combination (in this group)
                 # 1. asymmetric (=~, ~, ~1)
