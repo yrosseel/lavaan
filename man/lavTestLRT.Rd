@@ -9,7 +9,7 @@
 \description{
 LRT test for comparing two (nested) lavaan models.}
 \usage{
-lavTestLRT(object, ..., SB.classic = FALSE, SB.H0 = FALSE, 
+lavTestLRT(object, ..., SB.classic = TRUE, SB.H0 = FALSE, 
            type = "Chisq", model.names = NULL)
 anova(object, ...)
 }

@@ -1,7 +1,9 @@
 # compare to nested models, by default using the chi-square
 # difference test
-#
-lavTestLRT <- function(object, ..., SB.classic = FALSE, SB.H0 = FALSE,
+
+# NOTE: in 0.5-16, SB.classic = TRUE is the default again (for now)
+
+lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
                        type = "Chisq", model.names = NULL) {
 
     if(object@Fit@npar > 0L && !object@Fit@converged)
