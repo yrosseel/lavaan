@@ -8,13 +8,13 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     if(length(model.syntax) == 0) {
         stop("lavaan ERROR: empty model syntax")
     }
-  
-    # replace semicolons with newlines prior to split
-    model.syntax <- gsub(";", "\n", model.syntax, fixed=TRUE)
-  
+    
     # remove comments prior to split. 
     # Match from comment character to newline, but don't eliminate newline
     model.syntax <- gsub("[#!].*(?=\n)","", model.syntax, perl=TRUE)
+  
+    # replace semicolons with newlines prior to split
+    model.syntax <- gsub(";", "\n", model.syntax, fixed=TRUE)
   
     #remove whitespace prior to split
     model.syntax <- gsub("[ \t]+", "", model.syntax, perl=TRUE)
