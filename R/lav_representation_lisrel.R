@@ -407,23 +407,30 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
 }
 
 # compute TH for a single group
-computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
+computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, revert=FALSE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     BETA   <- MLIST$beta
     TAU    <- MLIST$tau; nth <- nrow(TAU)
 
     # missing alpha
-    if(is.null(MLIST$alpha))
+    if(is.null(MLIST$alpha)) {
         ALPHA <- matrix(0, nfac, 1L)
-    else
+    } else {
         ALPHA  <- MLIST$alpha
+    }
 
     # missing nu
-    if(is.null(MLIST$nu))
+    if(is.null(MLIST$nu)) {
         NU <- matrix(0, nvar, 1L)
-    else
+    } else {
         NU <- MLIST$nu
+    }
+
+    # revert sign alpha + nu
+    if(revert) {
+        NU <- -NU; ALPHA <- -ALPHA
+    }
 
     if(is.null(th.idx)) {
         th.idx <- 1:nth
@@ -1740,7 +1747,8 @@ derivative.th.LISREL <- function(m="tau",
                                  idx=1:length(MLIST[[m]]),
                                  th.idx=NULL,
                                  MLIST=NULL,
-                                 delta = TRUE) {
+                                 delta = TRUE,
+                                 revert = FALSE) {
 
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
@@ -1795,7 +1803,11 @@ derivative.th.LISREL <- function(m="tau",
         if(delta.flag)
             DX <- DX * as.numeric(K_nu %*% DELTA)
     } else if(m == "nu") {
-        DX <- (-1) * K_nu
+        if(revert) {
+            DX <-        K_nu
+        } else {
+            DX <- (-1) * K_nu
+        }
         if(delta.flag)
             DX <- DX * as.numeric(K_nu %*% DELTA)
     } else if(m == "lambda") {
@@ -1813,6 +1825,9 @@ derivative.th.LISREL <- function(m="tau",
     } else if(m == "alpha") {
         DX <- (-1) * LAMBDA %*% IB.inv
         DX <- K_nu %*% DX
+        if(revert) {
+            DX <- (-1) * DX
+        }
         if(delta.flag)
             DX <- DX * as.numeric(K_nu %*% DELTA)
     } else if(m == "delta") {

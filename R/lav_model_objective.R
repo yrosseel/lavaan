@@ -30,7 +30,13 @@ lav_model_objective <- function(lavmodel       = NULL,
     # do we need WLS.est?
     if(estimator == "GLS"  || estimator == "WLS"  || 
        estimator == "DWLS" || estimator == "ULS") {
-        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
+        if(lavmodel@categorical) {
+            REVERT <- TRUE
+        } else {
+            REVERT <- FALSE
+        }
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST,
+                                     revert = REVERT)
         if(debug) print(WLS.est)
     } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
         # compute moments for all groups

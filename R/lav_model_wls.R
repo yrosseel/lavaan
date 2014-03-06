@@ -1,5 +1,5 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL, revert = FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -17,7 +17,7 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) {
     if(meanstructure && !categorical) {
         Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
     } else if(categorical) {
-        TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
+        TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST, revert = revert)
         if(fixed.x)
             PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
     }

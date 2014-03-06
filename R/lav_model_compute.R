@@ -87,7 +87,7 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
-computeTH <- function(lavmodel = NULL, GLIST = NULL) {
+computeTH <- function(lavmodel = NULL, GLIST = NULL, revert = FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -113,7 +113,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL) {
 
         if(representation == "LISREL") {
             TH[[g]] <- computeTH.LISREL(MLIST = GLIST[ mm.in.group ],
-                                        th.idx=th.idx[[g]])
+                                        th.idx=th.idx[[g]], revert = revert)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
