@@ -3,8 +3,19 @@
 
 short.summary <- function(object) {
 
+    # catch FAKE run
+    FAKE <- FALSE
+    if(!is.null(object@Model@control$optim.method)) {
+        if(tolower(object@Model@control$optim.method) == "none") {
+            FAKE <- TRUE
+        }
+    }
+
     # Convergence or not?
-    if(object@Fit@iterations > 0) {
+    if(FAKE) {
+        cat(sprintf("lavaan (%s) -- DRY RUN with 0 iterations\n",
+                    packageDescription("lavaan", fields="Version")))
+    } else if(object@Fit@iterations > 0) {
         if(object@Fit@converged) {
 	    cat(sprintf("lavaan (%s) converged normally after %3i iterations\n",
                     packageDescription("lavaan", fields="Version"),

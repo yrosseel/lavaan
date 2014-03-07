@@ -208,14 +208,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
             #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
         } else {
             OPTIMIZER <- toupper(lavmodel@control$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B"))
+            stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B", "NONE"))
         }
     } else {
         if(is.null(lavmodel@control$optim.method)) {
             OPTIMIZER <- "NLMINB.CONSTR"
         } else {
             OPTIMIZER <- toupper(lavmodel@control$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR"))
+            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "NONE"))
         }
     }
 
@@ -397,6 +397,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
         } else {
             converged <- FALSE
         }
+    } else if(OPTIMIZER == "NONE") {
+        x <- start.x
+        iterations <- 0L
+        converged <- TRUE
+        control <- list()
+        optim.out <- list()
     }
 
     fx <- minimize.this.function(x) # to get "fx.group" attribute
