@@ -199,25 +199,12 @@ lavaanify <- lavParTable <- function(
 
             # check for wrong number of arguments if multiple groups
             nidx <- length(idx)
-            # fixed
-            if( !is.null(MOD.fixed) && nidx != length(MOD.fixed) ) {
+            if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
+                (!is.null(MOD.start) && nidx != length(MOD.start)) ||
+                (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
                 stop("lavaan ERROR: wrong number of arguments in modifier (",
-                    paste(MOD.fixed, collapse=","), ") of element ",
-                    LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
-            }
-            # start
-            if( !is.null(MOD.start) && nidx != length(MOD.start) ) {
-                el.idx <- which(LIST$mod.idx == el)[1L]
-                stop("lavaan ERROR: wrong number of arguments in modifier (",
-                    paste(MOD.start, collapse=","), ") of element ",
-                    LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
-            }
-            # label
-            if( !is.null(MOD.label) && nidx != length(MOD.label) ) {
-                el.idx <- which(LIST$mod.idx == el)[1L]
-                stop("lavaan ERROR: wrong number of arguments in modifier (",
-                    paste(MOD.label, collapse=","), ") of element ",
+                    paste(MOD.label, collapse=","), ") of element ", 
                     LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
             }
 

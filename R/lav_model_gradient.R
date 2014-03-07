@@ -42,13 +42,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
     if(estimator == "GLS"  || estimator == "WLS"  ||
        estimator == "DWLS" || estimator == "ULS") {
 
-        if(lavmodel@categorical) {
-            REVERT <- TRUE
-        } else {
-            REVERT <- FALSE
-        }
-        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST,
-                                     revert = REVERT)
+        # always compute WLS.est
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
 
         # only for GLS
         if(estimator == "GLS") {
@@ -158,8 +153,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                 stop("FIXME: Delta should be given if type != free")
             #stop("FIXME: WLS gradient with type != free needs fixing!")
         } else {
-            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST,
-                                  revert = REVERT)
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
         }
 
         for(g in 1:lavsamplestats@ngroups) {
@@ -308,8 +302,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL, 
-                         m.el.idx. = NULL, x.el.idx. = NULL,
-                         revert = FALSE) {
+                         m.el.idx. = NULL, x.el.idx. = NULL) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
@@ -453,8 +446,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                                                      idx=m.el.idx[[mm]],
                                                      th.idx=th.idx[[g]],
                                                      MLIST=GLIST[ mm.in.group ],
-                                                     delta = TRUE,
-                                                     revert = TRUE)
+                                                     delta = TRUE)
                     if(parameterization == "theta") {
                         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
                         dDelta.dx <- 
@@ -464,8 +456,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                             derivative.th.LISREL(m = "delta",
                                                  idx = 1:nvar[g],
                                                  MLIST = GLIST[ mm.in.group ],
-                                                 th.idx = th.idx[[g]],
-                                                 revert = revert)
+                                                 th.idx = th.idx[[g]])
                         # add dth.dDelta %*% dDelta.dx
                         no.num.idx <- which(th.idx[[g]] > 0)
                         DELTA.th[no.num.idx,] <- 
