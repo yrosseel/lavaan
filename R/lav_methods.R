@@ -1222,6 +1222,8 @@ function(object, what="free") {
         getModelTheta(object, labels=TRUE)
     } else if(what == "cor.ov") {
         getModelTheta(object, correlation.metric=TRUE, labels=TRUE)
+    } else if(what == "mean.lv") {
+        getModelMeanLV(object, labels=TRUE)
     } else if(what == "coverage") {
         getDataMissingCoverage(object, labels=TRUE)
     } else if(what %in% c("patterns", "pattern")) {
@@ -1661,6 +1663,44 @@ getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
 
 getModelCor <- function(object, labels=TRUE) {
     getModelCov(object, correlation.metric=TRUE, labels=labels)
+}
+
+getModelMeanLV <- function(object, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv means
+    OUT <- computeEETA(lavmodel       = object@Model, 
+                       lavsamplestats = object@SampleStats,
+                       remove.dummy.lv = TRUE)
+
+    OUT <- lapply(OUT, as.numeric)
+
+    # we need psi matrix for labels
+    psi.group <- which(names(object@Model@GLIST) == "psi")
+    if(labels) {
+        for(g in 1:G) {
+            psi.idx <- psi.group[g]
+            NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
+            # remove all dummy latent variables
+            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                        object@Model@ov.x.dummy.lv.idx[[g]])
+            if(length(lv.idx) > 0L) {
+                NAMES <- NAMES[-lv.idx]
+                OUT[[g]] <- OUT[[g]][-lv.idx]
+            }
+            names(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
 }
 
 getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
