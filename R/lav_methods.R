@@ -623,8 +623,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         if(object@Data@ngroups == 1L) r2 <- list(r2)
         for(g in 1:object@Data@ngroups) {
             if(object@Data@ngroups > 1) {
-                cat("R-Square Group ", object@Data@group.label[[g]], 
-                    ":\n\n", sep="")       
+                cat("R-Square Group ", g, " [", 
+                    object@Data@group.label[[g]], "]",
+                    ":\n\n", sep="")
             } else {
                 cat("R-Square:\n\n")
             } 
