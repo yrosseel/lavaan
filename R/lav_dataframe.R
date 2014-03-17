@@ -23,6 +23,10 @@ lav_dataframe_check_vartype <- function(frame = NULL, ov.names = character(0)) {
     out <- character(nvar)
     for(i in seq_len(nvar)) {
         out[i] <- class(frame[[var.idx[i]]])[1L]
+        # watch out for matrix type with 1 column
+        if(out[i] == "matrix" && ncol(frame[[var.idx[i]]]) == 1L) {
+            out[i] <- "numeric"
+        }
     }
     out
 }
@@ -71,8 +75,19 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
         x <- frame[[var.idx[i]]]
         
         type.x <- class(x)[1L]
-        if(type.x == "integer")
+
+        # correct for matrix with 1 column
+        if(type.x == "matrix" && ncol(x) == 1L) {
             type.x <- "numeric"
+        }
+
+        # correct for integers
+        if(type.x == "integer") {
+            type.x <- "numeric"
+        }
+
+
+        # handle ordered/factor
         if(!is.null(ordered) && var.names[i] %in% ordered) {
             type.x <- "ordered"
             lev <- sort(unique(x)) # we assume integers!
