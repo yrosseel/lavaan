@@ -199,6 +199,14 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
         RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
+
+        # remove dummy lv's
+        lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                          lavmodel@ov.x.dummy.lv.idx[[g]])
+        if(length(lv.dummy.idx) > 0L) {
+            FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        }
+
         FS[[g]] <- FS.g
     }
 

@@ -508,19 +508,13 @@ computeLAMBDA.LISREL <- function(MLIST = NULL,
 
     # fix LAMBDA
     LAMBDA <- MLIST$lambda
-    if(length(lv.dummy.idx) > 0L) {
-        LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
-        nfac <- ncol(LAMBDA)
-        LAMBDA[ov.y.dummy.ov.idx,] <-
-            MLIST$beta[ov.y.dummy.lv.idx,
-                       1:nfac, drop=FALSE]
+    if(length(ov.y.dummy.ov.idx) > 0L) {
+        LAMBDA.X[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
     }
 
     # remove dummy lv?
-    if(remove.dummy.lv) {
-        if(length(lv.dummy.idx) > 0L) {
-            LAMBDA <- LAMBDA[,-lv.dummy.idx,drop=FALSE]
-        }
+    if(remove.dummy.lv && length(lv.dummy.idx) > 0L) {
+        LAMBDA <- LAMBDA[,-lv.dummy.idx,drop=FALSE]
     }
 
     LAMBDA
@@ -681,8 +675,7 @@ computeVETAx.LISREL <- function(MLIST=NULL, lv.dummy.idx=NULL) {
             # fix LAMBDA
             LAMBDA.X <- MLIST$lambda
             if(length(ov.y.dummy.ov.idx) > 0L) {
-                LAMBDA.X[ov.y.dummy.ov.idx,] <-
-                    MLIST$beta[ov.y.dummy.lv.idx, ,drop=FALSE]
+                LAMBDA.X[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
             }
 
             # 'regress' NU on X
@@ -1203,13 +1196,10 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
                            ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
                            ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
 
-    # fix LAMBDA (remove dummies) ## FIXME -- needed?
+    # fix LAMBDA 
     LAMBDA <- MLIST$lambda
-    if(length(lv.dummy.idx) > 0L) {
-        LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
-        nfac <- ncol(LAMBDA)
-        LAMBDA[ov.y.dummy.ov.idx,] <-
-            MLIST$beta[ov.y.dummy.lv.idx, 1:nfac, drop=FALSE]
+    if(length(ov.y.dummy.ov.idx) > 0L) {
+        LAMBDA[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
     }
 
     # compute E(ETA)
