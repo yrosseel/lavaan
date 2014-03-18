@@ -1723,9 +1723,20 @@ getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
     if(labels) {
         for(g in 1:G) {
             lambda.idx <- lambda.group[g]
+            NAMES.ov <- object@Model@dimNames[[lambda.idx]][[1L]]
+
             psi.idx <- psi.group[g]
-            NAMES <- c(object@Model@dimNames[[lambda.idx]][[1L]],
-                       object@Model@dimNames[[psi.idx]][[1L]])
+            NAMES.lv <- object@Model@dimNames[[psi.idx]][[1L]]
+            # remove all dummy latent variables
+            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
+                        object@Model@ov.x.dummy.lv.idx[[g]])
+            if(length(lv.idx) > 0L) {
+                NAMES.lv <- NAMES.lv[-lv.idx]
+                lv.idx <- lv.idx + length(NAMES.ov)
+                OUT[[g]] <- OUT[[g]][-lv.idx, -lv.idx, drop=FALSE]
+            }
+
+            NAMES <- c(NAMES.ov, NAMES.lv)
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
             class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
         }
