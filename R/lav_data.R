@@ -489,10 +489,14 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
         # standardize observed variables? numeric only!
         if(std.ov) {
-            #num.idx <-
-            X[[g]]  <- scale(X[[g]])[,] # three copies are made!
-            if(length(exo.idx) > 0L)
+            num.idx <- which(ov.names[[g]] %in% ov$name & ov$type == "numeric")
+            if(length(num.idx) > 0L) {
+                X[[g]][,num.idx]  <- scale(X[[g]][,num.idx,drop=FALSE])[,] 
+                # three copies are made!!!!!
+            }
+            if(length(exo.idx) > 0L) {
                 eXo[[g]] <- scale(eXo[[g]])[,]
+            }
         }
 
         # missing data
