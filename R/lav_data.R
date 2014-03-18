@@ -487,8 +487,9 @@ lav_data_full <- function(data          = NULL,          # data.frame
         }
         #print( tracemem(X[[g]]) )
 
-        # standardize observed variables?
+        # standardize observed variables? numeric only!
         if(std.ov) {
+            #num.idx <-
             X[[g]]  <- scale(X[[g]])[,] # three copies are made!
             if(length(exo.idx) > 0L)
                 eXo[[g]] <- scale(eXo[[g]])[,]

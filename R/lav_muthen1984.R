@@ -390,9 +390,15 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
 
     B <- rbind( cbind(A11,A12),
                 cbind(A21,A22) )
-    # B.inv <- solve(B)
-    B.inv <- MASS::ginv(B)
+
+    # invert!
     ## FIXME: we need to invert B as a partioned matrix
+    B.inv <- try(solve(B), silent = TRUE)
+    if(inherits(B.inv, "try-error")) {
+        # brute force
+        B.inv <- MASS::ginv(B) 
+        warning("lavaan WARNING: trouble inverting W matrix; used generalized inverse")
+    }
 
     #  weight matrix (correlation metric)
     WLS.W <- B.inv %*% INNER %*% t(B.inv)
