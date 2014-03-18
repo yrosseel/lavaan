@@ -492,6 +492,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               lavdata@ov.names[[1L]])
             ov.x.idx <- match(vnames(lavpartable, "ov.x"), 
                               lavdata@ov.names[[1L]])
+            if(length(ov.x.idx) == 0L) {
+                stop("lavaan ERROR: no exogenous variables; remove all variances, covariances and intercepts of exogenous variables from the model syntax\n")
+            }
             YX <- lavdata@X[[1L]]
             #print(head(YX))
             # constraints?
