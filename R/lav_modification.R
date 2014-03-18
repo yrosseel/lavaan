@@ -280,10 +280,10 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # remove some columns
     LIST$free <- LIST$eq.id <- LIST$unco <- NULL
     LIST$mat <- LIST$row <- LIST$col <- LIST$id <- NULL
-    if(power) {
-        LIST$epc <- NULL
-        LIST$sepc.lv <- NULL
-    }
+    #if(power) {
+    #    LIST$epc <- NULL
+    #    LIST$sepc.lv <- NULL
+    #}
     if(ngroups == 1) LIST$group <- NULL
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
