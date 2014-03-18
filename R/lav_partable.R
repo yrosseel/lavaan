@@ -798,6 +798,19 @@ lav_partable_flat <- function(FLAT = NULL,
     #### FIXME!!!!! ORDER!
     ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
 
+    # if we have the "|" in the model syntax, check the number of thresholds
+    if(!is.null(varTable) && length(ov.names.ord1) > 0L) {
+        for(o in ov.names.ord1) {
+            nth <- varTable$nlev[ varTable$name == o ] - 1L
+            nth.in.partable <- sum(FLAT$op == "|" & FLAT$lhs == o)
+            if(nth != nth.in.partable) {
+                stop("lavaan ERROR: expected ", nth, 
+                     " threshold(s) for variable ",
+                     sQuote(o), "; syntax contains ", nth.in.partable, "\n")
+            }
+        }
+    }
+
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
 
