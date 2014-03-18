@@ -118,6 +118,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 0c categorical variables? -- needed for lavoptions
     if(any(FLAT$op == "|")) {
         categorical <- TRUE
+        # just in case, add lhs variables names to "ordered"
+        ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
     } else if(!is.null(data) && length(ordered) > 0L) {
         categorical <- TRUE
     } else if(is.data.frame(data) && 
