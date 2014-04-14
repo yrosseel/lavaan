@@ -128,10 +128,11 @@ start = function() {
 lik = function(x) {
     if(!missing(x)) theta <<- x
     th <- theta[1:nth]; TH <- c(-Inf, th, +Inf); beta <- theta[-c(1:nth)]
-    if(nexo > 0L) 
+    if(nexo > 0L) {
         eta <- drop(X %*% beta) + offset
-    else
+    } else {
         eta <- numeric(nobs)
+    }
     z1 <<- pmin( 100, TH[y+1L   ] - eta)
     z2 <<- pmax(-100, TH[y+1L-1L] - eta)
     probits <<- pnorm(z1) - pnorm(z2)

@@ -532,7 +532,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                  "  found: ", paste(cov.names, collapse=" "), "\n",
                  "  expected: ", paste(ov.names[[g]], collapse=" "), "\n")
         } else {
-            tmp.cov <- tmp.cov[idx,idx]
+            tmp.cov <- tmp.cov[idx,idx,drop=FALSE]
         }
 
         # strip dimnames
