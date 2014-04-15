@@ -156,6 +156,14 @@ diagh.idx <- function(n = 1L) {
     c(1L, cumsum(n:2L) + 1L)
 }
 
+# return the *vector* indices of the ANTI diagonal elements of a symmetric
+# matrix of size 'n'
+antidiag.idx <- function(n = 1L) {
+    if(n < 1L) return(integer(0L))
+    1L + seq_len(n)*(n-1L)
+}
+
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)
