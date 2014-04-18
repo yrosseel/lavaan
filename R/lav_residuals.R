@@ -159,18 +159,19 @@ function(object, type="raw", labels=TRUE) {
                 # this is identical to solve(A1)/N for complete data!!
             } else if(object@Options$se == "robust.huber.white" ||
                       object@Options$se == "robust.sem") {
-                A1 <- compute.A1.sample(samplestats=object@SampleStats, group=g, 
-                                        meanstructure=meanstructure,
-                                        information=object@Options$information)
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
-                                        data=object@Data, group=g,
-                                        meanstructure=meanstructure)
+                A1 <- compute.A1.sample(lavsamplestats = object@SampleStats, 
+                                        group = g, 
+                                        meanstructure = meanstructure,
+                                        information = object@Options$information)
+                B1 <- compute.B1.sample(lavsamplestats = object@SampleStats, 
+                                        lavdata = object@Data, group = g,
+                                        meanstructure = meanstructure)
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
-                B1 <- compute.B1.sample(samplestats=object@SampleStats, 
-                                        data=object@Data, group=g,
+                B1 <- compute.B1.sample(lavsamplestats = object@SampleStats, 
+                                        lavdata = object@Data, group=g,
                                         meanstructure=meanstructure)
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]

@@ -77,3 +77,37 @@ lav_tables_mvb_test <- function(nitems = 3L, verbose = FALSE) {
     all.equal(pidot, as.numeric(T.r %*% prop))
 }
 
+# L_r test of Maydeu-Olivares & Joe (2005) eq (4)
+lav_tables_mvb_Lr <- function(nitems = 0L, 
+                              obs.prop = NULL, est.prop = NULL, nobs = 0L,
+                              order. = 2L) {
+
+    # recreate tables
+    obs.PROP <- array(obs.prop, dim = rep(2L, nitems))
+    est.PROP <- array(est.prop, dim = rep(2L, nitems))
+    
+    # compute {obs,est}.prop.dot
+    obs.prop.dot <- lav_tables_mvb_getPiDot(obs.PROP, order. = order.)
+    est.prop.dot <- lav_tables_mvb_getPiDot(est.PROP, order. = order.)
+
+    # compute T.r
+    T.r <- lav_tables_mvb_getT(nitems = nitems, order. = order., rbind. = TRUE)
+
+    # compute GAMMA based on est.prop
+    GAMMA <- diag(est.prop) - tcrossprod(est.prop)
+
+    # compute XI
+    XI <- T.r %*% GAMMA %*% t(T.r)
+
+    # compute Lr
+    diff.dot <- obs.prop.dot - est.prop.dot
+    Lr <- as.numeric(nobs * t(diff.dot) %*% solve(XI) %*% diff.dot)
+    df <- 2^nitems - 1L
+    p.value <- 1 - pchisq(Lr, df = df)
+
+    # return list
+    list(Lr = Lr, df = df, p.value = p.value)
+}
+
+
+
