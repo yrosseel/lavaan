@@ -1486,13 +1486,31 @@ function(object, ...) {
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
+
+    # catch SB.classic and SB.H0
+    SB.classic <- TRUE; SB.H0 <- FALSE
+
+    arg.names <- names(dots)
+    arg.idx <- which(nchar(arg.names) > 0L)
+    if(length(arg.idx) > 0L) {
+        if(!is.null(dots$SB.classic))
+            SB.classic <- dots$SB.classic
+        if(!is.null(dots$SB.H0))
+            SB.H0 <- dots$SB.H0           
+        dots <- dots[-arg.idx]
+    }
+
     modp <- if(length(dots))
         sapply(dots, is, "lavaan") else logical(0)
     mods <- c(list(object), dots[modp])
     NAMES <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    lavTestLRT(object = object, ..., SB.classic = TRUE, SB.H0 = FALSE,
-               model.names = NAMES)
+    # use do.call to handle changed dots
+    ans <- do.call("lavTestLRT", c(list(object = object, 
+                   SB.classic = SB.classic, SB.H0 = SB.H0, 
+                   model.names = NAMES), dots))
+
+    ans
 })
 
 

@@ -222,9 +222,10 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
         }
     }
     if(any(c("X2", "G2") %in% statistic)) {
-        if(lavobject@Options$estimator == "FML") {
+        if(lavobject@Options$estimator %in% c("FML")) {
             # ok, nothing to say
-        } else if(lavobject@Options$estimator %in% c("WLS","DWLS","PML")) {
+        } else if(lavobject@Options$estimator %in% 
+                      c("WLS","DWLS","PML","ULS")) {
             warning("lavaan WARNING: estimator ", lavobject@Options$estimator,
                     " is not using full information while est.prop is using full information")
         } else {
