@@ -146,18 +146,28 @@ short.summary <- function(object) {
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 3. P-value
-        if(object@Fit@test[[1]]$refdistr == "chisq") {
-            t0.txt <- sprintf("  %-40s", "P-value (Chi-square)")
-        } else if(length(object@Fit@test) == 1L &&
-                  object@Fit@test[[1]]$refdistr == "unknown") {
-            t0.txt <- sprintf("  %-40s", "P-value (Unknown)")
+        if(object@Fit@test[[1]]$df > 0) {
+            if(object@Fit@test[[1]]$refdistr == "chisq") {
+                t0.txt <- sprintf("  %-40s", "P-value (Chi-square)")
+            } else if(length(object@Fit@test) == 1L &&
+                      object@Fit@test[[1]]$refdistr == "unknown") {
+                t0.txt <- sprintf("  %-40s", "P-value (Unknown)")
+            } else {
+                t0.txt <- sprintf("  %-40s", "P-value")
+            }
+            t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$pvalue)
+            t2.txt <- ifelse(scaled,
+                      sprintf("  %10.3f", object@Fit@test[[2]]$pvalue), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         } else {
-            t0.txt <- sprintf("  %-40s", "P-value")
+            # FIXME: should we do this? To warn that exact 0.0 was not obtained?
+            if(object@Fit@fx > 0) {
+                t0.txt <- sprintf("  %-35s", "Minimum Function Value")
+                t1.txt <- sprintf("  %15.13f", object@Fit@fx)
+                t2.txt <- ""
+                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            }
         }
-        t1.txt <- sprintf("  %10.3f", object@Fit@test[[1]]$pvalue)
-        t2.txt <- ifelse(scaled,
-                  sprintf("  %10.3f", object@Fit@test[[2]]$pvalue), "")
-        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 3b. Do we have a Bollen-Stine p-value?
         if(object@Options$test == "bollen.stine") {

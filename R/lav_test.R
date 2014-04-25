@@ -264,8 +264,24 @@ lav_model_test <- function(lavmodel       = NULL,
         pvalue <- as.numeric(NA)
     } else {
         refdistr <- "chisq"
+
         # pvalue  ### FIXME: what if df=0? NA? or 1? or 0?
-        pvalue <- 1 - pchisq(chisq, df)
+        # this is not trivial, since
+        # 1 - pchisq(0, df=0) = 1
+        # but
+        # 1 - pchisq(0.00000000001, df=0) = 0
+        # and
+        # 1 - pchisq(0, df=0, ncp=0) = 0
+        #
+        # This is due to different definitions of limits (from the left,
+        # or from the right)
+        #
+        # From 0.5-17 onwards, we will use NA if df=0, to be consistent
+        if(df == 0) {
+            pvalue <- as.numeric(NA)
+        } else {
+            pvalue <- 1 - pchisq(chisq, df)
+        }
     }
 
     TEST[[1]] <- list(test="standard",
