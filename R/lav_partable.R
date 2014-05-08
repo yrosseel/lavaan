@@ -941,6 +941,14 @@ lav_partable_flat <- function(FLAT = NULL,
     USER <- data.frame(lhs=lhs, op=op, rhs=rhs, mod.idx=mod.idx,
                        stringsAsFactors=FALSE)
 
+    # check for duplicated elements in USER
+    TMP <- USER[,1:3]
+    idx <- which(duplicated(TMP))
+    if(length(idx) > 0L) {
+        warning("duplicated elements in model syntax have been ignored: ", TMP[idx,])
+        USER <- USER[-idx,]
+    }
+
     # check for duplicated elements in DEFAULT
     # - FIXME: can we not avoid this somehow??
     # - for example, if the user model includes 'x1 ~~ x1'
