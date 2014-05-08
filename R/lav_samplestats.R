@@ -236,7 +236,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             # 3. variances (if any)
             # 4. covariance matrix (no diagonal!)
             TH <- th[[g]]
-            TH[ov.types == "numeric"] <- -1*TH[ov.types == "numeric"]
+
+            # NOTE: prior to 0.5-17, we had this:
+            # TH[ov.types == "numeric"] <- -1*TH[ov.types == "numeric"]
+            # which is WRONG if we have more than one threshold per variable
+            # (thanks to Sacha Epskamp for spotting this!)
+            TH[ th.idx[[g]] == 0 ] <- -1*TH[ th.idx[[g]] == 0 ]
+
             WLS.obs[[g]] <- c(TH,
                               vec(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),

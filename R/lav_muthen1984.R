@@ -424,9 +424,14 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # reverse sign numeric TH (because we provide -mu in WLS.obs)
     # (WOW, it took me a LOOONGGG time to realize this!)
     # YR 16 July 2012
+
+    # NOTE: prior to 0.5-17, we used num.idx (instead of NUM.idx)
+    # which is WRONG if we have more than one threshold per variable
+    # (thanks to Sacha Epskamp for spotting this!)
     if(length(num.idx) > 0L) {
-        WLS.W[num.idx,] <- -WLS.W[num.idx,]
-        WLS.W[,num.idx] <- -WLS.W[,num.idx]
+        NUM.idx <- which(unlist(TH.IDX) == 0L)
+        WLS.W[NUM.idx,] <- -WLS.W[NUM.idx,]
+        WLS.W[,NUM.idx] <- -WLS.W[,NUM.idx]
     }
     
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
