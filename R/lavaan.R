@@ -753,7 +753,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                      symmetric=TRUE,
                                      only.values=TRUE)$values
                     if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
-                        warning("lavaan WARNING: residual covariance matrix is not positive definite;", txt.group, " use inspect(fit,\"cov.ov\") to investigate.")
+                        warning("lavaan WARNING: observed variable term matrix (theta) is not positive definite;", txt.group, " use inspect(fit,\"theta\") to investigate.")
                     }
                 }
         }

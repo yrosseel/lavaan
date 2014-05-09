@@ -1228,11 +1228,8 @@ function(object, what="free") {
               what == "modelcor.all" ||
               what == "cor.all") {
         getModelCor(object, labels=TRUE)
-    } else if(what == "theta" ||
-              what == "cov.ov") {
+    } else if(what == "theta") {
         getModelTheta(object, labels=TRUE)
-    } else if(what == "cor.ov") {
-        getModelTheta(object, correlation.metric=TRUE, labels=TRUE)
     } else if(what == "mean.lv") {
         getModelMeanLV(object, labels=TRUE)
     } else if(what == "coverage") {
