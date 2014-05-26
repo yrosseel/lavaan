@@ -18,6 +18,13 @@ lav_model_estimate <- function(lavmodel       = NULL,
         group.weight <- TRUE
     }
 
+    # temp test
+    if(lavoptions$partrace) {
+        # fx + parameter values
+        PENV <- new.env()
+        PENV$PARTRACE <- matrix(NA, nrow=0, ncol=lavmodel@nx.free + 1L)
+    }
+
     # function to be minimized
     minimize.this.function <- function(x, verbose=FALSE, infToMax=FALSE) {
       
@@ -53,6 +60,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
             tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
             print(tmp.x); cat("\n")
             cat("Current free parameter values =\n"); print(x); cat("\n")
+        }
+
+        if(lavoptions$partrace) {
+            PENV$PARTRACE <- rbind(PENV$PARTRACE, c(fx, x))
         }
 
         # for L-BFGS-B
@@ -416,9 +427,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
     attr(x, "fx")         <- fx
     if(!is.null(optim.out$con.jac)) attr(x, "con.jac")    <- optim.out$con.jac
     if(!is.null(optim.out$lambda))  attr(x, "con.lambda") <- optim.out$lambda
+    if(lavoptions$partrace) {
+        attr(x, "partrace") <- PENV$PARTRACE
+    }
 
     x
-
 }
 
 # backwards compatibility

@@ -10,6 +10,12 @@ lav_options_set <- function(opt = formals(lavaan)) {
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
 
+    if(opt$debug) {
+        opt$partrace <- TRUE
+    } else {
+        opt$partrace <- FALSE
+    }
+
     # everything lowercase
     opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})

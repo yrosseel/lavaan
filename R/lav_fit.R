@@ -79,9 +79,17 @@ lav_model_fit <- function(lavpartable = NULL,
         attr(est, "BOOT.COEF") <- attr(VCOV, "BOOT.COEF")
     }
 
+    # partrace?
+    if(!is.null(attr(x, "partrace"))) {
+        PARTRACE <- attr(x, "partrace")
+    } else {
+        PARTRACE <- matrix(0, 0L, 0L)
+    }
+
     new("Fit",
         npar       = max(lavpartable$free),
         x          = x.copy,
+        partrace   = PARTRACE,
         # start      = lavpartable$start, # not yet, break semTools
         start      = start,
         est        = est,

@@ -125,6 +125,7 @@ setClass("Fit",
         #ndat="integer",
         #df="integer",
         x="numeric",               # x
+        partrace="matrix",         # parameter trace
         start="numeric",           # starting values
         est="numeric",             # estimated values
         se="numeric",              # standard errors

@@ -1368,7 +1368,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
         diag(MLIST$theta) <- 0.0
     }
     if(length(ov.y.dummy.ov.idx) > 0L) {
-        MLIST$psi[ov.y.dummy.lv.idx, ov.y.dummy.lv.idx] <- 0.0
+        MLIST$psi[ cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx) ] <- 0.0
     }
 
     # special case: PSI=0, and lambda=I (eg ex3.12)
@@ -1398,11 +1398,11 @@ setResidualElements.LISREL <- function(MLIST=NULL,
         diag(MLIST$theta) <- RESIDUAL
     }
 
-    # move ov.y.dummy elements from THETA to PSI
+    # move ov.y.dummy 'RESIDUAL' elements from THETA to PSI
     if(length(ov.y.dummy.ov.idx) > 0L) {
-        MLIST$psi[ov.y.dummy.lv.idx, ov.y.dummy.lv.idx] <- 
-            MLIST$theta[ov.y.dummy.ov.idx, ov.y.dummy.ov.idx]
-        MLIST$theta[ov.y.dummy.ov.idx, ov.y.dummy.ov.idx] <- 0.0
+        MLIST$psi[cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx)] <- 
+            MLIST$theta[cbind(ov.y.dummy.ov.idx, ov.y.dummy.ov.idx)]
+        MLIST$theta[cbind(ov.y.dummy.ov.idx, ov.y.dummy.ov.idx)] <- 0.0
     }
 
     MLIST
