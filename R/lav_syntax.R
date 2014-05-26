@@ -213,15 +213,16 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     rhs.name <- names(out)[j]
                 }
 
-                if(op == "|") {
-                    th.name <- paste("t", j, sep="")
-                    if(names(out)[j] != th.name) {
-                        stop("lavaan ERROR: threshold ", j, " of variable ", 
-                             sQuote(lhs.names[1]), " should be named ",
-                             sQuote(th.name), "; found ", 
-                             sQuote(names(out)[j]), "\n")
-                    }
-                }
+                # move this 'check' to post-parse 
+                #if(op == "|") {
+                #    th.name <- paste("t", j, sep="")
+                #    if(names(out)[j] != th.name) {
+                #        stop("lavaan ERROR: threshold ", j, " of variable ", 
+                #             sQuote(lhs.names[1]), " should be named ",
+                #             sQuote(th.name), "; found ", 
+                #             sQuote(names(out)[j]), "\n")
+                #    }
+                #}
 
                 # catch lhs = rhs and op = "=~"
                 if(op == "=~" && lhs.names[l] == names(out)[j]) {

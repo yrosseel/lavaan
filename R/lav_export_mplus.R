@@ -51,6 +51,12 @@ lav2mplus <- function(lav, group.label=NULL) {
         lav$op[var.idx] <- ""
         lav$rhs[var.idx] <- ""
 
+        # scaling factors
+        scal.idx <- which(lav$op == "~*~") 
+        lav$op[scal.idx] <- ""
+        lav$rhs2[scal.idx] <- paste(lav$rhs2[scal.idx],"}",sep="")
+        lav$lhs[scal.idx] <- "{"
+
         # intercepts
         int.idx <- which(lav$op == "~1")
         lav$op[int.idx] <- ""
