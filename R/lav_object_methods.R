@@ -629,7 +629,9 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
 
     # R-square?
     if(rsquare) {
-        r2 <- rsquare(object, est.std.all=est.std.all)
+        r2 <- lav_object_inspect_rsquare(object, est.std.all=est.std.all,
+                  drop.list.single.group = FALSE, add.labels = FALSE,
+                  add.class = FALSE)
         if(object@Data@ngroups == 1L) r2 <- list(r2)
         for(g in 1:object@Data@ngroups) {
             if(object@Data@ngroups > 1) {

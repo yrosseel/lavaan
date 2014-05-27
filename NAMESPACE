@@ -37,6 +37,8 @@ export("lavaan", "cfa", "sem", "growth",
        "lavParTable",       "lavaanify",
        "lavNames",          "lavaanNames",
        "lavParseModelString", # "parseModelString",
+       "lavInspect",        "inspect",
+       "lavTech",
        # utilities
        "getCov", "char2num", "cor2cov",
        "vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
@@ -87,8 +89,7 @@ exportMethods(
               "vcov", 
               "logLik",
               "fitted.values", "fitted",
-              "summary",
-              "inspect"
+              "summary"
              )
 
 S3method(print, lavaan.data.frame)

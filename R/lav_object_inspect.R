@@ -1,8 +1,36 @@
 # inspect a fitted lavaan object
 
-setMethod("inspect", "lavaan",
-function(object, what="free") {
+# backward compatibility -- wrapper around lavInspect
+inspect <- function(object, what = "free") {
+    lavInspect(object = object,
+               what = what,
+               add.labels = TRUE,
+               add.class = TRUE,
+               drop.list.single.group = TRUE)
+}
 
+# the `tech' version: no labels, full matrices, ... for further processing
+lavTech <- function(object, 
+                    what = "free", 
+                    add.labels = FALSE, 
+                    add.class = FALSE,
+                    drop.list.single.group = TRUE) { # or FALSE?
+    lavInspect(object = object, what = what,
+               add.labels = add.labels, add.class = add.class,
+                drop.list.single.group =  drop.list.single.group)
+}
+
+# the `user' version: for display only
+lavInspect <- function(object,
+                       what = "free",
+                       add.labels = TRUE,
+                       add.class = TRUE,
+                       drop.list.single.group = TRUE) {
+
+    # object must inherit from class lavaan
+    stopifnot(inherits(object, "lavaan"))
+
+    # only a single argument
     if(length(what) > 1) {
         stop("`what' arguments contains multiple arguments; only one is allowed")
     }
@@ -10,219 +38,189 @@ function(object, what="free") {
     # be case insensitive
     what <- tolower(what)
 
+
+    #### model matrices, with different contents ####
     if(what == "free") {
-        free.parameters(object, type="free")
+        lav_object_inspect_modelmatrices(object, what = "free", type = "free",
+            add.labels = add.labels, add.class = add.class)
     } else if(what == "unco") {
-        free.parameters(object, type="unco")
+        lav_object_inspect_modelmatrices(object, what = "free", type="unco",
+            add.labels = add.labels, add.class = add.class)
     } else if(what == "user") {
-        free.parameters(object, type="user")
+        lav_object_inspect_modelmatrices(object, what = "free", type="user",
+            add.labels = add.labels, add.class = add.class)
     } else if(what == "se" ||
               what == "std.err" ||
               what == "standard.errors") {
-        standard.errors(object)
-    } else if(what == "start" ||
-              what == "starting.values") {
-        starting.values(object)
-    } else if(what == "coef" ||
-              what == "coefficients" ||
-              what == "parameters" ||
-              what == "parameter.estimates" ||
-              what == "parameter.values" ||
-              what == "estimates" ||
-              what == "x" ||
-              what == "est") {
-        parameter.values(object)
+        lav_object_inspect_modelmatrices(object, what = "se",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "start" || what == "starting.values") {
+        lav_object_inspect_modelmatrices(object, what = "start",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "est"  || what == "estimates" ||
+              what == "coef" || what == "coefficients" ||
+              what == "x") {
+        lav_object_inspect_modelmatrices(object, what = "est",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "dx.free") {
+        lav_object_inspect_modelmatrices(object, what = "dx.free",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "dx" || what == "gradient" || what == "derivatives") {
+        lav_object_inspect_modelmatrices(object, what = "dx",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "std" || what == "std.all") {
+        lav_object_inspect_modelmatrices(object, what = "std.all",
+           add.labels = add.labels, add.class = add.class)
+    } else if(what == "std.lv") {
+        lav_object_inspect_modelmatrices(object, what = "std.lv",
+           add.labels = add.labels, add.class = add.class)
+    } else if(what == "std.nox") {
+        lav_object_inspect_modelmatrices(object, what = "std.nox",
+           add.labels = add.labels, add.class = add.class)
+
+
+    #### parameter table ####
     } else if(what == "list") {
-        parameter.list(object)
-    } else if(what == "dx" ||
-              what == "gradient" ||
-              what == "derivatives") {
-        derivatives(object)
+        parTable(object)
+
+    #### fit indices ####
     } else if(what == "fit" ||
               what == "fitmeasures" ||
               what == "fit.measures" ||
               what == "fit.indices") {
         fitMeasures(object)
-    } else if(what == "std" ||
-              what == "std.coef" ||
-              what == "standardized" ||
-              what == "standardizedsolution" ||
-              what == "standardized.solution") {
-        standardizedSolution(object)
+
+
+    #### modification indices ####
     } else if(what == "mi" ||
               what == "modindices" ||
-              what == "modification" ||
-              what == "modificationindices" ||
               what == "modification.indices") {
-         modificationIndices(object)
-    } else if(what == "samp" ||
+        modificationIndices(object)
+
+
+    #### sample statistics #####
+    } else if(what == "sampstat" ||
+              what == "samp" ||
               what == "sample" ||
-              what == "samplestatistics" ||
-              what == "sampstat") {
-        sampStat(object)
+              what == "samplestatistics") {
+        lav_object_inspect_sampstat(object, 
+            add.labels = add.labels, add.class = add.class, 
+            drop.list.single.group = drop.list.single.group)
+
+
+    #### data ####
     } else if(what == "data") {
-        lav_inspect_data(object)
-    } else if(what == "rsquare" || 
-              what == "r-square" ||
-              what == "r2") {
-         rsquare(object)
-    } else if(what == "wls.v") {
-        getWLS.V(object, drop.list.single.group=TRUE)
-    } else if(what == "nacov") {
-        getSampleStatsNACOV(object)    
-    } else if(what == "modelcovlv"  ||
-              what == "modelcov.lv" ||
-              what == "cov.lv") {
-        getModelCovLV(object, correlation.metric=FALSE, labels=TRUE)
-    } else if(what == "modelcorlv"  ||
-              what == "modelcor.lv" ||
-              what == "cor.lv") {
-        getModelCorLV(object, labels=TRUE)
-    } else if(what == "modelcovall"  ||
-              what == "modelcov.all" ||
-              what == "cov.all") {
-        getModelCov(object, correlation.metric=FALSE, labels=TRUE)
-    } else if(what == "modelcorall"  ||
-              what == "modelcor.all" ||
-              what == "cor.all") {
-        getModelCor(object, labels=TRUE)
-    } else if(what == "theta") {
-        getModelTheta(object, labels=TRUE)
+        lav_object_inspect_data(object, 
+            drop.list.single.group = drop.list.single.group)
+
+
+    #### rsquare ####
+    } else if(what == "rsquare" || what == "r-square" || what == "r2") {
+         lav_object_inspect_rsquare(object, 
+             add.labels = add.labels, add.class = add.class,
+             drop.list.single.group = drop.list.single.group)
+
+
+    #### model-implied sample statistics ####
+    } else if(what == "cov.lv") {
+        lav_object_inspect_cov_lv(object,
+            correlation.metric = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cor.lv") {
+        lav_object_inspect_cov_lv(object,
+            correlation.metric = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "mean.lv") {
-        getModelMeanLV(object, labels=TRUE)
+        lav_object_inspect_mean_lv(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cov.all") {
+        lav_object_inspect_cov_all(object,
+            correlation.metric = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cor.all") {
+        lav_object_inspect_cov_all(object,
+            correlation.metric = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cov.ov") {
+        lav_object_inspect_cov_ov(object,
+            correlation.metric = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cor.ov") {
+        lav_object_inspect_cov_lv(object,
+            correlation.metric = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "mean.ov") {
+        lav_object_inspect_mean_ov(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "th") {
+        lav_object_inspect_th(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+
+
+    #### wls.v - nacov####
+    } else if(what == "wls.v") {
+        getWLS.V(object, drop.list.single.group = drop.list.single.group)
+    } else if(what == "nacov") {
+        getSampleStatsNACOV(object)
+
+
+
+    #### specific model matrices? ####
+    } else if(what == "theta") {
+        getModelTheta(object, labels=TRUE,
+                      drop.list.single.group = drop.list.single.group)
+
+
+    #### missingness ####
     } else if(what == "coverage") {
-        getDataMissingCoverage(object, labels=TRUE)
+        getDataMissingCoverage(object, labels=TRUE,
+                               drop.list.single.group = drop.list.single.group)
     } else if(what %in% c("patterns", "pattern")) {
-        getDataMissingPatterns(object, labels=TRUE)
+        getDataMissingPatterns(object, labels=TRUE,
+                               drop.list.single.group = drop.list.single.group)
+
+
+    #### convergence ####
     } else if(what == "converged") {
         object@Fit@converged
+
+    #### not found ####
     } else {
         stop("unknown `what' argument in inspect function: `", what, "'")
     }
 
-})
+}
 
-free.parameters <- function(object, type="free") {
+
+lav_object_inspect_modelmatrices <- function(object, what = "free",
+    type = "free", add.labels = FALSE, add.class = FALSE) {
 
     GLIST <- object@Model@GLIST
 
-    for(mm in 1:length(GLIST)) {
-        # erase everything
-        GLIST[[mm]][,] <- 0.0
-
-        dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
-
-        # fill in free/unco parameter counts
-        if(type == "free") {
-            m.el.idx <- object@Model@m.free.idx[[mm]]
-            x.el.idx <- object@Model@x.free.idx[[mm]]
-        } else if(type == "unco") {
-            m.el.idx <- object@Model@m.unco.idx[[mm]]
-            x.el.idx <- object@Model@x.unco.idx[[mm]]
-        } else if(type == "user") {
-            m.el.idx <- object@Model@m.user.idx[[mm]]
-            x.el.idx <- object@Model@x.user.idx[[mm]]
-        } else {
-            stop("lavaan ERROR: unknown type argument:", type, )
-        }
-        GLIST[[mm]][m.el.idx] <- x.el.idx
-
-        # class
-        if(object@Model@isSymmetric[mm]) {
-            class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
-        } else {
-            class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    GLIST
-}
-
-
-standard.errors <- function(object) {
-
-    GLIST <- object@Model@GLIST
-
-    for(mm in 1:length(GLIST)) {
-        # labels
-        dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
-
-        # fill in starting values
-        m.user.idx <- object@Model@m.user.idx[[mm]]
-        x.user.idx <- object@Model@x.user.idx[[mm]]
-        GLIST[[mm]][m.user.idx] <- object@Fit@se[x.user.idx]
-
-        # class
-        if(object@Model@isSymmetric[mm]) {
-            class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
-        } else {
-            class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    GLIST
-}
-
-starting.values <- function(object) {
-
-    GLIST <- object@Model@GLIST
-
-    for(mm in 1:length(GLIST)) {
-        # labels
-        dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
-
-        # fill in starting values
-        m.user.idx <- object@Model@m.user.idx[[mm]]
-        x.user.idx <- object@Model@x.user.idx[[mm]]
-        GLIST[[mm]][m.user.idx] <- object@Fit@start[x.user.idx]
-
-        # class
-        if(object@Model@isSymmetric[mm]) {
-            class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
-        } else {
-            class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    GLIST
-}
-
-
-parameter.values <- function(object) {
-
-    GLIST <- object@Model@GLIST
-
-    for(mm in 1:length(GLIST)) {
-        # labels
-        dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
-
-        # fill in starting values
-        m.user.idx <- object@Model@m.user.idx[[mm]]
-        x.user.idx <- object@Model@x.user.idx[[mm]]
-        GLIST[[mm]][m.user.idx] <- object@Fit@est[x.user.idx]
-
-        # class
-        if(object@Model@isSymmetric[mm]) {
-            class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
-        } else {
-            class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    GLIST
-}
-
-
-parameter.list <- function(object) {
-
-    LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    LIST
-}
-
-
-derivatives <- function(object) {
-
-    GLIST <- lav_model_gradient(lavmodel       = object@Model,
+    if(what == "dx.free") {
+        DX <- lav_model_gradient(lavmodel       = object@Model,
+                                 GLIST          = NULL,
+                                 lavsamplestats = object@SampleStats,
+                                 lavdata        = object@Data,
+                                 lavcache       = object@Cache,
+                                 type           = "free",
+                                 estimator      = object@Options$estimator,
+                                 verbose        = FALSE,
+                                 forcePD        = TRUE,
+                                 group.weight   = TRUE,
+                                 constraints    = FALSE,
+                                 Delta          = NULL)
+    } else if(what == "dx") {
+        GLIST <- lav_model_gradient(lavmodel       = object@Model,
                                 GLIST          = NULL,
                                 lavsamplestats = object@SampleStats,
                                 lavdata        = object@Data,
@@ -234,17 +232,74 @@ derivatives <- function(object) {
                                 group.weight   = TRUE,
                                 constraints    = FALSE,
                                 Delta          = NULL)
-    names(GLIST) <- names(object@Model@GLIST)
+        names(GLIST) <- names(object@Model@GLIST)
+    } else if(what == "std.all") {
+        STD <- standardize.est.all(object)
+    } else if(what == "std.lv") {
+        STD <- standardize.est.lv(object)
+    } else if(what == "std.nox") {
+        STD <- standardize.est.all.nox(object)
+    }
 
     for(mm in 1:length(GLIST)) {
-        # labels
-        dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
+
+        if(what != "dx") {
+            # erase everything
+            GLIST[[mm]][,] <- 0.0
+        }
+
+        if(add.labels) {
+            dimnames(GLIST[[mm]]) <- object@Model@dimNames[[mm]]
+        }
+
+        if(what == "free") {
+            # fill in free/unco parameter counts
+            if(type == "free") {
+                m.el.idx <- object@Model@m.free.idx[[mm]]
+                x.el.idx <- object@Model@x.free.idx[[mm]]
+            } else if(type == "unco") {
+                m.el.idx <- object@Model@m.unco.idx[[mm]]
+                x.el.idx <- object@Model@x.unco.idx[[mm]]
+            } else if(type == "user") {
+                m.el.idx <- object@Model@m.user.idx[[mm]]
+                x.el.idx <- object@Model@x.user.idx[[mm]]
+            } else {
+                stop("lavaan ERROR: unknown type argument:", type, )
+            }
+            GLIST[[mm]][m.el.idx] <- x.el.idx
+        } else if(what == "se") {
+            # fill in standard errors
+            m.user.idx <- object@Model@m.user.idx[[mm]]
+            x.user.idx <- object@Model@x.user.idx[[mm]]
+            GLIST[[mm]][m.user.idx] <- object@Fit@se[x.user.idx]
+        } else if(what == "start") {
+            # fill in starting values
+            m.user.idx <- object@Model@m.user.idx[[mm]]
+            x.user.idx <- object@Model@x.user.idx[[mm]]
+            GLIST[[mm]][m.user.idx] <- object@Fit@start[x.user.idx]
+        } else if(what == "est") {
+            # fill in estimated parameter values
+            m.user.idx <- object@Model@m.user.idx[[mm]]
+            x.user.idx <- object@Model@x.user.idx[[mm]]
+            GLIST[[mm]][m.user.idx] <- object@Fit@est[x.user.idx]
+        } else if(what == "dx.free") {
+            # fill in derivatives free parameters
+            m.el.idx <- object@Model@m.free.idx[[mm]]
+            x.el.idx <- object@Model@x.free.idx[[mm]]
+            GLIST[[mm]][m.el.idx] <- DX[x.el.idx]
+        } else if(what %in% c("std.all", "std.lv", "std.nox")) {
+            m.user.idx <- object@Model@m.user.idx[[mm]]
+            x.user.idx <- object@Model@x.user.idx[[mm]]
+            GLIST[[mm]][m.user.idx] <- STD[x.user.idx]
+        } 
 
         # class
-        if(object@Model@isSymmetric[mm]) {
-            class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
-        } else {
-            class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
+        if(add.class) {
+            if(object@Model@isSymmetric[mm]) {
+                class(GLIST[[mm]]) <- c("lavaan.matrix.symmetric", "matrix")
+            } else {
+                class(GLIST[[mm]]) <- c("lavaan.matrix", "matrix")
+            }
         }
     }
 
@@ -253,8 +308,10 @@ derivatives <- function(object) {
 
 
 
+
 # fixme, should we export this function?
-sampStat <- function(object, labels=TRUE) {
+lav_object_inspect_sampstat <- function(object, 
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- object@Data@ngroups
     ov.names <- object@Data@ov.names
@@ -262,14 +319,21 @@ sampStat <- function(object, labels=TRUE) {
     OUT <- vector("list", length=G)
     for(g in 1:G) {
         OUT[[g]]$cov  <- object@SampleStats@cov[[g]]
-        if(labels) 
+        if(add.labels) {
             rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
-        class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+        if(add.class) {
+            class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
+        }
 
         #if(object@Model@meanstructure) {
             OUT[[g]]$mean <- as.numeric(object@SampleStats@mean[[g]])
-            if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
-            class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
+            if(add.labels) {
+                names(OUT[[g]]$mean) <- ov.names[[g]]
+            }
+            if(add.class) {
+                class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
+            }
         #}
 
         if(object@Model@categorical) {
@@ -277,30 +341,353 @@ sampStat <- function(object, labels=TRUE) {
             if(length(object@Model@num.idx[[g]]) > 0L) {
                 OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
             }
-            if(labels) {
+            if(add.labels) {
                 names(OUT[[g]]$th) <- 
                     vnames(object@ParTable, type="th", group=g)
             }
-            class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+            if(add.class) {
+                class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
+            }
         }
 
         if(object@Model@categorical &&
            object@Model@nexo > 0L) {
             OUT[[g]]$slopes  <- object@SampleStats@slopes[[g]]
-            if(labels) {
+            if(add.labels) {
                 rownames(OUT[[g]]$slopes) <- ov.names[[g]]
                 colnames(OUT[[g]]$slopes) <- 
                     vnames(object@ParTable, type="ov.x", group=g)
+            }
+            if(add.class) {
                 class(OUT[[g]]$slopes) <- c("lavaan.matrix", "matrix")
             }
         }
 
         if(object@Model@group.w.free) {
             OUT[[g]]$group.w <- object@SampleStats@group.w[[g]]
-            if(labels) {
+            if(add.labels) {
                 names(OUT[[g]]$group.w) <- "w"
+            }
+            if(add.class) {
                 class(OUT[[g]]$group.w) <- c("lavaan.vector", "numeric")
             }
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+
+lav_object_inspect_data <- function(object, add.labels = FALSE,
+                                    drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+    OUT <- object@Data@X
+
+    if(add.labels) {
+        for(g in 1:G) {
+            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+
+lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+    OUT <- vector("list", length=G)
+
+    if(is.null(est.std.all)) {
+        est.std.all <- standardize.est.all(object)
+    }
+
+    partable <- object@ParTable
+    partable$rsquare <- 1.0 - est.std.all
+    # no values > 1.0
+    partable$rsquare[partable$rsquare > 1.0] <- as.numeric(NA)
+
+    for(g in 1:G) {
+        ind.names <- partable$rhs[ which(partable$op == "=~" & 
+                                         partable$group == g) ]
+        eqs.y.names <- partable$lhs[ which(partable$op == "~"  & 
+                                           partable$group == g) ]
+        y.names <- unique( c(ind.names, eqs.y.names) )
+
+        idx <- which(partable$op == "~~" & partable$lhs %in% y.names & 
+                     partable$rhs == partable$lhs & partable$group == g)
+        tmp <- partable$rsquare[idx]
+
+        if(add.labels) {
+            names(tmp) <- partable$lhs[idx]
+        }
+        if(add.class) {
+            class(tmp) <- c("lavaan.vector", "numeric")
+        }
+
+        OUT[[g]] <- tmp
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT 
+}
+
+
+lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv covar
+    OUT <- computeVETA(lavmodel       = object@Model, 
+                       lavsamplestats = object@SampleStats,
+                       remove.dummy.lv = TRUE)
+
+    # cor + labels + class
+    for(g in 1:G) {
+
+        if(correlation.metric && nrow(OUT[[g]]) > 1L) {
+            # note: cov2cor fails if matrix is empty!
+            OUT[[g]] <- cov2cor(OUT[[g]])
+        }
+
+        if(add.labels) {
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- 
+                object@pta$vnames$lv.regular[[g]]
+        }
+
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_mean_lv <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv means
+    OUT <- computeEETA(lavmodel       = object@Model, 
+                       lavsamplestats = object@SampleStats,
+                       remove.dummy.lv = TRUE)
+    OUT <- lapply(OUT, as.numeric)
+
+    # labels + class
+    for(g in 1:G) {
+        if(add.labels) {
+            names(OUT[[g]]) <- object@pta$vnames$lv.regular[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # compute extended model implied covariance matrix (both ov and lv)
+    OUT <- computeCOV(lavmodel = object@Model, 
+                      lavsamplestats = object@SampleStats)
+
+    # cor + labels + class
+    for(g in 1:G) {
+
+        if(correlation.metric && nrow(OUT[[g]]) > 1L) {
+            # note: cov2cor fails if matrix is empty!
+            OUT[[g]] <- cov2cor(OUT[[g]])
+        }
+
+        if(add.labels) {
+            NAMES <- c(object@pta$vnames$ov[[g]],
+                       object@pta$vnames$lv.regular[[g]])
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+
+lav_object_inspect_cov_ov <- function(object, correlation.metric = FALSE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # get model-implied covariance matrix observed
+    OUT <- object@Fit@Sigma.hat
+
+    # cor + labels + class
+    for(g in 1:G) {
+ 
+        if(correlation.metric && nrow(OUT[[g]]) > 1L) {
+            # note: cov2cor fails if matrix is empty!
+            OUT[[g]] <- cov2cor(OUT[[g]])
+        }
+
+        if(add.labels) {
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- 
+                object@pta$vnames$ov[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_mean_ov <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # compute lv means
+    OUT <- object@Fit@Mu.hat
+    OUT <- lapply(OUT, as.numeric)
+
+    # labels + class
+    for(g in 1:G) {
+        if(add.labels) {
+            names(OUT[[g]]) <- object@pta$vnames$ov[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_th <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # thresholds
+    OUT <- object@Fit@TH
+    OUT <- lapply(OUT, as.numeric)
+
+    # labels + class
+    for(g in 1:G) {
+        if(length(object@Model@num.idx[[g]]) > 0L) {
+            OUT[[g]] <- OUT[[g]][ -object@Model@num.idx[[g]] ]
+        }
+        if(add.labels) {
+            names(OUT[[g]]) <- object@pta$vnames$th[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+
+getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
+
+    G <- object@Data@ngroups
+
+    # get residual covariances
+    OUT <- computeTHETA(lavmodel = object@Model)
+
+    # correlation?
+    if(correlation.metric) {
+        OUT <- lapply(OUT, cov2cor)
+    }
+
+    # we need lambda for labels
+    lambda.group <- which(names(object@Model@GLIST) == "lambda")
+    if(labels) {
+        for(g in 1:G) {
+            lambda.idx <- lambda.group[g]
+            NAMES <- object@Model@dimNames[[lambda.idx]][[1L]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
         }
     }
 
@@ -313,35 +700,67 @@ sampStat <- function(object, labels=TRUE) {
     OUT
 }
 
+getDataMissingCoverage <- function(object, labels=TRUE) {
 
-rsquare <- function(object, est.std.all=NULL) {
+    G <- object@Data@ngroups
 
-    if(is.null(est.std.all)) est.std.all <- standardize.est.all(object)
-    ngroups <- object@Data@ngroups
-    partable <- object@ParTable
-    partable$rsquare <- 1.0 - est.std.all
-    # no values > 1.0
-    partable$rsquare[partable$rsquare > 1.0] <- as.numeric(NA)
-    r2 <- vector("list", length=ngroups)
+    # get missing covarage
+    OUT <- vector("list", G)
+   
+    for(g in 1:G) {
+        if(!is.null(object@Data@Mp[[g]])) {
+            OUT[[g]] <- object@Data@Mp[[g]]$coverage
+        } else {
+            nvar <- length(object@Data@ov.names[[g]])
+            OUT[[g]] <- matrix(1.0, nvar, nvar)
+        }
 
-    for(g in 1:ngroups) {
-        ind.names   <- partable$rhs[ which(partable$op == "=~" & partable$group == g) ]
-        eqs.y.names <- partable$lhs[ which(partable$op == "~"  & partable$group == g) ]
-        y.names <- unique( c(ind.names, eqs.y.names) )
-
-        idx <- which(partable$op == "~~" & partable$lhs %in% y.names & 
-                     partable$rhs == partable$lhs & partable$group == g)
-        tmp <- partable$rsquare[idx]; names(tmp) <- partable$lhs[idx]
-        r2[[g]] <- tmp
+        if(labels) {
+            NAMES <- object@Data@ov.names[[g]]
+            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+        }
     }
 
-    if(ngroups == 1) {
-        r2 <- r2[[1]]
+    if(G == 1) {
+        OUT <- OUT[[1]]
     } else {
-        names(r2) <- unlist(object@Data@group.label)
+        names(OUT) <- unlist(object@Data@group.label)
     }
 
-    r2
+    OUT
+}
+
+getDataMissingPatterns <- function(object, labels = TRUE) {
+
+    G <- object@Data@ngroups
+
+    # get missing covarage
+    OUT <- vector("list", G)
+   
+    for(g in 1:G) {
+        if(!is.null(object@Data@Mp[[g]])) {
+            OUT[[g]] <- object@Data@Mp[[g]]$pat
+        } else {
+            nvar <- length(object@Data@ov.names[[g]])
+            OUT[[g]] <- matrix(TRUE, 1L, nvar)
+            rownames(OUT[[g]]) <- object@Data@nobs[[g]]
+        }
+
+        if(labels) {
+            NAMES <- object@Data@ov.names[[g]]
+            colnames(OUT[[g]]) <- NAMES
+            class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+        }
+    }
+
+    if(G == 1) {
+        OUT <- OUT[[1]]
+    } else {
+        names(OUT) <- unlist(object@Data@group.label)
+    }
+
+    OUT
 }
 
 getWLS.est <- function(object, drop.list.single.group=FALSE) {
@@ -464,255 +883,5 @@ getVariability <- function(object) {
     }
     
     B0
-}
-
-getModelCorLV <- function(object, labels=TRUE) {
-    getModelCovLV(object, correlation.metric=TRUE, labels=labels)
-}
-
-getModelCovLV <- function(object, correlation.metric=FALSE, labels=TRUE) {
-
-    G <- object@Data@ngroups
-
-    # compute lv covar
-    OUT <- computeVETA(lavmodel       = object@Model, 
-                       lavsamplestats = object@SampleStats)
-
-    # correlation?
-    if(correlation.metric) {
-        OUT <- lapply(OUT, cov2cor)
-    }
-    
-    # we need psi matrix for labels
-    psi.group <- which(names(object@Model@GLIST) == "psi")
-    if(labels) {
-        for(g in 1:G) {
-            psi.idx <- psi.group[g]
-            NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
-            # remove all dummy latent variables
-            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                        object@Model@ov.x.dummy.lv.idx[[g]])
-            if(length(lv.idx) > 0L) {
-                NAMES <- NAMES[-lv.idx]
-                OUT[[g]] <- OUT[[g]][-lv.idx, -lv.idx, drop=FALSE]
-            }
-            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-getModelCor <- function(object, labels=TRUE) {
-    getModelCov(object, correlation.metric=TRUE, labels=labels)
-}
-
-getModelMeanLV <- function(object, labels=TRUE) {
-
-    G <- object@Data@ngroups
-
-    # compute lv means
-    OUT <- computeEETA(lavmodel       = object@Model, 
-                       lavsamplestats = object@SampleStats,
-                       remove.dummy.lv = TRUE)
-
-    OUT <- lapply(OUT, as.numeric)
-
-    # we need psi matrix for labels
-    psi.group <- which(names(object@Model@GLIST) == "psi")
-    if(labels) {
-        for(g in 1:G) {
-            psi.idx <- psi.group[g]
-            NAMES <- object@Model@dimNames[[psi.idx]][[1L]]
-            # remove all dummy latent variables
-            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                        object@Model@ov.x.dummy.lv.idx[[g]])
-            if(length(lv.idx) > 0L) {
-                NAMES <- NAMES[-lv.idx]
-                OUT[[g]] <- OUT[[g]][-lv.idx]
-            }
-            names(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-getModelCov <- function(object, correlation.metric=FALSE, labels=TRUE) {
-
-    G <- object@Data@ngroups
-
-    # compute extended model implied covariance matrix (both ov and lv)
-    OUT <- computeCOV(lavmodel = object@Model, 
-                      lavsamplestats = object@SampleStats)
-
-    # correlation?
-    if(correlation.metric) {
-        OUT <- lapply(OUT, cov2cor)
-    }
-
-    # we need lambda + psi matrix for labels
-    lambda.group <- which(names(object@Model@GLIST) == "lambda")
-    psi.group <- which(names(object@Model@GLIST) == "psi")
-    if(labels) {
-        for(g in 1:G) {
-            lambda.idx <- lambda.group[g]
-            NAMES.ov <- object@Model@dimNames[[lambda.idx]][[1L]]
-
-            psi.idx <- psi.group[g]
-            NAMES.lv <- object@Model@dimNames[[psi.idx]][[1L]]
-            # remove all dummy latent variables
-            lv.idx <- c(object@Model@ov.y.dummy.lv.idx[[g]],
-                        object@Model@ov.x.dummy.lv.idx[[g]])
-            if(length(lv.idx) > 0L) {
-                NAMES.lv <- NAMES.lv[-lv.idx]
-                lv.idx <- lv.idx + length(NAMES.ov)
-                OUT[[g]] <- OUT[[g]][-lv.idx, -lv.idx, drop=FALSE]
-            }
-
-            NAMES <- c(NAMES.ov, NAMES.lv)
-            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-
-getModelTheta <- function(object, correlation.metric=FALSE, labels=TRUE) {
-
-    G <- object@Data@ngroups
-
-    # get residual covariances
-    OUT <- computeTHETA(lavmodel = object@Model)
-
-    # correlation?
-    if(correlation.metric) {
-        OUT <- lapply(OUT, cov2cor)
-    }
-
-    # we need lambda for labels
-    lambda.group <- which(names(object@Model@GLIST) == "lambda")
-    if(labels) {
-        for(g in 1:G) {
-            lambda.idx <- lambda.group[g]
-            NAMES <- object@Model@dimNames[[lambda.idx]][[1L]]
-            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-getDataMissingCoverage <- function(object, labels=TRUE) {
-
-    G <- object@Data@ngroups
-
-    # get missing covarage
-    OUT <- vector("list", G)
-   
-    for(g in 1:G) {
-        if(!is.null(object@Data@Mp[[g]])) {
-            OUT[[g]] <- object@Data@Mp[[g]]$coverage
-        } else {
-            nvar <- length(object@Data@ov.names[[g]])
-            OUT[[g]] <- matrix(1.0, nvar, nvar)
-        }
-
-        if(labels) {
-            NAMES <- object@Data@ov.names[[g]]
-            colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-getDataMissingPatterns <- function(object, labels = TRUE) {
-
-    G <- object@Data@ngroups
-
-    # get missing covarage
-    OUT <- vector("list", G)
-   
-    for(g in 1:G) {
-        if(!is.null(object@Data@Mp[[g]])) {
-            OUT[[g]] <- object@Data@Mp[[g]]$pat
-        } else {
-            nvar <- length(object@Data@ov.names[[g]])
-            OUT[[g]] <- matrix(TRUE, 1L, nvar)
-            rownames(OUT[[g]]) <- object@Data@nobs[[g]]
-        }
-
-        if(labels) {
-            NAMES <- object@Data@ov.names[[g]]
-            colnames(OUT[[g]]) <- NAMES
-            class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
-}
-
-
-lav_inspect_data <- function(object, labels = TRUE) {
-
-    G <- object@Data@ngroups
-    OUT <- object@Data@X
-
-    if(labels) {
-        for(g in 1:G) {
-            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
-        }
-    }
-
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
-    }
-
-    OUT
 }
 

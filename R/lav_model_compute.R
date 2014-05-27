@@ -324,7 +324,9 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
 }
 
 # COV: observed+latent variances variances/covariances
-computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
+computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+    remove.dummy.lv = FALSE) {
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -345,6 +347,19 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
 
         if(representation == "LISREL") {
             COV.g <- computeCOV.LISREL(MLIST = MLIST, cov.x = cov.x)
+
+            if(remove.dummy.lv) {
+                # remove all dummy latent variables
+                lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                            lavmodel@ov.x.dummy.lv.idx[[g]])
+                if(!is.null(lv.idx)) {
+                    # offset for ov
+                    lambda.names <- 
+                        lavmodel@dimNames[[which(names(GLIST) == "lambda")[g]]][[1L]]
+                    lv.idx <- lv.idx + length(lambda.names)
+                    COV.g <- COV.g[-lv.idx, -lv.idx, drop=FALSE]
+                }
+            }
         } else {
             stop("only representation LISREL has been implemented for now")
         }

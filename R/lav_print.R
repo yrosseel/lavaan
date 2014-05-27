@@ -1,3 +1,10 @@
+## NOTE:
+## round(1.2355, 3) = 1.236
+## but 
+## round(1.2345, 3) = 1.234
+##
+## perhaps we should add 0.0005 or something to avoid this?
+
 print.lavaan.data.frame <- function(x, ..., nd=3) {
 
     y <- as.data.frame(lapply(x, function(x) {
