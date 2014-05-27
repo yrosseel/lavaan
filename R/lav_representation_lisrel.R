@@ -2060,7 +2060,7 @@ derivative.alpha.LISREL <- function(m="alpha",
 
 # MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
 # vech.idx <- lavaan:::vech.idx; vechru.idx <- lavaan:::vechru.idx
-# vec <- lavaan:::vec; lavJacobianC <- lavaan:::lavJacobianC
+# vec <- lavaan:::vec; lav_func_jacobian_complex <- lavaan:::lav_func_jacobian_complex
 # computeSigmaHat.LISREL <- lavaan:::computeSigmaHat.LISREL
 # setDeltaElements.LISREL <- lavaan:::setDeltaElements.LISREL
 TESTING_derivatives.LISREL <- function(MLIST = NULL,
@@ -2210,7 +2210,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         }
 
         # 1. sigma
-        DX1 <- lavJacobianC(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lav_func_jacobian_complex(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                        MLIST=MLIST, delta = !theta)
         if(mm %in% c("psi","theta")) {
@@ -2238,7 +2238,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
             sprintf("%12.9f", max(DX1-DX2)), "\n")
 
         # 2. mu
-        DX1 <- lavJacobianC(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
+        DX1 <- lav_func_jacobian_complex(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
         DX2 <- derivative.mu.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
@@ -2258,7 +2258,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
         # 3. th
         if(th) {
-            DX1 <- lavJacobianC(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
+            DX1 <- lav_func_jacobian_complex(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
                                 th.idx=th.idx)
             DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                         MLIST=MLIST, th.idx=th.idx,
@@ -2305,7 +2305,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
         # 4. pi
         if(pi) {
-            DX1 <- lavJacobianC(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
+            DX1 <- lav_func_jacobian_complex(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
             DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                         MLIST=MLIST)
             if(mm %in% c("psi","theta")) {
@@ -2356,7 +2356,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
         # 5. gw
         if(gw) {
-            DX1 <- lavJacobianC(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
+            DX1 <- lav_func_jacobian_complex(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
             DX2 <- derivative.gw.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                     MLIST=MLIST)
             if(mm %in% c("psi","theta")) {

@@ -142,7 +142,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         }
         S
     }
-    Delta.S <- lavJacobianD(func=dVetadx, x=x, lavmodel = lavmodel, g = group)
+    Delta.S <- lav_func_jacobian_simple(func=dVetadx, x=x, lavmodel = lavmodel, g = group)
     DD$S <- Delta.S
 
     # compute dL/dx for each node

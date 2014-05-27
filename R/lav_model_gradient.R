@@ -292,7 +292,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 #    }
 #
 #    x <- lav_model_get_parameters(lavmodel = NULL, GLIST=GLIST, type="free")
-#    Delta <- lavJacobianC(func=compute.moments, x = x)
+#    Delta <- lav_func_jacobian_complex(func=compute.moments, x = x)
 #
 #    Delta
 #}

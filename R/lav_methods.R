@@ -849,13 +849,13 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         # add 'se' for standardized parameters
         # TODO!!
         if(type == "std.lv") {
-            JAC <- lavJacobianD(func=standardize.est.lv.x, x=object@Fit@est,
+            JAC <- lav_func_jacobian_simple(func=standardize.est.lv.x, x=object@Fit@est,
                                 object=object)
         } else if(type == "std.all") {
-            JAC <- lavJacobianD(func=standardize.est.all.x, x=object@Fit@est,
+            JAC <- lav_func_jacobian_simple(func=standardize.est.all.x, x=object@Fit@est,
                                 object=object)
         } else if(type == "std.nox") {
-            JAC <- lavJacobianD(func=standardize.est.all.nox.x, x=object@Fit@est,
+            JAC <- lav_func_jacobian_simple(func=standardize.est.all.nox.x, x=object@Fit@est,
                                 object=object)
         }
         JAC <- JAC[unco.idx,unco.idx]

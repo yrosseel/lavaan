@@ -215,7 +215,7 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
                 p1 <- mods[[m   ]]@ParTable # partable h1
                 p0 <- mods[[m+1L]]@ParTable # partable h0
                 af <- lav_partable_constraints_function(p1,p0)
-                A <- lavJacobianC(func=af, x=mods[[m   ]]@Fit@x)
+                A <- lav_func_jacobian_complex(func=af, x=mods[[m   ]]@Fit@x)
 
                 trace.UGamma  <- numeric( ngroups )
                 trace.UGamma2 <- numeric( ngroups )

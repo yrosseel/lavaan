@@ -27,7 +27,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
         if(is.null(ceq)) {
             ceq.jac <- function(x, ...) { matrix(0, nrow = 0L, ncol = length(x)) }
         } else {
-            ceq.jac <- function(x, ...) { lavJacobianC(func = ceq, x = x, ...) }
+            ceq.jac <- function(x, ...) { lav_func_jacobian_complex(func = ceq, x = x, ...) }
         }
     }
     if(is.null(cin.jac)) {
@@ -35,7 +35,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
             cin.jac <- function(x, ...) { matrix(0, nrow = 0L, ncol = length(x)) }
         } else {
             #require(numDeriv)
-            cin.jac <- function(x, ...) { lavJacobianC(func = cin, x = x, ...) }
+            cin.jac <- function(x, ...) { lav_func_jacobian_complex(func = cin, x = x, ...) }
         }
     }
 

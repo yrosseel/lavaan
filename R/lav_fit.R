@@ -46,10 +46,10 @@ lav_model_fit <- function(lavpartable = NULL,
                 def.cov <- cov(BOOT.def )
             } else {
                 # regular delta method
-                JAC <- try(lavJacobianC(func = lavmodel@def.function, x = x),
+                JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
                            silent=TRUE)
                 if(inherits(JAC, "try-error")) { # eg. pnorm()
-                    JAC <- lavJacobianD(func = lavmodel@def.function, x = x)
+                    JAC <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
                 }
                 def.cov <- JAC %*% VCOV %*% t(JAC)
             }

@@ -34,9 +34,9 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     ceq.function <- lav_partable_constraints_ceq(partable = partable,
                                                  con = LIST, debug = FALSE)
     # compute jacobian restrictions
-    JAC <- try(lavJacobianC(func = ceq.function, x = theta), silent=TRUE)
+    JAC <- try(lav_func_jacobian_complex(func = ceq.function, x = theta), silent=TRUE)
     if(inherits(JAC, "try-error")) { # eg. pnorm()
-        JAC <- lavJacobianD(func = ceq.function, x = theta)
+        JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
     }
 
     if(verbose) {

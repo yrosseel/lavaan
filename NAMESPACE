@@ -62,7 +62,13 @@ export("lavaan", "cfa", "sem", "growth",
        #"prelav",
        #"lavData",
        #"lavPredict",
-       "lavCor"
+       "lavCor",
+
+       # API functions
+       lav_func_gradient_complex,
+       lav_func_gradient_simple,
+       lav_func_jacobian_complex,
+       lav_func_jacobian_simple
       )
 
 # export Classes

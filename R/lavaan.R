@@ -556,10 +556,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                 A.ceq <- A.cin <- matrix(0, lavmodel@nx.free, 0)
                 if(!is.null(body(lavmodel@ceq.function)))
-                    A.ceq <- t(lavJacobianC(func=lavmodel@ceq.function, 
+                    A.ceq <- t(lav_func_jacobian_complex(func=lavmodel@ceq.function, 
                                             x=rep(0,lavmodel@nx.free)))
                 if(!is.null(body(lavmodel@cin.function)))
-                    A.cin <- t(lavJacobianC(func=lavmodel@cin.function, 
+                    A.cin <- t(lav_func_jacobian_complex(func=lavmodel@cin.function, 
                                             x=rep(0,lavmodel@nx.free)))
                 A <- cbind(A.ceq, A.cin)
                 con.jac <- t(A)
