@@ -29,7 +29,7 @@ lavCor <- function(object,
     se <- tolower(se); output <- tolower(output)
     if(se != "none") {
         if(output %in% c("cor","cov","sampstat","th","thresholds")) {
-            warning("lavaan WARNING: argument `se' is ignored since they are not needed for the requested `output'")
+            warning("lavaan WARNING: argument `se' is ignored since standard erros are not needed for the requested `output'")
             se <- "none"
         }
     }

@@ -965,7 +965,7 @@ parameterEstimates <- parameterestimates <-
 
 parameterTable <- parametertable <- parTable <- partable <-
         function(object) {
-    out <- inspect(object, "list")            
+    out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
     class(out) <- c("lavaan.data.frame", "data.frame")
     out
 }

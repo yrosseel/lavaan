@@ -195,8 +195,8 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
                 # original M (Satorra)
                 Delta1 <- computeDelta(lavmodel = mods[[m]]@Model)
                 npar <- ncol(Delta1[[1]])
-                WLS.V <- getWLS.V( mods[[m]] )  ## always H1
-                Gamma <- getSampleStatsNACOV( mods[[m]] ) 
+                WLS.V <- lav_object_inspect_wls_v( mods[[m]] )  ## always H1
+                Gamma <- lav_object_inspect_sampstat_nacov( mods[[m]] ) 
                 
 
                 # weight WLS.V

@@ -89,6 +89,7 @@ exportMethods(
               "vcov", 
               "logLik",
               "fitted.values", "fitted",
+              "inspect",
               "summary"
              )
 

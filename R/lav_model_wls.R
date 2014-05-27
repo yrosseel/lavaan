@@ -57,3 +57,57 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) {
     WLS.est
 }
 
+# compute WLS.est (as a list per group)
+lav_model_wls_v <- function(lavmodel       = NULL, 
+                            lavsamplestats = NULL,
+                            estimator      = "ML",
+                            lavdata        = NULL) {
+
+    WLS.V <- vector("list", length=lavsamplestats@ngroups)
+
+    # if we are using *LS, we already have WLS.V
+    if(estimator == "GLS"  ||
+       estimator == "WLS"  ||
+       estimator == "DWLS" ||
+       estimator == "ULS") {
+        # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
+        # for WLS, the WLS.V22 part is: Gamma
+        WLS.V <- lavsamplestats@WLS.V
+
+
+    # for ML, we need to recompute this, as it is function of Sigma (and Mu)
+    } else if(estimator == "ML") {
+        WLS.V <- vector("list", length=lavsamplestats@ngroups)
+
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+        if(lavmodel@group.w.free) {
+            GW <- unlist(computeGW(lavmodel = lavmodel))
+        }
+        if(lavsamplestats@missing.flag) {
+            Mu.hat <- computeMuHat(lavmodel = lavmodel)
+        }
+        for(g in 1:lavsamplestats@ngroups) {
+            if(lavsamplestats@missing.flag) {
+                WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
+                                            Mu.hat=Mu.hat[[g]],
+                                            lavsamplestats=lavsamplestats,
+                                            lavdata=lavdata, group=g,
+                                            information="expected")
+            } else {
+                # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
+                WLS.V[[g]] <-
+                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
+                                           meanstructure=lavmodel@meanstructure)
+            }
+            if(lavmodel@group.w.free) {
+                # unweight!!
+                a <- exp(GW[g]) / lavsamplestats@nobs[[g]]
+                # a <- exp(GW[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
+                WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
+            }
+        }
+    } # ML
+
+    WLS.V
+}
+

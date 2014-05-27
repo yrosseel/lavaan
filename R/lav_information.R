@@ -9,45 +9,11 @@ computeExpectedInformation <- function(lavmodel       = NULL,
                                        lavcache       = NULL,
                                        extra          = FALSE) {
 
-    # compute WLS.V
-    WLS.V       <- vector("list", length=lavsamplestats@ngroups)
-    if(estimator == "GLS"  || 
-       estimator == "WLS"  || 
-       estimator == "DWLS" ||
-       estimator == "ULS") {
-        # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
-        # for WLS, the WLS.V22 part is: Gamma
-        WLS.V <- lavsamplestats@WLS.V
-    } else if(estimator == "ML") {
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
-        if(lavmodel@group.w.free) {
-            GW <- unlist(computeGW(lavmodel = lavmodel))
-        }
-        if(lavsamplestats@missing.flag) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel)
-        }
-        for(g in 1:lavsamplestats@ngroups) {
-            if(lavsamplestats@missing.flag) {
-                WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
-                                            Mu.hat=Mu.hat[[g]],
-                                            lavsamplestats=lavsamplestats, 
-                                            lavdata=lavdata, group=g,
-                                            information="expected")
-            } else {
-                # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
-                WLS.V[[g]] <- 
-                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
-                                           meanstructure=lavmodel@meanstructure)
-            }
-            if(lavmodel@group.w.free) {
-                # unweight!!
-                a <- exp(GW[g]) / lavsamplestats@nobs[[g]]
-                # a <- exp(GW[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
-                WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
-            }
-        }
-    } # ML
-
+    # compute/get WLS.V
+    WLS.V <- lav_model_wls_v(lavmodel       = lavmodel, 
+                             lavsamplestats = lavsamplestats,
+                             estimator      = estimator,
+                             lavdata        = lavdata)
 
     # compute Information per group
     Info.group  <- vector("list", length=lavsamplestats@ngroups)

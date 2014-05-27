@@ -34,3 +34,5 @@ Fit <- function(partable=NULL, start, model, x=NULL, VCOV=NULL, TEST=NULL) {
                   x = x, VCOV = VCOV, TEST = TEST)
 }
 
+# for simsem: uses 'inspect' in exportMethods in NAMESPACE
+# setGeneric("inspect", function(object, ...) standardGeneric("inspect"))
