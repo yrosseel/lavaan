@@ -35,6 +35,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     type.list <- c("ov",          # observed variables (ov)
                    "ov.x",        # (pure) exogenous observed variables
                    "ov.nox",      # non-exogenous observed variables
+                   "ov.model",    # modeled observed variables (cont vs cat)
                    "ov.y",        # (pure) endogenous variables (dependent only)
                    "ov.num",      # numeric observed variables
                    "ov.ord",      # ordinal observed variables
@@ -81,6 +82,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     OUT$ov           <- vector("list", length=ngroups) 
     OUT$ov.x         <- vector("list", length=ngroups)
     OUT$ov.nox       <- vector("list", length=ngroups)
+    OUT$ov.model     <- vector("list", length=ngroups)
     OUT$ov.y         <- vector("list", length=ngroups)
     OUT$ov.num       <- vector("list", length=ngroups)
     OUT$ov.ord       <- vector("list", length=ngroups)
@@ -190,7 +192,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # exogenous `x' covariates
-        if(any(type %in% c("ov.x","ov.nox","ov.num",
+        if(any(type %in% c("ov.x","ov.nox","ov.num", "ov.model",
                            "th.mean","lv.nonnormal"))) {
             # correction: is any of these ov.names.x mentioned as a variance,
             #             covariance, or intercept? 
@@ -247,14 +249,26 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # ov's withouth ov.x
-        if(any(type %in% c("ov.nox", "ov.num", "th.mean", "lv.nonnormal"))) {
+        if(any(type %in% c("ov.nox", "ov.num", "ov.model",
+                           "th.mean", "lv.nonnormal"))) {
             ov.names.nox <- ov.names[! ov.names %in% ov.names.x ]
         }
 
         # store ov.nox
         if("ov.nox" %in% type) {
             OUT$ov.nox[[g]] <- ov.names.nox
-        } 
+        }
+
+        # store ov.model
+        if("ov.model" %in% type) {
+            # if no categorical, this is just ov
+            # else, this is ov.nox
+            if(any( partable$group == g & partable$op == "|" )) {
+                OUT$ov.model[[g]] <- ov.names.nox
+            } else {
+                OUT$ov.model[[g]] <- ov.names
+            }
+        }
 
         # ov's strictly ordered
         if(any(type %in% c("ov.ord", "th", "th.mean", 
