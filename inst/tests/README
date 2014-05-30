@@ -1,0 +1,4 @@
+# to create the *.Rout.save files
+# run
+# R --no-save < input.R > input.Rout.save 2>&1
+

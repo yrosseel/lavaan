@@ -1,0 +1,80 @@
+# default extractor functions
+summary(fit, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
+
+# stats
+coef(fit)
+residuals(fit)
+resid(fit)
+fitted.values(fit)
+fitted(fit)
+predict(fit)[1:10,,drop=FALSE]
+anova(fit)
+vcov(fit)
+update(fit, orthogonal=TRUE)
+
+# graphics
+# skip plot
+
+# methods
+show(fit)
+
+# stats4
+AIC(fit)
+BIC(fit)
+logLik(fit)
+nobs(fit)
+
+# lavaan fitting functions
+#lavParTable(fit) lavaanify(fit)
+lavNames(fit, "all")
+lavInspect(fit)
+lavInspect(fit, what="unco")
+lavInspect(fit, what="user")
+lavInspect(fit, what="se")
+lavInspect(fit, what="start")
+lavInspect(fit, what="est")
+lavInspect(fit, what="dx.free")
+#lavInspect(fit, what="dx")
+lavInspect(fit, what="std.all")
+lavInspect(fit, what="std.lv")
+lavInspect(fit, what="std.nox")
+lavInspect(fit, what="sampstat")
+lavInspect(fit, what="rsquare")
+lavInspect(fit, what="cov.lv")
+lavInspect(fit, what="cor.lv")
+lavInspect(fit, what="mean.lv")
+lavInspect(fit, what="cov.ov")
+lavInspect(fit, what="cor.ov")
+lavInspect(fit, what="mean.ov")
+#lavInspect(fit, what="th")
+lavInspect(fit, what="theta")
+lavInspect(fit, what="theta.cor")
+lavInspect(fit, what="coverage")
+lavInspect(fit, what="patterns")
+lavInspect(fit, what="converged")
+lavInspect(fit, what="wls.est")
+lavInspect(fit, what="wls.obs")
+lavInspect(fit, what="wls.v")
+lavInspect(fit, what="gamma")
+lavInspect(fit, what="hessian")
+#lavInspect(fit, what="first.order")
+
+head(modindices(fit))
+standardizedSolution(fit)
+parameterEstimates(fit)
+parameterTable(fit)
+varTable(fit)
+fitMeasures(fit)
+head(lavScores(fit))
+#lavTables(fit, dim=0)
+lavTestLRT(fit)
+#lavTestWald(fit)
+#lavMatrixRepresentation(fit)
+lavCor(fit)
+
+
+
+
+
+
+
