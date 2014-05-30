@@ -509,7 +509,7 @@ computeLAMBDA.LISREL <- function(MLIST = NULL,
     # fix LAMBDA
     LAMBDA <- MLIST$lambda
     if(length(ov.y.dummy.ov.idx) > 0L) {
-        LAMBDA.X[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
+        LAMBDA[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
     }
 
     # remove dummy lv?

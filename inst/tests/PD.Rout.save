@@ -18,7 +18,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 > library(lavaan)
-This is lavaan 0.5-17.690
+This is lavaan 0.5-17.691
 lavaan is BETA software! Please report any bugs.
 > 
 > model <- '
@@ -41,109 +41,6 @@ lavaan is BETA software! Please report any bugs.
 > 
 > # default extract functions
 > source("common.srcR", echo = TRUE)
-
-> summary(fit, fit.measures = TRUE, standardized = TRUE, 
-+     rsquare = TRUE)
-lavaan (0.5-17.690) converged normally after  61 iterations
-
-  Number of observations                            75
-
-  Estimator                                         ML
-  Minimum Function Test Statistic               40.179
-  Degrees of freedom                                38
-  P-value (Chi-square)                           0.374
-
-Model test baseline model:
-
-  Minimum Function Test Statistic              730.654
-  Degrees of freedom                                55
-  P-value                                        0.000
-
-User model versus baseline model:
-
-  Comparative Fit Index (CFI)                    0.997
-  Tucker-Lewis Index (TLI)                       0.995
-
-Loglikelihood and Information Criteria:
-
-  Loglikelihood user model (H0)              -1548.818
-  Loglikelihood unrestricted model (H1)      -1528.728
-
-  Number of free parameters                         28
-  Akaike (AIC)                                3153.636
-  Bayesian (BIC)                              3218.526
-  Sample-size adjusted Bayesian (BIC)         3130.277
-
-Root Mean Square Error of Approximation:
-
-  RMSEA                                          0.028
-  90 Percent Confidence Interval          0.000  0.087
-  P-value RMSEA <= 0.05                          0.665
-
-Standardized Root Mean Square Residual:
-
-  SRMR                                           0.056
-
-Parameter estimates:
-
-  Information                                 Expected
-  Standard Errors                             Standard
-
-                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.all
-Latent variables:
-  dem60 =~
-    y1                1.000                               2.201    0.850
-    y2        (a)     1.191    0.139    8.551    0.000    2.621    0.690
-    y3        (b)     1.175    0.120    9.755    0.000    2.586    0.758
-    y4        (c)     1.251    0.117   10.712    0.000    2.754    0.838
-  dem65 =~
-    y5                1.000                               2.154    0.817
-    y6        (a)     1.191    0.139    8.551    0.000    2.565    0.755
-    y7        (b)     1.175    0.120    9.755    0.000    2.530    0.802
-    y8        (c)     1.251    0.117   10.712    0.000    2.694    0.829
-  ind60 =~
-    x1                1.000                               0.670    0.920
-    x2                2.180    0.138   15.751    0.000    1.460    0.973
-    x3                1.818    0.152   11.971    0.000    1.218    0.872
-
-Regressions:
-  dem60 ~
-    ind60    (b1)     1.471    0.392    3.750    0.000    0.448    0.448
-  dem65 ~
-    ind60    (b2)     0.600    0.226    2.660    0.008    0.187    0.187
-    dem60    (b3)     0.865    0.075   11.554    0.000    0.884    0.884
-
-Covariances:
-  y1 ~~
-    y5                0.583    0.356    1.637    0.102    0.583    0.281
-  y2 ~~
-    y4                1.440    0.689    2.092    0.036    1.440    0.291
-    y6                2.183    0.737    2.960    0.003    2.183    0.356
-  y3 ~~
-    y7                0.712    0.611    1.165    0.244    0.712    0.169
-  y4 ~~
-    y8                0.363    0.444    0.817    0.414    0.363    0.111
-  y6 ~~
-    y8                1.372    0.577    2.378    0.017    1.372    0.338
-
-Variances:
-    y1                1.855    0.433                      1.855    0.277
-    y2                7.581    1.366                      7.581    0.525
-    y3                4.956    0.956                      4.956    0.426
-    y4                3.225    0.723                      3.225    0.298
-    y5                2.313    0.479                      2.313    0.333
-    y6                4.968    0.921                      4.968    0.430
-    y7                3.560    0.710                      3.560    0.357
-    y8                3.308    0.704                      3.308    0.313
-    x1                0.081    0.019                      0.081    0.154
-    x2                0.120    0.070                      0.120    0.053
-    x3                0.467    0.090                      0.467    0.239
-    dem60             3.875    0.866                      0.800    0.800
-    dem65             0.164    0.227                      0.035    0.035
-    ind60             0.449    0.087                      1.000    1.000
-
-R-Square:
-
 
 > coef(fit)
            a            b            c    ind60=~x2    ind60=~x3           b1 
@@ -237,18 +134,14 @@ y1 y2 y3 y4 y5 y6 y7 y8 x1 x2 x3
  0  0  0  0  0  0  0  0  0  0  0 
 
 
-> predict(fit)[1:10, , drop = FALSE]
-           dem60      dem65      ind60
- [1,] -2.5329587 -2.4576563 -0.5367466
- [2,] -2.3100201 -1.5724776  0.1515345
- [3,]  2.9060860  3.0787206  0.7411809
- [4,]  2.8695617  3.1325669  1.2443599
- [5,]  2.4338198  2.5138677  0.8306949
- [6,]  0.4838687  0.3144760  0.2070750
- [7,]  0.6749958  0.4752299  0.1122204
- [8,]  0.9673201  1.0879564  0.1365601
- [9,] -1.3924472 -0.8894846  0.2612655
-[10,]  3.4675863  3.3340058  0.4072893
+> head(predict(fit))
+          dem60     dem65      ind60
+[1,] -2.5329587 -2.457656 -0.5367466
+[2,] -2.3100201 -1.572478  0.1515345
+[3,]  2.9060860  3.078721  0.7411809
+[4,]  2.8695617  3.132567  1.2443599
+[5,]  2.4338198  2.513868  0.8306949
+[6,]  0.4838687  0.314476  0.2070750
 
 > anova(fit)
 Chi Square Test Statistic (unscaled)
@@ -375,25 +268,19 @@ dem60~~dem60
 dem65~~dem65       
 ind60~~ind60  0.008
 
-> update(fit, orthogonal = TRUE)
-lavaan (0.5-17.690) converged normally after  61 iterations
+> fit.ortho <- update(fit, orthogonal = TRUE)
 
-  Number of observations                            75
-
-  Estimator                                         ML
-  Minimum Function Test Statistic               40.179
-  Degrees of freedom                                38
-  P-value (Chi-square)                           0.374
-
-> show(fit)
-lavaan (0.5-17.690) converged normally after  61 iterations
-
-  Number of observations                            75
-
-  Estimator                                         ML
-  Minimum Function Test Statistic               40.179
-  Degrees of freedom                                38
-  P-value (Chi-square)                           0.374
+> coef(fit.ortho)
+           a            b            c    ind60=~x2    ind60=~x3           b1 
+       1.191        1.175        1.251        2.180        1.818        1.471 
+          b2           b3       y1~~y5       y2~~y4       y2~~y6       y3~~y7 
+       0.600        0.865        0.583        1.440        2.183        0.712 
+      y4~~y8       y6~~y8       y1~~y1       y2~~y2       y3~~y3       y4~~y4 
+       0.363        1.372        1.855        7.581        4.956        3.225 
+      y5~~y5       y6~~y6       y7~~y7       y8~~y8       x1~~x1       x2~~x2 
+       2.313        4.968        3.560        3.308        0.081        0.120 
+      x3~~x3 dem60~~dem60 dem65~~dem65 ind60~~ind60 
+       0.467        3.875        0.164        0.449 
 
 > AIC(fit)
 [1] 3153.636
@@ -2540,6 +2427,15 @@ x3 1  1  1  1  1  1  1  1  1  1  1
             115.167               0.920               0.861               0.530 
                 mfi                ecvi 
               0.986               1.282 
+
+> fitMeasures(fit, "chisq")
+ chisq 
+40.179 
+
+> fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea", 
++     "cfi"))
+ chisq     df pvalue  rmsea    cfi 
+40.179 38.000  0.374  0.028  0.997 
 
 > head(lavScores(fit))
                a           b          c  ind60=~x2   ind60=~x3           b1

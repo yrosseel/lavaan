@@ -1,5 +1,6 @@
 # default extractor functions
-summary(fit, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
+# we do not include the summary(); this shows the version number
+# and this changes all the time
 
 # stats
 coef(fit)
@@ -7,16 +8,17 @@ residuals(fit)
 resid(fit)
 fitted.values(fit)
 fitted(fit)
-predict(fit)[1:10,,drop=FALSE]
+head(predict(fit))
 anova(fit)
 vcov(fit)
-update(fit, orthogonal=TRUE)
+fit.ortho <- update(fit, orthogonal=TRUE)
+coef(fit.ortho)
 
 # graphics
 # skip plot
 
 # methods
-show(fit)
+# show(fit) - skip, shows version number
 
 # stats4
 AIC(fit)
@@ -64,7 +66,16 @@ standardizedSolution(fit)
 parameterEstimates(fit)
 parameterTable(fit)
 varTable(fit)
+
+# all fit measures
 fitMeasures(fit)
+
+# just one
+fitMeasures(fit, "chisq")
+
+# a few
+fitMeasures(fit, c("chisq","df","pvalue","rmsea","cfi"))
+
 head(lavScores(fit))
 #lavTables(fit, dim=0)
 lavTestLRT(fit)

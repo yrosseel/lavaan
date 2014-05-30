@@ -42,13 +42,15 @@ lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL,
 
         # COVARIANCES!
         pstar <- nvar*(nvar-1)/2
-        tmp <- utils::combn(OV[[g]], 2)
-        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
-         op <- c(op,   rep("~~", pstar))
-        rhs <- c(rhs, tmp[2,])
-        group <- c(group, rep(g,  pstar))
-        free  <- c(free,  rep(1L, pstar))
-        exo   <- c(exo,   rep(0L, pstar))
+        if(pstar > 0L) { # only if more than 1 variable
+            tmp <- utils::combn(OV[[g]], 2)
+            lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+             op <- c(op,   rep("~~", pstar))
+            rhs <- c(rhs, tmp[2,])
+            group <- c(group, rep(g,  pstar))
+            free  <- c(free,  rep(1L, pstar))
+            exo   <- c(exo,   rep(0L, pstar))
+        }
 
         # starting values -- variances
         if(!is.null(sample.cov)) {

@@ -1,6 +1,10 @@
 # contributed by Ed Merkle (17 Jan 2013)
+
 # small changes by YR (12 Feb 2013) to match the results
 # of lav_model_gradient in the multiple group case
+
+# YR 30 May 2014: handle 1-variable case (fixing apply in lines 56, 62, 108)
+
 estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
     stopifnot(inherits(object, "lavaan"))
@@ -49,14 +53,14 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
             dx.Mu <- -1 * mean.diff %*% Sigma.inv
 
-            dx.Sigma <- t(apply(mean.diff, 1L,
-               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
+            dx.Sigma <- t(matrix(apply(mean.diff, 1L,
+               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
 
             scores.H1 <- cbind(dx.Mu, dx.Sigma)
         } else {
             mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
-            dx.Sigma <- t(apply(mean.diff, 1L,
-               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))))
+            dx.Sigma <- t(matrix(apply(mean.diff, 1L,
+               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
             scores.H1 <- dx.Sigma
         }
         ## FIXME? Seems like we would need group.w even in the
@@ -101,8 +105,8 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
         ## Scores for missing pattern p within group g
         score.mu[pat.idx==p,var.idx] <- -1 * mean.diff %*% Sigma.inv
-        score.sigma[pat.idx==p,Sigma.idx] <- t(apply(mean.diff, 1L,
-          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ) )
+        score.sigma[pat.idx==p,Sigma.idx] <- t(matrix(apply(mean.diff, 1L,
+          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
 
       }
 

@@ -18,7 +18,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 > library(lavaan)
-This is lavaan 0.5-17.690
+This is lavaan 0.5-17.691
 lavaan is BETA software! Please report any bugs.
 > 
 > HS.model <- ' visual  =~ x1 + x2 + x3
@@ -28,92 +28,6 @@ lavaan is BETA software! Please report any bugs.
 > 
 > # default extract functions
 > source("common.srcR", echo = TRUE)
-
-> summary(fit, fit.measures = TRUE, standardized = TRUE, 
-+     rsquare = TRUE)
-lavaan (0.5-17.690) converged normally after  35 iterations
-
-  Number of observations                           301
-
-  Estimator                                         ML
-  Minimum Function Test Statistic               85.306
-  Degrees of freedom                                24
-  P-value (Chi-square)                           0.000
-
-Model test baseline model:
-
-  Minimum Function Test Statistic              918.852
-  Degrees of freedom                                36
-  P-value                                        0.000
-
-User model versus baseline model:
-
-  Comparative Fit Index (CFI)                    0.931
-  Tucker-Lewis Index (TLI)                       0.896
-
-Loglikelihood and Information Criteria:
-
-  Loglikelihood user model (H0)              -3737.745
-  Loglikelihood unrestricted model (H1)      -3695.092
-
-  Number of free parameters                         21
-  Akaike (AIC)                                7517.490
-  Bayesian (BIC)                              7595.339
-  Sample-size adjusted Bayesian (BIC)         7528.739
-
-Root Mean Square Error of Approximation:
-
-  RMSEA                                          0.092
-  90 Percent Confidence Interval          0.071  0.114
-  P-value RMSEA <= 0.05                          0.001
-
-Standardized Root Mean Square Residual:
-
-  SRMR                                           0.065
-
-Parameter estimates:
-
-  Information                                 Expected
-  Standard Errors                             Standard
-
-                   Estimate  Std.err  Z-value  P(>|z|)   Std.lv  Std.all
-Latent variables:
-  visual =~
-    x1                1.000                               0.900    0.772
-    x2                0.554    0.100    5.554    0.000    0.498    0.424
-    x3                0.729    0.109    6.685    0.000    0.656    0.581
-  textual =~
-    x4                1.000                               0.990    0.852
-    x5                1.113    0.065   17.014    0.000    1.102    0.855
-    x6                0.926    0.055   16.703    0.000    0.917    0.838
-  speed =~
-    x7                1.000                               0.619    0.570
-    x8                1.180    0.165    7.152    0.000    0.731    0.723
-    x9                1.082    0.151    7.155    0.000    0.670    0.665
-
-Covariances:
-  visual ~~
-    textual           0.408    0.074    5.552    0.000    0.459    0.459
-    speed             0.262    0.056    4.660    0.000    0.471    0.471
-  textual ~~
-    speed             0.173    0.049    3.518    0.000    0.283    0.283
-
-Variances:
-    x1                0.549    0.114                      0.549    0.404
-    x2                1.134    0.102                      1.134    0.821
-    x3                0.844    0.091                      0.844    0.662
-    x4                0.371    0.048                      0.371    0.275
-    x5                0.446    0.058                      0.446    0.269
-    x6                0.356    0.043                      0.356    0.298
-    x7                0.799    0.081                      0.799    0.676
-    x8                0.488    0.074                      0.488    0.477
-    x9                0.566    0.071                      0.566    0.558
-    visual            0.809    0.145                      1.000    1.000
-    textual           0.979    0.112                      1.000    1.000
-    speed             0.384    0.086                      1.000    1.000
-
-R-Square:
-
 
 > coef(fit)
       visual=~x2       visual=~x3      textual=~x5      textual=~x6 
@@ -201,18 +115,14 @@ x1 x2 x3 x4 x5 x6 x7 x8 x9
  0  0  0  0  0  0  0  0  0 
 
 
-> predict(fit)[1:10, , drop = FALSE]
-           visual     textual       speed
- [1,] -0.81767524 -0.13754501  0.06150726
- [2,]  0.04951940 -1.01272402  0.62549360
- [3,] -0.76139670 -1.87228634 -0.84057276
- [4,]  0.41934153  0.01848569 -0.27133710
- [5,] -0.41590481 -0.12225009  0.19432951
- [6,]  0.02325632 -1.32981727  0.70885348
- [7,] -0.98496789  0.65761381  0.04370647
- [8,]  0.10684376 -0.10512788 -0.53230194
- [9,] -0.25397131  0.40433106  0.20036715
-[10,] -1.05421886  0.09291512 -0.56666789
+> head(predict(fit))
+          visual     textual       speed
+[1,] -0.81767524 -0.13754501  0.06150726
+[2,]  0.04951940 -1.01272402  0.62549360
+[3,] -0.76139670 -1.87228634 -0.84057276
+[4,]  0.41934153  0.01848569 -0.27133710
+[5,] -0.41590481 -0.12225009  0.19432951
+[6,]  0.02325632 -1.32981727  0.70885348
 
 > anova(fit)
 Chi Square Test Statistic (unscaled)
@@ -291,25 +201,19 @@ visual~~textual   0.000  0.005
 visual~~speed     0.003  0.001  0.003        
 textual~~speed    0.002  0.001  0.001  0.002 
 
-> update(fit, orthogonal = TRUE)
-lavaan (0.5-17.690) converged normally after  32 iterations
+> fit.ortho <- update(fit, orthogonal = TRUE)
 
-  Number of observations                           301
-
-  Estimator                                         ML
-  Minimum Function Test Statistic              153.527
-  Degrees of freedom                                27
-  P-value (Chi-square)                           0.000
-
-> show(fit)
-lavaan (0.5-17.690) converged normally after  35 iterations
-
-  Number of observations                           301
-
-  Estimator                                         ML
-  Minimum Function Test Statistic               85.306
-  Degrees of freedom                                24
-  P-value (Chi-square)                           0.000
+> coef(fit.ortho)
+      visual=~x2       visual=~x3      textual=~x5      textual=~x6 
+           0.778            1.107            1.133            0.924 
+       speed=~x8        speed=~x9           x1~~x1           x2~~x2 
+           1.225            0.854            0.835            1.065 
+          x3~~x3           x4~~x4           x5~~x5           x6~~x6 
+           0.633            0.382            0.416            0.369 
+          x7~~x7           x8~~x8           x9~~x9   visual~~visual 
+           0.746            0.366            0.696            0.524 
+textual~~textual     speed~~speed 
+           0.969            0.437 
 
 > AIC(fit)
 [1] 7517.49
@@ -1649,6 +1553,15 @@ x9 1  1  1  1  1  1  1  1  1
             152.654               0.943               0.894               0.503 
                 mfi                ecvi 
               0.903               0.423 
+
+> fitMeasures(fit, "chisq")
+ chisq 
+85.306 
+
+> fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea", 
++     "cfi"))
+ chisq     df pvalue  rmsea    cfi 
+85.306 24.000  0.000  0.092  0.931 
 
 > head(lavScores(fit))
      visual=~x2 visual=~x3 textual=~x5 textual=~x6   speed=~x8   speed=~x9
