@@ -37,6 +37,11 @@ lavCor <- function(object,
     # check object class
     if(inherits(object, "lavaan")) {
         lav.data <- object@Data
+        if(missing(missing)) {
+            missing <- object@Options$missing
+        } else {
+            missing <- "default"
+        }
     } else if(inherits(object, "lavData")) {
         lav.data <- object
     } else if(inherits(object, "data.frame")) {
@@ -84,8 +89,10 @@ lavCor <- function(object,
                                   sample.th     = NULL,
                                   fixed.x       = fixed.x)
 
+    
     fit <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
+                  missing = missing,
                   se = se, estimator = estimator, ...)
 
     # check output

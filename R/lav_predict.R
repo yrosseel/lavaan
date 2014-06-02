@@ -244,7 +244,12 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
     }
 
     VETAx <- computeVETAx(lavmodel = lavmodel)
-    VETAx.inv <- lapply(VETAx, solve)
+    VETAx.inv <- VETAx
+    for(g in seq_len(lavdata@ngroups)) {
+        if(nrow(VETAx[[g]]) > 0L) {
+            VETAx.inv[[g]] <- solve(VETAx[[g]])
+        }
+    }
     EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
                           eXo = eXo, remove.dummy.lv = TRUE) ## FIXME? 
     TH    <- computeTH(   lavmodel = lavmodel)
@@ -258,14 +263,18 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
                                        lavsamplestats = lavsamplestats,
                                        y.i            = y.i, 
                                        x.i            = x.i,
-                                       eta.i          = x,  # <---- eta!
+                                       eta.i          = matrix(x, nrow=1L), # <---- eta!
                                        theta.sd       = theta.sd,
                                        th             = th,
                                        th.idx         = th.idx,
                                        log            = TRUE)
+
         diff <- t(x) - mu.i
-        tmp <- as.numeric(0.5 * diff %*% VETAx.inv[[g]] %*% t(diff))
-        out <- tmp - sum(log.fy)
+        V <- VETAx.inv[[g]]
+        # handle missing values: we skip them
+        tmp <- as.numeric(0.5 * diff %*% V %*% t(diff))
+        # handle missing values: we skip them: FIXME!!!
+        out <- tmp - sum(log.fy, na.rm=TRUE)
         out
     }
 
@@ -575,18 +584,23 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
                 FY[v] <- dnorm(y.i[v], mean = YHAT[v], sd = theta.sd[v], 
                                log = log)
             } else if(lavdata@ov$type[v] == "ordered") {
-                th.y <- th[ th.idx == v ]; TH.Y <-  c(-Inf, th.y, Inf)
-                k <- y.i[v]
-                p1 <- pnorm( (TH.Y[ k + 1 ] - YHAT[v])/theta.sd[v] )
-                p2 <- pnorm( (TH.Y[ k     ] - YHAT[v])/theta.sd[v] )
-                prob <- (p1 - p2)
-                if(prob < .Machine$double.eps) {
-                   prob <- .Machine$double.eps
-                }
-                if(log) {
-                    FY[v] <- log(prob)
+                # handle missing value
+                if(is.na(y.i[v])) {
+                    FY[v] <- as.numeric(NA)
                 } else {
-                    FY[v] <- prob
+                    th.y <- th[ th.idx == v ]; TH.Y <-  c(-Inf, th.y, Inf)
+                    k <- y.i[v]
+                    p1 <- pnorm( (TH.Y[ k + 1 ] - YHAT[v])/theta.sd[v] )
+                    p2 <- pnorm( (TH.Y[ k     ] - YHAT[v])/theta.sd[v] )
+                    prob <- (p1 - p2)
+                    if(prob < .Machine$double.eps) {
+                       prob <- .Machine$double.eps
+                    }
+                    if(log) {
+                        FY[v] <- log(prob)
+                    } else {
+                        FY[v] <- prob
+                    }
                 }
             } else {
                 stop("lavaan ERROR: unknown type: ", 

@@ -27,7 +27,6 @@ logLik(fit)
 nobs(fit)
 
 # lavaan fitting functions
-#lavParTable(fit) lavaanify(fit)
 lavNames(fit, "all")
 lavInspect(fit)
 lavInspect(fit, what="unco")
@@ -48,7 +47,7 @@ lavInspect(fit, what="mean.lv")
 lavInspect(fit, what="cov.ov")
 lavInspect(fit, what="cor.ov")
 lavInspect(fit, what="mean.ov")
-#lavInspect(fit, what="th")
+lavInspect(fit, what="th")
 lavInspect(fit, what="theta")
 lavInspect(fit, what="theta.cor")
 lavInspect(fit, what="coverage")
@@ -67,7 +66,7 @@ parameterEstimates(fit)
 parameterTable(fit)
 varTable(fit)
 
-# all fit measures
+# all fit measures -- this will change all the time?
 fitMeasures(fit)
 
 # just one
@@ -77,10 +76,10 @@ fitMeasures(fit, "chisq")
 fitMeasures(fit, c("chisq","df","pvalue","rmsea","cfi"))
 
 head(lavScores(fit))
-#lavTables(fit, dim=0)
+lavTables(fit, dim=0L)
+lavTables(fit, dim=1L)
+lavTables(fit, dim=2L)
 lavTestLRT(fit)
-#lavTestWald(fit)
-#lavMatrixRepresentation(fit)
 lavCor(fit)
 
 

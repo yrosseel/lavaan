@@ -49,7 +49,8 @@ vechru <- function(S, diagonal = TRUE) {
 vech.idx <- function(n = 1L, diagonal = TRUE) {
     # FIXME: is there a way to avoid creating ROW/COL matrices?
     n <- as.integer(n)
-    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
+    ROW <- matrix(seq_len(n), n, n)
+    COL <- matrix(seq_len(n), n, n, byrow=TRUE)
     if(diagonal) which(ROW >= COL) else which(ROW > COL)
 }
  
@@ -61,8 +62,8 @@ vech.idx <- function(n = 1L, diagonal = TRUE) {
 #
 vechru.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
-    tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
+    ROW <- matrix(seq_len(n), n, n); COL <- matrix(seq_len(n), n, n, byrow=TRUE)
+    tmp <- matrix(seq_len(n*n), n, n, byrow=TRUE)
     if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
 }
 
@@ -107,8 +108,8 @@ vechu <- function(S, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- ROW-WISE
 vechr.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
-    tmp <- matrix(1:(n*n), n, n, byrow=TRUE)
+    ROW <- matrix(seq_len(n), n, n); COL <- matrix(seq_len(n), n, n, byrow=TRUE)
+    tmp <- matrix(seq_len(n*n), n, n, byrow=TRUE)
     if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
 }
 
@@ -116,7 +117,7 @@ vechr.idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- COLUMN-WISE
 vechu.idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(1:n, n, n); COL <- matrix(1:n, n, n, byrow=TRUE)
+    ROW <- matrix(seq_len(n), n, n); COL <- matrix(seq_len(n), n, n, byrow=TRUE)
     if(diagonal) which(ROW <= COL) else which(ROW < COL)
 }
 
@@ -487,7 +488,7 @@ orthogonalComplement <- function(A = matrix(0,0,0)) {
      ranK <- qr(A)$rank
 
      P <- diag(n) - A %*% solve(crossprod(A)) %*% t(A)
-     H <- svd(P)$u[,1:(n-ranK),drop=FALSE]
+     H <- svd(P)$u[,seq_len(n-ranK),drop=FALSE]
 
      H
 }

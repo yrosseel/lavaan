@@ -7,7 +7,15 @@
 
 estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
-    stopifnot(inherits(object, "lavaan"))
+  stopifnot(inherits(object, "lavaan"))
+
+  # what if estimator != ML? 
+  # avoid hard error (using stop); throw a warning, and return an empty matrix
+  if(object@Options$estimator != "ML") {
+      warning("lavaan WARNING: scores only availalbe if estimator is ML")
+      return(matrix(0,0,0))
+  }
+
 
   # shortcuts
   lavdata        <- object@Data

@@ -1,0 +1,74 @@
+ library(lavaan)
+options(warn = 1L)
+
+# 3-variable model: simple path analysis
+set.seed(1234)
+x1 = rnorm(100)
+y1 = 0.5 + 2*x1 + rnorm(100)
+y2 = 0.8 + 0.4*y1 + rnorm(100)
+Data <- data.frame(y1 = y1, y2 = y2, x1 = x1)
+
+model <- ' y2 ~ y1; y1 ~ x1 '
+fit <- sem(model, data=Data, fixed.x=TRUE)
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+fit <- sem(model, data=Data, fixed.x=FALSE)
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+# create missing values
+missing.per.var <- floor(nrow(Data) / 10)
+Data.missing <- as.data.frame(lapply(Data, function(x) {
+    idx <- sample(1:length(x), missing.per.var); x[idx] <- NA; x}))
+
+# listwise deletion
+fit1 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="listwise")
+# FIML
+fit2 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="ml")
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+
+# create binary version - one categorical, one numeric
+Data.binary <- Data
+Data.binary$y1 <- cut(Data$y1, 2L, labels=FALSE)
+
+model <- ' y2 ~ y1; y1 ~ x1 '
+fit <- sem(model, data=Data.binary, estimator="WLSMV", ordered=c("y1"))
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+
+# create binary version - two categorical
+Data.binary$y2 <- cut(Data$y2, 2L, labels=FALSE)
+
+model <- ' y2 ~ y1; y1 ~ x1 '
+fit <- sem(model, data=Data.binary, estimator="WLSMV", ordered=c("y1","y2"))
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+
+
+# create missing values
+missing.per.var <- floor(nrow(Data) / 10)
+Data.missing <- as.data.frame(lapply(Data.binary, function(x) {
+    idx <- sample(1:length(x), missing.per.var); x[idx] <- NA; x}))
+
+# listwise deletion
+fit1 <- sem(model, data=Data.missing, missing="listwise", ordered=c("y1","y2"))
+# FIML
+fit2 <- sem(model, data=Data.missing, missing="pairwise", ordered=c("y1","y2"))
+
+# default extract functions
+source("common.srcR", echo = TRUE)
+
+
+
+
+

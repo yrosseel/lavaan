@@ -205,10 +205,10 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     } else {
                         stop("lavaan ERROR: right-hand side of formula contains an intercept, but operator is \"", op, "\" in: ", x)
                     }
-                } else if(names(out)[j] == "zero") {
-                    if(op == "~") rhs.name <- ""
-                } else if(names(out)[j] == "constant") {
-                    if(op == "~") rhs.name <- ""
+                } else if(names(out)[j] == "zero" && op == "~") {
+                    rhs.name <- ""
+                } else if(names(out)[j] == "constant" && op == "~") {
+                    rhs.name <- ""
                 } else {
                     rhs.name <- names(out)[j]
                 }

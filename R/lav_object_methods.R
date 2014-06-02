@@ -1093,10 +1093,11 @@ function(object, labels=TRUE, attributes.=FALSE) {
 setMethod("logLik", "lavaan",
 function(object, ...) {
     if(object@Options$estimator != "ML") {
-        stop("lavaan ERROR: logLik only available if estimator is ML")
+        warning("lavaan WARNING: logLik only available if estimator is ML")
     }
-    if(object@Fit@npar > 0L && !object@Fit@converged)
-        stop("lavaan ERROR: model did not converge")
+    if(object@Fit@npar > 0L && !object@Fit@converged) {
+        warning("lavaan WARNING: model did not converge")
+    }
     
     logl.df <- fitMeasures(object, c("logl", "npar", "ntotal"))
     names(logl.df) <- NULL

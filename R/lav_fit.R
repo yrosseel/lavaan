@@ -70,7 +70,7 @@ lav_model_fit <- function(lavpartable = NULL,
     if(lavmodel@categorical) {
         TH <- computeTH(lavmodel = lavmodel)
     } else {
-        TH <- list()
+        TH <- vector("list", length = lavmodel@ngroups)
     }
 
 

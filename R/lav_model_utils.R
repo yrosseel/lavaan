@@ -113,6 +113,9 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
 
     GLIST <- lavmodel@GLIST
     for(mm in 1:length(GLIST)) {
+        # skip empty matrix
+        if(nrow(GLIST[[mm]]) == 0L)
+            next
         if(type == "free") {
             m.el.idx <- lavmodel@m.free.idx[[mm]]
             x.el.idx <- lavmodel@x.free.idx[[mm]]
@@ -121,9 +124,9 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
                 N <- ncol(GLIST[[mm]])
                 m.el.idx <- vech.idx(N)
             } else {
-                m.el.idx <- 1:length(GLIST[[mm]])
+                m.el.idx <- seq_len(length(GLIST[[mm]]))
             }
-            x.el.idx <- 1:length(m.el.idx)
+            x.el.idx <- seq_len(length(m.el.idx))
             if(mm > 1) x.el.idx <- x.el.idx + sum(lavmodel@mmSize[1:(mm-1)])
         }
 

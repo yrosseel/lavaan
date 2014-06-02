@@ -77,6 +77,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     }
 
     # define 'sets' of fit measures:
+    fit.always <- c("npar")
 
     # basic chi-square test
     fit.chisq <- c("fmin", "chisq", "df", "pvalue")
@@ -164,13 +165,14 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     if(length(fit.measures) == 1L) {
         if(fit.measures == "default") {
             if(estimator == "ML") {
-                fit.measures <- c(fit.chisq, fit.baseline, 
+                fit.measures <- c(fit.always, fit.chisq, fit.baseline, 
                                   fit.cfi.tli, fit.logl, 
                                   fit.rmsea, fit.srmr)
             } else if(estimator == "MML") {
-                fit.measures <- c(fit.logl)
+                fit.measures <- c(fit.always, fit.logl)
             } else {
-                fit.measures <- c(fit.chisq, fit.baseline, fit.cfi.tli, 
+                fit.measures <- c(fit.always, 
+                                  fit.chisq, fit.baseline, fit.cfi.tli, 
                                   fit.rmsea, fit.srmr, fit.table)
                 if(object@Options$mimic == "Mplus") {
                     fit.measures <- c(fit.measures, "wrmr")
@@ -178,10 +180,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
             }
         } else if(fit.measures == "all") {
             if(estimator == "ML") {
-                fit.measures <- c(fit.chisq, fit.baseline, fit.incremental, 
+                fit.measures <- c(fit.always,
+                                  fit.chisq, fit.baseline, fit.incremental, 
                                   fit.logl, fit.rmsea, fit.srmr2, fit.other)
             } else {
-                fit.measures <- c(fit.chisq, fit.baseline, fit.incremental,
+                fit.measures <- c(fit.always,
+                                  fit.chisq, fit.baseline, fit.incremental,
                                   fit.rmsea, fit.srmr2, fit.other, fit.table)
             }
         }
@@ -189,6 +193,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
 
     # main container
     indices <- list()
+
+    if("npar" %in% fit.measures) {
+        indices["npar"] <- npar
+    }
 
     # Chi-square value estimated model (H0)
     if(any(c("fmin", "chisq", "chisq.scaled", 
@@ -467,12 +475,12 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         }
     }
 
-    if(estimator == "ML" || estimator == "MML") {
-        if("logl" %in% fit.measures ||
-           "unrestricted.logl" %in% fit.measures ||
-           "npar" %in% fit.measures ||
-           "aic" %in% fit.measures ||
-           "bic" %in% fit.measures) {
+    if("logl" %in% fit.measures ||
+       "unrestricted.logl" %in% fit.measures ||
+       "aic" %in% fit.measures ||
+       "bic" %in% fit.measures) {
+
+        if(estimator == "ML" || estimator == "MML") {
 
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
@@ -529,11 +537,6 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                 indices["logl"] <- logl.H0
             }
 
-            # Number of free parameters
-            if("npar" %in% fit.measures) {
-                indices["npar"] <- npar
-            }
-
             # AIC
             AIC <-  -2*logl.H0 + 2*npar
             if("aic" %in% fit.measures) {
@@ -558,6 +561,20 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                     object@Fit@test[[2]]$scaling.factor.h1
                 indices["scaling.factor.h0"] <- 
                     object@Fit@test[[2]]$scaling.factor.h0
+            }
+        } # ML
+        else { # no ML!
+            if("logl" %in% fit.measures) {
+                indices["logl"] <- as.numeric(NA)
+            }
+            if("unrestricted.logl" %in% fit.measures) {
+                indices["unrestricted.logl"] <- as.numeric(NA)
+            }
+            if("aic" %in% fit.measures) {
+                indices["aic"] <- as.numeric(NA)
+            }
+            if("bic" %in% fit.measures) {
+                indices["bic"] <- as.numeric(NA)
             }
         }
     }

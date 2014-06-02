@@ -691,10 +691,17 @@ computeVETAx.LISREL <- function(MLIST=NULL, lv.dummy.idx=NULL) {
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
                                 ov.y.dummy.lv.idx = NULL,
-                                ov.x.dummy.lv.idx = NULL) {
+                                ov.x.dummy.lv.idx = NULL,
+                                nexo = NULL) {
 
     nvar <- nrow(MLIST$lambda)
-    nexo <- ncol(MLIST$gamma)
+    if(!is.null(MLIST$gamma)) {
+        nexo <- ncol(MLIST$gamma)
+    } else if(!is.null(nexo)) {
+        nexo <- nexo
+    } else {
+        stop("nexo not known")
+    }
 
     # create KAPPA
     KAPPA <- matrix(0, nvar, nexo)
@@ -920,7 +927,8 @@ computeYHATetax.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
                                      ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                                      ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
                                      ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
-                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
+                                     nexo = nexo)
 
         # expand YHAT if ETA only has 1 row
         if(nrow(YHAT) == 1L) {
@@ -1012,7 +1020,8 @@ computeYHATx.LISREL <- function(MLIST=NULL, eXo=NULL,
                                      ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                                      ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
                                      ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
-                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
+                                     nexo = nexo)
 
         # expand YHAT if ETA only has 1 row
         if(nrow(YHAT) == 1L) {
@@ -1214,7 +1223,8 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
                                      ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                                      ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
                                      ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
-                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
+                                     nexo = length(mean.x))
 
         EY <- EY + as.numeric(KAPPA %*% mean.x)   
 

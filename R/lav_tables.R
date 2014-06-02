@@ -113,6 +113,11 @@ lavTables <- function(object,
         }
     }
 
+    if(nrow(out) == 0L) {
+        # empty table (perhaps, no categorical variables)
+        return(invisible(out))
+    }
+ 
     out
 }
 
@@ -159,7 +164,15 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
     # this only works if we have 'categorical' variables
     cat.idx <- which(lavdata@ov$type %in% c("ordered","factor"))
     if(length(cat.idx) == 0L) {
-        stop("lavaan ERROR: no categorical variables are found")
+        warning("lavaan WARNING: no categorical variables are found")
+        return(data.frame(pattern=character(0L), nobs=integer(0L),
+                          obs.freq=integer(0L), obs.prop=numeric(0L)))
+    }
+    # no support yet for mixture of endogenous ordered + numeric variables
+    if(length(lavNames(fit, "ov.nox")) > length(cat.idx)) {
+        warning("lavaan WARNING: some endogenous variables are not categorical")
+        return(data.frame(pattern=character(0L), nobs=integer(0L),
+                          obs.freq=integer(0L), obs.prop=numeric(0L)))
     }
 
     # default statistics
@@ -260,9 +273,16 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     # this only works if we have at least two 'categorical' variables
     cat.idx <- which(lavdata@ov$type %in% c("ordered","factor"))
     if(length(cat.idx) == 0L) {
-        stop("lavaan ERROR: no categorical variables are found")
-    } else if(length(cat.idx) == 1L) {
-        stop("lavaan ERROR: at least two categorical variables are needed")
+        warning("lavaan WARNING: no categorical variables are found")
+        return(data.frame(id=integer(0L), lhs=character(0L), rhs=character(0L),
+                          nobs=integer(0L), row=integer(0L), col=integer(0L),
+                          obs.freq=integer(0L), obs.prop=numeric(0L)))
+    }
+    if(length(cat.idx) == 1L) {
+        warning("lavaan WARNING: at least two categorical variables are needed")
+        return(data.frame(id=integer(0L), lhs=character(0L), rhs=character(0L),
+                          nobs=integer(0L), row=integer(0L), col=integer(0L),
+                          obs.freq=integer(0L), obs.prop=numeric(0L)))
     }
 
     # default statistics
@@ -558,7 +578,11 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 
     # do we have any categorical variables?
     if(length(cat.idx) == 0L) {
-        stop("lavaan ERROR: no categorical variables are found")
+        warning("lavaan WARNING: no categorical variables are found")
+        return(data.frame(id=integer(0L), lhs=character(0L), rhs=character(0L),
+                          nobs=integer(0L),
+                          obs.freq=integer(0L), obs.prop=numeric(0L),
+                          est.prop=numeric(0L), X2=numeric(0L)))
     } else {
         labels <- strsplit(vartable$lnam[cat.idx], "\\|")
     }
@@ -620,9 +644,13 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
         if("th.un" %in% statistic) {
             # sample based
             th <- unlist(lapply(1:lavdata@ngroups, function(x) {
-                  unname(unlist(tapply(lavobject@SampleStats@th[[x]],
-                                INDEX=lavobject@SampleStats@th.idx[[x]],
-                                function(x) c(x,Inf)))) }))
+                      TH <- lavobject@SampleStats@th[[x]][ 
+                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                      TH.IDX <- lavobject@SampleStats@th.idx[[x]][ 
+                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                  unname(unlist(tapply(TH,
+                                INDEX=TH.IDX,
+                                function(y) c(y,Inf)))) }))
             # overwrite obs.prop
             # NOTE: if we have exogenous variables, obs.prop will NOT
             #       correspond with qnorm(th)
@@ -638,8 +666,11 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 
             # model based
             th.h0 <- unlist(lapply(1:lavdata@ngroups, function(x) {
-                    unname(unlist(tapply(lavobject@Fit@TH[[x]],
-                                  INDEX=lavobject@SampleStats@th.idx[[x]],
+                         TH <- lavobject@Fit@TH[[x]][ 
+                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                      TH.IDX <- lavobject@SampleStats@th.idx[[x]][
+                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                    unname(unlist(tapply(TH, INDEX=TH.IDX,
                                   function(x) c(x,Inf)))) }))
 
             est.prop <- unname(unlist(tapply(th.h0, INDEX=out$id, 
@@ -938,7 +969,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
             if(!is.null(lavdata@Rp[[g]]$pat)) {
                 PAT <- lavdata@Rp[[g]]$pat
             } else {
-                PAT <- lav_data_resppatterns( lavdata@X[[g]] )
+                PAT <- lav_data_resppatterns( lavdata@X[[g]] )$pat
             }
             npatterns <- nrow(PAT)
             freq <- as.numeric( rownames(PAT) )
@@ -951,10 +982,23 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
                 # compute probability for each pattern
                 lower <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x]      ])
                 upper <- sapply(1:nvar, function(x) TH.VAR[[x]][ PAT[r,x] + 1L ])
-                PI.group[r] <- sadmvn(lower, upper, mean=MEAN, varcov=Sigmahat)
+                # handle missing values
+                na.idx <- which(is.na(PAT[r,]))
+                if(length(na.idx) > 0L) {
+                    lower <- lower[-na.idx]
+                    upper <- upper[-na.idx]
+                    MEAN.r <- MEAN[-na.idx]
+                    Sigmahat.r <- Sigmahat[-na.idx, -na.idx, drop=FALSE] 
+                } else {
+                    MEAN.r <- MEAN
+                    Sigmahat.r <- Sigmahat
+                }
+                PI.group[r] <- sadmvn(lower, upper, mean=MEAN.r, 
+                                      varcov=Sigmahat.r)
             }
         } else { # case-wise
-            stop("not implemented")
+            PI.group <- rep(as.numeric(NA), lavdata@nobs[[g]])
+            warning("lavaan WARNING: casewise PI not implemented")
         }  
 
         PI[[g]] <- PI.group

@@ -150,8 +150,8 @@ getMissingPatterns <- function(X) {
     # identify and remove empty row
     empty.idx <- which(id == "empty")
     if(length(empty.idx) > 0) {
-        MISSING <- MISSING[-empty.idx,]
-              X <-       X[-empty.idx,]
+        MISSING <- MISSING[-empty.idx,,drop=FALSE]
+              X <-       X[-empty.idx,,drop=FALSE]
              id <-      id[-empty.idx]
         # adjust ntotal
         ntotal <- ntotal - length(empty.idx)
