@@ -11,9 +11,11 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     type <- tolower(type)
     stopifnot(inherits(h0, "lavaan"), 
               inherits(h1, "lavaan"), 
-              type %in% c("bollen.stine", "parametric", "yuan"), 
+              type %in% c("bollen.stine", "parametric", "yuan", "nonparametric",
+                          "ordinary"),
               double.bootstrap %in% c("no", "FDB", "standard"))
-  
+    if(type == "nonparametric") type <- "ordinary"
+
     old_options <- options(); options(warn = warn)
 
     # prepare
@@ -53,8 +55,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     data <- h0@Data
   
     #Compute covariance matrix and additional mean vector
-    Sigma.hat <- computeSigmaHat(lavmodel = h0@Model)
-    Mu.hat    <- computeMuHat(lavmodel = h0@Model)
+    if(type == "bollen.stine" || type == "parametric" || type == "yuan") {
+        Sigma.hat <- computeSigmaHat(lavmodel = h0@Model)
+        Mu.hat    <- computeMuHat(lavmodel = h0@Model)
+    }
 
     # can we use the original data, or do we need to transform it first?
     if(type == "bollen.stine" || type == "yuan") {
@@ -143,7 +147,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
     # run bootstraps
     fn <- function(b) {
-        if (type == "bollen.stine" || type == "yuan") {
+        if (type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
             for(g in 1:h0@Data@ngroups) {
                 stopifnot(h0@SampleStats@nobs[[g]] > 1L)

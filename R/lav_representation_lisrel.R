@@ -609,6 +609,7 @@ computeVETAx.LISREL <- function(MLIST=NULL, lv.dummy.idx=NULL) {
 }
 
 # only if ALPHA=NULL but we need it anyway
+# we 'reconstruct' ALPHA here (including dummy entries), no fixing
 .internal_get_ALPHA <- function(MLIST = NULL, sample.mean = NULL,
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
@@ -732,7 +733,7 @@ computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL,
 
     LAMBDA <- MLIST$lambda; BETA <- MLIST$beta; GAMMA <- MLIST$gamma
 
-    # ALPHA?
+    # ALPHA? (reconstruct, but no 'fix')
     ALPHA <- .internal_get_ALPHA(MLIST = MLIST, sample.mean = sample.mean,
                                  ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                                  ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1198,21 +1199,34 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
 
     lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
-    # fix NU
+    # fix NU???
     NU <- .internal_get_NU(MLIST = MLIST, sample.mean = sample.mean,
                            ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                            ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
                            ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
                            ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
 
-    # fix LAMBDA 
+    ### FIXME !!!!!!
+
+    # fix LAMBDA (remove dummies) ## FIXME -- needed?
     LAMBDA <- MLIST$lambda
-    if(length(ov.y.dummy.ov.idx) > 0L) {
-        LAMBDA[ov.y.dummy.ov.idx,] <- MLIST$beta[ov.y.dummy.lv.idx,]
+    if(length(lv.dummy.idx) > 0L) {
+        LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
+        nfac <- ncol(LAMBDA)
+        LAMBDA[ov.y.dummy.ov.idx,] <-
+            MLIST$beta[ov.y.dummy.lv.idx, 1:nfac, drop=FALSE]
     }
 
     # compute E(ETA)
-    EETA <- computeEETA.LISREL(MLIST = MLIST, mean.x = mean.x)
+    EETA <- computeEETA.LISREL(MLIST = MLIST, sample.mean = sample.mean,
+                               mean.x = mean.x,
+                               ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                               ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                               ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                               ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+
+    # remove dummies (because we 'fixed' NU)
+    EETA <- EETA[-lv.dummy.idx,,drop=FALSE]
 
     # EY
     EY <- as.numeric(NU) + as.numeric(LAMBDA %*% EETA)

@@ -1,7 +1,7 @@
  library(lavaan)
 options(warn = 1L)
 
-# 3-variable model: simple path analysis
+# one-factor + eXo
 set.seed(1234)
 pop.model <- ' f =~ 0.7*y1 + 0.7*y2 + 0.7*y3 + 0.7*y4 + 0.7*y5
                f ~ (-2.3)*x1 + 0.8*x2
@@ -28,6 +28,7 @@ Data.missing <- as.data.frame(lapply(Data, function(x) {
 fit1 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="listwise")
 # FIML
 fit2 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="ml")
+fit <- fit2
 
 # default extract functions
 source("common.srcR", echo = TRUE)

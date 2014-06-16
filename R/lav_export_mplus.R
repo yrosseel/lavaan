@@ -27,6 +27,13 @@ lav2mplus <- function(lav, group.label=NULL) {
             lav <- lav[-exo.idx,]
         }
 
+        # remove intercepts for categorical variables
+        ord.names <- unique(lav$lhs[ lav$op == "|" ])
+        ord.int.idx <- which(lav$op == "~1" & lav$lhs %in% ord.names)
+        if(length(ord.int.idx)) {
+            lav <- lav[-ord.int.idx,]
+        }
+
         # end of line
         lav$eol <- rep(";", length(lav$lhs))
         lav$ustart <- ifelse(is.na(lav$ustart), "", lav$ustart)
@@ -57,7 +64,7 @@ lav2mplus <- function(lav, group.label=NULL) {
         lav$rhs2[scal.idx] <- paste(lav$rhs2[scal.idx],"}",sep="")
         lav$lhs[scal.idx] <- "{"
 
-        # intercepts
+        # intercepts - excluding categorical observed
         int.idx <- which(lav$op == "~1")
         lav$op[int.idx] <- ""
         lav$rhs2[int.idx] <- paste(lav$rhs2[int.idx],"]",sep="")

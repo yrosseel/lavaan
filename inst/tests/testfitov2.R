@@ -27,6 +27,7 @@ Data.missing <- as.data.frame(lapply(Data, function(x) {
 fit1 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="listwise")
 # FIML
 fit2 <- sem(model, data=Data.missing, fixed.x=FALSE, missing="ml")
+fit <- fit2
 
 # default extract functions
 source("common.srcR", echo = TRUE)

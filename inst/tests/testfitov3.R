@@ -64,6 +64,7 @@ Data.missing <- as.data.frame(lapply(Data.binary, function(x) {
 fit1 <- sem(model, data=Data.missing, missing="listwise", ordered=c("y1","y2"))
 # FIML
 fit2 <- sem(model, data=Data.missing, missing="pairwise", ordered=c("y1","y2"))
+fit <- fit2
 
 # default extract functions
 source("common.srcR", echo = TRUE)
