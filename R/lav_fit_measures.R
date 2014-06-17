@@ -913,7 +913,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     if(any(c("gfi","agfi","pgfi") %in% fit.measures)) {
         gfi.group <- numeric(G)
         WLS.obs <- object@SampleStats@WLS.obs
-        WLS.V   <- lav_object_inspect_wls_v(object)
+        WLS.V   <- lav_model_wls_v(lavmodel       = object@Model,
+                                   lavsamplestats = object@SampleStats,
+                                   estimator      = object@Options$estimator,
+                                   lavdata        = object@Data)
         WLS.est <- lav_object_inspect_wls_est(object)
         for(g in 1:G) {
             wls.obs <- WLS.obs[[g]]

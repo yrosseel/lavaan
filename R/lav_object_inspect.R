@@ -884,6 +884,14 @@ lav_object_inspect_wls_v <- function(object,
                            lavsamplestats = object@SampleStats,
                            estimator      = object@Options$estimator,
                            lavdata        = object@Data)
+
+    # if estimator == "DWLS" or "ULS", we only stored the diagonal
+    # hence, we create a full matrix here
+    if(object@Options$estimator %in% c("DWLS", "ULS")) {
+        OUT <- lapply(OUT, 
+            function(x) { nr = NROW(x); diag(x, nrow=nr, ncol=nr) })
+    }
+
     # label + class
     for(g in 1:G) {
         if(add.labels && nrow(OUT[[g]]) > 0L) {
