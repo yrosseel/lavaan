@@ -88,11 +88,18 @@ lav_model_objective <- function(lavmodel       = NULL,
                                      data.mean=lavsamplestats@mean[[g]], 
                                      data.cov.log.det=lavsamplestats@cov.log.det[[g]],
                                      meanstructure=meanstructure)
-        } else if(estimator == "GLS"  || estimator == "WLS"  || 
-                  estimator == "DWLS" || estimator == "ULS") {
+        } else if(estimator == "GLS"  || estimator == "WLS") {
+            # full weight matrix
             group.fx <- estimator.WLS(WLS.est = WLS.est[[g]],
+                                      WLS.obs = lavsamplestats@WLS.obs[[g]],
+                                      WLS.V=lavsamplestats@WLS.V[[g]])
+            attr(group.fx, "WLS.est") <- WLS.est[[g]]
+
+        } else if(estimator == "DWLS" || estimator == "ULS") {
+            # diagonal weight matrix
+            group.fx <- estimator.DWLS(WLS.est = WLS.est[[g]],
                                       WLS.obs = lavsamplestats@WLS.obs[[g]], 
-                                      WLS.V=lavsamplestats@WLS.V[[g]])  
+                                      WLS.VD = lavsamplestats@WLS.VD[[g]])
             attr(group.fx, "WLS.est") <- WLS.est[[g]]
 
         } else if(estimator == "PML") {

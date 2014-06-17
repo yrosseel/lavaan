@@ -66,13 +66,13 @@ lav_model_wls_v <- function(lavmodel       = NULL,
     WLS.V <- vector("list", length=lavsamplestats@ngroups)
 
     # if we are using *LS, we already have WLS.V
-    if(estimator == "GLS"  ||
-       estimator == "WLS"  ||
-       estimator == "DWLS" ||
-       estimator == "ULS") {
+    if(estimator == "GLS"  || estimator == "WLS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
         WLS.V <- lavsamplestats@WLS.V
+    } else if(estimator == "DWLS" || estimator == "ULS") {
+        # diagonal only!!
+        WLS.V <- lavsamplestats@WLS.VD
 
 
     # for ML, we need to recompute this, as it is function of Sigma (and Mu)

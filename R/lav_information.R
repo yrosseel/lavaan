@@ -10,6 +10,7 @@ computeExpectedInformation <- function(lavmodel       = NULL,
                                        extra          = FALSE) {
 
     # compute/get WLS.V
+    # if DWLS or ULS, this is the diagonal only! (since 0.5-17)
     WLS.V <- lav_model_wls_v(lavmodel       = lavmodel, 
                              lavsamplestats = lavsamplestats,
                              estimator      = estimator,
@@ -21,7 +22,17 @@ computeExpectedInformation <- function(lavmodel       = NULL,
         # note LISREL documentation suggest (Ng - 1) instead of Ng...
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
         # compute information for this group
-        Info.group[[g]] <- fg * (t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]])
+        if(estimator %in% c("DWLS", "ULS")) {
+            # diagonal weight matrix
+            Delta2 <- sqrt(WLS.V[[g]]) * Delta[[g]]
+            Info.group[[g]] <- fg * crossprod(Delta2)
+        } else {
+            # full weight matrix
+            # Info.group[[g]] <- 
+                # fg * (t(Delta[[g]]) %*% WLS.V[[g]] %*% Delta[[g]])
+            Info.group[[g]] <- 
+                fg * ( crossprod(Delta[[g]], WLS.V[[g]]) %*% Delta[[g]] )
+        }
     }
 
     # assemble over groups

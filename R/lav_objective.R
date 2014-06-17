@@ -53,10 +53,27 @@ estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
 }
 
 # general WLS estimator (Muthen, Appendix 4, eq 99 single group)
+# full weight (WLS.V) matrix
 estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
 
-    diff <- as.matrix(WLS.obs - WLS.est)
-    fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
+    #diff <- as.matrix(WLS.obs - WLS.est)
+    #fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
+
+    # since 0.5-17, we use crossprod twice
+    diff <- WLS.obs - WLS.est
+    fx <- as.numeric( crossprod(crossprod(WLS.V, diff), diff) )
+
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
+
+    fx
+}
+
+# diagonally weighted LS (DWLS)
+estimator.DWLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
+
+    diff <- WLS.obs - WLS.est
+    fx <- sum(diff * diff * WLS.VD)
 
     # no negative values
     if(fx < 0.0) fx <- 0.0

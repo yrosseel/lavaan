@@ -157,8 +157,21 @@ lav_model_gradient <- function(lavmodel       = NULL,
         }
 
         for(g in 1:lavsamplestats@ngroups) {
-            diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
-            group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
+            #diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
+            #group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
+            # 0.5-17: use crossprod twice; treat DWLS/ULS special
+            if(estimator == "WLS") {
+                # full weight matrix
+                diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
+                group.dx <- -1 * crossprod(Delta[[g]], 
+                                 crossprod(lavsamplestats@WLS.V[[g]], diff))
+            } else {
+                # diagonal weight matrix
+                diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
+                group.dx <- -1 * crossprod(Delta[[g]],
+                                           lavsamplestats@WLS.VD[[g]] * diff)
+            }
+
             group.dx <- group.w[g] * group.dx
             if(g == 1) {
                 dx <- group.dx

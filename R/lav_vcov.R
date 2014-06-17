@@ -295,7 +295,13 @@ Nvcov.robust.sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         # fg twice for WLS.V, 1/fg1 once for GaMMA
         # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
         # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
-        WD <- WLS.V[[g]] %*% Delta[[g]]
+        if(estimator == "DWLS" || estimator == "ULS") {
+            # diagonal weight matrix
+            WD <- WLS.V[[g]] * Delta[[g]]
+        } else {
+            # full weight matrix
+            WD <- WLS.V[[g]] %*% Delta[[g]]
+        }
         tDVGVD <- tDVGVD + fg*fg/fg1 * crossprod(WD, Gamma[[g]] %*% WD)
     } # g
     NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
@@ -428,7 +434,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
         }
 
     } else {
-        warning("lavaan WARNING: could not compute standard errors!\n")
+        warning("lavaan WARNING: could not compute standard errors!\nlavaan NOTE: this may be a symptom that the model is not identified.\n")
         VarCov <- NULL
     }
 

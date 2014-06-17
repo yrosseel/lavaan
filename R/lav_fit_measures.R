@@ -924,8 +924,15 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                 gfi.group[g] <- as.numeric(NA)
             } else {
                 wls.diff <- wls.obs - wls.est
-                t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
-                t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
+                if(is.matrix(wls.v)) {
+                    # full weight matrix
+                    t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
+                    t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
+                } else {
+                    # diagonal weight matrix
+                    t1 <- as.numeric(crossprod(wls.diff^2, wls.v))
+                    t2 <- as.numeric(crossprod(wls.obs^2, wls.v))
+                }
                 gfi.group[g] <- 1 - t1/t2
             }
         }

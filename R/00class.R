@@ -54,6 +54,7 @@ setClass("lavSampleStats",         # sample moments
         ridge="numeric",           # ridge constant
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
+        WLS.VD="list",             # diagonal of weight matrix only
         NACOV="list",              # N times the asymptotic covariance matrix
 
         missing.flag="logical",    # missing patterns?

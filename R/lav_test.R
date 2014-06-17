@@ -23,33 +23,45 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
     for(g in 1:ngroups) {
         fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
         fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
-        WLS.Vg  <- WLS.V[[g]] * fg
         Gamma.g <- Gamma[[g]] / fg  ## ?? check this
         Delta.g <- Delta[[g]]
 
         # just for testing: regular UG:
-        UG1 <- Gamma.g %*% (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% WLS.Vg)
+        # WLS.Vg  <- WLS.V[[g]] * fg
+        # UG1 <- Gamma.g %*% (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% WLS.Vg)
 
-        A1      <- WLS.V[[g]] * fg
-        B1 <- A1 %*% Gamma.g %*% A1
+        # diagonal WLS.V? we check for this since 0.5-17
+        diagonal <- FALSE
+        if(is.matrix(WLS.V[[g]])) {
+            A1 <- WLS.V[[g]] * fg
+            B1 <- A1 %*% Gamma.g %*% A1
+        } else {
+            diagonal <- TRUE
+            a1 <- WLS.V[[g]] * fg # numeric vector!
+            B1 <- Gamma.g * tcrossprod(a1)
+        }
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
             nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
-            A1      <- A1[idx,idx]
+            if(diagonal) {
+                a1 <- a1[idx]
+            } else {
+                A1 <- A1[idx,idx]
+            }
             B1      <- B1[idx,idx]
             Delta.g <- Delta.g[idx,]
         } 
-        A1.inv <- solve(A1)
 
-        #B0 <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
-        #trace.h1     <- sum( B1 * t(A1.inv) )
-        #trace.h0     <- sum( B0 * t(E.inv)  ) 
-        #trace.UGamma[g] <- (trace.h1-trace.h0)
 
-        tmp <- (B1 %*% A1.inv) - (B1 %*% Delta.g %*% E.inv %*% t(Delta.g))
+        if(diagonal) {
+            tmp <- t((1/a1) * B1) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+        } else {
+            A1.inv <- solve(A1)
+            tmp <- (B1 %*% A1.inv) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+        }
         # sanity check 1: sum(diag(UG1)) - sum(diag(tmp))
         # sanity check 2: sum(diag(UG1 %*% UG1)) - sum(diag(tmp %*% tmp))
         trace.UGamma2[g] <- sum(tmp * t(tmp))
@@ -84,11 +96,11 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
     attr(trace.UGamma, "trace.UGamma4") <- trace.UGamma4
 
     # testing only -- alternative interpretation of tr UG^2
-    tUG <- t(UG); trace.UGamma3 <- sum(UG * tUG) # seems wrong?
-    attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
+    # tUG <- t(UG); trace.UGamma3 <- sum(UG * tUG) # seems wrong?
+    # attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
 
     # eigen values
-    attr(trace.UGamma, "eigenvalues") <-  Re(eigen(UG, only.values=TRUE)$values)
+    # attr(trace.UGamma, "eigenvalues") <-  Re(eigen(UG, only.values=TRUE)$values)
 
     trace.UGamma
 }
@@ -382,9 +394,9 @@ lav_model_test <- function(lavmodel       = NULL,
                                         WLS.V       = WLS.V, 
                                         x.idx       = x.idx)
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
-        trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
+        # trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
         trace.UGamma4 <- attr(trace.UGamma, "trace.UGamma4")
-        UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
+        # UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
         attributes(trace.UGamma) <- NULL
 
         # adjust df?
@@ -437,8 +449,8 @@ lav_model_test <- function(lavmodel       = NULL,
                           shift.parameter=shift.parameter,
                           trace.UGamma=trace.UGamma,
                           trace.UGamma4=trace.UGamma4,
-                          trace.UGamma2=trace.UGamma2,
-                          UGamma.eigenvalues=UGamma.eigenvalues)
+                          trace.UGamma2=trace.UGamma2)
+                          #UGamma.eigenvalues=UGamma.eigenvalues)
 
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)

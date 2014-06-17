@@ -77,6 +77,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     # group weights
     group.w       <- vector("list", length=ngroups)
 
+    WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
         WLS.V      <- vector("list", length=ngroups)
         WLS.V.user <- FALSE   
@@ -336,19 +337,22 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                         dacov <- diag(NACOV[[g]])
                         WLS.V[[g]] <- diag(1/dacov, nrow=NROW(NACOV[[g]]), 
                                                     ncol=NCOL(NACOV[[g]]))
+                        WLS.VD[[g]] <- 1/dacov
                     } else if(estimator == "ULS") {
-                        WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                        #WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                        WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
                     }
                 } else {
                     if(estimator == "WLS") {
                         WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
                     } else if(estimator == "DWLS") {
                         dacov <- diag(CAT$WLS.W * nobs[[g]])
-                        WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
-                                                    ncol=NCOL(CAT$WLS.W))
+                        #WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
+                        #                            ncol=NCOL(CAT$WLS.W))
+                        WLS.VD[[g]] <- 1/dacov
                     } else if(estimator == "ULS") {
-                        DWLS <- diag(NROW(CAT$WLS.W))
-                        WLS.V[[g]] <- DWLS
+                        #WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                        WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
                     }
                 }
             } else if(estimator == "PML" || estimator == "FML") {
@@ -371,6 +375,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         }
     } # ngroups
+
+    # remove 'CAT', unless debug -- this is to save memory
+    if(!debug) {
+        CAT <- list()
+    }
 
     # construct SampleStats object
     lavSampleStats <- new("lavSampleStats",
@@ -399,7 +408,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        cov.log.det  = cov.log.det,
                        ridge        = ridge.eps,
                        WLS.obs      = WLS.obs,
-                       WLS.V        = WLS.V,                     
+                       WLS.V        = WLS.V,
+                       WLS.VD       = WLS.VD,
                        NACOV        = NACOV,
 
                        # missingness
@@ -464,6 +474,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     # group weights
     group.w       <- vector("list", length=ngroups)
 
+    WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
         WLS.V      <- vector("list", length=ngroups)
         WLS.V.user <- FALSE
@@ -622,6 +633,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 }
             } else if(estimator == "ULS") {
                 WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
+                WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
             } else if(estimator == "WLS" || estimator == "DWLS") {
                 if(is.null(WLS.V[[g]]))
                     stop("lavaan ERROR: the (D)WLS estimator is only available with full data or with a user-provided WLS.V")
@@ -665,6 +677,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                        ridge        = ridge.eps,
                        WLS.obs      = WLS.obs,
                        WLS.V        = WLS.V,
+                       WLS.VD       = WLS.VD,
                        NACOV        = NACOV,
 
                        # missingness
