@@ -25,7 +25,8 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
   ## number variables/sample size
   ntab <- unlist(lavsamplestats@nobs)
-  ntot <- lavsamplestats@ntotal
+  ## change in 0.5-17: we keep the 'empty cases'
+  ntot <- lavsamplestats@ntotal + length(sapply(fit@Data@Mp, "[[", "empty.idx"))
 
   Score.mat <- matrix(NA, ntot, length(coef(object)))
   
@@ -104,9 +105,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         Sigma.idx <- which(var.idx.mat[lower.tri(var.idx.mat, diag=T)]==1)
       
         J <- matrix(1, 1L, nobs) #[var.idx]
-        J2 <- matrix(1, nvar, nvar)[var.idx, var.idx]
+        J2 <- matrix(1, nvar, nvar)[var.idx, var.idx, drop = FALSE]
         diag(J2) <- 0.5
-        Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx],
+        Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx, drop = FALSE],
                                        logdet=FALSE)
         Mu <- Mu.hat[var.idx]
         mean.diff <- t(t(X) - Mu %*% J)
@@ -114,7 +115,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         ## Scores for missing pattern p within group g
         score.mu[pat.idx==p,var.idx] <- -1 * mean.diff %*% Sigma.inv
         score.sigma[pat.idx==p,Sigma.idx] <- t(matrix(apply(mean.diff, 1L,
-          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
+          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx,drop = FALSE]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
 
       }
 

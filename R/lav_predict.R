@@ -281,13 +281,20 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
     FS <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
         nfac <- ncol(VETAx[[g]])
-        FS[[g]] <- matrix(0, nrow(data.obs[[g]]), nfac)
+        FS[[g]] <- matrix(as.numeric(NA), nrow(data.obs[[g]]), nfac)
         if(nfac == 0L) next
 
         ## FIXME: factor scores not identical (but close) to Mplus
         #         if delta elements not equal to 1??
         mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
         MLIST     <- lavmodel@GLIST[ mm.in.group ]
+
+        # check for negative values
+        neg.var.idx <- which(diag(THETA[[g]]) < 0)
+        if(length(neg.var.idx) > 0) {
+            warning("lavaan WARNING: factor scores could not be computed due to at least one negative (residual) variance")
+            next
+        }
 
         # common values
         theta.sd <- sqrt(diag(THETA[[g]]))

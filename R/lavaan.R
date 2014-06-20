@@ -724,7 +724,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(attr(x, "converged")) { # only if estimation was successful
         # 1. check for Heywood cases, negative (residual) variances, ...
         var.idx <- which(lavpartable$op == "~~" &
-                         !lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+                         #!lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
                          lavpartable$lhs == lavpartable$rhs)
         if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")

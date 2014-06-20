@@ -1,12 +1,18 @@
  library(lavaan)
 options(warn = 1L)
 
-# one-factor (no eXo)
+# one-factor + eXo
 set.seed(1234)
-pop.model <- ' f =~ 0.7*y1 + 0.7*y2 + 0.7*y3 + 0.7*y4 + 0.7*y5 '
+pop.model <- ' f =~ 0.7*y1 + 0.7*y2 + 0.7*y3 + 0.7*y4 + 0.7*y5
+               f ~ (-2.3)*x1 + 0.8*x2
+               y1 ~ 0.2*x2 
+               y3 ~ 0.7*x1 '
 Data <- simulateData(pop.model, sample.nobs=100)
 
-model <- ' f =~ y1 + y2 + y3 + y4 + y5 '
+model <- ' f =~ y1 + y2 + y3 + y4 + y5
+           f ~ x1 + x2
+           y1 ~ x2
+           y3 ~ x1 '
 fit <- sem(model, data=Data, fixed.x=TRUE)
 
 # default extract functions
@@ -46,7 +52,6 @@ source("common.srcR", echo = TRUE)
 
 # create missing values
 missing.per.var <- floor(nrow(Data) / 10)
-set.seed(1234)
 Data.missing <- as.data.frame(lapply(Data.binary, function(x) {
     idx <- sample(1:length(x), missing.per.var); x[idx] <- NA; x}))
 

@@ -933,7 +933,7 @@ lav_object_inspect_sampstat_nacov <- function(object,
        estimator == "DWLS" ||
        estimator == "ULS") {
         NACOV <- lavsamplestats@NACOV
-    } else if(estimator == "ML") {
+    } else if(estimator == "ML" && !object@SampleStats@missing.flag) {
         for(g in 1:lavsamplestats@ngroups) {
             NACOV[[g]] <- 
                 compute.Gamma(object@Data@X[[g]], 

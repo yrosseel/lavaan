@@ -279,7 +279,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # NACOV (=GAMMA)
         if(!NACOV.user) {
-            if(estimator == "ML") {
+            if(estimator == "ML" && !missing.flag.) {
                 NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {

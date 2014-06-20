@@ -506,6 +506,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                # remove from case.idx
+                idx <- which(case.idx[[g]] %in% Mp[[g]]$empty.idx)
+                case.idx[[g]] <- case.idx[[g]][-idx]
+                # remove from eXo
                 if(length(exo.idx) > 0L) {
                     eXo[[g]] <- eXo[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
                 }
