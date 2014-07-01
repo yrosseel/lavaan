@@ -26,7 +26,8 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   ## number variables/sample size
   ntab <- unlist(lavsamplestats@nobs)
   ## change in 0.5-17: we keep the 'empty cases'
-  ntot <- lavsamplestats@ntotal + length(sapply(fit@Data@Mp, "[[", "empty.idx"))
+  ntot <- ( lavsamplestats@ntotal + 
+           length(sapply(object@Data@Mp, "[[", "empty.idx")) )
 
   Score.mat <- matrix(NA, ntot, length(coef(object)))
   

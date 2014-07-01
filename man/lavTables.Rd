@@ -83,9 +83,9 @@ HS9 <- HolzingerSwineford1939[,c("x1","x2","x3","x4","x5",
 HSbinary <- as.data.frame( lapply(HS9, cut, 2, labels=FALSE) )
 
 # using the data only
-lavTables(HS9, dim = 0L, categorical = names(HSbinary))
-lavTables(HS9, dim = 1L, categorical = names(HSbinary), stat=c("th.un"))
-lavTables(HS9, dim = 2L, categorical = names(HSbinary), type = "table")
+lavTables(HSbinary, dim = 0L, categorical = names(HSbinary))
+lavTables(HSbinary, dim = 1L, categorical = names(HSbinary), stat=c("th.un"))
+lavTables(HSbinary, dim = 2L, categorical = names(HSbinary), type = "table")
 
 # fit a model
 HS.model <- ' visual  =~ x1 + x2 + x3

@@ -288,7 +288,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     if(meanstructure) pstar <- pstar + nvar
                     if(nrow(X[[g]]) < pstar) {
                         if(ngroups > 1L) {
-                            txt <- cat(" in group: ", g, "\n", sep="")
+                            txt <- paste(" in group: ", g, "\n", sep="")
                         } else {
                             txt <- "\n"
                         }
@@ -335,6 +335,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                         WLS.V[[g]] <- inv.chol(NACOV[[g]])
                     } else if(estimator == "DWLS") {
                         dacov <- diag(NACOV[[g]])
+                        if(!all(is.finite(dacov))) {
+                            stop("lavaan ERROR: diagonal of Gamma (NACOV) contains non finite values")
+                        }
                         WLS.V[[g]] <- diag(1/dacov, nrow=NROW(NACOV[[g]]), 
                                                     ncol=NCOL(NACOV[[g]]))
                         WLS.VD[[g]] <- 1/dacov

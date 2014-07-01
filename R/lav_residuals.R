@@ -227,6 +227,7 @@ function(object, type="raw", labels=TRUE) {
 
     # replace 'cov' by 'cor' if type == "cor"
     if(type %in% c("cor","cor.bollen","cor.eqs","cor.bentler")) {
+        # only works for non-categorical case; otherwise, th becomes NA
         R <- lapply(R, "names<-", c("cor", "mean") )
     }
 

@@ -1212,8 +1212,8 @@ computeYHATx.LISREL.OLD <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
 #
 # this is similar to computeMuHat but:
 # - we ALWAYS compute NU+ALPHA, even if meanstructure=FALSE
-# - never used if GAMMA, since we then have categorical variables, and
-#   'part 1' structure contains then the (thresholds +) intercepts, not
+# - never used if GAMMA, since we then have categorical variables, and the
+#   'part 1' structure contains the (thresholds +) intercepts, not
 #   the means
 computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
                              ov.y.dummy.ov.idx=NULL,

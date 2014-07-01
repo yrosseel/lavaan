@@ -169,7 +169,8 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
                           obs.freq=integer(0L), obs.prop=numeric(0L)))
     }
     # no support yet for mixture of endogenous ordered + numeric variables
-    if(length(lavNames(fit, "ov.nox")) > length(cat.idx)) {
+    if(!is.null(lavobject) && 
+       length(lavNames(lavobject, "ov.nox")) > length(cat.idx)) {
         warning("lavaan WARNING: some endogenous variables are not categorical")
         return(data.frame(pattern=character(0L), nobs=integer(0L),
                           obs.freq=integer(0L), obs.prop=numeric(0L)))
@@ -183,6 +184,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
             stopifnot(statistic %in% c("G2.un", "X2.un", "G2", "X2"))
         }  
     } else {
+        # only data
         if(length(statistic) == 1L && statistic == "default") {
             # if data, none by default
             statistic <- character(0L)
