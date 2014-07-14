@@ -2,6 +2,8 @@
 
 # two-way frequency table
 pc_freq <- function(Y1, Y2) {
+    # FIXME: for 2x2, we could use
+    # array(tabulate((Y1-1) + (Y2-1)*2 + 1, nbins = 4L), dim=c(2L ,2L))
     max.y1 <- max(Y1, na.rm=TRUE); max.y2 <- max(Y2, na.rm=TRUE)
     bin <- Y1 - 1L; bin <- bin + max.y1 * (Y2 - 1L); bin <- bin[!is.na(bin)]
     if (length(bin)) bin <- bin + 1L
@@ -223,6 +225,8 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                       zero.keep.margins = TRUE,
                       verbose=FALSE) {
 
+    # cat("DEBUG: method = ", method, "\n")
+
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
     if(missing(Y1)) Y1 <- fit.y1$y else as.integer(Y1)
@@ -230,7 +234,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X
 
     stopifnot(min(Y1, na.rm=TRUE) == 1L, min(Y2, na.rm=TRUE) == 1L,
-              method %in% c("nlminb", "nlminb.hessian"))
+              method %in% c("nlminb", "BFGS", "nlminb.hessian"))
 
     # exo or not?
     exo <- ifelse(length(fit.y1$slope.idx) > 0L, TRUE, FALSE)
@@ -386,6 +390,12 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                       gradient=gradientFunction,
                       scale=10,
                       control=control)
+    } else if(method == "BFGS") {
+        out <- optim(par = atanh(rho.init), fn = objectiveFunction, 
+                     gr = gradientFunction,
+                     control = list(parscale = 1, reltol = 1e-10,
+                                    abstol=(.Machine$double.eps * 10)),
+                     method = "BFGS")
     } else if(method == "nlminb.hessian") {
         stopifnot(!exo)
         out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,

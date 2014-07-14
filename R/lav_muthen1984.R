@@ -2,9 +2,13 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
                        missing="listwise",
                        WLS.W=TRUE, # do we need asymptotic variance of stats?
+                       optim.method = "nlminb",
                        zero.add = c(0.5, 0.0),
                        zero.keep.margins = TRUE,
                        group=1L) { # group only for error messages
+
+    # override optim.method
+    # optim.method = "BFGS"
 
     # internal function lav_crossprod2
     if(missing == "listwise") {
@@ -190,6 +194,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
                 out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]],
+                                 method = optim.method,
                                  zero.add = zero.add, 
                                  zero.keep.margins = zero.keep.margins)
                 COR[i,j] <- COR[j,i] <- out

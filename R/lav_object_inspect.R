@@ -925,27 +925,36 @@ lav_object_inspect_sampstat_nacov <- function(object,
     # shortcuts
     lavsamplestats = object@SampleStats
     estimator   = object@Options$estimator
+    G <- object@Data@ngroups
 
-    NACOV       <- vector("list", length=lavsamplestats@ngroups)
+    OUT <- vector("list", length=lavsamplestats@ngroups)
 
     if(estimator == "GLS"  ||
        estimator == "WLS"  ||
        estimator == "DWLS" ||
        estimator == "ULS") {
-        NACOV <- lavsamplestats@NACOV
+        OUT <- lavsamplestats@NACOV
     } else if(estimator == "ML" && !object@SampleStats@missing.flag) {
         for(g in 1:lavsamplestats@ngroups) {
-            NACOV[[g]] <- 
+            OUT[[g]] <- 
                 compute.Gamma(object@Data@X[[g]], 
                               meanstructure=object@Options$meanstructure)
             if(object@Options$mimic == "Mplus") {
                 G11 <- ( lavsamplestats@cov[[g]] * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] )
-                NACOV[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
+                OUT[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
             }
         }
     }
 
-    NACOV
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
 }
 
 

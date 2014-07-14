@@ -340,6 +340,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        WLS.V             = WLS.V,
                        NACOV             = NACOV,
                        ridge             = ridge,
+                       optim.method      = 
+                           ifelse(!is.null(control$cor.optim.method), 
+                                           control$cor.optim.method, "nlminb"),
                        zero.add          = lavoptions$zero.add,
                        zero.keep.margins = lavoptions$zero.keep.margins,
                        debug             = lavoptions$debug,
