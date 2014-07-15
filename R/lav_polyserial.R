@@ -69,7 +69,7 @@ ps_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y2) {
 ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
                       method="nlminb", verbose=FALSE) {
 
-    stopifnot(method == "nlminb")
+    stopifnot(method %in% c("nlminb", "BFGS"))
 
     if(is.null(fit.y1)) fit.y1 <- lavOLS(Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(Y2, X=eXo)
@@ -129,10 +129,18 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
     }
 
     # minimize
-    out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
-                  gradient=gradientFunction,
-                  scale=10,
-                  control=list(trace=ifelse(verbose,1L,0L), rel.tol=1e-10))
+    if(method == "nlminb") {
+        out <- nlminb(start=atanh(rho.init), objective=objectiveFunction,
+                      gradient=gradientFunction,
+                      scale=10,
+                      control=list(trace=ifelse(verbose,1L,0L), rel.tol=1e-10))
+    } else if(method == "BFGS") {
+        out <- optim(par = atanh(rho.init), fn = objectiveFunction,
+                     gr = gradientFunction,
+                     control = list(parscale = 1, reltol = 1e-10,
+                                    abstol=(.Machine$double.eps * 10)),
+                     method = "BFGS")
+    }
     if(out$convergence != 0L) warning("no convergence")
     rho <- tanh(out$par)
 
