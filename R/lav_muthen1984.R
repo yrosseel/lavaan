@@ -5,6 +5,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                        optim.method = "nlminb",
                        zero.add = c(0.5, 0.0),
                        zero.keep.margins = TRUE,
+                       zero.cell.warn = TRUE,
                        group=1L) { # group only for error messages
 
     # override optim.method
@@ -196,7 +197,10 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                 out <- pc_cor_TS(fit.y1=FIT[[i]], fit.y2=FIT[[j]],
                                  method = optim.method,
                                  zero.add = zero.add, 
-                                 zero.keep.margins = zero.keep.margins)
+                                 zero.keep.margins = zero.keep.margins,
+                                 zero.cell.warn = zero.cell.warn,
+                                 Y1.name = ov.names[i],
+                                 Y2.name = ov.names[j])
                 COR[i,j] <- COR[j,i] <- out
             }
             # check for near 1.0 correlations

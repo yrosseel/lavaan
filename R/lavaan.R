@@ -71,6 +71,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # zero values
                    zero.add           = "default",
                    zero.keep.margins  = "default",
+                   zero.cell.warn     = TRUE,
 
                    # starting values
                    start              = "default",
@@ -155,6 +156,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             information = information, se = se, test = test, 
             bootstrap = bootstrap, mimic = mimic,
             zero.add = zero.add, zero.keep.margins = zero.keep.margins,
+            zero.cell.warn = zero.cell.warn,
             representation = representation, do.fit = do.fit, verbose = verbose,
             warn = warn, debug = debug)
         lavoptions <- lav_options_set(opt)
@@ -345,6 +347,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            control$cor.optim.method, "nlminb"),
                        zero.add          = lavoptions$zero.add,
                        zero.keep.margins = lavoptions$zero.keep.margins,
+                       zero.cell.warn    = lavoptions$zero.cell.warn,
                        debug             = lavoptions$debug,
                        verbose           = lavoptions$verbose)
                                                  
@@ -794,7 +797,8 @@ cfa <- sem <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    zero.add = "default", zero.keep.margins = "default", start = "default",
+    zero.add = "default", zero.keep.margins = "default", 
+    zero.cell.warn = TRUE, start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -830,7 +834,8 @@ growth <- function(model = NULL, data = NULL,
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default",
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    zero.add = "default", zero.keep.margins = "default", start = "default",
+    zero.add = "default", zero.keep.margins = "default", 
+    zero.cell.warn = TRUE, start = "default",
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
