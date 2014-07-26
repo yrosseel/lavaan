@@ -22,6 +22,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       optim.method      = "nlminb",
                                       zero.add          = c(0.5, 0.0),
                                       zero.keep.margins = TRUE,
+                                      zero.cell.warn    = TRUE,
                                       debug             = FALSE,
                                       verbose           = FALSE) {
 
@@ -151,6 +152,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                               optim.method = optim.method,
                               zero.add = zero.add,
                               zero.keep.margins = zero.keep.margins,
+                              zero.cell.warn = zero.cell.warn,
                               verbose=debug)
             if(verbose) cat("done\n")
             # if (and only if) all variables are ordinal, store pairwise
