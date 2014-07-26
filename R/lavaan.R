@@ -657,6 +657,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                 estimator = lavoptions$estimator)
         }
+
         if(!is.null(attr(x, "con.jac"))) 
             lavmodel@con.jac <- attr(x, "con.jac")
         if(!is.null(attr(x, "con.lambda")))
@@ -673,6 +674,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lav_model_objective(lavmodel = lavmodel, 
                 lavsamplestats = lavsamplestats, lavdata = lavdata, 
                 lavcache = lavcache, estimator = lavoptions$estimator)
+    }
+
+    # should we fake/force convergence? (eg. to enforce the
+    # computation of a test statistic
+    if(!is.null(control$optim.force.converged) &&
+       control$optim.force.converged) {
+        attr(x, "converged") <- TRUE
     }
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
