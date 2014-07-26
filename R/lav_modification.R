@@ -143,6 +143,12 @@ modificationIndices <- modificationindices <- modindices <- function(object,
             H <- H[-inactive.idx,,drop=FALSE]
             lambda <- lambda[-inactive.idx]
         }
+        # if length(eq.idx) > 0L, remove them from the columns of H
+        if(length(eq.idx) > 0L) {
+            free.again.idx <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
+            idx <- LIST$free[ free.again.idx[ free.again.idx %in% eq.idx ] ]
+            H <- H[,-idx]
+        }
         if(nrow(H) > 0L) {
             H0 <- matrix(0,nrow(H),nrow(H))
             H10 <- matrix(0, ncol(Q22), nrow(H))
