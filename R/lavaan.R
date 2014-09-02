@@ -407,7 +407,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
-        #lavpartable$start <- lavaanStart # not yet, break semTools
+        lavpartable$start <- lavaanStart # not yet, break semTools
         #print(as.data.frame(lavpartable))
 
         # 5. construct internal model (S4) representation

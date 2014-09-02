@@ -52,6 +52,31 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # eg - first indicator of factors
     #    - regressions that are already free covariances
     # TODO
+    #if(object@Model@categorical) {
+    #    for(g in 1:object@Model@ngroups) {
+    #        if(object@Model@parameterization == "delta") {
+    #            # if parameterization == "delta", remove all residual variances
+    #            # of the observed indicators (they are always a function of 
+    #            # other model parameters)
+    #            ov.names.ord <- object@pta$vnames$ov.ord[[g]]
+    #            var.idx <- which(LIST$op == "~~" &
+    #                             LIST$group == g &
+    #                             LIST$lhs == LIST$rhs &
+    #                             LIST$lhs %in% ov.names.ord)
+    #            if(length(var.idx) > 0L) {
+    #                LIST <- LIST[-var.idx,]
+    #            }
+    #        } else if(object@Model@parameterization == "theta") {
+    #            # if parameterization == "theta", remove all scaling elements
+    #            # in DELTA (they are a function of other model parameters)
+    #            scale.idx <- which(LIST$op == "~*~" &
+    #                               LIST$group == g)
+    #            if(length(scale.idx) > 0L) {
+    #                LIST <- LIST[-scale.idx,]
+    #            }
+    #        }
+    #    }
+    #}
  
 
     # master index: *all* elements that we will feed to computeDelta

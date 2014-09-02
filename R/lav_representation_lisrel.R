@@ -1629,6 +1629,8 @@ derivative.sigma.LISREL <- function(m="lambda",
     if(delta && !is.null(MLIST$delta)) {
         DELTA <- MLIST$delta
         delta.flag <- TRUE
+    } else if(m == "delta") { # modindices?
+        return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
     # beta?

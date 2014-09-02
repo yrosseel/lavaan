@@ -68,7 +68,7 @@ export("lavaan", "cfa", "sem", "growth",
 
        # API functions
 
-       lav_partable_independence,
+       lav_partable_independence,   # used by semTools!
 
        lav_func_gradient_complex,
        lav_func_gradient_simple,
