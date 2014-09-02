@@ -67,10 +67,13 @@ export("lavaan", "cfa", "sem", "growth",
        "lavCor",
 
        # API functions
+
+       lav_partable_independence,
+
        lav_func_gradient_complex,
        lav_func_gradient_simple,
        lav_func_jacobian_complex,
-       lav_func_jacobian_simple
+       lav_func_jacobian_simple     # used by semTools!
       )
 
 # export Classes

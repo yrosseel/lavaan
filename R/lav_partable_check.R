@@ -63,10 +63,13 @@ lav_partable_check <- function(partable, warn = TRUE) {
     # this is not necessarily problematic; perhaps only for
     # exogenous variables?
     ov.ind <- unique(partable$rhs[partable$op == "=~"])
+    lv.names <- unique(partable$lhs[partable$op == "=~"])
     int.fixed <- which(partable$op == "~1" &
                        partable$user == 0 &
                        partable$free == 0 &
                        partable$ustart == 0 &
+                       # do not include factors
+                       !partable$lhs %in% lv.names &
                        # do not include indicators
                        !partable$lhs %in% ov.ind)
 

@@ -1,8 +1,41 @@
-lav_partable_independence <- function(ov.names=NULL, ov=NULL, 
+# generate parameter table for an independence model
+lav_partable_independence <- function(object = NULL, 
+                              ov.names=NULL, ov=NULL, 
                               ov.names.x=NULL, sample.cov=NULL,
                               meanstructure=FALSE, sample.mean=NULL,
                               sample.th=NULL, parameterization = "delta",
                               fixed.x=TRUE) {
+
+    # grab everything from lavaan object
+    if(!is.null(object)) {
+        stopifnot(inherits(object, "lavaan"))
+
+        OV.X <- lapply(as.list(1:object@Data@ngroups),
+                       function(x) vnames(object@ParTable, type="ov.x", x))
+        # what with fixed.x?
+        if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            FIXED.X = object@Model@fixed.x
+        } else if(object@Options$mimic == "EQS") {
+            # always ignore fixed.x
+            OV.X = NULL
+            FIXED.X = FALSE
+        } else if(object@Options$mimic == "LISREL") {
+            # always ignore fixed.x??? CHECKME!!
+            OV.X = NULL
+            FIXED.X = FALSE
+        }
+
+        ov.names      = object@Data@ov.names
+        ov            = object@Data@ov
+        ov.names.x    = OV.X
+        sample.cov    = object@SampleStats@cov
+        meanstructure = object@Model@meanstructure
+        sample.mean   = object@SampleStats@mean
+        sample.th     = object@SampleStats@th
+        parameterization = object@Options$parameterization
+        fixed.x       = FIXED.X
+    }
+
 
     ngroups <- length(ov.names)
     ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
