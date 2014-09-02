@@ -184,7 +184,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # nothing to do
         } else {
             # make a GLIST
-            dx <- lav_model_x2GLIST(lavmodel = lavmodel, x = dx, type = "full")
+            dx <- lav_model_x2GLIST(lavmodel = lavmodel, x = dx, 
+                                    type = "full", setDelta = FALSE)
         }
 
     } # WLS
