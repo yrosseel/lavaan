@@ -160,7 +160,8 @@ lav_start <- function(start.method = "default",
                 # standardized?
                 var.f.idx <- which(lavpartable$lhs == f & lavpartable$op == "~~" &
                                    lavpartable$rhs == f)
-                if(lavpartable$free[var.f.idx] == 0 &&
+                if(length(var.f.idx) > 0L && 
+                   lavpartable$free[var.f.idx] == 0 &&
                    lavpartable$ustart[var.f.idx] == 1) {
                    # make sure factor loadings are between -0.7 and 0.7
                     x <- start[user.idx]

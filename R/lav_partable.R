@@ -343,7 +343,12 @@ lavaanify <- lavParTable <- function(
     }
 
     # data.frame?
-    if(as.data.frame.) LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
+    if(as.data.frame.) {
+        LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
+
+        # order? first by 'op', then by 'user'
+        #LIST[with(LIST, order(op, -user)),]
+    }
 
     LIST
 }
@@ -831,14 +836,16 @@ lav_partable_flat <- function(FLAT = NULL,
     # 2. default (residual) variances and covariances
 
     # a) (residual) VARIANCES (all ov's except exo, and regular lv's)
-    if(auto.var) {
+    # NOTE: change since 0.5-17: we ALWAYS include the vars in the 
+    #       parameter table; but only if auto.var = TRUE, we set them free
+    #if(auto.var) {
         ov.var <- ov.names.nox
         # auto-remove ordinal variables
         #idx <- match(ov.names.ord, ov.var)
         #if(length(idx)) ov.var <- ov.var[-idx]
         lhs <- c(lhs, ov.var, lv.names.r)
         rhs <- c(rhs, ov.var, lv.names.r)
-    }
+    #}
 
     # b) `independent` latent variable COVARIANCES (lv.names.x)
     if(auto.cov.lv.x && length(lv.names.x) > 1L) {
@@ -983,6 +990,15 @@ lav_partable_flat <- function(FLAT = NULL,
     #label   <- paste(lhs, op, rhs, sep="")
     label   <- rep(character(1), length(lhs))
     exo     <- rep(0L, length(lhs))
+
+    # 0. if auto.var = FALSE, set the unspecified variances to zero
+    if(!auto.var) {
+        var.idx <- which(op == "~~" &
+                         lhs == rhs &
+                         user == 0L)
+        ustart[var.idx] <- 0.0
+          free[var.idx] <- 0L
+    }
 
     # 1. fix metric of regular latent variables
     if(std.lv) {
