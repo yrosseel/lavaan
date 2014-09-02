@@ -114,6 +114,9 @@ lavInspect <- function(object,
     } else if(what == "data") {
         lav_object_inspect_data(object, 
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "case.idx") {
+        lav_object_inspect_case_idx(object,
+            drop.list.single.group = drop.list.single.group) 
 
 
     #### rsquare ####
@@ -166,6 +169,10 @@ lavInspect <- function(object,
         lav_object_inspect_th(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "vy") {
+        lav_object_inspect_vy(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
 
     #### specific model matrices? ####
@@ -188,6 +195,9 @@ lavInspect <- function(object,
     } else if(what %in% c("patterns", "pattern")) {
         lav_object_inspect_missing_patterns(object,
             add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "empty.idx") {
+        lav_object_inspect_empty_idx(object,
             drop.list.single.group = drop.list.single.group)
 
     #### convergence ####
@@ -445,6 +455,24 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
 
     OUT
 }
+
+lav_object_inspect_case_idx <- function(object,
+                                        drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+    OUT <- object@Data@case.idx
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
 
 
 lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
@@ -705,6 +733,42 @@ lav_object_inspect_th <- function(object,
     OUT
 }
 
+lav_object_inspect_vy <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    G <- object@Data@ngroups
+
+    # 'unconditional' model-implied variances
+    #  - same as diag(Sigma.hat) if all Y are continuous)
+    #  - 1.0 (or delta^2) if categorical
+    #  - if also Gamma, cov.x is used (only if categorical)
+    # only for semTools?
+
+    OUT <- computeVY(lavmodel = object@Model, GLIST = NULL, 
+                     lavsamplestats = object@SampleStats)
+                     
+
+    # labels + class
+    for(g in 1:G) {
+        if(add.labels && length(OUT[[g]]) > 0L) {
+            names(OUT[[g]]) <- object@pta$vnames$ov[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
 
 lav_object_inspect_theta <- function(object, correlation.metric = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
@@ -806,6 +870,33 @@ lav_object_inspect_missing_patterns <- function(object,
         }
     }
 
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_empty_idx <- function(object,
+                                         drop.list.single.group = FALSE) {
+   
+    G <- object@Data@ngroups
+
+    # get empty idx
+    OUT <- vector("list", G)
+
+    for(g in 1:G) {
+        if(!is.null(object@Data@Mp[[g]])) {
+            OUT[[g]] <- object@Data@Mp[[g]]$empty.idx
+        } else {
+            OUT[[g]] <- integer(0L)
+        }
+    }
+    
     if(G == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
