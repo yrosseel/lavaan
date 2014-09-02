@@ -317,6 +317,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     if(debug) print(as.data.frame(lavpartable))
 
+    # at this point, we should check if the partable is complete
+    # or not; this is especially relevant if the lavaan() function
+    # was used, but the user has forgotten some variances/intercepts...
+    check <- lav_partable_check(lavpartable)
+    
+
     # 2b. change meanstructure flag?
     if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
@@ -487,6 +493,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
            #FALSE && # to debug
            sum(nchar(FLAT$fixed)) == 0 && # no fixed values in parTable
                                           # this includes intercepts!!
+           # next one checks if we have exogenous variances/intercepts
+           # in model syntax
+           (length(vnames(lavpartable, "eqs.x")) == 
+            length(vnames(lavpartable, "ov.x"))) &&
            !categorical &&
            !lavmodel@eq.constraints &&
            length(lavdata@X) > 0L &&
@@ -499,7 +509,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.x.idx <- match(vnames(lavpartable, "ov.x"), 
                               lavdata@ov.names[[1L]])
             if(length(ov.x.idx) == 0L) {
-                stop("lavaan ERROR: no exogenous variables; remove all variances, covariances and intercepts of exogenous variables from the model syntax\n")
+                stop("lavaan ERROR: no exogenous variables; remove all variances, covariances and intercepts of exogenous variables from the model syntax, or use fixed.x = FALSE\n")
             }
             YX <- lavdata@X[[1L]]
             #print(head(YX))

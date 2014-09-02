@@ -434,7 +434,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
         }
 
     } else {
-        warning("lavaan WARNING: could not compute standard errors!\nlavaan NOTE: this may be a symptom that the model is not identified.\n")
+        warning("lavaan WARNING: could not compute standard errors!\n  lavaan NOTE: this may be a symptom that the model is not identified.\n")
         VarCov <- NULL
     }
 

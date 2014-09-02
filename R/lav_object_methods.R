@@ -1075,7 +1075,7 @@ function(object, labels=TRUE, attributes.=FALSE) {
                                 )
     }
 
-    if(labels) {
+    if(!is.null(VarCov) && labels) {
         colnames(VarCov) <- rownames(VarCov) <- 
             lav_partable_labels(object@ParTable, type="free")
     }
@@ -1090,7 +1090,10 @@ function(object, labels=TRUE, attributes.=FALSE) {
         attr(VarCov, "BOOT.TEST") <- NULL
     }
 
-    class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")
+    if(!is.null(VarCov)) {
+        class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")
+    }
+
     VarCov
 })
 
