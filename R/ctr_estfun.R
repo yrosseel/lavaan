@@ -25,10 +25,10 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
 
   ## number variables/sample size
   ntab <- unlist(lavsamplestats@nobs)
-  ## change in 0.5-17: we keep the 'empty cases'
-  ntot <- ( lavsamplestats@ntotal + 
-           length(sapply(object@Data@Mp, "[[", "empty.idx")) )
-
+  
+  #there's something broke that makes github version not working to perform a Vuong test
+  #this two lines are working well and are taken from an CRAN version
+  ntot <- lavsamplestats@ntotal
   Score.mat <- matrix(NA, ntot, length(coef(object)))
   
   for(g in 1:lavsamplestats@ngroups) {
