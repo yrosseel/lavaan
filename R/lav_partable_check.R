@@ -8,7 +8,7 @@ lav_partable_check <- function(partable, warn = TRUE) {
     if(length(partable$lhs) == 0) return(check)
 
     # get observed/latent variables
-    ov.names <- vnames(partable, "ov")
+    ov.names <- vnames(partable, "ov.nox") # no need to specify exo??
     lv.names <- vnames(partable, "lv")
     all.names <- c(ov.names, lv.names)
     

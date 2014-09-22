@@ -3,7 +3,7 @@ compute.Gamma <- function(data, meanstructure=FALSE, Mplus.WLS=FALSE) {
 
     if(meanstructure) {
         # G11
-        G11 <- cov(data)
+        G11 <- cov(data, use="pairwise")
         # FIXME: does LISREL/EQS also rescale cov(data)?
         N <- nrow(data)
         G11 <- G11 * (N-1) / N  # needed for Mplus, both for WLS and ML
@@ -46,11 +46,11 @@ compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
         Z <- as.matrix(Z) # special case p = 1L
     }
 
-    Gamma = (N-1)/N * cov(Z) # we divide by 'N'!
+    Gamma = (N-1)/N * cov(Z, use = "pairwise") # we divide by 'N'!
 
     # only to mimic Mplus WLS
     if(Mplus.WLS) {
-        w  <- cov(data)[idx]
+        w  <- cov(data, use = "pairwise")[idx]
         w.biased <- (N-1)/N * w
         diff <- outer(w,w) - outer(w.biased, w.biased)
         Gamma <- Gamma - diff
@@ -84,14 +84,19 @@ compute.third.moment <- function(data.) {
             }
         }
         for(i in 1:p) {
-            out[i,] <- colSums(zdata[,i] * Z)
+            out[i,] <- colSums(zdata[,i] * Z, na.rm = TRUE)
         }
         out <- out/N
     } else {
         idx <- which(lower.tri(matrix(0,p,p), diag=TRUE))
         Z <- t(apply(zdata, 1, function(x) { tcrossprod(x)[idx]  }))
-
-        out <- crossprod(zdata, Z)/N
+ 
+        if(any(is.na(zdata))) {
+            lav_crossprod2 <- base::crossprod
+        } else {
+            lav_crossprod2 <- function(x, y) sum(x * y, na.rm = TRUE)
+        }
+        out <- lav_crossprod2(zdata, Z)/N
      }
 
     out
