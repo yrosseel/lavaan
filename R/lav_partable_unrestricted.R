@@ -1,9 +1,40 @@
 # YR - 26 Nov 2013: generate partable for the unrestricted model
-lav_partable_unrestricted <- function(ov.names=NULL, ov=NULL, 
+lav_partable_unrestricted <- function(lavobject = NULL,
+                              ov.names=NULL, ov=NULL, 
                               ov.names.x=NULL, sample.cov=NULL,
                               meanstructure=FALSE, sample.mean=NULL,
                               sample.th=NULL,
                               fixed.x=TRUE) {
+
+    # grab everything from lavaan lavobject
+    if(!is.null(lavobject)) {
+        stopifnot(inherits(lavobject, "lavaan"))
+
+        OV.X <- lapply(as.list(1:lavobject@Data@ngroups),
+                       function(x) vnames(lavobject@ParTable, type="ov.x", x))
+        # what with fixed.x?
+        if(lavobject@Options$mimic %in% c("lavaan", "Mplus")) {
+            FIXED.X = lavobject@Model@fixed.x
+        } else if(lavobject@Options$mimic == "EQS") {
+            # always ignore fixed.x
+            OV.X = NULL
+            FIXED.X = FALSE
+        } else if(lavobject@Options$mimic == "LISREL") {
+            # always ignore fixed.x??? CHECKME!!
+            OV.X = NULL
+            FIXED.X = FALSE
+        }
+
+        ov.names      = lavobject@Data@ov.names
+        ov            = lavobject@Data@ov
+        ov.names.x    = OV.X
+        sample.cov    = lavobject@SampleStats@cov
+        meanstructure = lavobject@Model@meanstructure
+        sample.mean   = lavobject@SampleStats@mean
+        sample.th     = lavobject@SampleStats@th
+        parameterization = lavobject@Options$parameterization
+        fixed.x       = FIXED.X
+    }
 
     ngroups <- length(ov.names)
     ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
