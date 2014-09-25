@@ -45,11 +45,11 @@ lavInspect <- function(object,
     if(what == "free") {
         lav_object_inspect_modelmatrices(object, what = "free", type = "free",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "unco") {
+    } else if(what == "unco" || what == "unconstrained") {
         lav_object_inspect_modelmatrices(object, what = "free", type="unco",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "user") {
-        lav_object_inspect_modelmatrices(object, what = "free", type="user",
+    } else if(what == "partable") {
+        lav_object_inspect_modelmatrices(object, what = "free", type="partable",
             add.labels = add.labels, add.class = add.class)
     } else if(what == "se" ||
               what == "std.err" ||
@@ -67,8 +67,8 @@ lavInspect <- function(object,
     } else if(what == "dx.free") {
         lav_object_inspect_modelmatrices(object, what = "dx.free",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "dx" || what == "gradient" || what == "derivatives") {
-        lav_object_inspect_modelmatrices(object, what = "dx",
+    } else if(what == "dx.all") {
+        lav_object_inspect_modelmatrices(object, what = "dx.all",
             add.labels = add.labels, add.class = add.class)
     } else if(what == "std" || what == "std.all") {
         lav_object_inspect_modelmatrices(object, what = "std.all",
@@ -151,7 +151,7 @@ lavInspect <- function(object,
             correlation.metric = TRUE,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
-    } else if(what == "cov.ov") {
+    } else if(what == "cov.ov" || what == "sigma" || what == "sigma.hat") {
         lav_object_inspect_cov_ov(object,
             correlation.metric = FALSE,
             add.labels = add.labels, add.class = add.class,
@@ -161,11 +161,11 @@ lavInspect <- function(object,
             correlation.metric = TRUE,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
-    } else if(what == "mean.ov") {
+    } else if(what == "mean.ov" || what == "mu" || what == "mu.hat") {
         lav_object_inspect_mean_ov(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
-    } else if(what == "th") {
+    } else if(what == "th" || what == "thresholds") {
         lav_object_inspect_th(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
@@ -266,7 +266,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                  group.weight   = TRUE,
                                  constraints    = FALSE,
                                  Delta          = NULL)
-    } else if(what == "dx") {
+    } else if(what == "dx.all") {
         GLIST <- lav_model_gradient(lavmodel       = object@Model,
                                 GLIST          = NULL,
                                 lavsamplestats = object@SampleStats,
@@ -290,7 +290,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
 
     for(mm in 1:length(GLIST)) {
 
-        if(what != "dx") {
+        if(what != "dx.all") {
             # erase everything
             GLIST[[mm]][,] <- 0.0
         }
@@ -307,7 +307,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
             } else if(type == "unco") {
                 m.el.idx <- object@Model@m.unco.idx[[mm]]
                 x.el.idx <- object@Model@x.unco.idx[[mm]]
-            } else if(type == "user") {
+            } else if(type == "partable") {
                 m.el.idx <- object@Model@m.user.idx[[mm]]
                 x.el.idx <- object@Model@x.user.idx[[mm]]
             } else {
@@ -751,7 +751,7 @@ lav_object_inspect_vy <- function(object,
     # labels + class
     for(g in 1:G) {
         if(add.labels && length(OUT[[g]]) > 0L) {
-            names(OUT[[g]]) <- object@pta$vnames$ov[[g]]
+            names(OUT[[g]]) <- object@pta$vnames$ov.nox[[g]]
         }
         if(add.class) {
             class(OUT[[g]]) <- c("lavaan.vector", "numeric")

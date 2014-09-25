@@ -19,6 +19,7 @@ cfa(model = NULL, data = NULL,
     bootstrap = 1000L, mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
     zero.add = "default", zero.keep.margins = "default",
+    zero.cell.warn = TRUE,
     start = "default", verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
@@ -226,6 +227,9 @@ order as they appear in the data.}
     frequency table are adjusted so that all margins are unaffected. If
     \code{"default"}, the value is set depending on the \code{"mimic"}. The
     default is \code{TRUE}.}
+\item{zero.cell.warn}{Logical. Only used if some observed endogenous variables
+    are categorical. If \code{TRUE}, give a warning if one or more cells
+    of a bivariate frequency table are empty.}
 \item{start}{If it is a character string,
     the two options are currently \code{"simple"} and \code{"Mplus"}. 
     In the first

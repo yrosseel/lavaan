@@ -19,8 +19,8 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
     N <- nrow(X)
 
     # starting values as used by Mplus
-    mu0  <- apply(X, 2, mean, na.rm = TRUE); names(mu0) <- NULL
-    var0 <- apply(X, 2,  var, na.rm = TRUE); names(var0) <- NULL
+    mu0  <- apply(X, 2, base::mean, na.rm = TRUE); names(mu0) <- NULL
+    var0 <- apply(X, 2,  base::var, na.rm = TRUE); names(var0) <- NULL
     sigma0 <- diag(x=var0, nrow=length(var0))
     mu <- mu0; sigma <- sigma0
 
@@ -219,7 +219,8 @@ estimate.moments.fiml <- function (X = NULL, M = NULL, verbose = FALSE) {
 
     # starting values
     start.cov <- cov(X, use = "p"); dimnames(start.cov) <- NULL
-    start.mean <- apply(X, 2, mean, na.rm = TRUE); names(start.mean) <- NULL
+    start.mean <- apply(X, 2, base::mean, na.rm = TRUE)
+    names(start.mean) <- NULL
 
     # x2param
     lower.idx <- which(lower.tri(start.cov, diag = TRUE))

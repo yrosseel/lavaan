@@ -37,7 +37,7 @@ scores = function(x) {
 
 gradient = function(x) {
     SCORES <- scores(x)
-    apply(SCORES, 2L, sum, na.rm=TRUE)
+    apply(SCORES, 2L, base::sum, na.rm=TRUE)
 }
 
 ))

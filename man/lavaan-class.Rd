@@ -12,7 +12,6 @@
 \alias{nobs} %% not imported in < 2.13
 \alias{nobs,lavaan-method}
 \alias{logLik,lavaan-method}
-\alias{inspect}
 \alias{inspect,lavaan-method}
 \alias{update,lavaan-method}
 \alias{show,lavaan-method}
@@ -103,78 +102,8 @@ about the data.}
       was used. The \code{\link[stats]{AIC}} and \code{\link[stats]{BIC}}
       methods automatically work via \code{logLik()}.}
     \item{inspect}{\code{signature(object = "lavaan", what = "free")}: This
-      is the main `extractor' function for \code{lavaan} objects.  It
-      allows the user to peek into the internal representation of the model. In
-      addition, the requested information is returned (typically as a list) and
-      can be used for further processing.
-      The following values for \code{what} are allowed (in alphabetical order):
-      \describe{
-
-        \item{\code{"coef"}:}{A list of model matrices containing the current
-          values of all parameters.}
-        \item{\code{"coefficients"}:}{An alias for \code{"coef"}.}
-        \item{\code{"converged"}:}{Returns TRUE if the optimization routine
-          has converged; FALSE otherwise.}
-        \item{\code{"cov.all"}:}{Model implied covariance matrix of both the 
-          observed and latent variables.}
-        \item{\code{"cov.lv"}:}{Model implied covariance matrix of the latent 
-          variables.}
-        \item{\code{"cor.all"}:}{Model implied covariance matrix of both the 
-          observed and latent variables, in a correlation mectric.}
-        \item{\code{"cor.lv"}:}{Model implied covariance matrix of the latent 
-          variables, in a correlation metric.}
-        \item{\code{"derivatives"}:}{An alias for \code{"dx"}.}
-        \item{\code{"dx"}:}{A list of model matrices containing the
-          derivatives of all parameters evaluated at the current (typically
-          minimum) function value.}
-        \item{\code{"estimates"}:}{An alias for \code{"coef"}.}
-        \item{\code{"est"}:}{An alias for \code{"coef"}.}
-        \item{\code{"free"}:}{A list of model matrices counting the free
-          parameters in the model, typically in the same order as they are
-          specified by the user.}
-        \item{\code{"gradient"}:}{An alias for \code{"dx"}.}
-        \item{\code{"list"}:}{A dataframe showing the internal
-          representation of a lavaan model.
-          Each row corresponds to a model parameter. The
-          columns contain all the information that lavaan stores about
-          these parameters (for example, if it is free of fixed, the
-          user-specified starting values, etcetera). This is called
-          the parameter table.}
-        \item{\code{"mi"}:}{A data.frame containing modification indices
-          and expected parameter change (EPC) values, both in unstandardized
-          and standardized metric.}
-        \item{\code{"modindices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modification"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modificationindices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modification.indices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"nacov"}:}{N times the asymptotic variance of the model 
-          parameters.}
-        \item{\code{"parameters"}:}{An alias for \code{"coef"}.}
-        \item{\code{"parameter.estimates"}:}{An alias for \code{"coef"}.}
-        \item{\code{"parameter.values"}:}{An alias for \code{"coef"}.}
-        \item{\code{"r2"}:}{An alias for \code{"rsquare"}.}
-        \item{\code{"rsquare"}:}{A named vector with the R-Square value
-          of the dependent observed and latent variables.}
-        \item{\code{"r-square"}:}{An alias for \code{"rsquare"}.}
-        \item{\code{"sampstat"}:}{The sample statistics used for the analysis.}
-        \item{\code{"se"}:}{A list of model matrices containing the 
-          estimated standard errors for all free parameters.}
-        \item{\code{"standardized"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standardizedsolution"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standardized.solution"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standard.errors"}:}{An alias for \code{"se"}.}
-        \item{\code{"start"}:}{A list of model matrices containing the
-          starting values for all parameters.}
-        \item{\code{"starting.values"}:}{An alias for \code{"start"}.}
-        \item{\code{"std"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"std.coef"}:}{A data.frame containing both the raw
-           and (completely) standardized parameter values.}
-        \item{\code{"std.err"}:}{An alias for \code{"se"}.}
-        \item{\code{"wls.v"}:}{The weight matrix for WLS.}
-        \item{\code{"x"}:}{An alias for \code{"coef"}.}
-
-       }
-    }
+      is a shortcut for the \code{lavInspect()} function. See
+      \link{lavInspect} for more details.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", standardized=FALSE, fit.measures=FALSE, rsquare=FALSE, modindices=FALSE)}: 
