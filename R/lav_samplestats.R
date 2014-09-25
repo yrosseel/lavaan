@@ -180,7 +180,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         if(categorical) {
             var[[g]]  <- CAT$VAR
             cov[[g]]  <- unname(CAT$COV)
-            mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
+            mean[[g]] <- apply(X[[g]], 2, base::mean, na.rm=TRUE)
             notnum.idx <- which(ov.types != "numeric")
             mean[[g]][notnum.idx] <- 0.0
 
@@ -200,7 +200,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # to a sample cov divided by 'n'
                 cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
             }
-            mean[[g]] <- apply(X[[g]], 2, mean, na.rm=TRUE)
+            mean[[g]] <- apply(X[[g]], 2, base::mean, na.rm=TRUE)
         
             # icov and cov.log.det (but not if missing)
             if(missing != "ml") {
