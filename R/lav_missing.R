@@ -20,7 +20,7 @@ estimate.moments.EM <- function (X = NULL, M = NULL, verbose = FALSE,
 
     # starting values as used by Mplus
     mu0  <- apply(X, 2, base::mean, na.rm = TRUE); names(mu0) <- NULL
-    var0 <- apply(X, 2,  base::var, na.rm = TRUE); names(var0) <- NULL
+    var0 <- apply(X, 2,  stats::var, na.rm = TRUE); names(var0) <- NULL
     sigma0 <- diag(x=var0, nrow=length(var0))
     mu <- mu0; sigma <- sigma0
 
