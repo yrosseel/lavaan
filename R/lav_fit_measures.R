@@ -510,6 +510,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                 }
             } else {
                 logl.H1.group <- as.numeric(NA)
+                logl.H1 <- as.numeric(NA)
             }
 
             if("unrestricted.logl" %in% fit.measures) {
@@ -531,6 +532,8 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
                 }
             } else if(object@Options$estimator == "MML") {
                 logl.H0 <- -1 * fx
+            } else {
+                logl.H0 <- as.numeric(NA)
             }             
            
             if("logl" %in% fit.measures) {
