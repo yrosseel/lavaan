@@ -92,9 +92,10 @@ compute.third.moment <- function(data.) {
         Z <- t(apply(zdata, 1, function(x) { tcrossprod(x)[idx]  }))
  
         if(any(is.na(zdata))) {
-            lav_crossprod2 <- base::crossprod
+            lav_crossprod2 <- function(A, B) {
+                apply(A, 2, function(x) colSums(B * x, na.rm=TRUE)) }
         } else {
-            lav_crossprod2 <- function(x, y) sum(x * y, na.rm = TRUE)
+            lav_crossprod2 <- base::crossprod
         }
         out <- lav_crossprod2(zdata, Z)/N
      }

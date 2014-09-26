@@ -11,6 +11,7 @@ lav_partable_check <- function(partable, warn = TRUE) {
     ov.names <- vnames(partable, "ov.nox") # no need to specify exo??
     lv.names <- vnames(partable, "lv")
     all.names <- c(ov.names, lv.names)
+    ov.names.ord <- vnames(partable, "ov.ord")
     
     # we should have a (residual) variance for *each* ov/lv
     # note: if lavaanify() has been used, this is always TRUE
@@ -70,6 +71,8 @@ lav_partable_check <- function(partable, warn = TRUE) {
                        partable$ustart == 0 &
                        # do not include factors
                        !partable$lhs %in% lv.names &
+                       # do not include ordered variables
+                       !partable$lhs %in% ov.names.ord &
                        # do not include indicators
                        !partable$lhs %in% ov.ind)
 

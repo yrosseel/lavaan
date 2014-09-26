@@ -70,7 +70,7 @@ lavInspect <- function(lavobject,
     } else if(what == "dx.all") {
         lav_object_inspect_modelmatrices(lavobject, what = "dx.all",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "std" || what == "std.all") {
+    } else if(what == "std" || what == "std.all" || what == "standardized") {
         lav_object_inspect_modelmatrices(lavobject, what = "std.all",
            add.labels = add.labels, add.class = add.class)
     } else if(what == "std.lv") {

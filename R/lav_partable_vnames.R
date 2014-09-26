@@ -44,6 +44,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
                    "lv",          # latent variables
                    "lv.regular",  # latent variables (defined by =~ only)
+                   "lv.formative",# latent variables (defined by <~ only)
                    "lv.x",        # (pure) exogenous variables
                    "lv.y",        # (pure) endogenous variables
                    "lv.nox",      # non-exogenous latent variables
@@ -91,6 +92,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
     OUT$lv           <- vector("list", length=ngroups)
     OUT$lv.regular   <- vector("list", length=ngroups)
+    OUT$lv.formative <- vector("list", length=ngroups)
     OUT$lv.x         <- vector("list", length=ngroups)
     OUT$lv.y         <- vector("list", length=ngroups)
     OUT$lv.nox       <- vector("list", length=ngroups)
@@ -116,6 +118,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             out <- unique( partable$lhs[ partable$group == g &
                                          partable$op == "=~"   ] )
             OUT$lv.regular[[g]] <- out
+        }
+
+        # formative latent variables ONLY (ie defined by <~ only)
+        if("lv.formative" %in% type) {
+            out <- unique( partable$lhs[ partable$group == g &
+                                         partable$op == "<~"   ] )
+            OUT$lv.formative[[g]] <- out
         }
 
         # eqs.y

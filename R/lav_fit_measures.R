@@ -111,9 +111,9 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     
     # likelihood based measures
     if(estimator == "MML") {
-        fit.logl <- c("logl", "npar", "aic", "bic", "ntotal", "bic2")
+        fit.logl <- c("logl", "aic", "bic", "ntotal", "bic2")
     } else {
-        fit.logl <- c("logl", "unrestricted.logl", "npar", "aic", "bic",
+        fit.logl <- c("logl", "unrestricted.logl", "aic", "bic",
                       "ntotal", "bic2")
     }
     if(scaled && object@Options$test == "yuan.bentler") {
