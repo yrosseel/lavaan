@@ -718,14 +718,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     TEST <- NULL
     if(lavoptions$test != "none" && attr(x, "converged")) {
         if(verbose) cat("Computing TEST for test =", lavoptions$test, "...")
-        TEST <- lav_model_test(lavmodel       = lavmodel,
-                               lavpartable    = lavpartable,
-                               lavsamplestats = lavsamplestats,
-                               lavoptions     = lavoptions,
-                               x              = x,
-                               VCOV           = VCOV,
-                               lavdata        = lavdata,
-                               lavcache       = lavcache)
+        test.UGamma.eigvals <- TRUE # for now
+        if(!is.null(control$test.UGamma.eigvals)) {
+            if(is.logical(control$test.UGamma.eigvals)) {
+                 test.UGamma.eigvals <- control$test.UGamma.eigvals
+            }
+        }
+        TEST <- lav_model_test(lavmodel            = lavmodel,
+                               lavpartable         = lavpartable,
+                               lavsamplestats      = lavsamplestats,
+                               lavoptions          = lavoptions,
+                               x                   = x,
+                               VCOV                = VCOV,
+                               lavdata             = lavdata,
+                               lavcache            = lavcache,
+                               test.UGamma.eigvals = test.UGamma.eigvals)
         if(verbose) cat(" done.\n")
     } else {
         TEST <- list(list(test="none", stat=NA, 

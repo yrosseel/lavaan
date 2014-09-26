@@ -1,6 +1,7 @@
 testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats, 
                                         E.inv, Delta, WLS.V,
-                                        x.idx=list(integer(0))) {
+                                        x.idx=list(integer(0)),
+                                        test.UGamma.eigvals = TRUE) {
 
     # UG = Gamma %*% [V - V %*% Delta %*% E.inv %*% tDelta %*% V]
     #    = Gamma %*% V  - Gamma %*% V %*% Delta %*% E.inv %*% tDelta %*% V
@@ -100,7 +101,13 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
     # attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
 
     # eigen values
-    # attr(trace.UGamma, "eigenvalues") <-  Re(eigen(UG, only.values=TRUE)$values)
+    # this is for the lavaan.survey pval.pFsum() function
+    # but for large problems, this can take a loooong time; perhaps
+    # we should make this optional?
+    if(test.UGamma.eigvals) {
+        attr(trace.UGamma, "eigenvalues") <-  
+            Re(eigen(UG, only.values=TRUE)$values)
+    }
 
     trace.UGamma
 }
@@ -212,7 +219,8 @@ lav_model_test <- function(lavmodel       = NULL,
                            x              = NULL, 
                            VCOV           = NULL, 
                            lavcache       = NULL,
-                           lavdata        = NULL, 
+                           lavdata        = NULL,
+                           test.UGamma.eigvals = TRUE,
                            control        = list()) {
 
 
@@ -396,7 +404,11 @@ lav_model_test <- function(lavmodel       = NULL,
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
         # trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
         trace.UGamma4 <- attr(trace.UGamma, "trace.UGamma4")
-        # UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
+        if(test.UGamma.eigvals) {
+            UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
+        } else {
+            UGamma.eigenvalues <- numeric(0L)
+        }
         attributes(trace.UGamma) <- NULL
 
         # adjust df?
@@ -440,17 +452,17 @@ lav_model_test <- function(lavmodel       = NULL,
             shift.parameter <- as.numeric(NA)
         }
 
-        TEST[[2]] <- list(test=test,
-                          stat=chisq.scaled,
-                          stat.group=stat.group,
-                          df=df,
-                          pvalue=pvalue.scaled,
-                          scaling.factor=scaling.factor,
-                          shift.parameter=shift.parameter,
-                          trace.UGamma=trace.UGamma,
-                          trace.UGamma4=trace.UGamma4,
-                          trace.UGamma2=trace.UGamma2)
-                          #UGamma.eigenvalues=UGamma.eigenvalues)
+        TEST[[2]] <- list(test               = test,
+                          stat               = chisq.scaled,
+                          stat.group         = stat.group,
+                          df                 = df,
+                          pvalue             = pvalue.scaled,
+                          scaling.factor     = scaling.factor,
+                          shift.parameter    = shift.parameter,
+                          trace.UGamma       = trace.UGamma,
+                          trace.UGamma4      = trace.UGamma4,
+                          trace.UGamma2      = trace.UGamma2,
+                          UGamma.eigenvalues = UGamma.eigenvalues)
 
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)

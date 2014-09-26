@@ -102,7 +102,7 @@ about the data.}
       was used. The \code{\link[stats]{AIC}} and \code{\link[stats]{BIC}}
       methods automatically work via \code{logLik()}.}
     \item{inspect}{\code{signature(object = "lavaan", what = "free")}: This
-      is a shortcut for the \code{lavInspect()} function. See
+      method is now a shortcut for the \code{lavInspect()} function. See
       \link{lavInspect} for more details.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
