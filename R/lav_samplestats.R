@@ -100,9 +100,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # FIXME: check dimension of WLS.V!!
     }
 
+    NACOV.compute <- TRUE
     if(is.null(NACOV)) {
         NACOV      <- vector("list", length=ngroups)
         NACOV.user <- FALSE
+    } else if(is.logical(NACOV)) {
+        if(!NACOV) {
+            NACOV.compute <- FALSE
+        }
+        NACOV.user <- FALSE
+        NACOV      <- vector("list", length=ngroups)
     } else {
         if(!is.list(NACOV)) {
             if(ngroups == 1L) {
@@ -283,7 +290,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # NACOV (=GAMMA)
         if(!NACOV.user) {
-            if(estimator == "ML" && !missing.flag.) {
+            if(estimator == "ML" && !missing.flag. && NACOV.compute) {
                 NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
