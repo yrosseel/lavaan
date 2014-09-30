@@ -48,7 +48,7 @@ lavInspect <- function(lavobject,
     } else if(what == "unco" || what == "unconstrained") {
         lav_object_inspect_modelmatrices(lavobject, what = "free", type="unco",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "partable") {
+    } else if(what == "partable" || what == "user") {
         lav_object_inspect_modelmatrices(lavobject, what = "free", type="partable",
             add.labels = add.labels, add.class = add.class)
     } else if(what == "se" ||
