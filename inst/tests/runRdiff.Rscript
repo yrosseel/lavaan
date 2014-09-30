@@ -1,8 +1,0 @@
-# run this with in a shell with
-# Rscript runRdiff.R
-
-# note the we should first install lavaan
-# since we are using the 'installed' version
-library(lavaan)
-tools:::testInstalledPackage(pkg="lavaan", type="tests",
-                             outDir = "/tmp")

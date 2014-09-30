@@ -1,5 +1,0 @@
-# to create the *.Rout.save files
-# run
-# R --no-save < HS.R > HS.Rout.save 2>&1
-# R --no-save < PD.R > PD.Rout.save 2>&1
-
