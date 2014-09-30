@@ -507,15 +507,19 @@ lav_data_full <- function(data          = NULL,          # data.frame
             if(length(Mp[[g]]$empty.idx) > 0L) {
                 X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
                 # remove from case.idx
-                idx <- which(case.idx[[g]] %in% Mp[[g]]$empty.idx)
-                case.idx[[g]] <- case.idx[[g]][-idx]
+                # idx <- which(case.idx[[g]] %in% Mp[[g]]$empty.idx)
+                empty.idx <- Mp[[g]]$empty.idx
+                empty.case.idx <- case.idx[[g]][empty.idx]
+                case.idx[[g]] <- case.idx[[g]][-empty.idx]
                 # remove from eXo
                 if(length(exo.idx) > 0L) {
-                    eXo[[g]] <- eXo[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                    eXo[[g]] <- eXo[[g]][-empty.idx,,drop=FALSE]
                 }
                 if(warn) {
-                    warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(Mp[[g]]$empty.idx, collapse=" "))
+                    warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(empty.case.idx, collapse=" "))
                 }
+                # give empty.idx case.idx? (for multiple groups):
+                Mp[[g]]$empty.idx <- empty.case.idx
             }
             if(warn && any(Mp[[g]]$coverage < 0.1)) {
                 warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")

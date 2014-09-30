@@ -6,7 +6,7 @@
     and plug-in p-values.}
     
 \usage{
-  \method{plot}{InformativeTesting}(x, ..., type = c"lr","ppv"), 
+  \method{plot}{InformativeTesting}(x, ..., type = c("lr","ppv"), 
        main = "main", xlab = "xlabel",
        ylab = "Frequency", freq = TRUE, breaks = 15, cex.main = 1, 
        cex.lab = 1, cex.axis = 1, col = "grey", border = par("fg"), 

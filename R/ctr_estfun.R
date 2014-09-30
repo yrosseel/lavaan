@@ -26,8 +26,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   ## number variables/sample size
   ntab <- unlist(lavsamplestats@nobs)
   ## change in 0.5-17: we keep the 'empty cases'
-  ntot <- ( lavsamplestats@ntotal + 
-           length(sapply(object@Data@Mp, "[[", "empty.idx")) )
+  ##                   and 'fill' in the scores at their 'case.idx'
+  ##                   later, we remove the 'empty rows'
+  ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
 
   Score.mat <- matrix(NA, ntot, length(coef(object)))
   
@@ -133,6 +134,13 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
       Score.mat[wi,] <- (-1/ntot) * Score.mat[wi,]
     }
   } # g
+
+  # handle empty rows
+  empty.idx <- which( apply(Score.mat, 1L, 
+                          function(x) sum(is.na(x))) == ncol(Score.mat) )
+  if(length(empty.idx) > 0L) {
+      Score.mat <- Score.mat[-empty.idx,,drop=FALSE]
+  }
   
   # provide column names
   colnames(Score.mat) <- names(coef(object))
