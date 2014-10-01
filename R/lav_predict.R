@@ -141,12 +141,26 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
     # method
     method <- tolower(method)
 
+    # alias
+    if(method == "regression") {
+        method <- "ebm"
+    }
+
     # normal case?
-    if(all(lavdata@ov$type == "numeric") && method == "ebm") {
-        out <- lav_predict_eta_normal(lavobject = lavobject,
-                   lavmodel = lavmodel, lavdata = lavdata, 
-                   lavsamplestats = lavsamplestats,
-                   data.obs = data.obs, eXo = eXo)
+    if(all(lavdata@ov$type == "numeric")) {
+        if(method == "ebm") {
+            out <- lav_predict_eta_normal(lavobject = lavobject,
+                       lavmodel = lavmodel, lavdata = lavdata, 
+                       lavsamplestats = lavsamplestats,
+                       data.obs = data.obs, eXo = eXo)
+        } else if(method == "bartlett" || method == "bartlet") {
+            out <- lav_predict_eta_bartlett(lavobject = lavobject,
+                       lavmodel = lavmodel, lavdata = lavdata,
+                       lavsamplestats = lavsamplestats,
+                       data.obs = data.obs, eXo = eXo)
+        } else {
+            stop("method ", method, " not supported yet for numeric only data")
+        }
     } else {
         out <- lav_predict_eta_ebm(lavobject = lavobject,
                    lavmodel = lavmodel, lavdata = lavdata,
@@ -200,7 +214,67 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         }
 
         # factor score coefficient matrix 'C'
-        FSC = VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]]
+        FSC <- VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]]
+
+        RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
+        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
+
+        # remove dummy lv's
+        lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                          lavmodel@ov.x.dummy.lv.idx[[g]])
+        if(length(lv.dummy.idx) > 0L) {
+            FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        }
+
+        FS[[g]] <- FS.g
+    }
+
+    FS
+}
+
+# factor scores - normal case - Bartlett method
+# NOTE: this is the classic 'Bartlett' method; for the linear/continuous 
+#       case, this is equivalent to 'ML'
+lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
+                                     # sub objects
+                                     lavmodel = NULL, lavdata = NULL, 
+                                     lavsamplestats = NULL,
+                                     # optional new data
+                                     data.obs = NULL, eXo = NULL) { 
+
+    # full object?
+    if(inherits(lavobject, "lavaan")) {
+        lavmodel       <- lavobject@Model
+        lavdata        <- lavobject@Data
+        lavsamplestats <- lavobject@SampleStats
+    } else {
+        stopifnot(!is.null(lavmodel), !is.null(lavdata),
+                  !is.null(lavsamplestats))
+    }
+
+    if(is.null(data.obs)) {
+        data.obs <- lavdata@X
+    }
+    # eXo not needed
+
+    LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+    THETA  <- computeTHETA(lavmodel = lavmodel)
+    THETA.inv <- lapply(THETA, solve)
+
+    EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+    EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+     
+    FS <- vector("list", length=lavdata@ngroups)
+    for(g in 1:lavdata@ngroups) {
+        nfac <- length(EETA[[g]])
+        if(nfac == 0L) {
+            FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
+            next
+        }
+
+        # factor score coefficient matrix 'C'
+        FSC = ( solve(t(LAMBDA[[g]]) %*% THETA.inv[[g]] %*% LAMBDA[[g]]) %*%
+                t(LAMBDA[[g]]) %*% THETA.inv[[g]] )
 
         RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
