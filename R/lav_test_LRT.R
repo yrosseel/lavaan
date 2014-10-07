@@ -83,7 +83,12 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
 
     # here come the checks
     if(TRUE) {
-        # 1. same data? we check the covariance matrices of the first group
+        # 1. same set of observed variables?
+        ov.names <- lapply(mods, lavNames)
+        OV <- ov.names[[1L]] # the observed variable names of the first model
+        if(!all(sapply(ov.names, function(x) identical(x, OV)))) {
+            warning("lavaan WARNING: some models are based on a different set of observed variables")
+        }
         ## wow FIXME: we may need to reorder the rows/columns first!!
         #COVS <- lapply(mods, function(x) slot(slot(x, "Sample"), "cov")[[1]])
         #if(!all(sapply(COVS, all.equal, COVS[[1]]))) {
@@ -94,6 +99,10 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
         # TODO!
         
         # 3. all meanstructure?
+        mean.structure <- sapply(mods, inspect, "meanstructure")
+        if(!all(mean.structure)) {
+            warning("lavaan WARNING: not all models have a meanstructure")
+        }
     }
 
     mods.scaled <- unlist( lapply(mods, function(x) {

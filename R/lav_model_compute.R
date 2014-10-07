@@ -205,8 +205,6 @@ computeGW <- function(lavmodel = NULL, GLIST=NULL) {
 #  - same as diag(Sigma.hat) if all Y are continuous)
 #  - 1.0 (or delta^2) if categorical
 #  - if also Gamma, cov.x is used (only if categorical)
-
-# only for semTools compatibility
 computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                       samplestats = NULL) {
     # state or final?
@@ -231,11 +229,9 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         cov.x <- lavsamplestats@cov.x[[g]]
-        num.idx <- lavmodel@num.idx[[g]]
 
         if(representation == "LISREL") {
-            VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x,
-                                     num.idx = num.idx)
+            VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x)
         } else {
             stop("only representation LISREL has been implemented for now")
         }

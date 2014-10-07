@@ -200,9 +200,14 @@ lavInspect <- function(lavobject,
         lav_object_inspect_empty_idx(lavobject,
             drop.list.single.group = drop.list.single.group)
 
-    #### convergence ####
+    #### convergence, meanstructure, categorical ####
     } else if(what == "converged") {
         lavobject@Fit@converged
+    } else if(what == "meanstructure") {
+        lavobject@Model@meanstructure
+    } else if(what == "categorical") {
+        lavobject@Model@categorical
+    
 
 
     #### wls.est - wls.obs - wls.v ####
@@ -742,7 +747,6 @@ lav_object_inspect_vy <- function(lavobject,
     #  - same as diag(Sigma.hat) if all Y are continuous)
     #  - 1.0 (or delta^2) if categorical
     #  - if also Gamma, cov.x is used (only if categorical)
-    # only for semTools?
 
     OUT <- computeVY(lavmodel = lavobject@Model, GLIST = NULL, 
                      lavsamplestats = lavobject@SampleStats)
@@ -751,7 +755,11 @@ lav_object_inspect_vy <- function(lavobject,
     # labels + class
     for(g in 1:G) {
         if(add.labels && length(OUT[[g]]) > 0L) {
-            names(OUT[[g]]) <- lavobject@pta$vnames$ov.nox[[g]]
+            if(lavobject@Model@categorical) {
+                 names(OUT[[g]]) <- lavobject@pta$vnames$ov.nox[[g]]
+            } else {
+                 names(OUT[[g]]) <- lavobject@pta$vnames$ov[[g]]
+            }
         }
         if(add.class) {
             class(OUT[[g]]) <- c("lavaan.vector", "numeric")

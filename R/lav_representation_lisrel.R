@@ -295,7 +295,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     REP
 }
 
-# compute V(Y*|x_i)
+# compute V(Y*|x_i) == model-implied covariance matrix
 # this equals V(Y*) if no (explicit) eXo no GAMMA
 computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL, 
                                                         delta = TRUE) {
@@ -326,55 +326,23 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
 }
 
 # compute the *un*conditional variance of y: V(Y) or V(Y*)
-computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL, num.idx=NULL) {
+# 'unconditional' model-implied variances
+#  - same as diag(Sigma.hat) if all Y are continuous
+#  - 1.0 (or delta^2) if categorical
+#  - if also Gamma, cov.x is used (only if categorical)
+#    only in THIS case, VY is different from diag(VYx)
+#
+# V(Y) = LAMBDA V(ETA) t(LAMBDA) + THETA
+computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL) {
 
-    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
-    PSI    <- MLIST$psi
+    LAMBDA <- MLIST$lambda
     THETA  <- MLIST$theta
-    BETA   <- MLIST$beta
-
-    # beta?
-    if(is.null(BETA)) {
-        LAMBDA..IB.inv <- LAMBDA
-    } else {
-        IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
-        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
-    }
-
-    SY1 <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv)
-
-    # if TAU, we need to adjust the diagonal of THETA
-    TAU <- MLIST$tau
-    if(!is.null(TAU)) {
-        if(!is.null(MLIST$delta)) {
-            DELTA.inv2 <- 1/(MLIST$delta[,1L]*MLIST$delta[,1L]) 
-        } else {
-            DELTA.inv2 <- rep(1, nvar)
-        }    
-        THETA.diag <- DELTA.inv2 - diag(SY1)
-        # but not for continuous 
-        if(length(num.idx) > 0L)
-            THETA.diag[num.idx] <- diag(THETA)[num.idx]
-        # replace diagonal of THETA
-        diag(THETA) <- THETA.diag
-    }
-
-    # compute Sigma Hat
-    SY <- SY1 + THETA
-
-    # if GAMMA, also x part
-    GAMMA <- MLIST$gamma
-    if(!is.null(GAMMA)) {
-        stopifnot(!is.null(cov.x))
-        LAMBDA..IB.inv..GAMMA <- LAMBDA..IB.inv %*% GAMMA
-        SX <- tcrossprod(LAMBDA..IB.inv..GAMMA %*% cov.x, LAMBDA..IB.inv..GAMMA)
-        SYX <- SX + SY
-    } else {
-        SYX <- SY
-    }
+ 
+    VETA <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+    VY <- tcrossprod(LAMBDA %*% VETA, LAMBDA) + THETA
 
     # variances only
-    diag(SYX)
+    diag(VY)
 }
 
 # compute MuHat for a single group -- only for the continuous case (no eXo)
