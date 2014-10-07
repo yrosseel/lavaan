@@ -407,13 +407,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
-        #lavpartable$start <- lavaanStart # not yet, breaks semTools
-        #print(as.data.frame(lavpartable))
+        lavpartable$start <- lavaanStart # since semTools 0.4-6 (lav 0.5-18)
 
         # 5. construct internal model (S4) representation
         lavmodel <- 
             lav_model(lavpartable      = lavpartable,
-                      start            = lavaanStart, # stay, for semTools
                       representation   = lavoptions$representation,
                       th.idx           = lavsamplestats@th.idx,
                       parameterization = lavoptions$parameterization,
@@ -744,7 +742,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 9. collect information about model fit (S4)
     lavfit <- lav_model_fit(lavpartable = lavpartable, 
-                            start       = lavaanStart,
                             lavmodel    = lavmodel,
                             x           = x, 
                             VCOV        = VCOV,

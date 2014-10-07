@@ -1,5 +1,4 @@
 lav_model_fit <- function(lavpartable = NULL,
-                          start       = NULL,
                           lavmodel    = NULL, 
                           x           = NULL, 
                           VCOV        = NULL, 
@@ -90,8 +89,7 @@ lav_model_fit <- function(lavpartable = NULL,
         npar       = max(lavpartable$free),
         x          = x.copy,
         partrace   = PARTRACE,
-        # start      = lavpartable$start, # not yet, break semTools
-        start      = start,
+        start      = lavpartable$start, # needed?
         est        = est,
         se         = se,
         fx         = fx,
