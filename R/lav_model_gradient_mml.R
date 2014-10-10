@@ -174,7 +174,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         }
 
         # again, compute yhat for this node (eta)
-        yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,
+        yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
                     ETA = eta, sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
                     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,

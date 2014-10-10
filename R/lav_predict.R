@@ -663,10 +663,10 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
 
     # linear predictor for all items
     YHAT <-
-        computeYHATetax.LISREL(MLIST             = MLIST,
-                              eXo               = x.i,
-                              ETA               = eta.i,
-                              sample.mean       = lavsamplestats@mean[[g]],
+        computeEYetax.LISREL(MLIST             = MLIST,
+                             eXo               = x.i,
+                             ETA               = eta.i,
+                             sample.mean       = lavsamplestats@mean[[g]],
                             ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                             ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                             ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],

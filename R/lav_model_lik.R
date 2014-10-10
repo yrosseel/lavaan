@@ -92,7 +92,7 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         }
 
         # compute yhat for this node (eta)
-        yhat <- computeYHATetax.LISREL(MLIST = MLIST, eXo = eXo,
+        yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
                     ETA = eta, sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                     ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
