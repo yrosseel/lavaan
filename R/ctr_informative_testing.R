@@ -201,7 +201,7 @@ plot.InformativeTesting <- function(x, ...,
       plot(plot, freq = freq, main = main.lrt[i], xlab = xlab.lrt, ylab = ylab, 
            cex.axis = cex.axis, cex.main = cex.main, cex.lab = cex.lab, 
            col = col, border = border, axes = FALSE, xaxt = "n", ...) 
-      axis(side = 1, at = 0:max(lrt[,i]))
+      axis(side = 1)
       axis(side = 2)
       box(lty = 1, col = "black")
       
