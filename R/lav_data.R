@@ -148,6 +148,11 @@ lavData <- function(data          = NULL,          # data.frame
         ov$nobs <- rep(sample.nobs, nvar)
         ov$type <- rep("numeric", nvar)
 
+        # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
+        if(std.ov) {
+            warning("lavaan WARNING: std.ov argument is ignored if only sample statistics are provided.")
+        }
+
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "moment",
