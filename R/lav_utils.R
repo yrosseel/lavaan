@@ -62,8 +62,8 @@ char2num <- function(s = '') {
 
 # create full matrix based on lower.tri or upper.tri elements; add names
 # always ROW-WISE!!
-getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
-                   names=paste("V", 1:nvar, sep="")) {
+getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+                   names = paste("V", 1:nvar, sep="")) {
 
     # check x and sds
     if(is.character(x)) x <- char2num(x)
@@ -71,9 +71,9 @@ getCov <- function(x, lower=TRUE, diagonal=TRUE, sds=NULL,
    
     nels <- length(x)
     if(lower) {
-        COV <- lower2full(x, diagonal=diagonal)
+        COV <- lav_matrix_lower2full(x, diagonal = diagonal)
     } else {
-        COV <- upper2full(x, diagonal=diagonal)
+        COV <- lav_matrix_upper2full(x, diagonal = diagonal)
     }
     nvar <- ncol(COV)
 

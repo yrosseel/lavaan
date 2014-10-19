@@ -65,13 +65,13 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
             dx.Mu <- -1 * mean.diff %*% Sigma.inv
 
             dx.Sigma <- t(matrix(apply(mean.diff, 1L,
-               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
+               function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
 
             scores.H1 <- cbind(dx.Mu, dx.Sigma)
         } else {
             mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
             dx.Sigma <- t(matrix(apply(mean.diff, 1L,
-               function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
+               function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
             scores.H1 <- dx.Sigma
         }
         ## FIXME? Seems like we would need group.w even in the
@@ -117,7 +117,7 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
         ## Scores for missing pattern p within group g
         score.mu[pat.idx==p,var.idx] <- -1 * mean.diff %*% Sigma.inv
         score.sigma[pat.idx==p,Sigma.idx] <- t(matrix(apply(mean.diff, 1L,
-          function(x) vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx,drop = FALSE]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
+          function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx,drop = FALSE]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
 
       }
 

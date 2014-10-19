@@ -168,10 +168,10 @@ hessian.MVN.saturated <- function(Sigma=NULL, Mu=NULL,
     #    param2x <- function(Sigma, Mu) {
     #        if(meanstructure) {
     #            x1 <- as.numeric(Mu)
-    #            x2 <- vech(Sigma)
+    #            x2 <- lav_matrix_vech(Sigma)
     #            x <- c(x1, x2)
     #        } else {
-    #            x <- vech(Sigma)
+    #            x <- lav_matrix_vech(Sigma)
     #        }
     #        x
     #    }
@@ -199,18 +199,18 @@ hessian.MVN.saturated <- function(Sigma=NULL, Mu=NULL,
             H11 <- inv.chol(Sigma, logdet=FALSE)
 
             tmp <- t(diff) %*% Sigma.inv
-            H12 <- D.post(Sigma.inv %x% tmp)
+            H12 <- lav_matrix_duplication_post(Sigma.inv %x% tmp)
             H21 <- t(H12)
 
             tmp <- (Sigma.inv %*% TT %*% Sigma.inv) - 0.5*Sigma.inv
-            H22 <- D.pre.post(Sigma.inv %x% tmp)
+            H22 <- lav_matrix_duplication_pre_post(Sigma.inv %x% tmp)
 
             H <- rbind( cbind(H11, H12),
                         cbind(H21, H22) )
         } else {
            TT <- data.cov
            tmp <- (Sigma.inv %*% TT %*% Sigma.inv) - 0.5*Sigma.inv
-           H <- D.pre.post(Sigma.inv %x% tmp)
+           H <- lav_matrix_duplication_pre_post(Sigma.inv %x% tmp)
         }
     # }
 

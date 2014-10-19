@@ -27,7 +27,7 @@ lav_gauss_hermite_xw <- function(n = 100L, revert = FALSE) {
     # construct symmetric, tridiagonal Jacobi matrix
     # diagonal = 0, -1/+1 diagonal is sqrt(1:(n-1)/2)
     u <-  sqrt(1:(n-1)/2) # upper diagonal of J
-    Jn <- matrix(0, n, n); didx <- diag.idx(n)
+    Jn <- matrix(0, n, n); didx <- lav_matrix_diag_idx(n)
     Jn[(didx+1)[-n]] <- u
     #Jn[(didx-1)[-1]] <- u # only lower matrix is used anyway
 

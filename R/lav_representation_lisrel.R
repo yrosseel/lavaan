@@ -910,7 +910,7 @@ computeTHETA.LISREL <- function(MLIST=NULL,
 
     if(!is.null(BETA)) {
         tmp <- -BETA
-        tmp[diag.idx(nr)] <- 1
+        tmp[lav_matrix_diag_idx(nr)] <- 1
         IB.inv <- solve(tmp)
     } else {
         IB.inv <- diag(nr)
@@ -1487,7 +1487,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     PSI    <- MLIST$psi
  
     # only lower.tri part of sigma (not same order as elimination matrix?)
-    v.idx <- vech.idx( nvar  ); pstar <- nvar*(nvar+1)/2
+    v.idx <- lav_matrix_vech_idx( nvar ); pstar <- nvar*(nvar+1)/2
 
     # shortcut for gamma, nu, alpha and tau: empty matrix
     if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw") {
@@ -1512,7 +1512,7 @@ derivative.sigma.LISREL <- function(m="lambda",
 
     # pre
     if(m == "lambda" || m == "beta" || m == "delta") 
-        IK <- diag(nvar^2) + commutationMatrix(nvar, nvar)
+        IK <- diag(nvar^2) + lav_matrix_commutation(nvar, nvar)
     if(m == "lambda" || m == "beta") {
         IB.inv..PSI..tIB.inv..tLAMBDA <-
             IB.inv %*% PSI %*% t(IB.inv) %*% t(LAMBDA)
@@ -1529,7 +1529,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     } else if(m == "beta") {
         DX <- IK %*% ( t(IB.inv..PSI..tIB.inv..tLAMBDA) %x% LAMBDA..IB.inv )
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,diag.idx(nfac)] <- 0.0
+        DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         if(delta.flag) 
              DX <- DX * as.numeric(DELTA %x% DELTA)
     } else if(m == "psi") {
@@ -1542,8 +1542,8 @@ derivative.sigma.LISREL <- function(m="lambda",
         #imatrix <- matrix(1:nfac^2,nfac,nfac)
         #lower.idx <- imatrix[lower.tri(imatrix, diag=FALSE)]
         #upper.idx <- imatrix[upper.tri(imatrix, diag=FALSE)]
-        lower.idx <- vech.idx(nfac, diagonal=FALSE)
-        upper.idx <- vechru.idx(nfac, diagonal=FALSE)
+        lower.idx <- lav_matrix_vech_idx(nfac, diagonal = FALSE)
+        upper.idx <- lav_matrix_vechru_idx(nfac, diagonal = FALSE)
         # NOTE YR: upper.idx (see 3 lines up) is wrong in MH patch!
         # fixed again 13/06/2012 after bug report of Mijke Rhemtulla.
 
@@ -1562,8 +1562,8 @@ derivative.sigma.LISREL <- function(m="lambda",
         DD <- diag(DELTA[,1], nvar, nvar)
         DD.Omega <- (DD %*% Omega)
         A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
-        DX <- A[,diag.idx(nvar),drop=FALSE] + 
-              B[,diag.idx(nvar),drop=FALSE]
+        DX <- A[,lav_matrix_diag_idx(nvar),drop=FALSE] + 
+              B[,lav_matrix_diag_idx(nvar),drop=FALSE]
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -1608,7 +1608,7 @@ derivative.mu.LISREL <- function(m="alpha",
     } else if(m == "beta") {
         DX <- t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,diag.idx(nfac)] <- 0.0
+        DX[,lav_matrix_diag_idx(nfac)] <- 0.0
     } else if(m == "alpha") {
         DX <- LAMBDA %*% IB.inv
     } else {
@@ -1691,7 +1691,7 @@ derivative.th.LISREL <- function(m="tau",
     } else if(m == "beta") {
         DX <- (-1) * t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,diag.idx(nfac)] <- 0.0
+        DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         DX <- K_nu %*% DX
         if(delta.flag)
             DX <- DX * as.numeric(K_nu %*% DELTA)
@@ -1750,7 +1750,7 @@ derivative.pi.LISREL <- function(m="lambda",
     } else if(m == "beta") {
         DX <- t(IB.inv %*% GAMMA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
-        DX[,diag.idx(nfac)] <- 0.0
+        DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         if(delta.flag)
             DX <- DX * DELTA.diag
     } else if(m == "gamma") {
@@ -1813,7 +1813,7 @@ derivative.psi.LISREL <- function(m="psi",
                                   MLIST=NULL) {
 
     PSI <- MLIST$psi; nfac <- nrow(PSI)
-    v.idx <- vech.idx( nfac  )
+    v.idx <- lav_matrix_vech_idx( nfac )
 
     # shortcut for empty matrices
     if(m != "psi") {
@@ -1835,7 +1835,7 @@ derivative.theta.LISREL <- function(m="theta",
                                  MLIST=NULL) {
 
     THETA <- MLIST$theta; nvar <- nrow(THETA)
-    v.idx <- vech.idx( nvar)
+    v.idx <- lav_matrix_vech_idx(nvar)
 
     # shortcut for empty matrices
     if(m != "theta") {
@@ -1954,7 +1954,7 @@ derivative.alpha.LISREL <- function(m="alpha",
 }
 
 # MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
-# vech.idx <- lavaan:::vech.idx; vechru.idx <- lavaan:::vechru.idx
+# lav_matrix_vech_idx <- lavaan:::lav_matrix_vech_idx; lav_matrix_vechru_idx <- lavaan:::lav_matrix_vechru_idx
 # vec <- lavaan:::vec; lav_func_jacobian_complex <- lavaan:::lav_func_jacobian_complex
 # computeSigmaHat.LISREL <- lavaan:::computeSigmaHat.LISREL
 # setDeltaElements.LISREL <- lavaan:::setDeltaElements.LISREL
@@ -2014,10 +2014,10 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         diag(MLIST$beta) <- 0.0
         diag(MLIST$theta) <- diag(MLIST$theta)^2 * 10 
         diag(MLIST$psi)   <- diag(MLIST$psi)^2 * 10
-        MLIST$psi[ vechru.idx(nfac) ] <-  
-            MLIST$psi[ vech.idx(nfac) ]
-        MLIST$theta[ vechru.idx(nvar) ] <-  
-            MLIST$theta[ vech.idx(nvar) ]
+        MLIST$psi[ lav_matrix_vechru_idx(nfac) ] <-  
+            MLIST$psi[ lav_matrix_vech_idx(nfac) ]
+        MLIST$theta[ lav_matrix_vechru_idx(nvar) ] <-  
+            MLIST$theta[ lav_matrix_vech_idx(nvar) ]
         if(delta) MLIST$delta[,] <- abs(MLIST$delta)*10
     } else {
         nvar <- nrow(MLIST$lambda)
@@ -2026,20 +2026,20 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     compute.sigma <- function(x, mm="lambda", MLIST=NULL) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
-            mlist[[mm]] <- vech.reverse(x)
+            mlist[[mm]] <- lav_matrix_vech_reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
         if(theta) {
             mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
         }
-        vech(computeSigmaHat.LISREL(mlist))
+        lav_matrix_vech(computeSigmaHat.LISREL(mlist))
     }
 
     compute.mu <- function(x, mm="lambda", MLIST=NULL) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
-            mlist[[mm]] <- vech.reverse(x)
+            mlist[[mm]] <- lav_matrix_vech_reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
@@ -2052,7 +2052,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     compute.th2 <- function(x, mm="tau", MLIST=NULL, th.idx) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
-            mlist[[mm]] <- vech.reverse(x)
+            mlist[[mm]] <- lav_matrix_vech_reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
@@ -2065,7 +2065,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     compute.pi <- function(x, mm="lambda", MLIST=NULL) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
-            mlist[[mm]] <- vech.reverse(x)
+            mlist[[mm]] <- lav_matrix_vech_reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
@@ -2078,7 +2078,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     compute.gw <- function(x, mm="gw", MLIST=NULL) {
         mlist <- MLIST
         if(mm %in% c("psi", "theta")) {
-            mlist[[mm]] <- vech.reverse(x)
+            mlist[[mm]] <- lav_matrix_vech_reverse(x)
         } else {
             mlist[[mm]][,] <- x
         }
@@ -2095,9 +2095,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
     for(mm in names(MLIST)) {
         if(mm %in% c("psi", "theta")) {
-            x <- vech(MLIST[[mm]])
+            x <- lav_matrix_vech(MLIST[[mm]])
         } else {
-            x <- vec(MLIST[[mm]])
+            x <- lav_matrix_vec(MLIST[[mm]])
         }
         if(mm == "delta" && theta) next
         if(debug) {
@@ -2110,7 +2110,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                        MLIST=MLIST, delta = !theta)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+            idx <- lav_matrix_vechru_idx(sqrt(ncol(DX2)), diagonal=FALSE)
             if(length(idx) > 0L) DX2 <- DX2[,-idx]
         }
         if(theta) {
@@ -2138,7 +2138,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
-            idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+            idx <- lav_matrix_vechru_idx(sqrt(ncol(DX2)), diagonal = FALSE)
             if(length(idx) > 0L) DX2 <- DX2[,-idx]
         }
         cat("[MU   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
@@ -2163,8 +2163,8 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                 dxSigma <- 
                     derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
                                             MLIST=MLIST, delta = !theta)
-                var.idx <- which(!vech.idx(nvar) %in% 
-                                  vech.idx(nvar, diagonal=FALSE))
+                var.idx <- which(!lav_matrix_vech_idx(nvar) %in% 
+                                  lav_matrix_vech_idx(nvar, diagonal = FALSE))
                 sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
                 dsigma <- diag(sigma.hat)
                 # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
@@ -2184,7 +2184,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
             }
             if(mm %in% c("psi","theta")) {
                 # remove duplicated columns of symmetric matrices 
-                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                idx <- lav_matrix_vechru_idx(sqrt(ncol(DX2)), diagonal = FALSE)
                 if(length(idx) > 0L) DX2 <- DX2[,-idx]
             }
             cat("[TH   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",
@@ -2205,7 +2205,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                         MLIST=MLIST)
             if(mm %in% c("psi","theta")) {
                 # remove duplicated columns of symmetric matrices 
-                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                idx <- lav_matrix_vechru_idx(sqrt(ncol(DX2)), diagonal = FALSE)
                 if(length(idx) > 0L) DX2 <- DX2[,-idx]
             }
             if(theta) {
@@ -2215,11 +2215,11 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                             MLIST=MLIST, delta = !theta)
                 if(mm %in% c("psi","theta")) {
                     # remove duplicated columns of symmetric matrices 
-                    idx <- vechru.idx(sqrt(ncol(dxSigma)), diagonal=FALSE)
+                    idx <- lav_matrix_vechru_idx(sqrt(ncol(dxSigma)), diagonal = FALSE)
                     if(length(idx) > 0L) dxSigma <- dxSigma[,-idx]
                 }
-                var.idx <- which(!vech.idx(nvar) %in% 
-                                  vech.idx(nvar, diagonal=FALSE))
+                var.idx <- which(!lav_matrix_vech_idx(nvar) %in% 
+                                  lav_matrix_vech_idx(nvar, diagonal = FALSE))
                 sigma.hat <- computeSigmaHat.LISREL(MLIST=MLIST, delta=FALSE)
                 dsigma <- diag(sigma.hat)
                 # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
@@ -2256,7 +2256,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                     MLIST=MLIST)
             if(mm %in% c("psi","theta")) {
                 # remove duplicated columns of symmetric matrices 
-                idx <- vechru.idx(sqrt(ncol(DX2)), diagonal=FALSE)
+                idx <- lav_matrix_vechru_idx(sqrt(ncol(DX2)), diagonal = FALSE)
                 if(length(idx) > 0L) DX2 <- DX2[,-idx]
             }
             cat("[GW   ] mm = ", sprintf("%-8s:", mm), "sum delta = ",

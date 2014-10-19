@@ -205,7 +205,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
                   Sigma.inv))
                 diag(dx.Sigma) <- diag(dx.Sigma)/2
                 # in lavaan: first the means, then the covariances
-                dx <- c(dx.Mu, vech(dx.Sigma))
+                dx <- c(dx.Mu, lav_matrix_vech(dx.Sigma))
                 Bj <- Bj + tcrossprod(dx)
             }
         }
@@ -214,8 +214,8 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
     A.beta <- NULL
     B.beta <- NULL
     if (Abeta) {
-        Abeta22 <- D.pre.post(Aj22)
-        Abeta12 <- D.post(Aj12); Abeta21 <- t(Abeta12)
+        Abeta22 <- lav_matrix_duplication_pre_post(Aj22)
+        Abeta12 <- lav_matrix_duplication_post(Aj12); Abeta21 <- t(Abeta12)
         Abeta11 <- Aj11
         A.beta  <- 1/ntotal * rbind( cbind(Abeta11, Abeta12), 
                                      cbind(Abeta21, Abeta22)  )
@@ -254,7 +254,7 @@ compute.Abeta.complete <- function(Sigma.hat=NULL, meanstructure=TRUE) {
         Sigma.hat.inv <- inv.chol(Sigma.hat)
     }
 
-    A <- 0.5 * D.pre.post(Sigma.hat.inv %x% Sigma.hat.inv)
+    A <- 0.5 * lav_matrix_duplication_pre_post(Sigma.hat.inv %x% Sigma.hat.inv)
 
     if(meanstructure) {
         A11 <- Sigma.hat.inv
@@ -288,7 +288,7 @@ compute.A1.sample <- function(lavsamplestats, group=1L, meanstructure=TRUE,
             sample.mean <- sample.mean[idx]
         }
 
-        A1 <- 0.5 * D.pre.post(sample.icov %x% sample.icov)
+        A1 <- 0.5 * lav_matrix_duplication_pre_post(sample.icov %x% sample.icov)
 
         if(meanstructure) {
             A11 <- sample.icov
@@ -350,7 +350,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
     diff.mean <- as.matrix(sample.mean - Mu.hat)
     TT <- sample.cov + tcrossprod(diff.mean)
     Sigma.hat.inv <- attr(Sigma.hat, "inv")
-    W <- 0.5 * D.pre.post(Sigma.hat.inv %x% Sigma.hat.inv)
+    W <- 0.5 * lav_matrix_duplication_pre_post(Sigma.hat.inv %x% Sigma.hat.inv)
 
     if(meanstructure) {
         G11 <- TT
@@ -361,7 +361,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
         B12 <- Sigma.hat.inv %*% G12 %*% W
         B21 <- t(B12)
 
-        diff <- tcrossprod(vech(TT) - vech(Sigma.hat))
+        diff <- tcrossprod(lav_matrix_vech(TT) - lav_matrix_vech(Sigma.hat))
         G0 <- G22 + diff
 
         B22 <- W %*% G0 %*% W
@@ -373,7 +373,7 @@ compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
         # to meanstructure=TRUE and is probably not correct?
         # not used for now
         G <- compute.Gamma1(X)
-        diff <- tcrossprod(vech(sample.cov) - vech(Sigma.hat))
+        diff <- tcrossprod(lav_matrix_vech(sample.cov) - lav_matrix_vech(Sigma.hat))
         G0 <- G + diff
         B1 <- W %*% G0 %*% W
     }

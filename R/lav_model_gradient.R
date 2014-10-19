@@ -295,7 +295,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 #   compute.moments <- function(x) {
 #       GLIST <- lav_model_x2GLIST(lavmodel = NULL, x=x, type="free")
 #       Sigma.hat <- computeSigmaHat(lavmodel = NULL, GLIST = GLIST)
-#        S.vec <- vech(Sigma.hat[[g]])
+#        S.vec <- lav_matrix_vech(Sigma.hat[[g]])
 #        if(lavmodel@meanstructure) {
 #            Mu.hat <- computeMuHat(lavmodel = NULL, GLIST=GLIST)
 #            out <- c(Mu.hat[[g]], S.vec)
@@ -414,9 +414,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
             dsigma <- diag(sigma.hat)
             # dcor/dcov for sigma
             R <- lav_deriv_cov2cor(sigma.hat, num.idx = lavmodel@num.idx[[g]])
-
-            theta.var.idx <- which(!vech.idx(nvar[g]) %in%
-                                    vech.idx(nvar[g], diagonal=FALSE))
+            theta.var.idx <- lav_matrix_diagh_idx(nvar[g])
         }
 
         for(mm in mm.in.group) {
@@ -440,8 +438,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                 
                 if(categorical) {
                     # reorder: first variances (of numeric), then covariances
-                    cov.idx  <- vech.idx(nvar[g])
-                    covd.idx <- vech.idx(nvar[g], diagonal=FALSE)
+                    cov.idx  <- lav_matrix_vech_idx(nvar[g])
+                    covd.idx <- lav_matrix_vech_idx(nvar[g], diagonal = FALSE)
 
                     var.idx <- which(is.na(match(cov.idx, 
                                                  covd.idx)))[num.idx[[g]]]
@@ -756,10 +754,10 @@ lav_model_gradient_DD <- function(lavmodel, GLIST = NULL, group = 1L) {
     nfac <- ncol(MLIST$lambda) - length(lv.dummy.idx)
 
     # DD$theta
-    theta.idx <- diagh.idx(nvar)
+    theta.idx <- lav_matrix_diagh_idx(nvar)
     DD$theta <-  Delta.theta[theta.idx,,drop=FALSE]
     if(length(ov.dummy.idx) > 0L) {
-        psi.idx <- diagh.idx( ncol(MLIST$psi)   )[lv.dummy.idx]
+        psi.idx <- lav_matrix_diagh_idx( ncol(MLIST$psi) )[lv.dummy.idx]
         DD$theta[ov.dummy.idx,] <- Delta.psi[psi.idx,,drop=FALSE]
     }
     # num only? FIXME or just all of them?

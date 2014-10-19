@@ -159,8 +159,8 @@ bootstrap.internal <- function(object          = NULL,
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
         for(g in 1:lavsamplestats@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(lavsamplestats@icov[[g]])
+            sigma.sqrt <- lav_matrix_symmetric_sqrt(Sigma.hat[[g]])
+            S.inv.sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats@icov[[g]])
 
             # center (needed???)
             X <- scale(lavdata@X[[g]], center=TRUE, scale=FALSE)
@@ -222,8 +222,8 @@ bootstrap.internal <- function(object          = NULL,
             }
 
             # Transform the data (p. 263)
-            S.a.sqrt <- sqrtSymmetricMatrix(S.a)
-            S.inv.sqrt <- sqrtSymmetricMatrix(lavsamplestats@icov[[g]])
+            S.a.sqrt <- lav_matrix_symmetric_sqrt(S.a)
+            S.inv.sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats@icov[[g]])
 
             X <- lavdata@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            

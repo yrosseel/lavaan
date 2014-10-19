@@ -760,7 +760,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                       nobs = rep.int(sum(FREQ), ncell),
                        row = rep.int(seq_len(ncol), times=nrow),
                        col = rep(seq_len(nrow), each=ncol),
-                      obs.freq = vec(FREQ) # col by col!
+                      obs.freq = lav_matrix_vec(FREQ) # col by col!
                     )
             })
     }
@@ -826,14 +826,14 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
                                           th.rho.vec=LONG2)
         } else {
             PI.group <- integer(0)
-            # order! first i, then j, vec(table)!
+            # order! first i, then j, lav_matrix_vec(table)!
             for(i in seq_len(nvar-1L)) {
                 for(j in (i+1L):nvar) {
                     if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                         PI.table <- pc_PI(rho   = Sigmahat[i,j],
                                           th.y1 = TH[[g]][ th.idx[[g]] == i ],
                                           th.y2 = TH[[g]][ th.idx[[g]] == j ])
-                        PI.group <- c(PI.group, vec(PI.table))
+                        PI.group <- c(PI.group, lav_matrix_vec(PI.table))
                     }
                 }
             }
@@ -896,14 +896,14 @@ lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL,
         ov.types[ord.idx] <- "ordered"
 
         PI.group <- integer(0)
-        # order! first i, then j, vec(table)!
+        # order! first i, then j, lav_matrix_vec(table)!
         for(i in seq_len(nvar-1L)) {
             for(j in (i+1L):nvar) {
                 if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                     PI.table <- pc_PI(rho   = Sigmahat[i,j],
                                       th.y1 = TH[[g]][ th.idx == i ],
                                       th.y2 = TH[[g]][ th.idx == j ])
-                    PI.group <- c(PI.group, vec(PI.table))
+                    PI.group <- c(PI.group, lav_matrix_vec(PI.table))
                 }
             }
         }

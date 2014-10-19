@@ -10,7 +10,7 @@ prelis.read.cor <- function(file = "") {
     x <- as.numeric(txt)
 
     # create COR/COR matrix
-    COR <- lower2full(x, diagonal=TRUE)
+    COR <- lav_matrix_lower2full(x, diagonal = TRUE)
     COR
 }
 
@@ -28,7 +28,7 @@ prelis.read.acm <- function(file = "", rescale=1e-3) {
     # scale numbers
     raw <- raw*rescale
  
-    ACM <- lower2full(raw, diagonal=TRUE)
+    ACM <- lav_matrix_lower2full(raw, diagonal = TRUE)
     ACM
 }
 

@@ -83,7 +83,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         GRAD <- matrix(0, pstar, GRAD.size) # each pair is a row
     }
     PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
-    PSTAR[vech.idx(nvar, diagonal=FALSE)] <- 1:pstar
+    PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
 
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {

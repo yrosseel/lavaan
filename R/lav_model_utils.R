@@ -122,7 +122,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
         } else if(type == "full") {
             if(lavmodel@isSymmetric[mm]) {
                 N <- ncol(GLIST[[mm]])
-                m.el.idx <- vech.idx(N)
+                m.el.idx <- lav_matrix_vech_idx(N)
             } else {
                 m.el.idx <- seq_len(length(GLIST[[mm]]))
             }

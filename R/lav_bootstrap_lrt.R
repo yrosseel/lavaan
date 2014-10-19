@@ -73,8 +73,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     #Bollen-Stine data transformation
     if(type == "bollen.stine") {
         for(g in 1:h0@Data@ngroups) {
-            sigma.sqrt <- sqrtSymmetricMatrix(     Sigma.hat[[g]])
-            S.inv.sqrt <- sqrtSymmetricMatrix(h0@SampleStats@icov[[g]])
+            sigma.sqrt <- lav_matrix_symmetric_sqrt(     Sigma.hat[[g]])
+            S.inv.sqrt <- lav_matrix_symmetric_sqrt(h0@SampleStats@icov[[g]])
 
             # center
             X <- scale(data@X[[g]], center = TRUE, scale = FALSE)
@@ -134,8 +134,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             }
 
             # Transform the data (p. 263)
-            S.a.sqrt <- sqrtSymmetricMatrix(S.a)
-            S.inv.sqrt <- sqrtSymmetricMatrix(h0@SampleStats@icov[[g]])
+            S.a.sqrt <- lav_matrix_symmetric_sqrt(S.a)
+            S.inv.sqrt <- lav_matrix_symmetric_sqrt(h0@SampleStats@icov[[g]])
 
             X <- data@X[[g]]
             X <- X %*% S.inv.sqrt %*% S.a.sqrt            

@@ -5,8 +5,8 @@
 # line 3: number of sample statistics (ndat)
 # line 4: number of free parameters (npar)
 # delta (ndat x npar)
-# P1 (E.inv) vechr(npar x npar)
-# V1 (NVarCov) vechr(npar x npar)
+# P1 (E.inv) lav_matrix_vechr(npar x npar)
+# V1 (NVarCov) lav_matrix_vechr(npar x npar)
 lavutils_mplus_readdifftest <- function(file="deriv.dat") {
 
     ###FIXME: does not work for multiple groups yet!!!
@@ -26,12 +26,12 @@ lavutils_mplus_readdifftest <- function(file="deriv.dat") {
     # P1
     offset <- 4L + npar*ndat
     p1_raw <- raw[offset + seq_len(pstar)]
-    P1 <- lower2full(p1_raw)
+    P1 <- lav_matrix_lower2full(p1_raw)
 
     # (robust) NACOV npar
     offset <- 4L + npar*ndat + pstar
     nacov_raw <- raw[offset + seq_len(pstar)]
-    V1 <- lower2full(nacov_raw)
+    V1 <- lav_matrix_lower2full(nacov_raw)
 
     # just for fun, M1
     # M1 <- (P1 - P1 %*% H %*% solve(t(H) %*% P1 %*% H) %*% t(H) %*% P1) %*% V1

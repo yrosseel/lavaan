@@ -168,14 +168,14 @@ function(object, type="raw", labels=TRUE) {
                                         meanstructure = meanstructure)
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
+                Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
                 B1 <- compute.B1.sample(lavsamplestats = object@SampleStats, 
                                         lavdata = object@Data, group=g,
                                         meanstructure=meanstructure)
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                Var.cov  <- Var.sample.cov  <- vech.reverse(diag(Info)[-idx.mean])
+                Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
             }
         }
 
@@ -185,10 +185,10 @@ function(object, type="raw", labels=TRUE) {
  
             if(meanstructure) {
                 Var.model.mean <- Var.model[idx.mean]
-                Var.model.cov  <- vech.reverse(Var.model[-idx.mean])
+                Var.model.cov  <- lav_matrix_vech_reverse(Var.model[-idx.mean])
             } else {
                 Var.model.mean <- rep(0, nvar)
-                Var.model.cov  <- vech.reverse(Var.model)
+                Var.model.cov  <- lav_matrix_vech_reverse(Var.model)
             }
 
             Var.mean <- (Var.sample.mean - Var.model.mean)

@@ -256,13 +256,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             TH[ th.idx[[g]] == 0 ] <- -1*TH[ th.idx[[g]] == 0 ]
 
             WLS.obs[[g]] <- c(TH,
-                              vec(CAT$SLOPES), # FIXME
+                              lav_matrix_vec(CAT$SLOPES), # FIXME
                               unlist(CAT$VAR[ov.types == "numeric"]),
-                              vech(CAT$COV, diagonal=FALSE))
+                              lav_matrix_vech(CAT$COV, diagonal=FALSE))
         } else if(!categorical && meanstructure) {
-            WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
+            WLS.obs[[g]] <- c(mean[[g]], lav_matrix_vech(cov[[g]]))
         } else {
-            WLS.obs[[g]] <- vech(cov[[g]])
+            WLS.obs[[g]] <- lav_matrix_vech(cov[[g]])
         }
         if(group.w.free) {
             #group.w.last <- nobs[[ngroups]] / sum(unlist(nobs))
@@ -326,11 +326,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     if(mimic == "Mplus") { # is this a bug in Mplus?
                         V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                     }
-                    V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                    V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
                     WLS.V[[g]] <- bdiag(V11,V22)
                 } else {
                     WLS.V[[g]] <-
-                        0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                        0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
                 }
             } else if(estimator == "ML") {
                 # no WLS.V here, since function of model-implied moments
@@ -618,9 +618,9 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
         # WLS.obs
         if(meanstructure) 
-            WLS.obs[[g]] <- c(mean[[g]], vech(cov[[g]]))
+            WLS.obs[[g]] <- c(mean[[g]], lav_matrix_vech(cov[[g]]))
         else
-            WLS.obs[[g]] <- vech(cov[[g]])
+            WLS.obs[[g]] <- lav_matrix_vech(cov[[g]])
         if(group.w.free) {
             WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
         }
@@ -639,11 +639,11 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                     if(mimic == "Mplus") { # is this a bug in Mplus?
                         V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                     }
-                    V22 <- 0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                    V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
                     WLS.V[[g]] <- bdiag(V11,V22)
                 } else {
                     WLS.V[[g]] <-
-                        0.5 * D.pre.post(icov[[g]] %x% icov[[g]])
+                        0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
                 }
             } else if(estimator == "ULS") {
                 WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
