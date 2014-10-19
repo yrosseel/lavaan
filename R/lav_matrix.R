@@ -401,6 +401,70 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
     OUT
 }
 
+# create the generalized inverse of the duplication matrix (D^+_n): 
+# it removes the duplicated elements in vec(S) to create vech(S)
+#
+# D^+ %*% vec(S) == vech(S)
+#
+# M&N book: pages ???
+
+# create first t(DUP.ginv)
+.dup_ginv1 <- function(n = 1L) {
+    if ((n < 1L) | (round(n) != n)) {
+        stop("n must be a positive integer")
+    }
+
+    if(n > 255L) {
+        stop("n is too large")
+    }
+
+    nstar <- n * (n+1)/2
+    n2    <- n * n
+    # THIS is the real bottleneck: allocating an ocean of zeroes...
+    x <- numeric(nstar * n2)
+
+    tmp <- matrix(1:(n*n), n, n)
+    idx1 <- lav_matrix_vech(tmp) + (0:(nstar-1L))*n2
+    x[idx1] <- 0.5
+    idx2 <- lav_matrix_vechru(tmp) + (0:(nstar-1L))*n2
+    x[idx2] <- 0.5
+    idx3 <- lav_matrix_diag_idx(n) + (lav_matrix_diagh_idx(n)-1L)*n2
+    x[idx3] <- 1.0
+
+    attr(x, "dim") <- c(n2, nstar)
+    x <- t(x)
+    x
+}
+
+# create DUP.ginv without transpose
+.dup_ginv2 <- function(n = 1L) {
+    if ((n < 1L) | (round(n) != n)) {
+        stop("n must be a positive integer")
+    }
+
+    if(n > 255L) {
+        stop("n is too large")
+    }
+
+    nstar <- n * (n+1)/2
+    n2    <- n * n
+    # THIS is the real bottleneck: allocating an ocean of zeroes...
+    x <- numeric(nstar * n2)
+
+    tmp <- matrix(1:(n*n), n, n)
+    idx1 <- (lav_matrix_vech(tmp) - 1L)*nstar + 1:nstar
+    x[idx1] <- 0.5
+    idx2 <- (lav_matrix_vechru(tmp) - 1L)*nstar + 1:nstar
+    x[idx2] <- 0.5
+    idx3 <- (lav_matrix_diag_idx(n) - 1L)*nstar + lav_matrix_diagh_idx(n)
+    x[idx3] <- 1.0
+
+    attr(x, "dim") <- c(nstar, n2)
+    x
+}
+
+lav_matrix_duplication_ginv <- .dup_ginv2
+
 # create the commutation matrix (K_mn) 
 # the mn x mx commutation matrix is a permutation matrix which
 # transforms vec(A) into vec(A')
