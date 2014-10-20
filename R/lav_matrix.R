@@ -651,5 +651,42 @@ lav_matrix_orthogonal_complement <- function(A = matrix(0,0,0)) {
      H
 }
 
+# construct block diagonal matrix
+lav_matrix_bdiag <- function(...) {
+
+    if(nargs() == 0L) return(matrix(0,0,0))
+    dots <- list(...)
+
+    # create list of matrices
+    if(is.list(dots[[1]])) {
+        mlist <- dots[[1]]
+    } else {
+        mlist <- dots
+    }
+    if(length(mlist) == 1L) return(mlist[[1]])
+
+    # more than 1 matrix
+    nmat <- length(mlist)
+    nrows <- sapply(mlist, nrow); crows <- cumsum(nrows)
+    ncols <- sapply(mlist, ncol); ccols <- cumsum(ncols)
+    trows <- sum(nrows)
+    tcols <- sum(ncols)
+    x <- numeric(trows * tcols)
+   
+    for(m in seq_len(nmat)) {
+        if(m > 1L) {
+            rcoffset <- trows*ccols[m-1] + crows[m-1]
+        } else {
+            rcoffset <- 0L
+        }
+        m.idx <- ( rep((0:(ncols[m] - 1L))*trows, each=nrows[m]) +
+                   rep(1:nrows[m], ncols[m]) + rcoffset )
+        x[m.idx] <- mlist[[m]]        
+    }
+
+    attr(x, "dim") <- c(trows, tcols)
+    x
+}
+
 
 
