@@ -406,7 +406,9 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
 #
 # D^+ %*% vec(S) == vech(S)
 #
-# M&N book: pages ???
+# M&N book: page 49
+#
+# D^+ == solve(t(D_n %*% D_n) %*% t(D_n)
 
 # create first t(DUP.ginv)
 .dup_ginv1 <- function(n = 1L) {
@@ -451,13 +453,9 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
     # THIS is the real bottleneck: allocating an ocean of zeroes...
     x <- numeric(nstar * n2)
 
-    tmp <- matrix(1:(n*n), n, n)
-    idx1 <- (lav_matrix_vech(tmp) - 1L)*nstar + 1:nstar
-    x[idx1] <- 0.5
-    idx2 <- (lav_matrix_vechru(tmp) - 1L)*nstar + 1:nstar
-    x[idx2] <- 0.5
-    idx3 <- (lav_matrix_diag_idx(n) - 1L)*nstar + lav_matrix_diagh_idx(n)
-    x[idx3] <- 1.0
+    x[(lav_matrix_vech_idx(n)   - 1L)*nstar + 1:nstar] <- 0.5
+    x[(lav_matrix_vechru_idx(n) - 1L)*nstar + 1:nstar] <- 0.5
+    x[(lav_matrix_diag_idx(n) - 1L)*nstar + lav_matrix_diagh_idx(n)] <- 1.0
 
     attr(x, "dim") <- c(nstar, n2)
     x
@@ -465,16 +463,83 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
 
 lav_matrix_duplication_ginv <- .dup_ginv2
 
+# pre-multiply with D^+
+# number of rows in A must be 'square' (n*n)
+lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
+
+    # number of rows
+    n2 <- nrow(A)
+
+    # square nrow(A) only, n2 = n^2
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+    nstar <- n * (n+1)/2
+
+    idx1 <- lav_matrix_vech_idx(n); idx2 <- lav_matrix_vechru_idx(n)
+    OUT <- (A[idx1,,drop=FALSE] + A[idx2,,drop=FALSE]) / 2
+    OUT
+}
+
+# post-multiply with t(D^+)
+# number of columns in A must be 'square' (n*n)
+lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
+
+    # number of columns
+    n2 <- ncol(A)
+
+    # square A only, n2 = n^2
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    idx1 <- lav_matrix_vech_idx(n); idx2 <- lav_matrix_vechru_idx(n)
+    OUT <- (A[,idx1,drop=FALSE] + A[,idx2,drop=FALSE]) / 2
+    OUT
+}
+
+# pre AND post-multiply with D^+: D^+ %*% A %*% t(D^+)
+# for square matrices only, with ncol = nrow = n^2
+lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
+
+    # number of columns
+    n2 <- ncol(A)
+
+    # square A only, n2 = n^2
+    stopifnot(nrow(A) == n2, sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+   
+    idx1 <- lav_matrix_vech_idx(n); idx2 <- lav_matrix_vechru_idx(n)
+    OUT <- (A[idx1,,drop=FALSE] + A[idx2,,drop=FALSE]) / 2
+    OUT <- (OUT[,idx1,drop=FALSE] + OUT[,idx2,drop=FALSE]) / 2
+    OUT
+}
+
+
+
+
 # create the commutation matrix (K_mn) 
 # the mn x mx commutation matrix is a permutation matrix which
 # transforms vec(A) into vec(A')
 #
-# K %*% vec(A) == vec(A')
+# K_mn %*% vec(A) == vec(A')
 #
 # M&N book: pages 46-48
 #
-# note: several flavors: com1, com2, ...
-# currently used: com1
+# note: K_mn is a permutation matrix, so it is orthogonal: t(K_mn) = K_mn^-1
+#       K_nm %*% K_mn == I_mn
+# 
+# it is called the 'commutation' matrix because it enables us to interchange
+# ('commute') the two matrices of a Kronecker product, eg
+#   K_pm (A %x% B) K_nq == (B %x% A)
+#
+# important property: it allows us to transform a vec of a Kronecker product
+# into the Kronecker product of the vecs (if A is m x n and B is p x q):
+#   vec(A %x% B) == (I_n %x% K_qm %x% I_p)(vec A %x% vec B)
 
 # first attempt
 .com1 <- function(m = 1L, n = 1L) {
@@ -535,6 +600,15 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 
     OUT <- A[row.idx,,drop=FALSE]
     OUT
+}
+
+# N_n == 1/2 (I_n^2 + K_nn)
+# see MN page 48
+#
+# N_n == D_n %*% D^+_n
+#
+lav_matrix_commutation_Nn <- function(n = 1L) {
+     stop("not implemented yet")
 }
 
 # square root of a positive definite symmetric matrix
