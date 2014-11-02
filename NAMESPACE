@@ -103,6 +103,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_matrix_commutation_mn_pre",
        "lav_matrix_symmetric_sqrt",
        "lav_matrix_orthogonal_complement",
+       "lav_matrix_bdiag",
  
        # lav_partable
        "lav_partable_independence",   # used by semTools!

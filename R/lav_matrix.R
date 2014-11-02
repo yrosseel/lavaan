@@ -30,6 +30,8 @@ lav_matrix_vecr <- function(A) {
 # into a vector by stacking the *columns* of the matrix one underneath the 
 # other, but eliminating all supradiagonal elements
 #
+# see Henderson & Searle, 1979
+#
 # M&N book: page 48-49
 #
 lav_matrix_vech <- function(S, diagonal = TRUE) {
@@ -528,6 +530,7 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
 #
 # K_mn %*% vec(A) == vec(A')
 #
+# (in Henderson & Searle 1979, it is called the vec-permutation matrix)
 # M&N book: pages 46-48
 #
 # note: K_mn is a permutation matrix, so it is orthogonal: t(K_mn) = K_mn^-1
@@ -581,7 +584,8 @@ lav_matrix_commutation_pre <- function(A) {
     n <- sqrt(n2)
 
     # compute row indices
-    row.idx <- as.integer(t(matrix(1:n2, n, n)))
+    #row.idx <- as.integer(t(matrix(1:n2, n, n)))
+    row.idx <- rep(1:n, each=n) + (0:(n-1L))*n
 
     OUT <- A[row.idx,,drop=FALSE]
     OUT   
@@ -596,7 +600,8 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
     stopifnot(mn == m * n)
 
     # compute row indices
-    row.idx <- as.integer(t(matrix(1:mn, m, n)))
+    # row.idx <- as.integer(t(matrix(1:mn, m, n)))
+    row.idx <- rep(1:m, each=n) + (0:(n-1L))*m
 
     OUT <- A[row.idx,,drop=FALSE]
     OUT
@@ -609,6 +614,72 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 #
 lav_matrix_commutation_Nn <- function(n = 1L) {
      stop("not implemented yet")
+}
+
+# (simplified) kronecker product for square matrices
+lav_matrix_kronecker_square <- function(A, check = TRUE) {
+
+    dimA <- dim(A); n <- dimA[1L]; n2 <- n*n
+    if(check) {
+        stopifnot(dimA[2L] == n)
+    }
+
+    # all possible combinations
+    out <- tcrossprod(as.vector(A))
+
+    # break up in n*n pieces, and rearrange
+    dim(out) <- c(n,n,n,n)
+    out <- aperm(out, perm = c(3,1,4,2))
+    
+    # reshape again, to form n2 x n2 matrix
+    dim(out) <- c(n2, n2)
+
+    out
+}
+
+# (simplified) faster kronecker product for symmetric matrices
+# note: not faster, but the logic extends to vech versions
+lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
+    
+    dimS <- dim(S); n <- dimS[1L]; n2 <- n*n
+    if(check) {
+        stopifnot(dimA[2L] == n)
+    }
+    
+    # all possible combinations
+    out <- tcrossprod(as.vector(S))
+    
+    # break up in n*(n*n) pieces, and rearrange
+    dim(out) <- c(n,n*n,n) 
+    out <- aperm(out, perm = c(3L,2L,1L))
+    
+    # reshape again, to form n2 x n2 matrix
+    dim(out) <- c(n2, n2)
+    
+    out
+}
+
+# shortcut for the idiom 't(S2) %*% (S %x% S) %*% S2'
+# where S is symmetric, and the rows of S2 correspond to
+# the elements of S
+# eg - S2 = DELTA (the jacobian dS/dtheta)
+lav_matrix_tS2_SxS_S2 <- function(S2, S, check = TRUE) {
+
+    # size of S
+    n <- nrow(S)
+
+    if(check) {
+        stopifnot(nrow(S2) == n^2)
+    }
+
+    A <- matrix(S %*% matrix(S2, n, ), n^2,)
+    A2 <- A[rep(1:n, each=n) + (0:(n-1L))*n,,drop = FALSE]
+    crossprod(A, A2)
+}
+
+# shortcut for the idiom 't(D) %*% (S %x% S) %*% S'
+# where S is symmetric, and D is the duplication matrix
+lav_matrix_tD_SxS_D <- function(S) {
 }
 
 # square root of a positive definite symmetric matrix
@@ -633,22 +704,31 @@ lav_matrix_symmetric_sqrt <- function(S = matrix(0,0,0)) {
 # see Satorra (1992). Sociological Methodology, 22, 249-278, footnote 3:
 #
 # To compute such an orthogonal matrix, consider the p* x p* matrix P = I -
-# A(A'A)^1A', which is idempotent of rank p* - q. Consider the singular value
+# A(A'A)^-1A', which is idempotent of rank p* - q. Consider the singular value
 # decomposition P = HVH', where H is a p* x (p* - q) matrix of full column rank,
 # and V is a (p* - q) x (p* - q) diagonal matrix. It is obvious that H'A = 0;
 # hence, H is the desired orthogonal complement. This method of constructing an
 # orthogonal complement was proposed by Heinz Neudecker (1990, pers. comm.). 
 #
-# FIXME: reuse qr(A) information, avoid solve()
+# update YR 21 okt 2014:
+# - note that A %*% solve(t(A) %*% A) %*% t(A) == tcrossprod(qr.Q(qr(A)))
+# - if we are using qr, we can as well use qr.Q to get the complement
 #
 lav_matrix_orthogonal_complement <- function(A = matrix(0,0,0)) {
-     n <- nrow(A)
-     ranK <- qr(A)$rank
 
-     P <- diag(n) - A %*% solve(crossprod(A)) %*% t(A)
-     H <- svd(P)$u[, seq_len(n - ranK), drop = FALSE]
+     QR <- qr(Q)
+     ranK <- QR$rank
 
-     H
+     # following Heinz Neudecker:
+     #n <- nrow(A)
+     #P <- diag(n) - tcrossprod(qr.Q(QR))
+     #OUT <- svd(P)$u[, seq_len(n - ranK), drop = FALSE]
+
+     Q <- qr.Q(QR, complete = TRUE)
+     # get rid of the first ranK columns
+     OUT <- Q[, -seq_len(ranK), drop = FALSE]
+
+     OUT
 }
 
 # construct block diagonal matrix
