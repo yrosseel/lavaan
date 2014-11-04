@@ -396,6 +396,13 @@ lav_options_set <- function(opt = formals(lavaan)) {
             opt$se <- "standard"
         if(opt$test != "none") opt$test <- "standard"
         #opt$missing <- "listwise"
+    } else if(opt$estimator == "reml") {
+        opt$estimator <- "REML"
+        opt$information <- "observed"
+        if(opt$se == "default")
+            opt$se <- "standard"
+        if(opt$test != "none") opt$test <- "standard"
+        opt$missing <- "listwise"
     } else if(opt$estimator %in% c("mml")) {
         opt$estimator <- "MML"
         opt$information <- "observed"
@@ -430,7 +437,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
     }
 
     # likelihood approach (wishart or normal) + sample.cov.rescale
-    if(opt$estimator != "ML") {
+    if(!opt$estimator %in% c("ML", "REML")) {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
         }

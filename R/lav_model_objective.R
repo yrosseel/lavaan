@@ -32,10 +32,15 @@ lav_model_objective <- function(lavmodel       = NULL,
        estimator == "DWLS" || estimator == "ULS") {
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
         if(debug) print(WLS.est)
-    } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
+    } else if(estimator == "ML" || estimator == "PML" || 
+              estimator == "FML" || estimator == "REML") {
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, 
-                                     extra = (estimator == "ML"))
+                                     extra = (estimator %in% c("ML", "REML")))
+
+        if(estimator == "REML") {
+            LAMBDA <- computeLAMBDA(lavmodel = lavmodel, GLIST = GLIST)
+        }
 
         # ridge?
         if( lavsamplestats@ridge > 0.0 ) {
@@ -47,19 +52,19 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(debug) print(Sigma.hat)
 
         if(meanstructure && !categorical) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST=GLIST)
+            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         } else if(categorical) {
-            TH <- computeTH(lavmodel = lavmodel, GLIST=GLIST)
+            TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
             if(fixed.x) 
-                 PI <- computePI(lavmodel = lavmodel, GLIST=GLIST)
+                 PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(group.w.free) {
-            GW <- computeGW(lavmodel = lavmodel, GLIST=GLIST)
+            GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }
     } else if(estimator == "MML") {
-        TH    <- computeTH(   lavmodel = lavmodel, GLIST=GLIST)
-        THETA <- computeTHETA(lavmodel = lavmodel, GLIST=GLIST)
-        GW    <- computeGW(   lavmodel = lavmodel, GLIST=GLIST)
+        TH    <- computeTH(   lavmodel = lavmodel, GLIST = GLIST)
+        THETA <- computeTHETA(lavmodel = lavmodel, GLIST = GLIST)
+        GW    <- computeGW(   lavmodel = lavmodel, GLIST = GLIST)
     }
  
     fx <- 0.0
@@ -130,11 +135,23 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       lavdata     = lavdata,
                                       sample.mean = lavsamplestats@mean[[g]],
                                       lavcache    = lavcache)
+        } else if(estimator == "REML") {
+            # restricted/residual maximum likelihood
+            group.fx <- estimator.REML(Sigma.hat = Sigma.hat[[g]],
+                                       Mu.hat=Mu.hat[[g]],
+                                       data.cov=lavsamplestats@cov[[g]],
+                                       data.mean=lavsamplestats@mean[[g]],
+                                       data.cov.log.det=lavsamplestats@cov.log.det[[g]],
+                                       meanstructure=meanstructure,
+                                       group = g,
+                                       lavmodel = lavmodel,
+                                       lavsamplestats = lavsamplestats,
+                                       lavdata = lavdata)
         } else {
             stop("unsupported estimator: ", estimator)
         }
 
-        if(estimator == "ML") {
+        if(estimator == "ML" || estimator == "REML") {
             group.fx <- 0.5 * group.fx ## FIXME
         } else if(estimator == "PML" || estimator == "FML" || 
                   estimator == "MML") {
@@ -163,7 +180,7 @@ lav_model_objective <- function(lavmodel       = NULL,
     }
 
     # penalty for group.w + ML
-    if(group.w.free && estimator %in% c("ML","MML","FML","PML")) {
+    if(group.w.free && estimator %in% c("ML","MML","FML","PML", "REML")) {
         #obs.prop <- unlist(lavsamplestats@group.w)
         #est.prop <- unlist(GW)
         # if(estimator %in% c("WLS", "GLS", ...) {

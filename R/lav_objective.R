@@ -29,6 +29,45 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     fx
 }
 
+# fitting function for restricted ML
+estimator.REML <- function(Sigma.hat=NULL, Mu.hat=NULL,
+                           data.cov=NULL, data.mean=NULL,
+                           data.cov.log.det=NULL,
+                           meanstructure=FALSE,
+                           group = 1L, lavmodel = NULL, 
+                           lavsamplestats = NULL, lavdata = NULL) {
+
+    if(!attr(Sigma.hat, "po")) return(Inf)
+
+    Sigma.hat.inv     <- attr(Sigma.hat, "inv")
+    Sigma.hat.log.det <- attr(Sigma.hat, "log.det")
+    nvar <- ncol(Sigma.hat)
+
+    if(!meanstructure) {
+        fx <- (Sigma.hat.log.det + sum(data.cov * Sigma.hat.inv) -
+               data.cov.log.det - nvar)
+    } else {
+        W.tilde <- data.cov + tcrossprod(data.mean - Mu.hat)
+        fx <- (Sigma.hat.log.det + sum(W.tilde * Sigma.hat.inv) -
+               data.cov.log.det - nvar)
+    }
+
+    lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
+    LAMBDA <- lavmodel@GLIST[[ lambda.idx[group] ]]
+    data.cov.inv <- lavsamplestats@icov[[group]]
+    reml.h0 <- log(det(t(LAMBDA) %*% Sigma.hat.inv %*% LAMBDA))
+    reml.h1 <- log(det(t(LAMBDA) %*% data.cov.inv %*% LAMBDA))
+    nobs <- lavsamplestats@nobs[[group]]
+
+    #fx <- (Sigma.hat.log.det + tmp - data.cov.log.det - nvar) + 1/Ng * (reml.h0  - reml.h1)
+    fx <- fx + ( 1/nobs * (reml.h0  - reml.h1) )
+
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
+
+    fx
+}
+
 # 'classic' fitting function for GLS, not used for now
 estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
                           data.cov=NULL, data.mean=NULL, data.nobs=NULL,

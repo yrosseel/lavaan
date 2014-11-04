@@ -26,9 +26,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
+    if(estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
+
     # group.weight
     if(group.weight) {
-        if(estimator %in% c("ML","PML","FML","MML")) {
+        if(estimator %in% c("ML","PML","FML","MML","REML")) {
             group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
         } else {
             # FIXME: double check!
@@ -53,10 +55,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
             }
         }
 
-    } else if(estimator == "ML" || estimator == "PML" || estimator == "FML") {
+    } else if(estimator == "ML" || estimator == "PML" || 
+              estimator == "FML" || estimator == "REML") {
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
-                                     extra = (estimator == "ML"))
+                                     extra = (estimator %in% c("ML", "REML")))
 
         # ridge here?
         if(meanstructure && !categorical) {
@@ -81,7 +84,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # - PML/FML/MML: custom
 
     # 1. ML/GLS approach
-    if(estimator == "ML" || estimator == "GLS") {
+    if(estimator == "ML" || estimator == "REML" || estimator == "GLS") {
         if(meanstructure) {
             Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
                                   lavsamplestats=lavsamplestats, estimator=estimator, 
@@ -261,7 +264,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
 
     # group.w.free for ML
-    if(lavmodel@group.w.free && estimator %in% c("ML","MML","FML","PML")) {
+    if(lavmodel@group.w.free && estimator %in% c("ML","MML","FML","PML","REML")) {
         #est.prop <- unlist( computeGW(lavmodel = lavmodel, GLIST = GLIST) )
         #obs.prop <- unlist(lavsamplestats@group.w)
         # FIXME: G2 based -- ML and friends only!!
@@ -641,7 +644,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
     for(g in 1:lavsamplestats@ngroups) {
 
         # ML
-        if(estimator == "ML") {
+        if(estimator == "ML" || estimator == "REML") {
 
             if(attr(Sigma.hat[[g]], "po") == FALSE) {
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??
