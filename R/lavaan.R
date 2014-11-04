@@ -445,8 +445,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             nobs <- nrow(lavdata@X[[g]])
             th.idx <- lavmodel@th.idx[[g]]
             # pairwise tables, as a long vector
-            PW <- pairwiseTables(data=lavdata@X[[g]], no.x=nvar)$pairTables
-            bifreq <- as.numeric(unlist(PW))
+            #PW <- pairwiseTables(data=lavdata@X[[g]], no.x=nvar)$pairTables
+            #bifreq <- as.numeric(unlist(PW))
+            bifreq <- lav_tables_pairwise_freq_cell(lavdata)$obs.freq
             ### FIXME!!! Check for zero cells!!
             #zero.idx <- which(bifreq == 0)
             #bifreq[zero.idx] <- 0.001 ####????

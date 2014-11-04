@@ -140,33 +140,42 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                 } else {
                     # TH
                     if(length(th.idx_i) > 1L) {
-                        GRAD[pstar.idx, th.idx_i] <- colSums(SC.COR.UNI$dx.th.y1)
+                        GRAD[pstar.idx, th.idx_i] <- 
+                            colSums(SC.COR.UNI$dx.th.y1, na.rm = TRUE)
                     } else {
-                        GRAD[pstar.idx, th.idx_i] <- sum(SC.COR.UNI$dx.th.y1)
+                        GRAD[pstar.idx, th.idx_i] <- 
+                            sum(SC.COR.UNI$dx.th.y1, na.rm = TRUE)
                     }
                     if(length(th.idx_j) > 1L) {
-                         GRAD[pstar.idx, th.idx_j] <- colSums(SC.COR.UNI$dx.th.y2)
+                         GRAD[pstar.idx, th.idx_j] <- 
+                             colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
                     } else {
-                         GRAD[pstar.idx, th.idx_j] <- sum(SC.COR.UNI$dx.th.y2)
+                         GRAD[pstar.idx, th.idx_j] <- 
+                             sum(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
                     }
     
                     # SL
                     if(nexo > 0L) {
                         if(length(sl.idx_i) > 1L) {
-                            GRAD[pstar.idx, sl.idx_i] <- colSums(SC.COR.UNI$dx.sl.y1)
+                            GRAD[pstar.idx, sl.idx_i] <- 
+                                colSums(SC.COR.UNI$dx.sl.y1, na.rm = TRUE)
                         } else {
-                            GRAD[pstar.idx, sl.idx_i] <- sum(SC.COR.UNI$dx.sl.y1)
+                            GRAD[pstar.idx, sl.idx_i] <- 
+                                sum(SC.COR.UNI$dx.sl.y1, na.rm = TRUE)
                         }
                         if(length(sl.idx_j) > 1L) {
-                            GRAD[pstar.idx, sl.idx_j] <- colSums(SC.COR.UNI$dx.sl.y2)
+                            GRAD[pstar.idx, sl.idx_j] <- 
+                                colSums(SC.COR.UNI$dx.sl.y2, na.rm = TRUE)
                         } else {
-                            GRAD[pstar.idx, sl.idx_j] <- sum(SC.COR.UNI$dx.sl.y2)
+                            GRAD[pstar.idx, sl.idx_j] <- 
+                                sum(SC.COR.UNI$dx.sl.y2, na.rm = TRUE)
                         }
                     }
                     # NO VAR
 
                     # RHO
-                    GRAD[pstar.idx,cor.idx] <- sum(SC.COR.UNI$dx.rho)
+                    GRAD[pstar.idx,cor.idx] <- 
+                        sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
                 }
             }
         }
@@ -176,7 +185,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     if(scores) return(SCORES)
 
     # gradient is sum over all pairs
-    gradient <- colSums(GRAD)
+    gradient <- colSums(GRAD, na.rm = TRUE)
 
     # we multiply by -1 because we minimize
     if(negative) {

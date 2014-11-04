@@ -123,6 +123,8 @@ lav_options_set <- function(opt = formals(lavaan)) {
         # nothing to do
     } else if(opt$missing == "pairwise") {
         # nothing to do
+    } else if(opt$missing == "available.cases") {
+        # nothing to do, or warn if not categorical?
     } else {
         stop("unknown value for `missing' argument: ", opt$missing, "\n")
     }
@@ -388,7 +390,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
         if(opt$se == "default")
             opt$se <- "robust.huber.white"
         if(opt$test != "none") opt$test <- "standard"
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
     } else if(opt$estimator %in% c("fml","umn")) {
         opt$estimator <- "FML"
         opt$information <- "observed"
