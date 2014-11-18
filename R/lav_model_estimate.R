@@ -232,8 +232,9 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     # optimizer
-    if(is.null(body(lavmodel@ceq.function)) && 
-       is.null(body(lavmodel@cin.function)) ) {
+    if(length(lavmodel@ceq.nonlinear.idx) == 0L &&
+       length(lavmodel@cin.linear.idx)    == 0L &&
+       length(lavmodel@cin.nonlinear.idx) == 0L) {
         if(is.null(lavmodel@control$optim.method)) {
             OPTIMIZER <- "NLMINB"
             #OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
@@ -243,6 +244,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
             stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B", "NONE"))
         }
     } else {
+        #cat("DEBUG: constrained optimization is currently broken!\n")
+        #cat("DEBUG: please reinstall lavaan 0.5-17 if you need this\n")
+        #cat("DEBUG: only *linear* *equality* constraints are supported in this version.\n")
+        #stop("not read yet - dev version")
         if(is.null(lavmodel@control$optim.method)) {
             OPTIMIZER <- "NLMINB.CONSTR"
         } else {

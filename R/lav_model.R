@@ -14,6 +14,7 @@ lav_model <- function(lavpartable      = NULL,
                       debug            = FALSE) {
 
     # global info from user model
+    npar <- max(lavpartable$free)
     ngroups <- max(lavpartable$group)
     meanstructure <- any(lavpartable$op == "~1")
     categorical <- any(lavpartable$op == "|")
@@ -22,43 +23,51 @@ lav_model <- function(lavpartable      = NULL,
 
 
     # handle variable definitions and (in)equality constraints
+
     # 1. variable definitions
     def.function <- lav_partable_constraints_def(lavpartable, con = NULL,
                                                  debug = debug)
+
     # 2a. non-trivial equality constraints (linear or nonlinear)
     ceq.function <- lav_partable_constraints_ceq(lavpartable, con = NULL, 
                                                  debug = debug)
-    # 2b. construct jacobian function
+    # 2b. linear or nonlinear?
+    ceq.linear.idx <- lav_constraints_linear_idx(func = ceq.function,
+                                                 npar = npar)
+    ceq.nonlinear.idx <- lav_constraints_nonlinear_idx(func = ceq.function,
+                                                       npar = npar)
+    
+    # 2c. construct jacobian function
     if(!is.null(body(ceq.function))) {
         ceq.jacobian <- function() NULL
     } else {
         ceq.jacobian <- function() NULL
     }
+
    
     # 3a. non-trivial inequality constraints (linear or nonlinear)
     cin.function <- lav_partable_constraints_ciq(lavpartable, con = NULL,
                                                  debug = debug)
-    # 3b. construct jacobian function
+
+    # 3b. linear or nonlinear?
+    cin.linear.idx <- lav_constraints_linear_idx(func = cin.function,
+                                                 npar = npar)
+    cin.nonlinear.idx <- lav_constraints_nonlinear_idx(func = cin.function,
+                                                       npar = npar)
+
+    # 3c. construct jacobian function
     if(!is.null(body(cin.function))) {
         cin.jacobian <- function() NULL
     } else {
         cin.jacobian <- function() NULL
     }
 
-    # 4. simple linear equality constraints
-    #    capture equality constraints in 'K' matrix
-    #    rows are the unconstrained parameters, cols are the unique parameters
-    #n.unco <- max(lavpartable$unco)
-    #n.free       <- max(lavpartable$free)
-    #if(n.free == n.unco) {
-    #    eq.constraints <- FALSE
-    if(is.null(body(ceq.function))) {
-        eq.constraints <- FALSE
-        eq.constraints.K <- matrix(0, 0, 0)
-        eq.constraints.k0 <- numeric(0)
-        JAC <- matrix(0,0,0)
-    } else {
-     
+    # 4. handle *linear* equality constraints
+    if(length(ceq.linear.idx)     > 0  && # some linear equality constraints
+       length(ceq.nonlinear.idx) == 0L && # no nonlinear equality constraints
+       length(cin.linear.idx)    == 0L && # no inequality constraints
+       length(cin.nonlinear.idx) == 0L) {
+
         eq.constraints <- TRUE
 
         ## NEW: 18 nov 2014: handle general *linear* constraints
@@ -89,30 +98,33 @@ lav_model <- function(lavpartable      = NULL,
         Q1 <- Q[,1:ranK, drop = FALSE]         # range space
         Q2 <- Q[,-seq_len(ranK), drop = FALSE] # null space
         # R <- qr.R(QR)
-        npar <- max(lavpartable$free)
         
         #eq.constraints.K <- lav_matrix_orthogonal_complement( t(JAC) )
         eq.constraints.K <- Q2
 
-        # if we have a non-zero 'b'
-        # bvec <- attr(JAC, "bvec")
-        bvec <- NULL
-        if(!is.null(bvec)) {
-            eq.constraints.k0 <- as.numeric(bvec %*% qr.coef(QR, diag(npar)))
+        # do we have a non-zero 'b' FIXME!!! is this reliable??
+        bvec <- -1 * ceq.function( numeric(npar) )
+        if(all(bvec == 0)) {
+            eq.constraints.k0 <- numeric(npar)
         } else {
-            eq.constraints.k0 <- numeric( npar )
+            tmp <- qr.coef(QR, diag(npar))
+            NA.idx <- which(is.na(rowSums(tmp))) # catch NAs
+            if(length(NA.idx) > 0L) {
+                tmp[NA.idx,] <- 0
+            }
+            eq.constraints.k0 <- as.numeric(bvec %*% tmp)
         }
-    }
 
-    #### FIXMEEE ##### 
-    body(ceq.function) <- NULL
-    #x.ceq.idx <- which(lavpartable$op == "==")
-    x.ceq.idx <- integer(0L)
-    con.jac <- JAC
-    con.lambda <- numeric(nrow(JAC))
-    attr(con.jac, "inactive.idx") <- integer(0L)
-    if(nrow(JAC) > 0L) {
+        con.jac <- JAC
+        con.lambda <- numeric(nrow(JAC))
+        attr(con.jac, "inactive.idx") <- integer(0L)
         attr(con.jac, "ceq.idx") <- seq_len( nrow(JAC) )
+    } else {
+        eq.constraints <- FALSE
+        eq.constraints.K <- matrix(0, 0, 0)
+        eq.constraints.k0 <- numeric(0)
+        con.jac <- matrix(0,0,0)
+        con.lambda <- numeric(0)
     }
 
 
@@ -320,7 +332,7 @@ lav_model <- function(lavpartable      = NULL,
                  m.user.idx=m.user.idx,
                  x.user.idx=x.user.idx,
                  x.def.idx=which(lavpartable$op == ":="),
-                 x.ceq.idx=x.ceq.idx,
+                 x.ceq.idx=which(lavpartable$op == "=="),
                  x.cin.idx=which(lavpartable$op == ">" | lavpartable$op == "<"),
                  eq.constraints=eq.constraints,
                  eq.constraints.K=eq.constraints.K,
@@ -328,8 +340,12 @@ lav_model <- function(lavpartable      = NULL,
                  def.function=def.function,
                  ceq.function=ceq.function,
                  ceq.jacobian=ceq.jacobian,
+                 ceq.linear.idx=ceq.linear.idx,
+                 ceq.nonlinear.idx=ceq.nonlinear.idx,
                  cin.function=cin.function,
                  cin.jacobian=cin.jacobian, 
+                 cin.linear.idx=cin.linear.idx,
+                 cin.nonlinear.idx=cin.nonlinear.idx,
                  con.jac=con.jac,
                  con.lambda=con.lambda,
                  nexo=nexo,

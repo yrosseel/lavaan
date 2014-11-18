@@ -105,8 +105,12 @@ setClass("Model",          # MATRIX representation of the sem model
         def.function="function",
         ceq.function="function",
         ceq.jacobian="function",
+        ceq.linear.idx="integer",
+        ceq.nonlinear.idx="integer",
         cin.function="function",
         cin.jacobian="function",
+        cin.linear.idx="integer",
+        cin.nonlinear.idx="integer",
         con.jac="matrix",
         con.lambda="numeric",
 

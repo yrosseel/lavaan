@@ -150,7 +150,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             lhs <- gsub("\\\"", "", lhs)
             rhs <- gsub("\\\"", "", rhs)
             CON.idx <- CON.idx + 1L
-            CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs)
+            CON[[CON.idx]] <- list(op=op, lhs=lhs, rhs=rhs, user=1L)
             next
         }
     

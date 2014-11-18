@@ -723,9 +723,9 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         JAC <- JAC[unco.idx,unco.idx]
         VCOV <- as.matrix(vcov(object, labels=FALSE))
         # handle eq constraints in fit@Model@eq.constraints.K
-        if(object@Model@eq.constraints) {
-            JAC <- JAC %*% object@Model@eq.constraints.K       
-        }
+        #if(object@Model@eq.constraints) {
+        #    JAC <- JAC %*% object@Model@eq.constraints.K       
+        #}
         COV <- JAC %*% VCOV %*% t(JAC)
         LIST$se <- rep(NA, length(LIST$lhs))
         LIST$se[unco.idx] <- sqrt(diag(COV))
