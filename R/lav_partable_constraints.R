@@ -106,58 +106,86 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
     
     # get equality constraints
     eq.idx <- which(partable$op == "==")
-    if(length(eq.idx) > 0L) {
-        formals(ceq.function) <- alist(x=, ...=)
-        BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
 
-        # first come the variable definitions
-        DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
-        def.idx <- which(partable$op == ":=")
-        BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
-
-        for(i in 1:length(eq.idx)) {
-            lhs <- partable$lhs[ eq.idx[i] ]
-            rhs <- partable$rhs[ eq.idx[i] ]
-            if(rhs == "0") {
-                eq.string <- lhs
-            } else {
-                eq.string <- paste(lhs, "- (", rhs, ")", sep="")
-            }
-            # coerce to expression to extract variable names
-            eq.labels <- all.vars( parse(file="", text=eq.string) )
-            # get corresponding 'x' indices
-            if(length(def.idx) > 0L) {
-                # remove def.names from ineq.labels
-                def.names <- as.character(partable$lhs[def.idx])
-                d.idx <- which(eq.labels %in% def.names)
-                if(length(d.idx) > 0) eq.labels <- eq.labels[-d.idx]
-            }
-            if(length(eq.labels) > 0L) {
-                eq.x.idx  <- partable$free[match(eq.labels, partable$label)]
-                if(any(is.na(eq.x.idx))) {
-                    stop("lavaan ERROR: unknown label(s) in equality constraint: ",
-                         paste(eq.labels[which(is.na(eq.x.idx))], collapse=" "))
-                }
-                if(any(eq.x.idx == 0)) {
-                    stop("lavaan ERROR: non-free parameter(s) in inequality constraint: ",
-                        paste(eq.labels[which(eq.x.idx == 0)], collapse=" "))
-                }
-                eq.x.lab  <- paste("x[", eq.x.idx, "]",sep="")
-                # put both the labels and the expression in the function BODY
-                BODY.txt <- paste(BODY.txt,
-                    paste(eq.labels, "=", eq.x.lab, collapse=";"),"\n",
-                    "out[", i, "] = ", eq.string, "\n", sep="")
-            } else {
-                BODY.txt <- paste(BODY.txt,
-                    "out[", i, "] = ", eq.string, "\n", sep="")
-            }
-        }
-        # what to do with NA values? -> return +Inf???
-        BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep="")
-        BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
-        body(ceq.function) <- parse(file="", text=BODY.txt)
-        if(debug) { cat("ceq.function = \n"); print(ceq.function); cat("\n") }
+    # catch empty ceq
+    if(length(eq.idx) == 0L) {
+        return(ceq.function)
     }
+
+    # create function
+    formals(ceq.function) <- alist(x=, ...=)
+    BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
+
+    # first come the variable definitions
+    DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
+    def.idx <- which(partable$op == ":=")
+    BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
+
+
+    # extract labels
+    lhs.labels <- all.vars( parse(file="", text=partable$lhs[eq.idx]) )
+    rhs.labels <- all.vars( parse(file="", text=partable$rhs[eq.idx]) )
+    eq.labels <- unique(c(lhs.labels, rhs.labels))
+    # remove def.names from eq.labels
+    if(length(def.idx) > 0L) {
+        def.names <- as.character(partable$lhs[def.idx])
+        d.idx <- which(eq.labels %in% def.names)
+        if(length(d.idx) > 0) eq.labels <- eq.labels[-d.idx]
+    }
+    eq.x.idx <- rep(as.integer(NA), length(eq.labels))
+    # get user-labels ids
+    ulab.idx <- which(eq.labels %in% partable$label)
+    if(length(ulab.idx) > 0L) {
+        eq.x.idx[ ulab.idx] <- partable$free[match(eq.labels[ulab.idx], 
+                                                   partable$label)]
+    }
+    # get plabels ids
+    plab.idx <- which(eq.labels %in% partable$plabel)
+    if(length(plab.idx) > 0L) {
+        eq.x.idx[ plab.idx] <- partable$free[match(eq.labels[plab.idx],  
+                                                   partable$plabel)]
+    }
+
+    # check if we have found the label
+    if(any(is.na(eq.x.idx))) {
+        stop("lavaan ERROR: unknown label(s) in equality constraint: ",
+         paste(eq.labels[which(is.na(eq.x.idx))], collapse=" "))
+    }
+    # check if they are all 'free'
+    if(any(eq.x.idx == 0)) {
+        stop("lavaan ERROR: non-free parameter(s) in equality constraint: ",
+            paste(eq.labels[which(eq.x.idx == 0)], collapse=" "))
+    }
+
+    # put the labels the function BODY
+    eq.x.lab  <- paste("x[", eq.x.idx, "]",sep="")
+    if(length(eq.x.idx) > 0L) {
+        BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+            paste(eq.labels, "<-", eq.x.lab, collapse="\n"),
+            "\n", sep="")
+    }
+
+    # write the definitions literally
+    BODY.txt <- paste(BODY.txt, "\n# equality constraints\n", sep="")
+    for(i in 1:length(eq.idx)) {
+        lhs <- partable$lhs[ eq.idx[i] ]
+        rhs <- partable$rhs[ eq.idx[i] ]
+        if(rhs == "0") { 
+            eq.string <- lhs
+        } else {
+            eq.string <- paste(lhs, " - (", rhs, ")", sep="")
+        }
+        BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", eq.string, "\n", sep="")
+    }
+    # put the results in 'out'
+    #BODY.txt <- paste(BODY.txt, "\nout <- ",
+    #    paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
+
+    # what to do with NA values? -> return +Inf???
+    BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep="")
+    BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
+    body(ceq.function) <- parse(file="", text=BODY.txt)
+    if(debug) { cat("ceq.function = \n"); print(ceq.function); cat("\n") }
 
     ceq.function
 }

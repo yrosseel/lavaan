@@ -167,7 +167,7 @@ lavaanify <- lavParTable <- function(
             ngroups = ngroups)
     }        
     if(debug) {
-        cat("[lavaan DEBUG]: parameter LIST:\n")
+        cat("[lavaan DEBUG]: parameter LIST without MODIFIERS:\n")
         print( as.data.frame(LIST, stringsAsFactors=FALSE) )
     }
 
@@ -227,6 +227,11 @@ lavaanify <- lavParTable <- function(
     # remove mod.idx column
     LIST$mod.idx <- NULL
 
+    if(debug) {
+        cat("[lavaan DEBUG]: parameter LIST with MODIFIERS:\n")
+        print( as.data.frame(LIST, stringsAsFactors=FALSE) )
+    }
+
     # check if CON contains *simple* equality constraints (eg b1 == b2)
     # FIXME!!!
     # b1 == b3
@@ -259,53 +264,102 @@ lavaanify <- lavParTable <- function(
     # get 'virtual' parameter labels
     LABEL <- lav_partable_labels(partable=LIST, group.equal=group.equal,
                                 group.partial=group.partial)
-    #cat("DEBUG: label after lav_partable_labels:\n"); print(LABEL); cat("\n")
-    #cat("DEBUG: eq.id after group.equal:\n"); print(LIST$eq.id); cat("\n")
-    #cat("DEBUG: LIST$label:\n"); print(LIST$label); cat("\n")
+
+    if(debug) {
+        cat("[lavaan DEBUG]: parameter LIST with LABELS:\n")
+        tmp <- LIST; tmp$LABEL <- LABEL
+        print( as.data.frame(tmp, stringsAsFactors=FALSE) )
+    }
+
+
 
     # handle user-specified equality constraints
     # insert 'target/reference' id's in eq.id/label columns
     # so that the eq.id column reflects sets of equal parameters
     # the 'reference' parameter has free > 0; the 'equal to' pars free == 0
+    #idx.eq.label <- which(duplicated(LABEL))
+    #if(length(idx.eq.label) > 0L) {
+    #    for(idx in idx.eq.label) {
+    #        eq.label <- LABEL[idx]
+    #        ref.idx <- which(LABEL == eq.label)[1L] # the first one only
+    #        # set eq.id equal
+    #        LIST$eq.id[ref.idx] <- LIST$eq.id[idx] <- ref.idx
+    #        # fix target
+    #        LIST$free[idx] <- 0L
+    #
+    #        # special case: check if there are any more instances 
+    #        # of idx in  LIST$eq.id (perhaps due to group.equal)
+    #        idx.all <- which(LIST$eq.id == idx)
+    #        if(length(idx.all) > 0L) {
+    #            ref.idx.all <- which(LIST$eq.id == ref.idx)
+    #            LIST$label[ref.idx.all] <- eq.label
+    #            LIST$eq.id[idx.all] <- ref.idx
+    #            LIST$free[idx.all] <- 0L  # fix!
+    #            LIST$label[idx.all] <- eq.label
+    #        }
+    #        # special case: ref.idx is a fixed parameter
+    #        if(LIST$free[ref.idx] == 0L) {
+    #            ref.idx.all <- which(LIST$eq.id == ref.idx)
+    #            LIST$ustart[ref.idx.all] <- LIST$ustart[ref.idx]
+    #            LIST$eq.id[ref.idx.all] <- 0L
+    #        }
+    #    }
+    #
+    #    if(debug) {
+    #        cat("[lavaan DEBUG]: parameter LIST after eq.id:\n")
+    #        print( as.data.frame(LIST, stringsAsFactors=FALSE) )
+    #    }
+    #}
+
+    # lavaan 0.5-18
+    # - rewrite 'LABEL-based' equality constraints as == constraints
+    # - create plabel: internal labels, based on id
+    # - create CON entries, using these internal labels
+    LIST$plabel <- paste("p", LIST$id, "__", sep="")
     idx.eq.label <- which(duplicated(LABEL))
     if(length(idx.eq.label) > 0L) {
+        CON.idx <- length(CON)
+        # add 'user' column
+        CON <- lapply(CON, function(x) {x$user <- 1L; x} )
+        LIST$unco <- LIST$free
         for(idx in idx.eq.label) {
             eq.label <- LABEL[idx]
-            ref.idx <- which(LABEL == eq.label)[1L] # the first one only
-            # set eq.id equal
-            LIST$eq.id[ref.idx] <- LIST$eq.id[idx] <- ref.idx
+            ref.idx <- which(LABEL == eq.label)[1L] # the first one only 
             # fix target
-            LIST$free[idx] <- 0L
+            # LIST$free[idx] <- 0L
 
-            # special case: check if there are any more instances 
-            # of idx in  LIST$eq.id (perhaps due to group.equal)
-            idx.all <- which(LIST$eq.id == idx)
-            if(length(idx.all) > 0L) {
-                ref.idx.all <- which(LIST$eq.id == ref.idx)
-                LIST$label[ref.idx.all] <- eq.label
-                LIST$eq.id[idx.all] <- ref.idx
-                LIST$free[idx.all] <- 0L  # fix!
-                LIST$label[idx.all] <- eq.label
-            }
-            # special case: ref.idx is a fixed parameter
+            # two possibilities: either ref.idx is fixed or free
+            # 1. ref.idx is a fixed parameter
             if(LIST$free[ref.idx] == 0L) {
-                ref.idx.all <- which(LIST$eq.id == ref.idx)
-                LIST$ustart[ref.idx.all] <- LIST$ustart[ref.idx]
-                LIST$eq.id[ref.idx.all] <- 0L
+                LIST$ustart[idx] <- LIST$ustart[ref.idx]
+            } else {
+            # 2. ref.idx is a free parameter
+                # user-label?
+                #if(nchar(LIST$label[ref.idx])  > 0) {
+                #    lhs.lab <- LIST$label[ref.idx]
+                #} else {
+                #    lhs.lab <- PLABEL[ref.idx]
+                #}
+                CON.idx <- CON.idx + 1L
+                CON[[CON.idx]] <- list(op   = "==", 
+                                       lhs  = LIST$plabel[ref.idx], 
+                                       rhs  = LIST$plabel[idx],
+                                       user = 2L)
             }
         }
     }
- 
-    #cat("DEBUG: eq.id after eq.id:\n"); print(LIST$eq.id); cat("\n")    
-    #cat("DEBUG: LIST$label:\n"); print(LIST$label); cat("\n")
+    if(debug) {
+        print(CON)
+    }
+
 
     # count free parameters
     idx.free <- which(LIST$free > 0)
     LIST$free[idx.free] <- seq_along(idx.free)
 
     # 2. add free counter to this element
-    idx.equal <- which(LIST$eq.id > 0)
-    LIST$free[idx.equal] <- LIST$free[ LIST$eq.id[idx.equal] ]
+    #idx.equal <- which(LIST$eq.id > 0)
+    #LIST$free[idx.equal] <- LIST$free[ LIST$eq.id[idx.equal] ]
 
     # 3. which parameters would be free without equality constraints?
     idx.unco <- which(LIST$free > 0)
@@ -315,20 +369,22 @@ lavaanify <- lavParTable <- function(
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
     if(length(CON) > 0L) {
         #cat("DEBUG:\n"); print(CON)
-        lhs = unlist(lapply(CON, "[[", "lhs"))
-         op = unlist(lapply(CON, "[[",  "op"))
-        rhs = unlist(lapply(CON, "[[", "rhs"))
+        lhs  = unlist(lapply(CON, "[[", "lhs"))
+         op  = unlist(lapply(CON, "[[",  "op"))
+        rhs  = unlist(lapply(CON, "[[", "rhs"))
+        user = unlist(lapply(CON, "[[", "user"))
         LIST$id         <- c(LIST$id,         length(LIST$id) + seq_along(lhs) )
         LIST$lhs        <- c(LIST$lhs,        lhs)
         LIST$op         <- c(LIST$op,         op)
         LIST$rhs        <- c(LIST$rhs,        rhs)
-        LIST$user       <- c(LIST$user,       rep(1L, length(lhs)) )
+        LIST$user       <- c(LIST$user,       user)
         LIST$group      <- c(LIST$group,      rep(0L, each=length(CON)))
         LIST$free       <- c(LIST$free,       rep(0L, length(lhs)) )
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
-        LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
+        LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
+        #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
     }
 
@@ -1217,7 +1273,7 @@ lav_partable_flat <- function(FLAT = NULL,
                         ustart      = ustart,
                         exo         = exo,
                         label       = label,
-                        eq.id       = rep(0L,  length(lhs)),
+                        #eq.id       = rep(0L,  length(lhs)),
                         unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)

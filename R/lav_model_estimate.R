@@ -42,6 +42,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
         #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
+        if(lavmodel@eq.constraints) {
+            x <- as.numeric(lavmodel@eq.constraints.K %*% x) + 
+                            lavmodel@eq.constraints.k0
+        }
         GLIST <- lav_model_x2GLIST(lavmodel, x=x)
 
         fx <- lav_model_objective(lavmodel       = lavmodel, 
@@ -78,6 +82,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
         #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
         # update GLIST (change `state') and make a COPY!
+        if(lavmodel@eq.constraints) {
+            x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+                            lavmodel@eq.constraints.k0
+        }
         GLIST <- lav_model_x2GLIST(lavmodel, x=x)
 
         dx <- lav_model_gradient(lavmodel       = lavmodel, 
@@ -93,6 +101,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
+        }
+
+        #print( dx %*% lavmodel@eq.constraints.K )
+        #stop("for now")
+
+        # handle linear equality constraints
+        if(lavmodel@eq.constraints) {
+            dx <- as.numeric( dx %*% lavmodel@eq.constraints.K )
         }
 
         dx
@@ -132,6 +148,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
  
     # starting values
     start.x <- lav_model_get_parameters(lavmodel)
+    if(lavmodel@eq.constraints) {
+        start.x <- as.numeric( (start.x - lavmodel@eq.constraints.k0) %*% 
+                                lavmodel@eq.constraints.K )
+    }
+
     if(debug) {
         cat("start.unco = ", lav_model_get_parameters(lavmodel, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
@@ -417,6 +438,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     fx <- minimize.this.function(x) # to get "fx.group" attribute
+    # transform back
+    if(lavmodel@eq.constraints) {
+        x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+                        lavmodel@eq.constraints.k0
+    }
 
     # transform variances back
     #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])

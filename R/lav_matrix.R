@@ -716,7 +716,7 @@ lav_matrix_symmetric_sqrt <- function(S = matrix(0,0,0)) {
 #
 lav_matrix_orthogonal_complement <- function(A = matrix(0,0,0)) {
 
-     QR <- qr(Q)
+     QR <- qr(A)
      ranK <- QR$rank
 
      # following Heinz Neudecker:

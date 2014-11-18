@@ -10,7 +10,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE,
-                               constraints    = TRUE,
+                               constraints    = FALSE,
                                Delta          = NULL) {
 
     nmat           <- lavmodel@nmat
@@ -137,9 +137,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
             }
 
             # handle equality constraints
-            if(lavmodel@eq.constraints && constraints) {
-                dx <- as.numeric( t(lavmodel@eq.constraints.K) %*% dx )
-            }
+            #if(lavmodel@eq.constraints && constraints) {
+            #    dx <- as.numeric( t(lavmodel@eq.constraints.K) %*% dx )
+            #}
         } else {
             dx <- DX
             # handle equality constraints
@@ -517,9 +517,9 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         # save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
 
         # if type == "free" take care of equality constraints
-        if(type == "free" && lavmodel@eq.constraints) {
-            Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
-        }
+        #if(type == "free" && lavmodel@eq.constraints) {
+        #    Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
+        #}
   
         #Delta.eq <- Delta.group
         # save(Delta.eq, file=paste0("delta_NO_EQ",g,".Rdata"))
@@ -625,9 +625,9 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
             }
         } # mm
 
-        if(type == "free" && lavmodel@eq.constraints) {
-            Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
-        }
+        #if(type == "free" && lavmodel@eq.constraints) {
+        #    Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
+        #}
 
         Delta[[g]] <- Delta.group
     } # g

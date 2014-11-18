@@ -596,7 +596,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
     # 7. constraints
     cin.idx <- which((object@ParTable$op == "<" | 
                       object@ParTable$op == ">"))
-    ceq.idx <- which(object@ParTable$op == "==")
+    ceq.idx <- which(object@ParTable$op == "==" & object@ParTable$user == 1L)
     if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
         # set small negative values to zero, to avoid printing " -0.000"
         slack <- ifelse(abs(est) < 1e-5, 0, est)
