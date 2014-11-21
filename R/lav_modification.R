@@ -21,8 +21,12 @@ modificationIndices <- modificationindices <- modindices <- function(object,
                           LIST$rhs == partable$rhs[i] &
                           LIST$group == partable$group[i])
         LIST$free[LIST.idx] <- partable$free[i]
-        LIST$eq.id[LIST.idx] <- partable$eq.id[i]
-        LIST$unco[LIST.idx] <- partable$unco[i]
+        if(!is.null(partable$eq.id)) {
+            LIST$eq.id[LIST.idx] <- partable$eq.id[i]
+        }
+        if(!is.null(partable$unco)) {
+            LIST$unco[LIST.idx] <- partable$unco[i]
+        }
     }
 
     # add matrix representation
@@ -129,7 +133,9 @@ modificationIndices <- modificationindices <- modindices <- function(object,
                              estimator      = object@Options$estimator,
                              group.weight   = TRUE,
                              constraints    = TRUE, #### FIXME???
-                             Delta          = Delta)
+                             Delta          = Delta,
+                             m.el.idx       = m.el.idx,
+                             x.el.idx       = x.el.idx)
 
     # flatten list DX to a vector dx
     dx <- numeric(0)
@@ -205,7 +211,7 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # surely this code needs some serious optimization
     # but it seems to work for now
     # we should use the K matrix somewhere...
-    if(object@Model@eq.constraints) {
+    if(FALSE) {
         for(i in 1:length(eq.idx)) {
             # index in all.idx (only mi.fixed elements)
             theta2.idx <- eq.idx[i]

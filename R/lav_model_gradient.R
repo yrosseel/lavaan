@@ -11,7 +11,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                forcePD        = TRUE, 
                                group.weight   = TRUE,
                                constraints    = FALSE,
-                               Delta          = NULL) {
+                               Delta          = NULL,
+                               m.el.idx       = NULL,
+                               x.el.idx       = NULL) {
 
     nmat           <- lavmodel@nmat
     representation <- lavmodel@representation
@@ -188,7 +190,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
         } else {
             # make a GLIST
             dx <- lav_model_x2GLIST(lavmodel = lavmodel, x = dx, 
-                                    type = "full", setDelta = FALSE)
+                                    type = "custom", setDelta = FALSE,
+                                    m.el.idx = m.el.idx, 
+                                    x.el.idx = x.el.idx)
         }
 
     } # WLS
@@ -284,6 +288,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
         gw.mat.idx <- which(names(lavmodel@GLIST) == "gw")
         gw.x.idx <- unlist( lavmodel@x.free.idx[gw.mat.idx] )
         dx[gw.x.idx] <- dx.GW
+    }
+
+    # dx is 1xnpar matrix of LIST (type != "free")
+    if(is.matrix(dx)) {
+        as.numeric(dx)
     }
 
     dx
