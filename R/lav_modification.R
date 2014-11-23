@@ -1,9 +1,11 @@
 modificationIndices <- modificationindices <- modindices <- function(object, 
-    standardized=TRUE, power=FALSE, delta=0.1, alpha=0.05, high.power=0.75) {
+    standardized=TRUE, power=FALSE, delta=0.1, alpha=0.05, high.power=0.75,
+    sort. = FALSE, minimum.value = 0.0, maximum.number = nrow(LIST),
+    na.remove = FALSE, op = NULL) {
 
     # check if model has converged
     if(object@Fit@npar > 0L && !object@Fit@converged) {
-        stop("lavaan ERROR: model did not converge")
+        warning("lavaan WARNINGS: model did not converge")
     }
 
     if(power) standardized <- TRUE
@@ -52,36 +54,10 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # remove....
     if(length(idx) > 0L) LIST <- LIST[-idx,]
 
-    # here we should remove elements that will produce NA anyways...
+    # here we could/should remove elements that will produce NA anyways...
     # eg - first indicator of factors
     #    - regressions that are already free covariances
-    # TODO
-    #if(object@Model@categorical) {
-    #    for(g in 1:object@Model@ngroups) {
-    #        if(object@Model@parameterization == "delta") {
-    #            # if parameterization == "delta", remove all residual variances
-    #            # of the observed indicators (they are always a function of 
-    #            # other model parameters)
-    #            ov.names.ord <- object@pta$vnames$ov.ord[[g]]
-    #            var.idx <- which(LIST$op == "~~" &
-    #                             LIST$group == g &
-    #                             LIST$lhs == LIST$rhs &
-    #                             LIST$lhs %in% ov.names.ord)
-    #            if(length(var.idx) > 0L) {
-    #                LIST <- LIST[-var.idx,]
-    #            }
-    #        } else if(object@Model@parameterization == "theta") {
-    #            # if parameterization == "theta", remove all scaling elements
-    #            # in DELTA (they are a function of other model parameters)
-    #            scale.idx <- which(LIST$op == "~*~" &
-    #                               LIST$group == g)
-    #            if(length(scale.idx) > 0L) {
-    #                LIST <- LIST[-scale.idx,]
-    #            }
-    #        }
-    #    }
-    #}
- 
+    # TODO?? (now, we just compute them, get NA, and remove them)
 
     # master index: *all* elements that we will feed to computeDelta
     LIST$id <- 1:nrow(LIST)
@@ -146,17 +122,25 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # Saris, Satorra & Sorbom 1987
     # partition Q into Q_11, Q_22 and Q_12/Q_21
     # which elements of Q correspond with 'free' and 'nonfree' parameters?
-    all.idx      <- LIST$id
-    free.idx     <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
-    eq.idx       <- LIST$id[LIST$eq.id > 0L]
-    eq.id        <- LIST$eq.id[ eq.idx ]
+    #all.idx      <- LIST$id
+    #free.idx     <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
+    #eq.idx       <- LIST$id[LIST$eq.id > 0L]
+    #eq.id        <- LIST$eq.id[ eq.idx ]
 
-    # nonfree
-    if(length(free.idx) > 0L) nonfree.idx <- all.idx[ -free.idx ]
-    # if eqs.idx, remove them from free.idx
-    if(length(eq.idx) > 0L) free.idx <- free.idx[-which(free.idx %in% eq.idx)]
- 
-    # check: nonfree.idx, free.idx and eq.idx should NOT overlap!
+    # NOTE: since 0.5-18, we do not make a distinction anymore between
+    #       equality constrained parameters (using labels), and general
+    #       linear constraints (using ==)
+    #       As a result, the 'free' parameters are not necessarily a clean
+    #       subset of the total set of parameters
+    #
+    #       But we can compute what would happen if we release a constraint,
+    #       one at a time
+    #       FIXME!!!
+
+
+    free.idx    <- which(LIST$free  > 0L)
+    nonfree.idx <- which(LIST$free == 0L)
+    eq.idx <- integer(0L)
 
     # partition Q
     Q11 <- Q[nonfree.idx, nonfree.idx]
@@ -175,11 +159,11 @@ modificationIndices <- modificationindices <- modindices <- function(object,
             lambda <- lambda[-inactive.idx]
         }
         # if length(eq.idx) > 0L, remove them from the columns of H
-        if(length(eq.idx) > 0L) {
-            free.again.idx <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
-            idx <- LIST$free[ free.again.idx[ free.again.idx %in% eq.idx ] ]
-            H <- H[,-idx]
-        }
+        #if(length(eq.idx) > 0L) {
+        #    free.again.idx <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
+        #    idx <- LIST$free[ free.again.idx[ free.again.idx %in% eq.idx ] ]
+        #    H <- H[,-idx]
+        #}
         if(nrow(H) > 0L) {
             H0 <- matrix(0,nrow(H),nrow(H))
             H10 <- matrix(0, ncol(Q22), nrow(H))
@@ -195,6 +179,10 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     } else {
         Q22.inv <- solve(Q22)
     }
+
+    #print( dim(Q22.inv) )
+    #print( Q22.inv[1:5, 1:5] )
+    # NOTE: we could perhaps use Q22.inv <- vcov(fit) * N^2?
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
     V.diag <- diag(V)
@@ -262,14 +250,14 @@ modificationIndices <- modificationindices <- modindices <- function(object,
 
     # FIXME: epc for equality constraints must be adapted!?
     # we need a reference for this!!!!
-    if(object@Model@eq.constraints) {
-        for(i in 1:length(eq.idx)) {
-            # this is just a temporary solution
-            # until we get it right
-            neq <- length(eq.idx[eq.id == eq.id[i]])
-            epc[eq.idx[i]] <- epc[eq.idx[i]] / neq * (neq - 1)
-        }
-    }
+    #if(object@Model@eq.constraints) {
+    #    for(i in 1:length(eq.idx)) {
+    #        # this is just a temporary solution
+    #        # until we get it right
+    #        neq <- length(eq.idx[eq.id == eq.id[i]])
+    #        epc[eq.idx[i]] <- epc[eq.idx[i]] / neq * (neq - 1)
+    #    }
+    #}
 
     LIST$mi <- mi
     if(length(object@Fit@test) > 1L) {
@@ -280,6 +268,9 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     # remove some rows
     #idx <- which(LIST$free > 0L & !duplicated(LIST$free) & !LIST$eq.id > 0L)
     #LIST <- LIST[-idx,]
+    if(length(free.idx) > 0L) {
+        LIST <- LIST[-free.idx,]
+    }
 
     # standardize?
     if(standardized) {
@@ -322,9 +313,65 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     #    LIST$epc <- NULL
     #    LIST$sepc.lv <- NULL
     #}
-    if(ngroups == 1) LIST$group <- NULL
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
+
+    # add eq constraints (if any)
+    eq.idx <- which(partable$op == "==")
+    if(length(eq.idx) > 0L) {
+        N <- length(eq.idx)
+        TMP <- data.frame(lhs = partable$lhs[eq.idx],
+                           op = partable$op[eq.idx],
+                          rhs = partable$rhs[eq.idx],
+                          group = partable$group[eq.idx],
+                          mi = rep(as.numeric(NA), N),
+                          epc = rep(as.numeric(NA), N),
+                          sepc.lv = rep(as.numeric(NA), N),
+                          sepc.all = rep(as.numeric(NA), N),
+                          sepc.nox = rep(as.numeric(NA), N) )
+        if(!standardized) {
+            TMP$sepc.lv <- TMP$sepc.all <- TMP$sepc.nox <- NULL
+        }
+        LIST <- rbind(LIST, TMP)
+    }
+
+    # remove 'existing' parameters
+    #TMP1 <- data.frame(lhs = partable$lhs,
+    #                   op = partable$op,
+    #                   rhs = partable$rhs,
+    #                   group = partable$group)
+    #TMP2 <- data.frame(lhs = LIST$lhs, 
+    #                   op = LIST$op,
+    #                   rhs = LIST$rhs,
+    #                   group = LIST$group)
+    #idx <- which(duplicated(rbind(TMP2, TMP1), fromLast = TRUE))
+    #if(length(idx) > 0L) {
+    #    LIST <- LIST[-idx,]
+    #}
+    if(ngroups == 1) LIST$group <- NULL
+    
+    # sort?
+    if(sort.) {
+        LIST <- LIST[order(LIST$mi, decreasing = TRUE),]
+    }
+    if(minimum.value > 0.0) {
+        LIST <- LIST[!is.na(LIST$mi) & LIST$mi > minimum.value,]  
+    }
+    if(maximum.number < nrow(LIST)) {
+        LIST <- LIST[seq_len(maximum.number),]
+    }
+    if(na.remove) {
+        idx <- which(is.na(LIST$mi))
+        if(length(idx) > 0) {
+            LIST <- LIST[-idx,]
+        }
+    }
+    if(!is.null(op)) {
+        idx <- LIST$op %in% op
+        if(length(idx) > 0) {
+            LIST <- LIST[idx,]
+        }
+    }
 
     LIST
 }

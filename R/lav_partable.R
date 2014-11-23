@@ -1030,7 +1030,7 @@ lav_partable_flat <- function(FLAT = NULL,
                 cat("[lavaan DEBUG] idx in DEFAULT: i = ", i, "\n"); print(DEFAULT[i,])
                cat("[lavaan DEBUG] flat.idx:"); print(flat.idx)
             }
-    }
+        }
         DEFAULT <- DEFAULT[-idx,]
     }
 
