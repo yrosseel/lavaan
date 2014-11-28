@@ -129,7 +129,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     
         # 2. split by operator (only the *first* occurence!)
         # check first if equal/label modifier has been used on the LEFT!
-        if(substr(x,1,5) == "label") 
+        if(substr(x,1,6) == "label(") 
             stop("label modifier can not be used on the left-hand side of the operator")
         if(op == "|") {
             op.idx <- regexpr("\\|", x)
