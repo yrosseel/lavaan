@@ -298,6 +298,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         # catch special cases for 2x2 tables
         if(nr == 2L && nc == 2L) {
             # 1. a*d == c*d
+            storage.mode(freq) <- "numeric" # to avoid integer overflow
             if(freq[1,1]*freq[2,2] == freq[1,2]*freq[2,1]) {
                 return(0.0)
             }
