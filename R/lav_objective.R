@@ -240,8 +240,8 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 
     } else {
         # # order! first i, then j, lav_matrix_vec(table)!
-        for(i in seq_len(nvar-1L)) {
-            for(j in (i+1L):nvar) {
+        for(j in seq_len(nvar-1L)) {
+            for(i in (j+1L):nvar) {
                 pstar.idx <- PSTAR[i,j]
                 # cat("pstar.idx =", pstar.idx, "i = ", i, " j = ", j, "\n")
                 if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
