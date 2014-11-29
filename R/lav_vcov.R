@@ -136,7 +136,7 @@ Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL,
                              th.idx    = lavmodel@th.idx[[g]],
                              num.idx   = lavmodel@num.idx[[g]],
                              X         = lavdata@X[[g]],
-                             lavcache     = lavcache,
+                             lavcache  = lavcache[[g]],
                              scores    = TRUE,
                              negative  = FALSE)
 
@@ -147,7 +147,7 @@ Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL,
             B0.group[[g]] <- crossprod(group.SC)
 
             # to get NACOV instead of ACOV
-            B0.group[[g]] <- B0.group[[g]] / lavsamplestats@ntotal
+            #B0.group[[g]] <- B0.group[[g]] / lavsamplestats@ntotal
 
             # group weights (if any)
             #group.dx <- group.w[g] * group.dx 
@@ -420,14 +420,13 @@ lav_model_vcov <- function(lavmodel       = NULL,
     if(! inherits(NVarCov, "try-error") ) {
 
         # denominator!
-        if(estimator %in% c("ML","PML","FML") && 
-           likelihood == "normal") {
+        if(estimator %in% c("ML","PML","FML") && likelihood == "normal") {
             N <- lavsamplestats@ntotal
         } else {
             N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }
 
-        if(estimator == "MML") {
+        if(estimator %in% c("PML", "MML")) {
             VarCov <- NVarCov
         } else {
             VarCov <- 1/N * NVarCov

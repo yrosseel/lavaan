@@ -184,8 +184,8 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # the idea is to compute for each pair of variables, the model-based 
     # probability (or likelihood in mixed case) (that we observe the data 
     # for this pair under the model) for *each case* 
-    # after taking logs, the sum over the cases gives the probablity/likelihood 
-    # for this pair
+    # after taking logs, the sum over the cases gives the 
+    # log probablity/likelihood for this pair
     # the sum over all pairs gives the final PML based logl
 
     # first of all: check if all correlations are within [-1,1]
@@ -227,13 +227,16 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     
         # more convenient fit function
         prop <- lavcache$bifreq / lavcache$nobs
+        freq <- lavcache$bifreq
         # remove zero props # FIXME!!! or add 0.5???
         zero.idx <- which(prop == 0.0)
         if(length(zero.idx) > 0L) {
+            freq <- freq[-zero.idx]
             prop <- prop[-zero.idx]
             PI   <- PI[-zero.idx]
-        }
-        Fmin <- sum( prop*log(prop/PI) )
+        } 
+        ##Fmin <- sum( prop*log(prop/PI) )
+        Fmin <- sum( freq * log(prop/PI) ) # to avoid 'N'
 
     } else {
         # # order! first i, then j, lav_matrix_vec(table)!

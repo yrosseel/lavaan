@@ -463,7 +463,8 @@ pc_cor_gradient_noexo <- function(Y1, Y2, rho, th.y1=NULL, th.y2=NULL,
 
 pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                           th.y1=NULL, th.y2=NULL,
-                          sl.y1=NULL, sl.y2=NULL) {
+                          sl.y1=NULL, sl.y2=NULL,
+                          na.zero=FALSE) {
 
     # check if rho > 
 
@@ -507,6 +508,9 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                    dnorm(fit.y1$z2) * pnorm( (fit.y2$z2-rho*fit.y1$z2)/R) )
     }
     dx.th.y1 <- (fit.y1$Y1*y1.Z1 - fit.y1$Y2*y1.Z2) / lik
+    if(na.zero) {
+        dx.th.y1[is.na(dx.th.y1)] <- 0
+    }
 
     # th.y2
     if(identical(R, 0.0)) {
@@ -519,13 +523,22 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                     dnorm(fit.y2$z2) * pnorm( (fit.y1$z2-rho*fit.y2$z2)/R) )
     }
     dx.th.y2 <- (fit.y2$Y1*y2.Z1 - fit.y2$Y2*y2.Z2) / lik
+    if(na.zero) {
+        dx.th.y2[is.na(dx.th.y2)] <- 0
+    }
 
     dx.sl.y1 <- dx.sl.y2 <- NULL
     if(length(fit.y1$slope.idx) > 0L) {
         # sl.y1
         dx.sl.y1 <- (y1.Z2 - y1.Z1) * eXo / lik
+        if(na.zero) {
+            dx.sl.y1[is.na(dx.sl.y1)] <- 0
+        }
         # sl.y2
         dx.sl.y2 <- (y2.Z2 - y2.Z1) * eXo / lik
+        if(na.zero) {
+            dx.sl.y2[is.na(dx.sl.y2)] <- 0
+        }
     }
 
     # rho
@@ -541,6 +554,9 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                 dbinorm(fit.y1$z2, fit.y2$z2, rho) )
     }
     dx.rho <- dx / lik
+    if(na.zero) {
+        dx.rho[is.na(dx.rho)] <- 0
+    }
 
     list(dx.th.y1=dx.th.y1, dx.th.y2=dx.th.y2, 
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2, dx.rho=dx.rho)

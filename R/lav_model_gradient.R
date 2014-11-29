@@ -225,9 +225,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                  lavcache  = lavcache[[g]])
 
                 # chain rule (fmin)
-                ### FIXME why -1L ???
                 group.dx <- 
-                    as.numeric(t(d1) %*% Delta[[g]])/lavsamplestats@nobs[[g]]
+                    as.numeric(t(d1) %*% Delta[[g]])
 
             } else if(estimator == "FML") {
                 d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],

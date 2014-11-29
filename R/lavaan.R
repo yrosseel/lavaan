@@ -440,21 +440,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavcache <- vector("list", length=lavdata@ngroups)
     if(lavoptions$estimator == "PML") {
         TH <- computeTH(lavmodel)
+        BI <- lav_tables_pairwise_freq_cell(lavdata)
         for(g in 1:lavdata@ngroups) {
-            nvar <- ncol(lavdata@X[[g]])
-            nobs <- nrow(lavdata@X[[g]])
-            th.idx <- lavmodel@th.idx[[g]]
-            # pairwise tables, as a long vector
-            #PW <- pairwiseTables(data=lavdata@X[[g]], no.x=nvar)$pairTables
-            #bifreq <- as.numeric(unlist(PW))
-            bifreq <- lav_tables_pairwise_freq_cell(lavdata)$obs.freq
-            ### FIXME!!! Check for zero cells!!
-            #zero.idx <- which(bifreq == 0)
-            #bifreq[zero.idx] <- 0.001 ####????
-            LONG <- LongVecInd(no.x               = nvar,
+            if(is.null(BI$group) || max(BI$group) == 1L) {
+                bifreq <- BI$obs.freq
+                binobs  <- BI$nobs
+            } else {
+                idx <- which(BI$group == g)
+                bifreq <- BI$obs.freq[idx]
+                binobs  <- BI$nobs[idx]
+            }
+            LONG <- LongVecInd(no.x               = ncol(lavdata@X[[g]]),
                                all.thres          = TH[[g]],
-                               index.var.of.thres = th.idx)
-            lavcache[[g]] <- list(bifreq=bifreq, nobs=nobs, LONG=LONG)
+                               index.var.of.thres = lavmodel@th.idx[[g]])
+            lavcache[[g]] <- list(bifreq = bifreq,
+                                  nobs   = binobs,
+                                  LONG   = LONG)
         }
     }
     # copy response patterns to cache -- FIXME!! (data not included 

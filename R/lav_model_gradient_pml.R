@@ -123,7 +123,8 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                                 th.y1 = TH[ th.idx == i ],
                                                 th.y2 = TH[ th.idx == j ],
                                                 sl.y1 = NULL,
-                                                sl.y2 = NULL)
+                                                sl.y2 = NULL,
+                                                na.zero = TRUE)
                     # TH
                     SCORES[,th.idx_i] <- SCORES[,th.idx_i] + SC.COR.UNI$dx.th.y1
                     SCORES[,th.idx_j] <- SCORES[,th.idx_j] + SC.COR.UNI$dx.th.y2

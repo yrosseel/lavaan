@@ -439,7 +439,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
     }
 
     # likelihood approach (wishart or normal) + sample.cov.rescale
-    if(!opt$estimator %in% c("ML", "REML")) {
+    if(!opt$estimator %in% c("ML", "REML", "PML", "FML")) {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
         }
@@ -448,8 +448,10 @@ lav_options_set <- function(opt = formals(lavaan)) {
         } else {
             warning("sample.cov.rescale argument is only relevant if estimator = ML")
         }
-    } else { # ml
-        if(opt$likelihood == "default") {
+    } else { # ml and friends
+        if(opt$estimator %in% c("PML", "FML")) {
+            opt$likelihood <- "normal"
+        } else if(opt$likelihood == "default") {
            opt$likelihood <- "normal"
             if(opt$mimic == "EQS"    || 
                opt$mimic == "LISREL" || 
