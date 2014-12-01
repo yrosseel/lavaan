@@ -384,7 +384,7 @@ lavaanify <- lavParTable <- function(
         LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
         LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
-        #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
+        LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
     }
 
@@ -1273,7 +1273,7 @@ lav_partable_flat <- function(FLAT = NULL,
                         ustart      = ustart,
                         exo         = exo,
                         label       = label,
-                        #eq.id       = rep(0L,  length(lhs)),
+                        eq.id       = rep(0L,  length(lhs)),
                         unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)
