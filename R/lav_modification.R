@@ -1,40 +1,40 @@
-modificationIndices <- modificationindices <- modindices <- function(object, 
-    standardized=TRUE, power=FALSE, delta=0.1, alpha=0.05, high.power=0.75,
-    sort. = FALSE, minimum.value = 0.0, maximum.number = nrow(LIST),
-    na.remove = FALSE, op = NULL) {
+# univariate modification indices
+#
+
+modindices <- function(object, 
+                       standardized = TRUE, 
+
+                       # power statistics?
+                       power = FALSE, 
+                       delta = 0.1, 
+                       alpha = 0.05, 
+                       high.power = 0.75,
+
+                       # customize output
+                       sort. = FALSE, 
+                       minimum.value = 0.0, 
+                       maximum.number = nrow(LIST),
+                       na.remove = FALSE, 
+                       op = NULL) {
 
     # check if model has converged
     if(object@Fit@npar > 0L && !object@Fit@converged) {
         warning("lavaan WARNINGS: model did not converge")
     }
 
+    # sanity check
     if(power) standardized <- TRUE
 
-    # get LIST parameter list
-    LIST <- lav_partable_full(object@ParTable)
-    LIST$free <- 0L; LIST$eq.id <- 0L; LIST$unco <- 0L
-    LIST <- as.data.frame(LIST)
-
-    # fill in USER information
-    partable <- object@ParTable; N <- length(partable$lhs)
-    for(i in 1:N) {
-        LIST.idx <- which(LIST$lhs == partable$lhs[i] &
-                          LIST$op  == partable$op[i] &
-                          LIST$rhs == partable$rhs[i] &
-                          LIST$group == partable$group[i])
-        LIST$free[LIST.idx] <- partable$free[i]
-        if(!is.null(partable$eq.id)) {
-            LIST$eq.id[LIST.idx] <- partable$eq.id[i]
-        }
-        if(!is.null(partable$unco)) {
-            LIST$unco[LIST.idx] <- partable$unco[i]
-        }
-    }
+    # create extended parameter LIST, including model parameters
+    partable <- object@ParTable
+    LIST <- lav_partable_merge(lav_partable_full(object@ParTable, free = TRUE),
+                               partable[c("lhs","op","rhs","group","free")], 
+                               remove = TRUE, warn = FALSE)
 
     # add matrix representation
     if(object@Model@representation == "LISREL") {
-        REP <- representation.LISREL(partable=object@ParTable, target=LIST,
-                                     extra=FALSE)
+        REP <- representation.LISREL(partable = object@ParTable, target = LIST,
+                                     extra = FALSE)
     } else {
         stop("only LISREL representation has been implemented")
     }
@@ -332,6 +332,9 @@ modificationIndices <- modificationindices <- modindices <- function(object,
         if(!standardized) {
             TMP$sepc.lv <- TMP$sepc.all <- TMP$sepc.nox <- NULL
         }
+        if(!is.null(LIST$mi.scaled)) {
+            TMP$mi.scaled <- rep(as.numeric(NA), N)
+        }
         LIST <- rbind(LIST, TMP)
     }
 
@@ -376,4 +379,5 @@ modificationIndices <- modificationindices <- modindices <- function(object,
     LIST
 }
 
-
+# aliases
+modificationIndices <- modificationindices <- modindices

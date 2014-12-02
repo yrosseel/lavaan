@@ -1,9 +1,15 @@
 # classic Wald test
 #
+# NOTE: does not handle redundant constraints yet!
+
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
 
     if(object@Fit@npar > 0L && !object@Fit@converged)
         stop("lavaan ERROR: model did not converge")
+
+    if(is.null(constraints) || nchar(constraints) == 0L) {
+        stop("lavaan ERROR: constraints are empty")
+    }
 
     # remove == constraints from parTable
     PT <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
@@ -65,5 +71,5 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     # p-value based on chisq
     Wald.pvalue <- 1 - pchisq(Wald, df=Wald.df)
 
-    list(stat=Wald, df=Wald.df, p.value=Wald.pvalue)
+    list(stat=Wald, df=Wald.df, p.value=Wald.pvalue, se=object@Options$se)
 }

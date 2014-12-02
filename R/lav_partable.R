@@ -699,7 +699,8 @@ lav_partable_labels <- function(partable, group.equal="", group.partial="",
 getParameterLabels <- lav_partable_labels
 
 
-lav_partable_full <- function(partable=NULL, group=NULL) {
+lav_partable_full <- function(partable = NULL, group = NULL, 
+                              free = FALSE) {
 
     # meanstructure + number of groups
     meanstructure <- any(partable$op == "~1")
@@ -796,6 +797,12 @@ lav_partable_full <- function(partable=NULL, group=NULL) {
 
     LIST <- data.frame(lhs=lhs, op=op, rhs=rhs, group=group,
                        stringsAsFactors=FALSE)
+
+    if(free) {
+        LIST$free <- rep(0L, nrow(LIST))
+    }
+
+    LIST
 }
 
 lav_partable_flat <- function(FLAT = NULL,

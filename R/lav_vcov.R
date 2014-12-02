@@ -208,7 +208,7 @@ Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL,
             # check if E is pd 
             eigvals <- eigen(E, symmetric = TRUE, only.values = TRUE)$values
             if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
-                warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be thrustworthy")
+                warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be trustworthy")
             }
             NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
         }
@@ -217,7 +217,7 @@ Nvcov.first.order <- function(lavmodel = NULL, lavsamplestats = NULL,
         # check if E is pd 
         eigvals <- eigen(E, symmetric = TRUE, only.values = TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
-            warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be thrustworthy")
+            warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be trustworthy")
         }
 
         NVarCov <- MASS::ginv(E) ## FIXME: should we allow this?
