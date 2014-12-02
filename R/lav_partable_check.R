@@ -1,6 +1,6 @@
 # check if the partable is complete/consistent
 # we may have added intercepts/variances (user = 0), fixed to zero
-lav_partable_check <- function(partable, warn = TRUE) {
+lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
 
     check <- TRUE
 
@@ -12,6 +12,14 @@ lav_partable_check <- function(partable, warn = TRUE) {
     lv.names <- vnames(partable, "lv")
     all.names <- c(ov.names, lv.names)
     ov.names.ord <- vnames(partable, "ov.ord")
+
+    # if categorical, we should have some ov.names.ord
+    if(categorical && length(ov.names.ord) == 0L) {
+        check <- FALSE
+        if(warn) {
+            warning("lavaan WARNING: parameter table does not contain thresholds ")
+        }
+    }
     
     # we should have a (residual) variance for *each* ov/lv
     # note: if lavaanify() has been used, this is always TRUE

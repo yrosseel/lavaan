@@ -886,8 +886,11 @@ lav_partable_flat <- function(FLAT = NULL,
     lhs <- rhs <- character(0)
 
     # 1. THRESHOLDS (based on varTable)
+    #    NOTE: new in 0.5-18: ALWAYS include threshold parameters in partable,
+    #    but only free them if auto.th = TRUE
     nth <- 0L
-    if(auto.th && length(ov.names.ord2) > 0L) {
+    #if(auto.th && length(ov.names.ord2) > 0L) {
+    if(length(ov.names.ord2) > 0L) {
         for(o in ov.names.ord2) {
             nth  <- varTable$nlev[ varTable$name == o ] - 1L
             if(nth < 1L) next
@@ -1055,7 +1058,13 @@ lav_partable_flat <- function(FLAT = NULL,
     label   <- rep(character(1), length(lhs))
     exo     <- rep(0L, length(lhs))
 
-    # 0. if auto.var = FALSE, set the unspecified variances to zero
+    # 0a. if auto.th = FALSE, set fix the thresholds
+    if(!auto.th) {
+        th.idx <- which(op == "|" & user == 0L)
+        free[th.idx] <- 0L
+    }
+
+    # 0b. if auto.var = FALSE, set the unspecified variances to zero
     if(!auto.var) {
         var.idx <- which(op == "~~" &
                          lhs == rhs &

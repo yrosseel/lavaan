@@ -320,7 +320,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # at this point, we should check if the partable is complete
     # or not; this is especially relevant if the lavaan() function
     # was used, but the user has forgotten some variances/intercepts...
-    check <- lav_partable_check(lavpartable)
+    check <- lav_partable_check(lavpartable, categorical = categorical,
+                                warn = TRUE)
     
 
     # 2b. change meanstructure flag?
