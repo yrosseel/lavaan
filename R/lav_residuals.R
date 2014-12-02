@@ -103,6 +103,10 @@ function(object, type="raw", labels=TRUE) {
 
     R <- vector("list", length=G)
     for(g in 1:G) {
+
+        # add type
+        R[[g]]$type <- type
+
         # sample moments
         if(!object@SampleStats@missing.flag) {
             S <- object@SampleStats@cov[[g]]
@@ -227,8 +231,11 @@ function(object, type="raw", labels=TRUE) {
 
     # replace 'cov' by 'cor' if type == "cor"
     if(type %in% c("cor","cor.bollen","cor.eqs","cor.bentler")) {
-        # only works for non-categorical case; otherwise, th becomes NA
-        R <- lapply(R, "names<-", c("cor", "mean") )
+        if("th" %in% names(R[[1]])) {
+            R <- lapply(R, "names<-", c("type", "cor", "mean", "th") )
+        } else {
+            R <- lapply(R, "names<-", c("type", "cor", "mean") )
+        }
     }
 
     if(G == 1) {

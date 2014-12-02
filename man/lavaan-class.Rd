@@ -71,13 +71,21 @@ about the data.}
       and \code{mean} for the residual mean vector. 
       If only the covariance matrix was analyzed, the residual mean vector 
       will be zero. 
-      If code{type="cor"}, the observed and model implied covariance matrix 
+      If \code{type="cor"}, the observed and model implied covariance matrix 
       is first transformed to a correlation matrix (using \code{cov2cor}), 
       before the residuals are computed.
       If \code{type="normalized"}, the residuals are
-      normalized. If \code{type="standardized"}, the residuals are
-      standardized. In the latter case, the residuals have a metric similar
-      to z-values.}
+      divided by the square root of an asymptotic variance estimate of the
+      corresponding sample statistic (the variance estimate depends on the
+      choice for the \code{se} argument).
+      If \code{type="standardized"}, the residuals are divided by the square
+      root of the difference between an asymptotic variance estimate of the
+      corresponding sample statistic and an asymptotic variance estimate of
+      the corresponding model-implied statistic.
+      In the latter case, the residuals have a metric similar
+      to z-values. On the other hand, they may often result in \code{NA} values;      for these cases, it may be better to use the normalized residuals. For
+      more information about the normalized and standardized residuals, see
+      the Mplus reference below.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
     \item{vcov}{\code{signature(object = "lavaan")}: returns the
@@ -120,7 +128,11 @@ about the data.}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. URL
-http://www.jstatsoft.org/v48/i02/.}
+http://www.jstatsoft.org/v48/i02/.
+
+Standardized Residuals in Mplus. Document retrieved from URL
+http://www.statmodel.com/download/StandardizedResiduals.pdf
+}
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}, 
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},
