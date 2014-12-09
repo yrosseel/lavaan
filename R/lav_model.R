@@ -3,6 +3,7 @@
 # initial version: YR 22/11/2010
 # - YR 14 Jan 2014: moved to lav_model.R
 # - YR 18 Nov 2014: more efficient handling of linear equality constraints
+# - YR 02 Dec 2014: allow for bare-minimum parameter tables
 
 # construct MATRIX representation of the model
 lav_model <- function(lavpartable      = NULL,
@@ -13,6 +14,9 @@ lav_model <- function(lavpartable      = NULL,
                       control          = list(),
                       debug            = FALSE) {
 
+    # handle bare-minimum partables
+    lavpartable <- lav_partable_complete(lavpartable)
+ 
     # global info from user model
     npar <- max(lavpartable$free)
     ngroups <- max(lavpartable$group)
@@ -128,17 +132,6 @@ lav_model <- function(lavpartable      = NULL,
     }
 
 
-
-    # what if no starting values are provided? 
-    if(is.null(lavpartable$start)) {
-        startValues <- lav_start(start.method = "simple", 
-                                 lavpartable = lavpartable)
-    } else {
-        startValues <- lavpartable$start
-    }
- 
-    # check start length
-    stopifnot(length(startValues) == nrow(lavpartable))
 
     # select model matrices
     if(representation == "LISREL") {
@@ -259,7 +252,7 @@ lav_model <- function(lavpartable      = NULL,
             # FIXME: again, we may want to use sparse matrices here...
             tmp <- matrix(0.0, nrow=mmRows[mm],
                                ncol=mmCols[mm])
-            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- startValues[idx]
+            tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$start[idx]
             if(mmSymmetric[mm]) {
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
             }

@@ -25,107 +25,64 @@ modindices <- function(object,
     # sanity check
     if(power) standardized <- TRUE
 
-    # create extended parameter LIST, including model parameters
-    partable <- object@ParTable
-    LIST <- lav_partable_merge(lav_partable_full(object@ParTable, free = TRUE),
-                               partable[c("lhs","op","rhs","group","free")], 
-                               remove = TRUE, warn = FALSE)
+    # user-specified model parameters
+    partable <- object@ParTable[c("lhs","op","rhs","group","free","start")]
+    # replace 'start' column, since lav_model will fill these in in GLIST
+    partable$start <- parameterEstimates(object)$est 
 
-    # add matrix representation
-    if(object@Model@representation == "LISREL") {
-        REP <- representation.LISREL(partable = object@ParTable, target = LIST,
-                                     extra = FALSE)
-    } else {
-        stop("only LISREL representation has been implemented")
+    # extended list (fixed-to-zero parameters)
+    FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE)
+
+    # merge
+    LIST <- lav_partable_merge(partable, FULL, remove = TRUE, warn = FALSE)
+
+    # remove  ==, <, :=, > rows from partable
+    nonpar.idx <- which(LIST$op %in% c("==", ":=", "<", ">"))
+    if(length(nonpar.idx) > 0L) {
+        LIST <- LIST[-nonpar.idx,]   
     }
-    LIST <- cbind(LIST, as.data.frame(REP, stringsAsFactors = FALSE))
 
-    # here we remove `non-existing' parameters (depends on the matrix
-    # representation (eg in LISREL rep, there is no ~~ between lv and ov)
-    idx <- which( nchar(LIST$mat) > 0L &
-                  !is.na(LIST$row) & LIST$row > 0L &
-                  !is.na(LIST$col) & LIST$col > 0L )
-    LIST <- LIST[idx,]
+    ### DEBUG
+    #TMP <- data.frame(lhs = c("dem60", "dem60", "dem60", 
+    #                          "dem65", "dem65", "dem65"),
+    #                   op = c("=~", "=~", "=~", "=~", "=~", "=~"),
+    #                  rhs = c("y2", "y3", "y4", "y6", "y7", "y8"),
+    #                  group = c(1L, 1L, 1L, 1L, 1L, 1L),
+    #                  free = c(0L, 0L, 0L, 0L, 0L, 0L),
+    #                  start = c(1.1907820, 1.1745407, 1.2509789,
+    #                            1.302820, 1.403190, 1.401179))
+    #LIST <- rbind(LIST, TMP)
 
-    # check for duplicated matrix elements
-    idx <- which( duplicated(LIST[,c("group", "mat","row","col")], 
-                  fromLast=TRUE) )
-    # FIXME!!! what to do here?
-    # remove....
-    if(length(idx) > 0L) LIST <- LIST[-idx,]
-
-    # here we could/should remove elements that will produce NA anyways...
-    # eg - first indicator of factors
-    #    - regressions that are already free covariances
-    # TODO?? (now, we just compute them, get NA, and remove them)
-
-    # master index: *all* elements that we will feed to computeDelta
-    LIST$id <- 1:nrow(LIST)
-
-    # compute Delta for remaining parameters
-    ngroups  <- object@Model@ngroups
-    mmNumber <- object@Model@nmat
-    mmNames  <- names(object@Model@GLIST)
-    m.el.idx <- x.el.idx <- vector("list", length=length(object@Model@GLIST))
-    offset <- 0L
-    for(g in 1:ngroups) {
-        for(mm in 1:mmNumber[g]) {
-            # offset in GLIST
-            offset <- offset + 1L
-
-            # select elements for this matrix
-            idx <- which(LIST$group == g & LIST$mat == mmNames[offset])
-
-            tmp <- matrix(0L, nrow=nrow(object@Model@GLIST[[mm]]),
-                              ncol=ncol(object@Model@GLIST[[mm]]))
-
-            # assign id values
-            tmp[ cbind(LIST$row[idx], LIST$col[idx]) ] <- LIST$id[idx]
-            if(object@Model@isSymmetric[mm]) {
-                # everything is in upper tri, but we only extract lower tri
-                tmp <- t(tmp)
-            }
-            m.el.idx[[offset]] <-     which(tmp > 0)
-            x.el.idx[[offset]] <- tmp[which(tmp > 0)]
-        }
-    }
-    Delta <- computeDelta(lavmodel = object@Model, 
-                          m.el.idx. = m.el.idx, x.el.idx. = x.el.idx)
-
-    # compute information matrix
-    E <- computeExpectedInformation(lavmodel       = object@Model, 
+    # create lavmodel object for this 'full' LIST
+    LIST2 <- LIST; LIST2$free <- 1:nrow(LIST)
+    lavmodelFULL <- lav_model(lavpartable = LIST2,
+                              representation = object@Model@representation,
+                              th.idx = object@Model@th.idx,
+                              parameterization = object@Model@parameterization,
+                              link = object@Model@link,
+                              debug = FALSE)
+    LIST$start <- NULL
+                              
+    # compute information matrix 'full'
+    E <- computeExpectedInformation(lavmodel       = lavmodelFULL,
                                     lavsamplestats = object@SampleStats,
-                                    estimator      = object@Options$estimator,
-                                    Delta          = Delta)
+                                    estimator      = object@Options$estimator)
     Q <- (1/object@SampleStats@ntotal) * E
 
-    # list!
-    DX <- lav_model_gradient(lavmodel       = object@Model, 
+    # compute gradient 'full'
+    dx <- lav_model_gradient(lavmodel       = lavmodelFULL,
                              GLIST          = NULL, 
                              lavsamplestats = object@SampleStats,
                              lavdata        = object@Data,
                              lavcache       = object@Cache,
-                             type           = "allofthem", 
+                             type           = "free",
                              estimator      = object@Options$estimator,
                              group.weight   = TRUE,
-                             constraints    = TRUE, #### FIXME???
-                             Delta          = Delta,
-                             m.el.idx       = m.el.idx,
-                             x.el.idx       = x.el.idx)
+                             constraints    = FALSE) #### not used anymore?
 
-    # flatten list DX to a vector dx
-    dx <- numeric(0)
-    for(mm in 1:length(object@Model@GLIST)) {
-        dx[ x.el.idx[[mm]] ] <- DX[[mm]][ m.el.idx[[mm]] ] 
-    }
-                             
     # Saris, Satorra & Sorbom 1987
     # partition Q into Q_11, Q_22 and Q_12/Q_21
     # which elements of Q correspond with 'free' and 'nonfree' parameters?
-    #all.idx      <- LIST$id
-    #free.idx     <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
-    #eq.idx       <- LIST$id[LIST$eq.id > 0L]
-    #eq.id        <- LIST$eq.id[ eq.idx ]
 
     # NOTE: since 0.5-18, we do not make a distinction anymore between
     #       equality constrained parameters (using labels), and general
@@ -137,54 +94,19 @@ modindices <- function(object,
     #       one at a time
     #       FIXME!!!
 
-
-    free.idx    <- which(LIST$free  > 0L)
-    nonfree.idx <- which(LIST$free == 0L)
-    eq.idx <- integer(0L)
+    model.idx <- which(LIST$free  > 0L)
+    extra.idx <- which(LIST$free == 0L)
 
     # partition Q
-    Q11 <- Q[nonfree.idx, nonfree.idx]
-    Q12 <- Q[nonfree.idx,    free.idx]
-    Q21 <- Q[free.idx,    nonfree.idx]
-    Q22 <- Q[free.idx,       free.idx]
+    Q11 <- Q[extra.idx, extra.idx, drop = FALSE]
+    Q12 <- Q[extra.idx, model.idx, drop = FALSE]
+    Q21 <- Q[model.idx, extra.idx, drop = FALSE]
+    Q22 <- Q[model.idx, model.idx, drop = FALSE]
+    Q22.inv <- vcov(object) * (nobs(object))^2 
 
-    # take care of constraints (if any)
-    # handle constraints
-    if(nrow(object@Model@con.jac) > 0L) {
-        H <- object@Model@con.jac
-        inactive.idx <- attr(H, "inactive.idx")
-        lambda <- object@Model@con.lambda # lagrangean coefs
-        if(length(inactive.idx) > 0L) {
-            H <- H[-inactive.idx,,drop=FALSE]
-            lambda <- lambda[-inactive.idx]
-        }
-        # if length(eq.idx) > 0L, remove them from the columns of H
-        #if(length(eq.idx) > 0L) {
-        #    free.again.idx <- LIST$id[LIST$free > 0L & !duplicated(LIST$free)]
-        #    idx <- LIST$free[ free.again.idx[ free.again.idx %in% eq.idx ] ]
-        #    H <- H[,-idx]
-        #}
-        if(nrow(H) > 0L) {
-            H0 <- matrix(0,nrow(H),nrow(H))
-            H10 <- matrix(0, ncol(Q22), nrow(H))
-            DL <- 2*diag(lambda, nrow(H), nrow(H))
-            E3 <- rbind( cbind(     Q22,  H10, t(H)),
-                         cbind(t(H10),     DL,  H0),
-                         cbind(     H,     H0,  H0)  )
-            Q22.inv <- MASS::ginv(E3)[1:ncol(Q22), 1:ncol(Q22)]
-            # FIXME: better include inactive + slacks??
-        } else {
-            Q22.inv <- solve(Q22)
-        }
-    } else {
-        Q22.inv <- solve(Q22)
-    }
-
-    #print( dim(Q22.inv) )
-    #print( Q22.inv[1:5, 1:5] )
-    # NOTE: we could perhaps use Q22.inv <- vcov(fit) * N^2?
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
+    #V.diag <- c(diag(V), diag(Q22))
     V.diag <- diag(V)
     # dirty hack: catch very small or negative values in diag(V)
     # this is needed eg when parameters are not identified if freed-up;
@@ -192,54 +114,69 @@ modindices <- function(object,
 
     # create and fill in mi
     mi <- numeric( length(dx) )
-    mi[nonfree.idx] <- dx[nonfree.idx]^2 / V.diag
+    mi[extra.idx] <- dx[extra.idx]^2 / V.diag
+    if(length(model.idx) > 0L) {
+        mi[model.idx]    <- dx[model.idx]^2 / diag(Q22)
+    }
 
-    # take care of equality constraints
-    # Sorbom 1989 equations 12 and 13
-    # surely this code needs some serious optimization
-    # but it seems to work for now
-    # we should use the K matrix somewhere...
-    if(FALSE) {
-        for(i in 1:length(eq.idx)) {
-            # index in all.idx (only mi.fixed elements)
-            theta2.idx <- eq.idx[i]
-            thetac.idx <- eq.idx[eq.id == eq.id[i] & eq.idx != eq.idx[i]]
-            #f.idx <- free.idx[-which(free.idx == theta2.idx)]
-            f.idx <- free.idx
-            Q22 <- Q[f.idx, f.idx, drop=FALSE]
+    # correct mi's for equality constraints
+    if(length(model.idx) > 0L && object@Model@eq.constraints) {
+        # take care of equality constraints
+        # Sorbom 1989 equations 12 and 13
+        # surely this code needs some serious optimization
+        # but it seems to work for now
+        # we should use the K matrix somewhere...
 
-            ivec <- as.matrix(rep(1,length(thetac.idx)))
-            C11 <- Q[thetac.idx, thetac.idx, drop=FALSE]
-            C21 <- Q[theta2.idx, thetac.idx, drop=FALSE]; C12 <- t(C21)
-            C22 <- Q[theta2.idx, theta2.idx, drop=FALSE] 
-            D1  <- Q[f.idx, thetac.idx, drop=FALSE]; 
-            d2  <- Q[f.idx, theta2.idx, drop=FALSE]
+        K <- object@Model@eq.constraints.K
+        con.idx <- which(colSums(K != 0) > 1)
+        ncon <- length(con.idx) # # number of constraints
 
-            c11 <- t(ivec) %*% C11 %*% ivec
-            c21 <- C21 %*% ivec; c12 <- t(c21)
-            c22 <- C22
+        for(con in seq_len(ncon)) {
 
-            C <- rbind( cbind(c11,c12), cbind(c21, c22) )
-        
-            D <- cbind(D1 %*% ivec, d2)
+            # what are the involved parameters (in model.idx)?
+            eq.idx <- which(K[,con.idx[con]] > 0)
 
-   
-            e12 <- (D1 %*% ivec) + d2; e21 <- t(e12)
-            e22 <- (t(ivec) %*% C11 %*% ivec) + (t(ivec) %*% C12) + (C21 %*% ivec) + C22
-            E.star <- rbind( cbind(Q22, e12), cbind(e21, e22) )
+            for(i in 1:length(eq.idx)) {
+                # index in all.idx (only mi.fixed elements)
+                theta2.idx <- model.idx[ eq.idx[i]  ]
+                thetac.idx <- model.idx[ eq.idx[-i] ]
+                #f.idx <- free.idx[-which(free.idx == theta2.idx)]
+                f.idx <- model.idx[ -eq.idx ]
+                Q22 <- Q[f.idx, f.idx, drop=FALSE]
 
-            E.star.inv <- inv.chol(E.star)
-            n.free <- length(f.idx); n.ref <- length(theta2.idx)
-            E11 <- E.star.inv[1:n.free, 1:n.free]
-            E21 <- t(E.star.inv[n.free + 1:n.ref, 1:n.free]); E12 <- t(E21)
-            E22 <- as.numeric(E.star.inv[n.free + 1:n.ref, n.free + 1:n.ref])
-            E.inv <- E11 - (E12 %*% E21)/E22
+                ivec <- as.matrix(rep(1,length(thetac.idx)))
+                C11 <- Q[thetac.idx, thetac.idx, drop=FALSE]
+                C21 <- Q[theta2.idx, thetac.idx, drop=FALSE]; C12 <- t(C21)
+                C22 <- Q[theta2.idx, theta2.idx, drop=FALSE]
+                D1  <- Q[f.idx, thetac.idx, drop=FALSE];
+                d2  <- Q[f.idx, theta2.idx, drop=FALSE]
+    
+                c11 <- t(ivec) %*% C11 %*% ivec
+                c21 <- C21 %*% ivec; c12 <- t(c21)
+                c22 <- C22
 
-            H <- C - (t(D) %*% E.inv %*% D)
-            h11 <- H[1,1]; h12 <- H[1,2]; h21 <- H[2,1]; h22 <- H[2,2]
+                C <- rbind( cbind(c11,c12), cbind(c21, c22) )
 
-            mi[theta2.idx] <- dx[theta2.idx]^2 * (h11 + 2*h21 + h22) / (h11*h22 - h12^2)
-        }
+                D <- cbind(D1 %*% ivec, d2)
+
+
+                e12 <- (D1 %*% ivec) + d2; e21 <- t(e12)
+                e22 <- (t(ivec) %*% C11 %*% ivec) + (t(ivec) %*% C12) + (C21 %*% ivec) + C22
+                E.star <- rbind( cbind(Q22, e12), cbind(e21, e22) )
+ 
+                E.star.inv <- inv.chol(E.star)
+                n.free <- length(f.idx); n.ref <- length(theta2.idx)
+                E11 <- E.star.inv[1:n.free, 1:n.free]
+                E21 <- t(E.star.inv[n.free + 1:n.ref, 1:n.free]); E12 <- t(E21)
+                E22 <- as.numeric(E.star.inv[n.free + 1:n.ref, n.free + 1:n.ref])
+                E.inv <- E11 - (E12 %*% E21)/E22
+
+                H <- C - (t(D) %*% E.inv %*% D)
+                h11 <- H[1,1]; h12 <- H[1,2]; h21 <- H[2,1]; h22 <- H[2,2]
+
+                mi[theta2.idx] <- dx[theta2.idx]^2 * (h11 + 2*h21 + h22) / (h11*h22 - h12^2)
+            } #i
+        } # ncon
     }
 
     # EPC
@@ -268,9 +205,9 @@ modindices <- function(object,
     # remove some rows
     #idx <- which(LIST$free > 0L & !duplicated(LIST$free) & !LIST$eq.id > 0L)
     #LIST <- LIST[-idx,]
-    if(length(free.idx) > 0L) {
-        LIST <- LIST[-free.idx,]
-    }
+    #if(length(model.idx) > 0L) {
+    #    LIST <- LIST[-model.idx,]
+    #}
 
     # standardize?
     if(standardized) {
@@ -351,7 +288,7 @@ modindices <- function(object,
     #if(length(idx) > 0L) {
     #    LIST <- LIST[-idx,]
     #}
-    if(ngroups == 1) LIST$group <- NULL
+    if(max(LIST$group) == 1) LIST$group <- NULL
     
     # sort?
     if(sort.) {

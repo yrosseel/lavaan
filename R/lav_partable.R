@@ -700,7 +700,7 @@ getParameterLabels <- lav_partable_labels
 
 
 lav_partable_full <- function(partable = NULL, group = NULL, 
-                              free = FALSE) {
+                              free = FALSE, start = FALSE) {
 
     # meanstructure + number of groups
     meanstructure <- any(partable$op == "~1")
@@ -800,6 +800,10 @@ lav_partable_full <- function(partable = NULL, group = NULL,
 
     if(free) {
         LIST$free <- rep(0L, nrow(LIST))
+    }
+
+    if(start) {
+        LIST$start <- rep(0, nrow(LIST))
     }
 
     LIST
@@ -1297,3 +1301,28 @@ lav_partable_flat <- function(FLAT = NULL,
     LIST
 }
 
+lav_partable_matrixrep <- function(partable, target = NULL,
+                                       representation = "LISREL") {
+
+    if(is.null(target)) {
+        target <- partable
+    } 
+
+    if(representation == "LISREL") {
+        REP <- representation.LISREL(partable = partable, target = target,
+                                     extra = FALSE)
+    } else {
+        stop("only LISREL representation has been implemented")
+    }
+
+    if(is.data.frame(target)) {
+        target <- cbind(target, as.data.frame(REP, stringsAsFactors = FALSE))
+    } else {
+        target$mat <- REP$mat
+        target$row <- REP$row
+        target$col <- REP$col
+    }
+
+    target
+}
+    

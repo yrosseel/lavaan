@@ -8,7 +8,7 @@
 #                   YR 2012-05-17: thresholds
 
 representation.LISREL <- function(partable=NULL, target=NULL, 
-                                  extra=FALSE) {
+                                  extra=FALSE, remove.nonexisting=TRUE) {
 
     # prepare target list
     if(is.null(target)) target <- partable 
@@ -278,6 +278,20 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     REP <- list(mat = tmp.mat,
                 row = tmp.row,
                 col = tmp.col)
+
+    # remove non-existing (NAs)? 
+    # here we remove `non-existing' parameters; this depends on the matrix
+    # representation (eg in LISREL rep, there is no ~~ between lv and ov)
+    if(remove.nonexisting) {
+        idx <- which( nchar(REP$mat) > 0L &
+                      !is.na(REP$row) & REP$row > 0L &
+                      !is.na(REP$col) & REP$col > 0L )
+        # but keep ==, :=, etc.
+        idx <- c(idx, which(partable$op %in% c("==", ":=", "<", ">")))
+        REP$mat <- REP$mat[idx]
+        REP$row <- REP$row[idx]
+        REP$col <- REP$col[idx]
+    }
 
     # always add 'ov.dummy.*.names' attributes
     attr(REP, "ov.dummy.names.nox") <- ov.dummy.names.nox

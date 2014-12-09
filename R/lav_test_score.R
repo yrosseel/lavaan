@@ -9,7 +9,8 @@
 #
 # YR 1 dec 2014
 
-lavTestScore <- function(object, extra = NULL, verbose = FALSE) {
+lavTestScore <- function(object, extra = NULL, release = NULL, 
+                         verbose = FALSE) {
 
     if(object@Fit@npar > 0L && !object@Fit@converged)
         stop("lavaan ERROR: model did not converge")
@@ -40,6 +41,10 @@ lavTestScore <- function(object, extra = NULL, verbose = FALSE) {
         paste(apply(FLAT[idx, c("lhs","op","rhs")], 1, 
               paste, collapse=" "), collapse="\n"))
         FLAT <- FLAT[-idx,]
+    }
+
+    if(nrow(FLAT) == 0L) {
+        stop("lavaan ERROR: extra parameters table is empty")
     }
 
     # what about group?

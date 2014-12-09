@@ -2,6 +2,7 @@
 # - but allow different number of columns
 lav_partable_merge <- function(pt1 = NULL, pt2 = NULL, 
                                remove.duplicated = FALSE,
+                               fromLast=FALSE,
                                warn = TRUE) {
 
     pt1 <- as.data.frame(pt1, stringsAsFactors = FALSE)
@@ -26,14 +27,34 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     }
 
     # check for duplicated elements
-    idx <- which(duplicated(TMP, fromLast=TRUE)) # idx should be in pt1
-    if(length(idx)) {
-        if(warn) {
-            warning("lavaan WARNING: duplicated parameters are ignored:\n",
-            paste(apply(pt1[idx, c("lhs","op","rhs")], 1,
-                  paste, collapse=" "), collapse="\n"))
-        l}
-        pt1 <- pt1[-idx,]
+    if(remove.duplicated) {
+        # if fromLast = TRUE, idx is in pt1
+        # if fromLast = FALSE, idx is in pt2
+        idx <- which(duplicated(TMP, fromLast=fromLast)) 
+    
+        if(length(idx)) {
+            if(warn) {
+                warning("lavaan WARNING: duplicated parameters are ignored:\n",
+                paste(apply(pt1[idx, c("lhs","op","rhs")], 1,
+                      paste, collapse=" "), collapse="\n"))
+            }
+            if(fromLast) {
+                pt1 <- pt1[-idx,]
+            } else {
+                idx <- idx - nrow(pt1)
+                pt2 <- pt2[-idx,]
+            }
+        }
+    } else if(!is.null(pt1$start) && !is.null(pt2$start)) {
+        # copy start values from pt1 to pt2
+        for(i in 1:length(pt1$lhs)) {
+            idx <- which(pt2$lhs == pt1$lhs[i] &
+                         pt2$op  == pt1$op[i] &
+                         pt2$rhs == pt1$rhs[i] &
+                         pt2$group == pt1$group[i])
+
+            pt2$start[idx] <- pt1$start[i]
+        }
     }
 
     # nicely merge, using 'id' column (if it comes first)
