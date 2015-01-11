@@ -27,46 +27,23 @@ lav_model <- function(lavpartable      = NULL,
 
 
     # handle variable definitions and (in)equality constraints
+    CON <- lav_constraints_parse(partable = lavpartable,
+                                 constraints = NULL,
+                                 debug = debug)
 
-    # 1. variable definitions
-    def.function <- lav_partable_constraints_def(lavpartable, con = NULL,
-                                                 debug = debug)
+    def.function      <- CON$def.function
+    ceq.function      <- CON$ceq.function
+    ceq.JAC           <- CON$ceq.JAC
+    ceq.jacobian      <- function() NULL
+    ceq.linear.idx    <- CON$ceq.linear.idx
+    ceq.nonlinear.idx <- CON$ceq.nonlinear.idx
+    cin.function      <- CON$cin.function
+    cin.JAC           <- CON$cin.JAC
+    cin.jacobian      <- function() NULL
+    cin.linear.idx    <- CON$cin.linear.idx
+    cin.nonlinear.idx <- CON$cin.nonlinear.idx
 
-    # 2a. non-trivial equality constraints (linear or nonlinear)
-    ceq.function <- lav_partable_constraints_ceq(lavpartable, con = NULL, 
-                                                 debug = debug)
-    # 2b. linear or nonlinear?
-    ceq.linear.idx <- lav_constraints_linear_idx(func = ceq.function,
-                                                 npar = npar)
-    ceq.nonlinear.idx <- lav_constraints_nonlinear_idx(func = ceq.function,
-                                                       npar = npar)
-    
-    # 2c. construct jacobian function
-    if(!is.null(body(ceq.function))) {
-        ceq.jacobian <- function() NULL
-    } else {
-        ceq.jacobian <- function() NULL
-    }
-
-   
-    # 3a. non-trivial inequality constraints (linear or nonlinear)
-    cin.function <- lav_partable_constraints_ciq(lavpartable, con = NULL,
-                                                 debug = debug)
-
-    # 3b. linear or nonlinear?
-    cin.linear.idx <- lav_constraints_linear_idx(func = cin.function,
-                                                 npar = npar)
-    cin.nonlinear.idx <- lav_constraints_nonlinear_idx(func = cin.function,
-                                                       npar = npar)
-
-    # 3c. construct jacobian function
-    if(!is.null(body(cin.function))) {
-        cin.jacobian <- function() NULL
-    } else {
-        cin.jacobian <- function() NULL
-    }
-
-    # 4. handle *linear* equality constraints
+    # handle *linear* equality constraints special
     if(length(ceq.linear.idx)     > 0  && # some linear equality constraints
        length(ceq.nonlinear.idx) == 0L && # no nonlinear equality constraints
        length(cin.linear.idx)    == 0L && # no inequality constraints
@@ -93,8 +70,9 @@ lav_model <- function(lavpartable      = NULL,
 
         # compute range+null space of the jacobion (JAC) of the constraint
         # matrix
-        JAC <- lav_func_jacobian_complex(func = ceq.function,
-                   x = lavpartable$start[lavpartable$free > 0L])
+        #JAC <- lav_func_jacobian_complex(func = ceq.function,
+        #           x = lavpartable$start[lavpartable$free > 0L])
+        JAC <- CON$ceq.JAC
 
         QR <- qr(t(JAC))
         ranK <- QR$rank
@@ -107,7 +85,10 @@ lav_model <- function(lavpartable      = NULL,
         eq.constraints.K <- Q2
 
         # do we have a non-zero 'b' FIXME!!! is this reliable??
-        bvec <- -1 * ceq.function( numeric(npar) )
+        #bvec <- -1 * ceq.function( numeric(npar) )
+        bvec <- CON$ceq.rhs
+        
+
         if(all(bvec == 0)) {
             eq.constraints.k0 <- numeric(npar)
         } else {
@@ -130,8 +111,6 @@ lav_model <- function(lavpartable      = NULL,
         con.jac <- matrix(0,0,0)
         con.lambda <- numeric(0)
     }
-
-
 
     # select model matrices
     if(representation == "LISREL") {

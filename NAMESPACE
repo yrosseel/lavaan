@@ -112,6 +112,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_partable_ndat",
        "lav_partable_df",
        "lav_partable_labels",
+       "lav_partable_from_lm",
        
        # lav_func
        "lav_func_gradient_complex",
