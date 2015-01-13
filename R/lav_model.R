@@ -18,7 +18,6 @@ lav_model <- function(lavpartable      = NULL,
     lavpartable <- lav_partable_complete(lavpartable)
  
     # global info from user model
-    npar <- max(lavpartable$free)
     ngroups <- max(lavpartable$group)
     meanstructure <- any(lavpartable$op == "~1")
     categorical <- any(lavpartable$op == "|")
@@ -31,83 +30,13 @@ lav_model <- function(lavpartable      = NULL,
                                  constraints = NULL,
                                  debug = debug)
 
-    def.function      <- CON$def.function
-    ceq.function      <- CON$ceq.function
-    ceq.JAC           <- CON$ceq.JAC
-    ceq.jacobian      <- function() NULL
-    ceq.linear.idx    <- CON$ceq.linear.idx
-    ceq.nonlinear.idx <- CON$ceq.nonlinear.idx
-    cin.function      <- CON$cin.function
-    cin.JAC           <- CON$cin.JAC
-    cin.jacobian      <- function() NULL
-    cin.linear.idx    <- CON$cin.linear.idx
-    cin.nonlinear.idx <- CON$cin.nonlinear.idx
-
     # handle *linear* equality constraints special
-    if(length(ceq.linear.idx)     > 0  && # some linear equality constraints
-       length(ceq.nonlinear.idx) == 0L && # no nonlinear equality constraints
-       length(cin.linear.idx)    == 0L && # no inequality constraints
-       length(cin.nonlinear.idx) == 0L) {
-
-        eq.constraints <- TRUE
-
-        ## NEW: 18 nov 2014: handle general *linear* constraints
-        ##
-        ## see Nocedal & Wright (2006) 15.3
-        ## - from x to x.red: 
-        ##       x.red <- MASS::ginv(Q2) %*% (x - Q1 %*% solve(t(R)) %*% b)
-        ##   or
-        ##       x.red <- as.numeric((x - b %*% qr.coef(QR,diag(npar))) %*% Q2) 
-        ## 
-        ## - from x.red to x
-        ##       x <- as.numeric(Q1 %*% solve(t(R)) %*% b + Q2 %*% x.red) 
-        ##   or
-        ##       x <- as.numeric(b %*% qr.coef(QR, diag(npar))) + 
-        ##                       as.numeric(Q2 %*% x.red)
-        ##
-        ## we write eq.constraints.K = Q2
-        ##          eq.constraints.k0 = b %*% qr.coef(QR, diag(npar)))
-
-        # compute range+null space of the jacobion (JAC) of the constraint
-        # matrix
-        #JAC <- lav_func_jacobian_complex(func = ceq.function,
-        #           x = lavpartable$start[lavpartable$free > 0L])
-        JAC <- CON$ceq.JAC
-
-        QR <- qr(t(JAC))
-        ranK <- QR$rank
-        Q <- qr.Q(QR, complete = TRUE)
-        Q1 <- Q[,1:ranK, drop = FALSE]         # range space
-        Q2 <- Q[,-seq_len(ranK), drop = FALSE] # null space
-        # R <- qr.R(QR)
-        
-        #eq.constraints.K <- lav_matrix_orthogonal_complement( t(JAC) )
-        eq.constraints.K <- Q2
-
-        # do we have a non-zero 'b' FIXME!!! is this reliable??
-        #bvec <- -1 * ceq.function( numeric(npar) )
-        bvec <- CON$ceq.rhs
-        
-
-        if(all(bvec == 0)) {
-            eq.constraints.k0 <- numeric(npar)
-        } else {
-            tmp <- qr.coef(QR, diag(npar))
-            NA.idx <- which(is.na(rowSums(tmp))) # catch NAs
-            if(length(NA.idx) > 0L) {
-                tmp[NA.idx,] <- 0
-            }
-            eq.constraints.k0 <- as.numeric(bvec %*% tmp)
-        }
-
-        con.jac <- JAC
-        con.lambda <- numeric(nrow(JAC))
+    if(CON$ceq.linear.only.flag) {
+        con.jac <- CON$ceq.JAC
+        con.lambda <- numeric(nrow(CON$ceq.JAC))
         attr(con.jac, "inactive.idx") <- integer(0L)
-        attr(con.jac, "ceq.idx") <- seq_len( nrow(JAC) )
+        attr(con.jac, "ceq.idx") <- seq_len( nrow(CON$ceq.JAC) )
     } else {
-        eq.constraints <- FALSE
-        eq.constraints.K <- matrix(0, 0, 0)
-        eq.constraints.k0 <- numeric(0)
         con.jac <- matrix(0,0,0)
         con.lambda <- numeric(0)
     }
@@ -204,7 +133,7 @@ lav_model <- function(lavpartable      = NULL,
 
             # 2. if equality constraints, unconstrained free parameters
             #    -> to be used in lav_model_gradient
-            if(eq.constraints) {
+            if(CON$ceq.linear.only.flag) {
                 tmp[ cbind(REP$row[idx], 
                            REP$col[idx]) ] <- lavpartable$unco[idx]
                 if(mmSymmetric[mm]) {
@@ -306,20 +235,29 @@ lav_model <- function(lavpartable      = NULL,
                  x.def.idx=which(lavpartable$op == ":="),
                  x.ceq.idx=which(lavpartable$op == "=="),
                  x.cin.idx=which(lavpartable$op == ">" | lavpartable$op == "<"),
-                 eq.constraints=eq.constraints,
-                 eq.constraints.K=eq.constraints.K,
-                 eq.constraints.k0=eq.constraints.k0,
-                 def.function=def.function,
-                 ceq.function=ceq.function,
-                 ceq.jacobian=ceq.jacobian,
-                 ceq.linear.idx=ceq.linear.idx,
-                 ceq.nonlinear.idx=ceq.nonlinear.idx,
-                 cin.function=cin.function,
-                 cin.jacobian=cin.jacobian, 
-                 cin.linear.idx=cin.linear.idx,
-                 cin.nonlinear.idx=cin.nonlinear.idx,
+
+                 eq.constraints      = CON$ceq.linear.only.flag,
+                 eq.constraints.K    = CON$ceq.JAC.NULL,
+                 eq.constraints.k0   = CON$ceq.rhs.NULL,
+
+                 def.function        = CON$def.function,
+                 ceq.function        = CON$ceq.function,
+                 ceq.JAC             = CON$ceq.JAC,
+                 ceq.rhs             = CON$ceq.rhs,
+                 ceq.jacobian        = CON$ceq.jacobian,
+                 ceq.linear.idx      = CON$ceq.linear.idx,
+                 ceq.nonlinear.idx   = CON$ceq.nonlinear.idx,
+
+                 cin.function        = CON$cin.function,
+                 cin.JAC             = CON$cin.JAC,
+                 cin.rhs             = CON$cin.rhs,
+                 cin.jacobian        = CON$cin.jacobian,
+                 cin.linear.idx      = CON$cin.linear.idx,
+                 cin.nonlinear.idx   = CON$cin.nonlinear.idx,
+
                  con.jac=con.jac,
                  con.lambda=con.lambda,
+
                  nexo=nexo,
                  fixed.x=fixed.x,
                  parameterization=parameterization,

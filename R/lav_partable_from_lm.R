@@ -27,23 +27,28 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
         rhs[int.idx] <- ""
     }
 
-    # always add residual variance
-    lhs <- c(lhs, responseName)
-     op <- c(op, "~~")
-    rhs <- c(rhs, responseName)
+    # always add residual variance?
+    #lhs <- c(lhs, responseName)
+    # op <- c(op, "~~")
+    #rhs <- c(rhs, responseName)
 
     # construct minimal partable
     partable <- list(lhs = lhs, op = op, rhs = rhs)
 
     # include 'est' column?
     if(est) {
-        partable$est <- c(as.numeric(predCoef),
-                          sum(resid(object)^2) / object$df.residual)
+        #partable$est <- c(as.numeric(predCoef),
+        #                  sum(resid(object)^2) / object$df.residual)
+        partable$est <- as.numeric(predCoef)
     }
 
     # include 'label' column?
     if(label) {
-        partable$label <- c(predNames, responseName)
+        # partable$label <- c(predNames, responseName)
+        partable$label <- predNames
+
+        # convert all ':' to '.'
+        partable$label <- gsub(":", ".", partable$label)
     }
 
     # convert to data.frame?

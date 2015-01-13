@@ -113,6 +113,9 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_partable_df",
        "lav_partable_labels",
        "lav_partable_from_lm",
+
+       # lav_constraints
+       "lav_constraints_parse",
        
        # lav_func
        "lav_func_gradient_complex",

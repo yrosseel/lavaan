@@ -291,7 +291,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     # dx is 1xnpar matrix of LIST (type != "free")
     if(is.matrix(dx)) {
-        as.numeric(dx)
+        dx <- as.numeric(dx)
     }
 
     dx

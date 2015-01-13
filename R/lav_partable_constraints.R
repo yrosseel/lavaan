@@ -217,6 +217,118 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
 #         }
 lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
 
+
+    # empty function
+    cin.function <- function() NULL
+
+    # if 'con', merge partable + con
+    if(!is.null(con)) {
+        partable$lhs <- c(partable$lhs, con$lhs)
+        partable$op  <- c(partable$op,  con$op )
+        partable$rhs <- c(partable$rhs, con$rhs)
+    }
+    
+    # get inequality constraints
+    ineq.idx <- which(partable$op == ">" | partable$op == "<")
+
+    # catch empty ceq
+    if(length(ineq.idx) == 0L) {
+        return(cin.function)
+    }
+
+    # create function
+    formals(cin.function) <- alist(x=, ...=)
+    BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
+
+    # first come the variable definitions
+    DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
+    def.idx <- which(partable$op == ":=")
+    BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
+
+    # extract labels
+    lhs.labels <- all.vars( parse(file="", text=partable$lhs[ineq.idx]) )
+    rhs.labels <- all.vars( parse(file="", text=partable$rhs[ineq.idx]) )
+    ineq.labels <- unique(c(lhs.labels, rhs.labels))
+    # remove def.names from ineq.labels
+    if(length(def.idx) > 0L) {
+        def.names <- as.character(partable$lhs[def.idx])
+        d.idx <- which(ineq.labels %in% def.names)
+        if(length(d.idx) > 0) ineq.labels <- ineq.labels[-d.idx]
+    }
+    ineq.x.idx <- rep(as.integer(NA), length(ineq.labels))
+    # get user-labels ids
+    ulab.idx <- which(ineq.labels %in% partable$label)
+    if(length(ulab.idx) > 0L) {
+        ineq.x.idx[ ulab.idx] <- partable$free[match(ineq.labels[ulab.idx], 
+                                                   partable$label)]
+    }
+    # get plabels ids
+    plab.idx <- which(ineq.labels %in% partable$plabel)
+    if(length(plab.idx) > 0L) {
+        ineq.x.idx[ plab.idx] <- partable$free[match(ineq.labels[plab.idx],  
+                                                   partable$plabel)]
+    }
+
+    # check if we have found the label
+    if(any(is.na(ineq.x.idx))) {
+        stop("lavaan ERROR: unknown label(s) in inequality constraint(s): ",
+         paste(ineq.labels[which(is.na(ineq.x.idx))], collapse=" "))
+    }
+    # check if they are all 'free'
+    if(any(ineq.x.idx == 0)) {
+        fixed.ineq.idx <- which(ineq.x.idx == 0)
+        # FIXME: what should we do here? we used to stop with an error
+        # from 0.5.18, we give a warning, and replace the non-free label
+        # with its fixed value in ustart
+        warning("lavaan WARNING: non-free parameter(s) in inequality constraint(s): ",
+            paste(ineq.labels[fixed.ineq.idx], collapse=" "))
+
+        fixed.lab.lhs <- ineq.labels[fixed.ineq.idx]
+        fixed.lab.rhs <- partable$ustart[match(fixed.lab.lhs, partable$label)]
+        BODY.txt <- paste(BODY.txt, "# non-free parameter labels\n",
+            paste(fixed.lab.lhs, "<-", fixed.lab.rhs, collapse="\n"),
+            "\n", sep="")
+
+        ineq.x.idx <- ineq.x.idx[-fixed.ineq.idx]
+        ineq.labels <- ineq.labels[-fixed.ineq.idx]
+    }
+
+    # put the labels the function BODY
+    ineq.x.lab  <- paste("x[", ineq.x.idx, "]",sep="")
+    if(length(ineq.x.idx) > 0L) {
+        BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+            paste(ineq.labels, "<-", ineq.x.lab, collapse="\n"),
+            "\n", sep="")
+    }
+
+    # write the definitions literally
+    BODY.txt <- paste(BODY.txt, "\n# inequality constraints\n", sep="")
+    for(i in 1:length(ineq.idx)) {
+        lhs <- partable$lhs[ ineq.idx[i] ]
+        rhs <- partable$rhs[ ineq.idx[i] ]
+        if(rhs == "0") { 
+            ineq.string <- lhs
+        } else {
+            ineq.string <- paste(lhs, " - (", rhs, ")", sep="")
+        }
+        BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", ineq.string, "\n", sep="")
+    }
+    # put the results in 'out'
+    #BODY.txt <- paste(BODY.txt, "\nout <- ",
+    #    paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
+
+    # what to do with NA values? -> return +Inf???
+    BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep="")
+    BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
+    body(cin.function) <- parse(file="", text=BODY.txt)
+    if(debug) { cat("cin.function = \n"); print(cin.function); cat("\n") }
+
+    cin.function
+}
+
+
+lav_partable_constraints_ciq_OLD <- function(partable, con = NULL, debug = FALSE) {
+
     cin.function <- function() NULL
 
     # if 'con', merge partable + con

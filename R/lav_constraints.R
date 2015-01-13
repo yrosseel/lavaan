@@ -4,7 +4,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
 
     # just in case we do not have a $free column in partable
     if(is.null(partable$free)) {
-        partable$free <- rep(1L, length(partable$lhs))
+        partable$free <- seq_len(length(partable$lhs))
     }
 
     # from the partable: free parameters
@@ -76,9 +76,13 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         # constants
         # do we have a non-zero 'rhs' elements? FIXME!!! is this reliable??
         ceq.rhs <- -1 * ceq.function( numeric(npar) )
+
+        # evaluate constraints
+        ceq.theta <- ceq.function(theta)
     } else {
         ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
         ceq.rhs <- numeric(0L)
+        ceq.theta <- numeric(0L)
     }
 
     if(!is.null(body(cin.function))) {
@@ -91,24 +95,109 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         # constants
         # do we have a non-zero 'rhs' elements? FIXME!!! is this reliable??
         cin.rhs <- -1 * cin.function( numeric(npar) )
+
+        # evaluate constraints
+        cin.theta <- cin.function(theta)
     } else {
         cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
         cin.rhs <- numeric(0L)
+        cin.theta <- numeric(0L)
     }
 
-    OUT <- list(def.function      = def.function,
+    # shortcut flags
+    ceq.linear.flag    <- length(ceq.linear.idx) > 0L
+    ceq.nonlinear.flag <- length(ceq.nonlinear.idx) > 0L
+    ceq.flag           <- ceq.linear.flag || ceq.nonlinear.flag
 
-                ceq.function      = ceq.function,
-                ceq.JAC           = ceq.JAC,
-                ceq.rhs           = ceq.rhs,
-                ceq.linear.idx    = ceq.linear.idx,
-                ceq.nonlinear.idx = ceq.nonlinear.idx,
+    cin.linear.flag    <- length(cin.linear.idx) > 0L
+    cin.nonlinear.flag <- length(cin.nonlinear.idx) > 0L
+    cin.flag           <- cin.linear.flag || cin.nonlinear.flag
 
-                cin.function      = cin.function,
-                cin.JAC           = cin.JAC,
-                cin.rhs           = cin.rhs,
-                cin.linear.idx    = cin.linear.idx,
-                cin.nonlinear.idx = cin.nonlinear.idx)
+    ceq.only.flag      <- ceq.flag && !cin.flag
+    cin.only.flag      <- cin.flag && !ceq.flag
+
+    ceq.linear.only.flag <- (  ceq.linear.flag    && 
+                              !ceq.nonlinear.flag && 
+                              !cin.flag )
+
+    # additional info if ceq.linear.flag
+    if(ceq.linear.flag) {
+        ## NEW: 18 nov 2014: handle general *linear* constraints
+        ##
+        ## see Nocedal & Wright (2006) 15.3
+        ## - from x to x.red: 
+        ##       x.red <- MASS::ginv(Q2) %*% (x - Q1 %*% solve(t(R)) %*% b)
+        ##   or
+        ##       x.red <- as.numeric((x - b %*% qr.coef(QR,diag(npar))) %*% Q2) 
+        ## 
+        ## - from x.red to x
+        ##       x <- as.numeric(Q1 %*% solve(t(R)) %*% b + Q2 %*% x.red) 
+        ##   or
+        ##       x <- as.numeric(b %*% qr.coef(QR, diag(npar))) + 
+        ##                       as.numeric(Q2 %*% x.red)
+        ##
+        ## we write eq.constraints.K = Q2
+        ##          eq.constraints.k0 = b %*% qr.coef(QR, diag(npar)))
+
+        # compute range+null space of the jacobion (JAC) of the constraint
+        # matrix
+        #JAC <- lav_func_jacobian_complex(func = ceq.function,
+        #           x = lavpartable$start[lavpartable$free > 0L]
+        QR <- qr(t(ceq.JAC))
+        ranK <- QR$rank
+        Q <- qr.Q(QR, complete = TRUE)
+        # Q1 <- Q[,1:ranK, drop = FALSE]         # range space
+        # Q2 <- Q[,-seq_len(ranK), drop = FALSE] # null space
+        # R <- qr.R(QR)
+        ceq.JAC.NULL <- Q[,-seq_len(ranK), drop = FALSE]
+
+        if(all(ceq.rhs == 0)) {
+            ceq.rhs.NULL <- numeric(npar)
+        } else {
+            tmp <- qr.coef(QR, diag(npar))
+            NA.idx <- which(is.na(rowSums(tmp))) # catch NAs
+            if(length(NA.idx) > 0L) {
+                tmp[NA.idx,] <- 0
+            }
+            ceq.rhs.NULL <- as.numeric(ceq.rhs %*% tmp)
+        }
+    } else {
+        ceq.JAC.NULL <- matrix(0,0L,0L)
+        ceq.rhs.NULL <- numeric(0L)
+    }
+
+    # dummy jacobian 'function'
+    ceq.jacobian <- function() NULL
+    cin.jacobian <- function() NULL
+
+
+    OUT <- list(def.function         = def.function,
+
+                ceq.function         = ceq.function,
+                ceq.JAC              = ceq.JAC,
+                ceq.jacobian         = ceq.jacobian,
+                ceq.rhs              = ceq.rhs,
+                ceq.theta            = ceq.theta,
+                ceq.linear.idx       = ceq.linear.idx,
+                ceq.nonlinear.idx    = ceq.nonlinear.idx,
+                ceq.linear.flag      = ceq.linear.flag,
+                ceq.nonlinear.flag   = ceq.nonlinear.flag,
+                ceq.flag             = ceq.flag,
+                ceq.linear.only.flag = ceq.linear.only.flag,
+                ceq.JAC.NULL         = ceq.JAC.NULL,
+                ceq.rhs.NULL         = ceq.rhs.NULL,
+
+                cin.function         = cin.function,
+                cin.JAC              = cin.JAC,
+                cin.jacobian         = cin.jacobian,
+                cin.rhs              = cin.rhs,
+                cin.theta            = cin.theta,
+                cin.linear.idx       = cin.linear.idx,
+                cin.nonlinear.idx    = cin.nonlinear.idx,
+                cin.linear.flag      = cin.linear.flag,
+                cin.nonlinear.flag   = cin.nonlinear.flag,
+                cin.flag             = cin.flag,
+                cin.only.flag        = cin.only.flag)
 
     OUT
 }
