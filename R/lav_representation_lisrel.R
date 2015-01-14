@@ -656,7 +656,7 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
         }
 
         # put back ETA values for the 'real' latent variables
-        ETA2[,1:ncol(ETA)] <- ETA
+        ETA2[,seq_len( ncol(ETA) )] <- ETA
     } 
 
     # get NU, but do not 'fix'
@@ -804,13 +804,13 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
     }
 
     if(is.null(th.idx)) {
-        th.idx <- 1:nth
+        th.idx <- seq_len(nth)
         nlev <- rep(1L, nvar)
         K_nu <- diag(nvar)
     } else {
         nlev <- tabulate(th.idx, nbins=nvar); nlev[nlev == 0L] <- 1L
         K_nu <- matrix(0, sum(nlev), nvar)
-        K_nu[ cbind(1:sum(nlev), rep(1:nvar, times=nlev)) ] <- 1.0
+        K_nu[ cbind(seq_len(sum(nlev)), rep(seq_len(nvar), times=nlev)) ] <- 1.0
     }
 
     # shortcut
@@ -1093,7 +1093,7 @@ computeYHATetax.LISREL <- function(MLIST=NULL, eXo=NULL, ETA=NULL,
         LAMBDA <- LAMBDA[, -lv.dummy.idx, drop=FALSE]
         nfac <- ncol(LAMBDA)
         LAMBDA[ov.y.dummy.ov.idx,] <-
-            MLIST$beta[ov.y.dummy.lv.idx, 1:nfac, drop=FALSE]
+            MLIST$beta[ov.y.dummy.lv.idx, seq_len(nfac), drop=FALSE]
     }
 
     # compute YHAT
@@ -1241,7 +1241,7 @@ MLISTX2MLIST <- function(MLISTX=NULL,
     MLIST$psi[lv.idx, lv.idx] <- cov.x
 
     # move (ov.x.dummy elements of) GAMMA to BETA
-    MLIST$beta[1:nfac, ov.x.dummy.lv.idx] <- MLISTX$gamma
+    MLIST$beta[seq_len(nfac), ov.x.dummy.lv.idx] <- MLISTX$gamma
     MLIST$gamma <- NULL
 
     # fix ALPHA
@@ -1362,7 +1362,8 @@ computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
     # if delta, scale
     if(delta && !is.null(MLIST$delta)) {
         DELTA <- diag(MLIST$delta[,1L], nrow=nvar, ncol=nvar)
-        COV[1:nvar,1:nvar] <- DELTA %*% COV[1:nvar,1:nvar] %*% DELTA
+        COV[seq_len(nvar),seq_len(nvar)] <- 
+            DELTA %*% COV[seq_len(nvar),seq_len(nvar)] %*% DELTA
     }
 
 
@@ -1493,7 +1494,7 @@ derivative.sigma.LISREL <- function(m="lambda",
                                     # we assume that the have full size 
                                     # (nvar*nvar) (but already correct for 
                                     # symmetry)
-                                    idx=1:length(MLIST[[m]]),
+                                    idx=seq_len(length(MLIST[[m]])),
                                     MLIST=NULL,
                                     delta = TRUE) {
 
@@ -1589,7 +1590,7 @@ derivative.sigma.LISREL <- function(m="lambda",
 # dMu/dx -- per model matrix
 derivative.mu.LISREL <- function(m="alpha", 
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]), 
+                                 idx=seq_len(length(MLIST[[m]])), 
                                  MLIST=NULL) {
 
 
@@ -1636,7 +1637,7 @@ derivative.mu.LISREL <- function(m="alpha",
 # dTh/dx -- per model matrix
 derivative.th.LISREL <- function(m="tau",
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]),
+                                 idx=seq_len(length(MLIST[[m]])),
                                  th.idx=NULL,
                                  MLIST=NULL,
                                  delta = TRUE) {
@@ -1667,13 +1668,13 @@ derivative.th.LISREL <- function(m="tau",
     }
 
     if(is.null(th.idx)) {
-        th.idx <- 1:nth
+        th.idx <- seq_len(nth)
         nlev <- rep(1L, nvar)
         K_nu <- diag(nvar)
     } else {
         nlev <- tabulate(th.idx, nbins=nvar); nlev[nlev == 0L] <- 1L
         K_nu <- matrix(0, sum(nlev), nvar)
-        K_nu[ cbind(1:sum(nlev), rep(1:nvar, times=nlev)) ] <- 1.0
+        K_nu[ cbind(seq_len(sum(nlev)), rep(seq_len(nvar), times=nlev)) ] <- 1.0
     }
 
     # shortcut for empty matrices
@@ -1731,7 +1732,7 @@ derivative.th.LISREL <- function(m="tau",
 # dPi/dx -- per model matrix
 derivative.pi.LISREL <- function(m="lambda",
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]),
+                                 idx=seq_len(length(MLIST[[m]])),
                                  MLIST=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
@@ -1785,7 +1786,7 @@ derivative.pi.LISREL <- function(m="lambda",
 # dGW/dx -- per model matrix
 derivative.gw.LISREL <- function(m="gw", 
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]), 
+                                 idx=seq_len(length(MLIST[[m]])), 
                                  MLIST=NULL) {
 
     # shortcut for empty matrices
@@ -1803,7 +1804,7 @@ derivative.gw.LISREL <- function(m="gw",
 # dlambda/dx -- per model matrix
 derivative.lambda.LISREL <- function(m="lambda", 
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]), 
+                                 idx=seq_len(length(MLIST[[m]])), 
                                  MLIST=NULL) {
 
     LAMBDA <- MLIST$lambda
@@ -1823,7 +1824,7 @@ derivative.lambda.LISREL <- function(m="lambda",
 # dpsi/dx -- per model matrix - FIXME!!!!!
 derivative.psi.LISREL <- function(m="psi", 
                                   # all model matrix elements, or only a few?
-                                  idx=1:length(MLIST[[m]]), 
+                                  idx=seq_len(length(MLIST[[m]])), 
                                   MLIST=NULL) {
 
     PSI <- MLIST$psi; nfac <- nrow(PSI)
@@ -1845,7 +1846,7 @@ derivative.psi.LISREL <- function(m="psi",
 # dtheta/dx -- per model matrix
 derivative.theta.LISREL <- function(m="theta", 
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]), 
+                                 idx=seq_len(length(MLIST[[m]])), 
                                  MLIST=NULL) {
 
     THETA <- MLIST$theta; nvar <- nrow(THETA)
@@ -1868,7 +1869,7 @@ derivative.theta.LISREL <- function(m="theta",
 # dbeta/dx -- per model matrix
 derivative.beta.LISREL <- function(m="beta", 
                                    # all model matrix elements, or only a few?
-                                   idx=1:length(MLIST[[m]]), 
+                                   idx=seq_len(length(MLIST[[m]])), 
                                    MLIST=NULL) {
 
     BETA <- MLIST$beta
@@ -1888,7 +1889,7 @@ derivative.beta.LISREL <- function(m="beta",
 # dgamma/dx -- per model matrix
 derivative.gamma.LISREL <- function(m="gamma",
                                     # all model matrix elements, or only a few?
-                                    idx=1:length(MLIST[[m]]),
+                                    idx=seq_len(length(MLIST[[m]])),
                                     MLIST=NULL) {
 
     GAMMA <- MLIST$gamma
@@ -1908,7 +1909,7 @@ derivative.gamma.LISREL <- function(m="gamma",
 # dnu/dx -- per model matrix
 derivative.nu.LISREL <- function(m="nu",
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]),
+                                 idx=seq_len(length(MLIST[[m]])),
                                  MLIST=NULL) {
 
     NU <- MLIST$nu
@@ -1928,7 +1929,7 @@ derivative.nu.LISREL <- function(m="nu",
 # dtau/dx -- per model matrix
 derivative.tau.LISREL <- function(m="tau",
                                  # all model matrix elements, or only a few?
-                                 idx=1:length(MLIST[[m]]),
+                                 idx=seq_len(length(MLIST[[m]])),
                                  MLIST=NULL) {
 
     TAU <- MLIST$tau
@@ -1950,7 +1951,7 @@ derivative.tau.LISREL <- function(m="tau",
 # dalpha/dx -- per model matrix
 derivative.alpha.LISREL <- function(m="alpha",
                                     # all model matrix elements, or only a few?
-                                    idx=1:length(MLIST[[m]]),
+                                    idx=seq_len(length(MLIST[[m]])),
                                     MLIST=NULL) {
 
     ALPHA <- MLIST$alpha
@@ -1998,7 +1999,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         }
         if(is.null(th.idx)) {
             th.idx <- integer(0L)
-            for(i in 1:nvar) {
+            for(i in seq_len(nvar)) {
                 if(i %in% num.idx) {
                     th.idx <- c(th.idx, 0)
                 } else {
@@ -2120,7 +2121,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
         # 1. sigma
         DX1 <- lav_func_jacobian_complex(func=compute.sigma, x=x, mm=mm, MLIST=MLIST)
-        DX2 <- derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+        DX2 <- derivative.sigma.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                        MLIST=MLIST, delta = !theta)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
@@ -2148,7 +2149,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
         # 2. mu
         DX1 <- lav_func_jacobian_complex(func=compute.mu, x=x, mm=mm, MLIST=MLIST)
-        DX2 <- derivative.mu.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+        DX2 <- derivative.mu.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                        MLIST=MLIST)
         if(mm %in% c("psi","theta")) {
             # remove duplicated columns of symmetric matrices 
@@ -2169,13 +2170,13 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         if(th) {
             DX1 <- lav_func_jacobian_complex(func=compute.th2, x=x, mm=mm, MLIST=MLIST, 
                                 th.idx=th.idx)
-            DX2 <- derivative.th.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+            DX2 <- derivative.th.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                         MLIST=MLIST, th.idx=th.idx,
                                         delta=TRUE)
             if(theta) {
                 # 1. compute dDelta.dx
                 dxSigma <- 
-                    derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                    derivative.sigma.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                             MLIST=MLIST, delta = !theta)
                 var.idx <- which(!lav_matrix_vech_idx(nvar) %in% 
                                   lav_matrix_vech_idx(nvar, diagonal = FALSE))
@@ -2187,7 +2188,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                 # 2. compute dth.dDelta
                 dth.dDelta <- 
                     derivative.th.LISREL(m="delta", 
-                                         idx=1:length(MLIST[["delta"]]),
+                                         idx=seq_len(length(MLIST[["delta"]])),
                                          MLIST=MLIST, th.idx=th.idx)
 
                 # 3. add dth.dDelta %*% dDelta.dx
@@ -2215,7 +2216,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         # 4. pi
         if(pi) {
             DX1 <- lav_func_jacobian_complex(func=compute.pi, x=x, mm=mm, MLIST=MLIST)
-            DX2 <- derivative.pi.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+            DX2 <- derivative.pi.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                         MLIST=MLIST)
             if(mm %in% c("psi","theta")) {
                 # remove duplicated columns of symmetric matrices 
@@ -2225,7 +2226,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
             if(theta) {
                 # 1. compute dDelta.dx
                 dxSigma <- 
-                    derivative.sigma.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+                    derivative.sigma.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                             MLIST=MLIST, delta = !theta)
                 if(mm %in% c("psi","theta")) {
                     # remove duplicated columns of symmetric matrices 
@@ -2242,7 +2243,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                 # 2. compute dpi.dDelta
                 dpi.dDelta <- 
                     derivative.pi.LISREL(m="delta", 
-                                         idx=1:length(MLIST[["delta"]]),
+                                         idx=seq_len(length(MLIST[["delta"]])),
                                          MLIST=MLIST)
 
                 # 3. add dpi.dDelta %*% dDelta.dx
@@ -2266,7 +2267,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         # 5. gw
         if(gw) {
             DX1 <- lav_func_jacobian_complex(func=compute.gw, x=x, mm=mm, MLIST=MLIST)
-            DX2 <- derivative.gw.LISREL(m=mm, idx=1:length(MLIST[[mm]]),
+            DX2 <- derivative.gw.LISREL(m=mm, idx=seq_len(length(MLIST[[mm]])),
                                     MLIST=MLIST)
             if(mm %in% c("psi","theta")) {
                 # remove duplicated columns of symmetric matrices 

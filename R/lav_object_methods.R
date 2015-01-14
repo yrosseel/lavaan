@@ -1004,7 +1004,15 @@ varTable <- vartable <- function(object, ov.names=names(object),
 
 
 setMethod("fitted.values", "lavaan",
-function(object, labels=TRUE) {
+function(object, type = "moments", labels=TRUE) {
+
+    # lowercase type
+    type <- tolower(type)
+
+    # catch type="casewise"
+    if(type %in% c("casewise","case","obs","observations","ov")) {
+        return( lavPredict(object, type = "ov", label = labels) )
+    }
 
     G <- object@Data@ngroups
     ov.names <- object@Data@ov.names
@@ -1046,8 +1054,8 @@ function(object, labels=TRUE) {
 
 
 setMethod("fitted", "lavaan",
-function(object, labels=TRUE) {
-     fitted.values(object, labels=labels)
+function(object, type = "moments", labels=TRUE) {
+     fitted.values(object, type = type, labels = labels)
 })
 
 

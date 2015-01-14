@@ -6,7 +6,7 @@ function(object, type="raw", labels=TRUE) {
     type <- tolower(type)
 
     # catch type="casewise"
-    if(type %in% c("casewise","case","obs","observations")) {
+    if(type %in% c("casewise","case","obs","observations","ov")) {
         return( lav_residuals_casewise(object, labels = labels) )
     }
  

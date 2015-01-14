@@ -178,7 +178,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
             "\n", sep="")
     }
 
-    # write the definitions literally
+    # write the equality constraints literally
     BODY.txt <- paste(BODY.txt, "\n# equality constraints\n", sep="")
     for(i in 1:length(eq.idx)) {
         lhs <- partable$lhs[ eq.idx[i] ]
@@ -215,6 +215,9 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
 #             b1 = x[10]; b2 = x[17] 
 #             out[1] <- b1 + b2 - 2
 #         }
+#
+# NOTE: very similar, but not identitical to ceq, because we need to take
+#       care of the difference between '<' and '>'
 lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
 
 
@@ -301,16 +304,24 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
             "\n", sep="")
     }
 
-    # write the definitions literally
+    # write the constraints literally
     BODY.txt <- paste(BODY.txt, "\n# inequality constraints\n", sep="")
     for(i in 1:length(ineq.idx)) {
         lhs <- partable$lhs[ ineq.idx[i] ]
+         op <- partable$op[  ineq.idx[i] ]
         rhs <- partable$rhs[ ineq.idx[i] ]
-        if(rhs == "0") { 
+
+        # note,this is different from ==, because we have < AND >
+        if(rhs == "0" && op == ">") {
             ineq.string <- lhs
-        } else {
+        } else if(rhs == "0" && op == "<") {
+            ineq.string <- paste(rhs, " - (", lhs, ")", sep="")
+        } else if(rhs != "0" && op == ">") {
             ineq.string <- paste(lhs, " - (", rhs, ")", sep="")
+        } else if(rhs != "0" && op == "<") {
+            ineq.string <- paste(rhs, " - (", lhs, ")", sep="")
         }
+
         BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", ineq.string, "\n", sep="")
     }
     # put the results in 'out'
