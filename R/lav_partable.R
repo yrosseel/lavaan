@@ -315,7 +315,7 @@ lavaanify <- lavParTable <- function(
     # - rewrite 'LABEL-based' equality constraints as == constraints
     # - create plabel: internal labels, based on id
     # - create CON entries, using these internal labels
-    LIST$plabel <- paste("p", LIST$id, "__", sep="")
+    LIST$plabel <- paste(".p", LIST$id, ".", sep="")
     idx.eq.label <- which(duplicated(LABEL))
     if(length(idx.eq.label) > 0L) {
         CON.idx <- length(CON)
