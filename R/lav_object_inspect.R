@@ -45,9 +45,6 @@ lavInspect <- function(lavobject,
     if(what == "free") {
         lav_object_inspect_modelmatrices(lavobject, what = "free", type = "free",
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "unco" || what == "unconstrained") {
-        lav_object_inspect_modelmatrices(lavobject, what = "free", type="unco",
-            add.labels = add.labels, add.class = add.class)
     } else if(what == "partable" || what == "user") {
         lav_object_inspect_modelmatrices(lavobject, what = "free", type="partable",
             add.labels = add.labels, add.class = add.class)
@@ -305,13 +302,13 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
         }
 
         if(what == "free") {
-            # fill in free/unco parameter counts
+            # fill in free parameter counts
             if(type == "free") {
                 m.el.idx <- lavobject@Model@m.free.idx[[mm]]
                 x.el.idx <- lavobject@Model@x.free.idx[[mm]]
-            } else if(type == "unco") {
-                m.el.idx <- lavobject@Model@m.unco.idx[[mm]]
-                x.el.idx <- lavobject@Model@x.unco.idx[[mm]]
+            #} else if(type == "unco") {
+            #    m.el.idx <- lavobject@Model@m.unco.idx[[mm]]
+            #    x.el.idx <- lavobject@Model@x.unco.idx[[mm]]
             } else if(type == "partable") {
                 m.el.idx <- lavobject@Model@m.user.idx[[mm]]
                 x.el.idx <- lavobject@Model@x.user.idx[[mm]]

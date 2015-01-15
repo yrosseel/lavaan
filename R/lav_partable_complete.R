@@ -61,19 +61,24 @@ lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
     }
 
     # add eq.id column 
-    if(is.null(lavpartable$eq.id)) {
-        lavpartable$eq.id <- rep(0, N)
-    }
+    #if(is.null(lavpartable$eq.id)) {
+    #    lavpartable$eq.id <- rep(0, N)
+    #}
 
     # add unco column
-    if(is.null(lavpartable$unco)) {
-        lavpartable$unco <- lavpartable$free
-    }
+    #if(is.null(lavpartable$unco)) {
+    #    lavpartable$unco <- lavpartable$free
+    #}
 
     # order them nicely: id lhs op rhs group
     idx <- match(c("id", "lhs","op","rhs", "group","user",
-                   "free","ustart","exo","label","eq.id","unco"), 
+                   "free","ustart","exo","label"),
                  names(lavpartable))
+
+    # order them nicely: id lhs op rhs group
+    #idx <- match(c("id", "lhs","op","rhs", "group","user",
+    #               "free","ustart","exo","label","eq.id","unco"), 
+    #             names(lavpartable))
     tmp <- lavpartable[idx]
     lavpartable <- c(tmp, lavpartable[-idx])
 

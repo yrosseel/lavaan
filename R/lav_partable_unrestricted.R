@@ -202,9 +202,9 @@ lav_partable_unrestricted <- function(lavobject = NULL,
                         free        = free,
                         ustart      = ustart,
                         exo         = exo,
-                        label       = rep("",  length(lhs)),
-                        eq.id       = rep(0L,  length(lhs)),
-                        unco        = free
+                        label       = rep("",  length(lhs))
+                        #eq.id       = rep(0L,  length(lhs)),
+                        #unco        = free
                    )
     LIST
 

@@ -69,7 +69,7 @@ function(object, type="raw", labels=TRUE) {
             idx <- which(augUser$exo > 0L)
             augUser$exo[       idx ] <- 0L
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
-            augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
+            #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
             augModel <- lav_model(lavpartable    = augUser,
                                   start          = object@Fit@est,
                                   representation = object@Options$representation,

@@ -60,9 +60,9 @@ lav_model_estimate <- function(lavmodel       = NULL,
             cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
         }
         if(debug) {
-            cat("Current unconstrained parameter values =\n")
-            tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
-            print(tmp.x); cat("\n")
+            #cat("Current unconstrained parameter values =\n")
+            #tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
+            #print(tmp.x); cat("\n")
             cat("Current free parameter values =\n"); print(x); cat("\n")
         }
 
@@ -154,7 +154,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     if(debug) {
-        cat("start.unco = ", lav_model_get_parameters(lavmodel, type="unco"), "\n")
+        #cat("start.unco = ", lav_model_get_parameters(lavmodel, type="unco"), "\n")
         cat("start.x = ", start.x, "\n")
     }
 

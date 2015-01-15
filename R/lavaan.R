@@ -541,18 +541,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
                 if(!lavoptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
-                    x[lavpartable$unco[lavpartable$op == "~~" &
-                                          lavpartable$unco]] <- y.rvar
-                    x[lavpartable$unco[lavpartable$op == "~" &
-                                          lavpartable$unco]] <- x.beta[-1L]
+                    x[lavpartable$free[lavpartable$op == "~~" &
+                                          lavpartable$free]] <- y.rvar
+                    x[lavpartable$free[lavpartable$op == "~" &
+                                          lavpartable$free]] <- x.beta[-1L]
                 } else {
                     x <- numeric(1L + length(x.beta))
-                    x[lavpartable$unco[lavpartable$op == "~~" &
-                                          lavpartable$unco]] <- y.rvar
-                    x[lavpartable$unco[lavpartable$op == "~" &
-                                          lavpartable$unco]] <- x.beta[-1L]
-                    x[lavpartable$unco[lavpartable$op == "~1" &
-                                          lavpartable$unco]] <- x.beta[1L]
+                    x[lavpartable$free[lavpartable$op == "~~" &
+                                          lavpartable$free]] <- y.rvar
+                    x[lavpartable$free[lavpartable$op == "~" &
+                                          lavpartable$free]] <- x.beta[-1L]
+                    x[lavpartable$free[lavpartable$op == "~1" &
+                                          lavpartable$free]] <- x.beta[1L]
                 }
                 lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                                            estimator=lavoptions$estimator)
@@ -583,12 +583,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 con.jac <- t(A)
 
                 # meanstructure?
-                rvar.idx <- lavpartable$unco[lavpartable$op == "~~" &
-                                                lavpartable$unco]
+                rvar.idx <- lavpartable$free[lavpartable$op == "~~" &
+                                                lavpartable$free]
                 if(lavoptions$meanstructure) {
                     # where is the intercept?
-                    int.idx <- lavpartable$unco[lavpartable$op == "~1" &
-                                                   lavpartable$unco]
+                    int.idx <- lavpartable$free[lavpartable$op == "~1" &
+                                                   lavpartable$free]
                     # first intercept, then coefficients, remove resvar
                     A <- rbind(A[int.idx,,drop=FALSE], 
                                A[-c(int.idx,rvar.idx),,drop=FALSE])

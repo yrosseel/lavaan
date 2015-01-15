@@ -57,10 +57,8 @@ lav_model <- function(lavpartable      = NULL,
     isSymmetric <- logical(nG)
     mmSize      <- integer(nG)
 
-    m.free.idx <- m.unco.idx <- m.user.idx <- 
-        vector(mode="list", length=nG)
-    x.free.idx <- x.unco.idx <- x.user.idx <-
-        vector(mode="list", length=nG)
+    m.free.idx <- m.user.idx <- vector(mode="list", length=nG)
+    x.free.idx <- x.user.idx <- vector(mode="list", length=nG)
 
     # prepare ngroups-sized slots
     nvar <- integer(ngroups)
@@ -133,19 +131,19 @@ lav_model <- function(lavpartable      = NULL,
 
             # 2. if equality constraints, unconstrained free parameters
             #    -> to be used in lav_model_gradient
-            if(CON$ceq.linear.only.flag) {
-                tmp[ cbind(REP$row[idx], 
-                           REP$col[idx]) ] <- lavpartable$unco[idx]
-                if(mmSymmetric[mm]) {
-                    # NOTE: we assume everything is in the UPPER tri!
-                    T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
-                }
-                m.unco.idx[[offset]] <-     which(tmp > 0)
-                x.unco.idx[[offset]] <- tmp[which(tmp > 0)]
-            } else {
-                m.unco.idx[[offset]] <- m.free.idx[[offset]]
-                x.unco.idx[[offset]] <- x.free.idx[[offset]]
-            }
+            #if(CON$ceq.linear.only.flag) {
+            #    tmp[ cbind(REP$row[idx], 
+            #               REP$col[idx]) ] <- lavpartable$unco[idx]
+            #    if(mmSymmetric[mm]) {
+            #        # NOTE: we assume everything is in the UPPER tri!
+            #        T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
+            #    }
+            #    m.unco.idx[[offset]] <-     which(tmp > 0)
+            #    x.unco.idx[[offset]] <- tmp[which(tmp > 0)]
+            #} else {
+            #    m.unco.idx[[offset]] <- m.free.idx[[offset]]
+            #    x.unco.idx[[offset]] <- x.free.idx[[offset]]
+            #}
 
             # 3. general mapping between user and GLIST
             tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$id[idx]
@@ -224,12 +222,12 @@ lav_model <- function(lavpartable      = NULL,
                  num.idx=num.idx,
                  th.idx=th.idx,
                  nx.free=max(lavpartable$free),
-                 nx.unco=max(lavpartable$unco),
+                 #nx.unco=max(lavpartable$unco),
                  nx.user=max(lavpartable$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,
-                 m.unco.idx=m.unco.idx,
-                 x.unco.idx=x.unco.idx,
+                 #m.unco.idx=m.unco.idx,
+                 #x.unco.idx=x.unco.idx,
                  m.user.idx=m.user.idx,
                  x.user.idx=x.user.idx,
                  x.def.idx=which(lavpartable$op == ":="),

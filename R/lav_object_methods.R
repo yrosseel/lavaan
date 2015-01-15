@@ -673,11 +673,11 @@ function(object, type="free", labels=TRUE) {
         idx <- 1:length( object@ParTable$lhs )
     } else if(type == "free") {
         idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
-    } else if(type == "unco") {
-        idx <- which(object@ParTable$unco > 0L & 
-                     !duplicated(object@ParTable$unco))
+    #} else if(type == "unco") {
+    #    idx <- which(object@ParTable$unco > 0L & 
+    #                 !duplicated(object@ParTable$unco))
     } else {
-        stop("argument `type' must be one of free, unco, or user")
+        stop("argument `type' must be one of free or user")
     }
     cof <- object@Fit@est[idx]
   
@@ -695,7 +695,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     LIST <- inspect(object, "list")
-    unco.idx <- which(LIST$unco > 0L)
+    free.idx <- which(LIST$free > 0L)
     LIST <- LIST[,c("lhs", "op", "rhs", "group")]
 
     # add std and std.all columns
@@ -720,7 +720,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
             JAC <- lav_func_jacobian_simple(func=standardize.est.all.nox.x, x=object@Fit@est,
                                 object=object)
         }
-        JAC <- JAC[unco.idx,unco.idx]
+        JAC <- JAC[free.idx, free.idx, drop = FALSE]
         VCOV <- as.matrix(vcov(object, labels=FALSE))
         # handle eq constraints in fit@Model@eq.constraints.K
         #if(object@Model@eq.constraints) {
@@ -728,7 +728,7 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         #}
         COV <- JAC %*% VCOV %*% t(JAC)
         LIST$se <- rep(NA, length(LIST$lhs))
-        LIST$se[unco.idx] <- sqrt(diag(COV))
+        LIST$se[free.idx] <- sqrt(diag(COV))
 
         # add 'z' column
         tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)

@@ -29,7 +29,7 @@ lav_model_fit <- function(lavpartable = NULL,
         se <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST, 
                                        type = "user", extra = FALSE) # no def/cin/ceq entries!
         # fixed parameters -> se = 0.0
-        se[ which(lavpartable$unco == 0L) ] <- 0.0
+        se[ which(lavpartable$free == 0L) ] <- 0.0
 
         # defined parameters: 
         def.idx <- which(lavpartable$op == ":=")

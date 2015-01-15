@@ -23,7 +23,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     fixed.x        <- lavmodel@fixed.x
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
-    nx.unco        <- lavmodel@nx.unco
+    nx.free        <- lavmodel@nx.free
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -128,13 +128,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
         # extract free parameters
         if(type == "free") {
-            dx <- numeric( nx.unco )
+            dx <- numeric( nx.free )
             for(g in 1:lavsamplestats@ngroups) {
                 mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
                 for(mm in mm.in.group) {
-                      m.unco.idx  <- lavmodel@m.unco.idx[[mm]]
-                         x.unco.idx  <- lavmodel@x.unco.idx[[mm]]
-                      dx[x.unco.idx] <- DX[[mm]][m.unco.idx]
+                      m.free.idx  <- lavmodel@m.free.idx[[mm]]
+                         x.free.idx  <- lavmodel@x.free.idx[[mm]]
+                      dx[x.free.idx] <- DX[[mm]][m.free.idx]
                 }
             }
 
@@ -379,15 +379,15 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     # number of columns in DELTA + m.el.idx/x.el.idx
     if(type == "free") {
-        NCOL <- lavmodel@nx.unco
+        NCOL <- lavmodel@nx.free
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
-            m.el.idx[[mm]] <- lavmodel@m.unco.idx[[mm]]
-            x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
+            m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
+            x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
             # handle symmetric matrices
             if(lavmodel@isSymmetric[mm]) {
-                # since we use 'x.unco.idx', only symmetric elements
-                # are duplicated (not the equal ones, only in x.free.unco)
+                # since we use 'x.free.idx', only symmetric elements
+                # are duplicated (not the equal ones, only in x.free.free)
                 dix <- duplicated(x.el.idx[[mm]])
                 if(any(dix)) {
                     m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]
@@ -553,15 +553,15 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
     # number of columns in DELTA + m.el.idx/x.el.idx
     type <- "free"
     #if(type == "free") {
-        NCOL <- lavmodel@nx.unco
+        NCOL <- lavmodel@nx.free
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
-            m.el.idx[[mm]] <- lavmodel@m.unco.idx[[mm]]
-            x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
+            m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
+            x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
             # handle symmetric matrices
             if(lavmodel@isSymmetric[mm]) {
-                # since we use 'x.unco.idx', only symmetric elements
-                # are duplicated (not the equal ones, only in x.free.unco)
+                # since we use 'x.free.idx', only symmetric elements
+                # are duplicated (not the equal ones, only in x.free.free)
                 dix <- duplicated(x.el.idx[[mm]])
                 if(any(dix)) {
                     m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]

@@ -84,13 +84,13 @@ setClass("Model",          # MATRIX representation of the sem model
         th.idx="list",
 
         nx.free="integer",
-        nx.unco="integer",
+        #nx.unco="integer",
         nx.user="integer",
 
         m.free.idx="list",
         x.free.idx="list",
-        m.unco.idx="list",
-        x.unco.idx="list",
+        #m.unco.idx="list",
+        #x.unco.idx="list",
         m.user.idx="list",
         x.user.idx="list",
         x.def.idx="integer",

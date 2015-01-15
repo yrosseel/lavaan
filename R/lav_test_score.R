@@ -55,7 +55,7 @@ lavTestScore <- function(object, extra = NULL, release = NULL,
     FLAT$label <- rep("", nflat)
     FLAT$plabel <- paste("p", FLAT$id, "__", sep = "")
     FLAT$user <- rep(0L, nflat)
-    FLAT$unco <- (max(partable$unco) + 1L):(max(partable$unco) + nflat)
+    #FLAT$unco <- (max(partable$unco) + 1L):(max(partable$unco) + nflat)
 
     # build new 'extended' model
     NEW <- base::merge(partable, FLAT, all = TRUE)

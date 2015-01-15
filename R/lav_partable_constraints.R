@@ -338,87 +338,14 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
 }
 
 
-lav_partable_constraints_ciq_OLD <- function(partable, con = NULL, debug = FALSE) {
-
-    cin.function <- function() NULL
-
-    # if 'con', merge partable + con
-    if(!is.null(con)) {
-        partable$lhs <- c(partable$lhs, con$lhs)
-        partable$op  <- c(partable$op,  con$op )
-        partable$rhs <- c(partable$rhs, con$rhs)
-    }
-
-    # get inequality constraints
-    ineq.idx <- which(partable$op == ">" | partable$op == "<")
-    if(length(ineq.idx) > 0L) {
-        formals(cin.function) <- alist(x=, ...=)
-        BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
-
-        # first come the variable definitions
-        DEF.txt <- lav_partable_constraints_def(partable, defTxtOnly=TRUE)
-        def.idx <- which(partable$op == ":=")
-        BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
-
-        for(i in 1:length(ineq.idx)) {
-            lhs <- partable$lhs[ ineq.idx[i] ]
-             op <- partable$op[  ineq.idx[i] ]
-            rhs <- partable$rhs[ ineq.idx[i] ]
-            if(rhs == "0" && op == ">") {
-                ineq.string <- lhs
-            } else if(rhs == "0" && op == "<") {
-                ineq.string <- paste(rhs, " - (", lhs, ")", sep="")
-            } else if(rhs != "0" && op == ">") {
-                ineq.string <- paste(lhs, " - (", rhs, ")", sep="")
-            } else if(rhs != "0" && op == "<") {
-                ineq.string <- paste(rhs, " - (", lhs, ")", sep="")
-            }
-            # coerce to expression to extract variable names
-            ineq.labels <- all.vars( parse(file="", text=ineq.string) )
-            # get corresponding 'x' indices
-            if(length(def.idx) > 0L) {
-                # remove def.names from ineq.labels
-                def.names <- as.character(partable$lhs[def.idx])
-                d.idx <- which(ineq.labels %in% def.names)
-                if(length(d.idx) > 0) ineq.labels <- ineq.labels[-d.idx]
-            }
-            if(length(ineq.labels) > 0L) {
-                ineq.x.idx  <- partable$free[match(ineq.labels, partable$label)]
-                if(any(is.na(ineq.x.idx))) {
-                   stop("lavaan ERROR: unknown label(s) in inequality constraint: ",
-                        paste(ineq.labels[which(is.na(ineq.x.idx))], collapse=" "))
-                }
-                if(any(ineq.x.idx == 0)) {
-                    stop("lavaan ERROR: non-free parameter(s) in inequality constraint(s): ",
-                        paste(ineq.labels[which(ineq.x.idx == 0)], collapse=" "))
-                }
- ineq.x.lab  <- paste("x[", ineq.x.idx, "]",sep="")
-                # put both the labels and the expression in the function BODY
-                BODY.txt <- paste(BODY.txt,
-                    paste(ineq.labels, "=", ineq.x.lab, collapse=";"),"\n",
-                    "out[", i, "] = ", ineq.string, "\n", sep="")
-            } else {
-                BODY.txt <- paste(BODY.txt,
-                    "out[", i, "] = ", ineq.string, "\n", sep="")
-            }
-        }
-        # what to do with NA values? -> return +Inf???
-        BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep="")
-        BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
-        body(cin.function) <- parse(file="", text=BODY.txt)
-        if(debug) { cat("cin.function = \n"); print(cin.function); cat("\n") }
-    }
-
-    cin.function
-}
-
-
 # given two models, M1 and M0, where M0 is nested in M1,
 # create a function 'af(x)' where 'x' is the full parameter vector of M1
 # and af(x) returns the evaluated restrictions under M0).
 # The 'jacobian' of this function 'A' will be used in the anova
 # anova() function, and elsewhere
 lav_partable_constraints_function <- function(p1, p0) {
+
+    stop("lavaan DEBUG: this function needs revision; use SB.classic = TRUE for now")
 
     # check for inequality constraints
     if(any(c(p0$op,p1$op) %in% c(">","<"))) 

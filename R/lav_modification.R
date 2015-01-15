@@ -55,9 +55,15 @@ modindices <- function(object,
 
     # create lavmodel object for this 'full' LIST
     LIST2 <- LIST; LIST2$free <- 1:nrow(LIST)
+
+    # reconstruct th.idx
+    th.idx <- vector("list", length=object@Data@ngroups)
+    for(g in 1:object@Data@ngroups) {
+        th.idx[[g]] <- lav_partable_ov_idx(LIST2, type="th", group = g)
+    }
     lavmodelFULL <- lav_model(lavpartable = LIST2,
                               representation = object@Model@representation,
-                              th.idx = object@Model@th.idx,
+                              th.idx = th.idx,
                               parameterization = object@Model@parameterization,
                               link = object@Model@link,
                               debug = FALSE)
@@ -244,7 +250,7 @@ modindices <- function(object,
 
 
     # remove some columns
-    LIST$free <- LIST$eq.id <- LIST$unco <- NULL
+    LIST$free <- NULL
     LIST$mat <- LIST$row <- LIST$col <- LIST$id <- NULL
     #if(power) {
     #    LIST$epc <- NULL

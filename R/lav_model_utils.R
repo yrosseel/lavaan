@@ -7,7 +7,6 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
                                      type = "free", extra = TRUE) {
 
     # type == "free": only non-redundant free parameters (x)
-    # type == "unco": all free parameters (including constrained ones)
     # type == "user": all parameters listed in User model
 
     # state or final?
@@ -15,8 +14,8 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
 
     if(type == "free") {
         N <- lavmodel@nx.free
-    } else if(type == "unco") {
-        N <- lavmodel@nx.unco
+    #} else if(type == "unco") {
+    #    N <- lavmodel@nx.unco
     } else if(type == "user") {
         N <- lavmodel@nx.user
     }
@@ -26,9 +25,9 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
         if(type == "free") {
             m.idx <- lavmodel@m.free.idx[[mm]]
             x.idx <- lavmodel@x.free.idx[[mm]]
-        } else if(type == "unco") { 
-            m.idx <- lavmodel@m.unco.idx[[mm]]
-            x.idx <- lavmodel@x.unco.idx[[mm]]
+        #} else if(type == "unco") { 
+        #    m.idx <- lavmodel@m.unco.idx[[mm]]
+        #    x.idx <- lavmodel@x.unco.idx[[mm]]
         } else if(type == "user") {
             m.idx <- lavmodel@m.user.idx[[mm]]
             x.idx <- lavmodel@x.user.idx[[mm]]

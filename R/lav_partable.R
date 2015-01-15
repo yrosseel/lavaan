@@ -321,7 +321,7 @@ lavaanify <- lavParTable <- function(
         CON.idx <- length(CON)
         # add 'user' column
         CON <- lapply(CON, function(x) {x$user <- 1L; x} )
-        LIST$unco <- LIST$free
+        #LIST$unco <- LIST$free
         for(idx in idx.eq.label) {
             eq.label <- LABEL[idx]
             ref.idx <- which(LABEL == eq.label)[1L] # the first one only 
@@ -362,8 +362,8 @@ lavaanify <- lavParTable <- function(
     #LIST$free[idx.equal] <- LIST$free[ LIST$eq.id[idx.equal] ]
 
     # 3. which parameters would be free without equality constraints?
-    idx.unco <- which(LIST$free > 0)
-    LIST$unco[idx.unco] <- seq_along(idx.unco)
+    #idx.unco <- which(LIST$free > 0)
+    #LIST$unco[idx.unco] <- seq_along(idx.unco)
 
 
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
@@ -384,8 +384,8 @@ lavaanify <- lavParTable <- function(
         LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
         LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
-        LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
-        LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
+        #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
+        #LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
     }
 
     # put lhs of := elements in label column
@@ -686,10 +686,10 @@ lav_partable_labels <- function(partable, group.equal="", group.partial="",
         idx <- 1:length(label)
     } else if(type == "free") {
         idx <- which(partable$free > 0L & !duplicated(partable$free))
-    } else if(type == "unco") {
-        idx <- which(partable$unco > 0L & !duplicated(partable$unco))
+    #} else if(type == "unco") {
+    #    idx <- which(partable$unco > 0L & !duplicated(partable$unco))
     } else {
-        stop("argument `type' must be one of free, unco, or user")
+        stop("argument `type' must be one of free or user")
     }
 
     label[idx]
@@ -1292,9 +1292,9 @@ lav_partable_flat <- function(FLAT = NULL,
                         free        = free,
                         ustart      = ustart,
                         exo         = exo,
-                        label       = label,
-                        eq.id       = rep(0L,  length(lhs)),
-                        unco        = rep(0L,  length(lhs))
+                        label       = label
+                        #eq.id       = rep(0L,  length(lhs)),
+                        #unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)
 
