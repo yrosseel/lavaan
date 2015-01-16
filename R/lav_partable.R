@@ -232,35 +232,6 @@ lavaanify <- lavParTable <- function(
         print( as.data.frame(LIST, stringsAsFactors=FALSE) )
     }
 
-    # check if CON contains *simple* equality constraints (eg b1 == b2)
-    # FIXME!!!
-    # b1 == b3
-    # b2 == b3 does not work
-    # better a general approach for linear constraints!
-    #if(length(CON) > 0L) {
-    #    el.idx <- integer(0L)
-    #    for(el in 1:length(CON)) {
-    #        if(CON[[el]]$op == "==") {
-    #            lhs.idx <- which(LIST$label == CON[[el]]$lhs)
-    #            rhs.idx <- which(LIST$label == CON[[el]]$rhs)
-    #            if(length(lhs.idx) && length(rhs.idx)) {
-    #                # flag this constraint (to be removed)
-    #                el.idx <- c(el.idx, el)
-    #                # fill in equal and fix
-    #                if(LIST$label[lhs.idx] == "") {
-    #                    LIST$label[rhs.idx] <- LIST$label[lhs.idx]
-    #                } else {
-    #                    LIST$label[rhs.idx] <- LIST$label[lhs.idx]
-    #                }
-    #                LIST$free[ rhs.idx] <- 0L
-                     # FIXME: what is needed is to replace all occurences
-                     #        of rhs.idx by lhs.idx in CON!!!
-    #            }
-    #        }
-    #    }
-    #    if(length(el.idx) > 0L) CON <- CON[-el.idx]
-    #}
-
     # get 'virtual' parameter labels
     LABEL <- lav_partable_labels(partable=LIST, group.equal=group.equal,
                                 group.partial=group.partial)
@@ -272,45 +243,7 @@ lavaanify <- lavParTable <- function(
     }
 
 
-
     # handle user-specified equality constraints
-    # insert 'target/reference' id's in eq.id/label columns
-    # so that the eq.id column reflects sets of equal parameters
-    # the 'reference' parameter has free > 0; the 'equal to' pars free == 0
-    #idx.eq.label <- which(duplicated(LABEL))
-    #if(length(idx.eq.label) > 0L) {
-    #    for(idx in idx.eq.label) {
-    #        eq.label <- LABEL[idx]
-    #        ref.idx <- which(LABEL == eq.label)[1L] # the first one only
-    #        # set eq.id equal
-    #        LIST$eq.id[ref.idx] <- LIST$eq.id[idx] <- ref.idx
-    #        # fix target
-    #        LIST$free[idx] <- 0L
-    #
-    #        # special case: check if there are any more instances 
-    #        # of idx in  LIST$eq.id (perhaps due to group.equal)
-    #        idx.all <- which(LIST$eq.id == idx)
-    #        if(length(idx.all) > 0L) {
-    #            ref.idx.all <- which(LIST$eq.id == ref.idx)
-    #            LIST$label[ref.idx.all] <- eq.label
-    #            LIST$eq.id[idx.all] <- ref.idx
-    #            LIST$free[idx.all] <- 0L  # fix!
-    #            LIST$label[idx.all] <- eq.label
-    #        }
-    #        # special case: ref.idx is a fixed parameter
-    #        if(LIST$free[ref.idx] == 0L) {
-    #            ref.idx.all <- which(LIST$eq.id == ref.idx)
-    #            LIST$ustart[ref.idx.all] <- LIST$ustart[ref.idx]
-    #            LIST$eq.id[ref.idx.all] <- 0L
-    #        }
-    #    }
-    #
-    #    if(debug) {
-    #        cat("[lavaan DEBUG]: parameter LIST after eq.id:\n")
-    #        print( as.data.frame(LIST, stringsAsFactors=FALSE) )
-    #    }
-    #}
-
     # lavaan 0.5-18
     # - rewrite 'LABEL-based' equality constraints as == constraints
     # - create plabel: internal labels, based on id
@@ -332,6 +265,9 @@ lavaanify <- lavParTable <- function(
             # 1. ref.idx is a fixed parameter
             if(LIST$free[ref.idx] == 0L) {
                 LIST$ustart[idx] <- LIST$ustart[ref.idx]
+                LIST$free[idx] <- 0L  # not free anymore, since it must 
+                                      # be equal to the 'fixed' parameter
+                                      # (Note: Mplus ignores this)
             } else {
             # 2. ref.idx is a free parameter
                 # user-label?
