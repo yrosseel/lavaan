@@ -215,19 +215,43 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
         out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
                                      / OV[ match(partable$rhs[rv.idx], ov.names) ] )
 
-        # covariances
-        idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
-                     partable$lhs != partable$rhs &
-                     partable$group == g)
-        if(length(idx) > 0L) {
+        # covariances ov
+        # three types:
+        # - only lhs is OV (and fixed.x = FALSE)
+        # - only rhs is OV (and fixed.x = FALSE)
+        # - both lhs and rhs are OV (regular case)
+        if(cov.std) {
+            RV   <- sqrt(est[rv.idx])
+            rv.names <- partable$lhs[rv.idx]
+        }
+
+        # left
+        idx.lhs <- which(partable$op == "~~" &
+                         !(partable$lhs %in% lv.names) &
+                         partable$lhs != partable$rhs &
+                         partable$group == g)
+        if(length(idx.lhs) > 0L) {
             if(cov.std == FALSE) {
-                out[idx] <- ( out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
-                                       / OV[ match(partable$rhs[idx], ov.names) ] )
+                out[idx.lhs] <- 
+                   (out[idx.lhs] / OV[ match(partable$lhs[idx.lhs], ov.names)])
             } else {
-                RV   <- sqrt(est[rv.idx])
-                rv.names <- partable$lhs[rv.idx]
-                out[idx] <- ( out[idx] / RV[ match(partable$lhs[idx], rv.names) ]
-                                       / RV[ match(partable$rhs[idx], rv.names) ] )
+                out[idx.lhs] <- 
+                   (out[idx.lhs] / RV[ match(partable$lhs[idx.lhs], rv.names)])
+            }
+        }
+
+        # right
+        idx.rhs <- which(partable$op == "~~" & 
+                         !(partable$rhs %in% lv.names) &
+                         partable$lhs != partable$rhs &
+                         partable$group == g)
+        if(length(idx.rhs) > 0L) {
+            if(cov.std == FALSE) {
+                out[idx.rhs] <- 
+                    (out[idx.rhs] / OV[ match(partable$rhs[idx.rhs], ov.names)])
+            } else {
+                out[idx.rhs] <- 
+                    (out[idx.rhs] / RV[ match(partable$rhs[idx.rhs], rv.names)])
             }
         }
 
@@ -352,21 +376,45 @@ standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
         out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
                                      / OV[ match(partable$rhs[rv.idx], ov.names) ] )
 
-        # covariances
-        idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
-                     !(partable$lhs %in% ov.names.x) &
-                     !(partable$rhs %in% ov.names.x) &
-                     partable$lhs != partable$rhs &
-                     partable$group == g)
-        if(length(idx) > 0L) {
+        # covariances ov
+        # three types:
+        # - only lhs is OV (and fixed.x = FALSE)
+        # - only rhs is OV (and fixed.x = FALSE)
+        # - both lhs and rhs are OV (regular case)
+        if(cov.std) {
+            RV   <- sqrt(est[rv.idx])
+            rv.names <- partable$lhs[rv.idx]
+        }
+
+        # left
+        idx.lhs <- which(partable$op == "~~" &
+                         !(partable$lhs %in% lv.names) &
+                         !(partable$lhs %in% ov.names.x) &
+                         partable$lhs != partable$rhs &
+                         partable$group == g)
+        if(length(idx.lhs) > 0L) {
             if(cov.std == FALSE) {
-                out[idx] <- ( out[idx] / OV[ match(partable$lhs[idx], ov.names) ]
-                                       / OV[ match(partable$rhs[idx], ov.names) ] )
+                out[idx.lhs] <- 
+                   (out[idx.lhs] / OV[ match(partable$lhs[idx.lhs], ov.names)])
             } else {
-                RV   <- sqrt(est[rv.idx])
-                rv.names <- partable$lhs[rv.idx]
-                out[idx] <- ( out[idx] / RV[ match(partable$lhs[idx], rv.names) ]
-                                       / RV[ match(partable$rhs[idx], rv.names) ] )
+                out[idx.lhs] <- 
+                   (out[idx.lhs] / RV[ match(partable$lhs[idx.lhs], rv.names)])
+            }
+        }
+
+        # right
+        idx.rhs <- which(partable$op == "~~" & 
+                         !(partable$rhs %in% lv.names) &
+                         !(partable$rhs %in% ov.names.x) &
+                         partable$lhs != partable$rhs &
+                         partable$group == g)
+        if(length(idx.rhs) > 0L) {
+            if(cov.std == FALSE) {
+                out[idx.rhs] <- 
+                    (out[idx.rhs] / OV[ match(partable$rhs[idx.rhs], ov.names)])
+            } else {
+                out[idx.rhs] <- 
+                    (out[idx.rhs] / RV[ match(partable$rhs[idx.rhs], rv.names)])
             }
         }
 
