@@ -242,7 +242,6 @@ lavaanify <- lavParTable <- function(
         print( as.data.frame(tmp, stringsAsFactors=FALSE) )
     }
 
-
     # handle user-specified equality constraints
     # lavaan 0.5-18
     # - rewrite 'LABEL-based' equality constraints as == constraints
@@ -254,20 +253,42 @@ lavaanify <- lavParTable <- function(
         CON.idx <- length(CON)
         # add 'user' column
         CON <- lapply(CON, function(x) {x$user <- 1L; x} )
-        #LIST$unco <- LIST$free
         for(idx in idx.eq.label) {
             eq.label <- LABEL[idx]
-            ref.idx <- which(LABEL == eq.label)[1L] # the first one only 
-            # fix target
-            # LIST$free[idx] <- 0L
+            all.idx <- which(LABEL == eq.label) # all same-label parameters   
+            ref.idx <- all.idx[1L]              # the first one only 
 
-            # two possibilities: either ref.idx is fixed or free
-            # 1. ref.idx is a fixed parameter
-            if(LIST$free[ref.idx] == 0L) {
-                LIST$ustart[idx] <- LIST$ustart[ref.idx]
-                LIST$free[idx] <- 0L  # not free anymore, since it must 
+            # two possibilities: 
+            # 1. all.idx contains a fixed parameter: in this case,
+            #    we fix them all (hopefully to the same value)
+            # 2. all.idx contains only free parameters
+
+            # 1. fixed?
+            if(any(LIST$free[all.idx] == 0L)) {
+
+                # which one is fixed? (only pick the first!)
+                fixed.all <- all.idx[ LIST$free[all.idx] == 0L ]
+                fixed.idx <- fixed.all[1] # only pick the first!
+
+                # sanity check: are all ustart values equal?
+                ustart1 <- LIST$ustart[ fixed.idx ]
+                if(! all(ustart1 == LIST$ustart[fixed.all]) ) {
+                    warning("lavaan WARNING: equality constraints involve fixed parameters with different values; only the first one will be used")
+                }
+
+
+                fixed.idx <- fixed.all[1] # only pick the first!
+
+                # fix current 'idx'
+                LIST$ustart[idx] <- LIST$ustart[fixed.idx]
+                LIST$free[idx] <- 0L  # not free anymore, since it must
                                       # be equal to the 'fixed' parameter
                                       # (Note: Mplus ignores this)
+
+                # just in case: if ref.idx is not equal to fixed.idx, 
+                # fix this one too
+                LIST$ustart[ref.idx] <- LIST$ustart[fixed.idx]
+                LIST$free[ref.idx] <- 0L
             } else {
             # 2. ref.idx is a free parameter
                 # user-label?
