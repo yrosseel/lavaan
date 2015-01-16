@@ -497,8 +497,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                                     idx = 1:nvar[g],
                                     MLIST = GLIST[ mm.in.group ])
                             # add dpi.dDelta %*% dDelta.dx
-                            no.num.idx <- which(!seq.int(1L,nvar) %in% num.idx)
-                            no.num.idx <- rep(seq.int(0,nexo-1) * nvar,
+                            no.num.idx <- which(!seq.int(1L,nvar[[g]]) %in% num.idx[[g]])
+                            no.num.idx <- rep(seq.int(0,nexo[[g]]-1) * nvar[[g]],
                                           each=length(no.num.idx)) + no.num.idx
                             DELTA.pi[no.num.idx,] <- 
                                 DELTA.pi[no.num.idx,,drop=FALSE] +
