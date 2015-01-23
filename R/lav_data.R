@@ -496,11 +496,11 @@ lav_data_full <- function(data          = NULL,          # data.frame
         if(std.ov) {
             num.idx <- which(ov.names[[g]] %in% ov$name & ov$type == "numeric")
             if(length(num.idx) > 0L) {
-                X[[g]][,num.idx]  <- scale(X[[g]][,num.idx,drop=FALSE])[,] 
+                X[[g]][,num.idx]  <- scale(X[[g]][,num.idx,drop=FALSE])[,,drop = FALSE] 
                 # three copies are made!!!!!
             }
             if(length(exo.idx) > 0L) {
-                eXo[[g]] <- scale(eXo[[g]])[,]
+                eXo[[g]] <- scale(eXo[[g]])[,,drop = FALSE]
             }
         }
 
