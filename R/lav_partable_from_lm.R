@@ -48,7 +48,7 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
         partable$label <- predNames
 
         # convert all ':' to '.'
-        partable$label <- gsub(":", ".", partable$label)
+        partable$label <- gsub("[:()]", ".", partable$label)
     }
 
     # convert to data.frame?
