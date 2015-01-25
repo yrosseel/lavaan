@@ -110,7 +110,7 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
 
         # left
         idx.lhs <- which(partable$op == "~~" &
-                         !(partable$rhs %in% lv.names) &
+                         partable$lhs %in% lv.names &
                          partable$lhs != partable$rhs &
                          partable$group == g)
         if(length(idx.lhs) > 0L) {
@@ -125,7 +125,7 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
 
         # right
         idx.rhs <- which(partable$op == "~~" & 
-                         !(partable$lhs %in% lv.names) &
+                         partable$rhs %in% lv.names &
                          partable$lhs != partable$rhs &
                          partable$group == g)
         if(length(idx.rhs) > 0L) {
