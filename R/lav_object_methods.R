@@ -711,16 +711,28 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         # add 'se' for standardized parameters
         # TODO!!
         if(type == "std.lv") {
-            JAC <- lav_func_jacobian_simple(func=standardize.est.lv.x, x=object@Fit@est,
-                                object=object)
+            JAC <- try(lav_func_jacobian_complex(func = standardize.est.lv.x,
+                           x = object@Fit@x, object = object), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = standardize.est.lv.x, 
+                           x = object@Fit@x, object=object)
+            }
         } else if(type == "std.all") {
-            JAC <- lav_func_jacobian_simple(func=standardize.est.all.x, x=object@Fit@est,
-                                object=object)
+            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.x,
+                           x = object@Fit@x, object = object), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = standardize.est.all.x,
+                           x = object@Fit@x, object=object)
+            }
         } else if(type == "std.nox") {
-            JAC <- lav_func_jacobian_simple(func=standardize.est.all.nox.x, x=object@Fit@est,
-                                object=object)
+            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.nox.x,
+                           x = object@Fit@x, object = object), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = standardize.est.all.nox.x,
+                           x = object@Fit@x, object=object)
+            }
         }
-        JAC <- JAC[free.idx, free.idx, drop = FALSE]
+        #JAC <- JAC[free.idx, free.idx, drop = FALSE]
         VCOV <- as.matrix(vcov(object, labels=FALSE))
         # handle eq constraints in fit@Model@eq.constraints.K
         #if(object@Model@eq.constraints) {
@@ -728,7 +740,14 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
         #}
         COV <- JAC %*% VCOV %*% t(JAC)
         LIST$se <- rep(NA, length(LIST$lhs))
-        LIST$se[free.idx] <- sqrt(diag(COV))
+        #LIST$se[free.idx] <- sqrt(diag(COV))
+        tmp <- sqrt(diag(COV))
+        # catch near-zero SEs
+        zero.idx <- which(tmp < 1e-08)
+        if(length(zero.idx) > 0L) {
+            tmp[zero.idx] <- 0.0
+        }
+        LIST$se <- tmp
 
         # add 'z' column
         tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)

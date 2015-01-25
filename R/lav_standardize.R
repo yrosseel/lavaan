@@ -1,15 +1,34 @@
-standardize.est.lv.x <- function(x, object, partable=NULL, cov.std=TRUE) {
-    standardize.est.lv(object=object, partable=partable, est=x, cov.std=cov.std)
+standardize.est.lv.x <- function(x, object, partable = NULL, cov.std = TRUE) {
+    # embed x in est
+    est <- object@Fit@est
+    free.idx <- which(object@ParTable$free > 0L)
+    stopifnot(length(x) == length(free.idx))
+    est[free.idx] <- x
+    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+    standardize.est.lv(object = object, partable = partable, est = est, 
+                       GLIST = GLIST, cov.std = cov.std)
 }
 
-standardize.est.all.x <- function(x, object, partable=NULL, cov.std=TRUE) {
-    standardize.est.all(object=object, partable=partable, est=x, est.std=NULL,
-                        cov.std=cov.std)
+standardize.est.all.x <- function(x, object, partable = NULL, cov.std = TRUE) {
+    # embed x in est
+    est <- object@Fit@est
+    free.idx <- which(object@ParTable$free > 0L)
+    stopifnot(length(x) == length(free.idx))
+    est[free.idx] <- x
+    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+    standardize.est.all(object = object, partable = partable, est = est,
+                        est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
 
-standardize.est.all.nox.x <- function(x, object, partable=NULL, cov.std=TRUE) {
-    standardize.est.all.nox(object=object, partable=partable, est=x, 
-                            est.std=NULL, cov.std=cov.std)
+standardize.est.all.nox.x <- function(x, object, partable = NULL, cov.std = TRUE) {
+    # embed x in est
+    est <- object@Fit@est
+    free.idx <- which(object@ParTable$free > 0L)
+    stopifnot(length(x) == length(free.idx))
+    est[free.idx] <- x
+    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+    standardize.est.all.nox(object = object, partable = partable, est = est, 
+                            est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
 
 unstandardize.est.ov.x <- function(x, object) {
@@ -19,20 +38,21 @@ unstandardize.est.ov.x <- function(x, object) {
                          cov.std=TRUE)
 }
 
-standardize.est.lv <- function(object, partable=NULL, est=NULL,
+standardize.est.lv <- function(object, partable=NULL, est=NULL, GLIST=NULL,
                                cov.std = TRUE) {
 
     if(is.null(partable)) partable <- object@ParTable
     if(is.null(est))   est <- object@Fit@est
+    if(is.null(GLIST)) GLIST <- object@Model@GLIST
 
     out <- est; N <- length(est)
     stopifnot(N == length(partable$lhs))
 
-    GLIST <- object@Model@GLIST
     nmat <- object@Model@nmat
 
     # compute ETA
-    LV.ETA <- computeVETA(lavmodel       = object@Model, 
+    LV.ETA <- computeVETA(lavmodel       = object@Model,
+                          GLIST          = GLIST,
                           lavsamplestats = object@SampleStats)
     
     for(g in 1:object@Data@ngroups) {
@@ -174,20 +194,21 @@ standardize.est.lv <- function(object, partable=NULL, est=NULL,
 }
 
 standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
-                                cov.std = TRUE) {
+                                GLIST = NULL, cov.std = TRUE) {
 
     if(is.null(partable)) partable <- object@ParTable
     if(is.null(est))   est <- object@Fit@est
     if(is.null(est.std)) {
-        est.std <- standardize.est.lv(object, partable=partable, est=est)
-    } 
+        est.std <- standardize.est.lv(object, partable = partable, est = est,
+                                      GLIST = GLIST, cov.std = cov.std)
+    }
+    if(is.null(GLIST)) GLIST <- object@Model@GLIST
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    GLIST <- object@Model@GLIST
-
-    VY <- computeVY(lavmodel = object@Model, 
+    VY <- computeVY(lavmodel = object@Model,
+                    GLIST = GLIST,
                     lavsamplestats = object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
@@ -331,21 +352,23 @@ standardize.est.all <- function(object, partable=NULL, est=NULL, est.std=NULL,
 }
 
 
-standardize.est.all.nox <- function(object, partable=NULL, est=NULL, 
-                                    est.std=NULL, cov.std = TRUE) {
+standardize.est.all.nox <- function(object, partable=NULL, est=NULL,
+                                    est.std=NULL, GLIST = NULL,
+                                    cov.std = TRUE) {
 
     if(is.null(partable)) partable <- object@ParTable
     if(is.null(est))   est <- object@Fit@est
     if(is.null(est.std)) {
-        est.std <- standardize.est.lv(object, partable=partable, est=est)
-    } 
+        est.std <- standardize.est.lv(object, partable = partable, est = est,
+                                      GLIST = GLIST, cov.std = cov.std)
+    }
+    if(is.null(GLIST)) GLIST <- object@Model@GLIST
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    GLIST <- object@Model@GLIST
-
-    VY <- computeVY(lavmodel = object@Model, 
+    VY <- computeVY(lavmodel       = object@Model,
+                    GLIST          = GLIST,
                     lavsamplestats = object@SampleStats)
 
     for(g in 1:object@Data@ngroups) {
