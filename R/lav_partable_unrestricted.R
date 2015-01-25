@@ -88,7 +88,7 @@ lav_partable_unrestricted <- function(lavobject = NULL,
             sample.var.idx <- match(OV[[g]], ov.names[[g]])
             COV <-  sample.cov[[g]][sample.var.idx, sample.var.idx]
             ### CHECK ME!!! upper tri??
-            ustart <- c(ustart, COV[upper.tri(COV, diag=FALSE)])
+            ustart <- c(ustart, COV[lower.tri(COV, diag=FALSE)])
         } else {
             ustart <- c(ustart, rep(as.numeric(NA), pstar))
         }

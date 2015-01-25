@@ -56,6 +56,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   estimator      = estimator, 
                                   verbose        = verbose,
                                   forcePD        = forcePD)
+
+        # only for PML: divide by N (to speed up convergence)
+        if(estimator == "PML") {
+            fx <- fx / lavsamplestats@ntotal
+        }
+
+
+
         if(debug || verbose) { 
             cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
         }
@@ -98,6 +106,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  estimator      = estimator,
                                  verbose        = verbose,
                                  forcePD        = TRUE)
+
+        # only for PML: divide by N (to speed up convergence)
+        if(estimator == "PML") {
+            dx <- dx / lavsamplestats@ntotal
+        }
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")

@@ -82,6 +82,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    slotSampleStats    = NULL,
                    slotData           = NULL,
                    slotModel          = NULL,
+                   slotCache          = NULL,
   
                    # verbosity
                    verbose            = FALSE,
@@ -437,33 +438,37 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #    stop("lavaan ERROR: bootstrap not supported (yet) for categorical data")
     #}
 
-    # prepare cache -- stuff needed for estimation, but also post-estimation
-    lavcache <- vector("list", length=lavdata@ngroups)
-    if(lavoptions$estimator == "PML") {
-        TH <- computeTH(lavmodel)
-        BI <- lav_tables_pairwise_freq_cell(lavdata)
-        for(g in 1:lavdata@ngroups) {
-            if(is.null(BI$group) || max(BI$group) == 1L) {
-                bifreq <- BI$obs.freq
-                binobs  <- BI$nobs
-            } else {
-                idx <- which(BI$group == g)
-                bifreq <- BI$obs.freq[idx]
-                binobs  <- BI$nobs[idx]
+    if(!is.null(slotCache)) {
+        lavcache <- slotCache
+    } else {
+        # prepare cache -- stuff needed for estimation, but also post-estimation
+        lavcache <- vector("list", length=lavdata@ngroups)
+        if(lavoptions$estimator == "PML") {
+            TH <- computeTH(lavmodel)
+            BI <- lav_tables_pairwise_freq_cell(lavdata)
+            for(g in 1:lavdata@ngroups) {
+                if(is.null(BI$group) || max(BI$group) == 1L) {
+                    bifreq <- BI$obs.freq
+                    binobs  <- BI$nobs
+                } else {
+                    idx <- which(BI$group == g)
+                    bifreq <- BI$obs.freq[idx]
+                    binobs  <- BI$nobs[idx]
+                }
+                LONG  <- LongVecInd(no.x               = ncol(lavdata@X[[g]]),
+                                   all.thres          = TH[[g]],
+                                   index.var.of.thres = lavmodel@th.idx[[g]])
+                lavcache[[g]] <- list(bifreq = bifreq,
+                                      nobs   = binobs,
+                                     LONG   = LONG)
             }
-            LONG <- LongVecInd(no.x               = ncol(lavdata@X[[g]]),
-                               all.thres          = TH[[g]],
-                               index.var.of.thres = lavmodel@th.idx[[g]])
-            lavcache[[g]] <- list(bifreq = bifreq,
-                                  nobs   = binobs,
-                                  LONG   = LONG)
         }
-    }
-    # copy response patterns to cache -- FIXME!! (data not included 
-    # in Model only functions)
-    if(lavdata@data.type == "full" && !is.null(lavdata@Rp[[1L]])) {
-        for(g in 1:lavdata@ngroups) {
-            lavcache[[g]]$pat <- lavdata@Rp[[g]]$pat
+        # copy response patterns to cache -- FIXME!! (data not included 
+        # in Model only functions)
+        if(lavdata@data.type == "full" && !is.null(lavdata@Rp[[1L]])) {
+            for(g in 1:lavdata@ngroups) {
+                lavcache[[g]]$pat <- lavdata@Rp[[g]]$pat
+            }
         }
     }
 
