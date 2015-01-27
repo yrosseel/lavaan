@@ -164,7 +164,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
     # select 'default' fit measures
     if(length(fit.measures) == 1L) {
         if(fit.measures == "default") {
-            if(estimator == "ML") {
+            if(estimator == "ML" || estimator == "PML") {
                 fit.measures <- c(fit.always, fit.chisq, fit.baseline, 
                                   fit.cfi.tli, fit.logl, 
                                   fit.rmsea, fit.srmr)
@@ -266,15 +266,22 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         if (!is.null(baseline.model) & is(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
         } else {
-            fit.indep <- independence.model.fit(object)
+            fit.indep <- try(independence.model.fit(object), silent = TRUE)
         }
                             
-        X2.null <- fit.indep@Fit@test[[1]]$stat
-        df.null <- fit.indep@Fit@test[[1]]$df
-        if(scaled) {
-            X2.null.scaled <- fit.indep@Fit@test[[2]]$stat
-            df.null.scaled <- fit.indep@Fit@test[[2]]$df
-        } 
+        if(inherits(fit.indep, "try-error")) {
+            X2.null <- df.null <- as.numeric(NA)
+            if(scaled) {
+                X2.null.scaled <- df.null.scaled <- as.numeric(NA)
+            }
+        } else {
+            X2.null <- fit.indep@Fit@test[[1]]$stat
+            df.null <- fit.indep@Fit@test[[1]]$df
+            if(scaled) {
+                X2.null.scaled <- fit.indep@Fit@test[[2]]$stat
+                df.null.scaled <- fit.indep@Fit@test[[2]]$df
+            } 
+        }
 
         # check for NAs
         if(is.na(X2) || is.na(df) || is.na(X2.null) || is.na(df.null)) {
@@ -590,7 +597,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         } else if(df > 0) {
             if(scaled) {
                 d <- sum(object@Fit@test[[2]]$trace.UGamma)
-                if(d==0) d <- NA
+                if(is.na(d) || d==0) d <- NA
             } 
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 GG <- 0

@@ -195,7 +195,9 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
     if(any(abs(cors) > 1)) {
         # question: what is the best approach here??
-        return(+Inf) 
+        OUT <- +Inf
+        attr(OUT, "logl") <- as.numeric(NA)
+        return(OUT) 
         #idx <- which( abs(cors) > 0.99 )
         #cors[idx] <- 0.99 # clip
         #cat("CLIPPING!\n")
@@ -223,7 +225,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         # get expected probability per table, per pair
         PI <- pairwiseExpProbVec(ind.vec = lavcache$LONG, th.rho.vec=LONG2)
         # get frequency per table, per pair
-        #LogLik <- sum(lavcache$bifreq * log(PI))
+        logl <- sum(lavcache$bifreq * log(PI))
     
         # more convenient fit function
         prop <- lavcache$bifreq / lavcache$nobs
@@ -281,6 +283,9 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     # function value as returned to the minimizer
     #fx <- -1 * LogLik
     fx <- Fmin
+
+    # attach 'loglikelihood' 
+    attr(fx, "logl") <- logl
 
     fx
 }

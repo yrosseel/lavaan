@@ -185,6 +185,8 @@ ctr_pml_aic_bic <- function(lavobject) {
     lavdata <- lavobject@Data
     lavcache <- lavobject@Cache
 
+    nsize <- lavobject@SampleStats@ntotal
+
 ########################## The code for PL version fo AIC and BIC
 # The following should be done because it is not the pl log-likelihood
 # that is maximized but a fit function that should be minimized. So, we
@@ -199,15 +201,16 @@ ctr_pml_aic_bic <- function(lavobject) {
 #zero.idx <- which(prop == 0.0)
 #prop <- prop[-zero.idx]
 #logPL <-  (-1)* nsize * ( lavfit@fx - sum( prop*log(prop) )  )
-logPL <- lav_model_objective(lavmodel = lavobject@Model, lavsamplestats = lavobject@SampleStats, lavdata = lavobject@Data, lavcache = lavobject@Cache, estimator = "PML")
-attr(logPL, "fx.group") <- NULL
+fmin <- lav_model_objective(lavmodel = lavobject@Model, lavsamplestats = lavobject@SampleStats, lavdata = lavobject@Data, lavcache = lavobject@Cache, estimator = "PML")
+logPL <- sum(attr(fmin, "logl.group"))
 
 # Find the right dimension of the (theta) parameter.
 # lavobject is the output of function lavaan when we fit the model of interest.
 # I don't know how else to get the Hessian through the code of lavaan function.
 # That's why I'm using below the function getHessian(lavobject).
 Hes <- (-1)* getHessian(lavobject)
-InvG <- nsize * vcov(lavobject)
+#InvG <- nsize * vcov(lavobject)
+InvG <- 1 * vcov(lavobject)
 # I guess vcov(lavobject) can be substituted by object VCOV computed inside
 # the lavaan function.
 dimTheta <- sum(diag(Hes %*% InvG))
@@ -216,5 +219,5 @@ dimTheta <- sum(diag(Hes %*% InvG))
 PL_AIC <- (-1)*logPL + dimTheta
 PL_BIC <- (-2)*logPL + dimTheta *log(nsize)
 
-    list(PL_AIC = PL_AIC, PL_BIC = PL_BIC)
+list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)
 }

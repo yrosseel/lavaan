@@ -363,7 +363,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
     verbose     <- lavoptions$verbose
     mimic       <- lavoptions$mimic
   
-    if(se == "none") return(NULL)
+    if(se == "none") return(matrix(0,0,0))
 
     # some require meanstructure (for now)
     if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 

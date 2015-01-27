@@ -69,6 +69,7 @@ lav_model_objective <- function(lavmodel       = NULL,
  
     fx <- 0.0
     fx.group <- numeric( lavsamplestats@ngroups )
+    logl.group <- rep(as.numeric(NA), lavsamplestats@ngroups)
     for(g in 1:lavsamplestats@ngroups) {
 
         # incomplete data and fiml?
@@ -115,6 +116,8 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = lavdata@X[[g]],
                                       lavcache  = lavcache[[g]])
+            LOGL <- attr(group.fx, "logl")
+            logl.group[g] <- attr(group.fx, "logl")
 
         } else if(estimator == "FML") { 
             # Full maximum likelihood (underlying multivariate normal)
@@ -210,6 +213,9 @@ lav_model_objective <- function(lavmodel       = NULL,
     }
 
     attr(fx, "fx.group") <- fx.group
+    if(estimator == "PML") {
+        attr(fx, "logl.group") <- logl.group
+    }
 
     fx
 }
