@@ -70,24 +70,27 @@ lavCor <- function(object,
 
     # extract partable options from dots
     dots <- list(...)
-    meanstructure <- FALSE; fixed.x <- FALSE
+    meanstructure <- FALSE; fixed.x <- FALSE; mimic <- "lavaan"
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
     }
     if(!is.null(dots$fixed.x)) {
         fixed.x <- dots$fixed.x
     }
+    if(!is.null(dots$mimic)) {
+        mimic <- dots$mimic
+    }
 
     # generate partable for unrestricted model
     PT.un <- 
-        lav_partable_unrestricted(ov.names      = lav.data@ov.names,
-                                  ov            = lav.data@ov,
-                                  ov.names.x    = lav.data@ov.names.x,
+        lav_partable_unrestricted(lavobject     = NULL,
+                                  lavdata       = lav.data,
+                                  lavoptions    = list(meanstructure = meanstructure,
+                                                       fixed.x = fixed.x, 
+                                                       mimic = mimic),
                                   sample.cov    = NULL,
-                                  meanstructure = meanstructure,
                                   sample.mean   = NULL,
-                                  sample.th     = NULL,
-                                  fixed.x       = fixed.x)
+                                  sample.th     = NULL)
 
     
     fit <- lavaan(slotParTable = PT.un, slotData = lav.data,

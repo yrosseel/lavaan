@@ -268,6 +268,8 @@ lav_model_test <- function(lavmodel       = NULL,
         NFAC <- NFAC / 2
         NFAC <- NFAC - 1
         NFAC <- NFAC * 2
+    } else if(lavoptions$estimator == "PML") {
+        NFAC <- 2
     }
     chisq.group <- fx.group * NFAC
 
@@ -336,8 +338,35 @@ lav_model_test <- function(lavmodel       = NULL,
         }
     }
 
-    if(test %in% c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
-       df > 0) {
+    if(lavoptions$estimator == "PML") {
+        if(test == "standard") {
+            # nothing to do
+        } else if(test == "mean.var.adjusted") {
+            OUT <- ctr_pml_plrt(lavobject = NULL,
+                                lavmodel = lavmodel, 
+                                lavdata = lavdata,
+                                lavoptions = lavoptions,
+                                lavcache = lavcache,
+                                lavsamplestats = lavsamplestats,
+                                lavpartable = lavpartable)
+
+            TEST[[2]] <- list(test               = test,
+                          stat               = OUT$stat,
+                          stat.group         = as.numeric(NA), # for now
+                          df                 = OUT$df,
+                          pvalue             = OUT$p.value,
+                          scaling.factor     = as.numeric(NA),
+                          shift.parameter    = as.numeric(NA),
+                          trace.UGamma       = as.numeric(NA),
+                          trace.UGamma4      = as.numeric(NA),
+                          trace.UGamma2      = as.numeric(NA),
+                          UGamma.eigenvalues = as.numeric(NA))
+        } else {
+            warning("test option ", test, " not available for estimator PML")
+        }
+    } else if(test %in% 
+          c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
+          df > 0 && lavoptions$estimator != "PML") {
         # try to extract attr from VCOV (if present)
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")

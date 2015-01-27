@@ -195,9 +195,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # 3. warn that this is still experimental
-        message("Please note: the PML estimator is still under development.\n",
-                "Future releases will improve speed, and allow for mixed ord/cont variables.\n",
-                "Research on how to compute a proper goodness-of-fit test is ongoing.\n")
+        #message("Please note: the PML estimator is still under development.\n",
+        #        "Future releases will improve speed, and allow for mixed ord/cont variables.\n")
     }
 
     # 1b. check data/sample.cov and get the number of groups

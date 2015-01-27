@@ -389,7 +389,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$information <- "observed"
         if(opt$se == "default")
             opt$se <- "robust.huber.white"
-        if(opt$test != "none") opt$test <- "standard"
+        if(opt$test != "none") opt$test <- "mean.var.adjusted"
         #opt$missing <- "listwise"
     } else if(opt$estimator %in% c("fml","umn")) {
         opt$estimator <- "FML"

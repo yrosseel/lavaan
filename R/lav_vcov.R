@@ -11,7 +11,7 @@ Nvcov.standard <- function(lavmodel = lavmodel, lavsamplestats = NULL,
         }
         E <- computeObservedInformation(lavmodel = lavmodel, 
             lavsamplestats = lavsamplestats, lavdata = lavdata, 
-            lavcache = lavcache, estimator = estimator, type = "free",
+            lavcache = lavcache, estimator = estimator,
             group.weight = group.weight)
     } else {
         E <- computeExpectedInformation(lavmodel = lavmodel, 

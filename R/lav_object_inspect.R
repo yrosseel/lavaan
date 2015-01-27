@@ -1059,16 +1059,12 @@ lav_object_inspect_sampstat_nacov <- function(lavobject,
 lav_object_inspect_hessian <- function(lavobject,
     add.labels = FALSE, add.class = FALSE) {
 
-    # lazy approach: take -1 the observed information
-    E <- computeObservedInformation(lavmodel       = lavobject@Model, 
-                                    lavsamplestats = lavobject@SampleStats,
-                                    lavdata        = lavobject@Data,
-                                    lavcache       = lavobject@Cache,
-                                    type           = "free",
-                                    estimator      = lavobject@Options$estimator,
-                                    group.weight   = TRUE)
-
-    OUT <- -E
+    OUT <- lav_model_hessian(lavmodel       = lavobject@Model, 
+                             lavsamplestats = lavobject@SampleStats,
+                             lavdata        = lavobject@Data,
+                             lavcache       = lavobject@Cache,
+                             estimator      = lavobject@Options$estimator,
+                             group.weight   = TRUE)
 
     # labels
     if(add.labels) {
