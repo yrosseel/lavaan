@@ -8,7 +8,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
                               group.weight   = TRUE) {
 
     # computing the Richardson extrapolation
-    # (note that this matrix is not fully symmetric --> do not use chol)
     Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
     x <- lav_model_get_parameters(lavmodel = lavmodel)
     for(j in 1:lavmodel@nx.free) {
@@ -60,9 +59,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                estimator      = estimator,
                                group.weight   = group.weight)
     
-        Hessian[,j] <- ( -1 * (g.left2 - 8*g.left + 
-                                         8*g.right - 
-                               g.right2)/(12*h.j) )
+        Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
     }
 
     # make symmetric (NEEDED? probably not)

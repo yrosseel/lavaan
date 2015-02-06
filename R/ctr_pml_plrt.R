@@ -11,7 +11,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
         lavpartable <- lavobject@ParTable
     }
 
-    # compute 'fx' = object function value (NOTE: since 0.5-18, NOT divided
+    # compute 'fx' = objective function value (NOTE: since 0.5-18, NOT divided
     # by N!!)
     fx <- lav_model_objective(lavmodel       = lavmodel,
                               lavsamplestats = lavsamplestats,
@@ -34,8 +34,6 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                                           lavdata        = lavdata,
                                           lavoptions     = lavoptions,
                                           lavsamplestats = lavsamplestats)
-
-    #### TODO: replace all lavobject@ ...
 
     # FIXME: se="none", test="none"??
     Options <- lavoptions
@@ -113,7 +111,8 @@ VCOV <- lav_model_vcov(lavmodel       = lavmodel,
                        lavcache       = lavcache)
 InvG_to_psipsi_attheta0 <- (1 * VCOV )[index.par, index.par]  #G^psipsi(theta0)
 #below the lavaan function getHessian is used
-Hattheta0 <- (-1) * H0.Hessian
+#Hattheta0 <- (-1) * H0.Hessian
+Hattheta0 <- H0.Hessian
 InvHattheta0 <- solve(Hattheta0)
 InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par]   #H^psipsi(theta0)
 Inv_of_InvH_to_psipsi_attheta0 <- solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
@@ -135,7 +134,8 @@ VCOV <- lav_model_vcov(lavmodel       = fittedSat2@Model,
                        lavpartable    = fittedSat2@ParTable,
                        lavcache       = fittedSat2@Cache)
 InvG_to_sigmasigma_attheta0 <- (1 * VCOV)[1:dSat, 1:dSat]  #G^sigmasigma(theta0)
-Hattheta0 <- (-1)* getHessian(fittedSat2)
+#Hattheta0 <- (-1)* getHessian(fittedSat2)
+Hattheta0 <- getHessian(fittedSat2)
 InvHattheta0 <- solve(Hattheta0)
 InvH_to_sigmasigma_attheta0 <- InvHattheta0[1:dSat, 1:dSat] #H^sigmasigma(theta0)
 Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0) #[H^sigmasigma(theta0)]^(-1)
@@ -208,7 +208,8 @@ logPL <- sum(attr(fmin, "logl.group"))
 # lavobject is the output of function lavaan when we fit the model of interest.
 # I don't know how else to get the Hessian through the code of lavaan function.
 # That's why I'm using below the function getHessian(lavobject).
-Hes <- (-1)* getHessian(lavobject)
+#Hes <- (-1)* getHessian(lavobject)
+Hes <- getHessian(lavobject)
 #InvG <- nsize * vcov(lavobject)
 InvG <- 1 * vcov(lavobject)
 # I guess vcov(lavobject) can be substituted by object VCOV computed inside
@@ -216,7 +217,7 @@ InvG <- 1 * vcov(lavobject)
 dimTheta <- sum(diag(Hes %*% InvG))
 
 # computations of PL versions of AIC and BIC
-PL_AIC <- (-1)*logPL + dimTheta
+PL_AIC <- (-2)*logPL + dimTheta
 PL_BIC <- (-2)*logPL + dimTheta *log(nsize)
 
 list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)

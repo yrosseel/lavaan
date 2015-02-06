@@ -188,6 +188,12 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
             # extract scaled Chisq for each model
             STAT <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"),
                             "test")[[2]]$stat))
+        } else if (estimator == "PML") {
+            for(m in seq_len(length(mods) - 1L)) {
+                out <- ctr_pml_plrt_nested(mods[[m]], mods[[m+1]])
+                STAT.delta[m+1] <- out$FSMA.PLRT
+                Df.delta[m+1] <- out$adj.df
+            }
         } else {
             # see Mplus Web Note 10 (2006)
             for(m in seq_len(length(mods) - 1L)) {
