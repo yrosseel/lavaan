@@ -652,10 +652,7 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
             df2 <- df
         } else {
             XX2 <- X2
-            if(test == "mean.var.adjusted") 
-                df2 <- df
-            else
-                df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
+            df2 <- sum(object@Fit@test[[2]]$trace.UGamma)
         }
         lower.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
