@@ -217,7 +217,7 @@ InvG <- 1 * vcov(lavobject)
 dimTheta <- sum(diag(Hes %*% InvG))
 
 # computations of PL versions of AIC and BIC
-PL_AIC <- (-2)*logPL + dimTheta
+PL_AIC <- (-2)*logPL + 2*dimTheta
 PL_BIC <- (-2)*logPL + dimTheta *log(nsize)
 
 list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)
