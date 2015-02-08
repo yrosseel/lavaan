@@ -61,10 +61,13 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                                   sample.cov     = computeSigmaHat(lavmodel),
                                   sample.mean    = computeMuHat(lavmodel), 
                                   sample.th      = computeTH(lavmodel))
+
+    Options$se <- lavoptions$se
     fittedSat2 <- lavaan(ModelSat2, 
                         control=list(optim.method          = "none",
                                      optim.force.converged = TRUE) ,
-                        slotOptions = lavoptions,
+                        #slotOptions = lavoptions,
+                        slotOptions = Options,
                         slotSampleStats = lavsamplestats,
                         slotData = lavdata, slotCache = lavcache)
 
@@ -201,8 +204,9 @@ ctr_pml_aic_bic <- function(lavobject) {
 #zero.idx <- which(prop == 0.0)
 #prop <- prop[-zero.idx]
 #logPL <-  (-1)* nsize * ( lavfit@fx - sum( prop*log(prop) )  )
-fmin <- lav_model_objective(lavmodel = lavobject@Model, lavsamplestats = lavobject@SampleStats, lavdata = lavobject@Data, lavcache = lavobject@Cache, estimator = "PML")
-logPL <- sum(attr(fmin, "logl.group"))
+#fmin <- lav_model_objective(lavmodel = lavobject@Model, lavsamplestats = lavobject@SampleStats, lavdata = lavobject@Data, lavcache = lavobject@Cache, estimator = "PML")
+#logPL <- sum(attr(fmin, "logl.group"))
+logPL <- lavobject@Fit@logl
 
 # Find the right dimension of the (theta) parameter.
 # lavobject is the output of function lavaan when we fit the model of interest.

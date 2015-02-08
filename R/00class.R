@@ -141,6 +141,8 @@ setClass("Fit",
         se="numeric",              # standard errors
         fx="numeric",
         fx.group="numeric",
+        logl="numeric",
+        logl.group="numeric",
         iterations="integer",      # number of iterations
         converged="logical",
         control="list",

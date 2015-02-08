@@ -11,6 +11,13 @@ lav_model_fit <- function(lavpartable = NULL,
     converged  = attr(x, "converged")
     fx         = attr(x, "fx")
     fx.group   = attr(fx, "fx.group")
+    if(!is.null(attr(fx, "logl.group"))) {
+        logl.group = attr(fx, "logl.group")
+        logl       = sum(logl.group)
+    } else {
+        logl.group = as.numeric(NA)
+        logl = as.numeric(NA)
+    }
     #print(fx.group)
     control    = attr(x, "control")
     attributes(fx) <- NULL
@@ -94,6 +101,8 @@ lav_model_fit <- function(lavpartable = NULL,
         se         = se,
         fx         = fx,
         fx.group   = fx.group,
+        logl       = logl,
+        logl.group = logl.group,
         iterations = iterations,
         converged  = converged,
         control    = control,

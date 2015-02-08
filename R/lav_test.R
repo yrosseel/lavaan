@@ -256,22 +256,32 @@ lav_model_test <- function(lavmodel       = NULL,
         return(TEST)
     }    
 
-    # get fx.group
-    fx <- attr(x, "fx")
-    fx.group <- attr(fx, "fx.group")
+    if(lavoptions$estimator == "PML" && test != "none") {
+        PML <- ctr_pml_plrt(lavobject = NULL,
+                            lavmodel = lavmodel,
+                            lavdata = lavdata,
+                            lavoptions = lavoptions,
+                            lavcache = lavcache,
+                            lavsamplestats = lavsamplestats,
+                            lavpartable = lavpartable)
+        #### FIXME!!!! does not work for multiple groups yet!!!
+        chisq.group <- PML$PLRTH0Sat
+    } else {
+        # get fx.group
+        fx <- attr(x, "fx")
+        fx.group <- attr(fx, "fx.group")
 
-    # always compute `standard' test statistic
-    ## FIXME: the NFAC is now implicit in the computation of fx...
-    NFAC <- 2 * unlist(lavsamplestats@nobs)
-    if(lavoptions$estimator == "ML" && lavoptions$likelihood == "wishart") {
-        # first divide by two
-        NFAC <- NFAC / 2
-        NFAC <- NFAC - 1
-        NFAC <- NFAC * 2
-    } else if(lavoptions$estimator == "PML") {
-        NFAC <- 2
+        # always compute `standard' test statistic
+        ## FIXME: the NFAC is now implicit in the computation of fx...
+        NFAC <- 2 * unlist(lavsamplestats@nobs)
+        if(lavoptions$estimator == "ML" && lavoptions$likelihood == "wishart") {
+            # first divide by two
+            NFAC <- NFAC / 2
+            NFAC <- NFAC - 1
+            NFAC <- NFAC * 2
+        } 
+        chisq.group <- fx.group * NFAC
     }
-    chisq.group <- fx.group * NFAC
 
     # check for negative values
     chisq.group[which(chisq.group < 0)] <- 0.0
@@ -342,25 +352,17 @@ lav_model_test <- function(lavmodel       = NULL,
         if(test == "standard") {
             # nothing to do
         } else if(test == "mean.var.adjusted") {
-            OUT <- ctr_pml_plrt(lavobject = NULL,
-                                lavmodel = lavmodel, 
-                                lavdata = lavdata,
-                                lavoptions = lavoptions,
-                                lavcache = lavcache,
-                                lavsamplestats = lavsamplestats,
-                                lavpartable = lavpartable)
-
             TEST[[2]] <- list(test               = test,
-                          stat               = OUT$stat,
-                          stat.group         = as.numeric(NA), # for now
-                          df                 = OUT$df,
-                          pvalue             = OUT$p.value,
-                          scaling.factor     = as.numeric(NA),
-                          shift.parameter    = as.numeric(NA),
-                          trace.UGamma       = as.numeric(NA),
-                          trace.UGamma4      = as.numeric(NA),
-                          trace.UGamma2      = as.numeric(NA),
-                          UGamma.eigenvalues = as.numeric(NA))
+                              stat               = PML$stat,
+                              stat.group         = as.numeric(NA), # for now
+                              df                 = PML$df,
+                              pvalue             = PML$p.value,
+                              scaling.factor     = as.numeric(NA),
+                              shift.parameter    = as.numeric(NA),
+                              trace.UGamma       = as.numeric(NA),
+                              trace.UGamma4      = as.numeric(NA),
+                              trace.UGamma2      = as.numeric(NA),
+                              UGamma.eigenvalues = as.numeric(NA))
         } else {
             warning("test option ", test, " not available for estimator PML")
         }

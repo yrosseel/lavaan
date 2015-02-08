@@ -107,19 +107,20 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  # The 1's, -1's (and possibly -2) are the contrast coefficients of the parameters.
  # The sum of the rows should be equal to 0.
  if(equalConstr==TRUE) {
-     EqMat <- t(fit_objH0@Model@eq.constraints.K)
-     NoRowsEqMat <- nrow(EqMat)
-     NoColsEqMat <- ncol(EqMat)
-     for(i in 1:NoRowsEqMat){
-       id_of_ones <- c(1:NoColsEqMat)[ EqMat[i,]==1] #vector with position index where 1's are
-       tmp_values <- rep(c(1,-1), (length(id_of_ones) %/% 2)) #create pairs of the values 1, -1
-       if((length(id_of_ones) %% 2)!=0) {  #if the number of parameters in row i is odd, 
-           #then substitute the last -1 with -2 and add one more 1
-           tmp_values <- tmp_values[-length(tmp_values)]
-           tmp_values <- c(tmp_values, -2, 1) 
-       }
-       EqMat[i,id_of_ones] <- tmp_values 
-     }
+     EqMat <- fit_objH0@Model@ceq.JAC
+     #EqMat <- t(fit_objH0@Model@eq.constraints.K)
+     #NoRowsEqMat <- nrow(EqMat)
+     #NoColsEqMat <- ncol(EqMat)
+     #for(i in 1:NoRowsEqMat){
+     #  id_of_ones <- c(1:NoColsEqMat)[ EqMat[i,]==1] #vector with position index where 1's are
+     #  tmp_values <- rep(c(1,-1), (length(id_of_ones) %/% 2)) #create pairs of the values 1, -1
+     #  if((length(id_of_ones) %% 2)!=0) {  #if the number of parameters in row i is odd, 
+     #      #then substitute the last -1 with -2 and add one more 1
+     #      tmp_values <- tmp_values[-length(tmp_values)]
+     #      tmp_values <- c(tmp_values, -2, 1) 
+     #  }
+     #  EqMat[i,id_of_ones] <- tmp_values 
+     #}
  }
 
 
