@@ -269,17 +269,33 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
     if(estimator == "ML") {
         aic <- sapply(mods, FUN=AIC)
         bic <- sapply(mods, FUN=BIC)
+    } else if(estimator == "PML") {
+        OUT <- lapply(mods, ctr_pml_aic_bic)
+        aic <- sapply(OUT, "[[", "PL_AIC")
+        bic <- sapply(OUT, "[[", "PL_BIC")
     }
 
-    val <- data.frame(Df = Df,
-                      AIC = aic,
-                      BIC = bic,
-                      Chisq = STAT,
-                      "Chisq diff" = STAT.delta,
-                      "Df diff" = Df.delta,
-                      "Pr(>Chisq)" = Pvalue.delta,
-                      row.names = names(mods), 
-                      check.names = FALSE)
+    if(estimator == "PML") {
+        val <- data.frame(Df = Df,
+                          PL_AIC = aic,
+                          PL_BIC = bic,
+                          Chisq = STAT,
+                          "Chisq diff" = STAT.delta,
+                          "Df diff" = Df.delta,
+                          "Pr(>Chisq)" = Pvalue.delta,
+                          row.names = names(mods),
+                          check.names = FALSE)
+    } else {
+        val <- data.frame(Df = Df,
+                          AIC = aic,
+                          BIC = bic,
+                          Chisq = STAT,
+                          "Chisq diff" = STAT.delta,
+                          "Df diff" = Df.delta,
+                          "Pr(>Chisq)" = Pvalue.delta,
+                          row.names = names(mods), 
+                          check.names = FALSE)
+    }
 
     if(type == "chisq") {
         if(scaled) {
