@@ -110,7 +110,7 @@ computeObservedInformation <- function(lavmodel       = NULL,
                                  lavdata        = lavdata,
                                  lavcache       = lavcache,
                                  estimator      = estimator,
-                                 group.weight   = TRUE)
+                                 group.weight   = group.weight)
 
     # in lavaan, we ALWAYS minimize, so the Hessian is already pos def
     Information <- Hessian
