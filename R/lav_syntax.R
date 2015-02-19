@@ -205,9 +205,9 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     } else {
                         stop("lavaan ERROR: right-hand side of formula contains an intercept, but operator is \"", op, "\" in: ", x)
                     }
-                } else if(names(out)[j] == "zero" && op == "~") {
+                } else if(names(out)[j] == "..zero.." && op == "~") {
                     rhs.name <- ""
-                } else if(names(out)[j] == "constant" && op == "~") {
+                } else if(names(out)[j] == "..constant.." && op == "~") {
                     rhs.name <- ""
                 } else {
                     rhs.name <- names(out)[j]
@@ -387,10 +387,10 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
                 if(as.character(rhs) == "1") {
                     names(out)[1L] <- "intercept"
                 } else if(as.character(rhs) == "0") {
-                    names(out)[1L] <- "zero"
+                    names(out)[1L] <- "..zero.."
                     out[[1L]]$fixed <- 0
                 } else {
-                    names(out)[1L] <- "constant"
+                    names(out)[1L] <- "..constant.."
                     out[[1L]]$fixed <- 0 
                 }
             }
