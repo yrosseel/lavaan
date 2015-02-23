@@ -212,9 +212,12 @@ lav_model_objective <- function(lavmodel       = NULL,
         fx <- fx + (fx.w + fx.sat)
     }
 
+    fx.value <- as.numeric(fx)
+
     attr(fx, "fx.group") <- fx.group
     if(estimator == "PML") {
         attr(fx, "logl.group") <- logl.group
+        attr(fx, "fx.pml") <- fx.value
     }
 
     fx

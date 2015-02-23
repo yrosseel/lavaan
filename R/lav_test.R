@@ -261,6 +261,7 @@ lav_model_test <- function(lavmodel       = NULL,
                             lavmodel = lavmodel,
                             lavdata = lavdata,
                             lavoptions = lavoptions,
+                            x = x, VCOV = VCOV,
                             lavcache = lavcache,
                             lavsamplestats = lavsamplestats,
                             lavpartable = lavpartable)
@@ -357,7 +358,7 @@ lav_model_test <- function(lavmodel       = NULL,
                               stat.group         = as.numeric(NA), # for now
                               df                 = PML$df,
                               pvalue             = PML$p.value,
-                              scaling.factor     = as.numeric(NA),
+                              scaling.factor     = PML$scaling.factor,
                               shift.parameter    = as.numeric(NA),
                               trace.UGamma       = as.numeric(NA),
                               trace.UGamma4      = as.numeric(NA),
@@ -504,16 +505,15 @@ lav_model_test <- function(lavmodel       = NULL,
             # if se="standard", information is probably expected
             # change it to observed
             if(lavoptions$se != "robust.mlr") information <- "observed"
-            E.inv <-
-                lav_model_information(lavmodel       = lavmodel,
-                                            lavsamplestats = lavsamplestats,
-                                            lavdata        = lavdata,
-                                            estimator      = "ML",
-                                            lavcache       = lavcache,
-                                            information    = information,
-                                            extra          = FALSE,
-                                            augmented      = TRUE,
-                                            inverted       = TRUE)
+            E.inv <- lav_model_information(lavmodel       = lavmodel,
+                                           lavsamplestats = lavsamplestats,
+                                           lavdata        = lavdata,
+                                           estimator      = "ML",
+                                           lavcache       = lavcache,
+                                           information    = information,
+                                           extra          = FALSE,
+                                           augmented      = TRUE,
+                                           inverted       = TRUE)
         }
 
         if(mimic == "Mplus" || mimic == "lavaan") {

@@ -218,14 +218,14 @@ lav_model_information_observed <- function(lavmodel       = NULL,
 
 # outer product of the case-wise scores (gradients)
 lav_model_information_firstorder <- function(lavmodel       = NULL,
-                                                   lavsamplestats = NULL,
-                                                   lavdata        = NULL,
-                                                   estimator      = "ML",
-                                                   lavcache       = NULL,
-                                                   extra          = FALSE,
-                                                   check.pd       = FALSE,
-                                                   augmented      = FALSE,
-                                                   inverted       = FALSE) {
+                                             lavsamplestats = NULL,
+                                             lavdata        = NULL,
+                                             estimator      = "ML",
+                                             lavcache       = NULL,
+                                             extra          = FALSE,
+                                             check.pd       = FALSE,
+                                             augmented      = FALSE,
+                                             inverted       = FALSE) {
     if(inverted) {
         augmented <- TRUE
     }
