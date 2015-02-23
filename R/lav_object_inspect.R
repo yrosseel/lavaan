@@ -229,9 +229,15 @@ lavInspect <- function(lavobject,
             drop.list.single.group = drop.list.single.group)
 
 
-    #### Hessian, first.order ####
+    #### Hessian, information, first.order ####
     } else if(what == "hessian") {
         lav_object_inspect_hessian(lavobject,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "information") {
+        lav_object_inspect_information(lavobject, augmented = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "augmented.information") {
+        lav_object_inspect_information(lavobject, augmented = TRUE,
             add.labels = add.labels, add.class = add.class)
     } else if(what == "first.order") {
         lav_object_inspect_firstorder(lavobject,
@@ -1079,21 +1085,45 @@ lav_object_inspect_hessian <- function(lavobject,
     OUT
 }
 
+lav_object_inspect_information <- function(lavobject, augmented = FALSE,
+    add.labels = FALSE, add.class = FALSE) {
+
+    OUT <- lav_model_information(lavmodel =  lavobject@Model,
+              lavsamplestats = lavobject@SampleStats,
+              lavdata        = lavobject@Data,
+              estimator      = lavobject@Options$estimator,
+              lavcache       = lavobject@Cache,
+              information    = lavobject@Options$information,
+              augmented      = augmented,
+              inverted       = FALSE)
+
+    # labels
+    if(add.labels) {
+        # FIXME!
+    }
+
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+    }
+
+    OUT
+}
+
+
 lav_object_inspect_firstorder <- function(lavobject,
     add.labels = FALSE, add.class = FALSE) {
 
-    # lazy approach: get it from Nvcov.first.order
-    NACOV <- Nvcov.first.order(lavmodel       = lavobject@Model,
-                               lavsamplestats = lavobject@SampleStats,
-                               lavdata        = lavobject@Data,
-                               estimator      = lavobject@Options$estimator)
+    B0 <- lav_model_information_firstorder(lavmodel =  lavobject@Model,
+              lavsamplestats = lavobject@SampleStats,
+              lavdata        = lavobject@Data,
+              estimator      = lavobject@Options$estimator,
+              lavcache       = lavobject@Cache,
+              check.pd       = FALSE,
+              augmented      = FALSE,
+              inverted       = FALSE)
+    attr(B0, "B0.group") <- NULL
 
-    B0 <- attr(NACOV, "B0")
-
-    if(lavobject@Options$estimator == "PML") {
-        B0 <- B0 * lavobject@SampleStats@ntotal
-    }
-    
     OUT <- B0
 
     # labels

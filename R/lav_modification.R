@@ -70,9 +70,10 @@ modindices <- function(object,
     LIST$start <- NULL
                               
     # compute information matrix 'full'
-    E <- computeExpectedInformation(lavmodel       = lavmodelFULL,
-                                    lavsamplestats = object@SampleStats,
-                                    estimator      = object@Options$estimator)
+    E <- 
+       lav_model_information_expected(lavmodel       = lavmodelFULL,
+                                      lavsamplestats = object@SampleStats,
+                                      estimator      = object@Options$estimator)
     Q <- (1/object@SampleStats@ntotal) * E
 
     # compute gradient 'full'

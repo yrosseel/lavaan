@@ -379,10 +379,10 @@ lav_model_test <- function(lavmodel       = NULL,
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
             if(mimic == "Mplus" && estimator == "ML") {
                 # special treatment for Mplus
-                E <- computeExpectedInformationMLM(lavmodel = lavmodel,
+                E <- lav_model_information_expected_MLM(lavmodel = lavmodel,
                          lavsamplestats=lavsamplestats)
             } else {
-                E <- computeExpectedInformation(lavmodel = lavmodel, 
+                E <- lav_model_information_expected(lavmodel = lavmodel, 
                          lavsamplestats = lavsamplestats, lavdata = lavdata,
                          estimator = estimator, extra = TRUE)
             }
@@ -415,7 +415,7 @@ lav_model_test <- function(lavmodel       = NULL,
 #                                  debug          = FALSE)
 #
 #                Delta <- computeDelta(lavmodel = augModel)
-#                E <- computeExpectedInformationMLM(object, lavsamplestats=lavsamplestats,
+#                E <- lav_model_information_expected_MLM(object, lavsamplestats=lavsamplestats,
 #                                                   Delta=Delta)
 #                fixed.x.idx <- max(lavpartable$free) + 1:length(idx)
 #                free.idx    <- 1:max(lavpartable$free)
@@ -504,20 +504,31 @@ lav_model_test <- function(lavmodel       = NULL,
             # if se="standard", information is probably expected
             # change it to observed
             if(lavoptions$se != "robust.mlr") information <- "observed"
-            E.inv <- Nvcov.standard(lavmodel       = lavmodel,
-                                    lavsamplestats = lavsamplestats,
-                                    lavdata        = lavdata,
-                                    estimator      = "ML",
-                                    information    = information)
+            E.inv <-
+                lav_model_information(lavmodel       = lavmodel,
+                                            lavsamplestats = lavsamplestats,
+                                            lavdata        = lavdata,
+                                            estimator      = "ML",
+                                            lavcache       = lavcache,
+                                            information    = information,
+                                            extra          = FALSE,
+                                            augmented      = TRUE,
+                                            inverted       = TRUE)
         }
 
         if(mimic == "Mplus" || mimic == "lavaan") {
             if(is.null(B0.group)) {
-                Nvcov <- Nvcov.first.order(lavmodel       = lavmodel,
-                                           lavsamplestats = lavsamplestats,
-                                           lavdata        = lavdata)
-                B0.group <- attr(Nvcov, "B0.group")
-            } 
+                B0 <- 
+                    lav_model_information_firstorder(lavmodel = lavmodel,
+                                             lavsamplestats = lavsamplestats,
+                                             lavdata        = lavdata,
+                                             estimator      = estimator,
+                                             lavcache       = lavcache,
+                                             check.pd       = FALSE,
+                                             augmented      = FALSE,
+                                             inverted       = FALSE)
+                B0.group <- attr(B0, "B0.group")
+            }
             trace.UGamma <- 
                 testStatisticYuanBentler.Mplus(lavsamplestats = lavsamplestats,
                                                lavdata        = lavdata,
