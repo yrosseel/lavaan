@@ -343,16 +343,16 @@ computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL,
         IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
         # GAMMA?
         if(!is.null(GAMMA)) {
-            eeta <- as.numeric(IB.inv %*% ALPHA + IB.inv %*% GAMMA %*% mean.x)
+            eeta <- as.vector(IB.inv %*% ALPHA + IB.inv %*% GAMMA %*% mean.x)
         } else {
-            eeta <- as.numeric(IB.inv %*% ALPHA)
+            eeta <- as.vector(IB.inv %*% ALPHA)
         }
     } else {
         # GAMMA?
         if(!is.null(GAMMA)) {
-            eeta <- as.numeric(ALPHA + GAMMA %*% mean.x)
+            eeta <- as.vector(ALPHA + GAMMA %*% mean.x)
         } else {
-            eeta <- as.numeric(ALPHA)
+            eeta <- as.vector(ALPHA)
         }
     }
 
@@ -517,11 +517,11 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
                                ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
 
     # EY
-    EY <- as.numeric(NU) + as.numeric(LAMBDA %*% EETA)
+    EY <- as.vector(NU) + as.vector(LAMBDA %*% EETA)
 
     # if delta, scale
     if(!is.null(MLIST$delta)) {
-        EY <- EY * as.numeric(MLIST$delta)
+        EY <- EY * as.vector(MLIST$delta)
     }
 
     EY
@@ -1275,7 +1275,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
         diag(MLIST$theta) <- 0.0
     }
     if(length(ov.y.dummy.ov.idx) > 0L) {
-        MLIST$psi[ cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx) ] <- 0.0
+       MLIST$psi[ cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx) ] <- 0.0
     }
 
     # special case: PSI=0, and lambda=I (eg ex3.12)
@@ -1298,7 +1298,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
         delta <- MLIST$delta
     }
     # theta = DELTA^(-1/2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
-    RESIDUAL <- as.numeric(1/delta^2 - diag.Sigma)
+    RESIDUAL <- as.vector(1/delta^2 - diag.Sigma)
     if(length(num.idx) > 0L) {
         diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
     } else {
@@ -1540,13 +1540,13 @@ derivative.sigma.LISREL <- function(m="lambda",
     if(m == "lambda") {
         DX <- IK %*% t(IB.inv..PSI..tIB.inv..tLAMBDA %x% diag(nvar))
         if(delta.flag)
-             DX <- DX * as.numeric(DELTA %x% DELTA)
+             DX <- DX * as.vector(DELTA %x% DELTA)
     } else if(m == "beta") {
         DX <- IK %*% ( t(IB.inv..PSI..tIB.inv..tLAMBDA) %x% LAMBDA..IB.inv )
         # this is not really needed (because we select idx=m.el.idx)
         DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         if(delta.flag) 
-             DX <- DX * as.numeric(DELTA %x% DELTA)
+             DX <- DX * as.vector(DELTA %x% DELTA)
     } else if(m == "psi") {
         DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv) 
         # symmetry correction, but keeping all duplicated elements
@@ -1565,13 +1565,13 @@ derivative.sigma.LISREL <- function(m="lambda",
         offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
         DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
         if(delta.flag)
-            DX <- DX * as.numeric(DELTA %x% DELTA)
+            DX <- DX * as.vector(DELTA %x% DELTA)
     } else if(m == "theta") {
         DX <- diag(nvar^2) # very sparse...
         # symmetry correction not needed, since all off-diagonal elements
         # are zero?
         if(delta.flag)
-            DX <- DX * as.numeric(DELTA %x% DELTA)
+            DX <- DX * as.vector(DELTA %x% DELTA)
     } else if(m == "delta") {
         Omega <- computeSigmaHat.LISREL(MLIST, delta=FALSE)
         DD <- diag(DELTA[,1], nvar, nvar)
@@ -1693,34 +1693,34 @@ derivative.th.LISREL <- function(m="tau",
         DX <- matrix(0, nrow=length(th.idx), ncol=nth)
         DX[ th.idx > 0L, ] <-  diag(nth)
         if(delta.flag)
-            DX <- DX * as.numeric(K_nu %*% DELTA)
+            DX <- DX * as.vector(K_nu %*% DELTA)
     } else if(m == "nu") {
         DX <- (-1) * K_nu
         if(delta.flag)
-            DX <- DX * as.numeric(K_nu %*% DELTA)
+            DX <- DX * as.vector(K_nu %*% DELTA)
     } else if(m == "lambda") {
         DX <- (-1) * t(IB.inv %*% ALPHA) %x% diag(nvar)
         DX <- K_nu %*% DX
         if(delta.flag)
-            DX <- DX * as.numeric(K_nu %*% DELTA)
+            DX <- DX * as.vector(K_nu %*% DELTA)
     } else if(m == "beta") {
         DX <- (-1) * t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)
         # this is not really needed (because we select idx=m.el.idx)
         DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         DX <- K_nu %*% DX
         if(delta.flag)
-            DX <- DX * as.numeric(K_nu %*% DELTA)
+            DX <- DX * as.vector(K_nu %*% DELTA)
     } else if(m == "alpha") {
         DX <- (-1) * LAMBDA %*% IB.inv
         DX <- K_nu %*% DX
         if(delta.flag)
-            DX <- DX * as.numeric(K_nu %*% DELTA)
+            DX <- DX * as.vector(K_nu %*% DELTA)
     } else if(m == "delta") {
         DX1 <- matrix(0, nrow=length(th.idx), ncol=1)
         DX1[ th.idx > 0L, ] <-  TAU
         DX2 <- NU + LAMBDA %*% IB.inv %*% ALPHA
         DX2 <- K_nu %*% DX2
-        DX <- K_nu * as.numeric(DX1 - DX2)
+        DX <- K_nu * as.vector(DX1 - DX2)
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -1774,7 +1774,7 @@ derivative.pi.LISREL <- function(m="lambda",
             DX <- DX * DELTA.diag
     } else if(m == "delta") {
         PRE <- rep(1, nexo) %x% diag(nvar)
-        DX <- PRE * as.numeric(LAMBDA %*% IB.inv %*% GAMMA)
+        DX <- PRE * as.vector(LAMBDA %*% IB.inv %*% GAMMA)
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }

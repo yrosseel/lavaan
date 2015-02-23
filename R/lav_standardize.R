@@ -4,7 +4,12 @@ standardize.est.lv.x <- function(x, object, partable = NULL, cov.std = TRUE) {
     free.idx <- which(object@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
-    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+
+    # take care of setResidualElements...
+    lavmodel <- lav_model_set_parameters(lavmodel = object@Model, x = x, 
+                                         estimator = object@Options$estimator)
+    GLIST <- lavmodel@GLIST
+
     standardize.est.lv(object = object, partable = partable, est = est, 
                        GLIST = GLIST, cov.std = cov.std)
 }
@@ -15,7 +20,12 @@ standardize.est.all.x <- function(x, object, partable = NULL, cov.std = TRUE) {
     free.idx <- which(object@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
-    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+
+    # take care of setResidualElements...
+    lavmodel <- lav_model_set_parameters(lavmodel = object@Model, x = x, 
+                                         estimator = object@Options$estimator)
+    GLIST <- lavmodel@GLIST
+
     standardize.est.all(object = object, partable = partable, est = est,
                         est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
@@ -26,7 +36,12 @@ standardize.est.all.nox.x <- function(x, object, partable = NULL, cov.std = TRUE
     free.idx <- which(object@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
-    GLIST <- lav_model_x2GLIST(lavmodel = fit@Model, x = x)
+
+    # take care of setResidualElements...
+    lavmodel <- lav_model_set_parameters(lavmodel = object@Model, x = x, 
+                                         estimator = object@Options$estimator)
+    GLIST <- lavmodel@GLIST
+
     standardize.est.all.nox(object = object, partable = partable, est = est, 
                             est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
