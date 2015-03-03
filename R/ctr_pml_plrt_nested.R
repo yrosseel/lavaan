@@ -22,36 +22,58 @@
 
 ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
-  # sanity check, perhaps we misordered H0 and H1 in the function call??
-  if(fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
-      tmp <- fit_objH0
-      fit_objH0 <- fit_objH1
-      fit_objH1 <- tmp
-  }
+    # sanity check, perhaps we misordered H0 and H1 in the function call??
+    if(fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
+        tmp <- fit_objH0
+        fit_objH0 <- fit_objH1
+        fit_objH1 <- tmp
+    }
 
-  # check if we have equality constraints
-  if(fit_objH0@Model@eq.constraints) {
-      equalConstr = TRUE
-  } else {
-      equalConstr = FALSE
-  }
+    # check if we have equality constraints
+    if(fit_objH0@Model@eq.constraints) {
+        equalConstr = TRUE
+    } else {
+        equalConstr = FALSE
+    }
   
-  nsize <- fit_objH0@Data@nobs[[1]]   #[[1]] to be substituted by [[g]]?
-  PLRT <- 2*nsize*(fit_objH0@Fit@fx - fit_objH1@Fit@fx)
-  #!!!!!! we keep the multiplication by nsize because lavfit@fx gives the objective function divided by N
+    nsize <- fit_objH0@SampleStats@ntotal
+    PLRT <- 2 * (fit_objH1@Fit@logl - fit_objH0@Fit@logl)
+
+    # create a new object 'objH1_h0': the object 'H1', but where
+    # the parameter values are from H0
+    #objH1_h0 <- update(fit_objH1, 
+    #                   start = parameterEstimates(fit0), 
+    #                   control = list(optim.method="none", 
+    #                                  optim.force.converged = TRUE), 
+    #                   se = "none", test = "none", verbose = FALSE)
+
+    Options <- fit_objH1@Options
+    Options$verbose <- FALSE; Options$se <- "none"; Options$test <- "none"
+
+    PT.H0 <- fit_objH0@ParTable
+    PT.H1 <- fit_objH1@ParTable
+
+    objH1_h0 <- lavaan(model = PT.H1,
+                       start = parameterEstimates(fit_objH0),
+                       control=list(optim.method          = "none",
+                                    optim.force.converged = TRUE) ,
+                       slotOptions     = Options,
+                       slotSampleStats = fit_objH1@SampleStats,
+                       slotData        = fit_objH1@Data, 
+                       slotCache       = fit_objH1@Cache)
 
   
-  # number of parameters under the alternative hypothesis H1
-  Npar <- fit_objH1@Fit@npar  
+    # number of parameters under the alternative hypothesis H1
+    Npar <- fit_objH1@Fit@npar  
 
 
-   MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
+   #MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
    # MY.m.el.idx2 gives the POSITION index of the free parameters within each 
    # parameter matrix under H1 model.
    # The index numbering restarts from 1 when we move to a new parameter matrix.
    # Within each matrix the index numbering "moves" columnwise.
 
-   MY.x.el.idx2 <- fit_objH1@Model@x.free.idx
+   #MY.x.el.idx2 <- fit_objH1@Model@x.free.idx
    # MY.x.el.idx2 ENUMERATES the free parameters within each parameter matrix.
    # The numbering continues as we move from one parameter matrix to the next one.
 
@@ -61,38 +83,45 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
    # (those placed above the main diagonal).
    # That's why I do the following:
 
-   MY.m.el.idx <- MY.m.el.idx2
-   MY.x.el.idx <- MY.x.el.idx2
+   #MY.m.el.idx <- MY.m.el.idx2
+   #MY.x.el.idx <- MY.x.el.idx2
    # Psi, the variance - covariance matrix of factors
-   if( length(MY.x.el.idx2[[3]])!=0 & any(table(MY.x.el.idx2[[3]])>1)) {
-     nfac <- ncol(fit_objH1@Model@GLIST$lambda) #number of factors
-     tmp  <- matrix(c(1:(nfac^2)), nrow= nfac, ncol= nfac )
-     tmp_keep <- tmp[lower.tri(tmp, diag=TRUE)]
-     MY.m.el.idx[[3]] <- MY.m.el.idx[[3]][MY.m.el.idx[[3]] %in% tmp_keep]
-     MY.x.el.idx[[3]] <- unique( MY.x.el.idx2[[3]] )
-   }
+   #if( length(MY.x.el.idx2[[3]])!=0 & any(table(MY.x.el.idx2[[3]])>1)) {
+   #  nfac <- ncol(fit_objH1@Model@GLIST$lambda) #number of factors
+   #  tmp  <- matrix(c(1:(nfac^2)), nrow= nfac, ncol= nfac )
+   #  tmp_keep <- tmp[lower.tri(tmp, diag=TRUE)]
+   #  MY.m.el.idx[[3]] <- MY.m.el.idx[[3]][MY.m.el.idx[[3]] %in% tmp_keep]
+   #  MY.x.el.idx[[3]] <- unique( MY.x.el.idx2[[3]] )
+   #}
 
    #for Theta, the variance-covariance matrix of measurement errors
-    if( length(MY.x.el.idx2[[2]])!=0 & any(table(MY.x.el.idx2[[2]])>1)) {
-     nvar <- fit_objH1@Model@nvar #number of indicators
-     tmp  <- matrix(c(1:(nvar^2)), nrow= nvar, ncol= nvar )
-     tmp_keep <- tmp[lower.tri(tmp, diag=TRUE)]
-     MY.m.el.idx[[2]] <- MY.m.el.idx[[2]][MY.m.el.idx[[2]] %in% tmp_keep]
-     MY.x.el.idx[[2]] <- unique( MY.x.el.idx2[[2]] )
-    }
+   # if( length(MY.x.el.idx2[[2]])!=0 & any(table(MY.x.el.idx2[[2]])>1)) {
+   #  nvar <- fit_objH1@Model@nvar #number of indicators
+   #  tmp  <- matrix(c(1:(nvar^2)), nrow= nvar, ncol= nvar )
+   #  tmp_keep <- tmp[lower.tri(tmp, diag=TRUE)]
+   #  MY.m.el.idx[[2]] <- MY.m.el.idx[[2]][MY.m.el.idx[[2]] %in% tmp_keep]
+   #  MY.x.el.idx[[2]] <- unique( MY.x.el.idx2[[2]] )
+   # }
  
    #below the commands to find the row-column indices of the Hessian that correspond to
    #the parameters to be tested equal to 0
    #tmp.ind contains these indices
-   MY.m.el.idx2.H0 <- fit_objH0@Model@m.free.idx
-   tmp.ind <- c()
-   for(i in 1:6) {
-     tmp.ind <- c(tmp.ind ,
-                  MY.x.el.idx2[[i]] [!(MY.m.el.idx2[[i]]  %in%
-                                       MY.m.el.idx2.H0[[i]] )  ]  )
-   }
+   # MY.m.el.idx2.H0 <- fit_objH0@Model@m.free.idx
+   # tmp.ind <- c()
+   # for(i in 1:6) {
+   #   tmp.ind <- c(tmp.ind ,
+   #               MY.x.el.idx2[[i]] [!(MY.m.el.idx2[[i]]  %in%
+   #                                    MY.m.el.idx2.H0[[i]] )  ]  )
+   # }
    # next line added by YR
-   tmp.ind <- unique(tmp.ind)
+   # tmp.ind <- unique(tmp.ind)
+
+   # YR: use partable to find which parameters are restricted in H0
+   #     (this should work in multiple groups too)
+   h0.par.idx <- which(   PT.H1$free[PT.H1$user < 2] > 0  & 
+                        !(PT.H0$free[PT.H0$user < 2] > 0)   )
+   tmp.ind <- PT.H1$free[ h0.par.idx ]
+
 
  # if the models are nested because of equality constraints among the parameters, we need
  # to construct the matrix of derivatives of function g(theta) with respect to theta
@@ -108,123 +137,152 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  # The sum of the rows should be equal to 0.
  if(equalConstr==TRUE) {
      EqMat <- fit_objH0@Model@ceq.JAC
-     #EqMat <- t(fit_objH0@Model@eq.constraints.K)
-     #NoRowsEqMat <- nrow(EqMat)
-     #NoColsEqMat <- ncol(EqMat)
-     #for(i in 1:NoRowsEqMat){
-     #  id_of_ones <- c(1:NoColsEqMat)[ EqMat[i,]==1] #vector with position index where 1's are
-     #  tmp_values <- rep(c(1,-1), (length(id_of_ones) %/% 2)) #create pairs of the values 1, -1
-     #  if((length(id_of_ones) %% 2)!=0) {  #if the number of parameters in row i is odd, 
-     #      #then substitute the last -1 with -2 and add one more 1
-     #      tmp_values <- tmp_values[-length(tmp_values)]
-     #      tmp_values <- c(tmp_values, -2, 1) 
-     #  }
-     #  EqMat[i,id_of_ones] <- tmp_values 
-     #}
- }
+ } else {
+    no.par0 <- length(tmp.ind)
+    tmp.ind2 <- cbind(1:no.par0, tmp.ind)
+    EqMat <- matrix(0, nrow = no.par0, ncol = Npar)
+    EqMat[tmp.ind2] <- 1
+}
 
 
  # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
  # so that the adjustment to PLRT can be applied.
  # Here a couple of functions (e.g. MYgetHessian) which are modifications of 
  # lavaan functions (e.g. getHessian) are needed. These are defined in the end of the file.  
- obj <- fit_objH0
+ # obj <- fit_objH0
 
  #the quantity below follows the same logic as getHessian of lavaan 0.5-18
  #and it actually gives N*Hessian. That's why the command following the command below. 
- NHes.theta0 <- MYgetHessian (object = obj@Model,
-                            samplestats = obj@SampleStats ,
-                            X = obj@Data@X ,
-                            estimator = "PML",
-                            lavcache = obj@Cache,
-                            MY.m.el.idx = MY.m.el.idx,
-                            MY.x.el.idx = MY.x.el.idx,
-                            MY.m.el.idx2 = MY.m.el.idx2, # input for MYx2GLIST
-                            MY.x.el.idx2 = MY.x.el.idx2, # input for MYx2GLIST
-                            Npar = Npar,
-                            equalConstr=equalConstr)
+ # NHes.theta0 <- MYgetHessian (object = obj@Model,
+ #                           samplestats = obj@SampleStats ,
+ #                           X = obj@Data@X ,
+ #                           estimator = "PML",
+ #                           lavcache = obj@Cache,
+ #                           MY.m.el.idx = MY.m.el.idx,
+ #                           MY.x.el.idx = MY.x.el.idx,
+ #                           MY.m.el.idx2 = MY.m.el.idx2, # input for MYx2GLIST
+ #                           MY.x.el.idx2 = MY.x.el.idx2, # input for MYx2GLIST
+ #                           Npar = Npar,
+ #                           equalConstr=equalConstr)
+ NHes.theta0 <- lavTech(objH1_h0, "hessian")
  Hes.theta0 <- NHes.theta0/ nsize #!!!!! to get the Hessian
- if(equalConstr==TRUE) { 
-   Inv.Hes.theta0.final <- solve(Hes.theta0)
- } else {
-   #Below manipulations so that the first rows-columns of the Hessian will correspond
-   #to the parameters that are tested to be equal to 0.
-   tmp.Hes.theta0.without <- Hes.theta0[-tmp.ind,-tmp.ind]
-   #i.e. temporarily delete the rows and columns which correspond
-   #to the parameters tested to be 0.
-
-   tmp.row <- Hes.theta0[tmp.ind, -tmp.ind]
-   # i.e. the corresponding row without the elements corresponding to the parameters
-   
-   Hes.theta0.perm <- rbind(tmp.row, tmp.Hes.theta0.without)
-   if (length(tmp.ind)>1) { #if more than one parameters are tested
-      tmp.col <- rbind(Hes.theta0[tmp.ind,tmp.ind], t(tmp.row))
-   } else if (length(tmp.ind)==1) { #if one parameter is tested
-      tmp.col <- c(Hes.theta0[tmp.ind,tmp.ind], tmp.row)
-   }
-   Hes.theta0.perm <- cbind(tmp.col , Hes.theta0.perm)
-
-   #invert the Hessian and take only its first part that corresponds to
-   # thetested parameters
-   Inv.Hes.theta0.final <- solve( Hes.theta0.perm)
-   H.to.psipsi.attheta0 <- Inv.Hes.theta0.final[1:length(tmp.ind), 1:length(tmp.ind)] #!!! correction here
- }
+ Inv.Hes.theta0 <- solve(Hes.theta0)
 
  #N times the estimated variability matrix is given :
- NJ.theta0 <- MYgetVariability(object = obj,
-                             MY.m.el.idx = MY.m.el.idx,
-                             MY.x.el.idx = MY.x.el.idx,
-                             equalConstr=equalConstr)
- J.theta0.divbyN <-  NJ.theta0/(nsize^2) #!!!!!! added due to changes of lavaan functions
- if(equalConstr==TRUE) { 
-   J.theta0.final <- J.theta0.divbyN
- } else {
-   #similar manipulations as in the case of Hessian so that the rows and columns of J
-   #referring to the parameters to be tested  appear first
-   tmp.J.theta0.without <- J.theta0.divbyN[-tmp.ind,-tmp.ind]
-   tmp.row <- J.theta0.divbyN[tmp.ind, -tmp.ind]
-   J.theta0.perm <- rbind(tmp.row, tmp.J.theta0.without)
-   if (length(tmp.ind)>1) {
-      tmp.col <- rbind(J.theta0.divbyN[tmp.ind,tmp.ind], t(tmp.row))
-   } else if (length(tmp.ind)==1) {
-      tmp.col <- c(J.theta0.divbyN[tmp.ind,tmp.ind], tmp.row)
-   }
-   J.theta0.final <- cbind(tmp.col , J.theta0.perm)
- }
- 
+ #NJ.theta0 <- MYgetVariability(object = obj,
+ #                            MY.m.el.idx = MY.m.el.idx,
+ #                            MY.x.el.idx = MY.x.el.idx,
+ #                            equalConstr=equalConstr)
+ #J.theta0.divbyN <-  NJ.theta0/(nsize^2) #!!!!!! added due to changes of lavaan functions
+ NJ.theta0 <- lavTech(objH1_h0, "first.order")
+ # J.theta0 <- NJ.theta0/(nsize^2)
+ J.theta0 <-  NJ.theta0 / nsize
  
  # below the Inverse of the G matrix divided by N
- Inv.G <- Inv.Hes.theta0.final %*% J.theta0.final %*% Inv.Hes.theta0.final
+ Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
 
- if(equalConstr==TRUE) { 
-   MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
-   MinvHtM <- EqMat %*% Inv.Hes.theta0.final %*% t(EqMat)  #!!!! corrected
-   Amat <- MinvHtM #Alpha matrix in my notes
-   InvAmat <- solve(Amat) 
-   tmp.prod  <-  MInvGtM %*% InvAmat
-   tmp.prod2 <- tmp.prod %*% tmp.prod
-   sum.eig   <- sum( diag(tmp.prod) )
-   sum.eigsq <- sum( diag(tmp.prod2) )
- } else {
-   Inv.G.to.psipsi.attheta0 <- Inv.G[1:length(tmp.ind), 1:length(tmp.ind)]
-   if (length(tmp.ind)>1) { #if more than one parameters are tested
-     tmp.prod  <-  Inv.G.to.psipsi.attheta0 %*% solve( H.to.psipsi.attheta0)
-     tmp.prod2 <- tmp.prod %*% tmp.prod
-     sum.eig   <- sum( diag(tmp.prod) )
-     sum.eigsq <- sum( diag(tmp.prod2) )
-   } else if (length(tmp.ind)==1) { #if one parameter is tested
-      #because here one element, the eigenvalue coincides with the following value
-      sum.eig <- Inv.G.to.psipsi.attheta0 / H.to.psipsi.attheta0
-      sum.eigsq <- sum.eig^2
-   }
- }
- 
- FSMA.PLRT <- (sum.eig    / sum.eigsq) * PLRT # adjusted PLRT
- adj.df    <- (sum.eig^2) / sum.eigsq # adjusted df
- pvalue <- 1-pchisq(FSMA.PLRT, df=adj.df )
+ MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
+ MinvHtM <- EqMat %*% Inv.Hes.theta0 %*% t(EqMat)
+ Inv_MinvHtM <- solve(MinvHtM)    #!!! change names
+ tmp.prod <- MInvGtM %*% Inv_MinvHtM  #!!! change names
+ tmp.prod2 <- tmp.prod %*% tmp.prod
+ sum.eig <- sum(diag(tmp.prod))
+ sum.eigsq <- sum(diag(tmp.prod2))
 
- list(FSMA.PLRT = FSMA.PLRT, adj.df = adj.df, pvalue=pvalue)
+ FSMA.PLRT <- (sum.eig/sum.eigsq) * PLRT
+ adj.df <- (sum.eig^2)/sum.eigsq
+ pvalue <- 1 - pchisq(FSMA.PLRT, df = adj.df)
+ list(FSMA.PLRT = FSMA.PLRT, adj.df = adj.df, pvalue = pvalue)
 }
+
+
+# for testing: this is the 'original' (using m.el.idx and x.el.idx)
+ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
+
+    if (fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
+        tmp <- fit_objH0
+        fit_objH0 <- fit_objH1
+        fit_objH1 <- tmp
+    }
+
+    if (fit_objH0@Model@eq.constraints) {
+        equalConstr = TRUE
+    }   else {
+        equalConstr = FALSE
+    }
+
+    nsize <- fit_objH0@Data@nobs[[1]]
+    PLRT <- 2 * nsize * (fit_objH0@Fit@fx - fit_objH1@Fit@fx)
+    Npar <- fit_objH1@Fit@npar
+    MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
+    MY.x.el.idx2 <- fit_objH1@Model@x.free.idx
+    MY.m.el.idx <- MY.m.el.idx2
+    MY.x.el.idx <- MY.x.el.idx2
+
+    if (length(MY.x.el.idx2[[3]]) != 0 & any(table(MY.x.el.idx2[[3]]) > 1)) {
+        nfac <- ncol(fit_objH1@Model@GLIST$lambda)
+        tmp <- matrix(c(1:(nfac^2)), nrow = nfac, ncol = nfac)
+        tmp_keep <- tmp[lower.tri(tmp, diag = TRUE)]
+        MY.m.el.idx[[3]] <- MY.m.el.idx[[3]][MY.m.el.idx[[3]] %in% tmp_keep]
+        MY.x.el.idx[[3]] <- unique(MY.x.el.idx2[[3]])
+    }
+
+    if (length(MY.x.el.idx2[[2]]) != 0 & any(table(MY.x.el.idx2[[2]]) > 1)) {
+        nvar <- fit_objH1@Model@nvar
+        tmp <- matrix(c(1:(nvar^2)), nrow = nvar, ncol = nvar)
+        tmp_keep <- tmp[lower.tri(tmp, diag = TRUE)]
+        MY.m.el.idx[[2]] <- MY.m.el.idx[[2]][MY.m.el.idx[[2]] %in% tmp_keep]
+        MY.x.el.idx[[2]] <- unique(MY.x.el.idx2[[2]])
+    }
+    MY.m.el.idx2.H0 <- fit_objH0@Model@m.free.idx
+
+    tmp.ind <- c()
+    for (i in 1:6) {
+        tmp.ind <- c(tmp.ind, MY.x.el.idx2[[i]][!(MY.m.el.idx2[[i]] %in%
+            MY.m.el.idx2.H0[[i]])])
+    }
+    tmp.ind <- unique(tmp.ind)
+
+    if (equalConstr == TRUE) {
+        EqMat <- fit_objH0@Model@ceq.JAC
+    } else {
+        no.par0 <- length(tmp.ind)
+        tmp.ind2 <- cbind(1:no.par0, tmp.ind )
+        EqMat <- matrix(0, nrow=no.par0, ncol=Npar)
+        EqMat[tmp.ind2] <- 1
+    }
+
+    obj <- fit_objH0
+
+    NHes.theta0 <- MYgetHessian(object = obj@Model, samplestats = obj@SampleStats,
+        X = obj@Data@X, estimator = "PML", lavcache = obj@Cache,
+        MY.m.el.idx = MY.m.el.idx, MY.x.el.idx = MY.x.el.idx,
+        MY.m.el.idx2 = MY.m.el.idx2, MY.x.el.idx2 = MY.x.el.idx2,
+        Npar = Npar, equalConstr = equalConstr)
+    Hes.theta0 <- NHes.theta0/nsize
+    Inv.Hes.theta0 <- solve(Hes.theta0)
+
+    NJ.theta0 <- MYgetVariability(object = obj, MY.m.el.idx = MY.m.el.idx,
+        MY.x.el.idx = MY.x.el.idx, equalConstr = equalConstr)
+    J.theta0 <- NJ.theta0/(nsize^2)
+
+
+    Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
+    MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
+    MinvHtM <- EqMat %*% Inv.Hes.theta0 %*% t(EqMat)
+    Inv_MinvHtM <- solve(MinvHtM)    #!!! change names
+    tmp.prod <- MInvGtM %*% Inv_MinvHtM  #!!! change names
+    tmp.prod2 <- tmp.prod %*% tmp.prod
+    sum.eig <- sum(diag(tmp.prod))
+    sum.eigsq <- sum(diag(tmp.prod2))
+
+
+    FSMA.PLRT <- (sum.eig/sum.eigsq) * PLRT
+    adj.df <- (sum.eig^2)/sum.eigsq
+    pvalue <- 1 - pchisq(FSMA.PLRT, df = adj.df)
+    list(FSMA.PLRT = FSMA.PLRT, adj.df = adj.df, pvalue = pvalue)
+}
+
 
 
 
