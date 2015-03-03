@@ -1089,37 +1089,9 @@ function(object, labels=TRUE, attributes.=FALSE) {
         stop("lavaan ERROR: vcov not available if se=\"none\"")
     }
 
-    if(object@Fit@npar == 0) {
-        VarCov <- matrix(0,0,0)
-    } else {
-        VarCov <- lav_model_vcov(lavmodel       = object@Model, 
-                                 lavsamplestats = object@SampleStats, 
-                                 lavoptions     = object@Options, 
-                                 lavdata        = object@Data,
-                                 lavpartable    = object@Partable, 
-                                 lavcache       = object@Cache
-                                )
-    }
-
-    if(!is.null(VarCov) && labels) {
-        colnames(VarCov) <- rownames(VarCov) <- 
-            lav_partable_labels(object@ParTable, type="free")
-    }
- 
-    if(!attributes.) {
-        attr(VarCov, "E.inv") <- NULL
-        attr(VarCov, "B0") <- NULL
-        attr(VarCov, "B0.group") <- NULL
-        attr(VarCov, "Delta") <- NULL
-        attr(VarCov, "WLS.V") <- NULL
-        attr(VarCov, "BOOT.COEF") <- NULL
-        attr(VarCov, "BOOT.TEST") <- NULL
-    }
-
-    if(!is.null(VarCov)) {
-        class(VarCov) <- c("lavaan.matrix.symmetric", "matrix")
-    }
-
+    VarCov <- lav_object_inspect_vcov(lavobject = object,
+                                      add.labels = labels,
+                                      add.class = TRUE)
     VarCov
 })
 

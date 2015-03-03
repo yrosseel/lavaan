@@ -93,7 +93,7 @@ dSat.idx <- PT.Sat2$free[ PT.Sat2$free > 0L & PT.Sat2$op != "|" ] # remove thres
 # Secondly, we need to specify the indices of the rows/columns of vcov(), hessian, and
 # variability matrix that refer to all SEM parameters except thresholds.
 PT <- lavpartable
-index.par <- PT$free[PT$free > 0L & PT$op != "|" & PT$group == g]
+index.par <- PT$free[PT$free > 0L & PT$op != "|"]
 
 # Thirdly, specify the sample size.
 # nsize <- lavdata@nobs[[g]]
@@ -125,7 +125,38 @@ InvG_to_psipsi_attheta0 <- (1 * VCOV )[index.par, index.par]  #G^psipsi(theta0)
 #InvHattheta0 <- solve(Hattheta0)
 InvHattheta0 <- attr(VCOV, "E.inv")
 InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par]   #H^psipsi(theta0)
-Inv_of_InvH_to_psipsi_attheta0 <- solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
+if(lavmodel@eq.constraints) {
+    IN <- InvH_to_psipsi_attheta0
+    IN.npar <- ncol(IN)
+
+    # create `bordered' matrix
+    if(nrow(lavmodel@con.jac) > 0L) {
+        H <- lavmodel@con.jac[, index.par]
+        inactive.idx <- attr(H, "inactive.idx")
+        lambda <- lavmodel@con.lambda # lagrangean coefs
+        if(length(inactive.idx) > 0L) {
+            H <- H[-inactive.idx,,drop=FALSE]
+            lambda <- lambda[-inactive.idx]
+        }
+        if(nrow(H) > 0L) {
+            H0 <- matrix(0,nrow(H),nrow(H))
+            H10 <- matrix(0, ncol(IN), nrow(H))
+            DL <- 2*diag(lambda, nrow(H), nrow(H))
+            # FIXME: better include inactive + slacks??
+            E3 <- rbind( cbind(     IN,  H10, t(H)),
+                         cbind( t(H10),   DL,  H0),
+                         cbind(      H,   H0,  H0)  )
+            Inv_of_InvH_to_psipsi_attheta0 <-
+                MASS::ginv(IN)[1:IN.npar, 1:IN.npar, drop = FALSE]
+        } else {
+            Inv_of_InvH_to_psipsi_attheta0 <- solve(IN)
+        }
+    }
+} else {
+    Inv_of_InvH_to_psipsi_attheta0 <- 
+        solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
+}
+
 H0tmp_prod1 <- Inv_of_InvH_to_psipsi_attheta0 %*% InvG_to_psipsi_attheta0
 H0tmp_prod2 <- H0tmp_prod1 %*% H0tmp_prod1
 E_tww <- sum(diag(H0tmp_prod1)) #expected mean of the first quadratic quantity
@@ -166,7 +197,7 @@ deltamat <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
 # From deltamat we need to exclude the rows and columns referring to thresholds.
 # For this:
 # free_TH_indices <- lavmodel@x.free.idx[[6]]
-free_TH_indices <- PT$free[PT$free > 0L & PT$op == "|" & PT$group == g]
+free_TH_indices <- PT$free[PT$free > 0L & PT$op == "|"]
 noTH <- length(free_TH_indices)
 #nrowsDelta <- noTH + dSat
 nrowsDelta <- noTH + length(dSat.idx)

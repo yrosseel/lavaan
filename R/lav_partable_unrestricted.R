@@ -6,7 +6,8 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                                       # optional user-provided sample stats
                                       sample.cov     = NULL,
                                       sample.mean    = NULL,
-                                      sample.th      = NULL) {
+                                      sample.th      = NULL,
+                                      sample.th.idx  = NULL) {
 
     # grab everything from lavaan lavobject
     if(!is.null(lavobject)) {
@@ -24,8 +25,11 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
     if(is.null(sample.mean) && !is.null(lavsamplestats)) {
         sample.mean <- lavsamplestats@mean
     }
-    if(is.null(sample.cov) && !is.null(lavsamplestats)) {
+    if(is.null(sample.th) && !is.null(lavsamplestats)) {
          sample.th <- lavsamplestats@th
+    }
+    if(is.null(sample.th.idx) && !is.null(lavsamplestats)) {
+         sample.th.idx <- lavsamplestats@th
     }
 
     ov.names      = lavdata@ov.names
@@ -133,10 +137,15 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                 group <- c(group, rep(g, nel))
                  free <- c(free, rep(1L, nel))
                   exo <- c(exo, rep(0L, nel))
-               #th.start <- rep(0, nel)
-               #th.start <- sample.th[[g]] ### FIXME:: ORDER??? ONLY ORD!!!
-               #ustart <- c(ustart, th.start)
-               ustart <- c(ustart, rep(as.numeric(NA), nel))
+
+                # starting values
+                if(!is.null(sample.th) && !is.null(sample.th.idx)) {
+                    th.start <- 
+                       lavsamplestats@th[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
+                    ustart <- c(ustart, th.start)
+                } else {
+                    ustart <- c(ustart, rep(as.numeric(NA), nel))
+                }
             }
         }
 

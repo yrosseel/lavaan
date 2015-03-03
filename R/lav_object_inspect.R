@@ -229,7 +229,7 @@ lavInspect <- function(lavobject,
             drop.list.single.group = drop.list.single.group)
 
 
-    #### Hessian, information, first.order ####
+    #### Hessian, information, first.order, vcov ####
     } else if(what == "hessian") {
         lav_object_inspect_hessian(lavobject,
             add.labels = add.labels, add.class = add.class)
@@ -242,10 +242,9 @@ lavInspect <- function(lavobject,
     } else if(what == "first.order") {
         lav_object_inspect_firstorder(lavobject,
             add.labels = add.labels, add.class = add.class)
-
-    
-
-
+    } else if(what == "vcov") {
+        lav_object_inspect_vcov(lavobject,
+            add.labels = add.labels, add.class = add.class)
 
 
     #### not found ####
@@ -1074,7 +1073,8 @@ lav_object_inspect_hessian <- function(lavobject,
 
     # labels
     if(add.labels) {
-        # FIXME!
+        colnames(OUT) <- rownames(OUT) <-
+            lav_partable_labels(lavobject@ParTable, type="free")
     }
 
     # class
@@ -1099,7 +1099,8 @@ lav_object_inspect_information <- function(lavobject, augmented = FALSE,
 
     # labels
     if(add.labels) {
-        # FIXME!
+        colnames(OUT) <- rownames(OUT) <-
+            lav_partable_labels(lavobject@ParTable, type="free")
     }
 
     # class
@@ -1128,7 +1129,8 @@ lav_object_inspect_firstorder <- function(lavobject,
 
     # labels
     if(add.labels) {
-        # FIXME!
+        colnames(OUT) <- rownames(OUT) <-
+            lav_partable_labels(lavobject@ParTable, type="free")       
     }
 
     # class
@@ -1139,3 +1141,40 @@ lav_object_inspect_firstorder <- function(lavobject,
     OUT
 }
 
+lav_object_inspect_vcov <- function(lavobject,
+    add.labels = FALSE, add.class = FALSE) {
+
+    if(lavobject@Fit@npar == 0) {
+        OUT <- matrix(0,0,0)
+    } else {
+        OUT <- lav_model_vcov(lavmodel       = lavobject@Model,
+                              lavsamplestats = lavobject@SampleStats,
+                              lavoptions     = lavobject@Options,
+                              lavdata        = lavobject@Data,
+                              lavpartable    = lavobject@Partable,
+                              lavcache       = lavobject@Cache
+                             )
+    }
+   
+    # strip attributes
+    attr(OUT, "E.inv") <- NULL
+    attr(OUT, "B0") <- NULL
+    attr(OUT, "B0.group") <- NULL
+    attr(OUT, "Delta") <- NULL
+    attr(OUT, "WLS.V") <- NULL
+    attr(OUT, "BOOT.COEF") <- NULL
+    attr(OUT, "BOOT.TEST") <- NULL
+
+    # labels
+    if(add.labels) {
+        colnames(OUT) <- rownames(OUT) <-
+            lav_partable_labels(lavobject@ParTable, type="free")
+    }
+
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+    }
+
+    OUT
+}
