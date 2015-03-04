@@ -665,9 +665,20 @@ getParameterLabels <- lav_partable_labels
 lav_partable_full <- function(partable = NULL, group = NULL, 
                               free = FALSE, start = FALSE) {
 
-    # meanstructure + number of groups
+    # check minimum requirements: lhs, op, rhs
+    stopifnot( !is.null(partable$lhs), 
+               !is.null(partable$op), 
+               !is.null(partable$rhs) )
+
+    # meanstructure
     meanstructure <- any(partable$op == "~1")
-    ngroups <- max(partable$group)
+
+    # number of groups
+    if(!is.null(partable$group)) {
+        ngroups <- max(partable$group)
+    } else {
+        ngroups <- 1L
+    }
 
     # extract `names' of various types of variables:
     lv.names     <- lav_partable_vnames(partable, type="lv",  group=group)   # latent variables

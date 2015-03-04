@@ -26,6 +26,66 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                      pt2[, c("lhs","op","rhs","group")])
     }
 
+    # if missing columns, provide default values of the right type 
+    # (numeric/integer/character)
+
+    # user
+    if(is.null(pt1$user) && !is.null(pt2$user)) {
+        pt1$user <- rep(0L, length(pt1$lhs))
+    } else if(is.null(pt2$user) && !is.null(pt1$user)) {
+        pt2$user <- rep(0L, length(pt2$lhs))
+    }
+
+    # free
+    if(is.null(pt1$free) && !is.null(pt2$free)) {
+        pt1$free <- rep(0L, length(pt1$lhs))
+    } else if(is.null(pt2$free) && !is.null(pt1$free)) {
+        pt2$free <- rep(0L, length(pt2$lhs))
+    }
+
+    # ustart -- set to zero!!
+    if(is.null(pt1$ustart) && !is.null(pt2$ustart)) {
+        pt1$ustart <- rep(0, length(pt1$lhs))
+    } else if(is.null(pt2$ustart) && !is.null(pt1$ustart)) {
+        pt2$ustart <- rep(0, length(pt2$lhs))
+    }
+
+    # exo
+    if(is.null(pt1$exo) && !is.null(pt2$exo)) {
+        pt1$exo <- rep(0L, length(pt1$lhs))
+    } else if(is.null(pt2$exo) && !is.null(pt1$exo)) {
+        pt2$exo <- rep(0L, length(pt2$lhs))
+    }
+
+    # label
+    if(is.null(pt1$label) && !is.null(pt2$label)) {
+        pt1$label <- rep("", length(pt1$lhs))
+    } else if(is.null(pt2$label) && !is.null(pt1$label)) {
+        pt2$label <- rep("", length(pt2$lhs))
+    }
+
+    # plabel
+    if(is.null(pt1$plabel) && !is.null(pt2$plabel)) {
+        pt1$plabel <- rep("", length(pt1$lhs))
+    } else if(is.null(pt2$plabel) && !is.null(pt1$plabel)) {
+        pt2$plabel <- rep("", length(pt2$lhs))
+    }
+
+    # start
+    if(is.null(pt1$start) && !is.null(pt2$start)) {
+        pt1$start <- rep(as.numeric(NA), length(pt1$lhs))
+    } else if(is.null(pt2$start) && !is.null(pt1$start)) {
+        pt2$start <- rep(as.numeric(NA), length(pt2$lhs))
+    }
+
+    # est 
+    if(is.null(pt1$est) && !is.null(pt2$est)) {
+        pt1$est <- rep(0, length(pt1$lhs))
+    } else if(is.null(pt2$est) && !is.null(pt1$est)) {
+        pt2$est <- rep(0, length(pt2$lhs))
+    }
+
+
     # check for duplicated elements
     if(remove.duplicated) {
         # if fromLast = TRUE, idx is in pt1

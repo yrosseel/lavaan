@@ -19,8 +19,10 @@
 # and Godambe matrix.
   
 
-
 ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
+
+    stopifnot(fit_objH1@Data@ngroups == 1L)
+
 
     # sanity check, perhaps we misordered H0 and H1 in the function call??
     if(fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
@@ -53,8 +55,26 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     PT.H0 <- fit_objH0@ParTable
     PT.H1 <- fit_objH1@ParTable
 
-    objH1_h0 <- lavaan(model = PT.H1,
-                       start = parameterEstimates(fit_objH0),
+    # `extend' PT.H1 partable to include all `fixed-to-zero parameters'
+    PT.H1.FULL <- lav_partable_full(PT.H1, free = TRUE, start = TRUE)
+    PT.H1.extended <- lav_partable_merge(PT.H1, PT.H1.FULL, 
+                                         remove = TRUE, warn = FALSE)
+
+    # `extend' PT.H0 partable to include all `fixed-to-zero parameters'
+    PT.H0.FULL <- lav_partable_full(PT.H0, free = TRUE, start = TRUE)
+    PT.H0.extended <- lav_partable_merge(PT.H0, PT.H0.FULL,
+                                         remove = TRUE, warn = FALSE)
+
+    # `extend' PE of H0 to include all `fixed-to-zero parameters'
+    PE.H0 <- parameterEstimates(fit_objH0)
+    PE.H0.FULL <- lav_partable_full(PE.H0)
+    PE.H0.extended <- lav_partable_merge(PE.H0, PE.H0.FULL,
+                                         remove = TRUE, warn = FALSE)
+
+    
+
+    objH1_h0 <- lavaan(model = PT.H1.extended,
+                       start = PE.H0.extended,
                        control=list(optim.method          = "none",
                                     optim.force.converged = TRUE) ,
                        slotOptions     = Options,
@@ -118,9 +138,10 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
    # YR: use partable to find which parameters are restricted in H0
    #     (this should work in multiple groups too)
-   h0.par.idx <- which(   PT.H1$free[PT.H1$user < 2] > 0  & 
-                        !(PT.H0$free[PT.H0$user < 2] > 0)   )
-   tmp.ind <- PT.H1$free[ h0.par.idx ]
+   #h0.par.idx <- which(   PT.H1.extended$free[PT.H1.extended$user < 2] > 0  & 
+   #                     !(PT.H0.extended$free[PT.H0.extended$user < 2] > 0)   )
+   #tmp.ind <- PT.H1.extended$free[ h0.par.idx ]
+   #print(tmp.ind)
 
 
  # if the models are nested because of equality constraints among the parameters, we need
@@ -135,14 +156,20 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  # in the rows that refer to odd number of parameters that are equal there is one -2.
  # The 1's, -1's (and possibly -2) are the contrast coefficients of the parameters.
  # The sum of the rows should be equal to 0.
- if(equalConstr==TRUE) {
-     EqMat <- fit_objH0@Model@ceq.JAC
- } else {
-    no.par0 <- length(tmp.ind)
-    tmp.ind2 <- cbind(1:no.par0, tmp.ind)
-    EqMat <- matrix(0, nrow = no.par0, ncol = Npar)
-    EqMat[tmp.ind2] <- 1
-}
+ #if(equalConstr==TRUE) {
+ #    EqMat <- fit_objH0@Model@ceq.JAC
+ #} else {
+ #   no.par0 <- length(tmp.ind)
+ #   tmp.ind2 <- cbind(1:no.par0, tmp.ind)
+ #   EqMat <- matrix(0, nrow = no.par0, ncol = Npar)
+ # EqMat[tmp.ind2] <- 1
+# }
+
+  # use a numeric approximation of `EqMat'
+  Delta1 <- computeDelta(fit_objH1@Model)[[1]] # FIXME multiple groups???
+  Delta0 <- computeDelta(fit_objH0@Model)[[1]]
+  H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
+  EqMat <- t(lav_matrix_orthogonal_complement(H))
 
 
  # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
