@@ -210,11 +210,17 @@ lavaanify <- lavParTable <- function(
 
             # apply modifiers
             if(!is.null(MOD.fixed)) {
+                # two options: constant or NA
                 na.idx <- which(is.na(MOD.fixed))
                 not.na.idx <- which(!is.na(MOD.fixed))
+
+                # constant
                 LIST$ustart[idx][not.na.idx] <- MOD.fixed[not.na.idx]
                 LIST$free[  idx][not.na.idx] <- 0L
-                LIST$free[  idx][na.idx]     <- 1L # eg factor loading
+
+                # NA* modifier
+                LIST$free[  idx][na.idx] <- 1L # eg factor loading
+                LIST$ustart[idx][na.idx] <- as.numeric(NA)
             }
             if(!is.null(MOD.start)) {
                 LIST$ustart[idx] <- MOD.start

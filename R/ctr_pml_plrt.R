@@ -73,7 +73,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     # the code below was contributed by Myrsini Katsikatsou (Jan 2015)
 
 # for now, only a single group is supported:    
-g = 1L
+# g = 1L
 
 
 ########################### The code for PLRT for overall goodness of fit
@@ -191,21 +191,45 @@ var_tzz <- 2* sum(diag(H1tmp_prod2))#variance of the second quadratic quantity
 
 
 ##### Section 3: Compute the asymptotic covariance of the two quadratic quantities
-deltamat <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
-# The above gives the derivatives of thresholds and polychoric correlations
-# with respect to SEM param (including thresholds) evaluated under H0.
-# From deltamat we need to exclude the rows and columns referring to thresholds.
-# For this:
-# free_TH_indices <- lavmodel@x.free.idx[[6]]
-free_TH_indices <- PT$free[PT$free > 0L & PT$op == "|"]
-noTH <- length(free_TH_indices)
-#nrowsDelta <- noTH + dSat
-nrowsDelta <- noTH + length(dSat.idx)
-drhodpsi_mat <- deltamat[(noTH+1):nrowsDelta , index.par ]
+
+drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
+# group weights
+# gw <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
+
+for(g in 1:lavsamplestats@ngroups) {
+    deltamat <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
+    # The above gives the derivatives of thresholds and polychoric correlations
+    # with respect to SEM param (including thresholds) evaluated under H0.
+    # From deltamat we need to exclude the rows and columns referring to thresholds.
+    # For this:
+    # free_TH_indices <- lavmodel@x.free.idx[[6]]
+    free_TH_indices <- PT$free[PT$free > 0L & PT$op == "|" & PT$group == g]
+    noTH <- length(free_TH_indices)
+    nrowsDelta <- nrow(deltamat)
+
+    #drhodpsi_MAT[[g]] <- gw[g] * deltamat[(noTH+1):nrowsDelta , index.par]
+    drhodpsi_MAT[[g]] <- deltamat[(noTH+1):nrowsDelta , index.par]
+}
+drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
+
+#for(g in 1:lavsamplestats@ngroups) {
+#    if(g == 1L) {
+#        MtHM <- gw[g] * ( t(drhodpsi_mat) %*% 
+#                          Inv_of_InvH_to_sigmasigma_attheta0 %*% 
+#                          drhodpsi_mat )
+#    } else {
+#        MtHM <- MtHM + 
+#                gw[g] * ( t(drhodpsi_mat) %*%
+#                          Inv_of_InvH_to_sigmasigma_attheta0 %*% 
+#                          drhodpsi_mat )
+#    }
+#}
+
 tmp_prod <- t(drhodpsi_mat) %*% Inv_of_InvH_to_sigmasigma_attheta0 %*%
-            drhodpsi_mat %*%
-            InvG_to_psipsi_attheta0 %*% H0tmp_prod1
+              drhodpsi_mat %*% InvG_to_psipsi_attheta0 %*% H0tmp_prod1
+#tmp_prod <- MtHM %*% InvG_to_psipsi_attheta0 %*% H0tmp_prod1
 cov_tzztww <- 2* sum(diag(tmp_prod))
+#print(cov_tzztww)
 
 ##### Section 4: compute the adjusted PLRT and its p-value
 # PLRTH0Sat <- 2*nsize*(lavfit@fx - fittedSat@Fit@fx)
