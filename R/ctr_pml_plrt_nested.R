@@ -165,12 +165,16 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  # EqMat[tmp.ind2] <- 1
 # }
 
-  # use a numeric approximation of `EqMat'
-  Delta1 <- computeDelta(fit_objH1@Model)[[1]] # FIXME multiple groups???
-  Delta0 <- computeDelta(fit_objH0@Model)[[1]]
-  H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
-  EqMat <- t(lav_matrix_orthogonal_complement(H))
-
+  # EqMat
+  if(fit_objH0@Model@eq.constraints) {
+      EqMat <- fit_objH0@Model@ceq.JAC
+  } else {
+      # use a numeric approximation of `EqMat' (FIXME!!!!!)
+      Delta1 <- computeDelta(fit_objH1@Model)[[1]] # FIXME multiple groups???
+      Delta0 <- computeDelta(fit_objH0@Model)[[1]]
+      H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
+      EqMat <- t(lav_matrix_orthogonal_complement(H))
+  } 
 
  # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
  # so that the adjustment to PLRT can be applied.
@@ -193,7 +197,37 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  #                           equalConstr=equalConstr)
  NHes.theta0 <- lavTech(objH1_h0, "hessian")
  Hes.theta0 <- NHes.theta0/ nsize #!!!!! to get the Hessian
- Inv.Hes.theta0 <- solve(Hes.theta0)
+
+ if(objH1_h0@Model@eq.constraints) {
+    IN <- Hes.theta0
+    IN.npar <- ncol(IN)
+
+    # create `bordered' matrix
+    if(nrow(lavmodel@con.jac) > 0L) {
+        H <- lavmodel@con.jac
+        inactive.idx <- attr(H, "inactive.idx")
+        lambda <- lavmodel@con.lambda # lagrangean coefs
+        if(length(inactive.idx) > 0L) {
+            H <- H[-inactive.idx,,drop=FALSE]
+            lambda <- lambda[-inactive.idx]
+        }
+        if(nrow(H) > 0L) {
+            H0 <- matrix(0,nrow(H),nrow(H))
+            H10 <- matrix(0, ncol(IN), nrow(H))
+            DL <- 2*diag(lambda, nrow(H), nrow(H))
+            # FIXME: better include inactive + slacks??
+            E3 <- rbind( cbind(     IN,  H10, t(H)),
+                         cbind( t(H10),   DL,  H0),
+                         cbind(      H,   H0,  H0)  )
+            Inv.Hes.theta0 <-
+                MASS::ginv(IN)[1:IN.npar, 1:IN.npar, drop = FALSE]
+        } else {
+            Inv.Hes.theta0 <- solve(IN)
+        }
+    }
+} else {
+    Inv.Hes.theta0 <- solve(Hes.theta0)
+} 
 
  #N times the estimated variability matrix is given :
  #NJ.theta0 <- MYgetVariability(object = obj,
