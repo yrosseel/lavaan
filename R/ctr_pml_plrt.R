@@ -193,9 +193,6 @@ var_tzz <- 2* sum(diag(H1tmp_prod2))#variance of the second quadratic quantity
 ##### Section 3: Compute the asymptotic covariance of the two quadratic quantities
 
 drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
-# group weights
-# gw <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-
 for(g in 1:lavsamplestats@ngroups) {
     deltamat <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
     # The above gives the derivatives of thresholds and polychoric correlations
@@ -212,24 +209,9 @@ for(g in 1:lavsamplestats@ngroups) {
 }
 drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
 
-#for(g in 1:lavsamplestats@ngroups) {
-#    if(g == 1L) {
-#        MtHM <- gw[g] * ( t(drhodpsi_mat) %*% 
-#                          Inv_of_InvH_to_sigmasigma_attheta0 %*% 
-#                          drhodpsi_mat )
-#    } else {
-#        MtHM <- MtHM + 
-#                gw[g] * ( t(drhodpsi_mat) %*%
-#                          Inv_of_InvH_to_sigmasigma_attheta0 %*% 
-#                          drhodpsi_mat )
-#    }
-#}
-
 tmp_prod <- t(drhodpsi_mat) %*% Inv_of_InvH_to_sigmasigma_attheta0 %*%
               drhodpsi_mat %*% InvG_to_psipsi_attheta0 %*% H0tmp_prod1
-#tmp_prod <- MtHM %*% InvG_to_psipsi_attheta0 %*% H0tmp_prod1
 cov_tzztww <- 2* sum(diag(tmp_prod))
-#print(cov_tzztww)
 
 ##### Section 4: compute the adjusted PLRT and its p-value
 # PLRTH0Sat <- 2*nsize*(lavfit@fx - fittedSat@Fit@fx)

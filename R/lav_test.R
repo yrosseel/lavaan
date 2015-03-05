@@ -257,16 +257,13 @@ lav_model_test <- function(lavmodel       = NULL,
     }    
 
     if(lavoptions$estimator == "PML" && test != "none") {
-        PML <- ctr_pml_plrt(lavobject = NULL,
-                            lavmodel = lavmodel,
-                            lavdata = lavdata,
-                            lavoptions = lavoptions,
-                            x = x, VCOV = VCOV,
-                            lavcache = lavcache,
-                            lavsamplestats = lavsamplestats,
-                            lavpartable = lavpartable)
-        #### FIXME!!!! does not work for multiple groups yet!!!
-        chisq.group <- PML$PLRTH0Sat
+        # get fx.group
+        fx <- attr(x, "fx")
+        fx.group <- attr(fx, "fx.group")
+
+        # we need to weight, and 2*
+        chisq.group <- 
+            fx.group * unlist(lavsamplestats@nobs) / lavsamplestats@ntotal * 2
     } else {
         # get fx.group
         fx <- attr(x, "fx")
@@ -353,9 +350,18 @@ lav_model_test <- function(lavmodel       = NULL,
         if(test == "standard") {
             # nothing to do
         } else if(test == "mean.var.adjusted") {
+            PML <- ctr_pml_plrt(lavobject = NULL,
+                                lavmodel = lavmodel,
+                                lavdata = lavdata,
+                                lavoptions = lavoptions,
+                                x = x, VCOV = VCOV,
+                                lavcache = lavcache,
+                                lavsamplestats = lavsamplestats,
+                                lavpartable = lavpartable)
+
             TEST[[2]] <- list(test               = test,
                               stat               = PML$stat,
-                              stat.group         = as.numeric(NA), # for now
+                              stat.group         = TEST[[1]]$stat.group*PML$scaling.factor,
                               df                 = PML$df,
                               pvalue             = PML$p.value,
                               scaling.factor     = 1/PML$scaling.factor,
