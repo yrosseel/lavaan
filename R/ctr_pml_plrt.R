@@ -216,6 +216,7 @@ cov_tzztww <- 2* sum(diag(tmp_prod))
 ##### Section 4: compute the adjusted PLRT and its p-value
 # PLRTH0Sat <- 2*nsize*(lavfit@fx - fittedSat@Fit@fx)
 PLRTH0Sat <- 2*(H0.fx - SAT.fx)
+PLRTH0Sat.group <- 2*(H0.fx.group - SAT.fx.group)
 asym_mean_PLRTH0Sat <- E_tzz - E_tww
 asym_var_PLRTH0Sat  <- var_tzz + var_tww -2*cov_tzztww
 scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat/2) )
@@ -227,7 +228,9 @@ adjusted_df  <- (asym_mean_PLRTH0Sat^2) / (asym_var_PLRTH0Sat/2)
 # and for this the first and second moment adjusted PLRT is not computed." .
 pvalue <- 1-pchisq(FSA_PLRT_SEM, df=adjusted_df )
 
-list(PLRTH0Sat = PLRTH0Sat, stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue, scaling.factor = scaling.factor)
+list(PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
+     stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue, 
+     scaling.factor = scaling.factor)
 }
 ############################################################################
 

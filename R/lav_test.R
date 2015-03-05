@@ -257,13 +257,17 @@ lav_model_test <- function(lavmodel       = NULL,
     }    
 
     if(lavoptions$estimator == "PML" && test != "none") {
-        # get fx.group
-        fx <- attr(x, "fx")
-        fx.group <- attr(fx, "fx.group")
-
-        # we need to weight, and 2*
-        chisq.group <- 
-            fx.group * unlist(lavsamplestats@nobs) / lavsamplestats@ntotal * 2
+        PML <- ctr_pml_plrt(lavobject = NULL,
+                            lavmodel = lavmodel,
+                            lavdata = lavdata,
+                            lavoptions = lavoptions,
+                            x = x, VCOV = VCOV,
+                            lavcache = lavcache,
+                            lavsamplestats = lavsamplestats,
+                            lavpartable = lavpartable)
+        # get chi.group from PML, since we compare to `unrestricted' model,
+        # NOT observed data
+        chisq.group <- PML$PLRTH0Sat.group
     } else {
         # get fx.group
         fx <- attr(x, "fx")
@@ -350,15 +354,6 @@ lav_model_test <- function(lavmodel       = NULL,
         if(test == "standard") {
             # nothing to do
         } else if(test == "mean.var.adjusted") {
-            PML <- ctr_pml_plrt(lavobject = NULL,
-                                lavmodel = lavmodel,
-                                lavdata = lavdata,
-                                lavoptions = lavoptions,
-                                x = x, VCOV = VCOV,
-                                lavcache = lavcache,
-                                lavsamplestats = lavsamplestats,
-                                lavpartable = lavpartable)
-
             TEST[[2]] <- list(test               = test,
                               stat               = PML$stat,
                               stat.group         = TEST[[1]]$stat.group*PML$scaling.factor,

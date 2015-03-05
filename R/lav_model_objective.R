@@ -175,9 +175,14 @@ lav_model_objective <- function(lavmodel       = NULL,
            # nobs <- unlist(GW) * lavsamplestats@ntotal
         #   nobs <- exp(unlist(GW))
         #} else {
-           nobs <- unlist(lavsamplestats@nobs)
-        #}
-        fx <- weighted.mean(fx.group, w=nobs)
+        if(estimator == "PML") {
+            # no weighting needed! (since N_g is part of the logl per group)
+            fx <- sum(fx.group)
+        } else {
+            nobs <- unlist(lavsamplestats@nobs)
+            #}
+            fx <- weighted.mean(fx.group, w=nobs)
+        }
     } else { # single group
         fx <- fx.group[1]
     }
