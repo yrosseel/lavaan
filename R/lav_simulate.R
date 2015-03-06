@@ -303,7 +303,7 @@ Skewness <- function(x., N1=TRUE) {
     mean.x <- mean(x); xc <- x - mean.x; var.x <- var(x)
     if(!N1) var.x <- var.x * (N-1)/N
     sd.x <- sqrt(var.x)
-    sk <- sum(xc^3)/sd.x^3
+    sk <- sum(xc*xc*xc)/(sd.x*sd.x*sd.x)
     skewness <- N*sk/((N-1)*(N-2))
     skewness
 }
@@ -312,8 +312,8 @@ Kurtosis <- function(x., N1=TRUE) {
     x <- x.; x <- x[!is.na(x)]; N <- length(x)
     mean.x <- mean(x); xc <- x - mean.x; var.x <- var(x)
     if(!N1) var.x <- var.x * (N-1)/N
-    k <- sum(xc^4)/var.x^2
-    kurtosis <- N*(N+1)*k/((N-1)*(N-2)*(N-3))-3*(N-1)^2/((N-2)*(N-3))
+    k <- sum(xc*xc*xc*xc)/(var.x*var.x)
+    kurtosis <- N*(N+1)*k/((N-1)*(N-2)*(N-3))-3*(N-1)*(N-1)/((N-2)*(N-3))
     kurtosis
 }
 
@@ -333,12 +333,12 @@ lav_fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
 
     system.function <- function(x, skewness, kurtosis) {
         b=x[1L]; c=x[2L]; d=x[3L]
-        eq1 <- b^2 + 6*b*d + 2*c^2 + 15*d^2 - 1
-        eq2 <- 2*c*(b^2 + 24*b*d + 105*d^2 + 2) - skewness
-        eq3 <- 24*(b*d + c^2*(1 + b^2 + 28*b*d) +
-                   d^2*(12 + 48*b*d + 141*c^2 + 225*d^2)) - kurtosis
+        eq1 <- b*b + 6*b*d + 2*c*c + 15*d*d - 1
+        eq2 <- 2*c*(b*b + 24*b*d + 105*d*d + 2) - skewness
+        eq3 <- 24*(b*d + c*c*(1 + b*b + 28*b*d) +
+                   d*d*(12 + 48*b*d + 141*c*c + 225*d*d)) - kurtosis
         eq <- c(eq1,eq2,eq3)
-        sum(eq^2) ## SS
+        sum(eq*eq) ## SS
     }
 
     out <- nlminb(start=c(1,0,0), objective=system.function,
@@ -349,7 +349,7 @@ lav_fleishman1978 <- function(n=100, skewness=0, kurtosis=0, verbose=FALSE) {
     b <- out$par[1L]; c <- out$par[2L]; d <- out$par[3L]; a <- -c
 
     Z <- rnorm(n=n)
-    Y <- a + b*Z + c*Z^2 + d*Z^3
+    Y <- a + b*Z + c*Z*Z + d*Z*Z*Z
     Y
 }
 
@@ -358,12 +358,12 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
     fleishman1978_abcd <- function(skewness, kurtosis) {
         system.function <- function(x, skewness, kurtosis) {
             b.=x[1L]; c.=x[2L]; d.=x[3L]
-            eq1 <- b.^2 + 6*b.*d. + 2*c.^2 + 15*d.^2 - 1
-            eq2 <- 2*c.*(b.^2 + 24*b.*d. + 105*d.^2 + 2) - skewness
-            eq3 <- 24*(b.*d. + c.^2*(1 + b.^2 + 28*b.*d.) +
-                       d.^2*(12 + 48*b.*d. + 141*c.^2 + 225*d.^2)) - kurtosis
+            eq1 <- b.*b. + 6*b.*d. + 2*c.*c. + 15*d.*d. - 1
+            eq2 <- 2*c.*(b.*b. + 24*b.*d. + 105*d.*d. + 2) - skewness
+            eq3 <- 24*(b.*d. + c.*c.*(1 + b.*b. + 28*b.*d.) +
+                       d.*d.*(12 + 48*b.*d. + 141*c.*c. + 225*d.*d.)) - kurtosis
             eq <- c(eq1,eq2,eq3)
-            sum(eq^2) ## SS
+            sum(eq*eq) ## SS
         }
 
         out <- nlminb(start=c(1,0,0), objective=system.function,
@@ -379,8 +379,8 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
         objectiveFunction <- function(x, b1, c1, d1, b2, c2, d2, R) {
             rho=x[1L]
             eq <- rho*(b1*b2 + 3*b1*d2 + 3*d1*b2 + 9*d1*d2) +
-                  rho^2*(2*c1*c2) + rho^3*(6*d1*d2) - R
-            eq^2
+                  rho*rho*(2*c1*c2) + rho*rho*rho*(6*d1*d2) - R
+            eq*eq
         }
 
         #gradientFunction <- function(x, bcd1, bcd2, R) {
@@ -449,8 +449,8 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
 
     # transform Z using Fleishman constants
     for(i in 1:nvar) {
-        X[,i] <- FTable[i,1L] + FTable[i,2L]*Z[,i] + FTable[i,3L]*Z[,i]^2 +
-                 FTable[i,4L]*Z[,i]^3
+        X[,i] <- FTable[i,1L] + FTable[i,2L]*Z[,i] + FTable[i,3L]*Z[,i]*Z[,i] +
+                 FTable[i,4L]*Z[,i]*Z[,i]*Z[,i]
     }
 
     X

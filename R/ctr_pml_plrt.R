@@ -221,7 +221,7 @@ asym_mean_PLRTH0Sat <- E_tzz - E_tww
 asym_var_PLRTH0Sat  <- var_tzz + var_tww -2*cov_tzztww
 scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat/2) )
 FSA_PLRT_SEM <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat/2) )* PLRTH0Sat
-adjusted_df  <- (asym_mean_PLRTH0Sat^2) / (asym_var_PLRTH0Sat/2)
+adjusted_df  <- (asym_mean_PLRTH0Sat*asym_mean_PLRTH0Sat) / (asym_var_PLRTH0Sat/2)
 # In some very few cases (simulations show very few cases in small sample sizes)
 # the adjusted_df is a negative number, we should then
 # print a warning like: "The adjusted df is computed to be a negative number

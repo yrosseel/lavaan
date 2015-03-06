@@ -109,7 +109,7 @@ modindices <- function(object,
     Q12 <- Q[extra.idx, model.idx, drop = FALSE]
     Q21 <- Q[model.idx, extra.idx, drop = FALSE]
     Q22 <- Q[model.idx, model.idx, drop = FALSE]
-    Q22.inv <- vcov(object) * (nobs(object))^2 
+    Q22.inv <- vcov(object) * (nobs(object)) * (nobs(object))
 
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
@@ -121,9 +121,9 @@ modindices <- function(object,
 
     # create and fill in mi
     mi <- numeric( length(dx) )
-    mi[extra.idx] <- dx[extra.idx]^2 / V.diag
+    mi[extra.idx] <- dx[extra.idx]*dx[extra.idx] / V.diag
     if(length(model.idx) > 0L) {
-        mi[model.idx]    <- dx[model.idx]^2 / diag(Q22)
+        mi[model.idx]    <- dx[model.idx]*dx[model.idx] / diag(Q22)
     }
 
     # correct mi's for equality constraints
@@ -181,7 +181,7 @@ modindices <- function(object,
                 H <- C - (t(D) %*% E.inv %*% D)
                 h11 <- H[1,1]; h12 <- H[1,2]; h21 <- H[2,1]; h22 <- H[2,2]
 
-                mi[theta2.idx] <- dx[theta2.idx]^2 * (h11 + 2*h21 + h22) / (h11*h22 - h12^2)
+                mi[theta2.idx] <- dx[theta2.idx]*dx[theta2.idx] * (h11 + 2*h21 + h22) / (h11*h22 - h12*h12)
             } #i
         } # ncon
     }
@@ -234,7 +234,7 @@ modindices <- function(object,
         # FIXME: this is using epc in unstandardized metric
         #        this would be much more useful in standardized metric
         #        we need a standardize.est.all.reverse function...
-        LIST$ncp <- (LIST$mi / LIST$epc^2) * (delta)^2
+        LIST$ncp <- (LIST$mi / LIST$epc*LIST$epc) * (delta*delta)
         LIST$power <- 1 - pchisq(qchisq((1.0 - alpha), df=1), 
                                  df=1, ncp=LIST$ncp)
         LIST$decision <- character( length(LIST$power) )

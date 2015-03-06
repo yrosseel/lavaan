@@ -973,7 +973,7 @@ parameterEstimates <- parameterestimates <-
                         sample.mean  = MEAN,
                         sample.nobs  = object@Data@nobs)
         SE.step2 <- ifelse(step2@Fit@se == 0.0, as.numeric(NA), step2@Fit@se)
-        LIST$fmi <- 1-(SE.step2^2/SE.orig^2)
+        LIST$fmi <- 1-(SE.step2*SE.step2/(SE.orig*SE.orig))
     }
 
     # if single group, remove group column

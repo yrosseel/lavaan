@@ -669,10 +669,10 @@ lav_matrix_tS2_SxS_S2 <- function(S2, S, check = TRUE) {
     n <- nrow(S)
 
     if(check) {
-        stopifnot(nrow(S2) == n^2)
+        stopifnot(nrow(S2) == n*n)
     }
 
-    A <- matrix(S %*% matrix(S2, n, ), n^2,)
+    A <- matrix(S %*% matrix(S2, n, ), n*n,)
     A2 <- A[rep(1:n, each=n) + (0:(n-1L))*n,,drop = FALSE]
     crossprod(A, A2)
 }

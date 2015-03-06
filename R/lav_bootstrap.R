@@ -185,7 +185,8 @@ bootstrap.internal <- function(object          = NULL,
         g.a <- function(a, Sigmahat, Sigmahat.inv, S, tau.hat, p){
             S.a <- a*S + (1-a)*Sigmahat
             tmp.term <- S.a %*% Sigmahat.inv
-            res <- ((sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat)^2
+            res1 <- (sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat
+            res <- res1*res1
             # From p 272
             #attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
             #                         (Sigmahat.inv - chol2inv(chol(S.a)))))
@@ -208,7 +209,7 @@ bootstrap.internal <- function(object          = NULL,
             # if so, we need to let S.a = Sigmahat. (see middle p 275)
             ifelse(length(h0.rmsea)==0,
               tau.hat <- (ghat - df)/(n-1),  # middle p 267
-              tau.hat <- df*(h0.rmsea^2))    # middle p 273
+              tau.hat <- df*(h0.rmsea*h0.rmsea))    # middle p 273
 
             if (tau.hat >= 0){
               # Find a to minimize g.a

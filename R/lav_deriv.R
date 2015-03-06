@@ -1,5 +1,6 @@
 # numerical derivatives using complex numbers
 # see Squire & Trapp 1998, siam rev 40(1) 110-112
+# or Ridout, MS (2009), the american statistician 63(1) 66-74
 
 # it would seem that you can choose h to be fairly small, without
 # sacrifycing accuracy due to rounding errors
@@ -132,7 +133,7 @@ lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
         delta[num.idx] <- 1.0
     }
 
-    A <- COV * -1/( 2*delta^2*tcrossprod(delta) )
+    A <- COV * -1/( 2*delta*delta*tcrossprod(delta) )
     if(length(num.idx) > 0L) {
         A[num.idx,] <- 0; A[cbind(num.idx, num.idx)] <- 1
     }

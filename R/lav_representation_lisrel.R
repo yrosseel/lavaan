@@ -1298,7 +1298,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
         delta <- MLIST$delta
     }
     # theta = DELTA^(-1/2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
-    RESIDUAL <- as.vector(1/delta^2 - diag.Sigma)
+    RESIDUAL <- as.vector(1/(delta*delta) - diag.Sigma)
     if(length(num.idx) > 0L) {
         diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
     } else {
@@ -1527,7 +1527,7 @@ derivative.sigma.LISREL <- function(m="lambda",
 
     # pre
     if(m == "lambda" || m == "beta" || m == "delta") 
-        IK <- diag(nvar^2) + lav_matrix_commutation(nvar, nvar)
+        IK <- diag(nvar*nvar) + lav_matrix_commutation(nvar, nvar)
     if(m == "lambda" || m == "beta") {
         IB.inv..PSI..tIB.inv..tLAMBDA <-
             IB.inv %*% PSI %*% t(IB.inv) %*% t(LAMBDA)
@@ -1567,7 +1567,7 @@ derivative.sigma.LISREL <- function(m="lambda",
         if(delta.flag)
             DX <- DX * as.vector(DELTA %x% DELTA)
     } else if(m == "theta") {
-        DX <- diag(nvar^2) # very sparse...
+        DX <- diag(nvar*nvar) # very sparse...
         # symmetry correction not needed, since all off-diagonal elements
         # are zero?
         if(delta.flag)
@@ -2027,8 +2027,8 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         MLIST <- lapply(MLIST, function(x) {x[,] <- rnorm(length(x)); x})
         # fix
         diag(MLIST$beta) <- 0.0
-        diag(MLIST$theta) <- diag(MLIST$theta)^2 * 10 
-        diag(MLIST$psi)   <- diag(MLIST$psi)^2 * 10
+        diag(MLIST$theta) <- diag(MLIST$theta)*diag(MLIST$theta) * 10 
+        diag(MLIST$psi)   <- diag(MLIST$psi)*diag(MLIST$psi) * 10
         MLIST$psi[ lav_matrix_vechru_idx(nfac) ] <-  
             MLIST$psi[ lav_matrix_vech_idx(nfac) ]
         MLIST$theta[ lav_matrix_vechru_idx(nvar) ] <-  

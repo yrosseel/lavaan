@@ -159,7 +159,7 @@ function(object, type="raw", labels=TRUE) {
                object@Options$se == "none") {
                 dS <- diag(S)
                 Var.mean <- Var.sample.mean <- dS / N 
-                Var.cov  <- Var.sample.cov  <- (tcrossprod(dS) + S^2) / N
+                Var.cov  <- Var.sample.cov  <- (tcrossprod(dS) + S*S) / N
                 # this is identical to solve(A1)/N for complete data!!
             } else if(object@Options$se == "robust.huber.white" ||
                       object@Options$se == "robust.sem") {

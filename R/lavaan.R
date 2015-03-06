@@ -542,7 +542,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 #     out <- lm.fit(x=YX[,ov.x.idx], y=YX[,ov.y.idx])
                 #     x.beta <- c(0,out$coefficients)
                 #}
-                y.rvar <- sum(out$residuals^2)/length(out$residuals) #ML?
+                y.rvar <- sum(out$residuals*out$residuals)/length(out$residuals) #ML?
                 if(!lavoptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
                     x[lavpartable$free[lavpartable$op == "~~" &
@@ -624,7 +624,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                 meq=length(lavmodel@x.ceq.idx))
                 x.beta <- out$solution
                 residuals <- Y - (X %*% x.beta)
-                y.rvar <- sum(residuals^2)/length(residuals) #ML?
+                y.rvar <- sum(residuals*residuals)/length(residuals) #ML?
                 if(!lavoptions$meanstructure) {
                     x <- numeric(1L + length(x.beta) - 1L)
                     x[lavpartable$free[lavpartable$op == "~~" &

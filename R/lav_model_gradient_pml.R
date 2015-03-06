@@ -649,7 +649,7 @@ derLtoTau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x=0L) {
   cum.prob.vec <- rep(NA, length(xi$index.thres.var2.of.pair) )
   cum.prob.vec[xi$index.thres.var2.of.pair==0] <- 0
   cum.prob.vec[xi$last.thres.var2.of.pair] <- 1
-  denom <- (1-th.rho.vec$rho.vector^2)^0.5
+  denom <- sqrt(1-(th.rho.vec$rho.vector*th.rho.vec$rho.vector))
   cum.prob.vec[is.na(cum.prob.vec)] <-
       pnorm( (th.rho.vec$thres.var2.of.pair -
               th.rho.vec$rho.vector* th.rho.vec$thres.var1.of.pair) /
@@ -668,7 +668,7 @@ derLtoTau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x=0L) {
   cum.prob.vec <- rep(NA, length(xj$index.thres.var1.of.pair) )
   cum.prob.vec[xj$index.thres.var1.of.pair==0] <- 0
   cum.prob.vec[xj$last.thres.var1.of.pair] <- 1
-  denom <- (1-th.rho.vec$rho.vector^2)^0.5
+  denom <- sqrt(1-(th.rho.vec$rho.vector*th.rho.vec$rho.vector))
   cum.prob.vec[is.na(cum.prob.vec)] <-
       pnorm( (th.rho.vec$thres.var1.of.pair -
               th.rho.vec$rho.vector* th.rho.vec$thres.var2.of.pair) /

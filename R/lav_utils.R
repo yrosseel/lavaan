@@ -14,7 +14,8 @@ inv.chol <- function(S, logdet=FALSE) {
     #}
     S.inv <- chol2inv( cS )
     if(logdet) {
-        attr(S.inv, "logdet") <- sum(log(diag(cS)^2))
+        diag.cS <- diag(cS)
+        attr(S.inv, "logdet") <- sum(log(diag.cS*diag.cS))
     }
     S.inv
 }

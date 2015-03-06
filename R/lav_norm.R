@@ -29,7 +29,7 @@ lav_loglik_mvnorm_samplestats <- function(mu = NULL, sigma = NULL,
 # dnorm
 dnorm_dummy <- function(y, mu = 0, sigma2 = 1) {
     sigma <- sqrt(sigma2)
-    1/(sigma*sqrt(2*pi)) * exp( -0.5 * ((y - mu)/sigma)^2 )
+    1/(sigma*sqrt(2*pi)) * exp( -0.5 * ((y - mu)/sigma * (y - mu)/sigma) )
 }
 
 # dnorm_dmu_x <- function(x, y, sigma2 = 1) {
@@ -51,7 +51,7 @@ dnorm_dmu <- function(y, mu = 0, sigma2 = 1) {
 # partial derivative - sigma2
 dnorm_dsigma2 <- function(y, mu = 0, sigma2 = 1) {
     dy <- dnorm(x = y, mean = mu, sd = sqrt(sigma2))
-    (1/(2*sigma2^2) * (y - mu)^2 - 1/(2*sigma2)) * dy
+    (1/(2*sigma2*sigma2) * (y - mu)*(y - mu) - 1/(2*sigma2)) * dy
 }
 
 #dnorm_dy_x <- function(x, mu = 0, sigma2 = 1) {
@@ -72,7 +72,7 @@ dnorm_dy <- function(y, mu = 0, sigma2 = 1) {
 # d log dnorm() / d theta   = 1/dy d dnorm() / d theta
 dlogdnorm <- function(y, mu = 0, sigma2 = 1) {
     sigma <- sqrt(sigma2)
-    -log( sigma*sqrt(2*pi) ) + (-0.5 * ((y - mu)/sigma)^2)
+    -log( sigma*sqrt(2*pi) ) + (-0.5 * ((y - mu)/sigma*(y - mu)/sigma))
 }
 
 #dlogdnorm_dmu_x <- function(x, y, sigma2 = 1) {
@@ -93,7 +93,7 @@ dlogdnorm_dmu <- function(y, mu = 0, sigma2 = 1) {
 
 # partial derivative - sigma2
 dlogdnorm_dsigma2 <- function(y, mu = 0, sigma2 = 1) {
-    1/(2*sigma2^2) * (y - mu)^2 - 1/(2*sigma2)
+    1/(2*sigma2*sigma2) * (y - mu)*(y - mu) - 1/(2*sigma2)
 }
 #dlogdnorm_dsigma2(y = 2.3, mu = 0.3, sigma2 = 16)
 

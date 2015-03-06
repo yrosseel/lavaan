@@ -251,7 +251,7 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
  sum.eigsq <- sum(diag(tmp.prod2))
 
  FSMA.PLRT <- (sum.eig/sum.eigsq) * PLRT
- adj.df <- (sum.eig^2)/sum.eigsq
+ adj.df <- (sum.eig*sum.eig)/sum.eigsq
  pvalue <- 1 - pchisq(FSMA.PLRT, df = adj.df)
  list(FSMA.PLRT = FSMA.PLRT, adj.df = adj.df, pvalue = pvalue)
 }
@@ -282,7 +282,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
     if (length(MY.x.el.idx2[[3]]) != 0 & any(table(MY.x.el.idx2[[3]]) > 1)) {
         nfac <- ncol(fit_objH1@Model@GLIST$lambda)
-        tmp <- matrix(c(1:(nfac^2)), nrow = nfac, ncol = nfac)
+        tmp <- matrix(c(1:(nfac*nfac)), nrow = nfac, ncol = nfac)
         tmp_keep <- tmp[lower.tri(tmp, diag = TRUE)]
         MY.m.el.idx[[3]] <- MY.m.el.idx[[3]][MY.m.el.idx[[3]] %in% tmp_keep]
         MY.x.el.idx[[3]] <- unique(MY.x.el.idx2[[3]])
@@ -290,7 +290,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
     if (length(MY.x.el.idx2[[2]]) != 0 & any(table(MY.x.el.idx2[[2]]) > 1)) {
         nvar <- fit_objH1@Model@nvar
-        tmp <- matrix(c(1:(nvar^2)), nrow = nvar, ncol = nvar)
+        tmp <- matrix(c(1:(nvar*nvar)), nrow = nvar, ncol = nvar)
         tmp_keep <- tmp[lower.tri(tmp, diag = TRUE)]
         MY.m.el.idx[[2]] <- MY.m.el.idx[[2]][MY.m.el.idx[[2]] %in% tmp_keep]
         MY.x.el.idx[[2]] <- unique(MY.x.el.idx2[[2]])
@@ -325,7 +325,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
     NJ.theta0 <- MYgetVariability(object = obj, MY.m.el.idx = MY.m.el.idx,
         MY.x.el.idx = MY.x.el.idx, equalConstr = equalConstr)
-    J.theta0 <- NJ.theta0/(nsize^2)
+    J.theta0 <- NJ.theta0/(nsize*nsize)
 
 
     Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
@@ -339,7 +339,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
 
     FSMA.PLRT <- (sum.eig/sum.eigsq) * PLRT
-    adj.df <- (sum.eig^2)/sum.eigsq
+    adj.df <- (sum.eig*sum.eig)/sum.eigsq
     pvalue <- 1 - pchisq(FSMA.PLRT, df = adj.df)
     list(FSMA.PLRT = FSMA.PLRT, adj.df = adj.df, pvalue = pvalue)
 }

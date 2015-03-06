@@ -401,7 +401,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # A22
     A22 <- matrix(0, pstar, pstar)
     for(i in seq_len(pstar)) {
-        A22[i,i] <- sum( SC.COR[,i]^2, na.rm=TRUE )
+        A22[i,i] <- sum( SC.COR[,i]*SC.COR[,i], na.rm=TRUE )
     }
 
     # A12

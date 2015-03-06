@@ -91,13 +91,13 @@ pp_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
 
     gradientFunction <- function(x) {
         rho = tanh(x[1L])
-        R <- (1-rho^2)
-        z <- Y1c^2/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c^2/var.y2
-        dx.rho <- sum( rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R^2), 
+        R <- (1-rho*rho); R2 <- R*R
+        z <- Y1c*Y1c/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c*Y2c/var.y2
+        dx.rho <- sum( rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R2),
                        na.rm = TRUE )
 
         # tanh + minimize
-        -dx.rho * 1/cosh(x)^2
+        -dx.rho * 1/(cosh(x)*cosh(x))
     }
 
     # FIXME:: TODO!!!
@@ -128,7 +128,7 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     if(missing(Y2)) Y2 <- fit.y2$y
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y2$X[,-1]
 
-    R <- (1-rho^2)
+    R <- (1-rho*rho)
 
     Y1c <- Y1 - fit.y1$yhat
     Y2c <- Y2 - fit.y2$yhat
@@ -143,11 +143,11 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
 
     # var.y1
     dx.var.y1 <- - (0.5/var.y1 -
-                   (Y1c^2/var.y1^2 - rho*Y1c*Y2c/(var.y1*sd.y1*sd.y2))/(2*R))
+                   (Y1c*Y1c/var.y1*var.y1 - rho*Y1c*Y2c/(var.y1*sd.y1*sd.y2))/(2*R))
 
     # var.y2
     dx.var.y2 <- -(0.5/var.y2 +
-                  (rho*Y1c*Y2c/(var.y2*sd.y1*sd.y2) - Y2c^2/var.y2^2)/(2*R))
+                  (rho*Y1c*Y2c/(var.y2*sd.y1*sd.y2) - Y2c*Y2c/(var.y2*var.y2))/(2*R))
 
     # sl.y1
     dx.sl.y1 <- NULL
@@ -160,8 +160,8 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
         dx.sl.y2 <- dx.mu.y2 * eXo
 
     # rho
-    z <- Y1c^2/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c^2/var.y2
-    dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/R^2)
+    z <- Y1c*Y1c/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + Y2c*Y2c/var.y2
+    dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/(R*R))
 
     list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, 
          dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, 

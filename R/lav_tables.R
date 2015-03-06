@@ -364,7 +364,8 @@ lav_tables_stat_G2 <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
 
 # X2 (aka X2) statistic
 lav_tables_stat_X2 <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
-    X2 <- nobs*(obs.prop-est.prop)^2/est.prop
+    res.prop <- obs.prop-est.prop
+    X2 <- nobs*(res.prop*res.prop)/est.prop
     X2
 }
 
@@ -508,7 +509,7 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
             # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
             # because for ncp > 80, routine only computes lower tail
             out$RMSEA.pval <- 1.0 - pchisq(G2,
-                                           ncp = 0.1^2*out$nobs*out$df,
+                                           ncp = 0.1*0.1*out$nobs*out$df,
                                            df=out$df, lower.tail = TRUE)
         }
     }
@@ -523,7 +524,7 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
             # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
             # because for ncp > 80, routine only computes lower tail
             out$RMSEA.un.pval <- 1.0 - pchisq(G2,
-                                               ncp = 0.1^2*out$nobs*out$df,
+                                               ncp = 0.1*0.1*out$nobs*out$df,
                                                df=out$df, lower.tail = TRUE)
         }
     }

@@ -130,7 +130,7 @@ scores = function(x) {
     # beta
     scores.beta <- 1/e.var * X * (y - yhat)
     # var
-    scores.var  <- -1/(2*e.var) + 1/(2*e.var^2) * (y - yhat)^2
+    scores.var  <- -1/(2*e.var) + 1/(2*e.var*e.var) * (y - yhat)*(y - yhat)
 
     cbind(scores.beta, scores.var, deparse.level=0)
 },
@@ -148,12 +148,14 @@ hessian = function(x) {
     }
     # beta - var
     if(nexo > 0L) {
-        dx.beta.var <- -1/e.var^2*crossprod(X, y-yhat)
+        dx.beta.var <- -1/(e.var*e.var) * crossprod(X, y-yhat)
     } else {
-        dx.beta.var <- -1/e.var^2* sum(y-yhat)
+        dx.beta.var <- -1/(e.var*e.var) * sum(y-yhat)
     }
     # var - var           
-    dx2.var <- nobs/(2*e.var^2) - 1/sqrt(e.var)^6*crossprod(y-yhat)
+    sq.e.var <- sqrt(e.var)
+    sq.e.var6 <- sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var
+    dx2.var <- nobs/(2*e.var*e.var) - 1/sq.e.var6 * crossprod(y-yhat)
 
     rbind( cbind(  dx2.beta, dx.beta.var, deparse.level=0),
            cbind(t(dx.beta.var), dx2.var, deparse.level=0), deparse.level=0 )

@@ -99,7 +99,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         g.a <- function(a, Sigmahat, Sigmahat.inv, S, tau.hat, p){
             S.a <- a*S + (1-a)*Sigmahat
             tmp.term <- S.a %*% Sigmahat.inv
-            res <- ((sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat)^2
+            res1 <- (sum(diag(tmp.term)) - log(det(tmp.term)) - p) - tau.hat
+            res <- res1*res1
             # From p 272
             attr(res, "gradient") <- sum(diag((S - Sigmahat) %*%
                                      (Sigmahat.inv - chol2inv(chol(S.a)))))

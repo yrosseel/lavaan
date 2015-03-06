@@ -149,9 +149,9 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     if(Abeta) {
-        Aj22 <- matrix(0, nvar^2, nvar^2)
+        Aj22 <- matrix(0, nvar*nvar, nvar*nvar)
         Aj11 <- matrix(0, nvar, nvar)
-        Aj12 <- matrix(0, nvar, nvar^2)
+        Aj12 <- matrix(0, nvar, nvar*nvar)
     }
 
     if(Bbeta) {

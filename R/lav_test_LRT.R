@@ -252,7 +252,7 @@ lavTestLRT <- function(object, ..., SB.classic = TRUE, SB.H0 = FALSE,
                     # see 'Simple Second Order Chi-Square Correction' 2010 paper
                     # on www.statmodel.com, section 4
                     # Df.delta[m+1L] <- floor((tr.M1^2 / tr2.M1) + 0.5)
-                    Df.delta[m+1L] <- tr.M^2 / tr2.M
+                    Df.delta[m+1L] <- tr.M*tr.M / tr2.M
                 } 
 
                 scaling.factor <- tr.M / Df.delta[m+1L]
