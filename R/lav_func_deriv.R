@@ -27,6 +27,10 @@ lav_func_gradient_complex <- function(func, x,
     # determine 'h' per element of x
     h <- pmax(h, abs(h*x))
 
+    # get exact h, per x
+    tmp <- x + h
+    h <- (tmp - x)
+
     # simple 'forward' method
     dx <- rep(as.numeric(NA), nvar)
     for(p in seq_len(nvar)) {
@@ -114,6 +118,48 @@ lav_func_jacobian_simple <- function(func, x,
     }
 
     dx
+}
+
+# this is based on the Ridout (2009) paper, and the code snippet for 'h4'
+lav_func_hessian_complex <- function(func, x, 
+                                     h = .Machine$double.eps, ... , 
+                                     check = TRUE) {
+
+    # check current point, see if it is a scalar function
+    if(check) {
+        f0 <- try(func(x*(0+1i), ...), silent = TRUE)
+        if(inherits(f0, "try-error")) {
+            stop("function does not support non-numeric (complex) argument")
+        }
+        if(length(f0) != 1L) {
+            stop("function is not scalar and returns more than one element")
+        }
+    }
+
+    nvar <- length(x)
+
+    # determine 'h' per element of x
+    delta1 <- pmax(h^(1/3), abs(h^(1/3)*x))
+    delta2 <- pmax(h^(1/5), abs(h^(1/5)*x))
+
+    H <- matrix(as.numeric(NA), nvar, nvar)
+    for(i in seq_len(nvar)) {
+        for(j in 1:i) {
+            if(i == j) {
+                delta <- delta1
+            } else {
+                delta <- delta2
+            }
+            H[i,j] <- H[j,i] <-
+                Im(func(x + delta*1i*(seq.int(nvar) == i) + 
+                            delta*(seq.int(nvar) == j), ...) -
+                   func(x + delta*1i*(seq.int(nvar) == i) - 
+                            delta*(seq.int(nvar) == j), ...)) / 
+                   (2*delta[i]*delta[j])
+        }
+    }
+
+    H
 }
 
 # quick and dirty (FIXME!!!) way to get
