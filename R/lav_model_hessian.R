@@ -67,3 +67,30 @@ lav_model_hessian <- function(lavmodel       = NULL,
 
     Hessian
 }
+
+# if only chol would accept a complex matrix...
+lav_model_hessian_complex <- function(lavmodel       = NULL,
+                                      lavsamplestats = NULL,
+                                      lavdata        = NULL,
+                                      estimator      = "ML",
+                                      lavcache       = NULL,
+                                      group.weight   = TRUE) {
+
+    gradf <- function(x) {
+        GLIST <-  lav_model_x2GLIST(lavmodel = lavmodel, x = x)
+        dx <- lav_model_gradient(lavmodel       = lavmodel,
+                                 GLIST          = GLIST,
+                                 lavsamplestats = lavsamplestats,
+                                 lavdata        = lavdata,
+                                 lavcache       = lavcache,
+                                 type           = "free",
+                                 estimator      = estimator,
+                                 group.weight   = group.weight)
+        dx
+    }
+
+    x <- lav_model_get_parameters(lavmodel = lavmodel)
+    Hessian <- lav_func_jacobian_complex(func = gradf, x = x)
+
+    Hessian
+}

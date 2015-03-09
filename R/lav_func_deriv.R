@@ -139,23 +139,25 @@ lav_func_hessian_complex <- function(func, x,
     nvar <- length(x)
 
     # determine 'h' per element of x
-    delta1 <- pmax(h^(1/3), abs(h^(1/3)*x))
-    delta2 <- pmax(h^(1/5), abs(h^(1/5)*x))
+    #delta1 <- pmax(h^(1/3), abs(h^(1/3)*x))
+    #delta2 <- pmax(h^(1/5), abs(h^(1/5)*x))
+    delta1 <- h^(1/3)
+    delta2 <- h^(1/5)
 
     H <- matrix(as.numeric(NA), nvar, nvar)
     for(i in seq_len(nvar)) {
         for(j in 1:i) {
             if(i == j) {
-                delta <- delta1
-            } else {
                 delta <- delta2
+            } else {
+                delta <- delta1
             }
             H[i,j] <- H[j,i] <-
-                Im(func(x + delta*1i*(seq.int(nvar) == i) + 
-                            delta*(seq.int(nvar) == j), ...) -
-                   func(x + delta*1i*(seq.int(nvar) == i) - 
-                            delta*(seq.int(nvar) == j), ...)) / 
-                   (2*delta[i]*delta[j])
+                Im(func(x + delta*1i*(seq.int(nvar) == i)*x + 
+                            delta*(seq.int(nvar) == j)*x, ...) -
+                   func(x + delta*1i*(seq.int(nvar) == i)*x - 
+                            delta*(seq.int(nvar) == j)*x, ...)) / 
+                   (2*delta*delta*x[i]*x[j])
         }
     }
 

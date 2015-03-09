@@ -29,7 +29,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
          sample.th <- lavsamplestats@th
     }
     if(is.null(sample.th.idx) && !is.null(lavsamplestats)) {
-         sample.th.idx <- lavsamplestats@th
+         sample.th.idx <- lavsamplestats@th.idx
     }
 
     ov.names      = lavdata@ov.names
@@ -140,8 +140,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
 
                 # starting values
                 if(!is.null(sample.th) && !is.null(sample.th.idx)) {
-                    th.start <- 
-                       lavsamplestats@th[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
+                    th.start <- sample.th[[g]][ sample.th.idx[[g]] > 0L ]
                     ustart <- c(ustart, th.start)
                 } else {
                     ustart <- c(ustart, rep(as.numeric(NA), nel))

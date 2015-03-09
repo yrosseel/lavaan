@@ -59,7 +59,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                                   lavsamplestats = NULL,
                                   sample.cov     = computeSigmaHat(lavmodel),
                                   sample.mean    = computeMuHat(lavmodel), 
-                                  sample.th      = computeTH(lavmodel))
+                                  sample.th      = computeTH(lavmodel),
+                                  sample.th.idx  = lavsamplestats@th.idx)
 
     #Options$se <- lavoptions$se
     fittedSat2 <- lavaan(ModelSat2, 
