@@ -40,8 +40,9 @@ lav2mplus <- function(lav, group.label=NULL) {
         lav$rhs2 <- ifelse(lav$free == 0L, 
                            paste("@",lav$ustart,sep=""),
                            paste("*",lav$ustart,sep=""))
-        lav$label <- ifelse(lav$label == "", lav$label,
-                            paste(" (",lav$label,")",sep=""))
+        lav$plabel <- gsub("\\.", "", lav$plabel)
+        lav$plabel <- ifelse(lav$plabel == "", lav$plabel,
+                            paste(" (",lav$plabel,")",sep=""))
 
         # remove variances for ordered variables
         ov.names.ord <- vnames(lav, type="ov.ord")
@@ -84,7 +85,7 @@ lav2mplus <- function(lav, group.label=NULL) {
 
 
         lav2 <- paste(lav$lhs, lav$op, lav$rhs, lav$rhs2,
-                      lav$label, lav$eol, sep="")
+                      lav$plabel, lav$eol, sep="")
                       
         body <- paste(" ", lav2, collapse="\n")
 
@@ -130,8 +131,9 @@ lav2mplus <- function(lav, group.label=NULL) {
         if(length(eq.idx) > 0L) {
             lav$op[eq.idx] <- "="
         }
-        con <- paste(lav$lhs[con.idx], " ", lav$op[con.idx], " ", 
-                     lav$rhs[con.idx], ";", sep="")
+        con <- paste(gsub("\\.","",lav$lhs[con.idx]), " ", 
+                     lav$op[con.idx], " ", 
+                     gsub("\\.","",lav$rhs[con.idx]), ";", sep="")
         con2 <- paste("  ", con, collapse="\n")
         constraints <- paste(constraints, con2, sep="\n") 
     } else {

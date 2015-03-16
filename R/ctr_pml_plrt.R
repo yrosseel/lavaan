@@ -132,7 +132,7 @@ if(lavmodel@eq.constraints) {
 
     # create `bordered' matrix
     if(nrow(lavmodel@con.jac) > 0L) {
-        H <- lavmodel@con.jac[, index.par]
+        H <- lavmodel@con.jac[, index.par, drop = FALSE]
         inactive.idx <- attr(H, "inactive.idx")
         lambda <- lavmodel@con.lambda # lagrangean coefs
         if(length(inactive.idx) > 0L) {
