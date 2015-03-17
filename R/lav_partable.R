@@ -178,6 +178,7 @@ lavaanify <- lavParTable <- function(
             MOD.fixed <- MOD[[el]]$fixed  
             MOD.start <- MOD[[el]]$start
             MOD.label <- MOD[[el]]$label 
+            MOD.prior <- MOD[[el]]$prior
 
             # check for single argument if multiple groups
             if(ngroups > 1L && length(idx) > 1L) {
@@ -185,6 +186,7 @@ lavaanify <- lavParTable <- function(
                 # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1L) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1L) MOD.start <- rep(MOD.start, ngroups)
+                if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
                 # B) here we do NOT! otherwise, it would imply an equality 
                 #                    constraint...
                 #    except if group.equal="loadings"!
@@ -201,6 +203,7 @@ lavaanify <- lavParTable <- function(
             nidx <- length(idx)
             if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
                 (!is.null(MOD.start) && nidx != length(MOD.start)) ||
+                (!is.null(MOD.prior) && nidx != length(MOD.prior)) ||
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
                 stop("lavaan ERROR: wrong number of arguments in modifier (",
@@ -224,6 +227,13 @@ lavaanify <- lavParTable <- function(
             }
             if(!is.null(MOD.start)) {
                 LIST$ustart[idx] <- MOD.start
+            }
+            if(!is.null(MOD.prior)) {
+                # do we already have a `prior' column? if not, create one
+                if(is.null(LIST$prior)) {
+                    LIST$prior <- character( length(LIST$lhs) )
+                }
+                LIST$prior[idx] <- MOD.prior
             }
             if(!is.null(MOD.label)) {
                 LIST$label[idx] <- MOD.label
@@ -346,6 +356,7 @@ lavaanify <- lavParTable <- function(
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
+        LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
         LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
         #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         #LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
