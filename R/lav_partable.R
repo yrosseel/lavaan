@@ -356,7 +356,9 @@ lavaanify <- lavParTable <- function(
         LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
         LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
         LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
-        LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
+        if(!is.null(LIST$prior)) {
+            LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
+        }
         LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
         #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
         #LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
