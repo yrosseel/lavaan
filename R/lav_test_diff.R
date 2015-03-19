@@ -194,7 +194,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
                                          remove = TRUE, warn = FALSE)
 
     # `extend' PE of M0 to include all `fixed-to-zero parameters'
-    PE.M0 <- parameterEstimates(m0)
+    PE.M0 <- parameterEstimates(m0, remove.eq = FALSE, remove.ineq = FALSE)
     PE.M0.FULL <- lav_partable_full(PE.M0)
     PE.M0.extended <- lav_partable_merge(PE.M0, PE.M0.FULL,
                                          remove = TRUE, warn = FALSE)

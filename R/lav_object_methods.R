@@ -690,7 +690,11 @@ function(object, type="free", labels=TRUE) {
     cof
 })
 
-standardizedSolution <- standardizedsolution <- function(object, type="std.all") {
+standardizedSolution <- standardizedsolution <- function(object,
+                                                         type = "std.all",
+                                                         remove.eq = TRUE,
+                                                         remove.ineq = TRUE,
+                                                         remove.def = FALSE) {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
@@ -710,40 +714,20 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     if(object@Options$se != "none") {
         # add 'se' for standardized parameters
         # TODO!!
-        if(type == "std.lv") {
-            JAC <- try(lav_func_jacobian_complex(func = standardize.est.lv.x,
-                           x = object@Fit@x, object = object), silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = standardize.est.lv.x, 
-                           x = object@Fit@x, object=object)
-            }
-        } else if(type == "std.all") {
-            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.x,
-                           x = object@Fit@x, object = object), silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = standardize.est.all.x,
-                           x = object@Fit@x, object=object)
-            }
-        } else if(type == "std.nox") {
-            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.nox.x,
-                           x = object@Fit@x, object = object), silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = standardize.est.all.nox.x,
-                           x = object@Fit@x, object=object)
-            }
-        }
-        #JAC <- JAC[free.idx, free.idx, drop = FALSE]
-        VCOV <- as.matrix(vcov(object, labels=FALSE))
-        # handle eq constraints in fit@Model@eq.constraints.K
-        #if(object@Model@eq.constraints) {
-        #    JAC <- JAC %*% object@Model@eq.constraints.K       
-        #}
-        COV <- JAC %*% VCOV %*% t(JAC)
+        VCOV <- lav_object_inspect_vcov(object, standardized = TRUE,
+                                        type = type, free.only = FALSE,
+                                        add.labels = FALSE, add.class = FALSE)
         LIST$se <- rep(NA, length(LIST$lhs))
-        #LIST$se[free.idx] <- sqrt(diag(COV))
-        tmp <- sqrt(diag(COV))
+        tmp <- diag(VCOV)
+        # catch negative values
+        min.idx <- which(tmp < 0)
+        if(length(min.idx) > 0L) {
+            tmp[min.idx] <- as.numeric(NA)
+        }
+        # now, we can safely take the square root
+        tmp <- sqrt(tmp)
         # catch near-zero SEs
-        zero.idx <- which(tmp < 1e-08)
+        zero.idx <- which(tmp < sqrt(.Machine$double.eps))
         if(length(zero.idx) > 0L) {
             tmp[zero.idx] <- 0.0
         }
@@ -758,15 +742,42 @@ standardizedSolution <- standardizedsolution <- function(object, type="std.all")
     # if single group, remove group column
     if(object@Data@ngroups == 1L) LIST$group <- NULL
 
+    # remove == rows?
+    if(remove.eq) {
+        eq.idx <- which(LIST$op == "==")
+        if(length(eq.idx) > 0L) {
+            LIST <- LIST[-eq.idx,]
+        }
+    }
+    # remove <> rows?
+    if(remove.ineq) {
+        ineq.idx <- which(LIST$op == "<" || LIST$op == ">")
+        if(length(ineq.idx) > 0L) {
+            LIST <- LIST[-ineq.idx,]
+        }
+    }
+    # remove := rows?
+    if(remove.def) {
+        def.idx <- which(LIST$op == ":=")
+        if(length(def.idx) > 0L) {
+            LIST <- LIST[-def.idx,]
+        }
+    }
+
+    # always add attributes (for now)
     class(LIST) <- c("lavaan.data.frame", "data.frame")
     LIST
 }
 
-parameterEstimates <- parameterestimates <- 
-    function(object, 
-             ci = TRUE, level = 0.95, boot.ci.type = "perc",
-             standardized = FALSE, 
-             fmi = "default") {
+parameterEstimates <- parameterestimates <- function(object, 
+                                                     ci = TRUE, 
+                                                     level = 0.95, 
+                                                     boot.ci.type = "perc",
+                                                     standardized = FALSE, 
+                                                     fmi = "default",
+                                                     remove.eq = TRUE,
+                                                     remove.ineq = TRUE,
+                                                     remove.def = FALSE) {
 
     # fmi or not
     FMI <- fmi
@@ -982,6 +993,27 @@ parameterEstimates <- parameterestimates <-
     # if no user-defined labels, remove label column
     if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
 
+    # remove == rows?
+    if(remove.eq) {
+        eq.idx <- which(LIST$op == "==")
+        if(length(eq.idx) > 0L) {
+            LIST <- LIST[-eq.idx,]
+        }
+    }
+    # remove <> rows?
+    if(remove.ineq) {
+        ineq.idx <- which(LIST$op == "<" || LIST$op == ">")
+        if(length(ineq.idx) > 0L) {
+            LIST <- LIST[-ineq.idx,]
+        }
+    }
+    # remove := rows?
+    if(remove.def) {
+        def.idx <- which(LIST$op == ":=")
+        if(length(def.idx) > 0L) {
+            LIST <- LIST[-def.idx,]
+        }
+    }
 
     class(LIST) <- c("lavaan.data.frame", "data.frame")
     LIST

@@ -57,7 +57,8 @@ lav_start <- function(start.method = "default",
     } else if(is.list(start.method)) {
         start.user <- start.method
     } else if(inherits(start.method, "lavaan")) {
-        start.user <- parameterEstimates(start.method)
+        start.user <- parameterEstimates(start.method, remove.eq = FALSE, 
+                                         remove.ineq = FALSE)
     }
     # check model list elements, if provided
     if(!is.null(start.user)) {

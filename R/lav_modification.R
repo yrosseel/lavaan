@@ -28,7 +28,8 @@ modindices <- function(object,
     # user-specified model parameters
     partable <- object@ParTable[c("lhs","op","rhs","group","free","start")]
     # replace 'start' column, since lav_model will fill these in in GLIST
-    partable$start <- parameterEstimates(object)$est 
+    partable$start <- parameterEstimates(object, 
+                          remove.eq = FALSE, remove.ineq = FALSE)$est 
 
     # extended list (fixed-to-zero parameters)
     FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE)
@@ -218,14 +219,14 @@ modindices <- function(object,
 
     # standardize?
     if(standardized) {
-        LIST$sepc.lv  <- standardize.est.lv(object, partable=LIST, est=LIST$epc,
-                                            cov.std=FALSE)
-        LIST$sepc.all <- standardize.est.all(object, partable=LIST, est=LIST$epc,
-                                             est.std=LIST$sepc.lv,
-                                             cov.std=FALSE)
-        LIST$sepc.nox <- standardize.est.all.nox(object,partable=LIST,est=LIST$epc,
-                                             est.std=LIST$sepc.lv,
-                                             cov.std=FALSE)
+        LIST$sepc.lv <- standardize.est.lv(object, partable = LIST, 
+                                           est = LIST$epc)
+        LIST$sepc.all <- standardize.est.all(object, partable = LIST, 
+                                             est = LIST$epc, 
+                                             est.std =LIST$sepc.lv)
+        LIST$sepc.nox <- standardize.est.all.nox(object, partable = LIST,
+                                                 est = LIST$epc,
+                                                 est.std = LIST$sepc.lv)
     }
 
     # power?

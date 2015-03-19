@@ -244,6 +244,19 @@ lavInspect <- function(lavobject,
             add.labels = add.labels, add.class = add.class)
     } else if(what == "vcov") {
         lav_object_inspect_vcov(lavobject,
+            standardized = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.std.all") {
+        lav_object_inspect_vcov(lavobject,
+            standardized = TRUE, type = "std.all",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.std.lv") {
+        lav_object_inspect_vcov(lavobject,
+            standardized = TRUE, type = "std.lv",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.std.nox") {
+        lav_object_inspect_vcov(lavobject,
+            standardized = TRUE, type = "std.nox",
             add.labels = add.labels, add.class = add.class)
 
 
@@ -1141,7 +1154,8 @@ lav_object_inspect_firstorder <- function(lavobject,
     OUT
 }
 
-lav_object_inspect_vcov <- function(lavobject,
+lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
+    type = "std.all", free.only = TRUE,
     add.labels = FALSE, add.class = FALSE) {
 
     if(lavobject@Fit@npar == 0) {
@@ -1164,6 +1178,41 @@ lav_object_inspect_vcov <- function(lavobject,
     attr(OUT, "WLS.V") <- NULL
     attr(OUT, "BOOT.COEF") <- NULL
     attr(OUT, "BOOT.TEST") <- NULL
+
+    # standardized?
+    if(standardized) {
+        if(type == "std.lv") {
+            JAC <- try(lav_func_jacobian_complex(func = standardize.est.lv.x,
+                x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = standardize.est.lv.x,
+                    x = lavobject@Fit@x, lavobject=lavobject)
+            }
+        } else if(type == "std.all") {
+            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.x,
+                x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = standardize.est.all.x,
+                    x = lavobject@Fit@x, lavobject=lavobject)
+            }
+        } else if(type == "std.nox") {
+            JAC <- 
+                try(lav_func_jacobian_complex(func = standardize.est.all.nox.x,
+                    x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- 
+                    lav_func_jacobian_simple(func = standardize.est.all.nox.x,
+                        x = lavobject@Fit@x, lavobject=lavobject)
+            }
+        }
+
+        # JAC contains *all* parameters in the parameter table
+        if(free.only) { 
+            free.idx <- which(lavobject@ParTable$free > 0L)
+            JAC <- JAC[free.idx,, drop = FALSE]
+        }
+        OUT <- JAC %*% OUT %*% t(JAC)
+    }
 
     # labels
     if(add.labels) {

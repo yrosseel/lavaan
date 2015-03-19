@@ -20,7 +20,8 @@ lavTestScore <- function(object, extra = NULL, release = NULL,
     }
 
     partable <- parTable(object)
-    partable$start <- parameterEstimates(fit)$est
+    partable$start <- parameterEstimates(fit, remove.eq = FALSE, 
+                                         remove.ineq = FALSE)$est
     nid <- max(partable$id)
     nfree <- max(partable$free)
 
