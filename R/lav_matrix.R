@@ -77,6 +77,29 @@ lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
     COL <- matrix(seq_len(n), n, n, byrow = TRUE)
     if(diagonal) which(ROW >= COL) else which(ROW > COL)
 }
+
+# return the *row* indices of the lower triangular elements of a 
+# symmetric matrix of size 'n'
+lav_matrix_vech_row_idx <- function(n = 1L, diagonal = TRUE) {
+    n <- as.integer(n)
+    if(diagonal ) {
+        unlist(lapply(seq_len(n), seq.int, n))
+    } else {
+        1 + unlist(lapply(seq_len(n-1), seq.int, n-1))
+    }
+}
+
+# return the *col* indices of the lower triangular elements of a 
+# symmetric matrix of size 'n'
+lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
+    n <- as.integer(n)
+    if(!diagonal) {
+        n <- n - 1L
+    }
+    rep.int(seq_len(n), times = rev(seq_len(n)))
+}
+
+
  
 
 # return the *vector* indices of the lower triangular elements of a 
@@ -469,6 +492,8 @@ lav_matrix_duplication_ginv <- .dup_ginv2
 # number of rows in A must be 'square' (n*n)
 lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
 
+    A <- as.matrix(A)
+
     # number of rows
     n2 <- nrow(A)
 
@@ -488,6 +513,8 @@ lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
 # number of columns in A must be 'square' (n*n)
 lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
 
+    A <- as.matrix(A)
+
     # number of columns
     n2 <- ncol(A)
 
@@ -505,6 +532,8 @@ lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
 # pre AND post-multiply with D^+: D^+ %*% A %*% t(D^+)
 # for square matrices only, with ncol = nrow = n^2
 lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
+
+    A <- as.matrix(A)
 
     # number of columns
     n2 <- ncol(A)
@@ -766,6 +795,14 @@ lav_matrix_bdiag <- function(...) {
 
     attr(x, "dim") <- c(trows, tcols)
     x
+}
+
+# crossproduct, but handling NAs pairwise
+lav_matrix_crossprod <- function(A, B) {
+    if(missing(B)) {
+        B <- A
+    }
+    apply(A, 2L, function(x) colSums(B * x, na.rm=TRUE))
 }
 
 

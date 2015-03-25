@@ -50,7 +50,9 @@ lavData <- function(data          = NULL,          # data.frame
                     stop("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
                 } else {
                     # or perhaps it is a data matrix?
-                    warning("lavaan WARNING: data argument has been coerced to a data.frame")
+                    if(warn) {
+                        warning("lavaan WARNING: data argument has been coerced to a data.frame")
+                    }
                     ### FIXME, we should avoid as.data.frame() and handle
                     ### data matrices directly
                     data <- as.data.frame(data, stringsAsFactors = FALSE)

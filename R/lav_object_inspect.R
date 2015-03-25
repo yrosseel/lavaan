@@ -223,8 +223,8 @@ lavInspect <- function(lavobject,
 
 
     #### NACOV samplestats ####
-    } else if(what == "gamma" || what == "sampstat.nacov") {
-        lav_object_inspect_sampstat_nacov(lavobject,
+    } else if(what == "gamma") {
+        lav_object_inspect_sampstat_gamma(lavobject,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
@@ -1030,34 +1030,13 @@ lav_object_inspect_wls_v <- function(lavobject,
 }
 
 
-lav_object_inspect_sampstat_nacov <- function(lavobject,
+lav_object_inspect_sampstat_gamma <- function(lavobject,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    if(lavobject@Options$se == "robust.mlr")
-        stop("not done yet; FIX THIS!")
-
-    # shortcuts
-    lavsamplestats = lavobject@SampleStats
-    estimator   = lavobject@Options$estimator
-    G <- lavobject@Data@ngroups
-
-    OUT <- vector("list", length=lavsamplestats@ngroups)
-
-    if(estimator == "GLS"  ||
-       estimator == "WLS"  ||
-       estimator == "DWLS" ||
-       estimator == "ULS") {
+    if(!is.null(lavsamplestats@NACOV[[1]])) {
         OUT <- lavsamplestats@NACOV
-    } else if(estimator == "ML" && !lavobject@SampleStats@missing.flag) {
-        for(g in 1:lavsamplestats@ngroups) {
-            OUT[[g]] <- 
-                compute.Gamma(lavobject@Data@X[[g]], 
-                              meanstructure=lavobject@Options$meanstructure)
-            if(lavobject@Options$mimic == "Mplus") {
-                G11 <- ( lavsamplestats@cov[[g]] * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] )
-                OUT[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
-            }
-        }
+    } else {
+        OUT <- lavGamma(lavobject)
     }
 
     if(G == 1L && drop.list.single.group) {

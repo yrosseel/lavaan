@@ -59,6 +59,40 @@ compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
     Gamma
 }
 
+compute.Gamma.fixed.x <- function(data, x.idx = integer(0L)) {
+    #data <- as.matrix(data)
+
+    # we need central moments, so center
+    zdata <- scale(data, center=TRUE, scale=FALSE)
+    N <- nrow(data); p <- ncol(data)
+
+    # create Z where the rows z_i are vecs(zdata_i' %*% zdata_i)
+    idx <- lav_matrix_vech_idx(p)
+    Z1 <- apply(zdata, 1, function(x) { tcrossprod(x)[idx]  })
+    if(p > 1L) {
+        Z1<- t(Z1)
+    } else {
+        Z1<- as.matrix(Z1) # special case p = 1L
+    }
+
+    rdata <- zdata
+    RES <- qr.resid(qr(cbind(zdata[,x.idx,drop=FALSE])), 
+                             zdata[,-x.idx,drop=FALSE])
+    rdata[,-x.idx] <- zdata[,-x.idx] - RES
+    Z2 <- apply(rdata, 1, function(x) { tcrossprod(x)[idx]  })
+    if(p > 1L) {
+        Z2<- t(Z2)
+    } else {
+        Z2 <- as.matrix(Z2) # special case p = 1L
+    }
+
+    Z <- Z1 - Z2
+
+    Gamma = (N-1)/N * cov(Z, use = "pairwise") # we divide by 'N'!
+    
+    Gamma
+}
+
 
 ## compute the multivariate third order central moment
 ## speeded up version for p < 20 contributed by Thierry Marchant (4 sept 2009)

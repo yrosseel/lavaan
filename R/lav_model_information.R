@@ -112,11 +112,11 @@ lav_model_information_expected <- function(lavmodel       = NULL,
 
 # only for Mplus MLM
 lav_model_information_expected_MLM <- function(lavmodel       = NULL, 
-                                                     lavsamplestats = NULL, 
-                                                     Delta          = NULL,
-                                                     extra          = FALSE,
-                                                     augmented      = FALSE,
-                                                     inverted       = FALSE) {
+                                               lavsamplestats = NULL, 
+                                               Delta          = NULL,
+                                               extra          = FALSE,
+                                               augmented      = FALSE,
+                                               inverted       = FALSE) {
 
     if(inverted) {
         augmented <- TRUE

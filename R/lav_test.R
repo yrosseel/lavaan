@@ -379,16 +379,20 @@ lav_model_test <- function(lavmodel       = NULL,
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
         if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
+            # this happens, for example, when we compute the independence
+            # model
             if(mimic == "Mplus" && estimator == "ML") {
                 # special treatment for Mplus
                 E <- lav_model_information_expected_MLM(lavmodel = lavmodel,
-                         lavsamplestats=lavsamplestats)
+                         augmented = FALSE, inverted = FALSE,
+                         lavsamplestats=lavsamplestats, extra = TRUE)
             } else {
                 E <- lav_model_information_expected(lavmodel = lavmodel, 
                          lavsamplestats = lavsamplestats, lavdata = lavdata,
                          estimator = estimator, extra = TRUE)
             }
-            E.inv <- try(solve(E), silent=TRUE)
+            E.inv <- try(lav_model_information_augment_invert(lavmodel,
+                         information = E, inverted = TRUE), silent=TRUE)
             if(inherits(E.inv, "try-error")) {
                 TEST[[2]] <- list(test=test, stat=as.numeric(NA), 
                     stat.group=rep(as.numeric(NA), lavsamplestats@ngroups),

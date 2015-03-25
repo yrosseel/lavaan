@@ -302,7 +302,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # NACOV (=GAMMA)
         if(!NACOV.user) {
             if(estimator == "ML" && !missing.flag. && NACOV.compute) {
-                NACOV[[g]] <- compute.Gamma(X[[g]], meanstructure=meanstructure)
+                NACOV[[g]] <- 
+                    lav_samplestats_Gamma(X[[g]], meanstructure = meanstructure)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
                     # sample size large enough?
@@ -318,9 +319,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                 nrow(X[[g]]), ") too small to compute Gamma", 
                                 txt)
                     }
-                    NACOV[[g]] <- compute.Gamma(X[[g]], 
-                                                meanstructure=meanstructure,
-                                                Mplus.WLS=(mimic=="Mplus"))
+                    NACOV[[g]] <- 
+                        lav_samplestats_Gamma(X[[g]], 
+                                              meanstructure = meanstructure,
+                                              Mplus.WLS = (mimic=="Mplus"))
                 } else { # categorical case
                     NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
                 }
