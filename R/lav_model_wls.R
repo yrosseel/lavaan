@@ -57,7 +57,7 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) {
     WLS.est
 }
 
-# compute WLS.est (as a list per group)
+# compute WLS.V (as a list per group)
 lav_model_wls_v <- function(lavmodel       = NULL, 
                             lavsamplestats = NULL,
                             estimator      = "ML",

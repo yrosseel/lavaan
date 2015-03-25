@@ -26,12 +26,12 @@ lav_model_information <- function(lavmodel       = NULL,
         E <- lav_model_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
             lavcache = lavcache, estimator = estimator,
-            group.weight = group.weight, 
+            group.weight = group.weight,
             augmented = augmented, inverted = inverted)
     } else {
         E <- lav_model_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavcache = lavcache, estimator = estimator,
+            lavcache = lavcache, estimator = estimator, extra = extra,
             augmented = augmented, inverted = inverted)
     }
 
@@ -133,7 +133,7 @@ lav_model_information_expected_MLM <- function(lavmodel       = NULL,
     }
     for(g in 1:lavsamplestats@ngroups) {
         WLS.V[[g]] <- compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
-                                        meanstructure=TRUE, 
+                                        meanstructure=lavmodel@meanstructure,
                                         information="expected")
         # the same as GLS... (except for the N/N-1 scaling)
         if(lavmodel@group.w.free) {
