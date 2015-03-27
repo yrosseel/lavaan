@@ -307,6 +307,18 @@ lav_test_diff_A <- function(m1, m0, method = "exact") {
                               paste("x[", p0$free[p0.free.idx], "]",sep=""), 
                               collapse = "\n"),
                       "\n", sep="")
+
+    # we also need any user-specified labels, in case we have
+    # explicit == constraints
+    user.label.idx <- which(nchar(p0$label) > 0L & p0$free > 0L)
+    if(length(user.label.idx) > 0L) {
+        BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+                      paste(  p0$label[user.label.idx],
+                              " <- ",
+                              paste("x[", p0$free[user.label.idx], "]",sep=""),
+                              collapse = "\n"),
+                      "\n", sep="")
+    }
    
     # for each parameter in p1, we 'check' is it is fixed to a constant in p0
     ncon <- 0L

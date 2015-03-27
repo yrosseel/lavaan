@@ -1033,8 +1033,11 @@ lav_object_inspect_wls_v <- function(lavobject,
 lav_object_inspect_sampstat_gamma <- function(lavobject,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    if(!is.null(lavsamplestats@NACOV[[1]])) {
-        OUT <- lavsamplestats@NACOV
+    # shortcuts
+    G <- lavobject@Data@ngroups
+
+    if(!is.null(lavobject@SampleStats@NACOV[[1]])) {
+        OUT <- lavobject@SampleStats@NACOV
     } else {
         OUT <- lavGamma(lavobject)
     }

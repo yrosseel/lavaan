@@ -6,6 +6,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      E.inv          = NULL,
                                      Delta          = NULL,
                                      WLS.V          = NULL,
+                                     Gamma          = NULL,
                                      test           = "satorra.bentler",
                                      mimic          = "lavaan",
                                      method         = "default") {
@@ -63,7 +64,9 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     }
 
     # Gamma
-    Gamma <- lavsamplestats@NACOV
+    if(is.null(Gamma)) {
+        Gamma <- lavsamplestats@NACOV
+    }
 
     # ngroups
     ngroups <- lavsamplestats@ngroups
