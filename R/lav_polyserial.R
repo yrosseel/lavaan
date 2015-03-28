@@ -19,7 +19,7 @@ ps_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
     if(is.null(fit.y2)) fit.y2 <- lavProbit(Y2, X=eXo)
     if(missing(Y1)) Y1 <- fit.y1$y
 
-    R <- sqrt(1-rho*rho)
+    R <- sqrt(1 - rho*rho)
     y1.SD  <- sqrt(fit.y1$theta[fit.y1$var.idx])
     y1.ETA <- fit.y1$yhat
     Z <- (Y1 - y1.ETA) / y1.SD
@@ -89,7 +89,7 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
 
     gradientFunction <- function(x) {
         rho = tanh(x[1L])
-        R <- sqrt(1-rho*rho)
+        R <- sqrt(1 - rho*rho)
         tauj.star  <- (fit.y2$z1 - rho*Z)/R
         tauj1.star <- (fit.y2$z2 - rho*Z)/R
         y.Z1  <- dnorm(tauj.star); y.Z2 <- dnorm(tauj1.star)
@@ -156,7 +156,7 @@ ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(eXo) && length(fit.y2$slope.idx) > 0L) eXo <- fit.y2$X
 
-    R <- sqrt(1-rho*rho)
+    R <- sqrt(1 - rho*rho)
     y1.VAR <- fit.y1$theta[fit.y1$var.idx]; y1.SD  <- sqrt(y1.VAR)
     y1.ETA <- fit.y1$yhat
     Z <- (Y1 - y1.ETA) / y1.SD
@@ -175,7 +175,7 @@ ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     dx.mu.y1 <- 1/y1.SD * (Z + (pyx.inv * (rho/R) * y.Z1.y.Z2))
 
     # var.y1
-    dx.var.y1 <-  1/(2*y1.VAR) * ( (Z*Z-1) + (pyx.inv*rho*Z/R)*(y.Z1.y.Z2) )
+    dx.var.y1 <-  1/(2*y1.VAR) * ( ((Z*Z)-1) + (pyx.inv*rho*Z/R)*(y.Z1.y.Z2) )
 
     # th.y2
     dx.th.y2 <- (fit.y2$Y1*y.Z1 - fit.y2$Y2*y.Z2) * 1/R * pyx.inv
