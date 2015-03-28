@@ -127,7 +127,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # FIXME: check dimension of NACOV!!
     }
 
+    # x.idx <- vector("list", length = ngroups)
     for(g in 1:ngroups) {
+
+        # x.idx
+        #### DEBUGG #####
+        # if(fixed.x && estimator =) {
+        #    x.idx[[g]] <- match(ov.names.x[[g]], ov.names[[g]])
+        #} else {
+        #    x.idx[[g]] <- integer(0L)
+        #}
 
         # check nobs
         if(nobs[[g]] < 2L) {
@@ -303,7 +312,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         if(!NACOV.user) {
             if(estimator == "ML" && !missing.flag. && NACOV.compute) {
                 NACOV[[g]] <- 
-                    lav_samplestats_Gamma(X[[g]], meanstructure = meanstructure)
+                    lav_samplestats_Gamma(X[[g]], 
+                                          # x.idx = x.idx[[g]],
+                                          meanstructure = meanstructure)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
                     # sample size large enough?
@@ -322,6 +333,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     NACOV[[g]] <- 
                         lav_samplestats_Gamma(X[[g]], 
                                               meanstructure = meanstructure,
+                                              # x.idx = x.idx[[g]],
+                                              # fixed.x always FALSE for now
                                               Mplus.WLS = (mimic=="Mplus"))
                 } else { # categorical case
                     NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)

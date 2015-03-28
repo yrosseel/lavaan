@@ -18,3 +18,5 @@ duplicationMatrix <- lav_matrix_duplication
 commutationMatrix <- lav_matrix_commutation
 sqrtSymmetricMatrix <- lav_matrix_symmetric_sqrt
 
+# rsem
+computeExpectedInformation <- lav_model_information_expected

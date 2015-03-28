@@ -529,6 +529,7 @@ lav_model_test <- function(lavmodel       = NULL,
                                              lavdata        = lavdata,
                                              estimator      = estimator,
                                              lavcache       = lavcache,
+                                             extra          = TRUE,
                                              check.pd       = FALSE,
                                              augmented      = FALSE,
                                              inverted       = FALSE)
