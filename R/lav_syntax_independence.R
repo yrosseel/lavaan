@@ -1,7 +1,7 @@
 # generate syntax for an independence model
-syntax.independence.model <- function(ov.names=character(0), 
-                                      ov.names.x=character(0),
-                                      sample.cov=NULL) {
+lav_syntax_independence <- function(ov.names=character(0), 
+                                    ov.names.x=character(0),
+                                    sample.cov=NULL) {
 
     ov.names.nox <- ov.names[!ov.names %in% ov.names.x]
     nvar <- length(ov.names.nox)

@@ -233,40 +233,10 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
         # this is not strictly needed for ML, but it is for
         # GLS and WLS
         # and MLM and MLR to get the scaling factor(s)!
-        #if(estimator == "ML") {
-        #    if(object@SampleStats@missing.flag) {
-        #        do.fit <- TRUE
-        #    } else {
-        #        do.fit <- FALSE
-        #    }
-        #} else {
-        #    do.fit <- TRUE
-        #}
-
-        #OV.X <- character(0L)
-        #if(object@Options$mimic == "Mplus") 
-        #    OV.X <- vnames(object@ParTable, type="ov.x")
-
-        #indep.syntax <- 
-        #    syntax.independence.model(ov.names   = object@Data@ov.names,
-        #                              ov.names.x = OV.X,
-        #                              sample.cov = object@SampleStats@cov)
-        #fit.indep <- update(object, model = indep.syntax, 
-        #                    se = "none", do.fit=TRUE, 
-        #                    constraints = "",
-        #                    verbose = FALSE, warn = FALSE)
-        #OCALL <- as.list(object@call); OCALL$env <- NULL; OCALL[[1]] <- NULL
-        #NCALL <- list(model = indep.syntax, se = "none", do.fit = TRUE, 
-        #              constraints = "", verbose = FALSE, warn = FALSE)
-        #CALL  <- modifyList(OCALL, NCALL)
-        #cat("DEBUG!\n"); print(as.list(object@call$env)); cat("*******\n")
-        #fit.indep <- do.call("lavaan", args=CALL, envir=object@call$env)
-        #fit.indep <- do.call("lavaan", args=CALL)
-
         if (!is.null(baseline.model) & is(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
         } else {
-            fit.indep <- try(independence.model.fit(object), silent = TRUE)
+            fit.indep <- try(lav_object_independence(object), silent = TRUE)
         }
                             
         if(inherits(fit.indep, "try-error")) {
