@@ -85,7 +85,7 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         ETA2 <- diag(LV.ETA[[g]])
-        ETA  <- sqrt(abs(ETA2)) # abs just in case we have a negative
+        ETA  <- sqrt(ETA2)
 
         # 1a. "=~" regular indicators
         idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) & 
@@ -139,7 +139,11 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
         # - only rhs is LV (and fixed.x = FALSE)
         # - both lhs and rhs are LV (regular case)
         if(cov.std) {
-            RV   <- sqrt(abs(est[rv.idx])) # abs in case of heywood cases
+            if(!is.complex(est[rv.idx])) {
+                RV <- sqrt(abs(est[rv.idx])) # abs in case of heywood cases
+            } else {
+                RV <- sqrt( est[rv.idx] )
+            }
             rv.names <- partable$lhs[rv.idx]
         }
 
@@ -231,13 +235,13 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
         ov.names <- vnames(lavobject@ParTable, "ov", group=g) # not user
         lv.names <- vnames(lavobject@ParTable, "lv", group=g)
 
-        OV  <- sqrt(abs(VY[[g]]))
+        OV  <- sqrt(VY[[g]])
 
         if(lavobject@Model@categorical) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", group=g)
             ov.names <- c(ov.names, ov.names.x)
-            OV <- c(OV, sqrt(abs(diag(lavobject@SampleStats@cov.x[[g]]))))
+            OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
         }
 
         # 1a. "=~" regular indicators
@@ -284,7 +288,11 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
         # - only rhs is OV (and fixed.x = FALSE)
         # - both lhs and rhs are OV (regular case)
         if(cov.std) {
-            RV   <- sqrt(abs(est[rv.idx]))
+            if(!is.complex(est[rv.idx])) {
+                RV <- sqrt(abs(est[rv.idx]))
+            } else {
+                Rv <- sqrt( est[rv.idx] )
+            }
             rv.names <- partable$lhs[rv.idx]
         }
 
@@ -393,13 +401,13 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
         ov.names.nox <- vnames(lavobject@ParTable, "ov.nox", group=g)
         lv.names     <- vnames(lavobject@ParTable, "lv",     group=g)
 
-        OV  <- sqrt(abs(VY[[g]]))
+        OV  <- sqrt(VY[[g]])
 
         if(lavobject@Model@categorical) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", group=g)
             ov.names <- c(ov.names, ov.names.x)
-            OV <- c(OV, sqrt(abs(diag(lavobject@SampleStats@cov.x[[g]]))))
+            OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
         }
 
         # 1a. "=~" regular indicators
@@ -447,7 +455,11 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
         # - only rhs is OV (and fixed.x = FALSE)
         # - both lhs and rhs are OV (regular case)
         if(cov.std) {
-            RV   <- sqrt(abs(est[rv.idx]))
+            if(!is.complex(est[rv.idx])) {
+                RV <- sqrt(abs(est[rv.idx]))
+            } else {
+                RV <- sqrt( est[rv.idx] )
+            }
             rv.names <- partable$lhs[rv.idx]
         }
 
@@ -559,7 +571,7 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
         ov.names <- vnames(partable, "ov", group=g) # not user
         lv.names <- vnames(partable, "lv", group=g)
 
-        OV  <- sqrt(abs(ov.var[[g]]))
+        OV  <- sqrt(ov.var[[g]])
 
         # 1a. "=~" regular indicators
         idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
@@ -608,8 +620,11 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
                 out[idx] <- ( out[idx] * OV[ match(partable$lhs[idx], ov.names) ]
                                        * OV[ match(partable$rhs[idx], ov.names) ] )
             } else {
-                # RV   <- sqrt(est[rv.idx])
-                RV   <- sqrt(abs(out[rv.idx]))
+                if(!is.complex(out[rv.idx])) {
+                    RV <- sqrt(abs(out[rv.idx]))
+                } else {
+                    RV <- sqrt( out[rv.idx] )
+                }
                 rv.names <- partable$lhs[rv.idx]
                 out[idx] <- ( out[idx] * RV[ match(partable$lhs[idx], rv.names) ]
                                        * RV[ match(partable$rhs[idx], rv.names) ] )

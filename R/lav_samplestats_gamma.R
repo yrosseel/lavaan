@@ -14,8 +14,12 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
         lavdata <- object@Data
         if(missing(missing)) {
             missing <- object@Options$missing
+            if(missing != "listwise") {
+                ### FIXME!!!!!
+                return(NULL) # for now!
+            }
         } else {
-            missing <- "default"
+            missing <- "listwise"
         }
     } else if(inherits(object, "lavData")) {
         lavdata <- object
