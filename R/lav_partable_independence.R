@@ -34,31 +34,29 @@ lav_partable_independence <- function(lavobject        = NULL,
 
     ov.names         = lavdata@ov.names
     ov               = lavdata@ov
-    ov.names.x       = lavdata@ov.names.x
     meanstructure    = lavoptions$meanstructure
     parameterization = lavoptions$parameterization
 
     # what with fixed.x?
     if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
-        fixed.x = TRUE
-        # even if fixed.x = FALSE; otherwise, we count the fixed-to-zero
-        # covariances of the x's as additional degrees of freedom
-        # FIXME?
+        fixed.x = lavoptions$fixed.x
+        ov.names.x = lavdata@ov.names.x
     } else if(lavoptions$mimic == "EQS") {
         # always ignore fixed.x
         fixed.x = FALSE
+        ov.names.x = NULL
     } else if(lavoptions$mimic == "LISREL") {
         # always ignore fixed.x??? CHECKME!!
         fixed.x = FALSE
+        ov.names.x = NULL
     }
 
     ngroups <- length(ov.names)
-    if(fixed.x) {
-        ov.names.nox <- lavobject@pta$vnames$ov.nox
-    } else {
-        # if length(ov.x) > 1, this will change the degrees of freedom!
-        ov.names.nox <- ov.names
-    }
+
+    # DO NOT USE: ov.names.nox <- lavobject@pta$vnames$ov.nox
+    # even if fixed.x = FALSE, we need to make a distinction
+    ov.names.nox <- lapply(seq_len(ngroups), function(g)
+                ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
 
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
@@ -175,7 +173,7 @@ lav_partable_independence <- function(lavobject        = NULL,
         }
 
         # fixed.x exogenous variables?
-        if(fixed.x && !categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
+        if(!categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
             idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
             nel <- sum(idx)
             lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
