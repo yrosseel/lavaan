@@ -375,9 +375,13 @@ fitMeasures <- fitmeasures <- function(object, fit.measures="all",
 
             # NFI - normed fit index (Bentler & Bonett, 1980)
             if("nfi" %in% fit.measures) {
-                t1 <- X2.null - X2
-                t2 <- X2.null
-                NFI <- t1/t2
+                if(df > 0) {
+                    t1 <- X2.null - X2
+                    t2 <- X2.null
+                    NFI <- t1/t2
+                } else {
+                    NFI <- 1
+                }
                 indices["nfi"] <- NFI
             }
             if("nfi.scaled" %in% fit.measures) {

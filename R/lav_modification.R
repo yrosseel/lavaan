@@ -219,14 +219,42 @@ modindices <- function(object,
 
     # standardize?
     if(standardized) {
-        LIST$sepc.lv <- standardize.est.lv(object, partable = LIST, 
-                                           est = LIST$epc)
-        LIST$sepc.all <- standardize.est.all(object, partable = LIST, 
-                                             est = LIST$epc, 
-                                             est.std =LIST$sepc.lv)
-        LIST$sepc.nox <- standardize.est.all.nox(object, partable = LIST,
-                                                 est = LIST$epc,
-                                                 est.std = LIST$sepc.lv)
+        # two problems: 
+        #   - EPC of variances can be negative, and that is
+        #     perfectly leagel
+        #   - EPC (of variances) can be tiny (near-zero), and we should 
+        #     not divide by tiny variables
+ 
+        EPC <- LIST$epc
+        small.idx <- which(LIST$op == "~~" & 
+                           LIST$lhs == LIST$rhs &
+                           abs(EPC) < sqrt( .Machine$double.eps ) )
+        if(length(small.idx) > 0L) {
+            EPC[ small.idx ] <- as.numeric(NA)
+        }
+
+        # get the sign
+        EPC.sign <- sign(LIST$epc)
+
+        LIST$sepc.lv <- EPC.sign * standardize.est.lv(object, 
+                                                      partable = LIST, 
+                                                      est = abs(EPC))
+        if(length(small.idx) > 0L) {
+            LIST$sepc.lv[small.idx] <- 0
+        }
+        LIST$sepc.all <- EPC.sign * standardize.est.all(object, 
+                                                        partable = LIST, 
+                                                        est = abs(EPC))
+        if(length(small.idx) > 0L) {
+            LIST$sepc.all[small.idx] <- 0
+        }
+        LIST$sepc.nox <- EPC.sign * standardize.est.all.nox(object, 
+                                                            partable = LIST,
+                                                            est = abs(EPC))
+        if(length(small.idx) > 0L) {
+            LIST$sepc.nox[small.idx] <- 0
+        }
+ 
     }
 
     # power?
