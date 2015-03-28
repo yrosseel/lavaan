@@ -40,22 +40,23 @@ lav_partable_independence <- function(lavobject        = NULL,
 
     # what with fixed.x?
     if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
-        fixed.x = lavoptions$fixed.x
+        fixed.x = TRUE
+        # even if fixed.x = FALSE; otherwise, we count the fixed-to-zero
+        # covariances of the x's as additional degrees of freedom
+        # FIXME?
     } else if(lavoptions$mimic == "EQS") {
         # always ignore fixed.x
-        ov.names.x = NULL
         fixed.x = FALSE
     } else if(lavoptions$mimic == "LISREL") {
         # always ignore fixed.x??? CHECKME!!
-        ov.names.x = NULL
         fixed.x = FALSE
     }
 
     ngroups <- length(ov.names)
     if(fixed.x) {
-        ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
-                        ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
+        ov.names.nox <- lavobject@pta$vnames$ov.nox
     } else {
+        # if length(ov.x) > 1, this will change the degrees of freedom!
         ov.names.nox <- ov.names
     }
 
