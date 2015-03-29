@@ -5,7 +5,8 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all")
+standardizedSolution(object, type = "std.all", remove.eq = TRUE, 
+                     remove.ineq = TRUE, remove.def = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -16,6 +17,12 @@ on both the variances of both (continuous) observed and latent variables.
 If \code{"std.nox"}, the standardized estimates are based
 on both the variances of both (continuous) observed and latent variables, 
 but not the variances of exogenous covariates.}
+\item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
+containing equality constraints, if any.}
+\item{remove.ineq}{Logical. If TRUE, filter the output by removing all
+rows containing inequality constraints, if any.}
+\item{remove.def}{Logical. If TRUE, filter the ouitput by removing all
+rows containing parameter definitions, if any.}
 }
 \value{
   A data.frame containing standardized model parameters.

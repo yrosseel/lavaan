@@ -601,7 +601,7 @@ lav_matrix_commutation <- .com1
 # compute K_n %*% A without explicitly computing K
 # K_n = K_nn, so sqrt(nrow(A)) must be an integer!
 # = permuting the rows of A
-lav_matrix_commutation_pre <- function(A) {
+lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
 
     # number of rows of A
     n2 <- nrow(A)
@@ -672,7 +672,7 @@ lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
     
     dimS <- dim(S); n <- dimS[1L]; n2 <- n*n
     if(check) {
-        stopifnot(dimA[2L] == n)
+        stopifnot(dimS[2L] == n)
     }
     
     # all possible combinations

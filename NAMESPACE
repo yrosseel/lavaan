@@ -42,11 +42,6 @@ export("lavaan", "cfa", "sem", "growth",
        # utilities
        "getCov", "char2num", "cor2cov",
 
-       # matrix utilities -- old names
-       "vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
-       "vechr", "vechr.reverse", "vechu", "vechu.reverse", "upper2full", 
-       "duplicationMatrix", "commutationMatrix", "sqrtSymmetricMatrix",
-
        "modindices", "modificationIndices", "modificationindices",
        "standardizedSolution", "standardizedsolution",
        "parameterEstimates", "parameterestimates",
@@ -78,18 +73,20 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_matrix_vechu",
        "lav_matrix_vechru",
        "lav_matrix_vech_idx",
+       "lav_matrix_vech_row_idx",
+       "lav_matrix_vech_col_idx",
        "lav_matrix_vechr_idx",
        "lav_matrix_vechu_idx",
        "lav_matrix_vechru_idx",
+       "lav_matrix_diag_idx",
+       "lav_matrix_diagh_idx",
+       "lav_matrix_antidiag_idx",
        "lav_matrix_vech_reverse",
        "lav_matrix_vechru_reverse",
        "lav_matrix_upper2full",
        "lav_matrix_vechr_reverse",
        "lav_matrix_vechu_reverse",
        "lav_matrix_lower2full",
-       "lav_matrix_diag_idx",
-       "lav_matrix_diagh_idx",
-       "lav_matrix_antidiag_idx",  
        "lav_matrix_duplication",
        "lav_matrix_duplication_pre",
        "lav_matrix_duplication_post",
@@ -121,7 +118,12 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_func_gradient_complex",
        "lav_func_gradient_simple",
        "lav_func_jacobian_complex",
-       "lav_func_jacobian_simple"     # used by semTools!
+       "lav_func_jacobian_simple",    # used by semTools!
+
+       # deprecated functions
+       "vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
+       "vechr", "vechr.reverse", "vechu", "vechu.reverse", "upper2full",
+       "duplicationMatrix", "commutationMatrix", "sqrtSymmetricMatrix"
       )
 
 # export Classes

@@ -25,7 +25,7 @@ lavaan(model = NULL, data = NULL,
     zero.cell.warn = TRUE, start = "default", 
     slotOptions = NULL, slotParTable = NULL,
     slotSampleStats = NULL, slotData = NULL, slotModel = NULL,
-    verbose = FALSE, warn = TRUE, debug = FALSE)
+    slotCache = NULL, verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -284,6 +284,8 @@ If provided, no new SampleStats slot will be created by this call.}
 no new Data slot will be created by this call.}
 \item{slotModel}{Model slot from a fitted lavaan object. If provided,
 no new Model slot will be created by this call.}
+\item{slotCache}{Cache slot from a fitted lavaan object. If provided,
+no new Cache slot will be created by this call.}
 \item{verbose}{If \code{TRUE}, the function value is printed out during
     each iteration.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed

@@ -11,8 +11,7 @@
 #     method = "Satorra-Bentler-2010-PML"
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
-                       A = NULL, H1 = TRUE,
-                       type = "Chisq", model.names = NULL) {
+                       H1 = TRUE, type = "Chisq", model.names = NULL) {
 
     if(object@Fit@npar > 0L && !object@Fit@converged)
         stop("lavaan ERROR: model did not converge")
@@ -215,7 +214,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
                 out <- lav_test_diff_Satorra2000(mods[[m]], mods[[m+1]],
                                                  H1 = TRUE,
                                                  Satterthwaite = Satterthwaite,
-                                                 A.method = A.method, A = A)
+                                                 A.method = A.method)
                 STAT.delta[m+1] <- out$T.delta
                   Df.delta[m+1] <- out$df.delta
             }

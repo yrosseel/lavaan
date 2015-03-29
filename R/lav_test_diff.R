@@ -186,18 +186,18 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
     PT.M1.FULL <- lav_partable_full(PT.M1, free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
-                                         remove = TRUE, warn = FALSE)
+                                         remove.duplicated = TRUE, warn = FALSE)
 
     # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
     PT.M0.FULL <- lav_partable_full(PT.M0, free = TRUE, start = TRUE)
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
-                                         remove = TRUE, warn = FALSE)
+                                         remove.duplicated = TRUE, warn = FALSE)
 
     # `extend' PE of M0 to include all `fixed-to-zero parameters'
     PE.M0 <- parameterEstimates(m0, remove.eq = FALSE, remove.ineq = FALSE)
     PE.M0.FULL <- lav_partable_full(PE.M0)
     PE.M0.extended <- lav_partable_merge(PE.M0, PE.M0.FULL,
-                                         remove = TRUE, warn = FALSE)
+                                         remove.duplicated = TRUE, warn = FALSE)
 
     # FIXME:
     # - check if H0 does not contain additional parameters...
@@ -277,12 +277,12 @@ lav_test_diff_A <- function(m1, m0, method = "exact") {
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
     PT.M1.FULL <- lav_partable_full(PT.M1, free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
-                                         remove = TRUE, warn = FALSE)
+                                         remove.duplicated = TRUE, warn = FALSE)
 
     # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
     PT.M0.FULL <- lav_partable_full(PT.M0, free = TRUE, start = TRUE)
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
-                                         remove = TRUE, warn = FALSE)
+                                         remove.duplicated = TRUE, warn = FALSE)
 
     # for each parameter in P0, see if we have constrained this parameter
     # somehow

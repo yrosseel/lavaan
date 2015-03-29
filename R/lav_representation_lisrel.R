@@ -734,7 +734,7 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
 # V(Y | eta_i, x_i) = THETA
 computeVYetax.LISREL <- function(MLIST = NULL, delta = TRUE) {
 
-    VYetax <- MLIST$theta
+    VYetax <- MLIST$theta; nvar <- nrow(MLIST$theta)
 
     # if delta, scale
     if(delta && !is.null(MLIST$delta)) {

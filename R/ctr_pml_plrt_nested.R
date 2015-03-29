@@ -393,17 +393,17 @@ MYcomputeGradient <- function (object, GLIST, samplestats = NULL, X = NULL,
    if (is.null(GLIST)) {
         GLIST <- object@GLIST
     }
-   Sigma.hat <- lavaan:::computeSigmaHat(object, GLIST = GLIST, extra = (estimator ==  "ML"))
-   TH <- lavaan:::computeTH(object, GLIST = GLIST)
+   Sigma.hat <- computeSigmaHat(object, GLIST = GLIST, extra = (estimator ==  "ML"))
+   TH <- computeTH(object, GLIST = GLIST)
    g<-1
-   d1 <- lavaan:::pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
+   d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
                              th.idx = th.idx[[g]], num.idx = num.idx[[g]],
                              X = X[[g]], lavcache = lavcache[[g]])
 
  #!?  if(equalConstr) { #delete the following three commented lines, wrong
  #     Delta <- lavaan:::computeDelta (lavmodel= object, GLIST. = GLIST)
  #  } else {
-      Delta <- lavaan:::computeDelta (lavmodel= object, GLIST. = GLIST,
+      Delta <- computeDelta (lavmodel= object, GLIST. = GLIST,
                                       m.el.idx. = MY.m.el.idx , 
                                       x.el.idx. = MY.x.el.idx)
   # }
@@ -487,16 +487,16 @@ MYNvcov.first.order <- function (lavmodel, lavsamplestats = NULL,
  #!?   if (equalConstr) {     ###the following three lines are commented because they are wrong
  #      Delta <- lavaan:::computeDelta(lavmodel, GLIST. = NULL)
  #   } else {
-       Delta <- lavaan:::computeDelta(lavmodel,
+       Delta <- computeDelta(lavmodel,
                                        GLIST. = NULL,
                                        m.el.idx. = MY.m.el.idx,#!!!!! different here and below
                                        x.el.idx. = MY.x.el.idx)
   #  }
-    Sigma.hat <- lavaan:::computeSigmaHat(lavmodel)
-    TH <- lavaan:::computeTH(lavmodel)
+    Sigma.hat <- computeSigmaHat(lavmodel)
+    TH <- computeTH(lavmodel)
     g <-1
 
-    SC <- lavaan:::pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
+    SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
                               th.idx = lavmodel@th.idx[[g]], 
                               num.idx = lavmodel@num.idx[[g]],
                               X = lavdata@X[[g]], lavcache = lavcache,

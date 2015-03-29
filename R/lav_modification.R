@@ -35,7 +35,8 @@ modindices <- function(object,
     FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE)
 
     # merge
-    LIST <- lav_partable_merge(partable, FULL, remove = TRUE, warn = FALSE)
+    LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE, 
+                               warn = FALSE)
 
     # remove  ==, <, :=, > rows from partable
     nonpar.idx <- which(LIST$op %in% c("==", ":=", "<", ">"))

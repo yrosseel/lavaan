@@ -26,7 +26,7 @@ lavTestScore <- function(object, extra = NULL, release = NULL,
     nfree <- max(partable$free)
 
     # parse extra syntax
-    FLAT <- lavParseModelString(extra, as.data.frame = TRUE)
+    FLAT <- lavParseModelString(extra, as.data.frame. = TRUE)
     FLAT$mod.idx <- FLAT$fixed <- FLAT$start <- FLAT$label <- NULL
     nflat <- nrow(FLAT)
     if(is.null(FLAT$group)) {

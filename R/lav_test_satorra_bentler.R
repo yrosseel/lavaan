@@ -2,6 +2,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel       = NULL,
                                      lavoptions     = NULL,
+                                     lavdata        = NULL,
                                      TEST.unscaled  = NULL,
                                      E.inv          = NULL,
                                      Delta          = NULL,
@@ -18,6 +19,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         lavmodel       <- lavobject@Model
         lavoptions     <- lavobject@Options
         lavpartable    <- lavobject@ParTable
+        lavdata        <- lavobject@Data
         TEST$standard  <- lavobject@Fit@test[[1]]
     }
 
@@ -52,10 +54,10 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         E.inv <- try(lav_model_information_augment_invert(lavmodel,
                          information = E, inverted = TRUE), silent=TRUE)
         if(inherits(E.inv, "try-error")) {
-            TEST <- list(test=test, stat=as.numeric(NA),
-                stat.group=rep(as.numeric(NA), lavsamplestats@ngroups),
-                df=df, refdistr=refdistr, pvalue=as.numeric(NA),
-                scaling.factor=as.numeric(NA))
+            TEST <- list(test = test, stat = as.numeric(NA),
+                stat.group = rep(as.numeric(NA), lavsamplestats@ngroups),
+                df = TEST.unscaled$df, refdistr = TEST.unscaled$refdistr, 
+                pvalue = as.numeric(NA), scaling.factor = as.numeric(NA))
             warning("lavaan WARNING: could not invert information matrix\n")
             return(TEST)
         }
