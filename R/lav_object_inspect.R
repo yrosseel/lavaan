@@ -233,15 +233,60 @@ lavInspect <- function(lavobject,
     } else if(what == "hessian") {
         lav_object_inspect_hessian(lavobject,
             add.labels = add.labels, add.class = add.class)
+
     } else if(what == "information") {
-        lav_object_inspect_information(lavobject, augmented = FALSE,
+        lav_object_inspect_information(lavobject, information = "default",
+            augmented = FALSE, inverted = FALSE,
             add.labels = add.labels, add.class = add.class)
+    } else if(what == "information.expected") {
+        lav_object_inspect_information(lavobject, information = "expected",
+            augmented = FALSE, inverted = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "information.observed") {
+        lav_object_inspect_information(lavobject, information = "observed",
+            augmented = FALSE, inverted = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "information.first.order" || what == "first.order") {
+        lav_object_inspect_information(lavobject, information = "first.order",
+            augmented = FALSE, inverted = FALSE,
+            add.labels = add.labels, add.class = add.class)
+
     } else if(what == "augmented.information") {
-        lav_object_inspect_information(lavobject, augmented = TRUE,
+        lav_object_inspect_information(lavobject, information = "default",
+            augmented = TRUE, inverted = FALSE,
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "first.order") {
-        lav_object_inspect_firstorder(lavobject,
+    } else if(what == "augmented.information.expected") {
+        lav_object_inspect_information(lavobject, information = "expected",
+            augmented = TRUE, inverted = FALSE,
             add.labels = add.labels, add.class = add.class)
+    } else if(what == "augmented.information.observed") {
+        lav_object_inspect_information(lavobject, information = "observed",
+            augmented = TRUE, inverted = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "augmented.information.first.order" ||
+              what == "augmented.first.order") {
+        lav_object_inspect_information(lavobject, information = "first.order",
+            augmented = TRUE, inverted = FALSE,
+            add.labels = add.labels, add.class = add.class)
+
+    } else if(what == "inverted.information") {
+        lav_object_inspect_information(lavobject, information = "default",
+            augmented = TRUE, inverted = TRUE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "inverted.information.expected") {
+        lav_object_inspect_information(lavobject, information = "expected",
+            augmented = TRUE, inverted = TRUE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "inverted.information.observed") {
+        lav_object_inspect_information(lavobject, information = "observed",
+            augmented = TRUE, inverted = TRUE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "inverted.information.first.order" || 
+              what == "inverted.first.order") {
+        lav_object_inspect_information(lavobject, information = "first.order",
+            augmented = TRUE, inverted = TRUE,
+            add.labels = add.labels, add.class = add.class)
+
     } else if(what == "vcov") {
         lav_object_inspect_vcov(lavobject,
             standardized = FALSE,
@@ -1080,17 +1125,35 @@ lav_object_inspect_hessian <- function(lavobject,
     OUT
 }
 
-lav_object_inspect_information <- function(lavobject, augmented = FALSE,
+lav_object_inspect_information <- function(lavobject, 
+    information = "default", augmented = FALSE, inverted = FALSE,
     add.labels = FALSE, add.class = FALSE) {
 
-    OUT <- lav_model_information(lavmodel =  lavobject@Model,
+    if(information == "default") {
+        information <- lavobject@Options$information
+    } 
+
+    if(information == "expected" || information == "observed") {
+        OUT <- lav_model_information(lavmodel =  lavobject@Model,
+                  lavsamplestats = lavobject@SampleStats,
+                  lavdata        = lavobject@Data,
+                  estimator      = lavobject@Options$estimator,
+                  lavcache       = lavobject@Cache,
+                  information    = information,
+                  augmented      = augmented,
+                  inverted       = inverted)
+    } else if(information == "first.order") {
+        B0 <- lav_model_information_firstorder(lavmodel =  lavobject@Model,
               lavsamplestats = lavobject@SampleStats,
               lavdata        = lavobject@Data,
               estimator      = lavobject@Options$estimator,
               lavcache       = lavobject@Cache,
-              information    = lavobject@Options$information,
+              check.pd       = FALSE,
               augmented      = augmented,
-              inverted       = FALSE)
+              inverted       = inverted)
+        attr(B0, "B0.group") <- NULL
+        OUT <- B0
+    }
 
     # labels
     if(add.labels) {
@@ -1106,11 +1169,11 @@ lav_object_inspect_information <- function(lavobject, augmented = FALSE,
     OUT
 }
 
-
-lav_object_inspect_firstorder <- function(lavobject,
+# only to provide a direct function to the old 'getVariability()' function
+lav_object_inspect_firstorder <- function(lavobject, 
     add.labels = FALSE, add.class = FALSE) {
 
-    B0 <- lav_model_information_firstorder(lavmodel =  lavobject@Model,
+     B0 <- lav_model_information_firstorder(lavmodel =  lavobject@Model,
               lavsamplestats = lavobject@SampleStats,
               lavdata        = lavobject@Data,
               estimator      = lavobject@Options$estimator,
@@ -1119,13 +1182,12 @@ lav_object_inspect_firstorder <- function(lavobject,
               augmented      = FALSE,
               inverted       = FALSE)
     attr(B0, "B0.group") <- NULL
-
     OUT <- B0
 
     # labels
     if(add.labels) {
         colnames(OUT) <- rownames(OUT) <-
-            lav_partable_labels(lavobject@ParTable, type="free")       
+            lav_partable_labels(lavobject@ParTable, type="free")
     }
 
     # class
