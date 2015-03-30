@@ -239,19 +239,22 @@ modindices <- function(object,
 
         LIST$sepc.lv <- EPC.sign * standardize.est.lv(object, 
                                                       partable = LIST, 
-                                                      est = abs(EPC))
+                                                      est = abs(EPC),
+                                                      cov.std = FALSE)
         if(length(small.idx) > 0L) {
             LIST$sepc.lv[small.idx] <- 0
         }
         LIST$sepc.all <- EPC.sign * standardize.est.all(object, 
                                                         partable = LIST, 
-                                                        est = abs(EPC))
+                                                        est = abs(EPC),
+                                                        cov.std = FALSE)
         if(length(small.idx) > 0L) {
             LIST$sepc.all[small.idx] <- 0
         }
         LIST$sepc.nox <- EPC.sign * standardize.est.all.nox(object, 
                                                             partable = LIST,
-                                                            est = abs(EPC))
+                                                            est = abs(EPC),
+                                                            cov.std = FALSE)
         if(length(small.idx) > 0L) {
             LIST$sepc.nox[small.idx] <- 0
         }

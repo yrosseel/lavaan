@@ -291,7 +291,7 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
             if(!is.complex(est[rv.idx])) {
                 RV <- sqrt(abs(est[rv.idx]))
             } else {
-                Rv <- sqrt( est[rv.idx] )
+                RV <- sqrt( est[rv.idx] )
             }
             rv.names <- partable$lhs[rv.idx]
         }
