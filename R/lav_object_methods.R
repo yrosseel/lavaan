@@ -1020,7 +1020,7 @@ parameterEstimates <- parameterestimates <- function(object,
 }
 
 parameterTable <- parametertable <- parTable <- partable <-
-        function(object, remove.auto.eq = FALSE, fake.eq.free = FALSE) {
+        function(object) {
 
     # convert to data.frame
     out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
@@ -1030,6 +1030,9 @@ parameterTable <- parametertable <- parTable <- partable <-
     if(any(grepl("singleParamTest", SYS))) {
         remove.auto.eq = TRUE
         fake.eq.free = TRUE
+    } else {
+        remove.auto.eq <- FALSE
+        fake.eq.free <- FALSE
     }
     
     # remove 'auto' equality constraints

@@ -374,7 +374,7 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
     trace.UGamma <- sum(trace.UGamma)
     trace.UGamma2 <- sum(trace.UGamma2)
 
-    if(!return.gamma) {
+    if(!return.ugamma) {
         UG <- NULL
     }
 

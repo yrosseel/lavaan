@@ -292,10 +292,10 @@ Although this automatic labeling of parameters is convenient, the user may
 specify its own labels for specific parameters simply by pre-multiplying
 the corresponding term (on the right hand side of the operator only) by
 a character string (starting with a letter).
-For example, in the formula \code{f1 =~ x1 + x2 + mylabelx3}, the parameter 
+For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter 
 corresponding with the factor loading of
 \code{x3} will be named \code{"mylabel"}.
-\code{"f1=~x3"}. An alternative way to specify
+An alternative way to specify
 the label is as follows: \code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
 where the label is the argument of special function \code{label()};
 this can be useful if the label contains a space, or an operator (like "~").
@@ -339,18 +339,10 @@ of groups. The only exception are numerical constants (for fixing values): if
 you provide only a single number, the same number will be used for all groups.
 However, it is safer (and cleaner) to specify the same number of elements as
 the number of groups. For example, if there are two groups:
-\preformatted{HS.model <- ' visual  =~             x1 +
-                                 0.5*x2 +
-                         c(0.6, 0.8)*x3
-
-              textual =~                    x4 +
-                         start(c(1.2, 0.6))*x5 +
-                                            x6
-
-              speed   =~                x7 +
-                                        x8 +
-                         c(x9.group1,
-                           x9.group2) * x9 '
+\preformatted{
+HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
+              textual =~ x4 + start(c(1.2, 0.6))*x5 + x6
+              speed   =~ x7 + x8 + c(x9.group1, x9.group2)*x9 '
 }
 In this example, the factor loading of the `x2' indicator is fixed to the
 value 0.5 for all groups. However, the factor loadings of the `x3' indicator 
