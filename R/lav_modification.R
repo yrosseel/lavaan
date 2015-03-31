@@ -19,8 +19,13 @@ modindices <- function(object,
 
     # check if model has converged
     if(object@Fit@npar > 0L && !object@Fit@converged) {
-        warning("lavaan WARNINGS: model did not converge")
+        warning("lavaan WARNING: model did not converge")
     }
+ 
+    # warn for equality constraints
+    #if(object@Model@eq.constraints) {
+    #    warning("lavaan WARNING: modindices do not take the equality constraints into account (for now)")
+    #}
 
     # sanity check
     if(power) standardized <- TRUE

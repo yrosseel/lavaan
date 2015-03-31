@@ -10,7 +10,8 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      Gamma          = NULL,
                                      test           = "satorra.bentler",
                                      mimic          = "lavaan",
-                                     method         = "default") {
+                                     method         = "default",
+                                     return.ugamma  = FALSE) {
 
     TEST <- list()
 
@@ -83,19 +84,22 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         out <- lav_test_satorra_bentler_trace_original(Gamma = Gamma,
                    Delta = Delta, WLS.V = WLS.V, E.inv = E.inv, 
                    ngroups = ngroups, nobs = lavsamplestats@nobs, 
-                   ntotal = lavsamplestats@ntotal,
+                   ntotal = lavsamplestats@ntotal, 
+                   return.ugamma = return.ugamma,
                    Satterthwaite = Satterthwaite)
     } else if(method == "orthogonal.complement") {
         out <- lav_test_satorra_bentler_trace_complement(Gamma = Gamma,
                    Delta = Delta, WLS.V = WLS.V, lavmodel = lavmodel,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal,
+                   return.ugamma = return.ugamma,
                    Satterthwaite = Satterthwaite)
     } else if(method == "ABA") {
         out <- lav_test_satorra_bentler_trace_ABA(Gamma = Gamma,
                    Delta = Delta, WLS.V = WLS.V, E.inv = E.inv,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal,
+                   return.ugamma = return.ugamma,
                    Satterthwaite = Satterthwaite)
     } else {
         stop("lavaan ERROR: method `", method, "' not supported")
@@ -196,6 +200,10 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                  shift.parameter = shift.parameter)
     }
 
+    if(return.ugamma) {
+        TEST$UGamma <- out$UGamma
+    }
+
     TEST
 }
 
@@ -208,6 +216,7 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
                                                     ngroups       = NULL,
                                                     nobs          = NULL,
                                                     ntotal        = NULL,
+                                                    return.ugamma = FALSE,
                                                     Satterthwaite = FALSE) {
  
     # trace of UGamma per group
@@ -224,7 +233,8 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
                                 t(Delta[[g]]) %*% WLS.Vg) 
         trace.UGamma[g] <- sum(U * Gamma.g)
 
-        if(Satterthwaite) {
+        UG <- NULL
+        if(Satterthwaite || return.ugamma) {
             UG <- U %*% Gamma.g
             trace.UGamma2[g] <- sum(UG * t(UG))
         }
@@ -234,7 +244,8 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
     trace.UGamma <- sum(trace.UGamma)
     trace.UGamma2 <- sum(trace.UGamma2)
 
-    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2)
+    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2, 
+         UGamma = UG)
 }
 
 # using the orthogonal complement of Delta: Delta.c
@@ -246,6 +257,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
                                                       ngroups       = NULL,
                                                       nobs          = NULL,
                                                       ntotal        = NULL,
+                                                      return.ugamma = FALSE,
                                                       Satterthwaite = FALSE) {
 
     # trace of UGamma per group
@@ -272,7 +284,8 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
         tmp2 <- t(Delta.c) %*% Gamma.g %*% Delta.c
 
         trace.UGamma[g] <- sum(tmp1 * tmp2)
-        if(Satterthwaite) {
+        UG <- NULL
+        if(Satterthwaite || return.ugamma) {
             UG <- tmp1 %*% tmp2
             trace.UGamma2[g] <- sum(UG * t(UG))
         }
@@ -282,7 +295,8 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
     trace.UGamma <- sum(trace.UGamma)
     trace.UGamma2 <- sum(trace.UGamma2)
 
-    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2)
+    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
+         UGamma = UG)
 }
 
 # using the ABA form
@@ -304,6 +318,7 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
                                                ngroups       = NULL,
                                                nobs          = NULL,
                                                ntotal        = NULL,
+                                               return.ugamma = FALSE,
                                                Satterthwaite = FALSE) {
 
     # trace of UGamma per group
@@ -359,7 +374,12 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
     trace.UGamma <- sum(trace.UGamma)
     trace.UGamma2 <- sum(trace.UGamma2)
 
-    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2)
+    if(!return.gamma) {
+        UG <- NULL
+    }
+
+    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
+         UGamma = UG)
 }
 
 

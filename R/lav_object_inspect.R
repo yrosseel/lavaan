@@ -303,6 +303,9 @@ lavInspect <- function(lavobject,
         lav_object_inspect_vcov(lavobject,
             standardized = TRUE, type = "std.nox",
             add.labels = add.labels, add.class = add.class)
+    } else if(what == "ugamma" || what == "ug" || what == "u.gamma") {
+        lav_object_inspect_UGamma(lavobject,
+            add.labels = add.labels, add.class = add.class)
 
 
     #### not found ####
@@ -1262,6 +1265,26 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(add.labels) {
         colnames(OUT) <- rownames(OUT) <-
             lav_partable_labels(lavobject@ParTable, type="free")
+    }
+
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+    }
+
+    OUT
+}
+
+lav_object_inspect_UGamma <- function(lavobject,
+    add.labels = FALSE, add.class = FALSE) {
+
+    out <- lav_test_satorra_bentler(lavobject     = lavobject,
+                                    return.ugamma = TRUE)
+    OUT <- out$UGamma
+
+    # labels
+    if(add.labels) {
+       # colnames(OUT) <- rownames(OUT) <-
     }
 
     # class
