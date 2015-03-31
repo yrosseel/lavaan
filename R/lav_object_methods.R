@@ -795,7 +795,7 @@ parameterEstimates <- parameterestimates <- function(object,
         FMI <- FALSE
     }
 
-    LIST <- inspect(object, "list")
+    LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
     LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
     # add est and se column
     est <- object@Fit@est
@@ -1020,8 +1020,38 @@ parameterEstimates <- parameterestimates <- function(object,
 }
 
 parameterTable <- parametertable <- parTable <- partable <-
-        function(object) {
+        function(object, remove.auto.eq = FALSE, fake.eq.free = FALSE) {
+
+    # convert to data.frame
     out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
+
+    # only to trick semTools
+    SYS <- as.character(sys.calls())
+    if(any(grepl("singleParamTest", SYS))) {
+        remove.auto.eq = TRUE
+        fake.eq.free = TRUE
+    }
+    
+    # remove 'auto' equality constraints
+    # only as a temporary measure (for semTools)
+    if(remove.auto.eq) {
+        auto.eq <- which(out$user == 2L & out$op == "==")
+        if(length(auto.eq) > 0L) {
+            out <- out[-auto.eq,]    
+        }
+    }
+
+    # create the illusion that free column reflects simple equality
+    # constraints; only as a temporary measure (for semTools)
+    if(fake.eq.free) {
+        dup.label.idx <- which(nchar(out$label) > 0L & duplicated(out$label))
+        if(length(dup.label.idx) > 0L) {
+            out$free[ dup.label.idx ] <- 0L
+            non.zero.idx <- which(out$free > 0L)
+            out$free[non.zero.idx] <- seq_along(non.zero.idx)
+        }
+    }
+    
     class(out) <- c("lavaan.data.frame", "data.frame")
     out
 }

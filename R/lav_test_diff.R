@@ -24,6 +24,9 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         P.inv <- lav_model_information_augment_invert(m1@Model,
                                                       information = P,
                                                       inverted = TRUE)
+        if(inherits(P.inv, "try-error")) {
+             return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
+        }
         #P.inv <- solve(P)
     
         # compute 'A' matrix 
@@ -43,6 +46,9 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         P.inv <- lav_model_information_augment_invert(m0@Model,
                                                       information = P,
                                                       inverted = TRUE)
+        if(inherits(P.inv, "try-error")) {
+             return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
+        }
         #P.inv <- solve(P)
 
         # compute 'A' matrix 

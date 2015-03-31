@@ -11,7 +11,28 @@ lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
     N <- length(lavpartable$lhs)
     if(!is.data.frame(lavpartable)) {
          # check for equal column length
-         stopifnot(all(N ==  sapply(lavpartable, length)))
+         nel <- sapply(lavpartable, length)
+         short.idx <- which(nel < N)
+         long.idx <- which(nel > N)
+         if(length(long.idx) > 0L) {
+             warning("lavaan WARNING: partable columns have unequal length")
+         }
+         if(length(short.idx) > 0L) {
+             # try to extend them in a 'natural' way
+             for(i in short.idx) {
+                 too.short <- N - nel[i]
+                 if(is.integer(lavpartable[[i]])) {
+                     lavpartable[[i]] <- c(lavpartable[[i]], 
+                                           integer( too.short ))
+                 } else if(is.numeric(lavpartable[[i]])) {
+                     lavpartable[[i]] <- c(lavpartable[[i]], 
+                                           numeric( too.short ))
+                 } else {
+                     lavpartable[[i]] <- c(lavpartable[[i]],
+                                           character( too.short ))
+                 }
+             }
+         }
     }
 
     # add id column

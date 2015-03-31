@@ -318,6 +318,14 @@ lavaanify <- lavParTable <- function(
                                        lhs  = LIST$plabel[ref.idx], 
                                        rhs  = LIST$plabel[idx],
                                        user = 2L)
+
+                # just to trick semTools, also add something in the label
+                # colum, *if* it is empty
+                for(i in all.idx) {
+                    if(nchar(LIST$label[i]) == 0L) {
+                        LIST$label[i] <- LIST$plabel[ ref.idx ]
+                    }
+                }
             }
         }
     }
@@ -329,6 +337,9 @@ lavaanify <- lavParTable <- function(
     # count free parameters
     idx.free <- which(LIST$free > 0)
     LIST$free[idx.free] <- seq_along(idx.free)
+    if(!is.null(LIST$unco)) {
+         LIST$unco[idx.free] <- seq_along(idx.free)
+    }
 
     # 2. add free counter to this element
     #idx.equal <- which(LIST$eq.id > 0)
@@ -360,8 +371,12 @@ lavaanify <- lavParTable <- function(
             LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
         }
         LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
-        #LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
-        #LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
+        if(!is.null(LIST$eq.id)) {
+            LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
+        }
+        if(!is.null(LIST$unco)) {
+            LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
+        }
     }
 
     # put lhs of := elements in label column
@@ -1279,9 +1294,10 @@ lav_partable_flat <- function(FLAT = NULL,
                         free        = free,
                         ustart      = ustart,
                         exo         = exo,
-                        label       = label
-                        #eq.id       = rep(0L,  length(lhs)),
-                        #unco        = rep(0L,  length(lhs))
+                        label       = label    ,
+                        # IF we add these, also change
+                        eq.id       = rep(0L,  length(lhs)),
+                        unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)
 

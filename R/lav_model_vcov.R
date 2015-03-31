@@ -76,6 +76,11 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                         inverted       = TRUE)
     }
 
+    # check if E.inv is ok
+    if(inherits(E.inv, "try-error")) { 
+        return(E.inv)
+    }
+
     Delta <- attr(E.inv, "Delta")
     WLS.V <- attr(E.inv, "WLS.V")
 
