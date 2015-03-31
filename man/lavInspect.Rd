@@ -50,9 +50,6 @@ Model matrices:
         to the position of the free parameter in the parameter vector.
         This determines the order of the model parameters in the output
         of for example \code{coef()} and \code{vcov()}.}
-    \item{\code{"unco"}:}{A list of model matrices. The non-zero integers
-        represent the free parameters if we ignore any equality constraints.
-        Alias: \code{"unconstrained"}.}
     \item{\code{"partable"}:}{A list of model matrices. The non-zero integers
         represent both the fixed parameters (for example, factor loadings
         fixed at 1.0), and the free parameters if we ignore any equality 
@@ -154,17 +151,78 @@ Model-implied sample statistics and fit information:
         Aliases: \code{"r-square"}, \code{"r2"}.}
     \item{\code{"converged"}:}{Logical. \code{TRUE} if the optimizer has
         converged; \code{FALSE} otherwise.}
+    \item{\code{"meanstructure"}:}{Logical. \code{TRUE} if a meanstructure
+        was included in the model.}
+    \item{\code{"categorical"}:}{Logical. \code{TRUE} if categorical endogenous
+        variables were part of the model.}
+}
+
+Hessian, observed, expected and first.order information matrices:
+
+\describe{
     \item{\code{"hessian"}:}{Matrix containing the second derivatives
         of the discrepancy function with respect to the (free) model
         parameters.}
-    \item{\code{"first.order"}:}{Matrix containing the outer product of
-        the gradient elements (the first derivative of the the discrepancy 
-        function with respect to the (free) model parameters.).}
+    \item{\code{"information"}:}{Matrix containing either the observed or
+        the expected information matrix (depending on the information option
+        of the fitted model.}
+    \item{\code{"information.expected"}:}{Matrix containing the expected
+        information matrix for the free model parameters.}
+    \item{\code{"information.observed"}:}{Matrix containing the observed
+        information matrix for the free model parameters.}
+    \item{\code{"information.first.order"}:}{Matrix containing the first.order
+        information matrix for the free model parameters. This is the 
+        outer product of the gradient elements (the first derivative of 
+        the discrepancy function with respect to the (free) model parameters).
+        Alias: \code{"first.order"}.}
+    \item{\code{"augmented.information"}:}{Matrix containing either the 
+        observed or the expected augmented (or bordered) information 
+        matrix (depending on the information option of the fitted model.
+        Only relevant if constraints have been used in the model.}
+    \item{\code{"augmented.information.expected"}:}{Matrix containing the 
+        expected augmented (or bordered) information matrix.
+        Only relevant if constraints have been used in the model.}
+    \item{\code{"augmented.information.observed"}:}{Matrix containing the      
+        observed augmented (or bordered) information matrix.
+        Only relevant if constraints have been used in the model.}
+    \item{\code{"augmented.information.first.order"}:}{Matrix containing 
+        the first.order augmented (or bordered) information matrix.
+        Only relevant if constraints have been used in the model.}
+    \item{\code{"inverted.information"}:}{Matrix containing either the 
+        observed or the expected inverted information matrix 
+        (depending on the information option of the fitted model.}
+    \item{\code{"inverted.information.expected"}:}{Matrix containing the 
+        inverted expected information matrix for the free model parameters.} 
+    \item{\code{"inverted.information.observed"}:}{Matrix containing the 
+        inverted observed information matrix for the free model parameters.}
+    \item{\code{"inverted.information.first.order"}:}{Matrix containing the 
+        inverted first.order information matrix for the free model parameters.}
+}
+
+Variance covariance matrix of the model parameters:
+
+\describe{
+    \item{\code{"vcov"}:}{Matrix containing the variance covariance matrix
+        of the estimated model parameters.}
+    \item{\code{"vcov.std.all"}:}{Matrix containing the variance covariance 
+        matrix of the standardized estimated model parameters. Standardization  
+        is done with respect to both observed and latent variables.}
+    \item{\code{"vcov.std.lv"}:}{Matrix containing the variance covariance 
+        matrix of the standardized estimated model parameters. Standardization  
+        is done with respect to the latent variables only.}
+    \item{\code{"vcov.std.nox"}:}{Matrix containing the variance covariance 
+        matrix of the standardized estimated model parameters. Standardization  
+        is done with respect to both observed and latent variables, but 
+        ignoring any exogenous observed covariates.}
 }
 
 Miscellaneous:
 
 \describe{
+    \item{\code{"UGamma"}:}{Matrix containing the product of 'U' and 'Gamma'
+        matrices as used by the Satorra-Bentler correction. The trace of
+        this matrix, divided by the degrees of freedom, gives the scaling 
+        factor.}
     \item{\code{"list"}:}{The parameter table. The same output as given
         by \code{parTable()}.}
     \item{\code{"fit"}:}{The fit measures. Aliases: \code{"fitmeasures"},
