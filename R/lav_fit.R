@@ -59,7 +59,10 @@ lav_model_fit <- function(lavpartable = NULL,
                 }
                 def.cov <- JAC %*% VCOV %*% t(JAC)
             }
-            se[def.idx] <- sqrt(diag(def.cov))
+            # check for negative se's
+            diag.def.cov <- diag(def.cov)
+            diag.def.cov[ diag.def.cov < 0 ] <- as.numeric(NA)
+            se[def.idx] <- sqrt(diag.def.cov)
         }
     }
 
