@@ -301,26 +301,28 @@ modindices <- function(object,
     class(LIST) <- c("lavaan.data.frame", "data.frame")
 
     # add eq constraints (if any)
-    #eq.idx <- which(partable$op == "==")
-    #if(length(eq.idx) > 0L) {
-    #    N <- length(eq.idx)
-    #    TMP <- data.frame(lhs = partable$lhs[eq.idx],
-    #                       op = partable$op[eq.idx],
-    #                      rhs = partable$rhs[eq.idx],
-    #                      group = partable$group[eq.idx],
-    #                      mi = rep(as.numeric(NA), N),
-    #                      epc = rep(as.numeric(NA), N),
-    #                      sepc.lv = rep(as.numeric(NA), N),
-    #                      sepc.all = rep(as.numeric(NA), N),
-    #                      sepc.nox = rep(as.numeric(NA), N) )
-    #    if(!standardized) {
-    #        TMP$sepc.lv <- TMP$sepc.all <- TMP$sepc.nox <- NULL
-    #    }
-    #    if(!is.null(LIST$mi.scaled)) {
-    #        TMP$mi.scaled <- rep(as.numeric(NA), N)
-    #    }
-    #    LIST <- rbind(LIST, TMP)
-    #}
+    eq.idx <- which(partable$op == "==")
+    if(length(eq.idx) > 0L) {
+        warning("lavaan WARNING: modification indices do not reflect (yet) what happens if we release an equality constraint")
+        # FIXME!!!!
+        N <- length(eq.idx)
+        TMP <- data.frame(lhs = partable$lhs[eq.idx],
+                           op = partable$op[eq.idx],
+                          rhs = partable$rhs[eq.idx],
+                          group = partable$group[eq.idx],
+                          mi = rep(as.numeric(NA), N),
+                          epc = rep(as.numeric(NA), N),
+                          sepc.lv = rep(as.numeric(NA), N),
+                          sepc.all = rep(as.numeric(NA), N),
+                          sepc.nox = rep(as.numeric(NA), N) )
+        if(!standardized) {
+            TMP$sepc.lv <- TMP$sepc.all <- TMP$sepc.nox <- NULL
+        }
+        if(!is.null(LIST$mi.scaled)) {
+            TMP$mi.scaled <- rep(as.numeric(NA), N)
+        }
+        LIST <- rbind(LIST, TMP)
+    }
 
     # remove 'existing' parameters
     #TMP1 <- data.frame(lhs = partable$lhs,
