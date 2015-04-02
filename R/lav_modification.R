@@ -116,8 +116,10 @@ modindices <- function(object,
     Q12 <- Q[extra.idx, model.idx, drop = FALSE]
     Q21 <- Q[model.idx, extra.idx, drop = FALSE]
     Q22 <- Q[model.idx, model.idx, drop = FALSE]
-    Q22.inv <- vcov(object) * (nobs(object)) * (nobs(object))
 
+    #Q22.inv <- vcov(object) * (nobs(object)) * (nobs(object))
+    # ALWAYS use *expected* information (for now)
+    Q22.inv <- lavTech(object, "inverted.information.expected") * nobs(object)
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
     #V.diag <- c(diag(V), diag(Q22))
