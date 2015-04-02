@@ -1325,6 +1325,7 @@ setDeltaElements.LISREL <- function(MLIST=NULL, num.idx=NULL) {
     # (1/delta^2) = diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) ) + THETA
     #tmp <- diag.Sigma + THETA
     tmp <- diag.Sigma
+    tmp[tmp < 0] <- as.numeric(NA)
     MLIST$delta[, 1L] <- sqrt(1/tmp)
 
     # numeric delta's stay 1.0
