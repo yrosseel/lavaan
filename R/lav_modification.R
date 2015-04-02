@@ -21,12 +21,12 @@ modindices <- function(object,
     if(object@Fit@npar > 0L && !object@Fit@converged) {
         warning("lavaan WARNING: model did not converge")
     }
- 
-    # warn for equality constraints
-    #if(object@Model@eq.constraints) {
-    #    warning("lavaan WARNING: modindices do not take the equality constraints into account (for now)")
-    #}
 
+    # not ready for estimator = "PML"
+    if(object@Options$estimator == "PML") {
+        stop("lavaan WARNING: modification indices for estimator PML are not implemented yet.")
+    }
+ 
     # sanity check
     if(power) standardized <- TRUE
 
@@ -37,7 +37,8 @@ modindices <- function(object,
                           remove.eq = FALSE, remove.ineq = FALSE)$est 
 
     # extended list (fixed-to-zero parameters)
-    FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE)
+    FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE,
+                              strict.exo = object@Model@fixed.x)
 
     # merge
     LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE, 
@@ -119,7 +120,8 @@ modindices <- function(object,
 
     #Q22.inv <- vcov(object) * (nobs(object)) * (nobs(object))
     # ALWAYS use *expected* information (for now)
-    Q22.inv <- lavTech(object, "inverted.information.expected") * nobs(object)
+    Q22.inv <- 
+        lavTech(object, "inverted.information.expected") * nobs(object)
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
     #V.diag <- c(diag(V), diag(Q22))

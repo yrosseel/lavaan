@@ -690,7 +690,8 @@ lav_partable_labels <- function(partable, group.equal="", group.partial="",
 getParameterLabels <- lav_partable_labels
 
 
-lav_partable_full <- function(partable = NULL, group = NULL, 
+lav_partable_full <- function(partable = NULL, group = NULL,
+                              strict.exo = FALSE,
                               free = FALSE, start = FALSE) {
 
     # check minimum requirements: lhs, op, rhs
@@ -728,10 +729,15 @@ lav_partable_full <- function(partable = NULL, group = NULL,
 
     # 2a. "~~" ov ## FIXME: ov.names.nox or ov.names??
     ov.lhs <- ov.rhs <- ov.op <- character(0)
-    nx <- length(ov.names)
+    if(strict.exo) {
+        OV <- ov.names.nox
+    } else {
+        OV
+    }
+    nx <- length(OV)
     idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
-    ov.lhs <- rep(ov.names,  each=nx)[idx] # fill upper.tri
-    ov.rhs <- rep(ov.names, times=nx)[idx]
+    ov.lhs <- rep(OV,  each=nx)[idx] # fill upper.tri
+    ov.rhs <- rep(OV, times=nx)[idx]
     ov.op  <- rep("~~", length(ov.lhs))
 
     # 2b. "~~" lv
@@ -745,11 +751,18 @@ lav_partable_full <- function(partable = NULL, group = NULL,
     # 3 regressions?
     r.lhs <- r.rhs <- r.op <- character(0)
     if(any(partable$op == "~")) {
-        # FIXME: better choices?
-        eqs.names <- unique( c(partable$lhs[ partable$op == "~" ],
-                               partable$rhs[ partable$op == "~" ]) )
-        r.lhs <- rep(eqs.names, each=length(eqs.names))
-        r.rhs <- rep(eqs.names, times=length(eqs.names))
+
+        if(strict.exo) {
+            eqs.y <- unique( partable$lhs[ partable$op == "~" &
+                                           !partable$lhs %in% ov.names.x ] )
+        } else {
+            eqs.y <- unique( partable$lhs[ partable$op == "~" ] )
+        }
+        eqs.x <- unique( partable$rhs[ partable$op == "~" ] )
+
+        r.lhs <- rep(eqs.y, each=length(eqs.x))
+        r.rhs <- rep(eqs.x, times=length(eqs.y))
+
         # remove self-arrows
         idx <- which(r.lhs == r.rhs)
         r.lhs <- r.lhs[-idx]
@@ -757,10 +770,14 @@ lav_partable_full <- function(partable = NULL, group = NULL,
         r.op <- rep("~", length(r.rhs))
     }
 
-    # 4. intercetps
+    # 4. intercepts
     int.lhs <- int.rhs <- int.op <- character(0)
     if(meanstructure) {
-        int.lhs <- c(ov.names, lv.names)
+        if(strict.exo) {
+            int.lhs <- c(ov.names.nox, lv.names)
+        } else {
+            int.lhs <- c(ov.names, lv.names)
+        }
         int.rhs <- rep("",   length(int.lhs))
         int.op  <- rep("~1", length(int.lhs))
     }
