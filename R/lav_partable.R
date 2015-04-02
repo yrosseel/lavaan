@@ -732,7 +732,7 @@ lav_partable_full <- function(partable = NULL, group = NULL,
     if(strict.exo) {
         OV <- ov.names.nox
     } else {
-        OV
+        OV <- ov.names
     }
     nx <- length(OV)
     idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)

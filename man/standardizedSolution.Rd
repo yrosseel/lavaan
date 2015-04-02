@@ -5,7 +5,7 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all", remove.eq = TRUE, 
+standardizedSolution(object, type = "std.all", se = TRUE, remove.eq = TRUE, 
                      remove.ineq = TRUE, remove.def = FALSE)
 }
 \arguments{
@@ -17,6 +17,8 @@ on both the variances of both (continuous) observed and latent variables.
 If \code{"std.nox"}, the standardized estimates are based
 on both the variances of both (continuous) observed and latent variables, 
 but not the variances of exogenous covariates.}
+\item{se}{Logical. If TRUE, standard errors for the standardized parameters
+will be computed, together with a z-statistic and a p-value.}
 \item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
 containing equality constraints, if any.}
 \item{remove.ineq}{Logical. If TRUE, filter the output by removing all

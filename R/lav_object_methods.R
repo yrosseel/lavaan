@@ -692,6 +692,7 @@ function(object, type="free", labels=TRUE) {
 
 standardizedSolution <- standardizedsolution <- function(object,
                                                          type = "std.all",
+                                                         se = TRUE,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
                                                          remove.def = FALSE) {
@@ -711,32 +712,37 @@ standardizedSolution <- standardizedsolution <- function(object,
         LIST$est.std <- standardize.est.all.nox(object)
     }
 
-    if(object@Options$se != "none") {
+    if(object@Options$se != "none" && se) {
         # add 'se' for standardized parameters
-        # TODO!!
-        VCOV <- lav_object_inspect_vcov(object, standardized = TRUE,
-                                        type = type, free.only = FALSE,
-                                        add.labels = FALSE, add.class = FALSE)
-        LIST$se <- rep(NA, length(LIST$lhs))
-        tmp <- diag(VCOV)
-        # catch negative values
-        min.idx <- which(tmp < 0)
-        if(length(min.idx) > 0L) {
-            tmp[min.idx] <- as.numeric(NA)
+        VCOV <- try(lav_object_inspect_vcov(object, standardized = TRUE,
+                                            type = type, free.only = FALSE,
+                                            add.labels = FALSE, 
+                                            add.class = FALSE))
+        if(inherits(VCOV, "try-error")) {
+            LIST$se <- rep(NA, length(LIST$lhs))
+            LIST$z  <- rep(NA, length(LIST$lhs))
+            LIST$pvalue <- rep(NA, length(LIST$lhs))
+        } else {
+            tmp <- diag(VCOV)
+            # catch negative values
+            min.idx <- which(tmp < 0)
+            if(length(min.idx) > 0L) {
+                tmp[min.idx] <- as.numeric(NA)
+            }
+            # now, we can safely take the square root
+            tmp <- sqrt(tmp)
+            # catch near-zero SEs
+            zero.idx <- which(tmp < sqrt(.Machine$double.eps))
+            if(length(zero.idx) > 0L) {
+                tmp[zero.idx] <- 0.0
+            }
+            LIST$se <- tmp
+ 
+            # add 'z' column
+            tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+            LIST$z <- LIST$est.std / tmp.se
+            LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
         }
-        # now, we can safely take the square root
-        tmp <- sqrt(tmp)
-        # catch near-zero SEs
-        zero.idx <- which(tmp < sqrt(.Machine$double.eps))
-        if(length(zero.idx) > 0L) {
-            tmp[zero.idx] <- 0.0
-        }
-        LIST$se <- tmp
-
-        # add 'z' column
-        tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
-        LIST$z <- LIST$est.std / tmp.se
-        LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
     }
 
     # if single group, remove group column
