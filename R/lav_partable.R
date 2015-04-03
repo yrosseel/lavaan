@@ -720,6 +720,9 @@ lav_partable_full <- function(partable = NULL, group = NULL,
     lvov.names.y <- c(ov.names.y, lv.names.y)
     ov.names.ord <- lav_partable_vnames(partable, type="ov.ord", group=group)
 
+    # indicators only
+    ov.names.ind <- partable$rhs[partable$op == "=~" & 
+                                 partable$rhs %in% ov.names.nox]
 
     # 1 "=~"
     l.lhs <- r.rhs <- op <- character(0)
@@ -752,13 +755,17 @@ lav_partable_full <- function(partable = NULL, group = NULL,
     r.lhs <- r.rhs <- r.op <- character(0)
     if(any(partable$op == "~")) {
 
+        eqs.names <- unique( c(partable$lhs[partable$op == "~"], 
+                               partable$rhs[partable$op == "~"]) )
         if(strict.exo) {
-            eqs.y <- unique( partable$lhs[ partable$op == "~" &
-                                           !partable$lhs %in% ov.names.x ] )
+            x.idx <- which(eqs.names %in% ov.names.x)
+            if(length(x.idx) > 0L) {
+                eqs.y <- eqs.names[-x.idx]
+            }
         } else {
-            eqs.y <- unique( partable$lhs[ partable$op == "~" ] )
+            eqs.y <- eqs.names
         }
-        eqs.x <- unique( partable$rhs[ partable$op == "~" ] )
+        eqs.x <- eqs.names
 
         r.lhs <- rep(eqs.y, each=length(eqs.x))
         r.rhs <- rep(eqs.x, times=length(eqs.y))
@@ -767,6 +774,11 @@ lav_partable_full <- function(partable = NULL, group = NULL,
         idx <- which(r.lhs == r.rhs)
         r.lhs <- r.lhs[-idx]
         r.rhs <- r.rhs[-idx]
+
+        # remove factor ~ indicators combinations, if any
+        bad.idx <- which( r.lhs %in% lv.names &
+                          r.rhs %in% ov.ind )
+
         r.op <- rep("~", length(r.rhs))
     }
 

@@ -39,6 +39,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                    "ov.y",        # (pure) endogenous variables (dependent only)
                    "ov.num",      # numeric observed variables
                    "ov.ord",      # ordinal observed variables
+                   "ov.ind",      # observed indicators of latent variables
                    "th",          # thresholds ordinal only
                    "th.mean",     # thresholds ordinal + numeric variables
 
@@ -87,6 +88,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     OUT$ov.y         <- vector("list", length=ngroups)
     OUT$ov.num       <- vector("list", length=ngroups)
     OUT$ov.ord       <- vector("list", length=ngroups)
+    OUT$ov.ind       <- vector("list", length=ngroups)
     OUT$th           <- vector("list", length=ngroups)
     OUT$th.mean      <- vector("list", length=ngroups)
 
@@ -198,6 +200,10 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         # store ov?
         if("ov" %in% type) {
             OUT$ov[[g]] <- ov.names
+        }
+
+        if("ov.ind" %in% type) {
+            OUT$ov.ind[[g]] <- ov.ind
         }
 
         # exogenous `x' covariates

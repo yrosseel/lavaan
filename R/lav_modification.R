@@ -37,8 +37,12 @@ modindices <- function(object,
                           remove.eq = FALSE, remove.ineq = FALSE)$est 
 
     # extended list (fixed-to-zero parameters)
+    strict.exo <- FALSE
+    if(object@Model@fixed.x && object@Model@categorical) {
+        strict.exo <- TRUE ## truly conditional.x
+    }
     FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE,
-                              strict.exo = object@Model@fixed.x)
+                              strict.exo = strict.exo)
 
     # merge
     LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE, 
