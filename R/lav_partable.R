@@ -1349,10 +1349,10 @@ lav_partable_flat <- function(FLAT = NULL,
                         free        = free,
                         ustart      = ustart,
                         exo         = exo,
-                        label       = label    ,
+                        label       = label   # ,
                         # IF we add these, also change
-                        eq.id       = rep(0L,  length(lhs)),
-                        unco        = rep(0L,  length(lhs))
+                        #eq.id       = rep(0L,  length(lhs)),
+                        #unco        = rep(0L,  length(lhs))
                    )
     #                   stringsAsFactors=FALSE)
 
