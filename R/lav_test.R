@@ -253,6 +253,14 @@ lav_model_test <- function(lavmodel       = NULL,
                           df=df,
                           refdistr="unknown",
                           pvalue=as.numeric(NA))
+
+        # just in case
+        TEST[[2]] <- list(test=test,
+                          stat=as.numeric(NA),
+                          stat.group=as.numeric(NA),
+                          df=df,
+                          refdistr="unknown",
+                          pvalue=as.numeric(NA))
         return(TEST)
     }    
 
