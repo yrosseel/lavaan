@@ -720,28 +720,50 @@ lav_partable_full <- function(partable = NULL, group = NULL,
     lvov.names.y <- c(ov.names.y, lv.names.y)
     ov.names.ord <- lav_partable_vnames(partable, type="ov.ord", group=group)
 
-    # indicators only
-    ov.names.ind <- partable$rhs[partable$op == "=~" & 
-                                 partable$rhs %in% ov.names.nox]
+    # eqs.y
+    # eqs.y <- lav_partable_vnames(partable, type="eqs.y", group=group)
+    ov.names.ind <- lav_partable_vnames(partable, type="ov.ind", group=group)
 
     # 1 "=~"
     l.lhs <- r.rhs <- op <- character(0)
     l.lhs <- rep(lv.names, each=length(ov.names.nox))
     l.rhs <- rep(ov.names.nox, times=length(lv.names))
+
+    # remove factor ~ eqs.y combinations, if any
+    # because they also appear as a regression
+    #bad.idx <- which( l.lhs %in% lv.names &
+    #                  l.rhs %in% eqs.y)
+    #if(length(bad.idx) > 0L) {
+    #    l.lhs <- l.lhs[-bad.idx]
+    #    l.rhs <- l.rhs[-bad.idx]
+    #}
+
     l.op  <- rep("=~", length(l.lhs))
 
     # 2a. "~~" ov ## FIXME: ov.names.nox or ov.names??
     ov.lhs <- ov.rhs <- ov.op <- character(0)
-    if(strict.exo) {
+    #if(strict.exo) {
         OV <- ov.names.nox
-    } else {
-        OV <- ov.names
-    }
+    #} else {
+    #    OV <- ov.names
+    #}
     nx <- length(OV)
     idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
     ov.lhs <- rep(OV,  each=nx)[idx] # fill upper.tri
     ov.rhs <- rep(OV, times=nx)[idx]
     ov.op  <- rep("~~", length(ov.lhs))
+
+    # exo ~~
+    if(!strict.exo && length(ov.names.x) > 0L) {
+        OV <- ov.names.x
+        nx <- length(OV)
+        idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
+        more.lhs <- rep(OV,  each=nx)[idx] # fill upper.tri
+        more.rhs <- rep(OV, times=nx)[idx]
+        ov.lhs <- c(ov.lhs, more.lhs)
+        ov.rhs <- c(ov.rhs, more.rhs)
+        ov.op  <- c(ov.op,  rep("~~", length(more.lhs)))
+    }
 
     # 2b. "~~" lv
     lv.lhs <- lv.rhs <- lv.op <- character(0)
@@ -775,9 +797,13 @@ lav_partable_full <- function(partable = NULL, group = NULL,
         r.lhs <- r.lhs[-idx]
         r.rhs <- r.rhs[-idx]
 
-        # remove factor ~ indicators combinations, if any
-        bad.idx <- which( r.lhs %in% lv.names &
-                          r.rhs %in% ov.ind )
+        # remove indicator ~ factor if they exist
+        bad.idx <- which(r.lhs %in% ov.names.ind &
+                         r.rhs %in% lv.names)
+        if(length(bad.idx) > 0L) {
+            r.lhs <- r.lhs[-bad.idx]
+            r.rhs <- r.rhs[-bad.idx]
+        }
 
         r.op <- rep("~", length(r.rhs))
     }

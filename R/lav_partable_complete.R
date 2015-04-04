@@ -64,10 +64,17 @@ lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
 
     # add ustart column
     if(is.null(lavpartable$ustart)) {
-        lavpartable$ustart <- rep(as.numeric(NA), N)
-        non.free <- which(!lavpartable$free)
-        if(length(non.free)) {
-            lavpartable$ustart[non.free] <- 0
+        # do we have something else? start? est?
+        if(!is.null(lavpartable$start)) {
+            lavpartable$ustart <- lavpartable$start
+        } else if(!is.null(lavpartable$est)) {
+            lavpartable$ustart <- lavpartable$est
+        } else {
+            lavpartable$ustart <- rep(as.numeric(NA), N)
+            non.free <- which(!lavpartable$free)
+            if(length(non.free)) {
+                lavpartable$ustart[non.free] <- 0
+            }
         }
     }
 

@@ -308,6 +308,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(!is.null(model$lhs) && !is.null(model$op)  &&
            !is.null(model$rhs) && !is.null(model$free)) {
             lavpartable <- as.list(model)
+            # complete table
+            lavpartable <- lav_partable_complete(lavpartable)
         } else if(is.character(model[[1]])) {
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }

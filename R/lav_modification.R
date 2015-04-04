@@ -31,7 +31,7 @@ modindices <- function(object,
     if(power) standardized <- TRUE
 
     # user-specified model parameters
-    partable <- object@ParTable[c("lhs","op","rhs","group","free","start")]
+    partable <- object@ParTable[c("lhs","op","rhs","group","free","exo")]
     # replace 'start' column, since lav_model will fill these in in GLIST
     partable$start <- parameterEstimates(object, 
                           remove.eq = FALSE, remove.ineq = FALSE)$est 
@@ -54,17 +54,6 @@ modindices <- function(object,
         LIST <- LIST[-nonpar.idx,]   
     }
 
-    ### DEBUG
-    #TMP <- data.frame(lhs = c("dem60", "dem60", "dem60", 
-    #                          "dem65", "dem65", "dem65"),
-    #                   op = c("=~", "=~", "=~", "=~", "=~", "=~"),
-    #                  rhs = c("y2", "y3", "y4", "y6", "y7", "y8"),
-    #                  group = c(1L, 1L, 1L, 1L, 1L, 1L),
-    #                  free = c(0L, 0L, 0L, 0L, 0L, 0L),
-    #                  start = c(1.1907820, 1.1745407, 1.2509789,
-    #                            1.302820, 1.403190, 1.401179))
-    #LIST <- rbind(LIST, TMP)
-
     # create lavmodel object for this 'full' LIST
     LIST2 <- LIST; LIST2$free <- 1:nrow(LIST)
 
@@ -80,6 +69,7 @@ modindices <- function(object,
                               link = object@Model@link,
                               debug = FALSE)
     LIST$start <- NULL
+    LIST$exo <- NULL
                               
     # compute information matrix 'full'
     E <- 
