@@ -12,7 +12,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     debug         <- lavoptions$debug
     ngroups       <- lavsamplestats@ngroups
 
-    if(lavsamplestats@missing.flag) {
+    if(lavsamplestats@missing.flag || estimator == "PML") {
         group.weight <- FALSE
     } else {
         group.weight <- TRUE
@@ -107,11 +107,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  verbose        = verbose,
                                  forcePD        = TRUE)
 
-        # only for PML: divide by N (to speed up convergence)
-        if(estimator == "PML") {
-            dx <- dx / lavsamplestats@ntotal
-        }
-
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
         }
@@ -122,6 +117,15 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # handle linear equality constraints
         if(lavmodel@eq.constraints) {
             dx <- as.numeric( dx %*% lavmodel@eq.constraints.K )
+        }
+
+        # only for PML: divide by N (to speed up convergence)
+        if(estimator == "PML") {
+            dx <- dx / lavsamplestats@ntotal
+        }
+
+        if(debug) {
+            cat("Gradient function (analytical, after eq.constraints.K) =\n"); print(dx); cat("\n")
         }
 
         dx
