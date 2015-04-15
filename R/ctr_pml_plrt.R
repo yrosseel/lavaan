@@ -238,71 +238,30 @@ list(PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
 
 ctr_pml_aic_bic <- function(lavobject) {
 
-    lavmodel <- lavobject@Model
-    lavdata <- lavobject@Data
-    lavoptions <- lavobject@Options
-    lavsamplestats <- lavobject@SampleStats
-    lavcache <- lavobject@Cache
-    lavpartable <- lavobject@ParTable
+    ########################## The code for PL version fo AIC and BIC
+    # The following should be done because it is not the pl log-likelihood
+    # that is maximized but a fit function that should be minimized. So, we
+    # should find the value of log-PL at the estimated parameters through the
+    # value of the fitted function.
+    # The following may need to be updated if we change the fit function
+    # so that it is correct for the case of missing values as well.
 
+    logPL <- lavobject@Fit@logl
     nsize <- lavobject@SampleStats@ntotal
 
-########################## The code for PL version fo AIC and BIC
-# The following should be done because it is not the pl log-likelihood
-# that is maximized but a fit function that should be minimized. So, we
-# should find the value of log-PL at the estimated parameters through the
-# value of the fitted function.
-# The following may need to be updated if we change the fit function
-# so that it is correct for the case of missing values as well.
-# Below lavcache as defined in the code of lavaan function and
-# [[1]] may need to be substituted by g.
-#nsize <- lavdata@nobs[[1]]
-#ObsProp <- lavcache[[1]]$bifreq / nsize
-#zero.idx <- which(prop == 0.0)
-#prop <- prop[-zero.idx]
-#logPL <-  (-1)* nsize * ( lavfit@fx - sum( prop*log(prop) )  )
-#fmin <- lav_model_objective(lavmodel = lavobject@Model, lavsamplestats = lavobject@SampleStats, lavdata = lavobject@Data, lavcache = lavobject@Cache, estimator = "PML")
-#logPL <- sum(attr(fmin, "logl.group"))
-    logPL <- lavobject@Fit@logl
+    # inverted observed unit information 
+    H.inv <- lavTech(lavobject, "inverted.information.observed")
 
-# Find the right dimension of the (theta) parameter.
-# lavobject is the output of function lavaan when we fit the model of interest.
-# I don't know how else to get the Hessian through the code of lavaan function.
-# That's why I'm using below the function getHessian(lavobject).
-#Hes <- (-1)* getHessian(lavobject)
-#Hes <- getHessian(lavobject)
-#InvG <- nsize * vcov(lavobject)
-#InvG <- 1 * vcov(lavobject)
-# I guess vcov(lavobject) can be substituted by object VCOV computed inside
-# the lavaan function.
-#dimTheta <- sum(diag(Hes %*% InvG))
+    # first order unit information
+    J <- lavTech(lavobject, "information.first.order")
 
-    VCOV <- lav_model_vcov(lavmodel       = lavmodel,
-                           lavsamplestats = lavsamplestats,
-                           lavoptions     = lavoptions,
-                           lavdata        = lavdata,
-                           lavpartable    = lavpartable,
-                           lavcache       = lavcache)
-
-    H.inv <- attr(VCOV, "E.inv")
-    B0.group <- attr(VCOV, "B0.group") # B0 = J(theta) per group
-
-    if(lavsamplestats@ngroups > 1L) {
-        # groups weights
-        B0 <- (lavsamplestats@nobs[[1]]/lavsamplestats@ntotal) * B0.group[[1]]
-        for(g in 2:lavsamplestats@ngroups) {
-            B0 <- B0 + (lavsamplestats@nobs[[g]]/lavsamplestats@ntotal) * B0.group[[g]]
-        }
-    } else {
-        B0 <- B0.group[[1]]
-    }
-
-    dimTheta <- sum(B0 * H.inv)
+    # trace (J %*% H.inv) = sum (J * t(H.inv)) 
+    dimTheta <- sum(J * H.inv)
 
 
-# computations of PL versions of AIC and BIC
-PL_AIC <- (-2)*logPL + 2*dimTheta
-PL_BIC <- (-2)*logPL + dimTheta *log(nsize)
+    # computations of PL versions of AIC and BIC
+    PL_AIC <- (-2)*logPL + 2*dimTheta
+    PL_BIC <- (-2)*logPL + dimTheta *log(nsize)
 
-list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)
+    list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)
 }
