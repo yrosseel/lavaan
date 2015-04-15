@@ -203,7 +203,10 @@ lav_model_information_observed <- function(lavmodel       = NULL,
     # 2. currently, all estimators give unit information, except MML and PML
     Information <- Hessian
 
-    # TODO: divide by 'N' for MML and PML?
+    # divide by 'N' for MML and PML
+    if(estimator == "PML" || estimator == "MML") {
+        Information <- Information / lavsamplestats@ntotal
+    }
 
     # augmented information?
     if(augmented) {
@@ -282,7 +285,14 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
 
     Information <- B0
 
-    # NOTE: for MML and PML, we get 'total' information (instead of unit)?
+    # NOTE: for MML and PML, we get 'total' information (instead of unit)
+    # divide by 'N' for MML and PML
+    if(estimator == "PML" || estimator == "MML") {
+        Information <- Information / lavsamplestats@ntotal
+        for(g in 1:lavsamplestats@ngroups) {
+            B0.group[[g]] <- B0.group[[g]] / lavsamplestats@ntotal
+        }
+    }
 
     # augmented information?
     if(augmented) {

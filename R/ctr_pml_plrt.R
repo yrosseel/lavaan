@@ -119,7 +119,7 @@ if(is.null(VCOV)) {
                            lavpartable    = lavpartable,
                            lavcache       = lavcache)
 }
-InvG_to_psipsi_attheta0 <- (1 * VCOV )[index.par, index.par]  #G^psipsi(theta0)
+InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV )[index.par, index.par]  #G^psipsi(theta0)
 #below the lavaan function getHessian is used
 #Hattheta0 <- (-1) * H0.Hessian
 #Hattheta0 <- H0.Hessian
@@ -177,7 +177,7 @@ VCOV.Sat2 <- lav_model_vcov(lavmodel       = fittedSat2@Model,
                             lavdata        = fittedSat2@Data,
                             lavpartable    = fittedSat2@ParTable,
                             lavcache       = fittedSat2@Cache)
-InvG_to_sigmasigma_attheta0 <- VCOV.Sat2[dSat.idx, dSat.idx, drop = FALSE]  #G^sigmasigma(theta0)
+InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx, dSat.idx, drop = FALSE]  #G^sigmasigma(theta0)
 #Hattheta0 <- (-1)* getHessian(fittedSat2)
 #Hattheta0 <- getHessian(fittedSat2)
 #InvHattheta0 <- solve(Hattheta0)

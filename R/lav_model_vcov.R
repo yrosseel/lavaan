@@ -251,11 +251,11 @@ lav_model_vcov <- function(lavmodel       = NULL,
             N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }
 
-        if(estimator %in% c("PML", "MML")) {
-            VarCov <- NVarCov
-        } else {
+        #if(estimator %in% c("PML", "MML")) {
+        #    VarCov <- NVarCov
+        #} else {
             VarCov <- 1/N * NVarCov
-        }
+        #}
 
     } else {
         warning("lavaan WARNING: could not compute standard errors!\n  lavaan NOTE: this may be a symptom that the model is not identified.\n")
