@@ -44,9 +44,8 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     # EqMat
     EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
 
-    # Hessian
-    NHes.theta0 <- lavTech(objH1_h0, "hessian")
-     Hes.theta0 <- NHes.theta0/ nsize #!!!!! to get the Hessian
+    # Observed information (= for PML, this is Hessian / N)
+    Hes.theta0 <- lavTech(objH1_h0, "information.observed")
 
     # handle possible constraints in H1 (and therefore also in objH1_h0)
     Inv.Hes.theta0 <- 
@@ -54,11 +53,10 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
                                              information = Hes.theta0,
                                              inverted = TRUE)
 
-    #N times the estimated variability matrix is given :
-    NJ.theta0 <- lavTech(objH1_h0, "first.order")
-    J.theta0 <-  NJ.theta0 / nsize
+    # the estimated variability matrix is given (=unit information first order)
+    J.theta0 <- lavTech(objH1_h0, "first.order")
  
-    # below the Inverse of the G matrix divided by N
+    # the Inverse of the G matrix
     Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
 
     MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
