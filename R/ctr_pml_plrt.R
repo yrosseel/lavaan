@@ -257,7 +257,11 @@ if(asym_mean_PLRTH0Sat == 0) {
     # sample sizes) the adjusted_df is a negative number, we should then
     # print a warning like: "The adjusted df is computed to be a negative number
     # and for this the first and second moment adjusted PLRT is not computed." 
-    pvalue <- 1-pchisq(FSA_PLRT_SEM, df=adjusted_df )
+    if(scaling.factor > 0) {
+        pvalue <- 1-pchisq(FSA_PLRT_SEM, df=adjusted_df )
+    } else {
+        pvalue <- as.numeric(NA)
+    }
 }
 
 list(PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
