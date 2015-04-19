@@ -80,27 +80,53 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 ########################### The code for PLRT for overall goodness of fit
 
 ##### Section 1. Compute the asymptotic mean and variance of the first quadratic quantity
-if(is.null(VCOV)) {
-    VCOV <- lav_model_vcov(lavmodel       = lavmodel,
-                           lavsamplestats = lavsamplestats,
-                           lavoptions     = lavoptions,
-                           lavdata        = lavdata,
-                           lavpartable    = lavpartable,
-                           lavcache       = lavcache)
-}
+#if(is.null(VCOV)) {
+#    VCOV <- lav_model_vcov(lavmodel       = lavmodel,
+#                           lavsamplestats = lavsamplestats,
+#                           lavoptions     = lavoptions,
+#                           lavdata        = lavdata,
+#                           lavpartable    = lavpartable,
+#                           lavcache       = lavcache)
+#}
 # G.inv
-InvG_attheta0 <- lavsamplestats@ntotal * VCOV[,]
+#InvG_attheta0 <- lavsamplestats@ntotal * VCOV[,]
 # Hessian
-H_attheta0 <- solve(attr(VCOV, "E.inv"))
+#H_attheta0 <- solve(attr(VCOV, "E.inv"))
 
-H0tmp_prod1 <- H_attheta0 %*% InvG_attheta0
+# inverted observed information ('H.inv')
+if(is.null(VCOV)) {
+    H0.inv <- lav_model_information(lavmodel = lavmodel, 
+                  lavsamplestats = lavsamplestats, lavdata = lavdata, 
+                  estimator = "PML", lavcache = lavcache, 
+                  information = "observed", augmented = TRUE, inverted = TRUE)
+} else {
+    H0.inv <- attr(VCOV, "E.inv")
+}
+
+# first order information ('J')
+if(is.null(VCOV)) {
+    J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
+                  lavsamplestats = lavsamplestats, lavdata = lavdata,
+                  estimator = "PML", lavcache = lavcache)[,] 
+} else {
+    # we do not get J, but J.group, FIXME?
+    J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
+                  lavsamplestats = lavsamplestats, lavdata = lavdata,
+                  estimator = "PML", lavcache = lavcache)[,]
+}
+
+# inverted Godambe information
+G0.inv <- H0.inv %*% J0 %*% H0.inv
+
+H0tmp_prod1 <- H0.inv %*% J0
+#H0tmp_prod1 <- InvG_attheta0 %*% H_attheta0
 H0tmp_prod2 <- H0tmp_prod1 %*% H0tmp_prod1
 E_tww <- sum(diag(H0tmp_prod1))
 var_tww <- 2* sum(diag(H0tmp_prod2))
 
 ##### Section 2: Compute the asymptotic mean and variance of the second quadratic quantity.
 tmp.options <- fittedSat2@Options
-tmp.options$se <- lavoptions$se
+tmp.options$se <- "robust.huber.white"
 VCOV.Sat2 <- lav_model_vcov(lavmodel       = fittedSat2@Model,
                             lavsamplestats = fittedSat2@SampleStats,
                             lavoptions     = tmp.options,
@@ -110,9 +136,11 @@ VCOV.Sat2 <- lav_model_vcov(lavmodel       = fittedSat2@Model,
 # G.inv at vartheta_0
 InvG_at_vartheta0 <- lavsamplestats@ntotal * VCOV.Sat2[,]
 # Hessian at vartheta_0
-H_at_vartheta0 <- solve(attr(VCOV.Sat2, "E.inv"))
-
-H1tmp_prod1 <- H_at_vartheta0 %*% InvG_at_vartheta0
+H_at_vartheta0 <- solve(attr(VCOV.Sat2, "E.inv")) # should always work
+#H1.inv <- lavTech(fittedSat2, "inverted.information.observed")
+#J1     <- lavTech(fittedSat2, "information.first.order")
+# H1tmp_prod1 <- H1.inv %*% J1
+H1tmp_prod1 <- InvG_at_vartheta0 %*% H_at_vartheta0
 H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
 E_tzz <- sum(diag(H1tmp_prod1)) 
 var_tzz <- 2* sum(diag(H1tmp_prod2))
@@ -122,12 +150,40 @@ var_tzz <- 2* sum(diag(H1tmp_prod2))
 
 drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
 for(g in 1:lavsamplestats@ngroups) {
-    drhodpsi_MAT[[g]] <- computeDelta(lavmodel)[[g]]
+    delta.g <- computeDelta(lavmodel)[[g]]
+    # order of the rows: first the thresholds, then the correlations
+    # we need to map the rows of delta.g to the rows/cols of H_at_vartheta0
+    # of H1
+
+    PT <- fittedSat2@ParTable
+    PT$label <- lavaan:::lav_partable_labels(PT)
+    free.idx <- which(PT$free > 0 & PT$group == g)
+    PARLABEL <- PT$label[free.idx]
+
+    # for now, we can assume that computeDelta will always return
+    # the thresholds first, then the correlations
+    #
+    # later, we should add a (working) add.labels = TRUE option to 
+    # computeDelta
+    th.names <- lavobject@pta$vnames$th[[g]]
+    ov.names <- lavobject@pta$vnames$ov[[g]]
+    tmp <- utils::combn(ov.names, 2)
+    cor.names <- paste(tmp[1,], "~~", tmp[2,], sep = "")
+    NAMES <- c(th.names, cor.names)
+    if(g > 1L) {
+        NAMES <- paste(NAMES, ".g", g, sep = "")
+    }
+
+    par.idx <- match(PARLABEL, NAMES)
+    drhodpsi_MAT[[g]] <- delta.g[par.idx,,drop = FALSE]
 }
 drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
 
-tmp_prod <- t(drhodpsi_mat) %*% H_at_vartheta0 %*%
-              drhodpsi_mat %*% InvG_attheta0 %*% H0tmp_prod1
+# tmp_prod <- ( t(drhodpsi_mat) %*% H_at_vartheta0 %*%
+#                 drhodpsi_mat %*% InvG_attheta0 %*%  
+#                 H_attheta0 %*% InvG_attheta0 )
+tmp_prod <- ( t(drhodpsi_mat) %*% H_at_vartheta0 %*%
+                drhodpsi_mat %*% H0.inv %*% J0 %*% G0.inv )
 cov_tzztww <- 2*sum(diag(tmp_prod))
 
 ##### Section 4: compute the adjusted PLRT and its p-value

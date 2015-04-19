@@ -327,7 +327,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL, 
-                         m.el.idx. = NULL, x.el.idx. = NULL) {
+                         m.el.idx. = NULL, x.el.idx. = NULL,
+                         add.labels = FALSE) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
@@ -344,7 +345,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     nth <- sapply(th.idx, function(x) sum(x > 0L))
 
     # state or final?
-    if(is.null(GLIST.)) 
+    if(is.null(GLIST.))
         GLIST <- lavmodel@GLIST
     else
         GLIST <- GLIST.
@@ -376,6 +377,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
             pstar[g] <- pstar[g] + 1L # add group weight
         }
     }
+
 
     # number of columns in DELTA + m.el.idx/x.el.idx
     if(type == "free") {
@@ -417,6 +419,18 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+
+        # label rows of Delta.group --- FIXME!!! 
+        #if(categorical) {
+        #    # 1. th (means interleaved?)
+        #    # 2. pi
+        #    # 3. var num + cor
+        #} else {
+        #    if(meanstructure) {
+        #    }
+        #}
+        #if(group.w.free) {
+        #}
 
         # if theta, do some preparation
         if(parameterization == "theta") {
