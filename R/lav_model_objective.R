@@ -116,7 +116,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                       num.idx   = num.idx[[g]],
                                       X         = lavdata@X[[g]],
                                       lavcache  = lavcache[[g]])
-            LOGL <- attr(group.fx, "logl")
             logl.group[g] <- attr(group.fx, "logl")
 
         } else if(estimator == "FML") { 

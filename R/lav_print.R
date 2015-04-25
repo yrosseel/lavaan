@@ -7,8 +7,10 @@
 
 print.lavaan.data.frame <- function(x, ..., nd=3) {
 
+    ROW.NAMES <- rownames(x)
     y <- as.data.frame(lapply(x, function(x) {
                               if(is.numeric(x)) round(x, nd) else x}))
+    rownames(y) <- ROW.NAMES
 
     print(y, ...)
     invisible(x)
