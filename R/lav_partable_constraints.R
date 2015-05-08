@@ -25,7 +25,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
     }
 
     # create function
-    formals(def.function) <- alist(x=, ...=)
+    formals(def.function) <- alist(.x.=, ...=)
     if(defTxtOnly) {
         BODY.txt <- ""
     } else {
@@ -48,7 +48,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
         stop("lavaan ERROR: non-free parameter(s) in variable definition(s): ",
             paste(def.labels[which(def.x.idx == 0)], collapse=" "))
     }
-    def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
+    def.x.lab  <- paste(".x.[", def.x.idx, "]",sep="")
     # put both the labels the function BODY
     if(length(def.x.idx) > 0L) {
         BODY.txt <- paste(BODY.txt, "# parameter labels\n",
@@ -113,7 +113,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
     }
 
     # create function
-    formals(ceq.function) <- alist(x=, ...=)
+    formals(ceq.function) <- alist(.x.=, ...=)
     BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep="")
 
     # first come the variable definitions
@@ -171,7 +171,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE) {
     }
 
     # put the labels the function BODY
-    eq.x.lab  <- paste("x[", eq.x.idx, "]",sep="")
+    eq.x.lab  <- paste(".x.[", eq.x.idx, "]",sep="")
     if(length(eq.x.idx) > 0L) {
         BODY.txt <- paste(BODY.txt, "# parameter labels\n",
             paste(eq.labels, "<-", eq.x.lab, collapse="\n"),
@@ -240,7 +240,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
     }
 
     # create function
-    formals(cin.function) <- alist(x=, ...=)
+    formals(cin.function) <- alist(.x.=, ...=)
     BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
 
     # first come the variable definitions
@@ -297,7 +297,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
     }
 
     # put the labels the function BODY
-    ineq.x.lab  <- paste("x[", ineq.x.idx, "]",sep="")
+    ineq.x.lab  <- paste(".x.[", ineq.x.idx, "]",sep="")
     if(length(ineq.x.idx) > 0L) {
         BODY.txt <- paste(BODY.txt, "# parameter labels\n",
             paste(ineq.labels, "<-", ineq.x.lab, collapse="\n"),
@@ -356,7 +356,7 @@ lav_partable_constraints_function <- function(p1, p0) {
     npar.diff <- npar.p1 - npar.p0
 
     con.function <- function() NULL
-    formals(con.function) <- alist(x=, ...=)
+    formals(con.function) <- alist(.x.=, ...=)
     BODY.txt <- paste("{\nout <- rep(NA, ", npar.diff, ")\n", sep="")
 
     # for each free parameter in p1, we 'check' is it is somehow 
@@ -430,7 +430,7 @@ lav_partable_constraints_function <- function(p1, p0) {
                 def.labels <- all.vars( parse(file="", text=def.string) )
                 # get corresponding 'x' indices
                 def.x.idx  <- p0$free[match(def.labels, p0$label)]
-                def.x.lab  <- paste("x[", def.x.idx, "]",sep="")
+                def.x.lab  <- paste(".x.[", def.x.idx, "]",sep="")
                 # put both the labels and the expression in the function BODY
                 BODY.txt <- paste(BODY.txt,
                     paste(def.labels, "=",def.x.lab, collapse=";"),"\n",
@@ -465,7 +465,7 @@ lav_partable_constraints_function <- function(p1, p0) {
                     stop("lavaan ERROR: non-free parameter(s) in inequality constraint(s): ",
                         paste(eq.labels[which(eq.x.idx == 0)], collapse=" "))
                 }
-                eq.x.lab  <- paste("x[", eq.x.idx, "]",sep="")
+                eq.x.lab  <- paste(".x.[", eq.x.idx, "]",sep="")
                 # put both the labels and the expression in the function BODY
                 BODY.txt <- paste(BODY.txt,
                     paste(eq.labels, "=", eq.x.lab, collapse=";"),"\n",
