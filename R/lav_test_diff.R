@@ -33,7 +33,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         # NOTE: order of parameters may change between H1 and H0, so be
         # careful!
         if(is.null(A)) {
-            A <- lav_test_diff_A(m1, m0, method = A.method)
+            A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H1")
             if(debug) print(A)
         }
     } else {
@@ -56,7 +56,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         # careful!
         if(is.null(A)) {
             # m1, m0 OR m0, m1 (works for delta, but not for exact)
-            A <- lav_test_diff_A(m1, m0, method = A.method)
+            A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H0")
             if(debug) print(A)
         }
     }
@@ -225,14 +225,21 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 #
 # 
 #
-lav_test_diff_A <- function(m1, m0, method = "exact") {
+lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
 
     # FIXME!!!!
 
     if(method == "exact") {
         # not ready yet, just for testing
-        af <- .test_compute_partable_A_diff(m1 = m1, m0 = m0)
-        A <- lav_func_jacobian_complex(func = af, x = m1@Fit@x)
+        af <- .test_compute_partable_A_diff(m1 = m1, m0 = m0) 
+        if(reference == "H1") {
+            #A.pivot <- .test_compute_partable_A_pivot(m1 = m1, m0 = m0)
+            #x.pivot <- as.numeric(m1@Fit@x %*% A.pivot)
+            #A <- lav_func_jacobian_complex(func = af, x = x.pivot)
+            A <- lav_func_jacobian_complex(func = af, x = m1@Fit@x)
+        } else { # evaluate under H0
+            A <- lav_func_jacobian_complex(func = af, x = m0@Fit@x)
+        }
     } else if(method == "delta") {
         # use a numeric approximation of `A'
         Delta1 <- do.call(rbind, computeDelta(m1@Model))
@@ -395,3 +402,34 @@ lav_test_diff_A <- function(m1, m0, method = "exact") {
     con.function
 }
 
+
+# create a matrix that maps the free parameters of m1 to m0
+# in case they are not in the same 'order'
+.test_compute_partable_A_pivot  <- function(m1, m0) {
+
+    PT.M0 <- m0@ParTable
+    PT.M1 <- m1@ParTable
+
+    p1 <- PT.M1; p1.free.idx <- which(p1$free > 0L); np1 <- length(p1.free.idx)
+    p0 <- PT.M0; p0.free.idx <- which(p0$free > 0L); np0 <- length(p0.free.idx)
+
+    A.pivot <- matrix(0, np1, np0)
+
+    for(j in seq_along(p1.free.idx)) {
+        # free p in p1
+        i <- p1.free.idx[j]
+        lhs <- p1$lhs[i]; op <- p1$op[i]; rhs <- p1$rhs[i]; group <- p1$group[i]
+
+        # search for corresponding parameter in p0
+        p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
+                        p0$group == group)
+        if(length(p0.idx) == 0L) {
+            stop("lavaan ERROR: parameter in H1 not found in H0: ",
+                 paste(lhs, op, rhs, "(group = ", group, ")", sep=" "))
+        } else {
+            A.pivot[ j, p0$free[p0.idx] ] <- 1
+        }
+    }
+
+    A.pivot
+}
