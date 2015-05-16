@@ -65,6 +65,17 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     ngroups <- m1@SampleStats@ngroups
     UG.group  <- vector("list", length=ngroups)
 
+    # safety check: A %*% P.inv %*% t(A) should NOT contain all-zero
+    # rows/columns
+    APA <- A %*% P.inv %*% t(A)
+    cSums <- colSums(APA)
+    rSums <- rowSums(APA)
+    empty.idx <- which( abs(cSums) < .Machine$double.eps^0.5 & 
+                        abs(rSums) < .Machine$double.eps ^0.5 )
+    if(length(empty.idx) > 0) {
+        A <- A[-empty.idx,, drop = FALSE]
+    }
+
     # PAAPAAP
     PAAPAAP <- P.inv %*% t(A) %*% solve(A %*% P.inv %*% t(A)) %*% A %*% P.inv
 
@@ -230,20 +241,24 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
     # FIXME!!!!
 
     if(method == "exact") {
-        # not ready yet, just for testing
-        af <- .test_compute_partable_A_diff(m1 = m1, m0 = m0) 
         if(reference == "H1") {
-            #A.pivot <- .test_compute_partable_A_pivot(m1 = m1, m0 = m0)
-            #x.pivot <- as.numeric(m1@Fit@x %*% A.pivot)
-            #A <- lav_func_jacobian_complex(func = af, x = x.pivot)
-            A <- lav_func_jacobian_complex(func = af, x = m1@Fit@x)
+            af <- lav_test_diff_af_h1(m1 = m1, m0 = m0)
+            xx <- m1@Fit@x
         } else { # evaluate under H0
-            A <- lav_func_jacobian_complex(func = af, x = m0@Fit@x)
+            stop("not ready yet")
+            af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
+            xx <- m0@Fit@x
+        }
+        A <- try(lav_func_jacobian_complex(func = af, x = xx), silent = TRUE)
+        if(inherits(A, "try-error")) {
+            A <- lav_func_jacobian_simple(func = af, x = xx)
         }
     } else if(method == "delta") {
         # use a numeric approximation of `A'
-        Delta1 <- do.call(rbind, computeDelta(m1@Model))
-        Delta0 <- do.call(rbind, computeDelta(m0@Model))
+        Delta1.list <- computeDelta(m1@Model)
+        Delta0.list <- computeDelta(m0@Model)
+        Delta1 <- do.call(rbind, Delta1.list)
+        Delta0 <- do.call(rbind, Delta0.list)
 
         # take into account equality constraints m0
         if(m0@Model@eq.constraints) {
@@ -270,23 +285,56 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
         H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
         A <- t(lav_matrix_orthogonal_complement(H))
     }
-
+ 
     A
 }
 
-### 
-### af()
-###
-### - problem: we need the plabels, but plabels in h1 need not be
-###             the same plabels in h0
-###             so we need to somehow 'match' the plabels as they appear
-###             in == constraints, etc...
-###
-.test_compute_partable_A_diff  <- function(m1, m0) {
 
-    PT.M0 <- m0@ParTable
-    PT.M1 <- m1@ParTable
+# for each parameter in H1 (m1), see if we have somehow constrained
+# this parameter under H0 (m0)
+#
+# since we work 'under H0', we need to use the labels/constraints/def
+# as they appear in H0. Unfortunately, the order of the parameters, and
+# even the (p)labels may be different in the two models...
+#
+# Therefore, we will attempt to:
+#   - change the 'order' of the 'free' column in m0, so that they map to
+#     to the 'x' that we will provide from H1
+#   - the plabels used in "==" constraints must be renamed, if necessary
+#
+lav_test_diff_af_h1 <- function(m1, m0) {
 
+    PT.M0 <- parTable(m0)
+    PT.M1 <- parTable(m1)
+
+    # select .p*. parameters only
+    M0.p.idx <- which(grepl("\\.p", PT.M0$plabel)); np0 <- length(M0.p.idx)
+    M1.p.idx <- which(grepl("\\.p", PT.M1$plabel)); np1 <- length(M1.p.idx)
+
+    # check if parameter space is the same
+    if(np0 != np1) {
+        stop("lavaan ERROR: unconstrained parameter set is not the same in m0 and m1")
+    }
+
+    # split partable in 'parameter' and 'constraints' section
+    PT.M0.part1 <- PT.M0[ M0.p.idx,]
+    PT.M0.part2 <- PT.M0[-M0.p.idx,]
+
+    PT.M1.part1 <- PT.M1[ M1.p.idx,]
+    PT.M1.part2 <- PT.M1[-M1.p.idx,]
+
+    #figure out relationship between m0 and m1
+    p1.id <- lav_partable_map_id_p1_in_p2(PT.M0.part1, PT.M1.part1)
+    p0.free.idx <- which(PT.M0.part1$free > 0)
+
+    # change 'free' order in m0
+    PT.M0.part1$free[p0.free.idx] <- 
+    PT.M1.part1$free[ PT.M0.part1$id[p1.id][p0.free.idx] ]
+
+    # paste back
+    PT.M0 <- rbind(PT.M0.part1, PT.M0.part2)
+    PT.M1 <- rbind(PT.M1.part1, PT.M1.part2)
+    
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
     PT.M1.FULL <- lav_partable_full(PT.M1, free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
@@ -297,44 +345,61 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 
-    # for each parameter in P0, see if we have constrained this parameter
-    # somehow
     p1 <- PT.M1.extended; np1 <- length(p1$lhs)
     p0 <- PT.M0.extended; np0 <- length(p0$lhs)
 
     con.function <- function() NULL
-    formals(con.function) <- alist(x=, ...=)
-    BODY.txt <- paste("{\nout <- numeric(0L)\n", sep="")
+    formals(con.function) <- alist(.x.=, ...=)
+    BODY.txt <- paste("{\nout <- numeric(0L)\n", sep = "")
 
-    # first come the variable definitions, from H0 only
-    DEF.txt <- lav_partable_constraints_def(p0, defTxtOnly=TRUE)
-    def.idx <- which(p0$op == ":=")
-    BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep="")
 
-    # then we need all the labels, as they correspond to the parameters
-    # FREE only! in H0
-    p0.free.idx <- which(p0$free > 0L)
-    BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-                      paste(  p0$plabel[p0.free.idx],
-                              " <- ",
-                              paste("x[", p0$free[p0.free.idx], "]",sep=""), 
-                              collapse = "\n"),
-                      "\n", sep="")
+    # first handle def + == constraints
+    # but FIRST, remove == constraints that also appear in H1!!!
 
-    # we also need any user-specified labels, in case we have
-    # explicit == constraints
-    user.label.idx <- which(nchar(p0$label) > 0L & p0$free > 0L)
-    if(length(user.label.idx) > 0L) {
-        BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-                      paste(  p0$label[user.label.idx],
-                              " <- ",
-                              paste("x[", p0$free[user.label.idx], "]",sep=""),
-                              collapse = "\n"),
-                      "\n", sep="")
+    # remove equivalent eq constraints from p0
+    P0 <- p0
+
+    p0.eq.idx <- which(p0$op == "==")
+    p1.eq.idx <- which(p1$op == "==")
+    p0.remove.idx <- integer(0L)
+    if(length(p0.eq.idx) > 0L) {
+        for(i in seq_along(p0.eq.idx)) {
+            # e0 in p0
+            e0 <- p0.eq.idx[i]
+            lhs <- p0$lhs[e0]; rhs <- p0$rhs[e0]
+
+            # do we have an equivalent constraint in H1?
+            # NOTE!! the (p)labels may differ
+
+            # SO, we will use an 'empirical' approach: if we fill in (random)
+            # values, and work out the constraint, do we get identical values?
+            # if yes, constraint is equivalent, and we should NOT add it here
+
+            if(length(p1.eq.idx) > 0) {
+                # generate random parameter values
+                xx1 <- rnorm( length(M1.p.idx) )
+                xx0 <- xx1[ p1.id ]
+
+                con.h0.value <- m0@Model@ceq.function(xx0)[i]
+                con.h1.values <- m1@Model@ceq.function(xx1)
+
+                if(con.h0.value %in% con.h1.values) {
+                    p0.remove.idx <- c(p0.remove.idx, e0)
+                }
+            }
+        }
     }
+    if(length(p0.remove.idx) > 0L) {
+        P0 <- P0[-p0.remove.idx,]
+    }
+
+    # only for the UNIQUE equality constraints in H0, generate syntax
+    DEFCON.txt <- lav_partable_constraints_ceq(P0, txtOnly=TRUE)
+    BODY.txt <- paste(BODY.txt, DEFCON.txt, "\n", sep="")
+
    
     # for each parameter in p1, we 'check' is it is fixed to a constant in p0
-    ncon <- 0L
+    ncon <- length( which(P0$op == "==") )
     for(i in seq_len(np1)) {
         # p in p1
         lhs <- p1$lhs[i]; op <- p1$op[i]; rhs <- p1$rhs[i]; group <- p1$group[i]
@@ -364,7 +429,7 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
                 # match, this is a contrained parameter in H0
                 ncon <- ncon + 1L
                 BODY.txt <- paste(BODY.txt,
-                    "out[", ncon, "] = x[", p1$free[i], "] - ",
+                    "out[", ncon, "] = .x.[", p1$free[i], "] - ",
                         p0$ustart[p0.idx], "\n", sep="")
                 next
             } else {
@@ -373,27 +438,6 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
         }
     }
 
-    # add 'new' equality constraints only
-    eq.idx <- which(p0$op == "==")
-    if(length(eq.idx) > 0L) {
-        for(e in eq.idx) {
-            # e in p0
-            lhs <- p0$lhs[e]; rhs <- p0$rhs[e]
-
-            # do we have the same == in h1? if so, ignore
-            p1.idx <- which(p1$lhs == lhs & p1$op == "==" & p1$rhs == rhs)
-
-            if(length(p1.idx) > 0) {
-                # ignore
-            } else {
-                # new == constraint!
-                ncon <- ncon + 1L
-                eq.string <- paste(p0$lhs[e], " - (", p0$rhs[e], ")", sep="")
-                BODY.txt <- paste(BODY.txt, 
-                             "out[", ncon, "] <- ", eq.string, "\n", sep="")
-            }
-        }
-    }    
 
     # wrap function
     BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep="")
@@ -402,34 +446,3 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
     con.function
 }
 
-
-# create a matrix that maps the free parameters of m1 to m0
-# in case they are not in the same 'order'
-.test_compute_partable_A_pivot  <- function(m1, m0) {
-
-    PT.M0 <- m0@ParTable
-    PT.M1 <- m1@ParTable
-
-    p1 <- PT.M1; p1.free.idx <- which(p1$free > 0L); np1 <- length(p1.free.idx)
-    p0 <- PT.M0; p0.free.idx <- which(p0$free > 0L); np0 <- length(p0.free.idx)
-
-    A.pivot <- matrix(0, np1, np0)
-
-    for(j in seq_along(p1.free.idx)) {
-        # free p in p1
-        i <- p1.free.idx[j]
-        lhs <- p1$lhs[i]; op <- p1$op[i]; rhs <- p1$rhs[i]; group <- p1$group[i]
-
-        # search for corresponding parameter in p0
-        p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
-                        p0$group == group)
-        if(length(p0.idx) == 0L) {
-            stop("lavaan ERROR: parameter in H1 not found in H0: ",
-                 paste(lhs, op, rhs, "(group = ", group, ")", sep=" "))
-        } else {
-            A.pivot[ j, p0$free[p0.idx] ] <- 1
-        }
-    }
-
-    A.pivot
-}
