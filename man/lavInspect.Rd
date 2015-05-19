@@ -157,9 +157,12 @@ Model-implied sample statistics and fit information:
         variables were part of the model.}
 }
 
-Hessian, observed, expected and first.order information matrices:
+Gradient, Hessian, observed, expected and first.order information matrices:
 
 \describe{
+    \item{\code{"gradient"}:}{Numeric vector containing the first derivatives
+        of the discrepancy function with respect to the (free) model
+        parameters.}
     \item{\code{"hessian"}:}{Matrix containing the second derivatives
         of the discrepancy function with respect to the (free) model
         parameters.}

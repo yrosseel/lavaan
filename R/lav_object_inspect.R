@@ -229,7 +229,10 @@ lavInspect <- function(lavobject,
             drop.list.single.group = drop.list.single.group)
 
 
-    #### Hessian, information, first.order, vcov ####
+    #### gradient, Hessian, information, first.order, vcov ####
+    } else if(what == "gradient") {
+        lav_object_inspect_gradient(lavobject,
+            add.labels = add.labels, add.class = add.class)
     } else if(what == "hessian") {
         lav_object_inspect_hessian(lavobject,
             add.labels = add.labels, add.class = add.class)
@@ -1102,7 +1105,38 @@ lav_object_inspect_sampstat_gamma <- function(lavobject,
 }
 
 
+lav_object_inspect_gradient <- function(lavobject,
+    add.labels = FALSE, add.class = FALSE) {
 
+    if(lavobject@SampleStats@missing.flag ||
+       lavobject@Options$estimator == "PML") {
+        group.weight <- FALSE
+    } else {
+        group.weight <- TRUE
+    }
+
+    OUT <- lav_model_gradient(lavmodel       = lavobject@Model,
+                              GLIST          = NULL,
+                              lavsamplestats = lavobject@SampleStats,
+                              lavdata        = lavobject@Data,
+                              lavcache       = lavobject@Cache,
+                              type           = "free",
+                              estimator      = lavobject@Options$estimator,
+                              verbose        = FALSE,
+                              group.weight   = group.weight)
+
+    # labels
+    if(add.labels) {
+        names(OUT) <- lav_partable_labels(lavobject@ParTable, type="free")
+    }
+
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.vector", "numeric")
+    }
+
+    OUT
+}
 
 lav_object_inspect_hessian <- function(lavobject,
     add.labels = FALSE, add.class = FALSE) {
