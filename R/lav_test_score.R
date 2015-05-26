@@ -1,97 +1,130 @@
-# classic score test (= Langrage Multiplier test)
+# classic score test (= Lagrange Multiplier test)
 #
-# 'extra' contains extra parameters that are currently fixed (to zero),
-# but should be released
+# 'add' contains new parameters that are currently not included in de model
+# (aka fixed to zero), but should be released
 #
-# NOTE: - this is just a 'test' implementation
-#       - it can not handle non-identified parameters,
-#         redundant parameters, etc...
+# if empty, we test the internal == constraints
 #
-# YR 1 dec 2014
+lavTestScore <- function(object, add = NULL, verbose = FALSE,
+                         univariate = TRUE, cumulative = FALSE) {
 
-lavTestScore <- function(object, extra = NULL, release = NULL, 
-                         verbose = FALSE) {
+    # check object
+    stopifnot(inherits(object, "lavaan"))
+    lavoptions <- object@Options
 
-    if(object@Fit@npar > 0L && !object@Fit@converged)
+    if(object@Fit@npar > 0L && !object@Fit@converged) {
         stop("lavaan ERROR: model did not converge")
-
-    if(is.null(extra) || nchar(extra) == 0L) {
-        stop("lavaan ERROR: extra parameter syntax is empty")
     }
 
-    partable <- parTable(object)
-    partable$start <- parameterEstimates(fit, remove.eq = FALSE, 
-                                         remove.ineq = FALSE)$est
-    nid <- max(partable$id)
-    nfree <- max(partable$free)
-
-    # parse extra syntax
-    FLAT <- lavParseModelString(extra, as.data.frame. = TRUE)
-    FLAT$mod.idx <- FLAT$fixed <- FLAT$start <- FLAT$label <- NULL
-    nflat <- nrow(FLAT)
-    if(is.null(FLAT$group)) {
-        FLAT$group <- rep(1L, nflat)
+    # check arguments
+    if(cumulative) {
+        univariate <- TRUE
     }
 
-    # check for duplicated elements
-    TMP <- rbind(FLAT[,    c("lhs","op","rhs","group")], 
-                 partable[,c("lhs","op","rhs","group")])
-    idx <- which(duplicated(TMP, fromLast=TRUE)) # idx should be in FLAT
-    if(length(idx)) {
-        warning("lavaan WARNING: parameters already in the model are ignored:\n", 
-        paste(apply(FLAT[idx, c("lhs","op","rhs")], 1, 
-              paste, collapse=" "), collapse="\n"))
-        FLAT <- FLAT[-idx,]
+    # add.flag?
+    if(is.null(add) || nchar(add) == 0L) {
+        add.flag <- FALSE
+    } else {
+        add.flag <- TRUE
     }
 
-    if(nrow(FLAT) == 0L) {
-        stop("lavaan ERROR: extra parameters table is empty")
+    if(add.flag) {
+        # extend model with extra set of parameters
+        FIT <- lav_object_extended(object, add = add)
+        score <- lavTech(FIT, "gradient")
+        information <- lavTech(FIT, "information.expected")
+
+        npar <- object@Model@nx.free
+        nadd <- FIT@Model@nx.free - npar
+
+        # R
+        R <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
+        J.inv <- MASS:::ginv(information)
+
+        # lhs/rhs
+        lhs <- paste(".c", seq_len(nadd), sep = "")
+        rhs <- rep("0", nadd)
+        LABEL <- FIT@ParTable$label[ FIT@ParTable$user == 10L ]
+        label.idx <- which(nchar(LABEL) > 0L)
+        if(length(label.idx) > 0L) {
+            lhs[ label.idx ] <- LABEL[ label.idx ]
+        }
+    } else {
+        score <- lavTech(object, "gradient")
+        information <- lavTech(object, "information.expected")
+        J.inv <- MASS::ginv(information)
+        R <- object@Model@con.jac[,]
+
+        # lhs/rhs
+        eq.idx <- which(object@ParTable$op == "==")
+        if(length(eq.idx) > 0L) {
+            OUT$lhs <- object@ParTable$lhs[eq.idx]
+            OUT$rhs <- object@ParTable$rhs[eq.idx]
+        }
     }
 
-    # what about group?
-    nflat <- nrow(FLAT)
-    FLAT$id <- (nid+1L):(nid+nflat)
-    FLAT$start <- 0
-    FLAT$free <- (nfree + 1L):(nfree + nflat)
-    FLAT$label <- rep("", nflat)
-    FLAT$plabel <- paste("p", FLAT$id, "__", sep = "")
-    FLAT$user <- rep(0L, nflat)
-    #FLAT$unco <- (max(partable$unco) + 1L):(max(partable$unco) + nflat)
+    if(nrow(R) == 0L) {
+        stop("lavaan ERROR: now equality constraints found in model")
+    }
 
-    # build new 'extended' model
-    NEW <- base::merge(partable, FLAT, all = TRUE)
+    N <- nobs(object)
+    if(lavoptions$mimic == "EQS") {
+        N <- N - 1
+    }
+    
+    if(lavoptions$se == "standard") {
+        stat <- as.numeric(N * score %*% J.inv %*% score)
+    } else {
+        # generalized score test
+        warning("lavaan WARNING: se is not `standard'; not implemented yet; falling back to ordinary score test")
 
+        # NOTE!!!
+        # we can NOT use VCOV here, because it reflects the constraints,
+        # and the whole point is to test for these constraints...
+        
+        stat <- as.numeric(N * score %*% J.inv %*% score)
+    }
 
-    # fit model, without any iterations
-    fit <- lavaan(NEW, 
-                  start = NEW,
-                  slotOptions = object@Options,
-                  slotSampleStats = object@SampleStats,
-                  slotData = object@Data,
-                  do.fit = FALSE)
-
-    dx <- lav_model_gradient(lavmodel = fit@Model, 
-                             lavsamplestats = fit@SampleStats,
-                             lavdata = fit@Data,
-                             lavcache = fit@Cache,
-                             type = "free",
-                             estimator = fit@Options$estimator)
-
-    lavoptions <- fit@Options
-    lavoptions$se <- object@Options$se
-
-    J <- lav_model_vcov(lavmodel = fit@Model, 
-                        lavoptions = lavoptions,
-                        lavpartable = fit@ParTable,
-                        # control??
-                        lavsamplestats = fit@SampleStats,
-                        lavdata = fit@Data,
-                        lavcache = fit@Cache)
-
-    J <- J * nobs(fit)
-    stat <- nobs(fit) * as.numeric(t(dx) %*% J %*% dx)
-    df <- nrow(FLAT)
+    # compute df, taking into account that some of the constraints may
+    # be needed to identify the model (and hence information is singular)
+    information.plus <- information + crossprod(R)
+    df <- qr(R)$rank + qr(information)$rank - qr(information.plus)$rank
     pvalue <- 1 - pchisq(stat, df=df)
 
-    list(stat = stat, df = df, p.value = pvalue, se = lavoptions$se)
+    OUT <- list(stat = stat, df = df, p.value = pvalue, se = lavoptions$se,
+                lhs = lhs, rhs = rhs)
+
+    if(univariate) {
+        TS <- numeric( nrow(R) )
+        for(r in 1:nrow(R)) {
+            R1 <- R[-r,,drop = FALSE]
+            Z1 <- cbind( rbind(information, R1),
+                         rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+            Z1.plus <- MASS::ginv(Z1)
+            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
+        }
+
+        OUT$TS.univariate <- TS
+    }
+
+    if(cumulative) {
+        TS.order <- sort.int(TS, index.return = TRUE, decreasing = TRUE)$ix
+        TS <- numeric( nrow(R) )
+        for(r in 1:nrow(R)) {
+            r.idx <- TS.order[1:r]
+
+            R1 <- R[-r.idx,,drop = FALSE]
+            Z1 <- cbind( rbind(information, R1),
+                         rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+            Z1.plus <- MASS::ginv(Z1)
+            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
+        }
+
+        OUT$TS.order <- TS.order
+        OUT$TS.cumulative <- TS
+    }
+
+    OUT
 }

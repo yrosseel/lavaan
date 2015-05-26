@@ -282,16 +282,16 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     # remove non-existing (NAs)? 
     # here we remove `non-existing' parameters; this depends on the matrix
     # representation (eg in LISREL rep, there is no ~~ between lv and ov)
-    if(remove.nonexisting) {
-        idx <- which( nchar(REP$mat) > 0L &
-                      !is.na(REP$row) & REP$row > 0L &
-                      !is.na(REP$col) & REP$col > 0L )
-        # but keep ==, :=, etc.
-        idx <- c(idx, which(partable$op %in% c("==", ":=", "<", ">")))
-        REP$mat <- REP$mat[idx]
-        REP$row <- REP$row[idx]
-        REP$col <- REP$col[idx]
-    }
+    #if(remove.nonexisting) {
+    #    idx <- which( nchar(REP$mat) > 0L &
+    #                 !is.na(REP$row) & REP$row > 0L &
+    #                 !is.na(REP$col) & REP$col > 0L )
+    #   # but keep ==, :=, etc.
+    #   idx <- c(idx, which(partable$op %in% c("==", ":=", "<", ">")))
+    #   REP$mat <- REP$mat[idx]
+    #   REP$row <- REP$row[idx]
+    #   REP$col <- REP$col[idx]
+    #
 
     # always add 'ov.dummy.*.names' attributes
     attr(REP, "ov.dummy.names.nox") <- ov.dummy.names.nox

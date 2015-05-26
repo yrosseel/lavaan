@@ -49,6 +49,18 @@ lav_model <- function(lavpartable      = NULL,
     }
     if(debug) print(REP)
 
+    # FIXME: check for non-existing parameters
+    bad.idx <- which(REP$mat == "" & 
+                     !lavpartable$op %in% c("==","<",">",":="))
+
+    if(length(bad.idx) > 0L) {
+        
+        label <- paste(lavpartable$lhs[bad.idx[1]], 
+                       lavpartable$op[bad.idx[1]],
+                       lavpartable$rhs[bad.idx[1]], sep = " ")
+        stop("lavaan ERROR: parameter is not defined: ", label)
+    }
+
     # prepare nG-sized slots
     nG <- sum(unlist(attr(REP, "mmNumber")))
     GLIST <- vector(mode="list", nG)

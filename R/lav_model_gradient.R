@@ -10,7 +10,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE,
-                               constraints    = FALSE,
                                Delta          = NULL,
                                m.el.idx       = NULL,
                                x.el.idx       = NULL) {

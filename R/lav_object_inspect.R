@@ -335,7 +335,6 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
                                  verbose        = FALSE,
                                  forcePD        = TRUE,
                                  group.weight   = TRUE,
-                                 constraints    = FALSE,
                                  Delta          = NULL)
     } else if(what == "dx.all") {
         GLIST <- lav_model_gradient(lavmodel   = lavobject@Model,
@@ -348,7 +347,6 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
                                 verbose        = FALSE,
                                 forcePD        = TRUE,
                                 group.weight   = TRUE,
-                                constraints    = FALSE,
                                 Delta          = NULL)
         names(GLIST) <- names(lavobject@Model@GLIST)
     } else if(what == "std.all") {

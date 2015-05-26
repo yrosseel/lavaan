@@ -45,7 +45,7 @@ modindices <- function(object,
                               strict.exo = strict.exo)
 
     # merge
-    LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE, 
+    LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE,
                                warn = FALSE)
 
     # remove  ==, <, :=, > rows from partable
@@ -72,6 +72,7 @@ modindices <- function(object,
     LIST$exo <- NULL
                               
     # compute information matrix 'full'
+    # ALWAYS use *expected* information (for now)
     E <- 
        lav_model_information_expected(lavmodel       = lavmodelFULL,
                                       lavsamplestats = object@SampleStats,
@@ -86,8 +87,7 @@ modindices <- function(object,
                              lavcache       = object@Cache,
                              type           = "free",
                              estimator      = object@Options$estimator,
-                             group.weight   = TRUE,
-                             constraints    = FALSE) #### not used anymore?
+                             group.weight   = TRUE)
 
     # Saris, Satorra & Sorbom 1987
     # partition Q into Q_11, Q_22 and Q_12/Q_21
@@ -118,7 +118,6 @@ modindices <- function(object,
         lavTech(object, "inverted.information.expected") * nobs(object)
 
     V <- Q11 - Q12 %*% Q22.inv %*% Q21
-    #V.diag <- c(diag(V), diag(Q22))
     V.diag <- diag(V)
     # dirty hack: catch very small or negative values in diag(V)
     # this is needed eg when parameters are not identified if freed-up;
@@ -131,67 +130,6 @@ modindices <- function(object,
         mi[model.idx]    <- dx[model.idx]*dx[model.idx] / diag(Q22)
     }
 
-    # correct mi's for equality constraints
-    #if(length(model.idx) > 0L && object@Model@eq.constraints) {
-    #    # take care of equality constraints
-    #    # Sorbom 1989 equations 12 and 13
-    #    # surely this code needs some serious optimization
-    #    # but it seems to work for now
-    #    # we should use the K matrix somewhere...
-    #
-    #    A <- object@Model@ceq.JAC
-    #    ncon <- nrow(A) # # number of constraints
-    #
-    #    for(con in seq_len(ncon)) {
-    #
-    #        # what are the involved parameters (in model.idx)?
-    #        eq.idx <- which(A[con,] != 0)
-    #
-    #        for(i in 1:length(eq.idx)) {
-    #            # index in all.idx (only mi.fixed elements)
-    #            theta2.idx <- model.idx[ eq.idx[i]  ]
-    #            thetac.idx <- model.idx[ eq.idx[-i] ]
-    #            #f.idx <- free.idx[-which(free.idx == theta2.idx)]
-    #            f.idx <- model.idx[ -eq.idx ]
-    #            Q22 <- Q[f.idx, f.idx, drop=FALSE]
-    #
-    #            ivec <- as.matrix(rep(1,length(thetac.idx)))
-    #            C11 <- Q[thetac.idx, thetac.idx, drop=FALSE]
-    #            C21 <- Q[theta2.idx, thetac.idx, drop=FALSE]; C12 <- t(C21)
-    #            C22 <- Q[theta2.idx, theta2.idx, drop=FALSE]
-    #            D1  <- Q[f.idx, thetac.idx, drop=FALSE];
-    #            d2  <- Q[f.idx, theta2.idx, drop=FALSE]
-    # 
-    #            c11 <- t(ivec) %*% C11 %*% ivec
-    #            c21 <- C21 %*% ivec; c12 <- t(c21)
-    #            c22 <- C22
-    # 
-    #            C <- rbind( cbind(c11,c12), cbind(c21, c22) )
-    #
-    #            D <- cbind(D1 %*% ivec, d2)
-    #
-    #
-    #            e12 <- (D1 %*% ivec) + d2; e21 <- t(e12)
-    #            e22 <- (t(ivec) %*% C11 %*% ivec) + (t(ivec) %*% C12) + (C21 %*% ivec) + C22
-    #            E.star <- rbind( cbind(Q22, e12), cbind(e21, e22) )
-    # 
-    #            E.star.inv <- inv.chol(E.star)
-    #            #E.star.inv <- 
-    #            #    lav_model_information_augment_invert(object@Model, 
-    #            #        information = E.star, inverted = TRUE)
-    #            n.free <- length(f.idx); n.ref <- length(theta2.idx)
-    #            E11 <- E.star.inv[1:n.free, 1:n.free]
-    #            E21 <- t(E.star.inv[n.free + 1:n.ref, 1:n.free]); E12 <- t(E21)
-    #            E22 <- as.numeric(E.star.inv[n.free + 1:n.ref, n.free + 1:n.ref])
-    #            E.inv <- E11 - (E12 %*% E21)/E22
-    #
-    #            H <- C - (t(D) %*% E.inv %*% D)
-    #            h11 <- H[1,1]; h12 <- H[1,2]; h21 <- H[2,1]; h22 <- H[2,2]
-    #
-    #            mi[theta2.idx] <- dx[theta2.idx]*dx[theta2.idx] * (h11 + 2*h21 + h22) / (h11*h22 - h12*h12)
-    #        } #i
-    #    } # ncon
-    #}
 
     # EPC
     d <- (-1 * object@SampleStats@ntotal) * dx
@@ -227,7 +165,7 @@ modindices <- function(object,
     if(standardized) {
         # two problems: 
         #   - EPC of variances can be negative, and that is
-        #     perfectly leagel
+        #     perfectly legal
         #   - EPC (of variances) can be tiny (near-zero), and we should 
         #     not divide by tiny variables
  
