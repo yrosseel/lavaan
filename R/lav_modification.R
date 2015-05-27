@@ -14,7 +14,8 @@ modindices <- function(object,
                        sort. = FALSE, 
                        minimum.value = 0.0, 
                        maximum.number = nrow(LIST),
-                       na.remove = FALSE, 
+                       free.remove = TRUE,
+                       na.remove = TRUE,
                        op = NULL) {
 
     # check if model has converged
@@ -30,12 +31,6 @@ modindices <- function(object,
     # sanity check
     if(power) standardized <- TRUE
 
-    # user-specified model parameters
-    partable <- object@ParTable[c("lhs","op","rhs","group","free","exo")]
-    # replace 'start' column, since lav_model will fill these in in GLIST
-    partable$start <- parameterEstimates(object, 
-                          remove.eq = FALSE, remove.ineq = FALSE)$est 
-
     # extended list (fixed-to-zero parameters)
     strict.exo <- FALSE
     if(object@Model@fixed.x && object@Model@categorical) {
@@ -43,123 +38,70 @@ modindices <- function(object,
     }
     FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE,
                               strict.exo = strict.exo)
+    FULL$free <- rep(1L, nrow(FULL))
+    FULL$user <- rep(10L, nrow(FULL))
 
-    # merge
-    LIST <- lav_partable_merge(partable, FULL, remove.duplicated = TRUE,
-                               warn = FALSE)
+    FIT <- lav_object_extended(object, add = FULL, all.free = TRUE)
+    LIST <- FIT@ParTable
 
-    # remove  ==, <, :=, > rows from partable
-    nonpar.idx <- which(LIST$op %in% c("==", ":=", "<", ">"))
-    if(length(nonpar.idx) > 0L) {
-        LIST <- LIST[-nonpar.idx,]   
-    }
-
-    # create lavmodel object for this 'full' LIST
-    LIST2 <- LIST; LIST2$free <- 1:nrow(LIST)
-
-    # reconstruct th.idx
-    th.idx <- vector("list", length=object@Data@ngroups)
-    for(g in 1:object@Data@ngroups) {
-        th.idx[[g]] <- lav_partable_ov_idx(LIST2, type="th", group = g)
-    }
-    lavmodelFULL <- lav_model(lavpartable = LIST2,
-                              representation = object@Model@representation,
-                              th.idx = th.idx,
-                              parameterization = object@Model@parameterization,
-                              link = object@Model@link,
-                              debug = FALSE)
-    LIST$start <- NULL
-    LIST$exo <- NULL
-                              
-    # compute information matrix 'full'
+    # compute information matrix 'extended model'
     # ALWAYS use *expected* information (for now)
-    E <- 
-       lav_model_information_expected(lavmodel       = lavmodelFULL,
-                                      lavsamplestats = object@SampleStats,
-                                      estimator      = object@Options$estimator)
-    Q <- (1/object@SampleStats@ntotal) * E
+    information <- lavTech(FIT, "information.expected")
 
-    # compute gradient 'full'
-    dx <- lav_model_gradient(lavmodel       = lavmodelFULL,
-                             GLIST          = NULL, 
-                             lavsamplestats = object@SampleStats,
-                             lavdata        = object@Data,
-                             lavcache       = object@Cache,
-                             type           = "free",
-                             estimator      = object@Options$estimator,
-                             group.weight   = TRUE)
+    # compute gradient 'extended model'
+    score <- lavTech(FIT, "gradient")
 
     # Saris, Satorra & Sorbom 1987
     # partition Q into Q_11, Q_22 and Q_12/Q_21
     # which elements of Q correspond with 'free' and 'nonfree' parameters?
+    model.idx <- LIST$free[ LIST$free > 0L & LIST$user != 10L ]
+    extra.idx <- LIST$free[ LIST$free > 0L & LIST$user == 10L ]
 
-    # NOTE: since 0.5-18, we do not make a distinction anymore between
-    #       equality constrained parameters (using labels), and general
-    #       linear constraints (using ==)
-    #       As a result, the 'free' parameters are not necessarily a clean
-    #       subset of the total set of parameters
-    #
-    #       But we can compute what would happen if we release a constraint,
-    #       one at a time
-    #       FIXME!!!
+    # partition 
+    I11 <- information[extra.idx, extra.idx, drop = FALSE]
+    I12 <- information[extra.idx, model.idx, drop = FALSE]
+    I21 <- information[model.idx, extra.idx, drop = FALSE]
+    I22 <- information[model.idx, model.idx, drop = FALSE]
 
-    model.idx <- which(LIST$free  > 0L)
-    extra.idx <- which(LIST$free == 0L)
-
-    # partition Q
-    Q11 <- Q[extra.idx, extra.idx, drop = FALSE]
-    Q12 <- Q[extra.idx, model.idx, drop = FALSE]
-    Q21 <- Q[model.idx, extra.idx, drop = FALSE]
-    Q22 <- Q[model.idx, model.idx, drop = FALSE]
-
-    #Q22.inv <- vcov(object) * (nobs(object)) * (nobs(object))
     # ALWAYS use *expected* information (for now)
-    Q22.inv <- 
-        lavTech(object, "inverted.information.expected") * nobs(object)
+    I22.inv <- lavTech(object, "inverted.information.expected")
 
-    V <- Q11 - Q12 %*% Q22.inv %*% Q21
+    V <- I11 - I12 %*% I22.inv %*% I21
     V.diag <- diag(V)
     # dirty hack: catch very small or negative values in diag(V)
     # this is needed eg when parameters are not identified if freed-up;
     idx <- which(V.diag < 1.0e-15); V.diag[idx] <- as.numeric(NA)
 
     # create and fill in mi
-    mi <- numeric( length(dx) )
-    mi[extra.idx] <- dx[extra.idx]*dx[extra.idx] / V.diag
+    N <- object@SampleStats@ntotal
+    mi <- numeric( length(score) )
+    mi[extra.idx] <- N * (score[extra.idx]*score[extra.idx]) / V.diag
     if(length(model.idx) > 0L) {
-        mi[model.idx]    <- dx[model.idx]*dx[model.idx] / diag(Q22)
+        mi[model.idx] <- N * (score[model.idx]*score[model.idx]) / diag(I22)
+    }
+
+    LIST$mi <- rep(as.numeric(NA), length(LIST$lhs))
+    LIST$mi[ LIST$free > 0 ] <- mi
+
+    # handle equality constraints (if any)
+    eq.idx <- which(LIST$op == "==")
+    if(length(eq.idx) > 0L) {
+        OUT <- lavTestScore(object, warn = FALSE)
+        LIST$mi[ eq.idx ] <- OUT$TS.univariate
+    }
+  
+    # scaled?
+    if(length(object@Fit@test) > 1L) {
+        LIST$mi.scaled <- LIST$mi / object@Fit@test[[2]]$scaling.factor
     }
 
 
     # EPC
-    d <- (-1 * object@SampleStats@ntotal) * dx
+    d <- (-1 * N) * score
     # needed?
     d[which(abs(d) < 1e-15)] <- 1.0
-    epc <- mi/d
+    LIST$epc[ LIST$free > 0 ] <- mi/d
 
-    # FIXME: epc for equality constraints must be adapted!?
-    # we need a reference for this!!!!
-    #if(object@Model@eq.constraints) {
-    #    for(i in 1:length(eq.idx)) {
-    #        # this is just a temporary solution
-    #        # until we get it right
-    #        neq <- length(eq.idx[eq.id == eq.id[i]])
-    #        epc[eq.idx[i]] <- epc[eq.idx[i]] / neq * (neq - 1)
-    #    }
-    #}
-
-    LIST$mi <- mi
-    if(length(object@Fit@test) > 1L) {
-        LIST$mi.scaled <- mi / object@Fit@test[[2]]$scaling.factor
-    }
-    LIST$epc <- epc
-
-    # remove some rows
-    #idx <- which(LIST$free > 0L & !duplicated(LIST$free) & !LIST$eq.id > 0L)
-    #LIST <- LIST[-idx,]
-    #if(length(model.idx) > 0L) {
-    #    LIST <- LIST[-model.idx,]
-    #}
 
     # standardize?
     if(standardized) {
@@ -225,54 +167,24 @@ modindices <- function(object,
         LIST$decision[ which(!mi.significant & !high.power) ] <- "(i)"
     }
 
-
     # remove some columns
-    LIST$free <- NULL
-    LIST$mat <- LIST$row <- LIST$col <- LIST$id <- NULL
-    #if(power) {
-    #    LIST$epc <- NULL
-    #    LIST$sepc.lv <- NULL
-    #}
+    LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL
+    LIST$start <- LIST$free <- NULL
 
+    # create data.frame
+    LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
     class(LIST) <- c("lavaan.data.frame", "data.frame")
 
-    # add eq constraints (if any)
-    eq.idx <- which(partable$op == "==")
-    if(length(eq.idx) > 0L) {
-        warning("lavaan WARNING: modification indices do not reflect (yet) what happens if we release an equality constraint")
-        # FIXME!!!!
-        N <- length(eq.idx)
-        TMP <- data.frame(lhs = partable$lhs[eq.idx],
-                           op = partable$op[eq.idx],
-                          rhs = partable$rhs[eq.idx],
-                          group = partable$group[eq.idx],
-                          mi = rep(as.numeric(NA), N),
-                          epc = rep(as.numeric(NA), N),
-                          sepc.lv = rep(as.numeric(NA), N),
-                          sepc.all = rep(as.numeric(NA), N),
-                          sepc.nox = rep(as.numeric(NA), N) )
-        if(!standardized) {
-            TMP$sepc.lv <- TMP$sepc.all <- TMP$sepc.nox <- NULL
+    # remove rows corresponding with 'old' free parameters
+    if(free.remove) {
+        old.idx <- which(LIST$user != 10L)
+        if(length(old.idx) > 0L) {
+            LIST <- LIST[-old.idx,]
         }
-        if(!is.null(LIST$mi.scaled)) {
-            TMP$mi.scaled <- rep(as.numeric(NA), N)
-        }
-        LIST <- rbind(LIST, TMP)
     }
 
-    # remove 'existing' parameters
-    #TMP1 <- data.frame(lhs = partable$lhs,
-    #                   op = partable$op,
-    #                   rhs = partable$rhs,
-    #                   group = partable$group)
-    #TMP2 <- data.frame(lhs = LIST$lhs, 
-    #                   op = LIST$op,
-    #                   rhs = LIST$rhs,
-    #                   group = LIST$group)
-    #idx <- which(duplicated(rbind(TMP2, TMP1), fromLast = TRUE))
-    #if(length(idx) > 0L) {
-    #    LIST <- LIST[-idx,]
-    #}
+    # remove even more columns 
+    LIST$user <- NULL
     if(max(LIST$group) == 1) LIST$group <- NULL
     
     # sort?

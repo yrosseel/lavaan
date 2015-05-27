@@ -5,7 +5,7 @@
 #
 # if empty, we test the internal == constraints
 #
-lavTestScore <- function(object, add = NULL, verbose = FALSE,
+lavTestScore <- function(object, add = NULL, verbose = FALSE, warn = TRUE,
                          univariate = TRUE, cumulative = FALSE) {
 
     # check object
@@ -58,8 +58,8 @@ lavTestScore <- function(object, add = NULL, verbose = FALSE,
         # lhs/rhs
         eq.idx <- which(object@ParTable$op == "==")
         if(length(eq.idx) > 0L) {
-            OUT$lhs <- object@ParTable$lhs[eq.idx]
-            OUT$rhs <- object@ParTable$rhs[eq.idx]
+            lhs <- object@ParTable$lhs[eq.idx]
+            rhs <- object@ParTable$rhs[eq.idx]
         }
     }
 
@@ -76,8 +76,10 @@ lavTestScore <- function(object, add = NULL, verbose = FALSE,
         stat <- as.numeric(N * score %*% J.inv %*% score)
     } else {
         # generalized score test
-        warning("lavaan WARNING: se is not `standard'; not implemented yet; falling back to ordinary score test")
-
+        if(warn) {
+            warning("lavaan WARNING: se is not `standard'; not implemented yet; falling back to ordinary score test")
+        }
+ 
         # NOTE!!!
         # we can NOT use VCOV here, because it reflects the constraints,
         # and the whole point is to test for these constraints...

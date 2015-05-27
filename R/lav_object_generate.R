@@ -111,12 +111,20 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
 # 3. extended model
 lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
+                                all.free = FALSE,
                                 verbose = FALSE, warn = FALSE, 
                                 do.fit = FALSE) {
 
     # partable original model
     partable <- object@ParTable[c("lhs","op","rhs","group","free",
-                                  "exo","label")] # do we need 'exo'?
+                                  "exo","label","plabel")] # do we need 'exo'?
+    if(all.free) {
+        partable$user <- rep(1L, length(partable$lhs))
+        non.free.idx <- which(partable$free == 0L)
+        partable$free[ non.free.idx ] <- 1L
+        partable$user[ non.free.idx ] <- 10L
+    }
+ 
     # replace 'start' column, since lav_model will fill these in in GLIST
     partable$start <- parameterEstimates(object,
                           remove.eq = FALSE, remove.ineq = FALSE)$est
