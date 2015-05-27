@@ -11,7 +11,7 @@
 #
 lavTestScore <- function(object, add = NULL, release = NULL,
                          univariate = TRUE, cumulative = FALSE,
-                         verbose = FALSE, warn = TRUE) {
+                         epc = FALSE, verbose = FALSE, warn = TRUE) {
 
     # check object
     stopifnot(inherits(object, "lavaan"))
@@ -164,6 +164,21 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         OUT$TS.order <- TS.order
         OUT$TS.cumulative <- TS
+    }
+
+    if(epc) {
+        EPC <- vector("list", length = length(r.idx))
+        for(i in 1:length(r.idx)) {
+            r <- r.idx[i]
+            R1 <- R[-r,,drop = FALSE]
+            Z1 <- cbind( rbind(information, R1),
+                         rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+            Z1.plus <- MASS::ginv(Z1)
+            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            EPC[[i]] <- -1 * as.numeric(score %*%  Z1.plus1)
+        }
+
+        OUT$EPC <- EPC
     }
 
     OUT

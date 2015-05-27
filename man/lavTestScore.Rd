@@ -10,7 +10,7 @@ Score test (or Lagrange Multiplier test) for releasing one or more
 fixed or constrained parameters in model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
-             univariate = TRUE, cumulative = FALSE,
+             univariate = TRUE, cumulative = FALSE, epc = FALSE,
              verbose = FALSE, warn = TRUE)
 }
 \arguments{
@@ -26,6 +26,9 @@ statistics, one for each constraints.}
 \item{cumulative}{Logical. If \code{TRUE}, order the univariate score
 statistics from large to small, and compute a series of 
 multivariate score statistics, each time adding an additional constraint.}
+\item{epc}{Logical. If \code{TRUE}, and we are releasing existing constraints,
+compute the expected parameter changes for the existing (free) parameters,
+for each released constraint.}
 \item{verbose}{Logical. Not used for now.} 
 \item{warn}{Logical. If \code{TRUE}, print out warnings if they occur.}
 }
@@ -52,6 +55,11 @@ multivariate score statistics, each time adding an additional constraint.}
   test statistics, and an element (TS.cumulative) containing a numeric
   vector of cumulative multivariate score statistics.
 }
+\references{
+Bentler, P. M., & Chou, C. P. (1993). Some new covariance structure model
+improvement statistics. Sage Focus Editions, 154, 235-255.
+}
+
 \examples{
 HS.model <- '
     visual  =~ x1 + b1*x2 + x3
