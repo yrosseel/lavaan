@@ -156,7 +156,7 @@ for(g in 1:lavsamplestats@ngroups) {
     # of H1
 
     PT <- fittedSat2@ParTable
-    PT$label <- lavaan:::lav_partable_labels(PT)
+    PT$label <- lav_partable_labels(PT)
     free.idx <- which(PT$free > 0 & PT$group == g)
     PARLABEL <- PT$label[free.idx]
 

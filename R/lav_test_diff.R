@@ -246,7 +246,7 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
             xx <- m1@Fit@x
         } else { # evaluate under H0
             stop("not ready yet")
-            af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
+            #af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
             xx <- m0@Fit@x
         }
         A <- try(lav_func_jacobian_complex(func = af, x = xx), silent = TRUE)
