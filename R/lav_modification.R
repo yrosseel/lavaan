@@ -210,6 +210,10 @@ modindices <- function(object,
         }
     }
 
+    # add header
+    # TODO: small explanation of the columns in the header?
+    #attr(LIST, "header") <- c("modification indices:")
+
     LIST
 }
 

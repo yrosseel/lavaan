@@ -64,7 +64,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # lhs/rhs
         lhs <- lav_partable_labels(FIT@ParTable)[ FIT@ParTable$user == 10L ]
+         op <- rep("==", nadd)
         rhs <- rep("0", nadd)
+        Table <- data.frame(lhs = lhs, op = op, rhs = rhs)
+        class(Table) <- c("lavaan.data.frame", "data.frame")
     } else {
     # MODE 2: releasing constraints
 
@@ -82,16 +85,18 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             # ALL constraints
             r.idx <- seq_len( nrow(R) )
         } else if(is.numeric(release)) {
-            if(length(release) == 1L) {
-                r.idx <- seq_len( release )
-            } else {
-                r.idx <- release
-            }
-
+            r.idx <- release
             if(max(r.idx) > nrow(R)) {
                 stop("lavaan ERROR: maximum constraint number (", max(r.idx),
                      ") is larger than number of constraints (", nrow(R), ")")
             }
+
+            # neutralize the non-needed constraints
+            R1 <- R[-r.idx,,drop = FALSE]
+            Z1 <- cbind( rbind(information, R1),
+                         rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+            Z1.plus <- MASS::ginv(Z1)
+            J.inv <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
         } else if(is.character(release)) {
             stop("not implemented yet")
         }
@@ -100,8 +105,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         eq.idx <- which(object@ParTable$op == "==")
         if(length(eq.idx) > 0L) {
             lhs <- object@ParTable$lhs[eq.idx][r.idx]
+             op <- rep("==", length(r.idx))
             rhs <- object@ParTable$rhs[eq.idx][r.idx]
         }
+        Table <- data.frame(lhs = lhs, op = op, rhs = rhs)
+        class(Table) <- c("lavaan.data.frame", "data.frame")
     }
 
     N <- nobs(object)
@@ -127,12 +135,17 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     # compute df, taking into account that some of the constraints may
     # be needed to identify the model (and hence information is singular)
     information.plus <- information + crossprod(R)
-    df <- qr(R[r.idx,,drop = FALSE])$rank + 
-              ( qr(information)$rank - qr(information.plus)$rank )
+    #df <- qr(R[r.idx,,drop = FALSE])$rank + 
+    #          ( qr(information)$rank - qr(information.plus)$rank )
+    df <- nrow( R[r.idx,,drop = FALSE] )
     pvalue <- 1 - pchisq(stat, df=df)
 
-    OUT <- list(stat = stat, df = df, p.value = pvalue, se = lavoptions$se,
-                lhs = lhs, rhs = rhs)
+    # total score test
+    TEST <- data.frame(test = "score", X2 = stat, df = df, p.value = pvalue)
+    class(TEST) <- c("lavaan.data.frame", "data.frame")
+    attr(TEST, "header") <- "total score test:"
+
+    OUT <- list(test = TEST) 
 
     if(univariate) {
         TS <- numeric( nrow(R) )
@@ -145,7 +158,12 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
-        OUT$TS.univariate <- TS[r.idx]
+        Table2 <- Table
+        Table2$X2 <- TS[r.idx]
+        Table2$df <- rep(1, length(r.idx))
+        Table2$p.value <- 1 - pchisq(Table2$X2, df = Table2$df)
+        attr(Table2, "header") <- "univariate score tests:"
+        OUT$uni <- Table2
     }
 
     if(cumulative) {
@@ -162,23 +180,55 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
-        OUT$TS.order <- TS.order
-        OUT$TS.cumulative <- TS
+        Table3 <- Table
+        Table3$X2 <- TS
+        Table3$df <- seq_len( length(TS) )
+        Table3$p.value <- 1 - pchisq(Table3$X2, df = Table3$df)
+        attr(Table3, "header") <- "cumulative score tests:"
+        OUT$cumulative <- Table3
     }
 
     if(epc) {
-        EPC <- vector("list", length = length(r.idx))
-        for(i in 1:length(r.idx)) {
-            r <- r.idx[i]
-            R1 <- R[-r,,drop = FALSE]
-            Z1 <- cbind( rbind(information, R1),
-                         rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
-            Z1.plus <- MASS::ginv(Z1)
-            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
-            EPC[[i]] <- -1 * as.numeric(score %*%  Z1.plus1)
+        #EPC <- vector("list", length = length(r.idx))
+        #for(i in 1:length(r.idx)) {
+        #    r <- r.idx[i]
+        #    R1 <- R[-r,,drop = FALSE]
+        #    Z1 <- cbind( rbind(information, R1),
+        #                 rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+        #    Z1.plus <- MASS::ginv(Z1)
+        #    Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+        #    EPC[[i]] <- -1 * as.numeric(score %*%  Z1.plus1)
+        #}
+        #
+        #OUT$EPC <- EPC
+
+        # alltogether
+        R1 <- R[-r.idx,,drop = FALSE]
+        Z1 <- cbind( rbind(information, R1),
+                     rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
+        Z1.plus <- MASS::ginv(Z1)
+        Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+        EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
+
+        # create epc table for the 'free' parameters
+        LIST <- parTable(object)
+        LIST <- LIST[,c("lhs","op","rhs","group","free","label","plabel")]
+        if(max(LIST$group) == 1L) {
+            LIST$group <- NULL
+        }
+        nonpar.idx <- which(LIST$op %in% c("==", ":=", "<", ">"))
+        if(length(nonpar.idx) > 0L) {
+            LIST <- LIST[-nonpar.idx,]
         }
 
-        OUT$EPC <- EPC
+        LIST$est[ LIST$free > 0 ] <- coef(object)
+        LIST$epc <- rep(as.numeric(NA), length(LIST$lhs))
+        LIST$epc[ LIST$free > 0 ] <- EPC.all
+        LIST$epv <- LIST$est + LIST$epc
+
+        attr(LIST, "header") <- "expected parameter changes (epc) and expected parameter values (epv):"
+
+        OUT$epc <- LIST
     }
 
     OUT

@@ -12,6 +12,10 @@ print.lavaan.data.frame <- function(x, ..., nd=3) {
                               if(is.numeric(x)) round(x, nd) else x}))
     rownames(y) <- ROW.NAMES
 
+    if(!is.null(attr(x, "header"))) {
+        cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+
     print(y, ...)
     invisible(x)
 }
