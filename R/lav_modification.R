@@ -84,11 +84,11 @@ modindices <- function(object,
     LIST$mi[ LIST$free > 0 ] <- mi
 
     # handle equality constraints (if any)
-    eq.idx <- which(LIST$op == "==")
-    if(length(eq.idx) > 0L) {
-        OUT <- lavTestScore(object, warn = FALSE)
-        LIST$mi[ eq.idx ] <- OUT$TS.univariate
-    }
+    #eq.idx <- which(LIST$op == "==")
+    #if(length(eq.idx) > 0L) {
+    #    OUT <- lavTestScore(object, warn = FALSE)
+    #    LIST$mi[ eq.idx ] <- OUT$uni$X2
+    #}
   
     # scaled?
     if(length(object@Fit@test) > 1L) {
@@ -175,13 +175,19 @@ modindices <- function(object,
     LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
     class(LIST) <- c("lavaan.data.frame", "data.frame")
 
-    # remove rows corresponding with 'old' free parameters
+    # remove rows corresponding to 'old' free parameters
     if(free.remove) {
         old.idx <- which(LIST$user != 10L)
         if(length(old.idx) > 0L) {
             LIST <- LIST[-old.idx,]
         }
     }
+
+    # remove rows corresponding to 'equality' constraints
+    eq.idx <- which(LIST$op == "==")
+    if(length(eq.idx) > 0L) {
+        LIST <- LIST[-eq.idx,]
+    } 
 
     # remove even more columns 
     LIST$user <- NULL
@@ -212,7 +218,10 @@ modindices <- function(object,
 
     # add header
     # TODO: small explanation of the columns in the header?
-    #attr(LIST, "header") <- c("modification indices:")
+#    attr(LIST, "header") <- 
+# c("modification indices for newly added parameters only; to\n",
+#   "see the effects of releasing equality constraints, use the\n",
+#   "lavTestScore() function")
 
     LIST
 }
