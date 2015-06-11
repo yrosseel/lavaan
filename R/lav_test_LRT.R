@@ -5,10 +5,10 @@
 # - in 0.5-18, SB.classic is replaced by 'method', with the following
 #   options:
 #     method = "default" (we choose a default method, based on the estimator)
-#     method = "Satorra-2000"
-#     method = "Satorra-Bentler-2001"
-#     method = "Satorra-Bentler-2010"
-#     method = "Satorra-Bentler-2010-PML"
+#     method = "Satorra.2000"
+#     method = "Satorra.Bentler.2001"
+#     method = "Satorra.Bentler.2010"
+#     method = "mean.var.adjusted.PLRT"
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
                        H1 = TRUE, type = "Chisq", model.names = NULL) {
@@ -166,14 +166,14 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
         # select method
         if(method == "default") {
             if(estimator == "PML") {
-                method <- "satorra.bentler.2010.pml"
+                method <- "mean.var.adjusted.PLRT"
             } else if(TEST %in% c("satorra.bentler", "yuan.bentler")) {
                 method <- "satorra.bentler.2001"
             } else {
                 method <- "satorra.2000"
             }
-        } else if(method == "satorrabentler2010pml") {
-            method <- "satorra.bentler.2010.pml"
+        } else if(method == "meanvaradjustedplrt") {
+            method <- "mean.var.adjusted.PLRT"
             stopifnot(estimator == "PML")
         } else if(method == "satorra2000") {
             method <- "satorra.2000"
@@ -192,7 +192,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
                 STAT.delta[m+1] <- out$T.delta
                   Df.delta[m+1] <- out$df.delta
             }
-        } else if (method == "satorra.bentler.2010.pml") {
+        } else if (method == "mean.var.adjusted.PLRT") {
             for(m in seq_len(length(mods) - 1L)) {
                 out <- ctr_pml_plrt_nested(mods[[m]], mods[[m+1]])
                 STAT.delta[m+1] <- out$FSMA.PLRT
