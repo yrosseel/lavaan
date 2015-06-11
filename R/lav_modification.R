@@ -70,7 +70,10 @@ modindices <- function(object,
     V.diag <- diag(V)
     # dirty hack: catch very small or negative values in diag(V)
     # this is needed eg when parameters are not identified if freed-up;
-    idx <- which(V.diag < 1.0e-15); V.diag[idx] <- as.numeric(NA)
+    idx <- which(V.diag < sqrt(.Machine$double.eps))
+    if(length(idx) > 0L) {
+        V.diag[idx] <- as.numeric(NA)
+    }
 
     # create and fill in mi
     N <- object@SampleStats@ntotal
@@ -95,10 +98,9 @@ modindices <- function(object,
         LIST$mi.scaled <- LIST$mi / object@Fit@test[[2]]$scaling.factor
     }
 
-
     # EPC
     d <- (-1 * N) * score
-    # needed?
+    # needed? probably not; just in case
     d[which(abs(d) < 1e-15)] <- 1.0
     LIST$epc[ LIST$free > 0 ] <- mi/d
 
@@ -152,24 +154,39 @@ modindices <- function(object,
         # FIXME: this is using epc in unstandardized metric
         #        this would be much more useful in standardized metric
         #        we need a standardize.est.all.reverse function...
-        LIST$ncp <- (LIST$mi / LIST$epc*LIST$epc) * (delta*delta)
-        LIST$power <- 1 - pchisq(qchisq((1.0 - alpha), df=1), 
+        LIST$ncp <- (LIST$mi / (LIST$epc*LIST$epc)) * (delta*delta)
+        LIST$power <- 1 - pchisq(qchisq((1.0 - alpha), df=1),
                                  df=1, ncp=LIST$ncp)
         LIST$decision <- character( length(LIST$power) )
 
-        # four possibilities (Table 6 in Saris, Satorra, van der Veld, 2009)
+        # five possibilities (Table 6 in Saris, Satorra, van der Veld, 2009)
         mi.significant <- ifelse( 1 - pchisq(LIST$mi, df=1) < alpha,
                                   TRUE, FALSE )
         high.power <- LIST$power > high.power
+        # FIXME: sepc.all or epc??
+        #epc.high <- LIST$sepc.all > LIST$delta   
+        epc.high <- LIST$epc > LIST$delta
 
-        LIST$decision[ which(mi.significant &  high.power) ] <- "epc"
-        LIST$decision[ which(mi.significant & !high.power) ] <- "***"
-        LIST$decision[ which(!mi.significant & !high.power) ] <- "(i)"
+        LIST$decision[ which(!mi.significant & !high.power)] <- "(i)"
+        LIST$decision[ which( mi.significant & !high.power)] <- "**(m)**"
+        LIST$decision[ which(!mi.significant &  high.power)] <- "(nm)"
+        LIST$decision[ which( mi.significant &  high.power & 
+                             !epc.high)] <-  "epc:nm"
+        LIST$decision[ which( mi.significant &  high.power & 
+                              epc.high)] <-  "*epc:m*"
+
+        #LIST$decision[ which(mi.significant &  high.power) ] <- "epc"
+        #LIST$decision[ which(mi.significant & !high.power) ] <- "***"
+        #LIST$decision[ which(!mi.significant & !high.power) ] <- "(i)"
     }
 
     # remove some columns
     LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL
     LIST$start <- LIST$free <- NULL
+
+    if(power) {
+        LIST$sepc.lv <- sepc.nox <- NULL
+    }
 
     # create data.frame
     LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
