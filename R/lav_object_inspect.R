@@ -200,6 +200,10 @@ lavInspect <- function(lavobject,
     #### convergence, meanstructure, categorical ####
     } else if(what == "converged") {
         lavobject@Fit@converged
+    } else if(what == "iterations" ||
+              what == "iter" ||
+              what == "niter") {
+        lavobject@Fit@iterations
     } else if(what == "meanstructure") {
         lavobject@Model@meanstructure
     } else if(what == "categorical") {

@@ -151,6 +151,8 @@ Model-implied sample statistics and fit information:
         Aliases: \code{"r-square"}, \code{"r2"}.}
     \item{\code{"converged"}:}{Logical. \code{TRUE} if the optimizer has
         converged; \code{FALSE} otherwise.}
+    \item{\code{"iteratons"}:}{Integer. The number of iterations used by the
+        optimizer.}
     \item{\code{"meanstructure"}:}{Logical. \code{TRUE} if a meanstructure
         was included in the model.}
     \item{\code{"categorical"}:}{Logical. \code{TRUE} if categorical endogenous
