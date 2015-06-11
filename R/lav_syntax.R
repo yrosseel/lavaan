@@ -334,59 +334,6 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
     # - every modifier is evaluated
     # - unquoted labels are allowed (eg. x1 + x2 + c(v1,v2,v3)*x3)
 
-    getModifier <- function(mod) {
-        if(length(mod) == 1L) {
-            # three possibilites: 1) numeric, 2) NA, or 3) quoted character
-            if( is.numeric(mod) ) 
-                return( list(fixed=mod) )
-            if( is.na(mod) ) 
-                return( list(fixed=as.numeric(NA)) )
-            if( is.character(mod) )
-                return( list(label=mod) )
-        } else if(mod[[1L]] == "start") {
-            cof <- unlist(lapply(as.list(mod)[-1], 
-                                 eval, envir=NULL, enclos=NULL))
-            return( list(start=cof) )
-        } else if(mod[[1L]] == "equal") {
-            label <- unlist(lapply(as.list(mod)[-1],    
-                            eval, envir=NULL, enclos=NULL))
-            return( list(label=label) )
-        } else if(mod[[1L]] == "label") {
-            label <- unlist(lapply(as.list(mod)[-1],
-                            eval, envir=NULL, enclos=NULL))
-            label[is.na(label)] <- "" # catch 'NA' elements in a label
-            return( list(label=label) )
-        } else if(mod[[1L]] == "prior") {
-            prior <- unlist(lapply(as.list(mod)[-1],
-                            eval, envir=NULL, enclos=NULL))
-            return( list(prior=prior) )
-        } else if(mod[[1L]] == "c") {
-            # vector: we allow numeric and character only!
-            cof <- unlist(lapply(as.list(mod)[-1],    
-                                 eval, envir=NULL, enclos=NULL))
-            if(is.numeric(cof)) 
-                 return( list(fixed=cof) )
-            else if(is.character(cof)) {
-                 cof[is.na(cof)] <- "" # catch 'NA' elements in a label
-                 return( list(label=cof) )
-            } else {
-                stop("lavaan ERROR: can not parse modifier:", mod, "\n")
-            }
-        } else {
-            # unknown expression
-            # as a final attempt, we will evaluate it and coerce it
-            # to either a numeric or character (vector)
-            cof <- try( eval(mod, envir=NULL, enclos=NULL), silent=TRUE)
-            if(is.numeric(cof))
-                 return( list(fixed=cof) )
-            else if(is.character(cof))
-                 return( list(label=cof) )
-            else {
-                stop("lavaan ERROR: can not parse modifier:", mod, "\n")
-            }
-        }
-    }
-
     # fill in rhs list
     out <- list()
     repeat {
@@ -421,7 +368,7 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
                 out[[1L]]$label <- i.var
             } else {
                 # modifer is something else
-                out[[1L]] <- getModifier(rhs[[2L]])
+                out[[1L]] <- lav_syntax_get_modifier(rhs[[2L]])
             }
             break
         } else if(rhs[[1L]] == "+") { # not last one!
@@ -438,7 +385,7 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
                 out[[1L]]$label <- i.var[-n.var]
             } else if(length(rhs[[3]]) == 3L) {
                 # modifiers!!
-                out[[1L]] <- getModifier(rhs[[3L]][[2L]])
+                out[[1L]] <- lav_syntax_get_modifier(rhs[[3L]][[2L]])
             }
 
             # next element
@@ -471,3 +418,61 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
 
     out
 }
+
+
+lav_syntax_get_modifier <- function(mod) {
+
+    if(length(mod) == 1L) {
+        # three possibilites: 1) numeric, 2) NA, or 3) quoted character
+        if( is.numeric(mod) ) 
+            return( list(fixed=mod) )
+        if( is.na(mod) ) 
+            return( list(fixed=as.numeric(NA)) )
+        if( is.character(mod) )
+            return( list(label=mod) )
+    } else if(mod[[1L]] == "start") {
+        cof <- unlist(lapply(as.list(mod)[-1], 
+                             eval, envir=NULL, enclos=NULL))
+        return( list(start=cof) )
+    } else if(mod[[1L]] == "equal") {
+        label <- unlist(lapply(as.list(mod)[-1],    
+                        eval, envir=NULL, enclos=NULL))
+        return( list(label=label) )
+    } else if(mod[[1L]] == "label") {
+        label <- unlist(lapply(as.list(mod)[-1],
+                        eval, envir=NULL, enclos=NULL))
+        label[is.na(label)] <- "" # catch 'NA' elements in a label
+        return( list(label=label) )
+    } else if(mod[[1L]] == "prior") {
+        prior <- unlist(lapply(as.list(mod)[-1],
+                        eval, envir=NULL, enclos=NULL))
+        return( list(prior=prior) )
+    } else if(mod[[1L]] == "c") {
+        # vector: we allow numeric and character only!
+        cof <- unlist(lapply(as.list(mod)[-1],    
+                             eval, envir=NULL, enclos=NULL))
+        if(all(is.na(cof))) {
+             return( list(fixed=rep(as.numeric(NA), length(cof))) )
+        } else if(is.numeric(cof)) 
+             return( list(fixed=cof) )
+        else if(is.character(cof)) {
+             cof[is.na(cof)] <- "" # catch 'NA' elements in a label
+             return( list(label=cof) )
+        } else {
+            stop("lavaan ERROR: can not parse modifier:", mod, "\n")
+        }
+    } else {
+        # unknown expression
+        # as a final attempt, we will evaluate it and coerce it
+        # to either a numeric or character (vector)
+        cof <- try( eval(mod, envir=NULL, enclos=NULL), silent=TRUE)
+        if(is.numeric(cof))
+             return( list(fixed=cof) )
+        else if(is.character(cof))
+             return( list(label=cof) )
+        else {
+            stop("lavaan ERROR: can not parse modifier:", mod, "\n")
+        }
+    }
+}
+
