@@ -779,13 +779,13 @@ lav_partable_full <- function(partable = NULL, group = NULL,
 
         eqs.names <- unique( c(partable$lhs[partable$op == "~"], 
                                partable$rhs[partable$op == "~"]) )
+
+        eqs.y <- eqs.names
         if(strict.exo) {
             x.idx <- which(eqs.names %in% ov.names.x)
             if(length(x.idx) > 0L) {
                 eqs.y <- eqs.names[-x.idx]
             }
-        } else {
-            eqs.y <- eqs.names
         }
         eqs.x <- eqs.names
 
