@@ -145,17 +145,22 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                    augmented      = TRUE,
                                    inverted       = TRUE)
 
+    # check if E.inv is ok
+    if(inherits(E.inv, "try-error")) {
+        return(E.inv)
+    }
+
     # outer product of case-wise scores
     B0 <- 
         lav_model_information_firstorder(lavmodel       = lavmodel,
-                                               lavsamplestats = lavsamplestats,
-                                               lavdata        = lavdata,
-                                               estimator      = estimator,
-                                               lavcache       = lavcache,
-                                               extra          = TRUE,
-                                               check.pd       = FALSE,
-                                               augmented      = FALSE,
-                                               inverted       = FALSE)
+                                         lavsamplestats = lavsamplestats,
+                                         lavdata        = lavdata,
+                                         estimator      = estimator,
+                                         lavcache       = lavcache,
+                                         extra          = TRUE,
+                                         check.pd       = FALSE,
+                                         augmented      = FALSE,
+                                         inverted       = FALSE)
 
     # compute sandwich estimator
     NVarCov <- E.inv %*% B0 %*% E.inv

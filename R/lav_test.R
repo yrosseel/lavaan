@@ -246,6 +246,7 @@ lav_model_test <- function(lavmodel       = NULL,
         }
     }
 
+
     if(test == "none" || df < 0L || estimator == "MML") {
         TEST[[1]] <- list(test=test,
                           stat=as.numeric(NA),
@@ -337,6 +338,15 @@ lav_model_test <- function(lavmodel       = NULL,
                               "mean.var.adjusted", "scaled.shifted")) {
         TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
                           df=df, refdistr=refdistr, pvalue=pvalue, 
+                          scaling.factor=as.numeric(NA))
+        return(TEST)
+    }
+
+    # do we already know E.inv is singular?
+    E.inv <- attr(VCOV, "E.inv")
+    if(!is.null(E.inv) && inherits(E.inv, "try-error")) {
+        TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
+                          df=df, refdistr=refdistr, pvalue=pvalue,
                           scaling.factor=as.numeric(NA))
         return(TEST)
     }
@@ -527,6 +537,15 @@ lav_model_test <- function(lavmodel       = NULL,
                                            extra          = FALSE,
                                            augmented      = TRUE,
                                            inverted       = TRUE)
+        }
+
+        if(inherits(E.inv, "try-error")) {
+            TEST[[2]] <- list(test=test, stat=as.numeric(NA),
+                stat.group=rep(as.numeric(NA), lavsamplestats@ngroups),
+                df=df, refdistr=refdistr, pvalue=as.numeric(NA),
+                scaling.factor=as.numeric(NA))
+            warning("lavaan WARNING: could not compute scaled test statistic\n")
+            return(TEST)
         }
 
         if(mimic == "Mplus" || mimic == "lavaan") {

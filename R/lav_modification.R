@@ -185,7 +185,7 @@ modindices <- function(object,
     LIST$start <- LIST$free <- NULL
 
     if(power) {
-        LIST$sepc.lv <- sepc.nox <- NULL
+        LIST$sepc.lv <- LIST$sepc.nox <- NULL
     }
 
     # create data.frame
