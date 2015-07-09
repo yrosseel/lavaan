@@ -1,25 +1,37 @@
 # only when we have src code
 # useDynLib("lavaan")
 
-importFrom("stats", 
-           coef,
-           residuals, resid,
-           fitted.values, fitted,
-           predict,
-           update,
-           anova,
-           vcov)
-importFrom("graphics",
-           plot)
-importFrom("methods",
-           show)
+importFrom("graphics", 
+           "abline", "axis", "box", "hist", "pairs", "par",
+           # generics
+           "plot")
+
+importFrom("methods", 
+           "is", "new", "slot",
+           # generics,
+
+           "show")
+importFrom("stats", "as.formula", "complete.cases", "cor", "cov", "cov2cor",
+           "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq", 
+           "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif", 
+           "sd", "terms", "uniroot", "var", "weighted.mean",
+           # generics
+           "coef", "residuals", "resid", "fitted.values", "fitted",
+           "predict", "update", "anova", "vcov")
+
+importFrom("utils", 
+           "combn", "modifyList", "packageDescription", "read.table",
+           "str", "write.table")
+
 importFrom("quadprog",
-           solve.QP)
+           "solve.QP")
+
 importFrom("mnormt",
-           dmnorm,
-           sadmvn)
+           "dmnorm",
+           "sadmvn")
+
 importFrom("pbivnorm",
-           pbivnorm)
+           "pbivnorm")
 
 # AIC and friends...
 if(getRversion() >= "2.13.0") {
