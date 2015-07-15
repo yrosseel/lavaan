@@ -1196,8 +1196,14 @@ lav_object_inspect_information <- function(lavobject,
 
     # labels
     if(add.labels) {
-        colnames(OUT) <- rownames(OUT) <-
-            lav_partable_labels(lavobject@ParTable, type="free")
+        NAMES <- lav_partable_labels(lavobject@ParTable, type="free")
+        if(augmented) {
+            nExtra <- nrow(OUT) - length(NAMES)
+            if(nExtra > 0L) {
+                NAMES <- c(NAMES, paste("aug", 1:nExtra, sep=""))
+            }
+        }
+        colnames(OUT) <- rownames(OUT) <- NAMES
     }
 
     # class
