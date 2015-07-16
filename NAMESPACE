@@ -122,6 +122,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_partable_df",
        "lav_partable_labels",
        "lav_partable_from_lm",
+       "lav_partable_complete",
 
        # lav_constraints
        "lav_constraints_parse",

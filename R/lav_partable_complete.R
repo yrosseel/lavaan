@@ -2,6 +2,13 @@
 # add some additional columns
 lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
 
+    # check if we hava a data.frame
+    # if so, check for columns that are 'factor' and convert them to 'character'
+    if(is.data.frame(lavpartable)) {
+        fac.idx <- sapply(lavpartable, is.factor)
+        lavpartable[fac.idx] <- lapply(lavpartable[fac.idx], as.character)
+    }
+
     # check if we have lhs, op, rhs
     stopifnot(!is.null(lavpartable$lhs),
               !is.null(lavpartable$op),

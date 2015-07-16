@@ -412,6 +412,9 @@ lavaanify <- lavParTable <- function(
 lavMatrixRepresentation <- function(partable, representation = "LISREL",
                                     as.data.frame. = TRUE) {
 
+    # check parameter table
+    partable <- lav_partable_complete(partable)
+
     # get model matrices
     if(representation == "LISREL") {
         REP <- representation.LISREL(partable, target=NULL, extra=FALSE)
