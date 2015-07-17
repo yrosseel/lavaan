@@ -32,9 +32,9 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
 
-# extract partable (only first six columns are needed)
-partable <- parTable(fit)[,1:6]
+# extract partable
+partable <- parTable(fit)
 
-# add matrix representation
-lavMatrixRepresentation(partable)
+# add matrix representation (and show only a few columns)
+lavMatrixRepresentation(partable)[,c("lhs","op","rhs","mat","row","col")]
 }

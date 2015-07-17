@@ -1,24 +1,24 @@
 # handle bare-minimum partables
 # add some additional columns
-lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
+lav_partable_complete <- function(partable = NULL, start = TRUE) {
 
     # check if we hava a data.frame
     # if so, check for columns that are 'factor' and convert them to 'character'
-    if(is.data.frame(lavpartable)) {
-        fac.idx <- sapply(lavpartable, is.factor)
-        lavpartable[fac.idx] <- lapply(lavpartable[fac.idx], as.character)
+    if(is.data.frame(partable)) {
+        fac.idx <- sapply(partable, is.factor)
+        partable[fac.idx] <- lapply(partable[fac.idx], as.character)
     }
 
     # check if we have lhs, op, rhs
-    stopifnot(!is.null(lavpartable$lhs),
-              !is.null(lavpartable$op),
-              !is.null(lavpartable$rhs))
+    stopifnot(!is.null(partable$lhs),
+              !is.null(partable$op),
+              !is.null(partable$rhs))
         
     # number of elements
-    N <- length(lavpartable$lhs)
-    if(!is.data.frame(lavpartable)) {
+    N <- length(partable$lhs)
+    if(!is.data.frame(partable)) {
          # check for equal column length
-         nel <- sapply(lavpartable, length)
+         nel <- sapply(partable, length)
          short.idx <- which(nel < N)
          long.idx <- which(nel > N)
          if(length(long.idx) > 0L) {
@@ -28,14 +28,14 @@ lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
              # try to extend them in a 'natural' way
              for(i in short.idx) {
                  too.short <- N - nel[i]
-                 if(is.integer(lavpartable[[i]])) {
-                     lavpartable[[i]] <- c(lavpartable[[i]], 
+                 if(is.integer(partable[[i]])) {
+                     partable[[i]] <- c(partable[[i]], 
                                            integer( too.short ))
-                 } else if(is.numeric(lavpartable[[i]])) {
-                     lavpartable[[i]] <- c(lavpartable[[i]], 
+                 } else if(is.numeric(partable[[i]])) {
+                     partable[[i]] <- c(partable[[i]], 
                                            numeric( too.short ))
                  } else {
-                     lavpartable[[i]] <- c(lavpartable[[i]],
+                     partable[[i]] <- c(partable[[i]],
                                            character( too.short ))
                  }
              }
@@ -43,87 +43,87 @@ lav_partable_complete <- function(lavpartable = NULL, start = TRUE) {
     }
 
     # add id column
-    if(is.null(lavpartable$id)) {
-        lavpartable$id <- seq_len(N)
+    if(is.null(partable$id)) {
+        partable$id <- seq_len(N)
     }
 
     # add group column
-    if(is.null(lavpartable$group)) {
-        lavpartable$group <- rep(1L, N)
+    if(is.null(partable$group)) {
+        partable$group <- rep(1L, N)
     }
 
     # add user column
-    if(is.null(lavpartable$user)) {
-        lavpartable$user <- rep(1L, N)
+    if(is.null(partable$user)) {
+        partable$user <- rep(1L, N)
     }
 
     # add free column
-    if(is.null(lavpartable$free)) {
-        lavpartable$free <- seq_len(N)
+    if(is.null(partable$free)) {
+        partable$free <- seq_len(N)
     } else {
         # treat non-zero as 'free'
-        free.idx <- which(as.logical(lavpartable$free))
-        lavpartable$free <- rep(0L, N)
+        free.idx <- which(as.logical(partable$free))
+        partable$free <- rep(0L, N)
         if(length(free.idx) > 0L) {
-            lavpartable$free[free.idx] <- seq_len(length(free.idx))
+            partable$free[free.idx] <- seq_len(length(free.idx))
         }
     }
 
     # add ustart column
-    if(is.null(lavpartable$ustart)) {
+    if(is.null(partable$ustart)) {
         # do we have something else? start? est?
-        if(!is.null(lavpartable$start)) {
-            lavpartable$ustart <- lavpartable$start
-        } else if(!is.null(lavpartable$est)) {
-            lavpartable$ustart <- lavpartable$est
+        if(!is.null(partable$start)) {
+            partable$ustart <- partable$start
+        } else if(!is.null(partable$est)) {
+            partable$ustart <- partable$est
         } else {
-            lavpartable$ustart <- rep(as.numeric(NA), N)
-            non.free <- which(!lavpartable$free)
+            partable$ustart <- rep(as.numeric(NA), N)
+            non.free <- which(!partable$free)
             if(length(non.free)) {
-                lavpartable$ustart[non.free] <- 0
+                partable$ustart[non.free] <- 0
             }
         }
     }
 
     # add exo column
-    if(is.null(lavpartable$exo)) {
-        lavpartable$exo <- rep(0, N)
+    if(is.null(partable$exo)) {
+        partable$exo <- rep(0, N)
     }
 
     # add label column
-    if(is.null(lavpartable$label)) {
-        lavpartable$label <- rep("", N)
+    if(is.null(partable$label)) {
+        partable$label <- rep("", N)
     }
 
     # add eq.id column 
-    #if(is.null(lavpartable$eq.id)) {
-    #    lavpartable$eq.id <- rep(0, N)
+    #if(is.null(partable$eq.id)) {
+    #    partable$eq.id <- rep(0, N)
     #}
 
     # add unco column
-    #if(is.null(lavpartable$unco)) {
-    #    lavpartable$unco <- lavpartable$free
+    #if(is.null(partable$unco)) {
+    #    partable$unco <- partable$free
     #}
 
     # order them nicely: id lhs op rhs group
     idx <- match(c("id", "lhs","op","rhs", "group","user",
                    "free","ustart","exo","label"),
-                 names(lavpartable))
+                 names(partable))
 
     # order them nicely: id lhs op rhs group
     #idx <- match(c("id", "lhs","op","rhs", "group","user",
     #               "free","ustart","exo","label","eq.id","unco"), 
-    #             names(lavpartable))
-    tmp <- lavpartable[idx]
-    lavpartable <- c(tmp, lavpartable[-idx])
+    #             names(partable))
+    tmp <- partable[idx]
+    partable <- c(tmp, partable[-idx])
 
     # add start column
     if(start) {
-        if(is.null(lavpartable$start)) {
-            lavpartable$start <- lav_start(start.method = "simple",
-                                           lavpartable = lavpartable)
+        if(is.null(partable$start)) {
+            partable$start <- lav_start(start.method = "simple",
+                                        lavpartable = partable)
         }
     }
 
-    lavpartable
+    partable
 }

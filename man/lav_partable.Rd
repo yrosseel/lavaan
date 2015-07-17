@@ -6,6 +6,7 @@
 \alias{lav_partable_npar}
 \alias{lav_partable_labels}
 \alias{lav_partable_from_lm}
+\alias{lav_partable_complete}
 \title{lavaan partable functions}
 \description{Utility functions related to the parameter table (partable)}
 \usage{
@@ -28,6 +29,9 @@ lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, lavoptions = NULL,
     sample.th = NULL, sample.th.idx = NULL)
 
 lav_partable_from_lm(object, est = FALSE, label = FALSE, as.data.frame. = FALSE)
+
+# complete a parameter table only containing a few columns (lhs,op,rhs)
+lav_partable_complete(partable = NULL, start = TRUE)
 }
 \arguments{
 \item{partable}{A parameter table. see \code{\link{lavParTable}} 
@@ -62,6 +66,8 @@ threshold indices for this group.}
 \item{label}{Logical. If TRUE, include parameter labels in the parameter table.}
 \item{as.data.frame.}{Logical. If TRUE, return the parameter table as a data.frame.}
 \item{object}{An object of class \code{lm}.}
+\item{start}{Logical. If TRUE, include a start column, based on 
+the simple method for generating starting values.}
 }
 \examples{
 # generate syntax for an independence model
