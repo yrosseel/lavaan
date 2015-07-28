@@ -279,8 +279,57 @@ function(object) {
 })
 
 setMethod("summary", "lavaan",
-function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE, 
-         rsquare=FALSE, std.nox=FALSE, modindices=FALSE) {
+function(object, header       = TRUE,
+                 fit.measures = FALSE, 
+                 estimates    = TRUE,
+                 ci           = FALSE, 
+                 standardized = FALSE,
+                 rsquare      = FALSE, 
+                 std.nox      = FALSE, 
+                 modindices   = FALSE, 
+                 nd = 3L) {
+
+    if(std.nox) standardized <- TRUE
+
+    # print the 'short' summary
+    if(header) {
+        short.summary(object)
+    }
+
+    # only if requested, the fit measures
+    if(fit.measures) {
+        if(object@Options$test == "none") {
+            warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+        } else if(object@Fit@npar > 0L && !object@Fit@converged) {
+            warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
+        } else {
+            print.fit.measures( fitMeasures(object, fit.measures="default") )
+        }
+    }
+
+    if(estimates) {
+        PE <- parameterEstimates(object, ci = ci, standardized = standardized,
+                                 rsquare = rsquare,
+                                 remove.eq = FALSE, remove.system.eq = TRUE,
+                                 remove.ineq = FALSE, remove.def = FALSE, 
+                                 add.attributes = TRUE)
+        if(standardized && std.nox) {
+            PE$std.all <- PE$std.nox
+        }
+        print(PE, nd = nd)
+    }
+
+    # modification indices?
+    if(modindices) {
+        cat("Modification Indices:\n\n")
+        print( modificationIndices(object, standardized=TRUE) )
+    }
+})
+
+# old summary (<0.5-19)
+summary2 <- function(object, estimates=TRUE, fit.measures=FALSE, 
+                     standardized=FALSE, 
+                     rsquare=FALSE, std.nox=FALSE, modindices=FALSE) {
 
     if(std.nox) standardized <- TRUE
 
@@ -661,7 +710,7 @@ function(object, estimates=TRUE, fit.measures=FALSE, standardized=FALSE,
         print( modificationIndices(object, standardized=TRUE) )
     }
 
-})
+}
 
 
 
@@ -781,9 +830,12 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      boot.ci.type = "perc",
                                                      standardized = FALSE, 
                                                      fmi = "default",
+                                                     remove.system.eq = TRUE,
                                                      remove.eq = TRUE,
                                                      remove.ineq = TRUE,
-                                                     remove.def = FALSE) {
+                                                     remove.def = FALSE,
+                                                     rsquare = FALSE,
+                                                     add.attributes = FALSE) {
 
     # fmi or not
     FMI <- fmi
@@ -791,10 +843,11 @@ parameterEstimates <- parameterestimates <- function(object,
         if(object@SampleStats@missing.flag &&
            object@Fit@converged &&
            object@Options$estimator == "ML" &&
-           object@Options$se == "standard")
+           object@Options$se == "standard") {
             FMI <- TRUE
-        else
+        } else {
             FMI <- FALSE
+        }
     }
     if(FMI && object@Options$se != "standard") {
         warning("lavaan WARNING: fmi only available if se=\"standard\"")
@@ -802,7 +855,7 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    LIST <- LIST[,c("lhs", "op", "rhs", "group", "label")]
+    LIST <- LIST[,c("lhs", "op", "rhs", "user", "group", "label", "exo")]
     # add est and se column
     est <- object@Fit@est
     BOOT <- attr(est, "BOOT.COEF")
@@ -957,11 +1010,21 @@ parameterEstimates <- parameterestimates <- function(object,
         LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]    
     }
 
-    # add std and std.all columns
+    # standardized estimates?
     if(standardized) {
         LIST$std.lv  <- standardize.est.lv(object)
         LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
         LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
+    }
+
+    # rsquare?
+    if(rsquare) {
+        r2 <- lavTech(object, "rsquare", add.labels = TRUE)
+        NAMES <- unlist(lapply(r2, names)); nel <- length(NAMES)
+        R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
+                          group = rep(1:length(r2), sapply(r2, length)),
+                          est = unlist(r2), stringsAsFactors = FALSE )
+        LIST <- lav_partable_merge(pt1 = LIST, pt2 = R2, warn = FALSE)
     }
 
     # fractional missing information (if estimator="fiml")
@@ -1001,7 +1064,13 @@ parameterEstimates <- parameterestimates <- function(object,
 
     # remove == rows?
     if(remove.eq) {
-        eq.idx <- which(LIST$op == "==")
+        eq.idx <- which(LIST$op == "==" & LIST$user == 1L)
+        if(length(eq.idx) > 0L) {
+            LIST <- LIST[-eq.idx,]
+        }
+    }
+    if(remove.system.eq) {
+        eq.idx <- which(LIST$op == "==" & LIST$user != 1L)
         if(length(eq.idx) > 0L) {
             LIST <- LIST[-eq.idx,]
         }
@@ -1021,7 +1090,23 @@ parameterEstimates <- parameterestimates <- function(object,
         }
     }
 
-    class(LIST) <- c("lavaan.data.frame", "data.frame")
+    # remove LIST$user
+    LIST$user <- NULL
+
+    if(add.attributes) {
+        class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
+                         "data.frame")
+        attr(LIST, "information") <- object@Options$information
+        attr(LIST, "se") <- object@Options$se
+        attr(LIST, "group.label") <- object@Data@group.label
+        attr(LIST, "boot") <- object@Options$boot
+        attr(LIST, "boot.successful") <- nrow(attr(object@Fit@est, "BOOT.COEF"))
+        # FIXME: add more!!
+    } else {
+        LIST$exo <- NULL
+        class(LIST) <- c("lavaan.data.frame", "data.frame")
+    }
+
     LIST
 }
 

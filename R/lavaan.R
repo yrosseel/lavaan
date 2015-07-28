@@ -1,4 +1,4 @@
-# main user-visi ble cfa/sem/growth functions 
+# main user-visible cfa/sem/growth functions 
 #
 # initial version: YR 25/03/2009
 # added lavoptions YR 02/08/2010
