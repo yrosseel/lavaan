@@ -824,7 +824,9 @@ standardizedSolution <- standardizedsolution <- function(object,
     LIST
 }
 
-parameterEstimates <- parameterestimates <- function(object, 
+parameterEstimates <- parameterestimates <- function(object,
+                                                     zstat = TRUE,
+                                                     pvalue = TRUE,
                                                      ci = TRUE, 
                                                      level = 0.95, 
                                                      boot.ci.type = "perc",
@@ -865,8 +867,12 @@ parameterEstimates <- parameterestimates <- function(object,
     if(object@Options$se != "none") {
         LIST$se  <- object@Fit@se
         tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
-        LIST$z <- LIST$est / tmp.se
-        LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+        if(zstat) { 
+            LIST$z <- LIST$est / tmp.se
+            if(pvalue) {
+                LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+            }
+        }
     }
 
     # confidence interval

@@ -5,14 +5,21 @@
 \description{
 Parameter estimates of a latent variable model.}
 \usage{
-parameterEstimates(object, ci = TRUE, level = 0.95, 
-                   boot.ci.type = "perc", standardized = FALSE,
-                   fmi = "default", remove.eq = TRUE, 
-                   remove.ineq = TRUE, remove.def = FALSE)
+parameterEstimates(object, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
+                   level = 0.95, boot.ci.type = "perc", standardized = FALSE, 
+                   fmi = "default", remove.system.eq = TRUE, remove.eq = TRUE, 
+                   remove.ineq = TRUE, remove.def = FALSE, rsquare = FALSE, 
+                   add.attributes = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{ci}{If TRUE, confidence intervals are added to the output}
+\item{zstat}{Logical. If \code{TRUE}, an extra column is added containing
+the so-called z-statistic, which is simply the value of the estimate divided
+by its standard error.}
+\item{pvalue}{Logical. If \code{TRUE}, an extra column is added containing
+the pvalues corresponding to the z-statistic, evaluated under a standard
+normal distribution.}
+\item{ci}{If \code{TRUE}, confidence intervals are added to the output}
 \item{level}{The confidence level required.}
 \item{boot.ci.type}{If bootstrapping was used, the type of interval required.
   The value should be one of \code{"norm"}, \code{"basic"}, \code{"perc"}, 
@@ -21,22 +28,34 @@ parameterEstimates(object, ci = TRUE, level = 0.95,
   \code{"bca.simple"} option produces intervals using the adjusted bootstrap
   percentile (BCa) method, but with no correction for acceleration (only for 
   bias).}
-\item{standardized}{If TRUE, standardized estimates are added to the output}
+\item{standardized}{Logical. If \code{TRUE}, standardized estimates are 
+added to the output}
 \item{fmi}{Logical. If \code{TRUE}, an extra column is added containing the
 fraction of missing information for each estimated parameter. If
 \code{"default"}, the value is set to \code{TRUE} only if
 \code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.
 See references for more information.}
-\item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
-containing equality constraints, if any.}
-\item{remove.ineq}{Logical. If TRUE, filter the output by removing all
+\item{remove.eq}{Logical. If \code{TRUE}, filter the output by removing all 
+rows containing user-specified equality constraints, if any.}
+\item{remove.system.eq}{Logical. If \code{TRUE}, filter the output by 
+removing all rows containing system-generated equality constraints, if any.}
+\item{remove.ineq}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing inequality constraints, if any.}
-\item{remove.def}{Logical. If TRUE, filter the ouitput by removing all
+\item{remove.def}{Logical. If \code{TRUE}, filter the ouitput by removing all
 rows containing parameter definitions, if any.}
+\item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
+the rsquare values (in the \code{est} column) of all endogenous variables 
+in the model. Both the \code{lhs} and \code{rhs} column contain the
+name of the endogenous variable, while the code{op} column contains \code{r2}, 
+to indicate that the values in the \code{est} column are rsquare values.}
+\item{add.attributes}{Logical. If \code{TRUE}, add a class attribute
+(class \code{lavaan.parameterEstimates}) and other attributes to be used by
+the print function for this class (\code{print.lavaan.parameterEstimates}). 
+This is used by the \code{summary()} function, to prettify the output.}
 }
 \value{
   A data.frame containing the estimated parameters,
-  parameters, standard errors, z-values, and (by default) 
+  parameters, standard errors, and (by default) z-values , p-values, and 
   the lower and upper values of the confidence intervals. If requested,
   extra columns are added with standardized versions of the parameter
   estimates.
