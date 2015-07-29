@@ -102,12 +102,12 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     cat(t0.txt, t1.txt, "\n", sep="")
 
     # 3.
-    if(!is.null(attr(x, "boot"))) {
+    if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
         t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
-        t1.txt <- sprintf("  %10i", attr(x, "boot"))
+        t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
         cat(t0.txt, t1.txt, "\n", sep="")
         t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
-        t1.txt <- sprintf("  %10i", attr(x, "boot.successful"))
+        t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
         cat(t0.txt, t1.txt, "\n", sep="")
     }
     
@@ -144,15 +144,28 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     rownames(m) <- rep("", nrow(m))
 
     # handle se == 0.0
-    se.idx <- which(x$se == 0)
-    if(length(se.idx) > 0L) {
-        m[se.idx, c("se", "z", "pvalue")] <- ""
-    }
+    if(!is.null(x$se)) {
+        se.idx <- which(x$se == 0)
+        if(length(se.idx) > 0L) {
+            m[se.idx, "se"] <- ""
+            if(!is.null(x$z)) {
+                m[se.idx, "z"] <- ""
+            }
+            if(!is.null(x$pvalue)) {
+                m[se.idx, "pvalue"] <- ""
+            }
+        }
 
-    # handle se == NA
-    se.idx <- which(is.na(x$se))
-    if(length(se.idx) > 0L) {
-        m[se.idx, c("z", "pvalue")] <- ""
+        # handle se == NA
+        se.idx <- which(is.na(x$se))
+        if(length(se.idx) > 0L) {
+            if(!is.null(x$z)) {
+                m[se.idx, "z"] <- ""
+            }
+            if(!is.null(x$pvalue)) {
+                m[se.idx, "pvalue"] <- ""
+            }
+        }
     }
 
     # rename some column names

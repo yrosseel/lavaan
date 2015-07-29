@@ -364,7 +364,7 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
     cat(t0.txt, t1.txt, "\n", sep="")
     if(object@Options$se == "bootstrap") {
         t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
-        t1.txt <- sprintf("  %10i", object@Options$boot)
+        t1.txt <- sprintf("  %10i", object@Options$bootstrap)
         cat(t0.txt, t1.txt, "\n", sep="")
         t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
         t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT.COEF")))
@@ -1105,8 +1105,9 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "information") <- object@Options$information
         attr(LIST, "se") <- object@Options$se
         attr(LIST, "group.label") <- object@Data@group.label
-        attr(LIST, "boot") <- object@Options$boot
-        attr(LIST, "boot.successful") <- nrow(attr(object@Fit@est, "BOOT.COEF"))
+        attr(LIST, "bootstrap") <- object@Options$bootstrap
+        attr(LIST, "bootstrap.successful") <- 
+            nrow(attr(object@Fit@est, "BOOT.COEF"))
         # FIXME: add more!!
     } else {
         LIST$exo <- NULL
