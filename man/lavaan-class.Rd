@@ -45,6 +45,12 @@ about the data.}
     \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
     \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the 
       results of fitting the model}
+    \item{\code{boot}:}{List. Results and information about the bootstrap.}
+    \item{\code{optim}:}{List. Information about the optimization.}
+    \item{\code{implied}:}{List. Model implied statistics.}
+    \item{\code{vcov}:}{List. Information about the variance matrix (vcov) of the model parameters.}
+    \item{\code{test}:}{List. Different test statistics.}
+    \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
 }
 \section{Methods}{

@@ -367,7 +367,7 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
         t1.txt <- sprintf("  %10i", object@Options$bootstrap)
         cat(t0.txt, t1.txt, "\n", sep="")
         t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
-        t1.txt <- sprintf("  %10i", nrow(attr(object@Fit@est, "BOOT.COEF")))
+        t1.txt <- sprintf("  %10i", NROW(object@boot$coef))
         cat(t0.txt, t1.txt, "\n", sep="")
     }
     cat("\n")
@@ -412,7 +412,7 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
         cat(txt)
     }
 
-    est <- object@Fit@est
+    est <- object@ParTable$est
     se  <- object@Fit@se
     if(rsquare || standardized) {
         est.std    <- standardize.est.lv(object)
@@ -728,7 +728,7 @@ function(object, type="free", labels=TRUE) {
     } else {
         stop("argument `type' must be one of free or user")
     }
-    cof <- object@Fit@est[idx]
+    cof <- object@ParTable$est[idx]
   
     # labels?
     if(labels) names(cof) <- lav_partable_labels(object@ParTable, type=type)
@@ -857,12 +857,12 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    LIST <- LIST[,c("lhs", "op", "rhs", "user", "group", "label", "exo")]
+    LIST <- LIST[,c("lhs", "op", "rhs", "user", "group", "label", "exo","est")]
     # add est and se column
-    est <- object@Fit@est
-    BOOT <- attr(est, "BOOT.COEF")
-    attributes(est) <- NULL
-    LIST$est <- est
+    #est <- object@Fit@est
+    BOOT <- object@boot$coef
+    #attributes(est) <- NULL
+    #LIST$est <- est
 
     if(object@Options$se != "none") {
         LIST$se  <- object@Fit@se
@@ -1106,8 +1106,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "se") <- object@Options$se
         attr(LIST, "group.label") <- object@Data@group.label
         attr(LIST, "bootstrap") <- object@Options$bootstrap
-        attr(LIST, "bootstrap.successful") <- 
-            nrow(attr(object@Fit@est, "BOOT.COEF"))
+        attr(LIST, "bootstrap.successful") <- NROW(object@boot$coef)
         # FIXME: add more!!
     } else {
         LIST$exo <- NULL

@@ -136,8 +136,8 @@ setClass("Fit",
         #df="integer",
         x="numeric",               # x
         partrace="matrix",         # parameter trace
-        start="numeric",           # starting values
-        est="numeric",             # estimated values
+        start="numeric",           # starting values (only for other packages)
+        est="numeric",             # estimated values (only for other packages)
         se="numeric",              # standard errors
         fx="numeric",
         fx.group="numeric",
@@ -157,14 +157,20 @@ setClass("lavaan",
     representation(
         call        = "call",            # matched call
         timing      = "list",            # timing information
-        Options     = "list",            # lavaanOptions
+        Options     = "list",            # lavOptions
         ParTable    = "list",            # parameter table user-specified model
         pta         = "list",            # parameter table attributes
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "Model",           # internal matrix representation
         Cache       = "list",            # housekeeping stuff
-        Fit         = "Fit"              # fitted results
+        Fit         = "Fit",             # fitted results 
+        boot        = "list",            # bootstrap results
+        optim       = "list",            # optimizer results
+        implied     = "list",            # model implied moments
+        vcov        = "list",            # vcov
+        test        = "list",            # test
+        external    = "list"             # optional slot, for add-on packages
     ) 
 )
 

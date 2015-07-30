@@ -1330,9 +1330,6 @@ lav_partable_flat <- function(FLAT = NULL,
                       free[ var.ord.idx ] <- 1L
                     ustart[ var.ord.idx ] <- as.numeric(NA)
                 }
-            } else {
-                stop("lavaan ERROR: parameterization ", parameterization,
-                     " not supported")
             }
 
             # group proportions

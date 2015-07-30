@@ -396,12 +396,12 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
             # fill in starting values
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
-            GLIST[[mm]][m.user.idx] <- lavobject@Fit@start[x.user.idx]
+            GLIST[[mm]][m.user.idx] <- lavobject@ParTable$start[x.user.idx]
         } else if(what == "est") {
             # fill in estimated parameter values
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
-            GLIST[[mm]][m.user.idx] <- lavobject@Fit@est[x.user.idx]
+            GLIST[[mm]][m.user.idx] <- lavobject@ParTable$est[x.user.idx]
         } else if(what == "dx.free") {
             # fill in derivatives free parameters
             m.el.idx <- lavobject@Model@m.free.idx[[mm]]
@@ -1254,7 +1254,6 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
                               lavsamplestats = lavobject@SampleStats,
                               lavoptions     = lavobject@Options,
                               lavdata        = lavobject@Data,
-                              lavpartable    = lavobject@Partable,
                               lavcache       = lavobject@Cache
                              )
     }

@@ -434,11 +434,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
-    # check for categorical
-    #if(lavmodel@categorical && lavoptions$se == "bootstrap") {
-    #    stop("lavaan ERROR: bootstrap not supported (yet) for categorical data")
-    #}
-
     if(!is.null(slotCache)) {
         lavcache <- slotCache
     } else {
@@ -697,12 +692,37 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavcache = lavcache, estimator = lavoptions$estimator)
     }
 
+    # store parameters in @ParTable$est
+    lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
+                                                type = "user", extra = TRUE)
+
     # should we fake/force convergence? (eg. to enforce the
     # computation of a test statistic
     if(!is.null(control$optim.force.converged) &&
        control$optim.force.converged) {
         attr(x, "converged") <- TRUE
     }
+
+    # store optimization info in lavoptim
+    lavoptim <- list()
+    lavoptim$iterations <- attr(x, "iterations")
+    lavoptim$converged  <- attr(x, "converged")
+    fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
+    lavoptim$fx         <- fx
+    lavoptim$fx.group   <- attr(fx.copy, "fx.group")
+    if(!is.null(attr(fx.copy, "logl.group"))) {
+        lavoptim$logl.group <- attr(fx.copy, "logl.group")
+        lavoptim$logl       <- sum(lavoptim$logl.group)
+    } else {
+        lavoptim$logl.group <- as.numeric(NA)
+        lavoptim$logl       <- as.numeric(NA)
+    }
+    lavoptim$control        <- attr(x, "control")
+
+    # compute/store some model-implied moments
+    # TODO
+    lavimplied <- list()
+
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -719,6 +739,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavcache        = lavcache)
         if(verbose) cat(" done.\n")
     }
+
+    # extract bootstrap results (if any)
+    if(!is.null(attr(VCOV, "BOOT.COEF"))) {
+        lavboot <- list()
+        lavboot$coef <- attr(VCOV, "BOOT.COEF")
+    } else {
+        lavboot <- list()  
+    }
+
+    # store VCOV in vcov
+    # TODO
+    lavvcov <- list()
+
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -747,6 +780,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                      stat.group=rep(NA, lavdata@ngroups), df=NA, 
                      refdistr="unknown", pvalue=NA))
     }
+
+    # store test in lavtest
+    lavtest <- TEST
+
     timing$TEST <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -764,7 +801,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         var.idx <- which(lavpartable$op == "~~" &
                          #!lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
                          lavpartable$lhs == lavpartable$rhs)
-        if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0))
+        if(length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0))
             warning("lavaan WARNING: some estimated variances are negative")
         
         # 2. is cov.lv (PSI) positive definite?
@@ -808,7 +845,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   SampleStats  = lavsamplestats,      # S4 class
                   Model        = lavmodel,            # S4 class
                   Cache        = lavcache,            # list
-                  Fit          = lavfit               # S4 class
+                  Fit          = lavfit,              # S4 class
+                  boot         = lavboot,             # list
+                  optim        = lavoptim,            # list
+                  implied      = lavimplied,          # list
+                  vcov         = lavvcov,             # list
+                  test         = lavtest,             # list
+                  external     = list()               # empty list
                  )
 
     lavaan

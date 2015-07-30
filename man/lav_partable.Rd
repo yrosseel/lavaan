@@ -7,6 +7,8 @@
 \alias{lav_partable_labels}
 \alias{lav_partable_from_lm}
 \alias{lav_partable_complete}
+\alias{lav_partable_attributes}
+\alias{lav_partable_merge}
 \title{lavaan partable functions}
 \description{Utility functions related to the parameter table (partable)}
 \usage{
@@ -14,6 +16,7 @@
 lav_partable_df(partable, group = NULL)
 lav_partable_ndat(partable, group = NULL)
 lav_partable_npar(partable)
+lav_partable_attributes(partable, pta = NULL)
 
 # generate parameter labels
 lav_partable_labels(partable, group.equal = "", group.partial = "", 
@@ -32,6 +35,10 @@ lav_partable_from_lm(object, est = FALSE, label = FALSE, as.data.frame. = FALSE)
 
 # complete a parameter table only containing a few columns (lhs,op,rhs)
 lav_partable_complete(partable = NULL, start = TRUE)
+
+# merge two parameter tables
+lav_partable_merge(pt1 = NULL, pt2 = NULL, remove.duplicated = FALSE, 
+    fromLast = FALSE, warn = TRUE)
 }
 \arguments{
 \item{partable}{A parameter table. see \code{\link{lavParTable}} 
@@ -68,6 +75,15 @@ threshold indices for this group.}
 \item{object}{An object of class \code{lm}.}
 \item{start}{Logical. If TRUE, include a start column, based on 
 the simple method for generating starting values.}
+\item{pta}{A list containing parameter attributes.}
+\item{pt1}{A parameter table.}
+\item{pt2}{A parameter table.}
+\item{remove.duplicated}{Logical. If \code{TRUE}, remove duplicated elements
+when merging two parameter tables.}
+\item{fromLast}{Logical. If \code{TRUE}, duplicated elements are considered
+from the bottom of the merged parameter table.}
+\item{warn}{Logical. If code{TRUE}, a warning is produced when duplicated
+elements are found, when merging two parameter tables.}
 }
 \examples{
 # generate syntax for an independence model

@@ -182,7 +182,7 @@ modindices <- function(object,
 
     # remove some columns
     LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL
-    LIST$start <- LIST$free <- NULL
+    LIST$start <- LIST$free <- LIST$est <- LIST$se <- LIST$prior <- NULL
 
     if(power) {
         LIST$sepc.lv <- LIST$sepc.nox <- NULL

@@ -78,7 +78,7 @@ function(object, type="raw", labels=TRUE) {
             VarCov <- lav_model_vcov(lavmodel       = augModel, 
                                      lavsamplestats = object@SampleStats,
                                      lavdata        = object@Data,
-                                     lavpartable    = object@Partable,
+                                     lavpartable    = object@ParTable,
                                      lavoptions     = object@Options)
             # set cov between free and fixed.x elements to zero
             ###
@@ -94,7 +94,7 @@ function(object, type="raw", labels=TRUE) {
         } else {
             VarCov <- lav_model_vcov(lavmodel       = object@Model,
                                      lavdata        = object@Data,
-                                     lavpartable    = object@Partable,
+                                     lavpartable    = object@ParTable,
                                      lavsamplestats = object@SampleStats,
                                      lavoptions     = object@Options)
             Delta  <- computeDelta(lavmodel = object@Model)
