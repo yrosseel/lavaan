@@ -30,7 +30,11 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   ##                   later, we remove the 'empty rows'
   ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
 
-  Score.mat <- matrix(NA, ntot, length(coef(object)))
+  npar <- length(coef(object))
+  if(object@Model@eq.constraints) {
+     npar <- NCOL(object@Model@eq.constraints.K)
+  }
+  Score.mat <- matrix(NA, ntot, npar)
   
   for(g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1){
@@ -128,11 +132,17 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
     } # missing
     
     Delta <- computeDelta(lavmodel = lavmodel)[[g]]
+    if(lavmodel@eq.constraints) {
+        Delta <- Delta %*% lavmodel@eq.constraints.K # + lavmodel@eq.constraints.k0
+        #x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+        #                lavmodel@eq.constraints.k0
+    }
     wi <- lavdata@case.idx[[g]]
     Score.mat[wi,] <- -scores.H1 %*% Delta
     if(scaling){
       Score.mat[wi,] <- (-1/ntot) * Score.mat[wi,]
     }
+    
   } # g
 
   # handle empty rows
@@ -143,7 +153,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   }
   
   # provide column names
-  colnames(Score.mat) <- names(coef(object))
+  if(!object@Model@eq.constraints) {
+      colnames(Score.mat) <- names(coef(object))
+  }
 
   Score.mat
 }
