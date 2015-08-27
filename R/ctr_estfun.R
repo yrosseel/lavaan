@@ -31,9 +31,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
 
   npar <- length(coef(object))
-  if(object@Model@eq.constraints) {
-     npar <- NCOL(object@Model@eq.constraints.K)
-  }
+  #if(object@Model@eq.constraints) {
+  #   npar <- NCOL(object@Model@eq.constraints.K)
+  #}
   Score.mat <- matrix(NA, ntot, npar)
   
   for(g in 1:lavsamplestats@ngroups) {
@@ -132,11 +132,11 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
     } # missing
     
     Delta <- computeDelta(lavmodel = lavmodel)[[g]]
-    if(lavmodel@eq.constraints) {
-        Delta <- Delta %*% lavmodel@eq.constraints.K # + lavmodel@eq.constraints.k0
-        #x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-        #                lavmodel@eq.constraints.k0
-    }
+    #if(lavmodel@eq.constraints) {
+    #    Delta <- Delta %*% lavmodel@eq.constraints.K # + lavmodel@eq.constraints.k0
+    #    #x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+    #    #                lavmodel@eq.constraints.k0
+    #}
     wi <- lavdata@case.idx[[g]]
     Score.mat[wi,] <- -scores.H1 %*% Delta
     if(scaling){
@@ -153,9 +153,9 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   }
   
   # provide column names
-  if(!object@Model@eq.constraints) {
+  #if(!object@Model@eq.constraints) {
       colnames(Score.mat) <- names(coef(object))
-  }
+  #}
 
   Score.mat
 }

@@ -202,6 +202,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             cat("Group ", g, " [", group.label[g], "]:\n", sep="")
         }
 
+        # group-specific sections
         for(s in GSECTIONS) {
             if(s == "Latent Variables") {
                 row.idx <- which( x$op == "=~" & !x$lhs %in% ov.names & 
@@ -251,6 +252,14 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 row.idx <- integer(0L)
             }
 
+            # do we need special formatting for this section?
+            # three types:
+            #  - regular (nothing to do, except row/colnames)
+            #  - R-square
+            #  - Latent Variables (and Composites), Regressions and Covariances
+            #    'bundle' the output per lhs element
+            
+            # bundling
             if(s %in% c("Latent Variables", "Composites", 
                         "Regressions", "Covariances")) {
                 nel <- length(row.idx)
@@ -278,6 +287,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 cat("\n", s, ":\n", sep = "")
                 #cat("\n")
                 print(M, quote = FALSE)
+
+            # R-square
             } else if(s == "R-Square") {
                 M <- m[row.idx,1:2,drop=FALSE]
                 colnames(M) <- colnames(m)[1:2]
@@ -286,6 +297,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 cat("\n", s, ":\n", sep = "")
                 #cat("\n")
                 print(M, quote = FALSE)
+
+            # Regular
             } else {
                 #M <- rbind(matrix("", nrow = 1L, ncol = ncol(m)),
                 #           m[row.idx,])
