@@ -84,7 +84,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     # here come the checks
     if(TRUE) {
         # 1. same set of observed variables?
-        ov.names <- lapply(mods, lavNames)
+        ov.names <- lapply(mods, function(x) { sort(lavNames(x)) })
         OV <- ov.names[[1L]] # the observed variable names of the first model
         if(!all(sapply(ov.names, function(x) identical(x, OV)))) {
             warning("lavaan WARNING: some models are based on a different set of observed variables")
