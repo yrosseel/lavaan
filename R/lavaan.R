@@ -806,7 +806,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         
         # 2. is cov.lv (PSI) positive definite?
         if(length(vnames(lavpartable, type="lv.regular")) > 0L) {
-            ETA <- computeVETA(lavmodel, lavsamplestats = lavsamplestats)
+            ETA <- computeVETA(lavmodel, lavsamplestats = lavsamplestats,
+                               remove.dummy.lv = TRUE)
             for(g in 1:lavdata@ngroups) {
                 txt.group <- ifelse(lavdata@ngroups > 1L,
                                     paste("in group", g, ".", sep=""), "")
