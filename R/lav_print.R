@@ -282,7 +282,9 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                         }
                         old.lhs <- LHS[i]
                     }
-                    M <- M[-del.idx,,drop=FALSE]
+                    if(length(del.idx) > 0L) {
+                        M <- M[-del.idx,,drop=FALSE]
+                    }
                 }
                 cat("\n", s, ":\n", sep = "")
                 #cat("\n")

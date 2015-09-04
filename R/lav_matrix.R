@@ -716,8 +716,8 @@ lav_matrix_symmetric_sqrt <- function(S = matrix(0,0,0)) {
 
     n <- nrow(S)
 
-    # eigen decomposition
-    S.eigen <- eigen(S)
+    # eigen decomposition, assume symmetric matrix
+    S.eigen <- eigen(S, symmetric = TRUE)
     V <- S.eigen$vectors; d <- S.eigen$values
 
     # 'fix' slightly negative tiny numbers
