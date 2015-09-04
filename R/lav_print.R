@@ -389,27 +389,27 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 .makeConNames <- function(lhs, op, rhs, nd) {
 
     nd <- max(nd, 3)
-    W <- 40 + (nd - 3)*3
+    W <- 41 + (nd - 3)*3
 
     nel <- length(lhs)
     if(length(nel) == 0L) return(character(0))
     NAMES <- character(nel)
     for(i in 1:nel) {
-        if(rhs == "0" && op == ">") {
-            con.string <- paste(lhs, " - 0", sep="")
-        } else if(rhs == "0" && op == "<") {
-            con.string <- paste(rhs, " - (", lhs, ")", sep="")
-        } else if(rhs != "0" && op == ">") {
-            con.string <- paste(lhs, " - (", rhs, ")", sep="")
-        } else if(rhs != "0" && op == "<") {
-            con.string <- paste(rhs, " - (", lhs, ")", sep="")
-        } else if(rhs == "0" && op == "==") {
-            con.string <- paste(lhs, " - 0", sep="")
-        } else if(rhs != "0" && op == "==") {
-            con.string <- paste(lhs, " - (", rhs, ")", sep="")
+        if(rhs[i] == "0" && op[i] == ">") {
+            con.string <- paste(lhs[i], " - 0", sep="")
+        } else if(rhs[i] == "0" && op[i] == "<") {
+            con.string <- paste(rhs[i], " - (", lhs[i], ")", sep="")
+        } else if(rhs[i] != "0" && op[i] == ">") {
+            con.string <- paste(lhs[i], " - (", rhs[i], ")", sep="")
+        } else if(rhs[i] != "0" && op[i] == "<") {
+            con.string <- paste(rhs[i], " - (", lhs[i], ")", sep="")
+        } else if(rhs[i] == "0" && op[i] == "==") {
+            con.string <- paste(lhs[i], " - 0", sep="")
+        } else if(rhs[i] != "0" && op[i] == "==") {
+            con.string <- paste(lhs[i], " - (", rhs[i], ")", sep="")
         }
         con.string <- abbreviate(con.string, W, strict = TRUE)
-        char.format <- paste("    %-", W, "s", sep = "")
+        char.format <- paste("   %-", W, "s", sep = "")
         NAMES[i] <- sprintf(char.format, con.string)
     }
 

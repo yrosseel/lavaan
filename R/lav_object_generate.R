@@ -120,13 +120,16 @@ lav_object_extended <- function(object, add = NULL,
                                   "exo","label","plabel")] # do we need 'exo'?
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))
-        non.free.idx <- which(partable$free == 0L)
+        non.free.idx <- which(partable$free == 0L & partable$op != "==" &
+                              partable$op != ":=" & partable$op != "<" &
+                              partable$op != ">")
         partable$free[ non.free.idx ] <- 1L
         partable$user[ non.free.idx ] <- 10L
     }
  
     # replace 'start' column, since lav_model will fill these in in GLIST
-    partable$start <- parameterEstimates(object,
+    partable$start <- parameterEstimates(object, remove.system.eq = FALSE,
+                          remove.def = FALSE,
                           remove.eq = FALSE, remove.ineq = FALSE)$est
 
     # add new parameters, extend model

@@ -57,6 +57,22 @@ modindices <- function(object,
     model.idx <- LIST$free[ LIST$free > 0L & LIST$user != 10L ]
     extra.idx <- LIST$free[ LIST$free > 0L & LIST$user == 10L ]
 
+    # catch empty extra.idx (no modification indices!)
+    if(length(extra.idx) == 0L) {
+        # 2 possibilities: either model is saturated, or we have constraints
+        if(object@Fit@test[[1]]$df == 0) {
+            warning("lavaan WARNING: list with extra parameters is empty; model is saturated")
+        } else {
+            warning("lavaan WARNING: list with extra parameters is empty; to release equality\n                  constraints, use lavTestScore()")
+        }
+        LIST <- data.frame(lhs = character(0), op = character(0),  
+                           rhs = character(0), group = integer(0), 
+                           mi = numeric(0), epc = numeric(0), 
+                           sepc.lv = numeric(0), sepc.all = numeric(0),
+                           sepc.nox = numeric(0))
+        return(LIST)
+    }
+ 
     # partition 
     I11 <- information[extra.idx, extra.idx, drop = FALSE]
     I12 <- information[extra.idx, model.idx, drop = FALSE]
