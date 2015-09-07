@@ -21,6 +21,12 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         stop("lavaan ERROR: model did not converge")
     }
 
+    # check for inequality constraints
+    PT <- object@ParTable
+    if(any(PT$op == ">" | PT$op == "<")) {
+        stop("lavaan ERROR: lavTestScore() does not handle inequality constraints (yet)")
+    }
+
     # check arguments
     if(cumulative) {
         univariate <- TRUE
