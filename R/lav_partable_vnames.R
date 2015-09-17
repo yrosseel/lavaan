@@ -340,7 +340,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                 # return in the right order
                 out <- unlist(lapply(ord.names, function(x) { 
                     paste(x, "|t", 
-                          1:length(grep(paste("^",x,"\\|",sep=""),TH)), 
+                          1:length(grep(paste(x,"|",sep=""), TH, fixed=TRUE)), 
                           sep="") }))
             } else {
                 out <- character(0L)

@@ -926,6 +926,12 @@ lav_partable_flat <- function(FLAT = NULL,
         if(length(idx) > 0L) {
             ov.names.ord2 <- ov.names.ord2[-idx]
         }
+
+        # remove those that do appear in the model syntax
+        idx <- which(!ov.names.ord2 %in% ov.names)
+        if(length(idx) > 0L) {
+            ov.names.ord2 <- ov.names.ord2[-idx]
+        }
     } else {
         ov.names.ord2 <- character(0)
     }
