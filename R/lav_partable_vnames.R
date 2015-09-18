@@ -326,22 +326,23 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         if(any(c("th","th.mean") %in% type)) {
-            lhs <- partable$lhs[ partable$group == g &
-                                 partable$op == "|" ]
-            rhs <- partable$rhs[ partable$group == g &
-                                 partable$op == "|" ]
-            TH <- unique(paste(lhs, "|", rhs, sep=""))
+            TH.lhs <- partable$lhs[ partable$group == g &
+                                    partable$op == "|" ]
+            TH.rhs <- partable$rhs[ partable$group == g &
+                                    partable$op == "|" ]
         }
 
         # threshold
         if("th" %in% type) {
-            ## FIXME!! do some elegantly!
             if(length(ord.names) > 0L) {
-                # return in the right order
-                out <- unlist(lapply(ord.names, function(x) { 
-                    paste(x, "|t", 
-                          1:length(grep(paste(x,"|",sep=""), TH, fixed=TRUE)), 
-                          sep="") }))
+                # return in the right order (following ord.names!)
+                out <- unlist(lapply(ord.names, function(x) {
+                                  idx <- which(x == TH.lhs)
+                                  TH <- unique(paste(TH.lhs[idx], "|", 
+                                                     TH.rhs[idx], sep=""))
+                                  # make sure the th's are in increasing order
+                                  sort(TH)
+                             }))
             } else {
                 out <- character(0L)
             }
@@ -350,18 +351,22 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # thresholds and mean/intercepts of numeric variables
         if("th.mean" %in% type) {
-            ## FIXME!! do some elegantly!
-            # return in the right order
-            out <- unlist(lapply(ov.names.nox,
-                          function(x) {
-                          if(x %in% ord.names) {
-                               paste(x, "|t", 
-                                 1:length(grep(paste("^",x,"\\|",sep=""),TH)), 
-                                 sep="")
-                          } else {
-                              x
-                          }
-                          }))
+            if(length(ov.names.nox) > 0L) {
+                # return in the right order (following ov.names.nox!)
+                out <- unlist(lapply(ov.names.nox, function(x) {
+                              if(x %in% ord.names) {
+                                  idx <- which(x == TH.lhs)
+                                  TH <- unique(paste(TH.lhs[idx], "|",
+                                                     TH.rhs[idx], sep=""))
+                                  # make sure the th's are in increasing order
+                                  sort(TH)
+                              } else {
+                                  x
+                              }
+                         }))
+            } else {
+                out <- character(0L)
+            }
             OUT$th.mean[[g]] <- out
         }
 
