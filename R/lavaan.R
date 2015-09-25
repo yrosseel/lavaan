@@ -674,6 +674,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 estimator = lavoptions$estimator)
         }
 
+        # store parameters in @ParTable$est
+        lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
+                                                    type = "user", extra = TRUE)
+
         if(!is.null(attr(x, "con.jac"))) 
             lavmodel@con.jac <- attr(x, "con.jac")
         if(!is.null(attr(x, "con.lambda")))
@@ -690,11 +694,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lav_model_objective(lavmodel = lavmodel, 
                 lavsamplestats = lavsamplestats, lavdata = lavdata, 
                 lavcache = lavcache, estimator = lavoptions$estimator)
-    }
 
-    # store parameters in @ParTable$est
-    lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
-                                                type = "user", extra = TRUE)
+        lavpartable$est <- lavpartable$start
+    }
 
     # should we fake/force convergence? (eg. to enforce the
     # computation of a test statistic
@@ -719,9 +721,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     lavoptim$control        <- attr(x, "control")
 
-    # compute/store some model-implied moments
-    # TODO
-    lavimplied <- list()
+    # compute/store some model-implied statistics
+    lavimplied <- lav_model_implied(lavmodel)
 
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -749,8 +750,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # store VCOV in vcov
-    # TODO
-    lavvcov <- list()
+    # strip all attributes but 'dim'
+    tmp.attr <- attributes(VCOV)
+    VCOV1 <- VCOV
+    attributes(VCOV1) <- tmp.attr["dim"]
+    lavvcov <- list(vcov = VCOV1)
+
+    # store se in partable
+    SE <- lav_model_vcov_se(lavmodel = lavmodel, lavpartable = lavpartable,
+                            VCOV = VCOV, BOOT = lavboot$coef)
+    lavpartable$se <- SE
 
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
