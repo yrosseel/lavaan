@@ -5,7 +5,8 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all", se = TRUE, remove.eq = TRUE, 
+standardizedSolution(object, type = "std.all", se = TRUE, 
+                     zstat = TRUE, pvalue = TRUE, remove.eq = TRUE, 
                      remove.ineq = TRUE, remove.def = FALSE)
 }
 \arguments{
@@ -19,6 +20,12 @@ on both the variances of both (continuous) observed and latent variables,
 but not the variances of exogenous covariates.}
 \item{se}{Logical. If TRUE, standard errors for the standardized parameters
 will be computed, together with a z-statistic and a p-value.}
+\item{zstat}{Logical. If \code{TRUE}, an extra column is added containing
+the so-called z-statistic, which is simply the value of the estimate divided
+by its standard error.}
+\item{pvalue}{Logical. If \code{TRUE}, an extra column is added containing
+the pvalues corresponding to the z-statistic, evaluated under a standard
+normal distribution.}
 \item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
 containing equality constraints, if any.}
 \item{remove.ineq}{Logical. If TRUE, filter the output by removing all

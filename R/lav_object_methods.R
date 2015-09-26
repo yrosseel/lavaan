@@ -742,11 +742,18 @@ function(object, type="free", labels=TRUE) {
 standardizedSolution <- standardizedsolution <- function(object,
                                                          type = "std.all",
                                                          se = TRUE,
+                                                         zstat = TRUE,
+                                                         pvalue = TRUE,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
                                                          remove.def = FALSE) {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
+
+    # no zstat + pvalue if estimator is Bayes
+    if(object@Options$estimator == "Bayes") {
+        zstat <- pvalue <- FALSE
+    }
 
     LIST <- inspect(object, "list")
     free.idx <- which(LIST$free > 0L)
@@ -769,8 +776,12 @@ standardizedSolution <- standardizedsolution <- function(object,
                                             add.class = FALSE))
         if(inherits(VCOV, "try-error")) {
             LIST$se <- rep(NA, length(LIST$lhs))
-            LIST$z  <- rep(NA, length(LIST$lhs))
-            LIST$pvalue <- rep(NA, length(LIST$lhs))
+            if(zstat) {
+                LIST$z  <- rep(NA, length(LIST$lhs))
+            }
+            if(pvalue) {
+                 LIST$pvalue <- rep(NA, length(LIST$lhs))
+            }
         } else {
             tmp <- diag(VCOV)
             # catch negative values
@@ -788,9 +799,13 @@ standardizedSolution <- standardizedsolution <- function(object,
             LIST$se <- tmp
  
             # add 'z' column
-            tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
-            LIST$z <- LIST$est.std / tmp.se
-            LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+            if(zstat) {
+                 tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+                 LIST$z <- LIST$est.std / tmp.se
+            }
+            if(zstat && pvalue) {
+                 LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+            }
         }
     }
 
@@ -854,6 +869,11 @@ parameterEstimates <- parameterestimates <- function(object,
     if(FMI && object@Options$se != "standard") {
         warning("lavaan WARNING: fmi only available if se=\"standard\"")
         FMI <- FALSE
+    }
+
+    # no zstat + pvalue if estimator is Bayes
+    if(object@Options$estimator == "Bayes") {
+        zstat <- pvalue <- FALSE
     }
 
     LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
