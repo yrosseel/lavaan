@@ -1250,12 +1250,18 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(lavobject@Fit@npar == 0) {
         OUT <- matrix(0,0,0)
     } else {
-        OUT <- lav_model_vcov(lavmodel       = lavobject@Model,
-                              lavsamplestats = lavobject@SampleStats,
-                              lavoptions     = lavobject@Options,
-                              lavdata        = lavobject@Data,
-                              lavcache       = lavobject@Cache
-                             )
+        # check if we already have it
+        if(!is.null(lavobject@vcov$vcov)) {
+            OUT <- lavobject@vcov$vcov
+        } else {
+        # compute it again
+            OUT <- lav_model_vcov(lavmodel       = lavobject@Model,
+                                  lavsamplestats = lavobject@SampleStats,
+                                  lavoptions     = lavobject@Options,
+                                  lavdata        = lavobject@Data,
+                                  lavcache       = lavobject@Cache
+                                 )
+        }
     }
    
     # strip attributes
