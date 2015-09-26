@@ -1,6 +1,8 @@
 \name{fitMeasures}
 \alias{fitMeasures}
 \alias{fitmeasures}
+\alias{fitMeasures,lavaan-method}
+\alias{fitmeasures,lavaan-method}
 \alias{fitindices}
 \title{Fit Measures for a Latent Variable Model}
 \description{

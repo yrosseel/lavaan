@@ -1,5 +1,17 @@
-fitMeasures <- fitmeasures <- function(object, fit.measures="all", 
-                                       baseline.model = NULL) {
+setMethod("fitMeasures", signature(object = "lavaan"),
+function(object, fit.measures = "all", baseline.model = NULL) {
+    lav_fit_measures(object = object, fit.measures = fit.measures,
+                     baseline.model = baseline.model)
+})
+
+setMethod("fitmeasures", signature(object = "lavaan"),
+function(object, fit.measures = "all", baseline.model = NULL) {
+    lav_fit_measures(object = object, fit.measures = fit.measures,
+                     baseline.model = baseline.model)
+})
+
+lav_fit_measures <- function(object, fit.measures="all", 
+                             baseline.model = NULL) {
 
     # has the model converged?
     if(object@Fit@npar > 0L && !object@Fit@converged) {
