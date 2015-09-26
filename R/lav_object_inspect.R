@@ -298,7 +298,8 @@ lavInspect <- function(lavobject,
         lav_object_inspect_vcov(lavobject,
             standardized = FALSE,
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "vcov.std.all") {
+    } else if(what == "vcov.std.all" || what == "vcov.standardized" ||
+              what == "vcov.std") {
         lav_object_inspect_vcov(lavobject,
             standardized = TRUE, type = "std.all",
             add.labels = add.labels, add.class = add.class)
