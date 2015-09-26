@@ -315,6 +315,9 @@ lavInspect <- function(lavobject,
         lav_object_inspect_UGamma(lavobject,
             add.labels = add.labels, add.class = add.class)
 
+    # post-checking
+    } else if(what == "post.check" || what == "post") {
+        lav_object_post_check(lavobject)
 
     #### not found ####
     } else {

@@ -236,6 +236,8 @@ Miscellaneous:
     \item{\code{"mi"}:}{The modification indices. Alias: \code{"modindices"},
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
+    \item{\code{"post.check"}:}{Post-fitting check if the solution is admissible. A warning is raised if negative variances are found, or if either \code{lavInspect(fit, "cov.lv")} or \code{lavInspect(fit, "theta")} return a non-positive
+definite matrix.}
 }
 
 }

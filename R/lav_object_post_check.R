@@ -1,5 +1,5 @@
 # check if a fitted model is admissible
-lav_object_post_check <- function(object) {
+lav_object_post_check <- function(object, verbose = FALSE) {
 
     stopifnot(inherits(object, "lavaan"))
     lavpartable    <- object@ParTable

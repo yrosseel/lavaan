@@ -826,7 +826,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # post-fitting check
     if(attr(x, "converged")) {
-        lav_object_post_check(lavaan)
+        lavInspect(lavaan, "post.check")
     }
 
     lavaan
