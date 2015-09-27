@@ -311,6 +311,23 @@ lavInspect <- function(lavobject,
         lav_object_inspect_vcov(lavobject,
             standardized = TRUE, type = "std.nox",
             add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def") {
+        lav_object_inspect_vcov_def(lavobject,
+            standardized = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.std.all" || what == "vcov.def.standardized" ||
+              what == "vcov.def.std") {
+        lav_object_inspect_vcov_def(lavobject,
+            standardized = TRUE, type = "std.all",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.std.lv") {
+        lav_object_inspect_vcov_def(lavobject,
+            standardized = TRUE, type = "std.lv",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.std.nox") {
+        lav_object_inspect_vcov_def(lavobject,
+            standardized = TRUE, type = "std.nox",
+            add.labels = add.labels, add.class = add.class)
     } else if(what == "ugamma" || what == "ug" || what == "u.gamma") {
         lav_object_inspect_UGamma(lavobject,
             add.labels = add.labels, add.class = add.class)
@@ -1316,6 +1333,72 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(add.labels) {
         colnames(OUT) <- rownames(OUT) <-
             lav_partable_labels(lavobject@ParTable, type="free")
+    }
+
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+    }
+
+    OUT
+}
+
+lav_object_inspect_vcov_def <- function(lavobject, standardized = FALSE,
+    type = "std.all", add.labels = FALSE, add.class = FALSE) {
+
+    lavmodel    <- lavobject@Model
+    lavpartable <- lavobject@ParTable
+    def.idx <- which(lavpartable$op == ":=")
+
+    if(length(def.idx) == 0L) {
+        return( matrix(0,0,0) )
+    }
+
+    if(standardized) {
+        # compute VCOV for "free" parameters only
+        VCOV <- lav_object_inspect_vcov(lavobject = lavobject, 
+                                        standardized = TRUE,
+                                        type = type, free.only = FALSE,
+                                        add.labels = FALSE, add.class = FALSE)
+        OUT <- VCOV[def.idx, def.idx, drop = FALSE]
+    } else {
+
+        # get free parameters
+        x <- lav_model_get_parameters(lavmodel, type = "free")
+
+        # bootstrap or not?
+        if(!is.null(lavobject@boot$coef)) {
+            BOOT <- lavobject@boot$coef
+            BOOT.def <- apply(BOOT, 1L, lavmodel@def.function)
+            if(length(def.idx) == 1L) {
+                BOOT.def <- as.matrix(BOOT.def)
+            } else {
+                BOOT.def <- t(BOOT.def)
+            }
+            OUT <- cov(BOOT.def)
+        } else {
+            # VCOV
+            VCOV <- lav_object_inspect_vcov(lavobject = lavobject,
+                                            standardized = FALSE,
+                                            type = type, free.only = TRUE,
+                                            add.labels = FALSE, 
+                                            add.class = FALSE)
+    
+            # regular delta method
+            JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function,
+                       x = x), silent=TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = lavmodel@def.function,
+                                                x = x)
+            }
+            OUT <- JAC %*% VCOV %*% t(JAC)
+        }
+    }
+
+    # labels
+    if(add.labels) {
+        LHS.names <- lavpartable$lhs[def.idx]
+        colnames(OUT) <- rownames(OUT) <- LHS.names
     }
 
     # class

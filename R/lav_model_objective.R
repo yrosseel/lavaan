@@ -73,7 +73,7 @@ lav_model_objective <- function(lavmodel       = NULL,
     for(g in 1:lavsamplestats@ngroups) {
 
         # incomplete data and fiml?
-        if(lavsamplestats@missing.flag) {
+        if(lavsamplestats@missing.flag && estimator != "Bayes") {
             if(estimator == "ML") {
                 # FIML
                 if(!attr(Sigma.hat[[g]], "po")) return(Inf)
@@ -85,7 +85,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                 stop("this estimator: `", estimator, 
                      "' can not be used with incomplete data and the missing=\"ml\" option")
             }
-        } else if(estimator == "ML") {
+        } else if(estimator == "ML" || estimator == "Bayes") {
         # complete data
             # ML and friends
             group.fx <- estimator.ML(Sigma.hat=Sigma.hat[[g]], 
