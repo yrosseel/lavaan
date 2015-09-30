@@ -755,9 +755,12 @@ standardizedSolution <- standardizedsolution <- function(object,
         zstat <- pvalue <- FALSE
     }
 
-    LIST <- inspect(object, "list")
-    free.idx <- which(LIST$free > 0L)
-    LIST <- LIST[,c("lhs", "op", "rhs", "group")]
+    PARTABLE <- inspect(object, "list")
+    free.idx <- which(PARTABLE$free > 0L)
+    LIST <- PARTABLE[,c("lhs", "op", "rhs")]
+    if(!is.null(PARTABLE$group)) {
+        LIST$group <- PARTABLE$group
+    }
 
     # add std and std.all columns
     if(type == "std.lv") {
@@ -876,8 +879,34 @@ parameterEstimates <- parameterestimates <- function(object,
         zstat <- pvalue <- FALSE
     }
 
-    LIST <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    LIST <- LIST[,c("lhs", "op", "rhs", "user", "group", "label", "exo","est")]
+    PARTABLE <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
+    LIST <- PARTABLE[,c("lhs", "op", "rhs")]
+    if(!is.null(PARTABLE$user)) {
+        LIST$user <- PARTABLE$user
+    }
+    if(!is.null(PARTABLE$group)) {
+        LIST$group <- PARTABLE$group
+    } else {
+        LIST$group <- rep(1L, length(LIST$lhs))
+    }
+    if(!is.null(PARTABLE$label)) {
+        LIST$label <- PARTABLE$label
+    } else {
+        LIST$label <- rep("", length(LIST$lhs))
+    }
+    if(!is.null(PARTABLE$exo)) {
+        LIST$exo <- PARTABLE$exo
+    } else {
+        LIST$exo <- rep(0L, length(LIST$lhs))
+    }
+    if(!is.null(PARTABLE$est)) {
+        LIST$est <- PARTABLE$est
+    } else {
+        LIST$est <- lav_model_get_parameters(object@Model, type = "user",
+                                             extra = TRUE)    
+    }
+
+
     # add est and se column
     #est <- object@Fit@est
     BOOT <- object@boot$coef
