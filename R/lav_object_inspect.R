@@ -949,7 +949,7 @@ lav_object_inspect_theta <- function(lavobject, correlation.metric = FALSE,
         }
 
         if(add.class) {
-            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+            class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
         }
     }
 
