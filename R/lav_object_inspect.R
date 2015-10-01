@@ -698,7 +698,7 @@ lav_object_inspect_cov_lv <- function(lavobject, correlation.metric = FALSE,
 
         if(add.labels) {
             colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- 
-                lavobject@pta$vnames$lv.regular[[g]]
+                lavobject@pta$vnames$lv[[g]]
         }
 
         if(add.class) {
