@@ -144,7 +144,12 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # since 'NA' is not a valid name for list elements/data.frame columns
         if(lhs == "NA") lhs <- "NA."
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
-    
+
+        # check if first character is '+'; if so, remove silently
+        if(substr(rhs, 1, 1) == "+") {
+            rhs <- substr(rhs, 2, nchar(rhs))
+        }
+
         # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
         if(op == "==" || op == "<" || op == ">" || op == ":=") {
             # remove quotes, if any
