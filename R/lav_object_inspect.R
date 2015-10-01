@@ -344,6 +344,64 @@ lavInspect <- function(lavobject,
 }
 
 
+# helper functions (mostly to deal with older 'object' that may have
+# been save somewhere)
+lav_object_inspect_est <- function(lavobject) {
+    
+    # from 0.5-19, they are in the partable
+    if(!is.null(lavobject@ParTable$est)) {
+        OUT <- lavobject@ParTable$est
+    } else {
+        # in < 0.5-19, we should look in @Fit@est
+        OUT <- lavobject@Fit@est
+    }
+
+    OUT
+}
+
+lav_object_inspect_se <- function(lavobject) {
+    
+    # from 0.5-19, they are in the partable
+    if(!is.null(lavobject@ParTable$se)) {
+        OUT <- lavobject@ParTable$se
+    } else {
+        # in < 0.5-19, we should look in @Fit@se
+        OUT <- lavobject@Fit@se
+    }
+
+    OUT
+}
+
+lav_object_inspect_start <- function(lavobject) {
+
+    # from 0.5-19, they are in the partable
+    if(!is.null(lavobject@ParTable$start)) {
+        OUT <- lavobject@ParTable$start
+    } else {
+        # in < 0.5-19, we should look in @Fit@start
+        OUT <- lavobject@Fit@start
+    }
+
+    OUT
+}
+
+lav_object_inspect_boot <- function(lavobject) {
+
+    # from 0.5-19. they are in a separate slot
+    tmp <- try(slot(lavobject,"boot"), silent = TRUE)
+    if(inherits(tmp, "try-error")) {
+        # older version of object?
+        est <- lav_object_inspect_est(lavobject)
+        BOOT <- attr(est, "BOOT.COEF")
+    } else {
+        # 0.5-19 way
+        BOOT <- lavobject@boot$coef
+    }
+
+    BOOT
+}
+
+
 lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
     type = "free", add.labels = FALSE, add.class = FALSE) {
 
@@ -412,17 +470,20 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
             # fill in standard errors
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
-            GLIST[[mm]][m.user.idx] <- lavobject@Fit@se[x.user.idx]
+            SE <- lav_object_inspect_se(lavobject)
+            GLIST[[mm]][m.user.idx] <- SE[x.user.idx]
         } else if(what == "start") {
             # fill in starting values
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
-            GLIST[[mm]][m.user.idx] <- lavobject@ParTable$start[x.user.idx]
+            START <- lav_object_inspect_start(lavobject)
+            GLIST[[mm]][m.user.idx] <- START[x.user.idx]
         } else if(what == "est") {
             # fill in estimated parameter values
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
-            GLIST[[mm]][m.user.idx] <- lavobject@ParTable$est[x.user.idx]
+            EST <- lav_object_inspect_est(lavobject)
+            GLIST[[mm]][m.user.idx] <- EST[x.user.idx]
         } else if(what == "dx.free") {
             # fill in derivatives free parameters
             m.el.idx <- lavobject@Model@m.free.idx[[mm]]
@@ -1272,7 +1333,8 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
         OUT <- matrix(0,0,0)
     } else {
         # check if we already have it
-        if(!is.null(lavobject@vcov$vcov)) {
+        tmp <- try(slot(lavobject, "vcov"), silent = TRUE)
+        if(!inherits(tmp, "try-error") && !is.null(lavobject@vcov$vcov)) {
             OUT <- lavobject@vcov$vcov
         } else {
         # compute it again

@@ -1,6 +1,6 @@
 standardize.est.lv.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
-    est <- lavobject@ParTable$est
+    est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
@@ -16,7 +16,7 @@ standardize.est.lv.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) 
 
 standardize.est.all.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
-    est <- lavobject@ParTable$est
+    est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
@@ -32,7 +32,7 @@ standardize.est.all.x <- function(x, lavobject, partable = NULL, cov.std = TRUE)
 
 standardize.est.all.nox.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
-    est <- lavobject@ParTable$est
+    est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
     stopifnot(length(x) == length(free.idx))
     est[free.idx] <- x
@@ -57,7 +57,7 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
                                cov.std = TRUE) {
 
     if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est))   est <- lavobject@ParTable$est
+    if(is.null(est))   est <- lav_object_inspect_est(lavobject)
     if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
 
     out <- est; N <- length(est)
@@ -216,7 +216,7 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
                                 GLIST = NULL, cov.std = TRUE) {
 
     if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est))   est <- lavobject@ParTable$est
+    if(is.null(est)) est <- lav_object_inspect_est(lavobject)
     if(is.null(est.std)) {
         est.std <- standardize.est.lv(lavobject, partable = partable, est = est,
                                       GLIST = GLIST, cov.std = cov.std)
@@ -380,7 +380,7 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
                                     cov.std = TRUE) {
 
     if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est))   est <- lavobject@ParTable$est
+    if(is.null(est))   est <- lav_object_inspect_est(lavobject)
     if(is.null(est.std)) {
         est.std <- standardize.est.lv(lavobject, partable = partable, est = est,
                                       GLIST = GLIST, cov.std = cov.std)

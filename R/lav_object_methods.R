@@ -412,8 +412,8 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
         cat(txt)
     }
 
-    est <- object@ParTable$est
-    se  <- object@Fit@se
+    est <- lav_object_inspect_est(object)
+    se  <- lav_object_inspect_se(object)
     if(rsquare || standardized) {
         est.std    <- standardize.est.lv(object)
         if(std.nox) {
@@ -728,7 +728,8 @@ function(object, type="free", labels=TRUE) {
     } else {
         stop("argument `type' must be one of free or user")
     }
-    cof <- object@ParTable$est[idx]
+    EST <- lav_object_inspect_est(object)
+    cof <- EST[idx]
   
     # labels?
     if(labels) names(cof) <- lav_partable_labels(object@ParTable, type=type)
@@ -907,14 +908,9 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
 
-    # add est and se column
-    #est <- object@Fit@est
-    BOOT <- object@boot$coef
-    #attributes(est) <- NULL
-    #LIST$est <- est
-
+    # add se, zstat, pvalue
     if(object@Options$se != "none") {
-        LIST$se  <- object@Fit@se
+        LIST$se <- lav_object_inspect_se(object)
         tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
         if(zstat) { 
             LIST$z <- LIST$est / tmp.se
@@ -923,6 +919,10 @@ parameterEstimates <- parameterestimates <- function(object,
             }
         }
     }
+
+    # extract bootstrap data (if any)
+    BOOT <- lav_object_inspect_boot(object)
+    bootstrap.successful <- NROW(BOOT) # should be zero if NULL
 
     # confidence interval
     if(object@Options$se != "none" && ci) {
@@ -1107,7 +1107,15 @@ parameterEstimates <- parameterestimates <- function(object,
                         sample.cov   = COV,
                         sample.mean  = MEAN,
                         sample.nobs  = object@Data@nobs)
-        SE.step2 <- ifelse(step2@Fit@se == 0.0, as.numeric(NA), step2@Fit@se)
+        SE2 <- lav_object_inspect_se(step2)
+        SE.step2 <- ifelse(SE2 == 0.0, as.numeric(NA), SE2)
+        if(rsquare) {
+            # add additional elements, since LIST$se is now longer
+            r2.idx <- which(LIST$op == "r2")
+            if(length(r2.idx) > 0L) {
+                SE.step2 <- c(SE.step2, rep(as.numeric(NA), length(r2.idx)))
+            }
+        }
         LIST$fmi <- 1-(SE.step2*SE.step2/(SE.orig*SE.orig))
     }
 
@@ -1155,7 +1163,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "se") <- object@Options$se
         attr(LIST, "group.label") <- object@Data@group.label
         attr(LIST, "bootstrap") <- object@Options$bootstrap
-        attr(LIST, "bootstrap.successful") <- NROW(object@boot$coef)
+        attr(LIST, "bootstrap.successful") <- bootstrap.successful
         # FIXME: add more!!
     } else {
         LIST$exo <- NULL
