@@ -141,6 +141,8 @@ Model-implied sample statistics and fit information:
         variables. Aliases: \code{"mu"}, \code{"mu.hat"}.}
     \item{\code{"cov.all"}:}{The model-implied variance-covariance matrix 
         of both the observed and latent variables.}
+    \item{\code{"cor.all"}:}{The model-implied correlation matrix
+        of both the observed and latent variables.}
     \item{\code{"th"}:}{The model-implied thresholds. 
         Alias: \code{"thresholds"}.}
     \item{\code{"wls.est"}:}{The model-implied sample statistics (covariance
