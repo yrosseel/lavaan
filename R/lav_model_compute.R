@@ -601,13 +601,26 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
 
         if(lavmodel@representation == "LISREL") {
-            YHAT[[g]] <- computeEYetax.LISREL(MLIST = MLIST,
+            if(lavmodel@categorical) {
+                YHAT[[g]] <- computeEYetax.LISREL(MLIST = MLIST,
                           eXo = eXo[[g]], ETA = ETA[[g]], N = Nobs,
                           sample.mean = lavsamplestats@mean[[g]],
                           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                           ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
                           ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+            } else {
+                # unconditional case
+                YHAT[[g]] <- computeEYetax3.LISREL(MLIST = MLIST,
+                          ETA = ETA[[g]],
+                          sample.mean = lavsamplestats@mean[[g]],
+                          mean.x = lavsamplestats@mean.x[[g]],
+                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+                # impute back ov.y values that are NOT indicators
+            }
         } else {
             stop("lavaan ERROR: representation ", lavmodel@representation,
                  " not supported yet.")

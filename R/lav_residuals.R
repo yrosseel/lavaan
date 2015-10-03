@@ -263,6 +263,12 @@ lav_residuals_casewise <- function(object, labels = labels) {
     ov.names <- object@Data@ov.names
 
     X <- object@Data@X
+    if(object@Model@categorical) {
+        # add 'eXo' columns to X
+        X <- lapply(seq_len(object@Data@ngroups), function(g) {
+                    ret <- cbind(X[[g]], object@Data@eXo[[g]])
+                    ret })
+    }
     M <- lav_predict_yhat(object)
     # Note: if M has already class lavaan.matrix, print goes crazy
     # with Error: C stack usage is too close to the limit
@@ -274,7 +280,7 @@ lav_residuals_casewise <- function(object, labels = labels) {
 
     if(labels) {
         for(g in 1:G) {
-            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
+            colnames(OUT[[g]]) <- object@pta$vnames$ov[[g]]
         }
     }
 

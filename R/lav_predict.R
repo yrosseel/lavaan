@@ -67,10 +67,6 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo, method = method,
                    optim.method = optim.method)
-        # label?
-        for(g in seq_len(lavdata@ngroups)) {
-            colnames(out[[g]]) <- lavpta$vnames$lv[[g]]
-        }
 
         # remove dummy lv?
         lavmodel <- lavmodel
@@ -84,24 +80,40 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    ret 
                })
 
+        # label?
+        if(label) {
+            for(g in seq_len(lavdata@ngroups)) {
+                colnames(out[[g]]) <- lavpta$vnames$lv[[g]]
+            }
+        }
+
+    # estimated value for the observed indicators, given (estimated)
+    # factor scores
     } else if(type == "yhat") {
         out <- lav_predict_yhat(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo,
                    ETA = NULL, method = method, optim.method = optim.method)
+
         # label?
-        for(g in seq_len(lavdata@ngroups)) {
-            colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        if(label) {
+            for(g in seq_len(lavdata@ngroups)) {
+                colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+            }
         }
 
+    # density for each observed item, given (estimated) factor scores
     } else if(type == "fy") {
         out <- lav_predict_fy(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo,
                    ETA = NULL, method = method, optim.method = optim.method)
+
         # label?
-        for(g in seq_len(lavdata@ngroups)) {
-            colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+        if(label) {
+            for(g in seq_len(lavdata@ngroups)) {
+                colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
+            }
         }
 
     } else {
@@ -220,10 +232,20 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
 
         # remove dummy lv's
-        lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                          lavmodel@ov.x.dummy.lv.idx[[g]])
-        if(length(lv.dummy.idx) > 0L) {
-            FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+        #                  lavmodel@ov.x.dummy.lv.idx[[g]])
+        #if(length(lv.dummy.idx) > 0L) {
+        #    FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        #}
+
+        # replace values in dummy lv's by their observed counterpart
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+            FS.g[, lavmodel@ov.y.dummy.lv.idx[[g]] ] <-
+                data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
+        }
+        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L) {
+            FS.g[, lavmodel@ov.x.dummy.lv.idx[[g]] ] <-
+                data.obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
         }
 
         FS[[g]] <- FS.g
@@ -280,10 +302,20 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
 
         # remove dummy lv's
-        lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                          lavmodel@ov.x.dummy.lv.idx[[g]])
-        if(length(lv.dummy.idx) > 0L) {
-            FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+        #                  lavmodel@ov.x.dummy.lv.idx[[g]])
+        #if(length(lv.dummy.idx) > 0L) {
+        #    FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
+        #}
+
+        # replace values in dummy lv's by their observed counterpart
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+            FS.g[, lavmodel@ov.y.dummy.lv.idx[[g]] ] <-
+                data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
+        }
+        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L) {
+            FS.g[, lavmodel@ov.x.dummy.lv.idx[[g]] ] <-
+                data.obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
         }
 
         FS[[g]] <- FS.g
@@ -339,13 +371,22 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
 
     # local objective function: x = lv values
     f.eta.i <- function(x, y.i, x.i, mu.i) {
+
+        # add 'dummy' values (if any) for ov.y
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+            x2 <- c(x, data.obs[[g]][i,
+                           lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE])
+        } else {
+            x2 <- x
+        }
+
         # conditional density of y, given eta.i(=x)
         log.fy <- lav_predict_fy_eta.i(lavmodel       = lavmodel,
                                        lavdata        = lavdata,
                                        lavsamplestats = lavsamplestats,
                                        y.i            = y.i, 
                                        x.i            = x.i,
-                                       eta.i          = matrix(x, nrow=1L), # <---- eta!
+                                       eta.i          = matrix(x2, nrow=1L), # <---- eta!
                                        theta.sd       = theta.sd,
                                        th             = th,
                                        th.idx         = th.idx,
@@ -363,8 +404,19 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
     FS <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
         nfac <- ncol(VETAx[[g]])
-        FS[[g]] <- matrix(as.numeric(NA), nrow(data.obs[[g]]), nfac)
-        if(nfac == 0L) next
+        nfac2 <- nfac
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+            nfac2 <- nfac2 + length(lavmodel@ov.y.dummy.lv.idx[[g]])
+        }
+        FS[[g]] <- matrix(as.numeric(NA), nrow(data.obs[[g]]), nfac2)
+   
+        # special case: no regular lv's
+        if(nfac == 0) {
+            # impute dummy ov.y (if any)
+            FS[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]] ] <- 
+                data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
+            next
+        }
 
         ## FIXME: factor scores not identical (but close) to Mplus
         #         if delta elements not equal to 1??
@@ -396,14 +448,16 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
             mu.i <- EETAx[[g]][i,,drop=FALSE]
             y.i <- data.obs[[g]][i,,drop=FALSE]
 
+            START <- numeric(nfac) # initial values for eta
+
             # find best values for eta.i
             if(optim.method == "nlminb") {
-                out <- nlminb(start=numeric(nfac), objective=f.eta.i,
+                out <- nlminb(start=START, objective=f.eta.i,
                               gradient=NULL, # for now
                               control=list(rel.tol=1e-8),
                               y.i=y.i, x.i=x.i, mu.i=mu.i)
             } else if(optim.method == "BFGS") {
-                out <- optim(par = numeric(nfac), fn = f.eta.i,
+                out <- optim(par = START, fn = f.eta.i,
                              gr = NULL,
                              control = list(reltol = 1e-8),
                              method = "BFGS",
@@ -412,7 +466,13 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
             if(out$convergence == 0L) {
                 eta.i <- out$par
             } else {
-                eta.i <- rep(as.numeric(NA), nfac)
+                eta.i <- rep(as.numeric(NA), nfac2)
+            }
+
+            # add dummy ov.y lv values
+            if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+                eta.i <- c(eta.i, data.obs[[g]][i,
+                       lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE])
             }
 
             FS[[g]][i,] <- eta.i
@@ -479,10 +539,17 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
             stopifnot(lavdata@ngroups == length(ETA))
         }
     }
-  
+
     YHAT <- computeYHAT(lavmodel = lavmodel, GLIST = NULL,
                         lavsamplestats = lavsamplestats, eXo = eXo,
                         ETA = ETA, duplicate = duplicate)
+
+    # if conditional.x, paste eXo
+    if(lavmodel@categorical && !is.null(eXo)) {
+         YHAT <- lapply(seq_len(lavdata@ngroups), function(g) {
+                   ret <- cbind(YHAT[[g]], eXo[[g]])
+                   ret })
+    }
 
     YHAT
 }

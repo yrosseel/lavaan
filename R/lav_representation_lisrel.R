@@ -597,6 +597,8 @@ computeEYx.LISREL <- function(MLIST             = NULL,
 #
 # NOTE: we assume that any effect of x_i on eta_i has already been taken
 #       care off
+
+# categorical version
 computeEYetax.LISREL <- function(MLIST             = NULL, 
                                  eXo               = NULL, 
                                  ETA               = NULL,
@@ -623,12 +625,12 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
     }
 
     # always augment ETA with 'dummy values' (0 for ov.y, eXo for ov.x)
-    ndummy <- length(c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx))
-    if(ndummy > 0L) {
-        ETA2 <- cbind(ETA, matrix(0, N, ndummy))
-    } else {
-        ETA2 <- ETA
-    }
+    #ndummy <- length(c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx))
+    #if(ndummy > 0L) {
+    #    ETA2 <- cbind(ETA, matrix(0, N, ndummy))
+    #} else {
+    ETA2 <- ETA
+    #}
 
     # only if we have dummy ov.y, we need to compute the 'yhat' values
     # beforehand
@@ -637,6 +639,11 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
         if(length(ov.x.dummy.lv.idx) > 0L) {
             ETA2[,ov.x.dummy.lv.idx] <- eXo
         }
+        # zero ov.y values
+        if(length(ov.y.dummy.lv.idx) > 0L) {
+            ETA2[,ov.y.dummy.lv.idx] <- 0
+        }
+
         # ALPHA? (reconstruct, but no 'fix')
         ALPHA <- .internal_get_ALPHA(MLIST = MLIST, sample.mean = sample.mean,
                                      ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -656,8 +663,12 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
         }
 
         # put back ETA values for the 'real' latent variables
-        ETA2[,seq_len( ncol(ETA) )] <- ETA
-    } 
+        dummy.idx <- c(ov.x.dummy.lv.idx, ov.y.dummy.lv.idx)
+        if(length(dummy.idx) > 0L) {
+            lv.regular.idx <- seq_len( min(dummy.idx) - 1L )
+            ETA2[, lv.regular.idx] <- ETA[,lv.regular.idx, drop = FALSE]
+        }
+    }
 
     # get NU, but do not 'fix'
     NU <- .internal_get_NU(MLIST             = MLIST,
@@ -669,6 +680,142 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
 
     # EYetax
     EYetax <- sweep(tcrossprod(ETA2, LAMBDA), 2L, STATS = NU, FUN = "+")
+
+    # if delta, scale
+    if(!is.null(MLIST$delta)) {
+        EYetax <- sweep(EYetax, 2L, STATS = MLIST$delta, FUN = "*")
+    }
+
+    EYetax
+}
+
+# unconditional version
+computeEYetax2.LISREL <- function(MLIST             = NULL, 
+                                  ETA               = NULL,
+                                  sample.mean       = NULL,
+                                  ov.y.dummy.ov.idx = NULL,
+                                  ov.x.dummy.ov.idx = NULL,
+                                  ov.y.dummy.lv.idx = NULL,
+                                  ov.x.dummy.lv.idx = NULL) {
+
+    LAMBDA <- MLIST$lambda
+    BETA   <- MLIST$beta
+
+
+    # only if we have dummy ov.y, we need to compute the 'yhat' values
+    # beforehand, and impute them in ETA[,ov.y]
+    if(length(ov.y.dummy.lv.idx) > 0L) {
+
+        # ALPHA? (reconstruct, but no 'fix')
+        ALPHA <- .internal_get_ALPHA(MLIST = MLIST, sample.mean = sample.mean,
+                                     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                                     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                                     ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                                     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+
+        # keep all, but ov.y values
+        OV.NOY <-   ETA[,-ov.y.dummy.lv.idx, drop = FALSE]
+        # ov.y rows, non-ov.y cols
+        BETAY  <-  BETA[ov.y.dummy.lv.idx,-ov.y.dummy.lv.idx, drop = FALSE]
+        # ov.y intercepts
+        ALPHAY <- ALPHA[ov.y.dummy.lv.idx,, drop=FALSE]
+
+        # impute ov.y values in ETA
+        ETA[,ov.y.dummy.lv.idx] <- 
+            sweep(tcrossprod(OV.NOY, BETAY), 2L, STATS = ALPHAY, FUN = "+")
+    }
+
+    # get NU, but do not 'fix'
+    NU <- .internal_get_NU(MLIST             = MLIST,
+                           sample.mean       = sample.mean,
+                           ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                           ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                           ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                           ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+
+    # EYetax
+    EYetax <- sweep(tcrossprod(ETA, LAMBDA), 2L, STATS = NU, FUN = "+")
+
+    # if delta, scale
+    if(!is.null(MLIST$delta)) {
+        EYetax <- sweep(EYetax, 2L, STATS = MLIST$delta, FUN = "*")
+    }
+
+    EYetax
+}
+
+# unconditional version
+computeEYetax3.LISREL <- function(MLIST             = NULL, 
+                                  ETA               = NULL,
+                                  sample.mean       = NULL,
+                                  mean.x            = NULL,
+                                  ov.y.dummy.ov.idx = NULL,
+                                  ov.x.dummy.ov.idx = NULL,
+                                  ov.y.dummy.lv.idx = NULL,
+                                  ov.x.dummy.lv.idx = NULL) {
+
+    LAMBDA <- MLIST$lambda
+    
+    # special case: empty lambda
+    if(ncol(LAMBDA) == 0L) {
+        return( matrix(sample.mean, 
+                       nrow(ETA), length(sample.mean), byrow=TRUE) )
+    }
+
+    # lv idx
+    dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
+    if(length(dummy.idx) > 0L) {
+         nondummy.idx <- seq_len( min(dummy.idx) - 1L )
+    } else {
+         nondummy.idx <- seq_len( ncol(MLIST$lambda) )
+    }
+
+    # beta?
+    if(is.null(MLIST$beta) || length(ov.y.dummy.lv.idx) == 0L ||
+       length(nondummy.idx) == 0L) {
+        LAMBDA..IB.inv <- LAMBDA
+    } else {
+        # only keep those columns of BETA that correspond to the
+        # the `regular' latent variables
+        # (ie. ignore the structural part altogether)
+        MLIST2 <- MLIST
+        MLIST2$beta[,dummy.idx] <- 0
+        IB.inv <- .internal_get_IB.inv(MLIST = MLIST2)
+        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+
+    # compute model-implied means
+    EY <- computeEY.LISREL(MLIST = MLIST, mean.x = mean.x, 
+                           sample.mean = sample.mean,
+                           ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                           ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                           ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                           ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+
+    EETA <- computeEETA.LISREL(MLIST = MLIST, sample.mean = sample.mean,
+                               mean.x = mean.x,
+                               ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                               ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                               ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                               ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+
+    # center regular lv only
+    ETA[,nondummy.idx] <- sweep(ETA[,nondummy.idx,drop = FALSE], 2L, 
+                                STATS = EETA[nondummy.idx], FUN = "-")
+
+    # project from lv to ov, if we have any lv
+    if(length(nondummy.idx) > 0) {
+        EYetax <- sweep(tcrossprod(ETA[,nondummy.idx,drop=FALSE], 
+                                   LAMBDA..IB.inv[,nondummy.idx,drop=FALSE]), 
+                        2L, STATS = EY, FUN = "+")
+    } else {
+        EYetax <- ETA
+    }
+
+    # put back eXo variables
+    if(length(ov.x.dummy.lv.idx) > 0L) {
+        EYetax[,ov.x.dummy.ov.idx] <- ETA[,ov.x.dummy.lv.idx, drop = FALSE]
+    }
 
     # if delta, scale
     if(!is.null(MLIST$delta)) {

@@ -442,11 +442,6 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
 
     for(mm in 1:length(GLIST)) {
 
-        if(what != "dx.all") {
-            # erase everything
-            GLIST[[mm]][,] <- 0.0
-        }
-
         if(add.labels) {
             dimnames(GLIST[[mm]]) <- lavobject@Model@dimNames[[mm]]
         }
@@ -465,12 +460,16 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
             } else {
                 stop("lavaan ERROR: unknown type argument:", type, )
             }
+            # erase everything
+            GLIST[[mm]][,] <- 0.0
             GLIST[[mm]][m.el.idx] <- x.el.idx
         } else if(what == "se") {
             # fill in standard errors
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]
             x.user.idx <- lavobject@Model@x.user.idx[[mm]]
             SE <- lav_object_inspect_se(lavobject)
+            # erase everything
+            GLIST[[mm]][,] <- 0.0
             GLIST[[mm]][m.user.idx] <- SE[x.user.idx]
         } else if(what == "start") {
             # fill in starting values
@@ -488,6 +487,8 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
             # fill in derivatives free parameters
             m.el.idx <- lavobject@Model@m.free.idx[[mm]]
             x.el.idx <- lavobject@Model@x.free.idx[[mm]]
+            # erase everything
+            GLIST[[mm]][,] <- 0.0
             GLIST[[mm]][m.el.idx] <- DX[x.el.idx]
         } else if(what %in% c("std.all", "std.lv", "std.nox")) {
             m.user.idx <- lavobject@Model@m.user.idx[[mm]]

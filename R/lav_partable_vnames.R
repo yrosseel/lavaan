@@ -40,6 +40,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                    "ov.num",      # numeric observed variables
                    "ov.ord",      # ordinal observed variables
                    "ov.ind",      # observed indicators of latent variables
+                   "ov.orphan",   # lonely observed intercepts/variances
                    "th",          # thresholds ordinal only
                    "th.mean",     # thresholds ordinal + numeric variables
 
@@ -89,6 +90,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     OUT$ov.num       <- vector("list", length=ngroups)
     OUT$ov.ord       <- vector("list", length=ngroups)
     OUT$ov.ind       <- vector("list", length=ngroups)
+    OUT$ov.orphan    <- vector("list", length=ngroups)
     OUT$th           <- vector("list", length=ngroups)
     OUT$th.mean      <- vector("list", length=ngroups)
 
@@ -193,8 +195,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                                     !partable$lhs %in% lv.names ]
 
             ov.tmp <- c(ov.ind, ov.y, ov.x)
-            extra <- unique(c(ov.cov, ov.int))
-            ov.names <- c(ov.tmp, extra[ !extra %in% ov.tmp ])
+            ov.extra <- unique(c(ov.cov, ov.int))
+            ov.names <- c(ov.tmp, ov.extra[ !ov.extra %in% ov.tmp ])
         }
 
         # store ov?
@@ -251,8 +253,8 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                 ov.int <- partable$lhs[ partable$group == g &
                                         partable$op == "~1" & 
                                         partable$exo == 1L ]
-                extra <- unique(c(ov.cov, ov.int))
-                ov.tmp.x <- c(ov.tmp.x, extra[ !extra %in% ov.tmp.x ])
+                ov.extra <- unique(c(ov.cov, ov.int))
+                ov.tmp.x <- c(ov.tmp.x, ov.extra[ !ov.extra %in% ov.tmp.x ])
             }
 
             ov.names.x <- ov.tmp.x
@@ -261,6 +263,11 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         # store ov.x?
         if("ov.x" %in% type) {
             OUT$ov.x[[g]] <- ov.names.x
+        }
+
+        # story ov.orphan?
+        if("ov.orphan" %in% type) {
+            OUT$ov.orphan[[g]] <- ov.extra   
         }
 
         # ov's withouth ov.x
