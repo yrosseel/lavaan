@@ -4,7 +4,8 @@
 \description{
 Fit a Growth Curve model.}
 \usage{
-growth(model = NULL, data = NULL, fixed.x = "default",
+growth(model = NULL, data = NULL, 
+    conditional.x = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, 
     parameterization = "default", std.ov = FALSE,
     missing = "default", ordered = NULL, 
@@ -30,6 +31,13 @@ growth(model = NULL, data = NULL, fixed.x = "default",
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
     treat them as ordinal variables.}
+\item{conditional.x}{If \code{TRUE}, we set up the model conditional on
+    the exogenous `x' covariates; the model-implied sample statistics
+    only include the non-x variables. If \code{FALSE}, the exogenous `x'
+    variables are modeled jointly with the other variables, and the 
+    model-implied statistics refect both sets of variables. If
+    \code{"default"}, the value is set depending on the estimator, and
+    whether or not the model involves categorical endogenous variables.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered

@@ -15,6 +15,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    meanstructure      = "default",
                    int.ov.free        = FALSE,
                    int.lv.free        = FALSE,
+                   conditional.x      = "default", # or FALSE?
                    fixed.x            = "default", # or FALSE?
                    orthogonal         = FALSE,
                    std.lv             = FALSE,
@@ -834,7 +835,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 # cfa + sem
 cfa <- sem <- function(model = NULL, data = NULL,
-    meanstructure = "default", fixed.x = "default",
+    meanstructure = "default", 
+    conditional.x = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, 
     parameterization = "default", std.ov = FALSE,
     missing = "default", ordered = NULL, 
@@ -871,7 +873,7 @@ cfa <- sem <- function(model = NULL, data = NULL,
 
 # simple growth models
 growth <- function(model = NULL, data = NULL,
-    fixed.x = "default",
+    conditional.x = "default", fixed.x = "default",
     orthogonal = FALSE, std.lv = FALSE, 
     parameterization = "default", std.ov = FALSE,
     missing = "default", ordered = NULL, 
