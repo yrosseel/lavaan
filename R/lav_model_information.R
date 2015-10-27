@@ -353,8 +353,14 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
 
     if(inverted) {
         if(is.augmented) {
+            # note: default tol in MASS::ginv is sqrt(.Machine$double.eps)
+            #       which seems a bit too conservative
+            #       from 0.5-20, we changed this to .Machine$double.eps^(3/4)
             information <- 
-                try( MASS::ginv(information)[1:npar, 1:npar, drop = FALSE],
+                try( MASS::ginv(information, 
+                                tol = .Machine$double.eps^(3/4))[1:npar, 
+                                                                 1:npar, 
+                                                                 drop = FALSE],
                      silent = TRUE )
         } else {
             information <- try( solve(information), silent = TRUE )
