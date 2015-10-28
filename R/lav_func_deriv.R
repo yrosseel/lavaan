@@ -72,11 +72,17 @@ lav_func_gradient_simple <- function(func, x,
 }
 
 lav_func_jacobian_complex <- function(func, x, 
-                                      h = .Machine$double.eps, ...) {
+                                      h = .Machine$double.eps, 
+                                      fallback = TRUE, ...) {
 
     f0 <- try(func(x*(0+1i), ...), silent = TRUE)
     if(inherits(f0, "try-error")) {
-        stop("function does not support non-numeric (complex) argument")
+        if(fallback) {
+            dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
+            return(dx)
+        } else {
+            stop("function does not support non-numeric (complex) argument")
+        }
     }
     nres <- length(f0)
     nvar <- length(x)
