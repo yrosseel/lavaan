@@ -114,6 +114,12 @@ lavInspect <- function(lavobject,
     } else if(what == "case.idx") {
         lav_object_inspect_case_idx(lavobject,
             drop.list.single.group = drop.list.single.group) 
+    } else if(what == "ngroups") {
+         lav_object_inspect_data_ngroups(lavobject)
+    } else if(what == "group") {
+         lav_object_inspect_data_group(lavobject)
+    } else if(what == "group.label") {
+         lav_object_inspect_data_group.label(lavobject)
 
 
     #### rsquare ####
@@ -335,6 +341,18 @@ lavInspect <- function(lavobject,
     # post-checking
     } else if(what == "post.check" || what == "post") {
         lav_object_post_check(lavobject)
+
+    # options
+    } else if(what == "options" || what == "lavoptions") {
+        lav_object_inspect_options(lavobject)
+
+    # call
+    } else if(what == "call") {
+        lav_object_inspect_call(lavobject)
+
+    # timing
+    } else if(what == "timing") {
+        lav_object_inspect_timing(lavobject)
 
     #### not found ####
     } else {
@@ -629,6 +647,17 @@ lav_object_inspect_case_idx <- function(lavobject,
     OUT
 }
 
+lav_object_inspect_data_ngroups <- function(lavobject) {
+    lavobject@Data@ngroups
+}
+
+lav_object_inspect_data_group <- function(lavobject) {
+    lavobject@Data@group
+}
+
+lav_object_inspect_data_group.label <- function(lavobject) {
+    lavobject@Data@group.label
+}
 
 
 lav_object_inspect_rsquare <- function(lavobject, est.std.all=NULL,
@@ -1490,4 +1519,16 @@ lav_object_inspect_UGamma <- function(lavobject,
     }
 
     OUT
+}
+
+lav_object_inspect_options <- function(lavobject) {
+    lavobject@Options
+}
+
+lav_object_inspect_call <- function(lavobject) {
+    as.list(lavobject@call)
+}
+
+lav_object_inspect_timing <- function(lavobject) {
+    lavobject@timing
 }

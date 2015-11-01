@@ -102,6 +102,10 @@ Observed sample statistics and information about the data:
         sample statistics. Alias: \code{"sampstat.nacov"}.}
     \item{\code{"data"}:}{A matrix containing the observed variables
         that have been used to fit the model.}
+    \item{\code{"group"}:}{A character string. The group variable in
+        the data.frame (if any).}
+    \item{\code{"ngroups"}:}{Integer. The number of groups.}
+    \item{\code{"group.label"}:}{A character vector. The group labels.}
     \item{\code{"case.idx"}:}{The case/observation numbers that were used 
         in the analysis.
         In the case of multiple groups: a list of numbers.}
@@ -238,6 +242,9 @@ Miscellaneous:
     \item{\code{"mi"}:}{The modification indices. Alias: \code{"modindices"},
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
+    \item{\code{"options"}:}{List. The option list.}
+    \item{\code{"call"}:}{List. The call as returned by match.call, coerced to a list.}
+    \item{\code{"timing"}:}{List. The timing (in milliseconds) of various lavaan subprocedures.}
     \item{\code{"post.check"}:}{Post-fitting check if the solution is admissible. A warning is raised if negative variances are found, or if either \code{lavInspect(fit, "cov.lv")} or \code{lavInspect(fit, "theta")} return a non-positive
 definite matrix.}
 }
