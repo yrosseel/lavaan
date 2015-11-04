@@ -102,12 +102,31 @@ lavInspect <- function(lavobject,
               what == "samp" ||
               what == "sample" ||
               what == "samplestatistics") {
-        lav_object_inspect_sampstat(lavobject, 
+        lav_object_inspect_sampstat(lavobject, h1 = FALSE,
             add.labels = add.labels, add.class = add.class, 
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "h1" || what == "missing.h1" || what == "sampstat.h1") {
+        lav_object_inspect_sampstat(lavobject, h1 = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+
+    #### wls.est - wls.obs - wls.v ####
+    } else if(what == "wls.est") {
+        lav_object_inspect_wls_est(lavobject,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "wls.obs") {
+        lav_object_inspect_wls_obs(lavobject,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "wls.v") {
+        lav_object_inspect_wls_v(lavobject,
+            add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
 
-    #### data ####
+
+    #### data + missingness ####
     } else if(what == "data") {
         lav_object_inspect_data(lavobject, 
             drop.list.single.group = drop.list.single.group)
@@ -115,11 +134,28 @@ lavInspect <- function(lavobject,
         lav_object_inspect_case_idx(lavobject,
             drop.list.single.group = drop.list.single.group) 
     } else if(what == "ngroups") {
-         lav_object_inspect_data_ngroups(lavobject)
+        lavobject@Data@ngroups
     } else if(what == "group") {
-         lav_object_inspect_data_group(lavobject)
+        lavobject@Data@group
     } else if(what == "group.label") {
-         lav_object_inspect_data_group.label(lavobject)
+        lavobject@Data@group.label
+    } else if(what == "nobs") {
+        unlist( lavobject@Data@nobs )
+    } else if(what == "norig") {
+        unlist( lavobject@Data@norig )
+    } else if(what == "ntotal") {
+        sum(unlist( lavobject@Data@nobs ))
+    } else if(what == "coverage") {
+        lav_object_inspect_missing_coverage(lavobject,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what %in% c("patterns", "pattern")) {
+        lav_object_inspect_missing_patterns(lavobject,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "empty.idx") {
+        lav_object_inspect_empty_idx(lavobject,
+            drop.list.single.group = drop.list.single.group)
 
 
     #### rsquare ####
@@ -190,19 +226,6 @@ lavInspect <- function(lavobject,
  
 
 
-    #### missingness ####
-    } else if(what == "coverage") {
-        lav_object_inspect_missing_coverage(lavobject,
-            add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)
-    } else if(what %in% c("patterns", "pattern")) {
-        lav_object_inspect_missing_patterns(lavobject,
-            add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)
-    } else if(what == "empty.idx") {
-        lav_object_inspect_empty_idx(lavobject,
-            drop.list.single.group = drop.list.single.group)
-
     #### convergence, meanstructure, categorical ####
     } else if(what == "converged") {
         lavobject@Fit@converged
@@ -214,22 +237,11 @@ lavInspect <- function(lavobject,
         lavobject@Model@meanstructure
     } else if(what == "categorical") {
         lavobject@Model@categorical
+    } else if(what == "fixed.x") {
+        lavobject@Model@fixed.x
+    } else if(what == "parameterization") {
+        lavobject@Model@parameterization
     
-
-
-    #### wls.est - wls.obs - wls.v ####
-    } else if(what == "wls.est") {
-        lav_object_inspect_wls_est(lavobject,
-            add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)
-    } else if(what == "wls.obs") {
-        lav_object_inspect_wls_obs(lavobject,
-            add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)
-    } else if(what == "wls.v") {
-        lav_object_inspect_wls_v(lavobject,
-            add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)
 
 
     #### NACOV samplestats ####
@@ -344,15 +356,23 @@ lavInspect <- function(lavobject,
 
     # options
     } else if(what == "options" || what == "lavoptions") {
-        lav_object_inspect_options(lavobject)
+        lavobject@Options
 
     # call
     } else if(what == "call") {
-        lav_object_inspect_call(lavobject)
+        as.list( lavobject@call )
 
     # timing
     } else if(what == "timing") {
-        lav_object_inspect_timing(lavobject)
+        lavobject@timing
+
+    # optim
+    } else if(what == "optim") {
+        lavobject@optim
+
+    # test
+    } else if(what == "test") {
+        lavobject@test
 
     #### not found ####
     } else {
@@ -531,7 +551,7 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
 
 
 # fixme, should we export this function?
-lav_object_inspect_sampstat <- function(lavobject, 
+lav_object_inspect_sampstat <- function(lavobject, h1 = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- lavobject@Data@ngroups
@@ -539,7 +559,13 @@ lav_object_inspect_sampstat <- function(lavobject,
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
-        OUT[[g]]$cov  <- lavobject@SampleStats@cov[[g]]
+
+        # covariance matrix
+        if(h1 && !is.null(lavobject@SampleStats@missing.h1[[g]])) {
+            OUT[[g]]$cov  <- lavobject@SampleStats@missing.h1[[g]]$sigma
+        } else {
+            OUT[[g]]$cov  <- lavobject@SampleStats@cov[[g]]
+        }
         if(add.labels) {
             rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
         }
@@ -547,16 +573,20 @@ lav_object_inspect_sampstat <- function(lavobject,
             class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
         }
 
-        #if(lavobject@Model@meanstructure) {
+        # mean vector
+        if(h1 && !is.null(lavobject@SampleStats@missing.h1[[g]])) {
+            OUT[[g]]$mean <- lavobject@SampleStats@missing.h1[[g]]$mu
+        } else {
             OUT[[g]]$mean <- as.numeric(lavobject@SampleStats@mean[[g]])
-            if(add.labels) {
-                names(OUT[[g]]$mean) <- ov.names[[g]]
-            }
-            if(add.class) {
-                class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
-            }
-        #}
+        }
+        if(add.labels) {
+            names(OUT[[g]]$mean) <- ov.names[[g]]
+        }
+        if(add.class) {
+            class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
+        }
 
+        # thresholds
         if(lavobject@Model@categorical) {
             OUT[[g]]$th <- as.numeric(lavobject@SampleStats@th[[g]])
             if(length(lavobject@Model@num.idx[[g]]) > 0L) {
@@ -571,6 +601,7 @@ lav_object_inspect_sampstat <- function(lavobject,
             }
         }
 
+        # slopes
         if(lavobject@Model@categorical &&
            lavobject@Model@nexo > 0L) {
             OUT[[g]]$slopes  <- lavobject@SampleStats@slopes[[g]]
@@ -584,6 +615,7 @@ lav_object_inspect_sampstat <- function(lavobject,
             }
         }
 
+        # stochastic weights
         if(lavobject@Model@group.w.free) {
             OUT[[g]]$group.w <- lavobject@SampleStats@group.w[[g]]
             if(add.labels) {
@@ -645,18 +677,6 @@ lav_object_inspect_case_idx <- function(lavobject,
     }
 
     OUT
-}
-
-lav_object_inspect_data_ngroups <- function(lavobject) {
-    lavobject@Data@ngroups
-}
-
-lav_object_inspect_data_group <- function(lavobject) {
-    lavobject@Data@group
-}
-
-lav_object_inspect_data_group.label <- function(lavobject) {
-    lavobject@Data@group.label
 }
 
 
@@ -1521,14 +1541,3 @@ lav_object_inspect_UGamma <- function(lavobject,
     OUT
 }
 
-lav_object_inspect_options <- function(lavobject) {
-    lavobject@Options
-}
-
-lav_object_inspect_call <- function(lavobject) {
-    as.list(lavobject@call)
-}
-
-lav_object_inspect_timing <- function(lavobject) {
-    lavobject@timing
-}

@@ -89,29 +89,32 @@ Model matrices:
         set to unity; hence no-x.)}
 }
 
-Observed sample statistics and information about the data:
+Information about the data (including missing patterns):
 
 \describe{
-    \item{\code{"sampstat"}:}{Observed sample statistics. Aliases: 
-        \code{"samp"}, \code{"sample"}, \code{"samplestatistics"}.}
-    \item{\code{"wls.obs"}:}{The observed sample statistics (covariance
-        elements, intercepts/thresholds, etc.) in a single vector.}
-    \item{\code{"wls.v"}:}{The weight vector as used in weighted least
-        squares estimation.}
-    \item{\code{"gamma"}:}{N times the asymptotic variance matrix of the
-        sample statistics. Alias: \code{"sampstat.nacov"}.}
     \item{\code{"data"}:}{A matrix containing the observed variables
-        that have been used to fit the model.}
+        that have been used to fit the model. No column/row names are provided.
+        Column names correspond to the output of \code{lavNames(object)},
+        while the rows correspond to the output of 
+        \code{lavInspect(object, "case.idx"}.}
     \item{\code{"group"}:}{A character string. The group variable in
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
     \item{\code{"group.label"}:}{A character vector. The group labels.}
-    \item{\code{"case.idx"}:}{The case/observation numbers that were used 
+    \item{\code{"nobs"}:}{Integer vector. The number of observations
+        in each group that were used in the analysis.}
+    \item{\code{"norig"}:}{Integer vector. The original number of observations
+        in each group.}
+    \item{\code{"ntotal"}:}{Integer. The total number of observations that
+        were used in the analysis. If there is just a single group, this
+        is the same as the \code{"nobs"} option; if there are multiple groups,
+        this is the sum of the \code{"nobs"} numbers for each group.}
+    \item{\code{"case.idx"}:}{The case/observation numbers that were used
         in the analysis.
         In the case of multiple groups: a list of numbers.}
     \item{\code{"empty.idx"}:}{The case/observation numbers of those 
         cases/observations that contained missing values only 
-        (at least for the observed variables that wer included in the model).
+        (at least for the observed variables that were included in the model).
         In the case of multiple groups: a list of numbers.}
     \item{\code{"patterns"}:}{A binary matrix. The rows of the matrix 
         are the missing data patterns where 1 and 0 denote non-missing
@@ -127,7 +130,42 @@ Observed sample statistics and information about the data:
         In the case of multiple groups: a list of coverage matrices.}
 }
 
-Model-implied sample statistics and fit information:
+Observed sample statistics:
+
+\describe{
+    \item{\code{"sampstat"}:}{Observed sample statistics. Aliases: 
+        \code{"samp"}, \code{"sample"}, \code{"samplestatistics"}. In the 
+        presence of missing values, the sample covariance matrix is computed
+        using \code{use="pairwise"}, while listwise deletion is used for the
+        means (and thresholds, if any).}
+    \item{\code{"sampstat.h1"}:}{If all variables are continuous, and 
+        \code{missing = "ml"} (or \code{"fiml"}), 
+        the EM algorithm is used to compute an 
+        estimate of the sample covariance matrix and mean vector under 
+        the unrestricted (H1) model. Aliases: \code{"h1"}, \code{"missing.h1"}.}
+    \item{\code{"wls.obs"}:}{The observed sample statistics (covariance
+        elements, intercepts/thresholds, etc.) in a single vector.}
+    \item{\code{"wls.v"}:}{The weight vector as used in weighted least
+        squares estimation.}
+    \item{\code{"gamma"}:}{N times the asymptotic variance matrix of the
+        sample statistics. Alias: \code{"sampstat.nacov"}.}
+}
+
+Model features:
+
+\describe{
+    \item{\code{"meanstructure"}:}{Logical. \code{TRUE} if a meanstructure
+        was included in the model.}
+    \item{\code{"categorical"}:}{Logical. \code{TRUE} if categorical endogenous
+        variables were part of the model.}
+    \item{\code{"fixed.x"}:}{Logical. \code{TRUE} if the exogenous x-covariates
+        are treated as fixed.}
+    \item{\code{"parameterization"}:}{Character. Either \code{"delta"} or
+        \code{"theta"}.}
+}
+
+
+Model-implied sample statistics:
 
 \describe{
     \item{\code{"cov.lv"}:}{The model-implied variance-covariance matrix
@@ -155,14 +193,17 @@ Model-implied sample statistics and fit information:
         observed variables.}
     \item{\code{"rsquare"}:}{The R-square value for all endogenous variables.
         Aliases: \code{"r-square"}, \code{"r2"}.}
+}
+
+Optimizer information:
+
+\describe{
     \item{\code{"converged"}:}{Logical. \code{TRUE} if the optimizer has
         converged; \code{FALSE} otherwise.}
     \item{\code{"iteratons"}:}{Integer. The number of iterations used by the
         optimizer.}
-    \item{\code{"meanstructure"}:}{Logical. \code{TRUE} if a meanstructure
-        was included in the model.}
-    \item{\code{"categorical"}:}{Logical. \code{TRUE} if categorical endogenous
-        variables were part of the model.}
+    \item{\code{"optim"}:}{List. All available information regarding the
+        optimization results.}
 }
 
 Gradient, Hessian, observed, expected and first.order information matrices:
@@ -243,10 +284,16 @@ Miscellaneous:
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
     \item{\code{"options"}:}{List. The option list.}
-    \item{\code{"call"}:}{List. The call as returned by match.call, coerced to a list.}
-    \item{\code{"timing"}:}{List. The timing (in milliseconds) of various lavaan subprocedures.}
-    \item{\code{"post.check"}:}{Post-fitting check if the solution is admissible. A warning is raised if negative variances are found, or if either \code{lavInspect(fit, "cov.lv")} or \code{lavInspect(fit, "theta")} return a non-positive
-definite matrix.}
+    \item{\code{"call"}:}{List. The call as returned by match.call, coerced to 
+        a list.}
+    \item{\code{"timing"}:}{List. The timing (in milliseconds) of various 
+        lavaan subprocedures.}
+    \item{\code{"test"}:}{List. All available information regarding the
+        (goodness-of-fit) test statistic(s).}
+    \item{\code{"post.check"}:}{Post-fitting check if the solution is 
+        admissible. A warning is raised if negative variances are found, or if 
+        either \code{lavInspect(fit, "cov.lv")} or 
+        \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
 }
 
 }
