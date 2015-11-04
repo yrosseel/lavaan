@@ -54,6 +54,7 @@ InformativeTesting(model = NULL, data, constraints = NULL,
     method is available.}   
 %\seealso{}
 \examples{
+\dontrun{
 # Simple ANOVA model with 3 groups (N=20 per group) (artifical data)
 set.seed(1234)
 Y <- cbind(c(rnorm(20,0,1), rnorm(20,0.5,1), rnorm(20,1,1)))
@@ -89,6 +90,7 @@ example <- InformativeTesting(model = model, data = Data.new,
                               constraints = constraints)
 example
 # plot(example)
+}
 }
 
 \references{

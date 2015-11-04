@@ -8,11 +8,12 @@
 function or the Jacobian of a vector-valued function by numerical approximation.}
 \usage{
 lav_func_gradient_complex(func, x, h = .Machine$double.eps, ..., 
-                          check = TRUE)
-lav_func_jacobian_complex(func, x, h = .Machine$double.eps, ...)
+                          check.scalar = TRUE, fallback.simple = TRUE)
+lav_func_jacobian_complex(func, x, h = .Machine$double.eps, ...,
+                          fallback.simple = TRUE)
 
 lav_func_gradient_simple(func, x, h = sqrt(.Machine$double.eps), ...,
-                         check = TRUE)
+                         check.scalar = TRUE)
 lav_func_jacobian_simple(func, x, h = sqrt(.Machine$double.eps), ...)
 }
 \arguments{
@@ -23,7 +24,9 @@ of the function should be computed.}
 \item{h}{Numeric value representing a small change in `x' when
 computing the gradient/Jacobian.}
 \item{...}{Additional arguments to be passed to the function `func'.}
-\item{check}{Logical. If TRUE, check if the function is scalar-valued.}
+\item{check.scalar}{Logical. If TRUE, check if the function is scalar-valued.}
+\item{fallback.simple}{Logical. If TRUE, and the function evaluation fails,
+we call the corresponding simple (non-complex) method instead.}
 }
 \details{
 The complex versions use complex numbers to gain more precision, while
