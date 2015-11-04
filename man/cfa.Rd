@@ -50,7 +50,8 @@ cfa(model = NULL, data = NULL,
 \item{orthogonal}{If \code{TRUE}, the exogenous latent variables
     are assumed to be uncorrelated.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
-    determined by fixing their variances to 1.0. If \code{FALSE}, the metric
+    determined by fixing their (residual) variances to 1.0. If \code{FALSE}, 
+    the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
 \item{parameterization}{Currently only used if data is categorical. If 
