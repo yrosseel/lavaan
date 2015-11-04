@@ -213,7 +213,7 @@ lav_start <- function(start.method = "default",
             start[ov.var.ord.idx] <- 1.0
         }
 
-        # 3g) intercepts
+        # 3g) intercepts/means
         ov.int.idx <- which(lavpartable$group == g         &
                             lavpartable$op == "~1"         & 
                             lavpartable$lhs %in% ov.names)
@@ -224,7 +224,7 @@ lav_start <- function(start.method = "default",
             start[ov.int.idx] <- lavsamplestats@mean[[g]][sample.int.idx]
         }
         
-        # thresholds
+        # 4g) thresholds
         th.idx <- which(lavpartable$group == g & lavpartable$op == "|")
         if(length(th.idx) > 0L) {
             th.names.lavpartable <- paste(lavpartable$lhs[th.idx], "|",
@@ -239,7 +239,7 @@ lav_start <- function(start.method = "default",
         }
         
 
-        # 4g) exogenous `fixed.x' covariates
+        # 5g) exogenous `fixed.x' covariates
         if(!categorical && length(ov.names.x) > 0) {
             exo.idx <- which(lavpartable$group == g          &
                              lavpartable$op == "~~"          & 
@@ -254,6 +254,8 @@ lav_start <- function(start.method = "default",
                 start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx,col.idx)]
             }
         }
+
+        # 6g) regressions "~"
     }
 
     # group weights

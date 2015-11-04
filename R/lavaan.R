@@ -490,6 +490,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     x <- NULL
     if(do.fit && lavoptions$estimator != "none" && 
        lavmodel@nx.free > 0L) {
+
         x <- lav_model_estimate(lavmodel        = lavmodel,
                                 lavsamplestats  = lavsamplestats,
                                 lavdata         = lavdata,
@@ -523,7 +524,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # should we fake/force convergence? (eg. to enforce the
-    # computation of a test statistic
+    # computation of a test statistic)
     if(!is.null(control$optim.force.converged) &&
        control$optim.force.converged) {
         attr(x, "converged") <- TRUE
