@@ -63,6 +63,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
     categorical <- any(ov$type == "ordered")
     if(categorical) {
         OV <- ov.names.nox
+        meanstructure <- TRUE
     } else {
         OV <- ov.names
     }
