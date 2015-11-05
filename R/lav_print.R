@@ -122,7 +122,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     # round to 3 digits after the decimal point
     y <- as.data.frame(
            lapply(x, function(x) {
-               if(is.numeric(x)) { 
+               if(is.numeric(x)) {
                    sprintf(num.format, x)   
                } else {
                    x
@@ -168,6 +168,31 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
     }
 
+    # for blavaan, handle Post.SD and PSRF
+    if(!is.null(x$Post.SD)) {
+        se.idx <- which(x$Post.SD == 0)
+        if(length(se.idx) > 0L) {
+            m[se.idx, "Post.SD"] <- ""
+            if(!is.null(x$psrf)) {
+                m[se.idx, "psrf"] <- ""
+            }
+            if(!is.null(x$PSRF)) {
+                m[se.idx, "PSRF"] <- ""
+            }
+        }
+
+        # handle psrf for defined parameters
+        not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
+        if(length(def.idx) > 0L) {
+            if(!is.null(x$psrf)) {
+                m[not.idx, "psrf"] <- ""
+            }
+            if(!is.null(x$PSRF)) {
+                m[not.idx, "PSRF"] <- ""
+            }
+        }
+    }
+
     # rename some column names
     colnames(m)[ colnames(m) ==    "lhs" ] <- ""
     colnames(m)[ colnames(m) ==     "op" ] <- ""
@@ -183,6 +208,28 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
  
     # format column names
     colnames(m) <- sprintf(char.format, colnames(m))
+
+    # exceptions for blavaan: Post.Mean (width = 9), Prior (width = 14)
+    if(!is.null(x$Post.Mean)) {
+        tmp <- gsub("[ \t]+", "", colnames(m), perl=TRUE)
+
+        # reformat "Post.Mean" column
+        col.idx <- which(tmp == "Post.Mean")
+        if(length(col.idx) > 0L) {
+            tmp.format <- paste("%", max(9, nd + 5), "s", sep="")
+            colnames(m)[col.idx] <- sprintf(tmp.format, colnames(m)[col.idx])
+            m[,col.idx] <- sprintf(tmp.format, m[,col.idx])
+        }
+
+        # reformat "Prior" column
+        col.idx <- which(tmp == "Prior")
+        if(length(col.idx) > 0L) {
+            MAX <- max( nchar( m[,col.idx] ) ) + 1L
+            tmp.format <- paste("%", max(MAX, nd + 5), "s", sep="")
+            colnames(m)[col.idx] <- sprintf(tmp.format, colnames(m)[col.idx])
+            m[,col.idx] <- sprintf(tmp.format, m[,col.idx])
+        }
+    }
 
     # first the group-specific sections
     for(g in 1:ngroups) {
