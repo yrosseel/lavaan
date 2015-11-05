@@ -283,6 +283,7 @@ function(object, header       = TRUE,
                  fit.measures = FALSE, 
                  estimates    = TRUE,
                  ci           = FALSE, 
+                 fmi          = FALSE,
                  standardized = FALSE,
                  rsquare      = FALSE, 
                  std.nox      = FALSE, 
@@ -309,7 +310,7 @@ function(object, header       = TRUE,
 
     if(estimates) {
         PE <- parameterEstimates(object, ci = ci, standardized = standardized,
-                                 rsquare = rsquare,
+                                 rsquare = rsquare, fmi = fmi,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE, 
                                  add.attributes = TRUE)

@@ -120,13 +120,29 @@ about the data.}
       \link{lavInspect} for more details.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
-    \item{summary}{\code{signature(object = "lavaan", standardized=FALSE, fit.measures=FALSE, rsquare=FALSE, modindices=FALSE)}: 
-      Print a nice summary of the model estimates. If \code{standardized=TRUE},
-      the standardized solution is also printed. If \code{fit.measures=TRUE}, 
-      the chi-square statistic is supplemented by several fit measures. 
+    \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
+      Print a nice summary of the model estimates. 
+      If \code{header = TRUE}, the header section (including fit measures) is
+      printed.  
+      If \code{fit.measures = TRUE}, additional fit measures are added to the
+      header section.
+      If \code{estimates = TRUE}, print the parameter estimates section.
+      If \code{ci = TRUE}, add confidence intervals to the parameter estimates
+      section.
+      If \code{fmi = TRUE}, add the fmi (fraction of missing information) 
+      column, if it is available.
+      If \code{standardized=TRUE},
+      the standardized solution is also printed.  
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
-      in the model are printed. If \code{modindices=TRUE}, modification indices
-      are printed for all fixed parameters. Nothing is returned (use 
+      in the model are printed. 
+      If \code{std.nox = TRUE}, the \code{std.all} column contains the 
+      the \code{std.nox} column from the parameterEstimates() output.
+      If \code{modindices=TRUE}, modification indices
+      are printed for all fixed parameters. 
+      The argument \code{nd} determines the number of digits after the
+      decimal point to be printed (currently only in the parameter estimates
+      section.
+      Nothing is returned (use 
       \code{inspect} or another extractor function 
       to extract information from a fitted model).}
   }
