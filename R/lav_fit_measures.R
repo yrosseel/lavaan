@@ -477,7 +477,27 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # logl H1 -- unrestricted (aka saturated) model
             logl.H1.group <- numeric(G)
+
+            # check if everything is numeric, OR if we have exogenous
+            # factor with 2 levels only
+            logl.ok <- FALSE
             if(all(object@Data@ov$type == "numeric")) {
+                logl.ok <- TRUE
+            } else {
+                not.idx <- which(object@Data@ov$type != "numeric")
+                for(i in not.idx) {
+                    if(object@Data@ov$type[i] == "factor" &&
+                       object@Data@ov$exo[i] == 1L &&
+                       object@Data@ov$nlev[i] == 2L) {
+                        logl.ok <- TRUE
+                    } else {
+                        logl.ok <- FALSE
+                        break
+                    }
+                }
+            }
+
+            if(logl.ok) {
                 for(g in 1:G) {
                     nvar <- ncol(object@SampleStats@cov[[g]])
                     if(!object@SampleStats@missing.flag) {
@@ -512,7 +532,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # logl H0
             logl.H0.group <- numeric(G)
-            if(all(object@Data@ov$type == "numeric")) {
+            if(logl.ok) {
                 for(g in 1:G) {
                     Ng <- object@SampleStats@nobs[[g]]
                     logl.H0.group[g] <- -Ng * (fx.group[g] - 
