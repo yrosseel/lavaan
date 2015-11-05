@@ -183,7 +183,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
         # handle psrf for defined parameters
         not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
-        if(length(def.idx) > 0L) {
+        if(length(not.idx) > 0L) {
             if(!is.null(x$psrf)) {
                 m[not.idx, "psrf"] <- ""
             }
