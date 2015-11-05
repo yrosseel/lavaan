@@ -168,6 +168,21 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
     }
 
+    # handle fmi
+    if(!is.null(x$fmi)) {
+        se.idx <- which(x$se == 0)
+        if(length(se.idx) > 0L) {
+            m[se.idx, "fmi"] <- ""
+        }
+
+        not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
+        if(length(not.idx) > 0L) {
+            if(!is.null(x$fmi)) {
+                m[not.idx, "fmi"] <- ""
+            }
+        }
+    }
+
     # for blavaan, handle Post.SD and PSRF
     if(!is.null(x$Post.SD)) {
         se.idx <- which(x$Post.SD == 0)
@@ -205,6 +220,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     colnames(m)[ colnames(m) == "std.all"] <- "Std.all"
     colnames(m)[ colnames(m) == "std.nox"] <- "Std.nox"
     colnames(m)[ colnames(m) == "prior"  ] <- "Prior"
+    colnames(m)[ colnames(m) == "fmi"    ] <- "FMI"
  
     # format column names
     colnames(m) <- sprintf(char.format, colnames(m))
