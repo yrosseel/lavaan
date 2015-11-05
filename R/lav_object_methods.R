@@ -1268,7 +1268,7 @@ function(object, type = "moments", labels=TRUE) {
 
 
 setMethod("vcov", "lavaan",
-function(object, labels=TRUE, attributes.=FALSE) {
+function(object, labels = TRUE, alias. = FALSE) {
 
     # check for convergence first!
     if(object@Fit@npar > 0L && !object@Fit@converged)
@@ -1280,7 +1280,9 @@ function(object, labels=TRUE, attributes.=FALSE) {
 
     VarCov <- lav_object_inspect_vcov(lavobject = object,
                                       add.labels = labels,
-                                      add.class = TRUE)
+                                      add.class = TRUE,
+                                      alias. = alias.)
+
     VarCov
 })
 

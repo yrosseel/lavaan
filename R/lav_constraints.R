@@ -259,3 +259,40 @@ lav_constraints_check_linear <- function(model) {
          return(FALSE)
 }
 
+# check if the equality constraints are 'simple' (a == b)
+lav_constraints_check_simple <- function(lavmodel = NULL) {
+
+    ones <- (lavmodel@ceq.JAC == 1 | lavmodel@ceq.JAC == -1)
+    simple <- all(lavmodel@ceq.rhs == 0) &&
+              all(apply(lavmodel@ceq.JAC != 0, 1, sum) == 2) &&
+              all(apply(ones, 1, sum) == 2) &&
+              length(lavmodel@ceq.nonlinear.idx) == 0
+
+    # TRUE or FALSE
+    simple
+}
+
+lav_constraints_R2K <- function(lavmodel = NULL, R = NULL) {
+
+    # constraint matrix
+    if(!is.null(lavmodel)) {
+        R <- lavmodel@ceq.JAC
+    }
+    stopifnot(!is.null(R))
+
+    npar.full <- NCOL(R)
+    npar.red  <- npar.full - NROW(R)
+
+    K <- diag(npar.full)
+    for(i in 1:NROW(R)) {
+        idx1 <- which(R[i,] == 1)
+        idx2 <- which(R[i,] == -1)
+        K[idx2, idx1] <- 1
+    }
+
+    # remove redundant columns 
+    neg.idx <- which(colSums(R) < 0)
+    K <- K[,-neg.idx]
+
+    K
+}

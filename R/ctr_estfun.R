@@ -4,8 +4,10 @@
 # of lav_model_gradient in the multiple group case
 
 # YR 30 May 2014: handle 1-variable case (fixing apply in lines 56, 62, 108)
+# YR 05 Nov 2015: add alias. = TRUE, do cope with strucchange in case of
+#                 simple equality constraints
 
-estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
+estfun.lavaan <- lavScores <- function(object, scaling = FALSE, alias. = TRUE) {
 
   stopifnot(inherits(object, "lavaan"))
 
@@ -151,11 +153,21 @@ estfun.lavaan <- lavScores <- function(object, scaling=FALSE) {
   if(length(empty.idx) > 0L) {
       Score.mat <- Score.mat[-empty.idx,,drop=FALSE]
   }
-  
+
   # provide column names
-  #if(!object@Model@eq.constraints) {
-      colnames(Score.mat) <- names(coef(object))
-  #}
+  colnames(Score.mat) <- names(coef(object))
+
+  # handle simple equality constraints
+  if(alias. && lavmodel@eq.constraints) {
+      simple.flag <- lav_constraints_check_simple(lavmodel)
+      if(simple.flag) {
+          K <- lav_constraints_R2K(lavmodel)
+          Score.mat <- Score.mat %*% K
+      } else {
+          warning("lavaan WARNING: alias. is TRUE, but equality constraints do not appear to be simple; returning full scores")
+      }
+  }
 
   Score.mat
 }
+

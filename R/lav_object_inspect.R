@@ -1377,7 +1377,7 @@ lav_object_inspect_firstorder <- function(lavobject,
 
 lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     type = "std.all", free.only = TRUE,
-    add.labels = FALSE, add.class = FALSE) {
+    add.labels = FALSE, add.class = FALSE, alias. = FALSE) {
 
     if(lavobject@Fit@npar == 0) {
         OUT <- matrix(0,0,0)
@@ -1445,6 +1445,17 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(add.labels) {
         colnames(OUT) <- rownames(OUT) <-
             lav_partable_labels(lavobject@ParTable, type="free")
+    }
+
+    # alias?
+    if(alias.) {
+        simple.flag <- lav_constraints_check_simple(lavobject@Model)
+        if(simple.flag) {
+          K <- lav_constraints_R2K(lavobject@Model)
+          OUT <- t(K) %*% OUT %*% K
+      } else {
+          warning("lavaan WARNING: alias is TRUE, but equality constraints do not appear to be simple; returning full vcov")
+      }
     }
 
     # class
