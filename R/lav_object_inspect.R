@@ -1377,7 +1377,7 @@ lav_object_inspect_firstorder <- function(lavobject,
 
 lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     type = "std.all", free.only = TRUE,
-    add.labels = FALSE, add.class = FALSE, alias. = FALSE) {
+    add.labels = FALSE, add.class = FALSE, remove.duplicated = FALSE) {
 
     if(lavobject@Fit@npar == 0) {
         OUT <- matrix(0,0,0)
@@ -1448,7 +1448,7 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     }
 
     # alias?
-    if(alias.) {
+    if(remove.duplicated) {
         simple.flag <- lav_constraints_check_simple(lavobject@Model)
         if(simple.flag) {
           K <- lav_constraints_R2K(lavobject@Model)

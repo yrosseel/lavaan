@@ -10,7 +10,7 @@ data. In other words, this function returns the case-wise scores, evaluated
 at the fitted model parameters.
 }
 \usage{
-estfun.lavaan(object, scaling = FALSE, alias. = TRUE)
+estfun.lavaan(object, scaling = FALSE, remove.duplicated = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -18,9 +18,9 @@ estfun.lavaan(object, scaling = FALSE, alias. = TRUE)
 objective function used by lavaan. If \code{FALSE} (the default), the 
 objective function is the loglikelihood function assuming multivariate 
 normality.}
-\item{alias.}{If \code{TRUE}, and all the equality constraints have a simple
-form (eg. a == b), the unconstrained scores are post-multiplied with a
-transformation matrix in order to account for the equality constraints.}
+\item{remove.duplicated}{If \code{TRUE}, and all the equality constraints have
+a simple form (eg. a == b), the unconstrained scores are post-multiplied with a
+transformation matrix in order to remove the duplicated parameters.}
 
 }
 \value{A n x k matrix corresponding to n observations and k parameters.}
