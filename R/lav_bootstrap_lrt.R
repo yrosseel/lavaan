@@ -111,8 +111,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         for(g in 1:h0@Data@ngroups) {
             S <- h0@SampleStats@cov[[g]]
             # test is in Fit slot
-            ghat <- h0@Fit@test[[1]]$stat.group[[g]]
-            df <- h0@Fit@test[[1]]$df
+            ghat <- h0@test[[1]]$stat.group[[g]]
+            df <- h0@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
             Sigmahat.inv <- inv.chol(Sigmahat)
             nmv <- nrow(Sigmahat)

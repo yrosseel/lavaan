@@ -60,7 +60,7 @@ modindices <- function(object,
     # catch empty extra.idx (no modification indices!)
     if(length(extra.idx) == 0L) {
         # 2 possibilities: either model is saturated, or we have constraints
-        if(object@Fit@test[[1]]$df == 0) {
+        if(object@test[[1]]$df == 0) {
             warning("lavaan WARNING: list with extra parameters is empty; model is saturated")
         } else {
             warning("lavaan WARNING: list with extra parameters is empty; to release equality\n                  constraints, use lavTestScore()")
@@ -110,8 +110,8 @@ modindices <- function(object,
     #}
   
     # scaled?
-    if(length(object@Fit@test) > 1L) {
-        LIST$mi.scaled <- LIST$mi / object@Fit@test[[2]]$scaling.factor
+    if(length(object@test) > 1L) {
+        LIST$mi.scaled <- LIST$mi / object@test[[2]]$scaling.factor
     }
 
     # EPC

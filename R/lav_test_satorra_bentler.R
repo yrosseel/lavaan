@@ -21,7 +21,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         lavoptions     <- lavobject@Options
         lavpartable    <- lavobject@ParTable
         lavdata        <- lavobject@Data
-        TEST$standard  <- lavobject@Fit@test[[1]]
+        TEST$standard  <- lavobject@test[[1]]
     }
 
     # check test

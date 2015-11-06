@@ -197,8 +197,8 @@ bootstrap.internal <- function(object          = NULL,
         for(g in 1:lavsamplestats@ngroups) {
             S <- lavsamplestats@cov[[g]]
             # test is in Fit slot
-            ghat <- object@Fit@test[[1]]$stat.group[[g]]
-            df <- object@Fit@test[[1]]$df
+            ghat <- object@test[[1]]$stat.group[[g]]
+            df <- object@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
             Sigmahat.inv <- inv.chol(Sigmahat)
             nmv <- nrow(Sigmahat)
@@ -314,9 +314,9 @@ bootstrap.internal <- function(object          = NULL,
             if(FUN == "coef") {
                 out <- fit.boot@Fit@x
             } else if(FUN == "test") { 
-                out <- fit.boot@Fit@test[[1L]]$stat
+                out <- fit.boot@test[[1L]]$stat
             } else if(FUN == "coeftest") { 
-                out <- c(fit.boot@Fit@x, fit.boot@Fit@test[[1L]]$stat)
+                out <- c(fit.boot@Fit@x, fit.boot@test[[1L]]$stat)
             } 
         } else { # general use
             out <- try(FUN(fit.boot, ...), silent=TRUE)

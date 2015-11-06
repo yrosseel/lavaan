@@ -21,7 +21,7 @@
 ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
     # sanity check, perhaps we misordered H0 and H1 in the function call??
-    if(fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
+    if(fit_objH1@test[[1]]$df > fit_objH0@test[[1]]$df) {
         tmp <- fit_objH0
         fit_objH0 <- fit_objH1
         fit_objH1 <- tmp
@@ -78,7 +78,7 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 # for testing: this is the 'original' (using m.el.idx and x.el.idx)
 ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
-    if (fit_objH1@Fit@test[[1]]$df > fit_objH0@Fit@test[[1]]$df) {
+    if (fit_objH1@test[[1]]$df > fit_objH0@test[[1]]$df) {
         tmp <- fit_objH0
         fit_objH0 <- fit_objH1
         fit_objH1 <- tmp

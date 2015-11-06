@@ -45,13 +45,13 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
             bic <- c(NA, BIC(object))
         }
 
-        val <- data.frame(Df = c(0, object@Fit@test[[1L]]$df),
+        val <- data.frame(Df = c(0, object@test[[1L]]$df),
                           AIC = aic,
                           BIC = bic,
-                          Chisq = c(0, object@Fit@test[[1L]]$stat),
-                          "Chisq diff" = c(NA, object@Fit@test[[1L]]$stat),
-                          "Df diff" = c(NA, object@Fit@test[[1L]]$df),
-                          "Pr(>Chisq)" = c(NA, object@Fit@test[[1L]]$pvalue),
+                          Chisq = c(0, object@test[[1L]]$stat),
+                          "Chisq diff" = c(NA, object@test[[1L]]$stat),
+                          "Df diff" = c(NA, object@test[[1L]]$df),
+                          "Pr(>Chisq)" = c(NA, object@test[[1L]]$pvalue),
                           row.names = c("Saturated", "Model"),
                           check.names = FALSE)
         attr(val, "heading") <- "Chi Square Test Statistic (unscaled)\n"
@@ -78,7 +78,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     #}
 
     # put them in order (using degrees of freedom)
-    ndf <- sapply(mods, function(x) x@Fit@test[[1]]$df)    
+    ndf <- sapply(mods, function(x) x@test[[1]]$df)    
     mods <- mods[order(ndf)]
 
     # here come the checks
@@ -114,7 +114,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     if(all(mods.scaled)) {
         scaled <- TRUE
         # which type?
-        TEST <- object@Fit@test[[2]]$test
+        TEST <- object@test[[2]]$test
     } else if(!all(mods.scaled)) {
         scaled <- FALSE
         TEST <- "standard"
