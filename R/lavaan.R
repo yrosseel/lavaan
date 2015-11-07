@@ -577,8 +577,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 7. estimate vcov of free parameters (for standard errors)
     VCOV <- NULL
-    if(lavoptions$se != "none" && lavmodel@nx.free > 0L &&
-       attr(x, "converged")) {
+    if(lavoptions$se != "none" && lavoptions$se != "external" && 
+       lavmodel@nx.free > 0L && attr(x, "converged")) {
         if(verbose) cat("Computing VCOV for se =", lavoptions$se, "...")
         VCOV <- lav_model_vcov(lavmodel        = lavmodel,
                                lavsamplestats  = lavsamplestats,
@@ -602,12 +602,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     tmp.attr <- attributes(VCOV)
     VCOV1 <- VCOV
     attributes(VCOV1) <- tmp.attr["dim"]
-    lavvcov <- list(vcov = VCOV1)
+    lavvcov <- list(se = lavoptions$se, information = lavoptions$information,
+                    vcov = VCOV1)
 
     # store se in partable
-    SE <- lav_model_vcov_se(lavmodel = lavmodel, lavpartable = lavpartable,
-                            VCOV = VCOV, BOOT = lavboot$coef)
-    lavpartable$se <- SE
+    if(lavoptions$se != "external") {
+        lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel, 
+                                            lavpartable = lavpartable,
+                                            VCOV = VCOV, 
+                                            BOOT = lavboot$coef)
+    } else {
+        if(is.null(lavpartable$se)) {
+            lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel, 
+                                                lavpartable = lavpartable,
+                                                VCOV = NULL, BOOT = NULL)
+            warning("lavaan WARNING: se = \"external\" but parameter table does not contain a `se' column")
+        }
+    }
+
 
     timing$VCOV <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]

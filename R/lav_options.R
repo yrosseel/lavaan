@@ -228,6 +228,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
         } else if(opt$se == "first.order" || 
                   opt$se == "bootstrap"   ||
                   opt$se == "none"        || 
+                  opt$se == "external"    ||
                   opt$se == "standard"    ||
                   opt$se == "robust.huber.white"  || 
                   opt$se == "robust.sem") {
@@ -259,24 +260,26 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$information <- "expected"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         opt$missing <- "listwise"
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "first.order"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "first.order"
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.huber.white"
-        if(opt$test != "none") opt$test <- "yuan.bentler"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.huber.white"
+        if(opt$test != "none" && opt$se != "external") opt$test <- "yuan.bentler"
         opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none" || opt$se == "bootstrap") {
+        } else if(opt$se == "none" || 
+                  opt$se == "bootstrap" || 
+                  opt$se == "external") {
             # nothing to do
         } else {
             stop("invalid value for `se' argument when estimator is GLS: ", 
@@ -291,7 +294,9 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$estimator <- "WLS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none" || opt$se == "bootstrap") {
+        } else if(opt$se == "none" || 
+                  opt$se == "bootstrap" || 
+                  opt$se == "external") {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             # nothing to do
@@ -310,7 +315,9 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$estimator <- "DWLS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none" || opt$se == "bootstrap") {
+        } else if(opt$se == "none" || 
+                  opt$se == "bootstrap" || 
+                  opt$se == "external") {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             # nothing to do
@@ -330,26 +337,28 @@ lav_options_set <- function(opt = formals(lavaan)) {
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsmv") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsmvs") {
         opt$estimator <- "DWLS"
         if(opt$se == "bootstrap") stop("use (D)WLS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "mean.var.adjusted"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "uls") {
         opt$estimator <- "ULS"
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
-        } else if(opt$se == "none" || opt$se == "bootstrap") {
+        } else if(opt$se == "none" || 
+                  opt$se == "bootstrap" || 
+                  opt$se != "external") {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             # nothing to do
@@ -369,19 +378,19 @@ lav_options_set <- function(opt = formals(lavaan)) {
     } else if(opt$estimator == "ulsm") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "satorra.bentler"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmv") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "scaled.shifted"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "ulsmvs") {
         opt$estimator <- "ULS"
         if(opt$se == "bootstrap") stop("use ULS estimator for bootstrap")
-        if(opt$se != "none") opt$se <- "robust.sem"
+        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
         if(opt$test != "none") opt$test <- "mean.var.adjusted"
         #opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {

@@ -187,7 +187,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
     verbose     <- lavoptions$verbose
     mimic       <- lavoptions$mimic
   
-    if(se == "none") return(matrix(0,0,0))
+    # special cases
+    if(se == "none" || se == "external") return(matrix(0,0,0))
 
     # some require meanstructure (for now)
     if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 
@@ -273,16 +274,14 @@ lav_model_vcov <- function(lavmodel       = NULL,
 lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
                               BOOT = NULL) {
 
-    x <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+    # 0. special case
+    if(is.null(VCOV)) {
+        se <- rep(as.numeric(NA), lavmodel@nx.user)
+        se[ lavpartable$free == 0L ] <- 0.0
+        return(se)
+    }
 
-    se <- numeric( lavmodel@nx.user )
-
-    #if(is.null(VCOV) && !is.null(BOOT)) {
-    #    VCOV <- cov(BOOT)
-    #}
-
-    if(!is.null(VCOV)) {
-        # free parameters only
+    # 1. free parameters only
         x.var <- diag(VCOV)
         # check for negative values (what to do: NA or 0.0?)
         x.var[x.var < 0] <- as.numeric(NA)
@@ -293,10 +292,13 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
         # elements
         se <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST,
                                        type = "user", extra = FALSE)
-        # fixed parameters -> se = 0.0
+
+
+    # 2. fixed parameters -> se = 0.0
         se[ which(lavpartable$free == 0L) ] <- 0.0
 
-        # defined parameters: 
+
+    # 3. defined parameters: 
         def.idx <- which(lavpartable$op == ":=")
         if(length(def.idx) > 0L) {
             if(!is.null(BOOT)) {
@@ -309,7 +311,8 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
                 def.cov <- cov(BOOT.def )
             } else {
                 # regular delta method
-                JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
+                x <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+                 JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
                            silent=TRUE)
                 if(inherits(JAC, "try-error")) { # eg. pnorm()
                     JAC <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
@@ -321,7 +324,6 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
             diag.def.cov[ diag.def.cov < 0 ] <- as.numeric(NA)
             se[def.idx] <- sqrt(diag.def.cov)
         }
-    }
 
     se
 }
