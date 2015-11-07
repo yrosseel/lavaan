@@ -103,8 +103,31 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else if(is.character(model)) {
         FLAT <- lavParseModelString(model)
     } else if(is.list(model)) {
-        FLAT <- model
+        # two possibilities: either model is already lavaanified
+        # or it is something else...
+
+        # look for the bare minimum columns: lhs - op -
+        if(!is.null(model$lhs) && !is.null(model$op)  &&
+           !is.null(model$rhs) && !is.null(model$free)) {
+
+            # ok, we have something that looks like a parameter table
+            # FIXME: we need to check for redundant arguments 
+            # (but if cfa/sem was used, we can not trust the call)
+            # redundant <- c("meanstructure", "int.ov.free", "int.lv.free",
+            #        "fixed.x", "orthogonal", "std.lv", "parameterization",
+            #        "auto.fix.first", "auto.fix.single", "auto.var",
+            #        "auto.cov.lv.x", "auto.cov.y", "auto.th", "auto.delta")
+            FLAT <- model
+        } else {
+            bare.minimum <- c("lhs", "op", "rhs", "free")
+            missing.idx <- is.na(match(bare.minimum, names(model)))
+            missing.txt <- paste(bare.minimum[missing.idx], collapse = ", ")
+            stop("lavaan ERROR: model is a list, but not a parameterTable?",
+                 "\n  lavaan  NOTE: ", 
+                 "missing column(s) in parameter table: [", missing.txt, "]")
+        }
     }
+
     if(max(FLAT$group) < 2L) { # same model for all groups 
         ov.names   <- vnames(FLAT, type="ov")
         ov.names.y <- vnames(FLAT, type="ov.nox")
@@ -304,16 +327,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       as.data.frame.   = FALSE)
 
     } else if(is.list(model)) {
-        # two possibilities: either model is already lavaanified
-        # or it is something else...
-        if(!is.null(model$lhs) && !is.null(model$op)  &&
-           !is.null(model$rhs) && !is.null(model$free)) {
-            lavpartable <- as.list(model)
-            # complete table
-            lavpartable <- lav_partable_complete(lavpartable)
-        } else if(is.character(model[[1]])) {
-            stop("lavaan ERROR: model is a list, but not a parameterTable?")
-        }
+        # we already checked this when creating FLAT
+        # but we may need to complete it
+        lavpartable <- as.list(model) # in case model is a data.frame
+        # complete table
+        lavpartable <- lav_partable_complete(lavpartable)
     } else {
         cat("model type: ", class(model), "\n")
         stop("lavaan ERROR: model is not of type character or list")
