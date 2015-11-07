@@ -18,8 +18,10 @@ lav_fit_measures <- function(object, fit.measures="all",
         stop("lavaan ERROR: fit measures not available if model did not converge")
     }
 
+    TEST <- lavInspect(object, "test")
+
     # do we have a test statistic?
-    if(object@test[[1]]$test == "none") {
+    if(TEST[[1]]$test == "none") {
         stop("lavaan ERROR: please refit the model with test=\"standard\"")
     }
 
@@ -61,8 +63,8 @@ lav_fit_measures <- function(object, fit.measures="all",
     estimator     <- object@Options$estimator
     test          <- object@Options$test
     G <- object@Data@ngroups  # number of groups
-    X2 <- object@test[[1]]$stat
-    df <- object@test[[1]]$df
+    X2 <- TEST[[1]]$stat
+    df <- TEST[[1]]$df
 
     # fit stat and df are NA (perhaps test="none"?), try again:
     if(is.na(df)) {
@@ -84,8 +86,8 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     # scaled X2
     if(scaled) {
-        X2.scaled <- object@test[[2]]$stat
-        df.scaled <- object@test[[2]]$df
+        X2.scaled <- TEST[[2]]$stat
+        df.scaled <- TEST[[2]]$df
     }
 
     # define 'sets' of fit measures:
@@ -217,7 +219,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 	indices["chisq"] <- X2
         if(scaled) {
             indices["chisq.scaled"] <- X2.scaled
-            indices["chisq.scaling.factor"] <- object@test[[2]]$scaling.factor
+            indices["chisq.scaling.factor"] <- TEST[[2]]$scaling.factor
         } 
     }
     if(any(c("df", "df.scaled") %in% fit.measures)) {
@@ -227,9 +229,9 @@ lav_fit_measures <- function(object, fit.measures="all",
         }
     }
     if(any(c("pvalue", "pvalue.scaled") %in% fit.measures)) {
-        indices["pvalue"] <- object@test[[1]]$pvalue
+        indices["pvalue"] <- TEST[[1]]$pvalue
         if(scaled) {
-            indices["pvalue.scaled"] <- object@test[[2]]$pvalue
+            indices["pvalue.scaled"] <- TEST[[2]]$pvalue
         }
     }
 
@@ -574,9 +576,9 @@ lav_fit_measures <- function(object, fit.measures="all",
             # scaling factor for MLR
             if(object@Options$test == "yuan.bentler") {
                 indices["scaling.factor.h1"] <- 
-                    object@test[[2]]$scaling.factor.h1
+                    TEST[[2]]$scaling.factor.h1
                 indices["scaling.factor.h0"] <- 
-                    object@test[[2]]$scaling.factor.h0
+                    TEST[[2]]$scaling.factor.h0
             }
         } # ML
         else { # no ML!
@@ -602,7 +604,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             RMSEA <- RMSEA.scaled <- as.numeric(NA)
         } else if(df > 0) {
             if(scaled) {
-                d <- sum(object@test[[2]]$trace.UGamma)
+                d <- sum(TEST[[2]]$trace.UGamma)
                 if(is.na(d) || d==0) d <- NA
             } 
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
@@ -658,7 +660,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             df2 <- df
         } else {
             XX2 <- X2
-            df2 <- sum(object@test[[2]]$trace.UGamma)
+            df2 <- sum(TEST[[2]]$trace.UGamma)
         }
         lower.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.95)
@@ -709,7 +711,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             df2 <- df
         } else {
             XX2 <- X2
-            df2 <- sum(object@test[[2]]$trace.UGamma)
+            df2 <- sum(TEST[[2]]$trace.UGamma)
         }
         upper.lambda <- function(lambda) {
             (pchisq(XX2, df=df2, ncp=lambda) - 0.05)
@@ -758,7 +760,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             df2 <- df
         } else {
             XX2 <- X2
-            df2 <- sum(object@test[[2]]$trace.UGamma)
+            df2 <- sum(TEST[[2]]$trace.UGamma)
         }
         if(is.na(XX2) || is.na(df2)) {
             indices["rmsea.pvalue.scaled"] <- as.numeric(NA)
