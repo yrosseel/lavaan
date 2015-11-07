@@ -413,25 +413,47 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 4. compute some reasonable starting values 
     if(!is.null(slotModel)) {
         lavmodel <- slotModel
-        lavaanStart <- lav_model_get_parameters(lavmodel, type="user")
+        # FIXME
+        #lavaanStart <- lav_model_get_parameters(lavmodel, type="user")
         #lavpartable$start <- lavaanStart
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
     } else {
+
+
+        # starting values
+
+        # check if we have provide a full parameter table as model= input
         if(!is.null(lavpartable$est) && start == "default") {
-            # use est as start values
-            lavpartable$start <- lavaanStart <- lavpartable$est
+            # check if all 'est' values look ok
+            # this is not the case, eg, if partables have been merged eg, as
+            # in semTools' auxiliary() function
+
+            # check for zero free variances and NA values
+            zero.idx <- which(lavpartable$free > 0L &
+                              lavpartable$op == "~~" &
+                              lavpartable$lhs == lavpartable$rhs &
+                              lavpartable$est == 0)
+
+            if(length(zero.idx) > 0L || any(is.na(lavpartable$est))) {
+                lavpartable$start <- lav_start(start.method = start,
+                                           lavpartable     = lavpartable,
+                                           lavsamplestats  = lavsamplestats,
+                                           model.type   = lavoptions$model.type,
+                                           mimic        = lavoptions$mimic,
+                                           debug        = lavoptions$debug)
+            } else {
+                lavpartable$start <- lavpartable$est
+            }
         } else {
-            lavaanStart <- 
-                lav_start(start.method = start,
-                          lavpartable     = lavpartable, 
-                          lavsamplestats  = lavsamplestats,
-                          model.type   = lavoptions$model.type,
-                          mimic        = lavoptions$mimic,
-                          debug        = lavoptions$debug)
-            lavpartable$start <- lavaanStart # since semTools 0.4-6 (lav 0.5-18)
+            lavpartable$start <- lav_start(start.method = start,
+                                           lavpartable     = lavpartable, 
+                                           lavsamplestats  = lavsamplestats,
+                                           model.type   = lavoptions$model.type,
+                                           mimic        = lavoptions$mimic,
+                                           debug        = lavoptions$debug)
         }
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
