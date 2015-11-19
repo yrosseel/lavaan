@@ -1448,7 +1448,7 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     }
 
     # alias?
-    if(remove.duplicated) {
+    if(remove.duplicated && lavobject@Model@eq.constraints) {
         simple.flag <- lav_constraints_check_simple(lavobject@Model)
         if(simple.flag) {
           K <- lav_constraints_R2K(lavobject@Model)
