@@ -6,8 +6,11 @@
 # YR 30 May 2014: handle 1-variable case (fixing apply in lines 56, 62, 108)
 # YR 05 Nov 2015: add remove.duplicated = TRUE, do cope with strucchange in 
 #                 case of simple equality constraints
+# YR 19 Nov 2015: if constraints have been used, compute case-wise Lagrange
+#                 multipliers, and define the scores as: SC + (t(R) lambda)
 
-estfun.lavaan <- lavScores <- function(object, scaling = FALSE, 
+estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
+                                       ignore.constraints = FALSE,
                                        remove.duplicated = TRUE) {
 
   stopifnot(inherits(object, "lavaan"))
@@ -157,6 +160,19 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
 
   # provide column names
   colnames(Score.mat) <- names(coef(object))
+
+  # handle general constraints, so that the sum of the columns equals zero
+  if(!ignore.constraints &&
+     sum(lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
+         lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx) > 0) {
+
+      R <- object@Model@con.jac[,]
+      PRE <- lav_constraints_lambda_pre(object)
+      #LAMBDA <- -1 * t(PRE %*% t(Score.mat))
+      #RLAMBDA <- t(t(R) %*% t(LAMBDA))
+      Score.mat <- Score.mat - t( t(R) %*% PRE %*% t(Score.mat) )
+
+  }
 
   # handle simple equality constraints
   if(remove.duplicated && lavmodel@eq.constraints) {

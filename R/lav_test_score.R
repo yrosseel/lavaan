@@ -140,7 +140,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
     # compute df, taking into account that some of the constraints may
     # be needed to identify the model (and hence information is singular)
-    information.plus <- information + crossprod(R)
+    # information.plus <- information + crossprod(R)
     #df <- qr(R[r.idx,,drop = FALSE])$rank + 
     #          ( qr(information)$rank - qr(information.plus)$rank )
     df <- nrow( R[r.idx,,drop = FALSE] )

@@ -296,3 +296,38 @@ lav_constraints_R2K <- function(lavmodel = NULL, R = NULL) {
 
     K
 }
+
+lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
+    
+    # compute factor 'pre' so that pre %*% g = lambda
+    method <- tolower(method)
+
+    R <- lavobject@Model@con.jac[,]
+    if(is.null(R) || length(R) == 0L) {
+        return( numeric(0L) )
+    }
+
+    INFO <- lavTech(restr, "information.first.order")
+    npar <- nrow(INFO)
+
+    # Don 1985
+    if(method == "don") {
+        R.plus <- MASS:::ginv(R)
+
+        # construct augmented matrix
+        Z <- rbind( cbind(INFO, t(R)),
+                    cbind(R, matrix(0,nrow=nrow(R), ncol=nrow(R))) )
+        Z.plus <- MASS:::ginv(Z)
+        P.star <- Z.plus[1:npar, 1:npar]
+        PRE <- t(R.plus) %*% (diag(npar) - INFO %*% P.star)
+
+    # Bentler EQS manual
+    } else if(method == "bentler") {
+        INFO.inv <- solve(INFO)
+        PRE <- solve( R %*% INFO.inv %*% t(R) ) %*% R %*% INFO.inv
+    }
+
+    PRE
+}
+
+

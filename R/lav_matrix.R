@@ -806,4 +806,97 @@ lav_matrix_crossprod <- function(A, B) {
 }
 
 
+# reduced row echelon form of A
+lav_matrix_rref <- function(A, tol = sqrt( .Machine$double.eps)) {
+
+    # MATLAB documentation says rref uses: tol = (max(size(A))*eps *norm(A,inf)
+    if(missing(tol)) {
+        A.norm <- max(abs(apply(A,1,sum)))
+        tol <- max(dim(A)) * A.norm * .Machine$double.eps
+    }
+
+    # check if A is a matrix
+    stopifnot(is.matrix(A))
+
+    # dimensions
+    nRow <- nrow(A); nCol <- ncol(A)
+    pivot = integer(0L)
+
+    # catch empty matrix
+    if(nRow == 0 && nCol == 0) return(matrix(0,0,0))
+
+    rowIndex <- colIndex <- 1
+    while( rowIndex <= nRow &&
+           colIndex <= nCol ) {
+
+        # look for largest (in absolute value) element in this column:
+        i.below <- which.max(abs(A[rowIndex:nRow, colIndex]))
+        i <- i.below + rowIndex - 1L
+        p <- A[i, colIndex]
+
+        # check if column is empty
+        if(abs(p) <= tol) {
+            A[rowIndex:nRow, colIndex] <- 0L # clean up
+            colIndex <- colIndex + 1
+        } else {
+            # store pivot column
+            pivot <- c(pivot, colIndex)
+
+            # do we need to swap column?
+            if(rowIndex != i) {
+                A[ c(rowIndex,i), colIndex:nCol ] <-
+                    A[ c(i,rowIndex), colIndex:nCol ]
+            }
+
+            # scale pivot to be 1.0
+            A[ rowIndex, colIndex:nCol ] <- A[ rowIndex, colIndex:nCol] / p
+
+            # create zeroes below and above pivot
+            other <- seq_len(nRow)[-rowIndex]
+            A[other, colIndex:nCol] <-
+                A[other, colIndex:nCol] - tcrossprod(A[other,colIndex],
+                                                     A[rowIndex,colIndex:nCol])
+            # next row/col
+            rowIndex <- rowIndex + 1
+            colIndex <- colIndex + 1
+        }
+    }
+
+    # rounding?
+
+    list(R = A, pivot = pivot)
+}
+
+# non-orthonoramal (left) null space basis, using rref
+lav_matrix_orthogonal_complement2 <- function(A,
+    tol = sqrt( .Machine$double.eps)) {
+
+    # left
+    A <- t(A)
+
+    # compute rref
+    out <- lav_matrix_rref(A = A, tol = tol)
+
+    # number of free columns in R (if any)
+    nfree <- NCOL(A) - length(out$pivot)
+
+    if(nfree) {
+        R <- out$R
+ 
+        # remove all-zero rows
+        zero.idx <- which(apply(R, 1, function(x) { all(abs(x) < tol) }))
+        if(length(zero.idx) > 0) {
+            R <- R[-zero.idx,, drop = FALSE]
+        }
+ 
+        FREE <- R[, -out$pivot, drop = FALSE]
+        I <- diag( nfree )
+        N <- rbind(-FREE, I)
+    } else {
+        N <- matrix(0, nrow = NCOL(A), ncol = 0L)
+    }
+
+    N
+}
+
 
