@@ -307,17 +307,17 @@ lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
         return( numeric(0L) )
     }
 
-    INFO <- lavTech(restr, "information.first.order")
+    INFO <- lavTech(lavobject, "information.first.order")
     npar <- nrow(INFO)
 
     # Don 1985
     if(method == "don") {
-        R.plus <- MASS:::ginv(R)
+        R.plus <- MASS::ginv(R)
 
         # construct augmented matrix
         Z <- rbind( cbind(INFO, t(R)),
                     cbind(R, matrix(0,nrow=nrow(R), ncol=nrow(R))) )
-        Z.plus <- MASS:::ginv(Z)
+        Z.plus <- MASS::ginv(Z)
         P.star <- Z.plus[1:npar, 1:npar]
         PRE <- t(R.plus) %*% (diag(npar) - INFO %*% P.star)
 
