@@ -63,6 +63,13 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     }
 
     if(type == "lv") {
+
+        # post fit check (lv pd?)
+        ok <- lav_object_post_check(object)
+        if(!ok) {
+            stop("lavaan ERROR: lavInspect(,\"post.check\") is not TRUE; factor scores can not be computed. See the WARNING message.")
+        }
+
         out <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo, method = method,

@@ -7,12 +7,16 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     lavdata        <- object@Data
     lavfit         <- object@Fit
 
+    result.ok <- TRUE
+
     # 1. check for Heywood cases, negative (residual) variances, ...
     var.idx <- which(lavpartable$op == "~~" &
                      #!lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
                      lavpartable$lhs == lavpartable$rhs)
-    if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0))
+    if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0)) {
+        result.ok <- FALSE
         warning("lavaan WARNING: some estimated variances are negative")
+    }
 
     # 2. is cov.lv (PSI) positive definite?
     if(length(lavNames(lavpartable, type="lv.regular")) > 0L) {
@@ -21,8 +25,10 @@ lav_object_post_check <- function(object, verbose = FALSE) {
             txt.group <- ifelse(lavdata@ngroups > 1L,
                                 paste("in group", g, ".", sep=""), "")
             eigvals <- eigen(ETA[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(eigvals < -1 * .Machine$double.eps^(3/4)))
+            if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
                 warning("lavaan WARNING: covariance matrix of latent variables is not positive definite;", txt.group, " use inspect(fit,\"cov.lv\") to investigate.")
+                result.ok <- FALSE
+            }
         }
     }
 
@@ -38,8 +44,11 @@ lav_object_post_check <- function(object, verbose = FALSE) {
                              only.values = TRUE)$values
             if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
                 warning("lavaan WARNING: observed variable error term matrix (theta) is not positive definite;", txt.group, " use inspect(fit,\"theta\") to investigate.")
+                result.ok <- FALSE
             }
         }
     }
+
+    result.ok
 }
 
