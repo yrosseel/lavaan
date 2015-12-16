@@ -1,5 +1,5 @@
 # generate parameter table for an independence model
-lav_partable_independence <- function(lavobject        = NULL, 
+lav_partable_independence <- function(lavobject      = NULL, 
                                       lavdata        = NULL,
                                       lavoptions     = NULL,
                                       lavsamplestats = NULL,
@@ -55,8 +55,8 @@ lav_partable_independence <- function(lavobject        = NULL,
 
     # DO NOT USE: ov.names.nox <- lavobject@pta$vnames$ov.nox
     # even if fixed.x = FALSE, we need to make a distinction
-    ov.names.nox <- lapply(seq_len(ngroups), function(g)
-                ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
+    #ov.names.nox <- lapply(seq_len(ngroups), function(g)
+    #            ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
 
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
@@ -67,19 +67,18 @@ lav_partable_independence <- function(lavobject        = NULL,
 
     for(g in 1:ngroups) {
 
-        # a) VARIANCES (all ov's, except exo's)
-        nvar  <- length(ov.names.nox[[g]])
-        lhs   <- c(lhs, ov.names.nox[[g]])
+        # a) VARIANCES (all ov's, if !conditional.x, also exo's)
+        nvar  <- length(ov.names[[g]])
+        lhs   <- c(lhs, ov.names[[g]])
          op   <- c(op, rep("~~", nvar))
-            rhs   <- c(rhs, ov.names.nox[[g]])
+            rhs   <- c(rhs, ov.names[[g]])
         group <- c(group, rep(g,  nvar))
         free  <- c(free,  rep(1L, nvar))
         exo   <- c(exo,   rep(0L, nvar))
 
         # starting values
         if(!is.null(sample.cov)) {
-            sample.var.idx <- match(ov.names.nox[[g]], ov.names[[g]])
-            ustart <- c(ustart, diag(sample.cov[[g]])[sample.var.idx])
+            ustart <- c(ustart, diag(sample.cov[[g]]))
         } else {
             ustart <- c(ustart, rep(as.numeric(NA), nvar))
         }
@@ -124,7 +123,7 @@ lav_partable_independence <- function(lavobject        = NULL,
                 # add delta
                 if(parameterization == "theta") {
                    lhs.delta <- character(0); rhs.delta <- character(0)
-                   lhs.delta <- ov.names.nox[[g]]
+                   lhs.delta <- ov.names[[g]]
                    nel   <- length(lhs.delta)
                    lhs   <- c(lhs, lhs.delta)
                    rhs   <- c(rhs, lhs.delta)
@@ -150,10 +149,11 @@ lav_partable_independence <- function(lavobject        = NULL,
                ustart <- c(ustart, int.start)
             }
         }
+
         # meanstructure?
         if(meanstructure) {
             # auto-remove ordinal variables
-            ov.int <- ov.names.nox[[g]]
+            ov.int <- ov.names[[g]]
             idx <- which(ov.int %in% ord.names)
             if(length(idx)) ov.int <- ov.int[-idx]
 
@@ -174,45 +174,40 @@ lav_partable_independence <- function(lavobject        = NULL,
         }
 
         # fixed.x exogenous variables?
-        if(!conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
-            idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
-            nel <- sum(idx)
-            lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
-             op    <- c(op, rep("~~", nel))
-            rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
-            group  <- c(group, rep(g,  nel))
-            if(fixed.x) {
-                free   <- c(free,  rep(0L, nel))
-                exo    <- c(exo,   rep(1L, nel))
-                ustart <- c(ustart, rep(as.numeric(NA), nel))
-            } else {
-                free   <- c(free,  rep(1L, nel))
-                exo    <- c(exo,   rep(0L, nel))
+        if(!conditional.x &&
+           fixed.x && (nx <- length(ov.names.x[[g]])) > 0L) {
+            # fix variances
+            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+                             lhs %in% ov.names.x[[g]] &
+                             op == "~~" & group == g)
+            exo[exo.idx] <- 1L
+            free[exo.idx] <- 0L
+
+            # fix means
+            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+                             op == "~1" & group == g)
+            exo[exo.idx] <- 1L
+            free[exo.idx] <- 0L
+
+            # add covariances
+            pstar <- nx*(nx-1)/2
+            if(pstar > 0L) { # only if more than 1 variable
+                tmp <- utils::combn(ov.names.x[[g]], 2)
+                lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+                 op <- c(op,   rep("~~", pstar))
+                rhs <- c(rhs, tmp[2,])
+                group <- c(group, rep(g,  pstar))
+                free  <- c(free,  rep(0L, pstar))
+                exo   <- c(exo,   rep(1L, pstar))
+
                 # starting values
                 if(!is.null(sample.cov)) {
-                    # FIXME!!!
-                    # fill in cov.x values
-                    ustart <- c(ustart, rep(as.numeric(NA), nel))
+                    rhs.idx <- match(tmp[1,], ov.names[[g]])
+                    lhs.idx <- match(tmp[2,], ov.names[[g]])
+                    ustart <- c(ustart, 
+                                sample.cov[[g]][ cbind(rhs.idx, lhs.idx) ])
                 } else {
-                    ustart <- c(ustart, rep(as.numeric(NA), nel))
-                }
-            }
-
-            # meanstructure?
-            if(meanstructure) {
-                lhs    <- c(lhs,    ov.names.x[[g]])
-                 op    <- c(op,     rep("~1", nx))
-                rhs    <- c(rhs,    rep("", nx))
-                group  <- c(group,  rep(g,  nx))
-                if(fixed.x) {
-                    free  <- c(free,   rep(0L, nx))
-                     exo  <- c(exo,    rep(1L, nx))
-                   ustart <- c(ustart, rep(as.numeric(NA), nx))
-                } else {
-                    free  <- c(free,   rep(1L, nx))
-                    exo   <- c(exo,    rep(0L, nx))
-                   # FIXME!!
-                   ustart <- c(ustart, rep(as.numeric(NA), nx))
+                    ustart <- c(ustart, rep(as.numeric(NA), pstar))
                 }
             }
         }

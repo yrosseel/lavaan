@@ -1,169 +1,4 @@
-### these are old routines
-### see lav_samplestat_gamma.R for new versions
-
-# compute Gamma (including meanstructure)
-compute.Gamma <- function(data, meanstructure=FALSE, Mplus.WLS=FALSE) {
-
-    if(meanstructure) {
-        # G11
-        G11 <- cov(data, use="pairwise")
-        # FIXME: does LISREL/EQS also rescale cov(data)?
-        N <- nrow(data)
-        G11 <- G11 * (N-1) / N  # needed for Mplus, both for WLS and ML
-
-        # G12
-        G12 <- compute.third.moment(data)
-        if(Mplus.WLS) {
-            # this seems like a bug in Mplus
-            # compute.third.moment already scales by N (instead of N-1)
-            G12 <- G12 * (N-1) / N
-        }
-        G21 <- t(G12)
-        G22 <- compute.Gamma1(data, Mplus.WLS=Mplus.WLS)
-
-        Gamma <- rbind( cbind(G11, G12),
-                        cbind(G21, G22) )
-    } else {
-        Gamma <- compute.Gamma1(data=data, Mplus.WLS=Mplus.WLS)
-    }
-
-    Gamma
-}
-
-# function to compute 'Gamma' (cov only),  the ADF weight matrix
-# see Browne and Arminger 1995 page 190-191
-compute.Gamma1 <- function(data, Mplus.WLS=FALSE) {
-
-    #data <- as.matrix(data)
-
-    # we need central moments, so center
-    zdata <- scale(data, center=TRUE, scale=FALSE)
-    N <- nrow(data); p <- ncol(data)
-
-    # create Z where the rows z_i are vecs(zdata_i' %*% zdata_i)
-    idx <- which(lower.tri(matrix(0,p,p), diag=TRUE))
-    Z <- apply(zdata, 1, function(x) { tcrossprod(x)[idx]  })
-    if(p > 1L) {
-        Z <- t(Z)
-    } else {
-        Z <- as.matrix(Z) # special case p = 1L
-    }
-
-    Gamma = (N-1)/N * cov(Z, use = "pairwise") # we divide by 'N'!
-
-    # only to mimic Mplus WLS
-    if(Mplus.WLS) {
-        w  <- cov(data, use = "pairwise")[idx]
-        w.biased <- (N-1)/N * w
-        diff <- outer(w,w) - outer(w.biased, w.biased)
-        Gamma <- Gamma - diff
-    }
-
-    Gamma
-}
-
-compute.Gamma.fixed.x <- function(data, x.idx = integer(0L)) {
-    #data <- as.matrix(data)
-
-    # we need central moments, so center
-    zdata <- scale(data, center=TRUE, scale=FALSE)
-    N <- nrow(data); p <- ncol(data)
-
-    # create Z where the rows z_i are vecs(zdata_i' %*% zdata_i)
-    idx <- lav_matrix_vech_idx(p)
-    Z1 <- apply(zdata, 1, function(x) { tcrossprod(x)[idx]  })
-    if(p > 1L) {
-        Z1<- t(Z1)
-    } else {
-        Z1<- as.matrix(Z1) # special case p = 1L
-    }
-
-    rdata <- zdata
-    RES <- qr.resid(qr(cbind(zdata[,x.idx,drop=FALSE])), 
-                             zdata[,-x.idx,drop=FALSE])
-    rdata[,-x.idx] <- zdata[,-x.idx] - RES
-    Z2 <- apply(rdata, 1, function(x) { tcrossprod(x)[idx]  })
-    if(p > 1L) {
-        Z2<- t(Z2)
-    } else {
-        Z2 <- as.matrix(Z2) # special case p = 1L
-    }
-
-    Z <- Z1 - Z2
-
-    Gamma = (N-1)/N * cov(Z, use = "pairwise") # we divide by 'N'!
-    
-    Gamma
-}
-
-compute.Gamma.conditional.x <- function(data, x.idx = integer(0L)) {
-    #data <- as.matrix(data)
-
-    # we need central moments, so center
-    zdata <- scale(data, center=TRUE, scale=FALSE)
-    N <- nrow(data); p <- ncol(data)
-    #idx <- lav_matrix_vech_idx(p)
-
-    rdata <- zdata
-    RES <- qr.resid(qr(cbind(zdata[,x.idx,drop=FALSE])),
-                             zdata[,-x.idx,drop=FALSE])
-    rdata[,-x.idx] <- zdata[,-x.idx] - RES
-    Z2 <- apply(rdata, 1, function(x) { tcrossprod(x)[idx]  })
-    if(p > 1L) {
-        Z2<- t(Z2)
-    } else {
-        Z2 <- as.matrix(Z2) # special case p = 1L
-    }
-
-    Gamma = (N-1)/N * cov(Z2, use = "pairwise") # we divide by 'N'!
-
-    Gamma
-}
-
-
-## compute the multivariate third order central moment
-## speeded up version for p < 20 contributed by Thierry Marchant (4 sept 2009)
-compute.third.moment <- function(data.) {
-
-    data <- as.matrix(data.)
-
-    # center
-    zdata <- scale(data, center=TRUE, scale=FALSE)
-    p <- ncol(data)
-    N <- nrow(data)
-
-    if(p < 20) {
-        p.star <- 0.5 * p * (p + 1)
-        out <- matrix(0, nrow=p, ncol=p.star)
-        Z <- matrix(0, nrow=nrow(data), ncol=p.star)
-
-        count <- 1
-        for(j in 1:p) {
-            for(k in j:p) {
-                Z[, count] <- zdata[,j] * zdata[,k]
-                count <- count + 1
-            }
-        }
-        for(i in 1:p) {
-            out[i,] <- colSums(zdata[,i] * Z, na.rm = TRUE)
-        }
-        out <- out/N
-    } else {
-        idx <- which(lower.tri(matrix(0,p,p), diag=TRUE))
-        Z <- t(apply(zdata, 1, function(x) { tcrossprod(x)[idx]  }))
- 
-        if(any(is.na(zdata))) {
-            lav_crossprod2 <- function(A, B) {
-                apply(A, 2, function(x) colSums(B * x, na.rm=TRUE)) }
-        } else {
-            lav_crossprod2 <- base::crossprod
-        }
-        out <- lav_crossprod2(zdata, Z)/N
-     }
-
-    out
-}
-
+# these functions need serious revision, and move to lav_samplestats_gamma.R
 
 
 # compute Omega.beta: the 'incomplete Gamma' using either 
@@ -388,8 +223,8 @@ compute.B1.sample <- function(lavsamplestats=NULL, lavdata=NULL,
         # complete lavdata and sample values only: B1 = A1 %*% Gamma %*% A1
         A1 <- compute.A1.sample(lavsamplestats=lavsamplestats, group=group, 
                                 meanstructure=meanstructure)
-        Gamma <- compute.Gamma(data=lavdata@X[[group]],
-                               meanstructure=meanstructure)
+        Gamma <- lav_samplestats_Gamma(Y = lavdata@X[[group]],
+                                       meanstructure = meanstructure)
         B1 <- A1 %*% Gamma %*% A1
     }
 
@@ -399,45 +234,46 @@ compute.B1.sample <- function(lavsamplestats=NULL, lavdata=NULL,
 
 ### NOT USED, NOT (ENTIRELY CORRECT) !!!
 ### ONLY CORRECT FOR SATURATED MU!!!
-compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
-                                   sample.cov=NULL, sample.mean=NULL,
-                                   meanstructure=TRUE) {
+# compute.Bbeta.complete <- function(Sigma.hat=NULL, Mu.hat=NULL, X=NULL,
+#                                    sample.cov=NULL, sample.mean=NULL,
+#                                    meanstructure=TRUE) {
+# 
+#     # alternative `analytic' version (5 times faster?)
 
-    # alternative `analytic' version (5 times faster?)
-    # see Yuan & Hayashi 1996 page 406 (Beta hat)
-
-    # ONLY CORRECT FOR SATURATED MU!!!
-
-    diff.mean <- as.matrix(sample.mean - Mu.hat)
-    TT <- sample.cov + tcrossprod(diff.mean)
-    Sigma.hat.inv <- attr(Sigma.hat, "inv")
-    W <- 0.5 * lav_matrix_duplication_pre_post(Sigma.hat.inv %x% Sigma.hat.inv)
-
-    if(meanstructure) {
-        G11 <- TT
-        G12 <- compute.third.moment(X) 
-        G22 <- compute.Gamma1(X)
-
-        B11 <- Sigma.hat.inv %*% G11 %*% Sigma.hat.inv
-        B12 <- Sigma.hat.inv %*% G12 %*% W
-        B21 <- t(B12)
-
-        diff <- tcrossprod(lav_matrix_vech(TT) - lav_matrix_vech(Sigma.hat))
-        G0 <- G22 + diff
-
-        B22 <- W %*% G0 %*% W
-
-        B1 <- rbind( cbind(B11, B12),
-                     cbind(B21, B22) )
-    } else { 
-        # this gives slightly different results, compared
-        # to meanstructure=TRUE and is probably not correct?
-        # not used for now
-        G <- compute.Gamma1(X)
-        diff <- tcrossprod(lav_matrix_vech(sample.cov) - lav_matrix_vech(Sigma.hat))
-        G0 <- G + diff
-        B1 <- W %*% G0 %*% W
-    }
- 
-    B1
-}
+#     # see Yuan & Hayashi 1996 page 406 (Beta hat)
+# 
+#     # ONLY CORRECT FOR SATURATED MU!!!
+# 
+#     diff.mean <- as.matrix(sample.mean - Mu.hat)
+#     TT <- sample.cov + tcrossprod(diff.mean)
+#     Sigma.hat.inv <- attr(Sigma.hat, "inv")
+#     W <- 0.5 * lav_matrix_duplication_pre_post(Sigma.hat.inv %x% Sigma.hat.inv)
+# 
+#     if(meanstructure) {
+#         G11 <- TT
+#     #    G12 <- compute.third.moment(X) 
+#         G22 <- compute.Gamma1(X)
+# 
+#         B11 <- Sigma.hat.inv %*% G11 %*% Sigma.hat.inv
+#         B12 <- Sigma.hat.inv %*% G12 %*% W
+#         B21 <- t(B12)
+# 
+#         diff <- tcrossprod(lav_matrix_vech(TT) - lav_matrix_vech(Sigma.hat))
+#         G0 <- G22 + diff
+# 
+#         B22 <- W %*% G0 %*% W
+# 
+#         B1 <- rbind( cbind(B11, B12),
+#                      cbind(B21, B22) )
+#     } else { 
+#         # this gives slightly different results, compared
+#         # to meanstructure=TRUE and is probably not correct?
+#         # not used for now
+#         G <- compute.Gamma1(X)
+#         diff <- tcrossprod(lav_matrix_vech(sample.cov) - lav_matrix_vech(Sigma.hat))
+#         G0 <- G + diff
+#         B1 <- W %*% G0 %*% W
+#     }
+#  
+#     B1
+# }

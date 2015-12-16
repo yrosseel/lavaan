@@ -419,7 +419,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                         V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                     }
                     V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
-                    WLS.V[[g]] <- bdiag(V11,V22)
+                    WLS.V[[g]] <- lav_matrix_bdiag(V11,V22)
                 } else {
                     WLS.V[[g]] <-
                         0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
@@ -439,7 +439,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             WLS.V[[g]] <- inv.chol(NACOV[[g]])
                         } else {
                             # fixed.x: we have zero cols/rows
-                            WLS.V[[g]] <- MASS:::ginv(NACOV[[g]])
+                            WLS.V[[g]] <- MASS::ginv(NACOV[[g]])
                         }
                     } else if(estimator == "DWLS") {
                         dacov <- diag(NACOV[[g]])
@@ -481,7 +481,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 a <- group.w[[g]] * (1 - group.w[[g]]) * sum(unlist(nobs)) / nobs[[g]]
                 # invert
                 a <- 1/a
-                WLS.V[[g]] <- bdiag( matrix(a, 1, 1), WLS.V[[g]] )
+                WLS.V[[g]] <- lav_matrix_bdiag( matrix(a, 1, 1), WLS.V[[g]] )
             }
 
         }
@@ -737,7 +737,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                         V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                     }
                     V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
-                    WLS.V[[g]] <- bdiag(V11,V22)
+                    WLS.V[[g]] <- lav_matrix_bdiag(V11,V22)
                 } else {
                     WLS.V[[g]] <-
                         0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
@@ -753,7 +753,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             # group.w.free
             if(!is.null(WLS.V[[g]]) && group.w.free) {
                 # FIXME!!!
-                WLS.V[[g]] <- bdiag( matrix(1, 1, 1), WLS.V[[g]] )
+                WLS.V[[g]] <- lav_matrix_bdiag( matrix(1, 1, 1), WLS.V[[g]] )
             }
 
         }

@@ -140,7 +140,7 @@ lav_model_information_expected_MLM <- function(lavmodel       = NULL,
             # unweight!!
             a <- exp(GW[g]) / lavsamplestats@nobs[[g]]
             # a <- exp(GW[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
-            WLS.V[[g]] <- bdiag( matrix(a,1,1), WLS.V[[g]])
+            WLS.V[[g]] <- lav_matrix_bdiag( matrix(a,1,1), WLS.V[[g]])
         }
     }
 

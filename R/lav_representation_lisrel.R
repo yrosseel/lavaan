@@ -1501,7 +1501,7 @@ computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
 
     # 'extend' matrices
     LAMBDA2 <- rbind(LAMBDA, diag(nlat))
-    THETA2  <- bdiag(THETA,  matrix(0,nlat,nlat))
+    THETA2  <- lav_matrix_bdiag(THETA,  matrix(0,nlat,nlat))
 
 
     # beta?

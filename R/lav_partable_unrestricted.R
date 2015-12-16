@@ -6,6 +6,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                                       # optional user-provided sample stats
                                       sample.cov     = NULL,
                                       sample.mean    = NULL,
+                                      sample.slopes  = NULL,
                                       sample.th      = NULL,
                                       sample.th.idx  = NULL) {
 
@@ -25,6 +26,9 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
     if(is.null(sample.mean) && !is.null(lavsamplestats)) {
         sample.mean <- lavsamplestats@mean
     }
+    if(is.null(sample.slopes) && !is.null(lavsamplestats)) {
+        sample.slopes <- lavsamplestats@slopes
+    }
     if(is.null(sample.th) && !is.null(lavsamplestats)) {
          sample.th <- lavsamplestats@th
     }
@@ -32,12 +36,18 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
          sample.th.idx <- lavsamplestats@th.idx
     }
 
-    ov.names      = lavdata@ov.names
-    ov            = lavdata@ov
-    ov.names.x    = lavdata@ov.names.x
-    meanstructure = lavoptions$meanstructure
+    ov.names      <- lavdata@ov.names
+    ov            <- lavdata@ov
+    ov.names.x    <- lavdata@ov.names.x
+    meanstructure <- lavoptions$meanstructure
+    categorical   <- any(ov$type == "ordered")
+    conditional.x <- lavoptions$conditional.x
+    ngroups <- length(ov.names)
 
-    # what with fixed.x?
+    # what with fixed.x? 
+    # - does not really matter; fit will be saturated any way
+    # - fixed.x = TRUE may avoid convergence issues with non-numeric 
+    #             x-covariates
     if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
         fixed.x = lavoptions$fixed.x
     } else if(lavoptions$mimic == "EQS") {
@@ -50,40 +60,30 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         fixed.x = FALSE
     }
 
-    ngroups <- length(ov.names)
-    ov.names.nox <- lapply(as.list(1:ngroups), function(g) 
-                    ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
-
-
+    if(conditional.x) {
+        ov.names.nox <- lapply(seq_len(ngroups), function(g)
+                ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
+    }
 
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
     ustart <- numeric(0)
 
-    categorical <- any(ov$type == "ordered")
-    if(categorical) {
-        OV <- ov.names.nox
-        meanstructure <- TRUE
-    } else {
-        OV <- ov.names
-    }
-    
-
     for(g in 1:ngroups) {
 
-        # a) VARIANCES (all ov's, if !categorical, also exo's)
-        nvar  <- length(OV[[g]])
-        lhs   <- c(lhs, OV[[g]])
+        # a) VARIANCES (all ov's, if !conditional.x, also exo's)
+        nvar  <- length(ov.names[[g]])
+
+        lhs   <- c(lhs, ov.names[[g]])
          op   <- c(op, rep("~~", nvar))
-        rhs   <- c(rhs, OV[[g]])
+        rhs   <- c(rhs, ov.names[[g]])
         group <- c(group, rep(g,  nvar))
         free  <- c(free,  rep(1L, nvar))
         exo   <- c(exo,   rep(0L, nvar))
 
         # starting values -- variances
         if(!is.null(sample.cov)) {
-            sample.var.idx <- match(OV[[g]], ov.names[[g]])
-            ustart <- c(ustart, diag(sample.cov[[g]])[sample.var.idx])
+            ustart <- c(ustart, diag(sample.cov[[g]]))
         } else {
             ustart <- c(ustart, rep(as.numeric(NA), nvar))
         }
@@ -91,7 +91,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         # COVARIANCES!
         pstar <- nvar*(nvar-1)/2
         if(pstar > 0L) { # only if more than 1 variable
-            tmp <- utils::combn(OV[[g]], 2)
+            tmp <- utils::combn(ov.names[[g]], 2)
             lhs <- c(lhs, tmp[1,]) # to fill upper.tri
              op <- c(op,   rep("~~", pstar))
             rhs <- c(rhs, tmp[2,])
@@ -100,12 +100,10 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
             exo   <- c(exo,   rep(0L, pstar))
         }
 
-        # starting values -- variances
+        # starting values -- covariances
         if(!is.null(sample.cov)) {
-            sample.var.idx <- match(OV[[g]], ov.names[[g]])
-            COV <-  sample.cov[[g]][sample.var.idx, sample.var.idx]
-            ### CHECK ME!!! upper tri??
-            ustart <- c(ustart, COV[lower.tri(COV, diag=FALSE)])
+            ustart <- c(ustart, lav_matrix_vech(sample.cov[[g]], 
+                                                diagonal = FALSE))
         } else {
             ustart <- c(ustart, rep(as.numeric(NA), pstar))
         }
@@ -152,7 +150,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         # meanstructure?
         if(meanstructure) {
             # auto-remove ordinal variables
-            ov.int <- OV[[g]]
+            ov.int <- ov.names[[g]]
             idx <- which(ov.int %in% ord.names)
             if(length(idx)) ov.int <- ov.int[-idx]
 
@@ -175,7 +173,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         # categorical? insert means as fixed-to-zero parameters
         # since 0.5-17
         if(categorical) {
-            ov.int <- OV[[g]]
+            ov.int <- ov.names[[g]]
             idx <- which(ov.int %in% ord.names)
             ov.int <- ov.int[idx]
 
@@ -191,20 +189,40 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
  
 
         # fixed.x exogenous variables?
-        if(categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
-            # add regressions
-            lhs <- c(lhs, rep("dummy", nx))
-             op <- c( op, rep("~", nx))
-            rhs <- c(rhs, ov.names.x[[g]])
-            # add 3 dummy lines
-            lhs <- c(lhs, "dummy"); op <- c(op, "=~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~1"); rhs <- c(rhs, "")
+        if(!conditional.x && 
+           fixed.x && (nx <- length(ov.names.x[[g]])) > 0L) {
+            # fix variances/covariances 
+            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+                             lhs %in% ov.names.x[[g]] &
+                             op == "~~" & group == g)
+            exo[exo.idx] <- 1L
+            free[exo.idx] <- 0L
 
-            exo    <- c(exo,   rep(0L, nx + 3L))
-            group  <- c(group, rep(g,  nx + 3L))
-            free   <- c(free,  rep(0L, nx + 3L))
-            ustart <- c(ustart, rep(0, nx)); ustart <- c(ustart, c(0,1,0))
+            # fix means
+            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+                             op == "~1" & group == g)
+            exo[exo.idx] <- 1L
+            free[exo.idx] <- 0L
+        }
+
+        # conditional.x?
+        if(conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
+            nnox <- length(ov.names.nox[[g]])
+            nel  <- nnox * nx
+
+            lhs <- c(lhs, rep(ov.names.nox[[g]], times = nx))
+             op <- c(op,  rep("~", nel))
+            rhs <- c(rhs, rep(ov.names.x[[g]], each = nnox))
+          group <- c(group, rep(g,  nel))
+           free <- c(free,  rep(1L, nel))
+            exo <- c(exo,   rep(1L, nel))
+
+            # starting values -- slopes
+            if(!is.null(sample.slopes)) {
+                ustart <- c(ustart, lav_matrix_vec(sample.slopes[[g]]))
+            } else {
+                ustart <- c(ustart, rep(as.numeric(NA), nel))
+            }
         }
 
     } # ngroups
@@ -219,14 +237,16 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                         rhs         = rhs,
                         user        = rep(1L,  length(lhs)),
                         group       = group,
-                        mod.idx     = rep(0L,  length(lhs)),
+                        #mod.idx     = rep(0L,  length(lhs)),
                         free        = free,
                         ustart      = ustart,
-                        exo         = exo,
-                        label       = rep("",  length(lhs))
+                        exo         = exo #,
+                        #label       = rep("",  length(lhs))
                         #eq.id       = rep(0L,  length(lhs)),
                         #unco        = free
                    )
+
+
     LIST
 
 }

@@ -29,7 +29,7 @@ lav_partable_independence(lavobject = NULL, lavdata = NULL, lavoptions = NULL,
 
 lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, lavoptions = NULL, 
     lavsamplestats = NULL, sample.cov = NULL, sample.mean = NULL, 
-    sample.th = NULL, sample.th.idx = NULL)
+    sample.slopes = NULL, sample.th = NULL, sample.th.idx = NULL)
 
 lav_partable_from_lm(object, est = FALSE, label = FALSE, as.data.frame. = FALSE)
 
@@ -62,6 +62,10 @@ Each list element contains a sample variance-covariance matrix for this group.
 If provided, these values will be used as starting values.}
 \item{sample.mean}{Optional list of numeric vectors. 
 Each list element contains a sample mean vector for this group. 
+If provided, these values will be used as starting values.}
+\item{sample.slopes}{Optional list of numeric matrices.
+Each list element contains the sample slopes for this group (only used
+when \code{conditional.x = TRUE}).
 If provided, these values will be used as starting values.}
 \item{sample.th}{Optional list of numeric vectors. 
 Each list element contains a vector of sample thresholds for this group.
