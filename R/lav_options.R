@@ -447,6 +447,15 @@ lav_options_set <- function(opt = formals(lavaan)) {
         stop("unknown value for `estimator' argument: ", opt$estimator, "\n")
     }
 
+
+    # special stuff for categorical
+    if(opt$categorical) {
+        opt$meanstructure <- TRUE # Mplus style
+        if(opt$estimator == "ML") {
+            stop("lavaan ERROR: estimator ML for ordered data is not supported yet. Use WLSMV instead.")
+        }
+    }
+
     # likelihood approach (wishart or normal) + sample.cov.rescale
     if(!opt$estimator %in% c("ML", "REML", "PML", "FML")) {
         if(opt$likelihood != "default") {
@@ -502,21 +511,37 @@ lav_options_set <- function(opt = formals(lavaan)) {
         stop("information must be either \"expected\" or \"observed\"\n")
     }
 
+    # conditional.x
+    if(is.logical(opt$conditional.x)) {
+    } else if(opt$conditional.x == "default") {
+        if(opt$estimator == "ML" && (opt$mimic == "Mplus" ||
+                                     opt$mimic == "lavaan")) {
+            opt$conditional.x <- FALSE
+        } else if(opt$categorical) {
+            opt$conditional.x <- TRUE
+        } else {
+            opt$conditional.x <- FALSE
+        }
+    } else {
+        stop("lavaan ERROR: conditional.x must be TRUE, FALSE or \"default\"\n")
+    }
+
     # fixed.x
     if(is.logical(opt$fixed.x)) {
-        if(opt$estimator == "DWLS" && opt$fixed.x == FALSE)
-            stop("lavaan ERROR: fixed.x=FALSE is not supported for estimator DWLS")
+        if(opt$conditional.x && opt$fixed.x == FALSE) {
+            stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
+        }
     } else if(opt$fixed.x == "default") {
-        if(opt$estimator == "ML" && (opt$mimic == "Mplus" || 
+        if(opt$estimator == "ML" && (opt$mimic == "Mplus" ||
                                      opt$mimic == "lavaan")) {
             opt$fixed.x <- TRUE
-        } else if(opt$categorical) {
+        } else if(opt$conditional.x) {
             opt$fixed.x <- TRUE
         } else {
             opt$fixed.x <- FALSE
         }
     } else {
-        stop("fixed.x must be TRUE, FALSE or \"default\"\n")
+        stop("lavaan ERROR: fixed.x must be TRUE, FALSE or \"default\"\n")
     }
 
 

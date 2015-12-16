@@ -3,7 +3,7 @@
 #
 # YR 17 Sept 2013
 # 
-# - YR 26 Nov 2013: big change - make it wrapper around lavaan()
+# - YR 26 Nov 2013: big change - make it a wrapper around lavaan()
 #                   estimator = "none" means two.step (starting values)
 
 lavCor <- function(object, 

@@ -16,7 +16,7 @@ model as specified by the user. We refer to this table as the parameter table.}
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
-    fixed.x = TRUE, parameterization = "delta", 
+    conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
@@ -26,7 +26,7 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
-    fixed.x = TRUE, parameterization = "delta", 
+    conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
@@ -57,6 +57,11 @@ the model both for both observed and latent variables.}
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
+\item{conditional.x}{If \code{TRUE}, we set up the model conditional on
+    the exogenous `x' covariates; the model-implied sample statistics
+    only include the non-x variables. If \code{FALSE}, the exogenous `x'
+    variables are modeled jointly with the other variables, and the
+    model-implied statistics refect both sets of variables.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered

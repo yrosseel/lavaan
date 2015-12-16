@@ -19,7 +19,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     meanstructure  <- lavmodel@meanstructure
     categorical    <- lavmodel@categorical
     group.w.free   <- lavmodel@group.w.free
-    fixed.x        <- lavmodel@fixed.x
+    conditional.x  <- lavmodel@conditional.x
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
     nx.free        <- lavmodel@nx.free
@@ -46,7 +46,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
        estimator == "DWLS" || estimator == "ULS") {
 
         # always compute WLS.est
-        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST,
+                                     cov.x = lavsamplestats@cov.x)
 
         # only for GLS
         if(estimator == "GLS") {
@@ -67,8 +68,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         } else if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
-            if(fixed.x)
-                 PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+        }
+        if(conditional.x) {
+            PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
@@ -110,6 +112,12 @@ lav_model_gradient <- function(lavmodel       = NULL,
                 DX.group <- derivative.F.LISREL(GLIST[mm.in.group], 
                                                 Omega[[g]],
                                                 Omega.mu[[g]])
+
+                # FIXME!!!
+                # add empty gamma
+                if(lavmodel@conditional.x) {
+                    DX.group$gamma <- lavmodel@GLIST$gamma
+                }
 
                 # only save what we need
                 DX[mm.in.group] <- DX.group[ mm.names ] 
@@ -331,6 +339,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
+    conditional.x    <- lavmodel@conditional.x
     group.w.free     <- lavmodel@group.w.free
     nmat             <- lavmodel@nmat
     ngroups          <- lavmodel@ngroups
@@ -369,7 +378,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
             pstar[g] <- pstar[g] + nth[g]  # add thresholds
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num means
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
-            if(nexo[g] > 0L)
+        }
+        if(conditional.x && nexo[g] > 0L) {
                 pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
         }
         if(group.w.free) {
@@ -472,11 +482,26 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                     DELTA <- rbind(DELTA[var.idx,,drop=FALSE], 
                                    DELTA[cor.idx,,drop=FALSE])
                 }
-                if(lavmodel@meanstructure && !categorical) {
-                    DELTA.mu <- derivative.mu.LISREL(m=mname,
-                                                     idx=m.el.idx[[mm]],
-                                                     MLIST=GLIST[ mm.in.group ])
-                    DELTA <- rbind(DELTA.mu, DELTA)
+                if(!categorical) {
+                    if(lavmodel@meanstructure) {
+                        DELTA.mu <- derivative.mu.LISREL(m=mname,
+                               idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                        if(conditional.x && lavmodel@nexo[g] > 0L) {
+                            DELTA.pi <- derivative.pi.LISREL(m=mname,
+                             idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                            DELTA <- rbind(DELTA.mu, DELTA.pi, DELTA)
+                        } else {
+                            DELTA <- rbind(DELTA.mu, DELTA)
+                        }
+                    } else {
+                        if(conditional.x && lavmodel@nexo[g] > 0L) {
+                            DELTA.pi <- derivative.pi.LISREL(m=mname,
+                             idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
+                            DELTA <- rbind(DELTA.pi, DELTA)
+                        } else {
+                            # nothing to do
+                        }
+                    }
                 } else if(categorical) {
                     DELTA.th <- derivative.th.LISREL(m=mname,
                                                      idx=m.el.idx[[mm]],

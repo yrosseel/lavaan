@@ -119,6 +119,7 @@ setClass("Model",          # MATRIX representation of the sem model
         con.lambda="numeric",
 
         nexo="integer",
+        conditional.x="logical",
         fixed.x="logical",
         parameterization="character",
         ov.x.dummy.ov.idx="list",

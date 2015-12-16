@@ -237,7 +237,7 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
 
         OV  <- sqrt(VY[[g]])
 
-        if(lavobject@Model@categorical) {
+        if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", group=g)
             ov.names <- c(ov.names, ov.names.x)
@@ -403,7 +403,7 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
 
         OV  <- sqrt(VY[[g]])
 
-        if(lavobject@Model@categorical) {
+        if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", group=g)
             ov.names <- c(ov.names, ov.names.x)

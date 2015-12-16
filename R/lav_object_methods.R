@@ -1242,7 +1242,8 @@ function(object, type = "moments", labels=TRUE) {
         if(object@Model@categorical) {
             OUT[[g]]$th <- as.numeric(object@Fit@TH[[g]])
             if(length(object@Model@num.idx[[g]]) > 0L) {
-                OUT[[g]]$th <- OUT[[g]]$th[-object@Model@num.idx[[g]]]
+                NUM.idx <- which(object@Model@th.idx[[g]] == 0)
+                OUT[[g]]$th <- OUT[[g]]$th[ -NUM.idx ]
             }
             if(labels) {
                 names(OUT[[g]]$th) <-

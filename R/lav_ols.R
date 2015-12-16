@@ -155,7 +155,8 @@ hessian = function(x) {
     # var - var           
     sq.e.var <- sqrt(e.var)
     sq.e.var6 <- sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var
-    dx2.var <- nobs/(2*e.var*e.var) - 1/sq.e.var6 * crossprod(y-yhat)
+    #dx2.var <- nobs/(2*e.var*e.var) - 1/sq.e.var6 * crossprod(y-yhat)
+    dx2.var <- nobs/(2*e.var*e.var) - 1/sq.e.var6 * (e.var * nobs)
 
     rbind( cbind(  dx2.beta, dx.beta.var, deparse.level=0),
            cbind(t(dx.beta.var), dx2.var, deparse.level=0), deparse.level=0 )

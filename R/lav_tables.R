@@ -802,7 +802,6 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
     ngroups   <- lavobject@Data@ngroups
     ov.types  <- lavobject@Data@ov$type
     th.idx    <- lavobject@Model@th.idx
-    num.idx   <- lavobject@Model@num.idx
     Sigma.hat <- lavobject@Fit@Sigma.hat
     TH        <- lavobject@Fit@TH
 

@@ -21,7 +21,15 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     meanstructure <- any(partable$op == "~1")
     categorical   <- any(partable$op == "|")
     group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
-    gamma <- categorical
+
+    # gamma?
+    if(categorical) {
+        gamma <- TRUE
+    } else if(any(partable$op == "~" & partable$exo == 1L)) {
+        gamma <- TRUE
+    } else {
+        gamma <- FALSE
+    }
 
     # number of groups
     ngroups <- max(partable$group)
@@ -52,10 +60,10 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
-        # (only y if categorical)
+        # (only y if conditional.x = TRUE)
 
         # regression dummys
-        if(categorical) {
+        if(gamma) {
             tmp.names <-
                 unique( partable$lhs[(partable$op == "~" | 
                                         partable$op == "<~") &
@@ -125,7 +133,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.col[idx] <- match(target$lhs[idx], lv.names)
     
         # 2. "~" regressions
-        if(categorical) {
+        if(gamma) {
             # gamma
             idx <- which(target$rhs %in% ov.names.x &
                          target$group == g & (target$op == "~" |

@@ -590,7 +590,8 @@ lav_object_inspect_sampstat <- function(lavobject, h1 = FALSE,
         if(lavobject@Model@categorical) {
             OUT[[g]]$th <- as.numeric(lavobject@SampleStats@th[[g]])
             if(length(lavobject@Model@num.idx[[g]]) > 0L) {
-                OUT[[g]]$th <- OUT[[g]]$th[-lavobject@Model@num.idx[[g]]]
+                NUM.idx <- which(lavobject@Model@th.idx[[g]] == 0)
+                OUT[[g]]$th <- OUT[[g]]$th[ -NUM.idx ]
             }
             if(add.labels) {
                 names(OUT[[g]]$th) <- 
@@ -917,7 +918,8 @@ lav_object_inspect_th <- function(lavobject,
     # labels + class
     for(g in 1:G) {
         if(length(lavobject@Model@num.idx[[g]]) > 0L) {
-            OUT[[g]] <- OUT[[g]][ -lavobject@Model@num.idx[[g]] ]
+            NUM.idx <- which(lavobject@Model@th.idx[[g]] == 0)
+            OUT[[g]] <- OUT[[g]][ -NUM.idx ]
         }
         if(add.labels && length(OUT[[g]]) > 0L) {
             names(OUT[[g]]) <- lavobject@pta$vnames$th[[g]]
@@ -1121,7 +1123,8 @@ lav_object_inspect_wls_est <- function(lavobject,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- lavobject@Data@ngroups
-    OUT <- lav_model_wls_est(lavobject@Model)
+    OUT <- lav_model_wls_est(lavobject@Model,
+                             cov.x = lavobject@SampleStats@cov.x)
 
     for(g in 1:G) {
         if(add.labels && length(OUT[[g]]) > 0L) {

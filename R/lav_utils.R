@@ -273,43 +273,6 @@ augmented.covariance <- function(S., mean) {
 }
 
 
-# R code for forming block diagonal matrix posted by Berten Gunter on R-help:
-# Berton Gunter gunter.berton at gene.com Fri Sep 2 01:08:58 CEST 2005
-# slight changes by YR
-bdiag <- function(...) {
-    mlist <- list(...)
-    # handle case in which list of matrices is given
-    if(length(mlist) == 1) mlist <- unlist(mlist, recursive=FALSE)
-    # remove/ignore NULL blocks
-    null.idx <- sapply(mlist, is.null); mlist <- mlist[!null.idx]
-    csdim <- rbind(c(0,0), apply(sapply(mlist,dim), 1, cumsum ))
-    ret <- array(0, dim=csdim[length(mlist)+1,])
-    add1 <- matrix(rep(1:0,2), ncol=2)
-    for(i in seq(along=mlist)) {
-        indx <- apply(csdim[i:(i+1),]+add1,2, function(x) x[1]:x[2])
-          ## non-square matrix
-        if(is.null(dim(indx))) ret[indx[[1]], indx[[2]]] <- mlist[[i]]
-            ## square matrix
-        else ret[indx[,1],indx[,2]] <- mlist[[i]]
-    }
-    ret
-}
-
-# rbind list of matrices (same number of columns)
-rbindlist <- function(...) {
-     mlist <- list(...)
-     if(length(mlist) == 1) mlist <- unlist(mlist, recursive=FALSE)
-     nrows <- sapply(mlist, nrow)
-     end.row <- cumsum(nrows)
-     start.row <- c(1, end.row + 1)
-     ret <- matrix(0, nrow=sum(sapply(mlist, nrow)), ncol=ncol(mlist[[1]]))
-     for(i in seq(along=mlist)) {
-         ret[start.row[i]:end.row[i],] <- mlist[[i]]    
-     }   
-     ret
-}
-
-
 
 # linesearch using 'armijo' backtracking
 # to find a suitable `stepsize' (alpha)

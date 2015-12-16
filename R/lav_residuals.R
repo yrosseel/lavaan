@@ -71,10 +71,11 @@ function(object, type="raw", labels=TRUE) {
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
             augModel <- lav_model(lavpartable    = augUser,
-                                  representation = object@Options$representation,
-                                  parameterization = object@Options$parameterization,
-                                  link           = object@Options$link,
-                                  debug          = object@Options$debug)
+                            representation = object@Options$representation,
+                            conditional.x  = object@Options$conditional.x,
+                            parameterization = object@Options$parameterization,
+                            link           = object@Options$link,
+                            debug          = object@Options$debug)
             VarCov <- lav_model_vcov(lavmodel       = augModel, 
                                      lavsamplestats = object@SampleStats,
                                      lavdata        = object@Data,
@@ -142,7 +143,8 @@ function(object, type="raw", labels=TRUE) {
         if(object@Model@categorical) {
             R[[g]]$th <- object@SampleStats@th[[g]] - object@Fit@TH[[g]]
             if(length(object@Model@num.idx[[g]]) > 0L) {
-                R[[g]]$th <- R[[g]]$th[-object@Model@num.idx[[g]]]
+                NUM.idx <- which(object@Model@th.idx[[g]] == 0)
+                R[[g]]$th <- R[[g]]$th[ -NUM.idx ]
             }
             if(labels) {
                 names(R[[g]]$th) <- vnames(object@ParTable, type="th", group=g)

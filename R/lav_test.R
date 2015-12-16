@@ -1,7 +1,7 @@
 testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats, 
                                         E.inv, Delta, WLS.V,
                                         x.idx=list(integer(0)),
-                                        test.UGamma.eigvals = TRUE) {
+                                        test.UGamma.eigvals = FALSE) {
 
     # UG = Gamma %*% [V - V %*% Delta %*% E.inv %*% tDelta %*% V]
     #    = Gamma %*% V  - Gamma %*% V %*% Delta %*% E.inv %*% tDelta %*% V
@@ -101,9 +101,8 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
     # attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
 
     # eigen values
-    # this is for the lavaan.survey pval.pFsum() function
-    # but for large problems, this can take a loooong time; perhaps
-    # we should make this optional?
+    # this was for the lavaan.survey pval.pFsum() function
+    # but for large problems, this can take a loooong time; not needed anymore
     if(test.UGamma.eigvals) {
         attr(trace.UGamma, "eigenvalues") <-  
             Re(eigen(UG, only.values=TRUE)$values)
@@ -220,7 +219,7 @@ lav_model_test <- function(lavmodel       = NULL,
                            VCOV           = NULL, 
                            lavcache       = NULL,
                            lavdata        = NULL,
-                           test.UGamma.eigvals = TRUE,
+                           test.UGamma.eigvals = FALSE,
                            control        = list()) {
 
 
@@ -433,8 +432,8 @@ lav_model_test <- function(lavmodel       = NULL,
 #                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
 #                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
 #                augModel <- lav_model(lavpartable       = augUser,
-#                                  start          = lav_model_get_parameters(object, type="user"),
 #                                  representation = lavmodel@representation,
+#                                  conditional.x  = lavoptions$conditional.x,
 #                                  link           = lavmodel@link,
 #                                  debug          = FALSE)
 #

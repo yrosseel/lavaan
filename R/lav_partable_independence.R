@@ -63,6 +63,7 @@ lav_partable_independence <- function(lavobject        = NULL,
     ustart <- numeric(0)
 
     categorical <- any(ov$type == "ordered")
+    conditional.x <- lavoptions$conditional.x
 
     for(g in 1:ngroups) {
 
@@ -173,20 +174,29 @@ lav_partable_independence <- function(lavobject        = NULL,
         }
 
         # fixed.x exogenous variables?
-        if(!categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
+        if(!conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
             idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
             nel <- sum(idx)
             lhs    <- c(lhs, rep(ov.names.x[[g]],  each=nx)[idx]) # upper.tri
              op    <- c(op, rep("~~", nel))
             rhs    <- c(rhs, rep(ov.names.x[[g]], times=nx)[idx])
+            group  <- c(group, rep(g,  nel))
             if(fixed.x) {
                 free   <- c(free,  rep(0L, nel))
+                exo    <- c(exo,   rep(1L, nel))
+                ustart <- c(ustart, rep(as.numeric(NA), nel))
             } else {
                 free   <- c(free,  rep(1L, nel))
+                exo    <- c(exo,   rep(0L, nel))
+                # starting values
+                if(!is.null(sample.cov)) {
+                    # FIXME!!!
+                    # fill in cov.x values
+                    ustart <- c(ustart, rep(as.numeric(NA), nel))
+                } else {
+                    ustart <- c(ustart, rep(as.numeric(NA), nel))
+                }
             }
-            exo    <- c(exo,   rep(1L, nel))
-            group  <- c(group, rep(g,  nel))
-            ustart <- c(ustart, rep(as.numeric(NA), nel))
 
             # meanstructure?
             if(meanstructure) {
@@ -195,29 +205,41 @@ lav_partable_independence <- function(lavobject        = NULL,
                 rhs    <- c(rhs,    rep("", nx))
                 group  <- c(group,  rep(g,  nx))
                 if(fixed.x) {
-                    free   <- c(free,   rep(0L, nx))
+                    free  <- c(free,   rep(0L, nx))
+                     exo  <- c(exo,    rep(1L, nx))
+                   ustart <- c(ustart, rep(as.numeric(NA), nx))
                 } else {
-                    free   <- c(free,   rep(1L, nx))
+                    free  <- c(free,   rep(1L, nx))
+                    exo   <- c(exo,    rep(0L, nx))
+                   # FIXME!!
+                   ustart <- c(ustart, rep(as.numeric(NA), nx))
                 }
-                exo    <- c(exo,    rep(1L, nx))
-                ustart <- c(ustart, rep(as.numeric(NA), nx))
             }
         }
 
-        if(categorical && (nx <- length(ov.names.x[[g]])) > 0L) {
+        if(conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
             # add regressions
             lhs <- c(lhs, rep("dummy", nx))
              op <- c( op, rep("~", nx))
             rhs <- c(rhs, ov.names.x[[g]])
-            # add 3 dummy lines
-            lhs <- c(lhs, "dummy"); op <- c(op, "=~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~~"); rhs <- c(rhs, "dummy")
-            lhs <- c(lhs, "dummy"); op <- c(op, "~1"); rhs <- c(rhs, "")
 
-            exo    <- c(exo,   rep(0L, nx + 3L))
-            group  <- c(group, rep(g,  nx + 3L))
-            free   <- c(free,  rep(0L, nx + 3L))
-            ustart <- c(ustart, rep(0, nx)); ustart <- c(ustart, c(0,1,0))
+            # add dummy latent
+            lhs <- c(lhs,"dummy"); op <- c(op, "=~"); rhs <- c(rhs, "dummy")
+            lhs <- c(lhs,"dummy"); op <- c(op, "~~"); rhs <- c(rhs, "dummy") 
+
+            exo <- c(exo,    rep(1L, nx)); exo <- c(exo,   c(0L,0L))
+          group <- c(group,  rep(g,  nx + 2L))
+           free <- c(free,   rep(0L, nx + 2L))
+         ustart <- c(ustart, rep(0,  nx + 2L))
+
+            if(meanstructure) {
+                lhs <- c(lhs,"dummy"); op <- c(op, "~1"); rhs <- c(rhs, "")
+
+                exo    <- c(exo,    0L)
+                group  <- c(group,  g)
+                free   <- c(free,   0L)
+                ustart <- c(ustart, 0)
+            }
         }
 
     } # ngroups

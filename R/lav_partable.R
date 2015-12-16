@@ -20,6 +20,7 @@ lavaanify <- lavParTable <- function(
                       int.lv.free      = FALSE,
                       orthogonal       = FALSE, 
                       std.lv           = FALSE,
+                      conditional.x    = FALSE,
                       fixed.x          = TRUE,
                       parameterization = "delta",
                       constraints      = NULL,
@@ -134,7 +135,8 @@ lavaanify <- lavParTable <- function(
             FLAT.group <- FLAT[(group.op.idx[g]+1L):(group.op.idx[g+1]-1L),]    
             LIST.group <- lav_partable_flat(FLAT.group, meanstructure = meanstructure, 
                 int.ov.free = int.ov.free, int.lv.free = int.lv.free,
-                orthogonal = orthogonal, std.lv = std.lv, fixed.x = fixed.x,
+                orthogonal = orthogonal, std.lv = std.lv, 
+                conditional.x = conditional.x, fixed.x = fixed.x,
                 parameterization = parameterization,
                 auto.fix.first = auto.fix.first, 
                 auto.fix.single = auto.fix.single,
@@ -156,7 +158,8 @@ lavaanify <- lavParTable <- function(
     } else {
         LIST <- lav_partable_flat(FLAT, meanstructure = meanstructure, 
             int.ov.free = int.ov.free, int.lv.free = int.lv.free,
-            orthogonal = orthogonal, std.lv = std.lv, fixed.x = fixed.x,
+            orthogonal = orthogonal, std.lv = std.lv, 
+            conditional.x = conditional.x, fixed.x = fixed.x,
             parameterization = parameterization,
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
@@ -491,10 +494,11 @@ lav_partable_ndat <- function(partable, group=NULL) {
     ngroups <- max(partable$group)
     meanstructure <- any(partable$op == "~1")
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
+    conditional.x <- any(partable$exo > 0L & partable$op == "~")
     categorical <- any(partable$op == "|")
     if(categorical) meanstructure <- TRUE
 
-    if(categorical) {
+    if(conditional.x) {
         ov.names <- lav_partable_vnames(partable, "ov.nox", group=group)
     } else {
         ov.names <- lav_partable_vnames(partable, "ov", group=group)
@@ -505,7 +509,7 @@ lav_partable_ndat <- function(partable, group=NULL) {
     ndat  <- ngroups*pstar
 
     # correction for fixed.x?
-    if(!categorical && fixed.x) {
+    if(!conditional.x && fixed.x) {
         ov.names.x <- lav_partable_vnames(partable, "ov.x", group=group)
         nvar.x <- length(ov.names.x)
         pstar.x <- nvar.x * (nvar.x + 1) / 2
@@ -527,6 +531,14 @@ lav_partable_ndat <- function(partable, group=NULL) {
         ndat <- ndat - (ngroups * nvar.ord)
         # but additional thresholds
         ndat <- ndat + (ngroups * nth)
+        # add slopes
+        ndat <- ndat + (ngroups * nvar * nexo)
+    }
+ 
+    # correction for conditional.x not categorical
+    if(conditional.x && !categorical) {
+        ov.names.x <- lav_partable_vnames(partable, "ov.x", group=group)
+        nexo     <- length(ov.names.x)
         # add slopes
         ndat <- ndat + (ngroups * nvar * nexo)
     }
@@ -875,6 +887,7 @@ lav_partable_flat <- function(FLAT = NULL,
                               int.lv.free      = FALSE,
                               orthogonal       = FALSE,
                               std.lv           = FALSE,
+                              conditional.x    = FALSE,
                               fixed.x          = TRUE,
                               parameterization = "delta",
                               auto.fix.first   = FALSE,
@@ -1002,7 +1015,7 @@ lav_partable_flat <- function(FLAT = NULL,
     }
 
     # d) exogenous x covariates: VARIANCES + COVARIANCES
-    if(!categorical && (nx <- length(ov.names.x)) > 0L) {
+    if(!conditional.x && (nx <- length(ov.names.x)) > 0L) {
         idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
@@ -1026,7 +1039,7 @@ lav_partable_flat <- function(FLAT = NULL,
 
     # 3. INTERCEPTS
     if(meanstructure) {
-        if(categorical) {
+        if(conditional.x) {
             ov.int <- ov.names.nox
         } else {
             ov.int <- ov.names
@@ -1238,23 +1251,40 @@ lav_partable_flat <- function(FLAT = NULL,
         }
     }
 
-    # 5. handle exogenous `fixed.x' covariates
-    if(length(ov.names.x) > 0 && fixed.x) {
+    # 5. handle exogenous `x' covariates
+    if(length(ov.names.x) > 0) {
+
         # 1. variances/covariances
-               exo.idx  <- which(op == "~~" &
-                                 rhs %in% ov.names.x &
-                                 user == 0L)
-        ustart[exo.idx] <- as.numeric(NA) # should be overriden later!
-          free[exo.idx] <- 0L
-           exo[exo.idx] <- 1L
+        exo.var.idx  <- which(op == "~~" &
+                          rhs %in% ov.names.x &
+                          user == 0L)
+        if(fixed.x) {
+            ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
+              free[exo.var.idx] <- 0L
+               exo[exo.var.idx] <- 1L
+        } else if(conditional.x) {
+               exo[exo.var.idx] <- 1L
+        }
 
         # 2. intercepts
-               exo.int.idx  <- which(op == "~1" &
-                                     lhs %in% ov.names.x &
-                                     user == 0L)
-        ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
-          free[exo.int.idx] <- 0L
-           exo[exo.int.idx] <- 1L
+        exo.int.idx  <- which(op == "~1" &
+                              lhs %in% ov.names.x &
+                              user == 0L)
+        if(fixed.x) {
+            ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
+              free[exo.int.idx] <- 0L
+               exo[exo.int.idx] <- 1L
+        } else if(conditional.x) {
+               exo[exo.int.idx] <- 1L
+        }
+
+        # 3. regressions
+        exo.reg.idx <- which(op == "~" &
+                             lhs %in% ov.names.nox &
+                             rhs %in% ov.names.x)
+        if(conditional.x) {
+            exo[exo.reg.idx] <- 1L
+        }
     }
 
     # 5b. residual variances of ordinal variables?

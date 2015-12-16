@@ -7,12 +7,13 @@
 # fill in the 'ustart' column in a User data.frame with reasonable
 # starting values, using the sample data
 
-lav_start <- function(start.method = "default",
+lav_start <- function(start.method    = "default",
                       lavpartable     = NULL, 
                       lavsamplestats  = NULL,
-                      model.type   = "sem",
-                      mimic        = "lavaan",
-                      debug        = FALSE) {
+                      model.type      = "sem",
+                      mimic           = "lavaan",
+                      conditional.x   = FALSE,
+                      debug           = FALSE) {
 
     # check arguments
     stopifnot(is.list(lavpartable))
@@ -111,12 +112,16 @@ lav_start <- function(start.method = "default",
     for(g in 1:ngroups) {
 
         # info from user model for this group
-        if(categorical) {
+        if(conditional.x) {
             ov.names     <- vnames(lavpartable, "ov.nox", group=g)
+        } else {
+            ov.names     <- vnames(lavpartable, "ov", group=g)
+        }
+        if(categorical) {
             ov.names.num <- vnames(lavpartable, "ov.num", group=g)
             ov.names.ord <- vnames(lavpartable, "ov.ord", group=g)
         } else {
-            ov.names.num <- ov.names <- vnames(lavpartable, "ov", group=g)
+            ov.names.num <- ov.names
         }
         lv.names    <- vnames(lavpartable, "lv",   group=g)
         ov.names.x  <- vnames(lavpartable, "ov.x", group=g)
@@ -236,7 +241,7 @@ lav_start <- function(start.method = "default",
         
 
         # 5g) exogenous `fixed.x' covariates
-        if(!categorical && length(ov.names.x) > 0) {
+        if(!conditional.x && length(ov.names.x) > 0) {
             exo.idx <- which(lavpartable$group == g          &
                              lavpartable$op == "~~"          & 
                              lavpartable$lhs %in% ov.names.x &

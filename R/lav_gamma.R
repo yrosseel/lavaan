@@ -1,3 +1,6 @@
+### these are old routines
+### see lav_samplestat_gamma.R for new versions
+
 # compute Gamma (including meanstructure)
 compute.Gamma <- function(data, meanstructure=FALSE, Mplus.WLS=FALSE) {
 
@@ -90,6 +93,30 @@ compute.Gamma.fixed.x <- function(data, x.idx = integer(0L)) {
 
     Gamma = (N-1)/N * cov(Z, use = "pairwise") # we divide by 'N'!
     
+    Gamma
+}
+
+compute.Gamma.conditional.x <- function(data, x.idx = integer(0L)) {
+    #data <- as.matrix(data)
+
+    # we need central moments, so center
+    zdata <- scale(data, center=TRUE, scale=FALSE)
+    N <- nrow(data); p <- ncol(data)
+    #idx <- lav_matrix_vech_idx(p)
+
+    rdata <- zdata
+    RES <- qr.resid(qr(cbind(zdata[,x.idx,drop=FALSE])),
+                             zdata[,-x.idx,drop=FALSE])
+    rdata[,-x.idx] <- zdata[,-x.idx] - RES
+    Z2 <- apply(rdata, 1, function(x) { tcrossprod(x)[idx]  })
+    if(p > 1L) {
+        Z2<- t(Z2)
+    } else {
+        Z2 <- as.matrix(Z2) # special case p = 1L
+    }
+
+    Gamma = (N-1)/N * cov(Z2, use = "pairwise") # we divide by 'N'!
+
     Gamma
 }
 
@@ -292,7 +319,7 @@ compute.Abeta.complete <- function(Sigma.hat=NULL, meanstructure=TRUE) {
 
     if(meanstructure) {
         A11 <- Sigma.hat.inv
-        A <- bdiag(A11, A)
+        A <- lav_matrix_bdiag(A11, A)
     }
 
     A
@@ -326,7 +353,7 @@ compute.A1.sample <- function(lavsamplestats, group=1L, meanstructure=TRUE,
 
         if(meanstructure) {
             A11 <- sample.icov
-            A1 <- bdiag(A11, A1)
+            A1 <- lav_matrix_bdiag(A11, A1)
         }
     }
 

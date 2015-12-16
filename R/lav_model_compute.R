@@ -9,7 +9,6 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     nvar           <- lavmodel@nvar
     ngroups        <- lavmodel@ngroups
     representation <- lavmodel@representation
-    categorical    <- lavmodel@categorical
 
     # return a list
     Sigma.hat <- vector("list", length=ngroups)
@@ -132,7 +131,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL) {
     ngroups        <- lavmodel@ngroups
     nmat           <- lavmodel@nmat
     representation <- lavmodel@representation
-    fixed.x        <- lavmodel@fixed.x
+    conditional.x  <- lavmodel@conditional.x
 
     # return a list
     PI <- vector("list", length=ngroups)
@@ -143,7 +142,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        if(!fixed.x) {
+        if(!conditional.x) {
             PI.g <- numeric( lavmodel@nvar[g] )
         } else
         if(representation == "LISREL") {
@@ -243,7 +242,6 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 }
 
 # V(ETA): latent variances variances/covariances
-# - if conditional=TRUE, ignore all ov.dummy. * and GAMMA
 computeVETA <- function(lavmodel = NULL, GLIST = NULL, 
                         remove.dummy.lv = FALSE, lavsamplestats = NULL) {
     # state or final?
@@ -601,7 +599,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
 
         if(lavmodel@representation == "LISREL") {
-            if(lavmodel@categorical) {
+            if(lavmodel@conditional.x) {
                 YHAT[[g]] <- computeEYetax.LISREL(MLIST = MLIST,
                           eXo = eXo[[g]], ETA = ETA[[g]], N = Nobs,
                           sample.mean = lavsamplestats@mean[[g]],

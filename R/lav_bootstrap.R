@@ -270,6 +270,7 @@ bootstrap.internal <- function(object          = NULL,
                                estimator     = lavoptions$estimator,
                                mimic         = lavoptions$mimic,
                                meanstructure = lavoptions$meanstructure,
+                               conditional.x = lavoptions$conditional.x,
                                group.w.free  = lavoptions$group.w.free,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,

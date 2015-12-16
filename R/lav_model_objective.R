@@ -23,14 +23,15 @@ lav_model_objective <- function(lavmodel       = NULL,
     meanstructure <- lavmodel@meanstructure
     categorical   <- lavmodel@categorical
     group.w.free  <- lavmodel@group.w.free
-    fixed.x       <- lavmodel@fixed.x
+    conditional.x <- lavmodel@conditional.x
     num.idx       <- lavmodel@num.idx
     th.idx        <- lavmodel@th.idx
 
     # do we need WLS.est?
     if(estimator == "GLS"  || estimator == "WLS"  || 
        estimator == "DWLS" || estimator == "ULS") {
-        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST)
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST,
+                                     cov.x = lavsamplestats@cov.x)
         if(debug) print(WLS.est)
     } else if(estimator == "ML" || estimator == "PML" || 
               estimator == "FML" || estimator == "REML") {
@@ -55,8 +56,9 @@ lav_model_objective <- function(lavmodel       = NULL,
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         } else if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
-            if(fixed.x) 
-                 PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+        }
+        if(conditional.x) {
+            PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)

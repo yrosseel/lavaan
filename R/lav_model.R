@@ -8,6 +8,7 @@
 # construct MATRIX representation of the model
 lav_model <- function(lavpartable      = NULL,
                       representation   = "LISREL",
+                      conditional.x    = FALSE,
                       th.idx           = list(),
                       parameterization = "delta",
                       link             = "logit",
@@ -91,7 +92,7 @@ lav_model <- function(lavpartable      = NULL,
         ov.names.x <- vnames(lavpartable, "ov.x", group=g)
         nexo[g] <- length(ov.names.x)
         ov.num <- vnames(lavpartable, "ov.num", group=g)
-        if(categorical) {
+        if(conditional.x) {
             nvar[g] <- length(ov.names.nox)
         } else {
             nvar[g] <- length(ov.names)
@@ -270,6 +271,7 @@ lav_model <- function(lavpartable      = NULL,
 
                  nexo=nexo,
                  fixed.x=fixed.x,
+                 conditional.x=conditional.x,
                  parameterization=parameterization,
                  ov.x.dummy.ov.idx=ov.x.dummy.ov.idx,
                  ov.x.dummy.lv.idx=ov.x.dummy.lv.idx,

@@ -14,7 +14,7 @@
 setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
     lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
-               optim.method = "nlminb")
+               optim.method = "nlminb", id = FALSE, group = FALSE)
 })
 
 # main function
