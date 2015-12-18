@@ -50,12 +50,12 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                      cov.x = lavsamplestats@cov.x)
 
         # only for GLS
-        if(estimator == "GLS") {
-            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
-            if(meanstructure) {
-                Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
-            }
-        }
+        #if(estimator == "GLS") {
+        #    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
+        #    if(meanstructure) {
+        #        Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+        #    }
+        #}
 
     } else if(estimator == "ML" || estimator == "PML" || 
               estimator == "FML" || estimator == "REML") {
@@ -82,12 +82,12 @@ lav_model_gradient <- function(lavmodel       = NULL,
     }
 
     # three approaches (FIXME!!!! merge this!)
-    # - ML/GLS approach: using Omega (and Omega.mu)
+    # - ML approach: using Omega (and Omega.mu)
     # - WLS: using Delta
     # - PML/FML/MML: custom
 
-    # 1. ML/GLS approach
-    if(estimator == "ML" || estimator == "REML" || estimator == "GLS") {
+    # 1. ML approach
+    if(estimator == "ML" || estimator == "REML") {
         if(meanstructure) {
             Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
                                   lavsamplestats=lavsamplestats, estimator=estimator, 
@@ -155,10 +155,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
             ### FIXME!!!! TODO!!!!
         } 
 
-    } else # ML/GLS
+    } else # ML
 
     # 2. WLS approach
-    if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS") {
+    if(estimator == "WLS" || estimator == "DWLS" || estimator == "ULS" ||
+       estimator == "GLS") {
 
         if(type != "free") {
             if(is.null(Delta))
@@ -172,7 +173,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             #diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
             #group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
-            if(estimator == "WLS") {
+            if(estimator == "WLS" || estimator == "GLS") {
                 # full weight matrix
                 diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
                 group.dx <- -1 * crossprod(Delta[[g]], 

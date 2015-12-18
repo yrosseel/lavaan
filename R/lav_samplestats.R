@@ -102,7 +102,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # FIXME: check dimension of WLS.V!!
     }
 
-    NACOV.compute <- FALSE
+    NACOV.compute <- TRUE
     if(is.null(NACOV)) {
         NACOV      <- vector("list", length=ngroups)
         NACOV.user <- FALSE
@@ -413,17 +413,29 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # WLS.V
         if(!WLS.V.user) {
             if(estimator == "GLS") {
-                if(meanstructure) {
-                    V11 <- icov[[g]]
-                    if(mimic == "Mplus") { # is this a bug in Mplus?
-                        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
-                    }
-                    V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
-                    WLS.V[[g]] <- lav_matrix_bdiag(V11,V22)
+                # FIXME: in <0.5-21, we had
+                #V11 <- icov[[g]]
+                #    if(mimic == "Mplus") { # is this a bug in Mplus?
+                #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                #    }
+                if(conditional.x) {
+                    Y = cbind(X[[g]], eXo[[g]])
                 } else {
-                    WLS.V[[g]] <-
-                        0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
+                    Y = X[[g]]
                 }
+                WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
+                                                 #ICOV = icov[[g]],
+                                                 #COV  = cov[[g]],
+                                                 #MEAN = mean[[g]],
+                       # FIXME: we need the 'original' COV/MEAN/ICOV
+                       #        sample statistics; not the 'residual'
+                       #        version
+                                                 Y = Y,
+                                                 x.idx = x.idx,
+                                                 fixed.x = fixed.x,
+                                                 conditional.x = conditional.x,
+                                                 meanstructure = meanstructure,
+                                                 slopes = conditional.x)
             } else if(estimator == "ML") {
                 # no WLS.V here, since function of model-implied moments
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
@@ -631,6 +643,12 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
     for(g in 1:ngroups) {
 
+        # FIXME: if the user provides x.idx, we could use this!!!
+        # exogenous x?
+        x.idx <- integer(0L)
+        conditional.x <- FALSE
+        fixed.x <- FALSE
+
         # group weight
         group.w[[g]] <- nobs[[g]] / sum(unlist(nobs))
 
@@ -731,17 +749,19 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         # WLS.V
         if(!WLS.V.user) {
             if(estimator == "GLS") {
-                if(meanstructure) {
-                    V11 <- icov[[g]]
-                    if(mimic == "Mplus") { # is this a bug in Mplus?
-                        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
-                    }
-                    V22 <- 0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
-                    WLS.V[[g]] <- lav_matrix_bdiag(V11,V22)
-                } else {
-                    WLS.V[[g]] <-
-                        0.5 * lav_matrix_duplication_pre_post(icov[[g]] %x% icov[[g]])
-                }
+                # FIXME: in <0.5-21, we had
+                #V11 <- icov[[g]]
+                #    if(mimic == "Mplus") { # is this a bug in Mplus?
+                #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
+                #    }
+                WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(ICOV = icov[[g]],
+                                                 COV  = cov[[g]],
+                                                 MEAN = mean[[g]],
+                                                 x.idx = x.idx,
+                                                 fixed.x = fixed.x,
+                                                 conditional.x = conditional.x,
+                                                 meanstructure = meanstructure,
+                                                 slopes = conditional.x)
             } else if(estimator == "ULS") {
                 WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
                 WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
