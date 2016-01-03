@@ -1123,8 +1123,8 @@ lav_object_inspect_wls_est <- function(lavobject,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- lavobject@Data@ngroups
-    OUT <- lav_model_wls_est(lavobject@Model,
-                             cov.x = lavobject@SampleStats@cov.x)
+    OUT <- lav_model_wls_est(lavobject@Model) #,
+                             #cov.x = lavobject@SampleStats@cov.x)
 
     for(g in 1:G) {
         if(add.labels && length(OUT[[g]]) > 0L) {

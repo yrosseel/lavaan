@@ -34,6 +34,7 @@
 \alias{lav_matrix_symmetric_sqrt}
 \alias{lav_matrix_orthogonal_complement}
 \alias{lav_matrix_bdiag}
+\alias{lav_matrix_trace}
 
 \title{Utility Functions: Matrices and Vectors}
 \description{Utility functions for Matrix and Vector operations.}
@@ -81,6 +82,7 @@ lav_matrix_commutation_mn_pre(A, m = 1L, n = 1L)
 lav_matrix_symmetric_sqrt(S = matrix(0,0,0))
 lav_matrix_orthogonal_complement(A = matrix(0,0,0))
 lav_matrix_bdiag(...)
+lav_matrix_trace(..., check = TRUE)
 }
 \arguments{
 \item{A}{A general matrix.}
@@ -219,6 +221,12 @@ complement of the matrix A, using a qr decomposition.
 
 The \code{lav_matrix_bdiag} function constructs a block diagonal matrix from
 its arguments.
+
+The \code{lav_matrix_trace} function computes the trace (the sum of the
+diagonal elements) of a single (square) matrix, or if multiple matrices are
+provided (either as a list, or as multiple arguments), we first compute their
+product (which must result in a square matrix), and then we compute the trace; 
+if \code{check = TRUE}, we check if the (final) matrix is square.
 }
 \references{
 Magnus, J. R. and H. Neudecker (1999). Matrix Differential Calculus

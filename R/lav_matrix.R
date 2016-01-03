@@ -20,6 +20,11 @@ lav_matrix_vec <- function(A) {
 # the vecr operator ransforms a matrix into 
 # a vector by stacking the *rows* of the matrix one underneath the other
 lav_matrix_vecr <- function(A) {
+
+    # faster way??
+    # nRow <- NROW(A); nCol <- NCOL(A)
+    # idx <- (seq_len(nCol) - 1L) * nRow + rep(seq_len(nRow), each = nCol)
+
     lav_matrix_vec(t(A))
 }
 
@@ -44,7 +49,7 @@ lav_matrix_vech <- function(S, diagonal = TRUE) {
 # into a vector by stacking the *rows* of the matrix one after the
 # other, but eliminating all supradiagonal elements
 lav_matrix_vechr <- function(S, diagonal = TRUE) {
-    S[lav_matrix_vechr_idx(n = ncol(S), diagonal = diagonal)]
+    S[lav_matrix_vechr_idx(n = NCOL(S), diagonal = diagonal)]
 }
 
 
@@ -52,7 +57,7 @@ lav_matrix_vechr <- function(S, diagonal = TRUE) {
 # into a vector by stacking the *columns* of the matrix one after the
 # other, but eliminating all infradiagonal elements
 lav_matrix_vechu <- function(S, diagonal = TRUE) {
-    S[lav_matrix_vechu_idx(n = ncol(S), diagonal = diagonal)]
+    S[lav_matrix_vechu_idx(n = NCOL(S), diagonal = diagonal)]
 }
 
 
@@ -62,7 +67,7 @@ lav_matrix_vechu <- function(S, diagonal = TRUE) {
 #
 # same as vech (but using upper-diagonal elements)
 lav_matrix_vechru <- function(S, diagonal = TRUE) {
-    S[lav_matrix_vechru_idx(n = ncol(S), diagonal = diagonal)]
+    S[lav_matrix_vechru_idx(n = NCOL(S), diagonal = diagonal)]
 }
 
 
@@ -185,7 +190,7 @@ lav_matrix_lower2full <- function(x, diagonal = TRUE) {
 # matrix of size 'n'
 lav_matrix_diag_idx <- function(n = 1L) {
     if(n < 1L) return(integer(0L))
-    1L + 0L:(n-1L)*(n+1L)
+    1L + (seq_len(n) - 1L)*(n + 1L)
 }
 
 
@@ -340,7 +345,7 @@ lav_matrix_duplication <- .dup3
 lav_matrix_duplication_pre <- function(A = matrix(0,0,0)) {
 
     # number of rows
-    n2 <- nrow(A)
+    n2 <- NROW(A)
 
     # square nrow(A) only, n2 = n^2
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -361,7 +366,7 @@ lav_matrix_duplication_pre <- function(A = matrix(0,0,0)) {
 lav_matrix_duplication_dup_pre2 <- function(A = matrix(0,0,0)) {
 
     # number of rows
-    n2 <- nrow(A)
+    n2 <- NROW(A)
 
     # square nrow(A) only, n2 = n^2
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -385,7 +390,7 @@ lav_matrix_duplication_dup_pre2 <- function(A = matrix(0,0,0)) {
 lav_matrix_duplication_post <- function(A = matrix(0,0,0)) {
 
     # number of columns
-    n2 <- ncol(A)
+    n2 <- NCOL(A)
 
     # square A only, n2 = n^2
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -407,10 +412,10 @@ lav_matrix_duplication_post <- function(A = matrix(0,0,0)) {
 lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
 
     # number of columns
-    n2 <- ncol(A)
+    n2 <- NCOL(A)
 
     # square A only, n2 = n^2
-    stopifnot(nrow(A) == n2, sqrt(n2) == round(sqrt(n2)))
+    stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
 
     # dimension
     n <- sqrt(n2)
@@ -495,7 +500,7 @@ lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
     A <- as.matrix(A)
 
     # number of rows
-    n2 <- nrow(A)
+    n2 <- NROW(A)
 
     # square nrow(A) only, n2 = n^2
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -516,7 +521,7 @@ lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
     A <- as.matrix(A)
 
     # number of columns
-    n2 <- ncol(A)
+    n2 <- NCOL(A)
 
     # square A only, n2 = n^2
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -536,10 +541,10 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
     A <- as.matrix(A)
 
     # number of columns
-    n2 <- ncol(A)
+    n2 <- NCOL(A)
 
     # square A only, n2 = n^2
-    stopifnot(nrow(A) == n2, sqrt(n2) == round(sqrt(n2)))
+    stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
 
     # dimension
     n <- sqrt(n2)
@@ -604,7 +609,7 @@ lav_matrix_commutation <- .com1
 lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
 
     # number of rows of A
-    n2 <- nrow(A)
+    n2 <- NROW(A)
 
     # K_nn only (n2 = m * n)
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -625,7 +630,7 @@ lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
 lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 
     # number of rows of A
-    mn <- nrow(A)
+    mn <- NROW(A)
     stopifnot(mn == m * n)
 
     # compute row indices
@@ -695,10 +700,10 @@ lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
 lav_matrix_tS2_SxS_S2 <- function(S2, S, check = TRUE) {
 
     # size of S
-    n <- nrow(S)
+    n <- NROW(S)
 
     if(check) {
-        stopifnot(nrow(S2) == n*n)
+        stopifnot(NROW(S2) == n*n)
     }
 
     A <- matrix(S %*% matrix(S2, n, ), n*n,)
@@ -714,7 +719,7 @@ lav_matrix_tD_SxS_D <- function(S) {
 # square root of a positive definite symmetric matrix
 lav_matrix_symmetric_sqrt <- function(S = matrix(0,0,0)) {
 
-    n <- nrow(S)
+    n <- NROW(S)
 
     # eigen decomposition, assume symmetric matrix
     S.eigen <- eigen(S, symmetric = TRUE)
@@ -760,7 +765,9 @@ lav_matrix_orthogonal_complement <- function(A = matrix(0,0,0)) {
      OUT
 }
 
-# construct block diagonal matrix
+# construct block diagonal matrix from a list of matrices
+# ... can contain multiple arguments, which will be coerced to a list
+#     or it can be a single list (of matrices)
 lav_matrix_bdiag <- function(...) {
 
     if(nargs() == 0L) return(matrix(0,0,0))
@@ -776,8 +783,8 @@ lav_matrix_bdiag <- function(...) {
 
     # more than 1 matrix
     nmat <- length(mlist)
-    nrows <- sapply(mlist, nrow); crows <- cumsum(nrows)
-    ncols <- sapply(mlist, ncol); ccols <- cumsum(ncols)
+    nrows <- sapply(mlist, NROW); crows <- cumsum(nrows)
+    ncols <- sapply(mlist, NCOL); ccols <- cumsum(ncols)
     trows <- sum(nrows)
     tcols <- sum(ncols)
     x <- numeric(trows * tcols)
@@ -795,6 +802,82 @@ lav_matrix_bdiag <- function(...) {
 
     attr(x, "dim") <- c(trows, tcols)
     x
+}
+
+# trace of a single square matrix, or the trace of a product of (compatible)
+# matrices resulting in a single square matrix
+lav_matrix_trace <- function(..., check = TRUE) {
+
+    if(nargs() == 0L) return(as.numeric(NA))
+    dots <- list(...)
+
+    # create list of matrices
+    if(is.list(dots[[1]])) {
+        mlist <- dots[[1]]
+    } else {
+        mlist <- dots
+    }
+
+    # number of matrices
+    nMat <- length(mlist)
+
+    # single matrix
+    if(nMat == 1L) {
+        S <- mlist[[1]]
+        if(check) {
+            # check if square
+            stopifnot(NROW(S) == NCOL(S))
+        }
+        out <- sum(S[lav_matrix_diag_idx(n = NROW(S))])
+
+
+    } else if(nMat == 2L) {
+
+        # dimension check is done by '*'
+        out <- sum(mlist[[1]] * t(mlist[[2]]))
+
+    } else if(nMat == 3L) {
+
+        A <- mlist[[1]]
+        B <- mlist[[2]]
+        C <- mlist[[3]]
+
+        # A, B, C
+        # below is the logic; to be coded inline
+        # DIAG <- numeric( NROW(A) )
+        # for(i in seq_len(NROW(A))) {
+        #     DIAG[i] <- sum( rep(A[i,], times = NCOL(B)) * 
+        #                  as.vector(B) * 
+        #                  rep(C[,i], each=NROW(B)) )
+        # }
+        # out <- sum(DIAG)
+
+        # FIXME: 
+
+        # dimension check is automatic
+        B2 <- B %*% C
+        out <- sum(A * t(B2))
+
+    } else {
+
+        #nRows <- sapply(mlist, NROW)
+        #nCols <- sapply(mlist, NCOL)
+
+        # check if product is ok
+        #stopifnot(all(nCols[seq_len(nMat-1L)] == nRows[2:nMat]))
+
+        # check if product is square
+        #stopifnot(nRows[1] == nCols[nMat])
+
+        M1 <- mlist[[1]]
+        M2 <- mlist[[2]]
+        for(m in 3L:nMat) {
+            M2 <- M2 %*% mlist[[m]]
+        }
+        out <- sum(M1 * t(M2))
+    }
+
+    out
 }
 
 # crossproduct, but handling NAs pairwise
@@ -819,7 +902,7 @@ lav_matrix_rref <- function(A, tol = sqrt( .Machine$double.eps)) {
     stopifnot(is.matrix(A))
 
     # dimensions
-    nRow <- nrow(A); nCol <- ncol(A)
+    nRow <- NROW(A); nCol <- NCOL(A)
     pivot = integer(0L)
 
     # catch empty matrix

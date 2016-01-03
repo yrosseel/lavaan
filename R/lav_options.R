@@ -290,6 +290,23 @@ lav_options_set <- function(opt = formals(lavaan)) {
                  opt$test, "\n")
         }
         opt$missing <- "listwise"       
+    } else if(opt$estimator == "ntrls") {
+        opt$estimator <- "NTRLS"
+        if(opt$se == "default" || opt$se == "standard") {
+            opt$se <- "standard"
+        } else if(opt$se == "none" ||
+                  opt$se == "bootstrap" ||
+                  opt$se == "external") {
+            # nothing to do
+        } else {
+            stop("invalid value for `se' argument when estimator is NTRLS: ",
+                 opt$se, "\n")
+        }
+        if(!opt$test %in% c("standard","none")) {
+            stop("invalid value for `test' argument when estimator is NTRLS: ",
+                 opt$test, "\n")
+        }
+        opt$missing <- "listwise"
     } else if(opt$estimator == "wls") {
         opt$estimator <- "WLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -457,7 +474,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
     }
 
     # likelihood approach (wishart or normal) + sample.cov.rescale
-    if(!opt$estimator %in% c("ML", "REML", "PML", "FML")) {
+    if(!opt$estimator %in% c("ML", "REML", "PML", "FML","NTRLS")) {
         if(opt$likelihood != "default") {
             stop("likelihood argument is only relevant if estimator = ML")
         }

@@ -14,7 +14,7 @@
 setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
     lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
-               optim.method = "nlminb", id = FALSE, group = FALSE)
+               optim.method = "nlminb")
 })
 
 # main function
@@ -66,9 +66,9 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
         # post fit check (lv pd?)
         ok <- lav_object_post_check(object)
-        if(!ok) {
-            stop("lavaan ERROR: lavInspect(,\"post.check\") is not TRUE; factor scores can not be computed. See the WARNING message.")
-        }
+        #if(!ok) {
+        #    stop("lavaan ERROR: lavInspect(,\"post.check\") is not TRUE; factor scores can not be computed. See the WARNING message.")
+        #}
 
         out <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,

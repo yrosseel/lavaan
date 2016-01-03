@@ -316,6 +316,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(debug) print(as.data.frame(FLAT))
         # catch ~~ of fixed.x covariates if fixed.x = TRUE
         if(lavoptions$fixed.x) {
+            tmp <- try(vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE),
+                       silent = TRUE)
+            if(inherits(tmp, "try-error")) {
+                warning("lavaan WARNING: syntax contains parameters involving exogenous covariates; switching to fixed.x = FALSE")
+            }
+            lavoptions$fixed.x <- FALSE
+        }
+        if(lavoptions$conditional.x) {
             tmp <- vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE)
         }
 
@@ -388,7 +396,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        lavdata       = lavdata,
                        missing       = lavoptions$missing,
                        rescale       = 
-                           (lavoptions$estimator %in% c("ML","REML") &&
+                           (lavoptions$estimator %in% c("ML","REML","NTRLS") &&
                             lavoptions$likelihood == "normal"),
                        estimator     = lavoptions$estimator,
                        mimic         = lavoptions$mimic,

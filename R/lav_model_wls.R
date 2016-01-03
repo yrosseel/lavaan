@@ -1,6 +1,6 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
-                              cov.x = NULL) {
+lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) { #,
+                              #cov.x = NULL) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -84,6 +84,22 @@ lav_model_wls_v <- function(lavmodel       = NULL,
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
         WLS.V <- lavsamplestats@WLS.V
+    } else if(estimator == "NTRLS") {
+        # compute moments for all groups
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
+        Mu.hat <- computeMuHat(lavmodel = lavmodel)
+
+        for(g in 1:lavsamplestats@ngroups) {
+            WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
+                              ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
+                              COV           = Sigma.hat[[g]][,,drop=FALSE],
+                              MEAN          = Mu.hat[[g]],
+                              x.idx         = c(10000,10001), ### FIXME!!!!
+                              fixed.x       = lavmodel@fixed.x,
+                              conditional.x = lavmodel@conditional.x,
+                              meanstructure = lavmodel@meanstructure,
+                              slopes        = lavmodel@conditional.x)
+        }
     } else if(estimator == "DWLS" || estimator == "ULS") {
         # diagonal only!!
         WLS.V <- lavsamplestats@WLS.VD
