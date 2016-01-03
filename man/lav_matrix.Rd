@@ -93,6 +93,8 @@ matrix. If m is also provided, the number of column of the matrix.}
 \item{m}{Integer. The number of rows of a matrix.}
 \item{x}{Numeric. A vector.}
 \item{...}{One or more matrices, or a list of matrices.}
+\item{check}{Logical. If \code{check = TRUE}, we check if the (final) matrix 
+is square.}
 }
 \details{
 These are a collection of lower-level matrix/vector related functions
