@@ -455,8 +455,31 @@ lav_partable_attributes <- function(partable, pta=NULL) {
     # vnames
     pta$vnames <- lav_partable_vnames(partable, type="all", group="list")
 
+    # vidx
+    OV <- pta$vnames$ov
+    LV <- pta$vnames$lv
+    ngroups <- length(pta$vnames$ov)
+    pta$vidx <- lapply(names(pta$vnames), function(v) {
+                    lapply(seq_len(ngroups), function(g) {
+                        if(grepl("lv", v)) {
+                            match(pta$vnames[[v]][[g]], LV[[g]])
+                        } else if(grepl("th", v)) {
+                            # thresholds have '|t' pattern
+                            TH <-  sapply(strsplit(pta$vnames[[v]][[g]], 
+                                          "|t", fixed = TRUE), "[[", 1L)
+                            match(TH, OV[[g]])
+                        } else if(grepl("eqs", v)){
+                            # mixture of OV/LV
+                            integer(0L)
+                        } else {
+                            match(pta$vnames[[v]][[g]], OV[[g]])
+                        }
+                    })
+                })
+    names(pta$vidx) <- names(pta$vnames)
+
     # ngroups
-    pta$ngroups <- length(pta$vnames$ov)
+    pta$ngroups <- ngroups
 
     # nvar
     pta$nvar <- lapply(pta$vnames$ov, length)
