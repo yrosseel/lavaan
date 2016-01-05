@@ -80,6 +80,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     missing.flag. <- FALSE
     # group weights
     group.w       <- vector("list", length=ngroups)
+    x.idx         <- vector("list", length=ngroups)
 
     WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
@@ -153,18 +154,18 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             # two cases: ov.names contains 'x' variables, or not
             if(conditional.x) {
                 # ov.names.x are NOT in ov.names
-                x.idx <- length(ov.names[[g]]) + seq_len(nexo)
+                x.idx[[g]] <- length(ov.names[[g]]) + seq_len(nexo)
             } else {
                 if(fixed.x) {
                     # ov.names.x are a subset of ov.names
-                    x.idx <- match(ov.names.x[[g]], ov.names[[g]])
-                    stopifnot( !anyNA(x.idx) )
+                    x.idx[[g]] <- match(ov.names.x[[g]], ov.names[[g]])
+                    stopifnot( !anyNA(x.idx[[g]]) )
                 } else {
-                    x.idx <- integer(0L)
+                    x.idx[[g]] <- integer(0L)
                 }
             }
         } else {
-            x.idx <- integer(0L)
+            x.idx[[g]] <- integer(0L)
             conditional.x <- FALSE
             fixed.x <- FALSE
         }
@@ -237,9 +238,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                    Y <- cbind(X[[g]], eXo[[g]])
                  COV <- unname(cov(Y, use="pairwise"))
                 MEAN <- unname( apply(Y, 2, base::mean, na.rm=TRUE) )
-                A <- COV[-x.idx, -x.idx, drop=FALSE]
-                B <- COV[-x.idx,  x.idx, drop=FALSE]
-                C <- COV[ x.idx,  x.idx, drop=FALSE]
+                A <- COV[-x.idx[[g]], -x.idx[[g]], drop=FALSE]
+                B <- COV[-x.idx[[g]],  x.idx[[g]], drop=FALSE]
+                C <- COV[ x.idx[[g]],  x.idx[[g]], drop=FALSE]
                 cov[[g]] <- A - B %*% solve(C) %*% t(B)
                 var[[g]] <- diag( cov[[g]] ) 
  
@@ -250,7 +251,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
                 }
 
-                MY <- MEAN[-x.idx]; MX <- MEAN[x.idx]
+                MY <- MEAN[-x.idx[[g]]]; MX <- MEAN[x.idx[[g]]]
                 C3 <- rbind(c(1,MX),
                             cbind(MX, C + tcrossprod(MX)))
                 B3 <- cbind(MY, B + tcrossprod(MY,MX))
@@ -358,9 +359,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # NACOV (=GAMMA)
         if(!NACOV.user) {
             if(estimator == "ML" && !missing.flag. && NACOV.compute) {
+                if(conditional.x) {
+                     Y <- Y
+                } else {
+                    Y <- X[[g]]
+                }
                 NACOV[[g]] <- 
-                    lav_samplestats_Gamma(Y             = X[[g]], 
-                                          x.idx         = x.idx,
+                    lav_samplestats_Gamma(Y             = Y,
+                                          x.idx         = x.idx[[g]],
                                           # FALSE for now, until we use to
                                           # compute SB
                                           #fixed.x       = fixed.x,
@@ -396,7 +402,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                         Y <- X[[g]]
                     }
                     NACOV[[g]] <- lav_samplestats_Gamma(Y             = Y,
-                                                        x.idx         = x.idx,
+                                                        x.idx         = x.idx[[g]],
                                                         fixed.x       = fixed.x,
                                                conditional.x = conditional.x,
                                               meanstructure = meanstructure,
@@ -431,7 +437,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        #        sample statistics; not the 'residual'
                        #        version
                                                  Y = Y,
-                                                 x.idx = x.idx,
+                                                 x.idx = x.idx[[g]],
                                                  fixed.x = fixed.x,
                                                  conditional.x = conditional.x,
                                                  meanstructure = meanstructure,
@@ -525,6 +531,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        nobs         = nobs,
                        ntotal       = sum(unlist(nobs)),
                        ngroups      = ngroups,
+                       x.idx        = x.idx,
 
                        # extra sample statistics
                        icov         = icov,
@@ -596,6 +603,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     missing.flag. <- FALSE
     # group weights
     group.w       <- vector("list", length=ngroups)
+    x.idx         <- vector("list", length=ngroups)
 
     WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
@@ -645,7 +653,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
         # FIXME: if the user provides x.idx, we could use this!!!
         # exogenous x?
-        x.idx <- integer(0L)
+        x.idx[[g]] <- integer(0L)
         conditional.x <- FALSE
         fixed.x <- FALSE
 
@@ -757,7 +765,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(ICOV = icov[[g]],
                                                  COV  = cov[[g]],
                                                  MEAN = mean[[g]],
-                                                 x.idx = x.idx,
+                                                 x.idx = x.idx[[g]],
                                                  fixed.x = fixed.x,
                                                  conditional.x = conditional.x,
                                                  meanstructure = meanstructure,
@@ -801,6 +809,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                        nobs         = nobs,
                        ntotal       = sum(unlist(nobs)),
                        ngroups      = ngroups,
+                       x.idx        = x.idx,
 
                        # extra sample statistics
                        icov         = icov,

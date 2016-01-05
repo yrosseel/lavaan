@@ -94,7 +94,7 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                               ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                               COV           = Sigma.hat[[g]][,,drop=FALSE],
                               MEAN          = Mu.hat[[g]],
-                              x.idx         = c(10000,10001), ### FIXME!!!!
+                              x.idx         = lavsamplestats@x.idx[[g]],
                               fixed.x       = lavmodel@fixed.x,
                               conditional.x = lavmodel@conditional.x,
                               meanstructure = lavmodel@meanstructure,
@@ -109,15 +109,18 @@ lav_model_wls_v <- function(lavmodel       = NULL,
     } else if(estimator == "ML") {
         WLS.V <- vector("list", length=lavsamplestats@ngroups)
 
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
         if(lavmodel@group.w.free) {
             GW <- unlist(computeGW(lavmodel = lavmodel))
         }
-        if(lavsamplestats@missing.flag) {
+        if(lavsamplestats@missing.flag || lavmodel@conditional.x) {
             Mu.hat <- computeMuHat(lavmodel = lavmodel)
+        } else {
+            Mu.hat <- NULL
         }
         for(g in 1:lavsamplestats@ngroups) {
             if(lavsamplestats@missing.flag) {
+                stopifnot(!lavmodel@conditional.x)
                 WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
                                             Mu.hat=Mu.hat[[g]],
                                             lavsamplestats=lavsamplestats,
@@ -126,8 +129,16 @@ lav_model_wls_v <- function(lavmodel       = NULL,
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
                 WLS.V[[g]] <-
-                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
-                                           meanstructure=lavmodel@meanstructure)
+                    #compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
+                    #                       meanstructure=lavmodel@meanstructure)
+                    lav_samplestats_Gamma_inverse_NT(ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
+                              COV           = Sigma.hat[[g]][,,drop=FALSE],
+                              MEAN          = Mu.hat[[g]],
+                              x.idx         = lavsamplestats@x.idx[[g]],
+                              fixed.x       = lavmodel@fixed.x,
+                              conditional.x = lavmodel@conditional.x,
+                              meanstructure = lavmodel@meanstructure,
+                              slopes        = lavmodel@conditional.x)
             }
             if(lavmodel@group.w.free) {
                 # unweight!!

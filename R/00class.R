@@ -48,6 +48,7 @@ setClass("lavSampleStats",         # sample moments
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
+        x.idx="list",              # x.idx if fixed.x = TRUE
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)

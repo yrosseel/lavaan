@@ -73,12 +73,16 @@ lav_model_gradient <- function(lavmodel       = NULL,
         GW    <- computeGW(   lavmodel = lavmodel, GLIST = GLIST)
     }
 
-    # three approaches (FIXME!!!! merge this!)
+    # four approaches (FIXME!!!! merge this!)
     # - ML approach: using Omega (and Omega.mu)
-    # - WLS: using Delta
+    #    Omega = 'POST' = Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)
+    #   (still 2x faster than Delta method)
+    # - WLS/DWLS/GLS: using Delta + WLS.V; support for fixed.x, conditional.x
+    # - (ML)/NTRLS: using Delta, no support for fixed.x, conditional.x
     # - PML/FML/MML: custom
 
     # 1. ML approach
+    #if(estimator == "SDFSDFSDFSDF") {
     if(estimator == "ML" || estimator == "REML") {
         if(meanstructure) {
             Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
@@ -149,7 +153,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     } else # ML
 
-    # 2. WLS approach
+    # 2. using Delta
+    #if(estimator %in% c("ML", "WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
     if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
 
         if(type != "free") {
@@ -163,6 +168,30 @@ lav_model_gradient <- function(lavmodel       = NULL,
         for(g in 1:lavsamplestats@ngroups) {
             #diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
             #group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
+            # 0.5-21: ML uses Delta
+            if(estimator == "ML") {
+                S    <- lavsamplestats@cov[[g]]
+                Sigma <- Sigma.hat[[g]]
+                Sigma.inv <- attr(Sigma, "inv")
+                nvar  <- NROW(Sigma)
+
+                if(meanstructure) {
+                    MEAN <- lavsamplestats@mean[[g]]; Mu <- Mu.hat[[g]]
+                    POST.Sigma <- lav_matrix_duplication_pre(
+                    matrix((Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)) +
+                           (Sigma.inv %*% tcrossprod(MEAN - Mu) %*% Sigma.inv),
+                       ncol = 1) )
+                    POST.Mu <- as.numeric(2 * Sigma.inv %*% (MEAN - Mu))
+                    POST <- c(POST.Mu, POST.Sigma)
+                } else {
+                    POST <- lav_matrix_duplication_pre(
+                        matrix((Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)),
+                               ncol = 1))
+                }
+
+                group.dx <- as.numeric( -1 * crossprod(Delta[[g]], POST) )
+            } else
+        
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
             if(estimator == "WLS" || 
                estimator == "GLS" || 
@@ -181,7 +210,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                     #         ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                     #         COV           = Sigma.hat[[g]][,,drop=FALSE],
                     #         MEAN          = Mu.hat[[g]],
-                    #         x.idx         = c(10000,10001), ### FIXME!!!!
+                    #         x.idx         = lavsamplestats@x.idx[[g]],
                     #         fixed.x       = fixed.x,
                     #         conditional.x = conditional.x,
                     #         meanstructure = meanstructure,
@@ -210,7 +239,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
                     group.dx <- as.numeric( -1 * crossprod(Delta[[g]], POST) )
                 }
 
-            } else {
+            } else 
+
+            if(estimator == "DWLS") {
                 # diagonal weight matrix
                 diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
                 group.dx <- -1 * crossprod(Delta[[g]],

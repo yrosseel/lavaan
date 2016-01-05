@@ -320,8 +320,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        silent = TRUE)
             if(inherits(tmp, "try-error")) {
                 warning("lavaan WARNING: syntax contains parameters involving exogenous covariates; switching to fixed.x = FALSE")
+                lavoptions$fixed.x <- FALSE
             }
-            lavoptions$fixed.x <- FALSE
         }
         if(lavoptions$conditional.x) {
             tmp <- vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE)
