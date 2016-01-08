@@ -29,6 +29,42 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     fx
 }
 
+# fitting function for standard ML
+estimator.ML_res <- function(Sigma.hat=NULL, Mu.hat=NULL, PI=NULL,
+                             res.cov=NULL, res.int=NULL, res.slopes=NULL,
+                             res.cov.log.det=NULL, 
+                             cov.x = NULL, mean.x = NULL) {
+
+    if(!attr(Sigma.hat, "po")) return(Inf)
+
+    # augmented mean.x + cov.x matrix
+    C3 <- rbind(c(1,mean.x),
+                cbind(mean.x, cov.x + tcrossprod(mean.x)))
+
+    Sigma.hat.inv     <- attr(Sigma.hat, "inv")
+    Sigma.hat.log.det <- attr(Sigma.hat, "log.det")
+    nvar <- ncol(Sigma.hat)
+
+    # sigma
+    objective.sigma <- ( Sigma.hat.log.det + sum(res.cov * Sigma.hat.inv) -
+                         res.cov.log.det - nvar )
+    # beta
+    obs.beta <- c(res.int, lav_matrix_vec(res.slopes))
+    est.beta <- c(Mu.hat,  lav_matrix_vec(PI))
+    beta.COV <- C3 %x% Sigma.hat.inv 
+    #objective.beta <- as.vector((obs.beta - est.beta) %*% beta.COV %*%
+    #                           (obs.beta - est.beta))
+    objective.beta <- sum(tcrossprod(obs.beta - est.beta) * beta.COV)
+
+    fx <- objective.sigma + objective.beta
+
+    # no negative values
+    if(fx < 0.0) fx <- 0.0
+
+    fx
+}
+
+
 # fitting function for restricted ML
 estimator.REML <- function(Sigma.hat=NULL, Mu.hat=NULL,
                            data.cov=NULL, data.mean=NULL,

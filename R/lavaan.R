@@ -485,7 +485,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavpartable     = lavpartable,
                                        lavsamplestats  = lavsamplestats,
                                        model.type   = lavoptions$model.type,
-                                       conditional.x = lavoptions$conditional.x,
                                        mimic        = lavoptions$mimic,
                                        debug        = lavoptions$debug)
             } else {
@@ -496,7 +495,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavpartable     = lavpartable, 
                                        lavsamplestats  = lavsamplestats,
                                        model.type   = lavoptions$model.type,
-                                       conditional.x = lavoptions$conditional.x,
                                        mimic        = lavoptions$mimic,
                                        debug        = lavoptions$debug)
         }

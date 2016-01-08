@@ -32,14 +32,20 @@ setClass("lavData",
 setClass("lavSampleStats",         # sample moments
     representation(
         CAT="list",
-        var="list",                # variances
+        var="list",                # observed variances (per group)
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
         th="list",                 # thresholds for non-numeric var (per group)
-        th.nox="list",             # thresholds ignoring eXo
-        th.idx="list",
+        th.idx="list",             # th index (0 for numeric)
         th.names="list",           # threshold names
-        slopes="list",             # slopes exo
+
+        res.cov="list",            # residual var/cov matrix (if conditional.x)
+        res.var="list",            # residual variances
+        res.th="list",             # residual thresholds
+        res.th.nox="list",         # residual thresholds ignoring x
+        res.slopes="list",         # slopes exo (if conditional.x) 
+        res.int="list",            # intercepts (if conditional.x)
+
         mean.x="list",             # mean exo
         cov.x="list",              # variance/covariance exo
         bifreq="list",             # bivariate frequency tables
@@ -52,6 +58,8 @@ setClass("lavSampleStats",         # sample moments
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)
+        res.icov="list",
+        res.cov.log.det="list",
         ridge="numeric",           # ridge constant
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS

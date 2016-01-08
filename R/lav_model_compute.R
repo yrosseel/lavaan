@@ -1,4 +1,3 @@
-## FIXME: allow for GAMMA in continuous case
 computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE, 
                             delta = TRUE, debug = FALSE) {
 
@@ -52,7 +51,79 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     Sigma.hat
 }
 
-### FIXME:: replace by computeEY (to allow for GAMMA in continuous case)?
+## only if conditional.x = TRUE
+## compute the (larger) unconditional 'joint' covariance matrix (y,x)
+##
+## Sigma (Joint ) = [ (S11, S12), 
+##                    (S21, S22) ] where
+##     S11 = Sigma.res + PI %*% cov.x %*% t(PI) 
+##     S12 = PI %*% cov.x
+##     S21 = cov.x %*% t(PI)
+##     S22 = cov.x
+computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
+                                 lavsamplestats = NULL,
+                                 delta = TRUE, debug = FALSE) {
+
+    stopifnot(lavmodel@conditional.x)
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    nmat           <- lavmodel@nmat
+    nvar           <- lavmodel@nvar
+    ngroups        <- lavmodel@ngroups
+    representation <- lavmodel@representation
+
+    # return a list
+    Sigma.hat <- vector("list", length=ngroups)
+
+    for(g in 1:ngroups) {
+
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[mm.in.group]
+
+        if(representation == "LISREL") {
+            res.Sigma  <- computeSigmaHat.LISREL(MLIST = MLIST, delta = delta)
+            res.int    <- computeMuHat.LISREL(MLIST = MLIST)
+            res.slopes <- computePI.LISREL(MLIST = MLIST)
+            S.xx       <- lavsamplestats@cov.x[[g]]
+
+            S.yy <- res.Sigma + res.slopes %*% S.xx %*% t(res.slopes)
+            S.yx <- res.slopes %*% S.xx
+            S.xy <- S.xx %*% t(res.slopes)
+
+            Sigma.hat[[g]] <- rbind( cbind(S.yy, S.yx), cbind(S.xy, S.xx) )
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+        if(debug) print(Sigma.hat[[g]])
+
+        if(extra) {
+            # check if matrix is positive definite
+            ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
+            if(any(ev < .Machine$double.eps) || sum(ev) == 0) {
+                Sigma.hat.inv <-  MASS::ginv(Sigma.hat[[g]])
+                Sigma.hat.log.det <- log(.Machine$double.eps)
+                attr(Sigma.hat[[g]], "po") <- FALSE
+                attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
+                attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
+            } else {
+                ## FIXME
+                ## since we already do an 'eigen' decomposition, we should
+                ## 'reuse' that information, instead of doing a new cholesky
+                Sigma.hat.inv <-  inv.chol(Sigma.hat[[g]], logdet=TRUE)
+                Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+                attr(Sigma.hat[[g]], "po") <- TRUE
+                attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
+                attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
+            }
+        }
+    } # ngroups
+
+    Sigma.hat
+}
+
 computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
@@ -76,6 +147,50 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
         } else
         if(representation == "LISREL") {
             Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = GLIST[ mm.in.group ])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+    } # ngroups
+
+    Mu.hat
+}
+
+## only if conditional.x = TRUE
+## compute the (larger) unconditional 'joint' mean vector (y,x)
+##
+## Mu (Joint ) = [ Mu.y, Mu.x ] where
+##     Mu.y = res.int + PI %*% M.x
+##     Mu.x = M.x
+computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL,
+                              lavsamplestats = NULL) {
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    nmat           <- lavmodel@nmat
+    ngroups        <- lavmodel@ngroups
+    representation <- lavmodel@representation
+    meanstructure  <- lavmodel@meanstructure
+
+    # return a list
+    Mu.hat <- vector("list", length=ngroups)
+
+    for(g in 1:ngroups) {
+
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+
+        if(!meanstructure) {
+            Mu.hat[[g]] <- numeric( lavmodel@nvar[g] )
+        } else if(representation == "LISREL") {
+            MLIST <- GLIST[ mm.in.group ]
+            res.int    <- computeMuHat.LISREL(MLIST = MLIST)
+            res.slopes <- computePI.LISREL(MLIST = MLIST)
+            M.x        <- lavsamplestats@mean.x[[g]]
+
+            Mu.y <- res.int + res.slopes %*% M.x
+            Mu.x <- M.x
+            Mu.hat[[g]] <- c(Mu.y, Mu.x)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -200,19 +315,13 @@ computeGW <- function(lavmodel = NULL, GLIST=NULL) {
     GW
 }
 
-# unconditional variances of Y
-#  - same as diag(Sigma.hat) if all Y are continuous)
-#  - 1.0 (or delta^2) if categorical
+# *unconditional* variance/covariance matrix of Y
+#  - same as Sigma.hat if all Y are continuous)
 #  - if also Gamma, cov.x is used (only if categorical)
 computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                      samplestats = NULL) {
+                      diagonal.only = FALSE) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
-
-    # backwards compatibility (semTools!)
-    if(!is.null(samplestats)) {
-        lavsamplestats <- samplestats
-    }
 
     ngroups        <- lavmodel@ngroups
     nmat           <- lavmodel@nmat
@@ -235,7 +344,11 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
             stop("only representation LISREL has been implemented for now")
         }
 
-        VY[[g]] <- VY.g
+        if(diagonal.only) {
+            VY[[g]] <- diag(VY.g)
+        } else {
+            VY[[g]] <- VY.g
+        }
     }
 
     VY

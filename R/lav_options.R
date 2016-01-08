@@ -542,6 +542,11 @@ lav_options_set <- function(opt = formals(lavaan)) {
     } else {
         stop("lavaan ERROR: conditional.x must be TRUE, FALSE or \"default\"\n")
     }
+ 
+    # if conditional.x, always use a meanstructure
+    if(opt$conditional.x) {
+        opt$meanstructure <- TRUE
+    }
 
     # fixed.x
     if(is.logical(opt$fixed.x)) {

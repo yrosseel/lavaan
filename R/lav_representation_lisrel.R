@@ -834,11 +834,11 @@ computeEYetax3.LISREL <- function(MLIST             = NULL,
 }
 
 # 4) VY
-# compute the *un*conditional variance of y: V(Y) or V(Y*)
-# 'unconditional' model-implied variances
-#  - same as diag(Sigma.hat) if all Y are continuous
-#  - 1.0 (or delta^2) if categorical
-#  - if also Gamma, cov.x is used (only if categorical)
+# compute the *un*conditional variance/covariance of y: V(Y) or V(Y*)
+# 'unconditional' model-implied (co)variances
+#  - same as Sigma.hat if all Y are continuous
+#  - diagonal is 1.0 (or delta^2) if categorical
+#  - if also Gamma, cov.x is used (only if conditional.x)
 #    only in THIS case, VY is different from diag(VYx)
 #
 # V(Y) = LAMBDA V(ETA) t(LAMBDA) + THETA
@@ -849,9 +849,7 @@ computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL) {
  
     VETA <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
     VY <- tcrossprod(LAMBDA %*% VETA, LAMBDA) + THETA
-
-    # variances only
-    diag(VY)
+    VY
 }
 
 # 5) VYx

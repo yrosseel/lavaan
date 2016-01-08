@@ -12,7 +12,6 @@ lav_start <- function(start.method    = "default",
                       lavsamplestats  = NULL,
                       model.type      = "sem",
                       mimic           = "lavaan",
-                      conditional.x   = FALSE,
                       debug           = FALSE) {
 
     # check arguments
@@ -20,6 +19,9 @@ lav_start <- function(start.method    = "default",
 
     # categorical?
     categorical <- any(lavpartable$op == "|")
+    
+    # conditional.x?
+    conditional.x <- any(lavpartable$exo == 1L & lavpartable$op == "~")
     #ord.names <- unique(lavpartable$lhs[ lavpartable$op == "|" ])
 
     # shortcut for 'simple'
@@ -233,8 +235,14 @@ lav_start <- function(start.method    = "default",
             th.names.sample   <- 
                 lavsamplestats@th.names[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
             # th.names.sample should identical to
-           # vnames(lavpartable, "th", group = g)
-           th.values <- lavsamplestats@th.nox[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
+            # vnames(lavpartable, "th", group = g)
+            if(conditional.x) {
+                th.values <- 
+                 lavsamplestats@res.th.nox[[g]][lavsamplestats@th.idx[[g]] > 0L]
+            } else {
+                th.values <- 
+                  lavsamplestats@th[[g]][lavsamplestats@th.idx[[g]] > 0L]
+            }           
             start[th.idx] <- th.values[match(th.names.lavpartable,
                                              th.names.sample)]
         }

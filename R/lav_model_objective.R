@@ -40,8 +40,14 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(debug) print(WLS.est)
     } else if(estimator %in% c("ML", "PML", "FML", "REML")) {
         # compute moments for all groups
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, 
+        #if(conditional.x) {
+        #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
+        #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
+        #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
+        #} else {
+            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, 
                              extra = (estimator %in% c("ML", "REML","NTRLS")))
+        #}
 
         if(estimator == "REML") {
             LAMBDA <- computeLAMBDA(lavmodel = lavmodel, GLIST = GLIST)
@@ -57,7 +63,12 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(debug) print(Sigma.hat)
 
         if(meanstructure && !categorical) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+            #if(conditional.x) {
+            #    Mu.hat <- computeMuHatJoint(lavmodel = lavmodel, GLIST = GLIST,
+            #                           lavsamplestats = lavsamplestats)
+            #} else {
+                Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+            #}
         } else if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
@@ -94,12 +105,26 @@ lav_model_objective <- function(lavmodel       = NULL,
         } else if(estimator == "ML" || estimator == "Bayes") {
         # complete data
             # ML and friends
-            group.fx <- estimator.ML(Sigma.hat=Sigma.hat[[g]], 
-                                     Mu.hat=Mu.hat[[g]],
-                                     data.cov=lavsamplestats@cov[[g]], 
-                                     data.mean=lavsamplestats@mean[[g]], 
-                                     data.cov.log.det=lavsamplestats@cov.log.det[[g]],
-                                     meanstructure=meanstructure)
+            if(conditional.x) {
+                group.fx <- estimator.ML_res(
+                    Sigma.hat        = Sigma.hat[[g]],
+                    Mu.hat           = Mu.hat[[g]],
+                    PI               = PI[[g]],
+                    res.cov          = lavsamplestats@res.cov[[g]],
+                    res.int          = lavsamplestats@res.int[[g]],
+                    res.slopes       = lavsamplestats@res.slopes[[g]],
+                    res.cov.log.det  = lavsamplestats@res.cov.log.det[[g]],
+                    cov.x            = lavsamplestats@cov.x[[g]],
+                    mean.x           = lavsamplestats@mean.x[[g]])
+            } else {
+                group.fx <- estimator.ML(
+                    Sigma.hat        = Sigma.hat[[g]], 
+                    Mu.hat           = Mu.hat[[g]],
+                    data.cov         = lavsamplestats@cov[[g]], 
+                    data.mean        = lavsamplestats@mean[[g]], 
+                    data.cov.log.det = lavsamplestats@cov.log.det[[g]],
+                    meanstructure    = meanstructure)
+            }
         } else if(estimator == "GLS" || 
                   estimator == "WLS" || 
                   estimator == "NTRLS") {
@@ -109,13 +134,13 @@ lav_model_objective <- function(lavmodel       = NULL,
             } else if(estimator == "NTRLS") {
                 #WLS.V <- lav_samplestats_Gamma_inverse_NT(
                 #             ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
-                #             COV           = Sigma.hat[[g]][,,drop=FALSE],
-                #             MEAN          = Mu.hat[[g]],
-                #             x.idx         = c(10000,10001), ### FIXME!!!!
-                #             fixed.x       = fixed.x,
-                #             conditional.x = conditional.x,
-                #             meanstructure = meanstructure,
-                #             slopes        = conditional.x)
+                #             COV            = Sigma.hat[[g]][,,drop=FALSE],
+                #             MEAN           = Mu.hat[[g]],
+                #             x.idx          = c(10000,10001), ### FIXME!!!!
+                #             fixed.x        = fixed.x,
+                #             conditional.x  = conditional.x,
+                #             meanstructure  = meanstructure,
+                #             slopestructure = conditional.x)
                 WLS.V <-
                     compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
                                            meanstructure=lavmodel@meanstructure)

@@ -2,6 +2,7 @@
 # - functions to (directly) compute the inverse of 'Gamma' (the asymptotic
 #   variance matrix of the sample statistics)
 # - often used as 'WLS.V' (the weight matrix in WLS estimation)
+#   and when computing the expected information matrix
 
 # NOTE:
 #  - three types:
@@ -11,16 +12,16 @@
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_Gamma_inverse_NT <- function(Y             = NULL,
-                                             COV           = NULL,
-                                             ICOV          = NULL,
-                                             MEAN          = NULL,
-                                             rescale       = FALSE,
-                                             x.idx         = integer(0L),
-                                             fixed.x       = FALSE,
-                                             conditional.x = FALSE,
-                                             meanstructure = FALSE,
-                                             slopes        = FALSE) {
+lav_samplestats_Gamma_inverse_NT <- function(Y              = NULL,
+                                             COV            = NULL,
+                                             ICOV           = NULL,
+                                             MEAN           = NULL,
+                                             rescale        = FALSE,
+                                             x.idx          = integer(0L),
+                                             fixed.x        = FALSE,
+                                             conditional.x  = FALSE,
+                                             meanstructure  = FALSE,
+                                             slopestructure = FALSE) {
 
     # check arguments
     if(length(x.idx) == 0L) {
@@ -45,7 +46,8 @@ lav_samplestats_Gamma_inverse_NT <- function(Y             = NULL,
     }
 
     # if conditional.x, we may also need COV and MEAN
-    if(conditional.x && length(x.idx) > 0L && (meanstructure || slopes)) {
+    if(conditional.x && length(x.idx) > 0L && 
+       (meanstructure || slopestructure)) {
 
         if(is.null(COV)) {
             stopifnot(!is.null(Y))
@@ -113,7 +115,7 @@ lav_samplestats_Gamma_inverse_NT <- function(Y             = NULL,
 
         Gamma.inv <- 0.5*lav_matrix_duplication_pre_post(S11 %x% S11)
 
-        if(meanstructure || slopes) {
+        if(meanstructure || slopestructure) {
             C <- S[ x.idx,  x.idx, drop=FALSE]
             MY <- M[-x.idx]; MX <- M[x.idx]
             C3 <- rbind(c(1,MX),
@@ -121,21 +123,21 @@ lav_samplestats_Gamma_inverse_NT <- function(Y             = NULL,
         }
 
         if(meanstructure) {
-            if(slopes) {
+            if(slopestructure) {
                 A11 <- C3 %x% S11 
             } else {
                 c11 <- 1 / solve(C3)[1, 1, drop=FALSE]
                 A11 <- c11 %x% S11
             }
         } else {
-            if(slopes) {
+            if(slopestructure) {
                 A11 <- C %x% S11
             } else {
                 A11 <- matrix(0,0,0)
             }
         }
 
-        if(meanstructure || slopes) {
+        if(meanstructure || slopestructure) {
             Gamma.inv <- lav_matrix_bdiag(A11, Gamma.inv)
         }
     }

@@ -52,12 +52,23 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     if(estimator %in% c("ML", "PML", "FML", "REML", "NTRLS")) {
         # compute moments for all groups
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
-                            extra = (estimator %in% c("ML", "REML", "NTRLS")))
+        #if(conditional.x) {
+        #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
+        #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
+        #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
+        #} else {
+            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                             extra = (estimator %in% c("ML", "REML", "NTRLS")))
+        #}
 
         # ridge here?
         if(meanstructure && !categorical) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+            #if(conditional.x) {
+            #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST,
+            #                           lavsamplestats = lavsamplestats)
+            #} else { 
+                Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+            #}
         } else if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
@@ -82,17 +93,22 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # - PML/FML/MML: custom
 
     # 1. ML approach
-    #if(estimator == "SDFSDFSDFSDF") {
-    if(estimator == "ML" || estimator == "REML") {
+    if( (estimator == "ML" || estimator == "REML") && 
+        !lavmodel@conditional.x ) {
+
         if(meanstructure) {
             Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=Mu.hat,
-                                  lavsamplestats=lavsamplestats, estimator=estimator, 
-                                  meanstructure=TRUE)
+                                  lavsamplestats=lavsamplestats, 
+                                  estimator=estimator, 
+                                  meanstructure=TRUE, 
+                                  conditional.x = conditional.x)
             Omega.mu <- attr(Omega, "mu")
         } else {
             Omega <- computeOmega(Sigma.hat=Sigma.hat, Mu.hat=NULL,
-                                  lavsamplestats=lavsamplestats, estimator=estimator,
-                                  meanstructure=FALSE)
+                                  lavsamplestats=lavsamplestats, 
+                                  estimator=estimator,
+                                  meanstructure=FALSE,
+                                  conditional.x = conditional.x)
             Omega.mu <- vector("list", length=lavsamplestats@ngroups)
         }
 
@@ -153,9 +169,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     } else # ML
 
-    # 2. using Delta
-    #if(estimator %in% c("ML", "WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
-    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
+    # 2. using Delta - *LS family
+    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS")) {
 
         if(type != "free") {
             if(is.null(Delta))
@@ -168,30 +183,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
         for(g in 1:lavsamplestats@ngroups) {
             #diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
             #group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
-            # 0.5-21: ML uses Delta
-            if(estimator == "ML") {
-                S    <- lavsamplestats@cov[[g]]
-                Sigma <- Sigma.hat[[g]]
-                Sigma.inv <- attr(Sigma, "inv")
-                nvar  <- NROW(Sigma)
-
-                if(meanstructure) {
-                    MEAN <- lavsamplestats@mean[[g]]; Mu <- Mu.hat[[g]]
-                    POST.Sigma <- lav_matrix_duplication_pre(
-                    matrix((Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)) +
-                           (Sigma.inv %*% tcrossprod(MEAN - Mu) %*% Sigma.inv),
-                       ncol = 1) )
-                    POST.Mu <- as.numeric(2 * Sigma.inv %*% (MEAN - Mu))
-                    POST <- c(POST.Mu, POST.Sigma)
-                } else {
-                    POST <- lav_matrix_duplication_pre(
-                        matrix((Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)),
-                               ncol = 1))
-                }
-
-                group.dx <- as.numeric( -1 * crossprod(Delta[[g]], POST) )
-            } else
-        
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
             if(estimator == "WLS" || 
                estimator == "GLS" || 
@@ -208,13 +199,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
                     stopifnot(!conditional.x)
                     #WLS.V <- lav_samplestats_Gamma_inverse_NT(
                     #         ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
-                    #         COV           = Sigma.hat[[g]][,,drop=FALSE],
-                    #         MEAN          = Mu.hat[[g]],
-                    #         x.idx         = lavsamplestats@x.idx[[g]],
-                    #         fixed.x       = fixed.x,
-                    #         conditional.x = conditional.x,
-                    #         meanstructure = meanstructure,
-                    #         slopes        = conditional.x)
+                    #         COV            = Sigma.hat[[g]][,,drop=FALSE],
+                    #         MEAN           = Mu.hat[[g]],
+                    #         x.idx          = lavsamplestats@x.idx[[g]],
+                    #         fixed.x        = fixed.x,
+                    #         conditional.x  = conditional.x,
+                    #         meanstructure  = meanstructure,
+                    #         slopestructure = conditional.x)
 
                     S    <- lavsamplestats@cov[[g]]
                     Sigma <- Sigma.hat[[g]]
@@ -241,7 +232,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
             } else 
 
-            if(estimator == "DWLS") {
+            if(estimator == "DWLS" || estimator == "ULS") {
                 # diagonal weight matrix
                 diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
                 group.dx <- -1 * crossprod(Delta[[g]],
@@ -267,6 +258,78 @@ lav_model_gradient <- function(lavmodel       = NULL,
         }
 
     } # WLS
+
+    else if(estimator == "ML" && lavmodel@conditional.x) {
+        if(type != "free") {
+            if(is.null(Delta))
+                stop("FIXME: Delta should be given if type != free")
+            #stop("FIXME: WLS gradient with type != free needs fixing!")
+        } else {
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+        }
+
+        for(g in 1:lavsamplestats@ngroups) {
+
+            # augmented mean.x + cov.x matrix
+            mean.x <- lavsamplestats@mean.x[[g]]
+            cov.x  <- lavsamplestats@cov.x[[g]]
+            C3 <- rbind(c(1,mean.x),
+                        cbind(mean.x, cov.x + tcrossprod(mean.x)))
+
+            Sigma <- Sigma.hat[[g]]
+            Mu.g    <- Mu.hat[[g]]
+            PI.g    <- PI[[g]]
+            Sigma.inv <- attr(Sigma, "inv")
+            nvar  <- NROW(Sigma)
+            S <- lavsamplestats@res.cov[[g]]
+    
+            # beta
+            obs.beta <- c(lavsamplestats@res.int[[g]], 
+                          lav_matrix_vec(lavsamplestats@res.slopes[[g]]))
+            est.beta <- c(Mu.g,  lav_matrix_vec(PI.g))
+            beta.COV <- C3 %x% Sigma.inv
+
+            a <- t(obs.beta - est.beta)
+            b <- as.matrix(obs.beta - est.beta)
+            #K <- lav_matrix_commutation(m = nvar, n = nvar)
+            #AB <- (K %x% diag(NROW(C3)*NROW(C3))) %*%
+            #          (diag(nvar) %x% lav_matrix_vec(C3) %x% diag(nvar))
+            K <- lav_matrix_commutation(m = nvar, n = NROW(C3))
+            AB <- ( diag(NROW(C3)) %x% K %x% diag(nvar) ) %*%
+                    (lav_matrix_vec(C3) %x% diag( nvar * nvar) )
+
+            POST.beta <- 2 *  beta.COV %*% (obs.beta - est.beta)
+
+            POST.sigma1 <- lav_matrix_duplication_pre(
+                    (Sigma.inv %x% Sigma.inv)  %*% t(AB)  %*% (t(a) %x% b) )
+
+            # Sigma
+            POST.sigma2 <- lav_matrix_duplication_pre(
+                             matrix( lav_matrix_vec( 
+                      Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)), ncol = 1L))
+
+            POST <- c(POST.beta, POST.sigma1 + POST.sigma2)
+
+            group.dx <- as.numeric( -1 * crossprod(Delta[[g]], POST) )
+
+            group.dx <- group.w[g] * group.dx
+            if(g == 1) {
+                dx <- group.dx
+            } else {
+                dx <- dx + group.dx
+            }
+        } # g
+
+        if(type == "free") {
+            # nothing to do
+        } else {
+            # make a GLIST
+            dx <- lav_model_x2GLIST(lavmodel = lavmodel, x = dx, 
+                                    type = "custom", setDelta = FALSE,
+                                    m.el.idx = m.el.idx, 
+                                    x.el.idx = x.el.idx)
+        }
+    } # ML + conditional.x
 
     else if(estimator == "PML" || estimator == "FML" ||
             estimator == "MML") {
@@ -748,7 +811,8 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
 }
 
 computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,  
-                         lavsamplestats=NULL, estimator="ML", meanstructure=FALSE) {
+                         lavsamplestats=NULL, estimator="ML", 
+                         meanstructure=FALSE, conditional.x = FALSE) {
 
     Omega    <- vector("list", length=lavsamplestats@ngroups)
     Omega.mu <- vector("list", length=lavsamplestats@ngroups)
@@ -772,15 +836,24 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
             if(!lavsamplestats@missing.flag) { # complete data
                 if(meanstructure) {
-                    diff <- lavsamplestats@mean[[g]] - Mu.hat[[g]]
-                    W.tilde <- lavsamplestats@cov[[g]] + tcrossprod(diff)
+                    if(conditional.x) {
+                        diff <- lavsamplestats@res.int[[g]] - Mu.hat[[g]]
+                        W.tilde <- lavsamplestats@res.cov[[g]] + tcrossprod(diff)
+                    } else {
+                        diff <- lavsamplestats@mean[[g]] - Mu.hat[[g]]
+                        W.tilde <- lavsamplestats@cov[[g]] + tcrossprod(diff)
+                    }
                     # Browne 1995 eq 4.55
                     Omega.mu[[g]] <- t(t(diff) %*% Sigma.hat.inv)
                     Omega[[g]] <- 
                         ( Sigma.hat.inv %*% (W.tilde - Sigma.hat[[g]]) %*%
                           Sigma.hat.inv )
                 } else {
-                    W.tilde <- lavsamplestats@cov[[g]]
+                    if(conditional.x) {
+                        W.tilde <- lavsamplestats@res.cov[[g]]
+                    } else {
+                        W.tilde <- lavsamplestats@cov[[g]]
+                    }
                     Omega[[g]] <- 
                         ( Sigma.hat.inv %*% (W.tilde - Sigma.hat[[g]]) %*%
                           Sigma.hat.inv )

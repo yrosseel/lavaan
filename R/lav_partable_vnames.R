@@ -319,18 +319,22 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             # regular lv's
             lv.reg <- unique( partable$lhs[ partable$group == g &
                                             partable$op == "=~"   ] )
-            out <- unlist( lapply(lv.reg, function(x) {
-                # get indicators for this lv
-                tmp.ind <- unique( partable$rhs[ partable$group == g &
-                                                 partable$op == "=~" &
-                                                 partable$lhs == x     ] )
-                if(!all(tmp.ind %in% ov.num)) {
-                    return(x)
-                } else {
-                    return(character(0))
-                }
-                }) )
-            OUT$lv.nonnormal[[g]] <- out
+            if(length(lv.reg) > 0L) {
+                out <- unlist( lapply(lv.reg, function(x) {
+                    # get indicators for this lv
+                    tmp.ind <- unique( partable$rhs[ partable$group == g &
+                                                     partable$op == "=~" &
+                                                     partable$lhs == x     ] )
+                    if(!all(tmp.ind %in% ov.num)) {
+                        return(x)
+                    } else {
+                        return(character(0))
+                    }
+                    }) )
+                OUT$lv.nonnormal[[g]] <- out
+            } else {
+                OUT$lv.nonnormal[[g]] <- character(0)
+            }
         }
 
         if(any(c("th","th.mean") %in% type)) {

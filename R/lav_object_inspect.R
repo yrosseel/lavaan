@@ -605,7 +605,7 @@ lav_object_inspect_sampstat <- function(lavobject, h1 = FALSE,
         # slopes
         if(lavobject@Model@categorical &&
            lavobject@Model@nexo > 0L) {
-            OUT[[g]]$slopes  <- lavobject@SampleStats@slopes[[g]]
+            OUT[[g]]$slopes  <- lavobject@SampleStats@res.slopes[[g]]
             if(add.labels) {
                 rownames(OUT[[g]]$slopes) <- ov.names[[g]]
                 colnames(OUT[[g]]$slopes) <- 
@@ -951,7 +951,8 @@ lav_object_inspect_vy <- function(lavobject,
     #  - if also Gamma, cov.x is used (only if categorical)
 
     OUT <- computeVY(lavmodel = lavobject@Model, GLIST = NULL, 
-                     lavsamplestats = lavobject@SampleStats)
+                     lavsamplestats = lavobject@SampleStats,
+                     diagonal.only = TRUE)
                      
 
     # labels + class

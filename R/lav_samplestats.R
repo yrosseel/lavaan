@@ -2,6 +2,7 @@
 #
 # initial version: YR 25/03/2009
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
+# YR 5/01/2016: add rescov, resvar, ... if conditional.x = TRUE
 
 lav_samplestats_from_data <- function(lavdata           = NULL,
                                       DataX             = NULL,
@@ -60,27 +61,46 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     }
 
     # sample statistics per group
+
+    # joint (y,x)
     cov         <- vector("list", length=ngroups)
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     th          <- vector("list", length=ngroups)
-    th.nox      <- vector("list", length=ngroups)
     th.idx      <- vector("list", length=ngroups)
     th.names    <- vector("list", length=ngroups)
-    slopes      <- vector("list", length=ngroups)
+
+    # residual (y | x)
+    res.cov     <- vector("list", length=ngroups)
+    res.var     <- vector("list", length=ngroups)
+    res.th      <- vector("list", length=ngroups)
+    res.th.nox  <- vector("list", length=ngroups)
+    res.slopes  <- vector("list", length=ngroups)
+    res.int     <- vector("list", length=ngroups)
+
+    # fixed.x
     mean.x      <- vector("list", length=ngroups)
     cov.x       <- vector("list", length=ngroups)
+
+    # binary/ordinal
     bifreq      <- vector("list", length=ngroups)
+
     # extra sample statistics per group
-    icov          <- vector("list", length=ngroups)
-    cov.log.det   <- vector("list", length=ngroups)
-    WLS.obs       <- vector("list", length=ngroups)
-    missing.      <- vector("list", length=ngroups)
-    missing.h1.   <- vector("list", length=ngroups)
-    missing.flag. <- FALSE
+    icov            <- vector("list", length=ngroups)
+    cov.log.det     <- vector("list", length=ngroups)
+    res.icov        <- vector("list", length=ngroups)
+    res.cov.log.det <- vector("list", length=ngroups)
+    WLS.obs         <- vector("list", length=ngroups)
+    missing.        <- vector("list", length=ngroups)
+    missing.h1.     <- vector("list", length=ngroups)
+    missing.flag.   <- FALSE
+
     # group weights
     group.w       <- vector("list", length=ngroups)
+
+    # convenience? # FIXME!
     x.idx         <- vector("list", length=ngroups)
+
 
     WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
@@ -141,7 +161,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 stop("lavaan ERROR: data contains no observations", 
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
             } else {
-            stop("lavaan ERROR: data contains only a single observation", 
+                stop("lavaan ERROR: data contains only a single observation", 
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
             }
         }
@@ -217,39 +237,62 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         }
 
         if(categorical) {
-            var[[g]]  <- CAT$VAR
-            cov[[g]]  <- unname(CAT$COV)
-            mean[[g]] <- apply(X[[g]], 2, base::mean, na.rm=TRUE)
-            notnum.idx <- which(ov.types != "numeric")
-            mean[[g]][notnum.idx] <- 0.0
 
-            # th also contains the means of numeric variables
-            th[[g]] <- unlist(CAT$TH)
-            th.nox[[g]] <- unlist(CAT$TH.NOX)
+            if(conditional.x) {
+                # residual var/cov
+                res.var[[g]]  <- unlist(CAT$VAR)
+                res.cov[[g]]  <- unname(CAT$COV)
+
+                # th also contains the means of numeric variables
+                res.th[[g]]     <- unlist(CAT$TH)
+                res.th.nox[[g]] <- unlist(CAT$TH.NOX)
+
+                # slopes
+                res.slopes[[g]] <- CAT$SLOPES
+            } else {
+                # var/cov
+                var[[g]]  <- unlist(CAT$VAR)
+                cov[[g]]  <- unname(CAT$COV)               
+
+                # mean (numeric only)
+                mean[[g]] <- apply(X[[g]], 2, base::mean, na.rm=TRUE)
+                notnum.idx <- which(ov.types != "numeric")
+                mean[[g]][notnum.idx] <- 0.0
+
+                # th also contains the means of numeric variables
+                th[[g]] <- unlist(CAT$TH)
+            }
+            # convenience
             th.idx[[g]] <- unlist(CAT$TH.IDX)
             th.names[[g]] <- unlist(CAT$TH.NAMES)
-
-            slopes[[g]] <- CAT$SLOPES
+            
         } else {
+ 
             if(conditional.x) {
                 # residual covariances!
 
                 # FIXME: how to handle missing data here?
                    Y <- cbind(X[[g]], eXo[[g]])
-                 COV <- unname(cov(Y, use="pairwise"))
+                 COV <- unname( stats::cov(Y, use="pairwise"))
                 MEAN <- unname( apply(Y, 2, base::mean, na.rm=TRUE) )
-                A <- COV[-x.idx[[g]], -x.idx[[g]], drop=FALSE]
-                B <- COV[-x.idx[[g]],  x.idx[[g]], drop=FALSE]
-                C <- COV[ x.idx[[g]],  x.idx[[g]], drop=FALSE]
-                cov[[g]] <- A - B %*% solve(C) %*% t(B)
-                var[[g]] <- diag( cov[[g]] ) 
- 
+                var[[g]] <- diag(COV)
+                cov[[g]] <- COV
                 # rescale cov by (N-1)/N? (only COV!)
                 if(rescale) {
                     # we 'transform' the sample cov (divided by n-1) 
                     # to a sample cov divided by 'n'
-                    cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                    COV <- (nobs[[g]]-1)/nobs[[g]] * COV
                 }
+                cov[[g]] <- COV
+                mean[[g]] <- MEAN
+
+                A <- COV[-x.idx[[g]], -x.idx[[g]], drop=FALSE]
+                B <- COV[-x.idx[[g]],  x.idx[[g]], drop=FALSE]
+                C <- COV[ x.idx[[g]],  x.idx[[g]], drop=FALSE]
+                # FIXME: make robust against singular C!!!
+                res.cov[[g]] <- A - B %*% solve(C) %*% t(B)
+                res.var[[g]] <- diag( cov[[g]] ) 
+ 
 
                 MY <- MEAN[-x.idx[[g]]]; MX <- MEAN[x.idx[[g]]]
                 C3 <- rbind(c(1,MX),
@@ -257,15 +300,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 B3 <- cbind(MY, B + tcrossprod(MY,MX))
                 COEF <- unname(solve(C3, t(B3)))
 
-                mean[[g]]   <- COEF[1,]                  # intercepts
-                slopes[[g]] <- t(COEF[-1,,drop = FALSE]) # slopes
+                res.int[[g]]    <- COEF[1,]                  # intercepts
+                res.slopes[[g]] <- t(COEF[-1,,drop = FALSE]) # slopes
 
             } else {
-                cov[[g]]  <-   cov(X[[g]], use="pairwise") # must be pairwise
+                cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
                 var[[g]]  <-   diag(cov[[g]])
                 # rescale cov by (N-1)/N? (only COV!)
                 if(rescale) {
-                    # we 'transform' the sample cov (divided by n-1) 
+                    # we 'transform' the sample cov (divided by n-1)
                     # to a sample cov divided by 'n'
                     cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
                 }
@@ -275,71 +318,36 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             # icov and cov.log.det (but not if missing)
             if(missing != "ml") {
-                tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
-                if(inherits(tmp, "try-error")) {
-                    if(ngroups > 1) {
-                        warning("lavaan WARNING sample covariance can not be inverted in group: ", g)
-                    } else {
-                        warning("lavaan WARNING: sample covariance can not be inverted")
-                    }
-                    # ok, try ridging for exogenous x only
-                    ## FIXME -- only x (but all for now)
-                    ridge.eps <- ridge
-                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
-                    tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
-                    if(inherits(tmp, "try-error")) {
-                        # emergency values
-                        icov[[g]] <- MASS::ginv(cov[[g]])
-                        cov.log.det[[g]] <- log(.Machine$double.eps)
-                    } else {
-                        cov.log.det[[g]] <- attr(tmp, "logdet")
-                        attr(tmp, "logdet") <- NULL
-                        icov[[g]]        <- tmp
-                    }
-                } else {
-                    cov.log.det[[g]] <- attr(tmp, "logdet")
-                    attr(tmp, "logdet") <- NULL
-                    icov[[g]]        <- tmp
+                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
+                           ngroups = ngroups, g = g, warn = TRUE)
+                icov[[g]] <- out$icov
+                cov.log.det[[g]] <- out$cov.log.det
+
+                # the same for res.cov if conditional.x = TRUE
+                if(conditional.x) {
+                    out <- lav_samplestats_icov(COV = res.cov[[g]], ridge=ridge,
+                               ngroups = ngroups, g = g, warn = TRUE)
+                    res.icov[[g]] <- out$icov
+                    res.cov.log.det[[g]] <- out$cov.log.det
                 }
             }
         }
 
 
         # WLS.obs
-        if(categorical) {
-            # order of elements is important here:
-            # 1. thresholds + (negative) means (interleaved)
-            # 2. slopes (if any)
-            # 3. variances (if any)
-            # 4. covariance matrix (no diagonal!)
-            TH <- th[[g]]
-
-            # NOTE: prior to 0.5-17, we had this:
-            # TH[ov.types == "numeric"] <- -1*TH[ov.types == "numeric"]
-            # which is WRONG if we have more than one threshold per variable
-            # (thanks to Sacha Epskamp for spotting this!)
-            TH[ th.idx[[g]] == 0 ] <- -1*TH[ th.idx[[g]] == 0 ]
-
-            WLS.obs[[g]] <- c(TH,
-                              lav_matrix_vec(slopes[[g]]),
-                              unlist(var[[g]][ov.types == "numeric"]),
-                              lav_matrix_vech(cov[[g]], diagonal=FALSE))
-        } else if(!categorical && meanstructure) {
-            WLS.obs[[g]] <- c(mean[[g]],
-                              lav_matrix_vec(slopes[[g]]), # if conditional.x
-                              lav_matrix_vech(cov[[g]]))
-        } else {
-            WLS.obs[[g]] <- c(lav_matrix_vec(slopes[[g]]), # if conditional.x
-                              lav_matrix_vech(cov[[g]]))
-        }
-        if(group.w.free) {
-            #group.w.last <- nobs[[ngroups]] / sum(unlist(nobs))
-            #WLS.obs[[g]] <- c(log(group.w[[g]]/group.w.last), WLS.obs[[g]])
-            WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
-        }
+        WLS.obs[[g]] <- lav_samplestats_wls_obs(mean.g = mean[[g]], 
+            cov.g = cov[[g]], var.g = var[[g]], th.g = th[[g]], 
+            th.idx.g = th.idx[[g]], res.int.g = res.int[[g]], 
+            res.cov.g = res.cov[[g]], res.var.g = res.var[[g]], 
+            res.th.g = res.th[[g]],  res.slopes.g = res.slopes[[g]],
+            group.w.g = group.w[[g]], 
+            categorical = categorical, conditional.x = conditional.x,
+            meanstructure = meanstructure, slopestructure = conditional.x,
+            group.w.free = group.w.free)
 
         # if missing = "fiml", sample statistics per pattern
         if(missing == "ml") {
+            stopifnot(!conditional.x) # for now
             missing.flag. <- TRUE
             missing.[[g]] <- 
                 getMissingPatternStats(X  = X[[g]],
@@ -365,15 +373,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     Y <- X[[g]]
                 }
                 NACOV[[g]] <- 
-                    lav_samplestats_Gamma(Y             = Y,
-                                          x.idx         = x.idx[[g]],
+                    lav_samplestats_Gamma(Y              = Y,
+                                          x.idx          = x.idx[[g]],
                                           # FALSE for now, until we use to
                                           # compute SB
                                           #fixed.x       = fixed.x,
-                                          conditional.x = conditional.x,
-                                          meanstructure = meanstructure,
-                                          slopes        = FALSE,
-                                          Mplus.WLS     = FALSE)
+                                          conditional.x  = conditional.x,
+                                          meanstructure  = meanstructure,
+                                          slopestructure = conditional.x,
+                                          Mplus.WLS      = FALSE)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
                     # sample size large enough?
@@ -401,12 +409,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     } else {
                         Y <- X[[g]]
                     }
-                    NACOV[[g]] <- lav_samplestats_Gamma(Y             = Y,
-                                                        x.idx         = x.idx[[g]],
-                                                        fixed.x       = fixed.x,
-                                               conditional.x = conditional.x,
+                    NACOV[[g]] <- 
+                        lav_samplestats_Gamma(Y             = Y,
+                                              x.idx         = x.idx[[g]],
+                                              fixed.x       = fixed.x,
+                                              conditional.x = conditional.x,
                                               meanstructure = meanstructure,
-                                              slopes        = TRUE,
+                                              slopestructure = conditional.x,
                                               Mplus.WLS = (mimic=="Mplus"))
                 } else { # categorical case
                     NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
@@ -424,24 +433,18 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 #    if(mimic == "Mplus") { # is this a bug in Mplus?
                 #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
                 #    }
-                if(conditional.x) {
-                    Y = cbind(X[[g]], eXo[[g]])
-                } else {
-                    Y = X[[g]]
-                }
+
+                # Note: we need the 'original' COV/MEAN/ICOV
+                #        sample statistics; not the 'residual' version
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
-                                                 #ICOV = icov[[g]],
-                                                 #COV  = cov[[g]],
-                                                 #MEAN = mean[[g]],
-                       # FIXME: we need the 'original' COV/MEAN/ICOV
-                       #        sample statistics; not the 'residual'
-                       #        version
-                                                 Y = Y,
-                                                 x.idx = x.idx[[g]],
-                                                 fixed.x = fixed.x,
-                                                 conditional.x = conditional.x,
-                                                 meanstructure = meanstructure,
-                                                 slopes = conditional.x)
+                    ICOV           = icov[[g]],
+                    COV            = cov[[g]],
+                    MEAN           = mean[[g]],
+                    x.idx          = x.idx[[g]],
+                    fixed.x        = fixed.x,
+                    conditional.x  = conditional.x,
+                    meanstructure  = meanstructure,
+                    slopestructure = conditional.x)
             } else if(estimator == "ML") {
                 # no WLS.V here, since function of model-implied moments
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
@@ -515,13 +518,20 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        CAT = CAT, # debug only
                        # sample moments
                        th           = th,
-                       th.nox       = th.nox,
                        th.idx       = th.idx,
                        th.names     = th.names,
                        mean         = mean,
                        cov          = cov,
                        var          = var,
-                       slopes       = slopes,
+
+                       # residual (y | x)
+                       res.cov      = res.cov,
+                       res.var      = res.var,
+                       res.th       = res.th,
+                       res.th.nox   = res.th.nox,
+                       res.slopes   = res.slopes,
+                       res.int      = res.int,
+
                        mean.x       = mean.x,
                        cov.x        = cov.x,
                        bifreq       = bifreq,
@@ -534,18 +544,20 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        x.idx        = x.idx,
 
                        # extra sample statistics
-                       icov         = icov,
-                       cov.log.det  = cov.log.det,
-                       ridge        = ridge.eps,
-                       WLS.obs      = WLS.obs,
-                       WLS.V        = WLS.V,
-                       WLS.VD       = WLS.VD,
-                       NACOV        = NACOV,
+                       icov            = icov,
+                       cov.log.det     = cov.log.det,
+                       res.icov        = res.icov,
+                       res.cov.log.det = res.cov.log.det,
+                       ridge           = ridge.eps,
+                       WLS.obs         = WLS.obs,
+                       WLS.V           = WLS.V,
+                       WLS.VD          = WLS.VD,
+                       NACOV           = NACOV,
 
                        # missingness
-                       missing.flag = missing.flag.,
-                       missing      = missing.,
-                       missing.h1   = missing.h1.
+                       missing.flag    = missing.flag.,
+                       missing         = missing.,
+                       missing.h1      = missing.h1.
                       )
 
     lavSampleStats
@@ -587,23 +599,43 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     var         <- vector("list", length=ngroups)
     mean        <- vector("list", length=ngroups)
     th          <- vector("list", length=ngroups)
-    th.nox      <- vector("list", length=ngroups)
     th.idx      <- vector("list", length=ngroups)
     th.names    <- vector("list", length=ngroups)
-    slopes      <- vector("list", length=ngroups)
+
+    # residual (y | x)
+    res.cov     <- vector("list", length=ngroups)
+    res.var     <- vector("list", length=ngroups)
+    res.th      <- vector("list", length=ngroups)
+    res.th.nox  <- vector("list", length=ngroups)
+    res.slopes  <- vector("list", length=ngroups)
+    res.int     <- vector("list", length=ngroups)
+
+    # fixed.x
     mean.x      <- vector("list", length=ngroups)
     cov.x       <- vector("list", length=ngroups)
+
     bifreq      <- vector("list", length=ngroups)
+
     # extra sample statistics per group
     icov          <- vector("list", length=ngroups)
     cov.log.det   <- vector("list", length=ngroups)
-    WLS.obs       <- vector("list", length=ngroups)
-    missing.      <- vector("list", length=ngroups)
-    missing.h1.   <- vector("list", length=ngroups)
-    missing.flag. <- FALSE
+    res.icov        <- vector("list", length=ngroups)
+    res.cov.log.det <- vector("list", length=ngroups)
+    WLS.obs         <- vector("list", length=ngroups)
+    missing.        <- vector("list", length=ngroups)
+    missing.h1.     <- vector("list", length=ngroups)
+    missing.flag.   <- FALSE
+
     # group weights
-    group.w       <- vector("list", length=ngroups)
-    x.idx         <- vector("list", length=ngroups)
+    group.w         <- vector("list", length=ngroups)
+    x.idx           <- vector("list", length=ngroups)
+
+    # for now, we do NOT support categorical data (using moments only),
+    # fixed.x, and conditional.x
+    categorical <- FALSE
+    fixed.x <- FALSE
+    conditional.x <- FALSE
+
 
     WLS.VD <- vector("list", length=ngroups)
     if(is.null(WLS.V)) {
@@ -711,42 +743,32 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
         }
 
+        # FIXME: create res.cov if conditional.x = TRUE!!!
+        stopifnot(!conditional.x)
+
         # icov and cov.log.det
-        tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
-        if(inherits(tmp, "try-error")) {
-            if(ngroups > 1) {
-                warning("lavaan WARNING sample covariance can not be inverted in group: ", g)
-            } else {
-                warning("lavaan WARNING: sample covariance can not be inverted")
-            }
-            # ok, try ridging for exogenous x only
-            ## FIXME -- only x (but all for now)
-            ridge.eps <- ridge
-            diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
-            tmp <- try(inv.chol(cov[[g]], logdet=TRUE), silent=TRUE)
-            if(inherits(tmp, "try-error")) {
-                # emergency values
-                icov[[g]] <- MASS::ginv(cov[[g]])
-                cov.log.det[[g]] <- log(.Machine$double.eps)
-            } else {
-                cov.log.det[[g]] <- attr(tmp, "logdet")
-                attr(tmp, "logdet") <- NULL
-                icov[[g]]        <- tmp
-            }
-        } else {
-            cov.log.det[[g]] <- attr(tmp, "logdet")
-            attr(tmp, "logdet") <- NULL
-            icov[[g]]        <- tmp
+        out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
+                   ngroups = ngroups, g = g, warn = TRUE)
+        icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
+
+        # the same for res.cov if conditional.x = TRUE
+        if(conditional.x) {
+            out <- lav_samplestats_icov(COV = res.cov[[g]], ridge = ridge,
+                       ngroups = ngroups, g = g, warn = TRUE)
+            res.icov[[g]] <- out$icov
+            res.cov.log.det[[g]] <- out$cov.log.det
         }
 
         # WLS.obs
-        if(meanstructure) 
-            WLS.obs[[g]] <- c(mean[[g]], lav_matrix_vech(cov[[g]]))
-        else
-            WLS.obs[[g]] <- lav_matrix_vech(cov[[g]])
-        if(group.w.free) {
-            WLS.obs[[g]] <- c(group.w[[g]], WLS.obs[[g]])
-        }
+        WLS.obs[[g]] <- lav_samplestats_wls_obs(mean.g = mean[[g]],
+            cov.g = cov[[g]], var.g = var[[g]], th.g = th[[g]],
+            th.idx.g = th.idx[[g]], res.int.g = res.int[[g]],
+            res.cov.g = res.cov[[g]], res.var.g = res.var[[g]],
+            res.th.g = res.th[[g]], res.slopes.g = res.slopes[[g]],
+            group.w.g = group.w[[g]],
+            categorical = categorical, conditional.x = conditional.x,
+            meanstructure = meanstructure, slopestructure = conditional.x,
+            group.w.free = group.w.free)
 
         # NACOV
         # NACOV (=GAMMA)
@@ -769,7 +791,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                                  fixed.x = fixed.x,
                                                  conditional.x = conditional.x,
                                                  meanstructure = meanstructure,
-                                                 slopes = conditional.x)
+                                                 slopestructure = conditional.x)
             } else if(estimator == "ULS") {
                 WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
                 WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
@@ -793,15 +815,25 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
                        # sample moments
                        th           = th,
-                       th.nox       = th.nox,
                        th.idx       = th.idx,
                        th.names     = th.names,
                        mean         = mean,
                        cov          = cov,
                        var          = var,
-                       slopes       = slopes,
+
+                       # residual (y | x)
+                       res.cov      = res.cov,
+                       res.var      = res.var,
+                       res.th       = res.th,
+                       res.th.nox   = res.th.nox,
+                       res.slopes   = res.slopes,
+                       res.int      = res.int,
+
+                       # fixed.x
                        mean.x       = mean.x,
                        cov.x        = cov.x,
+
+                       # other
                        bifreq       = bifreq,
                        group.w      = group.w,
 
@@ -814,16 +846,18 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                        # extra sample statistics
                        icov         = icov,
                        cov.log.det  = cov.log.det,
-                       ridge        = ridge.eps,
-                       WLS.obs      = WLS.obs,
-                       WLS.V        = WLS.V,
-                       WLS.VD       = WLS.VD,
-                       NACOV        = NACOV,
+                       res.icov         = res.icov,
+                       res.cov.log.det  = res.cov.log.det,
+                       ridge            = ridge.eps,
+                       WLS.obs          = WLS.obs,
+                       WLS.V            = WLS.V,
+                       WLS.VD           = WLS.VD,
+                       NACOV            = NACOV,
 
                        # missingness
-                       missing.flag = missing.flag.,
-                       missing      = missing.,
-                       missing.h1   = missing.h1.
+                       missing.flag     = missing.flag.,
+                       missing          = missing.,
+                       missing.h1       = missing.h1.
 
                       )
 

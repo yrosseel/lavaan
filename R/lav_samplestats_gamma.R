@@ -9,7 +9,7 @@
 # input for lavGamma can be lavobject, lavdata, data.frame, or matrix
 lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
-                     meanstructure = FALSE, slopes = FALSE,
+                     meanstructure = FALSE, slopestructure = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
     
     if(inherits(object, "lavaan")) {
@@ -49,13 +49,13 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                       lavdata@ov.names[[g]]) )
 
     OUT <- lapply(seq_len(lavdata@ngroups),
-              function(g) lav_samplestats_Gamma(Y             = Y[[g]],
-                                                x.idx         = x.idx[[g]],
-                                                fixed.x       = fixed.x,
-                                                conditional.x = conditional.x,
-                                                meanstructure = meanstructure,
-                                                slopes        = slopes,
-                                                Mplus.WLS     = Mplus.WLS))
+              function(g) lav_samplestats_Gamma(Y              = Y[[g]],
+                                                x.idx          = x.idx[[g]],
+                                                fixed.x        = fixed.x,
+                                                conditional.x  = conditional.x,
+                                                meanstructure  = meanstructure,
+                                                slopestructure = slopestructure,
+                                                Mplus.WLS      = Mplus.WLS))
   
     OUT
 }
@@ -68,15 +68,15 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_Gamma_NT <- function(Y             = NULL,
-                                     COV           = NULL,
-                                     MEAN          = NULL,
-                                     rescale       = FALSE,
-                                     x.idx         = integer(0L),
-                                     fixed.x       = FALSE,
-                                     conditional.x = FALSE,
-                                     meanstructure = FALSE,
-                                     slopes        = FALSE) {
+lav_samplestats_Gamma_NT <- function(Y              = NULL,
+                                     COV            = NULL,
+                                     MEAN           = NULL,
+                                     rescale        = FALSE,
+                                     x.idx          = integer(0L),
+                                     fixed.x        = FALSE,
+                                     conditional.x  = FALSE,
+                                     meanstructure  = FALSE,
+                                     slopestructure = FALSE) {
 
     # check arguments
     if(length(x.idx) == 0L) {
@@ -97,7 +97,7 @@ lav_samplestats_Gamma_NT <- function(Y             = NULL,
     }
 
     if(conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
-       (meanstructure || slopes)) {
+       (meanstructure || slopestructure)) {
        stopifnot(!is.null(Y))
        MEAN <- colMeans(Y)
     }
@@ -159,7 +159,7 @@ lav_samplestats_Gamma_NT <- function(Y             = NULL,
         Cov.YbarX <- A - B %*% solve(C) %*% t(B)
         Gamma <- 2*lav_matrix_duplication_ginv_pre_post(Cov.YbarX %x% Cov.YbarX)
 
-        if(meanstructure || slopes) {
+        if(meanstructure || slopestructure) {
             MY <- M[-x.idx]; MX <- M[x.idx]
             C3 <- rbind(c(1,MX),
                         cbind(MX, C + tcrossprod(MX)))
@@ -167,13 +167,13 @@ lav_samplestats_Gamma_NT <- function(Y             = NULL,
         }
 
         if(meanstructure) {
-            if(slopes) {
+            if(slopestructure) {
                 A11 <- solve(C3) %x% Cov.YbarX
             } else {
                 A11 <- solve(C3)[1, 1, drop=FALSE] %x% Cov.YbarX
             }
         } else {
-            if(slopes) {
+            if(slopestructure) {
                 A11 <- solve(C3)[-1, -1, drop=FALSE] %x% Cov.YbarX
             } else {
                 A11 <- matrix(0,0,0)
@@ -199,7 +199,7 @@ lav_samplestats_Gamma <- function(Y,
                                   fixed.x        = FALSE,
                                   conditional.x  = FALSE,
                                   meanstructure  = FALSE,
-                                  slopes         = FALSE, 
+                                  slopestructure = FALSE, 
                                   Mplus.WLS      = FALSE,
                                   add.attributes = FALSE) {
     # coerce to matrix
@@ -275,14 +275,14 @@ lav_samplestats_Gamma <- function(Y,
         idx1 <- lav_matrix_vech_col_idx(p)
         idx2 <- lav_matrix_vech_row_idx(p)
 
-        if(meanstructure || slopes) {
+        if(meanstructure || slopestructure) {
             XtX.inv <- unname(solve(crossprod(X)))
             Xi <- (X %*% XtX.inv) * N ## FIXME, shorter way?
             ncX <- NCOL(X); ncY <- NCOL(RES)
         }
 
         if(meanstructure) {
-            if(slopes) {
+            if(slopestructure) {
                  Xi.idx <- rep(seq_len(ncX), each  = ncY)
                 Res.idx <- rep(seq_len(ncY), times = ncX)
                 Z <- cbind( Xi[, Xi.idx, drop = FALSE] *
@@ -297,7 +297,7 @@ lav_samplestats_Gamma <- function(Y,
                            RES[,   idx2, drop = FALSE] )
             }
         } else {
-            if(slopes) {
+            if(slopestructure) {
                  Xi.idx <- rep(seq_len(ncX), each  = ncY)
                  Xi.idx <- Xi.idx[ -seq_len(ncY) ]
                 Res.idx <- rep(seq_len(ncY), times = (ncX - 1L))

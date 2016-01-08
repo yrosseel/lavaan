@@ -27,7 +27,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         sample.mean <- lavsamplestats@mean
     }
     if(is.null(sample.slopes) && !is.null(lavsamplestats)) {
-        sample.slopes <- lavsamplestats@slopes
+        sample.slopes <- lavsamplestats@res.slopes
     }
     if(is.null(sample.th) && !is.null(lavsamplestats)) {
          sample.th <- lavsamplestats@th

@@ -226,9 +226,9 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    VY <- computeVY(lavmodel = lavobject@Model,
-                    GLIST = GLIST,
-                    lavsamplestats = lavobject@SampleStats)
+    VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
+                    lavsamplestats = lavobject@SampleStats, 
+                    diagonal.only = TRUE)
 
     for(g in 1:lavobject@Data@ngroups) {
 
@@ -390,9 +390,9 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    VY <- computeVY(lavmodel       = lavobject@Model,
-                    GLIST          = GLIST,
-                    lavsamplestats = lavobject@SampleStats)
+    VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
+                    lavsamplestats = lavobject@SampleStats,
+                    diagonal.only = TRUE)
 
     for(g in 1:lavobject@Data@ngroups) {
 
