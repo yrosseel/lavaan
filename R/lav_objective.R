@@ -252,7 +252,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     PCOL <- col(PSTAR)
 
     # shortcut for all ordered - tablewise
-    if(all(ov.types == "ordered")) {
+    if(all(ov.types == "ordered") && nexo==0L) {
         # prepare for Myrsini's vectorization scheme
         LONG2 <- LongVecTH.Rho(no.x               = nvar,
                                all.thres          = TH,
