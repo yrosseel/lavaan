@@ -18,16 +18,36 @@ lav_partable_independence <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
     }
 
+    # conditional.x ? check res.cov[[1]] slot
+    if(is.null(lavsamplestats@res.cov[[1]])) {
+        conditional.x <- FALSE
+    } else {
+        conditional.x <- TRUE
+    }
+
     # if user-based moments are given, use these
     if(is.null(sample.cov) && !is.null(lavsamplestats)) {
-        sample.cov <- lavsamplestats@cov
+        if(conditional.x) {
+            sample.cov <- lavsamplestats@res.cov
+        } else {
+            sampl.ecov <- lavsamplestats@cov
+        }
     }
     if(is.null(sample.mean) && !is.null(lavsamplestats)) {
-        sample.mean <- lavsamplestats@mean
+        if(conditional.x) {
+            sample.mean <- lavsamplestats@res.int
+        } else {
+            sample.mean <- lavsamplestats@mean
+        }
     }
     if(is.null(sample.th) && !is.null(lavsamplestats)) {
-         sample.th <- lavsamplestats@th
+         if(conditional.x) {
+             sample.th <- lavsamplestats@res.th
+         } else {
+             sample.th <- lavsamplestats@th
+         }
     }
+
     if(is.null(sample.th.idx) && !is.null(lavsamplestats)) {
          sample.th.idx <- lavsamplestats@th.idx
     }
@@ -39,7 +59,15 @@ lav_partable_independence <- function(lavobject      = NULL,
 
     # what with fixed.x?
     if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
-        fixed.x = lavoptions$fixed.x
+        #fixed.x = lavoptions$fixed.x
+        ##### IMPORTANT #####
+        # we always use 'fixed.x', thereby allowing the exogenous
+        # variables to correlate, even if in the original model,
+        # fixed.x = FALSE
+        #
+        # the rationale is that it seems very unrealistic (in most settings)
+        # to have uncorrelated exogenous covariates
+        fixed.x = TRUE
         ov.names.x = lavdata@ov.names.x
     } else if(lavoptions$mimic == "EQS") {
         # always ignore fixed.x
@@ -53,17 +81,12 @@ lav_partable_independence <- function(lavobject      = NULL,
 
     ngroups <- length(ov.names)
 
-    # DO NOT USE: ov.names.nox <- lavobject@pta$vnames$ov.nox
-    # even if fixed.x = FALSE, we need to make a distinction
-    #ov.names.nox <- lapply(seq_len(ngroups), function(g)
-    #            ov.names[[g]][ !ov.names[[g]] %in% ov.names.x[[g]] ])
 
     lhs <- rhs <- op <- character(0)
     group <- free <- exo <- integer(0)
     ustart <- numeric(0)
 
     categorical <- any(ov$type == "ordered")
-    conditional.x <- lavoptions$conditional.x
 
     for(g in 1:ngroups) {
 
@@ -184,7 +207,7 @@ lav_partable_independence <- function(lavobject      = NULL,
             free[exo.idx] <- 0L
 
             # fix means
-            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+            exo.idx <- which(lhs %in% ov.names.x[[g]] &
                              op == "~1" & group == g)
             exo[exo.idx] <- 1L
             free[exo.idx] <- 0L

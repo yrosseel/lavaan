@@ -1,5 +1,17 @@
 # casewise likelihoods
 
+# closed-form marginal likelihood
+# - classic SEM models, continous observed variables only
+lav_model_lik_ml <- function(lavmodel       = NULL,
+                             GLIST          = NULL,
+                             lavdata        = NULL,
+                             lavsamplestats = NULL) {
+
+
+}
+
+
+# marginal ML
 lav_model_lik_mml <- function(lavmodel    = NULL,
                               THETA       = NULL,
                               TH          = NULL,

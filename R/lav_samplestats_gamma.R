@@ -250,6 +250,10 @@ lav_samplestats_Gamma <- function(Y,
         #Gamma = (N-1)/N * cov(Z, use = "pairwise")
         # we center so we can use crossprod instead of cov
         Zc <- base::scale(Z, center = TRUE, scale = FALSE)
+
+        # note: centering is the same as substracting lav_matrix_vech(S),
+        # where S is the sample covariance matrix (divided by N)
+
         if(anyNA(Zc)) {
             Gamma <- lav_matrix_crossprod(Zc) / N
         } else {

@@ -1,28 +1,3 @@
-# compute loglikelihood multivariate normal distribution
-# using sample moments
-lav_loglik_mvnorm_samplestats <- function(mu = NULL, sigma = NULL,
-                                          sample.cov = NULL, 
-                                          sample.mean = NULL,
-                                          sample.nobs = NULL,
-                                          include.constant = TRUE) {
-
-    sigma.inv <- inv.chol(sigma, logdet = TRUE)
-    sigma.log.det <- attr(sigma.inv, "logdet")
-    nvar <- nrow(sigma)
-    W <- sample.cov + tcrossprod(sample.mean - mu)
-
-    if(include.constant) {
-         constant <- - sample.nobs*nvar/2*log(2*pi)
-    } else {
-         constant <- 0
-    }
-
-    logl <- ( constant -
-              sample.nobs/2*sigma.log.det -
-              sample.nobs/2*sum(sigma.inv * W) ) # tr(AB) = sum(A * t(B))
-    logl
-}
-
 
 # simple derivatives of the normal distribution
 

@@ -983,3 +983,34 @@ lav_matrix_orthogonal_complement2 <- function(A,
 }
 
 
+# inverse of a positive-definite symmetric matrix
+# FIXME: error handling?
+lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, method = "eigen") {
+
+    if(method == "eigen") {
+        EV <- eigen(S, symmetric = TRUE)
+        # V %*% diag(1/d) %*% V^{-1}, where V^{-1} = V^T
+        S.inv <- tcrossprod(sweep(EV$vector, 2L, 
+                                  STATS = (1/EV$values), FUN="*"), EV$vector)
+        if(logdet) {
+            attr(S.inv, "logdet") <- sum(log(EV$values))
+        }
+    } else if(method == "solve") {
+        S.inv <- solve(S)
+        if(logdet) {
+            ev <- eigen(S, symmetric = TRUE, only.values = TRUE)
+            attr(S.inv, "logdet") <- sum(log(ev$values))
+        }
+    } else if(method == "chol") {
+        cS <- chol(S)
+        S.inv <- chol2inv(cS)
+        if(logdet) {
+            diag.cS <- diag(cS)
+            attr(S.inv, "logdet") <- sum(log(diag.cS * diag.cS))
+        }
+    } else {
+        stop("method must be either `eigen', `solve' or `chol'")
+    }
+
+    S.inv
+}

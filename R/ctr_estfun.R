@@ -1,13 +1,15 @@
 # contributed by Ed Merkle (17 Jan 2013)
 
-# small changes by YR (12 Feb 2013) to match the results
-# of lav_model_gradient in the multiple group case
 
+# YR 12 Feb 2013: small changes to match the results of lav_model_gradient 
+#                 in the multiple group case
 # YR 30 May 2014: handle 1-variable case (fixing apply in lines 56, 62, 108)
-# YR 05 Nov 2015: add remove.duplicated = TRUE, do cope with strucchange in 
+# YR 05 Nov 2015: add remove.duplicated = TRUE, to cope with strucchange in 
 #                 case of simple equality constraints
 # YR 19 Nov 2015: if constraints have been used, compute case-wise Lagrange
 #                 multipliers, and define the scores as: SC + (t(R) lambda)
+# YR 11 Jan 2016: (preliminary) support for conditional.x (but ignoring the
+#                 slopestructure, for now)
 
 estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
                                        ignore.constraints = FALSE,
@@ -21,7 +23,6 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
       warning("lavaan WARNING: scores only availalbe if estimator is ML")
       return(matrix(0,0,0))
   }
-
 
   # shortcuts
   lavdata        <- object@Data
@@ -58,7 +59,11 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   
     if(!lavsamplestats@missing.flag) { # complete data
       #if(lavmodel@meanstructure) { # mean structure
-        nvar <- ncol(lavsamplestats@cov[[g]])
+        if(lavmodel@conditional.x) {
+            nvar <- ncol(lavsamplestats@res.cov[[g]])
+        } else {
+            nvar <- ncol(lavsamplestats@cov[[g]])
+        }
         Mu.hat <- moments$mean
         X <- lavdata@X[[g]]
         Sigma.inv <- inv.chol(Sigma.hat, logdet=FALSE)
@@ -68,18 +73,22 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
         J2 <- matrix(1, nvar, nvar)
         diag(J2) <- 0.5
 
-        if(lavmodel@meanstructure) {
+        if(lavmodel@conditional.x) {
+
+        } else if(lavmodel@meanstructure) {
             ## scores.H1 (H1 = saturated model)
             mean.diff <- t(t(X) - Mu.hat %*% J)
-
             dx.Mu <- -1 * mean.diff %*% Sigma.inv
-
             dx.Sigma <- t(matrix(apply(mean.diff, 1L,
                function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
 
             scores.H1 <- cbind(dx.Mu, dx.Sigma)
         } else {
-            mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
+            if(lavmodel@conditional.x) {
+                mean.diff <- t(t(X) - lavsamplestats@res.int[[g]] %*% J)
+            } else {
+                mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
+            }
             dx.Sigma <- t(matrix(apply(mean.diff, 1L,
                function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x)*N1 - Sigma.hat) %*% Sigma.inv))), ncol=nrow(mean.diff)))
             scores.H1 <- dx.Sigma
@@ -102,7 +111,11 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
       group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
 
       Mu.hat <- moments$mean
-      nvar <- ncol(lavsamplestats@cov[[g]])
+      if(lavmodel@conditional.x) {
+           nvar <- ncol(lavsamplestats@res.cov[[g]])
+      } else {
+          nvar <- ncol(lavsamplestats@cov[[g]])
+      }
       score.sigma   <- matrix(0, nsub, nvar*(nvar+1)/2)
       score.mu <- matrix(0, nsub, nvar)
     
