@@ -284,31 +284,45 @@ lav_model_gradient <- function(lavmodel       = NULL,
             S <- lavsamplestats@res.cov[[g]]
     
             # beta
-            obs.beta <- c(lavsamplestats@res.int[[g]], 
-                          lav_matrix_vec(lavsamplestats@res.slopes[[g]]))
-            est.beta <- c(Mu.g,  lav_matrix_vec(PI.g))
-            beta.COV <- C3 %x% Sigma.inv
+            OBS <- t( cbind(lavsamplestats@res.int[[g]],
+                            lavsamplestats@res.slopes[[g]]) )
+            EST <- t( cbind(Mu.g, PI.g) )
+            #obs.beta <- c(lavsamplestats@res.int[[g]], 
+            #              lav_matrix_vec(lavsamplestats@res.slopes[[g]]))
+            #est.beta <- c(Mu.g,  lav_matrix_vec(PI.g))
+            #beta.COV <- C3 %x% Sigma.inv
 
-            a <- t(obs.beta - est.beta)
-            b <- as.matrix(obs.beta - est.beta)
+            #a <- t(obs.beta - est.beta)
+            #b <- as.matrix(obs.beta - est.beta)
             #K <- lav_matrix_commutation(m = nvar, n = nvar)
             #AB <- (K %x% diag(NROW(C3)*NROW(C3))) %*%
             #          (diag(nvar) %x% lav_matrix_vec(C3) %x% diag(nvar))
-            K <- lav_matrix_commutation(m = nvar, n = NROW(C3))
-            AB <- ( diag(NROW(C3)) %x% K %x% diag(nvar) ) %*%
-                    (lav_matrix_vec(C3) %x% diag( nvar * nvar) )
+            #K <- lav_matrix_commutation(m = nvar, n = NROW(C3))
+            #AB <- ( diag(NROW(C3)) %x% K %x% diag(nvar) ) %*%
+            #        (lav_matrix_vec(C3) %x% diag( nvar * nvar) )
 
-            POST.beta <- 2 *  beta.COV %*% (obs.beta - est.beta)
+            #POST.beta <- 2 *  beta.COV %*% (obs.beta - est.beta)
+            d.BETA <- C3 %*% (OBS - EST) %*% Sigma.inv
+            # NOTE: the vecr here, unlike lav_mvreg_dlogl_beta
+            #       this is because DELTA has used vec(t(BETA)), 
+            #       instead of vec(BETA)
+            POST.beta <- 2 * lav_matrix_vecr(d.BETA)
 
-            POST.sigma1 <- lav_matrix_duplication_pre(
-                    (Sigma.inv %x% Sigma.inv)  %*% t(AB)  %*% (t(a) %x% b) )
+            #POST.sigma1 <- lav_matrix_duplication_pre(
+            #        (Sigma.inv %x% Sigma.inv)  %*% t(AB)  %*% (t(a) %x% b) )
 
             # Sigma
-            POST.sigma2 <- lav_matrix_duplication_pre(
-                             matrix( lav_matrix_vec( 
-                      Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)), ncol = 1L))
+            #POST.sigma2 <- lav_matrix_duplication_pre(
+            #                 matrix( lav_matrix_vec( 
+            #          Sigma.inv %*% (S - Sigma) %*% t(Sigma.inv)), ncol = 1L))
+            W.tilde <- S + t(OBS - EST) %*% C3 %*% (OBS - EST)
+            d.SIGMA <- (Sigma.inv - Sigma.inv %*% W.tilde %*% Sigma.inv)
+            d.vechSigma <- as.numeric( lav_matrix_duplication_pre(
+                                       as.matrix(lav_matrix_vec(d.SIGMA)) ) )
+            POST.sigma <- -1 * d.vechSigma
 
-            POST <- c(POST.beta, POST.sigma1 + POST.sigma2)
+            #POST <- c(POST.beta, POST.sigma1 + POST.sigma2)
+            POST <- c(POST.beta, POST.sigma)
 
             group.dx <- as.numeric( -1 * crossprod(Delta[[g]], POST) )
 

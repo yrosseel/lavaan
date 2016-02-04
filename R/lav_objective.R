@@ -49,12 +49,10 @@ estimator.ML_res <- function(Sigma.hat=NULL, Mu.hat=NULL, PI=NULL,
     objective.sigma <- ( Sigma.hat.log.det + sum(res.cov * Sigma.hat.inv) -
                          res.cov.log.det - nvar )
     # beta
-    obs.beta <- c(res.int, lav_matrix_vec(res.slopes))
-    est.beta <- c(Mu.hat,  lav_matrix_vec(PI))
-    beta.COV <- C3 %x% Sigma.hat.inv 
-    #objective.beta <- as.vector((obs.beta - est.beta) %*% beta.COV %*%
-    #                           (obs.beta - est.beta))
-    objective.beta <- sum(tcrossprod(obs.beta - est.beta) * beta.COV)
+    OBS <- t(cbind(res.int, res.slopes))
+    EST <- t(cbind(Mu.hat, PI))
+    Diff <- OBS - EST
+    objective.beta <- sum(Sigma.hat.inv * crossprod(Diff, C3) %*% Diff)
 
     fx <- objective.sigma + objective.beta
 
