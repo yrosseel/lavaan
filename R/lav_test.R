@@ -44,6 +44,9 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
         if(length(x.idx[[g]]) > 0L) {
+
+            # we should not be here if we have conditional.x = TRUE
+
             nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=TRUE, type="all")
@@ -58,7 +61,11 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
 
 
         if(diagonal) {
-            tmp <- t((1/a1) * B1) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+            a1.inv <- 1/a1
+            # if fixed.x = TRUE
+            zero.idx <- which(a1 == 0.0)
+            a1.inv[zero.idx] <- 0.0
+            tmp <- t(a1.inv * B1) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
         } else {
             A1.inv <- solve(A1)
             tmp <- (B1 %*% A1.inv) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
@@ -357,12 +364,11 @@ lav_model_test <- function(lavmodel       = NULL,
     }
 
     # fixed.x idx
-    x.idx <- vector("list", length=lavsamplestats@ngroups)
-    for(g in 1:lavsamplestats@ngroups) {
-        if(lavoptions$fixed.x && estimator == "ML") {
-            x.idx[[g]] <- match(vnames(lavpartable, "ov.x", group=g), 
-                                lavdata@ov.names[[g]])
-        } else {
+    if(lavmodel@fixed.x && estimator == "ML" && !lavmodel@conditional.x) {
+        x.idx <- lavsamplestats@x.idx
+    } else {
+        x.idx <- vector("list", length=lavsamplestats@ngroups)
+        for(g in 1:lavsamplestats@ngroups) {
             x.idx[[g]] <- integer(0L)
         }
     }

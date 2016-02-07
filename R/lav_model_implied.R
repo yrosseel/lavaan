@@ -9,6 +9,13 @@ lav_model_implied <- function(lavmodel = NULL) {
     # model-implied mean structure ('mu hat')
     Mu.hat <-    computeMuHat(lavmodel = lavmodel)
 
+    # if conditional.x, slopes
+    if(lavmodel@conditional.x) {
+        SLOPES <- computePI(lavmodel = lavmodel)
+    } else {
+        SLOPES <- vector("list", length = lavmodel@ngroups)
+    }
+
     # if categorical, model-implied thresholds
     if(lavmodel@categorical) {
         TH <- computeTH(lavmodel = lavmodel)
@@ -16,5 +23,7 @@ lav_model_implied <- function(lavmodel = NULL) {
         TH <- vector("list", length = lavmodel@ngroups)
     }
 
-    list(cov = Sigma.hat, mean = Mu.hat, th = TH)
+    # FIXME: should we use 'res.cov', 'res.int', 'res.th' if conditionl.x??
+
+    list(cov = Sigma.hat, mean = Mu.hat, slopes = SLOPES, th = TH)
 }

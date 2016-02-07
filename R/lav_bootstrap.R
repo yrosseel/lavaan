@@ -47,6 +47,11 @@ bootstrapLavaan <- function(object,
     if(object@Options$test == "bollen.stine")
         stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
 
+    # check for conditional.x = TRUE
+    if(object@Model@conditional.x) {
+        stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    }
+
     bootstrap.internal(object          = object,
                        lavdata.        = NULL,
                        lavmodel.       = NULL,

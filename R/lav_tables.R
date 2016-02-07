@@ -18,6 +18,7 @@
 #                 - added many more statistics; some based on the model, some
 #                   on the unrestricted model
 # - 8 Nov 2013:   - skip empty cells for G2, instead of adding 0.5 to obs
+# - 7 Feb 2016:   - take care of conditional.x = TRUE
 
 lavTables <- function(object,
                       # what type of table?
@@ -858,13 +859,23 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
 
     # get COR, TH and th.idx
     if(!is.null(lavobject)) {
-        COR    <- lavobject@SampleStats@cov
-        TH     <- lavobject@SampleStats@th
+        if(lavobject@Model@conditional.x) {
+            COR    <- lavobject@SampleStats@res.cov
+            TH     <- lavobject@SampleStats@res.th
+        } else { 
+            COR    <- lavobject@SampleStats@cov
+            TH     <- lavobject@SampleStats@th
+        }
         TH.IDX <- lavobject@SampleStats@th.idx
     } else if(!is.null(lavdata)) {
         fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
-        COR    <- fit.un@SampleStats@cov
-        TH     <- fit.un@SampleStats@th
+        if(lavobject@Model@conditional.x) {
+            COR    <- fit.un@SampleStats@res.cov
+            TH     <- fit.un@SampleStats@res.th
+        } else {
+            COR    <- fit.un@SampleStats@cov
+            TH     <- fit.un@SampleStats@th
+        }
         TH.IDX <- fit.un@SampleStats@th.idx
     } else {
         stop("lavaan ERROR: both lavobject and lavdata are NULL")
@@ -944,8 +955,13 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
             TH         <- fit.un@Fit@TH
             TH.IDX     <- fit.un@SampleStats@th.idx
         } else {
-            Sigma.hat <- lavobject@SampleStats@cov
-            TH        <- lavobject@SampleStats@th
+            if(lavobject@Model@conditional.x) {
+                Sigma.hat <- lavobject@SampleStats@res.cov
+                TH        <- lavobject@SampleStats@res.th
+            } else {
+                Sigma.hat <- lavobject@SampleStats@cov
+                TH        <- lavobject@SampleStats@th
+            }
             TH.IDX    <- lavobject@SampleStats@th.idx
         }
     }

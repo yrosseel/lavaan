@@ -18,6 +18,12 @@ function(object, type="raw", labels=TRUE) {
         if(object@Fit@npar > 0L && !object@Fit@converged) {
             stop("lavaan ERROR: model dit not converge")
         }
+        if(object@Model@conditional.x && type == "standardized") {
+            stop("lavaan ERROR: resid + standardized + conditional.x not supported yet")
+        }
+        if(object@Model@conditional.x && type == "normalized") {
+            stop("lavaan ERROR: resid + normalized + conditional.x not supported yet")
+        }
     }
     # NOTE: for some reason, Mplus does not compute the normalized/standardized
     # residuals if estimator = MLM !!!
@@ -51,6 +57,7 @@ function(object, type="raw", labels=TRUE) {
 
     # if type == standardized, we need VarCov and Delta
     if(type == "standardized") {
+
         # fixed.x idx?
         x.idx <- integer(0)
         if(object@Options$fixed.x) {
@@ -110,8 +117,13 @@ function(object, type="raw", labels=TRUE) {
 
         # sample moments
         if(!object@SampleStats@missing.flag) {
-            S <- object@SampleStats@cov[[g]]
-            M <- object@SampleStats@mean[[g]]
+            if(object@Model@conditional.x) {
+                S <- object@SampleStats@res.cov[[g]]
+                M <- object@SampleStats@res.int[[g]]
+            } else {
+                S <- object@SampleStats@cov[[g]]
+                M <- object@SampleStats@mean[[g]]
+            }
         } else {
             S <- object@SampleStats@missing.h1[[g]]$sigma
             M <- object@SampleStats@missing.h1[[g]]$mu
@@ -140,8 +152,20 @@ function(object, type="raw", labels=TRUE) {
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
+        if(object@Model@conditional.x) {
+            R[[g]]$slopes <- ( object@SampleStats@res.slopes[[g]] -
+                               object@implied$slopes[[g]] )
+            if(labels) {
+                rownames(R[[g]]$slopes) <- ov.names[[g]]
+                colnames(R[[g]]$slopes) <- object@Data@ov.names.x[[g]]
+            }
+        }
         if(object@Model@categorical) {
-            R[[g]]$th <- object@SampleStats@th[[g]] - object@Fit@TH[[g]]
+            if(object@Model@conditional.x) {
+                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@Fit@TH[[g]]
+            } else {
+                R[[g]]$th <- object@SampleStats@th[[g]] - object@Fit@TH[[g]]
+            }
             if(length(object@Model@num.idx[[g]]) > 0L) {
                 NUM.idx <- which(object@Model@th.idx[[g]] == 0)
                 R[[g]]$th <- R[[g]]$th[ -NUM.idx ]

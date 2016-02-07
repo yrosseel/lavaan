@@ -7,6 +7,11 @@ lavExport <- function(object, target="lavaan", prefix="sem",
     stopifnot(inherits(object, "lavaan"))
     target <- tolower(target)
 
+    # check for conditional.x = TRUE
+    if(object@Model@conditional.x) {
+        stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    }
+
     ngroups <- object@Data@ngroups
     if(ngroups > 1L) {
         group.label2 <- paste(".", object@Data@group.label, sep="")

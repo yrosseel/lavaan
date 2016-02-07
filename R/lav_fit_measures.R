@@ -507,13 +507,22 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             if(logl.ok) {
                 for(g in 1:G) {
-                    nvar <- ncol(object@SampleStats@cov[[g]])
                     if(!object@SampleStats@missing.flag) {
-                        Ng <- object@SampleStats@nobs[[g]]
-                        c <- Ng*nvar/2 * log(2 * pi)
-                        logl.H1.group[g] <- ( -c -(Ng/2) *
-                                          object@SampleStats@cov.log.det[[g]]
-                                          - (Ng/2)*nvar )
+                        if(object@Model@conditional.x) {
+                            nvar <- ncol(object@SampleStats@res.cov[[g]])
+                            Ng <- object@SampleStats@nobs[[g]]
+                            c <- Ng*nvar/2 * log(2 * pi)
+                            logl.H1.group[g] <- ( -c -(Ng/2) *
+                                        object@SampleStats@res.cov.log.det[[g]]
+                                              - (Ng/2)*nvar )
+                        } else {
+                            nvar <- ncol(object@SampleStats@cov[[g]])
+                            Ng <- object@SampleStats@nobs[[g]]
+                            c <- Ng*nvar/2 * log(2 * pi)
+                            logl.H1.group[g] <- ( -c -(Ng/2) *
+                                            object@SampleStats@cov.log.det[[g]]
+                                              - (Ng/2)*nvar )
+                        }
                     } else { # missing patterns case
                         pat <- object@Data@Mp[[g]]$pat
                         Ng <- object@Data@nobs[[g]]
@@ -798,8 +807,13 @@ lav_fit_measures <- function(object, fit.measures="all",
         for(g in 1:G) {
             # observed
             if(!object@SampleStats@missing.flag) {
-                S <- object@SampleStats@cov[[g]]
-                M <- object@SampleStats@mean[[g]]
+                if(object@Model@conditional.x) {
+                    S <- object@SampleStats@res.cov[[g]]
+                    M <- object@SampleStats@res.int[[g]]
+                } else {
+                    S <- object@SampleStats@cov[[g]]
+                    M <- object@SampleStats@mean[[g]]
+                }
             } else {
                 # EM estimates
                 S <- object@SampleStats@missing.h1[[g]]$sigma

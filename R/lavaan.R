@@ -171,7 +171,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         meanstructure <- TRUE
     }
 
-
+    # 1d exogenous covariates? if not, set conditional.x to FALSE
+    if( (is.list(ov.names.x) && sum(sapply(ov.names.x, FUN = length)) == 0L) ||
+        (is.character(ov.names.x) && length(ov.names.x) == 0L) ) {
+        # if explicitly set to TRUE, give warning
+        if(is.logical(conditional.x) && conditional.x) {
+            warning("lavaan WARNING: no exogenous covariates; conditional.x will be set to FALSE")
+        }
+        conditional.x <- FALSE
+    }
 
 
 

@@ -91,7 +91,11 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         # statistic
         for(g in 1:lavsamplestats@ngroups) {
             gg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]]
-            G11 <- gg1 * lavsamplestats@cov[[g]]
+            if(lavmodel@conditional.x) {
+                G11 <- gg1 * lavsamplestats@res.cov[[g]]
+            } else {
+                G11 <- gg1 * lavsamplestats@cov[[g]]
+            }
             Gamma[[g]][1:nrow(G11), 1:nrow(G11)] <- G11
         } # g
     }

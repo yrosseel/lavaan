@@ -19,19 +19,40 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
     }
 
+    # conditional.x ? check res.cov[[1]] slot
+    conditional.x <- FALSE
+    if(!is.null(lavsamplestats) && !is.null(lavsamplestats@res.cov[[1]])) {
+        conditional.x <- TRUE
+    } else if(!is.null(lavoptions) && lavoptions$conditional.x) {
+        conditional.x <- TRUE
+    }
+
     # if user-based moments are given, use these
     if(is.null(sample.cov) && !is.null(lavsamplestats)) {
-        sample.cov <- lavsamplestats@cov
+        if(conditional.x) {
+            sample.cov <- lavsamplestats@res.cov
+        } else {
+            sampl.ecov <- lavsamplestats@cov
+        }
     }
     if(is.null(sample.mean) && !is.null(lavsamplestats)) {
-        sample.mean <- lavsamplestats@mean
+        if(conditional.x) {
+            sample.mean <- lavsamplestats@res.int
+        } else {
+            sample.mean <- lavsamplestats@mean
+        }
     }
-    if(is.null(sample.slopes) && !is.null(lavsamplestats)) {
+    if(conditional.x && is.null(sample.slopes) && !is.null(lavsamplestats)) {
         sample.slopes <- lavsamplestats@res.slopes
     }
     if(is.null(sample.th) && !is.null(lavsamplestats)) {
-         sample.th <- lavsamplestats@th
+        if(conditional.x) {
+             sample.th <- lavsamplestats@res.th
+         } else {
+             sample.th <- lavsamplestats@th
+         }
     }
+
     if(is.null(sample.th.idx) && !is.null(lavsamplestats)) {
          sample.th.idx <- lavsamplestats@th.idx
     }
@@ -41,7 +62,6 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
     ov.names.x    <- lavdata@ov.names.x
     meanstructure <- lavoptions$meanstructure
     categorical   <- any(ov$type == "ordered")
-    conditional.x <- lavoptions$conditional.x
     ngroups <- length(ov.names)
 
     # what with fixed.x? 

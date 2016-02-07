@@ -155,7 +155,11 @@ lav_start <- function(start.method    = "default",
                     if(lavsamplestats@missing.flag) {
                         COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,ov.idx]
                     } else {
-                        COV <- lavsamplestats@cov[[g]][ov.idx,ov.idx]
+                        if(conditional.x) {
+                            COV <- lavsamplestats@res.cov[[g]][ov.idx,ov.idx]
+                        } else {
+                            COV <- lavsamplestats@cov[[g]][ov.idx,ov.idx]
+                        }
                     }
                     start[user.idx] <- fabin3.uni(COV)
                 } else if(length(free.idx) == 1L && length(ov.idx) == 2L) {
@@ -197,13 +201,21 @@ lav_start <- function(start.method    = "default",
             start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
         } else {
             if(start.initial == "mplus") {
-                start[ov.var.idx] <- 
-                    (1.0 - 0.50)*lavsamplestats@var[[1L]][sample.var.idx]
+                if(conditional.x) {
+                    start[ov.var.idx] <-
+                       (1.0 - 0.50)*lavsamplestats@res.var[[1L]][sample.var.idx]
+                } else {
+                    start[ov.var.idx] <- 
+                       (1.0 - 0.50)*lavsamplestats@var[[1L]][sample.var.idx]
+                }
             } else {
-                # start[ov.var.idx] <- 
-                #     (1.0 - 0.50)*lavsamplestats@var[[g]][sample.var.idx]
-                start[ov.var.idx] <- 
+                if(conditional.x) {
+                    start[ov.var.idx] <-
+                  (1.0 - 0.50)*diag(lavsamplestats@res.cov[[g]])[sample.var.idx]
+                } else {
+                    start[ov.var.idx] <- 
                     (1.0 - 0.50)*diag(lavsamplestats@cov[[g]])[sample.var.idx]
+                }
             }
         }
 
@@ -224,7 +236,11 @@ lav_start <- function(start.method    = "default",
         if(lavsamplestats@missing.flag) {
             start[ov.int.idx] <- lavsamplestats@missing.h1[[g]]$mu[sample.int.idx]
         } else {
-            start[ov.int.idx] <- lavsamplestats@mean[[g]][sample.int.idx]
+            if(conditional.x) {
+                start[ov.int.idx] <- lavsamplestats@res.int[[g]][sample.int.idx]
+            } else {
+                start[ov.int.idx] <- lavsamplestats@mean[[g]][sample.int.idx]
+            }
         }
         
         # 4g) thresholds
@@ -238,7 +254,7 @@ lav_start <- function(start.method    = "default",
             # vnames(lavpartable, "th", group = g)
             if(conditional.x) {
                 th.values <- 
-                 lavsamplestats@res.th.nox[[g]][lavsamplestats@th.idx[[g]] > 0L]
+                 lavsamplestats@res.th[[g]][lavsamplestats@th.idx[[g]] > 0L]
             } else {
                 th.values <- 
                   lavsamplestats@th[[g]][lavsamplestats@th.idx[[g]] > 0L]

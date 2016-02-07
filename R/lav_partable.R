@@ -1301,9 +1301,9 @@ lav_partable_flat <- function(FLAT = NULL,
                exo[exo.int.idx] <- 1L
         }
 
-        # 3. regressions
+        # 3. regressions ov + lv
         exo.reg.idx <- which(op == "~" &
-                             lhs %in% ov.names.nox &
+                             lhs %in% c(lv.names, ov.names.nox) &
                              rhs %in% ov.names.x)
         if(conditional.x) {
             exo[exo.reg.idx] <- 1L

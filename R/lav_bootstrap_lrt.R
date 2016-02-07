@@ -16,6 +16,11 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
               double.bootstrap %in% c("no", "FDB", "standard"))
     if(type == "nonparametric") type <- "ordinary"
 
+    # check for conditional.x = TRUE
+    if(h0@Model@conditional.x) {
+        stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    }
+
     old_options <- options(); options(warn = warn)
 
     # prepare

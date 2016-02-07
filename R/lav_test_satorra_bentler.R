@@ -1,3 +1,6 @@
+##
+## FIXME: does not work yet if WLS.V is diagonal/numeric!!!
+##
 lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel       = NULL,
@@ -65,6 +68,8 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         Delta <- attr(E, "Delta")
         WLS.V <- attr(E, "WLS.V")
     }
+
+    stopifnot(is.matrix(WLS.V[[1]]))
 
     # Gamma
     if(is.null(Gamma)) {

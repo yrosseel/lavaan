@@ -238,6 +238,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         if(categorical) {
 
+            # convenience
+            th.idx[[g]] <- unlist(CAT$TH.IDX)
+            th.names[[g]] <- unlist(CAT$TH.NAMES)
+
             if(conditional.x) {
                 # residual var/cov
                 res.var[[g]]  <- unlist(CAT$VAR)
@@ -247,6 +251,17 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 res.th[[g]]     <- unlist(CAT$TH)
                 res.th.nox[[g]] <- unlist(CAT$TH.NOX)
 
+                # for convenience, we store the intercept of numeric 
+                # variables in res.int
+                NVAR <- NCOL(res.cov[[g]])
+                mean[[g]] <- res.int[[g]] <- numeric(NVAR)
+                num.idx <- which(!seq_len(NVAR) %in% th.idx[[g]])
+                if(length(num.idx) > 0L) {
+                    NUM.idx <- which(th.idx[[g]] == 0L)
+                    mean[[g]][num.idx] <- res.th.nox[[g]][NUM.idx]
+                    res.int[[g]][num.idx]  <- res.th[[g]][NUM.idx]
+                }
+
                 # slopes
                 res.slopes[[g]] <- CAT$SLOPES
             } else {
@@ -254,17 +269,19 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 var[[g]]  <- unlist(CAT$VAR)
                 cov[[g]]  <- unname(CAT$COV)               
 
-                # mean (numeric only)
-                mean[[g]] <- apply(X[[g]], 2, base::mean, na.rm=TRUE)
-                notnum.idx <- which(ov.types != "numeric")
-                mean[[g]][notnum.idx] <- 0.0
-
                 # th also contains the means of numeric variables
                 th[[g]] <- unlist(CAT$TH)
+
+                # mean (numeric only)
+                NVAR <- NCOL(cov[[g]])
+                mean[[g]] <- numeric(NVAR)
+                num.idx <- which(!seq_len(NVAR) %in% th.idx[[g]])
+                if(length(num.idx) > 0L) {
+                    NUM.idx <- which(th.idx[[g]] == 0L)
+                    mean[[g]][num.idx] <- th[[g]][NUM.idx]
+                }
+
             }
-            # convenience
-            th.idx[[g]] <- unlist(CAT$TH.IDX)
-            th.names[[g]] <- unlist(CAT$TH.NAMES)
             
         } else {
  
@@ -460,6 +477,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             WLS.V[[g]] <- inv.chol(NACOV[[g]])
                         } else {
                             # fixed.x: we have zero cols/rows
+                            # ginv does the trick, but perhaps this is overkill
+                            # just removing the zero rows/cols, invert, and
+                            # fill back in the zero rows/cols would do it
                             WLS.V[[g]] <- MASS::ginv(NACOV[[g]])
                         }
                     } else if(estimator == "DWLS") {
@@ -467,9 +487,17 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                         if(!all(is.finite(dacov))) {
                             stop("lavaan ERROR: diagonal of Gamma (NACOV) contains non finite values")
                         }
-                        WLS.V[[g]] <- diag(1/dacov, nrow=NROW(NACOV[[g]]), 
-                                                    ncol=NCOL(NACOV[[g]]))
-                        WLS.VD[[g]] <- 1/dacov
+                        if(fixed.x) {
+                            # structural zeroes!
+                            zero.idx <- which(dacov == 0.0)
+                            idacov <- 1/dacov
+                            idacov[zero.idx] <- 0.0
+                        } else {
+                            idacov <- 1/dacov
+                        }
+                        WLS.V[[g]] <- diag(idacov, nrow=NROW(NACOV[[g]]), 
+                                                   ncol=NCOL(NACOV[[g]]))
+                        WLS.VD[[g]] <- idacov
                     } else if(estimator == "ULS") {
                         #WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
                         WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))

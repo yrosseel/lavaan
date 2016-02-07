@@ -19,11 +19,13 @@ lav_partable_independence <- function(lavobject      = NULL,
     }
 
     # conditional.x ? check res.cov[[1]] slot
-    if(is.null(lavsamplestats@res.cov[[1]])) {
-        conditional.x <- FALSE
-    } else {
+    conditional.x <- FALSE
+    if(!is.null(lavsamplestats) && !is.null(lavsamplestats@res.cov[[1]])) {
+        conditional.x <- TRUE
+    } else if(!is.null(lavoptions) && lavoptions$conditional.x) {
         conditional.x <- TRUE
     }
+
 
     # if user-based moments are given, use these
     if(is.null(sample.cov) && !is.null(lavsamplestats)) {
