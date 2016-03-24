@@ -39,7 +39,7 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
         npatterns <- 1L
     } else {
         type <- "missing"
-        ntotal <- sum(sapply(M, "[[", "nobs"))
+        ntotal <- sum(sapply(M, "[[", "freq"))
         nvar <- length(M[[1]]$var.idx)
         npatterns <- length(M)
     }
@@ -58,9 +58,9 @@ compute.Abeta.Bbeta <- function(Sigma.hat=NULL, Mu.hat=NULL,
     for(j in 1:npatterns) {
         if(type == "missing") {
             Xp <- M[[j]][["X"]]
-            SX <- M[[j]][["SX"]]
-            MX <- M[[j]][["MX"]]
-            nobs <- M[[j]][["nobs"]]
+            SX <- M[[j]][["SY"]]
+            MX <- M[[j]][["MY"]]
+            nobs <- M[[j]][["freq"]]
             var.idx <- M[[j]][["var.idx"]]
             taoj <- diag(nvar)[var.idx, , drop = FALSE]
         } else {

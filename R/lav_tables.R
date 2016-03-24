@@ -196,7 +196,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 
     # first, create basic table with response patterns
     for(g in 1:lavdata@ngroups) {
-        pat <- lav_data_resppatterns(lavdata@X[[g]])$pat
+        pat <- lav_data_resp_patterns(lavdata@X[[g]])$pat
         obs.freq <- as.integer( rownames(pat) )
         if(patternAsString) {
             pat <- data.frame(pattern = apply(pat, 1, paste, collapse=""),
@@ -987,7 +987,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
             if(!is.null(lavdata@Rp[[g]]$pat)) {
                 PAT <- lavdata@Rp[[g]]$pat
             } else {
-                PAT <- lav_data_resppatterns( lavdata@X[[g]] )$pat
+                PAT <- lav_data_resp_patterns( lavdata@X[[g]] )$pat
             }
             npatterns <- nrow(PAT)
             freq <- as.numeric( rownames(PAT) )

@@ -985,9 +985,10 @@ lav_matrix_orthogonal_complement2 <- function(A,
 
 # inverse of a positive-definite symmetric matrix
 # FIXME: error handling?
-lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, method = "eigen") {
+lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, 
+                                         Sinv.method = "eigen") {
 
-    if(method == "eigen") {
+    if(Sinv.method == "eigen") {
         EV <- eigen(S, symmetric = TRUE)
         # V %*% diag(1/d) %*% V^{-1}, where V^{-1} = V^T
         S.inv <- tcrossprod(sweep(EV$vector, 2L, 
@@ -995,13 +996,13 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, method = "eigen") {
         if(logdet) {
             attr(S.inv, "logdet") <- sum(log(EV$values))
         }
-    } else if(method == "solve") {
+    } else if(Sinv.method == "solve") {
         S.inv <- solve(S)
         if(logdet) {
             ev <- eigen(S, symmetric = TRUE, only.values = TRUE)
             attr(S.inv, "logdet") <- sum(log(ev$values))
         }
-    } else if(method == "chol") {
+    } else if(Sinv.method == "chol") {
         cS <- chol(S)
         S.inv <- chol2inv(cS)
         if(logdet) {
@@ -1014,3 +1015,169 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, method = "eigen") {
 
     S.inv
 }
+
+# update inverse of A, after removing 1 or more rows (and corresponding
+# colums) from A
+#
+# - this is one of the many applications of the Sherman-Morrison formula
+# - only removal for now
+#
+lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
+
+    ndel <- length(rm.idx)
+
+    # rank-1 update
+    if(ndel == 1L) {
+        a <- A.inv[-rm.idx, rm.idx, drop = FALSE]
+        b <- A.inv[rm.idx, -rm.idx, drop = FALSE]
+        h <- A.inv[rm.idx, rm.idx]
+        out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - (a %*% b) / h
+    }
+
+    # rank-n update
+    else if(ndel < NCOL(A.inv)) {
+        A <- A.inv[-rm.idx, rm.idx, drop = FALSE]
+        B <- A.inv[ rm.idx,-rm.idx, drop = FALSE]
+        H <- A.inv[ rm.idx, rm.idx, drop = FALSE]
+        out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% solve(H, B)
+
+    # erase all col/rows...
+    } else if(ndel == NCOL(A.inv)) {
+        out <- matrix(0,0,0)
+    }
+
+    out
+}
+
+# update inverse of S, after removing 1 or more rows (and corresponding
+# colums) from S, a symmetric matrix
+#
+# - only removal for now!
+#
+lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
+                                                logdet = FALSE, 
+                                                S.logdet = NULL) {
+
+    ndel <- length(rm.idx)
+
+    if(ndel == 0L) {
+        out <- S.inv
+        if(logdet) {
+            attr(out, "logdet") <- S.logdet
+        }
+    }
+
+    # rank-1 update
+    else if(ndel == 1L) {
+        h <- S.inv[rm.idx, rm.idx]
+        a <- S.inv[-rm.idx, rm.idx, drop = FALSE] / sqrt(h)
+        out <- S.inv[-rm.idx, -rm.idx, drop = FALSE] - tcrossprod(a)
+        if(logdet) {
+            attr(out, "logdet") <- S.logdet + log(h)
+        }
+    }
+
+    # rank-n update
+    else if(ndel < NCOL(S.inv)) {
+        A <- S.inv[ rm.idx, -rm.idx, drop = FALSE]
+        H <- S.inv[ rm.idx,  rm.idx, drop = FALSE]
+        out <- S.inv[-rm.idx, -rm.idx, drop = FALSE] - crossprod(A, solve(H, A))
+        if(logdet) {
+            cH <- chol(H); diag.cH <- diag(cH)
+            H.logdet <- sum(log(diag.cH * diag.cH))
+            attr(out, "logdet") <- S.logdet + H.logdet
+        }
+
+    # erase all col/rows...
+    } else if(ndel == NCOL(S.inv)) {
+        out <- matrix(0,0,0)
+    }
+
+    out
+}
+
+
+# update determinant of A, after removing 1 or more rows (and corresponding
+# colums) from A
+#
+lav_matrix_det_update <- function(det.A, A.inv, rm.idx = integer(0L)) {
+
+    ndel <- length(rm.idx)
+
+    # rank-1 update
+    if(ndel == 1L) {
+        h <- A.inv[rm.idx, rm.idx]
+        out <- det.A * h
+    }
+
+    # rank-n update
+    else if(ndel < NCOL(A.inv)) {
+        H <- A.inv[ rm.idx, rm.idx, drop = FALSE]
+        det.H <- det(H)
+        out <- det.A * det.H
+
+    # erase all col/rows...
+    } else if(ndel == NCOL(A.inv)) {
+        out <- matrix(0,0,0)
+    }
+
+    out
+}
+
+# update determinant of S, after removing 1 or more rows (and corresponding
+# colums) from S, a symmetric matrix
+#
+lav_matrix_symmetric_det_update <- function(det.S, S.inv, rm.idx = integer(0L)){
+
+    ndel <- length(rm.idx)
+
+    # rank-1 update
+    if(ndel == 1L) {
+        h <- S.inv[rm.idx, rm.idx]
+        out <- det.S * h
+    }
+
+    # rank-n update
+    else if(ndel < NCOL(S.inv)) {
+        H <- S.inv[ rm.idx, rm.idx, drop = FALSE]
+        cH <- chol(H); diag.cH <- diag(cH)
+        det.H <- prod(diag.cH * diag.cH)
+        out <- det.S * det.H
+
+    # erase all col/rows...
+    } else if(ndel == NCOL(S.inv)) {
+        out <- numeric(0L)
+    }
+
+    out
+}
+
+# update log determinant of S, after removing 1 or more rows (and corresponding
+# colums) from S, a symmetric matrix
+#
+lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv, 
+                                               rm.idx = integer(0L)) {
+
+    ndel <- length(rm.idx)
+
+    # rank-1 update
+    if(ndel == 1L) {
+        h <- S.inv[rm.idx, rm.idx]
+        out <- S.logdet + log(h)
+    }
+
+    # rank-n update
+    else if(ndel < NCOL(S.inv)) {
+        H <- S.inv[ rm.idx, rm.idx, drop = FALSE]
+        cH <- chol(H); diag.cH <- diag(cH)
+        H.logdet <- sum(log(diag.cH * diag.cH))
+        out <- S.logdet + H.logdet
+
+    # erase all col/rows...
+    } else if(ndel == NCOL(S.inv)) {
+        out <- numeric(0L)
+    }
+
+    out
+}
+

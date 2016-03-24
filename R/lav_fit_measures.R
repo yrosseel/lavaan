@@ -527,7 +527,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                         pat <- object@Data@Mp[[g]]$pat
                         Ng <- object@Data@nobs[[g]]
                         ni <- as.numeric(apply(pat, 1, sum) %*% 
-                                          as.integer(rownames(pat)))
+                                         object@Data@Mp[[g]]$freq)
                         fx.full <- object@SampleStats@missing.h1[[g]]$h1
                         logl.H1.group[g] <- - (ni/2 * log(2 * pi)) - 
                                                   (Ng/2 * fx.full)

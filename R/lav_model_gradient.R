@@ -840,7 +840,6 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??
                 # CURRENTLY: stop
                 warning("lav_model_gradient: Sigma.hat is not positive definite\n")
-                #Sigma.hat[[g]] <- force.pd(Sigma.hat[[g]])
                 Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
                 Sigma.hat.log.det <- log(.Machine$double.eps)
             } else {
@@ -880,9 +879,9 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 OMEGA.MU <- matrix(0, nvar, 1)
 
                 for(p in 1:length(M)) {
-                    SX <- M[[p]][["SX"]]
-                    MX <- M[[p]][["MX"]]
-                    nobs <- M[[p]][["nobs"]]
+                    SX <- M[[p]][["SY"]]
+                    MX <- M[[p]][["MY"]]
+                    nobs <- M[[p]][["freq"]]
                     var.idx <- M[[p]][["var.idx"]]
 
                     Sigma.inv <- inv.chol(Sigma.hat[[g]][var.idx, var.idx],

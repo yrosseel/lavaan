@@ -509,36 +509,38 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # missing data
         if(missing != "listwise") {
             # get missing patterns
-            Mp[[g]] <- getMissingPatterns(X[[g]])
+            Mp[[g]] <- lav_data_missing_patterns(X[[g]], sort.freq = TRUE,
+                                                 coverage = TRUE)
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
-                X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
+                #X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
                 # remove from case.idx
                 # idx <- which(case.idx[[g]] %in% Mp[[g]]$empty.idx)
-                empty.idx <- Mp[[g]]$empty.idx
-                empty.case.idx <- case.idx[[g]][empty.idx]
-                case.idx[[g]] <- case.idx[[g]][-empty.idx]
+                #empty.idx <- Mp[[g]]$empty.idx
+                #empty.case.idx <- case.idx[[g]][empty.idx]
+                empty.case.idx <- Mp[[g]]$empty.idx
+                #case.idx[[g]] <- case.idx[[g]][-empty.idx]
                 # remove from eXo
-                if(length(exo.idx) > 0L) {
-                    eXo[[g]] <- eXo[[g]][-empty.idx,,drop=FALSE]
-                }
+                #if(length(exo.idx) > 0L) {
+                #    eXo[[g]] <- eXo[[g]][-empty.idx,,drop=FALSE]
+                #}
                 if(warn) {
-                    warning("lavaan WARNING: some cases are empty and will be removed:\n  ", paste(empty.case.idx, collapse=" "))
+                    warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
                 }
                 # give empty.idx case.idx? (for multiple groups):
-                Mp[[g]]$empty.idx <- empty.case.idx
+                #Mp[[g]]$empty.idx <- empty.case.idx
             }
             if(warn && any(Mp[[g]]$coverage < 0.1)) {
                 warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
             }
             # in case we had observations with only missings
-            nobs[[g]] <- Mp[[g]]$nobs
+            nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)
         }
 
         # response patterns (categorical only, no exogenous variables)
         all.ordered <- all(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
         if(length(exo.idx) == 0L && all.ordered) {
-            Rp[[g]] <- lav_data_resppatterns(X[[g]])
+            Rp[[g]] <- lav_data_resp_patterns(X[[g]])
         }
 
         # warn if we have a small number of observations (but NO error!)
@@ -575,8 +577,71 @@ lav_data_full <- function(data          = NULL,          # data.frame
     lavData                     
 }
 
+# get missing patterns
+lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE) {
+
+    # construct TRUE/FALSE matrix: TRUE if value is observed
+    OBS <- !is.na(Y)
+
+    # empty cases
+    empty.idx <- which(rowSums(OBS) == 0L)
+
+    # this is what we did in < 0.6
+    #if(length(empty.idx) > 0L) {
+    #    OBS <- OBS[-empty.idx,,drop = FALSE]
+    #}
+
+    # pattern of observed values per observation
+    case.id <- apply(1L * OBS, 1L, paste, collapse = "")
+
+    # remove empty patterns
+    if(length(empty.idx)) {
+        case.id.nonempty <- case.id[-empty.idx]
+    } else {
+        case.id.nonempty <- case.id
+    }
+
+    # sort non-empty patterns (from high occurence to low occurence)
+    if(sort.freq) {
+        TABLE <- sort(table(case.id.nonempty), decreasing = TRUE)
+    } else {
+        TABLE <- table(case.id.nonempty)
+    }
+
+    # unique pattern ids
+    pat.id <- names(TABLE)
+
+    # number of patterns
+    pat.npatterns  <- length(pat.id)
+
+    # case idx per pattern
+    pat.case.idx <- lapply(seq_len(pat.npatterns), 
+                           function(p) which(case.id == pat.id[p]))
+
+    # unique pattern frequencies
+    pat.freq <- as.integer(TABLE)
+
+    # first occurrence of each pattern
+    pat.first <- match(pat.id, case.id)
+
+    # TRUE/FALSE for each pattern
+    pat.obs <- OBS[pat.first,,drop = FALSE] # observed per pattern
+
+    Mp <- list(npatterns = pat.npatterns, id = pat.id, freq = pat.freq,
+               case.idx = pat.case.idx, pat = pat.obs, empty.idx = empty.idx)
+
+    if(coverage) {
+        # FIXME: if we have empty cases, include them in N?
+        # no for now
+        Mp$coverage <- crossprod(OBS) / sum(pat.freq)
+        #Mp$coverage <- crossprod(OBS) / NROW(Y)
+    }
+
+    Mp
+}
+
 # get response patterns (empty records have already been removed!)
-lav_data_resppatterns <- function(X) {
+lav_data_resp_patterns <- function(X) {
 
     ntotal <- nrow(X); nvar <- ncol(X)
 

@@ -11,10 +11,13 @@
 # YR 05 Feb 2016: catch conditional.x = TRUE: no support (for now), until
 #                 we can use the generic 0.6 infrastructure for scores, 
 #                 including the missing-values case
+# YR 16 Feb 2016: adapt to changed @Mp slot elements; add remove.empty.cases=
+#                 argument
 
 estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
                                        ignore.constraints = FALSE,
-                                       remove.duplicated = TRUE) {
+                                       remove.duplicated = TRUE,
+                                       remove.empty.cases = TRUE) {
 
   stopifnot(inherits(object, "lavaan"))
 
@@ -37,11 +40,13 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   lavoptions     <- object@Options
 
   ## number variables/sample size
-  ntab <- unlist(lavsamplestats@nobs)
+  #ntab <- unlist(lavsamplestats@nobs)
   ## change in 0.5-17: we keep the 'empty cases'
   ##                   and 'fill' in the scores at their 'case.idx'
   ##                   later, we remove the 'empty rows'
-  ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
+  #ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
+  ntab <- unlist(lavdata@norig)
+  ntot <- sum(ntab)
 
   npar <- length(coef(object))
   #if(object@Model@eq.constraints) {
@@ -102,8 +107,8 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
     } else { # incomplete data
       nsub <- ntab[g]
       M <- lavsamplestats@missing[[g]]
-      MP1 <- lavdata@Mp[[g]]
-      pat.idx <- match(MP1$id, MP1$order)
+      Mp <- lavdata@Mp[[g]]
+      #pat.idx <- match(MP1$id, MP1$order)
       group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
 
       Mu.hat <- moments$mean
@@ -113,9 +118,11 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
     
       for(p in 1:length(M)) {
         ## Data
-        X <- M[[p]][["X"]]
-        nobs <- M[[p]][["nobs"]]
+        #X <- M[[p]][["X"]]
+        case.idx <- Mp$case.idx[[p]]
         var.idx <- M[[p]][["var.idx"]]
+        X <- lavdata@X[[g]][case.idx,var.idx,drop = FALSE]
+        nobs <- M[[p]][["freq"]]
         ## Which unique entries of covariance matrix are estimated?
         ## (Used to keep track of scores in score.sigma)
         var.idx.mat <- tcrossprod(var.idx)
@@ -130,8 +137,8 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
         mean.diff <- t(t(X) - Mu %*% J)
 
         ## Scores for missing pattern p within group g
-        score.mu[pat.idx==p,var.idx] <- -1 * mean.diff %*% Sigma.inv
-        score.sigma[pat.idx==p,Sigma.idx] <- t(matrix(apply(mean.diff, 1L,
+        score.mu[case.idx,var.idx] <- -1 * mean.diff %*% Sigma.inv
+        score.sigma[case.idx,Sigma.idx] <- t(matrix(apply(mean.diff, 1L,
           function(x) lav_matrix_vech(- J2 * (Sigma.inv %*% (tcrossprod(x) - Sigma.hat[var.idx,var.idx,drop = FALSE]) %*% Sigma.inv)) ), ncol=nrow(mean.diff)) )
 
       }
@@ -157,10 +164,13 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   } # g
 
   # handle empty rows
-  empty.idx <- which( apply(Score.mat, 1L, 
-                          function(x) sum(is.na(x))) == ncol(Score.mat) )
-  if(length(empty.idx) > 0L) {
-      Score.mat <- Score.mat[-empty.idx,,drop=FALSE]
+  if(remove.empty.cases) {
+      #empty.idx <- which( apply(Score.mat, 1L, 
+      #                        function(x) sum(is.na(x))) == ncol(Score.mat) )
+      empty.idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
+      if(length(empty.idx) > 0L) {
+          Score.mat <- Score.mat[-empty.idx,,drop=FALSE]
+      }
   }
 
   # provide column names

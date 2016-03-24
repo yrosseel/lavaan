@@ -3,16 +3,16 @@
 # pattern-based method
 derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
 
-    ntotal    <- sum(sapply(M, "[[", "nobs"))
+    ntotal    <- sum(sapply(M, "[[", "freq"))
     nvar      <- length(Mu.hat)
     npatterns <- length(M)
     dx.Sigma <- matrix(0, nvar, nvar)
     dx.Mu    <- matrix(0, nvar, 1)
 
     for(p in 1:npatterns) {
-        SX <- M[[p]][["SX"]]
-        MX <- M[[p]][["MX"]]
-        nobs <- M[[p]][["nobs"]]
+        SX <- M[[p]][["SY"]]
+        MX <- M[[p]][["MY"]]
+        nobs <- M[[p]][["freq"]]
         var.idx <- M[[p]][["var.idx"]]
 
         Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx],
@@ -41,47 +41,6 @@ derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
 
 }
 
-# derivatives FIML unrestricted model (h1)
-# case-based method (often much slower)
-# not used for now
-derivative.FIML.data <- function(Sigma.hat, Mu.hat, X) {
-
-    ntotal <- nrow(X)
-    nvar   <- ncol(X)
-    dx.Sigma <- matrix(0, nvar, nvar)
-    dx.Mu    <- matrix(0, nvar, 1)
-
-    for(i in 1:ntotal) {
-        nobs <- 1
-        var.idx <- which(! is.na(X[i,]))
-        SX <- 0
-        MX <- as.numeric( X[i, var.idx] )
-
-        Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx],
-                              logdet=FALSE)
-        Mu <- Mu.hat[var.idx]
-        TT <- SX + tcrossprod(MX - Mu)
-
-        dx.Mu[var.idx, 1] <-  ( dx.Mu[var.idx, 1] + nobs/ntotal *
-                                  -2 * t(t(MX - Mu) %*% Sigma.inv) )
-
-        dx.Sigma[var.idx, var.idx] <-
-            ( dx.Sigma[var.idx, var.idx] - nobs/ntotal * 2 *
-              # in the 'textbook' formula's, the Sigma.inv below is often
-              # replaced by [0.5 * D'(Sigma.inv %x% Sigma.inv) D]
-              # but we do not use the 'vecs' notation here, and
-              # we 'compensate' for the symmetry later on
-              (Sigma.inv %*%
-              (TT - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv ) )
-    }
- 
-    # compensate for symmetry
-    diag(dx.Sigma) <- diag(dx.Sigma)/2
-
-    out <- list(dx.mu=dx.Mu, dx.Sigma=dx.Sigma)
-    out
-    
-}
 
 # X  <- matrix(rnorm(200*3), ncol=3)
 # X2 <- matrix(rnorm(200*3), ncol=3)

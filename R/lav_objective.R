@@ -6,7 +6,6 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
 
     # FIXME: WHAT IS THE BEST THING TO DO HERE??
     # CURRENTLY: return Inf  (at least for nlminb, this works well)
-    # used to be: Sigma.hat <- force.pd(Sigma.hat) etc...
     if(!attr(Sigma.hat, "po")) return(Inf)
 
 
@@ -165,9 +164,9 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
     # for each missing pattern, combine cases and compute raw loglikelihood
     for(p in 1:npatterns) {
 
-        SX <- M[[p]][["SX"]]
-        MX <- M[[p]][["MX"]]
-        w.p[p] <- nobs <- M[[p]][["nobs"]]
+        SX <- M[[p]][["SY"]]
+        MX <- M[[p]][["MY"]]
+        w.p[p] <- nobs <- M[[p]][["freq"]]
         var.idx <- M[[p]][["var.idx"]]
 
         # note: if a decent 'sweep operator' was available (in fortran)

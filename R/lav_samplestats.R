@@ -50,7 +50,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         nobs <- vector("list", length=ngroups)
         for(g in 1:ngroups) {
             if(missing != "listwise") {
-                Mp[[g]] <- getMissingPatterns(X[[g]])
+                Mp[[g]] <- lav_data_missing_patterns(X[[g]], 
+                               remove.empty = TRUE, sort.freq = FALSE,
+                               coverage = FALSE)
             }
             nobs[[g]] <- nrow(X[[g]])
         }
@@ -367,14 +369,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             stopifnot(!conditional.x) # for now
             missing.flag. <- TRUE
             missing.[[g]] <- 
-                getMissingPatternStats(X  = X[[g]],
-                                       Mp = Mp[[g]])
+                lav_samplestats_missing_patterns(Y  = X[[g]],
+                                                 Mp = Mp[[g]])
 
             #cat("missing.h1 = "); print(missing.h1); cat("\n")
             if(missing.h1) {
                 # estimate moments unrestricted model
-                out <- estimate.moments.EM(X=X[[g]], M=missing.[[g]],
-                                           verbose=verbose)
+                out <- estimate.moments.EM(Y = X[[g]], Mp = Mp[[g]],
+                                           Yp = missing.[[g]],
+                                           verbose = verbose)
                 missing.h1.[[g]]$sigma <- out$sigma
                 missing.h1.[[g]]$mu    <- out$mu
                 missing.h1.[[g]]$h1    <- out$fx
@@ -890,5 +893,42 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                       )
 
     lavSampleStats
+}
+
+# compute sample statistics, per missing pattern
+lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL) {
+
+    # coerce Y to matrix
+    Y <- as.matrix(Y)
+
+    if(is.null(Mp)) {
+        Mp <- lav_data_missing_patterns(Y, sort.freq = FALSE, coverage = FALSE)
+    }
+
+    Yp <- vector("list", length = Mp$npatterns)
+
+    # fill in pattern statistics
+    for(p in seq_len(Mp$npatterns)) {
+
+        # extract raw data for these cases
+        RAW <- Y[Mp$case.idx[[p]], Mp$pat[p, ], drop = FALSE]
+
+        # more than one case
+        if (Mp$freq[p] > 1L) {
+            MY <- colMeans(RAW)
+            SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
+        }
+        # only a single observation
+        else {
+            SY <- 0
+            MY <- as.numeric(RAW)
+        }
+
+        # store sample statistics, var.idx and freq
+        Yp[[p]] <- list(SY = SY, MY = MY, var.idx = Mp$pat[p,],
+                        freq = Mp$freq[p])
+    }
+
+    Yp
 }
 
