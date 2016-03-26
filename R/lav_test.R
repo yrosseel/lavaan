@@ -183,11 +183,39 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
 
     for(g in 1:lavsamplestats@ngroups) {
         # if lavdata is complete, A1.22 is simply 0.5*D'(S.inv x S.inv)D
-        A1 <- compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
-                                meanstructure=meanstructure,
-                                information=information)
-        B1 <- compute.B1.sample(lavsamplestats=lavsamplestats, 
-                                lavdata=lavdata, group=g)
+        if(lavsamplestats@missing.flag) {
+            if(information == "expected") {
+                A1 <- lav_mvnorm_missing_information_expected(
+                          Y     = lavdata@X[[g]],
+                          Mp    = lavdata@Mp[[g]], 
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+            } else {
+                A1 <- lav_mvnorm_missing_information_observed_samplestats(
+                          Yp    = lavsamplestats@missing[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+            }
+        } else {
+            # data complete, under h1, expected == observed
+            A1 <- lav_mvnorm_h1_information_observed_samplestats(
+                      sample.cov     = lavsamplestats@cov[[g]],
+                      sample.cov.inv = lavsamplestats@icov[[g]])
+        }     
+
+        if(lavsamplestats@missing.flag) {
+            B1 <- lav_mvnorm_missing_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Mp    = lavdata@Mp[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+        } else {
+            B1 <- lav_mvnorm_h1_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Gamma = lavsamplestats@NACOV[[g]],
+                          sample.cov = lavsamplestats@cov[[g]],
+                          sample.cov.inv = lavsamplestats@icov[[g]])
+        }
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
@@ -584,20 +612,29 @@ lav_model_test <- function(lavmodel       = NULL,
             B1.group <- vector("list", length=lavsamplestats@ngroups)
             for(g in 1:lavsamplestats@ngroups) {
                 if(lavsamplestats@missing.flag) {
-                    X <- NULL
-                    M <- lavsamplestats@missing[[g]]
+                    out <- lav_mvnorm_missing_information_both(
+                               Y = lavdata@X[[g]],
+                               Mp = lavdata@Mp[[g]],
+                               Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                               information = information)
+                    A1.group[[g]] <- out$Abeta
+                    B1.group[[g]] <- out$Bbeta
                 } else {
-                    X <- lavdata@X[[g]]
-                    M <- NULL
+                    if(information == "expected") {
+                        A1.group[[g]] <- lav_mvnorm_information_expected(
+                            Y = lavdata@X[[g]],
+                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                    } else {
+                        A1.group[[g]] <- 
+                            lav_mvnorm_information_observed_samplestats(
+                                sample.mean = lavsamplestats@mean[[g]],
+                                sample.cov = lavsamplestats@cov[[g]],
+                                Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                    }
+                    B1.group[[g]] <- lav_mvnorm_information_firstorder(
+                            Y = lavdata@X[[g]],
+                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
                 }
-                out <- compute.Abeta.Bbeta(Sigma.hat=Sigma.hat[[g]], 
-                                           Mu.hat=Mu.hat[[g]], 
-                                           X=X,
-                                           M=M,
-                                           Abeta=TRUE, Bbeta=TRUE, 
-                                           information=information)
-                A1.group[[g]] <- out$Abeta
-                B1.group[[g]] <- out$Bbeta
             }
             trace.UGamma <-
                 testStatisticYuanBentler(lavsamplestats=lavsamplestats,

@@ -132,16 +132,13 @@ lav_model_wls_v <- function(lavmodel       = NULL,
         for(g in 1:lavsamplestats@ngroups) {
             if(lavsamplestats@missing.flag) {
                 stopifnot(!lavmodel@conditional.x)
-                WLS.V[[g]] <- compute.Abeta(Sigma.hat=Sigma.hat[[g]],
-                                            Mu.hat=Mu.hat[[g]],
-                                            lavsamplestats=lavsamplestats,
-                                            lavdata=lavdata, group=g,
-                                            information="expected")
+                WLS.V[[g]] <- lav_mvnorm_missing_information_expected(
+                                  Y     = lavdata@X[[g]],
+                                  Mp    = lavdata@Mp[[g]],
+                                  Mu    = Mu.hat[[g]],
+                                  Sigma = Sigma.hat[[g]])
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
-                #WLS.V[[g]] <-
-                #    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
-                #                         meanstructure=lavmodel@meanstructure)
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
                     ICOV           = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                     COV            = Sigma.hat[[g]][,,drop=FALSE],

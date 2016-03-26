@@ -189,20 +189,61 @@ function(object, type="raw", labels=TRUE) {
                 # this is identical to solve(A1)/N for complete data!!
             } else if(object@Options$se == "robust.huber.white" ||
                       object@Options$se == "robust.sem") {
-                A1 <- compute.A1.sample(lavsamplestats = object@SampleStats, 
-                                        group = g, 
-                                        meanstructure = meanstructure,
-                                        information = object@Options$information)
-                B1 <- compute.B1.sample(lavsamplestats = object@SampleStats, 
-                                        lavdata = object@Data, group = g,
-                                        meanstructure = meanstructure)
+
+                lavdata <- object@Data
+                lavsamplestats <- object@SampleStats
+
+                if(lavsamplestats@missing.flag) {
+                    if(object@Options$information == "expected") {
+                        A1 <- lav_mvnorm_missing_information_expected(
+                          Y     = lavdata@X[[g]],
+                          Mp    = lavdata@Mp[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                    } else {
+                        A1 <- lav_mvnorm_missing_information_observed_samplestats(
+                          Yp    = lavsamplestats@missing[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                    }
+                } else {
+                    # data complete, under h1, expected == observed
+                    A1 <- lav_mvnorm_h1_information_observed_samplestats(
+                      sample.cov     = lavsamplestats@cov[[g]],
+                      sample.cov.inv = lavsamplestats@icov[[g]])
+                }
+
+                if(lavsamplestats@missing.flag) {
+                    B1 <- lav_mvnorm_missing_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Mp    = lavdata@Mp[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                } else {
+                    B1 <- lav_mvnorm_h1_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Gamma = lavsamplestats@NACOV[[g]],
+                          sample.cov = lavsamplestats@cov[[g]],
+                          sample.cov.inv = lavsamplestats@icov[[g]])
+                }
+
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
-                B1 <- compute.B1.sample(lavsamplestats = object@SampleStats, 
-                                        lavdata = object@Data, group=g,
-                                        meanstructure=meanstructure)
+                if(lavsamplestats@missing.flag) {
+                    B1 <- lav_mvnorm_missing_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Mp    = lavdata@Mp[[g]],
+                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                } else {
+                    B1 <- lav_mvnorm_h1_information_firstorder(
+                          Y     = lavdata@X[[g]],
+                          Gamma = lavsamplestats@NACOV[[g]],
+                          sample.cov = lavsamplestats@cov[[g]],
+                          sample.cov.inv = lavsamplestats@icov[[g]])
+                }
                 Info <- solve(B1) / N
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])

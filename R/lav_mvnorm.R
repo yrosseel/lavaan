@@ -3,12 +3,17 @@
 # 1) loglikelihood (from raw data, or sample statistics)
 # 2) derivatives with respect to mu, Sigma, vech(Sigma)
 # 3) casewise scores with respect to mu, vech(Sigma), mu + vech(Sigma)
-# 4) 4a: (unit) information of mu + vech(Sigma)
-#    4b: (unit) observed information
+# 4) hessian mu + vech(Sigma)
+# 5) information h0 (restricted Sigma/mu)
+#    5a: (unit)    expected information of mu + vech(Sigma) h0
+#    5b: (unit)    observed information h0
+#    5c: (unit) first.order information h0
+
 
 # YR 07 Feb 2016: first version
+# YR 24 Mar 2016: added firstorder information, hessian logl
 
-# 1) likelihood
+# 1. likelihood
 
 # 1a: input is raw data
 # (note casewise = TRUE same as: dmvnorm(Y, mean, sigma, log = TRUE))
@@ -54,6 +59,8 @@ lav_mvnorm_loglik_data <- function(Y             = NULL,
 
     loglik
 }
+
+
 
 # 1b: input are sample statistics (mean, cov, N) only
 lav_mvnorm_loglik_samplestats <- function(sample.mean  = NULL,
@@ -270,18 +277,73 @@ lav_mvnorm_scores_mu_vech_sigma <- function(Y           = NULL,
     cbind(Yc, SC)
 }
 
-# 4) Information 
 
-# 4a: unit expected information Mu and vech(Sigma)
-lav_mvnorm_information_expected <- function(Sigma.inv = NULL) {
+# 4. hessian of logl
 
-    I11 <- Sigma.inv
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
+# 4a: hessian logl Mu and vech(Sigma) from raw data
+lav_mvnorm_logl_hessian_data <- function(Y           = NULL,
+                                         Mu          = NULL,
+                                         Sigma       = NULL,
+                                         Sinv.method = "eigen",
+                                         Sigma.inv   = NULL) {
+    N <- NROW(Y)
 
-    lav_matrix_bdiag(I11, I22)
+    # observed information
+    observed <- lav_mvnorm_information_observed_data(Y = Y, Mu = Mu,
+        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+
+    -N*observed
 }
 
-# 4b: unit observed inforrmation Mu and vech(Sigma) from raw data
+# 4b: hessian Mu and vech(Sigma) from samplestats
+lav_mvnorm_logl_hessian_samplestats <-
+    function(sample.mean  = NULL,
+             sample.cov   = NULL,
+             sample.nobs  = NULL,
+             Mu           = NULL,
+             Sigma        = NULL,
+             Sinv.method  = "eigen",
+             Sigma.inv    = NULL) {
+
+    N <- sample.nobs
+
+    # observed information
+    observed <- lav_mvnorm_information_observed_samplestats(sample.mean = 
+        sample.mean, sample.cov = sample.cov, Mu = Mu, 
+        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    
+    -N*observed
+}
+
+# 5) Information h0
+
+# 5a: unit expected information h0 Mu and vech(Sigma)
+lav_mvnorm_information_expected <- function(Y             = NULL, # unused!
+                                            Mu            = NULL, # unused!
+                                            Sigma         = NULL,
+                                            Sinv.method   = "eigen",
+                                            Sigma.inv     = NULL,
+                                            meanstructure = TRUE) {
+
+    if(is.null(Sigma.inv)) {
+        # invert Sigma
+        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+                                                  Sinv.method = Sinv.method)
+    }
+
+    I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
+
+    if(meanstructure) {
+        I11 <- Sigma.inv
+        out <- lav_matrix_bdiag(I11, I22)
+    } else {
+        out <- I22
+    }
+
+    out
+}
+
+# 5b: unit observed information h0
 lav_mvnorm_information_observed_data <- function(Y           = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
@@ -294,22 +356,20 @@ lav_mvnorm_information_observed_data <- function(Y           = NULL,
     sample.cov <- cov(Y) * (N-1)/N
 
     lav_mvnorm_information_observed_samplestats(sample.mean = sample.mean,
-        sample.cov = sample.cov, sample.nobs = N, Mu = Mu, Sigma = Sigma,
+        sample.cov = sample.cov, Mu = Mu, Sigma = Sigma,
         Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
 }
 
-# 4b-bis: hessian Mu and vech(Sigma) from samplestats
+# 5b-bis: observed information h0 from sample statistics
 lav_mvnorm_information_observed_samplestats <-
     function(sample.mean  = NULL,
              sample.cov   = NULL,
-             sample.nobs  = NULL,
              Mu           = NULL,
              Sigma        = NULL,
              Sinv.method  = "eigen",
              Sigma.inv    = NULL) {
 
     sample.mean <- as.numeric(sample.mean); Mu <- as.numeric(Mu)
-    N <- sample.nobs
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -330,4 +390,19 @@ lav_mvnorm_information_observed_samplestats <-
     rbind( cbind(I11, I12),
            cbind(I21, I22) )
 }
+
+# 5c: unit first-order information h0
+lav_mvnorm_information_firstorder <- function(Y           = NULL,
+                                              Mu          = NULL,
+                                              Sigma       = NULL,
+                                              Sinv.method = "eigen",
+                                              Sigma.inv   = NULL) {
+    N <- NROW(Y)
+
+    SC <- lav_mvnorm_scores_mu_vech_sigma(Y = Y, Mu = Mu, Sigma = Sigma,
+              Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+
+    crossprod(SC)/N
+}
+
 

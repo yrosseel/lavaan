@@ -50,8 +50,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         nobs <- vector("list", length=ngroups)
         for(g in 1:ngroups) {
             if(missing != "listwise") {
-                Mp[[g]] <- lav_data_missing_patterns(X[[g]], 
-                               remove.empty = TRUE, sort.freq = FALSE,
+                Mp[[g]] <- lav_data_missing_patterns(X[[g]], sort.freq = FALSE,
                                coverage = FALSE)
             }
             nobs[[g]] <- nrow(X[[g]])

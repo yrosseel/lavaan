@@ -11,9 +11,9 @@ at the fitted model parameters.
 }
 \usage{
 estfun.lavaan(object, scaling = FALSE, ignore.constraints = FALSE,
-              remove.duplicated = TRUE)
+              remove.duplicated = TRUE, remove.empty.cases = TRUE)
 lavScores(object, scaling = FALSE, ignore.constraints = FALSE,
-          remove.duplicated = TRUE)
+          remove.duplicated = TRUE, remove.empty.cases = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -31,7 +31,9 @@ the sum of the columns be (almost) equal to zero.}
 \item{remove.duplicated}{If \code{TRUE}, and all the equality constraints have
 a simple form (eg. a == b), the unconstrained scores are post-multiplied with a
 transformation matrix in order to remove the duplicated parameters.}
+\item{remove.empty.cases}{If \code{TRUE}, empty cases with only missing values
+will be removed from the output.}
 }
 \value{A n x k matrix corresponding to n observations and k parameters.}
-\author{Ed Merkle; the \code{remove.duplicated} and \code{ignore.constraints}
-options were added by Yves Rosseel}
+\author{Ed Merkle; the \code{remove.duplicated}, \code{ignore.constraints}
+and \code{remove.empty.cases} arguments were added by Yves Rosseel}

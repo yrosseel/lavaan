@@ -6,24 +6,24 @@
 # - hessian of Beta + vech(Sigma)
 
 # 1. input is raw data
-lav_mvreg_loglik_data <- function(Y        = NULL,
-                                  X        = NULL, # includes intercept
-                                  Beta     = NULL,
-                                  Sigma    = NULL,
-                                  casewise = FALSE,
-                                  method   = "eigen") {
+lav_mvreg_loglik_data <- function(Y           = NULL,
+                                  X           = NULL, # includes intercept
+                                  Beta        = NULL,
+                                  Sigma       = NULL,
+                                  casewise    = FALSE,
+                                  Sinv.method = "eigen") {
     Q <- NCOL(Y); N <- NROW(Y)
 
     # invert Sigma
     Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                              method = method)
+                                              Sinv.method = Sinv.method)
     logdet <- attr(Sigma.inv, "logdet")
 
     if(casewise) {
         LOG.2PI <- log(2 * pi)
 
         # invert Sigma
-        if(method == "chol") {
+        if(Sinv.method == "chol") {
             cS <- chol(Sigma); icS <- backsolve(cS, diag(Q))
             logdet <- -2 * sum(log(diag(icS)))
 
@@ -31,7 +31,7 @@ lav_mvreg_loglik_data <- function(Y        = NULL,
             DIST <- rowSums((RES %*% icS)^2)
         } else {
             Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                                      method = method)
+                                                      Sinv.method = Sinv.method)
             logdet <- attr(Sigma.inv, "logdet")
 
             RES <- Y - X %*% Beta
@@ -43,7 +43,7 @@ lav_mvreg_loglik_data <- function(Y        = NULL,
     } else {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                                 method = method)
+                                                  Sinv.method = Sinv.method)
 
         RES <- Y - X %*% Beta
         # TOTAL <- TR( (Y - X%*%Beta) %*% Sigma.inv %*% t(Y - X%*%Beta) )
@@ -62,7 +62,7 @@ lav_mvreg_loglik_samplestats <- function(sample.res.beta = NULL,
                                          sample.nobs     = NULL,
                                          Beta            = NULL,
                                          Sigma           = NULL,
-                                         method          = "eigen",
+                                         Sinv.method     = "eigen",
                                          Sigma.inv       = NULL) {
 
     Q <- NCOL(sample.res.cov); N <- sample.nobs
@@ -70,7 +70,7 @@ lav_mvreg_loglik_samplestats <- function(sample.res.beta = NULL,
 
     if(is.null(Sigma.inv)) {
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
         logdet <- attr(Sigma.inv, "logdet")
     } else {
         logdet <- attr(Sigma.inv, "logdet")
@@ -98,16 +98,16 @@ lav_mvreg_loglik_samplestats <- function(sample.res.beta = NULL,
 #    lav_matrix_vec( t(X) %*% RES %*% Sigma.inv )
 # version 2: using B/S
 #    lav_matrix_vec(XX %*% (B - Beta) %*% Sigma.inv)
-lav_mvreg_dlogl_dbeta <- function(Y         = NULL,
-                                  X         = NULL,
-                                  Beta      = NULL,
-                                  Sigma     = NULL,
-                                  method    = "eigen",
-                                  Sigma.inv = NULL) {
+lav_mvreg_dlogl_dbeta <- function(Y           = NULL,
+                                  X           = NULL,
+                                  Beta        = NULL,
+                                  Sigma       = NULL,
+                                  Sinv.method = "eigen",
+                                  Sigma.inv   = NULL) {
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }
 
     # substract 'X %*% Beta' from Y
@@ -120,18 +120,18 @@ lav_mvreg_dlogl_dbeta <- function(Y         = NULL,
 }
 
 # derivative logl with respect to Sigma (full matrix, ignoring symmetry)
-lav_mvreg_dlogl_dSigma <- function(Y         = NULL,
-                                   X         = NULL,
-                                   Beta      = NULL,
-                                   Sigma     = NULL,
-                                   method    = "eigen",
-                                   Sigma.inv = NULL) {
+lav_mvreg_dlogl_dSigma <- function(Y           = NULL,
+                                   X           = NULL,
+                                   Beta        = NULL,
+                                   Sigma       = NULL,
+                                   Sinv.method = "eigen",
+                                   Sigma.inv   = NULL) {
     N <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }
 
     # substract 'X %*% Beta' from Y
@@ -147,18 +147,18 @@ lav_mvreg_dlogl_dSigma <- function(Y         = NULL,
 }
 
 # derivative logl with respect to vech(Sigma)
-lav_mvreg_dlogl_dvechSigma <- function(Y         = NULL,
-                                       X         = NULL,
-                                       Beta      = NULL,
-                                       Sigma     = NULL,
-                                       method    = "eigen",
-                                       Sigma.inv = NULL) {
+lav_mvreg_dlogl_dvechSigma <- function(Y           = NULL,
+                                       X           = NULL,
+                                       Beta        = NULL,
+                                       Sigma       = NULL,
+                                       Sinv.method = "eigen",
+                                       Sigma.inv   = NULL) {
     N <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }
 
     # substract 'X %*% Beta' from Y
@@ -177,18 +177,18 @@ lav_mvreg_dlogl_dvechSigma <- function(Y         = NULL,
 
 
 # casewise scores with respect to Beta
-lav_mvreg_scores_beta <- function(Y         = NULL,
-                                  X         = NULL,
-                                  Beta      = NULL,
-                                  Sigma     = NULL,
-                                  method    = "eigen",
-                                  Sigma.inv = NULL) {
+lav_mvreg_scores_beta <- function(Y           = NULL,
+                                  X           = NULL,
+                                  Beta        = NULL,
+                                  Sigma       = NULL,
+                                  Sinv.method = "eigen",
+                                  Sigma.inv   = NULL) {
     Q <- NCOL(Y); P <- NCOL(X)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }
 
     # substract Mu
@@ -205,18 +205,18 @@ lav_mvreg_scores_beta <- function(Y         = NULL,
 
 
 # casewise scores with respect to vech(Sigma)
-lav_mvreg_scores_vech_sigma <- function(Y         = NULL,
-                                        X         = NULL,
-                                        Beta      = NULL,
-                                        Sigma     = NULL,
-                                        method    = "eigen",
-                                        Sigma.inv = NULL) {
+lav_mvreg_scores_vech_sigma <- function(Y           = NULL,
+                                        X           = NULL,
+                                        Beta        = NULL,
+                                        Sigma       = NULL,
+                                        Sinv.method = "eigen",
+                                        Sigma.inv   = NULL) {
     Q <- NCOL(Y)
     
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }                       
         
     # vech(Sigma.inv)
@@ -244,18 +244,18 @@ lav_mvreg_scores_vech_sigma <- function(Y         = NULL,
 
 
 # casewise scores with respect to beta + vech(Sigma)
-lav_mvreg_scores_beta_vech_sigma <- function(Y         = NULL,
-                                             X         = NULL,
-                                             Beta      = NULL,
-                                             Sigma     = NULL,
-                                             method    = "eigen",
-                                             Sigma.inv = NULL) {
+lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
+                                             X           = NULL,
+                                             Beta        = NULL,
+                                             Sigma       = NULL,
+                                             Sinv.method = "eigen",
+                                             Sigma.inv   = NULL) {
     Q <- NCOL(Y); P <- NCOL(X)
     
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }                       
         
     # vech(Sigma.inv)
@@ -300,19 +300,19 @@ lav_mvreg_information_beta_vech_sigma_samplestats <-
 
 
 # hessian Beta and vech(Sigma)
-lav_mvreg_hessian_beta_vech_sigma <- function(Y         = NULL,
-                                              X         = NULL,
-                                              Beta      = NULL,
-                                              Sigma     = NULL,
-                                              method    = "eigen",
-                                              Sigma.inv = NULL) {
+lav_mvreg_hessian_beta_vech_sigma <- function(Y           = NULL,
+                                              X           = NULL,
+                                              Beta        = NULL,
+                                              Sigma       = NULL,
+                                              Sinv.method = "eigen",
+                                              Sigma.inv   = NULL) {
 
     N <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  method = method)
+                                                  Sinv.method = Sinv.method)
     }
 
     RES <- Y - X %*% Beta

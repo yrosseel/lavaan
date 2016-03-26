@@ -141,9 +141,9 @@ lav_model_objective <- function(lavmodel       = NULL,
                 #             conditional.x  = conditional.x,
                 #             meanstructure  = meanstructure,
                 #             slopestructure = conditional.x)
-                WLS.V <-
-                    compute.Abeta.complete(Sigma.hat=Sigma.hat[[g]],
-                                           meanstructure=lavmodel@meanstructure)
+                WLS.V <- lav_mvnorm_information_expected(
+                             Sigma = Sigma.hat[[g]],
+                             meanstructure = lavmodel@meanstructure)
                 # DEBUG!!!!
                 #WLS.V <- 2*WLS.V
             }

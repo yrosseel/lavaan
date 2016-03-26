@@ -132,9 +132,9 @@ lav_model_information_expected_MLM <- function(lavmodel       = NULL,
         GW <- unlist(computeGW(lavmodel = lavmodel))
     }
     for(g in 1:lavsamplestats@ngroups) {
-        WLS.V[[g]] <- compute.A1.sample(lavsamplestats=lavsamplestats, group=g,
-                                        meanstructure=lavmodel@meanstructure,
-                                        information="expected")
+        WLS.V[[g]] <- lav_mvnorm_h1_information_expected(
+                          sample.cov     = lavsamplestats@cov[[g]],
+                          sample.cov.inv = lavsamplestats@icov[[g]])
         # the same as GLS... (except for the N/N-1 scaling)
         if(lavmodel@group.w.free) {
             # unweight!!
@@ -264,11 +264,15 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
             B0.group[[g]] <- crossprod(group.SC)
 
         } else {
-            B1 <- compute.Bbeta(Sigma.hat=Sigma.hat[[g]],
-                                Mu.hat=Mu.hat[[g]],
-                                lavsamplestats=lavsamplestats,
-                                lavdata=lavdata, group=g)
-
+            if(lavsamplestats@missing.flag) {
+                B1 <- 
+                  lav_mvnorm_missing_information_firstorder(Y = lavdata@X[[g]],
+                      Mp = lavdata@Mp[[g]], Mu = Mu.hat[[g]], 
+                      Sigma = Sigma.hat[[g]])
+            } else {
+                B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
+                          Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+            }        
             B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
         }
     } # g
