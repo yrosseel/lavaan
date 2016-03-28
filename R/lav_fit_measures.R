@@ -932,8 +932,14 @@ lav_fit_measures <- function(object, fit.measures="all",
     }
 
     if(any(c("cn_05", "cn_01") %in% fit.measures)) {
-        CN_05 <- qchisq(p=0.95, df=df)/(X2/N) + 1
-        CN_01 <- qchisq(p=0.99, df=df)/(X2/N) + 1
+        # catch df=0, X2=0
+        if(df == 0 && X2 == 0) {
+            CN_05 <- as.numeric(NA)
+            CN_01 <- as.numeric(NA)
+        } else {
+            CN_05 <- qchisq(p=0.95, df=df)/(X2/N) + 1
+            CN_01 <- qchisq(p=0.99, df=df)/(X2/N) + 1
+        }
         indices["cn_05"] <- CN_05
         indices["cn_01"] <- CN_01
     }

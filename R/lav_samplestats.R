@@ -447,12 +447,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # WLS.V
         if(!WLS.V.user) {
             if(estimator == "GLS") {
-                # FIXME: in <0.5-21, we had
-                #V11 <- icov[[g]]
-                #    if(mimic == "Mplus") { # is this a bug in Mplus?
-                #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
-                #    }
-
                 # Note: we need the 'original' COV/MEAN/ICOV
                 #        sample statistics; not the 'residual' version
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
@@ -464,6 +458,12 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     conditional.x  = conditional.x,
                     meanstructure  = meanstructure,
                     slopestructure = conditional.x)
+                if(mimic == "Mplus" && !conditional.x && meanstructure) {
+                    # bug in Mplus? V11 rescaled by nobs[[g]]/(nobs[[g]]-1) 
+                    nvar <- NCOL(cov[[g]])
+                    WLS.V[[g]][1:nvar, 1:nvar] <- WLS.V[[g]][1:nvar, 1:nvar,
+                                        drop = FALSE] * nobs[[g]]/(nobs[[g]]-1)
+                }
             } else if(estimator == "ML") {
                 # no WLS.V here, since function of model-implied moments
             } else if(estimator %in% c("WLS","DWLS","ULS")) {

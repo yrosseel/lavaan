@@ -32,7 +32,7 @@ lav_partable_independence <- function(lavobject      = NULL,
         if(conditional.x) {
             sample.cov <- lavsamplestats@res.cov
         } else {
-            sampl.ecov <- lavsamplestats@cov
+            sample.cov <- lavsamplestats@cov
         }
     }
     if(is.null(sample.mean) && !is.null(lavsamplestats)) {
@@ -61,15 +61,7 @@ lav_partable_independence <- function(lavobject      = NULL,
 
     # what with fixed.x?
     if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
-        #fixed.x = lavoptions$fixed.x
-        ##### IMPORTANT #####
-        # we always use 'fixed.x', thereby allowing the exogenous
-        # variables to correlate, even if in the original model,
-        # fixed.x = FALSE
-        #
-        # the rationale is that it seems very unrealistic (in most settings)
-        # to have uncorrelated exogenous covariates
-        fixed.x = TRUE
+        fixed.x = lavoptions$fixed.x
         ov.names.x = lavdata@ov.names.x
     } else if(lavoptions$mimic == "EQS") {
         # always ignore fixed.x
@@ -199,20 +191,23 @@ lav_partable_independence <- function(lavobject      = NULL,
         }
 
         # fixed.x exogenous variables?
-        if(!conditional.x &&
-           fixed.x && (nx <- length(ov.names.x[[g]])) > 0L) {
+        if(!conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
             # fix variances
             exo.idx <- which(rhs %in% ov.names.x[[g]] &
                              lhs %in% ov.names.x[[g]] &
                              op == "~~" & group == g)
-            exo[exo.idx] <- 1L
-            free[exo.idx] <- 0L
+            if(fixed.x) {
+                exo[exo.idx] <- 1L
+                free[exo.idx] <- 0L
+            }
 
             # fix means
             exo.idx <- which(lhs %in% ov.names.x[[g]] &
                              op == "~1" & group == g)
-            exo[exo.idx] <- 1L
-            free[exo.idx] <- 0L
+            if(fixed.x) {
+                exo[exo.idx] <- 1L
+                free[exo.idx] <- 0L
+            }
 
             # add covariances
             pstar <- nx*(nx-1)/2
@@ -222,8 +217,13 @@ lav_partable_independence <- function(lavobject      = NULL,
                  op <- c(op,   rep("~~", pstar))
                 rhs <- c(rhs, tmp[2,])
                 group <- c(group, rep(g,  pstar))
-                free  <- c(free,  rep(0L, pstar))
-                exo   <- c(exo,   rep(1L, pstar))
+                if(fixed.x) {
+                    free  <- c(free,  rep(0L, pstar))
+                    exo   <- c(exo,   rep(1L, pstar))
+                } else {
+                    free  <- c(free,  rep(1L, pstar))
+                    exo   <- c(exo,   rep(0L, pstar))
+                }
 
                 # starting values
                 if(!is.null(sample.cov)) {

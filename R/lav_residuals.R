@@ -294,6 +294,9 @@ function(object, type="raw", labels=TRUE) {
         if(labels) names(R[[g]]$mean) <- ov.names[[g]]
         class(R[[g]]$mean) <- c("lavaan.vector", "numeric")
         class(R[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
+        if(object@Model@conditional.x) {
+            class(R[[g]]$slopes) <- c("lavaan.matrix", "matrix")
+        }
     }
 
     # replace 'cov' by 'cor' if type == "cor"

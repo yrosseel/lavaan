@@ -640,8 +640,19 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE) {
     Mp
 }
 
-# get response patterns (empty records have already been removed!)
+# get response patterns (ignore empty cases!)
 lav_data_resp_patterns <- function(X) {
+
+    # construct TRUE/FALSE matrix: TRUE if value is observed
+    OBS <- !is.na(X)
+
+    # empty cases
+    empty.idx <- which(rowSums(OBS) == 0L)
+
+    # remove empty cases
+    if(length(empty.idx) > 0L) {
+        X <- X[-empty.idx,,drop = FALSE]
+    }
 
     ntotal <- nrow(X); nvar <- ncol(X)
 
@@ -655,7 +666,9 @@ lav_data_resp_patterns <- function(X) {
     pat <- X[match(order, id), , drop = FALSE]
     row.names(pat) <- as.character(TABLE)
 
-    total.patterns <- prod(apply(X, 2, max))
+    # handle NA?
+    X[is.na(X)] <- -9
+    total.patterns <- prod(apply(X, 2, function(x) length(unique(x))))
     empty.patterns <- total.patterns - npatterns
     # return a list
     #out <- list(nobs=ntotal, nvar=nvar,

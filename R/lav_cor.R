@@ -74,6 +74,9 @@ lavCor <- function(object,
     conditional.x <- FALSE
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
+    } 
+    if(categorical) {
+        meanstructure <- TRUE
     }
     if(!is.null(dots$fixed.x)) {
         fixed.x <- dots$fixed.x

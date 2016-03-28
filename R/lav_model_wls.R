@@ -139,6 +139,14 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                                   Sigma = Sigma.hat[[g]])
             } else {
                 # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
+
+                # NOTE: when fixed.x=TRUE, this will give slightly different
+                # results for the SEs compared to <= 0.5-20 (and Mplus), 
+                # because we set the rows/columns of exo variables to zero
+                #
+                # but this should be ok (although SEs for ~1 are somewhat
+                # larger)
+
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
                     ICOV           = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                     COV            = Sigma.hat[[g]][,,drop=FALSE],
@@ -149,6 +157,7 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                     meanstructure  = lavmodel@meanstructure,
                     slopestructure = lavmodel@conditional.x)
             }
+
             if(lavmodel@group.w.free) {
                 # unweight!!
                 a <- exp(GW[g]) / lavsamplestats@nobs[[g]]

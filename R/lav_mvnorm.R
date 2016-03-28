@@ -392,15 +392,21 @@ lav_mvnorm_information_observed_samplestats <-
 }
 
 # 5c: unit first-order information h0
-lav_mvnorm_information_firstorder <- function(Y           = NULL,
-                                              Mu          = NULL,
-                                              Sigma       = NULL,
-                                              Sinv.method = "eigen",
-                                              Sigma.inv   = NULL) {
+lav_mvnorm_information_firstorder <- function(Y             = NULL,
+                                              Mu            = NULL,
+                                              Sigma         = NULL,
+                                              Sinv.method   = "eigen",
+                                              Sigma.inv     = NULL,
+                                              meanstructure = TRUE) {
     N <- NROW(Y)
 
-    SC <- lav_mvnorm_scores_mu_vech_sigma(Y = Y, Mu = Mu, Sigma = Sigma,
-              Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    if(meanstructure) {
+        SC <- lav_mvnorm_scores_mu_vech_sigma(Y = Y, Mu = Mu, Sigma = Sigma,
+                  Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    } else {
+        SC <- lav_mvnorm_scores_vech_sigma(Y = Y, Mu = Mu, Sigma = Sigma,
+                  Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    }
 
     crossprod(SC)/N
 }

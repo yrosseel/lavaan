@@ -209,7 +209,8 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
         if(lavdata@ngroups > 1L) {
             pat$group <- rep(g, nrow(pat))
         }
-        pat$nobs <- rep(nrow(lavdata@X[[g]]), nrow(pat))
+        NOBS <- sum(obs.freq)
+        pat$nobs <- rep(NOBS, nrow(pat))
         pat$obs.freq <- obs.freq
         rownames(pat) <- NULL
         if(g == 1L) {

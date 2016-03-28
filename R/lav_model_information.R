@@ -271,7 +271,8 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                       Sigma = Sigma.hat[[g]])
             } else {
                 B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
-                          Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                          Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                          meanstructure = lavmodel@meanstructure)
             }        
             B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
         }
