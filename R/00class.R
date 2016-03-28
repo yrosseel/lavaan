@@ -65,6 +65,7 @@ setClass("lavSampleStats",         # sample moments
         WLS.V="list",              # weight matrix for GLS/WLS
         WLS.VD="list",             # diagonal of weight matrix only
         NACOV="list",              # N times the asymptotic covariance matrix
+        NACOV.user="logical",      # user-specified NACOV?
 
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information

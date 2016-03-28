@@ -583,6 +583,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        WLS.V           = WLS.V,
                        WLS.VD          = WLS.VD,
                        NACOV           = NACOV,
+                       NACOV.user      = NACOV.user,
 
                        # missingness
                        missing.flag    = missing.flag.,
@@ -883,6 +884,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                        WLS.V            = WLS.V,
                        WLS.VD           = WLS.VD,
                        NACOV            = NACOV,
+                       NACOV.user       = NACOV.user,
 
                        # missingness
                        missing.flag     = missing.flag.,
