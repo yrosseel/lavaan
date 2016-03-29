@@ -560,7 +560,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$estimator == "PML") {
             TH <- computeTH(lavmodel)
             BI <- lav_tables_pairwise_freq_cell(lavdata)
-            if(missing == "available.cases") {
+            if(lavoptions$missing == "available.cases") {
                 UNI <- lav_tables_univariate_freq_cell(lavdata)
             }
             for(g in 1:lavdata@ngroups) {
@@ -580,7 +580,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                       LONG   = LONG)
 
                 # available cases
-                if(missing == "available.cases") {
+                if(lavoptions$missing == "available.cases") {
                     if(is.null(UNI$group) || max(UNI$group) == 1L) {
                         unifreq <- UNI$obs.freq
                         uninobs <- UNI$nobs

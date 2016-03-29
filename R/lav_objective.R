@@ -241,7 +241,11 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     }
 
     nvar <- nrow(Sigma.hat)
-    nexo <- NCOL(eXo)
+    if(is.null(eXo)) {
+        nexo <- 0L
+    } else {
+        nexo <- NCOL(eXo)
+    }
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
     if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
@@ -261,9 +265,10 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                                index.var.of.thres = th.idx, 
                                rho.xixj           = cors)
         # get expected probability per table, per pair
-        PI <- pairwiseExpProbVec(ind.vec = lavcache$LONG, th.rho.vec=LONG2)
+        pairwisePI <- pairwiseExpProbVec(ind.vec = lavcache$LONG, 
+                                         th.rho.vec = LONG2)
         # get frequency per table, per pair
-        logl <- sum(lavcache$bifreq * log(PI))
+        logl <- sum(lavcache$bifreq * log(pairwisePI))
     
         # more convenient fit function
         prop <- lavcache$bifreq / lavcache$nobs
@@ -273,10 +278,10 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         if(length(zero.idx) > 0L) {
             freq <- freq[-zero.idx]
             prop <- prop[-zero.idx]
-            PI   <- PI[-zero.idx]
+            pairwisePI <- pairwisePI[-zero.idx]
         } 
-        ##Fmin <- sum( prop*log(prop/PI) )
-        Fmin <- sum( freq * log(prop/PI) ) # to avoid 'N'
+        ##Fmin <- sum( prop*log(prop/pairwisePI) )
+        Fmin <- sum( freq * log(prop/pairwisePI) ) # to avoid 'N'
 
         if(missing == "available.cases") {
             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
@@ -323,10 +328,10 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                           ov.types[j] == "ordered") {
                     # polychoric correlation
                     if(nexo == 0L) {
-                        PI <- pc_PI(rho   = Sigma.hat[i,j], 
-                                    th.y1 = TH[ th.idx == i ],
-                                    th.y2 = TH[ th.idx == j ])
-                        LIK[,pstar.idx] <- PI[ cbind(X[,i], X[,j]) ]
+                        pairwisePI <- pc_PI(rho   = Sigma.hat[i,j], 
+                                            th.y1 = TH[ th.idx == i ],
+                                            th.y2 = TH[ th.idx == j ])
+                        LIK[,pstar.idx] <- pairwisePI[ cbind(X[,i], X[,j]) ]
                     } else {
                          LIK[,pstar.idx] <- 
                              pc_lik_PL_with_cov(Y1          = X[,i],

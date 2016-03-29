@@ -18,17 +18,17 @@ fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 # chain rule to get the gradient
 # this is adapted from code written by Myrsini Katsikatsou
 # first attempt - YR 5 okt 2012
-pml_deriv1 <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
-                       TH         = NULL,    # model-based thresholds + means
-                       th.idx     = NULL,    # threshold idx per variable
-                       num.idx    = NULL,    # which variables are numeric
-                       X          = NULL,    # data
-                       eXo        = NULL,    # external covariates
-                       lavcache   = NULL,    # housekeeping stuff
-                       PI         = NULL,    # slopes
-                       missing    = NULL,    # how to deal with missings
-                       scores     = FALSE,   # return case-wise scores
-                       negative   = TRUE) {  # multiply by -1
+pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
+                       TH         = NULL,       # model-based thresholds + means
+                       th.idx     = NULL,       # threshold idx per variable
+                       num.idx    = NULL,       # which variables are numeric
+                       X          = NULL,       # data
+                       eXo        = NULL,       # external covariates
+                       lavcache   = NULL,       # housekeeping stuff
+                       PI         = NULL,       # slopes
+                       missing    = "listwise", # how to deal with missings
+                       scores     = FALSE,      # return case-wise scores
+                       negative   = TRUE) {     # multiply by -1
 
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
     if(any(abs(cors) > 1)) {
@@ -115,11 +115,15 @@ pml_deriv1 <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                 sl.idx_i <- N.TH + seq(i, by=nvar, length.out=nexo)
                 sl.idx_j <- N.TH + seq(j, by=nvar, length.out=nexo)
 
-                var.idx_i <- N.TH + N.SL + match(i, num.idx)
-                var.idx_j <- N.TH + N.SL + match(j, num.idx)
+                if(length(num.idx) > 0L) {
+                    var.idx_i <- N.TH + N.SL + match(i, num.idx)
+                    var.idx_j <- N.TH + N.SL + match(j, num.idx)
+                }
             } else {
-                var.idx_i <- N.TH + match(i, num.idx)
-                var.idx_j <- N.TH + match(j, num.idx)
+                if(length(num.idx) > 0L) {
+                    var.idx_i <- N.TH + match(i, num.idx)
+                    var.idx_j <- N.TH + match(j, num.idx)
+                }
             }
             if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
                 # ordinary pearson correlation

@@ -381,7 +381,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                  eXo        = lavdata@eXo[[g]],
                                  PI         = PI[[g]],
                                  missing    = lavdata@missing)
-
                 # chain rule (fmin)
                 group.dx <- 
                     as.numeric(t(d1) %*% Delta[[g]])
