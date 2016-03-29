@@ -249,9 +249,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         
         # 2. we can not handle exogenous covariates yet
-        if(length(ovx) > 0L) {
-            stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
-        }
+        #if(length(ovx) > 0L) {
+        #    stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
+        #}
     }
 
 
@@ -560,6 +560,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$estimator == "PML") {
             TH <- computeTH(lavmodel)
             BI <- lav_tables_pairwise_freq_cell(lavdata)
+            if(missing == "available.cases") {
+                UNI <- lav_tables_univariate_freq_cell(lavdata)
+            }
             for(g in 1:lavdata@ngroups) {
                 if(is.null(BI$group) || max(BI$group) == 1L) {
                     bifreq <- BI$obs.freq
@@ -570,11 +573,37 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     binobs  <- BI$nobs[idx]
                 }
                 LONG  <- LongVecInd(no.x               = ncol(lavdata@X[[g]]),
-                                   all.thres          = TH[[g]],
-                                   index.var.of.thres = lavmodel@th.idx[[g]])
+                                    all.thres          = TH[[g]],
+                                    index.var.of.thres = lavmodel@th.idx[[g]])
                 lavcache[[g]] <- list(bifreq = bifreq,
                                       nobs   = binobs,
-                                     LONG   = LONG)
+                                      LONG   = LONG)
+
+                # available cases
+                if(missing == "available.cases") {
+                    if(is.null(UNI$group) || max(UNI$group) == 1L) {
+                        unifreq <- UNI$obs.freq
+                        uninobs <- UNI$nobs
+                    } else {
+                        idx <- which(UNI$group == g)
+                        unifreq <- UNI$obs.freq[idx]
+                        uninobs <- UNI$nobs[idx]
+                    }
+                    lavcache[[g]]$unifreq <- unifreq
+                    lavcache[[g]]$uninobs <- uninobs
+
+                    uniweights.casewise <- rowSums( is.na( lavdata@X[[g]] ) )
+                    lavcache[[g]]$uniweights.casewise <- uniweights.casewise
+
+                    #weights per response category per variable in the same 
+                    # order as unifreq; i.e. w_ia, i=1,...,p, (p variables), 
+                    # a=1,...,Ci, (Ci response categories for variable i),
+                    # a running faster than i
+                    lavcache[[g]]$uniweights <- c( apply(lavdata@X[[g]], 2,
+                        function(x){
+                            tapply(uniweights.casewise, as.factor(x), sum,
+                                   na.rm=TRUE) } ))
+                }
             }
         }
         # copy response patterns to cache -- FIXME!! (data not included 
@@ -625,7 +654,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                 lavcache        = lavcache)
         lavmodel <- lav_model_set_parameters(lavmodel, x = x,
                                              estimator = lavoptions$estimator)
-
         # store parameters in @ParTable$est
         lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
                                                     type = "user", extra = TRUE)

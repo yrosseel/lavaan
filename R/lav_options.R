@@ -125,6 +125,8 @@ lav_options_set <- function(opt = formals(lavaan)) {
         # nothing to do
     } else if(opt$missing == "available.cases") {
         # nothing to do, or warn if not categorical?
+    } else if(opt$missing == "available_cases") {
+        opt$missing <- "available.cases"
     } else {
         stop("unknown value for `missing' argument: ", opt$missing, "\n")
     }

@@ -18,15 +18,17 @@ fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 # chain rule to get the gradient
 # this is adapted from code written by Myrsini Katsikatsou
 # first attempt - YR 5 okt 2012
-pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
-                       TH        = NULL,    # model-based thresholds + means
-                       th.idx    = NULL,    # threshold idx per variable
-                       num.idx   = NULL,    # which variables are numeric
-                       X         = NULL,    # data
-                       eXo       = NULL,    # external covariates
-                       lavcache     = NULL,    # housekeeping stuff
-                       scores    = FALSE,   # return case-wise scores
-                       negative  = TRUE) {  # multiply by -1
+pml_deriv1 <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
+                       TH         = NULL,    # model-based thresholds + means
+                       th.idx     = NULL,    # threshold idx per variable
+                       num.idx    = NULL,    # which variables are numeric
+                       X          = NULL,    # data
+                       eXo        = NULL,    # external covariates
+                       lavcache   = NULL,    # housekeeping stuff
+                       PI         = NULL,    # slopes
+                       missing    = NULL,    # how to deal with missings
+                       scores     = FALSE,   # return case-wise scores
+                       negative   = TRUE) {  # multiply by -1
 
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
     if(any(abs(cors) > 1)) {
@@ -66,6 +68,23 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                  rho.xixj           = cors,
                                  n.xixj.vec         = lavcache$bifreq,
                                  out.LongVecInd     = lavcache$LONG)
+
+        if(missing == "available.cases") {
+            uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
+            tmp <- lavcache$uniweights / uniPI
+
+            var.idx <- split(th.idx, th.idx)
+            var.idx <- unlist( lapply(var.idx, function(x){c(x,x[1])}) )
+
+            tmp.varwise <- split(tmp, var.idx)
+            tmp1 <- unlist( lapply(tmp.varwise, 
+                                   function(x){ c(x[-length(x)]) } ) )
+            tmp2 <- unlist( lapply(tmp.varwise, function(x){ c(x[-1]) } ) )
+
+            uni.der.tau <- dnorm(TH) * (tmp1 - tmp2)
+            nTH <- length(TH)
+            gradient[1:nTH] <- gradient[1:nTH] + uni.der.tau
+        }
 
         if(negative) {
             gradient <- -1 * gradient
@@ -113,7 +132,7 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                 stop("not done yet")
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
-                if(scores) {
+                if(nexo == 0L) {
                     SC.COR.UNI <- pc_cor_scores(Y1  = X[,i],
                                                 Y2  = X[,j],
                                                 eXo = NULL,
@@ -125,6 +144,21 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                                                 sl.y1 = NULL,
                                                 sl.y2 = NULL,
                                                 na.zero = TRUE)
+                } else {
+                    SC.COR.UNI <-
+                        pc_cor_scores_PL_with_cov(Y1 = X[,i],
+                                                  Y2 = X[,j],
+                                                  eXo = eXo,
+                                                  Rho = Sigma.hat[i,j],
+                                                  th.y1 = TH[ th.idx == i ],
+                                                  th.y2 = TH[ th.idx == j ],
+                                                  sl.y1 = PI[i,],
+                                                  sl.y2 = PI[j,],
+                                                  missing.ind = missing)
+                }
+
+                if(scores) {
+
                     # TH
                     SCORES[,th.idx_i] <- SCORES[,th.idx_i] + SC.COR.UNI$dx.th.y1
                     SCORES[,th.idx_j] <- SCORES[,th.idx_j] + SC.COR.UNI$dx.th.y2
@@ -175,9 +209,38 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
                     # NO VAR
 
                     # RHO
-                    GRAD[pstar.idx,cor.idx] <- 
+                    GRAD[pstar.idx, cor.idx] <- 
                         sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
                 }
+            }
+        }
+    }
+
+    if(missing == "available.cases" && all(ov.types == "ordered")) {
+        if(nexo == 0L) {
+            UNI_SCORES <- matrix(0, nrow(X), N.TH)
+            for(i in seq_len(nvar)) {
+                 th.idx_i <- which(th.idx == i)
+                 derY1 <- uni_scores(Y1 = X[,i], th.y1 = TH[ th.idx == i ],
+                              eXo = NULL, sl.y1 = NULL,
+                              weights.casewise = lavcache$uniweights.casewise)
+                 UNI_SCORES[,th.idx_i] <- derY1$dx.th.y1
+            }
+        } else {
+            UNI_SCORES <- matrix(0, nrow(X), ncol=(N.TH+N.SL) )
+            for(i in seq_len(nvar)) {
+                th.idx_i <- which(th.idx == i)
+                sl.idx_i <- N.TH + seq(i, by=nvar, length.out=nexo)
+                derY1 <- uni_scores(Y1 = X[,i], th.y1 = TH[ th.idx == i ],
+                             eXo = eXo, sl.y1 = PI[i,],
+                             weights.casewise = lavcache$uniweights.casewise)
+               UNI_SCORES[,th.idx_i] <- derY1$dx.th.y1
+               UNI_SCORES[,sl.idx_i] <- derY1$dx.sl.y1
+            }
+            if(scores) {
+                SCORES <- SCORES[, 1:(N.TH+N.SL)] + UNI_SCORES
+            } else {
+                uni_gradient <- colSums(UNI_SCORES)
             }
         }
     }
@@ -187,6 +250,14 @@ pml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 
     # gradient is sum over all pairs
     gradient <- colSums(GRAD, na.rm = TRUE)
+
+    if(missing == "available.cases" && all(ov.types == "ordered")) {
+        if(nexo == 0L) {
+            gradient[1:N.TH] <- gradient + uni_gradient
+        } else {
+            gradient[1:(N.TH+N.SL)] <- gradient + uni_gradient
+        }
+    }
 
     # we multiply by -1 because we minimize
     if(negative) {

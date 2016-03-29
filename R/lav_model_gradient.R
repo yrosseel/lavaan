@@ -75,6 +75,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
         if(conditional.x) {
             PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
+        if(estimator == "PML") {
+            if(lavmodel@nexo > 0L) {
+                PI <- computePI(lavmodel = lavmodel)
+            } else {
+                PI <- vector("list", length = lavsamplestats@ngroups)
+            }
+        }
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }
@@ -365,12 +372,15 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
             if(estimator == "PML") {
-                d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
-                                 TH        = TH[[g]],
-                                 th.idx    = th.idx[[g]],
-                                 num.idx   = num.idx[[g]],
-                                 X         = lavdata@X[[g]],
-                                 lavcache  = lavcache[[g]])
+                d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                                 TH         = TH[[g]],
+                                 th.idx     = th.idx[[g]],
+                                 num.idx    = num.idx[[g]],
+                                 X          = lavdata@X[[g]],
+                                 lavcache   = lavcache[[g]],
+                                 eXo        = lavdata@eXo[[g]],
+                                 PI         = PI[[g]],
+                                 missing    = lavdata@missing)
 
                 # chain rule (fmin)
                 group.dx <- 

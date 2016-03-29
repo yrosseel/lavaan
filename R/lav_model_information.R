@@ -239,6 +239,11 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
         Delta <- computeDelta(lavmodel = lavmodel)
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
         TH <- computeTH(lavmodel = lavmodel)
+        if(lavmodel@nexo > 0L) {
+            PI <- computePI(lavmodel = lavmodel)
+        } else {
+            PI <- vector("list", length = lavsamplestats@ngroups)
+        }
     } else {
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
         Mu.hat <- computeMuHat(lavmodel = lavmodel)
@@ -248,14 +253,17 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
     for(g in 1:lavsamplestats@ngroups) {
         if(estimator == "PML") {
             # slow approach: compute outer product of case-wise scores
-            SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]],
-                             TH        = TH[[g]],
-                             th.idx    = lavmodel@th.idx[[g]],
-                             num.idx   = lavmodel@num.idx[[g]],
-                             X         = lavdata@X[[g]],
-                             lavcache  = lavcache[[g]],
-                             scores    = TRUE,
-                             negative  = FALSE)
+            SC <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                             TH         = TH[[g]],
+                             th.idx     = lavmodel@th.idx[[g]],
+                             num.idx    = lavmodel@num.idx[[g]],
+                             X          = lavdata@X[[g]],
+                             eXo        = lavdata@eXo[[g]],
+                             PI         = PI[[g]],
+                             lavcache   = lavcache[[g]],
+                             missing    = lavdata@missing,
+                             scores     = TRUE,
+                             negative   = FALSE)
 
             # chain rule
             group.SC <- SC %*% Delta[[g]]

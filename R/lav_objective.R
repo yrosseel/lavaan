@@ -206,12 +206,16 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
 # some changes:
 # - no distinction between x/y (ksi/eta)
 # - loglikelihoods are computed case-wise
-estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
-                          TH        = NULL,    # model-based thresholds + means
-                          th.idx    = NULL,    # threshold idx per variable
-                          num.idx   = NULL,    # which variables are numeric
-                          X         = NULL,    # raw data
-                          lavcache     = NULL) {  # housekeeping stuff
+# - 29/03/2016: adapt for exogenous covariates
+estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
+                          TH         = NULL,    # model-based thresholds + means
+                          PI         = NULL,    # slopes
+                          th.idx     = NULL,    # threshold idx per variable
+                          num.idx    = NULL,    # which variables are numeric
+                          X          = NULL,    # raw data
+                          eXo        = NULL,    # eXo data
+                          lavcache   = NULL,    # housekeeping stuff
+                          missing    = NULL) {  # how to deal with missings?
 
     # YR 3 okt 2012
     # the idea is to compute for each pair of variables, the model-based 
@@ -237,6 +241,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     }
 
     nvar <- nrow(Sigma.hat)
+    nexo <- NCOL(eXo)
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
     if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
@@ -249,7 +254,7 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     PCOL <- col(PSTAR)
 
     # shortcut for all ordered - tablewise
-    if(all(ov.types == "ordered")) {
+    if(all(ov.types == "ordered") && nexo == 0L) {
         # prepare for Myrsini's vectorization scheme
         LONG2 <- LongVecTH.Rho(no.x               = nvar,
                                all.thres          = TH,
@@ -273,27 +278,67 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
         ##Fmin <- sum( prop*log(prop/PI) )
         Fmin <- sum( freq * log(prop/PI) ) # to avoid 'N'
 
+        if(missing == "available.cases") {
+            uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
+
+            # shortcuts
+            unifreq    <- lavcache$unifreq
+            uninobs    <- lavcache$uninobs
+            uniweights <- lavcache$uniweights
+
+            logl <- logl + sum(uniweights * log(uniPI))
+
+            uniprop <- unifreq / uninobs
+
+            # remove zero props 
+            uni.zero.idx <- which(uniprop == 0.0)
+            if(length(uni.zero.idx) > 0L) {
+                uniprop    <- uniprop[-uni.zero.idx]
+                uniPI      <- uniPI[-uni.zero.idx]
+                uniweights <- uniweights[-uni.zero.idx]
+            }
+
+            Fmin <- Fmin + sum(uniweights * log(uniprop/uniPI))
+        }
+
     } else {
         # # order! first i, then j, lav_matrix_vec(table)!
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {
                 pstar.idx <- PSTAR[i,j]
                 # cat("pstar.idx =", pstar.idx, "i = ", i, " j = ", j, "\n")
-                if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
+                if(ov.types[i] == "numeric" && 
+                   ov.types[j] == "numeric") {
                     # ordinary pearson correlation
                     stop("not done yet")
-                } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
+                } else if(ov.types[i] == "numeric" && 
+                          ov.types[j] == "ordered") {
                     # polyserial correlation
                     stop("not done yet")
-                } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
+                } else if(ov.types[j] == "numeric" && 
+                          ov.types[i] == "ordered") {
                     # polyserial correlation
                     stop("not done yet")
-                } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
+                } else if(ov.types[i] == "ordered" && 
+                          ov.types[j] == "ordered") {
                     # polychoric correlation
-                    PI <- pc_PI(rho   = Sigma.hat[i,j], 
-                                th.y1 = TH[ th.idx == i ],
-                                th.y2 = TH[ th.idx == j ])
-                    LIK[,pstar.idx] <- PI[ cbind(X[,i], X[,j]) ]
+                    if(nexo == 0L) {
+                        PI <- pc_PI(rho   = Sigma.hat[i,j], 
+                                    th.y1 = TH[ th.idx == i ],
+                                    th.y2 = TH[ th.idx == j ])
+                        LIK[,pstar.idx] <- PI[ cbind(X[,i], X[,j]) ]
+                    } else {
+                         LIK[,pstar.idx] <- 
+                             pc_lik_PL_with_cov(Y1          = X[,i],
+                                                Y2          = X[,j],
+                                                Rho         = Sigma.hat[i,j],
+                                                th.y1       = TH[th.idx==i],
+                                                th.y2       = TH[th.idx==j],
+                                                eXo         = eXo,
+                                                PI.y1       = PI[i,],
+                                                PI.y2       = PI[j,],
+                                                missing.ind = missing)
+                    }
                 }
                 #cat("Done\n")
             }
@@ -301,16 +346,55 @@ estimator.PML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 
         # check for zero likelihoods/probabilities
         # FIXME: or should we replace them with a tiny number?
-        if(any(LIK == 0.0)) return(Inf) # we minimize
+        if(any(LIK == 0.0, na.rm = TRUE)) {
+            OUT <- +Inf
+            attr(OUT, "logl") <- as.numeric(NA)
+            return(OUT)
+        }
  
         # loglikelihood
         LogLIK.cases <- log(LIK)
  
         # sum over cases
-        LogLIK.pairs <- colSums(LogLIK.cases)
+        LogLIK.pairs <- colSums(LogLIK.cases, na.rm = TRUE)
 
         # sum over pairs
-        LogLik <- sum(LogLIK.pairs)
+        LogLik <- logl <- sum(LogLIK.pairs)
+
+        # Fmin
+        Fmin <- (-1)*LogLik
+    }
+
+    if(missing == "available.cases" && all(ov.types == "ordered") && 
+       nexo != 0L) {
+
+       uni_LIK <- matrix(0, nrow(X), ncol(X))
+       for(i in seq_len(nvar)) {
+           uni_LIK[,i] <- uni_lik(Y1    = X[,i],
+                                  th.y1 = TH[th.idx==i],
+                                  eXo   = eXo,
+                                  PI.y1 = PI[i,])
+       }
+
+       if(any(uni_LIK == 0.0, na.rm = TRUE)) {
+           OUT <- +Inf
+           attr(OUT, "logl") <- as.numeric(NA)
+           return(OUT)
+       }
+
+       uni_logLIK_cases <- log(uni_LIK) * lavcache$uniweights.casewise
+
+       #sum over cases
+       uni_logLIK_varwise <- colSums(uni_logLIK_cases)
+
+       #sum over variables
+       uni_logLIK <- sum(uni_logLIK_varwise)
+
+       #add with the pairwise part of LogLik
+       LogLik <- logl <- LogLik + uni_logLIK
+
+       #we minimise
+       Fmin <- (-1)*LogLik
     }
 
     # function value as returned to the minimizer

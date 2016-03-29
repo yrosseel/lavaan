@@ -164,12 +164,14 @@ lav_model_objective <- function(lavmodel       = NULL,
             # Pairwise maximum likelihood
             group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
                                       TH        = TH[[g]],
+                                      PI        = PI[[g]],
                                       th.idx    = th.idx[[g]],
                                       num.idx   = num.idx[[g]],
                                       X         = lavdata@X[[g]],
-                                      lavcache  = lavcache[[g]])
+                                      eXo       = lavdata@eXo[[g]],
+                                      lavcache  = lavcache[[g]],
+                                      missing   = lavdata@missing)
             logl.group[g] <- attr(group.fx, "logl")
-
         } else if(estimator == "FML") { 
             # Full maximum likelihood (underlying multivariate normal)
             group.fx <- estimator.FML(Sigma.hat = Sigma.hat[[g]],
