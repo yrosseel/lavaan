@@ -49,7 +49,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         nadd <- FIT@Model@nx.free - npar
 
         # R
-        R.model <- object@Model@con.jac[,]
+        R.model <- object@Model@con.jac[,,drop = FALSE]
         if(nrow(R.model) > 0L) {
             R.model <- cbind(R.model, matrix(0, nrow(R.model), ncol = nadd))
             R.add   <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
@@ -77,7 +77,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     } else {
     # MODE 2: releasing constraints
 
-        R <- object@Model@con.jac[,]
+        R <- object@Model@con.jac[,,drop = FALSE]
         if(nrow(R) == 0L) {
             stop("lavaan ERROR: no equality constraints found in model.")
         }
@@ -85,7 +85,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         score <- lavTech(object, "gradient")
         information <- lavTech(object, "information.expected")
         J.inv <- MASS::ginv(information)
-        R <- object@Model@con.jac[,]
+        #R <- object@Model@con.jac[,]
 
         if(is.null(release)) {
             # ALL constraints
