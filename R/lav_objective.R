@@ -343,6 +343,13 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                                                 PI.y1       = PI[i,],
                                                 PI.y2       = PI[j,],
                                                 missing.ind = missing)
+                             #pc_lik2(Y1 = X[, i], Y2 = X[,j], 
+                             #        rho = Sigma.hat[i, j], 
+                             #        th.y1 = TH[th.idx == i], 
+                             #        th.y2 = TH[th.idx == j], 
+                             #        eXo = eXo, 
+                             #        sl.y1 = PI[i, ], 
+                             #        sl.y2 = PI[j, ])
                     }
                 }
                 #cat("Done\n")

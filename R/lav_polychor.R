@@ -144,6 +144,43 @@ pc_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL,
     logl
 }
 
+# pc_lik, with user-specified parameters
+pc_lik2 <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
+                    th.y1=NULL, th.y2=NULL,
+                    sl.y1=NULL, sl.y2=NULL) {
+
+    R <- sqrt(1 - rho*rho)
+    if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
+    if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
+    y1.update <- y2.update <- FALSE
+    if(!is.null(th.y1)) { # update thresholds fit.y1
+        y1.update <- TRUE
+        fit.y1$theta[fit.y1$th.idx] <- th.y1
+    }
+    if(!is.null(th.y2)) { # update thresholds fit.y1
+        y2.update <- TRUE
+        fit.y2$theta[fit.y2$th.idx] <- th.y2
+    }
+    if(!is.null(sl.y1)) { # update slopes
+        y1.update <- TRUE
+        fit.y1$theta[fit.y1$slope.idx] <- sl.y1
+    }
+    if(!is.null(sl.y2)) { # update slopes
+        y2.update <- TRUE
+        fit.y2$theta[fit.y2$slope.idx] <- sl.y2
+    }
+    if(y1.update) tmp <- fit.y1$lik()
+    if(y2.update) tmp <- fit.y2$lik()
+    if(missing(Y1)) Y1 <- fit.y1$y
+    if(missing(Y2)) Y2 <- fit.y2$y
+    if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X
+   
+    # lik
+    lik <- pc_lik(rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
+
+    lik
+}
+
 # individual likelihoods
 pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 

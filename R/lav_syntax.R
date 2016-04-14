@@ -362,6 +362,13 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
         } else if(rhs[[1L]] == "*") { # last one, but with modifier
             out <- c(vector("list", 1L), out)
             NAME <- all.vars(rhs[[3L]])
+
+            # catch interaction term
+            rhs3.names <- all.names(rhs[[3L]])
+            if(rhs3.names[1L] == ":") {
+                NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+            }
+
             if(length(NAME) > 0L) {
                 names(out)[1L] <- NAME
             } else { # intercept
@@ -376,9 +383,26 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
                 out[[1L]] <- lav_syntax_get_modifier(rhs[[2L]])
             }
             break
+        } else if(rhs[[1L]] == ":") { # last one, but interaction term
+            out <- c(vector("list", 1L), out)
+            NAME <- all.vars(rhs)
+            NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+            names(out)[1L] <- NAME
+            break
         } else if(rhs[[1L]] == "+") { # not last one!
             i.var <- all.vars(rhs[[3L]], unique=FALSE)
             n.var <- length(i.var)
+
+            # catch interaction term
+            rhs3.names <- all.names(rhs[[3L]])
+            if(length(i.var) > 1L && ":" %in% rhs3.names) {
+               colon.idx <- which(rhs3.names == ":")
+               i.var <- i.var[seq_len(n.var - 1L)]
+               n.var <- n.var - 1L
+               i.var[n.var] <- paste(rhs3.names[colon.idx + 1L], ":",
+                                     rhs3.names[colon.idx + 2L], sep = "")
+            }
+
             out <- c(vector("list", 1L), out)
             if(length(i.var) > 0L) {
                 names(out)[1L] <- i.var[n.var]
@@ -388,7 +412,7 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
             if(n.var > 1L) { 
                 # modifier are unquoted labels
                 out[[1L]]$label <- i.var[-n.var]
-            } else if(length(rhs[[3]]) == 3L) {
+            } else if(length(rhs[[3L]]) == 3L && rhs3.names[1L] == "*") {
                 # modifiers!!
                 out[[1L]] <- lav_syntax_get_modifier(rhs[[3L]][[2L]])
             }

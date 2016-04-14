@@ -343,7 +343,28 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # does the data contain all the observed variables
         # needed in the user-specified model for this group
         ov.all <- unique(ov.names[[g]], ov.names.x[[g]]) # no overlap if categ
+
+        # handle interactions
+        ov.int.names <- ov.all[ grepl(":", ov.all) ]
+        n.int <- length(ov.int.names)
+        if(n.int > 0L) {
+            ov.names.noint <- ov.all[!ov.all %in% ov.int.names]
+            for(iv in seq_len(n.int)) {
+                NAMES <- strsplit(ov.int.names[iv], ":", fixed = TRUE)[[1L]]
+                if(all(NAMES %in% ov.names.noint)) {
+                    # add this interaction term to the data.frame, unless
+                    # it already exists
+                    if(is.null(data[[ ov.int.names[iv] ]])) {
+                        data[[ ov.int.names[iv] ]] <- 
+                            data[,NAMES[1L]] * data[,NAMES[2L]]
+                    }
+                }
+            }
+        }
+
+        # check for missing obsered variables
         idx.missing <- which(!(ov.all %in% names(data)))
+
         if(length(idx.missing)) {
             stop("lavaan ERROR: missing observed variables in dataset: ",
                  paste(ov.all[idx.missing], collapse=" "))
