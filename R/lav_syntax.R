@@ -363,13 +363,12 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
             out <- c(vector("list", 1L), out)
             NAME <- all.vars(rhs[[3L]])
 
-            # catch interaction term
-            rhs3.names <- all.names(rhs[[3L]])
-            if(rhs3.names[1L] == ":") {
-                NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
-            }
-
-            if(length(NAME) > 0L) {
+            if(length(NAME) > 0L) { # not an intercept
+                # catch interaction term
+                rhs3.names <- all.names(rhs[[3L]])
+                if(rhs3.names[1L] == ":") {
+                    NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                }
                 names(out)[1L] <- NAME
             } else { # intercept
                 names(out)[1L] <- "intercept"
