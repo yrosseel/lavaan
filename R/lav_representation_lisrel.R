@@ -32,7 +32,19 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     }
 
     # number of groups
-    ngroups <- max(partable$group)
+    if(is.null(partable$group)) {
+        partable$group <- rep(1L, length(partable$lhs))
+        ngroups <- 1L
+    } else {
+        if(is.character(partable$group)) {
+            group.label <- unique(partable$group)
+            group.label <- group.label[ nchar(group.label) > 0L ]
+            ngroups <- length(group.label)
+        } else {
+            ngroups <- max(partable$group)
+        }
+    }
+
     ov.dummy.names.nox <- vector("list", ngroups)
     ov.dummy.names.x   <- vector("list", ngroups)
     if(extra) {

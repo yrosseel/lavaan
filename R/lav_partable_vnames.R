@@ -70,8 +70,16 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     # if `group' is missing in partable, just add group=1L 
     if(is.null(partable$group)) {
         partable$group <- rep(1L, length(partable$lhs))
+        ngroups <- 1L
+    } else {
+        if(is.character(partable$group)) {
+            group.label <- unique(partable$group)
+            group.label <- group.label[ nchar(group.label) > 0L ]
+            ngroups <- length(group.label)
+        } else {
+            ngroups <- max(partable$group)
+        }
     }
-    ngroups <- max(partable$group)
 
     # handle group argument
     group.orig <- group

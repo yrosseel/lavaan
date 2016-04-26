@@ -298,12 +298,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                #abs.tol=1e-20, ### important!! fx never negative
                                abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-10,
-                               step.min=2.2e-14, # too small??, default = 1.0
-                               #step.min=0.1,
+                               #step.min=2.2e-14, # too small??, default = 1.0
+                               step.min=0.1, # compromise...
+                               step.max=1.0,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, lavmodel@control)
-        control <- control.nlminb[c("eval.max", "iter.max", "trace", "step.min",
+        control <- control.nlminb[c("eval.max", "iter.max", "trace", 
+                                    "step.min", "step.max",
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
         #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
         optim.out <- nlminb(start=start.x,

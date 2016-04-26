@@ -557,7 +557,20 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
     stopifnot(!any(is.na(partable$ustart)))
     est <- out <- partable$ustart
     N <- length(est)
-    ngroups <- max(partable$group)
+
+    # ngroup
+    if(is.null(partable$group)) {
+        partable$group <- rep(1L, length(partable$lhs))
+        ngroups <- 1L
+    } else {
+        if(is.character(partable$group)) {
+            group.label <- unique(partable$group)
+            group.label <- group.label[ nchar(group.label) > 0L ]
+            ngroups <- length(group.label)
+        } else {
+            ngroups <- max(partable$group)
+        }
+    }
 
     # if ov.var is NOT a list, make a list
     if(!is.list(ov.var)) {
