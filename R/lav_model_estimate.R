@@ -299,6 +299,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-10,
                                step.min=2.2e-14, # too small??, default = 1.0
+                               #step.min=0.1,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, lavmodel@control)

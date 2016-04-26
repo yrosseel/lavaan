@@ -68,7 +68,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT.op          <- character(0)
     FLAT.rhs         <- character(0)
     FLAT.rhs.mod.idx <- integer(0)
-    FLAT.group       <- integer(0)    # keep track of groups using ":" operator
+    FLAT.block       <- integer(0)    # keep track of groups using ":" operator
   
     FLAT.fixed       <- character(0)  # only for display purposes! 
     FLAT.start       <- character(0)  # only for display purposes!
@@ -79,8 +79,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     CON.idx  <- 0L
     MOD <- vector("list", length=0L)
     CON <- vector("list", length=0L)
-    GRP <- 1L
-    GRP_OP <- FALSE
+    BLOCK <- 1L
+    BLOCK_OP <- FALSE
     for(i in 1:length(model)) {
         x <- model[i]
         if(debug) {
@@ -160,22 +160,22 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             next
         }
     
-        # 2c if operator is ":", put it in GRP
+        # 2c if operator is ":", put it in BLOCK
         if(op == ":") {
             FLAT.idx <- FLAT.idx + 1L
             FLAT.lhs[FLAT.idx] <- lhs
             FLAT.op[ FLAT.idx] <- op
-            FLAT.rhs[FLAT.idx] <- ""
+            FLAT.rhs[FLAT.idx] <- rhs
             FLAT.fixed[FLAT.idx] <- ""
             FLAT.start[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
             FLAT.prior[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
-            if(GRP_OP) {
-                GRP <- GRP + 1L
+            if(BLOCK_OP) {
+                BLOCK <- BLOCK + 1L
             }
-            FLAT.group[FLAT.idx] <- GRP
-            GRP_OP <- TRUE
+            FLAT.block[FLAT.idx] <- BLOCK
+            BLOCK_OP <- TRUE
             next
         }
     
@@ -241,7 +241,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 if(op != "~~") {
                     idx <- which(FLAT.lhs == lhs.names[l] &
                                  FLAT.op  == op &
-                                 FLAT.group == GRP &
+                                 FLAT.block == BLOCK &
                                  FLAT.rhs == rhs.name)
                     if(length(idx) > 0L) {
                         stop("lavaan ERROR: duplicate model element in: ", model[i])
@@ -250,7 +250,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     # 2. symmetric (~~)
                     idx <- which(FLAT.lhs == rhs.name &
                                  FLAT.op  == "~~" &
-                                 FLAT.group == GRP &
+                                 FLAT.block == BLOCK &
                                  FLAT.rhs == lhs.names[l])
                     if(length(idx) > 0L) {
                         stop("lavaan ERROR: duplicate model element in: ", model[i])
@@ -260,7 +260,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
                 FLAT.op[ FLAT.idx] <- op
                 FLAT.rhs[FLAT.idx] <- rhs.name
-                FLAT.group[FLAT.idx] <- GRP
+                FLAT.block[FLAT.idx] <- BLOCK
                 FLAT.fixed[FLAT.idx] <- ""
                 FLAT.start[FLAT.idx] <- ""
                 FLAT.label[FLAT.idx] <- ""
@@ -315,7 +315,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT.rhs.mod.idx[ mod.idx ] <- 1:length(mod.idx)
   
     FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
-                 mod.idx=FLAT.rhs.mod.idx, group=FLAT.group,
+                 mod.idx=FLAT.rhs.mod.idx, block=FLAT.block,
                  fixed=FLAT.fixed, start=FLAT.start,
                  label=FLAT.label, prior=FLAT.prior)
 

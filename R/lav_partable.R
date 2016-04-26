@@ -11,6 +11,7 @@
 #                                   a model (but no matrix representation)
 # - 14 Jan 2014: merge 02lavaanUser.R with lav_partable.R
 #                move syntax-based code to lav_syntax.R
+# - 26 April 2016: handle multiple 'blocks' (levels, classes, groups, ...)
 
 lavaanify <- lavParTable <- function(
 
@@ -118,40 +119,97 @@ lavaanify <- lavParTable <- function(
     # check for meanstructure
     if(any(FLAT$op == "~1")) meanstructure <- TRUE
 
-    # check for group identifiers in the syntax (op = ":")
-    n.group.flat <- length(which(FLAT$op == ":"))
-    if(n.group.flat > 0L && n.group.flat != ngroups) {
-        stop("lavaan ERROR: syntax defines ", n.group.flat, " groups; ",
-             "data suggests ", ngroups, " groups")
-    }
+    # check for block identifiers in the syntax (op = ":")
+    n.block.flat <- length(which(FLAT$op == ":"))
 
-    # for each `group' in n.group.flat, produce a USER
-    if(n.group.flat > 0L) {
-        # split the FLAT data.frame per `group', create LIST
-        # for each `group', and bind them together
-        FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
-        group.op.idx <- c(which(FLAT$op == ":"), nrow(FLAT)+1L)
-        for(g in 1:n.group.flat) {
-            FLAT.group <- FLAT[(group.op.idx[g]+1L):(group.op.idx[g+1]-1L),]    
-            LIST.group <- lav_partable_flat(FLAT.group, meanstructure = meanstructure, 
+    # for each non-empty `block' in n.block.flat, produce a USER
+    if(n.block.flat > 0L) {
+
+        # what are the block lhs labels?
+        BLOCKS <- tolower(FLAT$lhs[FLAT$op == ":"])
+        BLOCK.lhs <- unique(BLOCKS)
+  
+        # block op == ":" indices
+        BLOCK.op.idx <- which(FLAT$op == ":")
+
+        # check for wrong spelled 'group' lhs
+        if(length(grep("group", BLOCK.lhs)) > 1L) {
+            warning("lavaan WARNING: ambiguous block identifiers for group: ",
+                paste(BLOCK.lhs[grep("group", BLOCK.lhs)], collapse = " [or] "))
+        }
+
+        # if multiple blocks, and ":rhs" is missing, fill in integers 
+        # but only if there is just one type of block!
+        #if(length(BLOCK.lhs) == 1L) {
+        #    block.idx <- which(FLAT$op == ":" & FLAT$lhs == BLOCK.lhs[1])
+        #    FLAT$rhs[block.idx][nchar(FLAT$rhs[block.idx]) == 0L] <- 
+        #        seq_along(block.idx)
+        #} else {
+            # no empty :rhs fields allowed!
+            if( any( nchar(FLAT$rhs[BLOCK.op.idx]) == 0L ) ) {
+                stop("lavaan ERROR: syntax contains block identifiers with missing numbers/labels: ", paste(FLAT$lhs[BLOCK.op.idx][nchar(FLAT$rhs[BLOCK.op.idx]) == 0L], collapse = " "))
+            }
+        #}
+
+
+        # check for 'group'
+        if("group" %in% BLOCK.lhs) {
+            # how many group blocks?
+            group.block.idx <- FLAT$op == ":" & FLAT$lhs == "group"
+            n.group.flat <- length( unique(FLAT$rhs[group.block.idx]) )
+
+            if(n.group.flat > 0L && n.group.flat != ngroups) {
+                stop("lavaan ERROR: syntax defines ", n.group.flat, " groups; ",
+                     "data (or argument ngroups) suggests ", ngroups, " groups")
+            }
+        }
+
+        # split the FLAT data.frame per `block', create LIST
+        # for each `block', and rbind them together, adding block columns
+        FLAT <- as.data.frame(FLAT, stringsAsFactors = FALSE)
+        BLOCK.op.idx <- c(BLOCK.op.idx, nrow(FLAT) + 1L)
+        BLOCK.rhs <- rep("0", length(BLOCK.lhs))
+
+        for(g in seq_len(n.block.flat)) {
+
+            # fill BLOC.rhs value
+            block.lhs <- FLAT$lhs[BLOCK.op.idx[g]]
+            block.rhs <- FLAT$rhs[BLOCK.op.idx[g]]
+            BLOCK.rhs[ which(block.lhs == BLOCK.lhs) ] <- block.rhs
+
+            # another block identifier?
+            if(BLOCK.op.idx[g+1] - BLOCK.op.idx[g] == 1L) {
+                next
+            }
+
+            FLAT.block <- FLAT[(BLOCK.op.idx[g]+1L):(BLOCK.op.idx[g+1]-1L),]
+            LIST.block <- lav_partable_flat(FLAT.block,
+                meanstructure = meanstructure,
                 int.ov.free = int.ov.free, int.lv.free = int.lv.free,
-                orthogonal = orthogonal, std.lv = std.lv, 
+                orthogonal = orthogonal, std.lv = std.lv,
                 conditional.x = conditional.x, fixed.x = fixed.x,
                 parameterization = parameterization,
-                auto.fix.first = auto.fix.first, 
+                auto.fix.first = auto.fix.first,
                 auto.fix.single = auto.fix.single,
                 auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-                auto.cov.y = auto.cov.y, auto.th = auto.th, 
-                auto.delta = auto.delta, 
-                varTable = varTable, group.equal = NULL, 
+                auto.cov.y = auto.cov.y, auto.th = auto.th,
+                auto.delta = auto.delta,
+                varTable = varTable, group.equal = NULL,
                 group.w.free = group.w.free, ngroups = 1L)
-            LIST.group <- as.data.frame(LIST.group, stringsAsFactors=FALSE)
-            if(g == 1L) {
-                LIST <- LIST.group
+            LIST.block <- as.data.frame(LIST.block, stringsAsFactors = FALSE)
+ 
+            # add block columns with current values in BLOCK.rhs 
+            for(b in seq_len(length(BLOCK.lhs))) {
+                block.lhs <- BLOCK.lhs[b]
+                block.rhs <- BLOCK.rhs[b]
+                LIST.block[block.lhs] <- rep(block.rhs, length(LIST.block$lhs))
+            }
+
+            if(!exists("LIST")) {
+                LIST <- LIST.block
             } else {
-                LIST.group$group <- rep(g, length(LIST.group$lhs))
-                LIST.group$id <- LIST.group$id + max(LIST$id)
-                LIST <- rbind(LIST, LIST.group)
+                LIST.block$id <- LIST.block$id + max(LIST$id)
+                LIST <- rbind(LIST, LIST.block)
             }
         }
         LIST <- as.list(LIST)
@@ -352,34 +410,45 @@ lavaanify <- lavParTable <- function(
     #idx.unco <- which(LIST$free > 0)
     #LIST$unco[idx.unco] <- seq_along(idx.unco)
 
-
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
     if(length(CON) > 0L) {
         #cat("DEBUG:\n"); print(CON)
-        lhs  = unlist(lapply(CON, "[[", "lhs"))
-         op  = unlist(lapply(CON, "[[",  "op"))
-        rhs  = unlist(lapply(CON, "[[", "rhs"))
-        user = unlist(lapply(CON, "[[", "user"))
-        LIST$id         <- c(LIST$id,         length(LIST$id) + seq_along(lhs) )
-        LIST$lhs        <- c(LIST$lhs,        lhs)
-        LIST$op         <- c(LIST$op,         op)
-        LIST$rhs        <- c(LIST$rhs,        rhs)
-        LIST$user       <- c(LIST$user,       user)
-        LIST$group      <- c(LIST$group,      rep(0L, each=length(CON)))
-        LIST$free       <- c(LIST$free,       rep(0L, length(lhs)) )
-        LIST$ustart     <- c(LIST$ustart,     rep(as.numeric(NA), length(lhs)))
-        LIST$exo        <- c(LIST$exo,        rep(0L, length(lhs)) )
-        LIST$label      <- c(LIST$label,      rep("",  length(lhs)) )
-        if(!is.null(LIST$prior)) {
-            LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
+        CONLIST <- list()
+        CONLIST$id   = length(LIST$id) + seq_len(length(CON))
+        CONLIST$lhs  = unlist(lapply(CON, "[[", "lhs"))
+        CONLIST$op   = unlist(lapply(CON, "[[",  "op"))
+        CONLIST$rhs  = unlist(lapply(CON, "[[", "rhs"))
+        CONLIST$user = unlist(lapply(CON, "[[", "user"))
+
+        # add block columns with current values in BLOCK.rhs 
+        if(n.block.flat > 0L) {
+            for(b in seq_len(length(BLOCK.lhs))) {
+                block.lhs <- BLOCK.lhs[b]
+                block.rhs <- BLOCK.rhs[b]
+                if(is.character(block.rhs)) {
+                    CONLIST[[block.lhs]] <- rep("", length(CONLIST$lhs))
+                } else {
+                    CONLIST[[block.lhs]] <- rep(NA, length(CONLIST$lhs))
+                }
+            }
+        } else {
+            CONLIST$group <- rep(0L, length(CONLIST$lhs))
         }
-        LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
-        if(!is.null(LIST$eq.id)) {
-            LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
-        }
-        if(!is.null(LIST$unco)) {
-            LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
-        }
+
+        CONLIST$ustart <- rep(as.numeric(NA), length(CONLIST$lhs))
+        #if(!is.null(LIST$prior)) {
+        #    LIST$prior      <- c(LIST$prior,      rep("",  length(lhs)) )
+        #}
+        #LIST$plabel     <- c(LIST$plabel,     rep("",  length(lhs)) )
+        #if(!is.null(LIST$eq.id)) {
+        #    LIST$eq.id      <- c(LIST$eq.id,      rep(0L,  length(lhs)) )
+        #}
+        #if(!is.null(LIST$unco)) {
+        #    LIST$unco       <- c(LIST$unco,       rep(0L,  length(lhs)) )
+        #}
+
+        # merge
+        LIST <- lav_partable_merge(LIST, CONLIST)
     }
 
     # put lhs of := elements in label column

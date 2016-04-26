@@ -139,16 +139,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
-    if(max(FLAT$group) < 2L) { # same model for all groups 
+    # blocks?
+    if(sum(FLAT$op == ":") == 0L) { 
+        # no blocks: same set of variables per group/block
         ov.names   <- vnames(FLAT, type="ov")
         ov.names.y <- vnames(FLAT, type="ov.nox")
         ov.names.x <- vnames(FLAT, type="ov.x")
-    } else { # different model per group
-        ov.names <- lapply(1:max(FLAT$group),
+    } else { 
+        # possibly different set of variables per group/block
+        # FIXME: for now (0.5), we only 'recognize' groups
+
+        # how many groups?
+        n.block.groups <- length( unique(FLAT$rhs[FLAT$op == ":" & 
+                                                  FLAT$lhs == "group"]) )
+        ov.names <- lapply(1:n.block.groups,
                            function(x) vnames(FLAT, type="ov", group=x))
-        ov.names.y <- lapply(1:max(FLAT$group),
+        ov.names.y <- lapply(1:n.block.groups,
                            function(x) vnames(FLAT, type="ov.nox", group=x))
-        ov.names.x <- lapply(1:max(FLAT$group),
+        ov.names.x <- lapply(1:n.block.groups,
                            function(x) vnames(FLAT, type="ov.x", group=x))
     }
 
