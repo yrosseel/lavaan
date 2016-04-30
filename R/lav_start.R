@@ -103,6 +103,7 @@ lav_start <- function(start.method    = "default",
                         lavpartable$lhs == lavpartable$rhs)
     start[lv.var.idx] <- 0.05
 
+
     # 3. latent response scales (if any)
     delta.idx <- which(lavpartable$op == "~*~")
     start[delta.idx] <- 1.0
@@ -280,7 +281,44 @@ lav_start <- function(start.method    = "default",
             }
         }
 
-        # 6g) regressions "~"
+        # 6b. exogenous lv variances if single indicator -- new in 0.5-21
+        lv.x <- vnames(lavpartable, "lv.x", group = g)
+        if(length(lv.x) > 0L) {
+            for(ll in lv.x) {
+                ind.idx <- which(lavpartable$op == "=~" &
+                                 lavpartable$lhs == ll,
+                                 lavpartable$group == g)
+                if(length(ind.idx) == 1L) {
+                    single.ind <- lavpartable$rhs[ind.idx]
+                    single.fvar.idx <- which(lavpartable$op == "~~" &
+                                             lavpartable$lhs == ll &
+                                             lavpartable$rhs == ll &
+                                             lavpartable$group == g)
+                    single.var.idx <- which(lavpartable$op == "~~" &
+                                            lavpartable$lhs == single.ind &
+                                            lavpartable$rhs == single.ind &
+                                            lavpartable$group == g)
+                    # user-defined residual variance
+                    single.var <- lavpartable$ustart[single.var.idx]
+                    ov.idx <- match(single.ind, ov.names)
+                    if(conditional.x) {
+                        ov.var <- diag(lavsamplestats@res.cov[[g]])[ov.idx]
+                    } else {
+                        ov.var <- diag(lavsamplestats@cov[[g]])[ov.idx]
+                    }
+                    # take (1 - (rvar/ov.var) * ov.var
+                    tmp <- (1 - (single.var/ov.var)) * ov.var
+                    # just in case
+                    if(tmp < 0.05) {
+                        tmp <- 0.05
+                    }
+                    start[single.fvar.idx] <- tmp
+                }
+            }
+        }
+
+
+        # 7g) regressions "~"
     }
 
     # group weights
@@ -304,12 +342,10 @@ lav_start <- function(start.method    = "default",
         #lv.var.idx <- which(lavpartable$op == "~~"                &
         #                lavpartable$lhs %in% lv.names &
         #                lavpartable$lhs == lavpartable$rhs)
-        #start[lv.var.idx] <- c(2.369511, 0.7026852)
         
         ### DEBUG ONLY
         #lv.int.idx <- which(lavpartable$op == "~1"         &
         #                    lavpartable$lhs %in% lv.names)
-        #start[lv.int.idx] <- c(0.617156788, 1.005192793)
     }
 
     # override if a user list with starting values is provided 

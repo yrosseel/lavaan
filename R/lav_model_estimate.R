@@ -298,8 +298,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                #abs.tol=1e-20, ### important!! fx never negative
                                abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-10,
-                               #step.min=2.2e-14, # too small??, default = 1.0
-                               step.min=0.1, # compromise...
+                               #step.min=2.2e-14, # in =< 0.5-12
+                               step.min=1.0, # 1.0 in < 0.5-21
                                step.max=1.0,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
