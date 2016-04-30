@@ -113,6 +113,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         FLAT <- slotParTable
     } else if(is.character(model)) {
         FLAT <- lavParseModelString(model)
+    } else if(inherits(model, "lavaan")) {
+        # hm, a lavaan model; let's try to extract the parameter table
+        # and see what happens
+        FLAT <- parTable(model)
     } else if(is.list(model)) {
         # two possibilities: either model is already lavaanified
         # or it is something else...
@@ -373,6 +377,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                       as.data.frame.   = FALSE)
 
+    } else if(inherits(model, "lavaan")) {
+        lavpartable <- parTable(model)
     } else if(is.list(model)) {
         # we already checked this when creating FLAT
         # but we may need to complete it
