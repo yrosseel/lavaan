@@ -1654,7 +1654,7 @@ derivative.F.LISREL <- function(MLIST=NULL, Omega=NULL, Omega.mu=NULL) {
 # note:
 # we avoid using the duplication and elimination matrices
 # for now (perhaps until we'll use the Matrix package)
-derivative.sigma.LISREL <- function(m="lambda", 
+derivative.sigma.LISREL_OLD <- function(m="lambda", 
                                     # all model matrix elements, or only a few?
                                     # NOTE: for symmetric matrices, 
                                     # we assume that the have full size 
@@ -1692,7 +1692,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     } 
 
     # pre
-    if(m == "lambda" || m == "beta" || m == "delta") 
+    if(m == "lambda" || m == "beta") 
         IK <- diag(nvar*nvar) + lav_matrix_commutation(nvar, nvar)
     if(m == "lambda" || m == "beta") {
         IB.inv..PSI..tIB.inv..tLAMBDA <-
@@ -1710,6 +1710,7 @@ derivative.sigma.LISREL <- function(m="lambda",
     } else if(m == "beta") {
         DX <- IK %*% ( t(IB.inv..PSI..tIB.inv..tLAMBDA) %x% LAMBDA..IB.inv )
         # this is not really needed (because we select idx=m.el.idx)
+        # but just in case we need all elements of beta...
         DX[,lav_matrix_diag_idx(nfac)] <- 0.0
         if(delta.flag) 
              DX <- DX * as.vector(DELTA %x% DELTA)
@@ -1750,6 +1751,105 @@ derivative.sigma.LISREL <- function(m="lambda",
     }
 
     DX <- DX[v.idx, idx, drop=FALSE]
+    DX
+}
+
+# dSigma/dx -- per model matrix
+derivative.sigma.LISREL <- function(m     = "lambda", 
+                                    # all model matrix elements, or only a few?
+                                    # NOTE: for symmetric matrices, 
+                                    # we assume that the have full size 
+                                    # (nvar*nvar) (but already correct for 
+                                    # symmetry)
+                                    idx   = seq_len(length(MLIST[[m]])),
+                                    MLIST = NULL,
+                                    vech  = TRUE,
+                                    delta = TRUE) {
+
+    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+    PSI    <- MLIST$psi
+ 
+    # only lower.tri part of sigma (not same order as elimination matrix?)
+    v.idx <- lav_matrix_vech_idx( nvar ); pstar <- nvar*(nvar+1)/2
+
+    # shortcut for gamma, nu, alpha and tau: empty matrix
+    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw") {
+        return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
+    }
+
+    # Delta?
+    delta.flag <- FALSE
+    if(delta && !is.null(MLIST$delta)) {
+        DELTA <- MLIST$delta
+        delta.flag <- TRUE
+    } else if(m == "delta") { # modindices?
+        return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
+    }
+
+    # beta?
+    if(!is.null(MLIST$ibeta.inv)) {
+        IB.inv <- MLIST$ibeta.inv
+    } else {
+        IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    } 
+
+    # pre
+    #if(m == "lambda" || m == "beta") 
+    #    IK <- diag(nvar*nvar) + lav_matrix_commutation(nvar, nvar)
+    if(m == "lambda" || m == "beta") {
+        L1 <- LAMBDA %*% IB.inv %*% PSI %*% t(IB.inv)
+    }
+    if(m == "beta" || m == "psi") {
+        LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+
+    # here we go:
+    if(m == "lambda") {
+        KOL.idx <- matrix(1:(nvar*nfac), nvar, nfac, byrow = TRUE)[idx]
+        DX <- (L1 %x% diag(nvar))[,idx, drop = FALSE] + 
+              (diag(nvar) %x% L1)[,KOL.idx, drop = FALSE]
+    } else if(m == "beta") {
+        KOL.idx <- matrix(1:(nfac*nfac), nfac, nfac, byrow = TRUE)[idx]
+        DX <- (L1 %x% LAMBDA..IB.inv)[,idx, drop = FALSE] +
+              (LAMBDA..IB.inv %x% L1)[, KOL.idx, drop = FALSE]
+        # this is not really needed (because we select idx=m.el.idx)
+        # but just in case we need all elements of beta...
+        DX[, which(idx %in% lav_matrix_diag_idx(nfac))] <- 0.0
+    } else if(m == "psi") {
+        DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv) 
+        # symmetry correction, but keeping all duplicated elements
+        # since we depend on idx=m.el.idx
+        lower.idx <- lav_matrix_vech_idx(nfac, diagonal = FALSE)
+        upper.idx <- lav_matrix_vechru_idx(nfac, diagonal = FALSE)
+        offdiagSum <- DX[,lower.idx] + DX[,upper.idx]
+        DX[,c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
+        DX <- DX[,idx, drop = FALSE]
+    } else if(m == "theta") {
+        #DX <- diag(nvar*nvar) # very sparse...
+        DX <- matrix(0, nvar*nvar, length(idx))
+        DX[cbind(idx,seq_along(idx))] <- 1
+        # symmetry correction not needed, since all off-diagonal elements
+        # are zero?
+    } else if(m == "delta") {
+        Omega <- computeSigmaHat.LISREL(MLIST, delta=FALSE)
+        DD <- diag(DELTA[,1], nvar, nvar)
+        DD.Omega <- (DD %*% Omega)
+        A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
+        DX <- A[,lav_matrix_diag_idx(nvar),drop=FALSE] + 
+              B[,lav_matrix_diag_idx(nvar),drop=FALSE]
+    } else {
+        stop("wrong model matrix names: ", m, "\n")
+    }
+
+    if(delta.flag && !m == "delta") {
+        DX <- DX * as.vector(DELTA %x% DELTA)
+    }
+
+    # vech?
+    if(vech) {
+        DX <- DX[v.idx,, drop=FALSE]
+    }
+
     DX
 }
 

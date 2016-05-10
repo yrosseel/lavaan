@@ -994,15 +994,24 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
         S.inv <- tcrossprod(sweep(EV$vector, 2L, 
                                   STATS = (1/EV$values), FUN="*"), EV$vector)
         if(logdet) {
-            attr(S.inv, "logdet") <- sum(log(EV$values))
+            if(all(EV$values >= 0)) {
+                attr(S.inv, "logdet") <- sum(log(EV$values))
+            } else {
+                attr(S.inv, "logdet") <- as.numeric(NA)
+            }
         }
     } else if(Sinv.method == "solve") {
         S.inv <- solve(S)
         if(logdet) {
             ev <- eigen(S, symmetric = TRUE, only.values = TRUE)
-            attr(S.inv, "logdet") <- sum(log(ev$values))
+            if(all(ev$values >= 0)) {
+                attr(S.inv, "logdet") <- sum(log(ev$values))
+            } else {
+                attr(S.inv, "logdet") <- as.numeric(NA)
+            }
         }
     } else if(Sinv.method == "chol") {
+        # this will break if S is not positive definite
         cS <- chol(S)
         S.inv <- chol2inv(cS)
         if(logdet) {
