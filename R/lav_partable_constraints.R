@@ -349,6 +349,66 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
     cin.function
 }
 
+lav_partable_constraints_label_id <- function(partable, con = NULL) {
+
+    # if 'con', merge partable + con
+    if(!is.null(con)) {
+        partable$lhs <- c(partable$lhs, con$lhs)
+        partable$op  <- c(partable$op,  con$op )
+        partable$rhs <- c(partable$rhs, con$rhs)
+    }
+    
+    # get constraints
+    con.idx <- which(partable$op %in% c("==", "<", ">"))
+
+    # catch empty con
+    if(length(con.idx) == 0L) {
+        return(integer(0L))
+    }
+
+    def.idx <- which(partable$op == ":=")
+
+    # extract labels
+    lhs.labels <- all.vars( parse(file="", text=partable$lhs[con.idx]) )
+    rhs.labels <- all.vars( parse(file="", text=partable$rhs[con.idx]) )
+    con.labels <- unique(c(lhs.labels, rhs.labels))
+
+    # remove def.names from con.labels
+    if(length(def.idx) > 0L) {
+        def.names <- as.character(partable$lhs[def.idx])
+        d.idx <- which(con.labels %in% def.names)
+        if(length(d.idx) > 0) {
+            con.labels <- con.labels[-d.idx]
+        }
+    }
+    con.x.idx <- rep(as.integer(NA), length(con.labels))
+
+    # get user-labels ids
+    ulab.idx <- which(con.labels %in% partable$label)
+    if(length(ulab.idx) > 0L) {
+        con.x.idx[ ulab.idx] <- partable$free[match(con.labels[ulab.idx], 
+                                                   partable$label)]
+    }
+    # get plabels ids
+    plab.idx <- which(con.labels %in% partable$plabel)
+    if(length(plab.idx) > 0L) {
+        con.x.idx[ plab.idx] <- partable$free[match(con.labels[plab.idx],  
+                                                   partable$plabel)]
+    }
+
+    # check if we have found the label
+    if(any(is.na(con.x.idx))) {
+        stop("lavaan WARNING: unknown label(s) in equality constraint(s): ",
+         paste(con.labels[which(is.na(con.x.idx))], collapse=" "))
+    }
+
+    # return named integer vector
+    names(con.x.idx) <- con.labels
+
+    con.x.idx
+}
+
+
 # for all parameters in p1, find the 'id' of the corresponding parameter
 # in p2
 lav_partable_map_id_p1_in_p2 <- function(p1, p2) {

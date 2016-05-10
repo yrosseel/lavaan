@@ -544,6 +544,51 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
         }
     }
 
+    # try to reflect `equality constraints'
+    if(what == "free" && lavobject@Model@eq.constraints) {
+        # extract constraints from parameter table
+        PT <- parTable(lavobject)
+        CON <-  PT[PT$op %in% c("==","<",">") ,c("lhs","op","rhs")]
+        rownames(CON) <- NULL
+
+        # replace 'labels' by parameter numbers
+        ID <- lav_partable_constraints_label_id(PT)
+        LABEL <- names(ID)
+        for(con in 1:nrow(CON)) {
+            # lhs
+            LHS.labels <- all.vars(as.formula(paste("~",CON[con,"lhs"]))) 
+
+            if(length(LHS.labels) > 0L) {
+                # par id
+                LHS.freeid <- ID[match(LHS.labels, LABEL)]
+
+                # substitute
+                tmp <- CON[con,"lhs"]
+                for(pat in 1:length(LHS.labels)) {
+                    tmp <- sub(LHS.labels[pat], LHS.freeid[pat], tmp)
+                }
+                CON[con,"lhs"] <- tmp
+            }
+
+            # rhs
+            RHS.labels <- all.vars(as.formula(paste("~",CON[con,"rhs"])))
+
+            if(length(RHS.labels) > 0L) {
+                # par id
+                RHS.freeid <- ID[match(RHS.labels, LABEL)]
+                # substitute
+                tmp <- CON[con,"rhs"]
+                for(pat in 1:length(RHS.labels)) {
+                    tmp <- sub(RHS.labels[pat], RHS.freeid[pat], tmp)
+                }
+                CON[con,"rhs"] <- tmp
+            }
+        } # con
+
+        # add this info at the top
+        GLIST <- c(constraints = list(CON), GLIST)
+    }
+
     GLIST
 }
 
