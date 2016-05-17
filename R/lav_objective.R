@@ -274,7 +274,8 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         prop <- lavcache$bifreq / lavcache$nobs
         freq <- lavcache$bifreq
         # remove zero props # FIXME!!! or add 0.5???
-        zero.idx <- which(prop == 0.0)
+        #zero.idx <- which(prop == 0.0)
+        zero.idx <- which( (prop == 0.0) | !is.finite(prop) )
         if(length(zero.idx) > 0L) {
             freq <- freq[-zero.idx]
             prop <- prop[-zero.idx]
@@ -296,7 +297,8 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
             uniprop <- unifreq / uninobs
 
             # remove zero props 
-            uni.zero.idx <- which(uniprop == 0.0)
+            # uni.zero.idx <- which(uniprop == 0.0)
+            uni.zero.idx <- which( (uniprop == 0.0) | !is.finite(uniprop) )
             if(length(uni.zero.idx) > 0L) {
                 uniprop    <- uniprop[-uni.zero.idx]
                 uniPI      <- uniPI[-uni.zero.idx]
