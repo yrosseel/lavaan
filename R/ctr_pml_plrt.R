@@ -177,14 +177,17 @@ VCOV.Sat2 <- lav_model_vcov(lavmodel       = fittedSat2@Model,
                             lavoptions     = tmp.options,
                             lavdata        = fittedSat2@Data,
                             lavpartable    = fittedSat2@ParTable,
-                            lavcache       = fittedSat2@Cache)
+                            lavcache       = fittedSat2@Cache,
+                            use.ginv       = TRUE)
 InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx, dSat.idx, drop = FALSE]  #G^sigmasigma(theta0)
 #Hattheta0 <- (-1)* getHessian(fittedSat2)
 #Hattheta0 <- getHessian(fittedSat2)
 #InvHattheta0 <- solve(Hattheta0)
 InvHattheta0 <- attr(VCOV.Sat2, "E.inv")
 InvH_to_sigmasigma_attheta0 <- InvHattheta0[dSat.idx, dSat.idx, drop = FALSE] #H^sigmasigma(theta0)
-Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0) #[H^sigmasigma(theta0)]^(-1)
+#Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0) #[H^sigmasigma(theta0)]^(-1)
+Inv_of_InvH_to_sigmasigma_attheta0 <- MASS:::ginv(InvH_to_sigmasigma_attheta0,
+                                               tol = .Machine$double.eps^(3/4))
 H1tmp_prod1 <- Inv_of_InvH_to_sigmasigma_attheta0 %*% InvG_to_sigmasigma_attheta0
 H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
 E_tzz <- sum(diag(H1tmp_prod1))     #expected mean of the second quadratic quantity

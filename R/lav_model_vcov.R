@@ -51,7 +51,8 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL,
 # robust `sem' NVCOV (see Browne, 1984,  bentler & dijkstra 1985)
 lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                        lavdata = NULL, lavcache = NULL,
-                                       estimator = "ML", mimic = "lavaan") {
+                                       estimator = "ML", mimic = "lavaan",
+                                       use.ginv = FALSE) {
 
     # compute inverse of the expected(!) information matrix
     if(estimator == "ML" && mimic == "Mplus") {
@@ -65,7 +66,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                            lavsamplestats = lavsamplestats,
                                            extra          = TRUE,
                                            augmented      = TRUE,
-                                           inverted       = TRUE)
+                                           inverted       = TRUE,
+                                           use.ginv       = use.ginv)
     } else {
         E.inv <- lav_model_information_expected(lavmodel = lavmodel, 
                                         lavsamplestats = lavsamplestats, 
@@ -73,7 +75,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                         estimator      = estimator, 
                                         extra          = TRUE,
                                         augmented      = TRUE,
-                                        inverted       = TRUE)
+                                        inverted       = TRUE,
+                                        use.ginv       = use.ginv)
     }
 
     # check if E.inv is ok
@@ -133,7 +136,8 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                            lavdata        = NULL,
                                            information    = "observed", 
                                            lavcache       = NULL, 
-                                           estimator      = "ML") {
+                                           estimator      = "ML",
+                                           use.ginv       = FALSE) {
 
     # sandwich estimator: A.inv %*% B %*% t(A.inv)
     # where A.inv == E.inv
@@ -148,7 +152,8 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                    information    = information,
                                    extra          = FALSE,
                                    augmented      = TRUE,
-                                   inverted       = TRUE)
+                                   inverted       = TRUE,
+                                   use.ginv       = use.ginv)
 
     # check if E.inv is ok
     if(inherits(E.inv, "try-error")) {
@@ -165,7 +170,8 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                          extra          = TRUE,
                                          check.pd       = FALSE,
                                          augmented      = FALSE,
-                                         inverted       = FALSE)
+                                         inverted       = FALSE,
+                                         use.ginv       = use.ginv)
 
     # compute sandwich estimator
     NVarCov <- E.inv %*% B0 %*% E.inv
@@ -182,7 +188,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                            lavoptions     = NULL, 
                            lavdata        = NULL, 
                            lavpartable    = NULL, 
-                           lavcache       = NULL, 
+                           lavcache       = NULL,
+                           use.ginv       = FALSE,
                            control=list()) {
 
     estimator   <- lavoptions$estimator
@@ -210,7 +217,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                          information    = information,
                                          extra          = FALSE,
                                          augmented      = TRUE,
-                                         inverted       = TRUE)
+                                         inverted       = TRUE,
+                                         use.ginv       = use.ginv)
 
     } else if(se == "first.order") {
         NVarCov <- 
@@ -222,7 +230,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
                                              augmented      = TRUE,
-                                             inverted       = TRUE)
+                                             inverted       = TRUE,
+                                             use.ginv       = use.ginv)
     
     } else if(se == "robust.sem") {
         NVarCov <-
@@ -231,7 +240,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                        estimator      = estimator,
                                        mimic          = mimic,
                                        lavcache       = lavcache,
-                                       lavdata        = lavdata)
+                                       lavdata        = lavdata,
+                                       use.ginv       = use.ginv)
 
     } else if(se == "robust.huber.white") {
         NVarCov <-
@@ -240,7 +250,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                             lavdata        = lavdata,
                                             information    = information,
                                             lavcache       = lavcache,
-                                            estimator      = estimator)
+                                            estimator      = estimator,
+                                            use.ginv       = use.ginv)
 
     } else if(se == "bootstrap") {
         NVarCov <- try( lav_model_nvcov_bootstrap(lavmodel       = lavmodel,
