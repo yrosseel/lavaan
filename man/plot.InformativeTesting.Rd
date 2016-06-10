@@ -5,8 +5,10 @@
 \description{The print function shows the results of hypothesis tests
 Type A and Type B. The plot function plots the distributions of 
 bootstrapped LRT values and plug-in p-values.}
+
+\usage{
     
-\usage{print(x, digits = max(3, getOption("digits") - 4), ...)
+\method{print}{InformativeTesting}(x, digits = max(3, getOption("digits") - 3), ...)
   
 \method{plot}{InformativeTesting}(x, ..., type = c("lr","ppv"), 
    main = "main", xlab = "xlabel", ylab = "Frequency", freq = TRUE, 
@@ -14,8 +16,8 @@ bootstrapped LRT values and plug-in p-values.}
    col = "grey", border = par("fg"), vline = TRUE, 
    vline.col = c("red", "blue"), lty = c(1,2), lwd = 1, 
    legend = TRUE, bty = "o", cex.legend = 1, loc.legend = "topright")
-
 }
+ 
 \arguments{
   \item{x}{object of class "InformativeTesting".}
   \item{digits}{the number of significant digits to use when printing.}

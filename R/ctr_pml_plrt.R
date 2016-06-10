@@ -186,7 +186,7 @@ InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx, dSat.
 InvHattheta0 <- attr(VCOV.Sat2, "E.inv")
 InvH_to_sigmasigma_attheta0 <- InvHattheta0[dSat.idx, dSat.idx, drop = FALSE] #H^sigmasigma(theta0)
 #Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0) #[H^sigmasigma(theta0)]^(-1)
-Inv_of_InvH_to_sigmasigma_attheta0 <- MASS:::ginv(InvH_to_sigmasigma_attheta0,
+Inv_of_InvH_to_sigmasigma_attheta0 <- MASS::ginv(InvH_to_sigmasigma_attheta0,
                                                tol = .Machine$double.eps^(3/4))
 H1tmp_prod1 <- Inv_of_InvH_to_sigmasigma_attheta0 %*% InvG_to_sigmasigma_attheta0
 H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
