@@ -1,21 +1,24 @@
-\name{plot.InformativeTesting}
+\name{InformativeTesting methods}
+\alias{print.InformativeTesting}
 \alias{plot.InformativeTesting}
-\alias{plot.informativetesting}
-\title{Plot output InformativeTesting()}
-\description{The function plots the distributions of bootstrapped LRT values 
-    and plug-in p-values.}
+\title{Methods for output InformativeTesting()}
+\description{The print function shows the results of hypothesis tests
+Type A and Type B. The plot function plots the distributions of 
+bootstrapped LRT values and plug-in p-values.}
     
-\usage{
-  \method{plot}{InformativeTesting}(x, ..., type = c("lr","ppv"), 
-       main = "main", xlab = "xlabel",
-       ylab = "Frequency", freq = TRUE, breaks = 15, cex.main = 1, 
-       cex.lab = 1, cex.axis = 1, col = "grey", border = par("fg"), 
-       vline = TRUE, vline.col = c("red", "blue"), lty = c(1,2), 
-       lwd = 1, legend = TRUE, bty = "o", cex.legend = 0.75, 
-       loc.legend = "topright")
+\usage{print(x, digits = max(3, getOption("digits") - 4), ...)
+  
+\method{plot}{InformativeTesting}(x, ..., type = c("lr","ppv"), 
+   main = "main", xlab = "xlabel", ylab = "Frequency", freq = TRUE, 
+   breaks = 15, cex.main = 1, cex.lab = 1, cex.axis = 1, 
+   col = "grey", border = par("fg"), vline = TRUE, 
+   vline.col = c("red", "blue"), lty = c(1,2), lwd = 1, 
+   legend = TRUE, bty = "o", cex.legend = 1, loc.legend = "topright")
+
 }
 \arguments{
-  \item{x}{The output of the \code{InformativeTesting()} function}
+  \item{x}{object of class "InformativeTesting".}
+  \item{digits}{the number of significant digits to use when printing.}
   \item{...}{Currently not used.}
   \item{type}{If \code{"lr"}, a distribution of the first-level 
     bootstrapped LR values is plotted. If \code{"ppv"} a distribution of 
@@ -64,4 +67,81 @@
     \code{"bottomleft"}, \code{"left"}, \code{"topleft"}, \code{"top"}, 
     \code{"topright"}, \code{"right"} and \code{"center"}.}
 }
+
+\examples{
+\dontrun{
+#########################
+### real data example ###
+#########################
+# Multiple group path model for facial burns example.
+
+# model syntax with starting values.
+  burns.model <- 'Selfesteem ~ Age + c(m1, f1)*TBSA + HADS +
+                             start(-.10, -.20)*TBSA  
+                 HADS ~ Age + c(m2, f2)*TBSA + RUM +
+                        start(.10, .20)*TBSA '
+ 
+ 
+# constraints syntax
+ burns.constraints <- 'f2 > 0  ; m1 < 0
+                       m2 > 0  ; f1 < 0
+                       f2 > m2 ; f1 < m1'
+ 
+# we only generate 2 bootstrap samples in this example; in practice
+# you may wish to use a much higher number. 
+# the double bootstrap was switched off; in practice you probably 
+# want to set it to "standard".
+example1 <- InformativeTesting(model = burns.model, data = FacialBurns,
+                               R = 2, constraints = burns.constraints,
+                               double.bootstrap = "no", group = "Sex")
+example1
+plot(example1)
+
+##########################
+### artificial example ###
+##########################
+# Simple ANOVA model with 3 groups (N = 20 per group)
+set.seed(1234)
+Y <- cbind(c(rnorm(20,0,1), rnorm(20,0.5,1), rnorm(20,1,1)))
+grp <- c(rep("1", 20), rep("2", 20), rep("3", 20))
+Data <- data.frame(Y, grp)
+
+#create model matrix
+fit.lm <- lm(Y ~ grp, data = Data)
+mfit <- fit.lm$model
+mm <- model.matrix(mfit)
+
+Y <- model.response(mfit)
+X <- data.frame(mm[,2:3])
+names(X) <- c("d1", "d2")
+Data.new <- data.frame(Y, X)
+
+# model
+model <- 'Y ~ 1 + a1*d1 + a2*d2'
+
+# fit without constraints
+fit <- sem(model, data = Data.new)
+
+# constraints syntax: mu1 < mu2 < mu3
+constraints <- ' a1 > 0
+                 a1 < a2 '
+
+# we only generate 10 bootstrap samples in this example; in practice
+# you may wish to use a much higher number, say > 1000. The double 
+# bootstrap is not necessary in case of an univariate ANOVA model.
+example2 <- InformativeTesting(model = model, data = Data.new, 
+                               start = parTable(fit),
+                               R = 10L, double.bootstrap = "no",
+                               constraints = constraints)
+example2
+# plot(example2)
+}
+}
+
+\author{
+Leonard Vanbrabant
+\email{lgf.vanbrabant@gmail.com}
+}
+
+
 
