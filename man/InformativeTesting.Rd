@@ -1,15 +1,14 @@
 \name{InformativeTesting}
 \alias{InformativeTesting}
 \alias{informativetesting}
-\alias{print.InformativeTesting}
-\title{Testing order Constrained Hypotheses in SEM}
-\description{Testing order constrained Hypotheses in SEM}
+\title{Testing order/inequality Constrained Hypotheses in SEM}
+\description{Testing order/inequality constrained Hypotheses in SEM}
 \usage{
 InformativeTesting(model = NULL, data, constraints = NULL, 
                    R = 1000L, type = "bollen.stine",
                    return.LRT = TRUE, 
                    double.bootstrap = "standard",
-                   double.bootstrap.R = 500L, 
+                   double.bootstrap.R = 249L, 
                    double.bootstrap.alpha = 0.05,
                    parallel = c("no", "multicore", "snow"), 
                    ncpus = 1L, cl = NULL, verbose = FALSE, \dots)
@@ -33,7 +32,7 @@ InformativeTesting(model = NULL, data, constraints = NULL,
     each bootstrap sample. Note that the \code{"FDB"} is experimental and should 
     not be used by inexperienced users.}    
 \item{double.bootstrap.R}{Integer; number of double bootstrap draws. The default 
-    value is set to 500.}
+    value is set to 249.}
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted 
     alpha based on the plugin p-values. Only used if \code{double.bootstrap = "standard"}. 
     The default value is set to 0.05.}
@@ -49,13 +48,52 @@ InformativeTesting(model = NULL, data, constraints = NULL,
 \item{...}{Other named arguments from the lavaan package which are passed to 
     the function. For example \code{"group"} in a multiple group model.}
 }
-%\details{}
-\value{An object of class InformativeTesting for which a plot 
-    method is available.}   
+\details{The following hypothesis tests are available:
+\itemize{
+  \item Type A: Test H0: all restriktions with equalities ("=") 
+  active against HA: at least one inequality restriktion (">") 
+  strictly true.
+  \item Type B: Test H0: all restriktions with inequalities (">") 
+  (including some equalities ("=")) active against HA: at least 
+  one restriktion false (some equality restriktions may be 
+  maintained).}
+}
+\value{An object of class InformativeTesting for which a 
+print and a plot method is available.}   
 %\seealso{}
 \examples{
 \dontrun{
-# Simple ANOVA model with 3 groups (N=20 per group) (artifical data)
+#########################
+### real data example ###
+#########################
+# Multiple group path model for facial burns example.
+
+# model syntax with starting values.
+  burns.model <- 'Selfesteem ~ Age + c(m1, f1)*TBSA + HADS +
+                             start(-.10, -.20)*TBSA  
+                 HADS ~ Age + c(m2, f2)*TBSA + RUM +
+                        start(.10, .20)*TBSA '
+ 
+ 
+# constraints syntax
+ burns.constraints <- 'f2 > 0  ; m1 < 0
+                       m2 > 0  ; f1 < 0
+                       f2 > m2 ; f1 < m1'
+ 
+# we only generate 2 bootstrap samples in this example; in practice
+# you may wish to use a much higher number. 
+# the double bootstrap was switched off; in practice you probably 
+# want to set it to "standard".
+example1 <- InformativeTesting(model = burns.model, data = FacialBurns,
+                               R = 2, constraints = burns.constraints,
+                               double.bootstrap = "no", group = "Sex")
+
+example1
+
+##########################
+### artificial example ###
+##########################
+# Simple ANOVA model with 3 groups (N = 20 per group)
 set.seed(1234)
 Y <- cbind(c(rnorm(20,0,1), rnorm(20,0.5,1), rnorm(20,1,1)))
 grp <- c(rep("1", 20), rep("2", 20), rep("3", 20))
@@ -82,29 +120,32 @@ constraints <- ' a1 > 0
                  a1 < a2 '
 
 # we only generate 10 bootstrap samples in this example; in practice
-# you may wish to use a much higher number, say > 10.000. The double bootstrap
-# is not necessary in case of an univariate ANOVA model.
-example <- InformativeTesting(model = model, data = Data.new, 
-                              start = parTable(fit),
-                              R = 10L, double.bootstrap = "no",
-                              constraints = constraints)
-example
-# plot(example)
+# you may wish to use a much higher number, say > 1000. The double 
+# bootstrap is not necessary in case of an univariate ANOVA model.
+example2 <- InformativeTesting(model = model, data = Data.new, 
+                               start = parTable(fit),
+                               R = 10L, double.bootstrap = "no",
+                               constraints = constraints)
+example2
 }
 }
 
 \references{
 Van de Schoot, R., Hoijtink, H., & Dekovic, M. (2010). 
 Testing inequality constrained hypotheses in SEM models. 
-Structural Equation Modeling, 17, 443-463.
+\emph{Structural Equation Modeling}, \bold{17}, 443-463.
 
 Van de Schoot, R., Strohmeier, D. (2011). 
-Testing informative hypotheses in SEM increases power: 
-An illustration contrasting classical. 
-International Journal of Behavioral Development 35(2), 180-190.
+Testing informative hypotheses in SEM increases power: An 
+illustration contrasting classical. \emph{International Journal 
+of Behavioral Development}, \bold{35}, 180-190.
+
+Silvapulle, M.J. and Sen, P.K. (2005). \emph{Constrained 
+Statistical Inference}. Wiley, New York.
+
 } 
 
 \author{
 Leonard Vanbrabant
-\email{l.g.f.vanbrabant@hotmail.com}
+\email{lgf.vanbrabant@gmail.com}
 }
