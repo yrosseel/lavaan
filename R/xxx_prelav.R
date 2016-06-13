@@ -1,6 +1,6 @@
 # prelav
 #
-# a program not unlike prelis
+# a program not unlike prelis (unfinished)
 #
 # YR 19 Sept 2013
 
