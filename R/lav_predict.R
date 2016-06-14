@@ -14,12 +14,13 @@
 setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
     lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
+               fsm = FALSE,
                optim.method = "nlminb")
 })
 
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
-                       se.fit = FALSE, label = TRUE,
+                       se.fit = FALSE, label = TRUE, fsm = FALSE,
                        optim.method = "nlminb") {
 
     stopifnot(inherits(object, "lavaan"))
@@ -73,10 +74,12 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         out <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo, method = method,
-                   optim.method = optim.method)
+                   fsm = fsm, optim.method = optim.method)
 
         # remove dummy lv?
-        lavmodel <- lavmodel
+        if(fsm) {
+            FSM <- attr(out, "fsm")
+        }
         out <- lapply(seq_len(lavdata@ngroups), function(g) {
                    lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                                lavmodel@ov.x.dummy.lv.idx[[g]])
@@ -136,6 +139,10 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         out
     }
 
+    if(fsm) {
+        attr(out, "fsm") <- FSM
+    }
+
     out
 }
 
@@ -148,6 +155,7 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
                             data.obs = NULL, eXo = NULL,
                             # options
                             method = "EBM",
+                            fsm = FALSE,
                             optim.method = "nlminb") {
 
     # full object?
@@ -171,14 +179,14 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
             out <- lav_predict_eta_normal(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata, 
                        lavsamplestats = lavsamplestats,
-                       data.obs = data.obs, eXo = eXo)
+                       data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else if(method == "bartlett" || method == "bartlet") {
             out <- lav_predict_eta_bartlett(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
                        lavsamplestats = lavsamplestats,
-                       data.obs = data.obs, eXo = eXo)
+                       data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else {
-            stop("method ", method, " not supported yet for numeric only data")
+            stop("lavaan ERROR: unkown method: ", method)
         }
     } else {
         out <- lav_predict_eta_ebm(lavobject = lavobject,
@@ -200,7 +208,8 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                                    lavmodel = NULL, lavdata = NULL, 
                                    lavsamplestats = NULL,
                                    # optional new data
-                                   data.obs = NULL, eXo = NULL) { 
+                                   data.obs = NULL, eXo = NULL,
+                                   fsm = FALSE) { 
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -224,7 +233,10 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
      
-    FS <- vector("list", length=lavdata@ngroups)
+    FS <- vector("list", length = lavdata@ngroups)
+    if(fsm) {
+        FSM <- vector("list", length = lavdata@ngroups)
+    }
     for(g in 1:lavdata@ngroups) {
         nfac <- ncol(VETA[[g]])
         if(nfac == 0L) {
@@ -234,6 +246,9 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
         # factor score coefficient matrix 'C'
         FSC <- VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]]
+        if(fsm) {
+            FSM[[g]] <- FSC
+        }
 
         RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
@@ -258,6 +273,10 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         FS[[g]] <- FS.g
     }
 
+    if(fsm) {
+        attr(FS, "fsm") <- FSM
+    }
+
     FS
 }
 
@@ -269,7 +288,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                                      lavmodel = NULL, lavdata = NULL, 
                                      lavsamplestats = NULL,
                                      # optional new data
-                                     data.obs = NULL, eXo = NULL) { 
+                                     data.obs = NULL, eXo = NULL,
+                                     fsm = FALSE) { 
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -293,7 +313,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
      
-    FS <- vector("list", length=lavdata@ngroups)
+    FS <- vector("list", length = lavdata@ngroups)
+    if(fsm) {
+        FSM <- vector("list", length = lavdata@ngroups)
+    }
     for(g in 1:lavdata@ngroups) {
         nfac <- length(EETA[[g]])
         if(nfac == 0L) {
@@ -304,6 +327,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         # factor score coefficient matrix 'C'
         FSC = ( solve(t(LAMBDA[[g]]) %*% THETA.inv[[g]] %*% LAMBDA[[g]]) %*%
                 t(LAMBDA[[g]]) %*% THETA.inv[[g]] )
+
+        if(fsm) {
+            FSM[[g]] <- FSC
+        }
 
         RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
         FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
@@ -326,6 +353,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         }
 
         FS[[g]] <- FS.g
+    }
+
+    if(fsm) {
+        attr(FS, "fsm") <- FSM
     }
 
     FS

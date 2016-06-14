@@ -8,7 +8,8 @@ estimated values for latent variables, and given these values, the model-implied
 values for the indicators of these latent variables.}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
-           se.fit = FALSE, label = TRUE, optim.method = "nlminb")
+           se.fit = FALSE, label = TRUE, fsm = FALSE, 
+           optim.method = "nlminb")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -24,6 +25,8 @@ In the categorical case, the only option (for now) is \code{"EBM"} for
 the Empirical Bayes Modal approach.}
 \item{se.fit}{Not used yet.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
+\item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute. 
+           Only for numeric data.}
 \item{optim.method}{Character string. Only used in the categorical case. 
 If \code{"nlminb"} (the default), the \code{"nlminb()"} function is used 
 for the optimization. If \code{"BFGS"}, the \code{"optim()"} function

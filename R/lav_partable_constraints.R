@@ -349,7 +349,8 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
     cin.function
 }
 
-lav_partable_constraints_label_id <- function(partable, con = NULL) {
+lav_partable_constraints_label_id <- function(partable, con = NULL,
+                                              warn = TRUE) {
 
     # if 'con', merge partable + con
     if(!is.null(con)) {
@@ -397,8 +398,8 @@ lav_partable_constraints_label_id <- function(partable, con = NULL) {
     }
 
     # check if we have found the label
-    if(any(is.na(con.x.idx))) {
-        stop("lavaan WARNING: unknown label(s) in equality constraint(s): ",
+    if(any(is.na(con.x.idx)) && warn) {
+        warning("lavaan WARNING: unknown label(s) in equality constraint(s): ",
          paste(con.labels[which(is.na(con.x.idx))], collapse=" "))
     }
 

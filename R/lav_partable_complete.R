@@ -42,10 +42,10 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
          }
     }
 
-    # add id column
-    if(is.null(partable$id)) {
+    # create new id column
+    #if(is.null(partable$id)) {
         partable$id <- seq_len(N)
-    }
+    #}
 
     # add group column
     if(is.null(partable$group)) {
