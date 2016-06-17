@@ -25,6 +25,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         # nothing to do
     } else if(fsr.method == "croonb") {
         # nothing to do
+    } else if(fsr.method == "croonc") {
     }
 
     fs.method <- tolower(fs.method)
@@ -74,7 +75,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     # STEP 1:
     # compute factor scores, per latent variable
     SCORES <- vector("list", length = length(lv.names))
-    if(fsr.method %in% c("croon", "croonb")) { 
+    if(fsr.method %in% c("croon", "croonb", "croonc")) { 
         CROON <- vector("list", length = length(lv.names))
     }
     for(f in 1:length(lv.names)) {
@@ -134,7 +135,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
             fs.method <- "Bartlett"
         }
 
-        if(fsr.method %in% c("croon" ,"croonb")) {
+        if(fsr.method %in% c("croon" ,"croonb", "croonc")) {
             fsm <- TRUE
         } else {
             fsm <- FALSE
@@ -143,7 +144,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         # compute factor scores
         SC <- lavPredict(fit.1fac, type = "lv", method = fs.method, fsm = fsm)
 
-        if(fsr.method %in% c("croon", "croonb")) {
+        if(fsr.method %in% c("croon", "croonb", "croonc")) {
             FSM <- attr(SC, "fsm")
             attr(SC, "fsm") <- NULL
             SCORES[[f]] <- SC
@@ -166,7 +167,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
     names(SCORES) <- lv.names
     SCORES <- as.data.frame(SCORES)
-    if(fsr.method %in% c("croon", "croonb")) {
+    if(fsr.method %in% c("croon", "croonb", "croonc")) {
         names(CROON) <- lv.names
     }
 
@@ -202,20 +203,10 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
     PT.PA <- lav_partable_complete(PT.PA)
 
-    if(fsr.method == "naive") {
-        # add factor scores to data.frame
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
-    } else if(fsr.method == "skrondal.laake") {
-        # apply bias-avoiding method
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
-    } else if(fsr.method == "croon") {
-        # apply bias-correcting method
-        #fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
 
-        # here, we first do this manually; later, we will create a  
-        # lavaan object
-
-        PE <- vector("list", length = FIT@Data@ngroups)
+    if(fsr.method %in% c("croon", "croonb", "croonc")) {
+        # compute 'corrected' COV for the factor scores 
+        # using the Croon method
         for(g in FIT@Data@ngroups) {
 
             # FIXME: we assume only 1 group
@@ -228,7 +219,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
             # correct covariances only
             if(fs.method != "bartlett") {
-                for(i in 1:ncol(COV.SC)) {
+                for(i in 1:(ncol(COV.SC)-1)) {
                     LHS <- all.names[i]
 
                     A.y <- CROON[[LHS]]$fsm[[g]]
@@ -253,7 +244,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
             # correct variances
             for(i in 1:ncol(COV.SC)) {
                 RHS <- all.names[i]
-                if(!RHS %in% eqs.x.names) next
+                #if(!RHS %in% eqs.x.names) next
                 
                 A.x <- CROON[[RHS]]$fsm[[g]]
                 lambda.x <- CROON[[RHS]]$lambda[[g]]
@@ -269,8 +260,26 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
                 NEW[i,i] <- (COV.SC[RHS, RHS] - offset.x)/A.xx
             }
+        } # g
+    } # croon
 
 
+    if(fsr.method == "naive") {
+        # add factor scores to data.frame
+        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+    } else if(fsr.method == "skrondal.laake") {
+        # apply bias-avoiding method
+        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+    } else if(fsr.method == "croon") {
+        # apply bias-correcting method
+        #fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+
+        # here, we first do this manually; later, we will create a  
+        # lavaan object
+
+        PE <- vector("list", length = FIT@Data@ngroups)
+
+        for(g in FIT@Data@ngroups) {
 
             lhs <- op <- rhs <- character(0L)
             est <- se <- numeric(0L)
@@ -322,6 +331,22 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                 SCORES[,RHS] <- scale.factor * SCORES[,RHS]
             }
         }
+        # add factor scores to data.frame
+        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+
+    } else if(fsr.method == "croonc") {
+
+        # per GROUP!!!!
+
+        # transform SCORES
+        OLD.inv <- solve(COV.SC) 
+        OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
+        NEW.sqrt <- lav_matrix_symmetric_sqrt(NEW)
+        SC <- as.matrix(SCORES)
+        SC <- SC %*% OLD.inv.sqrt %*% NEW.sqrt
+        SCORES <- as.data.frame(SC)
+        names(SCORES) <- lv.names
+ 
         # add factor scores to data.frame
         fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
     } else {
