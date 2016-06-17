@@ -24,8 +24,8 @@ lavTablesFitCm(object)
 }
 
 \references{
-Barendse, M. T., Ligtvoet, R., Timmerman, M. E., & Oort, F. J. (under review). Structural Equation Modeling of Discrete data: 
-Model Fit after Pairwise Maximum Likelihood.
+Barendse, M. T., Ligtvoet, R., Timmerman, M. E., & Oort, F. J. (2016). Structural Equation Modeling of Discrete data: 
+Model Fit after Pairwise Maximum Likelihood.\emph{Frontiers in psychology, 7}, 1-8. 
 
 Joreskog, K. G., & Moustaki, I. (2001). Factor analysis of ordinal variables: A comparison of three approaches. 
 \emph{Multivariate Behavioral Research, 36}, 347-387. 
