@@ -7,10 +7,10 @@
 
 # here, we estimate Mu and Sigma from Y with missing values, assuming normality
 # this is a rewrite of the 'estimate.moments.EM' function in <= 0.5-20
-lav_mvnorm_missing_h1_estimate_moments <- function(Y   = NULL,
-                                                   Mp  = NULL,
-                                                   verbose = FALSE,
+lav_mvnorm_missing_h1_estimate_moments <- function(Y        = NULL,
+                                                   Mp       = NULL,
+                                                   verbose  = FALSE,
                                                    max.iter = 500L,
-                                                   tol = 1e-05) {
+                                                   tol      = 1e-05) {
 
 }

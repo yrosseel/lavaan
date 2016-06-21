@@ -26,7 +26,9 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     } else if(fsr.method == "croonb") {
         # nothing to do
     } else if(fsr.method == "croonc") {
+    } else if(fsr.method == "new") {
     }
+    
 
     fs.method <- tolower(fs.method)
 
@@ -75,8 +77,8 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     # STEP 1:
     # compute factor scores, per latent variable
     SCORES <- vector("list", length = length(lv.names))
-    if(fsr.method %in% c("croon", "croonb", "croonc")) { 
-        CROON <- vector("list", length = length(lv.names))
+    if(fsr.method %in% c("croon", "croonb", "croonc", "new")) { 
+        LVINFO <- vector("list", length = length(lv.names))
     }
     for(f in 1:length(lv.names)) {
         FAC <- lv.names[f]
@@ -131,7 +133,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
             }
         }
 
-        if(fsr.method == "croonb") {
+        if(fsr.method %in% c("croonb", "new")) {
             fs.method <- "Bartlett"
         }
 
@@ -151,11 +153,15 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
             lambda.idx <- which(names(fit.1fac@Model@GLIST) == "lambda")
             theta.idx  <- which(names(fit.1fac@Model@GLIST) == "theta")
-            CROON[[f]] <- list(fsm = FSM, 
-                               lambda = fit.1fac@Model@GLIST[lambda.idx],
-                               theta  = fit.1fac@Model@GLIST[theta.idx])
+            LVINFO[[f]] <- list(fsm = FSM, 
+                                lambda = fit.1fac@Model@GLIST[lambda.idx],
+                                theta  = fit.1fac@Model@GLIST[theta.idx])
         } else {
             SCORES[[f]] <- SC
+        }
+        if(fsr.method == "new") {
+            psi.idx <- which(names(fit.1fac@Model@GLIST) == "psi")
+            LVINFO[[f]] <- list(psi = fit.1fac@Model@GLIST[psi.idx])
         }
         
     }
@@ -167,8 +173,8 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
     names(SCORES) <- lv.names
     SCORES <- as.data.frame(SCORES)
-    if(fsr.method %in% c("croon", "croonb", "croonc")) {
-        names(CROON) <- lv.names
+    if(fsr.method %in% c("croon", "croonb", "croonc", "new")) {
+        names(LVINFO) <- lv.names
     }
 
 
@@ -222,14 +228,14 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                 for(i in 1:(ncol(COV.SC)-1)) {
                     LHS <- all.names[i]
 
-                    A.y <- CROON[[LHS]]$fsm[[g]]
-                    lambda.y <- CROON[[LHS]]$lambda[[g]]
+                    A.y <- LVINFO[[LHS]]$fsm[[g]]
+                    lambda.y <- LVINFO[[LHS]]$lambda[[g]]
 
                     for(j in (i+1):nrow(COV.SC)) {
                         RHS <- all.names[j]
 
-                        A.x <- CROON[[RHS]]$fsm[[g]]
-                        lambda.x <- CROON[[RHS]]$lambda[[g]]
+                        A.x <- LVINFO[[RHS]]$fsm[[g]]
+                        lambda.x <- LVINFO[[RHS]]$lambda[[g]]
                 
                         # always 1 if Bartlett
                         A.xy <- as.numeric(crossprod(A.x %*% lambda.x,
@@ -246,9 +252,9 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                 RHS <- all.names[i]
                 #if(!RHS %in% eqs.x.names) next
                 
-                A.x <- CROON[[RHS]]$fsm[[g]]
-                lambda.x <- CROON[[RHS]]$lambda[[g]]
-                theta.x <- CROON[[RHS]]$theta[[g]]
+                A.x <- LVINFO[[RHS]]$fsm[[g]]
+                lambda.x <- LVINFO[[RHS]]$lambda[[g]]
+                theta.x <- LVINFO[[RHS]]$theta[[g]]
 
                 if(fs.method == "bartlett") {
                     A.xx <- 1.0
@@ -261,7 +267,29 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                 NEW[i,i] <- (COV.SC[RHS, RHS] - offset.x)/A.xx
             }
         } # g
+
     } # croon
+
+    if(fsr.method == "new") {
+        for(g in FIT@Data@ngroups) {
+
+            # FIXME: we assume only 1 group
+            COV.SC <- cov(SCORES) ## divided by N-1!!!
+            N <- nobs(FIT)
+            COV.SC <- COV.SC * (N-1) / N
+            all.names <- rownames(COV.SC)
+
+            NEW <- COV.SC
+
+            # correct variances
+            for(i in 1:ncol(COV.SC)) {
+                RHS <- all.names[i]
+                PSI <- LVINFO[[RHS]]$psi[[g]]
+                
+                NEW[i,i] <- PSI[1,1]
+            }
+        }
+    }
 
 
     if(fsr.method == "naive") {
@@ -320,8 +348,8 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         # rescale x-scores
         for(g in FIT@Data@ngroups) {
             for(RHS in eqs.x.names) {
-                A.x <- CROON[[RHS]]$fsm[[g]]
-                theta.x <- CROON[[RHS]]$theta[[g]]
+                A.x <- LVINFO[[RHS]]$fsm[[g]]
+                theta.x <- LVINFO[[RHS]]$theta[[g]]
                 offset.x <- as.numeric(A.x %*% theta.x %*% t(A.x))
                 OLD.varx <- var(SCORES[,RHS]) # divided by N-1!!!
                 OLD.varx <- OLD.varx * (N - 1) / N
@@ -334,7 +362,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         # add factor scores to data.frame
         fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
 
-    } else if(fsr.method == "croonc") {
+    } else if(fsr.method %in% c("croonc", "new")) {
 
         # per GROUP!!!!
 
@@ -344,11 +372,21 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         NEW.sqrt <- lav_matrix_symmetric_sqrt(NEW)
         SC <- as.matrix(SCORES)
         SC <- SC %*% OLD.inv.sqrt %*% NEW.sqrt
-        SCORES <- as.data.frame(SC)
-        names(SCORES) <- lv.names
+        SC <- as.data.frame(SC)
+        names(SC) <- lv.names
  
         # add factor scores to data.frame
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+        if(fsr.method == "new") {
+
+            # use custom W matrix
+            W <- lavaan:::lav_samplestats_Gamma(Y = SCORES)
+            W.inv <- solve(W)
+
+            fit <- lavaan(PT.PA, data = cbind(data, SC), estimator = "WLS",
+                          WLS.V = W.inv, ...)
+        } else {
+            fit <- lavaan(PT.PA, data = cbind(data, SC), ...)
+        }
     } else {
         stop("lavaan ERROR: fsr.method [", fsr.method, "] unknown", sep="")
     }
