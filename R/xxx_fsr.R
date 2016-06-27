@@ -1,12 +1,11 @@
 # factor score regression
 
-# four methods:
-#  - regression fsr (biased)
-#  - Bartlett fsr (biased)
-#  - Skrondal & Laake (2001)
-#  - Croon (2002)
+# three methods:
+#  - naive (regression or Bartlett)
+#  - Skrondal & Laake (2001) (regression models only)
+#  - Croon (2002) (general + robust SE)
 
-fsr <- function(model = NULL, data = NULL, cmd = "sem", 
+fsr <- function(model = NULL, data = NULL, cmd = "sem",
                 fsr.method = "Croon", fs.method  = "Bartlett", ...) {
    
     # we need full data
@@ -23,17 +22,22 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         fsr.method <- "skrondal.laake"
     } else if(fsr.method == "croon") {
         # nothing to do
-    } else if(fsr.method == "croonb") {
-        # nothing to do
-    } else if(fsr.method == "croonc") {
-    } else if(fsr.method == "new") {
     }
-    
 
     fs.method <- tolower(fs.method)
 
     # dot dot dot
     dotdotdot <- list(...)
+
+    # check dotdotdot
+    if(!is.null(dotdotdot$meanstructure)) {
+        dotdotdot$meanstructure <- NULL
+    }
+
+    if(!is.null(dotdotdot$do.fit)) {
+        dotdotdot$do.fit <- NULL
+    }
+  
 
     # check for arguments that we do not want (eg sample.cov)?
     # TODO
@@ -42,10 +46,13 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     FIT <- do.call(cmd, 
                    args =  c(list(model  = model, 
                                   data   = data,
+                                  meanstructure = TRUE,
                                   do.fit = FALSE), dotdotdot) )
+    ngroups <- lavInspect(FIT, "ngroups")
 
     # any `regular' latent variables?
     lv.names <- unique(unlist(FIT@pta$vnames$lv.regular))
+    nfac     <- length(lv.names)
     if(length(lv.names) == 0L) {
         stop("lavaan ERROR: model does not contain any latent variables")
     }
@@ -69,18 +76,36 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     # check if we can use skrondal & laake (no mediational terms?)
     if(fsr.method == "skrondal.laake") {
         if(any(eqs.x.names %in% eqs.y.names)) {
-            stop("lavaan ERROR: mediational relationship are (currently) not allowed for the skrondal.laake method")
+            stop("lavaan ERROR: mediational relationship are not allowed for the Skrondal.Laake method; use ", sQuote(Croon), " instead.")
         }
     }
 
 
     # STEP 1:
     # compute factor scores, per latent variable
-    SCORES <- vector("list", length = length(lv.names))
-    if(fsr.method %in% c("croon", "croonb", "croonc", "new")) { 
-        LVINFO <- vector("list", length = length(lv.names))
+    FS.SCORES  <- vector("list", length = ngroups)
+    FSR.SCORES <- vector("list", length = ngroups)
+    FS.COV     <- vector("list", length = ngroups)
+    FSR.COV    <- vector("list", length = ngroups)
+    LVINFO     <- vector("list", length = ngroups)
+    if(ngroups > 1L) {
+        names(FS.SCORES) <- names(LVINFO) <- names(FS.COV) <- 
+        names(FSR.SCORES) <- names(FSR.COV) <-
+            lavInspect(FIT, "group.label")
     }
-    for(f in 1:length(lv.names)) {
+
+    for(g in 1:ngroups) {
+        FS.SCORES[[g]]  <- vector("list", length = nfac)
+        FSR.SCORES[[g]] <- vector("list", length = nfac)
+        names(FS.SCORES[[g]]) <- names(FSR.SCORES[[g]]) <- lv.names
+
+        LVINFO[[g]] <- vector("list", length = nfac)
+        names(LVINFO[[g]]) <- lv.names
+    }
+
+    # we assume the same number/names of lv's per group!!!
+    for(f in 1:nfac) {
+
         FAC <- lv.names[f]
         IND <- PT$rhs[ PT$op == "=~" & PT$lhs == FAC ]
 
@@ -102,6 +127,11 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                                          PT$rhs %in% IND &
                                          PT$lhs != PT$rhs)
 
+        # means/intercepts
+        # ov.int <- which(PT$op == "~1" & PT$lhs %in% IND)
+        # lv.int <- which(PT$op == "~1" & PT$lhs == FAC)
+
+
         # any regression where lhs is an indicator
         reg.idx <- which(PT$op == "~" & PT$lhs %in% IND & 
                                         !PT$rhs %in% lv.names)
@@ -114,7 +144,8 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
         # eq constraints?
         # TODO!!
-        keep.idx <- c(op.idx, var.idx, cov.idx, reg.idx, var2.idx)
+        keep.idx <- c(op.idx, var.idx, cov.idx, reg.idx, var2.idx) #,
+                      #ov.int, lv.int)
         PT.1fac <- PT[keep.idx, , drop = FALSE]
 
         # clean up
@@ -144,38 +175,44 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         }
 
         # compute factor scores
-        SC <- lavPredict(fit.1fac, type = "lv", method = fs.method, fsm = fsm)
+        SC <- lav_predict_eta(fit.1fac, method = fs.method, fsm = fsm)
 
-        if(fsr.method %in% c("croon", "croonb", "croonc")) {
-            FSM <- attr(SC, "fsm")
-            attr(SC, "fsm") <- NULL
-            SCORES[[f]] <- SC
+        for(g in 1:ngroups) {
 
-            lambda.idx <- which(names(fit.1fac@Model@GLIST) == "lambda")
-            theta.idx  <- which(names(fit.1fac@Model@GLIST) == "theta")
-            LVINFO[[f]] <- list(fsm = FSM, 
-                                lambda = fit.1fac@Model@GLIST[lambda.idx],
-                                theta  = fit.1fac@Model@GLIST[theta.idx])
-        } else {
-            SCORES[[f]] <- SC
+            if(fsr.method %in% c("croon")) {
+                FSM <- attr(SC, "fsm")
+                attr(SC, "fsm") <- NULL
+                FS.SCORES[[g]][[f]] <- SC[[g]]
+  
+                lambda.idx <- which(names(fit.1fac@Model@GLIST) == "lambda")
+                theta.idx  <- which(names(fit.1fac@Model@GLIST) == "theta")
+                LVINFO[[g]][[f]] <- 
+                    list(fsm = FSM[[g]], 
+                         lambda = fit.1fac@Model@GLIST[[lambda.idx[g]]],
+                         theta  = fit.1fac@Model@GLIST[[theta.idx[g]]])
+            } else {
+                FS.SCORES[[g]][[f]] <- SC[[g]]
+            }
+        } # g
+
+    } # nfac
+
+    # cbind factor scores
+    FS.SCORES <- lapply(1:ngroups, function(g) {
+        SC <- as.data.frame(FS.SCORES[[g]])
+        SC
+    })
+
+    # compute empirical covariance matrix factor scores
+    FS.COV <- lapply(1:ngroups, function(g) {
+        COV <- cov(FS.SCORES[[g]]) ## divided by N-1!!! 
+        if(FIT@Options$likelihood == "normal") {
+            Ng <- lavInspect(FIT, "nobs")[g]
+            COV <- COV * (Ng - 1) / Ng
         }
-        if(fsr.method == "new") {
-            psi.idx <- which(names(fit.1fac@Model@GLIST) == "psi")
-            LVINFO[[f]] <- list(psi = fit.1fac@Model@GLIST[psi.idx])
-        }
-        
-    }
-
-    # FIXME!!! rbind SCORES in the multiple group case!!!!
-    if(FIT@Data@ngroups > 1L) {
-        stop("lavaan ERROR: fsr code not ready for multiple groups (yet)")
-    }
-
-    names(SCORES) <- lv.names
-    SCORES <- as.data.frame(SCORES)
-    if(fsr.method %in% c("croon", "croonb", "croonc", "new")) {
-        names(LVINFO) <- lv.names
-    }
+        COV
+    })
+    FSR.COV <- FS.COV
 
 
     # STEP 2:
@@ -197,8 +234,16 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                                      PT$rhs %in% eqs.names &
                                      PT$lhs != PT$rhs)
 
-    keep.idx <- c(reg.idx, var.idx, cov.idx)
+    # means/intercepts
+    int.idx <- which(PT$op == "~1" & PT$lhs %in% eqs.names)
+
+    keep.idx <- c(reg.idx, var.idx, cov.idx, int.idx)
     PT.PA <- PT.PA[keep.idx, , drop = FALSE]
+
+    # free all means/intercepts
+    int.idx <- which(PT.PA$op == "~1")
+    PT.PA$free[int.idx] <- 1L
+    PT.PA$ustart[int.idx] <- NA
 
     # what about equality constraints?
     # TODO
@@ -209,52 +254,44 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
     PT.PA <- lav_partable_complete(PT.PA)
 
-
-    if(fsr.method %in% c("croon", "croonb", "croonc")) {
+    # adjust using Croon method
+    if(fsr.method %in% c("croon")) {
         # compute 'corrected' COV for the factor scores 
         # using the Croon method
-        for(g in FIT@Data@ngroups) {
-
-            # FIXME: we assume only 1 group
-            COV.SC <- cov(SCORES) ## divided by N-1!!!
-            N <- nobs(FIT)
-            COV.SC <- COV.SC * (N-1) / N
-            all.names <- rownames(COV.SC)
-
-            NEW <- COV.SC
+        for(g in 1:ngroups) {
 
             # correct covariances only
             if(fs.method != "bartlett") {
-                for(i in 1:(ncol(COV.SC)-1)) {
-                    LHS <- all.names[i]
+                for(i in 1:(nfac-1)) {
+                    LHS <- lv.names[i]
 
-                    A.y <- LVINFO[[LHS]]$fsm[[g]]
-                    lambda.y <- LVINFO[[LHS]]$lambda[[g]]
+                    A.y <- LVINFO[[g]][[LHS]]$fsm
+                    lambda.y <- LVINFO[[g]][[LHS]]$lambda
 
-                    for(j in (i+1):nrow(COV.SC)) {
-                        RHS <- all.names[j]
+                    for(j in (i+1):nfac) {
+                        RHS <- lv.names[j]
 
-                        A.x <- LVINFO[[RHS]]$fsm[[g]]
-                        lambda.x <- LVINFO[[RHS]]$lambda[[g]]
+                        A.x <- LVINFO[[g]][[RHS]]$fsm
+                        lambda.x <- LVINFO[[g]][[RHS]]$lambda
                 
                         # always 1 if Bartlett
                         A.xy <- as.numeric(crossprod(A.x %*% lambda.x,
                                                      A.y %*% lambda.y))
 
                         # corrected covariance
-                        NEW[i,j] <- NEW[j,i] <- COV.SC[LHS,RHS] / A.xy
+                        FSR.COV[[g]][i,j] <- FSR.COV[[g]][j,i] <- 
+                            FS.COV[[g]][LHS,RHS] / A.xy
                     }
                 }
             }
 
             # correct variances
-            for(i in 1:ncol(COV.SC)) {
-                RHS <- all.names[i]
-                #if(!RHS %in% eqs.x.names) next
+            for(i in 1:nfac) {
+                RHS <- lv.names[i]
                 
-                A.x <- LVINFO[[RHS]]$fsm[[g]]
-                lambda.x <- LVINFO[[RHS]]$lambda[[g]]
-                theta.x <- LVINFO[[RHS]]$theta[[g]]
+                A.x <- LVINFO[[g]][[RHS]]$fsm
+                lambda.x <- LVINFO[[g]][[RHS]]$lambda
+                theta.x <- LVINFO[[g]][[RHS]]$theta
 
                 if(fs.method == "bartlett") {
                     A.xx <- 1.0
@@ -264,132 +301,87 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
                 offset.x <- as.numeric(A.x %*% theta.x %*% t(A.x))
 
-                NEW[i,i] <- (COV.SC[RHS, RHS] - offset.x)/A.xx
+                FSR.COV[[g]][i,i] <- (FS.COV[[g]][RHS, RHS] - offset.x)/A.xx
             }
         } # g
 
     } # croon
 
-    if(fsr.method == "new") {
-        for(g in FIT@Data@ngroups) {
 
-            # FIXME: we assume only 1 group
-            COV.SC <- cov(SCORES) ## divided by N-1!!!
-            N <- nobs(FIT)
-            COV.SC <- COV.SC * (N-1) / N
-            all.names <- rownames(COV.SC)
-
-            NEW <- COV.SC
-
-            # correct variances
-            for(i in 1:ncol(COV.SC)) {
-                RHS <- all.names[i]
-                PSI <- LVINFO[[RHS]]$psi[[g]]
-                
-                NEW[i,i] <- PSI[1,1]
-            }
-        }
-    }
-
-
+    # Step 3: sem using factor scores
     if(fsr.method == "naive") {
+
+        # FIXME!!! rbind FS.SCORES in the multiple group case!!!!
+        if(ngroups > 1L) {
+            stop("lavaan ERROR: fsr code not ready for multiple groups (yet)")
+        }
+        FS.SCORES <- as.data.frame(FS.SCORES[[1]])
+
         # add factor scores to data.frame
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+        fit <- lavaan(PT.PA, data = cbind(data, FS.SCORES), ...)
+
     } else if(fsr.method == "skrondal.laake") {
+
+        # FIXME!!! rbind FS.SCORES in the multiple group case!!!!
+        if(ngroups > 1L) {
+            stop("lavaan ERROR: fsr code not ready for multiple groups (yet)")
+        }
+        FS.SCORES <- as.data.frame(FS.SCORES[[1]])
+
         # apply bias-avoiding method
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
+        fit <- lavaan(PT.PA, data = cbind(data, FS.SCORES), ...)
+
     } else if(fsr.method == "croon") {
+
         # apply bias-correcting method
-        #fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
 
-        # here, we first do this manually; later, we will create a  
-        # lavaan object
-
-        PE <- vector("list", length = FIT@Data@ngroups)
-
-        for(g in FIT@Data@ngroups) {
-
-            lhs <- op <- rhs <- character(0L)
-            est <- se <- numeric(0L)
-            for(y in eqs.y.names) {
-                reg.idx <- which(PT.PA$op == "~" & PT.PA$group == g 
-                                                 & PT.PA$lhs == y)
-                nx <- length(reg.idx)
-                x.names <- PT.PA$rhs[reg.idx]
-                EST <- solve(NEW[x.names, x.names, drop = FALSE], 
-                             NEW[x.names, y,       drop = FALSE])
-
-                lhs <- c(lhs, rep(y, nx))
-                 op <- c(op, rep("~", nx))
-                rhs <- c(rhs, x.names)
-                est <- c(est, as.numeric(EST))
-                 se <- c(se, rep(NA, nx))
-            }
-            tmp.se <- ifelse( se == 0.0, NA, se)
-            z <- est/tmp.se
-            pvalue <- 2 * (1 - pnorm( abs(z) ))
-            PE[[g]] <- data.frame(lhs = lhs, op = op, rhs = rhs,
-                                  est = est, se = se, z = z, pvalue = pvalue)
-            class(PE[[g]]) <- c("lavaan.data.frame", "data.frame")
-            attr(PE[[g]], "header") <- 
-                paste("lavaan factor score regression\n",
-                      "  fsr.method = ", fsr.method, "\n",
-                      "  fs.method  = ", fs.method, "\n",  sep = "")
+        # transform FS.SCORES
+        for(g in 1:ngroups) {
+            OLD.inv <- solve(FS.COV[[g]]) 
+            OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
+            FSR.COV.sqrt <- lav_matrix_symmetric_sqrt(FSR.COV[[g]])
+            SC <- as.matrix(FS.SCORES[[g]])
+            SC <- SC %*% OLD.inv.sqrt %*% FSR.COV.sqrt
+            SC <- as.data.frame(SC)
+            names(SC) <- lv.names
+            FSR.SCORES[[g]] <- SC
         }
-        if(FIT@Data@ngroups == 1L) {
-            fit <- PE[[1]]
-        } else {
-            fit <- PE
+
+        # FIXME!!! rbind FS.SCORES in the multiple group case!!!!
+        if(ngroups > 1L) {
+            stop("lavaan ERROR: fsr code not ready for multiple groups (yet)")
         }
-    } else if(fsr.method == "croonb") {
- 
-        N <- nobs(FIT)
+        FSR.SCORES <- as.data.frame(FSR.SCORES[[1]])
 
-        # rescale x-scores
-        for(g in FIT@Data@ngroups) {
-            for(RHS in eqs.x.names) {
-                A.x <- LVINFO[[RHS]]$fsm[[g]]
-                theta.x <- LVINFO[[RHS]]$theta[[g]]
-                offset.x <- as.numeric(A.x %*% theta.x %*% t(A.x))
-                OLD.varx <- var(SCORES[,RHS]) # divided by N-1!!!
-                OLD.varx <- OLD.varx * (N - 1) / N
-                NEW.varx <- OLD.varx - offset.x
-                scale.factor <- NEW.varx / OLD.varx
+        # compute Omega.y (using NT for now)
+        DATA <- lavInspect(FIT, "data")
+        Omega.y <- lav_samplestats_Gamma_NT(Y            = DATA, 
+                                           meanstructure = TRUE, 
+                                           rescale       = TRUE,
+                                           fixed.x       = FALSE)
 
-                SCORES[,RHS] <- scale.factor * SCORES[,RHS]
-            }
-        }
-        # add factor scores to data.frame
-        fit <- lavaan(PT.PA, data = cbind(data, SCORES), ...)
-
-    } else if(fsr.method %in% c("croonc", "new")) {
-
-        # per GROUP!!!!
-
-        # transform SCORES
-        OLD.inv <- solve(COV.SC) 
-        OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
-        NEW.sqrt <- lav_matrix_symmetric_sqrt(NEW)
-        SC <- as.matrix(SCORES)
-        SC <- SC %*% OLD.inv.sqrt %*% NEW.sqrt
-        SC <- as.data.frame(SC)
-        names(SC) <- lv.names
+        A <- lav_matrix_bdiag(lapply(LVINFO[[1]], "[[", "fsm"))
+        A11 <- A
+        A22 <- lav_matrix_duplication_post(
+               lav_matrix_duplication_ginv_pre(A %x% A))
+        A.tilde <- lav_matrix_bdiag(A11, A22)
+        Omega.f <- A.tilde %*% Omega.y %*% t(A.tilde)
  
         # add factor scores to data.frame
-        if(fsr.method == "new") {
+        fit <- lavaan(PT.PA, data = cbind(data, FSR.SCORES),
+                      meanstructure = TRUE,
+                      NACOV = Omega.f,
+                      se = "robust",
+                      fixed.x = FALSE)
 
-            # use custom W matrix
-            W <- lavaan:::lav_samplestats_Gamma(Y = SCORES)
-            W.inv <- solve(W)
-
-            fit <- lavaan(PT.PA, data = cbind(data, SC), estimator = "WLS",
-                          WLS.V = W.inv, ...)
-        } else {
-            fit <- lavaan(PT.PA, data = cbind(data, SC), ...)
-        }
     } else {
         stop("lavaan ERROR: fsr.method [", fsr.method, "] unknown", sep="")
     }
+
+    # use 'external' slot to stores info
+    fit@external <- list( FS.COV =  FS.COV,  FS.SCORES =  FS.SCORES, 
+                         FSR.COV = FSR.COV, FSR.SCORES = FSR.SCORES,
+                         LVINFO = LVINFO)
             
     fit
 }

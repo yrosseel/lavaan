@@ -135,7 +135,7 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
 
         if(is.null(sample.cov)) {
             # sample statistics
-            sample.mean <- colMeans(Y); N <- NCOL(Y)
+            sample.mean <- colMeans(Y); N <- NROW(Y)
             sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
         }
 
