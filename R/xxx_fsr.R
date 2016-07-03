@@ -103,6 +103,14 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         names(LVINFO[[g]]) <- lv.names
     }
 
+    # adjust options
+    dotdotdot2 <- dotdotdot
+    dotdotdot2$se <- "none"
+    dotdotdot2$test <- "none"
+    dotdotdot2$debug <- FALSE
+    dotdotdot2$verbose <- FALSE
+ 
+
     # we assume the same number/names of lv's per group!!!
     for(f in 1:nfac) {
 
@@ -152,7 +160,10 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         PT.1fac <- lav_partable_complete(PT.1fac)
 
         # fit 1-factor model
-        fit.1fac <- lavaan(PT.1fac, data = data, ...)
+        #fit.1fac <- lavaan(PT.1fac, data = data, ...)
+        fit.1fac <- do.call("lavaan",
+                            args =  c(list(model  = PT.1fac,
+                                           data   = data), dotdotdot2) )
 
         # fs.method?
         if(fsr.method == "skrondal.laake") {
@@ -164,11 +175,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
             }
         }
 
-        if(fsr.method %in% c("croonb", "new")) {
-            fs.method <- "Bartlett"
-        }
-
-        if(fsr.method %in% c("croon" ,"croonb", "croonc")) {
+        if(fsr.method %in% c("croon") || FIT@Options$se == "robust.sem") {
             fsm <- TRUE
         } else {
             fsm <- FALSE
@@ -179,7 +186,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
         for(g in 1:ngroups) {
 
-            if(fsr.method %in% c("croon")) {
+            if(fsr.method %in% c("croon") || FIT@Options$se == "robust.sem") {
                 FSM <- attr(SC, "fsm")
                 attr(SC, "fsm") <- NULL
                 FS.SCORES[[g]][[f]] <- SC[[g]]
@@ -317,8 +324,31 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
         }
         FS.SCORES <- as.data.frame(FS.SCORES[[1]])
 
-        # add factor scores to data.frame
-        fit <- lavaan(PT.PA, data = cbind(data, FS.SCORES), ...)
+        if(FIT@Options$se == "robust.sem") {
+            # compute Omega.y (using NT for now)
+            DATA <- lavInspect(FIT, "data")
+            Omega.y <- lav_samplestats_Gamma_NT(Y             = DATA,
+                                                meanstructure = TRUE,
+                                                rescale       = TRUE,
+                                                fixed.x       = FALSE)
+
+            A <- lav_matrix_bdiag(lapply(LVINFO[[1]], "[[", "fsm"))
+            A11 <- A
+            A22 <- lav_matrix_duplication_post(
+                   lav_matrix_duplication_ginv_pre(A %x% A))
+            A.tilde <- lav_matrix_bdiag(A11, A22)
+            Omega.f <- A.tilde %*% Omega.y %*% t(A.tilde)
+
+            # add factor scores to data.frame
+            fit <- lavaan(PT.PA, data = cbind(data, FS.SCORES),
+                          meanstructure = TRUE,
+                          NACOV = Omega.f,
+                          se = "robust",
+                          fixed.x = FALSE)
+        } else {
+            # add factor scores to data.frame
+            fit <- lavaan(PT.PA, data = cbind(data, FS.SCORES), ...)
+        }
 
     } else if(fsr.method == "skrondal.laake") {
 
@@ -355,18 +385,25 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
 
         # compute Omega.y (using NT for now)
         DATA <- lavInspect(FIT, "data")
-        Omega.y <- lav_samplestats_Gamma_NT(Y            = DATA, 
-                                           meanstructure = TRUE, 
-                                           rescale       = TRUE,
-                                           fixed.x       = FALSE)
-
+        Omega.y <- lav_samplestats_Gamma_NT(Y             = DATA, 
+                                            meanstructure = TRUE, 
+                                            rescale       = TRUE,
+                                            fixed.x       = FALSE)
+ 
+        # factor score matrices
         A <- lav_matrix_bdiag(lapply(LVINFO[[1]], "[[", "fsm"))
+        # compensate for Croon correction
+        if(fs.method == "regression") {
+            A <- OLD.inv.sqrt %*% FSR.COV.sqrt %*% A
+        }
+
+        # mean + vech(sigma)
         A11 <- A
         A22 <- lav_matrix_duplication_post(
                lav_matrix_duplication_ginv_pre(A %x% A))
         A.tilde <- lav_matrix_bdiag(A11, A22)
         Omega.f <- A.tilde %*% Omega.y %*% t(A.tilde)
- 
+
         # add factor scores to data.frame
         fit <- lavaan(PT.PA, data = cbind(data, FSR.SCORES),
                       meanstructure = TRUE,

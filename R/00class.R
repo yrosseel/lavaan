@@ -185,6 +185,29 @@ setClass("lavaan",
     ) 
 )
 
+setClass("lavaanList",
+    representation(
+        call            = "call",     # matched call
+        Options         = "list",     # lavOptions
+        ParTable        = "list",
+        Data            = "lavData",  # from first dataset (ngroups!)
+        Model           = "Model",    # based on first dataset
+        meta            = "list",
+
+        timingList      = "list",
+        ParTableList    = "list",
+        DataList        = "list",
+        SampleStatsList = "list",
+        vcovList        = "list",
+        testList        = "list",
+        optimList       = "list",
+        impliedList     = "list",
+        funList         = "list",
+        external        = "list"       # optional slot, for add-on packages
+    )
+)
+
+
 
 
 

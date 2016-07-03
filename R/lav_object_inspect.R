@@ -389,9 +389,12 @@ lav_object_inspect_est <- function(lavobject) {
     # from 0.5-19, they are in the partable
     if(!is.null(lavobject@ParTable$est)) {
         OUT <- lavobject@ParTable$est
-    } else {
+    } else if("Fit" %in% slotNames(lavobject)) {
         # in < 0.5-19, we should look in @Fit@est
         OUT <- lavobject@Fit@est
+    } else {
+        PT <- parTable(lavobject)
+        OUT <- rep(as.numeric(NA), length(PT$lhs))
     }
 
     OUT
@@ -402,9 +405,12 @@ lav_object_inspect_se <- function(lavobject) {
     # from 0.5-19, they are in the partable
     if(!is.null(lavobject@ParTable$se)) {
         OUT <- lavobject@ParTable$se
-    } else {
+    } else if("Fit" %in% slotNames(lavobject)) {
         # in < 0.5-19, we should look in @Fit@se
         OUT <- lavobject@Fit@se
+    } else {
+        PT <- parTable(lavobject)
+        OUT <- rep(as.numeric(NA), length(PT$lhs))
     }
 
     OUT

@@ -723,11 +723,8 @@ function(object, type="free", labels=TRUE) {
         idx <- 1:length( object@ParTable$lhs )
     } else if(type == "free") {
         idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
-    #} else if(type == "unco") {
-    #    idx <- which(object@ParTable$unco > 0L & 
-    #                 !duplicated(object@ParTable$unco))
     } else {
-        stop("argument `type' must be one of free or user")
+        stop("lavaan ERROR: argument `type' must be one of free or user")
     }
     EST <- lav_object_inspect_est(object)
     cof <- EST[idx]
@@ -862,7 +859,9 @@ parameterEstimates <- parameterestimates <- function(object,
     # fmi or not
     FMI <- fmi
     if(fmi == "default") {
-        if(object@SampleStats@missing.flag &&
+        if(inherits(object, "lavaanList")) {
+            FMI <- FALSE
+        } else if(object@SampleStats@missing.flag &&
            object@Fit@converged &&
            object@Options$estimator == "ML" &&
            object@Options$se == "standard") {
@@ -901,7 +900,13 @@ parameterEstimates <- parameterestimates <- function(object,
     } else {
         LIST$exo <- rep(0L, length(LIST$lhs))
     }
-    if(!is.null(PARTABLE$est)) {
+    if(inherits(object, "lavaanList")) {
+        # take the mean?
+        if("partable" %in% object@meta$store.slots) {
+            COF <- sapply(object@ParTableList, "[[", "est")
+            LIST$est <- rowMeans(COF)
+        } 
+    } else if(!is.null(PARTABLE$est)) {
         LIST$est <- PARTABLE$est
     } else {
         LIST$est <- lav_model_get_parameters(object@Model, type = "user",
