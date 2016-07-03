@@ -86,6 +86,7 @@ lavaanList <- function(model         = NULL,             # model
     lavoptions  <- FIT@Options
     lavmodel    <- FIT@Model
     lavpartable <- FIT@ParTable
+    lavpta <- lav_partable_attributes(lavpartable)
 
     # remove start/est/se columns from lavpartable
     lavpartable$start <- lavpartable$est
@@ -93,7 +94,8 @@ lavaanList <- function(model         = NULL,             # model
 
     # empty slots
     timingList <- ParTableList <- DataList <- SampleStatsList <-
-        vcovList <- testList <- optimList <- impliedList <- funList <- list()
+        CacheList <- vcovList <- testList <- optimList <- 
+        impliedList <- funList <- list()
 
     # prepare store.slotsd slots
     if("timing" %in% store.slots) {
@@ -107,6 +109,9 @@ lavaanList <- function(model         = NULL,             # model
     }
     if("samplestats" %in% store.slots) {
         SampleStatsList <- vector("list", length = ndat)
+    }
+    if("cache" %in% store.slots) {
+        CacheList <- vector("list", length = ndat)
     }
     if("vcov" %in% store.slots) {
         vcovList <- vector("list", length = ndat)
@@ -186,6 +191,9 @@ lavaanList <- function(model         = NULL,             # model
             if("samplestats" %in% store.slots) {
                 RES$SampleStats <- lavobject@vcov
             }
+            if("cache" %in% store.slots) {
+                RES$Cache <- lavobject@Cache
+            }
             if("vcov" %in% store.slots) {
                 RES$vcov <- lavobject@vcov
             }
@@ -256,6 +264,9 @@ lavaanList <- function(model         = NULL,             # model
     if("samplestats" %in% store.slots) {
         SampleStatsList <- lapply(RES, "[[", "SampleStats")
     }
+    if("cache" %in% store.slots) {
+        CacheList <- lapply(RES, "[[", "Cache")
+    }
     if("vcov" %in% store.slots) {
         vcovList <- lapply(RES, "[[", "vcov")
     }
@@ -277,6 +288,7 @@ lavaanList <- function(model         = NULL,             # model
                       call         = mc,
                       Options      = lavoptions,
                       ParTable     = lavpartable,
+                      pta          = lavpta,
                       Model        = lavmodel,
                       Data         = FIT@Data,
 
@@ -288,6 +300,7 @@ lavaanList <- function(model         = NULL,             # model
                       ParTableList    = ParTableList,
                       DataList        = DataList,
                       SampleStatsList = SampleStatsList,
+                      CacheList       = CacheList,
                       vcovList        = vcovList,
                       testList        = testList,
                       optimList       = optimList,
@@ -308,14 +321,18 @@ semList <- function(model         = NULL,
                     ...,
                     store.slots   = c("partable"),
                     FUN           = NULL,
-                    show.progress = FALSE) {
+                    show.progress = FALSE,
+                    parallel      = c("no", "multicore", "snow"),
+                    ncpus         = max(1L, parallel::detectCores() - 1L),
+                    cl            = NULL) {
 
     lavaanList(model = model, dataList = dataList, 
                dataFunction = dataFunction, 
                dataFunction.args = dataFunction.args, ndat = ndat, 
                cmd = "sem",
                ..., store.slots = store.slots, 
-               FUN = FUN, show.progress = show.progress)
+               FUN = FUN, show.progress = show.progress,
+               parallel = parallel, ncpus = ncpus, cl = cl)
 }
 
 cfaList <- function(model         = NULL,             
@@ -326,13 +343,17 @@ cfaList <- function(model         = NULL,
                     ...,
                     store.slots   = c("partable"),    
                     FUN           = NULL,             
-                    show.progress = FALSE) {
+                    show.progress = FALSE,
+                    parallel      = c("no", "multicore", "snow"),
+                    ncpus         = max(1L, parallel::detectCores() - 1L),
+                    cl            = NULL) {
 
     lavaanList(model = model, dataList = dataList, 
                dataFunction = dataFunction, 
                dataFunction.args = dataFunction.args, ndat = ndat, 
                cmd = "cfa",
                ..., store.slots = store.slots, 
-               FUN = FUN, show.progress = show.progress)
+               FUN = FUN, show.progress = show.progress,
+               parallel = parallel, ncpus = ncpus, cl = cl)
 }
 

@@ -16,7 +16,7 @@ fsr(model = NULL, data = NULL, cmd = "sem",
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
     treat them as ordinal variables.}
-\item{cmd}{Which command is used to run the sem models. The possible
+\item{cmd}{Charcater. Which command is used to run the sem models. The possible
     choices are \code{"sem"} or \code{"lavaan"}, determining how
     we deal with default options.}
 \item{fsr.method}{Character. Factor score regression method. Possible

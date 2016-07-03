@@ -76,7 +76,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
     # check if we can use skrondal & laake (no mediational terms?)
     if(fsr.method == "skrondal.laake") {
         if(any(eqs.x.names %in% eqs.y.names)) {
-            stop("lavaan ERROR: mediational relationship are not allowed for the Skrondal.Laake method; use ", sQuote(Croon), " instead.")
+            stop("lavaan ERROR: mediational relationship are not allowed for the Skrondal.Laake method; use ", sQuote("Croon"), " instead.")
         }
     }
 

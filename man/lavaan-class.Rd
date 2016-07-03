@@ -57,9 +57,7 @@ about the data.}
   \describe{
     \item{coef}{\code{signature(object = "lavaan", type = "free")}: Returns 
       the estimates of the parameters in the model as a named numeric vector.
-      If \code{type="free"}, only the free parameters are returned. If
-      \code{type="unco"}, both free and constrained parameters (simple
-      equality constraints only) are returned.
+      If \code{type="free"}, only the free parameters are returned.
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
     \item{fitted.values}{\code{signature(object = "lavaan")}: Returns the 
@@ -141,7 +139,7 @@ about the data.}
       are printed for all fixed parameters. 
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
-      section.
+      section.)
       Nothing is returned (use 
       \code{inspect} or another extractor function 
       to extract information from a fitted model).}

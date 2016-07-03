@@ -190,6 +190,7 @@ setClass("lavaanList",
         call            = "call",     # matched call
         Options         = "list",     # lavOptions
         ParTable        = "list",
+        pta             = "list",
         Data            = "lavData",  # from first dataset (ngroups!)
         Model           = "Model",    # based on first dataset
         meta            = "list",
@@ -198,6 +199,7 @@ setClass("lavaanList",
         ParTableList    = "list",
         DataList        = "list",
         SampleStatsList = "list",
+        CacheList       = "list",
         vcovList        = "list",
         testList        = "list",
         optimList       = "list",
