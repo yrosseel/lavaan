@@ -64,7 +64,9 @@ the double bootstrap.}
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted
 alpha based on the plugin p-values.}
 }
-\author{Yves Rosseel, Leonard Vanbrabant and Ed Merkle}
+\author{Yves Rosseel and Leonard Vanbrabant. Ed Merkle contributed
+Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
+by Hao Wu and Chuchu Cheng.}
 \details{The FUN function can return either a scalar or a numeric vector.
 This function can be an existing function (for example \code{coef}) or
 can be a custom defined function. For example:
