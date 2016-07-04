@@ -193,7 +193,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
 
         # new 0.5-12: before we do this, replace '0.2?' by 'start(0.2)*'
         # requested by the simsem folks
-        rhs <- gsub('([0-9]*\\.*[0-9]*)\\?',"start(\\1)\\*",rhs)
+        rhs <- gsub('\\(?([-]?[0-9]*\\.?[0-9]*)\\)?\\?',"start(\\1)\\*", rhs)
         rhs.formula <- as.formula(paste("~",rhs))
         out <- lav_syntax_parse_rhs(rhs=rhs.formula[[2L]],op=op)
 
