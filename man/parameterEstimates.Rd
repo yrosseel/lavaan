@@ -5,7 +5,7 @@
 \description{
 Parameter estimates of a latent variable model.}
 \usage{
-parameterEstimates(object, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
+parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    level = 0.95, boot.ci.type = "perc", standardized = FALSE, 
                    fmi = "default", remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, rsquare = FALSE, 
@@ -13,6 +13,9 @@ parameterEstimates(object, zstat = TRUE, pvalue = TRUE, ci = TRUE,
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
+\item{se}{Logical. If \code{TRUE}, include column containing the standard
+errors. If \code{FALSE}, this implies \code{zstat} and \code{pvalue} and
+\code{ci} are also \code{FALSE}.}
 \item{zstat}{Logical. If \code{TRUE}, an extra column is added containing
 the so-called z-statistic, which is simply the value of the estimate divided
 by its standard error.}

@@ -842,6 +842,7 @@ standardizedSolution <- standardizedsolution <- function(object,
 }
 
 parameterEstimates <- parameterestimates <- function(object,
+                                                     se    = TRUE,
                                                      zstat = TRUE,
                                                      pvalue = TRUE,
                                                      ci = TRUE, 
@@ -901,11 +902,12 @@ parameterEstimates <- parameterestimates <- function(object,
         LIST$exo <- rep(0L, length(LIST$lhs))
     }
     if(inherits(object, "lavaanList")) {
-        # take the mean?
-        if("partable" %in% object@meta$store.slots) {
-            COF <- sapply(object@ParTableList, "[[", "est")
-            LIST$est <- rowMeans(COF)
-        } 
+        # per default: nothing!
+        #if("partable" %in% object@meta$store.slots) {
+        #    COF <- sapply(object@ParTableList, "[[", "est")
+        #    LIST$est <- rowMeans(COF)
+        #} 
+        LIST$est <- NULL
     } else if(!is.null(PARTABLE$est)) {
         LIST$est <- PARTABLE$est
     } else {
@@ -915,9 +917,9 @@ parameterEstimates <- parameterestimates <- function(object,
 
 
     # add se, zstat, pvalue
-    if(object@Options$se != "none") {
+    if(se && object@Options$se != "none") {
         LIST$se <- lav_object_inspect_se(object)
-        tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
+        tmp.se <- ifelse(LIST$se == 0.0, NA, LIST$se)
         if(zstat) { 
             LIST$z <- LIST$est / tmp.se
             if(pvalue) {
@@ -931,7 +933,7 @@ parameterEstimates <- parameterestimates <- function(object,
     bootstrap.successful <- NROW(BOOT) # should be zero if NULL
 
     # confidence interval
-    if(object@Options$se != "none" && ci) {
+    if(se && object@Options$se != "none" && ci) {
         # next three lines based on confint.lm
         a <- (1 - level)/2; a <- c(a, 1 - a)
         if(object@Options$se != "bootstrap") {

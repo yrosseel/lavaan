@@ -71,19 +71,27 @@ lavaanList <- function(model         = NULL,             # model
     # dot dot dot
     dotdotdot <- list(...)
 
-    # check dotdotdot
-    dotdotdot$do.fit  <- TRUE    # to get starting values
-    dotdotdot$se      <- "none"
-    dotdotdot$test    <- "none"
-    dotdotdot$verbose <- FALSE
-    dotdotdot$debug   <- FALSE
+    # adapt for FIT
+    dotdotdotFIT <- dotdotdot
+    dotdotdotFIT$do.fit  <- TRUE    # to get starting values
+    dotdotdotFIT$se      <- "none"
+    dotdotdotFIT$test    <- "none"
+    dotdotdotFIT$verbose <- FALSE
+    dotdotdotFIT$debug   <- FALSE
 
     # initial model fit, using first dataset
     FIT <- do.call(cmd,
                    args = c(list(model  = model,
-                                 data   = firstData), dotdotdot) )
+                                 data   = firstData), dotdotdotFIT) )
 
-    lavoptions  <- FIT@Options
+    # use original dotdotdot to set user-specified options
+    opt.list <- formals(lavaan)
+    opt.list$categorical <- FIT@Options$categorical
+    opt.list$meanstructure <- FIT@Options$meanstructure
+    opt.list$conditional.x <- FIT@Options$conditional.x
+    lavoptions  <- lav_options_set( modifyList(opt.list,
+                                               val = dotdotdot) )
+
     lavmodel    <- FIT@Model
     lavpartable <- FIT@ParTable
     lavpta <- lav_partable_attributes(lavpartable)

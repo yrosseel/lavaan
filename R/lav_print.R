@@ -82,33 +82,34 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
     cat("\nParameter Estimates:\n\n")
 
-    # header
+    # info about standard errors (if we have x$se only)
     # 1. information
     # 2. se
     # 3. bootstrap requested/successful draws
-
-    # 1.
-    t0.txt <- sprintf("  %-40s", "Information")
-    tmp.txt <- attr(x, "information")
-    t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)),
-                     substring(tmp.txt,2), sep=""))
-    cat(t0.txt, t1.txt, "\n", sep="")
-
-    # 2.
-    t0.txt <- sprintf("  %-31s", "Standard Errors")
-    tmp.txt <- attr(x, "se")
-    t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
-                                      substring(tmp.txt,2), sep=""))
-    cat(t0.txt, t1.txt, "\n", sep="")
-
-    # 3.
-    if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
-        t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
-        t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
+    if(!is.null(x$se)) { 
+        # 1.
+        t0.txt <- sprintf("  %-40s", "Information")
+        tmp.txt <- attr(x, "information")
+        t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)),
+                         substring(tmp.txt,2), sep=""))
         cat(t0.txt, t1.txt, "\n", sep="")
-        t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
-        t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
+
+        # 2.
+        t0.txt <- sprintf("  %-31s", "Standard Errors")
+        tmp.txt <- attr(x, "se")
+        t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
+                                          substring(tmp.txt,2), sep=""))
         cat(t0.txt, t1.txt, "\n", sep="")
+    
+        # 3.
+        if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
+            t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
+            t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
+            cat(t0.txt, t1.txt, "\n", sep="")
+            t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
+            t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
+            cat(t0.txt, t1.txt, "\n", sep="")
+        }
     }
     
     # number of groups

@@ -101,7 +101,7 @@ about the data.}
       model comparison statistics. See \code{\link[stats]{anova}}. At least
       two arguments (fitted models) are required. If the test statistic is
       scaled, an appropriate scaled difference test will be computed.}
-    \item{update}{\code{signature(object = "lavaan", model.syntax, ..., 
+    \item{update}{\code{signature(object = "lavaan", model, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
         that is stored within the lavaan object, which is not necessarily
