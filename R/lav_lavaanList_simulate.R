@@ -8,6 +8,7 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                                                  sample.nobs = 1000L),   
                         ndat          = 1000L,
                         cmd           = "sem",
+                        cmd.pop       = "sem",
                         ...,
                         store.slots   = c("partable"),
                         FUN           = NULL,
@@ -16,12 +17,19 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                         ncpus         = max(1L, parallel::detectCores() - 1L),
                         cl            = NULL) {
 
-    if(is.null(model)) {
-        model <- pop.model
-    }
-
     # 'fit' population model, to get 'true' parameters
-    fit.orig <- do.call(cmd, args = list(model = pop.model))
+    fit.orig <- do.call(cmd.pop, args = list(model = pop.model))
+
+    # create (empty) 'model' object
+    if(is.null(model)) {
+        model <- fit.orig
+    } else {
+        # this is more tricky!! we must 'embed' the model in the original
+        # model, otherwise, the order of the parameters will be different!!
+
+        # TODO
+        stop("model argument not supported yet")
+    }
 
     # dotdotdot
     dotdotdot <- list()

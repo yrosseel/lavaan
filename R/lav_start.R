@@ -300,6 +300,9 @@ lav_start <- function(start.method    = "default",
                                             lavpartable$group == g)
                     # user-defined residual variance
                     single.var <- lavpartable$ustart[single.var.idx]
+                    if(is.na(single.var)) {
+                         single.var <- 1
+                    }
                     ov.idx <- match(single.ind, ov.names)
                     if(conditional.x) {
                         ov.var <- diag(lavsamplestats@res.cov[[g]])[ov.idx]
@@ -309,7 +312,7 @@ lav_start <- function(start.method    = "default",
                     # take (1 - (rvar/ov.var) * ov.var
                     tmp <- (1 - (single.var/ov.var)) * ov.var
                     # just in case
-                    if(tmp < 0.05) {
+                    if(is.na(tmp) || tmp < 0.05) {
                         tmp <- 0.05
                     }
                     start[single.fvar.idx] <- tmp
@@ -381,6 +384,26 @@ lav_start <- function(start.method    = "default",
     # override if the model syntax contains explicit starting values
     user.idx <- which(!is.na(lavpartable$ustart))
     start[user.idx] <- lavpartable$ustart[user.idx]
+
+    # sanity check: (user-specified) variances smaller than covariances
+    cov.idx <- which(lavpartable$op == "~~" & 
+                     lavpartable$lhs != lavpartable$rhs)
+    if(length(cov.idx) > 0L) {
+        var.names <- c(lavpartable$lhs[cov.idx],
+                       lavpartable$rhs[cov.idx])
+        cov.start <- abs( c(start[cov.idx], start[cov.idx]) )
+
+        for(v in seq_along(var.names)) {
+            # find variance idx
+            var.idx <- which(lavpartable$op == "~~" &
+                         lavpartable$lhs == lavpartable$rhs &
+                         lavpartable$lhs == var.names[v])
+            if(start[var.idx] < cov.start[v]) {
+                # warn???
+                start[var.idx] <- cov.start[v] * 1.10 # 10% larger
+            }
+        }
+    }
 
     if(debug) {
         cat("lavaan DEBUG: lavaanStart\n")

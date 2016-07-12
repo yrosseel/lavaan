@@ -71,18 +71,24 @@ lavaanList <- function(model         = NULL,             # model
     # dot dot dot
     dotdotdot <- list(...)
 
-    # adapt for FIT
-    dotdotdotFIT <- dotdotdot
-    dotdotdotFIT$do.fit  <- TRUE    # to get starting values
-    dotdotdotFIT$se      <- "none"
-    dotdotdotFIT$test    <- "none"
-    dotdotdotFIT$verbose <- FALSE
-    dotdotdotFIT$debug   <- FALSE
+    # if 'model' is a lavaan object (perhaps from lavSimulate), no need to
+    # call `cmd'
+    if(inherits(model, "lavaan")) {
+        FIT <- model
+    } else {
+        # adapt for FIT
+        dotdotdotFIT <- dotdotdot
+        dotdotdotFIT$do.fit  <- TRUE    # to get starting values
+        dotdotdotFIT$se      <- "none"
+        dotdotdotFIT$test    <- "none"
+        dotdotdotFIT$verbose <- FALSE
+        dotdotdotFIT$debug   <- FALSE
 
-    # initial model fit, using first dataset
-    FIT <- do.call(cmd,
-                   args = c(list(model  = model,
-                                 data   = firstData), dotdotdotFIT) )
+        # initial model fit, using first dataset
+        FIT <- do.call(cmd,
+                       args = c(list(model  = model,
+                                     data   = firstData), dotdotdotFIT) )
+    }
 
     # use original dotdotdot to set user-specified options
     opt.list <- formals(lavaan)
@@ -94,7 +100,7 @@ lavaanList <- function(model         = NULL,             # model
 
     lavmodel    <- FIT@Model
     lavpartable <- FIT@ParTable
-    lavpta <- lav_partable_attributes(lavpartable)
+    lavpta      <- FIT@pta
 
     # remove start/est/se columns from lavpartable
     lavpartable$start <- lavpartable$est
@@ -165,11 +171,46 @@ lavaanList <- function(model         = NULL,             # model
         #} 
 
         # fit model with this (new) dataset
-        lavobject <- try(lavaan(slotOptions  = lavoptions,
-                                slotParTable = lavpartable,
-                                slotModel    = lavmodel,
-                                start        = FIT,
-                                data         = DATA), silent = TRUE)
+        if(cmd %in% c("lavaan", "sem", "cfa", "growth")) {
+            lavobject <- try(do.call("lavaan",
+                                     args = list(slotOptions  = lavoptions,
+                                                 slotParTable = lavpartable,
+                                                 slotModel    = lavmodel,
+                                                 start        = FIT,
+                                                 data         = DATA)), 
+                             silent = TRUE)
+        } else if(cmd == "fsr") {
+            # extract fs.method and fsr.method from dotdotdot
+            if(!is.null(dotdotdot$fs.method)) {
+                fs.method <- dotdotdot$fs.method
+            } else {
+                fs.method <- formals(fsr)$fs.method # default
+            }
+ 
+            if(!is.null(dotdotdot$fsr.method)) {
+                fsr.method <- dotdotdot$fsr.method
+            } else {
+                fsr.method <- formals(fsr)$fsr.method # default
+            }
+browser()
+            lavobject <- try(do.call("fsr",
+                                     args = list(slotOptions  = lavoptions,
+                                                 slotParTable = lavpartable,
+                                                 slotModel    = lavmodel,
+                                                 start        = FIT,
+                                                 data         = DATA,
+                                                 cmd          = "lavaan", 
+                                                 fs.method    = fs.method,
+                                                 fsr.method   = fsr.method)),
+                             silent = TRUE)
+        } else {
+            stop("lavaan ERROR: unknown cmd: ", cmd)
+        }
+        #lavobject <- try(lavaan(slotOptions  = lavoptions,
+        #                        slotParTable = lavpartable,
+        #                        slotModel    = lavmodel,
+        #                        start        = FIT,
+        #                        data         = DATA), silent = TRUE)
 
         RES <- list(ok = FALSE, timing = NULL, ParTable = NULL,
                     Data = NULL, SampleStats = NULL, vcov = NULL,
