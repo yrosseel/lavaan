@@ -145,7 +145,8 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
 
     # theta parameterization: delta must be reset!
-    if(setDelta && lavmodel@parameterization == "theta") {
+    if(lavmodel@categorical && setDelta && 
+       lavmodel@parameterization == "theta") {
         nmat <- lavmodel@nmat
         for(g in 1:lavmodel@ngroups) {
             # which mm belong to group g?

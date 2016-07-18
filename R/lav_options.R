@@ -178,9 +178,18 @@ lav_options_set <- function(opt = formals(lavaan)) {
     }
  
     # check missing
+    if(opt$missing == "ml" && opt$se == "robust.sem") {
+        warning("lavaan WARNING: missing will be set to ",
+                    dQuote("listwise"), " for se = ",
+                    dQuote(opt$se) )
+        opt$missing <- "listwise"
+    }
     if(opt$missing == "ml" && 
        opt$test %in% c("satorra.bentler", 
                        "mean.var.adjusted", "scaled.shifted")) {
+        warning("lavaan WARNING: missing will be set to ",
+                    dQuote("listwise"), " for test = ",
+                    dQuote(opt$test) )
         opt$missing <- "listwise"
     }
 
@@ -249,6 +258,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
     } else if(opt$estimator == "mlm"   || 
               opt$estimator == "mlmv"  || 
               opt$estimator == "mlmvs") {
+        est.orig <- opt$estimator
         if(opt$test != "none") {
             if(opt$estimator == "mlm") {
                 opt$test <- "satorra.bentler"
@@ -259,10 +269,15 @@ lav_options_set <- function(opt = formals(lavaan)) {
             }
         }
         opt$estimator <- "ML"
-        opt$information <- "expected"
         opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") stop("use ML estimator for bootstrap")
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(!(opt$information %in% c("expected", "default"))) {
+            warning("lavaan WARNING: information will be set to ",
+                    dQuote("expected"), " for estimator = ", 
+                    dQuote(toupper(est.orig)) )
+        }
+        opt$information <- "expected"
         opt$missing <- "listwise"
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
@@ -528,6 +543,13 @@ lav_options_set <- function(opt = formals(lavaan)) {
         # nothing to do
     } else {
         stop("information must be either \"expected\" or \"observed\"\n")
+    }
+
+    # check information if se == "robust.sem"
+    if(opt$se == "robust.sem" && opt$information == "observed") {
+        warning("lavaan WARNING: information will be set to ",
+                dQuote("expected"), " for se = ", dQuote(opt$se))
+        opt$information <- "expected"
     }
 
     # conditional.x
