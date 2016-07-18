@@ -490,6 +490,15 @@ lav_options_set <- function(opt = formals(lavaan)) {
         }
     }
 
+    # link
+    if(opt$link == "logit") {
+        if(opt$estimator != "mml") {
+             warning("lavaan WARNING: link will be set to ",
+                    dQuote("probit"), " for estimator = ",
+                    dQuote(opt$estimator) )
+        }
+    }
+
     # likelihood approach (wishart or normal) + sample.cov.rescale
     if(!opt$estimator %in% c("ML", "REML", "PML", "FML","NTRLS")) {
         if(opt$likelihood != "default") {

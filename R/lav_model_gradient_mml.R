@@ -223,6 +223,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                 z2 <- pmax(-100, TH.Y[y+1L-1L] - yhat[,p])
                 p1 <- dnorm(z1)
                 p2 <- dnorm(z2)
+                # probits = p1 - p2
 
                 PRE[,p] <- -1 * (p1 - p2) * sd.v.inv * (1/FY[,p])
 

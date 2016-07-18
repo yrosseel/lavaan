@@ -170,6 +170,8 @@ lav_mplus_estimator <- function(object) {
         } else if(object@Options$test == "scaled.shifted") {
             estimator <- paste(estimator, "MV", sep="")
         }
+    } else if(estimator == "MML") {
+        estimator <- "ML"
     }
 
     estimator
