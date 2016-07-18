@@ -262,6 +262,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                         lavpartable    = lavpartable,
                                         control        = control),
                         silent=TRUE )
+    } else {
+        warning("lavaan WARNING: unknown se type: ", se)
     }
 
     if(! inherits(NVarCov, "try-error") ) {

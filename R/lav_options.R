@@ -392,7 +392,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
             opt$se <- "standard"
         } else if(opt$se == "none" || 
                   opt$se == "bootstrap" || 
-                  opt$se != "external") {
+                  opt$se == "external") {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             # nothing to do
