@@ -84,7 +84,7 @@ lavCor <- function(object,
     if(!is.null(dots$mimic)) {
         mimic <- dots$mimic
     }
-    if(!is.null(dots$fixed.x)) {
+    if(!is.null(dots$conditional.x)) {
         conditional.x <- dots$conditional.x
     }
 

@@ -154,7 +154,8 @@ lav_start <- function(start.method    = "default",
                 ov.idx <- match(lavpartable$rhs[user.idx], ov.names)
                 if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
                     if(lavsamplestats@missing.flag) {
-                        COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,ov.idx]
+                        COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
+                                                                    ov.idx]
                     } else {
                         if(conditional.x) {
                             COV <- lavsamplestats@res.cov[[g]][ov.idx,ov.idx]
@@ -164,8 +165,17 @@ lav_start <- function(start.method    = "default",
                     }
                     start[user.idx] <- fabin3.uni(COV)
                 } else if(length(free.idx) == 1L && length(ov.idx) == 2L) {
-                    REG2 <- ( lavsamplestats@cov[[g]][ov.idx[1],ov.idx[2]] /
-                              lavsamplestats@cov[[g]][ov.idx[1],ov.idx[1]] )
+                    if(conditional.x) {
+                        REG2 <- ( lavsamplestats@res.cov[[g]][ov.idx[1],
+                                                              ov.idx[2]] /
+                                  lavsamplestats@res.cov[[g]][ov.idx[1],
+                                                              ov.idx[1]] )
+                    } else {
+                        REG2 <- ( lavsamplestats@cov[[g]][ov.idx[1],
+                                                          ov.idx[2]] /
+                                  lavsamplestats@cov[[g]][ov.idx[1],
+                                                          ov.idx[1]] )
+                    }
                     start[free.idx] <- REG2
                 }
 
@@ -386,8 +396,9 @@ lav_start <- function(start.method    = "default",
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # sanity check: (user-specified) variances smaller than covariances
-    cov.idx <- which(lavpartable$op == "~~" & 
-                     lavpartable$lhs != lavpartable$rhs)
+    cov.idx <- which(lavpartable$op == "~~" &
+                     lavpartable$lhs != lavpartable$rhs &
+                     !lavpartable$exo)
     if(length(cov.idx) > 0L) {
         var.names <- c(lavpartable$lhs[cov.idx],
                        lavpartable$rhs[cov.idx])

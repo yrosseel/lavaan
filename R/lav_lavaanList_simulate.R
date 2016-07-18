@@ -17,8 +17,19 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                         ncpus         = max(1L, parallel::detectCores() - 1L),
                         cl            = NULL) {
 
+    # dotdotdot
+    dotdotdot <- list(...)
+
+    # dotdotdot for fit.orig
+    dotdotdot.orig <- dotdotdot
+    dotdotdot.orig$verbose <- FALSE
+    dotdotdot.orig$debug <- FALSE
+    dotdotdot.orig$data <- NULL
+    dotdotdot.orig$sample.cov <- NULL
+
     # 'fit' population model, to get 'true' parameters
-    fit.orig <- do.call(cmd.pop, args = list(model = pop.model))
+    fit.orig <- do.call(cmd.pop, args = c(list(model = pop.model),
+                                          dotdotdot.orig))
 
     # create (empty) 'model' object
     if(is.null(model)) {

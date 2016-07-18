@@ -85,19 +85,21 @@ lav_lavaanList_summary <- function(object,
 
             # pool est: take the mean
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+            m <- NCOL(EST)
             pe$est <- rowMeans(EST)
 
             # pool se
 
             # between-imputation variance
-            B.var <- apply(EST, 1L, var)
+            #B.var <- apply(EST, 1L, var)
+            est1 <- rowMeans(EST); est2 <- rowMeans(EST^2)
+            B.var <- (est2 - est1*est1) * m/(m-1)
 
             # within-imputation variance
             SE <- lav_lavaanList_partable(object, what = "se", type = "all")
             W.var <- rowMeans(SE^2)
 
             # total variance: T.var = W.var + B.var + B.var/m
-            m <- NCOL(EST)
             pe$se <- sqrt(W.var + B.var + (B.var / m))
 
             tmp.se <- ifelse(pe$se == 0.0, NA, pe$se)

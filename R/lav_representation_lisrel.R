@@ -1746,6 +1746,7 @@ derivative.sigma.LISREL_OLD <- function(m="lambda",
         A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
         DX <- A[,lav_matrix_diag_idx(nvar),drop=FALSE] + 
               B[,lav_matrix_diag_idx(nvar),drop=FALSE]
+        
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -1837,6 +1838,7 @@ derivative.sigma.LISREL <- function(m     = "lambda",
         A <- DD.Omega %x% diag(nvar); B <- diag(nvar) %x% DD.Omega
         DX <- A[,lav_matrix_diag_idx(nvar),drop=FALSE] + 
               B[,lav_matrix_diag_idx(nvar),drop=FALSE]
+        DX <- DX[,idx, drop = FALSE]
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
@@ -2406,8 +2408,10 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
             print(zapsmall(DX1)); cat("\n")
             cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX2 (analytical):\n");
             print(DX2); cat("\n")
-            cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX3 (analytical):\n");
-            print(DX3); cat("\n")
+            if(theta) {
+                cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX3 (analytical):\n");
+                print(DX3); cat("\n")
+            }
         }
         cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "sum delta = ",
             sprintf("%12.9f", sum(DX1-DX2)), "  max delta = ",
