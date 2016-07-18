@@ -1569,11 +1569,12 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(remove.duplicated && lavobject@Model@eq.constraints) {
         simple.flag <- lav_constraints_check_simple(lavobject@Model)
         if(simple.flag) {
-          K <- lav_constraints_R2K(lavobject@Model)
-          OUT <- t(K) %*% OUT %*% K
-      } else {
-          warning("lavaan WARNING: alias is TRUE, but equality constraints do not appear to be simple; returning full vcov")
-      }
+            LAB <- lav_partable_labels(lavobject@ParTable, type="free")
+            dup.flag <- duplicated(LAB)
+            OUT <- OUT[!dup.flag, !dup.flag, drop = FALSE]
+        } else {
+            warning("lavaan WARNING: alias is TRUE, but equality constraints do not appear to be simple; returning full vcov")
+        }
     }
 
     # class
