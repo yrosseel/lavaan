@@ -396,22 +396,26 @@ lav_start <- function(start.method    = "default",
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # sanity check: (user-specified) variances smaller than covariances
-    cov.idx <- which(lavpartable$op == "~~" &
-                     lavpartable$lhs != lavpartable$rhs &
-                     !lavpartable$exo)
-    if(length(cov.idx) > 0L) {
-        var.names <- c(lavpartable$lhs[cov.idx],
-                       lavpartable$rhs[cov.idx])
-        cov.start <- abs( c(start[cov.idx], start[cov.idx]) )
-
-        for(v in seq_along(var.names)) {
-            # find variance idx
-            var.idx <- which(lavpartable$op == "~~" &
-                         lavpartable$lhs == lavpartable$rhs &
-                         lavpartable$lhs == var.names[v])
-            if(start[var.idx] < cov.start[v]) {
-                # warn???
-                start[var.idx] <- cov.start[v] * 1.10 # 10% larger
+    for(g in 1:ngroups) {
+        cov.idx <- which(lavpartable$op == "~~" &
+                         lavpartable$group == g &
+                         lavpartable$lhs != lavpartable$rhs &
+                         !lavpartable$exo)
+        if(length(cov.idx) > 0L) {
+            var.names <- c(lavpartable$lhs[cov.idx],
+                           lavpartable$rhs[cov.idx])
+            cov.start <- abs( c(start[cov.idx], start[cov.idx]) )
+    
+            for(v in seq_along(var.names)) {
+                # find variance idx
+                var.idx <- which(lavpartable$op == "~~" &
+                             lavpartable$group == g &
+                             lavpartable$lhs == lavpartable$rhs &
+                             lavpartable$lhs == var.names[v])
+                if(start[var.idx] < cov.start[v]) {
+                    # warn???
+                    start[var.idx] <- cov.start[v] * 1.10 # 10% larger
+                }
             }
         }
     }

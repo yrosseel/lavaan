@@ -91,7 +91,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     }
 
     # compute scaling factor
-    fg <- unlist(m1@SampleStats@nobs[[g]])/m1@SampleStats@ntotal
+    fg <- unlist(m1@SampleStats@nobs)/m1@SampleStats@ntotal
 
     if(Satterthwaite) {
         cd <- sum(fg * trace.UGamma2) / sum(fg * trace.UGamma)
