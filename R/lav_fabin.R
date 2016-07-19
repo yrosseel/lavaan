@@ -118,7 +118,10 @@ fabin3.uni <- function(S) {
 
     # zero out references
     S[1L, 1L] <- 0.0
-    S.tilde <- solve(S)
+    S.tilde <- try(solve(S), silent = TRUE)
+    if(inherits(S.tilde, "try-error")) {
+        return( rep(1, nvar) )
+    }
 
     out <- numeric( nvar ); out[1L] <- 1.0
     for(i in 2:nvar) {
