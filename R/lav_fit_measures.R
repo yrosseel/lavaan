@@ -117,7 +117,8 @@ lav_fit_measures <- function(object, fit.measures="all",
     # cfi/tli
     fit.cfi.tli <- c("cfi", "tli")
     if(scaled) {
-        fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled")
+        fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled",
+                                      "cfi.robust", "tli.robust")
     }
 
     # more incremental fit indices
@@ -125,8 +126,10 @@ lav_fit_measures <- function(object, fit.measures="all",
                          "ifi", "rni")
     if(scaled) { 
         fit.incremental <- c(fit.incremental, "cfi.scaled", "tli.scaled", 
-                             "nnfi.scaled", "rfi.scaled", "nfi.scaled", 
-                             "ifi.scaled", "rni.scaled")
+                             "cfi.robust", "tli.robust",
+                             "nnfi.scaled", "nnfi.robust",
+                             "rfi.scaled", "nfi.scaled",
+                             "ifi.scaled", "rni.scaled", "rni.robust")
     }
     
     # likelihood based measures
@@ -242,10 +245,12 @@ lav_fit_measures <- function(object, fit.measures="all",
     }
 
 
-    if(any(c("cfi", "cfi.scaled", "tli", "tli.scaled",
-             "nnfi", "nnfi.scaled", "pnfi", "pnfi.scaled",
+    if(any(c("cfi", "cfi.scaled", "cfi.robust", 
+             "tli", "tli.scaled", "tli.robust",
+             "nnfi", "nnfi.scaled", "nnfi.robust", 
+             "pnfi", "pnfi.scaled",
              "rfi", "rfi.scaled", "nfi", "nfi.scaled",
-             "ifi", "ifi.scaled", "rni", "rni.scaled",
+             "ifi", "ifi.scaled", "rni", "rni.scaled", "rni.robust",
              "baseline.chisq", "baseline.chisq.scaled",
              "baseline.pvalue", "baseline.pvalue.scaled") %in% fit.measures)) {
         
@@ -303,25 +308,44 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # CFI - comparative fit index (Bentler, 1990) 
-            if("cfi" %in% fit.measures) {
+            # also known as:
+            # RNI - relative noncentrality index (McDonald & Marsh, 1990)
+            if("cfi" %in% fit.measures || "rni" %in% fit.measures) {
                 t1 <- max( c(X2 - df, 0) )
                 t2 <- max( c(X2 - df, X2.null - df.null, 0) )
                 if(t1 == 0 && t2 == 0) {
-                    indices["cfi"] <- 1
+                    indices["cfi"] <- indices["rni"] <- 1
                 } else {
-                    indices["cfi"] <- 1 - t1/t2
+                    indices["cfi"] <- indices["rni"] <- 1 - t1/t2
                 }
             }
-            if("cfi.scaled" %in% fit.measures) {
+            if("cfi.scaled" %in% fit.measures ||
+               "rni.scaled" %in% fit.measures) {
                 t1 <- max( c(X2.scaled - df.scaled, 0) )
                 t2 <- max( c(X2.scaled - df.scaled,
                              X2.null.scaled - df.null.scaled, 0) )
-                if(is.na(t1) || is.na(t2)){
-                    indices["cfi.scaled"] <- NA
+                if(is.na(t1) || is.na(t2)) {
+                    indices["cfi.scaled"] <- indices["rni.scaled"] <-NA
                 } else if(t1 == 0 && t2 == 0) {
-                    indices["cfi.scaled"] <- 1
+                    indices["cfi.scaled"] <- indices["rni.scaled"] <- 1
                 } else {
-                    indices["cfi.scaled"] <- 1 - t1/t2
+                    indices["cfi.scaled"] <- indices["rni.scaled"] <- 1 - t1/t2
+                }
+            }
+            if("cfi.robust" %in% fit.measures ||
+               "rni.robust" %in% fit.measures) {
+                # see Brosseau-Liard & Savalei MBR 2014, equation 15
+                ch <- TEST[[2]]$scaling.factor
+                cb <- fit.indep@test[[2]]$scaling.factor
+
+                t1 <- max( c(X2 - (ch*df), 0) )
+                t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
+                if(is.na(t1) || is.na(t2)) {
+                    indices["cfi.robust"] <- indices["rni.robust"] <- NA
+                } else if(t1 == 0 && t2 == 0) {
+                    indices["cfi.robust"] <- indices["rni.robust"] <- 1
+                } else {
+                    indices["cfi.robust"] <- indices["rni.robust"] <- 1 - t1/t2
                 }
             }
 
@@ -329,36 +353,62 @@ lav_fit_measures <- function(object, fit.measures="all",
             # same as
             # NNFI - nonnormed fit index (NNFI, Bentler & Bonett, 1980)
             if("tli" %in% fit.measures || "nnfi" %in% fit.measures) {
-                if(df > 0) {
-                    t1 <- X2.null/df.null - X2/df
-                    t2 <- X2.null/df.null - 1 
-                    # note: TLI original formula was in terms of fx/df, not X2/df
-                    # then, t1 <- fx_0/df.null - fx/df
-                    #       t2 <- fx_0/df.null - 1/N (or N-1 for wishart)
-                    if(t1 < 0 && t2 < 0) {
-                        TLI <- 1
-                    } else {
-                        TLI <- t1/t2
-                    }
+                # note: formula in lavaan <= 0.5-20:
+                # t1 <- X2.null/df.null - X2/df
+                # t2 <- X2.null/df.null - 1
+                # if(t1 < 0 && t2 < 0) {
+                #    TLI <- 1
+                #} else {
+                #    TLI <- t1/t2
+                #}
+                # note: TLI original formula was in terms of fx/df, not X2/df
+                # then, t1 <- fx_0/df.null - fx/df
+                #       t2 <- fx_0/df.null - 1/N (or N-1 for wishart)
+                
+                # note: in lavaan 0.5-21, we use the alternative formula:
+                # TLI <- 1 - ((X2 - df)/(X2.null - df.null) * df.null/df)
+                # this one has the advantage that a 'robust' version
+                # can be derived; this seems non-trivial for the original one
+                t1 <- max( c((X2 - df)*df.null, 0) )
+                t2 <- max( c((X2.null - df.null)*df, 0) )
+                if(t1 == 0 && t2 == 0) {
+                    indices["tli"] <- indices["nnfi"] <- 1
                 } else {
-                   TLI <- 1
+                    indices["tli"] <- indices["nnfi"] <- 1 - t1/t2
                 }
-                indices["tli"] <- indices["nnfi"] <- TLI
             }
-            if("tli.scaled" %in% fit.measures || "nnfi.scaled" %in% fit.measures) {
-                if(df > 0) {
-                    t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
-                    t2 <- X2.null.scaled/df.null.scaled - 1
-                    if(t1 < 0 && t2 < 0) {
-                        TLI <- 1
-                    } else {
-                        TLI <- t1/t2
-                    }
+
+            if("tli.scaled" %in% fit.measures || 
+               "nnfi.scaled" %in% fit.measures) {
+
+                t1 <- max( c((X2.scaled - df.scaled)*df.null.scaled, 0) ) 
+                t2 <- max( c((X2.null.scaled - df.null.scaled)*df.scaled, 0) )
+                if(is.na(t1) || is.na(t2)) {
+                    indices["tli.scaled"] <- indices["nnfi.scaled"] <- NA
+                } else if(t1 == 0 && t2 == 0) {
+                    indices["tli.scaled"] <- indices["nnfi.scaled"] <- 1
                 } else {
-                    TLI <- 1
+                    indices["tli.scaled"] <- indices["nnfi.scaled"] <- 1 - t1/t2
                 }
-                indices["tli.scaled"] <- indices["nnfi.scaled"] <- TLI
             }
+
+            if("tli.robust" %in% fit.measures || 
+               "nnfi.robust" %in% fit.measures) {
+                #  see Brosseau-Liard & Savalei MBR 2014, equation 16
+                ch <- TEST[[2]]$scaling.factor
+                cb <- fit.indep@test[[2]]$scaling.factor
+
+                t1 <- max( c((X2 - ch*df)*df.null, 0) ) 
+                t2 <- max( c((X2.null - cb*df.null)*df, 0) )
+                if(is.na(t1) || is.na(t2)) {
+                    indices["tli.robust"] <- indices["nnfi.robust"] <- NA
+                } else if(t1 == 0 && t2 == 0) {
+                    indices["tli.robust"] <- indices["nnfi.robust"] <- 1
+                } else {
+                    indices["tli.robust"] <- indices["nnfi.robust"] <- 1 - t1/t2
+                }
+            }
+            
     
     
             # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
@@ -447,31 +497,6 @@ lav_fit_measures <- function(object, fit.measures="all",
                     IFI <- t1/t2
                 }
                 indices["ifi.scaled"] <- IFI
-            }
- 
-            # RNI - relative noncentrality index (McDonald & Marsh, 1990)
-            if("rni" %in% fit.measures) {
-                t1 <- X2 - df
-                t2 <- X2.null - df.null
-                if(t1 < 0 || t2 < 0) {
-                    RNI <- 1
-                } else {
-                    RNI <- 1 - t1/t2
-                }
-                indices["rni"] <- RNI
-            }
-            if("rni.scaled" %in% fit.measures) {
-                t1 <- X2.scaled - df.scaled
-                t2 <- X2.null.scaled - df.null.scaled
-                t2 <- X2.null - df.null
-                if(is.na(t1) || is.na(t2)) {
-                    RNI <- NA
-                } else if(t1 < 0 || t2 < 0) {
-                    RNI <- 1
-                } else {
-                    RNI <- 1 - t1/t2
-                }
-                indices["rni.scaled"] <- RNI
             }
         }
     }
@@ -1176,21 +1201,24 @@ print.fit.measures <- function(x) {
         if("cfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
             t1.txt <- sprintf("  %10.3f", x["cfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
         if("tli" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI)")
             t1.txt <- sprintf("  %10.3f", x["tli"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
         if("nnfi" %in% names.x) {
             t0.txt <- sprintf("  %-42s", "Bentler-Bonett Non-normed Fit Index (NNFI)")
             t1.txt <- sprintf("  %8.3f", x["nnfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.scaled"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
  
@@ -1225,7 +1253,8 @@ print.fit.measures <- function(x) {
         if("rni" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Relative Noncentrality Index (RNI)")
             t1.txt <- sprintf("  %10.3f", x["rni"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.scaled"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
     }
