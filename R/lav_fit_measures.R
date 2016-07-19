@@ -154,8 +154,12 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     # srmr
     if(categorical) {
-        fit.srmr <- c("wrmr")
-        fit.srmr2 <- c("wrmr")
+        fit.srmr <- c("srmr", "wrmr")
+        fit.srmr2 <- c("rmr", "rmr_nomean",
+                       "srmr", # per default equal to srmr_bentler_nomean
+                       "srmr_bentler", "srmr_bentler_nomean",
+                       "srmr_bollen", "srmr_bollen_nomean",
+                       "srmr_mplus", "srmr_mplus_nomean")
     } else {
         fit.srmr <- c("srmr")
         fit.srmr2 <- c("rmr", "rmr_nomean", 
@@ -966,6 +970,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         srmr_bollen_nomean.group <- numeric(G)
         srmr_mplus.group <- numeric(G)
         srmr_mplus_nomean.group <- numeric(G)
+
         for(g in 1:G) {
             # observed
             if(!object@SampleStats@missing.flag) {
@@ -1071,7 +1076,11 @@ lav_fit_measures <- function(object, fit.measures="all",
 
         # the default!
         if(object@Options$mimic == "lavaan") {
-            indices["srmr"] <- SRMR_BENTLER
+            if(categorical) {
+                indices["srmr"] <- SRMR_BENTLER_NOMEAN
+            } else {
+                indices["srmr"] <- SRMR_BENTLER
+            }
         } else if(object@Options$mimic == "EQS") {
             indices["srmr"] <- SRMR_BENTLER
         } else if(object@Options$mimic == "Mplus") {
@@ -1089,7 +1098,11 @@ lav_fit_measures <- function(object, fit.measures="all",
         indices["srmr_bollen_nomean"]  <- SRMR_BOLLEN_NOMEAN
         indices["srmr_mplus"]          <- SRMR_MPLUS
         indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
-        indices["rmr"]                 <- RMR
+        if(categorical) {
+            indices["rmr"]             <- RMR
+        } else {
+            indices["rmr"]             <- RMR_NOMEAN
+        }
         indices["rmr_nomean"]          <- RMR_NOMEAN
     }
 
