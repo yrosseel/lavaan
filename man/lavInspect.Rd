@@ -10,11 +10,13 @@ fitted lavaan object. Note: the (older) S4 \code{inspect()} method is now a
 shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
-lavInspect(lavobject, what = "free", add.labels = TRUE, add.class = TRUE, 
+lavInspect(lavobject, what = "free", add.labels = TRUE, add.class = TRUE,
+           list.by.group = TRUE,
            drop.list.single.group = TRUE)
 
-lavTech(lavobject,    what = "free", add.labels = FALSE, add.class = FALSE, 
-           drop.list.single.group = FALSE)
+lavTech(lavobject, what = "free", add.labels = FALSE, add.class = FALSE,
+        list.by.group = FALSE,
+        drop.list.single.group = FALSE)
 }
 \arguments{
 \item{lavobject}{An object of class \code{\linkS4class{lavaan}}.}
@@ -27,6 +29,10 @@ and/or matrices.}
 matrices are given the `lavaan.matrix' class, and symmetric matrices are
 given the `lavaan.matrix.symmetric' class. This only affects the way they
 are printed on the screen.}
+\item{list.by.group}{Logical. Only used when the output are model matrices.
+If \code{TRUE}, the model matrices are nested within groups. If \code{FALSE},
+a flattened list is returned containing all model matrices, with repeated
+names for multiple groups.}
 \item{drop.list.single.group}{If \code{FALSE}, the results are returned as
     a list, where each element corresponds to a group (even if there is only
     a single group.) If \code{TRUE}, the list will be unlisted if there is

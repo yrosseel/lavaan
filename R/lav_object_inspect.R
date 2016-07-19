@@ -15,10 +15,12 @@ lavTech <- function(lavobject,
                     what                   = "free",
                     add.labels             = FALSE,
                     add.class              = FALSE,
+                    list.by.group          = FALSE,  
                     drop.list.single.group = FALSE) {
 
     lavInspect(lavobject = lavobject, what = what,
                add.labels = add.labels, add.class = add.class,
+               list.by.group = list.by.group,
                drop.list.single.group =  drop.list.single.group)
 }
 
@@ -27,6 +29,7 @@ lavInspect <- function(lavobject,
                        what                   = "free",
                        add.labels             = TRUE,
                        add.class              = TRUE,
+                       list.by.group          = TRUE,
                        drop.list.single.group = TRUE) {
 
     # lavobject must inherit from class lavaan
@@ -43,39 +46,59 @@ lavInspect <- function(lavobject,
 
     #### model matrices, with different contents ####
     if(what == "free") {
-        lav_object_inspect_modelmatrices(lavobject, what = "free", type = "free",
-            add.labels = add.labels, add.class = add.class)
+        lav_object_inspect_modelmatrices(lavobject, what = "free", 
+            type = "free", add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "partable" || what == "user") {
-        lav_object_inspect_modelmatrices(lavobject, what = "free", type="partable",
-            add.labels = add.labels, add.class = add.class)
+        lav_object_inspect_modelmatrices(lavobject, what = "free", 
+            type="partable", add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "se" ||
               what == "std.err" ||
               what == "standard.errors") {
         lav_object_inspect_modelmatrices(lavobject, what = "se",
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "start" || what == "starting.values") {
         lav_object_inspect_modelmatrices(lavobject, what = "start",
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "est"  || what == "estimates" ||
               what == "coef" || what == "coefficients" ||
               what == "x") {
         lav_object_inspect_modelmatrices(lavobject, what = "est",
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "dx.free") {
         lav_object_inspect_modelmatrices(lavobject, what = "dx.free",
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "dx.all") {
         lav_object_inspect_modelmatrices(lavobject, what = "dx.all",
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group, 
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "std" || what == "std.all" || what == "standardized") {
         lav_object_inspect_modelmatrices(lavobject, what = "std.all",
-           add.labels = add.labels, add.class = add.class)
+           add.labels = add.labels, add.class = add.class,
+           list.by.group = list.by.group, 
+           drop.list.single.group = drop.list.single.group)
     } else if(what == "std.lv") {
         lav_object_inspect_modelmatrices(lavobject, what = "std.lv",
-           add.labels = add.labels, add.class = add.class)
+           add.labels = add.labels, add.class = add.class,
+           list.by.group = list.by.group, 
+           drop.list.single.group = drop.list.single.group)
     } else if(what == "std.nox") {
         lav_object_inspect_modelmatrices(lavobject, what = "std.nox",
-           add.labels = add.labels, add.class = add.class)
+           add.labels = add.labels, add.class = add.class,
+           list.by.group = list.by.group, 
+           drop.list.single.group = drop.list.single.group)
 
 
     #### parameter table ####
@@ -447,7 +470,9 @@ lav_object_inspect_boot <- function(lavobject) {
 
 
 lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
-    type = "free", add.labels = FALSE, add.class = FALSE) {
+    type = "free", add.labels = FALSE, add.class = FALSE,
+    list.by.group = FALSE,
+    drop.list.single.group = FALSE) {
 
     GLIST <- lavobject@Model@GLIST
 
@@ -595,7 +620,33 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
         GLIST <- c(constraints = list(CON), GLIST)
     }
 
-    GLIST
+    # should we group them per group?
+    if(list.by.group) {
+        lavsamplestats <- lavobject@SampleStats
+        lavmodel       <- lavobject@Model
+        nmat           <- lavmodel@nmat
+
+        OUT <- vector("list", length = lavsamplestats@ngroups)
+        for(g in 1:lavsamplestats@ngroups) {
+            # which mm belong to group g?
+            mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+            mm.names <- names( GLIST[mm.in.group] )
+
+            OUT[[g]] <- GLIST[mm.in.group]
+        }
+
+        if(lavsamplestats@ngroups == 1L && drop.list.single.group) {
+            OUT <- OUT[[1]]
+        } else {
+            if(length(lavobject@Data@group.label) > 0L) {
+                names(OUT) <- unlist(lavobject@Data@group.label)
+            }
+        }
+    } else {
+        OUT <- GLIST
+    }
+
+    OUT
 }
 
 
