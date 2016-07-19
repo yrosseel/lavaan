@@ -263,7 +263,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # note: by default, we use the order as in the data; 
         # not as in levels(data[,group])
         if(length(group.label) == 0L) {
-            group.label <- unique(as.character(data[,group]))
+            group.label <- unique(as.character(data[[group]]))
             if(warn && any(is.na(group.label))) {
                 warning("lavaan WARNING: group variable ", sQuote(group), 
                         " contains missing values\n", sep="")
@@ -272,7 +272,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         } else {
             group.label <- unique(as.character(group.label))
             # check if user-provided group labels exist
-            LABEL <- unique(as.character(data[,group]))
+            LABEL <- unique(as.character(data[[group]]))
             idx <- match(group.label, LABEL)
             if(warn && any(is.na(idx))) {
                 warning("lavaan WARNING: some group.labels do not appear ",
@@ -356,7 +356,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     # it already exists
                     if(is.null(data[[ ov.int.names[iv] ]])) {
                         data[[ ov.int.names[iv] ]] <- 
-                            data[,NAMES[1L]] * data[,NAMES[2L]]
+                            data[[NAMES[1L]]] * data[[NAMES[2L]]]
                     }
                 }
             }
@@ -460,26 +460,26 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # extract cases per group
         if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
-                case.idx[[g]] <- which(data[, group] == group.label[g] &
-                                       complete.cases(data[,all.idx]))
+                case.idx[[g]] <- which(data[[group]] == group.label[g] &
+                                       complete.cases(data[all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
-                norig[[g]] <- length(which(data[, group] == group.label[g]))
+                norig[[g]] <- length(which(data[[group]] == group.label[g]))
             } else if(missing == "pairwise" && length(exo.idx) > 0L) {
-                case.idx[[g]] <- which(data[, group] == group.label[g] &
-                                       complete.cases(data[,exo.idx]))
+                case.idx[[g]] <- which(data[[group]] == group.label[g] &
+                                       complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
-                norig[[g]] <- length(which(data[, group] == group.label[g]))    
+                norig[[g]] <- length(which(data[[group]] == group.label[g]))
             } else {
-                case.idx[[g]] <- which(data[, group] == group.label[g])
+                case.idx[[g]] <- which(data[[group]] == group.label[g])
                 nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])
             }
         } else {
             if(missing == "listwise") {
-                case.idx[[g]] <- which(complete.cases(data[,all.idx]))
+                case.idx[[g]] <- which(complete.cases(data[all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else if(missing == "pairwise" && length(exo.idx) > 0L) {
-                case.idx[[g]] <- which(complete.cases(data[,exo.idx]))
+                case.idx[[g]] <- which(complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
             } else {
