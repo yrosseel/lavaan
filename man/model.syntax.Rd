@@ -36,7 +36,6 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 
 lavParseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
 
-lavNames(object, type = "ov", group = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -115,18 +114,6 @@ as a \code{data.frame}.}
 \item{object}{Either a list containing the parameter table, as 
 returned by \code{lavaanify} or \code{lavParseModelString}, or an 
 object of class \code{\linkS4class{lavaan}}.}
-\item{type}{Only used in the function \code{lavNames}. If type contains 
-\code{"ov"}, only observed variable names are returned. If type contains
-\code{"lv"}, only latent variable names are returned. The \code{"ov.x"}
-and \code{"lv.x"} types return exogenous variables only. The \code{"ov.y"}
-and \code{"lv.y"} types return dependent variables only (in the regression
-sense, excluding the indicators of latent variables). The
-\code{"ov.nox"} type returns all observed variables, except the exogenous
-ones.}
-\item{group}{Only used in the function \code{lavNames}. If \code{NULL},
-all groups (if any) are used. If an integer (vector), only names from those
-groups are extracted. The group numbers are found in the \code{group}
-column of the parameter table.}
 }
 \details{
 The model syntax consists of one or more formula-like expressions, each one
