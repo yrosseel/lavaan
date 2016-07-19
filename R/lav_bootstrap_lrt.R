@@ -4,8 +4,11 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           double.bootstrap = "no",
                           double.bootstrap.R = 500L, 
                           double.bootstrap.alpha = 0.05, 
-                          warn = -1L, parallel = c("no", "multicore", "snow"), 
-                          ncpus = 1L, cl = NULL) 
+                          warn = -1L, 
+                          parallel = c("no", "multicore", "snow"), 
+                          ncpus = 1L, 
+                          cl = NULL, 
+                          iseed = NULL)
 {
     # checks
     type <- tolower(type)
@@ -296,7 +299,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             if (is.null(cl)) {
                 cl <- parallel::makePSOCKcluster(rep("localhost", ncpus)) #
                 if (RNGkind()[1L] == "L'Ecuyer-CMRG") 
-                    parallel::clusterSetRNGStream(cl) # 
+                    parallel::clusterSetRNGStream(cl, iseed = iseed) # 
                 res <- parallel::parLapply(cl, seq_len(RR), fn) # 
                 parallel::stopCluster(cl) #
                 res

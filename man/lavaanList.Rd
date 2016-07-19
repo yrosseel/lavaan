@@ -10,19 +10,19 @@ lavaanList(model = NULL, dataList = NULL, dataFunction = NULL,
     dataFunction.args = list(), ndat = length(dataList), cmd = "lavaan", 
     ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE, 
     parallel = c("no", "multicore", "snow"), ncpus = max(1L, 
-        parallel::detectCores() - 1L), cl = NULL)
+        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
 semList(model = NULL, dataList = NULL, dataFunction = NULL,
     dataFunction.args = list(), ndat = length(dataList),
     ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
     parallel = c("no", "multicore", "snow"), ncpus = max(1L,
-        parallel::detectCores() - 1L), cl = NULL)
+        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
 cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     dataFunction.args = list(), ndat = length(dataList),
     ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
     parallel = c("no", "multicore", "snow"), ncpus = max(1L,
-        parallel::detectCores() - 1L), cl = NULL)
+        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -57,6 +57,11 @@ typically one would chose this to the number of available CPUs.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{lavaanList} call.}
+\item{iseed}{An integer to set the seed. Or NULL if no reproducible seeds are
+  needed. To make this work, make sure the first
+  RNGkind() element is \code{"L'Ecuyer-CMRG"}. You can check this by
+  typing \code{RNGkind()} in the console. You can set it by typing
+  \code{RNGkind("L'Ecuyer-CMRG")}, before the lavaanList functions are called.}
 \item{show.progress}{If \code{TRUE}, show information for each dataset.}
 }
 \value{

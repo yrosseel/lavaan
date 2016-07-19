@@ -13,7 +13,8 @@ lavaanList <- function(model         = NULL,             # model
                        show.progress = FALSE,
                        parallel      = c("no", "multicore", "snow"),
                        ncpus         = max(1L, parallel::detectCores() - 1L),
-                       cl            = NULL) {
+                       cl            = NULL,
+                       iseed         = NULL) {
 
     # store.slots call
     mc  <- match.call()
@@ -192,7 +193,7 @@ lavaanList <- function(model         = NULL,             # model
             } else {
                 fsr.method <- formals(fsr)$fsr.method # default
             }
-browser()
+
             lavobject <- try(do.call("fsr",
                                      args = list(slotOptions  = lavoptions,
                                                  slotParTable = lavpartable,
@@ -282,7 +283,7 @@ browser()
             if (is.null(cl)) {
                 cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
                 if(RNGkind()[1L] == "L'Ecuyer-CMRG") {
-                    parallel::clusterSetRNGStream(cl)
+                    parallel::clusterSetRNGStream(cl, iseed = iseed)
                 }
                 RES <- parallel::parLapply(cl, seq_len(ndat), fn)
                 parallel::stopCluster(cl)
@@ -373,7 +374,8 @@ semList <- function(model         = NULL,
                     show.progress = FALSE,
                     parallel      = c("no", "multicore", "snow"),
                     ncpus         = max(1L, parallel::detectCores() - 1L),
-                    cl            = NULL) {
+                    cl            = NULL,
+                    iseed         = NULL) {
 
     lavaanList(model = model, dataList = dataList, 
                dataFunction = dataFunction, 
@@ -381,7 +383,7 @@ semList <- function(model         = NULL,
                cmd = "sem",
                ..., store.slots = store.slots, 
                FUN = FUN, show.progress = show.progress,
-               parallel = parallel, ncpus = ncpus, cl = cl)
+               parallel = parallel, ncpus = ncpus, cl = cl, iseed = iseed)
 }
 
 cfaList <- function(model         = NULL,             
@@ -395,7 +397,8 @@ cfaList <- function(model         = NULL,
                     show.progress = FALSE,
                     parallel      = c("no", "multicore", "snow"),
                     ncpus         = max(1L, parallel::detectCores() - 1L),
-                    cl            = NULL) {
+                    cl            = NULL,
+                    iseed         = NULL) {
 
     lavaanList(model = model, dataList = dataList, 
                dataFunction = dataFunction, 
@@ -403,6 +406,7 @@ cfaList <- function(model         = NULL,
                cmd = "cfa",
                ..., store.slots = store.slots, 
                FUN = FUN, show.progress = show.progress,
-               parallel = parallel, ncpus = ncpus, cl = cl)
+               parallel = parallel, ncpus = ncpus, cl = cl,
+               iseed = iseed)
 }
 

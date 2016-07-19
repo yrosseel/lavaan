@@ -29,6 +29,7 @@ bootstrapLavaan <- function(object,
                             parallel    = c("no", "multicore", "snow"),
                             ncpus       = 1L,
                             cl          = NULL,
+                            iseed       = NULL,
                             h0.rmsea    = NULL,
                             ...) {
 
@@ -67,6 +68,7 @@ bootstrapLavaan <- function(object,
                        parallel        = parallel,
                        ncpus           = ncpus,
                        cl              = cl,
+                       iseed           = iseed,
                        h0.rmsea        = h0.rmsea,
                        ...)
 }
@@ -88,6 +90,7 @@ bootstrap.internal <- function(object          = NULL,
                                parallel        = c("no", "multicore", "snow"),
                                ncpus           = 1L,
                                cl              = NULL,
+                               iseed           = NULL,
                                h0.rmsea        = NULL,
                                ...) {
 
@@ -361,7 +364,7 @@ bootstrap.internal <- function(object          = NULL,
             if (is.null(cl)) {
                 cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
                 if(RNGkind()[1L] == "L'Ecuyer-CMRG")
-                    parallel::clusterSetRNGStream(cl)
+                    parallel::clusterSetRNGStream(cl, iseed = iseed)
                 res <- parallel::parLapply(cl, seq_len(RR), fn)
                 parallel::stopCluster(cl)
                 res

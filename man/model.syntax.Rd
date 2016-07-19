@@ -6,8 +6,6 @@
 \alias{lavPartable}
 \alias{parseModelString}
 \alias{lavParseModelString}
-\alias{lavaanNames}
-\alias{lavNames}
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
@@ -111,9 +109,6 @@ the model both for both observed and latent variables.}
 \item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
 as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
-\item{object}{Either a list containing the parameter table, as 
-returned by \code{lavaanify} or \code{lavParseModelString}, or an 
-object of class \code{\linkS4class{lavaan}}.}
 }
 \details{
 The model syntax consists of one or more formula-like expressions, each one

@@ -1,5 +1,6 @@
 \name{lavNames}
 \alias{lavNames}
+\alias{lavaanNames}
 \title{lavaan Names}
 \description{
 Extract variables names from a fitted lavaan object.}
