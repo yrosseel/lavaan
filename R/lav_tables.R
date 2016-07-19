@@ -607,7 +607,7 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
                 id <- (g-1)*nvar + x
 
                 # compute observed frequencies
-                FREQ <- tabulate(X[[g]][,idx])
+                FREQ <- tabulate(X[[g]][,idx], nbins = ncell)
 
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(vartable$name[idx], ncell),
