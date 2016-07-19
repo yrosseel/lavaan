@@ -120,6 +120,17 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 stop("lavaan ERROR: WLS.V assumes ", length(WLS.V),
                      " groups; data contains ", ngroups, " groups")
         }
+
+        # is WLS.V full? check first
+        if(is.null(dim(WLS.V[[1]]))) {
+            # we will assume it is the diagonal only
+            WLS.VD <- WLS.V
+            WLS.V  <- lapply(WLS.VD, diag)
+        } else {
+            # create WLS.VD
+            WLS.VD <- lapply(WLS.V, diag)
+        }
+
         WLS.V.user <- TRUE
         # FIXME: check dimension of WLS.V!!
     }
@@ -687,6 +698,17 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 stop("lavaan ERROR: WLS.V assumes ", length(WLS.V),
                      " groups; data contains ", ngroups, " groups")
         }
+
+        # is WLS.V full? check first
+        if(is.null(dim(WLS.V[[1]]))) {
+            # we will assume it is the diagonal only
+            WLS.VD <- WLS.V
+            WLS.V  <- lapply(WLS.VD, diag)
+        } else {
+            # create WLS.VD
+            WLS.VD <- lapply(WLS.V, diag)
+        }
+
         WLS.V.user <- TRUE
         # FIXME: check dimension of WLS.V!!
     }
