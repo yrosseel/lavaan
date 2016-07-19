@@ -572,7 +572,8 @@ lav_fit_measures <- function(object, fit.measures="all",
     if("logl" %in% fit.measures ||
        "unrestricted.logl" %in% fit.measures ||
        "aic" %in% fit.measures ||
-       "bic" %in% fit.measures) {
+       "bic" %in% fit.measures ||
+       "bic2" %in% fit.measures) {
 
         if(estimator == "ML" || estimator == "MML") {
 
@@ -670,7 +671,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # BIC
-            if("bic" %in% fit.measures) {
+            if("bic" %in% fit.measures ||
+               "bic2" %in% fit.measures) {
                 BIC <- -2*logl.H0 + npar*log(N)
                 indices["bic"] <- BIC
 
@@ -701,6 +703,9 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
             if("bic" %in% fit.measures) {
                 indices["bic"] <- as.numeric(NA)
+            }
+            if("bic2" %in% fit.measures) {
+                indices["bic2"] <- as.numeric(NA)
             }
         }
     }
