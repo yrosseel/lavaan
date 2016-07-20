@@ -399,7 +399,9 @@ lav_fit_measures <- function(object, fit.measures="all",
 
                 t1 <- X2 - ch*df
                 t2 <- X2.null - cb*df.null
-                if(t2 == 0) {
+                if(is.na(t1) || is.na(t2)) {
+                    RNI <- NA
+                } else if(t2 == 0) {
                     RNI <- NA
                 } else {
                     RNI <- 1 - t1/t2

@@ -20,6 +20,24 @@ print.lavaan.data.frame <- function(x, ..., nd=3) {
     invisible(x)
 }
 
+print.lavaan.list <- function(x, ...) {
+
+    y <- unclass(x)
+    attr(y, "header") <- NULL
+
+    header <- attr(x, "header")
+    if(!is.null(header)) {
+        if(is.character(header)) {
+            cat("\n", header, "\n\n", sep = "")
+        } else {
+            print(header); cat("\n")
+        }
+    }
+
+    print(y, ...)
+    invisible(x)
+}
+
 
 # prints only lower triangle of a symmetric matrix
 print.lavaan.matrix.symmetric <- function(x, ..., nd=3) {

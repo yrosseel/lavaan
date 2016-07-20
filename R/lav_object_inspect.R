@@ -576,6 +576,7 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
     }
 
     # try to reflect `equality constraints'
+    con.flag <- FALSE
     if(what == "free" && lavobject@Model@eq.constraints) {
         # extract constraints from parameter table
         PT <- parTable(lavobject)
@@ -617,7 +618,12 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
         } # con
 
         # add this info at the top
-        GLIST <- c(constraints = list(CON), GLIST)
+        #GLIST <- c(constraints = list(CON), GLIST)
+        #no, not a good idea, it does not work with list.by.group
+  
+        # add it as a 'header' attribute?
+        attr(CON, "header") <- "Note: model contains equality constraints:"
+        con.flag <- TRUE
     }
 
     # should we group them per group?
@@ -644,6 +650,16 @@ lav_object_inspect_modelmatrices <- function(lavobject, what = "free",
         }
     } else {
         OUT <- GLIST
+    }
+
+    # header
+    if(con.flag) {
+        attr(OUT, "header") <- CON
+    }
+
+    # lavaan.list
+    if(add.class) {
+        class(OUT) <- c("lavaan.list", "list")
     }
 
     OUT
