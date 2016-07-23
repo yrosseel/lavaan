@@ -284,7 +284,7 @@ ctr_pml_aic_bic <- function(lavobject) {
     # The following may need to be updated if we change the fit function
     # so that it is correct for the case of missing values as well.
 
-    logPL <- lavobject@Fit@logl
+    logPL <- lavobject@optim$logl
     nsize <- lavobject@SampleStats@ntotal
 
     # inverted observed unit information 

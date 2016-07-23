@@ -244,11 +244,11 @@ lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
     if(method == "exact") {
         if(reference == "H1") {
             af <- lav_test_diff_af_h1(m1 = m1, m0 = m0)
-            xx <- m1@Fit@x
+            xx <- m1@optim$x
         } else { # evaluate under H0
             stop("not ready yet")
             #af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
-            xx <- m0@Fit@x
+            xx <- m0@optim$x
         }
         A <- try(lav_func_jacobian_complex(func = af, x = xx), silent = TRUE)
         if(inherits(A, "try-error")) {

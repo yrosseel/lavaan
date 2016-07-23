@@ -15,15 +15,15 @@ short.summary <- function(object) {
     if(FAKE) {
         cat(sprintf("lavaan (%s) -- DRY RUN with 0 iterations\n",
                     packageDescription("lavaan", fields="Version")))
-    } else if(object@Fit@iterations > 0) {
-        if(object@Fit@converged) {
+    } else if(object@optim$iterations > 0) {
+        if(object@optim$converged) {
 	    cat(sprintf("lavaan (%s) converged normally after %3i iterations\n",
                     packageDescription("lavaan", fields="Version"),
-                    object@Fit@iterations))
+                    object@optim$iterations))
         } else {
             cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n", 
                 packageDescription("lavaan", fields="Version"),
-                object@Fit@iterations))
+                object@optim$iterations))
             cat("** WARNING ** Estimates below are most likely unreliable\n")
         }
     } else {
@@ -35,7 +35,7 @@ short.summary <- function(object) {
 
     # number of free parameters
     #t0.txt <- sprintf("  %-40s", "Number of free parameters")
-    #t1.txt <- sprintf("  %10i", object@Fit@npar)
+    #t1.txt <- sprintf("  %10i", object@optim$npar)
     #t2.txt <- ""
     #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     #cat("\n")
@@ -167,9 +167,9 @@ short.summary <- function(object) {
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         } else {
             # FIXME: should we do this? To warn that exact 0.0 was not obtained?
-            if(object@Fit@fx > 0) {
+            if(object@optim$fx > 0) {
                 t0.txt <- sprintf("  %-35s", "Minimum Function Value")
-                t1.txt <- sprintf("  %15.13f", object@Fit@fx)
+                t1.txt <- sprintf("  %15.13f", object@optim$fx)
                 t2.txt <- ""
                 cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
             }
@@ -301,7 +301,7 @@ function(object, header       = TRUE,
     if(fit.measures) {
         if(object@Options$test == "none") {
             warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
-        } else if(object@Fit@npar > 0L && !object@Fit@converged) {
+        } else if(object@optim$npar > 0L && !object@optim$converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
             print.fit.measures( fitMeasures(object, fit.measures="default") )
@@ -341,7 +341,7 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
     if(fit.measures) {
         if(object@Options$test == "none") {
             warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
-        } else if(object@Fit@npar > 0L && !object@Fit@converged) {
+        } else if(object@optim$npar > 0L && !object@optim$converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
             print.fit.measures( fitMeasures(object, fit.measures="default") )
@@ -650,8 +650,8 @@ summary2 <- function(object, estimates=TRUE, fit.measures=FALSE,
     if(length(cin.idx) > 0L || length(ceq.idx) > 0L) {
         # set small negative values to zero, to avoid printing " -0.000"
         slack <- ifelse(abs(est) < 1e-5, 0, est)
-        #slack[cin.idx] <- object@Model@cin.function(object@Fit@x)
-        #slack[ceq.idx] <- object@Model@ceq.function(object@Fit@x)
+        #slack[cin.idx] <- object@Model@cin.function(object@optim$x)
+        #slack[ceq.idx] <- object@Model@ceq.function(object@optim$x)
        
         if(object@Data@ngroups > 1 && length(def.idx) == 0L) cat("\n")
         cat("Constraints:                               Slack (>=0)\n")
@@ -863,7 +863,7 @@ parameterEstimates <- parameterestimates <- function(object,
         if(inherits(object, "lavaanList")) {
             FMI <- FALSE
         } else if(object@SampleStats@missing.flag &&
-           object@Fit@converged &&
+           object@optim$converged &&
            object@Options$estimator == "ML" &&
            object@Options$se == "standard") {
             FMI <- TRUE
@@ -1093,8 +1093,8 @@ parameterEstimates <- parameterestimates <- function(object,
     # fractional missing information (if estimator="fiml")
     if(FMI) {
         SE.orig <- LIST$se
-        COV <- object@Fit@Sigma.hat
-        MEAN <- object@Fit@Mu.hat
+        COV <- object@implied$cov
+        MEAN <- object@implied$mean
 
         # provide rownames
         for(g in 1:object@Data@ngroups)
@@ -1235,19 +1235,19 @@ function(object, type = "moments", labels=TRUE) {
 
     OUT <- vector("list", length=G)
     for(g in 1:G) {
-        OUT[[g]]$cov  <- object@Fit@Sigma.hat[[g]]
+        OUT[[g]]$cov  <- object@implied$cov[[g]]
         if(labels) 
             rownames(OUT[[g]]$cov) <- colnames(OUT[[g]]$cov) <- ov.names[[g]]
         class(OUT[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
 
         #if(object@Model@meanstructure) {
-            OUT[[g]]$mean <- as.numeric(object@Fit@Mu.hat[[g]])
+            OUT[[g]]$mean <- as.numeric(object@implied$mean[[g]])
             if(labels) names(OUT[[g]]$mean) <- ov.names[[g]]
             class(OUT[[g]]$mean) <- c("lavaan.vector", "numeric")
         #}
 
         if(object@Model@categorical) {
-            OUT[[g]]$th <- as.numeric(object@Fit@TH[[g]])
+            OUT[[g]]$th <- as.numeric(object@implied$th[[g]])
             if(length(object@Model@num.idx[[g]]) > 0L) {
                 NUM.idx <- which(object@Model@th.idx[[g]] == 0)
                 OUT[[g]]$th <- OUT[[g]]$th[ -NUM.idx ]
@@ -1280,7 +1280,7 @@ setMethod("vcov", "lavaan",
 function(object, labels = TRUE, remove.duplicated = FALSE) {
 
     # check for convergence first!
-    if(object@Fit@npar > 0L && !object@Fit@converged)
+    if(object@optim$npar > 0L && !object@optim$converged)
         stop("lavaan ERROR: model did not converge")
 
     if(object@Options$se == "none") {
@@ -1302,7 +1302,7 @@ function(object, ...) {
     if(object@Options$estimator != "ML") {
         warning("lavaan WARNING: logLik only available if estimator is ML")
     }
-    if(object@Fit@npar > 0L && !object@Fit@converged) {
+    if(object@optim$npar > 0L && !object@optim$converged) {
         warning("lavaan WARNING: model did not converge")
     }
     

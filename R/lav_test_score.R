@@ -17,7 +17,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     stopifnot(inherits(object, "lavaan"))
     lavoptions <- object@Options
 
-    if(object@Fit@npar > 0L && !object@Fit@converged) {
+    if(object@optim$npar > 0L && !object@optim$converged) {
         stop("lavaan ERROR: model did not converge")
     }
 

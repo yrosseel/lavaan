@@ -14,7 +14,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                              baseline.model = NULL) {
 
     # has the model converged?
-    if(object@Fit@npar > 0L && !object@Fit@converged) {
+    if(object@optim$npar > 0L && !object@optim$converged) {
         stop("lavaan ERROR: fit measures not available if model did not converge")
     }
 
@@ -24,11 +24,11 @@ lav_fit_measures <- function(object, fit.measures="all",
     if(TEST[[1]]$test == "none") {
 
         # to deal with semTools 0.4-9, we need to check the @Fit@test slot
-        if(object@Fit@test[[1]]$test != "none") {
-            TEST <- object@Fit@test
-        } else {
+        #if(object@Fit@test[[1]]$test != "none") {
+        #    TEST <- object@Fit@test
+        #} else {
             stop("lavaan ERROR: please refit the model with test=\"standard\"")
-        }
+        #}
     }
 
     if("all" %in% fit.measures) {
@@ -52,7 +52,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     # Change 0.5-13: take into account explicit equality constraints!!
     # reported by Mark L. Taper (affects AIC and BIC)
-    npar <- object@Fit@npar
+    npar <- object@optim$npar
     if(nrow(object@Model@con.jac) > 0L) {
         ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
         if(length(ceq.idx) > 0L) {
@@ -61,8 +61,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         }
     }
 
-    fx <- object@Fit@fx
-    fx.group <- object@Fit@fx.group
+    fx <- object@optim$fx
+    fx.group <- object@optim$fx.group
     meanstructure <- object@Model@meanstructure
     categorical   <- object@Model@categorical
     multigroup    <- object@Data@ngroups > 1L
@@ -996,8 +996,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             nvar <- ncol(S)
 
             # estimated
-            Sigma.hat <- object@Fit@Sigma.hat[[g]]
-            Mu.hat    <- object@Fit@Mu.hat[[g]]
+            Sigma.hat <- object@implied$cov[[g]]
+            Mu.hat    <- object@implied$mean[[g]]
 
             # unstandardized residuals
             RR <- (S - Sigma.hat)

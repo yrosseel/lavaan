@@ -325,7 +325,7 @@ bootstrap.internal <- function(object          = NULL,
                            slotModel       = model.boot,
                            slotSampleStats = bootSampleStats,
                            slotData        = lavdata)
-        if(!fit.boot@Fit@converged) {
+        if(!fit.boot@optim$converged) {
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)
             return(NULL)
@@ -334,11 +334,11 @@ bootstrap.internal <- function(object          = NULL,
         # extract information we need
         if(is.null(object)) { # internal use only!
             if(FUN == "coef") {
-                out <- fit.boot@Fit@x
+                out <- fit.boot@optim$x
             } else if(FUN == "test") { 
                 out <- fit.boot@test[[1L]]$stat
             } else if(FUN == "coeftest") { 
-                out <- c(fit.boot@Fit@x, fit.boot@test[[1L]]$stat)
+                out <- c(fit.boot@optim$x, fit.boot@test[[1L]]$stat)
             } 
         } else { # general use
             out <- try(FUN(fit.boot, ...), silent=TRUE)
@@ -349,8 +349,8 @@ bootstrap.internal <- function(object          = NULL,
             return(NULL)
         } 
         if(verbose) cat("   OK -- niter = ", 
-                        sprintf("%3d", fit.boot@Fit@iterations), " fx = ",
-                        sprintf("%13.9f", fit.boot@Fit@fx), "\n")
+                        sprintf("%3d", fit.boot@optim$iterations), " fx = ",
+                        sprintf("%13.9f", fit.boot@optim$fx), "\n")
         out
     }
 

@@ -671,7 +671,7 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 
             # model based
             th.h0 <- unlist(lapply(1:lavdata@ngroups, function(x) {
-                         TH <- lavobject@Fit@TH[[x]][ 
+                         TH <- lavobject@implied$th[[x]][ 
                                 lavobject@SampleStats@th.idx[[x]] > 0 ]
                       TH.IDX <- lavobject@SampleStats@th.idx[[x]][
                                 lavobject@SampleStats@th.idx[[x]] > 0 ]
@@ -804,8 +804,8 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
     ngroups   <- lavobject@Data@ngroups
     ov.types  <- lavobject@Data@ov$type
     th.idx    <- lavobject@Model@th.idx
-    Sigma.hat <- lavobject@Fit@Sigma.hat
-    TH        <- lavobject@Fit@TH
+    Sigma.hat <- lavobject@implied$cov
+    TH        <- lavobject@implied$th
 
     PI <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
@@ -946,14 +946,14 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
 
     # h0 or unrestricted?
     if(est == "h0") {
-        Sigma.hat <- lavobject@Fit@Sigma.hat
-        TH        <- lavobject@Fit@TH
+        Sigma.hat <- lavobject@implied$cov
+        TH        <- lavobject@implied$th
         TH.IDX    <- lavobject@SampleStats@th.idx
     } else {
         if(is.null(lavobject)) {
             fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
-            Sigma.hat  <- fit.un@Fit@Sigma.hat
-            TH         <- fit.un@Fit@TH
+            Sigma.hat  <- fit.un@implied$cov
+            TH         <- fit.un@implied$th
             TH.IDX     <- fit.un@SampleStats@th.idx
         } else {
             if(lavobject@Model@conditional.x) {

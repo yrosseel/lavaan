@@ -15,7 +15,7 @@ function(object, type="raw", labels=TRUE) {
         if(object@Options$estimator != "ML") {
             stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
         }
-        if(object@Fit@npar > 0L && !object@Fit@converged) {
+        if(object@optim$npar > 0L && !object@optim$converged) {
             stop("lavaan ERROR: model dit not converge")
         }
         if(object@Model@conditional.x && type == "standardized") {
@@ -47,7 +47,7 @@ function(object, type="raw", labels=TRUE) {
 
     # check for 0 parameters if type == standardized
     if(type == "standardized" &&
-       object@Fit@npar == 0) {
+       object@optim$npar == 0) {
         stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
     }
 
@@ -135,19 +135,19 @@ function(object, type="raw", labels=TRUE) {
 
         # residuals (for this group)
         if(type == "cor.bollen") {
-            R[[g]]$cov  <- cov2cor(S) - cov2cor(object@Fit@Sigma.hat[[g]])
+            R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$cov[[g]])
             R[[g]]$mean <- ( M/sqrt(diag(S)) -
-                object@Fit@Mu.hat[[g]]/sqrt(diag(object@Fit@Sigma.hat[[g]])) )
+                object@implied$mean[[g]]/sqrt(diag(object@implied$cov[[g]])) )
         } else if(type == "cor.bentler" || type == "cor.eqs") {
             # Bentler EQS manual: divide by (sqrt of) OBSERVED variances
             delta <- 1/sqrt(diag(S))
             DELTA <- diag(delta, nrow=nvar, ncol=nvar)
-            R[[g]]$cov  <- DELTA %*% (S - object@Fit@Sigma.hat[[g]]) %*% DELTA
-            R[[g]]$mean <- (M - object@Fit@Mu.hat[[g]])/sqrt(diag(S))
+            R[[g]]$cov  <- DELTA %*% (S - object@implied$cov[[g]]) %*% DELTA
+            R[[g]]$mean <- (M - object@implied$mean[[g]])/sqrt(diag(S))
         } else {
             # covariance/raw residuals
-            R[[g]]$cov  <- S - object@Fit@Sigma.hat[[g]]
-            R[[g]]$mean <- M - object@Fit@Mu.hat[[g]]
+            R[[g]]$cov  <- S - object@implied$cov[[g]]
+            R[[g]]$mean <- M - object@implied$mean[[g]]
         }
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
@@ -162,9 +162,9 @@ function(object, type="raw", labels=TRUE) {
         }
         if(object@Model@categorical) {
             if(object@Model@conditional.x) {
-                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@Fit@TH[[g]]
+                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@implied$th[[g]]
             } else {
-                R[[g]]$th <- object@SampleStats@th[[g]] - object@Fit@TH[[g]]
+                R[[g]]$th <- object@SampleStats@th[[g]] - object@implied$th[[g]]
             }
             if(length(object@Model@num.idx[[g]]) > 0L) {
                 NUM.idx <- which(object@Model@th.idx[[g]] == 0)

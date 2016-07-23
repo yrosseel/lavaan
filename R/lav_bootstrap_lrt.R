@@ -28,9 +28,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
     # prepare
     LRT <- rep(as.numeric(NA), R)
-    if((h1@Fit@fx - h0@Fit@fx) > (.Machine$double.eps * 10)) { 
+    if((h1@optim$fx - h0@optim$fx) > (.Machine$double.eps * 10)) { 
         # restricted fit should not be better!
-        cat(" ... h0@Fit@fx = ", h0@Fit@fx, "h1@Fit@fx = ", h1@Fit@fx,
+        cat(" ... h0@optim$fx = ", h0@optim$fx, "h1@optim$fx = ", h1@optim$fx,
             "h0 should not be better!\n")
         options(old_options)
         return(NULL)
@@ -210,14 +210,14 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                          slotParTable    = h0@ParTable, 
                          slotSampleStats = bootSampleStats, 
                          slotData        = data)
-        if (!fit.h0@Fit@converged) {
+        if (!fit.h0@optim$converged) {
             if (verbose) cat("     FAILED: no convergence\n")
             options(old_options)
             return(NULL)
         }
         if (verbose) 
-            cat("     ok -- niter = ", fit.h0@Fit@iterations, 
-                " fx = ", fit.h0@Fit@fx, "\n")
+            cat("     ok -- niter = ", fit.h0@optim$iterations, 
+                " fx = ", fit.h0@optim$fx, "\n")
 
         if (verbose) cat("  ... ... model h1: ")
         h1@Options$verbose <- FALSE
@@ -230,22 +230,22 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                          slotSampleStats = bootSampleStats, 
                          slotData        = data)
 
-        if (!fit.h1@Fit@converged) {
+        if (!fit.h1@optim$converged) {
             if (verbose) 
-                cat("     FAILED: no convergence -- niter = ", fit.h1@Fit@iterations, 
-                    " fx = ", fit.h1@Fit@fx,"\n")
+                cat("     FAILED: no convergence -- niter = ", fit.h1@optim$iterations, 
+                    " fx = ", fit.h1@optim$fx,"\n")
             options(old_options)
             return(NULL)
         }
         if (verbose) 
-            cat("     ok -- niter = ", fit.h1@Fit@iterations, 
-                " fx = ", fit.h1@Fit@fx, "\n")
+            cat("     ok -- niter = ", fit.h1@optim$iterations, 
+                " fx = ", fit.h1@optim$fx, "\n")
 
         # store LRT
-        if((fit.h1@Fit@fx - fit.h0@Fit@fx) > (.Machine$double.eps * 10)) {
-            #if((fit.h1@Fit@fx - fit.h0@Fit@fx) > 0.0) {
+        if((fit.h1@optim$fx - fit.h0@optim$fx) > (.Machine$double.eps * 10)) {
+            #if((fit.h1@optim$fx - fit.h0@optim$fx) > 0.0) {
             if (verbose)
-                cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@Fit@fx - fit.h0@Fit@fx, "\n")
+                cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@optim$fx - fit.h0@optim$fx, "\n")
             options(old_options)
             return(NULL)
         } else {

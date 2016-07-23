@@ -4,7 +4,7 @@
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
 
-    if(object@Fit@npar > 0L && !object@Fit@converged)
+    if(object@optim$npar > 0L && !object@optim$converged)
         stop("lavaan ERROR: model did not converge")
 
     if(is.null(constraints) || nchar(constraints) == 0L) {
@@ -34,7 +34,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     }
 
     # theta = free parameters only
-    theta <- object@Fit@x
+    theta <- object@optim$x
 
     # build constraint function
     ceq.function <- lav_partable_constraints_ceq(partable = partable,

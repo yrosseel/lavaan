@@ -78,7 +78,6 @@ lavTablesFitCf <- function(object) {
     }
     lavdata  <- object@Data
     lavpta   <- object@pta
-    lavfit   <- object@Fit
     lavmodel <- object@Model
     lavcache <- object@Cache
 
@@ -98,9 +97,9 @@ lavTablesFitCf <- function(object) {
     ov.idx <- which(ov.ord %in% lavdata@ov$name)
     ov.nlev <- lavdata@ov$nlev[ ov.idx ]
 
-    Sigma.hat <- lavfit@Sigma.hat
-    TH        <- lavfit@TH
-    DF        <- prod(ov.nlev) - lavfit@npar - 1L
+    Sigma.hat <- object@implied$cov
+    TH        <- object@implied$th
+    DF        <- prod(ov.nlev) - object@optim$npar - 1L
 
     for(g in seq_len(lavdata@ngroups)) {
         F.group <- estimator.FML(Sigma.hat = Sigma.hat[[g]],

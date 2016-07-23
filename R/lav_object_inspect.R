@@ -73,6 +73,7 @@ lavInspect <- function(lavobject,
         lav_object_inspect_modelmatrices(lavobject, what = "est",
             add.labels = add.labels, add.class = add.class,
             list.by.group = list.by.group, 
+            #list.by.group = FALSE, for semTools only
             drop.list.single.group = drop.list.single.group)
     } else if(what == "dx.free") {
         lav_object_inspect_modelmatrices(lavobject, what = "dx.free",
@@ -251,11 +252,11 @@ lavInspect <- function(lavobject,
 
     #### convergence, meanstructure, categorical ####
     } else if(what == "converged") {
-        lavobject@Fit@converged
+        lavobject@optim$converged
     } else if(what == "iterations" ||
               what == "iter" ||
               what == "niter") {
-        lavobject@Fit@iterations
+        lavobject@optim$iterations
     } else if(what == "meanstructure") {
         lavobject@Model@meanstructure
     } else if(what == "categorical") {
@@ -1027,7 +1028,7 @@ lav_object_inspect_cov_ov <- function(lavobject, correlation.metric = FALSE,
     G <- lavobject@Data@ngroups
 
     # get model-implied covariance matrix observed
-    OUT <- lavobject@Fit@Sigma.hat
+    OUT <- lavobject@implied$cov
 
     # cor + labels + class
     for(g in 1:G) {
@@ -1063,7 +1064,7 @@ lav_object_inspect_mean_ov <- function(lavobject,
     G <- lavobject@Data@ngroups
 
     # compute lv means
-    OUT <- lavobject@Fit@Mu.hat
+    OUT <- lavobject@implied$mean
     OUT <- lapply(OUT, as.numeric)
 
     # labels + class
@@ -1093,7 +1094,7 @@ lav_object_inspect_th <- function(lavobject,
     G <- lavobject@Data@ngroups
 
     # thresholds
-    OUT <- lavobject@Fit@TH
+    OUT <- lavobject@implied$th
     OUT <- lapply(OUT, as.numeric)
 
     # labels + class
@@ -1564,7 +1565,8 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     type = "std.all", free.only = TRUE,
     add.labels = FALSE, add.class = FALSE, remove.duplicated = FALSE) {
 
-    if(lavobject@Fit@npar == 0) {
+    npar <- max(lavobject@ParTable$free)
+    if(lavobject@optim$npar == 0) {
         OUT <- matrix(0,0,0)
     } else {
         # check if we already have it
@@ -1595,26 +1597,26 @@ lav_object_inspect_vcov <- function(lavobject, standardized = FALSE,
     if(standardized) {
         if(type == "std.lv") {
             JAC <- try(lav_func_jacobian_complex(func = standardize.est.lv.x,
-                x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+                x = lavobject@optim$x, lavobject = lavobject), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
                 JAC <- lav_func_jacobian_simple(func = standardize.est.lv.x,
-                    x = lavobject@Fit@x, lavobject=lavobject)
+                    x = lavobject@optim$x, lavobject=lavobject)
             }
         } else if(type == "std.all") {
             JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.x,
-                x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+                x = lavobject@optim$x, lavobject = lavobject), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
                 JAC <- lav_func_jacobian_simple(func = standardize.est.all.x,
-                    x = lavobject@Fit@x, lavobject=lavobject)
+                    x = lavobject@optim$x, lavobject=lavobject)
             }
         } else if(type == "std.nox") {
             JAC <- 
                 try(lav_func_jacobian_complex(func = standardize.est.all.nox.x,
-                    x = lavobject@Fit@x, lavobject = lavobject), silent = TRUE)
+                    x = lavobject@optim$x, lavobject = lavobject), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
                 JAC <- 
                     lav_func_jacobian_simple(func = standardize.est.all.nox.x,
-                        x = lavobject@Fit@x, lavobject=lavobject)
+                        x = lavobject@optim$x, lavobject=lavobject)
             }
         }
 

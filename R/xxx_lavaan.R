@@ -701,6 +701,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # store optimization info in lavoptim
     lavoptim <- list()
+    x2 <- x; attributes(x2) <- NULL
+    lavoptim$x <- x2
+    lavoptim$npar <- length(x)
     lavoptim$iterations <- attr(x, "iterations")
     lavoptim$converged  <- attr(x, "converged")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL

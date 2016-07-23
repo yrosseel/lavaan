@@ -35,7 +35,7 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     }
   
     nsize <- fit_objH0@SampleStats@ntotal
-    PLRT <- 2 * (fit_objH1@Fit@logl - fit_objH0@Fit@logl)
+    PLRT <- 2 * (fit_objH1@optim$logl - fit_objH0@optim$logl)
 
     # create a new object 'objH1_h0': the object 'H1', but where
     # the parameter values are from H0
@@ -91,8 +91,8 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
     }
 
     nsize <- fit_objH0@Data@nobs[[1]]
-    PLRT <- 2 * nsize * (fit_objH0@Fit@fx - fit_objH1@Fit@fx)
-    Npar <- fit_objH1@Fit@npar
+    PLRT <- 2 * nsize * (fit_objH0@optim$fx - fit_objH1@optim$fx)
+    Npar <- fit_objH1@optim$npar
     MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
     MY.x.el.idx2 <- fit_objH1@Model@x.free.idx
     MY.m.el.idx <- MY.m.el.idx2
@@ -183,8 +183,8 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
  # an rx1 vector where r are the equality constraints. In the null hypothesis
  # we test H0: g(theta)=0. The matrix of derivatives is of dimension:
  # nrows= number of free non-redundant parameters under H0, namely 
- # NparH0 <- fit_objH0[[1]]@Fit@npar , and ncols= number of free non-redundant
- # parameters under H1, namely NparH1 <- fit_objH0[[1]]@Fit@npar.
+ # NparH0 <- fit_objH0[[1]]@optim$npar , and ncols= number of free non-redundant
+ # parameters under H1, namely NparH1 <- fit_objH0[[1]]@optim$npar.
  # The matrix of derivatives of g(theta) is composed of 0's, 1's, -1's, and 
  # in the rows that refer to odd number of parameters that are equal there is one -2.
  # The 1's, -1's (and possibly -2) are the contrast coefficients of the parameters.

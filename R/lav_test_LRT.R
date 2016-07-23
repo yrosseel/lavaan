@@ -13,7 +13,7 @@
 lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
                        H1 = TRUE, type = "Chisq", model.names = NULL) {
 
-    if(object@Fit@npar > 0L && !object@Fit@converged)
+    if(object@optim$npar > 0L && !object@optim$converged)
         stop("lavaan ERROR: model did not converge")
     type <- tolower(type)
     method <- tolower( gsub("[-_\\.]", "", method ) )
@@ -69,7 +69,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     }
 
     ## put them in order (using number of free parameters)
-    #nfreepar <- sapply(mods, function(x) x@Fit@npar)
+    #nfreepar <- sapply(mods, function(x) x@optim$npar)
     #if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
     #    # what, same number of free parameters?
     #    # maybe, we need to count number of constraints
@@ -109,7 +109,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     mods.scaled <- unlist( lapply(mods, function(x) {
         any(c("satorra.bentler", "yuan.bentler", 
               "mean.var.adjusted", "scaled.shifted") %in% 
-            unlist(sapply(slot(slot(x, "Fit"), "test"), "[", "test")) ) }))
+            unlist(sapply(slot(x, "test"), "[", "test")) ) }))
 
     if(all(mods.scaled)) {
         scaled <- TRUE
@@ -136,8 +136,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
 
     # collect statistics for each model
     if(type == "chisq") {
-        Df <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"), 
-                            "test")[[1]]$df))
+        Df <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
     } else if(type == "cf") {
         Df <- rep(as.numeric(NA), length(mods))
     } else {
@@ -146,8 +145,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
     
 
     if(type == "chisq") {
-        STAT <- unlist(lapply(mods, function(x) slot(slot(x, "Fit"), 
-                            "test")[[1]]$stat))
+        STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
     } else if(type == "cf") {
         tmp <- lapply(mods, lavTablesFitCf)
         STAT <- unlist(tmp)

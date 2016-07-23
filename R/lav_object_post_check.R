@@ -5,7 +5,6 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     lavpartable    <- object@ParTable
     lavmodel       <- object@Model
     lavdata        <- object@Data
-    lavfit         <- object@Fit
 
     var.ov.ok <- var.lv.ok <- result.ok <- TRUE
 
@@ -13,7 +12,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     var.idx <- which(lavpartable$op == "~~" &
                      lavpartable$lhs %in% lavNames(object, "ov") &
                      lavpartable$lhs == lavpartable$rhs)
-    if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0)) {
+    if(length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
         result.ok <- var.ov.ok <- FALSE
         warning("lavaan WARNING: some estimated ov variances are negative")
     }
@@ -22,7 +21,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     var.idx <- which(lavpartable$op == "~~" &
                      lavpartable$lhs %in% lavNames(object, "lv") &
                      lavpartable$lhs == lavpartable$rhs)
-    if(length(var.idx) > 0L && any(lavfit@est[var.idx] < 0.0)) {
+    if(length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
         result.ok <- var.lv.ok <- FALSE
         warning("lavaan WARNING: some estimated lv variances are negative")
     }
