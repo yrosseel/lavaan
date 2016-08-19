@@ -1,4 +1,7 @@
 # routines for numerical intregration
+# only Gauss-Hermite for now
+
+
 
 # return Gauss-Hermite quadrature rules for given order (n)
 # return list: x = nodes, w = quadrature weights
@@ -11,18 +14,27 @@
 # (This is NOT Golub & Welsch, 1968: they use a specific method
 # tailored for tridiagonal symmetric matrices)
 #
+# TODO: look at https://github.com/ajt60gaibb/FastGaussQuadrature.jl/blob/master/src/gausshermite.jl
+# featuring the work of Ignace Bogaert (UGent)
+#
 # approximation of the integral of 'f(x) * exp(-x*x)' from -inf to +inf
 # by sum( f(x_i) * w_i )
 #
 # CHECK: sum(w_i) should be always sqrt(pi) = 1.772454
 #
-# Example: define g <- function(x) exp(-x*x) * sin(x^2)
-# brute force solution: integrate(g, -100, 100) = 0.5703706
-# using gauss_hermite, define f <- function(x) sin(x^2)
-# XW <- lav_gauss_hermite_xw(10) 
-# sum( f(XW$x) * XW$w ) = 0.5703706
+# Example: define g <- function(x) dnorm(x,0,0.2) * exp(-x*x)
+# plot:
+#   x <- seq(-5,5,0.01)
+#   plot(x, g(x))
+# brute force solution: integrate(g, -100, 100) = 0.9622504
+# using gauss_hermite, define f <- function(x) dnorm(x,0,0.2)
+# XW <- lavaan:::lav_integration_gauss_hermite(200)
+# sum( f(XW$x) * XW$w ) = 0.9622504
 #
-lav_gauss_hermite_xw <- function(n = 100L, revert = FALSE) {
+# note that we need N=200 to get decent accuracy here, because we have
+# a rather spiky function
+
+lav_integration_gauss_hermite <- function(n = 100L, revert = FALSE) {
 
     # construct symmetric, tridiagonal Jacobi matrix
     # diagonal = 0, -1/+1 diagonal is sqrt(1:(n-1)/2)
@@ -42,21 +54,22 @@ lav_gauss_hermite_xw <- function(n = 100L, revert = FALSE) {
     if(revert) {
         x <- -x
     }
-    list(x=x, w=w)
+
+    list(x = x, w = w)
 }
 
-# 'dnorm' version: weighting function is not exp(-x*x) but
-# w(x) = 1/(sqrt(2*pi)) * exp(-0.5 * x*x)
+# 'dnorm' version: weighting function is not exp(-x^2) but
+# w(x) = 1/(sqrt(2*pi)) * exp(-0.5 * x^2)
 #
-# Example: define g <- function(x) sin(x^2) * dnorm(x, 0.3, 0.4)
-# brute force solution: integrate(g, -100, 100) = 0.2227559
-# using gauss_hermite_dnorm, define f <- function(x) sin(x^2)
-# XW <- lav_gauss_hermite_xw_dnorm(n=10, mean=0.3, sd=0.4)
-# sum( f(XW$x) * XW$w ) = 0.2227559
-#
-lav_gauss_hermite_xw_dnorm <- function(n = 100L, revert = FALSE, 
-                                       mean = 0, sd = 1, ndim = 1L) {
-    XW <- lav_gauss_hermite_xw(n = n, revert = revert)
+# Example: define g <- function(x) dnorm(x,0,0.2) * dnorm(x, 0.3, 0.4)
+# brute force solution: integrate(g, -100, 100) = 0.712326
+# using gauss_hermite_dnorm, define f <- function(x) dnorm(x,0,0.2)
+# XW <- lav_integration_gauss_hermite_dnorm(n=100, mean=0.3, sd=0.4)
+# sum( f(XW$x) * XW$w ) = 0.712326
+lav_integration_gauss_hermite_dnorm <- function(n = 100L, revert = FALSE, 
+                                                mean = 0, sd = 1, ndim = 1L,
+                                                prune = 0) {
+    XW <- lav_integration_gauss_hermite(n = n, revert = revert)
 
     # scale/shift x
     x <- XW$x * sqrt(2) * sd + mean
@@ -74,5 +87,17 @@ lav_gauss_hermite_xw_dnorm <- function(n = 100L, revert = FALSE,
         w <- as.matrix(w)
     }
 
+    # prune?
+    if(prune > 0) {
+        lower.limit <- quantile(w, probs = prune)
+        keep.idx <- which(w > lower.limit)
+        w <- w[keep.idx]
+        x <- x[keep.idx,, drop = FALSE]
+    }
+
     list(x=x, w=w)
 }
+
+# plot 2-dim
+# out <- lavaan:::lav_integration_gauss_hermite_dnorm(n = 20, ndim = 2)
+# plot(out$x, cex = -10/log(out$w), col = "darkgrey", pch=19)

@@ -123,6 +123,8 @@ lavInspect <- function(lavobject,
 
     #### sample statistics #####
     } else if(what == "sampstat" ||
+              what == "sampstats" ||
+              what == "samplestats" ||
               what == "samp" ||
               what == "sample" ||
               what == "samplestatistics") {
@@ -373,6 +375,12 @@ lavInspect <- function(lavobject,
     } else if(what == "ugamma" || what == "ug" || what == "u.gamma") {
         lav_object_inspect_UGamma(lavobject,
             add.labels = add.labels, add.class = add.class)
+
+    ### jacobians ####
+    } else if(what == "delta") {
+        lav_object_inspect_delta(lavobject,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
     # post-checking
     } else if(what == "post.check" || what == "post") {
@@ -724,7 +732,6 @@ lav_object_inspect_sampstat <- function(lavobject, h1 = FALSE,
                 }
                 if(add.labels) {
                     names(OUT[[g]]$th) <- lavobject@pta$vnames$th[[g]]
-                        vnames(lavobject@ParTable, type="th", group=g)
                 }
                 if(add.class) {
                     class(OUT[[g]]$th) <- c("lavaan.vector", "numeric")
@@ -1739,4 +1746,106 @@ lav_object_inspect_UGamma <- function(lavobject,
 
     OUT
 }
+
+# Delta (jacobian: d samplestats / d free_parameters)
+lav_object_inspect_delta <- function(lavobject,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    OUT <- computeDelta(lavobject@Model)
+
+    # labels
+    lavmodel <- lavobject@Model
+    categorical    <- lavmodel@categorical
+    conditional.x  <- lavmodel@conditional.x
+    group.w.free   <- lavmodel@group.w.free
+    nvar           <- lavmodel@nvar
+    num.idx        <- lavmodel@num.idx
+    th.idx         <- lavmodel@th.idx
+    nexo           <- lavmodel@nexo
+    ngroups        <- lavmodel@ngroups
+
+    if(add.labels) {
+        PNAMES <- lav_partable_labels(lavobject@ParTable, type="free")
+
+        for(g in 1:ngroups) {
+            colnames(OUT[[g]]) <- PNAMES
+
+            if(conditional.x) {
+                ov.names <- lavobject@pta$vnames$ov.nox[[g]]
+            } else {
+                ov.names <- lavobject@pta$vnames$ov[[g]]
+            }
+            ov.names.x <- lavobject@pta$vnames$ov.x[[g]]
+            nvar <- length(ov.names)
+
+
+            names.cov <- names.cor <- names.var <- character(0L)
+            names.mu <- names.pi <- names.th <- character(0L)
+            names.gw <- character(0L)
+ 
+            # Sigma
+            # - if continuous: vech(Sigma)
+            # - if categorical: first numeric variances, then
+            tmp <- apply(expand.grid(ov.names, ov.names), 1L, 
+                         paste, collapse = "~~")
+            if(categorical) {
+                names.cor <- tmp[lav_matrix_vech_idx(nvar, diagonal = FALSE)]
+                names.var <- tmp[lav_matrix_diag_idx(nvar)[num.idx[[g]]]]
+            } else {
+                names.cov <- tmp[lav_matrix_vech_idx(nvar, diagonal = TRUE)]
+            }
+
+            # Mu
+            if(!categorical && lavmodel@meanstructure) {
+                names.mu <- paste(ov.names, "~1", sep = "")
+            }
+
+            # Pi
+            if(conditional.x && lavmodel@nexo[g] > 0L) {
+               names.pi <- apply(expand.grid(ov.names, ov.names.x), 1L, 
+                                 paste, collapse = "~")
+            }
+
+            # th
+            if(categorical) {
+                names.th <- lavobject@pta$vnames$th[[g]]
+                # interweave numeric intercepts, if any
+                if(length(num.idx[[g]]) > 0L) {
+                    tmp <- character( length(th.idx[[g]]) )
+                    tmp[ th.idx[[g]] > 0 ] <- names.th
+                    tmp[ th.idx[[g]] == 0 ] <- paste(ov.names[ num.idx[[g]] ],
+                                                     "~1", sep = "")
+                    names.th <- tmp
+                }
+            }
+
+            # gw
+            if(group.w.free) {
+                names.gw <- "w"
+            }
+
+            rownames(OUT[[g]]) <- c(names.gw,
+                                    names.th, names.mu, 
+                                    names.pi, 
+                                    names.cov, names.var, names.cor)
+
+            # class
+            if(add.class) {
+                class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+            }
+
+        } # g
+    } # labels
+
+    if(ngroups == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(lavobject@Data@group.label) > 0L) {
+            names(OUT) <- unlist(lavobject@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
 

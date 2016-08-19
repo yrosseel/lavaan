@@ -485,8 +485,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL, 
-                         m.el.idx. = NULL, x.el.idx. = NULL,
-                         add.labels = FALSE) {
+                         m.el.idx. = NULL, x.el.idx. = NULL) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
