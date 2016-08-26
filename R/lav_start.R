@@ -401,23 +401,71 @@ lav_start <- function(start.method    = "default",
                          lavpartable$group == g &
                          lavpartable$lhs != lavpartable$rhs &
                          !lavpartable$exo)
-        if(length(cov.idx) > 0L) {
-            var.names <- c(lavpartable$lhs[cov.idx],
-                           lavpartable$rhs[cov.idx])
-            cov.start <- abs( c(start[cov.idx], start[cov.idx]) )
-    
-            for(v in seq_along(var.names)) {
-                # find variance idx
-                var.idx <- which(lavpartable$op == "~~" &
-                             lavpartable$group == g &
-                             lavpartable$lhs == lavpartable$rhs &
-                             lavpartable$lhs == var.names[v])
-                if(start[var.idx] < cov.start[v]) {
-                    # warn???
-                    start[var.idx] <- cov.start[v] * 1.10 # 10% larger
-                }
+        for(cc in seq_along(cov.idx)) {
+            this.cov.idx <- cov.idx[cc]
+
+            # find corresponding variances
+            var.lhs <- lavpartable$lhs[this.cov.idx]
+            var.rhs <- lavpartable$rhs[this.cov.idx]
+
+            var.lhs.idx <- which(lavpartable$op == "~~" &
+                                 lavpartable$group == g &
+                                 lavpartable$lhs == var.lhs &
+                                 lavpartable$lhs == lavpartable$rhs)
+
+            var.rhs.idx <- which(lavpartable$op == "~~" &
+                                 lavpartable$group == g &
+                                 lavpartable$lhs == var.rhs &
+                                 lavpartable$lhs == lavpartable$rhs)
+
+            var.lhs.value <- start[var.lhs.idx]
+            var.rhs.value <- start[var.rhs.idx]
+
+            # which one is the smallest? abs() in case of negative variances
+            if(abs(var.lhs.value) < abs(var.rhs.value)) {
+                var.min.idx <- var.lhs.idx
+                var.max.idx <- var.rhs.idx
+            } else {
+                var.min.idx <- var.rhs.idx
+                var.max.idx <- var.lhs.idx
             }
-        }
+
+            # check
+            COR <- start[this.cov.idx] / sqrt(var.lhs.value * var.rhs.value)
+ 
+            if(COR > 1) {
+                warning(
+  "lavaan WARNING: starting values imply a correlation larger than 1;\n", 
+"                  variables involved are: ", var.lhs, " ", var.rhs)
+                
+                # three ways to fix it: rescale cov12, var1 or var2
+
+                # we prefer a free parameter, and not user-specified
+                if(        lavpartable$free[this.cov.idx] > 0L &&
+                   is.na(lavpartable$ustart[this.cov.idx])) {
+                    start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
+                } else if( lavpartable$free[var.min.idx] > 0L &&
+                           is.na(lavpartable$ustart[var.min.idx])) {
+                    start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
+                } else if(        lavpartable$free[var.max.idx] > 0L &&
+                          is.na(lavpartable$ustart[var.max.idx])) {
+                    start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
+
+                # not found? try just a free parameter
+                } else if      (lavpartable$free[this.cov.idx] > 0L) {
+                    start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
+                } else if(     lavpartable$free[var.min.idx] > 0L) {
+                    start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
+                } else if(     lavpartable$free[var.max.idx] > 0L) {
+                    start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
+
+                # nothing? abort
+                } else {
+                    stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
+"                variables involved are: ", var.lhs, " ", var.rhs)
+                }
+            } # COR > 1
+        } # cov.idx
     }
 
     if(debug) {
