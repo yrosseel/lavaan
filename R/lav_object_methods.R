@@ -849,7 +849,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      level = 0.95, 
                                                      boot.ci.type = "perc",
                                                      standardized = FALSE, 
-                                                     fmi = "default",
+                                                     fmi = FALSE,
                                                      remove.system.eq = TRUE,
                                                      remove.eq = TRUE,
                                                      remove.ineq = TRUE,
@@ -857,23 +857,28 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      rsquare = FALSE,
                                                      add.attributes = FALSE) {
 
-    # fmi or not
-    FMI <- fmi
-    if(fmi == "default") {
+    # check fmi
+    if(fmi) {
         if(inherits(object, "lavaanList")) {
-            FMI <- FALSE
-        } else if(object@SampleStats@missing.flag &&
-           object@optim$converged &&
-           object@Options$estimator == "ML" &&
-           object@Options$se == "standard") {
-            FMI <- TRUE
-        } else {
-            FMI <- FALSE
+            warning("lavaan WARNING: fmi not available for object of class \"lavaanList\"")
+            fmi <- FALSE
         }
-    }
-    if(FMI && object@Options$se != "standard") {
-        warning("lavaan WARNING: fmi only available if se=\"standard\"")
-        FMI <- FALSE
+        if(object@Options$se != "standard") {
+            warning("lavaan WARNING: fmi only available if se = \"standard\"")
+            fmi <- FALSE
+        }
+        if(object@Options$estimator != "ML") {
+            warning("lavaan WARNING: fmi only available if estimator = \"ML\"")
+            fmi <- FALSE
+        }
+        if(!object@SampleStats@missing.flag) {
+            warning("lavaan WARNING: fmi only available if missing = \"(fi)ml\"")
+            fmi <- FALSE
+        }
+        if(!object@optim$converged) {
+            warning("lavaan WARNING: fmi not available; model did not converge")
+            fmi <- FALSE
+        }
     }
 
     # no zstat + pvalue if estimator is Bayes
@@ -1091,7 +1096,7 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     # fractional missing information (if estimator="fiml")
-    if(FMI) {
+    if(fmi) {
         SE.orig <- LIST$se
         COV <- object@implied$cov
         MEAN <- object@implied$mean

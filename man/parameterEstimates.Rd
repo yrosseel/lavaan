@@ -7,7 +7,7 @@ Parameter estimates of a latent variable model.}
 \usage{
 parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    level = 0.95, boot.ci.type = "perc", standardized = FALSE, 
-                   fmi = "default", remove.system.eq = TRUE, remove.eq = TRUE, 
+                   fmi = FALSE, remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, rsquare = FALSE, 
                    add.attributes = FALSE)
 }
@@ -34,8 +34,8 @@ normal distribution.}
 \item{standardized}{Logical. If \code{TRUE}, standardized estimates are 
 added to the output}
 \item{fmi}{Logical. If \code{TRUE}, an extra column is added containing the
-fraction of missing information for each estimated parameter. If
-\code{"default"}, the value is set to \code{TRUE} only if
+fraction of missing information for each estimated parameter. Only
+available if 
 \code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.
 See references for more information.}
 \item{remove.eq}{Logical. If \code{TRUE}, filter the output by removing all 
