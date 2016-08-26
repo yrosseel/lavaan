@@ -286,6 +286,10 @@ lav_start <- function(start.method    = "default",
             if(lavsamplestats@missing.flag) {
                 start[exo.idx] <- 
                     lavsamplestats@missing.h1[[g]]$sigma[cbind(row.idx,col.idx)]
+                # using slightly smaller variance/covariances
+                # somehow avoids false convergence in saturated models
+                nobs <- lavsamplestats@nobs[[g]]
+                start[exo.idx] <- start[exo.idx] * (nobs-1)/nobs
             } else {
                 start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx,col.idx)]
             }

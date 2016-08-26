@@ -295,7 +295,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             }
             
-        } else {
+        } else { # continuous case
  
             if(conditional.x) {
                 # residual covariances!
