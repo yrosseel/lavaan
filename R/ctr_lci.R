@@ -18,9 +18,9 @@
 lci<-function(fitmodel, pindx, alpha=.05, bound=c("lower","upper"),
               func=function(x){x}, optimizer=c("Rsolnp","optim"),
               p.start=NULL,diffmethod="default",...){
-  if(optimizer[1]=="Rsolnp"){
-    require(Rsolnp)
-  }
+  #if(optimizer[1]=="Rsolnp"){
+  #  require(Rsolnp)
+  #}
   
   ## input checking
   if(!is.null(p.start)){
@@ -75,7 +75,7 @@ lci<-function(fitmodel, pindx, alpha=.05, bound=c("lower","upper"),
   
   for(b in bound){
     if(optimizer[1]=="Rsolnp"){
-      capture.output(LCI<-try(solnp(p.start,fit.diff.test.pfunc,fitmodel=fitmodel,
+      utils::capture.output(LCI<-try(Rsolnp::solnp(p.start,fit.diff.test.pfunc,fitmodel=fitmodel,
                      pindx=pindx, func=func, alpha=alpha, bound=b,
                      diffmethod=diffmethod,...)))
       if(class(LCI)!="try-error"){
