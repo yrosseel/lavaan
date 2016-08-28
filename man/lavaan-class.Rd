@@ -98,9 +98,14 @@ about the data.}
       factor scores for all cases that are provided in the data frame. For
       complete data only.}
     \item{anova}{\code{signature(object = "lavaan")}: returns 
-      model comparison statistics. See \code{\link[stats]{anova}}. At least
-      two arguments (fitted models) are required. If the test statistic is
-      scaled, an appropriate scaled difference test will be computed.}
+      model comparison statistics. This method is just a wrapper around
+      the function \code{\link[stats]{lavTestLRT}}.
+      If only a single argument (a fitted
+      model) is provided, this model is compared to the unrestricted
+      model. If two or more arguments (fitted models) are provided, the models
+      are compared in a sequential order. Test statistics are based on the 
+      likelihood ratio test. For more details and
+      further options, see the \code{\link[stats]{lavTestLRT}} page.} 
     \item{update}{\code{signature(object = "lavaan", model, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment

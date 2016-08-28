@@ -7,7 +7,7 @@
 \alias{anova}
 \title{LRT test}
 \description{
-LRT test for comparing two (nested) lavaan models.}
+LRT test for comparing (nested) lavaan models.}
 \usage{
 lavTestLRT(object, ..., method = "default", A.method = "exact",
            H1 = TRUE, type = "Chisq", model.names = NULL)
@@ -49,7 +49,9 @@ will be computed.}
     test statistic, we can use the method proposed by 
     Satorra \& Bentler (2010). Alternatively, when method is
     \code{"satorra.2000"}, the original formulas of Satorra (2000) are
-    used.
+    used. Note that for the Satorra (2000) method, the models must
+    be nested in the parameter sense, while for the other methods, they
+    only need to be nested in the covariance matrix sense.
 }
 \references{
 Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
