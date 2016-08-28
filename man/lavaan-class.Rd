@@ -99,13 +99,13 @@ about the data.}
       complete data only.}
     \item{anova}{\code{signature(object = "lavaan")}: returns 
       model comparison statistics. This method is just a wrapper around
-      the function \code{\link[stats]{lavTestLRT}}.
+      the function \code{\link{lavTestLRT}}.
       If only a single argument (a fitted
       model) is provided, this model is compared to the unrestricted
       model. If two or more arguments (fitted models) are provided, the models
       are compared in a sequential order. Test statistics are based on the 
       likelihood ratio test. For more details and
-      further options, see the \code{\link[stats]{lavTestLRT}} page.} 
+      further options, see the \code{\link{lavTestLRT}} page.} 
     \item{update}{\code{signature(object = "lavaan", model, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
