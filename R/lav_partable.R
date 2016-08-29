@@ -253,6 +253,13 @@ lavaanify <- lavParTable <- function(
     if(length(MOD)) {
         for(el in 1:length(MOD)) {
             idx <- which(LIST$mod.idx == el) # for each group
+
+            # 0.5-21: check is idx exists
+            # perhaps the corresponding element was duplicated, and removed
+            if(length(idx) == 0L) {
+                next
+            } 
+
             MOD.fixed <- MOD[[el]]$fixed  
             MOD.start <- MOD[[el]]$start
             MOD.label <- MOD[[el]]$label 
@@ -1281,7 +1288,12 @@ lav_partable_flat <- function(FLAT = NULL,
     TMP <- USER[,1:3]
     idx <- which(duplicated(TMP))
     if(length(idx) > 0L) {
-        warning("duplicated elements in model syntax have been ignored: ", TMP[idx,])
+        txt <- sapply(1:length(idx), function(i) { 
+            paste("    ", TMP[idx[i],"lhs"], 
+                          TMP[idx[i], "op"], 
+                          TMP[idx[i],"rhs"]) })
+        warning("duplicated elements in model syntax have been ignored:\n", 
+                paste(txt, collapse = "\n"))
         USER <- USER[-idx,]
     }
 
