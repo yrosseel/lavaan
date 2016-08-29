@@ -90,7 +90,6 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                         partable$group == g]) )
         }
         dummy.names1 <- tmp.names[ !tmp.names %in% lv.names ]
-browser()
         # covariances involving dummys
         dummy.cov.idx <- which(partable$op == "~~" & partable$group == g &
                                (partable$lhs %in% dummy.names1 |
