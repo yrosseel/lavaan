@@ -90,11 +90,17 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                         partable$group == g]) )
         }
         dummy.names1 <- tmp.names[ !tmp.names %in% lv.names ]
-
+browser()
         # covariances involving dummys
         dummy.cov.idx <- which(partable$op == "~~" & partable$group == g &
                                (partable$lhs %in% dummy.names1 |
                                 partable$rhs %in% dummy.names1))
+        # new in 0.5-21: also include covariances involving these covariances...
+        dummy.cov.idx1 <- which(partable$op == "~~" & partable$group == g &
+                                (partable$lhs %in% partable$lhs[dummy.cov.idx] |
+                                 partable$rhs %in% partable$rhs[dummy.cov.idx]))
+        dummy.cov.idx <- unique(c(dummy.cov.idx, dummy.cov.idx1))
+
         dummy.names2 <- unique( c(partable$lhs[dummy.cov.idx],
                                   partable$rhs[dummy.cov.idx]) )
         # collect all dummy variables

@@ -406,7 +406,8 @@ lav_start <- function(start.method    = "default",
         cov.idx <- which(lavpartable$op == "~~" &
                          lavpartable$group == g &
                          lavpartable$lhs != lavpartable$rhs &
-                         !lavpartable$exo)
+                         !lavpartable$exo &
+                         start != 0)
         for(cc in seq_along(cov.idx)) {
             this.cov.idx <- cov.idx[cc]
 
