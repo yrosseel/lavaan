@@ -401,13 +401,37 @@ lav_start <- function(start.method    = "default",
     user.idx <- which(!is.na(lavpartable$ustart))
     start[user.idx] <- lavpartable$ustart[user.idx]
 
-    # sanity check: (user-specified) variances smaller than covariances
+    if(debug) {
+        cat("lavaan DEBUG: lavaanStart\n")
+        print( start )
+    }
+
+    start
+}
+
+# backwards compatibility
+# StartingValues <- lav_start
+
+# sanity check: (user-specified) variances smaller than covariances
+lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
+
+    if(is.null(lavpartable$group)) {
+        ngroups <- 1L
+    } else {
+        ngroups <- max(lavpartable$group)
+    }
+
     for(g in 1:ngroups) {
+
+        # collect all non-zero covariances
         cov.idx <- which(lavpartable$op == "~~" &
                          lavpartable$group == g &
                          lavpartable$lhs != lavpartable$rhs &
                          !lavpartable$exo &
                          start != 0)
+
+        # for each covariance, use corresponding variances to standardize;
+        # the end result should not exceed abs(1)     
         for(cc in seq_along(cov.idx)) {
             this.cov.idx <- cov.idx[cc]
 
@@ -428,6 +452,29 @@ lav_start <- function(start.method    = "default",
             var.lhs.value <- start[var.lhs.idx]
             var.rhs.value <- start[var.rhs.idx]
 
+            group.txt <- ""
+            if(ngroups > 1L) {
+                group.txt <- paste(" [in group ", g, "]", sep = "")
+            }
+ 
+            # check for zero variances
+            if(var.lhs.value == 0 || var.rhs.value == 0) {
+                # this can only happen if it is user-specified
+                # cov.idx free? set it to zero    
+                if(start[this.cov.idx] == 0) {
+                    # nothing to do
+                } else if(lavpartable$free[this.cov.idx] > 0L) {
+                    warning(
+  "lavaan WARNING: non-zero covariance element set to zero, due to fixed-to-zero variances\n",
+"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+                    start[this.cov.idx] <- 0
+                } else {
+                    stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
+"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+                }
+                next
+            }
+
             # which one is the smallest? abs() in case of negative variances
             if(abs(var.lhs.value) < abs(var.rhs.value)) {
                 var.min.idx <- var.lhs.idx
@@ -440,10 +487,18 @@ lav_start <- function(start.method    = "default",
             # check
             COR <- start[this.cov.idx] / sqrt(var.lhs.value * var.rhs.value)
  
-            if(COR > 1) {
+            if(!is.finite(COR)) {
+                # force simple values
+                warning(
+  "lavaan WARNING: starting values imply NaN for a correlation value;\n",
+"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)    
+                start[var.lhs.idx] <- 1
+                start[var.rhs.idx] <- 1
+                start[this.cov.idx] <- 0
+            } else if(abs(COR) > 1) {
                 warning(
   "lavaan WARNING: starting values imply a correlation larger than 1;\n", 
-"                  variables involved are: ", var.lhs, " ", var.rhs)
+"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
                 
                 # three ways to fix it: rescale cov12, var1 or var2
 
@@ -469,19 +524,11 @@ lav_start <- function(start.method    = "default",
                 # nothing? abort
                 } else {
                     stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs)
+"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
                 }
             } # COR > 1
         } # cov.idx
     }
 
-    if(debug) {
-        cat("lavaan DEBUG: lavaanStart\n")
-        print( start )
-    }
-
     start
 }
-
-# backwards compatibility
-# StartingValues <- lav_start

@@ -84,6 +84,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    slotData           = NULL,
                    slotModel          = NULL,
                    slotCache          = NULL,
+
+                   # sanity checks
+                   check              = c("start", "post"),
   
                    # verbosity
                    verbose            = FALSE,
@@ -96,12 +99,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # 0a. store call
     mc  <- match.call()
-
-
-
-
-
-
 
 
 
@@ -394,8 +391,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # at this point, we should check if the partable is complete
     # or not; this is especially relevant if the lavaan() function
     # was used, but the user has forgotten some variances/intercepts...
-    check <- lav_partable_check(lavpartable, categorical = categorical,
-                                warn = TRUE)
+    junk <- lav_partable_check(lavpartable, categorical = categorical,
+                               warn = TRUE)
 
     # 4b. get partable attributes
     lavpta <- lav_partable_attributes(lavpartable)
@@ -513,18 +510,25 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavpartable$start <- lavpartable$est
             }
         } else {
-            lavpartable$start <- lav_start(start.method = start,
-                                       lavpartable     = lavpartable, 
-                                       lavsamplestats  = lavsamplestats,
-                                       model.type   = lavoptions$model.type,
-                                       mimic        = lavoptions$mimic,
-                                       debug        = lavoptions$debug)
+            START <- lav_start(start.method   = start,
+                               lavpartable    = lavpartable,
+                               lavsamplestats = lavsamplestats,
+                               model.type     = lavoptions$model.type,
+                               mimic          = lavoptions$mimic,
+                               debug          = lavoptions$debug)
+
+            # sanity check
+            if("start" %in% check) {
+                START <- lav_start_check_cov(lavpartable = lavpartable,
+                                             start       = START)
+            }
+
+            lavpartable$start <- START
         }
+        
+
         timing$Start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
-
-
-
 
 
 
@@ -553,7 +557,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                          x = lav_model_get_parameters(lavmodel), 
                                          estimator =lavoptions$estimator)
         }
-    }
+
+    } # slotModel
 
 
 
@@ -881,7 +886,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     # post-fitting check
-    if(lavTech(lavaan, "converged")) {
+    if("post" %in% check && lavTech(lavaan, "converged")) {
         lavInspect(lavaan, "post.check")
     }
 
@@ -908,6 +913,7 @@ cfa <- sem <- function(model = NULL, data = NULL,
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
     zero.add = "default", zero.keep.margins = "default", 
     zero.cell.warn = TRUE, start = "default",
+    check = c("start", "post"),
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()
@@ -945,6 +951,7 @@ growth <- function(model = NULL, data = NULL,
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
     zero.add = "default", zero.keep.margins = "default", 
     zero.cell.warn = TRUE, start = "default",
+    check = c("start", "post"),
     verbose = FALSE, warn = TRUE, debug = FALSE) {
 
     mc <- match.call()

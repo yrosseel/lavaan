@@ -20,8 +20,9 @@ sem(model = NULL, data = NULL,
     bootstrap = 1000L, mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
     zero.add = "default", zero.keep.margins = "default",
-    zero.cell.warn = TRUE,
-    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE)
+    zero.cell.warn = TRUE, start = "default", 
+    check = c("start", "post"),
+    verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -254,6 +255,11 @@ order as they appear in the data.}
     for example the output of the \code{paramaterEstimates()} function, 
     the values of the \code{est} or \code{start} or \code{ustart} column 
     (whichever is found first) will be extracted.}
+\item{check}{Character vector. If \code{check} includes \code{"start"},
+    the starting values are checked for possibly inconsistent values (for 
+    example values implying correlations larger than one); 
+    if \code{check} includes \code{"post"}, a check is performed after 
+    (post) fitting, to check if the solution is admissable.}
 \item{verbose}{If \code{TRUE}, the function value is printed out during
     each iteration.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
