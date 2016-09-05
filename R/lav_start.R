@@ -274,7 +274,6 @@ lav_start <- function(start.method    = "default",
                                              th.names.sample)]
         }
         
-
         # 5g) exogenous `fixed.x' covariates
         if(!conditional.x && length(ov.names.x) > 0) {
             exo.idx <- which(lavpartable$group == g          &
@@ -290,8 +289,8 @@ lav_start <- function(start.method    = "default",
                 # variance/covariances (fixed.x = FALSE);
                 # this somehow avoids false convergence in saturated models
                 nobs <- lavsamplestats@nobs[[g]]
-                start[exo.idx & lavpartable$free > 0L] <- 
-                start[exo.idx & lavpartable$free > 0L] * (nobs-1)/nobs
+                this.idx <- which( seq_len(length(lavpartable$free)) %in% exo.idx & lavpartable$free > 0L )
+                start[this.idx] <- start[this.idx] * (nobs-1)/nobs
             } else {
                 start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx,col.idx)]
             }
