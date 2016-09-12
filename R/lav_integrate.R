@@ -7,11 +7,11 @@
 # return list: x = nodes, w = quadrature weights
 #
 
-# This is the Wilf 1962 method: nodes are given by the eigenvalues
-# of the Jacobi matrix; weights are given by the squares of the
-# first components of the (normalized) eigenvectors
+# As noted by Wilf (1962, chapter 2, ex 9), the nodes are given by 
+# the eigenvalues of the Jacobi matrix; weights are given by the squares of the
+# first components of the (normalized) eigenvectors, multiplied by sqrt(pi)
 #
-# (This is NOT Golub & Welsch, 1968: they use a specific method
+# (This is NOT Golub & Welsch, 1968: as they used a specific method
 # tailored for tridiagonal symmetric matrices)
 #
 # TODO: look at https://github.com/ajt60gaibb/FastGaussQuadrature.jl/blob/master/src/gausshermite.jl
@@ -34,21 +34,29 @@
 # note that we need N=200 to get decent accuracy here, because we have
 # a rather spiky function
 
-lav_integration_gauss_hermite <- function(n = 100L, revert = FALSE) {
+lav_integration_gauss_hermite <- function(n = 21L, revert = FALSE) {
 
-    # construct symmetric, tridiagonal Jacobi matrix
-    # diagonal = 0, -1/+1 diagonal is sqrt(1:(n-1)/2)
-    u <-  sqrt(1:(n-1)/2) # upper diagonal of J
-    Jn <- matrix(0, n, n); didx <- lav_matrix_diag_idx(n)
-    Jn[(didx+1)[-n]] <- u
-    #Jn[(didx-1)[-1]] <- u # only lower matrix is used anyway
+    # force n to be an integer
+    n <- as.integer(n); stopifnot(n > 0L)
 
-    # eigen decomposition
-    # FIXME: use specialized function for tridiagonal symmetrix matrix
-    ev <- eigen(Jn, symmetric = TRUE)
-    x <- ev$values
-    tmp <- ev$vector[1L,]
-    w <- sqrt(pi)*tmp*tmp
+    if(n == 1L) {
+        x <- 0
+        w <- sqrt(pi)
+    } else {
+        # construct symmetric, tridiagonal Jacobi matrix
+        # diagonal = 0, -1/+1 diagonal is sqrt(1:(n-1)/2)
+        u <-  sqrt(seq.int(n-1L)/2) # upper diagonal of J
+        Jn <- matrix(0, n, n); didx <- lav_matrix_diag_idx(n)
+        Jn[(didx+1)[-n]] <- u
+        #Jn[(didx-1)[-1]] <- u # only lower matrix is used anyway
+
+        # eigen decomposition
+        # FIXME: use specialized function for tridiagonal symmetrix matrix
+        ev <- eigen(Jn, symmetric = TRUE)
+        x <- ev$values
+        tmp <- ev$vector[1L,]
+        w <- sqrt(pi)*tmp*tmp
+    }
 
     # revert? (minus to plus)
     if(revert) {
@@ -66,8 +74,9 @@ lav_integration_gauss_hermite <- function(n = 100L, revert = FALSE) {
 # using gauss_hermite_dnorm, define f <- function(x) dnorm(x,0,0.2)
 # XW <- lav_integration_gauss_hermite_dnorm(n=100, mean=0.3, sd=0.4)
 # sum( f(XW$x) * XW$w ) = 0.712326
-lav_integration_gauss_hermite_dnorm <- function(n = 100L, revert = FALSE, 
-                                                mean = 0, sd = 1, ndim = 1L,
+lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1, 
+                                                ndim = 1L,
+                                                revert = FALSE,
                                                 prune = 0) {
     XW <- lav_integration_gauss_hermite(n = n, revert = revert)
 
