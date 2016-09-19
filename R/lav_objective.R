@@ -497,19 +497,21 @@ estimator.FML <- function(Sigma.hat = NULL,    # model-based var/cov/cor
     fx
 }
 
-estimator.MML <- function(lavmodel    = NULL,
-                          THETA       = NULL,
-                          TH          = NULL,
-                          GLIST       = NULL,
-                          group       = 1L,
-                          lavdata     = NULL,
-                          sample.mean = NULL,
-                          lavcache    = NULL) {
+estimator.MML <- function(lavmodel      = NULL,
+                          THETA         = NULL,
+                          TH            = NULL,
+                          GLIST         = NULL,
+                          group         = 1L,
+                          lavdata       = NULL,
+                          sample.mean   = NULL,
+                          sample.mean.x = NULL,
+                          lavcache      = NULL) {
 
     # compute case-wise likelihoods 
     lik <- lav_model_lik_mml(lavmodel = lavmodel, THETA = THETA, TH = TH,
                GLIST = GLIST, group = group, lavdata = lavdata, 
-               sample.mean = sample.mean, lavcache = lavcache)
+               sample.mean = sample.mean, sample.mean.x = sample.mean.x,
+               lavcache = lavcache)
 
     # log + sum over observations
     logl <- sum( log(lik) )

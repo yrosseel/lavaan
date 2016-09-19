@@ -587,7 +587,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
             stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
         }
     } else if(opt$fixed.x == "default") {
-        if(opt$estimator == "ML" && (opt$mimic == "Mplus" ||
+        if(opt$estimator %in% c("MML", "ML") && (opt$mimic == "Mplus" ||
                                      opt$mimic == "lavaan")) {
             opt$fixed.x <- TRUE
         } else if(opt$conditional.x) {

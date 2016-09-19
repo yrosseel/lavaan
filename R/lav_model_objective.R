@@ -190,14 +190,15 @@ lav_model_objective <- function(lavmodel       = NULL,
 
         } else if(estimator == "MML") { 
             # marginal maximum likelihood
-            group.fx <- estimator.MML(lavmodel    = lavmodel,
-                                      GLIST       = GLIST,
-                                      THETA       = THETA[[g]],
-                                      TH          = TH[[g]],
-                                      group       = g,
-                                      lavdata     = lavdata,
-                                      sample.mean = lavsamplestats@mean[[g]],
-                                      lavcache    = lavcache)
+            group.fx <- estimator.MML(lavmodel= lavmodel,
+                                  GLIST       = GLIST,
+                                  THETA       = THETA[[g]],
+                                  TH          = TH[[g]],
+                                  group       = g,
+                                  lavdata     = lavdata,
+                                  sample.mean = lavsamplestats@mean[[g]],
+                                  sample.mean.x = lavsamplestats@mean.x[[g]],
+                                  lavcache    = lavcache)
         } else if(estimator == "REML") {
             # restricted/residual maximum likelihood
             group.fx <- estimator.REML(Sigma.hat = Sigma.hat[[g]],

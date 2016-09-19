@@ -5,6 +5,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                                    group       = 1L,
                                    lavdata     = NULL,
                                    sample.mean = NULL,
+                                   sample.mean.x = NULL,
                                    lavcache    = NULL) {
 
     if(lavmodel@link == "logit") 
@@ -35,7 +36,8 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     nfac <- ncol(GH$x)
 
     # compute VETAx (latent lv only)
-    VETAx <- computeVETAx.LISREL(MLIST = MLIST, lv.dummy.idx = lv.dummy.idx)
+    #VETAx <- computeVETAx.LISREL(MLIST = MLIST, lv.dummy.idx = lv.dummy.idx)
+    VETAx <- computeVETAx.LISREL(MLIST = MLIST)
     # check for negative values?
     if(any(diag(VETAx) < 0)) {
         warning("lavaan WARNING: --- VETAx contains negative values")
@@ -72,9 +74,9 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                         ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
                         ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
                         ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
-            if(length(lv.dummy.idx) > 0L) {
-                EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
-            }
+            #if(length(lv.dummy.idx) > 0L) {
+            #    EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
+            #}
         }
     }
 
@@ -174,12 +176,22 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         }
 
         # again, compute yhat for this node (eta)
-        yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
+        if(lavmodel@conditional.x) {
+            yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
+                        ETA = eta, sample.mean = sample.mean,
+                        ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                        ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                        ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                        ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+        } else {
+            yhat <- computeEYetax3.LISREL(MLIST = MLIST,
                     ETA = eta, sample.mean = sample.mean,
-                    ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
-                    ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
-                    ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
-                    ov.x.dummy.lv.idx = ov.x.dummy.lv.idx)
+                    mean.x = sample.mean.x,
+                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+        }
 
         # compute fy.var, for this node (eta): P(Y_i =  y_i | eta_i, x_i)
         log.fy.var <- lav_predict_fy_internal(X = X, yhat = yhat,

@@ -406,6 +406,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                     group          = g,
                                     lavdata        = lavdata,
                                     sample.mean    = lavsamplestats@mean[[g]],
+                                    sample.mean.x  = lavsamplestats@mean.x[[g]],
                                     lavcache       = lavcache)
             }
 

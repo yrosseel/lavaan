@@ -65,9 +65,9 @@ lav_model_fit <- function(lavpartable = NULL,
         iterations = iterations,
         converged  = converged,
         control    = control,
-        Sigma.hat  = implied$cov,
-        Mu.hat     = implied$mean,
-        TH         = implied$th,
+        Sigma.hat  = if(lavmodel@conditional.x) implied$res.cov else implied$cov,
+        Mu.hat     = if(lavmodel@conditional.x) implied$res.int else implied$mean,
+        TH         = if(lavmodel@conditional.x) implied$res.th  else implied$th,
         test       = test
        )
 }

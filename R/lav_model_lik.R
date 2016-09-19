@@ -12,14 +12,17 @@ lav_model_lik_ml <- function(lavmodel       = NULL,
 
 
 # marginal ML
-lav_model_lik_mml <- function(lavmodel    = NULL,
-                              THETA       = NULL,
-                              TH          = NULL,
-                              GLIST       = NULL,
-                              group       = 1L,
-                              lavdata     = NULL,
-                              sample.mean = NULL,
-                              lavcache    = NULL) {
+lav_model_lik_mml <- function(lavmodel      = NULL,
+                              THETA         = NULL,
+                              TH            = NULL,
+                              GLIST         = NULL,
+                              group         = 1L,
+                              lavdata       = NULL,
+                              sample.mean   = NULL,
+                              sample.mean.x = NULL,
+                              lavcache      = NULL) {
+
+    conditional.x <- lavmodel@conditional.x
 
     # data for this group
     X <- lavdata@X[[group]]; nobs <- nrow(X); nvar <- ncol(X)
@@ -38,6 +41,7 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
                       lavmodel@ov.x.dummy.lv.idx[[group]])
     VETAx <- computeVETAx.LISREL(MLIST = MLIST,
                                  lv.dummy.idx = lv.dummy.idx)
+    #VETAx <- computeVETAx.LISREL(MLIST = MLIST)
     # check for negative values?
     if(any(diag(VETAx) < 0)) {
         warning("lavaan WARNING: --- VETAx contains negative values")
@@ -67,15 +71,25 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
             return(0)
         }
         if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
-            EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo, N = nobs,
+            if(conditional.x) {
+                EETAx <- computeEETAx.LISREL(MLIST = MLIST, eXo = eXo, N = nobs,
                         sample.mean = sample.mean,
                         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                         ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
                         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
                         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
-            if(length(lv.dummy.idx) > 0L) {
-                EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
+            } else {
+                EETA <- computeEETA.LISREL(MLIST = MLIST, 
+                        mean.x = sample.mean.x,
+                        sample.mean = sample.mean,
+                        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
             }
+            #if(length(lv.dummy.idx) > 0L) {
+            #    EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
+            #}
         }
     }
 
@@ -84,15 +98,26 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
     for(q in 1:nGH) {
 
         # current value(s) for ETA
-        eta <- GH$x[q,,drop=FALSE]
-
+        #eta <- matrix(0, nrow = 1, ncol = ncol(MLIST$lambda))
+   
+        # non-dummy elements -> quadrature points
+        #eta[1L, -lv.dummy.idx] <- GH$x[q,,drop=FALSE]
+        XQ <- GH$x[q,,drop=FALSE]
+     
         # rescale/unwhiten
         if(CHOLESKY) {
             # un-orthogonalize
-            eta <- eta %*% chol.VETA
+            XQ <- XQ %*% chol.VETA
         } else {
             # no unit scale? (un-standardize)
-            eta <- sweep(eta, MARGIN=2, STATS=ETA.sd, FUN="*")
+            XQ <- sweep(XQ, MARGIN=2, STATS=ETA.sd, FUN="*")
+        }
+
+        eta <- matrix(0, nrow = 1, ncol = ncol(MLIST$lambda))
+        if(length(lv.dummy.idx) > 0L) {
+            eta[, -lv.dummy.idx] <- XQ
+        } else {
+            eta <- XQ
         }
 
         # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
@@ -100,17 +125,31 @@ lav_model_lik_mml <- function(lavmodel    = NULL,
         # - direct effect of BETA is already in VETAx, and hence chol.VETA
         # - need to add alpha, and GAMMA eta_i
         if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
-            eta <- sweep(EETAx, MARGIN=2, STATS=eta, FUN="+")
+            if(conditional.x) {
+                eta <- sweep(EETAx, MARGIN=2, STATS=eta, FUN="+")
+            } else {
+                eta <- eta + EETA
+            }
         }
 
         # compute yhat for this node (eta)
-        yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
+        if(lavmodel@conditional.x) {
+            yhat <- computeEYetax.LISREL(MLIST = MLIST, eXo = eXo,
                     ETA = eta, sample.mean = sample.mean,
                     ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
                     ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
                     ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
                     ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
-
+        } else {
+            yhat <- computeEYetax3.LISREL(MLIST = MLIST,
+                    ETA = eta, sample.mean = sample.mean,
+                    mean.x = sample.mean.x,
+                    ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+                    ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+                    ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+                    ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
+        }
+ 
         # compute fy.var, for this node (eta): P(Y_i =  y_i | eta_i, x_i)
         log.fy.var <- lav_predict_fy_internal(X = X, yhat = yhat,
                           TH = TH, THETA = THETA,
