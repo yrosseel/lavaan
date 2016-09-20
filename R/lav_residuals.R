@@ -1,3 +1,4 @@
+
 setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {
 

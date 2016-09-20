@@ -1235,7 +1235,7 @@ function(object, type = "moments", labels=TRUE) {
         return( lavPredict(object, type = "ov", label = labels) )
     }
 
-    lavInspect(object, what = "implied", 
+    lav_object_inspect_implied(object,
                add.labels = labels, add.class = TRUE,
                drop.list.single.group = TRUE)
 })

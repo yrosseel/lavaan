@@ -198,6 +198,11 @@ lavInspect <- function(lavobject,
         lav_object_inspect_implied(lavobject,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "resid" || what == "res" || what == "residual" ||
+              what == "residuals") {
+        lav_object_inspect_residuals(lavobject, h1 = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "cov.lv" || what == "veta") {
         lav_object_inspect_cov_lv(lavobject,
             correlation.metric = FALSE,
@@ -1052,6 +1057,117 @@ lav_object_inspect_implied <- function(lavobject,
     }
 
     if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(lavobject@Data@group.label) > 0L) {
+            names(OUT) <- unlist(lavobject@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
+
+# residuals: _inspect_sampstat - _inspect_implied
+lav_object_inspect_residuals <- function(lavobject, h1 = TRUE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+   # unstandardized residuals
+    obsList <- lav_object_inspect_sampstat(lavobject, h1 = h1,
+                                           add.labels = add.labels,
+                                           add.class  = FALSE,
+                                           drop.list.single.group = FALSE)
+    estList <- lav_object_inspect_implied(lavobject,
+                                          add.labels = add.labels,
+                                          add.class  = FALSE,
+                                          drop.list.single.group = FALSE)
+    # multiple groups
+    ngroups <- length(obsList)
+
+    resList <- vector("list", length = ngroups)
+    for(g in 1:ngroups) {
+        if(lavobject@Model@conditional.x) {
+            if(!is.null(estList[[g]]$res.cov)) {
+                resList[[g]]$res.cov <- ( obsList[[g]]$res.cov -
+                                          estList[[g]]$res.cov )
+                if(add.class) {
+                    class(resList[[g]]$res.cov) <- 
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[g]]$res.int)) {
+                 resList[[g]]$res.int <- ( obsList[[g]]$res.int -
+                                           estList[[g]]$res.int )
+                if(add.class) {
+                    class(resList[[g]]$res.int) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+            if(!is.null(estList[[g]]$res.th)) {
+                resList[[g]]$res.th  <- ( obsList[[g]]$res.th  -
+                                          estList[[g]]$res.th )
+                if(add.class) {
+                    class(resList[[g]]$res.th) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+            if(!is.null(estList[[g]]$res.slopes)) {
+                resList[[g]]$res.slopes <- ( obsList[[g]]$res.slopes -
+                                             estList[[g]]$res.slopes )
+                if(add.class) {
+                    class(resList[[g]]$res.slopes) <-
+                        c("lavaan.matrix", "matrix")
+                }
+            }
+            if(!is.null(estList[[g]]$cov.x)) {
+                resList[[g]]$cov.x  <- ( obsList[[g]]$cov.x  -
+                                         estList[[g]]$cov.x )
+                if(add.class) {
+                    class(resList[[g]]$cov.x) <- 
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+
+        # unconditional
+        } else {
+            if(!is.null(estList[[g]]$cov)) {
+                resList[[g]]$cov <- ( obsList[[g]]$cov -
+                                      estList[[g]]$cov )
+                if(add.class) {
+                    class(resList[[g]]$cov) <- 
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[g]]$mean)) {
+                 resList[[g]]$mean <- ( obsList[[g]]$mean -
+                                        estList[[g]]$mean )
+                 if(add.class) {
+                    class(resList[[g]]$mean) <-
+                        c("lavaan.vector", "numeric")
+                 }
+            }
+            if(!is.null(estList[[g]]$th)) {
+                resList[[g]]$th  <- ( obsList[[g]]$th  -
+                                      estList[[g]]$th )
+                if(add.class) {
+                    class(resList[[g]]$th) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+        }
+
+        # free group.w
+        if(!is.null(estList[[g]]$gw)) {
+            resList[[g]]$gw <- ( obsList[[g]]$gw  - estList[[g]]$gw )
+            if(add.class) {
+                class(resList[[g]]$gw) <-
+                    c("lavaan.vector", "numeric")
+            }
+        }
+    }
+
+    OUT <- resList
+    if(ngroups == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
         if(length(lavobject@Data@group.label) > 0L) {
