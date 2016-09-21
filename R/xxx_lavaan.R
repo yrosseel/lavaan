@@ -579,10 +579,29 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$estimator == "PML") {
             TH <- computeTH(lavmodel)
             BI <- lav_tables_pairwise_freq_cell(lavdata)
+
+            # handle option missing = "available.cases"
             if(lavoptions$missing == "available.cases") {
                 UNI <- lav_tables_univariate_freq_cell(lavdata)
             }
+
+            # checks for missing = "double.robust"
+            if (lavoptions$missing == "doubly.robust") {
+                # check whether the probabilities pairwiseProbGivObs and
+                # univariateProbGivObs are given by the user
+                if(is.null(control$pairwiseProbGivObs)) {
+                    stop("lavaan ERROR: could not find `pairwiseProbGivObs' in control() list")
+                }
+                if(is.null(control$univariateProbGivObs)) {
+                    stop("lavaan ERROR: could not find `univariateProbGivObs' in control() list")
+                }
+                if(is.null(control$FitFunctionConst)) {
+                    stop("lavaan ERROR: could not find `FitFunctionConst' in control() list")
+                }
+            }
+
             for(g in 1:lavdata@ngroups) {
+
                 if(is.null(BI$group) || max(BI$group) == 1L) {
                     bifreq <- BI$obs.freq
                     binobs  <- BI$nobs
@@ -622,8 +641,73 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                         function(x){
                             tapply(uniweights.casewise, as.factor(x), sum,
                                    na.rm=TRUE) } ))
-                }
-            }
+                } # "available.cases"
+
+                # doubly.robust"
+                if (lavoptions$missing == "doubly.robust") {
+
+                    # add fit constant
+                    lavcache[[g]]$FitFunctionConst <- control$FitFunctionConst
+
+                    # add the provided by the user probabilities 
+                    # pairwiseProbGivObs and univariateProbGivObs in Cache
+                    lavcache[[g]]$pairwiseProbGivObs <- 
+                        control$pairwiseProbGivObs[[g]]
+                    lavcache[[g]]$univariateProbGivObs <- 
+                        control$univariateProbGivObs[[g]]
+                    # compute different indices vectors that will help to do 
+                    # calculations
+                    ind.vec <- as.data.frame(LONG[1:5] )
+                    ind.vec <- 
+                        ind.vec[ ((ind.vec$index.thres.var1.of.pair!=0) &
+                                  (ind.vec$index.thres.var2.of.pair!=0)) , ]
+                    idx.cat.y1 <- ind.vec$index.thres.var1.of.pair
+                    idx.cat.y2 <- ind.vec$index.thres.var2.of.pair
+                    idx.pairs  <- ind.vec$index.pairs.extended
+                    lavcache[[g]]$idx.pairs <- idx.pairs
+                 
+                    idx.cat.y1.split <- split(idx.cat.y1, idx.pairs)
+                    idx.cat.y2.split <- split(idx.cat.y2, idx.pairs)
+                    lavcache[[g]]$idx.cat.y1.split <- idx.cat.y1.split
+                    lavcache[[g]]$idx.cat.y2.split <- idx.cat.y2.split
+                 
+                    # generate the variables, categories indices vector which 
+                    # keep track to which variables and categories the 
+                    # elements of vector probY1Gy2 refer to
+                    nlev <- lavdata@ov$nlev
+                    nvar <- length(nlev)
+                    idx.Y1  <- c()
+                    idx.Gy2 <- c()
+                    idx.cat.Y1  <- c()
+                    idx.cat.Gy2 <- c()
+                    for(i in 1:nvar) {
+                        for(j in 1:nvar) {
+                            if(i != j) {
+                                idx.cat.Y1  <- c(idx.cat.Y1, 
+                                                 rep(1:nlev[i], times=nlev[j]))
+                                idx.cat.Gy2 <- c(idx.cat.Gy2, 
+                                                 rep(1:nlev[j], each=nlev[i]))
+                                tmp.lngth   <- nlev[i]*nlev[j]
+                                idx.Y1      <- c(idx.Y1,  rep(i, tmp.lngth) )
+                                idx.Gy2     <- c(idx.Gy2, rep(j, tmp.lngth) )
+                            }
+                        }
+                    }
+                    lavcache[[g]]$idx.Y1      <- idx.Y1
+                    lavcache[[g]]$idx.Gy2     <- idx.Gy2
+                    lavcache[[g]]$idx.cat.Y1  <- idx.cat.Y1
+                    lavcache[[g]]$idx.cat.Gy2 <- idx.cat.Gy2
+                 
+                    # the vector below keeps track of the variable each column 
+                    # of the matrix univariateProbGivObs refers to
+                    lavcache[[g]]$id.uniPrGivObs <- 
+                        sort( c( unique(lavmodel@th.idx[[g]]) ,
+                                        lavmodel@th.idx[[g]] ) )
+                } # doubly.robust
+
+
+
+            } # g
         }
         # copy response patterns to cache -- FIXME!! (data not included 
         # in Model only functions)
