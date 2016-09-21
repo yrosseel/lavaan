@@ -1,3 +1,11 @@
+#lav_residuals_samplestats <- function(lavobject, h1 = FALSE) {
+#
+#    # unstandardized residuals
+#    obsList <- lav_object_inspect_sampstat(lavobject, h1 = h1,
+#                                           add.labels = TRUE)
+#    estList <-
+#
+#}
 
 setMethod("residuals", "lavaan",
 function(object, type="raw", labels=TRUE) {

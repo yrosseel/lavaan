@@ -1,4 +1,4 @@
-# YR 18 Dec 1015
+# YR 18 Dec 2015
 # - functions to (directly) compute the inverse of 'Gamma' (the asymptotic
 #   variance matrix of the sample statistics)
 # - often used as 'WLS.V' (the weight matrix in WLS estimation)

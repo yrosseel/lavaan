@@ -200,7 +200,7 @@ lavInspect <- function(lavobject,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "resid" || what == "res" || what == "residual" ||
               what == "residuals") {
-        lav_object_inspect_residuals(lavobject, h1 = FALSE,
+        lav_object_inspect_residuals(lavobject, h1 = TRUE,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "cov.lv" || what == "veta") {
@@ -818,7 +818,10 @@ lav_object_inspect_sampstat <- function(lavobject, h1 = FALSE,
 
         # stochastic weights
         if(lavobject@Model@group.w.free) {
-            OUT[[g]]$group.w <- lavsamplestats@group.w[[g]]
+            # to be consistent with the 'implied' values, 
+            # transform so group.w is the 'log(group.freq)'
+            OUT[[g]]$group.w <- 
+                log(lavsamplestats@group.w[[g]] * lavsamplestats@ntotal)
             if(add.labels) {
                 names(OUT[[g]]$group.w) <- "w"
             }
@@ -1048,7 +1051,7 @@ lav_object_inspect_implied <- function(lavobject,
         if(lavobject@Model@group.w.free) {
             OUT[[g]]$group.w <- lavimplied$group.w[[g]]
             if(add.labels) {
-                names(OUT[[g]]$group.w) <- "w"
+                names(OUT[[g]]$group.w) <- "w" # somewhat redundant
             }
             if(add.class) {
                 class(OUT[[g]]$group.w) <- c("lavaan.vector", "numeric")
@@ -1157,10 +1160,11 @@ lav_object_inspect_residuals <- function(lavobject, h1 = TRUE,
         }
 
         # free group.w
-        if(!is.null(estList[[g]]$gw)) {
-            resList[[g]]$gw <- ( obsList[[g]]$gw  - estList[[g]]$gw )
+        if(!is.null(estList[[g]]$group.w)) {
+            resList[[g]]$group.w <- ( obsList[[g]]$group.w  - 
+                                      estList[[g]]$group.w )
             if(add.class) {
-                class(resList[[g]]$gw) <-
+                class(resList[[g]]$group.w) <-
                     c("lavaan.vector", "numeric")
             }
         }

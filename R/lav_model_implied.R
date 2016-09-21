@@ -25,7 +25,8 @@ lav_model_implied <- function(lavmodel = NULL) {
  
     if(lavmodel@group.w.free) {
         w.idx <- which(names(lavmodel@GLIST) == "gw")
-        GW <- lavmodel@GLIST[ w.idx ]
+        GW <- unname(lavmodel@GLIST[ w.idx ])
+        GW <- lapply(GW, as.numeric)
     } else {
         GW <- vector("list", length = lavmodel@ngroups)
     }
@@ -33,9 +34,9 @@ lav_model_implied <- function(lavmodel = NULL) {
     # FIXME: should we use 'res.cov', 'res.int', 'res.th' if conditionl.x??
     # Yes, since 0.5-22
     if(lavmodel@conditional.x) {
-        implied <- list(res.cov = Sigma.hat, res.int = Mu.hat, res.slopes = SLOPES, res.th = TH, GW = GW)
+        implied <- list(res.cov = Sigma.hat, res.int = Mu.hat, res.slopes = SLOPES, res.th = TH, group.w = GW)
     } else {
-        implied <- list(cov = Sigma.hat, mean = Mu.hat, slopes = SLOPES, th = TH, GW = GW)
+        implied <- list(cov = Sigma.hat, mean = Mu.hat, slopes = SLOPES, th = TH, group.w = GW)
     }
 
     implied
