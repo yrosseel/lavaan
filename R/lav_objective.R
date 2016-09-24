@@ -362,6 +362,9 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
 
           #For the function compute_uniCondProb_based_on_bivProb see the .r file
           #with the same name.
+          compute_uniCondProb_based_on_bivProb <- function() {
+              stop("not ready yet!")
+          }
           ModProbY1Gy2 <- compute_uniCondProb_based_on_bivProb(
                                   bivProb = pairwisePI_orig,
                                      nvar = nvar,
