@@ -80,6 +80,7 @@ lavTablesFitCf <- function(object) {
     lavpta   <- object@pta
     lavmodel <- object@Model
     lavcache <- object@Cache
+    implied  <- object@implied
 
     CF.group <- rep(as.numeric(NA), lavdata@ngroups)
     DF.group <- rep(as.numeric(NA), lavdata@ngroups)
@@ -97,8 +98,8 @@ lavTablesFitCf <- function(object) {
     ov.idx <- which(ov.ord %in% lavdata@ov$name)
     ov.nlev <- lavdata@ov$nlev[ ov.idx ]
 
-    Sigma.hat <- object@implied$cov
-    TH        <- object@implied$th
+    Sigma.hat <- if(lavmodel@conditional.x) implied$res.cov else implied$cov
+    TH        <- if(lavmodel@conditional.x) implied$res.th  else implied$th
     DF        <- prod(ov.nlev) - object@optim$npar - 1L
 
     for(g in seq_len(lavdata@ngroups)) {

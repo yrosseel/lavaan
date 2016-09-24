@@ -671,8 +671,13 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 
             # model based
             th.h0 <- unlist(lapply(1:lavdata@ngroups, function(x) {
-                         TH <- lavobject@implied$th[[x]][ 
-                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                         if(lavobject@Model@conditional.x) {
+                             TH <- lavobject@implied$res.th[[x]][
+                                    lavobject@SampleStats@th.idx[[x]] > 0 ]
+                         } else {
+                             TH <- lavobject@implied$th[[x]][ 
+                                    lavobject@SampleStats@th.idx[[x]] > 0 ]
+                         }
                       TH.IDX <- lavobject@SampleStats@th.idx[[x]][
                                 lavobject@SampleStats@th.idx[[x]] > 0 ]
                     unname(unlist(tapply(TH, INDEX=TH.IDX,
@@ -801,11 +806,13 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
     stopifnot(lavobject@Model@categorical)
 
     # shortcuts
+    lavmodel  <- lavobject@Model
+    implied   <- lavobject@implied
     ngroups   <- lavobject@Data@ngroups
     ov.types  <- lavobject@Data@ov$type
     th.idx    <- lavobject@Model@th.idx
-    Sigma.hat <- lavobject@implied$cov
-    TH        <- lavobject@implied$th
+    Sigma.hat <- if(lavmodel@conditional.x) implied$res.cov else implied$cov
+    TH        <- if(lavmodel@conditional.x) implied$res.th  else implied$th
 
     PI <- vector("list", length=ngroups)
     for(g in 1:ngroups) {
@@ -943,17 +950,19 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
 
     # shortcuts
     ngroups <- lavdata@ngroups
+    lavmodel <- lavobject@Model
+    implied  <- lavobject@implied
 
     # h0 or unrestricted?
     if(est == "h0") {
-        Sigma.hat <- lavobject@implied$cov
-        TH        <- lavobject@implied$th
+        Sigma.hat <- if(lavmodel@conditional.x) implied$res.cov else implied$cov
+        TH        <- if(lavmodel@conditional.x) implied$res.th  else implied$th
         TH.IDX    <- lavobject@SampleStats@th.idx
     } else {
         if(is.null(lavobject)) {
             fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
-            Sigma.hat  <- fit.un@implied$cov
-            TH         <- fit.un@implied$th
+            Sigma.hat  <- if(fit.un@Model@conditional.x) fit.un@implied$res.cov else fit.un@implied$cov
+            TH         <- if(fit.un@Model@conditional.x) fit.un@implied$res.th  else fit.un@implied$th
             TH.IDX     <- fit.un@SampleStats@th.idx
         } else {
             if(lavobject@Model@conditional.x) {

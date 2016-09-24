@@ -1029,8 +1029,10 @@ lav_fit_measures <- function(object, fit.measures="all",
             nvar <- ncol(S)
 
             # estimated
-            Sigma.hat <- object@implied$cov[[g]]
-            Mu.hat    <- object@implied$mean[[g]]
+            implied <- object@implied
+            lavmodel <- object@Model
+            Sigma.hat <- if(lavmodel@conditional.x) implied$res.cov[[g]] else implied$cov[[g]]
+            Mu.hat    <- if(lavmodel@conditional.x) implied$res.int[[g]] else implied$mean[[g]]
 
             # unstandardized residuals
             RR <- (S - Sigma.hat)

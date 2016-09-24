@@ -1098,8 +1098,9 @@ parameterEstimates <- parameterestimates <- function(object,
     # fractional missing information (if estimator="fiml")
     if(fmi) {
         SE.orig <- LIST$se
-        COV <- object@implied$cov
-        MEAN <- object@implied$mean
+        lavmodel <- object@Model; implied <- object@implied
+        COV <- if(lavmodel@conditional.x) implied$res.cov else implied$cov
+        MEAN <- if(lavmodel@conditional.x) implied$res.int else implied$mean
 
         # provide rownames
         for(g in 1:object@Data@ngroups)

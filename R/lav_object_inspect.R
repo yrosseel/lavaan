@@ -1300,7 +1300,12 @@ lav_object_inspect_cov_ov <- function(lavobject, correlation.metric = FALSE,
     G <- lavobject@Data@ngroups
 
     # get model-implied covariance matrix observed
-    OUT <- lavobject@implied$cov
+
+    if(lavobject@Model@conditional.x) {
+        OUT <- lavobject@implied$res.cov
+    } else {
+        OUT <- lavobject@implied$cov
+    }
 
     # cor + labels + class
     for(g in 1:G) {
@@ -1336,7 +1341,13 @@ lav_object_inspect_mean_ov <- function(lavobject,
     G <- lavobject@Data@ngroups
 
     # compute lv means
-    OUT <- lavobject@implied$mean
+    if(lavobject@Model@conditional.x) {
+        OUT <- lavobject@implied$res.int
+    } else {
+        OUT <- lavobject@implied$mean
+    }
+   
+    # make numeric
     OUT <- lapply(OUT, as.numeric)
 
     # labels + class
@@ -1366,7 +1377,13 @@ lav_object_inspect_th <- function(lavobject,
     G <- lavobject@Data@ngroups
 
     # thresholds
-    OUT <- lavobject@implied$th
+    if(lavobject@Model@conditional.x) {
+        OUT <- lavobject@implied$res.th
+    } else {
+        OUT <- lavobject@implied$th
+    }
+
+    # make numeric
     OUT <- lapply(OUT, as.numeric)
 
     # labels + class

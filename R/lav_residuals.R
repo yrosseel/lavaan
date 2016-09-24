@@ -143,26 +143,43 @@ function(object, type="raw", labels=TRUE) {
 
         # residuals (for this group)
         if(type == "cor.bollen") {
-            R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$cov[[g]])
-            R[[g]]$mean <- ( M/sqrt(diag(S)) -
-                object@implied$mean[[g]]/sqrt(diag(object@implied$cov[[g]])) )
+            if(object@Model@conditional.x) {
+                R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$res.cov[[g]])
+                R[[g]]$mean <- ( M/sqrt(diag(S)) - 
+                                 ( object@implied$res.int[[g]] / 
+                                   sqrt(diag(object@implied$res.cov[[g]])) ) )
+            } else {
+                R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$cov[[g]])
+                R[[g]]$mean <- ( M/sqrt(diag(S)) -
+                    object@implied$mean[[g]]/sqrt(diag(object@implied$cov[[g]])) )
+            }
         } else if(type == "cor.bentler" || type == "cor.eqs") {
             # Bentler EQS manual: divide by (sqrt of) OBSERVED variances
             delta <- 1/sqrt(diag(S))
             DELTA <- diag(delta, nrow=nvar, ncol=nvar)
-            R[[g]]$cov  <- DELTA %*% (S - object@implied$cov[[g]]) %*% DELTA
-            R[[g]]$mean <- (M - object@implied$mean[[g]])/sqrt(diag(S))
+            if(object@Model@conditional.x) {
+                R[[g]]$cov  <- DELTA %*% (S - object@implied$res.cov[[g]]) %*% DELTA
+                R[[g]]$mean <- (M - object@implied$res.int[[g]])/sqrt(diag(S))
+            } else {
+                R[[g]]$cov  <- DELTA %*% (S - object@implied$cov[[g]]) %*% DELTA
+                R[[g]]$mean <- (M - object@implied$mean[[g]])/sqrt(diag(S))
+            }
         } else {
             # covariance/raw residuals
-            R[[g]]$cov  <- S - object@implied$cov[[g]]
-            R[[g]]$mean <- M - object@implied$mean[[g]]
+            if(object@Model@conditional.x) {
+                R[[g]]$cov  <- S - object@implied$res.cov[[g]]
+                R[[g]]$mean <- M - object@implied$res.int[[g]]
+            } else {
+                R[[g]]$cov  <- S - object@implied$cov[[g]]
+                R[[g]]$mean <- M - object@implied$mean[[g]]
+            }
         }
         if(labels) {
             rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
         }
         if(object@Model@conditional.x) {
             R[[g]]$slopes <- ( object@SampleStats@res.slopes[[g]] -
-                               object@implied$slopes[[g]] )
+                               object@implied$res.slopes[[g]] )
             if(labels) {
                 rownames(R[[g]]$slopes) <- ov.names[[g]]
                 colnames(R[[g]]$slopes) <- object@Data@ov.names.x[[g]]
@@ -170,7 +187,7 @@ function(object, type="raw", labels=TRUE) {
         }
         if(object@Model@categorical) {
             if(object@Model@conditional.x) {
-                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@implied$th[[g]]
+                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@implied$res.th[[g]]
             } else {
                 R[[g]]$th <- object@SampleStats@th[[g]] - object@implied$th[[g]]
             }
