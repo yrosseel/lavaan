@@ -336,26 +336,32 @@ lav_fit_measures <- function(object, fit.measures="all",
                 }
             }
             if("cfi.robust" %in% fit.measures) {
-                # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
-                # what to do if X2 = 0 and df = 0? in this case,
-                # the scaling factor (ch) will be NA, and we get NA 
-                # (instead of 1)
-                if(X2 < .Machine$double.eps && df == 0) {
-                    ch <- 0
-                } else {
-                    ch <- TEST[[2]]$scaling.factor
-                }
-                cb <- fit.indep@test[[2]]$scaling.factor
+                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                
+                    # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
-                t1 <- max( c(X2 - (ch*df), 0) )
-                t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
-                if(is.na(t1) || is.na(t2)) {
-                    indices["cfi.robust"] <- NA
-                } else if(t1 == 0 && t2 == 0) {
-                    indices["cfi.robust"] <- 1
+                    # what to do if X2 = 0 and df = 0? in this case,
+                    # the scaling factor (ch) will be NA, and we get NA 
+                    # (instead of 1)
+                    if(X2 < .Machine$double.eps && df == 0) {
+                        ch <- 0
+                    } else {
+                        ch <- TEST[[2]]$scaling.factor
+                    }
+                    cb <- fit.indep@test[[2]]$scaling.factor
+
+                    t1 <- max( c(X2 - (ch*df), 0) )
+                    t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
+                    if(is.na(t1) || is.na(t2)) {
+                        indices["cfi.robust"] <- NA
+                    } else if(t1 == 0 && t2 == 0) {
+                        indices["cfi.robust"] <- 1
+                    } else {
+                        indices["cfi.robust"] <- 1 - t1/t2
+                    }
                 } else {
-                    indices["cfi.robust"] <- 1 - t1/t2
+                    indices["cfi.robust"] <- NA 
                 }
             }
 
@@ -385,28 +391,33 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["rni.scaled"] <- RNI
             }
             if("rni.robust" %in% fit.measures) {
-                # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
-                # what to do if X2 = 0 and df = 0? in this case,
-                # the scaling factor (ch) will be NA, and we get NA 
-                # (instead of 1)
-                if(X2 < .Machine$double.eps && df == 0) {
-                    ch <- 0
-                } else {
-                    ch <- TEST[[2]]$scaling.factor
-                }
-                cb <- fit.indep@test[[2]]$scaling.factor
+                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                    # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
-                t1 <- X2 - ch*df
-                t2 <- X2.null - cb*df.null
-                if(is.na(t1) || is.na(t2)) {
-                    RNI <- NA
-                } else if(t2 == 0) {
-                    RNI <- NA
+                    # what to do if X2 = 0 and df = 0? in this case,
+                    # the scaling factor (ch) will be NA, and we get NA 
+                    # (instead of 1)
+                    if(X2 < .Machine$double.eps && df == 0) {
+                        ch <- 0
+                    } else {
+                        ch <- TEST[[2]]$scaling.factor
+                    }
+                    cb <- fit.indep@test[[2]]$scaling.factor
+
+                    t1 <- X2 - ch*df
+                    t2 <- X2.null - cb*df.null
+                    if(is.na(t1) || is.na(t2)) {
+                        RNI <- NA
+                    } else if(t2 == 0) {
+                        RNI <- NA
+                    } else {
+                        RNI <- 1 - t1/t2
+                    }
+                    indices["rni.robust"] <- RNI
                 } else {
-                    RNI <- 1 - t1/t2
+                    indices["rni.robust"] <- NA
                 }
-                indices["rni.robust"] <- RNI
             }
 
             # TLI - Tucker-Lewis index (Tucker & Lewis, 1973)
@@ -456,26 +467,31 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             if("tli.robust" %in% fit.measures || 
                "nnfi.robust" %in% fit.measures) {
-                #  see Brosseau-Liard & Savalei MBR 2014, equation 16
 
-                # what to do if X2 = 0 and df = 0? in this case,
-                # the scaling factor (ch) will be NA, and we get NA 
-                # (instead of 1)
-                if(X2 < .Machine$double.eps && df == 0) {
-                    ch <- 0
-                } else {
-                    ch <- TEST[[2]]$scaling.factor
-                }
-                cb <- fit.indep@test[[2]]$scaling.factor
+                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                    #  see Brosseau-Liard & Savalei MBR 2014, equation 16
+
+                    # what to do if X2 = 0 and df = 0? in this case,
+                    # the scaling factor (ch) will be NA, and we get NA 
+                    # (instead of 1)
+                    if(X2 < .Machine$double.eps && df == 0) {
+                        ch <- 0
+                    } else {
+                        ch <- TEST[[2]]$scaling.factor
+                    }
+                    cb <- fit.indep@test[[2]]$scaling.factor
  
-                t1 <- (X2 - ch*df)*df.null
-                t2 <- (X2.null - cb*df.null)*df
-                if(is.na(t1) || is.na(t2)) {
-                    indices["tli.robust"] <- indices["nnfi.robust"] <- NA
-                } else if(df > 0 && t2 != 0) {
-                    indices["tli.robust"] <- indices["nnfi.robust"] <- 1 - t1/t2
+                    t1 <- (X2 - ch*df)*df.null
+                    t2 <- (X2.null - cb*df.null)*df
+                    if(is.na(t1) || is.na(t2)) {
+                        indices["tli.robust"] <- indices["nnfi.robust"] <- NA
+                    } else if(df > 0 && t2 != 0) {
+                        indices["tli.robust"] <- indices["nnfi.robust"] <- 1 - t1/t2
+                    } else {
+                        indices["tli.robust"] <- indices["nnfi.robust"] <- 1
+                    }
                 } else {
-                    indices["tli.robust"] <- indices["nnfi.robust"] <- 1
+                    indices["tli.robust"] <- indices["nnfi.robust"] <- NA
                 }
             }
             
@@ -755,7 +771,11 @@ lav_fit_measures <- function(object, fit.measures="all",
         indices["rmsea"] <- RMSEA
         if(scaled) {
             indices["rmsea.scaled"] <- RMSEA.scaled
-            indices["rmsea.robust"] <- RMSEA.robust
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                indices["rmsea.robust"] <- RMSEA.robust
+            } else {
+                indices["rmsea.robust"] <- NA
+            }
         }
     }
 
@@ -812,22 +832,26 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["rmsea.ci.lower.scaled"] <- sqrt( lambda.l/(N*df2) )
             }
 
-            # robust
-            XX2 <- X2.scaled
-            df2 <- df
-            # scaling factor
-            c.hat <- TEST[[2]]$scaling.factor
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                # robust
+                XX2 <- X2.scaled
+                df2 <- df
+                # scaling factor
+                c.hat <- TEST[[2]]$scaling.factor
 
-            lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
-                            silent=TRUE)
-            if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
-                indices["rmsea.ci.lower.robust"] <-
-                        sqrt( (c.hat*lambda.l)/(N*df2) ) * sqrt(G)
+                lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
+                                silent=TRUE)
+                if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
+                if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+                    indices["rmsea.ci.lower.robust"] <-
+                            sqrt( (c.hat*lambda.l)/(N*df2) ) * sqrt(G)
+                } else {
+                    # no multiple group correction
+                    indices["rmsea.ci.lower.robust"] <- 
+                        sqrt( (c.hat*lambda.l)/(N*df2) )
+                }
             } else {
-                # no multiple group correction
-                indices["rmsea.ci.lower.robust"] <- 
-                    sqrt( (c.hat*lambda.l)/(N*df2) )
+                indices["rmsea.ci.lower.robust"] <- NA
             }
         }
     }
@@ -887,22 +911,26 @@ lav_fit_measures <- function(object, fit.measures="all",
                     sqrt( lambda.u/(N*df2) )
             }
 
-            # robust
-            XX2 <- X2.scaled
-            df2 <- df
-            # scaling factor
-            c.hat <- TEST[[2]]$scaling.factor
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                # robust
+                XX2 <- X2.scaled
+                df2 <- df
+                # scaling factor
+                c.hat <- TEST[[2]]$scaling.factor
 
-            lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
-                            silent=TRUE)
-            if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
-                indices["rmsea.ci.upper.robust"] <- 
-                    sqrt( (c.hat*lambda.u)/(N*df2) ) * sqrt(G)
+                lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
+                                silent=TRUE)
+                if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
+                if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+                    indices["rmsea.ci.upper.robust"] <- 
+                        sqrt( (c.hat*lambda.u)/(N*df2) ) * sqrt(G)
+                } else {
+                    # no multiple group correction
+                    indices["rmsea.ci.upper.robust"] <-
+                        sqrt( (c.hat*lambda.u)/(N*df2) )
+                }
             } else {
-                # no multiple group correction
-                indices["rmsea.ci.upper.robust"] <-
-                    sqrt( (c.hat*lambda.u)/(N*df2) )
+                indices["rmsea.ci.upper.robust"] <- NA
             }
         }
     }    
@@ -947,23 +975,28 @@ lav_fit_measures <- function(object, fit.measures="all",
                     1 - pchisq(XX2, df=df2, ncp=(N*df2*0.05^2))
             }
 
-            # robust
-            XX2 <- X2.scaled
-            df2 <- df
-            # scaling factor
-            c.hat <- TEST[[2]]$scaling.factor
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                # robust
+                XX2 <- X2.scaled
+                df2 <- df
+                # scaling factor
+                c.hat <- TEST[[2]]$scaling.factor
 
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
-                ncp <- N*(df2/c.hat)*0.05^2/G
-                indices["rmsea.pvalue.robust"] <-
-                    1 - pchisq(XX2, df=df2, ncp=ncp)
+                #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+                #    ncp <- N*(df2/c.hat)*0.05^2/G
+                #    indices["rmsea.pvalue.robust"] <-
+                #        1 - pchisq(XX2, df=df2, ncp=ncp)
+                #} else {
+                #    indices["rmsea.pvalue.robust"] <-
+                #        1 - pchisq(XX2, df=df2, ncp=(N*(df2/c.hat)*0.05^2))
+                #}
+                indices["rmsea.pvalue.robust"] <- NA
             } else {
-                indices["rmsea.pvalue.robust"] <-
-                    1 - pchisq(XX2, df=df2, ncp=(N*(df2/c.hat)*0.05^2))
+                indices["rmsea.pvalue.robust"] <- NA
             }
         } else {
-            indices["rmsea.pvalue.scaled"] <- 
-            indices["rmsea.pvalue.robust"] <- NA # used to be 1 in < 0.5-21
+                indices["rmsea.pvalue.scaled"] <- 
+                indices["rmsea.pvalue.robust"] <- NA # used to be 1 in < 0.5-21
         }
     }
 
@@ -1358,15 +1391,29 @@ print.fit.measures <- function(x) {
         if("cfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
             t1.txt <- sprintf("  %10.3f", x["cfi"])
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
 
         if("tli" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI)")
             t1.txt <- sprintf("  %10.3f", x["tli"])
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
+            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.robust"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+
+        if("cfi.robust" %in% names.x) {
+            t0.txt <- sprintf("\n  %-40s", "Robust Comparative Fit Index (CFI)")
+            t1.txt <- sprintf("  %10s", "")
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+
+        if("tli.robust" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "Robust Tucker-Lewis Index (TLI)")
+            t1.txt <- sprintf("  %10s", "")
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.robust"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
@@ -1483,13 +1530,42 @@ print.fit.measures <- function(x) {
        t0.txt <- sprintf("  %-40s", "RMSEA")
        t1.txt <- sprintf("  %10.3f", x["rmsea"])
        t2.txt <- ifelse(scaled,
-                 #sprintf("  %10.3f", x["rmsea.scaled"]), "")
-                 sprintf("  %10.3f", x["rmsea.robust"]), "")
+                 sprintf("  %10.3f", x["rmsea.scaled"]), "")
+                 #sprintf("  %10.3f", x["rmsea.robust"]), "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
        if("rmsea.ci.lower" %in% names.x) {
            t0.txt <- sprintf("  %-38s", "90 Percent Confidence Interval")
            t1.txt <- sprintf("  %5.3f", x["rmsea.ci.lower"])
            t2.txt <- sprintf("  %5.3f", x["rmsea.ci.upper"])
+           t3.txt <- ifelse(scaled,
+                     sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.scaled"],
+                                               x["rmsea.ci.upper.scaled"]), "")
+                     #sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.robust"],
+                     #                          x["rmsea.ci.upper.robust"]), "")
+           cat(t0.txt, t1.txt, t2.txt, t3.txt, "\n", sep="")
+       }
+       if("rmsea.pvalue" %in% names.x) {
+           t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
+           t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
+           t2.txt <- ifelse(scaled,
+                 sprintf("  %10.3f", x["rmsea.pvalue.scaled"]), "")
+                 #sprintf("  %10.3f", x["rmsea.pvalue.robust"]), "")
+           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       }
+
+       # robust
+       if("rmsea.robust" %in% names.x) {
+           t0.txt <- sprintf("\n  %-40s", "Robust RMSEA")
+           t1.txt <- sprintf("  %10s", "")
+           t2.txt <- ifelse(scaled,
+                     #sprintf("  %10.3f", x["rmsea.scaled"]), "")
+                     sprintf("  %10.3f", x["rmsea.robust"]), "")
+           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       }
+       if("rmsea.ci.lower.robust" %in% names.x) {
+           t0.txt <- sprintf("  %-38s", "90 Percent Confidence Interval")
+           t1.txt <- sprintf("  %5.3s", "")
+           t2.txt <- sprintf("  %5.3s", "")
            t3.txt <- ifelse(scaled,
                      #sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.scaled"],
                      #                          x["rmsea.ci.upper.scaled"]), "")
@@ -1497,14 +1573,14 @@ print.fit.measures <- function(x) {
                                                x["rmsea.ci.upper.robust"]), "")
            cat(t0.txt, t1.txt, t2.txt, t3.txt, "\n", sep="")
        }
-       if("rmsea.pvalue" %in% names.x) {
-           t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
-           t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
-           t2.txt <- ifelse(scaled,
-                 #sprintf("  %10.3f", x["rmsea.pvalue.scaled"]), "")
-                 sprintf("  %10.3f", x["rmsea.pvalue.robust"]), "")
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       }
+       #if("rmsea.pvalue.robust" %in% names.x) {
+       #    t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
+       #    t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
+       #    t2.txt <- ifelse(scaled,
+       #          #sprintf("  %10.3f", x["rmsea.pvalue.scaled"]), "")
+       #          sprintf("  %10.3f", x["rmsea.pvalue.robust"]), "")
+       #    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       #}
    }
 
     # SRMR
