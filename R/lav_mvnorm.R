@@ -13,6 +13,49 @@
 # YR 07 Feb 2016: first version
 # YR 24 Mar 2016: added firstorder information, hessian logl
 
+# 0. densities 
+lav_mvnorm_dmvnorm <- function(Y             = NULL,
+                               Mu            = NULL,
+                               Sigma         = NULL,
+                               Sigma.inv     = NULL,
+                               Sinv.method   = "eigen",
+                               log           = TRUE) {
+
+    if(is.matrix(Y)) {
+        out <- lav_mvnorm_loglik_data(Y = Y, Mu = Mu, Sigma = Sigma,
+                                      casewise = TRUE,
+                                      Sinv.method = Sinv.method)
+    } else {
+        # just one
+        N <- 1; P <- length(Y)
+        LOG.2PI <- log(2 * pi)
+
+        if(is.null(Sigma.inv)) {
+            Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
+                                                      Sinv.method = Sinv.method)
+            logdet <- attr(Sigma.inv, "logdet")
+        } else {
+            logdet <- attr(Sigma.inv, "logdet")
+            if(is.null(logdet)) {
+                # compute - ln|Sigma.inv|
+                ev <- eigen(Sigma.inv, symmetric = TRUE, only.values = TRUE)
+                logdet <- -1 * sum(log(ev$values))
+            }
+        }
+
+        # mahalanobis distance
+        Yc <- Y - Mu
+        DIST <- sum(Yc %*% Sigma.inv * Yc)
+        out <- -(P * LOG.2PI + logdet + DIST)/2
+    }
+
+    if(!log) {
+        out <- exp(out)
+    }
+
+    out
+}
+
 # 1. likelihood
 
 # 1a: input is raw data
@@ -98,6 +141,29 @@ lav_mvnorm_loglik_samplestats <- function(sample.mean  = NULL,
 
     loglik
 }
+
+# 1c special case: Mu = 0, Sigma = I
+lav_mvnorm_loglik_data_z <- function(Y             = NULL,
+                                     casewise      = FALSE) {
+    P <- NCOL(Y); N <- NROW(Y); LOG.2PI <- log(2 * pi)
+   
+    if(casewise) {
+        DIST <- rowSums(Y * Y)
+        loglik <- -(P * LOG.2PI + DIST)/2
+    } else {
+        sample.mean <- colMeans(Y)
+        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+
+        DIST1 <- sum(diag(sample.cov))
+        DIST2 <- sum(sample.mean * sample.mean)
+
+        loglik <- -N/2 * (P * LOG.2PI + DIST1 + DIST2)
+    }
+
+    loglik
+}
+
+
 
 
 

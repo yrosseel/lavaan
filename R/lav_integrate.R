@@ -97,7 +97,7 @@ lav_integration_gauss_hermite <- function(n = 21L, revert = FALSE) {
 lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1, 
                                                 ndim = 1L,
                                                 revert = FALSE,
-                                                prune = 0) {
+                                                prune = FALSE) {
     XW <- lav_integration_gauss_hermite(n = n, revert = revert)
 
     # scale/shift x
@@ -117,7 +117,13 @@ lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1,
     }
 
     # prune?
-    if(prune > 0) {
+    if(is.logical(prune) && prune) {
+        # always divide by N=21
+        lower.limit <- XW$w[1] * XW$w[floor((n+1)/2)] / 21
+        keep.idx <- which(w > lower.limit)
+        w <- w[keep.idx]
+        x <- x[keep.idx,, drop = FALSE]
+    } else if(is.numeric(prune) && prune > 0) {
         lower.limit <- quantile(w, probs = prune)
         keep.idx <- which(w > lower.limit)
         w <- w[keep.idx]
@@ -141,7 +147,7 @@ lav_integration_f_dnorm <- function(func       = NULL,  # often ly.prod
                                     iterative  = FALSE, # iterative?
                                     max.iter   = 20L,   # max iterations
                                     verbose    = FALSE, # verbose?
-                                    ...) {             # optional args for 'f'
+                                    ...) {              # optional args for 'f'
 
     # create GH rule
     if(is.null(XW)) {
@@ -193,6 +199,74 @@ lav_integration_f_dnorm <- function(func       = NULL,  # often ly.prod
             x.star <- sd.est*(sqrt(2)*XW$x) + mu.est
 
             out <- sum( func(x.star, ...) * w.star )
+        }
+    }
+
+    out
+}
+
+# integrand g(z) has the form g(z) = f(sz+m) dnorm(z, 0, 1)
+lav_integration_f_dnorm_z <- function(func       = NULL,  # often ly.prod
+                                      f.mean     = 0,     # f mean
+                                      f.sd       = 1,     # f sd
+                                      XW         = NULL,  # GH points
+                                      n          = 21L,   # number of nodes
+                                      adaptive   = FALSE, # adaptive?
+                                      iterative  = FALSE, # iterative?
+                                      max.iter   = 20L,   # max iterations
+                                      verbose    = FALSE, # verbose?
+                                     ...) {             # optional args for 'f'
+
+    # create GH rule
+    if(is.null(XW)) {
+        XW <- lav_integration_gauss_hermite(n = n, revert = TRUE)
+    }
+
+    if(!adaptive) {
+        w.star <- XW$w / sqrt(pi)
+        x.star <- sqrt(2)*XW$x
+        out <- sum( func(f.sd*x.star + f.mean, ...) * w.star )
+    } else {
+        # Naylor & Smith (1982, 1988)
+        if(iterative) {
+            mu.est <- 0; sd.est <- 1
+
+            for(i in 1:max.iter) {
+                w.star <- sqrt(2) * sd.est * dnorm(sd.est*sqrt(2)*XW$x + mu.est,0, 1) * exp(XW$x^2) * XW$w
+                x.star <- sd.est*(sqrt(2)*XW$x) + mu.est
+                LIK <- sum( func(f.sd*x.star + f.mean, ...) * w.star )
+
+                # update mu
+                mu.est <- sum(x.star * (func(f.sd*x.star + f.mean, ...) * w.star)/LIK)
+
+                # update sd
+                var.est <- sum(x.star^2 * (func(f.sd*x.star + f.mean, ...) * w.star)/LIK) - mu.est^2
+                sd.est <- sqrt(var.est)
+
+                if(verbose) {
+                    cat("i = ", i, "LIK = ", LIK, "mu.est = ", mu.est,
+                         "sd.est = ", sd.est, "\n")
+                }
+            }
+            out <- LIK
+
+        # Liu and Pierce (1994)
+        } else {
+            # integrand g(x) = func(x) * dnorm(x; m, s^2)
+            log.gz <- function(x, ...) {
+                ## FIXME: should we take the log right away?
+                log(func(f.sd*x + f.mean, ...) * dnorm(x, mean = 0, sd = 1))
+            }
+            # find mu hat and sd hat
+            mu.est <- optimize(f = log.gz, interval = c(-10,10),
+                    maximum = TRUE, tol=.Machine$double.eps, ...)$maximum
+            H <- as.numeric(numDeriv:::hessian(func = log.gz, x = mu.est, ...))
+            sd.est <- sqrt(1/-H)
+
+            w.star <- sqrt(2) * sd.est * dnorm(sd.est*(sqrt(2)*XW$x) + mu.est,0,1) * exp(XW$x^2) * XW$w
+            x.star <- sd.est*(sqrt(2)*XW$x) + mu.est
+
+            out <- sum( func(f.sd*x.star + f.mean, ...) * w.star )
         }
     }
 
