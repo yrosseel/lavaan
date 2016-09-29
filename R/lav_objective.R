@@ -391,17 +391,15 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
           #i.e. univariateProbGivObs * log_ModProbY1Gy2
           univariateProbGivObs <- lavcache$univariateProbGivObs
           nobs <-  nrow(X)
-          Cond_prod <- matrix(NA, nrow=nobs, ncol=length(ModProbY1Gy2) )
-
-          for(i in 1:nvar) {
-             tmp.mat  <- univariateProbGivObs[ , id.uniPrGivObs==i]
-             tmp.vec  <- log_ModProbY1Gy2[ idx.Y1==i]
-             #note that tmp.vec is longer than ncol(tmp.mat). That's why
-             #we use apply below where the function is done row-wise
-             #x recycles as we wish to meet the length of tmp.vec
-             Cond_prod[ , idx.Y1==i] <-
-                           t( apply(tmp.mat, 1, function(x){tmp.vec*x} ) )
-          }
+          Cond_prod <- sapply(1:nvar, function(x) {
+              tmp.mat  <- univariateProbGivObs[ , id.uniPrGivObs==x]
+              tmp.vec  <- log_ModProbY1Gy2[ idx.Y1==x]
+              #note that tmp.vec is longer than ncol(tmp.mat). That's why
+              #we use apply below where the function is done row-wise
+              #y recycles as we wish to meet the length of tmp.vec
+             t( apply(tmp.mat, 1, function(y){tmp.vec*y} ) )
+          })
+          Cond_prod <- do.call( cbind, Cond_prod )
 
           #Since the cells of univariateProbGivObs are zero for the variables 
           #that are observed (hence not contributing to the summand)
@@ -409,7 +407,6 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
           #within each individual.
           ElnyiGivyjbCasewise <- apply(Cond_prod, 1, sum)
           ElnyiGivyjb <- sum(ElnyiGivyjbCasewise)
-          logl <- logl + ElnyiGivyjb
           logl <- logl + ElnyiGivyjb
 
           # for the Fmin function

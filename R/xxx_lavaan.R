@@ -629,6 +629,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     }
                     lavcache[[g]]$unifreq <- unifreq
                     lavcache[[g]]$uninobs <- uninobs
+                }
+
+                # both available cases + doubly.robust
+                if(lavoptions$missing == "available.cases" ||
+                   lavoptions$missing == "doubly.robust") {
 
                     uniweights.casewise <- rowSums( is.na( lavdata@X[[g]] ) )
                     lavcache[[g]]$uniweights.casewise <- uniweights.casewise
@@ -637,17 +642,23 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     # order as unifreq; i.e. w_ia, i=1,...,p, (p variables), 
                     # a=1,...,Ci, (Ci response categories for variable i),
                     # a running faster than i
-                    lavcache[[g]]$uniweights <- c( apply(lavdata@X[[g]], 2,
+                    tmp.uniweights <- apply(lavdata@X[[g]], 2,
                         function(x){
                             tapply(uniweights.casewise, as.factor(x), sum,
-                                   na.rm=TRUE) } ))
-                } # "available.cases"
+                                   na.rm=TRUE) } )
+                    if( is.matrix(tmp.uniweights) ) {
+                        lavcache[[g]]$uniweights <- c(tmp.uniweights)
+                    }
+                    if( is.list(tmp.uniweights) ) {
+                        lavcache[[g]]$uniweights <- unlist(tmp.uniweights)
+                    }
+                } # "available.cases" or "double.robust"
 
-                # doubly.robust"
+                # doubly.robust only
                 if (lavoptions$missing == "doubly.robust") {
 
                     # add fit constant
-                    lavcache[[g]]$FitFunctionConst <- control$FitFunctionConst
+                    lavcache[[g]]$FitFunctionConst <- control$FitFunctionConst[[g]]
 
                     # add the provided by the user probabilities 
                     # pairwiseProbGivObs and univariateProbGivObs in Cache
@@ -676,23 +687,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     # elements of vector probY1Gy2 refer to
                     nlev <- lavdata@ov$nlev
                     nvar <- length(nlev)
-                    idx.Y1  <- c()
-                    idx.Gy2 <- c()
-                    idx.cat.Y1  <- c()
-                    idx.cat.Gy2 <- c()
-                    for(i in 1:nvar) {
-                        for(j in 1:nvar) {
-                            if(i != j) {
-                                idx.cat.Y1  <- c(idx.cat.Y1, 
-                                                 rep(1:nlev[i], times=nlev[j]))
-                                idx.cat.Gy2 <- c(idx.cat.Gy2, 
-                                                 rep(1:nlev[j], each=nlev[i]))
-                                tmp.lngth   <- nlev[i]*nlev[j]
-                                idx.Y1      <- c(idx.Y1,  rep(i, tmp.lngth) )
-                                idx.Gy2     <- c(idx.Gy2, rep(j, tmp.lngth) )
-                            }
-                        }
-                    }
+
+                    idx.var.matrix <- matrix(1:nvar, nrow=nvar, ncol=nvar)
+                    idx.diag <- diag( matrix(1:(nvar*nvar), nrow=nvar, 
+                                             ncol=nvar) )
+                    idx.Y1Gy2.matrix <- rbind(t(idx.var.matrix)[-idx.diag],
+                                                idx.var.matrix [-idx.diag])
+                    no.pairs.Y1Gy2 <- ncol(idx.Y1Gy2.matrix)
+                    idx.cat.Y1 <- unlist(lapply(1:no.pairs.Y1Gy2, function(x) {
+                        rep(     1:nlev[ idx.Y1Gy2.matrix[1,x] ],
+                            times= nlev[ idx.Y1Gy2.matrix[2,x] ]   )} ) )
+                    idx.cat.Gy2 <- unlist(lapply(1:no.pairs.Y1Gy2, function(x) {
+                        rep(     1:nlev[ idx.Y1Gy2.matrix[2,x] ],
+                             each= nlev[ idx.Y1Gy2.matrix[1,x] ]   )} ) )
+                    dim.pairs <- unlist(lapply(1:no.pairs.Y1Gy2, function(x) {
+                        nlev[ idx.Y1Gy2.matrix[1,x] ] *
+                        nlev[ idx.Y1Gy2.matrix[2,x] ] }) )
+                    idx.Y1 <- unlist( mapply(rep, idx.Y1Gy2.matrix[1,],
+                                             each=dim.pairs) )
+                    idx.Gy2 <- unlist( mapply(rep, idx.Y1Gy2.matrix[2,],
+                                              each=dim.pairs) )
+
                     lavcache[[g]]$idx.Y1      <- idx.Y1
                     lavcache[[g]]$idx.Gy2     <- idx.Gy2
                     lavcache[[g]]$idx.cat.Y1  <- idx.cat.Y1
