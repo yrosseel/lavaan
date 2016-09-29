@@ -22,31 +22,40 @@ lav_mvnorm_dmvnorm <- function(Y             = NULL,
                                log           = TRUE) {
 
     if(is.matrix(Y)) {
-        out <- lav_mvnorm_loglik_data(Y = Y, Mu = Mu, Sigma = Sigma,
-                                      casewise = TRUE,
-                                      Sinv.method = Sinv.method)
+        if(is.null(Mu) && is.null(Sigma) && is.null(Sigma.inv)) {
+            out <- lav_mvnorm_loglik_data_z(Y = Y, casewise = TRUE)
+        } else {
+            out <- lav_mvnorm_loglik_data(Y = Y, Mu = Mu, Sigma = Sigma,
+                                          casewise = TRUE,
+                                          Sinv.method = Sinv.method)
+        }
     } else {
         # just one
-        N <- 1; P <- length(Y)
-        LOG.2PI <- log(2 * pi)
+        P <- length(Y); LOG.2PI <- log(2 * pi)
 
-        if(is.null(Sigma.inv)) {
-            Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                                      Sinv.method = Sinv.method)
-            logdet <- attr(Sigma.inv, "logdet")
+        if(is.null(Mu) && is.null(Sigma) && is.null(Sigma.inv)) {
+            # mahalanobis distance
+            DIST <- sum(Y * Y)
+            out <- -(P * LOG.2PI + DIST)/2
         } else {
-            logdet <- attr(Sigma.inv, "logdet")
-            if(is.null(logdet)) {
-                # compute - ln|Sigma.inv|
-                ev <- eigen(Sigma.inv, symmetric = TRUE, only.values = TRUE)
-                logdet <- -1 * sum(log(ev$values))
+            if(is.null(Sigma.inv)) {
+                Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, 
+                    logdet = TRUE, Sinv.method = Sinv.method)
+                logdet <- attr(Sigma.inv, "logdet")
+            } else {
+                logdet <- attr(Sigma.inv, "logdet")
+                if(is.null(logdet)) {
+                    # compute - ln|Sigma.inv|
+                    ev <- eigen(Sigma.inv, symmetric = TRUE, only.values = TRUE)
+                    logdet <- -1 * sum(log(ev$values))
+                }
             }
-        }
 
-        # mahalanobis distance
-        Yc <- Y - Mu
-        DIST <- sum(Yc %*% Sigma.inv * Yc)
-        out <- -(P * LOG.2PI + logdet + DIST)/2
+            # mahalanobis distance
+            Yc <- Y - Mu
+            DIST <- sum(Yc %*% Sigma.inv * Yc)
+            out <- -(P * LOG.2PI + logdet + DIST)/2
+        }
     }
 
     if(!log) {
