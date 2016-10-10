@@ -61,7 +61,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     } else {
         # cholesky takes care of scaling
         ETA.sd <- rep(1, nfac)
-        tchol.VETA <- try(chol(VETAx)), silent = TRUE)
+        tchol.VETA <- try(chol(VETAx), silent = TRUE)
         if(inherits(tchol.VETA, "try-error")) {
             warning("lavaan WARNING: --- VETAx not positive definite")
             print(VETAx)

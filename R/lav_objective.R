@@ -288,7 +288,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         ##Fmin <- sum( prop*log(prop/pairwisePI) )
         Fmin <- sum( freq * log(prop/pairwisePI) ) # to avoid 'N'
 
-        if(missing == "available.cases" || missing =="doubly.robust.PML") {
+        if(missing == "available.cases") {
             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
 
             # shortcuts
@@ -312,105 +312,106 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
             Fmin <- Fmin + sum(uniweights * log(uniprop/uniPI))
         }
 
-                if (missing =="doubly.robust.PML")  {
+        if (missing =="doubly.robust.PML")  {
 
-          # COMPUTE THE SUM OF THE EXPECTED BIVARIATE CONDITIONAL LIKELIHOODS
-          #SUM_{i,j} [ E_{Yi,Yj|y^o}}(lnf(Yi,Yj))) ]
+             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
+             uniweights <- lavcache$uniweights
+             logl <- logl + sum(uniweights * log(uniPI))
 
-          #First compute the terms of the summand. Since the cells of
-          # pairwiseProbGivObs are zero for the pairs of variables that at least 
-          #one of the variables is observed (hence not contributing to the summand)
-          #there is no need to construct an index vector for summing appropriately 
-          #within each individual.
-          log_pairwisePI_orig <- log(pairwisePI_orig)
-          pairwiseProbGivObs <- lavcache$pairwiseProbGivObs
-          tmp_prod <- t(t(pairwiseProbGivObs)*log_pairwisePI_orig)
+             # COMPUTE THE SUM OF THE EXPECTED BIVARIATE CONDITIONAL LIKELIHOODS
+             #SUM_{i,j} [ E_{Yi,Yj|y^o}}(lnf(Yi,Yj))) ]
 
-          SumElnfijCasewise <- apply(tmp_prod, 1, sum)
-          SumElnfij <- sum(SumElnfijCasewise)
-          logl <- logl + SumElnfij
+             #First compute the terms of the summand. Since the cells of
+             # pairwiseProbGivObs are zero for the pairs of variables that at least 
+             #one of the variables is observed (hence not contributing to the summand)
+             #there is no need to construct an index vector for summing appropriately 
+             #within each individual.
+             log_pairwisePI_orig <- log(pairwisePI_orig)
+             pairwiseProbGivObs <- lavcache$pairwiseProbGivObs
+             tmp_prod <- t(t(pairwiseProbGivObs)*log_pairwisePI_orig)
+  
+             SumElnfijCasewise <- apply(tmp_prod, 1, sum)
+             SumElnfij <- sum(SumElnfijCasewise)
+             logl <- logl + SumElnfij
 
-          # COMPUTE THE THE SUM OF THE EXPECTED UNIVARIATE CONDITIONAL LIKELIHOODS 
-          # SUM_{i,j} [ E_{Yj|y^o}}(lnf(Yj|yi))) ]
+             # COMPUTE THE THE SUM OF THE EXPECTED UNIVARIATE CONDITIONAL LIKELIHOODS 
+             # SUM_{i,j} [ E_{Yj|y^o}}(lnf(Yj|yi))) ]
 
-          #First compute the model-implied conditional univariate probabilities
-          # p(y_i=a|y_j=b). Let ModProbY1Gy2 be the vector of these
-          # probabilities. The order the probabilities
-          #are listed in the vector ModProbY1Gy2 is as follows: 
-          # y1|y2, y1|y3, ..., y1|yp, y2|y1, y2|y3, ..., y2|yp,
-          # ..., yp|y1, yp|y2, ..., yp|y(p-1). Within each pair of variables the
-          #index "a" which represents the response category of variable yi runs faster than 
-          #"b" which represents the response category of the given variable yj.
-          #The computation of these probabilities are based on the model-implied
-          #bivariate probabilities p(y_i=a,y_j=b). To do the appropriate summations
-          #and divisions we need some index vectors to keep track of the index i, j,
-          #a, and b, as well as the pair index. These index vectors should be 
-          #computed once and stored in lavcache. About where in the lavaan code
-          #we will add the computations and how they will be done please see the 
-          #file "new objects in lavcache for DR-PL.r"
+             #First compute the model-implied conditional univariate probabilities
+             # p(y_i=a|y_j=b). Let ModProbY1Gy2 be the vector of these
+             # probabilities. The order the probabilities
+             #are listed in the vector ModProbY1Gy2 is as follows: 
+             # y1|y2, y1|y3, ..., y1|yp, y2|y1, y2|y3, ..., y2|yp,
+             # ..., yp|y1, yp|y2, ..., yp|y(p-1). Within each pair of variables the
+             #index "a" which represents the response category of variable yi runs faster than 
+             #"b" which represents the response category of the given variable yj.
+             #The computation of these probabilities are based on the model-implied
+             #bivariate probabilities p(y_i=a,y_j=b). To do the appropriate summations
+             #and divisions we need some index vectors to keep track of the index i, j,
+             #a, and b, as well as the pair index. These index vectors should be 
+             #computed once and stored in lavcache. About where in the lavaan code
+             #we will add the computations and how they will be done please see the 
+             #file "new objects in lavcache for DR-PL.r"
 
-          idx.pairs <- lavcache$idx.pairs
-          idx.cat.y2.split <- lavcache$idx.cat.y2.split
-          idx.cat.y1.split <- lavcache$idx.cat.y1.split
-          idx.Y1      <- lavcache$idx.Y1
-          idx.Gy2     <- lavcache$idx.Gy2
-          idx.cat.Y1  <- lavcache$idx.cat.Y1
-          idx.cat.Gy2 <- lavcache$idx.cat.Gy2
-          id.uniPrGivObs <- lavcache$id.uniPrGivObs
-          #the latter keeps track which variable each column of the matrix
-          #univariateProbGivObs refers to
+             idx.pairs <- lavcache$idx.pairs
+             idx.cat.y2.split <- lavcache$idx.cat.y2.split
+             idx.cat.y1.split <- lavcache$idx.cat.y1.split
+             idx.Y1      <- lavcache$idx.Y1
+             idx.Gy2     <- lavcache$idx.Gy2
+             idx.cat.Y1  <- lavcache$idx.cat.Y1
+             idx.cat.Gy2 <- lavcache$idx.cat.Gy2
+             id.uniPrGivObs <- lavcache$id.uniPrGivObs
+             #the latter keeps track which variable each column of the matrix
+             #univariateProbGivObs refers to
 
-          #For the function compute_uniCondProb_based_on_bivProb see the .r file
-          #with the same name.
-          compute_uniCondProb_based_on_bivProb <- function() {
-              stop("not ready yet!")
-          }
-          ModProbY1Gy2 <- compute_uniCondProb_based_on_bivProb(
-                                  bivProb = pairwisePI_orig,
-                                     nvar = nvar,
-                                idx.pairs = idx.pairs,
-                                   idx.Y1 = idx.Y1,
-                                  idx.Gy2 = idx.Gy2,
-                         idx.cat.y1.split = idx.cat.y1.split,
-                         idx.cat.y2.split = idx.cat.y2.split)
+             #For the function compute_uniCondProb_based_on_bivProb see the .r file
+             #with the same name.
+             ModProbY1Gy2 <- compute_uniCondProb_based_on_bivProb(
+                                     bivProb = pairwisePI_orig,
+                                        nvar = nvar,
+                                   idx.pairs = idx.pairs,
+                                      idx.Y1 = idx.Y1,
+                                     idx.Gy2 = idx.Gy2,
+                            idx.cat.y1.split = idx.cat.y1.split,
+                            idx.cat.y2.split = idx.cat.y2.split)
 
-          log_ModProbY1Gy2 <- log(ModProbY1Gy2)
+             log_ModProbY1Gy2 <- log(ModProbY1Gy2)
 
-          #Let univariateProbGivObs be the matrix of the conditional univariate 
-          # probabilities Pr(y_i=a|y^o) that has been computed in advance and are
-          #fed to the DR-PL function. The rows represent different individuals, 
-          #i.e. nrow=nobs, and the columns different probabilities. The columns
-          # are listed as follows: a runs faster than i. 
+             #Let univariateProbGivObs be the matrix of the conditional univariate 
+             # probabilities Pr(y_i=a|y^o) that has been computed in advance and are
+             #fed to the DR-PL function. The rows represent different individuals, 
+             #i.e. nrow=nobs, and the columns different probabilities. The columns
+             # are listed as follows: a runs faster than i. 
+   
+             #Note that the number of columns of univariateProbGivObs is not the 
+             #same with the length(log_ModProbY1Gy2), actually 
+             #ncol(univariateProbGivObs) < length(log_ModProbY1Gy2).
+             #For this we use the following commands in order to multiply correctly.
 
-          #Note that the number of columns of univariateProbGivObs is not the 
-          #same with the length(log_ModProbY1Gy2), actually 
-          #ncol(univariateProbGivObs) < length(log_ModProbY1Gy2).
-          #For this we use the following commands in order to multiply correctly.
+             #Compute for each case the product  Pr(y_i=a|y^o) * log[ p(y_i=a|y_j=b) ]
+             #i.e. univariateProbGivObs * log_ModProbY1Gy2
+             univariateProbGivObs <- lavcache$univariateProbGivObs
+             nobs <-  nrow(X)
+             Cond_prod <- sapply(1:nvar, function(x) {
+                tmp.mat  <- univariateProbGivObs[ , id.uniPrGivObs==x]
+                 tmp.vec  <- log_ModProbY1Gy2[ idx.Y1==x]
+                 #note that tmp.vec is longer than ncol(tmp.mat). That's why
+                 #we use apply below where the function is done row-wise
+                 #y recycles as we wish to meet the length of tmp.vec
+                t( apply(tmp.mat, 1, function(y){tmp.vec*y} ) )
+             })
+             Cond_prod <- do.call( cbind, Cond_prod )
 
-          #Compute for each case the product  Pr(y_i=a|y^o) * log[ p(y_i=a|y_j=b) ]
-          #i.e. univariateProbGivObs * log_ModProbY1Gy2
-          univariateProbGivObs <- lavcache$univariateProbGivObs
-          nobs <-  nrow(X)
-          Cond_prod <- sapply(1:nvar, function(x) {
-              tmp.mat  <- univariateProbGivObs[ , id.uniPrGivObs==x]
-              tmp.vec  <- log_ModProbY1Gy2[ idx.Y1==x]
-              #note that tmp.vec is longer than ncol(tmp.mat). That's why
-              #we use apply below where the function is done row-wise
-              #y recycles as we wish to meet the length of tmp.vec
-             t( apply(tmp.mat, 1, function(y){tmp.vec*y} ) )
-          })
-          Cond_prod <- do.call( cbind, Cond_prod )
+             #Since the cells of univariateProbGivObs are zero for the variables 
+             #that are observed (hence not contributing to the summand)
+             #there is no need to construct an index vector for summing appropriately 
+             #within each individual.
+             ElnyiGivyjbCasewise <- apply(Cond_prod, 1, sum)
+             ElnyiGivyjb <- sum(ElnyiGivyjbCasewise)
+             logl <- logl + ElnyiGivyjb
 
-          #Since the cells of univariateProbGivObs are zero for the variables 
-          #that are observed (hence not contributing to the summand)
-          #there is no need to construct an index vector for summing appropriately 
-          #within each individual.
-          ElnyiGivyjbCasewise <- apply(Cond_prod, 1, sum)
-          ElnyiGivyjb <- sum(ElnyiGivyjbCasewise)
-          logl <- logl + ElnyiGivyjb
-
-          # for the Fmin function
-          Fmin <- lavcache$FitFunctionConst -logl
+             # for the Fmin function
+             Fmin <- lavcache$FitFunctionConst -logl
 
         } #end of if (missing =="doubly.robust.PML") 
 
