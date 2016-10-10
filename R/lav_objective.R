@@ -312,7 +312,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
             Fmin <- Fmin + sum(uniweights * log(uniprop/uniPI))
         }
 
-        if (missing =="doubly.robust.PML")  {
+        if (missing =="doubly.robust")  {
 
              uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
              uniweights <- lavcache$uniweights
@@ -413,7 +413,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
              # for the Fmin function
              Fmin <- lavcache$FitFunctionConst -logl
 
-        } #end of if (missing =="doubly.robust.PML") 
+        } #end of if (missing =="doubly.robust") 
 
     } else {
         # # order! first i, then j, lav_matrix_vec(table)!
