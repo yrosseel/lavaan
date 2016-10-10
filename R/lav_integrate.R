@@ -23,7 +23,7 @@ lav_integration_gaussian_product <- function(mus = NULL, sds = NULL, vars = NULL
 
 
 
-# return Gauss-Hermite quadrature rules for given order (n)
+# return Gauss-Hermite quadrature rule for given order (n)
 # return list: x = nodes, w = quadrature weights
 #
 
@@ -31,8 +31,8 @@ lav_integration_gaussian_product <- function(mus = NULL, sds = NULL, vars = NULL
 # the eigenvalues of the Jacobi matrix; weights are given by the squares of the
 # first components of the (normalized) eigenvectors, multiplied by sqrt(pi)
 #
-# (This is NOT Golub & Welsch, 1968: as they used a specific method
-# tailored for tridiagonal symmetric matrices)
+# (This is NOT identical to Golub & Welsch, 1968: as they used a specific 
+#  method tailored for tridiagonal symmetric matrices)
 #
 # TODO: look at https://github.com/ajt60gaibb/FastGaussQuadrature.jl/blob/master/src/gausshermite.jl
 # featuring the work of Ignace Bogaert (UGent)
@@ -41,20 +41,7 @@ lav_integration_gaussian_product <- function(mus = NULL, sds = NULL, vars = NULL
 # by sum( f(x_i) * w_i )
 #
 # CHECK: sum(w_i) should be always sqrt(pi) = 1.772454
-#
-# Example: define g <- function(x) dnorm(x,0,0.2) * exp(-x*x)
-# plot:
-#   x <- seq(-5,5,0.01)
-#   plot(x, g(x))
-# brute force solution: integrate(g, -100, 100) = 0.9622504
-# using gauss_hermite, define f <- function(x) dnorm(x,0,0.2)
-# XW <- lavaan:::lav_integration_gauss_hermite(200)
-# sum( f(XW$x) * XW$w ) = 0.9622504
-#
-# note that we need N=200 to get decent accuracy here, because we have
-# a rather spiky function
-
-lav_integration_gauss_hermite <- function(n = 21L, revert = FALSE) {
+lav_integration_gauss_hermite_xw <- function(n = 21L, revert = FALSE) {
 
     # force n to be an integer
     n <- as.integer(n); stopifnot(n > 0L)
@@ -86,25 +73,27 @@ lav_integration_gauss_hermite <- function(n = 21L, revert = FALSE) {
     list(x = x, w = w)
 }
 
-# 'dnorm' version: weighting function is not exp(-x^2) but
-# w(x) = 1/(sqrt(2*pi)) * exp(-0.5 * x^2)
-#
-# Example: define g <- function(x) dnorm(x,0,0.2) * dnorm(x, 0.3, 0.4)
-# brute force solution: integrate(g, -100, 100) = 0.712326
-# using gauss_hermite_dnorm, define f <- function(x) dnorm(x,0,0.2)
-# XW <- lav_integration_gauss_hermite_dnorm(n=100, mean=0.3, sd=0.4)
-# sum( f(XW$x) * XW$w ) = 0.712326
-lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1, 
-                                                ndim = 1L,
-                                                revert = FALSE,
-                                                prune = FALSE) {
-    XW <- lav_integration_gauss_hermite(n = n, revert = revert)
+# generate GH points + weights
+lav_integration_gauss_hermite <- function(n = 21L,
+                                          dnorm = FALSE,
+                                          mean = 0, sd = 1,
+                                          ndim = 1L,
+                                          revert = TRUE,
+                                          prune = FALSE) {
 
-    # scale/shift x
-    x <- XW$x * sqrt(2) * sd + mean
+    XW <- lav_integration_gauss_hermite_xw(n = n, revert = revert)
 
-    # scale w
-    w <- XW$w / sqrt(pi)
+    # dnorm kernel?
+    if(dnorm) {
+        # scale/shift x
+        x <- XW$x * sqrt(2) * sd + mean
+
+        # scale w
+        w <- XW$w / sqrt(pi)
+    } else {
+        x <- XW$x
+        w <- XW$w
+    }
 
     if(ndim > 1L) {
         # cartesian product
@@ -133,6 +122,15 @@ lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1,
     list(x=x, w=w)
 }
 
+# backwards compatibility
+lav_integration_gauss_hermite_dnorm <- function(n = 21L, mean = 0, sd = 1,
+                                                ndim = 1L,
+                                                revert = TRUE,
+                                                prune = FALSE) {
+    lav_integration_gauss_hermite(n = n, dnorm = TRUE, mean = mean, sd = sd,
+                                  ndim = ndim, revert = revert, prune = prune)
+}
+
 # plot 2-dim
 # out <- lavaan:::lav_integration_gauss_hermite_dnorm(n = 20, ndim = 2)
 # plot(out$x, cex = -10/log(out$w), col = "darkgrey", pch=19)
@@ -151,7 +149,7 @@ lav_integration_f_dnorm <- function(func       = NULL,  # often ly.prod
 
     # create GH rule
     if(is.null(XW)) {
-        XW <- lav_integration_gauss_hermite(n = n, revert = TRUE)
+        XW <- lav_integration_gauss_hermite_xw(n = n, revert = TRUE)
     }
 
     if(!adaptive) {
@@ -219,7 +217,7 @@ lav_integration_f_dnorm_z <- function(func       = NULL,  # often ly.prod
 
     # create GH rule
     if(is.null(XW)) {
-        XW <- lav_integration_gauss_hermite(n = n, revert = TRUE)
+        XW <- lav_integration_gauss_hermite_xw(n = n, revert = TRUE)
     }
 
     if(!adaptive) {

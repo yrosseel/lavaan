@@ -745,9 +745,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             #nfac <- lavpta$nfac.nonnormal[[g]]
             nfac <- lavpta$nfac[[g]]
             lavcache[[g]]$GH <- 
-                lav_integration_gauss_hermite_dnorm(n = nGH, mean = 0, sd = 1,
-                                                    ndim = nfac,
-                                                    revert = FALSE)
+                lav_integration_gauss_hermite(n = nGH, dnorm = TRUE,
+                                              mean = 0, sd = 1,
+                                              ndim = nfac)
             #lavcache[[g]]$DD <- lav_model_gradient_DD(lavmodel, group = g)
         }
     }

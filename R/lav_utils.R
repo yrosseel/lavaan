@@ -2,6 +2,13 @@
 #
 # initial version: YR 25/03/2009
 
+# compute log(sum(exp(x))) avoiding under/overflow
+# using the identity: log(sum(exp(x)) = a + log(sum(exp(x - a)))
+lav_utils_logsumexp <- function(x) {
+    a <- max(x)
+    a + log(sum(exp(x - a)))
+}
+
 
 # invert positive definite symmetric matrix (eg cov matrix)
 # using choleski decomposition

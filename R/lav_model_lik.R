@@ -64,8 +64,8 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
         ETA.sd <- sqrt( diag(VETAx) )
     } else {
         # cholesky takes care of scaling
-        chol.VETA <- try(chol(VETAx), silent = TRUE)
-        if(inherits(chol.VETA, "try-error")) {
+        tchol.VETA <- try(chol(VETAx), silent = TRUE)
+        if(inherits(tchol.VETA, "try-error")) {
             warning("lavaan WARNING: --- VETAx not positive definite")
             print(VETAx)
             return(0)
@@ -107,7 +107,7 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
         # rescale/unwhiten
         if(CHOLESKY) {
             # un-orthogonalize
-            XQ <- XQ %*% chol.VETA
+            XQ <- XQ %*% tchol.VETA
         } else {
             # no unit scale? (un-standardize)
             XQ <- sweep(XQ, MARGIN=2, STATS=ETA.sd, FUN="*")
@@ -122,7 +122,7 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
 
         # eta_i = alpha + BETA eta_i + GAMMA eta_i + error
         #
-        # - direct effect of BETA is already in VETAx, and hence chol.VETA
+        # - direct effect of BETA is already in VETAx, and hence tchol.VETA
         # - need to add alpha, and GAMMA eta_i
         if(!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
             if(conditional.x) {
