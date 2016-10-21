@@ -288,7 +288,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         ##Fmin <- sum( prop*log(prop/pairwisePI) )
         Fmin <- sum( freq * log(prop/pairwisePI) ) # to avoid 'N'
 
-        if(missing == "available.cases") {
+        if(missing == "available.cases" || missing == "doubly.robust") {
             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
 
             # shortcuts
@@ -313,10 +313,6 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         }
 
         if (missing =="doubly.robust")  {
-
-             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
-             uniweights <- lavcache$uniweights
-             logl <- logl + sum(uniweights * log(uniPI))
 
              # COMPUTE THE SUM OF THE EXPECTED BIVARIATE CONDITIONAL LIKELIHOODS
              #SUM_{i,j} [ E_{Yi,Yj|y^o}}(lnf(Yi,Yj))) ]
@@ -411,7 +407,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
              logl <- logl + ElnyiGivyjb
 
              # for the Fmin function
-             Fmin <- lavcache$FitFunctionConst -logl
+             Fmin <-  Fmin + SumElnfij + ElnyiGivyjb
 
         } #end of if (missing =="doubly.robust") 
 

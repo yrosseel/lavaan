@@ -581,7 +581,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             BI <- lav_tables_pairwise_freq_cell(lavdata)
 
             # handle option missing = "available.cases"
-            if(lavoptions$missing == "available.cases") {
+            if(lavoptions$missing == "available.cases" ||
+               lavoptions$missing == "doubly.robust") {
                 UNI <- lav_tables_univariate_freq_cell(lavdata)
             }
 
@@ -594,9 +595,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 }
                 if(is.null(control$univariateProbGivObs)) {
                     stop("lavaan ERROR: could not find `univariateProbGivObs' in control() list")
-                }
-                if(is.null(control$FitFunctionConst)) {
-                    stop("lavaan ERROR: could not find `FitFunctionConst' in control() list")
                 }
             }
 
@@ -618,7 +616,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                       LONG   = LONG)
 
                 # available cases
-                if(lavoptions$missing == "available.cases") {
+                if(lavoptions$missing == "available.cases" ||
+                   lavoptions$missing == "doubly.robust") {
                     if(is.null(UNI$group) || max(UNI$group) == 1L) {
                         unifreq <- UNI$obs.freq
                         uninobs <- UNI$nobs
@@ -629,11 +628,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     }
                     lavcache[[g]]$unifreq <- unifreq
                     lavcache[[g]]$uninobs <- uninobs
-                }
-
-                # both available cases + doubly.robust
-                if(lavoptions$missing == "available.cases" ||
-                   lavoptions$missing == "doubly.robust") {
 
                     uniweights.casewise <- rowSums( is.na( lavdata@X[[g]] ) )
                     lavcache[[g]]$uniweights.casewise <- uniweights.casewise
@@ -656,9 +650,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                 # doubly.robust only
                 if (lavoptions$missing == "doubly.robust") {
-
-                    # add fit constant
-                    lavcache[[g]]$FitFunctionConst <- control$FitFunctionConst[[g]]
 
                     # add the provided by the user probabilities 
                     # pairwiseProbGivObs and univariateProbGivObs in Cache
