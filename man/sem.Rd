@@ -5,19 +5,24 @@
 Fit a Structural Equation Model (SEM).}
 \usage{
 sem(model = NULL, data = NULL,
-    meanstructure = "default", fixed.x = "default",
-    orthogonal = FALSE, std.lv = FALSE, std.ov = FALSE,
+    meanstructure = "default", 
+    conditional.x = "default", fixed.x = "default",
+    orthogonal = FALSE, std.lv = FALSE,
+    parameterization = "default", std.ov = FALSE,
     missing = "default", ordered = NULL, 
     sample.cov = NULL, sample.cov.rescale = "default",
     sample.mean = NULL, sample.nobs = NULL, 
     ridge = 1e-05, group = NULL, 
     group.label = NULL, group.equal = "", group.partial = "", 
-    cluster = NULL, constraints = '', 
-    estimator = "default", likelihood = "default", 
+    group.w.free = FALSE, cluster = NULL, constraints = '', 
+    estimator = "default", likelihood = "default", link = "default",
     information = "default", se = "default", test = "default",
     bootstrap = 1000L, mimic = "default", representation = "default", 
     do.fit = TRUE, control = list(), WLS.V = NULL, NACOV = NULL,
-    start = "default", verbose = FALSE, warn = TRUE, debug = FALSE)
+    zero.add = "default", zero.keep.margins = "default",
+    zero.cell.warn = TRUE, start = "default", 
+    check = c("start", "post"),
+    verbose = FALSE, warn = TRUE, debug = FALSE)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -31,6 +36,13 @@ sem(model = NULL, data = NULL,
 \item{meanstructure}{If \code{TRUE}, the means of the observed
     variables enter the model. If \code{"default"}, the value is set based
     on the user-specified model, and/or the values of other arguments.}
+\item{conditional.x}{If \code{TRUE}, we set up the model conditional on
+    the exogenous `x' covariates; the model-implied sample statistics
+    only include the non-x variables. If \code{FALSE}, the exogenous `x'
+    variables are modeled jointly with the other variables, and the 
+    model-implied statistics refect both sets of variables. If
+    \code{"default"}, the value is set depending on the estimator, and
+    whether or not the model involves categorical endogenous variables.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
@@ -39,9 +51,13 @@ sem(model = NULL, data = NULL,
 \item{orthogonal}{If \code{TRUE}, the exogenous latent variables
     are assumed to be uncorrelated.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
-    determined by fixing their variances to 1.0. If \code{FALSE}, the metric
+    determined by fixing their (residual)
+    variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
+\item{parameterization}{Currently only used if data is categorical. If 
+    \code{"delta"}, the delta parameterization is used. If \code{"theta"},
+    the theta parameterization is used.}
 \item{std.ov}{If \code{TRUE}, all observed variables are standardized
     before entering the analysis.}
 \item{missing}{If \code{"listwise"}, cases with missing values are removed
@@ -92,6 +108,11 @@ order as they appear in the data.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{group.w.free}{Logical. If \code{TRUE}, the group frequencies are
+    considered to be free parameters in the model. In this case, a 
+    Poisson model is fitted to estimate the group frequencies. If 
+    \code{FALSE} (the default), the group frequencies are fixed to their
+    observed values.}
 \item{cluster}{Not used yet.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
@@ -132,6 +153,10 @@ order as they appear in the data.}
     and test statistics are based on N. If \code{"default"}, it depends
     on the mimic option: if \code{mimic="lavaan"} or \code{mimic="Mplus"}, 
     normal likelihood is used; otherwise, wishart likelihood is used.}
+\item{link}{Currently only used if estimator is MML. If \code{"logit"},
+    a logit link is used for binary and ordered observed variables.
+    If \code{"probit"}, a probit link is used. If \code{"default"},
+    it is currently set to \code{"probit"} (but this may change).}
 \item{information}{If \code{"expected"}, the expected information matrix
     is used (to compute the standard errors). If \code{"observed"}, the
     observed information matrix is used. If \code{"default"}, the value is 
@@ -199,6 +224,22 @@ order as they appear in the data.}
     For a multiple group analysis, a list with an asymptotic
     variance-covariance matrix for each group. See the \code{WLS.V}
     argument for information about the order of the elements.}
+\item{zero.add}{A numeric vector containing two values. These values affect the
+    calculation of polychoric correlations when some frequencies in the
+    bivariate table are zero.
+    The first value only applies for 2x2 tables. The second value for larger
+    tables. This value is added to the zero frequency in the bivariate table.
+    If \code{"default"}, the value is set depending on the \code{"mimic"}
+    option. By default, lavaan uses \code{zero.add = c(0.5. 0.0)}.}
+\item{zero.keep.margins}{Logical. This argument only affects the computation
+    of polychoric correlations for 2x2 tables with an empty cell, and where a
+    value is added to the empty cell. If \code{TRUE}, the other values of the
+    frequency table are adjusted so that all margins are unaffected. If
+    \code{"default"}, the value is set depending on the \code{"mimic"}. The
+    default is \code{TRUE}.}
+\item{zero.cell.warn}{Logical. Only used if some observed endogenous variables
+    are categorical. If \code{TRUE}, give a warning if one or more cells
+    of a bivariate frequency table are empty.}
 \item{start}{If it is a character string,
     the two options are currently \code{"simple"} and \code{"Mplus"}. 
     In the first
@@ -214,6 +255,11 @@ order as they appear in the data.}
     for example the output of the \code{paramaterEstimates()} function, 
     the values of the \code{est} or \code{start} or \code{ustart} column 
     (whichever is found first) will be extracted.}
+\item{check}{Character vector. If \code{check} includes \code{"start"},
+    the starting values are checked for possibly inconsistent values (for 
+    example values implying correlations larger than one); 
+    if \code{check} includes \code{"post"}, a check is performed after 
+    (post) fitting, to check if the solution is admissable.}
 \item{verbose}{If \code{TRUE}, the function value is printed out during
     each iteration.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed

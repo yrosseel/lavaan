@@ -22,6 +22,7 @@ setClass("lavData",
         missing="character",       # "listwise" or not?
         Mp="list",                 # if not complete, missing patterns
                                    # we need this here, to get nobs right!
+        Rp="list",                 # response patterns (categorical only)
         eXo="list",                # local copy exo only
         X="list"                   # local copy
     )
@@ -31,27 +32,40 @@ setClass("lavData",
 setClass("lavSampleStats",         # sample moments
     representation(
         CAT="list",
-        var="list",                # variances
+        var="list",                # observed variances (per group)
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
         th="list",                 # thresholds for non-numeric var (per group)
-        th.nox="list",             # thresholds ignoring eXo
-        th.idx="list",
+        th.idx="list",             # th index (0 for numeric)
         th.names="list",           # threshold names
-        slopes="list",             # slopes exo
+
+        res.cov="list",            # residual var/cov matrix (if conditional.x)
+        res.var="list",            # residual variances
+        res.th="list",             # residual thresholds
+        res.th.nox="list",         # residual thresholds ignoring x
+        res.slopes="list",         # slopes exo (if conditional.x) 
+        res.int="list",            # intercepts (if conditional.x)
+
+        mean.x="list",             # mean exo
         cov.x="list",              # variance/covariance exo
         bifreq="list",             # bivariate frequency tables
+        group.w="list",            # group weight
 
         nobs="list",               # effective number of obs (per group)
         ntotal="integer",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
+        x.idx="list",              # x.idx if fixed.x = TRUE
 
         icov="list",               # inverse of observed cov (per group)
         cov.log.det="list",        # log det of observed cov (per group)
+        res.icov="list",
+        res.cov.log.det="list",
         ridge="numeric",           # ridge constant
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
+        WLS.VD="list",             # diagonal of weight matrix only
         NACOV="list",              # N times the asymptotic covariance matrix
+        NACOV.user="logical",      # user-specified NACOV?
 
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information
@@ -69,6 +83,9 @@ setClass("Model",          # MATRIX representation of the sem model
         representation="character",  # stub, until we define more classes
         meanstructure="logical",
         categorical="logical",
+        group.w.free="logical",
+        link="character",
+        control="list",
 
         ngroups="integer",
         nmat="integer",
@@ -77,13 +94,13 @@ setClass("Model",          # MATRIX representation of the sem model
         th.idx="list",
 
         nx.free="integer",
-        nx.unco="integer",
+        #nx.unco="integer",
         nx.user="integer",
 
         m.free.idx="list",
         x.free.idx="list",
-        m.unco.idx="list",
-        x.unco.idx="list",
+        #m.unco.idx="list",
+        #x.unco.idx="list",
         m.user.idx="list",
         x.user.idx="list",
         x.def.idx="integer",
@@ -93,17 +110,32 @@ setClass("Model",          # MATRIX representation of the sem model
 
         eq.constraints="logical",
         eq.constraints.K="matrix",
+        eq.constraints.k0="numeric",
 
         def.function="function",
         ceq.function="function",
         ceq.jacobian="function",
+        ceq.JAC="matrix",
+        ceq.rhs="numeric",
+        ceq.linear.idx="integer",
+        ceq.nonlinear.idx="integer",
         cin.function="function",
         cin.jacobian="function",
+        cin.JAC="matrix",
+        cin.rhs="numeric",
+        cin.linear.idx="integer",
+        cin.nonlinear.idx="integer",
         con.jac="matrix",
         con.lambda="numeric",
 
         nexo="integer",
-        fixed.x="logical"
+        conditional.x="logical",
+        fixed.x="logical",
+        parameterization="character",
+        ov.x.dummy.ov.idx="list",
+        ov.x.dummy.lv.idx="list",
+        ov.y.dummy.ov.idx="list",
+        ov.y.dummy.lv.idx="list"
 
     )
 )
@@ -114,11 +146,14 @@ setClass("Fit",
         #ndat="integer",
         #df="integer",
         x="numeric",               # x
-        start="numeric",           # starting values
-        est="numeric",             # estimated values
+        partrace="matrix",         # parameter trace
+        start="numeric",           # starting values (only for other packages)
+        est="numeric",             # estimated values (only for other packages)
         se="numeric",              # standard errors
         fx="numeric",
         fx.group="numeric",
+        logl="numeric",
+        logl.group="numeric",
         iterations="integer",      # number of iterations
         converged="logical",
         control="list",
@@ -133,15 +168,47 @@ setClass("lavaan",
     representation(
         call        = "call",            # matched call
         timing      = "list",            # timing information
-        Options     = "list",            # lavaanOptions
+        Options     = "list",            # lavOptions
         ParTable    = "list",            # parameter table user-specified model
+        pta         = "list",            # parameter table attributes
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "Model",           # internal matrix representation
         Cache       = "list",            # housekeeping stuff
-        Fit         = "Fit"              # fitted results
+        Fit         = "Fit",             # fitted results 
+        boot        = "list",            # bootstrap results
+        optim       = "list",            # optimizer results
+        implied     = "list",            # model implied moments
+        vcov        = "list",            # vcov
+        test        = "list",            # test
+        external    = "list"             # optional slot, for add-on packages
     ) 
 )
+
+setClass("lavaanList",
+    representation(
+        call            = "call",     # matched call
+        Options         = "list",     # lavOptions
+        ParTable        = "list",
+        pta             = "list",
+        Data            = "lavData",  # from first dataset (ngroups!)
+        Model           = "Model",    # based on first dataset
+        meta            = "list",
+
+        timingList      = "list",
+        ParTableList    = "list",
+        DataList        = "list",
+        SampleStatsList = "list",
+        CacheList       = "list",
+        vcovList        = "list",
+        testList        = "list",
+        optimList       = "list",
+        impliedList     = "list",
+        funList         = "list",
+        external        = "list"       # optional slot, for add-on packages
+    )
+)
+
 
 
 

@@ -6,8 +6,6 @@
 \alias{lavPartable}
 \alias{parseModelString}
 \alias{lavParseModelString}
-\alias{lavaanNames}
-\alias{lavNames}
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
@@ -16,23 +14,26 @@ model as specified by the user. We refer to this table as the parameter table.}
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
-    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem", 
+    conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
+    constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
-    group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    group.partial = NULL, group.w.free = FALSE,
+    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
-    fixed.x = TRUE, constraints = NULL, auto = FALSE, model.type = "sem",
+    conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
+    constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL,
-    group.partial = NULL, debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    group.partial = NULL, group.w.free = FALSE,
+    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
 
-lavNames(object, type = "ov", group = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -53,10 +54,18 @@ the model both for both observed and latent variables.}
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0.}
+\item{conditional.x}{If \code{TRUE}, we set up the model conditional on
+    the exogenous `x' covariates; the model-implied sample statistics
+    only include the non-x variables. If \code{FALSE}, the exogenous `x'
+    variables are modeled jointly with the other variables, and the
+    model-implied statistics refect both sets of variables.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
     random, and the means, variances and covariances are free parameters.}
+\item{parameterization}{Currently only used if data is categorical. If
+    \code{"delta"}, the delta parameterization is used. If \code{"theta"},
+    the theta parameterization is used.}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
 \item{auto}{If \code{TRUE}, the default values are used for the auto.*
@@ -90,26 +99,16 @@ the model both for both observed and latent variables.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
+\item{group.w.free}{Logical. If \code{TRUE}, the group frequencies are
+    considered to be free parameters in the model. In this case, a
+    Poisson model is fitted to estimate the group frequencies. If
+    \code{FALSE} (the default), the group frequencies are fixed to their
+    observed values.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
 \item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
 as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
-\item{object}{Either a list containing the parameter table, as 
-returned by \code{lavaanify} or \code{lavParseModelString}, or an 
-object of class \code{\linkS4class{lavaan}}.}
-\item{type}{Only used in the function \code{lavNames}. If type contains 
-\code{"ov"}, only observed variable names are returned. If type contains
-\code{"lv"}, only latent variable names are returned. The \code{"ov.x"}
-and \code{"lv.x"} types return exogenous variables only. The \code{"ov.y"}
-and \code{"lv.y"} types return dependent variables only (in the regression
-sense, excluding the indicators of latent variables). The
-\code{"ov.nox"} type returns all observed variables, except the exogenous
-ones.}
-\item{group}{Only used in the function \code{lavNames}. If \code{NULL},
-all groups (if any) are used. If an integer (vector), only names from those
-groups are extracted. The group numbers are found in the \code{group}
-column of the parameter table.}
 }
 \details{
 The model syntax consists of one or more formula-like expressions, each one
@@ -280,10 +279,10 @@ Although this automatic labeling of parameters is convenient, the user may
 specify its own labels for specific parameters simply by pre-multiplying
 the corresponding term (on the right hand side of the operator only) by
 a character string (starting with a letter).
-For example, in the formula \code{f1 =~ x1 + x2 + mylabelx3}, the parameter 
+For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter 
 corresponding with the factor loading of
 \code{x3} will be named \code{"mylabel"}.
-\code{"f1=~x3"}. An alternative way to specify
+An alternative way to specify
 the label is as follows: \code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
 where the label is the argument of special function \code{label()};
 this can be useful if the label contains a space, or an operator (like "~").
@@ -327,18 +326,10 @@ of groups. The only exception are numerical constants (for fixing values): if
 you provide only a single number, the same number will be used for all groups.
 However, it is safer (and cleaner) to specify the same number of elements as
 the number of groups. For example, if there are two groups:
-\preformatted{HS.model <- ' visual  =~             x1 +
-                                 0.5*x2 +
-                         c(0.6, 0.8)*x3
-
-              textual =~                    x4 +
-                         start(c(1.2, 0.6))*x5 +
-                                            x6
-
-              speed   =~                x7 +
-                                        x8 +
-                         c(x9.group1,
-                           x9.group2) * x9 '
+\preformatted{
+HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
+              textual =~ x4 + start(c(1.2, 0.6))*x5 + x6
+              speed   =~ x7 + x8 + c(x9.group1, x9.group2)*x9 '
 }
 In this example, the factor loading of the `x2' indicator is fixed to the
 value 0.5 for all groups. However, the factor loadings of the `x3' indicator 

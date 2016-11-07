@@ -1,30 +1,42 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.5-14
-Authors@R: c(person("Yves", "Rosseel", role = c("aut", "cre"),
+Version: 0.5-23.1026
+Authors@R: c(person(given = "Yves", family = "Rosseel",
+                    role  = c("aut", "cre"),
                     email = "Yves.Rosseel@UGent.be"),
-             person("Daniel", "Oberski", role = "ctb",
+             person(given = "Daniel", family = "Oberski",
+                    role = "ctb",
                     email = "daniel.oberski@gmail.com"),
-             person("Jarrett", "Byrnes", role = "ctb", 
+             person(given = "Jarrett", family = "Byrnes", 
+                    role = "ctb",
                     email = "byrnes@nceas.ucsb.edu"),
-             person("Leonard", "Vanbrabant", role = "ctb",
-                    email = "L.G.F.Vanbrabant@uu.nl"),
-             person("Victoria", "Savalei", role = "ctb",
+             person(given = "Leonard", family = "Vanbrabant",
+                    role = "ctb",
+                    email = "Leonard.Vanbrabant@ugent.be"),
+             person(given = "Victoria", family = "Savalei",
+                    role = "ctb",
                     email = "vsavalei@ubc.ca"),
-             person("Ed", "Merkle", role = "ctb",
+             person(given = "Ed", family = "Merkle",
+                    role = "ctb",
                     email = "merklee@missouri.edu"),
-             person("Michael", "Hallquist", role = "ctb",
+             person(given = "Michael", family = "Hallquist",
+                    role = "ctb",
                     email = "michael.hallquist at gmail.com"),
-             person("Mijke", "Rhemtulla", role = "ctb",
+             person(given = "Mijke", family = "Rhemtulla",
+                    role = "ctb",
                     email = "mijke@ku.edu"),
-             person("Myrsini", "Katsikatsou", role = "ctb",
-                    email = "mirtok2@gmail.com")
-            )  
+             person(given = "Myrsini", family = "Katsikatsou",
+                    role = "ctb",
+                    email = "mirtok2@gmail.com"),
+             person(given = "Mariska", family = "Barendse",
+                    role = "ctb",
+                    email = "m.t.barendse@rug.nl")
+            )
 Description: Fit a variety of latent variable models, including confirmatory
-    factor analysis, structural equation modeling and latent growth curve models.
-Depends: methods, R(>= 2.14.0), MASS, boot, mnormt, pbivnorm, quadprog
-Imports: stats4, stats, graphics
-Suggests: lavaan.survey, semPlot, semTools, simsem
-License: GPL (>=2)
+   factor analysis, structural equation modeling and latent growth curve models.
+Depends: R(>= 3.1.0)
+Imports: methods, stats4, stats, utils, graphics, MASS, 
+         mnormt, pbivnorm, quadprog
+License: GPL (>= 2)
 LazyData: yes
 URL: http://lavaan.org

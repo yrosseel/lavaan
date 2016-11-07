@@ -12,7 +12,6 @@
 \alias{nobs} %% not imported in < 2.13
 \alias{nobs,lavaan-method}
 \alias{logLik,lavaan-method}
-\alias{inspect}
 \alias{inspect,lavaan-method}
 \alias{update,lavaan-method}
 \alias{show,lavaan-method}
@@ -36,6 +35,7 @@ Objects can be created via the
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
     \item{\code{ParTable}:}{Named list describing the model parameters. Can be coerced to a data.frame. In the documentation, this is called the `parameter table'.}
+    \item{\code{pta}:}{Named list containing parameter table attributes.}
     \item{\code{Data}:}{Object of internal class \code{"Data"}: information
 about the data.}
     \item{\code{SampleStats}:}{Object of internal class \code{"SampleStats"}: sample 
@@ -45,15 +45,19 @@ about the data.}
     \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
     \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the 
       results of fitting the model}
+    \item{\code{boot}:}{List. Results and information about the bootstrap.}
+    \item{\code{optim}:}{List. Information about the optimization.}
+    \item{\code{implied}:}{List. Model implied statistics.}
+    \item{\code{vcov}:}{List. Information about the variance matrix (vcov) of the model parameters.}
+    \item{\code{test}:}{List. Different test statistics.}
+    \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
 }
 \section{Methods}{
   \describe{
     \item{coef}{\code{signature(object = "lavaan", type = "free")}: Returns 
       the estimates of the parameters in the model as a named numeric vector.
-      If \code{type="free"}, only the free parameters are returned. If
-      \code{type="unco"}, both free and constrained parameters (simple
-      equality constraints only) are returned.
+      If \code{type="free"}, only the free parameters are returned.
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
     \item{fitted.values}{\code{signature(object = "lavaan")}: Returns the 
@@ -71,13 +75,21 @@ about the data.}
       and \code{mean} for the residual mean vector. 
       If only the covariance matrix was analyzed, the residual mean vector 
       will be zero. 
-      If code{type="cor"}, the observed and model implied covariance matrix 
+      If \code{type="cor"}, the observed and model implied covariance matrix 
       is first transformed to a correlation matrix (using \code{cov2cor}), 
       before the residuals are computed.
       If \code{type="normalized"}, the residuals are
-      normalized. If \code{type="standardized"}, the residuals are
-      standardized. In the latter case, the residuals have a metric similar
-      to z-values.}
+      divided by the square root of an asymptotic variance estimate of the
+      corresponding sample statistic (the variance estimate depends on the
+      choice for the \code{se} argument).
+      If \code{type="standardized"}, the residuals are divided by the square
+      root of the difference between an asymptotic variance estimate of the
+      corresponding sample statistic and an asymptotic variance estimate of
+      the corresponding model-implied statistic.
+      In the latter case, the residuals have a metric similar
+      to z-values. On the other hand, they may often result in \code{NA} values;      for these cases, it may be better to use the normalized residuals. For
+      more information about the normalized and standardized residuals, see
+      the Mplus reference below.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
     \item{vcov}{\code{signature(object = "lavaan")}: returns the
@@ -86,10 +98,15 @@ about the data.}
       factor scores for all cases that are provided in the data frame. For
       complete data only.}
     \item{anova}{\code{signature(object = "lavaan")}: returns 
-      model comparison statistics. See \code{\link[stats]{anova}}. At least
-      two arguments (fitted models) are required. If the test statistic is
-      scaled, an appropriate scaled difference test will be computed.}
-    \item{update}{\code{signature(object = "lavaan", model.syntax, ..., 
+      model comparison statistics. This method is just a wrapper around
+      the function \code{\link{lavTestLRT}}.
+      If only a single argument (a fitted
+      model) is provided, this model is compared to the unrestricted
+      model. If two or more arguments (fitted models) are provided, the models
+      are compared in a sequential order. Test statistics are based on the 
+      likelihood ratio test. For more details and
+      further options, see the \code{\link{lavTestLRT}} page.} 
+    \item{update}{\code{signature(object = "lavaan", model, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
         that is stored within the lavaan object, which is not necessarily
@@ -102,87 +119,33 @@ about the data.}
       was used. The \code{\link[stats]{AIC}} and \code{\link[stats]{BIC}}
       methods automatically work via \code{logLik()}.}
     \item{inspect}{\code{signature(object = "lavaan", what = "free")}: This
-      is the main `extractor' function for \code{lavaan} objects.  It
-      allows the user to peek into the internal representation of the model. In
-      addition, the requested information is returned (typically as a list) and
-      can be used for further processing.
-      The following values for \code{what} are allowed (in alphabetical order):
-      \describe{
-
-        \item{\code{"coef"}:}{A list of model matrices containing the current
-          values of all parameters.}
-        \item{\code{"coefficients"}:}{An alias for \code{"coef"}.}
-        \item{\code{"converged"}:}{Returns TRUE if the optimization routine
-          has converged; FALSE otherwise.}
-        \item{\code{"cov.all"}:}{Model implied covariance matrix of both the 
-          observed and latent variables.}
-        \item{\code{"cov.lv"}:}{Model implied covariance matrix of the latent 
-          variables.}
-        \item{\code{"cor.all"}:}{Model implied covariance matrix of both the 
-          observed and latent variables, in a correlation mectric.}
-        \item{\code{"cor.lv"}:}{Model implied covariance matrix of the latent 
-          variables, in a correlation metric.}
-        \item{\code{"derivatives"}:}{An alias for \code{"dx"}.}
-        \item{\code{"dx"}:}{A list of model matrices containing the
-          derivatives of all parameters evaluated at the current (typically
-          minimum) function value.}
-        \item{\code{"estimates"}:}{An alias for \code{"coef"}.}
-        \item{\code{"est"}:}{An alias for \code{"coef"}.}
-        \item{\code{"free"}:}{A list of model matrices counting the free
-          parameters in the model, typically in the same order as they are
-          specified by the user.}
-        \item{\code{"gradient"}:}{An alias for \code{"dx"}.}
-        \item{\code{"list"}:}{A dataframe showing the internal
-          representation of a lavaan model.
-          Each row corresponds to a model parameter. The
-          columns contain all the information that lavaan stores about
-          these parameters (for example, if it is free of fixed, the
-          user-specified starting values, etcetera). This is called
-          the parameter table.}
-        \item{\code{"mi"}:}{A data.frame containing modification indices
-          and expected parameter change (EPC) values, both in unstandardized
-          and standardized metric.}
-        \item{\code{"modindices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modification"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modificationindices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"modification.indices"}:}{An alias for \code{"mi"}.}
-        \item{\code{"nacov"}:}{N times the asymptotic variance of the model 
-          parameters.}
-        \item{\code{"parameters"}:}{An alias for \code{"coef"}.}
-        \item{\code{"parameter.estimates"}:}{An alias for \code{"coef"}.}
-        \item{\code{"parameter.values"}:}{An alias for \code{"coef"}.}
-        \item{\code{"r2"}:}{An alias for \code{"rsquare"}.}
-        \item{\code{"rsquare"}:}{A named vector with the R-Square value
-          of the dependent observed and latent variables.}
-        \item{\code{"r-square"}:}{An alias for \code{"rsquare"}.}
-        \item{\code{"sampstat"}:}{The sample statistics used for the analysis.}
-        \item{\code{"se"}:}{A list of model matrices containing the 
-          estimated standard errors for all free parameters.}
-        \item{\code{"standardized"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standardizedsolution"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standardized.solution"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"standard.errors"}:}{An alias for \code{"se"}.}
-        \item{\code{"start"}:}{A list of model matrices containing the
-          starting values for all parameters.}
-        \item{\code{"starting.values"}:}{An alias for \code{"start"}.}
-        \item{\code{"std"}:}{An alias for \code{"std.coef"}.}
-        \item{\code{"std.coef"}:}{A data.frame containing both the raw
-           and (completely) standardized parameter values.}
-        \item{\code{"std.err"}:}{An alias for \code{"se"}.}
-        \item{\code{"wls.v"}:}{The weight matrix for WLS.}
-        \item{\code{"x"}:}{An alias for \code{"coef"}.}
-
-       }
-    }
+      method is now a shortcut for the \code{lavInspect()} function. See
+      \link{lavInspect} for more details.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
-    \item{summary}{\code{signature(object = "lavaan", standardized=FALSE, fit.measures=FALSE, rsquare=FALSE, modindices=FALSE)}: 
-      Print a nice summary of the model estimates. If \code{standardized=TRUE},
-      the standardized solution is also printed. If \code{fit.measures=TRUE}, 
-      the chi-square statistic is supplemented by several fit measures. 
+    \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
+      Print a nice summary of the model estimates. 
+      If \code{header = TRUE}, the header section (including fit measures) is
+      printed.  
+      If \code{fit.measures = TRUE}, additional fit measures are added to the
+      header section.
+      If \code{estimates = TRUE}, print the parameter estimates section.
+      If \code{ci = TRUE}, add confidence intervals to the parameter estimates
+      section.
+      If \code{fmi = TRUE}, add the fmi (fraction of missing information) 
+      column, if it is available.
+      If \code{standardized=TRUE},
+      the standardized solution is also printed.  
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
-      in the model are printed. If \code{modindices=TRUE}, modification indices
-      are printed for all fixed parameters. Nothing is returned (use 
+      in the model are printed. 
+      If \code{std.nox = TRUE}, the \code{std.all} column contains the 
+      the \code{std.nox} column from the parameterEstimates() output.
+      If \code{modindices=TRUE}, modification indices
+      are printed for all fixed parameters. 
+      The argument \code{nd} determines the number of digits after the
+      decimal point to be printed (currently only in the parameter estimates
+      section.)
+      Nothing is returned (use 
       \code{inspect} or another extractor function 
       to extract information from a fitted model).}
   }
@@ -190,7 +153,11 @@ about the data.}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. URL
-http://www.jstatsoft.org/v48/i02/.}
+http://www.jstatsoft.org/v48/i02/.
+
+Standardized Residuals in Mplus. Document retrieved from URL
+http://www.statmodel.com/download/StandardizedResiduals.pdf
+}
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}, 
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},

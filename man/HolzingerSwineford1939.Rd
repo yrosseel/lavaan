@@ -35,7 +35,7 @@ subjects from the Grant-White school only).
   }
 }
 \source{
-This dataset was retrieved from \url{http://web.missouri.edu/~kolenikovs/stata/hs-cfa.dta} and converted to an R dataset.
+This dataset was originally retrieved from \verb{http://web.missouri.edu/~kolenikovs/stata/hs-cfa.dta} (link no longer active) and converted to an R dataset.
 }
 \references{
 Holzinger, K., and Swineford, F. (1939). A study in factor analysis: The 

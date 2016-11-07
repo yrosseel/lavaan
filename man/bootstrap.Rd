@@ -8,13 +8,13 @@ of statistics) you can extract from a fitted lavaan object.}
 bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 FUN = "coef", warn = -1L, return.boot = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus = 1L, cl = NULL, h0.rmsea = NULL, ...)
+                ncpus = 1L, cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
              verbose = FALSE, return.LRT = FALSE, double.bootstrap = "no", 
              double.bootstrap.R = 500L, double.bootstrap.alpha = 0.05, 
              warn = -1L, parallel = c("no", "multicore", "snow"),
-             ncpus = 1L, cl = NULL)
+             ncpus = 1L, cl = NULL, iseed = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -51,6 +51,11 @@ typically one would chose this to the number of available CPUs.  }
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{bootstrapLavaan} or \code{bootstrapLRT}
 call.}
+\item{iseed}{An integer to set the seed. Or NULL if no reproducible seeds are
+  needed. To make this work, make sure the first
+  RNGkind() element is \code{"L'Ecuyer-CMRG"}. You can check this by
+  typing \code{RNGkind()} in the console. You can set it by typing
+  \code{RNGkind("L'Ecuyer-CMRG")}, before the boostrap functions are called.}
 \item{h0.rmsea}{Only used if \code{type="yuan"}. Allows one to do the Yuan
 bootstrap under the hypothesis that the population RMSEA equals a specified
 value.}
@@ -64,7 +69,9 @@ the double bootstrap.}
 \item{double.bootstrap.alpha}{The significance level to compute the adjusted
 alpha based on the plugin p-values.}
 }
-\author{Yves Rosseel, Leonard Vanbrabant and Ed Merkle}
+\author{Yves Rosseel and Leonard Vanbrabant. Ed Merkle contributed
+Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
+by Hao Wu and Chuchu Cheng.}
 \details{The FUN function can return either a scalar or a numeric vector.
 This function can be an existing function (for example \code{coef}) or
 can be a custom defined function. For example:
