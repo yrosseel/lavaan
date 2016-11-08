@@ -613,13 +613,21 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   
 }
 
-mplus2lavaan <- function(inpfile) {
-  #require(lavaan)
+mplus2lavaan <- function(inpfile, run=TRUE) {
+  stopifnot(length(inpfile) == 1L)
+  stopifnot(grepl("\\.inp$", inpfile))
+  if (!file.exists(inpfile)) { stop("Could not find file: ", inpfile) }
   
-  if (!file.exists(inpfile)) stop("Could not find file: ", inpfile)
+  #for future consideration. For now, require a .inp file
+#  if (length(inpfile) == 1L && grepl("\\.inp$", inpfile)) {
+#    if (!file.exists(inpfile)) { stop("Could not find file: ", inpfile) }
+#    inpfile.text <- scan(inpfile, what="character", sep="\n", strip.white=FALSE, blank.lines.skip=FALSE, quiet=TRUE)
+#  } else {
+#    #assume that inpfile itself is syntax (e.g., in a character vector)
+#    inpfile.text <- inpfile
+#  }
   
   inpfile.text <- scan(inpfile, what="character", sep="\n", strip.white=FALSE, blank.lines.skip=FALSE, quiet=TRUE)
-  
   sections <- divideInputIntoSections(inpfile.text, inpfile)
   
   mplus.inp <- list()
@@ -692,9 +700,14 @@ mplus2lavaan <- function(inpfile) {
     }    
   }
   
-  fit <- sem(mplus.inp$model, data=mplus.inp$data, meanstructure=meanstructure, mimic="Mplus", estimator=estimator, test=test, se=se, bootstrap=bootstrap, information=information)
+  if (run) {
+    fit <- sem(mplus.inp$model, data=mplus.inp$data, meanstructure=meanstructure, mimic="Mplus", estimator=estimator, test=test, se=se, bootstrap=bootstrap, information=information)
+    fit@external <- list(mplus.inp=mplus.inp)
+  } else {
+    fit <- mplus.inp #just return the syntax outside of a lavaan object
+  }
   
-  return(list(lav.out=fit, mplus.inp=mplus.inp))
+  return(fit)
 }
 
 
@@ -790,7 +803,10 @@ readMplusInputData <- function(mplus.inp, inpfile) {
   else
     datFile <- file.path(inpfile.split$directory, mplus.inp$data$file) #dat file path is relative or absent, and inp file directory is present
   
-  if (!file.exists(datFile)) stop("Cannot find data file: ", datFile)
+  if (!file.exists(datFile)) {
+    warning("Cannot find data file: ", datFile)
+    return(NULL)
+  }
   
   #handle missing is/are:
   missList <- NULL
