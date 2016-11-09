@@ -1,6 +1,4 @@
 # this code is written by Michael Hallquist
-
-
 #First draft of parser to convert Mplus model syntax to lavaan model syntax
 
 #idea: build parTable and run model from mplus syntax
@@ -615,13 +613,21 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   
 }
 
-mplus2lavaan <- function(inpfile) {
-  #require(lavaan)
+mplus2lavaan <- function(inpfile, run=TRUE) {
+  stopifnot(length(inpfile) == 1L)
+  stopifnot(grepl("\\.inp$", inpfile))
+  if (!file.exists(inpfile)) { stop("Could not find file: ", inpfile) }
   
-  if (!file.exists(inpfile)) stop("Could not find file: ", inpfile)
+  #for future consideration. For now, require a .inp file
+#  if (length(inpfile) == 1L && grepl("\\.inp$", inpfile)) {
+#    if (!file.exists(inpfile)) { stop("Could not find file: ", inpfile) }
+#    inpfile.text <- scan(inpfile, what="character", sep="\n", strip.white=FALSE, blank.lines.skip=FALSE, quiet=TRUE)
+#  } else {
+#    #assume that inpfile itself is syntax (e.g., in a character vector)
+#    inpfile.text <- inpfile
+#  }
   
-  inpfile.text <- scan(inpfile, what="character", sep="\n", strip.white=FALSE, blank.lines.skip=FALSE)
-  
+  inpfile.text <- scan(inpfile, what="character", sep="\n", strip.white=FALSE, blank.lines.skip=FALSE, quiet=TRUE)
   sections <- divideInputIntoSections(inpfile.text, inpfile)
   
   mplus.inp <- list()
@@ -693,12 +699,20 @@ mplus2lavaan <- function(inpfile) {
       bootstrap <- as.numeric(substr(mplus.inp$analysis$bootstrap, attr(nboot.match, "capture.start"), attr(nboot.match, "capture.start") + attr(nboot.match, "capture.length") - 1L))
     }    
   }
-  fit <- sem(mplus.inp$model, data=mplus.inp$data, meanstructure=meanstructure, mimic="Mplus", estimator=estimator, test=test, se=se, bootstrap=bootstrap, information=information)
   
-  return(list(lav.out=fit, mplus.inp=mplus.inp))
+  if (run) {
+    fit <- sem(mplus.inp$model, data=mplus.inp$data, meanstructure=meanstructure, mimic="Mplus", estimator=estimator, test=test, se=se, bootstrap=bootstrap, information=information)
+    fit@external <- list(mplus.inp=mplus.inp)
+  } else {
+    fit <- mplus.inp #just return the syntax outside of a lavaan object
+  }
+  
+  return(fit)
 }
 
+
 divideIntoFields <- function(section.text, required) {
+  
   if (is.null(section.text)) { return(NULL) }
   section.split <- strsplit(paste(section.text, collapse=" "), ";", fixed=TRUE)[[1]]
   
@@ -708,12 +722,29 @@ divideIntoFields <- function(section.text, required) {
     if (grepl("^\\s*!.*", cmd, perl=TRUE)) next #skip comment lines
     if (grepl("^\\s+$", cmd, perl=TRUE)) next #skip blank lines
     
-    #force text matches at word boundary, or just split on = (\b doesn't work for =)
-    cmd.split <- strsplit(cmd[1L], "(\\b(IS|ARE|is|are|Is|Are)\\b|=)", perl=TRUE)[[1]]
-    if (!length(cmd.split) == 2L) stop("First line not dividing into LHS and RHS: ", cmd[1L])
+    #mplus is apparently tolerant of specifications that don't include IS/ARE/=
+    #example: usevariables x1-x10;
+    #thus, split on spaces and assume that first element is lhs, drop second element if IS/ARE/=, and assume remainder is rhs
     
-    cmdName <- trimSpace(cmd.split[1L])
-    cmdArgs <- trimSpace(cmd.split[2L])
+    #but if user uses equals sign, then spaces will not always be present (e.g., usevariables=x1-x10)
+    if ( (leadingEquals <- regexpr("^\\s*[A-Za-z]+[A-Za-z_-]*\\s*(=)", cmd[1L], perl=TRUE))[1L] > 0) {
+      cmdName <- trimSpace(substr(cmd[1L], 1, attr(leadingEquals, "capture.start") - 1))
+      cmdArgs <- trimSpace(substr(cmd[1L], attr(leadingEquals, "capture.start") + 1, nchar(cmd[1L])))
+    } else {
+      cmd.spacesplit <- strsplit(trimSpace(cmd[1L]), "\\s+", perl=TRUE)[[1L]]
+      
+      if (length(cmd.spacesplit) < 2L) {
+        #for future: make room for this function to prase things like just TECH13 (no rhs)
+      } else {
+        cmdName <- trimSpace(cmd.spacesplit[1L])
+        if (length(cmd.spacesplit) > 2L && tolower(cmd.spacesplit[2L]) %in% c("is", "are")) {
+          cmdArgs <- paste(cmd.spacesplit[3L:length(cmd.spacesplit)], collapse=" ") #remainder, removing is/are
+        } else {
+          cmdArgs <- paste(cmd.spacesplit[2L:length(cmd.spacesplit)], collapse=" ") #is/are not used, so just join rhs
+        }
+      }
+      
+    }
     
     section.divide[[make.names(tolower(cmdName))]] <- cmdArgs
     
@@ -772,7 +803,10 @@ readMplusInputData <- function(mplus.inp, inpfile) {
   else
     datFile <- file.path(inpfile.split$directory, mplus.inp$data$file) #dat file path is relative or absent, and inp file directory is present
   
-  if (!file.exists(datFile)) stop("Cannot find data file: ", datFile)
+  if (!file.exists(datFile)) {
+    warning("Cannot find data file: ", datFile)
+    return(NULL)
+  }
   
   #handle missing is/are:
   missList <- NULL
@@ -846,7 +880,6 @@ readMplusInputData <- function(mplus.inp, inpfile) {
   } else {
     dat <- read.table(datFile, header=FALSE, col.names=mplus.inp$variable$names, na.strings=na.strings, colClasses="numeric")
   }
-  
   
   
   #TODO: support covariance/mean+cov inputs
