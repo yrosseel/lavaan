@@ -13,7 +13,7 @@ mplus2lavaan(inpfile)
 The data (as referred to in the Mplus input file) should be in the same
 directory as the Mplus input file.}
 \item{run}{Whether to run the specified Mplus input syntax (\code{TRUE}) or
-only to parse and convert the syntax (\code{FALSE}). 
+only to parse and convert the syntax (\code{FALSE}).} 
 }
 \value{
 A \code{lavaan} object with the fitted results of the Mplus model. The parsed
