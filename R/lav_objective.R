@@ -289,6 +289,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         Fmin <- sum( freq * log(prop/pairwisePI) ) # to avoid 'N'
 
         if(missing == "available.cases" || missing == "doubly.robust") {
+
             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
 
             # shortcuts

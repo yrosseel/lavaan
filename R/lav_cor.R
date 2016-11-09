@@ -131,7 +131,8 @@ lavCor <- function(object,
         out <- inspect(fit, "sampstat")
     } else if(output %in% c("parameterEstimates", "pe", 
               "parameterestimates", "est")) {
-        out <- parameterEstimates(fit)
+        #out <- parameterEstimates(fit)
+        out <- standardizedSolution(fit)
     } else {
         out <- fit
     }
