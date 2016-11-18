@@ -31,9 +31,10 @@ compute_uniCondProb_based_on_bivProb <- function(bivProb, nvar,
       y1Sums <- tapply(bivProb.split[[k]], idx.cat.y1.split[[k]], sum)
       y1Sums.mult <- y1Sums[idx.cat.y1.split[[k]] ]
       Y2Gy1 <- bivProb.split[[k]]/ y1Sums.mult
+      reordered_Y2Gy1 <- Y2Gy1[order(idx.cat.y1.split[[k]])]
       tmp.idx.vec.el <- idx.vec.el[(idx.Y1  == idx2.pairs[2,k]) &
                                    (idx.Gy2 == idx2.pairs[1,k])]
-      ProbY1Gy2[tmp.idx.vec.el] <- Y2Gy1
+      ProbY1Gy2[tmp.idx.vec.el] <- reordered_Y2Gy1
   }
   
   ProbY1Gy2

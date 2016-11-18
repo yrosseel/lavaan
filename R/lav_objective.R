@@ -330,6 +330,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
              SumElnfijCasewise <- apply(tmp_prod, 1, sum)
              SumElnfij <- sum(SumElnfijCasewise)
              logl <- logl + SumElnfij
+             Fmin <- Fmin - SumElnfij
 
              # COMPUTE THE THE SUM OF THE EXPECTED UNIVARIATE CONDITIONAL LIKELIHOODS 
              # SUM_{i,j} [ E_{Yj|y^o}}(lnf(Yj|yi))) ]
@@ -389,26 +390,42 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
              #i.e. univariateProbGivObs * log_ModProbY1Gy2
              univariateProbGivObs <- lavcache$univariateProbGivObs
              nobs <-  nrow(X)
-             Cond_prod <- sapply(1:nvar, function(x) {
-                tmp.mat  <- univariateProbGivObs[ , id.uniPrGivObs==x]
-                 tmp.vec  <- log_ModProbY1Gy2[ idx.Y1==x]
-                 #note that tmp.vec is longer than ncol(tmp.mat). That's why
-                 #we use apply below where the function is done row-wise
-                 #y recycles as we wish to meet the length of tmp.vec
-                t( apply(tmp.mat, 1, function(y){tmp.vec*y} ) )
+             uniweights.casewise <- lavcache$uniweights.casewise
+             id.cases.with.missing <- which(uniweights.casewise > 0)
+             no.cases.with.missing <- length(id.cases.with.missing)
+             no.obs.casewise <- nvar - uniweights.casewise
+             idx.missing.var <- apply(X, 1, function(x) { 
+                 which(is.na(x)) 
              })
-             Cond_prod <- do.call( cbind, Cond_prod )
-
-             #Since the cells of univariateProbGivObs are zero for the variables 
-             #that are observed (hence not contributing to the summand)
-             #there is no need to construct an index vector for summing appropriately 
-             #within each individual.
-             ElnyiGivyjbCasewise <- apply(Cond_prod, 1, sum)
-             ElnyiGivyjb <- sum(ElnyiGivyjbCasewise)
+             idx.observed.var <- lapply(idx.missing.var, function(x) {
+                 c(1:nvar)[-x] 
+             })
+             idx.cat.observed.var <- sapply(1:nobs, function(i) {
+                 X[i, idx.observed.var[[i]]]  
+             })
+             ElnyiGivyjbCasewise <- sapply(1:no.cases.with.missing,function(i) {
+                 tmp.id.case <- id.cases.with.missing[i]
+                 tmp.no.mis <- uniweights.casewise[tmp.id.case]
+                 tmp.idx.mis <- idx.missing.var[[tmp.id.case]]
+                 tmp.idx.obs <- idx.observed.var[[tmp.id.case]]
+                 tmp.no.obs <- no.obs.casewise[tmp.id.case]
+                 tmp.idx.cat.obs <- idx.cat.observed.var[[tmp.id.case]]
+                 tmp.uniProbGivObs.i <- univariateProbGivObs[tmp.id.case, ]
+                 sapply(1:tmp.no.mis, function(k) {
+                     tmp.idx.mis.var <- tmp.idx.mis[k]
+                     tmp.uniProbGivObs.ik <-
+                         tmp.uniProbGivObs.i[id.uniPrGivObs == tmp.idx.mis.var]
+                     tmp.log_ModProbY1Gy2 <- sapply(1:tmp.no.obs, function(z) {
+                         log_ModProbY1Gy2[idx.Y1 == tmp.idx.mis.var &
+                                         idx.Gy2 == tmp.idx.obs[z] &
+                                     idx.cat.Gy2 == tmp.idx.cat.obs[z]]})
+                     sum(tmp.log_ModProbY1Gy2 * tmp.uniProbGivObs.ik)
+                 })
+             })
+             ElnyiGivyjb <- sum(unlist(ElnyiGivyjbCasewise))
              logl <- logl + ElnyiGivyjb
-
              # for the Fmin function
-             Fmin <-  Fmin + SumElnfij + ElnyiGivyjb
+             Fmin <- Fmin - ElnyiGivyjb
 
         } #end of if (missing =="doubly.robust") 
 
