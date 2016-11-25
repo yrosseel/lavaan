@@ -332,6 +332,7 @@ fsr <- function(model = NULL, data = NULL, cmd = "sem",
                                                 rescale       = TRUE,
                                                 fixed.x       = FALSE)
 
+            ## FIXME: this should be the Jacobian!!
             A <- lav_matrix_bdiag(lapply(LVINFO[[1]], "[[", "fsm"))
             A11 <- A
             A22 <- lav_matrix_duplication_post(

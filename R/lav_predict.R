@@ -216,15 +216,32 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         lavmodel       <- lavobject@Model
         lavdata        <- lavobject@Data
         lavsamplestats <- lavobject@SampleStats
+        lavimplied     <- lavobject@implied
     } else {
         stopifnot(!is.null(lavmodel), !is.null(lavdata),
                   !is.null(lavsamplestats))
+        if(lavdata@missing == "ml") {
+            lavimplied <- lav_model_implied(lavmodel)
+        }
     }
 
     if(is.null(data.obs)) {
         data.obs <- lavdata@X
     }
     # eXo not needed
+
+    # missings? and missing = "ml"?
+    # impute values under the normal
+    if(lavdata@missing == "ml") {
+        for(g in seq_len(lavdata@ngroups)) {
+            data.obs[[g]] <- 
+                lav_mvnorm_missing_impute_pattern(Y = lavdata@X[[g]],
+                                                  Mp = lavdata@Mp[[g]],
+                                                  Mu = lavimplied$mean[[g]],
+                                                  Sigma = lavimplied$cov[[g]])
+        }
+    }
+
 
     Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
     Sigma.hat.inv <- lapply(Sigma.hat, solve)
@@ -296,15 +313,32 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         lavmodel       <- lavobject@Model
         lavdata        <- lavobject@Data
         lavsamplestats <- lavobject@SampleStats
+        lavimplied     <- lavobject@implied
     } else {
         stopifnot(!is.null(lavmodel), !is.null(lavdata),
                   !is.null(lavsamplestats))
+        if(lavdata@missing == "ml") {
+            lavimplied <- lav_model_implied(lavmodel)
+        }
     }
 
     if(is.null(data.obs)) {
         data.obs <- lavdata@X
     }
     # eXo not needed
+
+    # missings? and missing = "ml"?
+    # impute values under the normal
+    if(lavdata@missing == "ml") {
+        for(g in seq_len(lavdata@ngroups)) {
+            data.obs[[g]] <- 
+                lav_mvnorm_missing_impute_pattern(Y = lavdata@X[[g]],
+                                                  Mp = lavdata@Mp[[g]],
+                                                  Mu = lavimplied$mean[[g]],
+                                                  Sigma = lavimplied$cov[[g]])
+        }
+    }
+
 
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
     THETA  <- computeTHETA(lavmodel = lavmodel)

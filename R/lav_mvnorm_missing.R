@@ -1018,3 +1018,56 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
     list(Abeta = Abeta, Bbeta = Bbeta)
 }
 
+
+
+# impute missing cells, under the normal model, pattern-based
+##
+## FIXME: 
+## 1) adopt coding style (see above) for this function
+## 2) adopt estimate.moments.EM
+lav_mvnorm_missing_impute_pattern <- function(Y           = NULL,
+                                              Mp          = NULL,
+                                              Mu          = NULL,
+                                              Sigma       = NULL,
+                                              Sinv.method = "eigen") {
+
+    # complete data
+    Y.complete <- Y
+
+    for(p in seq_len(Mp$npatterns)) {
+
+        var.idx <- Mp$pat[p,]
+        if(all(var.idx)) {
+            next
+        }
+
+        # extract raw data for these cases
+        X <- Y[Mp$case.idx[[p]], Mp$pat[p, ], drop = FALSE]
+
+        # partition Mu (1=missing, 2=complete)
+        Mu_1 <- Mu[!var.idx]
+        Mu_2 <- Mu[ var.idx]
+
+        # partition Sigma (1=missing, 2=complete)
+        Sigma_11 <- Sigma[!var.idx, !var.idx, drop=FALSE]
+        Sigma_12 <- Sigma[!var.idx,  var.idx, drop=FALSE]
+        Sigma_21 <- Sigma[ var.idx, !var.idx, drop=FALSE]
+        Sigma_22 <- Sigma[ var.idx,  var.idx, drop=FALSE]
+        Sigma_22.inv <- try(inv.chol(Sigma_22, logdet=FALSE), silent = TRUE)
+        if(inherits(Sigma_22.inv, "try-error")) {
+            stop("lavaan ERROR: Sigma_22.inv cannot be inverted")
+        }
+        #Sigma_22.inv <- solve(Sigma_22)
+
+        # estimate missing values in this pattern
+        Diff <- apply(X, 1, '-', Mu_2)
+        X_missing2 <- t(Sigma_12 %*% Sigma_22.inv %*% Diff)
+        X_missing <- t(apply(X_missing2, 1, '+', Mu_1))
+
+        # complete data for this pattern
+        Y.complete[Mp$case.idx[[p]], !var.idx] <- X_missing
+    }
+
+    Y.complete
+}
+
