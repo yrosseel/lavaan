@@ -832,7 +832,7 @@ readMplusInputData <- function(mplus.inp, inpfile) {
     
     if (missSpec == "." || missSpec=="*") { #case 1: MISSING ARE|=|IS .;
       na.strings <- missSpec
-    } else if ((allMatch <- regexpr("\\s+ALL\\s+\\(([^\\)]+)\\)", missSpec, perl=TRUE))[1L] > -1L) { #case 2: use of ALL with parens
+    } else if ((allMatch <- regexpr("\\s*ALL\\s*\\(([^\\)]+)\\)", missSpec, perl=TRUE))[1L] > -1L) { #case 2: use of ALL with parens
       missStr <- trimSpace(substr(missSpec, attr(allMatch, "capture.start"), attr(allMatch, "capture.start") + attr(allMatch, "capture.length") - 1L))
       na.strings <- expandMissVec(missStr)
     } else { #case 3: specific missing values per variable
