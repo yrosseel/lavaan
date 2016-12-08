@@ -129,6 +129,9 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_partable_complete",
        "lav_partable_attributes",
        "lav_partable_merge",
+       "lav_partable_constraints_def",
+       "lav_partable_constraints_ceq",
+       "lav_partable_constraints_ciq",
 
        # lav_constraints
        "lav_constraints_parse",
