@@ -141,6 +141,8 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
 
 lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
 
+    ### FIXME: check if models are nested at the parameter level!!!
+
     # extract information from m1 and m2
     T1 <- m1@test[[1]]$stat
     r1 <- m1@test[[1]]$df

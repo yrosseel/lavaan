@@ -138,15 +138,11 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
         if(length(na.idx) == P) next
 
         # invert Sigma for this pattern
-        if(length(na.idx) > 0L) {
-            sigma.inv <- lav_matrix_symmetric_inverse_update(S.inv = Sigma.inv,
+        sigma.inv <- lav_matrix_symmetric_inverse_update(S.inv = Sigma.inv,
                 rm.idx = na.idx, logdet = TRUE, S.logdet = Sigma.logdet)
-            logdet[i] <- attr(sigma.inv, "logdet")
-        } else {
-            sigma.inv <- Sigma.inv
-            logdet[i] <- Sigma.logdet
-        }
+        logdet[i] <- attr(sigma.inv, "logdet")
 
+        # distance for this case
         DIST[i] <- sum(sigma.inv * crossprod(Yc[i, OBS[i,], drop = FALSE]))
     }
 
@@ -312,7 +308,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
         Mp <- lav_data_missing_patterns(Y)
     }
 
-    # for each pattern, compute Yc %*% sigma.inv
+    # for each pattern
     for(p in seq_len(Mp$npatterns)) {
 
         # observed values for this pattern
@@ -367,7 +363,7 @@ lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp          = NULL,
     # dvechSigma
     dSigma <- matrix(0, P, P)
 
-    # for each pattern, compute Yc %*% sigma.inv
+    # for each pattern
     for(p in seq_len(pat.N)) {
 
         # observed variables for this pattern
@@ -429,7 +425,7 @@ lav_mvnorm_missing_dlogl_dvechSigma_samplestats <-
     # dvechSigma
     dvechSigma <- numeric(P*(P+1)/2)
 
-    # for each pattern, compute Yc %*% sigma.inv
+    # for each pattern
     for(p in seq_len(pat.N)) {
 
         # observed variables for this pattern
@@ -499,6 +495,9 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
     # for each pattern, compute sigma.inv
     for(p in seq_len(Mp$npatterns)) {
 
+        # observed values for this pattern
+        var.idx <- Mp$pat[p,]
+
         # missing values for this pattern
         na.idx <- which(!var.idx)
 
@@ -553,7 +552,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
     # SC
     SC <- matrix(as.numeric(NA), nrow = N, ncol = length(iSigma))
 
-    # for each pattern, compute Yc %*% sigma.inv
+    # for each pattern
     for(p in seq_len(Mp$npatterns)) {
 
         # observed values for this pattern

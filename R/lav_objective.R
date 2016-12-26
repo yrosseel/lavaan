@@ -23,7 +23,7 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -56,7 +56,7 @@ estimator.ML_res <- function(Sigma.hat=NULL, Mu.hat=NULL, PI=NULL,
     fx <- objective.sigma + objective.beta
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -96,7 +96,7 @@ estimator.REML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     fx <- fx + ( 1/nobs * (reml.h0  - reml.h1) )
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -119,7 +119,7 @@ estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -136,7 +136,7 @@ estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
     fx <- as.numeric( crossprod(crossprod(WLS.V, diff), diff) )
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -148,7 +148,7 @@ estimator.DWLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
     fx <- sum(diff * diff * WLS.VD)
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -194,7 +194,7 @@ estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
         fx <- fx - h1
 
         # no negative values
-        if(fx < 0.0) fx <- 0.0
+        if(is.finite(fx) && fx < 0.0) fx <- 0.0
     }
 
     fx
