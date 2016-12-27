@@ -387,11 +387,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             #cat("missing.h1 = "); print(missing.h1); cat("\n")
             if(missing.h1) {
                 # estimate moments unrestricted model
-                out <- estimate.moments.EM(Y = X[[g]], Mp = Mp[[g]],
-                                           Yp = missing.[[g]],
-                                           verbose = verbose)
-                missing.h1.[[g]]$sigma <- out$sigma
-                missing.h1.[[g]]$mu    <- out$mu
+                #out <- estimate.moments.EM(Y = X[[g]], Mp = Mp[[g]],
+                #                           Yp = missing.[[g]],
+                #                           verbose = verbose)
+                out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
+                          Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
+                missing.h1.[[g]]$sigma <- out$Sigma
+                missing.h1.[[g]]$mu    <- out$Mu
                 missing.h1.[[g]]$h1    <- out$fx
             }
         }
