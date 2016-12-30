@@ -37,6 +37,7 @@ Description: Fit a variety of latent variable models, including confirmatory
 Depends: R(>= 3.1.0)
 Imports: methods, stats4, stats, utils, graphics, MASS, 
          mnormt, pbivnorm, quadprog
+Suggests: testthat
 License: GPL (>= 2)
 LazyData: yes
 URL: http://lavaan.org
