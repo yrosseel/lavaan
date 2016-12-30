@@ -190,7 +190,7 @@ lav_integration_f_dnorm <- function(func       = NULL,  # often ly.prod
             # find mu hat and sd hat
             mu.est <- optimize(f = log.g, interval = c(-10,10),
                     maximum = TRUE, tol=.Machine$double.eps, ...)$maximum
-            H <- as.numeric(numDeriv:::hessian(func = log.g, x = mu.est, ...))
+            H <- as.numeric(numDeriv::hessian(func = log.g, x = mu.est, ...))
             sd.est <- sqrt(1/-H)
 
             w.star <- sqrt(2) * sd.est * dnorm(sd.est*(sqrt(2)*XW$x) + mu.est,dnorm.mean,dnorm.sd) * exp(XW$x^2) * XW$w
@@ -258,7 +258,7 @@ lav_integration_f_dnorm_z <- function(func       = NULL,  # often ly.prod
             # find mu hat and sd hat
             mu.est <- optimize(f = log.gz, interval = c(-10,10),
                     maximum = TRUE, tol=.Machine$double.eps, ...)$maximum
-            H <- as.numeric(numDeriv:::hessian(func = log.gz, x = mu.est, ...))
+            H <- as.numeric(numDeriv::hessian(func = log.gz, x = mu.est, ...))
             sd.est <- sqrt(1/-H)
 
             w.star <- sqrt(2) * sd.est * dnorm(sd.est*(sqrt(2)*XW$x) + mu.est,0,1) * exp(XW$x^2) * XW$w

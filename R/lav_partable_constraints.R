@@ -230,7 +230,8 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
 #
 # NOTE: very similar, but not identitical to ceq, because we need to take
 #       care of the difference between '<' and '>'
-lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
+lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
+                                         txtOnly = FALSE) {
 
 
     # empty function
@@ -246,14 +247,22 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
     # get inequality constraints
     ineq.idx <- which(partable$op == ">" | partable$op == "<")
 
-    # catch empty ceq
+    # catch empty ciq
     if(length(ineq.idx) == 0L) {
-        return(cin.function)
+        if(txtOnly) {
+             return(character(0L))
+        } else {
+            return(cin.function)
+        }
     }
 
     # create function
     formals(cin.function) <- alist(.x.=, ...=)
-    BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
+    if(txtOnly) {
+        BODY.txt <- ""
+    } else {
+        BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep="")
+    }
 
     # first come the variable definitions
     DEF.txt <- lav_partable_constraints_def(partable, txtOnly=TRUE)
@@ -336,6 +345,9 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE) {
 
         BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", ineq.string, "\n", sep="")
     }
+
+    if(txtOnly) return(BODY.txt)
+
     # put the results in 'out'
     #BODY.txt <- paste(BODY.txt, "\nout <- ",
     #    paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")

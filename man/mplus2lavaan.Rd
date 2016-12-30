@@ -6,7 +6,7 @@
 Read in an Mplus input file, convert it to lavaan syntax, and fit
 the model.}
 \usage{
-mplus2lavaan(inpfile)
+mplus2lavaan(inpfile, run = TRUE)
 }
 \arguments{
 \item{inpfile}{The filename (including a full path) of the Mplus input file.
