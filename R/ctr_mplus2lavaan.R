@@ -483,7 +483,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   
   #split into vector of strings 
   #syntax.split <- unlist( strsplit(syntax, "\n") )
-  syntax.split <- unlist( strsplit(syntax, ";") )
+  syntax.split <- trimSpace(unlist( strsplit(syntax, ";") ))
   
   #format of parTable to mimic.
 # 'data.frame':	34 obs. of  12 variables:
@@ -714,8 +714,11 @@ mplus2lavaan <- function(inpfile, run=TRUE) {
 divideIntoFields <- function(section.text, required) {
   
   if (is.null(section.text)) { return(NULL) }
-  section.split <- strsplit(paste(section.text, collapse=" "), ";", fixed=TRUE)[[1]]
   
+  #The parser breaks down when there is a line with a trailing comment because then splitting on semicolon will combine it with the following line
+  #Thus, trim off trailing comments before initial split
+  section.text <- gsub("\\s*!.*$", "", section.text, perl=TRUE)
+  section.split <- strsplit(paste(section.text, collapse=" "), ";", fixed=TRUE)[[1]] #split on semicolons
   section.divide <- list()
   
   for (cmd in section.split) {
@@ -866,7 +869,7 @@ readMplusInputData <- function(mplus.inp, inpfile) {
       } else { stop("I don't understand this missing specification: ", missSpec) }
     }
   } else { na.strings <- "NA" }
-  
+
   if (!is.null(missList)) {
     dat <- read.table(datFile, header=FALSE, col.names=mplus.inp$variable$names, colClasses="numeric")
     #loop over variables in missList and set missing values to NA
