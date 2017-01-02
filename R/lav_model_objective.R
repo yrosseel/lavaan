@@ -103,8 +103,8 @@ lav_model_objective <- function(lavmodel       = NULL,
                 if(!attr(Sigma.hat[[g]], "po")) return(Inf)
                 group.fx <- estimator.FIML(Sigma.hat=Sigma.hat[[g]],
                                            Mu.hat=Mu.hat[[g]],
-                                           M=lavsamplestats@missing[[g]],
-                                           h1=lavsamplestats@missing.h1[[g]]$h1)
+                                           Yp=lavsamplestats@missing[[g]],
+                                           h1=lavsamplestats@missing.h1[[g]]$h1,                                           N=lavsamplestats@nobs[[g]])
             } else {
                 stop("this estimator: `", estimator, 
                      "' can not be used with incomplete data and the missing=\"ml\" option")

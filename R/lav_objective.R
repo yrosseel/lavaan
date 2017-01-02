@@ -23,7 +23,7 @@ estimator.ML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -56,7 +56,7 @@ estimator.ML_res <- function(Sigma.hat=NULL, Mu.hat=NULL, PI=NULL,
     fx <- objective.sigma + objective.beta
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -96,7 +96,7 @@ estimator.REML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     fx <- fx + ( 1/nobs * (reml.h0  - reml.h1) )
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -119,7 +119,7 @@ estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
     }
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -136,7 +136,7 @@ estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
     fx <- as.numeric( crossprod(crossprod(WLS.V, diff), diff) )
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
@@ -148,53 +148,30 @@ estimator.DWLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
     fx <- sum(diff * diff * WLS.VD)
 
     # no negative values
-    if(fx < 0.0) fx <- 0.0
+    if(is.finite(fx) && fx < 0.0) fx <- 0.0
 
     fx
 }
 
 # Full Information ML estimator (FIML) handling the missing values 
-estimator.FIML <- function(Sigma.hat=NULL, Mu.hat=NULL, M=NULL, h1=NULL) {
+estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL, 
+                           h1 = NULL, N = NULL) {
 
-    npatterns <- length(M)
-
-    fx.p <- numeric(npatterns)
-     w.p <- numeric(npatterns)
-
-    # for each missing pattern, combine cases and compute raw loglikelihood
-    for(p in 1:npatterns) {
-
-        SX <- M[[p]][["SY"]]
-        MX <- M[[p]][["MY"]]
-        w.p[p] <- nobs <- M[[p]][["freq"]]
-        var.idx <- M[[p]][["var.idx"]]
-
-        # note: if a decent 'sweep operator' was available (in fortran)
-        # we might win some time by 'updating' the inverse by sweeping
-        # out the changed patterns... (but to get the logdet, we need
-        # to do it one column at a time?)
-
-        #cat("FIML: pattern ", p, "\n")
-        #print(Sigma.hat[var.idx, var.idx])
-
-        Sigma.inv <- inv.chol(Sigma.hat[var.idx, var.idx], logdet=TRUE)
-        Sigma.log.det <- attr(Sigma.inv, "logdet")
-        Mu <- Mu.hat[var.idx]
-
-        TT <- SX + tcrossprod(MX - Mu)
-        trace <- sum(Sigma.inv * TT)
-
-        fx.p[p] <- Sigma.log.det + trace
+    if(is.null(N)) {
+        N <- sum(sapply(Yp, "[[", "freq"))
     }
 
-    fx <- weighted.mean(fx.p, w=w.p)
+    fx <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp,
+                                                Mu = Mu.hat, Sigma = Sigma.hat,
+                                                log2pi = FALSE,
+                                                minus.two = TRUE)/N
 
     # ajust for h1
     if(!is.null(h1)) {
         fx <- fx - h1
 
         # no negative values
-        if(fx < 0.0) fx <- 0.0
+        if(is.finite(fx) && fx < 0.0) fx <- 0.0
     }
 
     fx

@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.5-23.1044
+Version: 0.5-23.1051
 Authors@R: c(person(given = "Yves", family = "Rosseel",
                     role  = c("aut", "cre"),
                     email = "Yves.Rosseel@UGent.be"),
@@ -30,13 +30,17 @@ Authors@R: c(person(given = "Yves", family = "Rosseel",
                     email = "mirtok2@gmail.com"),
              person(given = "Mariska", family = "Barendse",
                     role = "ctb",
-                    email = "m.t.barendse@rug.nl")
+                    email = "m.t.barendse@rug.nl"),
+             person(given = "Michael", family = "Chow",
+                    role = "ctb",
+                    email = "machow@princeton.edu")
             )
 Description: Fit a variety of latent variable models, including confirmatory
    factor analysis, structural equation modeling and latent growth curve models.
 Depends: R(>= 3.1.0)
 Imports: methods, stats4, stats, utils, graphics, MASS, 
-         mnormt, pbivnorm, quadprog
+         mnormt, pbivnorm, quadprog, numDeriv
+Suggests: testthat
 License: GPL (>= 2)
 LazyData: yes
 URL: http://lavaan.org
