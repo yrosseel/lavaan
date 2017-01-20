@@ -1100,6 +1100,10 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
     # erase all col/rows...
     } else if(ndel == NCOL(S.inv)) {
         out <- matrix(0,0,0)
+    } 
+
+    else {
+        stop("lavaan ERROR: column indices exceed number of columns in S.inv")
     }
 
     out

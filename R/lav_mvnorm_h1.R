@@ -4,12 +4,22 @@
 # 1) loglikelihood h1 (from raw data, or sample statistics)
 # 4) hessian h1 around MLEs
 # 5) information h1 (restricted Sigma/mu)
-#    5a: (unit)    expected information h1 (A1)
-#    5b: (unit)    observed information h1 (A1)
+#    5a: (unit)    expected information h1 (A1 = Gamma.NT^{-1})
+#    5b: (unit)    observed information h1 (A1 = Gamma.NT^{-1})
 #    5c: (unit) first.order information h1 (B1 = A1 %*% Gamma %*% A1)
+# 6) inverted information h1 mu + vech(Sigma)
+#    6a: (unit) inverted expected information (A1.inv = Gamma.NT)
+#    6b: (unit) inverted observed information (A1.inv = Gamma.NT)
+#    6c: (unit) inverted first-order information (B1.inv)
+# 7) ACOV h1 mu + vech(Sigma)
+#    7a: 1/N * Gamma.NT
+#    7b: 1/N * Gamma.NT
+#    7c: 1/N * (Gamma.NT * Gamma^{-1} * Gamma.NT)
+#    7d: 1/N * Gamma (sandwich)
 
 
-# YR 25 March 2016: first version
+# YR 25 Mar 2016: first version
+# YR 19 Jan 2017: added 6) + 7)
 
 # 1. likelihood h1
 
@@ -207,4 +217,91 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     A1 %*% Gamma %*% A1
 }
 
+# 6) inverted information h1 mu + vech(Sigma)
+
+#    6a: (unit) inverted expected information (A1.inv = Gamma.NT)
+#    6b: (unit) inverted observed information (A1.inv = Gamma.NT)
+
+lav_mvnorm_h1_inverted_information_expected <- 
+lav_mvnorm_h1_inverted_information_observed <- function(Y              = NULL,
+                                                        sample.cov     = NULL) {
+    # sample.cov
+    if(is.null(sample.cov)) {
+        sample.mean <- colMeans(Y); N <- NROW(Y)
+        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+    }
+
+    I11 <- sample.cov
+    I22 <- 2 * lav_matrix_duplication_ginv_pre_post(sample.cov %x% sample.cov)
+
+    Gamma.NT <- lav_matrix_bdiag(I11, I22)
+
+    Gamma.NT
+}
+
+#    6c: (unit) inverted first-order information (B1.inv)
+
+lav_mvnorm_h1_inverted_information_firstorder <- function(Y          = NULL,
+                                                      sample.cov     = NULL,
+                                                      Sinv.method    = "eigen",
+                                                      sample.cov.inv = NULL,
+                                                      Gamma          = NULL) {
+    # Gamma
+    if(is.null(Gamma)) {
+        Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)
+    }
+
+    # Gamma.NT
+    Gamma.NT <- 
+        lav_mvnorm_h1_inverted_information_expected(Y = Y, 
+                                                    sample.cov = sample.cov)
+
+    Gamma.NT %*% solve(Gamma, Gamma.NT)
+}
+
+
+# 7) ACOV h1 mu + vech(Sigma)
+
+#    7a: 1/N * Gamma.NT
+#    7b: 1/N * Gamma.NT
+lav_mvnorm_h1_acov_expected <-
+lav_mvnorm_h1_acov_observed <- function(Y              = NULL,
+                                        sample.cov     = NULL) {
+    N <- NROW(Y)
+
+    Gamma.NT <- 
+        lav_mvnorm_h1_inverted_information_expected(Y = Y, 
+                                                    sample.cov = sample.cov)
+
+    (1/N) * Gamma.NT
+}
+
+#    7c: 1/N * (Gamma.NT * Gamma^{-1} * Gamma.NT)
+lav_mvnorm_h1_acov_firstorder <- function(Y              = NULL,
+                                          sample.cov     = NULL,
+                                          Sinv.method    = "eigen",
+                                          sample.cov.inv = NULL,
+                                          Gamma          = NULL) {
+    N <- NROW(Y)
+
+    J1.inv <- lav_mvnorm_h1_inverted_information_firstorder(Y = Y,
+                  sample.cov = sample.cov, Sinv.method = Sinv.method, 
+                  sample.cov.inv = sample.cov.inv, Gamma = Gamma)
+
+    (1/N) * J1.inv
+}
+
+#    7d: 1/N * Gamma (sandwich)
+lav_mvnorm_h1_acov_sandwich <- function(Y              = NULL,
+                                        sample.cov     = NULL,
+                                        Gamma          = NULL) {
+    N <- NROW(Y)
+
+    # Gamma
+    if(is.null(Gamma)) {
+        Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)
+    }
+
+    (1/N) * Gamma
+}
 

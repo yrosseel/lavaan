@@ -6,9 +6,28 @@
 # 3) casewise scores with respect to mu, vech(Sigma), mu + vech(Sigma)
 # 4) hessian of mu + vech(Sigma)
 # 5) (unit) information of mu + vech(Sigma)
+#    5a: (unit)    expected information
+#    5b: (unit)    observed information
+#    5c: (unit) first.order information
+#    5d: lav_mvnorm_missing_information_both (both observed + first.order)
+
+# 6) inverted information h0 mu + vech(Sigma)
+#    6a: /
+#    6b: /
+#    6c: /
+# 7) ACOV h0 mu + vech(Sigma)
+#    7a: 1/N * inverted expected    information
+#    7b: 1/N * inverted observed    information
+#    7c: 1/N * inverted first-order information
+#    7d: sandwich acov
+
+# 10) additional functions
+#      - lav_mvnorm_missing_impute_pattern
+#      - lav_mvnorm_missing_estep
 
 
 # YR 09 Feb 2016: first version
+# YR 19 Mar 2017: 10)
 
 
 # 1) likelihood
@@ -1054,6 +1073,64 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
 }
 
 
+# 6) inverted information h0 mu + vech(Sigma)
+
+#    6a: (unit) inverted expected information
+#    NOT USED: is not equal to solve(expected)
+#    (although it does converge to the same solution eventually)
+# lav_mvnorm_missing_inverted_information_expected <- function(Y  = NULL,
+#                                                    Mp          = NULL,
+#                                                    Mu          = NULL,# unused
+#                                                    Sigma       = NULL) {
+#    P <- NCOL(Y)
+#
+#    # missing patterns
+#    if(is.null(Mp)) {
+#        Mp <- lav_data_missing_patterns(Y)
+#    }
+#
+#    # N
+#    N <- sum(Mp$freq) # removed empty cases!
+#
+#    I11 <- matrix(0, P, P)
+#    I22 <- matrix(0, P*(P+1)/2, P*(P+1)/2)
+#
+#    # for each pattern
+#    for(p in seq_len(Mp$npatterns)) {
+#
+#        # observed variables
+#        var.idx <- Mp$pat[p,]
+#
+#        sigma <- matrix(0, P, P)
+#        sigma[var.idx, var.idx] <- Sigma[var.idx, var.idx]
+#        sigma2 <- 2 * lav_matrix_duplication_ginv_pre_post(sigma %x% sigma)
+#
+#        I11 <- I11 + Mp$freq[p] * sigma
+#        I22 <- I22 + Mp$freq[p] * sigma2
+#    }
+#
+#    lav_matrix_bdiag(I11, I22)/N
+#}
+
+#    6b: /
+
+#    6c: /
+
+
+# 7) ACOV h0 mu + vech(Sigma)
+
+#    7a: 1/N * inverted expected    information
+
+#    7b: 1/N * inverted observed    information
+
+#    7c: 1/N * inverted first-order information
+
+#    7d: sandwich acov
+
+
+
+# 10) other stuff
+
 # single imputation missing cells, under the normal model, pattern-based
 lav_mvnorm_missing_impute_pattern <- function(Y           = NULL,
                                               Mp          = NULL,
@@ -1156,7 +1233,7 @@ lav_mvnorm_missing_estep <- function(Y           = NULL,
         # extract observed data
         O <- Y[Mp$case.idx[[p]], Mp$pat[p, ], drop = FALSE]
 
-        # if complete, nothing to do
+        # if complete, just compute first and second moments
         if(all(var.idx)) {
             # complete pattern
             T1 <- T1 + colSums(O)

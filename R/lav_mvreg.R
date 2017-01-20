@@ -14,11 +14,6 @@ lav_mvreg_loglik_data <- function(Y           = NULL,
                                   Sinv.method = "eigen") {
     Q <- NCOL(Y); N <- NROW(Y)
 
-    # invert Sigma
-    Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
-                                              Sinv.method = Sinv.method)
-    logdet <- attr(Sigma.inv, "logdet")
-
     if(casewise) {
         LOG.2PI <- log(2 * pi)
 
@@ -44,6 +39,7 @@ lav_mvreg_loglik_data <- function(Y           = NULL,
         # invert Sigma
         Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
                                                   Sinv.method = Sinv.method)
+        logdet <- attr(Sigma.inv, "logdet")
 
         RES <- Y - X %*% Beta
         # TOTAL <- TR( (Y - X%*%Beta) %*% Sigma.inv %*% t(Y - X%*%Beta) )
@@ -86,9 +82,9 @@ lav_mvreg_loglik_samplestats <- function(sample.res.beta = NULL,
 
     # tr( Sigma^{-1} (B-beta)' X'X (B-beta) 
     Diff <- sample.res.beta - Beta
-    DIST2 <- sum(Sigma.inv * crossprod(Diff, sample.XX) %*% Diff)
+    DIST2 <- sum(Sigma.inv * crossprod(Diff, (1/N)*sample.XX) %*% Diff)
 
-    loglik <- -(1/2) * (N*Q*log(2*pi) + N*logdet + N*DIST1 + DIST2)
+    loglik <- -(N/2) * (Q*log(2*pi) + logdet + DIST1 + DIST2)
 
     loglik
 }
@@ -234,7 +230,7 @@ lav_mvreg_scores_vech_sigma <- function(Y           = NULL,
     Z <- RES[,idx1] * RES[,idx2]
 
     # substract isigma from each row
-    SC <- sweep(Z, 2L, STATS = isigma, FUN = "-")
+    SC <- t( t(Z) - isigma )
 
     # adjust for vech (and avoiding the 1/2 factor)
     SC[,lav_matrix_diagh_idx(Q)] <- SC[,lav_matrix_diagh_idx(Q)] / 2
@@ -276,7 +272,7 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
     Z <- RES[,idx1] * RES[,idx2]
 
     # substract isigma from each row
-    SC <- sweep(Z, 2L, STATS = isigma, FUN = "-")
+    SC <- t( t(Z) - isigma )
 
     # adjust for vech (and avoiding the 1/2 factor)
     SC[,lav_matrix_diagh_idx(Q)] <- SC[,lav_matrix_diagh_idx(Q)] / 2
@@ -316,14 +312,14 @@ lav_mvreg_hessian_beta_vech_sigma <- function(Y           = NULL,
     }
 
     RES <- Y - X %*% Beta
-    W.tilde <- crossprod(RES)
+    W.tilde <- 1/N * crossprod(RES)
 
     H11 <- Sigma.inv %x% ((1/N) * crossprod(X))
     H21 <- lav_matrix_duplication_pre( Sigma.inv %x% 
        (Sigma.inv %*% ((1/N) * crossprod(RES, X))) )
     H12 <- t(H21)
 
-    AAA <- Sigma.inv %*% ((2/N)*W.tilde - Sigma) %*% Sigma.inv
+    AAA <- Sigma.inv %*% (2*W.tilde - Sigma) %*% Sigma.inv
     H22 <- (1/2) * lav_matrix_duplication_pre_post(Sigma.inv %x% AAA)
 
     H <- -N * rbind( cbind(H11, H12),

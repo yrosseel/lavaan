@@ -4,14 +4,23 @@
 # 2) derivatives with respect to mu, Sigma, vech(Sigma)
 # 3) casewise scores with respect to mu, vech(Sigma), mu + vech(Sigma)
 # 4) hessian mu + vech(Sigma)
-# 5) information h0 (restricted Sigma/mu)
-#    5a: (unit)    expected information of mu + vech(Sigma) h0
-#    5b: (unit)    observed information h0
-#    5c: (unit) first.order information h0
-
+# 5) information h0 mu + vech(Sigma)
+#    5a: (unit)    expected information
+#    5b: (unit)    observed information
+#    5c: (unit) first.order information
+# 6) inverted information h0 mu + vech(Sigma)
+#    6a: (unit) inverted expected information
+#    6b: /
+#    6c: /
+# 7) ACOV h0 mu + vech(Sigma)
+#    7a: 1/N * inverted expected    information
+#    7b: 1/N * inverted observed    information
+#    7c: 1/N * inverted first-order information
+#    7d: sandwich acov
 
 # YR 07 Feb 2016: first version
 # YR 24 Mar 2016: added firstorder information, hessian logl
+# YR 19 Jan 2017: added lav_mvnorm_inverted_information_expected
 
 # 0. densities 
 lav_mvnorm_dmvnorm <- function(Y             = NULL,
@@ -428,7 +437,7 @@ lav_mvnorm_information_observed_data <- function(Y           = NULL,
 
     # sample statistics
     sample.mean <- colMeans(Y)
-    sample.cov <- cov(Y) * (N-1)/N
+    sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
 
     lav_mvnorm_information_observed_samplestats(sample.mean = sample.mean,
         sample.cov = sample.cov, Mu = Mu, Sigma = Sigma,
@@ -486,4 +495,44 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
     crossprod(SC)/N
 }
 
+
+# 6: inverted information h0
+
+# 6a: inverted unit expected information h0 Mu and vech(Sigma)
+lav_mvnorm_inverted_information_expected <- function(Y     = NULL, # unused!
+                                                     Mu    = NULL, # unused!
+                                                     Sigma         = NULL,
+                                                     meanstructure = TRUE) {
+
+    I22 <- 2 * lav_matrix_duplication_ginv_pre_post(Sigma %x% Sigma)
+
+    if(meanstructure) {
+        I11 <- Sigma
+        out <- lav_matrix_bdiag(I11, I22)
+    } else {
+        out <- I22
+    }
+
+    out
+}
+
+# 6b:  inverted unit observed information h0
+
+# one could use the inverse of a partitioned matrix, but that does not
+# seem to help much... unless we can find an expression for solve(I22)
+
+# 6c: inverted unit first-order information h0
+# /
+
+
+# 7) ACOV h0 mu + vech(Sigma)
+# not implemented, as too trivial
+
+#    7a: 1/N * inverted expected    information
+
+#    7b: 1/N * inverted observed    information
+
+#    7c: 1/N * inverted first-order information
+
+#    7d: sandwich acov
 

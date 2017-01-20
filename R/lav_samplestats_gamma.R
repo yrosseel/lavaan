@@ -1,6 +1,11 @@
 # YR 21 March 2015
-# new approach to compute 'Gamma': the asymptotic variance matrix of the
+# new approach to compute 'Gamma': the asymptotic variance matrix of 
+#                                  sqrt{N} times the
 #                                  observed sample statistics (means + varcov)
+#
+# Gamma = N x ACOV[ ybar, vech(S) ]
+#       = NACOV[ ybar, vech(S) ]
+#
 # - one single function for mean + cov
 # - handle 'fixed.x' exogenous covariates
 # - YR 3 Dec 2015: allow for conditional.x = TRUE

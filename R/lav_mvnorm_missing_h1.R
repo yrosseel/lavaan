@@ -3,7 +3,8 @@
 # 1) loglikelihood --> same as h0 but where Mu and Sigma are unrestricted
 # 2) 3) 4) 5)      --> (idem)
 
-# YR 26 March 2016: first version
+# YR 26 Mar 2016: first version
+# YR 20 Jan 2017: added _h1_omega_sw()
 
 # here, we estimate Mu and Sigma from Y with missing values, assuming normality
 # this is a rewrite of the 'estimate.moments.EM' function in <= 0.5-22
@@ -125,4 +126,53 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
     list(Sigma = Sigma, Mu = Mu, fx = fx)
 }
+
+# compute N times ACOV(Mu, vech(Sigma))
+# in the literature: - `Omega_{SW}'
+#                    - `Gamma for incomplete data'
+#                    - (N times the) sandwich estimator for acov(mu,vech(Sigma))
+#
+lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
+                                           Mp          = NULL,
+                                           Yp          = NULL,
+                                           Sinv.method = "eigen",
+                                           Mu          = NULL,
+                                           Sigma       = NULL,
+                                           Sigma.inv   = NULL,
+                                           information = "observed") {
+
+    # missing patterns
+    if(is.null(Mp)) {
+        Mp <- lav_data_missing_patterns(Y)
+    }
+
+    # sample stats per pattern
+    if(is.null(Yp) && (information == "observed" || is.null(Sigma))) {
+        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp)
+    }
+
+    # Sigma and Mu
+    if(is.null(Sigma) || is.null(Mu)) {
+        out <- lavaan:::lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp,
+                                                               Yp = Yp)
+        Mu <- out$Mu
+        Sigma <- out$Sigma
+    }
+
+    # information matrices
+    info <- lav_mvnorm_missing_information_both(Y = Y, Mp = Mp, Mu = Mu,
+                Sigma = Sigma, Sinv.method = Sinv.method, 
+                Sigma.inv = Sigma.inv, information = information)
+
+    A <- info$Abeta
+    A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = FALSE, 
+                                          Sinv.method = Sinv.method)
+    B <- info$Bbeta
+
+    # sandwich
+    SW <- A.inv %*% B %*% A.inv
+
+    SW
+}
+
 
