@@ -105,9 +105,13 @@ lav_model_wls_v <- function(lavmodel       = NULL,
         # diagonal only!!
         WLS.V <- lavsamplestats@WLS.VD
 
-
     # for ML, we need to recompute this, as it is function of Sigma (and Mu)
-    } else if(estimator == "ML") {
+    # - unless missing = "two.stage", where we use the unstructured versions
+    #   already stored in WLS.V
+    } else if(estimator == "ML" && !is.null(lavsamplestats@WLS.V[[1]])) {
+        WLS.V <- lavsamplestats@WLS.V
+
+    } else if(estimator == "ML" && is.null(lavsamplestats@WLS.V[[1]])) {
         WLS.V <- vector("list", length=lavsamplestats@ngroups)
         
         if(lavmodel@conditional.x) {

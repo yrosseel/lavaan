@@ -426,6 +426,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        missing.h1    = (lavoptions$missing != "listwise"),
                        WLS.V             = WLS.V,
                        NACOV             = NACOV,
+                       se                = lavoptions$se,
+                       information       = lavoptions$information,
                        ridge             = ridge,
                        optim.method      = 
                            ifelse(!is.null(control$cor.optim.method), 

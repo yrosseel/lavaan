@@ -174,11 +174,12 @@ lavaanList <- function(model         = NULL,             # model
         # fit model with this (new) dataset
         if(cmd %in% c("lavaan", "sem", "cfa", "growth")) {
             lavobject <- try(do.call("lavaan",
-                                     args = list(slotOptions  = lavoptions,
-                                                 slotParTable = lavpartable,
-                                                 slotModel    = lavmodel,
-                                                 start        = FIT,
-                                                 data         = DATA)), 
+                                     args = c(list(slotOptions  = lavoptions,
+                                                   slotParTable = lavpartable,
+                                                   slotModel    = lavmodel,
+                                                   start        = FIT,
+                                                   data         = DATA),
+                                                   dotdotdot)), 
                              silent = TRUE)
         } else if(cmd == "fsr") {
             # extract fs.method and fsr.method from dotdotdot

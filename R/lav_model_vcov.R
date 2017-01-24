@@ -182,6 +182,60 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
     NVarCov
 }
 
+# two stage 
+# - two.stage: Gamma = I_1^{-1}
+# - robust.two.stage: Gamma = incomplete Gamma (I_1^{-1} J_1 I_1^{-1})
+# where I_1 and J_1 are based on the `unstructured' (saturated) model h1
+# references:
+#
+# - Savalei \& Bentler (2009) eq (6) for se = "two.stage"
+# - Savalei \& Falk (2014) eq  (3)   for se = "robust.two.stage"
+# - Yuan \& Bentler (2000)
+lav_model_nvcov_two_stage <- function(lavmodel       = NULL, 
+                                      lavsamplestats = NULL, 
+                                      use.ginv       = FALSE) {
+
+    # we 'grab' WLS.V from the @Samplestats@WLS.V slot
+    E.inv <- lav_model_information_expected(lavmodel       = lavmodel, 
+                                            lavsamplestats = lavsamplestats, 
+                                            lavdata        = lavdata, 
+                                            estimator      = "ML",
+                                            extra          = TRUE,
+                                            augmented      = TRUE,
+                                            inverted       = TRUE,
+                                            use.ginv       = use.ginv)
+
+    # check if E.inv is ok
+    if(inherits(E.inv, "try-error")) { 
+        return(E.inv)
+    }
+
+    Delta <- attr(E.inv, "Delta")
+    WLS.V <- attr(E.inv, "WLS.V")
+
+    # Gamma
+    Gamma <- lavsamplestats@NACOV
+   
+    # handle multiple groups
+    tDVGVD <- matrix(0, ncol=ncol(E.inv), nrow=nrow(E.inv))
+    for(g in 1:lavsamplestats@ngroups) {
+        fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
+        fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
+        # fg twice for WLS.V, 1/fg1 once for GaMMA
+        # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
+        # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
+        WD <- WLS.V[[g]] %*% Delta[[g]]
+        tDVGVD <- tDVGVD + fg*fg/fg1 * crossprod(WD, Gamma[[g]] %*% WD)
+    } # g
+    NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
+
+    # to be reused by lavaanTest
+    attr(NVarCov, "E.inv") <- E.inv 
+    attr(NVarCov, "Delta") <- Delta
+    attr(NVarCov, "WLS.V") <- WLS.V
+
+    NVarCov
+}
 
 lav_model_vcov <- function(lavmodel       = NULL, 
                            lavsamplestats = NULL, 
@@ -252,6 +306,12 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                             lavcache       = lavcache,
                                             estimator      = estimator,
                                             use.ginv       = use.ginv)
+
+    } else if(se %in% c("two.stage", "robust.two.stage")) {
+        NVarCov <-
+            lav_model_nvcov_two_stage(lavmodel       = lavmodel,
+                                      lavsamplestats = lavsamplestats,
+                                      use.ginv       = use.ginv)
 
     } else if(se == "bootstrap") {
         NVarCov <- try( lav_model_nvcov_bootstrap(lavmodel       = lavmodel,

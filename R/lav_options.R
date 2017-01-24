@@ -119,7 +119,17 @@ lav_options_set <- function(opt = formals(lavaan)) {
                                 "uls", "ulsm", "ulsmv", "pml")) {
             stop("lavaan ERROR: missing=\"ml\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML")
         }
-    } else if(opt$missing %in% c("two.stage", "listwise")) {
+    } else if(opt$missing %in% c("two.stage", "twostage", "two-stage",
+                                 "two.step",  "twostep",  "two-step")) {
+        opt$missing <- "two.stage"
+        if(opt$categorical) {
+            stop("lavaan ERROR: missing=\"two.stage\" not available in the categorical setting")
+        }
+        if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
+                                "uls", "ulsm", "ulsmv", "pml", "mml")) {
+            stop("lavaan ERROR: missing=\"two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML, MML")
+        }
+    } else if(opt$missing == "listwise") {
         # nothing to do
     } else if(opt$missing == "pairwise") {
         # nothing to do
@@ -142,7 +152,11 @@ lav_options_set <- function(opt = formals(lavaan)) {
 
     # default test statistic
     if(opt$test == "default") {
-        opt$test <- "standard"
+        if(opt$missing == "two.stage") {
+            opt$test <- "satorra.bentler"
+        } else {
+            opt$test <- "standard"
+        }
     } else if(opt$test %in% c("none", "standard")) {
         # nothing to do
     } else if(opt$test == "satorra" || 
@@ -201,16 +215,58 @@ lav_options_set <- function(opt = formals(lavaan)) {
                     dQuote(opt$test) )
         opt$missing <- "listwise"
     }
+    if(opt$missing == "two.stage") {
+        opt$meanstructure <- TRUE
+        # se
+        if(opt$se %in% c("default", "robust")) {
+           opt$se <- "robust.two.stage"
+        } else if(opt$se == "standard") {
+            warning("lavaan WARNING: se will be set to ",
+                     dQuote("two.stage"), " if missing = ",
+                     dQuote(opt$missing) )
+            opt$se <- "two.stage"
+        } else if(opt$se %in% c("robust.sem", "robust.huber.white")) {
+            warning("lavaan WARNING: se will be set to ",
+                     dQuote("robust.two.stage"), " if missing = ",
+                     dQuote(opt$missing) )
+            opt$se <- "robust.two.stage"
+        } else if(opt$se == "first.order") {
+            warning("lavaan WARNING: se will be set to ",
+                     dQuote("two.stage"), " if missing = ",
+                     dQuote(opt$missing) )
+            opt$se <- "two.stage"
+        }
+        # information
+        if(opt$information == "default") {
+            opt$information <- "expected"
+        } else if(opt$information == "first.order") {
+            warning("lavaan WARNING: information will be set to ",
+                     dQuote("observed"), " if missing = ",
+                     dQuote(opt$missing) )
+            opt$information <- "expected"
+        }
+        # test
+        if(opt$test == "default") {
+            opt$test <- "satorra.bentler"
+        } else if(opt$test == "yuan.bentler") {
+            warning("lavaan WARNING: test will be set to ",
+                     dQuote("satorra.bentler"), " if missing = ",
+                     dQuote(opt$missing) )
+            opt$test <- "satorra.bentler"
+        }
+    }
 
     # meanstructure
     if(is.logical(opt$meanstructure)) {
         if(opt$meanstructure == FALSE) {
             # user explicitly wants meanstructure == FALSE
             # check for conflicting arguments
-            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv", "pml"))
+            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv", "pml")) {
                 warning("lavaan WARNING: estimator forces meanstructure = TRUE")
-            if(opt$missing == "ml")
+            }
+            if(opt$missing %in% c("ml", "two.stage")) {
                 warning("lavaan WARNING: missing argument forces meanstructure = TRUE")
+            }
         }
     } else if(opt$meanstructure == "default") {
         # by default: no meanstructure!
@@ -231,10 +287,11 @@ lav_options_set <- function(opt = formals(lavaan)) {
 
     # default estimator
     if(opt$estimator == "default") {
-        if(opt$categorical) 
+        if(opt$categorical) {
             opt$estimator <- "wlsmv"
-        else
+        } else {
             opt$estimator <- "ml"
+        }
     }
 
     # backwards compatibility (0.4 -> 0.5)
@@ -245,17 +302,15 @@ lav_options_set <- function(opt = formals(lavaan)) {
         opt$estimator <- "ML"
         if(opt$se == "default") {
             opt$se <- "standard"
-        } else if(opt$se == "first.order" || 
-                  opt$se == "bootstrap"   ||
-                  opt$se == "none"        || 
-                  opt$se == "external"    ||
-                  opt$se == "standard"    ||
-                  opt$se == "robust.huber.white"  || 
-                  opt$se == "robust.sem") {
+        } else if(opt$se %in% c("first.order","bootstrap", "none", 
+                  "external", "standard", "robust.huber.white",
+                  "two.stage", "robust.two.stage", "robust.sem")) {
             # nothing to do
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
                 opt$se <- "robust.huber.white"
+            } else if(opt$missing == "two.stage") {
+                opt$se <- "robust.two.stage"
             } else {
                 opt$se <- "robust.sem"
             }
