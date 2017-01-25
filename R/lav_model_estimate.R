@@ -53,7 +53,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   lavsamplestats = lavsamplestats, 
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
-                                  estimator      = estimator, 
                                   verbose        = verbose,
                                   forcePD        = forcePD)
 
@@ -103,7 +102,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  lavcache       = lavcache,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
-                                 estimator      = estimator,
                                  verbose        = verbose,
                                  forcePD        = TRUE)
 

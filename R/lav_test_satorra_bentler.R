@@ -53,7 +53,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         } else {
             E <- lav_model_information_expected(lavmodel = lavmodel,
                      lavsamplestats = lavsamplestats, lavdata = lavdata,
-                     estimator = lavoptions$estimator, extra = TRUE)
+                     extra = TRUE)
         }
         E.inv <- try(lav_model_information_augment_invert(lavmodel,
                          information = E, inverted = TRUE), silent=TRUE)

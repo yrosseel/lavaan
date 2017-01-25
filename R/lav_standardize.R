@@ -6,8 +6,7 @@ standardize.est.lv.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) 
     est[free.idx] <- x
 
     # take care of setResidualElements...
-    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x, 
-                                         estimator = lavobject@Options$estimator)
+    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
     standardize.est.lv(lavobject = lavobject, partable = partable, est = est, 
@@ -22,8 +21,7 @@ standardize.est.all.x <- function(x, lavobject, partable = NULL, cov.std = TRUE)
     est[free.idx] <- x
 
     # take care of setResidualElements...
-    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x, 
-                                         estimator = lavobject@Options$estimator)
+    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
     standardize.est.all(lavobject = lavobject, partable = partable, est = est,
@@ -38,8 +36,7 @@ standardize.est.all.nox.x <- function(x, lavobject, partable = NULL, cov.std = T
     est[free.idx] <- x
 
     # take care of setResidualElements...
-    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x, 
-                                         estimator = lavobject@Options$estimator)
+    lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
     standardize.est.all.nox(lavobject = lavobject, partable = partable, est = est, 

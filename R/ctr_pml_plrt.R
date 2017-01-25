@@ -19,8 +19,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
         fx <- lav_model_objective(lavmodel       = lavmodel,
                                   lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,
-                                  lavcache       = lavcache,
-                                  estimator      = "PML")
+                                  lavcache       = lavcache)
         H0.fx <- as.numeric(fx)
         H0.fx.group <- attr(fx, "fx.group")
     } else {
@@ -45,8 +44,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     fx <- lav_model_objective(lavmodel = fittedSat@Model,
                               lavsamplestats = fittedSat@SampleStats,
                               lavdata = fittedSat@Data,
-                              lavcache = fittedSat@Cache,
-                              estimator = "PML")
+                              lavcache = fittedSat@Cache)
     SAT.fx <- as.numeric(fx)
     SAT.fx.group <- attr(fx, "fx.group")
 

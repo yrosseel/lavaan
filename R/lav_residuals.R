@@ -86,11 +86,7 @@ function(object, type="raw", labels=TRUE) {
             augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
             #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
             augModel <- lav_model(lavpartable    = augUser,
-                            representation = object@Options$representation,
-                            conditional.x  = object@Options$conditional.x,
-                            parameterization = object@Options$parameterization,
-                            link           = object@Options$link,
-                            debug          = object@Options$debug)
+                                  lavoptions     = object@Options)
             VarCov <- lav_model_vcov(lavmodel       = augModel, 
                                      lavsamplestats = object@SampleStats,
                                      lavdata        = object@Data,

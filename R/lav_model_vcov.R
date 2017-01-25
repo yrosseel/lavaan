@@ -51,11 +51,11 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL,
 # robust `sem' NVCOV (see Browne, 1984,  bentler & dijkstra 1985)
 lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                        lavdata = NULL, lavcache = NULL,
-                                       estimator = "ML", mimic = "lavaan",
+                                       mimic = "lavaan",
                                        use.ginv = FALSE) {
 
     # compute inverse of the expected(!) information matrix
-    if(estimator == "ML" && mimic == "Mplus") {
+    if(lavmodel@estimator == "ML" && mimic == "Mplus") {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
         # - WLS.V is not based on Sigma.hat and Mu.hat (as it
         #   should be?), but on lavsamplestats@cov and lavsamplestats@mean...
@@ -72,7 +72,6 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         E.inv <- lav_model_information_expected(lavmodel = lavmodel, 
                                         lavsamplestats = lavsamplestats, 
                                         lavdata        = lavdata, 
-                                        estimator      = estimator, 
                                         extra          = TRUE,
                                         augmented      = TRUE,
                                         inverted       = TRUE,
@@ -89,7 +88,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
 
     # Gamma
     Gamma <- lavsamplestats@NACOV
-    if(estimator == "ML" && mimic == "Mplus" && !lavsamplestats@NACOV.user) {
+    if(lavmodel@estimator == "ML" && 
+       mimic == "Mplus" && !lavsamplestats@NACOV.user) {
         # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test 
         # statistic
         for(g in 1:lavsamplestats@ngroups) {
@@ -112,7 +112,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         # fg twice for WLS.V, 1/fg1 once for GaMMA
         # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
         # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
-        if(estimator == "DWLS" || estimator == "ULS") {
+        if(lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
             # diagonal weight matrix
             WD <- WLS.V[[g]] * Delta[[g]]
         } else {
@@ -136,7 +136,6 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                            lavdata        = NULL,
                                            information    = "observed", 
                                            lavcache       = NULL, 
-                                           estimator      = "ML",
                                            use.ginv       = FALSE) {
 
     # sandwich estimator: A.inv %*% B %*% t(A.inv)
@@ -147,7 +146,6 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
     E.inv <- lav_model_information(lavmodel       = lavmodel,
                                    lavsamplestats = lavsamplestats,
                                    lavdata        = lavdata,
-                                   estimator      = estimator,
                                    lavcache       = lavcache,
                                    information    = information,
                                    extra          = FALSE,
@@ -165,7 +163,6 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
         lav_model_information_firstorder(lavmodel       = lavmodel,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
-                                         estimator      = estimator,
                                          lavcache       = lavcache,
                                          extra          = TRUE,
                                          check.pd       = FALSE,
@@ -198,8 +195,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     # we 'grab' WLS.V from the @Samplestats@WLS.V slot
     E.inv <- lav_model_information_expected(lavmodel       = lavmodel, 
                                             lavsamplestats = lavsamplestats, 
-                                            lavdata        = lavdata, 
-                                            estimator      = "ML",
+                                            lavdata        = NULL,
                                             extra          = TRUE,
                                             augmented      = TRUE,
                                             inverted       = TRUE,
@@ -246,7 +242,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
                            use.ginv       = FALSE,
                            control=list()) {
 
-    estimator   <- lavoptions$estimator
     likelihood  <- lavoptions$likelihood
     information <- lavoptions$information
     se          <- lavoptions$se
@@ -266,7 +261,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
         NVarCov <- lav_model_information(lavmodel       = lavmodel,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
-                                         estimator      = estimator,
                                          lavcache       = lavcache,
                                          information    = information,
                                          extra          = FALSE,
@@ -279,7 +273,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
             lav_model_information_firstorder(lavmodel = lavmodel,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
-                                             estimator      = estimator,
                                              lavcache       = lavcache,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
@@ -291,7 +284,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
         NVarCov <-
             lav_model_nvcov_robust_sem(lavmodel       = lavmodel,
                                        lavsamplestats = lavsamplestats,
-                                       estimator      = estimator,
                                        mimic          = mimic,
                                        lavcache       = lavcache,
                                        lavdata        = lavdata,
@@ -304,7 +296,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                             lavdata        = lavdata,
                                             information    = information,
                                             lavcache       = lavcache,
-                                            estimator      = estimator,
                                             use.ginv       = use.ginv)
 
     } else if(se %in% c("two.stage", "robust.two.stage")) {
@@ -329,13 +320,14 @@ lav_model_vcov <- function(lavmodel       = NULL,
     if(! inherits(NVarCov, "try-error") ) {
 
         # denominator!
-        if(estimator %in% c("ML","PML","FML") && likelihood == "normal") {
+        if(lavmodel@estimator %in% c("ML","PML","FML") && 
+           likelihood == "normal") {
             N <- lavsamplestats@ntotal
         } else {
             N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }
 
-        #if(estimator %in% c("PML", "MML")) {
+        #if(lavmodle@estimator %in% c("PML", "MML")) {
         #    VarCov <- NVarCov
         #} else {
             VarCov <- 1/N * NVarCov

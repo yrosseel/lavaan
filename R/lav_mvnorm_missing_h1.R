@@ -153,7 +153,7 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
 
     # Sigma and Mu
     if(is.null(Sigma) || is.null(Mu)) {
-        out <- lavaan:::lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp,
+        out <- lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp,
                                                                Yp = Yp)
         Mu <- out$Mu
         Sigma <- out$Sigma

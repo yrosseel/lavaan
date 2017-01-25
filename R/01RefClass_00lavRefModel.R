@@ -2,7 +2,7 @@
 
 
 # super class -- virtual statistical model 
-lavRefModel <- setRefClass("lavModel",
+lavRefModel <- setRefClass("lavRefModel",
 
 # fields
 fields = list(

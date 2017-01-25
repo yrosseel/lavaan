@@ -3,9 +3,10 @@
 lav_model_hessian <- function(lavmodel       = NULL,
                               lavsamplestats = NULL,
                               lavdata        = NULL,
-                              estimator      = "ML",
                               lavcache       = NULL,
                               group.weight   = TRUE) {
+
+    estimator <- lavmodel@estimator
 
     # computing the Richardson extrapolation
     Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
@@ -24,7 +25,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                lavdata        = lavdata, 
                                lavcache       = lavcache,
                                type           = "free", 
-                               estimator      = estimator, 
                                group.weight   = group.weight)
         g.left2 <-    
             lav_model_gradient(lavmodel       = lavmodel,
@@ -34,7 +34,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                lavdata        = lavdata, 
                                lavcache       = lavcache,
                                type           = "free", 
-                               estimator      = estimator,
                                group.weight   = group.weight)
 
         g.right <- 
@@ -45,7 +44,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                lavdata        = lavdata, 
                                lavcache       = lavcache,
                                type           = "free", 
-                               estimator      = estimator,
                                group.weight   = group.weight)
 
         g.right2 <- 
@@ -56,7 +54,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                lavdata        = lavdata, 
                                lavcache       = lavcache,
                                type           = "free", 
-                               estimator      = estimator,
                                group.weight   = group.weight)
     
         Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
@@ -72,7 +69,6 @@ lav_model_hessian <- function(lavmodel       = NULL,
 lav_model_hessian_complex <- function(lavmodel       = NULL,
                                       lavsamplestats = NULL,
                                       lavdata        = NULL,
-                                      estimator      = "ML",
                                       lavcache       = NULL,
                                       group.weight   = TRUE) {
 
@@ -84,7 +80,6 @@ lav_model_hessian_complex <- function(lavmodel       = NULL,
                                  lavdata        = lavdata,
                                  lavcache       = lavcache,
                                  type           = "free",
-                                 estimator      = estimator,
                                  group.weight   = group.weight)
         dx
     }

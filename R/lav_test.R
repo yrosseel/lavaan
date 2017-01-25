@@ -440,7 +440,7 @@ lav_model_test <- function(lavmodel       = NULL,
             } else {
                 E <- lav_model_information_expected(lavmodel = lavmodel, 
                          lavsamplestats = lavsamplestats, lavdata = lavdata,
-                         estimator = estimator, extra = TRUE)
+                         extra = TRUE)
             }
             E.inv <- try(lav_model_information_augment_invert(lavmodel,
                          information = E, inverted = TRUE), silent=TRUE)
@@ -564,7 +564,6 @@ lav_model_test <- function(lavmodel       = NULL,
             E.inv <- lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
                                            lavdata        = lavdata,
-                                           estimator      = "ML",
                                            lavcache       = lavcache,
                                            information    = information,
                                            extra          = FALSE,
@@ -587,7 +586,6 @@ lav_model_test <- function(lavmodel       = NULL,
                     lav_model_information_firstorder(lavmodel = lavmodel,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
-                                             estimator      = estimator,
                                              lavcache       = lavcache,
                                              extra          = TRUE,
                                              check.pd       = FALSE,

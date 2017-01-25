@@ -1,7 +1,7 @@
 # compute model implied statistics
 lav_model_implied <- function(lavmodel = NULL) {
 
-    stopifnot(inherits(lavmodel, "Model"))
+    stopifnot(inherits(lavmodel, "lavModel"))
     
     # model-implied variance/covariance matrix ('sigma hat')
     Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)

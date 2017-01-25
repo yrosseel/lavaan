@@ -19,8 +19,7 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
         fx <- lav_model_objective(lavmodel       = lavmodel,
                                   lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,
-                                  lavcache       = lavcache,
-                                  estimator      = "PML")
+                                  lavcache       = lavcache)
         H0.fx <- as.numeric(fx)
         H0.fx.group <- attr(fx, "fx.group")
     } else {
@@ -45,8 +44,7 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     fx <- lav_model_objective(lavmodel = fittedSat@Model,
                               lavsamplestats = fittedSat@SampleStats,
                               lavdata = fittedSat@Data,
-                              lavcache = fittedSat@Cache,
-                              estimator = "PML")
+                              lavcache = fittedSat@Cache)
     SAT.fx <- as.numeric(fx)
     SAT.fx.group <- attr(fx, "fx.group")
 
@@ -97,8 +95,8 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 if(is.null(VCOV)) {
     H0.inv <- lav_model_information(lavmodel = lavmodel, 
                   lavsamplestats = lavsamplestats, lavdata = lavdata, 
-                  estimator = "PML", lavcache = lavcache, 
-                  information = "observed", augmented = TRUE, inverted = TRUE)
+                  lavcache = lavcache, information = "observed", 
+                  augmented = TRUE, inverted = TRUE)
 } else {
     H0.inv <- attr(VCOV, "E.inv")
 }
@@ -107,12 +105,12 @@ if(is.null(VCOV)) {
 if(is.null(VCOV)) {
     J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
                   lavsamplestats = lavsamplestats, lavdata = lavdata,
-                  estimator = "PML", lavcache = lavcache)[,] 
+                  lavcache = lavcache)[,] 
 } else {
     # we do not get J, but J.group, FIXME?
     J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
                   lavsamplestats = lavsamplestats, lavdata = lavdata,
-                  estimator = "PML", lavcache = lavcache)[,]
+                  lavcache = lavcache)[,]
 }
 
 # inverted Godambe information

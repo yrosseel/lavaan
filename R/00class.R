@@ -73,7 +73,7 @@ setClass("lavSampleStats",         # sample moments
     )
 )
 
-setClass("Model",          # MATRIX representation of the sem model
+setClass("lavModel",          # MATRIX representation of the sem model
     representation(
         GLIST="list",              # list of all model matrices (for all groups)
         dimNames="list",           # dim names for the model matrices
@@ -135,8 +135,9 @@ setClass("Model",          # MATRIX representation of the sem model
         ov.x.dummy.ov.idx="list",
         ov.x.dummy.lv.idx="list",
         ov.y.dummy.ov.idx="list",
-        ov.y.dummy.lv.idx="list"
+        ov.y.dummy.lv.idx="list",
 
+        estimator="character"
     )
 )
 
@@ -173,7 +174,7 @@ setClass("lavaan",
         pta         = "list",            # parameter table attributes
         Data        = "lavData",         # full data
         SampleStats = "lavSampleStats",  # sample statistics
-        Model       = "Model",           # internal matrix representation
+        Model       = "lavModel",        # internal matrix representation
         Cache       = "list",            # housekeeping stuff
         Fit         = "Fit",             # fitted results 
         boot        = "list",            # bootstrap results
@@ -192,7 +193,7 @@ setClass("lavaanList",
         ParTable        = "list",
         pta             = "list",
         Data            = "lavData",  # from first dataset (ngroups!)
-        Model           = "Model",    # based on first dataset
+        Model           = "lavModel", # based on first dataset
         meta            = "list",
 
         timingList      = "list",

@@ -196,14 +196,15 @@ lavaanList <- function(model         = NULL,             # model
             }
 
             lavobject <- try(do.call("fsr",
-                                     args = list(slotOptions  = lavoptions,
-                                                 slotParTable = lavpartable,
-                                                 slotModel    = lavmodel,
-                                                 start        = FIT,
-                                                 data         = DATA,
-                                                 cmd          = "lavaan", 
-                                                 fs.method    = fs.method,
-                                                 fsr.method   = fsr.method)),
+                                     args = c(list(slotOptions  = lavoptions,
+                                                   slotParTable = lavpartable,
+                                                   slotModel    = lavmodel,
+                                                   start        = FIT,
+                                                   data         = DATA,
+                                                   cmd          = "lavaan", 
+                                                   fs.method    = fs.method,
+                                                   fsr.method   = fsr.method),
+                                                   dotdotdot)),
                              silent = TRUE)
         } else {
             stop("lavaan ERROR: unknown cmd: ", cmd)

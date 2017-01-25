@@ -8,7 +8,6 @@
 lav_model_information <- function(lavmodel       = NULL,
                                   lavsamplestats = NULL,
                                   lavdata        = NULL,
-                                  estimator      = "ML",
                                   Delta          = NULL,
                                   lavcache       = NULL,
                                   information    = "observed",
@@ -16,6 +15,8 @@ lav_model_information <- function(lavmodel       = NULL,
                                   augmented      = FALSE,
                                   inverted       = FALSE,
                                   use.ginv       = FALSE) {
+
+    estimator <- lavmodel@estimator
 
     # compute information matrix
     if(information == "observed") {
@@ -26,13 +27,12 @@ lav_model_information <- function(lavmodel       = NULL,
         }
         E <- lav_model_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavcache = lavcache, estimator = estimator,
-            group.weight = group.weight,
+            lavcache = lavcache, group.weight = group.weight,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else {
         E <- lav_model_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavcache = lavcache, estimator = estimator, extra = extra,
+            lavcache = lavcache, extra = extra,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     }
 
@@ -44,13 +44,14 @@ lav_model_information <- function(lavmodel       = NULL,
 lav_model_information_expected <- function(lavmodel       = NULL,
                                            lavsamplestats = NULL,
                                            lavdata        = NULL,
-                                           estimator      = "ML",
                                            Delta          = NULL,
                                            lavcache       = NULL,
                                            extra          = FALSE,
                                            augmented      = FALSE,
                                            inverted       = FALSE,
                                            use.ginv       = FALSE) {
+
+    estimator <- lavmodel@estimator
 
     if(inverted) {
         augmented <- TRUE
@@ -65,7 +66,6 @@ lav_model_information_expected <- function(lavmodel       = NULL,
     # if DWLS or ULS, this is the diagonal only! (since 0.5-17)
     WLS.V <- lav_model_wls_v(lavmodel       = lavmodel, 
                              lavsamplestats = lavsamplestats,
-                             estimator      = estimator,
                              lavdata        = lavdata)
 
     # compute Information per group
@@ -184,12 +184,12 @@ lav_model_information_expected_MLM <- function(lavmodel       = NULL,
 lav_model_information_observed <- function(lavmodel       = NULL,
                                                  lavsamplestats = NULL,
                                                  lavdata        = NULL,
-                                                 estimator      = "ML",
                                                  lavcache       = NULL,
                                                  group.weight   = TRUE,
                                                  augmented      = FALSE,
                                                  inverted       = FALSE,
                                                  use.ginv       = FALSE) {
+    estimator <- lavmodel@estimator
 
     if(inverted) {
         augmented <- TRUE
@@ -199,7 +199,6 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                  lavsamplestats = lavsamplestats,
                                  lavdata        = lavdata,
                                  lavcache       = lavcache,
-                                 estimator      = estimator,
                                  group.weight   = group.weight)
 
     # NOTE! What is the relationship between the Hessian of the objective
@@ -230,13 +229,14 @@ lav_model_information_observed <- function(lavmodel       = NULL,
 lav_model_information_firstorder <- function(lavmodel       = NULL,
                                              lavsamplestats = NULL,
                                              lavdata        = NULL,
-                                             estimator      = "ML",
                                              lavcache       = NULL,
                                              extra          = FALSE,
                                              check.pd       = FALSE,
                                              augmented      = FALSE,
                                              inverted       = FALSE,
                                              use.ginv       = FALSE) {
+    estimator <- lavmodel@estimator
+
     if(inverted) {
         augmented <- TRUE
     }

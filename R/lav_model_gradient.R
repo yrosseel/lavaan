@@ -6,7 +6,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                lavdata        = NULL,
                                lavcache       = NULL, 
                                type           = "free", 
-                               estimator      = "ML", 
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE,
@@ -15,6 +14,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                x.el.idx       = NULL) {
 
     nmat           <- lavmodel@nmat
+    estimator      <- lavmodel@estimator
     representation <- lavmodel@representation
     meanstructure  <- lavmodel@meanstructure
     categorical    <- lavmodel@categorical

@@ -6,7 +6,7 @@
 lavRefOptim <- setRefClass("lavOptim",
 
 # inherits
-contains = "lavModel",
+contains = "lavRefModel",
 
 # fields
 fields = list(

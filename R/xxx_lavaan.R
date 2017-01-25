@@ -535,29 +535,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-
-
     #####################
     #### 7. lavmodel ####
     #####################
-        lavmodel <- 
-            lav_model(lavpartable      = lavpartable,
-                      representation   = lavoptions$representation,
-                      conditional.x    = lavoptions$conditional.x,
-                      th.idx           = lavsamplestats@th.idx,
-                      parameterization = lavoptions$parameterization,
-                      link             = lavoptions$link,
-                      control          = control,
-                      debug            = lavoptions$debug)
+        lavmodel <- lav_model(lavpartable      = lavpartable,
+                              lavoptions       = lavoptions,
+                              th.idx           = lavsamplestats@th.idx,
+                              control          = control)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
   
         # if no data, call lav_model_set_parameters once (for categorical case)
         if(lavdata@data.type == "none" && lavmodel@categorical) {
-            lavmodel <- 
-                lav_model_set_parameters(lavmodel = lavmodel, 
-                                         x = lav_model_get_parameters(lavmodel), 
-                                         estimator =lavoptions$estimator)
+            lavmodel <- lav_model_set_parameters(lavmodel = lavmodel, 
+                            x = lav_model_get_parameters(lavmodel)) 
         }
 
     } # slotModel
@@ -765,8 +756,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                 lavdata         = lavdata,
                                 lavoptions      = lavoptions,
                                 lavcache        = lavcache)
-        lavmodel <- lav_model_set_parameters(lavmodel, x = x,
-                                             estimator = lavoptions$estimator)
+        lavmodel <- lav_model_set_parameters(lavmodel, x = x)
         # store parameters in @ParTable$est
         lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
                                                     type = "user", extra = TRUE)
@@ -786,7 +776,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "fx") <- 
             lav_model_objective(lavmodel = lavmodel, 
                 lavsamplestats = lavsamplestats, lavdata = lavdata, 
-                lavcache = lavcache, estimator = lavoptions$estimator)
+                lavcache = lavcache)
 
         lavpartable$est <- lavpartable$start
     }

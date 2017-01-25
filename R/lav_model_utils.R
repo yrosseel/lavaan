@@ -56,8 +56,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
 }
 
 # warning: this will make a copy of lavmodel
-lav_model_set_parameters <- function(lavmodel = NULL, x = NULL, 
-                                     estimator = "ML") {
+lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
     tmp <- lavmodel@GLIST
     for(mm in 1:length(lavmodel@GLIST)) {
@@ -74,7 +73,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL,
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
-                if(estimator %in% c("WLS","DWLS","ULS","PML")) {
+                if(lavmodel@estimator %in% c("WLS","DWLS","ULS","PML")) {
                     if(lavmodel@parameterization == "delta") {
                         tmp[mm.in.group] <- 
                         setResidualElements.LISREL(MLIST = tmp[mm.in.group],
@@ -86,7 +85,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL,
                         setDeltaElements.LISREL(MLIST = tmp[mm.in.group],
                             num.idx = lavmodel@num.idx[[g]])
                     }
-                } else if(estimator %in% c("MML", "FML")) {
+                } else if(lavmodel@estimator %in% c("MML", "FML")) {
                   #  ttt <- diag(tmp[mm.in.group]$theta)
                   #  diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
                   #  if(length(lavmodel@num.idx[[g]]) > 0L) {

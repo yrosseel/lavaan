@@ -7,7 +7,7 @@
 \description{Utility functions related to internal model representation (lavmodel)}
 \usage{
 # set/get free parameters
-lav_model_set_parameters(lavmodel, x = NULL, estimator = "ML")
+lav_model_set_parameters(lavmodel, x = NULL)
 lav_model_get_parameters(lavmodel, GLIST = NULL, type = "free",
                          extra = TRUE)
 
@@ -20,8 +20,6 @@ lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL)
 \arguments{
 \item{lavmodel}{An internal representation of a lavaan model.}
 \item{x}{Numeric.}{A vector containing the values of all the free model parameters.}
-\item{estimator}{Character string.}{The estimator we should assume has been
-used.}
 \item{GLIST}{List. A list of model matrices, similar to the output of 
 \code{lavInspect(object, "est")}.}
 \item{type}{Character string. If \code{"free"}, only return the free model

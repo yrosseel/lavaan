@@ -74,17 +74,16 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) { #,
 # compute WLS.V (as a list per group)
 lav_model_wls_v <- function(lavmodel       = NULL, 
                             lavsamplestats = NULL,
-                            estimator      = "ML",
                             lavdata        = NULL) {
 
     WLS.V <- vector("list", length=lavsamplestats@ngroups)
 
     # if we are using *LS, we already have WLS.V
-    if(estimator == "GLS"  || estimator == "WLS") {
+    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
         WLS.V <- lavsamplestats@WLS.V
-    } else if(estimator == "NTRLS") {
+    } else if(lavmodel@estimator == "NTRLS") {
         stopifnot(!lavmodel@conditional.x)
         # compute moments for all groups
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
@@ -101,17 +100,19 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                               meanstructure  = lavmodel@meanstructure,
                               slopestructure = lavmodel@conditional.x)
         }
-    } else if(estimator == "DWLS" || estimator == "ULS") {
+    } else if(lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
         # diagonal only!!
         WLS.V <- lavsamplestats@WLS.VD
 
     # for ML, we need to recompute this, as it is function of Sigma (and Mu)
     # - unless missing = "two.stage", where we use the unstructured versions
     #   already stored in WLS.V
-    } else if(estimator == "ML" && !is.null(lavsamplestats@WLS.V[[1]])) {
+    } else if(lavmodel@estimator == "ML" && 
+              !is.null(lavsamplestats@WLS.V[[1]])) {
         WLS.V <- lavsamplestats@WLS.V
 
-    } else if(estimator == "ML" && is.null(lavsamplestats@WLS.V[[1]])) {
+    } else if(lavmodel@estimator == "ML" && 
+              is.null(lavsamplestats@WLS.V[[1]])) {
         WLS.V <- vector("list", length=lavsamplestats@ngroups)
         
         if(lavmodel@conditional.x) {

@@ -5,7 +5,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                 lavsamplestats = NULL,
                                 lavdata        = NULL,
                                 lavcache       = NULL,
-                                estimator      = "ML",
                                 verbose        = FALSE,
                                 forcePD        = TRUE,
                                 debug          = FALSE) {
@@ -14,13 +13,14 @@ lav_model_objective <- function(lavmodel       = NULL,
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
     # shortcut for data.type == "none" or estimator == "none"
-    if(estimator == "none" || length(lavsamplestats@cov) == 0L) {
+    if(lavmodel@estimator == "none" || length(lavsamplestats@cov) == 0L) {
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), lavsamplestats@ngroups)
         return(fx)
     }
 
     meanstructure <- lavmodel@meanstructure
+    estimator     <- lavmodel@estimator
     categorical   <- lavmodel@categorical
     group.w.free  <- lavmodel@group.w.free
     fixed.x       <- lavmodel@fixed.x
