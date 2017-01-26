@@ -359,8 +359,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         }
 
         # factor score coefficient matrix 'C'
-        FSC = ( solve(t(LAMBDA[[g]]) %*% THETA.inv[[g]] %*% LAMBDA[[g]]) %*%
-                t(LAMBDA[[g]]) %*% THETA.inv[[g]] )
+        FSC = ( MASS::ginv(t(LAMBDA[[g]]) %*% THETA.inv[[g]] %*% LAMBDA[[g]]) 
+                %*% t(LAMBDA[[g]]) %*% THETA.inv[[g]] )
 
         if(fsm) {
             FSM[[g]] <- FSC
