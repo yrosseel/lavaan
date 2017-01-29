@@ -46,14 +46,14 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     }
 
     # cholesky?
-    if(is.null(lavmodel@control$cholesky)) {
+    #if(is.null(lavmodel@control$cholesky)) {
         CHOLESKY <- TRUE
-    } else {
-        CHOLESKY <- as.logical(lavmodel@control$cholesky)
+    #} else {
+    #    CHOLESKY <- as.logical(lavmodel@control$cholesky)
         #if(nfac > 1L && !CHOLESKY) {
         #    warning("lavaan WARNING: CHOLESKY is OFF but nfac > 1L")
         #}
-    }
+    #}
 
     if(!CHOLESKY) {
         # we should still 'scale' the factors, if std.lv=FALSE

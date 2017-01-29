@@ -1,5 +1,4 @@
 # model estimation
-
 lav_model_estimate <- function(lavmodel       = NULL,
                                lavsamplestats = NULL,
                                lavdata        = NULL,
@@ -190,7 +189,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                 attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
                 attr(x, "converged")  <- FALSE
                 attr(x, "iterations") <- 0L
-                attr(x, "control")    <- lavmodel@control
+                attr(x, "control")    <- lavoptions@control
                 attr(x, "fx")         <- fx
                 return(x)
             }
@@ -217,59 +216,44 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
 
     # first some nelder mead steps? (default = FALSE)
-    if(is.null(lavmodel@control$init_nelder_mead)) {
-        INIT_NELDER_MEAD <- FALSE
-    } else {
-        INIT_NELDER_MEAD <- lavmodel@control$init_nelder_mead
-    }
+    INIT_NELDER_MEAD <- lavoptions$optim.init_nelder_mead
 
     # gradient: analytic, numerical or NULL?
-    if(is.null(lavmodel@control$gradient)) {
-        GRADIENT <- first.derivative.param
-    } else {
-        if(is.logical(lavmodel@control$gradient)) {
-            if(lavmodel@control$gradient) {
-                GRADIENT <- first.derivative.param
-            } else {
-                GRADIENT <- NULL
-            }
-        } else if(is.character(lavmodel@control$gradient)) {
-            if(lavmodel@control$gradient %in% c("analytic","analytica")) {
-                GRADIENT <- first.derivative.param
-            } else if(lavmodel@control$gradient %in% c("numerical","numeric")) {
-                GRADIENT <- first.derivative.param.numerical
-            } else if(lavmodel@control$gradient == "NULL") {
-                GRADIENT <- NULL
-            } else {
-                warning("lavaan WARNING: lavmodel@control$gradient should be analytic, numerical or NULL")
-                GRADIENT <- NULL
-            }
+    if(is.character(lavoptions$optim.gradient)) {
+        if(lavoptions$optim.gradient %in% c("analytic","analytical")) {
+            GRADIENT <- first.derivative.param
+        } else if(lavoptions$optim.gradient %in% c("numerical", "numeric")) {
+            GRADIENT <- first.derivative.param.numerical
+        } else if(lavoptions$optim.gradient %in% c("NULL", "null")) {
+            GRADIENT <- NULL
+        } else {
+            warning("lavaan WARNING: gradient should be analytic, numerical or NULL")
         }
+    } else if(is.logical(lavoptions$optim.gradient)) {
+        if(lavoptions$optim.gradient) {
+            GRADIENT <- first.derivative.param
+        } else {
+            GRADIENT <- NULL
+        }
+    } else if(is.null(lavoptions$optim.gradient)) {
+        GRADIENT <- first.derivative.param
     }
+
 
     # optimizer
     if(length(lavmodel@ceq.nonlinear.idx) == 0L &&
        length(lavmodel@cin.linear.idx)    == 0L &&
        length(lavmodel@cin.nonlinear.idx) == 0L) {
-        if(is.null(lavmodel@control$optim.method)) {
+        if(is.null(lavoptions$optim.method)) {
             OPTIMIZER <- "NLMINB"
             #OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
             #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
         } else {
-            OPTIMIZER <- toupper(lavmodel@control$optim.method)
+            OPTIMIZER <- toupper(lavoptions$optim.method)
             stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B", "NONE"))
         }
     } else {
-        #cat("DEBUG: constrained optimization is currently broken!\n")
-        #cat("DEBUG: please reinstall lavaan 0.5-17 if you need this\n")
-        #cat("DEBUG: only *linear* *equality* constraints are supported in this version.\n")
-        #stop("not read yet - dev version")
-        if(is.null(lavmodel@control$optim.method)) {
-            OPTIMIZER <- "NLMINB.CONSTR"
-        } else {
-            OPTIMIZER <- toupper(lavmodel@control$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "NONE"))
-        }
+        OPTIMIZER <- "NLMINB.CONSTR"
     }
 
     if(INIT_NELDER_MEAD) {
@@ -301,7 +285,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                step.max=1.0,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
-        control.nlminb <- modifyList(control.nlminb, lavmodel@control)
+        control.nlminb <- modifyList(control.nlminb, lavoptions$control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace", 
                                     "step.min", "step.max",
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
@@ -340,7 +324,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                              abstol=1e-20,
                              reltol=1e-10,
                              REPORT=1L)
-        control.bfgs <- modifyList(control.bfgs, lavmodel@control)
+        control.bfgs <- modifyList(control.bfgs, lavoptions$control)
         control <- control.bfgs[c("trace", "fnscale", "parscale", "ndeps",
                                   "maxit", "abstol", "reltol", "REPORT")]
         #trace <- 0L; if(verbose) trace <- 1L
@@ -379,7 +363,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                lmm=5L,
                                factr=1e7,
                                pgtol=0)
-        control.lbfgsb <- modifyList(control.lbfgsb, lavmodel@control)
+        control.lbfgsb <- modifyList(control.lbfgsb, lavoptions$control)
         control <- control.lbfgsb[c("trace", "fnscale", "parscale", 
                                     "ndeps", "maxit", "REPORT", "lmm", 
                                     "factr", "pgtol")]
@@ -410,8 +394,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
     } else if(OPTIMIZER == "NLMINB.CONSTR") {
 
         ocontrol <- list(verbose=verbose)
-        if(!is.null(lavmodel@control$control.outer)) {
-            ocontrol <- c(lavmodel@control$control.outer, verbose=verbose)
+        if(!is.null(lavoptions$control$control.outer)) {
+            ocontrol <- c(lavoptions$control$control.outer, verbose=verbose)
         }
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
@@ -419,7 +403,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                #abs.tol=1e-20,
                                abs.tol=(.Machine$double.eps * 10),
                                rel.tol=1e-9) # 1e-10 seems 'too strict'
-        control.nlminb <- modifyList(control.nlminb, lavmodel@control)
+        control.nlminb <- modifyList(control.nlminb, lavoptions$control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                     "abs.tol", "rel.tol")]
         cin <- cin.jac <- ceq <- ceq.jac <- NULL

@@ -9,8 +9,7 @@
 # construct MATRIX lavoptions$representation of the model
 lav_model <- function(lavpartable      = NULL,
                       lavoptions       = NULL,
-                      th.idx           = list(),
-                      control          = list()) {
+                      th.idx           = list()) {
 
     # handle bare-minimum partables
     lavpartable <- lav_partable_complete(lavpartable)
@@ -223,7 +222,6 @@ lav_model <- function(lavpartable      = NULL,
                  meanstructure=meanstructure,
                  categorical=categorical,
                  link=lavoptions$link,
-                 control=control,
                  ngroups=ngroups,
                  group.w.free=group.w.free,
                  nmat=nmat,

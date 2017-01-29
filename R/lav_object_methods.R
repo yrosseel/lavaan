@@ -5,10 +5,8 @@ short.summary <- function(object) {
 
     # catch FAKE run
     FAKE <- FALSE
-    if(!is.null(object@Model@control$optim.method)) {
-        if(tolower(object@Model@control$optim.method) == "none") {
-            FAKE <- TRUE
-        }
+    if(object@Options$optim.method == "none") {
+        FAKE <- TRUE
     }
 
     # Convergence or not?

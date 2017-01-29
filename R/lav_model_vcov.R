@@ -1,8 +1,7 @@
 # bootstrap based NVCOV
 lav_model_nvcov_bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL, 
                                       lavoptions = NULL, lavdata = NULL,
-                                      lavcache = NULL, lavpartable = NULL, 
-                                      control=list()) {
+                                      lavcache = NULL, lavpartable = NULL) {
 
     # number of bootstrap draws
     if(!is.null(lavoptions$bootstrap)) {
@@ -26,10 +25,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL,
                                type            = boot.type,
                                FUN  = ifelse(boot.type == "bollen.stine",
                                           "coeftest", "coef"),
-                               warn            = -1L,
-                               parallel        = control$parallel,
-                               ncpus           = control$ncpus,
-                               cl              = control$cl)
+                               warn            = -1L)
     if(boot.type == "bollen.stine") {
         nc <- ncol(COEF)
         TEST <- COEF[,nc]
@@ -239,8 +235,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                            lavdata        = NULL, 
                            lavpartable    = NULL, 
                            lavcache       = NULL,
-                           use.ginv       = FALSE,
-                           control=list()) {
+                           use.ginv       = FALSE) {
 
     likelihood  <- lavoptions$likelihood
     information <- lavoptions$information
@@ -310,8 +305,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                         lavoptions     = lavoptions,
                                         lavdata        = lavdata,
                                         lavcache       = lavcache,
-                                        lavpartable    = lavpartable,
-                                        control        = control),
+                                        lavpartable    = lavpartable),
                         silent=TRUE )
     } else {
         warning("lavaan WARNING: unknown se type: ", se)

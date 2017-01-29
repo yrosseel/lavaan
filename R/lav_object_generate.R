@@ -31,19 +31,10 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     lavoptions$do.fit  <- TRUE
 
     # verbose?
-    if(verbose) {
-        lavoptions$verbose <- TRUE
-    } else {
-        lavoptions$verbose <- FALSE
-    }
+    lavoptions$verbose <- verbose
 
     # warn?
-    if(warn) {
-        lavoptions$warn <- TRUE
-    } else {
-        lavoptions$warn <- FALSE
-    }
-
+    lavoptions$warn <- warn
 
     # needed?
     if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
@@ -171,24 +162,18 @@ lav_object_extended <- function(object, add = NULL,
     lavoptions <- object@Options
 
     # verbose?
-    if(verbose) {
-        lavoptions$verbose <- TRUE
-    } else {
-        lavoptions$verbose <- FALSE
-    }
+    lavoptions$verbose <- verbose
 
     # warn?
-    if(warn) {
-        lavoptions$warn <- TRUE
-    } else {
-        lavoptions$warn <- FALSE
-    }
+    lavoptions$warn <- warn
+
+    # do.fit?
+    lavoptions$do.fit <- do.fit
 
     # needed?
     if(any(LIST$op == "~1")) lavoptions$meanstructure <- TRUE
 
     FIT <- lavaan(LIST,
-                  do.fit          = do.fit,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,

@@ -53,11 +53,14 @@ bootstrapLavaan <- function(object,
         stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
     }
 
+    lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl, 
+                        iseed = iseed)
+
     bootstrap.internal(object          = object,
                        lavdata.        = NULL,
                        lavmodel.       = NULL,
                        lavsamplestats. = NULL,
-                       lavoptions.     = NULL,
+                       lavoptions.     = lavoptions.,
                        lavpartable.    = NULL,
                        R               = R,
                        type            = type.,
@@ -65,10 +68,6 @@ bootstrapLavaan <- function(object,
                        FUN             = FUN,
                        warn            = warn,
                        return.boot     = return.boot,
-                       parallel        = parallel,
-                       ncpus           = ncpus,
-                       cl              = cl,
-                       iseed           = iseed,
                        h0.rmsea        = h0.rmsea,
                        ...)
 }
@@ -87,10 +86,6 @@ bootstrap.internal <- function(object          = NULL,
                                FUN             = "coef",
                                warn            = 0L,
                                return.boot     = FALSE,
-                               parallel        = c("no", "multicore", "snow"),
-                               ncpus           = 1L,
-                               cl              = NULL,
-                               iseed           = NULL,
                                h0.rmsea        = NULL,
                                ...) {
 
@@ -130,13 +125,15 @@ bootstrap.internal <- function(object          = NULL,
         }
     }
 
+    parallel <- lavoptions$parallel
+    ncpus    <- lavoptions$ncpus
+    cl       <- lavoptions$cl
+    iseed    <- lavoptions$iseed
+
     # prepare
     old_options <- options(); options(warn = warn)
-    if (missing(parallel)) parallel <- "no"
     # the next 10 lines are borrowed from the boot package
-    parallel <- match.arg(parallel)
     have_mc <- have_snow <- FALSE
-    ncpus <- ncpus
     if (parallel != "no" && ncpus > 1L) {
         if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
         else if (parallel == "snow") have_snow <- TRUE

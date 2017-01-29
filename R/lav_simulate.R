@@ -41,9 +41,9 @@ simulateData <- function(
                         )
 {
     if(!is.null(seed)) set.seed(seed)
-    if(!exists(".Random.seed", envir = .GlobalEnv))
-        runif(1)               # initialize the RNG if necessary
-    RNGstate <- .Random.seed
+    #if(!exists(".Random.seed", envir = .GlobalEnv))
+    #    runif(1)               # initialize the RNG if necessary
+    #RNGstate <- .Random.seed
 
     # lavaanify
     if(is.list(model)) {
@@ -137,7 +137,7 @@ simulateData <- function(
             warning("lavaan WARNING: if residual variances are specified, please use standardized=FALSE")
         }
         lav2$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
-        fit <- lavaan(model=lav2, sample.nobs=sample.nobs,  ...)
+        fit <- lavaan(model=lav2, sample.nobs=sample.nobs, ...)
         Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
         ETA <- computeVETA(lavmodel = fit@Model, 
                            lavsamplestats = fit@SampleStats)

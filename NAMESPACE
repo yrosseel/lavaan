@@ -55,6 +55,8 @@ export("lavaan", "cfa", "sem", "growth",
        "lavTech",
        # utilities
        "getCov", "char2num", "cor2cov",
+       # options,
+       "lavOptions",
 
        "modindices", "modificationIndices", "modificationindices",
        "standardizedSolution", "standardizedsolution",

@@ -222,10 +222,10 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     # FIXME:
     # - check if H0 does not contain additional parameters...
 
+    Options$optim.method          = "none"
+    Options$optim.force.converged = TRUE
     m10 <- lavaan(model = PT.M1.extended,
                   start = PE.M0.extended,
-                  control=list(optim.method          = "none",
-                               optim.force.converged = TRUE) ,
                   slotOptions     = Options,
                   slotSampleStats = m1@SampleStats,
                   slotData        = m1@Data,

@@ -85,7 +85,6 @@ setClass("lavModel",          # MATRIX representation of the sem model
         categorical="logical",
         group.w.free="logical",
         link="character",
-        control="list",
 
         ngroups="integer",
         nmat="integer",

@@ -254,8 +254,7 @@ lav_model_test <- function(lavmodel       = NULL,
                            VCOV           = NULL, 
                            lavcache       = NULL,
                            lavdata        = NULL,
-                           test.UGamma.eigvals = FALSE,
-                           control        = list()) {
+                           test.UGamma.eigvals = FALSE) {
 
 
     mimic       <- lavoptions$mimic
@@ -685,10 +684,7 @@ lav_model_test <- function(lavmodel       = NULL,
                                    verbose         = lavoptions$verbose,
                                    type            = boot.type,
                                    FUN             = "test",
-                                   warn            = -1L,
-                                   parallel        = control$parallel,
-                                   ncpus           = control$ncpus,
-                                   cl              = control$cl)
+                                   warn            = -1L)
             BOOT.TEST <- drop(BOOT.TEST)
         }
 
