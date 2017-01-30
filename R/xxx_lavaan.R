@@ -256,6 +256,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         lavdata <- lavData(data        = data,
                            group       = group,
+                           cluster     = cluster,
                            ov.names    = ov.names,
                            ov.names.x  = ov.names.x,
                            ordered     = ordered,

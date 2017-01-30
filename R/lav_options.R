@@ -70,10 +70,14 @@ lav_options_default <- function(mimic = "lavaan") {
                 ridge              = 1e-5,
 
                 # multiple groups
+                group              = NULL,
                 group.label        = NULL,
                 group.equal        = '',
                 group.partial      = '',
                 group.w.free       = FALSE,
+
+                # clusters
+                cluster            = NULL,
 
                 # estimation
                 estimator          = "default",
