@@ -165,6 +165,10 @@ lavInspect <- function(lavobject,
         lavobject@Data@ngroups
     } else if(what == "group") {
         lavobject@Data@group
+    } else if(what == "cluster") {
+        lavobject@Data@cluster
+    } else if(what == "ordered") {
+        lavobject@Data@ordered
     } else if(what == "group.label") {
         lavobject@Data@group.label
     } else if(what == "nobs") {

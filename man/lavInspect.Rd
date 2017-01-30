@@ -107,6 +107,9 @@ Information about the data (including missing patterns):
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
     \item{\code{"group.label"}:}{A character vector. The group labels.}
+    \item{\code{"cluster"}:}{A character vector. The cluster variable(s) 
+       in the data.frame (if any).}
+    \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis.}
     \item{\code{"norig"}:}{Integer vector. The original number of observations
