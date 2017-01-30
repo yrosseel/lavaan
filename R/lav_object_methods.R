@@ -1257,7 +1257,7 @@ function(object, labels = TRUE, remove.duplicated = FALSE) {
         stop("lavaan ERROR: vcov not available if se=\"none\"")
     }
 
-    VarCov <- lav_object_inspect_vcov(lavobject = object,
+    VarCov <- lav_object_inspect_vcov(object,
                                       add.labels = labels,
                                       add.class = TRUE,
                                       remove.duplicated = remove.duplicated)

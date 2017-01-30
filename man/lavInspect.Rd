@@ -10,16 +10,16 @@ fitted lavaan object. Note: the (older) S4 \code{inspect()} method is now a
 shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
-lavInspect(lavobject, what = "free", add.labels = TRUE, add.class = TRUE,
+lavInspect(object, what = "free", add.labels = TRUE, add.class = TRUE,
            list.by.group = TRUE,
            drop.list.single.group = TRUE)
 
-lavTech(lavobject, what = "free", add.labels = FALSE, add.class = FALSE,
+lavTech(object, what = "free", add.labels = FALSE, add.class = FALSE,
         list.by.group = FALSE,
         drop.list.single.group = FALSE)
 }
 \arguments{
-\item{lavobject}{An object of class \code{\linkS4class{lavaan}}.}
+\item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{what}{Character. What needs to be inspected/extracted? See Details for a
 full list. Note: the \code{what} argument is not case-sensitive
 (everything is converted to lower case.)}
