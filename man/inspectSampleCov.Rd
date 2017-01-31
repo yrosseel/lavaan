@@ -17,7 +17,7 @@ inspectSampleCov(model, data, ...)
 One must supply both a model, coded with proper \code{\link{model.syntax}} and
 a data frame from which a covariance matrix will be calculated. This function
 essentially calls \code{\link{sem}}, but doesn't fit the model, then uses
-\code{\link{inspect}} to get the sample covariance matrix and meanstructure.
+\code{\link{lavInspect}} to get the sample covariance matrix and meanstructure.
 }
 
-\section{See also}{\code{\link{sem}}, \code{\link{inspect}} }
+\section{See also}{\code{\link{sem}}, \code{\link{lavInspect}} }

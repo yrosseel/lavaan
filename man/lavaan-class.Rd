@@ -12,7 +12,6 @@
 \alias{nobs} %% not imported in < 2.13
 \alias{nobs,lavaan-method}
 \alias{logLik,lavaan-method}
-\alias{inspect,lavaan-method}
 \alias{update,lavaan-method}
 \alias{show,lavaan-method}
 \alias{summary,lavaan-method}
@@ -118,9 +117,6 @@ about the data.}
       returns the log-likelihood of the fitted model, if maximum likelihood estimation
       was used. The \code{\link[stats]{AIC}} and \code{\link[stats]{BIC}}
       methods automatically work via \code{logLik()}.}
-    \item{inspect}{\code{signature(object = "lavaan", what = "free")}: This
-      method is now a shortcut for the \code{lavInspect()} function. See
-      \link{lavInspect} for more details.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
@@ -146,7 +142,7 @@ about the data.}
       decimal point to be printed (currently only in the parameter estimates
       section.)
       Nothing is returned (use 
-      \code{inspect} or another extractor function 
+      \code{lavInspect} or another extractor function 
       to extract information from a fitted model).}
   }
 }
@@ -161,7 +157,7 @@ http://www.statmodel.com/download/StandardizedResiduals.pdf
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}, 
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},
-\code{\link{parameterEstimates}},
+\code{\link{parameterEstimates}}, \code{\link{lavInspect}},
 \code{\link{modindices}}
 }
 \examples{
@@ -172,11 +168,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
 
 summary(fit, standardized=TRUE, fit.measures=TRUE, rsquare=TRUE)
-inspect(fit, "free")
-inspect(fit, "start")
-inspect(fit, "rsquare")
-inspect(fit, "fit")
-fitted.values(fit)
+fitted(fit)
 coef(fit)
 resid(fit, type="normalized")
 }

@@ -6,8 +6,8 @@
 \description{
 The \code{lavInspect()} and \code{lavTech()} functions can be used to
 inspect/extract information that is stored inside (or can be computed from) a
-fitted lavaan object. Note: the (older) S4 \code{inspect()} method is now a
-shortcut for \code{lavInspect()} with default arguments.
+fitted lavaan object. Note: the (older) \code{inspect()} function is
+now simply a shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
 lavInspect(object, what = "free", add.labels = TRUE, add.class = TRUE,
@@ -17,6 +17,8 @@ lavInspect(object, what = "free", add.labels = TRUE, add.class = TRUE,
 lavTech(object, what = "free", add.labels = FALSE, add.class = FALSE,
         list.by.group = FALSE,
         drop.list.single.group = FALSE)
+
+inspect(object, what = "free")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
