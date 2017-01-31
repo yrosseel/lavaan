@@ -53,8 +53,11 @@ export("lavaan", "cfa", "sem", "growth",
        "lavParseModelString", # "parseModelString",
        "lavInspect",        "inspect",
        "lavTech",
+       "lavListInspect",    "lavListTech",
        # utilities
        "getCov", "char2num", "cor2cov",
+       # options,
+       "lavOptions",
 
        "modindices", "modificationIndices", "modificationindices",
        "standardizedSolution", "standardizedsolution",
@@ -187,3 +190,7 @@ S3method(plot, InformativeTesting)
 # S3method(print, lavaan.tables.fit.Cf)
 # S3method(print, lavaan.tables.fit.Cp)
 # S3method(print, lavaan.tables.fit.Cm)
+S3method(lavInspect, lavaan)
+S3method(lavTech,    lavaan)
+S3method(lavInspect, lavaanList)
+S3method(lavTech,    lavaanList)

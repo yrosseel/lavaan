@@ -5,10 +5,8 @@ short.summary <- function(object) {
 
     # catch FAKE run
     FAKE <- FALSE
-    if(!is.null(object@Model@control$optim.method)) {
-        if(tolower(object@Model@control$optim.method) == "none") {
-            FAKE <- TRUE
-        }
+    if(object@Options$optim.method == "none") {
+        FAKE <- TRUE
     }
 
     # Convergence or not?
@@ -1259,7 +1257,7 @@ function(object, labels = TRUE, remove.duplicated = FALSE) {
         stop("lavaan ERROR: vcov not available if se=\"none\"")
     }
 
-    VarCov <- lav_object_inspect_vcov(lavobject = object,
+    VarCov <- lav_object_inspect_vcov(object,
                                       add.labels = labels,
                                       add.class = TRUE,
                                       remove.duplicated = remove.duplicated)

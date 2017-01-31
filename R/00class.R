@@ -9,6 +9,7 @@ setClass("lavData",
         data.type="character",     # "full", "moment" or "none"
         ngroups="integer",         # number of groups
         group="character",         # group variable
+        cluster="character",       # cluster variable(s)
         group.label="character",   # group labels
         std.ov="logical",          # standardize observed variables?
         nobs="list",               # effective number of observations
@@ -17,6 +18,7 @@ setClass("lavData",
         ov.names.x="list",         # exo variable names (per group)
         #ov.types="list",           # variable types (per group)
         #ov.idx="list",             # column indices (all observed variables)
+        ordered="character",       # ordered variables
         ov="list",                 # variable table
         case.idx="list",           # case indices per group
         missing="character",       # "listwise" or not?
@@ -85,7 +87,6 @@ setClass("lavModel",          # MATRIX representation of the sem model
         categorical="logical",
         group.w.free="logical",
         link="character",
-        control="list",
 
         ngroups="integer",
         nmat="integer",

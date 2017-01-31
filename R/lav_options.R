@@ -1,12 +1,138 @@
 # initial version YR 02/08/2010
 
+# YR 28 Jan 2017: add lavOptions(), lav_options_default()
+
+# public function
+lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") {
+
+    lavoptions <- lav_options_default(mimic = mimic)
+
+    # selection only
+    if(!is.null(x)) {
+        if(is.character(x)) {
+            # lower case only
+            x <- tolower(x)
+
+            # check if x is in names(lavoptions)
+            not.ok <- which(!x %in% names(lavoptions))
+            if(length(not.ok) > 0L) {
+                # only warn if multiple options were requested
+                if(length(x) > 1L) {
+                    warning("lavaan WARNING: option `", x[not.ok], 
+                            "' not available")
+                }
+                x <- x[ -not.ok ]
+            }
+
+            # return requested option(s)
+            if(length(x) == 0L) {
+                return(default)
+            } else {
+                lavoptions[x]
+            }
+        } else {
+            stop("lavaan ERROR: `x' must be a character string")
+        }
+    } else {
+        lavoptions
+    }
+}
+
+# set the default options (including unspecified values "default")
+lav_options_default <- function(mimic = "lavaan") {
+
+    opt <- list(model.type         = "sem",
+
+                # model modifiers
+                meanstructure      = "default",
+                int.ov.free        = FALSE,
+                int.lv.free        = FALSE,
+                conditional.x      = "default", # or FALSE?
+                fixed.x            = "default", # or FALSE?
+                orthogonal         = FALSE,
+                std.lv             = FALSE,
+                parameterization   = "default",
+
+                auto.fix.first     = FALSE,
+                auto.fix.single    = FALSE,
+                auto.var           = FALSE,
+                auto.cov.lv.x      = FALSE,
+                auto.cov.y         = FALSE,
+                auto.th            = FALSE,
+                auto.delta         = FALSE,
+
+                # full data
+                std.ov             = FALSE,
+                missing            = "default",
+
+                # summary data
+                sample.cov.rescale = "default",
+                ridge              = 1e-5,
+
+                # multiple groups
+                group              = NULL,
+                group.label        = NULL,
+                group.equal        = '',
+                group.partial      = '',
+                group.w.free       = FALSE,
+
+                # clusters
+                cluster            = NULL,
+
+                # estimation
+                estimator          = "default",
+                likelihood         = "default",
+                link               = "default",
+                information        = "default",
+                se                 = "default",
+                test               = "default",
+                bootstrap          = 1000L,
+                mimic              = "default",
+                representation     = "default",
+                do.fit             = TRUE,
+
+                # optimization
+                control                = list(),
+                optim.method           = "nlminb",
+                optim.method.cor       = "nlminb",
+                optim.force.converged  = FALSE,
+                optim.gradient         = "analytic",
+                optim.init_nelder_mead = FALSE,
+
+                # numerical integration
+                integration.ngh        = 21L,
+
+                # parallel
+                parallel               = "no",
+                ncpus                  = 1L,
+                cl                     = NULL,
+                iseed                  = NULL,
+
+                # zero values
+                zero.add               = "default",
+                zero.keep.margins      = "default",
+                zero.cell.warn         = TRUE,
+
+                # starting values
+                start                  = "default",
+
+                # sanity checks
+                check                  = c("start", "post"),
+
+                # verbosity
+                verbose                = FALSE,
+                warn                   = TRUE,
+                debug                  = FALSE)
+
+    opt
+}
+
 # this function collects and checks the user-provided options/arguments, 
 # and fills in the "default" values, or changes them in an attempt to
 # produce a consistent set of values...
 #
 # returns a list with the named options 
-
-lav_options_set <- function(opt = formals(lavaan)) {
+lav_options_set <- function(opt = NULL) {
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
 
@@ -272,7 +398,7 @@ lav_options_set <- function(opt = formals(lavaan)) {
         # by default: no meanstructure!
         opt$meanstructure <- FALSE
         # unless there is a group argument? (added since 0.4-10)
-        if(!is.null(opt$group)) opt$meanstructure <- TRUE
+        # if(!is.null(opt$group)) opt$meanstructure <- TRUE
     } else {
         stop("meanstructure must be TRUE, FALSE or \"default\"\n")
     }
@@ -606,8 +732,8 @@ lav_options_set <- function(opt = formals(lavaan)) {
     if(opt$information == "default") {
         if(opt$missing == "ml"     || 
            opt$se == "robust.huber.white"  || 
-           opt$se == "first.order" ||
-           nchar(opt$constraints) > 0L) {
+           opt$se == "first.order") {
+           #nchar(opt$constraints) > 0L) {
             opt$information <- "observed"
         } else {
             opt$information <- "expected"

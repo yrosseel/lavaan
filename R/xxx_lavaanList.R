@@ -1,5 +1,7 @@
 # lavaanList: fit the *same* model, on different datasets
-# YR - 29 June 2016
+# YR - 29 Jun 2016
+
+# YR - 27 Jan 2017: change lavoptions; add dotdotdot to each call
 
 lavaanList <- function(model         = NULL,             # model
                        dataList      = NULL,             # list of datasets
@@ -78,27 +80,20 @@ lavaanList <- function(model         = NULL,             # model
         FIT <- model
     } else {
         # adapt for FIT
-        dotdotdotFIT <- dotdotdot
-        dotdotdotFIT$do.fit  <- TRUE    # to get starting values
-        dotdotdotFIT$se      <- "none"
-        dotdotdotFIT$test    <- "none"
-        dotdotdotFIT$verbose <- FALSE
-        dotdotdotFIT$debug   <- FALSE
+        #dotdotdotFIT <- dotdotdot
+        #dotdotdotFIT$do.fit  <- TRUE    # to get starting values
+        #dotdotdotFIT$se      <- "none"
+        #dotdotdotFIT$test    <- "none"
+        #dotdotdotFIT$verbose <- FALSE
+        #dotdotdotFIT$debug   <- FALSE
 
         # initial model fit, using first dataset
         FIT <- do.call(cmd,
                        args = c(list(model  = model,
-                                     data   = firstData), dotdotdotFIT) )
+                                     data   = firstData), dotdotdot) )
     }
 
-    # use original dotdotdot to set user-specified options
-    opt.list <- formals(lavaan)
-    opt.list$categorical <- FIT@Options$categorical
-    opt.list$meanstructure <- FIT@Options$meanstructure
-    opt.list$conditional.x <- FIT@Options$conditional.x
-    lavoptions  <- lav_options_set( modifyList(opt.list,
-                                               val = dotdotdot) )
-
+    lavoptions  <- FIT@Options
     lavmodel    <- FIT@Model
     lavpartable <- FIT@ParTable
     lavpta      <- FIT@pta
@@ -209,11 +204,6 @@ lavaanList <- function(model         = NULL,             # model
         } else {
             stop("lavaan ERROR: unknown cmd: ", cmd)
         }
-        #lavobject <- try(lavaan(slotOptions  = lavoptions,
-        #                        slotParTable = lavpartable,
-        #                        slotModel    = lavmodel,
-        #                        start        = FIT,
-        #                        data         = DATA), silent = TRUE)
 
         RES <- list(ok = FALSE, timing = NULL, ParTable = NULL,
                     Data = NULL, SampleStats = NULL, vcov = NULL,
@@ -264,9 +254,6 @@ lavaanList <- function(model         = NULL,             # model
                 RES$fun <- FUN(lavobject)
             }
 
-            #if("coef" %in% output) {
-            #    COEF[[i]] <- coef(lavobject)
-            #}
         } else {
             if(show.progress) {
                 cat("     FAILED: no convergence\n")

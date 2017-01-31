@@ -60,12 +60,11 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                                   sample.th      = computeTH(lavmodel),
                                   sample.th.idx  = lavsamplestats@th.idx)
 
-    #Options$se <- lavoptions$se
+    Options2 <- Options
+    Options2$optim.method          <- "none"
+    Options2$optim.force.converged <- TRUE
     fittedSat2 <- lavaan(ModelSat2, 
-                        control=list(optim.method          = "none",
-                                     optim.force.converged = TRUE) ,
-                        #slotOptions = lavoptions,
-                        slotOptions = Options,
+                        slotOptions = Options2,
                         slotSampleStats = lavsamplestats,
                         slotData = lavdata, slotCache = lavcache)
 

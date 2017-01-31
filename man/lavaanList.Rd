@@ -80,7 +80,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 # a data generating function
 generateData <- function() simulateData(HS.model, sample.nobs = 100)
 
-fit <- semList(HS.model, dataFunction = generateData, ndat = 10,
+set.seed(1234)
+fit <- semList(HS.model, dataFunction = generateData, ndat = 5,
                store.slots = "partable")
 
 # show parameter estimates, per dataset

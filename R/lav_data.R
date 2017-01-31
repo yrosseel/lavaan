@@ -12,6 +12,7 @@
 # extract the data we need for this particular model
 lavData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
+                    cluster       = NULL,          # clusters?
                     group.label   = NULL,          # custom group labels?
                     ov.names      = NULL,          # variables needed in model
                     ordered       = NULL,          # ordered variables
@@ -64,6 +65,7 @@ lavData <- function(data          = NULL,          # data.frame
 
         lavData <- lav_data_full(data              = data,
                                  group             = group,
+                                 cluster           = cluster,
                                  group.label       = group.label,
                                  ov.names          = ov.names,
                                  ordered           = ordered,
@@ -160,11 +162,13 @@ lavData <- function(data          = NULL,          # data.frame
                        data.type   = "moment",
                        ngroups     = ngroups, 
                        group       = character(0L),
+                       cluster     = character(0L),
                        group.label = group.label,
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
                        ov.names.x  = ov.names.x,
+                       ordered     = as.character(ordered),
                        ov          = ov,
                        std.ov      = FALSE,
                        missing     = "listwise",
@@ -219,11 +223,13 @@ lavData <- function(data          = NULL,          # data.frame
                        data.type   = "none",
                        ngroups     = ngroups,
                        group       = character(0L),
+                       cluster     = character(0L),
                        group.label = group.label,
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
                        ov.names.x  = ov.names.x,
+                       ordered     = as.character(ordered),
                        ov          = ov,
                        missing     = "listwise",
                        case.idx    = vector("list", length=ngroups),
@@ -241,6 +247,7 @@ lavData <- function(data          = NULL,          # data.frame
 # handle full data
 lav_data_full <- function(data          = NULL,          # data.frame
                           group         = NULL,          # multiple groups?
+                          cluster       = NULL,
                           group.label   = NULL,          # custom group labels?
                           ov.names      = NULL,          # variables needed 
                                                          # in model
@@ -292,6 +299,13 @@ lav_data_full <- function(data          = NULL,          # data.frame
         ngroups <- 1L
         group.label <- character(0L)
         group <- character(0L)
+    }
+
+    # cluster
+    if(is.null(cluster)) {
+        cluster <- character(0L)
+    } else {
+        warning("lavaan ERROR: cluster argument not used (yet)")
     }
 
     # ov.names
@@ -579,6 +593,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                       data.type       = "full",
                       ngroups         = ngroups,
                       group           = group,
+                      cluster         = cluster,
                       group.label     = group.label,
                       std.ov          = std.ov,
                       nobs            = nobs,
@@ -587,6 +602,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                       ov.names.x      = ov.names.x,
                       #ov.types        = ov.types,
                       #ov.idx          = ov.idx,
+                      ordered         = as.character(ordered),
                       ov              = ov,
                       case.idx        = case.idx,
                       missing         = missing,

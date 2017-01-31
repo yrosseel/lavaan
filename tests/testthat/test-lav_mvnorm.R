@@ -14,9 +14,9 @@ H9miss$x5 <- ifelse(H9miss$x1 <= quantile(H9miss$x1, .3), NA, H9miss$x5)
 H9miss$x9 <- ifelse(H9miss$x4 <= quantile(H9miss$x4, .3), NA, H9miss$x9)
 ## fit model to complete and incomplete data
 HS.model <- '
-visual  =~ x1 + x2 + x3
-textual =~ x4 + x5 + x6
-speed   =~ x7 + x8 + x9
+    visual  =~ x1 + x2 + x3
+    textual =~ x4 + x5 + x6
+    speed   =~ x7 + x8 + x9
 '
 
 
@@ -27,19 +27,17 @@ speed   =~ x7 + x8 + x9
 cfit <- cfa(HS.model, data = H9, meanstructure = TRUE)
 
 ## save summary statistics
-cM <- lavInspect(cfit, "sampstat")$mean # matches round(colMeans(H9), 3)
-cS <- lavInspect(cfit, "sampstat")$cov  # matches round(cov(H9)*300/301, 3)
+cM <- lavInspect(cfit, "sampstat", add.class = FALSE)$mean # matches round(colMeans(H9), 3)
+cS <- lavInspect(cfit, "sampstat", add.class = FALSE)$cov  # matches round(cov(H9)*300/301, 3)
 ## model-implied moments
-cMu <- lavInspect(cfit, "mean.ov")
-cSigma <- lavInspect(cfit, "cov.ov")
-
+cMu <- lavInspect(cfit, "mean.ov", add.class = FALSE)
+cSigma <- lavInspect(cfit, "cov.ov", add.class = FALSE)
 
 
 ## sum casewise log-likelihoods under saturated model
 cLL1 <- fitMeasures(cfit)[["unrestricted.logl"]]
-cLL2 <- sum(apply(H9, 1, mnormt::dmnorm, # why does this function return warnings?
-                   mean = cM, varcov = cS, log = TRUE))
-cLL3 <- sum(apply(H9, 1, mvtnorm::dmvnorm, mean = cM, sigma = cS, log = TRUE))
+cLL2 <- sum(mnormt::dmnorm(H9, mean = cM, varcov = cS, log = TRUE))
+#cLL3 <- sum(mvtnorm::dmvnorm(H9, mean = cM, sigma = cS, log = TRUE))
 ## functions of actual interest
 cLL4 <- sum(lav_mvnorm_dmvnorm(Y = as.matrix(H9), Mu = cM, Sigma = cS))
 cLL5 <- lav_mvnorm_h1_loglik_data(as.matrix(H9), casewise = FALSE)
@@ -47,19 +45,20 @@ cLL6 <- sum(lav_mvnorm_h1_loglik_data(as.matrix(H9), casewise = TRUE))
 
 test_that("6 saturated log-likelihoods match for complete data", {
   expect_equal(cLL1, cLL2)
-  expect_equal(cLL1, cLL3)
+#  expect_equal(cLL1, cLL3)
   expect_equal(cLL1, cLL4)
   expect_equal(cLL1, cLL5)
   expect_equal(cLL1, cLL6)
 })
-rm(cLL1, cLL2, cLL3, cLL4, cLL5, cLL6)
+rm(cLL1, cLL2,
+   #cLL3, 
+   cLL4, cLL5, cLL6)
 
 
 ## sum casewise log-likelihoods under target model
 cLL1 <- fitMeasures(cfit)[["logl"]]
-cLL2 <- sum(apply(H9, 1, mnormt::dmnorm, # why does this function return warnings?
-                  mean = cMu, varcov = cSigma, log = TRUE))
-cLL3 <- sum(apply(H9, 1, mvtnorm::dmvnorm, mean = cMu, sigma = cSigma, log = TRUE))
+cLL2 <- sum(mnormt::dmnorm(H9, mean = cMu, varcov = cSigma, log = TRUE))
+#cLL3 <- sum(mvtnorm::dmvnorm(H9, mean = cMu, sigma = cSigma, log = TRUE))
 cLL4 <- sum(lav_mvnorm_dmvnorm(Y = as.matrix(H9), Mu = cMu, Sigma = cSigma))
 cLL5 <- lav_mvnorm_loglik_samplestats(sample.mean = cM, sample.cov = cS,
                                       sample.nobs = nobs(cfit),
@@ -67,19 +66,21 @@ cLL5 <- lav_mvnorm_loglik_samplestats(sample.mean = cM, sample.cov = cS,
 
 test_that("5 target-model log-likelihoods match for complete data", {
   expect_equal(cLL1, cLL2)
-  expect_equal(cLL1, cLL3)
+#  expect_equal(cLL1, cLL3)
   expect_equal(cLL1, cLL4)
   expect_equal(cLL1, cLL5)
 })
-rm(cLL1, cLL2, cLL3, cLL4, cLL5)
-
+rm(cLL1, cLL2,
+   #cLL3, 
+   cLL4, cLL5)
 
 
 ##################
 ## Missing Data ##
 ##################
 
-mfit <- update(cfit, data = H9miss, missing = "fiml")
+mfit <- cfa(HS.model, data = H9miss, meanstructure = TRUE, missing = "fiml")
+
 ## list per missind-data pattern
 lavInspect(mfit, "coverage")
 pattern <- lavInspect(mfit, "pattern")
@@ -100,8 +101,9 @@ all(rowSums(indPatterns) == 1) # check exactly 1 pattern per person
 #   cov(H9miss[indPatterns[,pp], varnames[pattern[pp,]]]) * (mN[pp] - 1) / mN[pp]
 # })
 ## lists of model-implied moments
-mMu <- lavInspect(mfit, "mean.ov")
-mSigma <- lavInspect(mfit, "cov.ov")
+mMu <- lavInspect(mfit, "mean.ov", add.class = FALSE)
+mSigma <- lavInspect(mfit, "cov.ov", add.class = FALSE)
+
 
 
 
@@ -112,11 +114,11 @@ mLL2 <- sum(sapply(1:4, function(pp) {
             mnormt::dmnorm, mean = mMu[varnames[pattern[pp,]]],
             varcov = mSigma[varnames[pattern[pp,]], varnames[pattern[pp,]]], log = TRUE))
 }))
-mLL3 <- sum(sapply(1:4, function(pp) {
-  sum(apply(H9miss[indPatterns[,pp], varnames[pattern[pp,]]], 1,
-            mvtnorm::dmvnorm, mean = mMu[varnames[pattern[pp,]]],
-            sigma = mSigma[varnames[pattern[pp,]], varnames[pattern[pp,]]], log = TRUE))
-}))
+#mLL3 <- sum(sapply(1:4, function(pp) {
+#  sum(apply(H9miss[indPatterns[,pp], varnames[pattern[pp,]]], 1,
+#            mvtnorm::dmvnorm, mean = mMu[varnames[pattern[pp,]]],
+#            sigma = mSigma[varnames[pattern[pp,]], varnames[pattern[pp,]]], log = TRUE))
+#}))
 ## functions of actual interest
 mLL4 <- lav_mvnorm_missing_loglik_data(H9miss, mMu, mSigma, pattern = FALSE)
 mLL5 <- lav_mvnorm_missing_loglik_data(H9miss, mMu, mSigma, pattern = TRUE)
@@ -125,20 +127,17 @@ mLL6 <- lav_mvnorm_missing_loglik_samplestats(mfit@SampleStats@missing[[1]], mMu
 
 test_that("6 target-model log-likelihoods match for missing data", {
   expect_equal(mLL1, mLL2)
-  expect_equal(mLL1, mLL3)
+#  expect_equal(mLL1, mLL3)
   expect_equal(mLL1, mLL4)
   expect_equal(mLL1, mLL5)
   expect_equal(mLL1, mLL6)
 })
-rm(mLL1, mLL2, mLL3, mLL4, mLL5, mLL6)
-
-
-
-
+rm(mLL1, mLL2,
+   #mLL3, 
+   mLL4, mLL5, mLL6)
 
 
 #########################
 ## run tests in this file
 # test_file("tests/testthat/test_lav_mvnorm.R")
-
 

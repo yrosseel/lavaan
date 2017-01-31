@@ -29,7 +29,9 @@ modindices <- function(object,
     }
  
     # sanity check
-    if(power) standardized <- TRUE
+    if(power) {
+        standardized <- TRUE
+    }
 
     # extended list (fixed-to-zero parameters)
     strict.exo <- FALSE
