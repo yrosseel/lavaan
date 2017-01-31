@@ -1,6 +1,3 @@
-# for simsem: uses 'inspect' in exportMethods in NAMESPACE
-setGeneric("inspect", function(object, ...) standardGeneric("inspect"))
-
 # for blavaan
 setGeneric("fitMeasures", 
     function(object, fit.measures = "all", baseline.model = NULL) 
@@ -11,6 +8,10 @@ setGeneric("fitmeasures",
 
 
 # S3 generics
+inspect <- function(object, what = "free") {
+    UseMethod("inspect", object)
+}
+
 lavInspect <- function(object, what                   = "free",
                                add.labels             = TRUE,
                                add.class              = TRUE,

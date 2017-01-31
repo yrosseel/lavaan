@@ -1,14 +1,13 @@
 # inspect a fitted lavaan object
 
 # backward compatibility -- wrapper around lavInspect
-setMethod("inspect", "lavaan",
-function(object, what = "free") {
-    lavInspect(object              = object,
-               what                   = what,
-               add.labels             = TRUE,
-               add.class              = TRUE,
-               drop.list.single.group = TRUE)
-})
+inspect.lavaan <- function(object, what = "free") {
+    lavInspect.lavaan(object              = object,
+                      what                   = what,
+                      add.labels             = TRUE,
+                      add.class              = TRUE,
+                      drop.list.single.group = TRUE)
+}
 
 # the `tech' version: no labels, full matrices, ... for further processing
 lavTech.lavaan <- function(object, 
@@ -50,6 +49,9 @@ lavInspect.lavaan <- function(object,
             type = "free", add.labels = add.labels, add.class = add.class,
             list.by.group = list.by.group, 
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "impute" ||
+              what == "imputed") { # just to ease the transition for semTools!
+        object@imputed
     } else if(what == "partable" || what == "user") {
         lav_object_inspect_modelmatrices(object, what = "free", 
             type="partable", add.labels = add.labels, add.class = add.class,

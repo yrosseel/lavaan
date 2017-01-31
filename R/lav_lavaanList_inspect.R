@@ -1,13 +1,12 @@
 # inspect a lavaanList object
 
-#setMethod("inspect", "lavaanList",
-#function(object, what = "free") {
-#    lavListInspect(object              = object,
-#                   what                   = what,
-#                   add.labels             = TRUE,
-#                   add.class              = TRUE,
-#                   drop.list.single.group = TRUE)
-#})
+inspect.lavaanList <- function(object, what = "free") {
+    lavListInspect(object                 = object,
+                   what                   = what,
+                   add.labels             = TRUE,
+                   add.class              = TRUE,
+                   drop.list.single.group = TRUE)
+}
 
 # the `tech' version: no labels, full matrices, ... for further processing
 lavTech.lavaanList <- function(object, 
