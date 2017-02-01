@@ -38,8 +38,9 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
         }
         lavdata <- lavData(data = object, group = group,
                            ov.names = NAMES, ordered = NULL,
-                           ov.names.x = ov.names.x, warn = FALSE,
-                           missing = missing)
+                           ov.names.x = ov.names.x, 
+                           lavoptions = list(warn = FALSE,
+                                             missing = missing))
     } else {
         stop("lavaan ERROR: lavGamma can not handle objects of class ",
              paste(class(object), collapse= " "))

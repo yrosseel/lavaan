@@ -263,11 +263,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.cov  = sample.cov,
                            sample.mean = sample.mean,
                            sample.nobs = sample.nobs,
-
-                           group.label = lavoptions$group.label,
-                           std.ov      = lavoptions$std.ov,
-                           missing     = lavoptions$missing,
-                           warn        = lavoptions$warn)
+                           lavoptions  = lavoptions)
     }
     # what have we learned from the data?
     if(lavdata@data.type == "none") {

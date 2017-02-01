@@ -53,11 +53,11 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                            group       = lavdata@group,
                            group.label = lavdata@group.label,
                            ov.names    = lavdata@ov.names,
-                           ordered     = OV$name[ OV$type == "ordered" ],
                            ov.names.x  = lavdata@ov.names.x,
-                           std.ov      = lavdata@std.ov,
-                           missing     = lavdata@missing,
-                           # warn      = FALSE,
+                           ordered     = OV$name[ OV$type == "ordered" ],
+                           lavoptions  = list(std.ov = lavdata@std.ov,
+                                              missing = lavdata@missing,
+                                              warn = FALSE),
                            allow.single.case = TRUE)
         data.obs <- newData@X
         eXo <- newData@eXo

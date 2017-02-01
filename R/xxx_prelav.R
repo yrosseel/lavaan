@@ -38,9 +38,9 @@ prelav <- function(object = NULL, ordered = NULL, ov.names.x = NULL,
     lav.data <- lavData(data = object, group = group,
                         ov.names = NAMES, ordered = ordered,
                         ov.names.x = ov.names.x,
-                        missing = missing)
+                        lavoptions = list(missing = missing))
 
-    lav.stats <- lav_samplestats_from_data(lavdata    = lav.data,
+    lav.stats <- lav_samplestats_from_data(lavdata       = lav.data,
                                            missing       = missing,
                                            rescale       = FALSE,
                                            estimator     = "ML",

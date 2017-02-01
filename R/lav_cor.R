@@ -52,7 +52,7 @@ lavCor <- function(object,
         lav.data <- lavData(data = object, group = group, 
                             ov.names = NAMES, ordered = ordered,
                             ov.names.x = ov.names.x,
-                            missing = missing)
+                            lavoptions = list(missing = missing))
     } else {
         stop("lavaan ERROR: lavCor can not handle objects of class ",
              paste(class(object), collapse= " "))

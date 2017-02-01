@@ -13,19 +13,30 @@
 lavData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
                     cluster       = NULL,          # clusters?
-                    group.label   = NULL,          # custom group labels?
                     ov.names      = NULL,          # variables needed in model
-                    ordered       = NULL,          # ordered variables
                     ov.names.x    = character(0),  # exo variables
-                    std.ov        = FALSE,         # standardize ov's?
-                    missing       = "listwise",    # remove missings?
+                    ordered       = NULL,          # ordered variables
                     sample.cov    = NULL,          # sample covariance(s)
                     sample.mean   = NULL,          # sample mean vector(s)
                     sample.nobs   = NULL,          # sample nobs
-                    warn          = TRUE,          # produce warnings?
+ 
+                    lavoptions    = lavOptions(),  # lavoptions
                     allow.single.case = FALSE      # allow single case (for newdata in predict)
                    ) 
 {
+
+    # get info from lavoptions
+    group.label <- lavoptions$group.label
+    if(is.null(group.label)) {
+        group.label <- character(0L)
+    }
+    std.ov      <- lavoptions$std.ov
+    missing     <- lavoptions$missing
+    if(missing == "default") { 
+        missing <- "listwise"
+    }
+    warn        <- lavoptions$warn
+
     # four scenarios:
     #    0) data is already a lavData object: do nothing
     #    1) data is full data.frame (or a matrix)
