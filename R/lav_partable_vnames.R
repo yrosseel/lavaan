@@ -1,6 +1,6 @@
-# lav_partable_names 
+# lav_partable_names
 #
-# YR. 29 june 2013 
+# YR. 29 june 2013
 #  - as separate file; used to be in utils-user.R
 #  - lav_partable_names (aka 'vnames') allows multiple options in 'type'
 #    returning them all as a list (or just a vector if only 1 type is needed)
@@ -8,7 +8,7 @@
 # public version
 lavNames <- function(object, type = "ov", group = NULL) {
 
-    if(inherits(object, "lavaan")) {
+    if(inherits(object, "lavaan") || inherits(object, "lavaanList")) {
          partable <- object@ParTable
     } else if(class(object) == "list" ||
               inherits(object, "data.frame")) {
@@ -22,11 +22,11 @@ lavNames <- function(object, type = "ov", group = NULL) {
 lavaanNames <- lavNames
 
 # return variable names in a partable
-# - the 'type' argument determines the status of the variable: observed, 
+# - the 'type' argument determines the status of the variable: observed,
 #   latent, endo/exo/...; default = "ov", but most used is type = "all"
 # - the 'group' argument either selects a single group (if group is an integer)
 #   or returns a list per group
-lav_partable_vnames <- function(partable, type = NULL, group = NULL, 
+lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                                 warn = FALSE, ov.x.fatal = FALSE) {
 
     # check for empy table
@@ -53,21 +53,21 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                    "lv.nox",      # non-exogenous latent variables
                    "lv.nonnormal",# latent variables with non-normal indicators
                    "lv.interaction", # interaction terms
-     
+
                    "eqs.y",       # y's in regression
                    "eqs.x"        # x's in regression
                   )
 
     # sanity check
-    stopifnot(is.list(partable), 
-              !missing(type), 
+    stopifnot(is.list(partable),
+              !missing(type),
               type %in% c(type.list, "all"))
 
     if(length(type) == 1L && type == "all") {
         type <- type.list
     }
 
-    # if `group' is missing in partable, just add group=1L 
+    # if `group' is missing in partable, just add group=1L
     if(is.null(partable$group)) {
         partable$group <- rep(1L, length(partable$lhs))
         ngroups <- 1L
@@ -92,7 +92,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
     # output: list per group
     OUT                <- vector("list", length=ngroups)
-    OUT$ov             <- vector("list", length=ngroups) 
+    OUT$ov             <- vector("list", length=ngroups)
     OUT$ov.x           <- vector("list", length=ngroups)
     OUT$ov.nox         <- vector("list", length=ngroups)
     OUT$ov.model       <- vector("list", length=ngroups)
@@ -132,12 +132,12 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             ok.idx <- logical(n.int)
             for(iv in seq_len(n.int)) {
                 NAMES <- strsplit(int.names[iv], ":", fixed = TRUE)[[1L]]
-              
+
                 # three scenario's:
                 # - both variables are latent (ok)
                 # - both variables are observed (ignore)
                 # - only one latent (warn??) -> upgrade observed to latent
-                # thus if at least one is in lv.names, we treat it as a 
+                # thus if at least one is in lv.names, we treat it as a
                 # latent interaction
                 if(sum(NAMES %in% lv.names) > 0L) {
                     ok.idx[iv] <- TRUE
@@ -152,7 +152,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         # store lv
         if("lv" %in% type) {
             OUT$lv[[g]] <- lv.names
-        } 
+        }
 
         # regular latent variables ONLY (ie defined by =~ only)
         if("lv.regular" %in% type) {
@@ -174,7 +174,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # eqs.y
-        if(!(length(type) == 1L && 
+        if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
             eqs.y <- unique( partable$lhs[ partable$group == g  &
                                            partable$op == "~"     ] )
@@ -184,9 +184,9 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         if("eqs.y" %in% type) {
             OUT$eqs.y[[g]] <- eqs.y
         }
-       
+
         # eqs.x
-        if(!(length(type) == 1L && 
+        if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal","lv.x"))) {
             eqs.x <- unique( partable$rhs[ partable$group == g  &
                                            (partable$op == "~"  |
@@ -199,14 +199,14 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # v.ind -- indicators of latent variables
-        if(!(length(type) == 1L && 
+        if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
             v.ind <- unique( partable$rhs[ partable$group == g  &
                                            partable$op == "=~"    ] )
         }
 
         # ov.*
-        if(!(length(type) == 1L && 
+        if(!(length(type) == 1L &&
              type %in% c("lv", "lv.regular", "lv.nonnormal", "lv.x","lv.y"))) {
             # 1. indicators, which are not latent variables themselves
             ov.ind <- v.ind[ !v.ind %in% lv.names ]
@@ -216,7 +216,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
         }
 
-        # observed variables 
+        # observed variables
         # easy approach would be: everything that is not in lv.names,
         # but the main purpose here is to 'order' the observed variables
         # according to 'type' (indicators, ov.y, ov.x, orphans)
@@ -226,13 +226,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             # 4. orphaned covariances
             ov.cov <- c(partable$lhs[ partable$group == g &
                                       partable$op == "~~" &
-                                     !partable$lhs %in% lv.names ], 
+                                     !partable$lhs %in% lv.names ],
                         partable$rhs[ partable$group == g &
                                       partable$op == "~~" &
                                      !partable$rhs %in% lv.names ])
             # 5. orphaned intercepts/thresholds
             ov.int <- partable$lhs[ partable$group == g &
-                                    (partable$op == "~1" | 
+                                    (partable$op == "~1" |
                                      partable$op == "|") &
                                     !partable$lhs %in% lv.names ]
 
@@ -281,32 +281,32 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         if(any(type %in% c("ov.x","ov.nox","ov.num", "ov.model",
                            "th.mean","lv.nonnormal"))) {
             # correction: is any of these ov.names.x mentioned as a variance,
-            #             covariance, or intercept? 
+            #             covariance, or intercept?
             # this should trigger a warning in lavaanify()
             if(is.null(partable$user)) { # FLAT!
                 partable$user <-  rep(1L, length(partable$lhs))
             }
             vars <- c( partable$lhs[ partable$group == g  &
-                                     partable$op == "~1"  & 
+                                     partable$op == "~1"  &
                                      partable$user == 1     ],
                        partable$lhs[ partable$group == g  &
-                                     partable$op == "~~"  & 
+                                     partable$op == "~~"  &
                                      partable$user == 1     ],
                        partable$rhs[ partable$group == g  &
-                                     partable$op == "~~"  & 
+                                     partable$op == "~~"  &
                                      partable$user == 1     ] )
             idx.no.x <- which(ov.x %in% vars)
             if(length(idx.no.x)) {
                 if(ov.x.fatal) {
-                   stop("lavaan ERROR: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [", 
+                   stop("lavaan ERROR: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [",
                             paste(ov.x[idx.no.x], collapse=" "),
                             "];\n  Please remove them and try again.")
                 }
                 if(warn) {
-                    warning("lavaan WARNING: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [", 
+                    warning("lavaan WARNING: model syntax contains variance/covariance/intercept formulas\n  involving (an) exogenous variable(s): [",
                             paste(ov.x[idx.no.x], collapse=" "),
                             "];\n  Please use fixed.x=FALSE or leave them alone")
-                } 
+                }
                 ov.x <- ov.x[-idx.no.x]
             }
             ov.tmp.x <- ov.x
@@ -314,13 +314,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             # extra
             if(!is.null(partable$exo)) {
                 ov.cov <- c(partable$lhs[ partable$group == g &
-                                          partable$op == "~~" & 
+                                          partable$op == "~~" &
                                           partable$exo == 1L],
                             partable$rhs[ partable$group == g &
-                                          partable$op == "~~" & 
+                                          partable$op == "~~" &
                                           partable$exo == 1L])
                 ov.int <- partable$lhs[ partable$group == g &
-                                        partable$op == "~1" & 
+                                        partable$op == "~1" &
                                         partable$exo == 1L ]
                 ov.extra <- unique(c(ov.cov, ov.int))
                 ov.tmp.x <- c(ov.tmp.x, ov.extra[ !ov.extra %in% ov.tmp.x ])
@@ -328,7 +328,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
             ov.names.x <- ov.tmp.x
         }
-  
+
         # store ov.x?
         if("ov.x" %in% type) {
             OUT$ov.x[[g]] <- ov.names.x
@@ -336,7 +336,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # story ov.orphan?
         if("ov.orphan" %in% type) {
-            OUT$ov.orphan[[g]] <- ov.extra   
+            OUT$ov.orphan[[g]] <- ov.extra
         }
 
         # ov's withouth ov.x
@@ -363,7 +363,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         # ov's strictly ordered
-        if(any(type %in% c("ov.ord", "th", "th.mean", 
+        if(any(type %in% c("ov.ord", "th", "th.mean",
                            "ov.num", "lv.nonnormal"))) {
             tmp <- unique(partable$lhs[ partable$group == g &
                                         partable$op == "|" ])
@@ -419,7 +419,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                 # return in the right order (following ord.names!)
                 out <- unlist(lapply(ord.names, function(x) {
                                   idx <- which(x == TH.lhs)
-                                  TH <- unique(paste(TH.lhs[idx], "|", 
+                                  TH <- unique(paste(TH.lhs[idx], "|",
                                                      TH.rhs[idx], sep=""))
                                   # make sure the th's are in increasing order
                                   sort(TH)
@@ -461,7 +461,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         if("lv.x" %in% type) {
             OUT$lv.x[[g]] <- lv.names.x
         }
- 
+
         # dependent ov (but not also indicator or x)
         if("ov.y" %in% type) {
             tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
