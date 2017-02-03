@@ -31,11 +31,18 @@ lavData <- function(data          = NULL,          # data.frame
         group.label <- character(0L)
     }
     std.ov      <- lavoptions$std.ov
+    if(is.null(std.ov)) {
+        std.ov <- FALSE
+    }
     missing     <- lavoptions$missing
-    if(missing == "default") { 
+    if(is.null(missing) || missing == "default") {
         missing <- "listwise"
     }
     warn        <- lavoptions$warn
+    if(is.null(warn)) {
+        warn <- TRUE
+    }
+    
 
     # four scenarios:
     #    0) data is already a lavData object: do nothing

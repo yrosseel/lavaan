@@ -336,7 +336,14 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- lavsamplestats@cov.x[[g]]
+        if(!is.null(lavsamplestats)) {
+            cov.x <- lavsamplestats@cov.x[[g]]
+        } else {
+            if(lavmodel@fixed.x) {
+                stop("lavaaan ERROR: fixed.x = TRUE, but cov.x is NULL")
+            }
+            cov.x <- NULL
+        }
 
         if(representation == "LISREL") {
             VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x)
@@ -373,7 +380,14 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- lavsamplestats@cov.x[[g]]
+        if(!is.null(lavsamplestats)) {
+            cov.x <- lavsamplestats@cov.x[[g]]
+        } else {
+            if(lavmodel@fixed.x) {
+                stop("lavaaan ERROR: fixed.x = TRUE, but cov.x is NULL")
+            }
+            cov.x <- NULL
+        }
        
         if(representation == "LISREL") {
             ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)

@@ -56,6 +56,11 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
     if(is.null(partable)) partable <- lavobject@ParTable
     if(is.null(est))   est <- lav_object_inspect_est(lavobject)
     if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+    if("SampleStats" %in% slotNames(lavobject)) {
+        lavsamplestats = lavobject@SampleStats
+    } else {
+        lavsamplestats = NULL
+    }
 
     out <- est; N <- length(est)
     stopifnot(N == length(partable$lhs))
@@ -65,7 +70,7 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
     # compute ETA
     LV.ETA <- computeVETA(lavmodel       = lavobject@Model,
                           GLIST          = GLIST,
-                          lavsamplestats = lavobject@SampleStats)
+                          lavsamplestats = lavsamplestats)
     
     for(g in 1:lavobject@Data@ngroups) {
 
@@ -219,12 +224,17 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
                                       GLIST = GLIST, cov.std = cov.std)
     }
     if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+    if("SampleStats" %in% slotNames(lavobject)) {
+        lavsamplestats = lavobject@SampleStats
+    } else {
+        lavsamplestats = NULL
+    }
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
-                    lavsamplestats = lavobject@SampleStats, 
+                    lavsamplestats = lavsamplestats,
                     diagonal.only = TRUE)
 
     for(g in 1:lavobject@Data@ngroups) {
@@ -383,12 +393,17 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
                                       GLIST = GLIST, cov.std = cov.std)
     }
     if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+    if("SampleStats" %in% slotNames(lavobject)) {
+        lavsamplestats = lavobject@SampleStats
+    } else {
+        lavsamplestats = NULL
+    }
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
-                    lavsamplestats = lavobject@SampleStats,
+                    lavsamplestats = lavsamplestats,
                     diagonal.only = TRUE)
 
     for(g in 1:lavobject@Data@ngroups) {
