@@ -435,15 +435,24 @@ lavInspect.lavaan <- function(object,
 # been save somewhere)
 lav_object_inspect_est <- function(object) {
     
-    # from 0.5-19, they are in the partable
-    if(!is.null(object@ParTable$est)) {
-        OUT <- object@ParTable$est
-    } else if("Fit" %in% slotNames(object)) {
-        # in < 0.5-19, we should look in @Fit@est
-        OUT <- object@Fit@est
+    if(class(object) == "lavaan") {
+        # from 0.5-19, they are in the partable
+        if(!is.null(object@ParTable$est)) {
+            OUT <- object@ParTable$est
+        } else if("Fit" %in% slotNames(object)) {
+            # in < 0.5-19, we should look in @Fit@est
+            OUT <- object@Fit@est
+        } else {
+            PT <- parTable(object)
+            OUT <- rep(as.numeric(NA), length(PT$lhs))
+        }
     } else {
-        PT <- parTable(object)
-        OUT <- rep(as.numeric(NA), length(PT$lhs))
+        # try coef()
+        OUT <- coef(object, type = "user")
+        if(is.matrix(OUT)) {
+            # lavaanList?
+            OUT <- rowMeans(OUT)
+        }
     }
 
     OUT
