@@ -752,6 +752,15 @@ standardizedSolution <- standardizedsolution <- function(object,
         zstat <- pvalue <- FALSE
     }
 
+    # no se if class is not lavaan
+    if(class(object) != "lavaan") {
+        if(missing(se) || !se) {
+            se <- FALSE
+            zstat <- FALSE
+            pvalue <- FALSE
+        }
+    }
+
     PARTABLE <- inspect(object, "list")
     free.idx <- which(PARTABLE$free > 0L)
     LIST <- PARTABLE[,c("lhs", "op", "rhs")]
@@ -854,6 +863,15 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.def = FALSE,
                                                      rsquare = FALSE,
                                                      add.attributes = FALSE) {
+
+    # no se if class is not lavaan
+    if(class(object) != "lavaan") {
+        if(missing(se) || !se) {
+            se <- FALSE
+            zstat <- FALSE
+            pvalue <- FALSE
+        }
+    }
 
     # check fmi
     if(fmi) {
