@@ -334,7 +334,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 res.int[[g]]    <- COEF[1,]                  # intercepts
                 res.slopes[[g]] <- t(COEF[-1,,drop = FALSE]) # slopes
 
-            } else if(missing == "two.stage") {
+            } else if(missing == "two.stage" ||
+                      missing == "robust.two.stage") {
                 stopifnot(!conditional.x) # for now
                 missing.flag. <- FALSE #!!! just use sample statistics
                 missing.[[g]] <-
@@ -346,6 +347,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 missing.h1.[[g]]$mu    <- out$Mu
                 missing.h1.[[g]]$h1    <- out$fx
 
+                # here, sample statistics == EM estimates
                 cov[[g]]  <- missing.h1.[[g]]$sigma
                 var[[g]]  <- diag(cov[[g]])
                 mean[[g]] <- missing.h1.[[g]]$mu
@@ -417,34 +419,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # NACOV (=GAMMA)
         if(!NACOV.user) {
-            if(estimator == "ML" && missing == "two.stage") {
-                if(se == "two.stage") {
-                    # this is Savalei & Bentler (2009)
-                    if(information == "expected") {
-                        Info.g <-
-                            lav_mvnorm_missing_information_expected(Y = X[[g]],
-                                      Mp = Mp[[g]], Mu = missing.h1.[[g]]$mu,
-                                      Sigma = missing.h1.[[g]]$sigma,
-                                      Sigma.inv = icov[[g]])
-                    } else {
-                        Info.g <-
-                          lav_mvnorm_missing_information_observed_samplestats(
-                              Yp = missing.[[g]],
-                              Mu = missing.h1.[[g]]$mu,
-                              Sigma = missing.h1.[[g]]$sigma,
-                              Sigma.inv = icov[[g]])
-                    }
-                    NACOV[[g]] <- lav_matrix_symmetric_inverse(Info.g)
-                } else { # we assume "robust.two.stage"
-                    # NACOV is here incomplete Gamma
-                    # Savalei & Falk (2014)
-                    NACOV[[g]] <- lav_mvnorm_missing_h1_omega_sw(Y = X[[g]],
-                                      Mp = Mp[[g]], Yp = missing.[[g]],
-                                      Mu = missing.h1.[[g]]$mu,
-                                      Sigma = missing.h1.[[g]]$sigma)
-                }
-
-            } else if(estimator == "ML" && !missing.flag. && NACOV.compute) {
+            if(estimator == "ML" && !missing.flag. && NACOV.compute) {
                 if(conditional.x) {
                      Y <- Y
                 } else {
@@ -523,17 +498,12 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     WLS.V[[g]][1:nvar, 1:nvar] <- WLS.V[[g]][1:nvar, 1:nvar,
                                         drop = FALSE] * nobs[[g]]/(nobs[[g]]-1)
                 }
+
+
             } else if(estimator == "ML") {
                 # no WLS.V here, since function of model-implied moments
-                # unless, we have missing = "two.stage"
-                if(missing == "two.stage") {
 
-                    # expected!! (only one possible)
-                    WLS.V[[g]] <- 
-                        lav_mvnorm_information_expected(Sigma.inv = icov[[g]], 
-                                                        meanstructure = TRUE)
 
-                }
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
                     if(estimator == "WLS") {

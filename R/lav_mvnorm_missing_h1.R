@@ -131,7 +131,6 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 # in the literature: - `Omega_{SW}'
 #                    - `Gamma for incomplete data'
 #                    - (N times the) sandwich estimator for acov(mu,vech(Sigma))
-#
 lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
                                            Mp          = NULL,
                                            Yp          = NULL,

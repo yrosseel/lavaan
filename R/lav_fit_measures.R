@@ -1190,6 +1190,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         WLS.obs <- object@SampleStats@WLS.obs
         WLS.V   <- lav_model_wls_v(lavmodel       = object@Model,
                                    lavsamplestats = object@SampleStats,
+                                   structured     = TRUE,
                                    lavdata        = object@Data)
         WLS.est <- lav_object_inspect_wls_est(object)
         for(g in 1:G) {

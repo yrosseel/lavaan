@@ -834,7 +834,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavoptions      = lavoptions,
                                lavdata         = lavdata,
                                lavpartable     = lavpartable,
-                               lavcache        = lavcache)
+                               lavcache        = lavcache,
+                               lavimplied      = lavimplied)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }

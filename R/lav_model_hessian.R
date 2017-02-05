@@ -3,6 +3,7 @@
 lav_model_hessian <- function(lavmodel       = NULL,
                               lavsamplestats = NULL,
                               lavdata        = NULL,
+                              lavoptions     = NULL,
                               lavcache       = NULL,
                               group.weight   = TRUE) {
 

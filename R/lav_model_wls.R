@@ -72,26 +72,45 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) { #,
 }
 
 # compute WLS.V (as a list per group)
+#
+# three options:
+#  1) *LS: WLS.V is already in lavsamplestats
+#  2) NTRLS: WLS.V needs to recomputed after every iteration, using
+#            the structured estimates of Sigma/Mu
+#  3) ML: 3a: complete, structured (default)
+#         3b: complete, unstructured
+#         3c: incomplete, FIML, structured
+#         3d: incomplete, FIML, unstructured
+#         3e: incomplete, two.stage, structured
+#         ef: incomplete, two.stage, unstructured (EM estimates)
 lav_model_wls_v <- function(lavmodel       = NULL, 
                             lavsamplestats = NULL,
+                            structured     = TRUE,
+                            lavimplied     = NULL,
                             lavdata        = NULL) {
 
     WLS.V <- vector("list", length=lavsamplestats@ngroups)
 
-    # if we are using *LS, we already have WLS.V
+    # 1) *LS: WLS.V is already in lavsamplestats
     if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
         # for GLS, the WLS.V22 part is: 0.5 * t(D) %*% [S.inv %x% S.inv] %*% D
         # for WLS, the WLS.V22 part is: Gamma
         WLS.V <- lavsamplestats@WLS.V
+    } else if(lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
+        # diagonal only!!
+        WLS.V <- lavsamplestats@WLS.VD
+
+
+    # 2) NTRLS: based on structured estimates of Sigma/Mu
     } else if(lavmodel@estimator == "NTRLS") {
         stopifnot(!lavmodel@conditional.x)
-        # compute moments for all groups
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
+
+        # by definition, we always use the 'structured' moments
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
         Mu.hat <- computeMuHat(lavmodel = lavmodel)
 
         for(g in 1:lavsamplestats@ngroups) {
             WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
-                              ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                               COV            = Sigma.hat[[g]][,,drop=FALSE],
                               MEAN           = Mu.hat[[g]],
                               x.idx          = lavsamplestats@x.idx[[g]],
@@ -100,40 +119,69 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                               meanstructure  = lavmodel@meanstructure,
                               slopestructure = lavmodel@conditional.x)
         }
-    } else if(lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
-        # diagonal only!!
-        WLS.V <- lavsamplestats@WLS.VD
 
-    # for ML, we need to recompute this, as it is function of Sigma (and Mu)
-    # - unless missing = "two.stage", where we use the unstructured versions
-    #   already stored in WLS.V
-    } else if(lavmodel@estimator == "ML" && 
-              !is.null(lavsamplestats@WLS.V[[1]])) {
-        WLS.V <- lavsamplestats@WLS.V
-
-    } else if(lavmodel@estimator == "ML" && 
-              is.null(lavsamplestats@WLS.V[[1]])) {
+    #  3) ML: 3a: complete, structured (default)
+    #         3b: complete, unstructured
+    #         3c: incomplete, FIML, structured
+    #         3d: incomplete, FIML, unstructured
+    #         3e: incomplete, two.stage, structured
+    #         ef: incomplete, two.stage, unstructured (EM estimates)
+    } else if(lavmodel@estimator == "ML") {
         WLS.V <- vector("list", length=lavsamplestats@ngroups)
         
-        if(lavmodel@conditional.x) {
-             Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
-                              lavsamplestats = lavsamplestats, extra = TRUE)
+        if(structured) {
+            if(lavmodel@conditional.x) {
+                 Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
+                                 lavsamplestats = lavsamplestats, extra = TRUE)
+            } else {
+                 Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
+            }
+            if(lavmodel@meanstructure) {
+                if(lavmodel@conditional.x) {
+                    Mu.hat <- computeMuHatJoint(lavmodel = lavmodel, 
+                                  lavsamplestats = lavsamplestats)
+                } else {
+                    Mu.hat <- computeMuHat(lavmodel = lavmodel)
+                }
+            } else {
+                Mu.hat <- NULL
+            }
         } else {
-             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
+            if(lavmodel@conditional.x) {
+                 # FIXME: wahat to do here?
+                 stop("lavaan ERROR: conditional.x = TRUE, but structured = FALSE?")
+            } else {
+                 # complete data: observed var/cov matrix 'S'
+                 # two.stage + incomplete data: EM estimate of 'S'
+                 Sigma.hat <- lavsamplestats@cov
+            }
+            if(lavmodel@meanstructure) {
+                if(lavmodel@conditional.x) {
+                    # FIXME!
+                } else {
+                    # complete data: observed mean vector 'ybar'
+                    # two.stage + incomplete data: EM estimate of 'ybar'
+                    Mu.hat <- lavsamplestats@mean
+                }
+            } else {
+                Mu.hat <- NULL
+            }
+            
         }
+
+        # GW?
         if(lavmodel@group.w.free) {
             GW <- unlist(computeGW(lavmodel = lavmodel))
         }
-        if(lavsamplestats@missing.flag || lavmodel@conditional.x) {
-            if(lavmodel@conditional.x) {
-                Mu.hat <- computeMuHatJoint(lavmodel = lavmodel, 
-                              lavsamplestats = lavsamplestats)
-            } else {
-                Mu.hat <- computeMuHat(lavmodel = lavmodel)
-            }
-        } else {
-            Mu.hat <- NULL
-        }
+
+
+        # three options
+        #  - complete data
+        #  - incomplete data + FIML
+        #  - incomplete data + two.stage
+        # two variants:
+        #  - using unstructured moments
+        #  - using structured moments
         for(g in 1:lavsamplestats@ngroups) {
             if(lavsamplestats@missing.flag) {
                 stopifnot(!lavmodel@conditional.x)
@@ -143,17 +191,7 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                                   Mu    = Mu.hat[[g]],
                                   Sigma = Sigma.hat[[g]])
             } else {
-                # WLS.V22 = 0.5*t(D) %*% [Sigma.hat.inv %x% Sigma.hat.inv]%*% D
-
-                # NOTE: when fixed.x=TRUE, this will give slightly different
-                # results for the SEs compared to <= 0.5-20 (and Mplus), 
-                # because we set the rows/columns of exo variables to zero
-                #
-                # but this should be ok (although SEs for ~1 are somewhat
-                # larger)
-
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
-                    ICOV           = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
                     COV            = Sigma.hat[[g]][,,drop=FALSE],
                     MEAN           = Mu.hat[[g]],
                     x.idx          = lavsamplestats@x.idx[[g]],
