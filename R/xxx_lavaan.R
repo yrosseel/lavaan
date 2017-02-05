@@ -200,6 +200,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             opt$conditional.x <- FALSE
         }
 
+        # fixed.x
+        if( (is.list(ov.names.x) &&
+             sum(sapply(ov.names.x, FUN = length)) == 0L) ||
+            (is.character(ov.names.x) && length(ov.names.x) == 0L) ) {
+            # if explicitly set to TRUE, give warning
+            if(is.logical(dotdotdot$fixed.x) && dotdotdot$fixed.x) {
+                # ok, we respect this: keep fixed.x = TRUE
+            } else {
+                opt$fixed.x <- FALSE
+            }
+        }
+
         # fill in remaining "default" values
         lavoptions <- lav_options_set(opt)
     }

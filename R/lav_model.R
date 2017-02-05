@@ -207,10 +207,10 @@ lav_model <- function(lavpartable      = NULL,
     } # g
 
     # fixed.x parameters?
-    fixed.x <- any(lavpartable$exo > 0L & lavpartable$free == 0L) 
-    if(categorical) {
-        fixed.x <- TRUE
-    }
+    #fixed.x <- any(lavpartable$exo > 0L & lavpartable$free == 0L) 
+    #if(categorical) {
+    #    fixed.x <- TRUE
+    #}
 
 
     Model <- new("lavModel",
@@ -264,7 +264,7 @@ lav_model <- function(lavpartable      = NULL,
                  con.lambda          = con.lambda,
 
                  nexo                = nexo,
-                 fixed.x             = fixed.x,
+                 fixed.x             = lavoptions$fixed.x,
                  conditional.x       = lavoptions$conditional.x,
                  #x.idx               = x.idx,
                  parameterization    = lavoptions$parameterization,
