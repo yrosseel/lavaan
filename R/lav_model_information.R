@@ -34,8 +34,8 @@ lav_model_information <- function(lavmodel       = NULL,
     } else {
         # structured of unstructured? (since 0.5-23)
         if(!is.null(lavoptions) &&
-           !is.null(lavoptions$h1.information.se) &&
-           lavoptions$h1.information.se == "unstructured") {
+           !is.null(lavoptions$h1.information) &&
+           lavoptions$h1.information == "unstructured") {
             structured <- FALSE
         } else {
             structured <- TRUE
@@ -266,7 +266,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
             #     - complete data, unstructured
             #     - incomplete data, structured (default)
             #     - incomplete data, unstructured
-            if(lavoptions$h1.information.se == "structured") {
+            if(lavoptions$h1.information == "structured") {
                 SIGMA <- computeSigmaHat(lavmodel = lavmodel)
                 MU    <- computeMuHat(lavmodel = lavmodel)
             } else {
@@ -274,25 +274,15 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                 MU    <- lavsamplestats@mean
             }
 
-            if(is.null(lavsamplestats@missing[[1]])) {
-                # assume data is complete
-                for(g in 1:lavsamplestats@ngroups) {
-                    WLS.V[[g]] <- 
-                        lav_mvnorm_information_observed_samplestats(
-                            sample.mean = lavsamplestats@mean[[g]],
-                            sample.cov  = lavsamplestats@cov[[g]],
-                            Mu          = MU[[g]], 
-                            Sigma       = SIGMA[[g]])
-                }
-            } else {
-                # assume data is incomplete
-                for(g in 1:lavsamplestats@ngroups) {
-                    WLS.V[[g]] <-
-                        lav_mvnorm_missing_information_observed_samplestats(
-                            Yp    = lavsamplestats@missing[[g]],
-                            Mu    = MU[[g]],
-                            Sigma = SIGMA[[g]])
-                }
+            # - if missing = two.stage, MU/SIGMA can be EM estimates
+            #     if unstructured, or model-implied moments if structured
+            for(g in 1:lavsamplestats@ngroups) {
+                WLS.V[[g]] <- 
+                    lav_mvnorm_information_observed_samplestats(
+                        sample.mean = lavsamplestats@mean[[g]],
+                        sample.cov  = lavsamplestats@cov[[g]],
+                        Mu          = MU[[g]], 
+                        Sigma       = SIGMA[[g]])
             }
         } else {
             stop("lavaan ERROR: observed.information = ", 

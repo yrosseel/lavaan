@@ -91,8 +91,9 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # inference
                 information            = "default",
-                h1.information.se      = "structured",
-                h1.information.test    = "structured",
+                h1.information         = "structured",
+                #h1.information.se      = "structured",
+                #h1.information.test    = "structured",
                 se                     = "default",
                 test                   = "default",
                 bootstrap              = 1000L,
@@ -773,18 +774,18 @@ lav_options_set <- function(opt = NULL) {
         stop("information must be either \"expected\" or \"observed\"\n")
     }
 
-    if(opt$h1.information.se == "structured" ||
-       opt$h1.information.se == "unstructured") {
+    if(opt$h1.information == "structured" ||
+       opt$h1.information == "unstructured") {
         # nothing to do
     } else {
-        stop("lavaan ERROR: h1.information.se must be either \"structured\" or \"unstructured\"\n")
+        stop("lavaan ERROR: h1.information must be either \"structured\" or \"unstructured\"\n")
     }
-    if(opt$h1.information.test == "structured" ||
-       opt$h1.information.test == "unstructured") {
-        # nothing to do
-    } else {
-        stop("lavaan ERROR: h1.information.se must be either \"structured\" or \"unstructured\"\n")
-    }
+    #if(opt$h1.information.test == "structured" ||
+    #   opt$h1.information.test == "unstructured") {
+    #    # nothing to do
+    #} else {
+    #    stop("lavaan ERROR: h1.information.se must be either \"structured\" or \"unstructured\"\n")
+    #}
 
     # check information if se == "robust.sem"
     if(opt$se == "robust.sem" && opt$information == "observed") {

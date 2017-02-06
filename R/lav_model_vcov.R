@@ -205,8 +205,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     if(lavoptions$information == "expected") {
         # structured of unstructured?
         if(!is.null(lavoptions) &&
-           !is.null(lavoptions$h1.information.se) &&
-           lavoptions$h1.information.se == "unstructured") {
+           !is.null(lavoptions$h1.information) &&
+           lavoptions$h1.information == "unstructured") {
             structured <- FALSE
         } else {
             structured <- TRUE
@@ -222,6 +222,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
                                                 use.ginv       = use.ginv)
         Delta <- attr(E.inv, "Delta")
         WLS.V <- attr(E.inv, "WLS.V") # this is 'H' in the literature
+        attr(E.inv, "Delta") <- NULL
+        attr(E.inv, "WLS.V") <- NULL
     } else {
         E.inv <- lav_model_information_observed(lavmodel       = lavmodel,
                                                 lavsamplestats = lavsamplestats,
@@ -233,6 +235,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
         if(lavoptions$observed.information == "h1") {
             Delta <- attr(E.inv, "Delta")
             WLS.V <- attr(E.inv, "WLS.V") # this is 'H' in the literature
+            attr(E.inv, "Delta") <- NULL
+            attr(E.inv, "WLS.V") <- NULL
         } else {
             stop("lavaan ERROR: two.stage + observed information currently only works with observed.information = ", dQuote("h1"))
         }
@@ -246,6 +250,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     if(is.null(WLS.V)) {
         stop("lavaan ERROR: WLS.V/H is NULL, observed.information = hessian?")
     }
+    Gamma <- vector("list", length = lavsamplestats@ngroups)
 
     # handle multiple groups
     tDVGVD <- matrix(0, ncol=ncol(E.inv), nrow=nrow(E.inv))
@@ -263,7 +268,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
         #
         # we use the same setting as to compute 'H' (the h1 information matrix)
         # so that at Omega = H if data is complete
-        if(lavoptions$h1.information.se == "unstructured") {
+        if(lavoptions$h1.information == "unstructured") {
             MU    <- lavsamplestats@missing.h1[[g]]$mu
             SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
         } else {
@@ -283,30 +288,31 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
                             Yp = lavsamplestats@missing[[g]], 
                             Mu = MU, Sigma = SIGMA)
             }
-            Gamma <- lav_matrix_symmetric_inverse(Info)
+            Gamma[[g]] <- lav_matrix_symmetric_inverse(Info)
         } else { # we assume "robust.two.stage"
                  # NACOV is here incomplete Gamma
                  # Savalei & Falk (2014)
                  #
-            Gamma <- lav_mvnorm_missing_h1_omega_sw(Y = 
-                         lavdata@X[[g]], Mp = lavdata@Mp[[g]], 
-                         Yp = lavsamplestats@missing[[g]], 
-                         Mu = MU, Sigma = SIGMA,
-                         information = lavoptions$information)
+            Gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(Y = 
+                             lavdata@X[[g]], Mp = lavdata@Mp[[g]], 
+                             Yp = lavsamplestats@missing[[g]], 
+                             Mu = MU, Sigma = SIGMA,
+                             information = lavoptions$information)
         }
  
         # compute
-        tDVGVD <- tDVGVD + fg*fg/fg1 * crossprod(WD, Gamma %*% WD)
+        tDVGVD <- tDVGVD + fg*fg/fg1 * crossprod(WD, Gamma[[g]] %*% WD)
     } # g
 
     NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
 
     # to be reused by lavaanTest
     attr(NVarCov, "Delta") <- Delta
-    if(lavoptions$h1.information.se == lavoptions$h1.information.test) {
+    attr(NVarCov, "Gamma") <- Gamma
+    #if(lavoptions$h1.information.se == lavoptions$h1.information.test) {
         attr(NVarCov, "E.inv") <- E.inv 
         attr(NVarCov, "WLS.V") <- WLS.V
-    }
+    #}
 
     NVarCov
 }

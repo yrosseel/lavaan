@@ -1197,7 +1197,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "missing") <- object@Options$missing
         attr(LIST, "observed.information") <- 
             object@Options$observed.information
-        attr(LIST, "h1.information") <- object@Options$h1.information.se
+        attr(LIST, "h1.information") <- object@Options$h1.information
         # FIXME: add more!!
     } else {
         LIST$exo <- NULL

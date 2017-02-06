@@ -132,9 +132,9 @@ lav_model_wls_v <- function(lavmodel       = NULL,
         if(structured) {
             if(lavmodel@conditional.x) {
                  Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
-                                 lavsamplestats = lavsamplestats, extra = TRUE)
+                                 lavsamplestats = lavsamplestats)
             } else {
-                 Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, extra = TRUE)
+                 Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
             }
             if(lavmodel@meanstructure) {
                 if(lavmodel@conditional.x) {
