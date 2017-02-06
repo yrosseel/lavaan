@@ -84,9 +84,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
 
-    ###################################
-    #### 1. ov.names + categorical ####
-    ###################################
+    ######################
+    #### 1. ov.names  ####
+    ######################
     # 1a. get ov.names and ov.names.x (per group) -- needed for lavData()
     if(!is.null(slotParTable)) {
         FLAT <- slotParTable

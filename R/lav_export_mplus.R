@@ -98,7 +98,7 @@ lav2mplus <- function(lav, group.label=NULL) {
         # group 1
         body <- lav_one_group(lav[lav$group == 1,])
 
-        if(is.null(group.label)) {
+        if(is.null(group.label) || length(group.label) == 0L) {
             group.label <- paste(1:ngroups)
         }
 

@@ -119,7 +119,7 @@ lavData <- function(data          = NULL,          # data.frame
             # multiple groups, multiple cov matrices
             ngroups     <- length(sample.cov)
             LABEL <- names(sample.cov)
-            if(is.null(group.label)) {
+            if(is.null(group.label) || length(group.label) == 0L) {
                 if(is.null(LABEL))
                     group.label <- paste("Group ", 1:ngroups, sep="")
                 else
