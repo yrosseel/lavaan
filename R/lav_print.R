@@ -128,6 +128,23 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
             cat(t0.txt, t1.txt, "\n", sep="")
         }
+
+        # 4.
+        if(attr(x, "missing") %in% c("two.stage", "robust.two.stage")) {
+            t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
+            tmp.txt <- attr(x, "h1.information")
+            t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
+                                          substring(tmp.txt,2), sep=""))
+            cat(t0.txt, t1.txt, "\n", sep="")
+            if(attr(x, "information") == "observed") {
+                t0.txt <- sprintf("  %-35s", "Observed information based on")
+                tmp.txt <- attr(x, "observed.information")
+                t1.txt <- sprintf("  %15s", 
+                                  paste(toupper(substring(tmp.txt,1,1)),
+                                  substring(tmp.txt,2), sep=""))
+                cat(t0.txt, t1.txt, "\n", sep="")
+            }
+        }
     }
     
     # number of groups

@@ -1669,6 +1669,7 @@ lav_object_inspect_wls_v <- function(object,
 
     OUT <- lav_model_wls_v(lavmodel       = object@Model,
                            lavsamplestats = object@SampleStats,
+                           structured     = TRUE,
                            lavdata        = object@Data)
 
     # if estimator == "DWLS" or "ULS", we only stored the diagonal

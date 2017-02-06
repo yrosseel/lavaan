@@ -1,5 +1,5 @@
-testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats, 
-                                        E.inv, Delta, WLS.V,
+testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
+                                        E.inv, Delta, WLS.V, Gamma,
                                         x.idx=list(integer(0)),
                                         test.UGamma.eigvals = FALSE) {
 
@@ -15,7 +15,9 @@ testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
     # we write it like this to allow for fixed.x covariates which affect A1
     # and B1
 
-    Gamma <- lavsamplestats@NACOV
+    if(is.null(Gamma)) {
+        Gamma <- lavsamplestats@NACOV
+    }
     nss <- ncol(Gamma[[1]])
     ngroups <- lavsamplestats@ngroups
 
@@ -425,6 +427,7 @@ lav_model_test <- function(lavmodel       = NULL,
         E.inv <- attr(VCOV, "E.inv")
         Delta <- attr(VCOV, "Delta")
         WLS.V <- attr(VCOV, "WLS.V")
+        Gamma <- attr(VCOV, "Gamma")
 
         # if not present (perhaps se.type="standard" or se.type="none")
         #  we need to compute these again
@@ -486,7 +489,8 @@ lav_model_test <- function(lavmodel       = NULL,
             testStatisticSatorraBentler(lavsamplestats = lavsamplestats,
                                         E.inv       = E.inv, 
                                         Delta       = Delta, 
-                                        WLS.V       = WLS.V, 
+                                        WLS.V       = WLS.V,
+                                        Gamma       = Gamma,
                                         x.idx       = x.idx)
         trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
         # trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")

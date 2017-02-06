@@ -43,6 +43,9 @@ lav_options_default <- function(mimic = "lavaan") {
 
     opt <- list(model.type         = "sem",
 
+                # global
+                mimic              = "lavaan",
+
                 # model modifiers
                 meanstructure      = "default",
                 int.ov.free        = FALSE,
@@ -80,16 +83,21 @@ lav_options_default <- function(mimic = "lavaan") {
                 cluster            = NULL,
 
                 # estimation
-                estimator          = "default",
-                likelihood         = "default",
-                link               = "default",
-                information        = "default",
-                se                 = "default",
-                test               = "default",
-                bootstrap          = 1000L,
-                mimic              = "default",
-                representation     = "default",
-                do.fit             = TRUE,
+                estimator              = "default",
+                likelihood             = "default",
+                link                   = "default",
+                representation         = "default",
+                do.fit                 = TRUE,
+
+                # inference
+                information            = "default",
+                h1.information         = "structured",
+                #h1.information.se      = "structured",
+                #h1.information.test    = "structured",
+                se                     = "default",
+                test                   = "default",
+                bootstrap              = 1000L,
+                observed.information   = "hessian",
 
                 # optimization
                 control                = list(),
@@ -255,6 +263,18 @@ lav_options_set <- function(opt = NULL) {
                                 "uls", "ulsm", "ulsmv", "pml", "mml")) {
             stop("lavaan ERROR: missing=\"two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML, MML")
         }
+    } else if(opt$missing %in% c("robust.two.stage", "robust.twostage", 
+                                 "robust.two-stage", "robust-two-stage",
+                                 "robust.two.step",  "robust.twostep",  
+                                 "robust-two-step")) {
+        opt$missing <- "robust.two.stage"
+        if(opt$categorical) {
+            stop("lavaan ERROR: missing=\"robust.two.stage\" not available in the categorical setting")
+        }
+        if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
+                                "uls", "ulsm", "ulsmv", "pml", "mml")) {
+            stop("lavaan ERROR: missing=\"robust.two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML, MML")
+        }
     } else if(opt$missing == "listwise") {
         # nothing to do
     } else if(opt$missing == "pairwise") {
@@ -278,7 +298,8 @@ lav_options_set <- function(opt = NULL) {
 
     # default test statistic
     if(opt$test == "default") {
-        if(opt$missing == "two.stage") {
+        if(opt$missing == "two.stage" ||
+           opt$missing == "robust.two.stage") {
             opt$test <- "satorra.bentler"
         } else {
             opt$test <- "standard"
@@ -341,46 +362,55 @@ lav_options_set <- function(opt = NULL) {
                     dQuote(opt$test) )
         opt$missing <- "listwise"
     }
-    if(opt$missing == "two.stage") {
+
+    # missing = "two.stage"
+    if(opt$missing == "two.stage" ||
+       opt$missing == "robust.two.stage") {
         opt$meanstructure <- TRUE
         # se
-        if(opt$se %in% c("default", "robust")) {
-           opt$se <- "robust.two.stage"
-        } else if(opt$se == "standard") {
+        if(opt$se == "default") {
+            if(opt$missing == "two.stage") {
+                opt$se <- "two.stage"
+            } else {
+                opt$se <- "robust.two.stage"
+            }
+        } else if(opt$missing == "two.stage" && 
+                  opt$se      == "two.stage") {
+            # nothing to do
+        } else if(opt$missing == "robust.two.stage" &&
+                  opt$se      == "robust.two.stage") {
+            # nothing to do
+        } else {
             warning("lavaan WARNING: se will be set to ",
-                     dQuote("two.stage"), " if missing = ",
+                     dQuote(opt$missing), " if missing = ",
                      dQuote(opt$missing) )
-            opt$se <- "two.stage"
-        } else if(opt$se %in% c("robust.sem", "robust.huber.white")) {
-            warning("lavaan WARNING: se will be set to ",
-                     dQuote("robust.two.stage"), " if missing = ",
-                     dQuote(opt$missing) )
-            opt$se <- "robust.two.stage"
-        } else if(opt$se == "first.order") {
-            warning("lavaan WARNING: se will be set to ",
-                     dQuote("two.stage"), " if missing = ",
-                     dQuote(opt$missing) )
-            opt$se <- "two.stage"
+            opt$se <- opt$missing
         }
         # information
         if(opt$information == "default") {
-            opt$information <- "expected"
+            # for both two.stage and robust.two.stage
+            opt$information <- "observed"
         } else if(opt$information == "first.order") {
             warning("lavaan WARNING: information will be set to ",
                      dQuote("observed"), " if missing = ",
                      dQuote(opt$missing) )
-            opt$information <- "expected"
+            opt$information <- "observed"
         }
+        # observed.information (ALWAYS "h1" for now)
+        opt$observed.information <- "h1"
         # test
-        if(opt$test == "default") {
+        if(opt$test == "default" ||
+           opt$test == "satorra.bentler") {
             opt$test <- "satorra.bentler"
-        } else if(opt$test == "yuan.bentler") {
+        } else {
             warning("lavaan WARNING: test will be set to ",
                      dQuote("satorra.bentler"), " if missing = ",
                      dQuote(opt$missing) )
             opt$test <- "satorra.bentler"
         }
     }
+
+
 
     # meanstructure
     if(is.logical(opt$meanstructure)) {
@@ -743,6 +773,19 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("information must be either \"expected\" or \"observed\"\n")
     }
+
+    if(opt$h1.information == "structured" ||
+       opt$h1.information == "unstructured") {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: h1.information must be either \"structured\" or \"unstructured\"\n")
+    }
+    #if(opt$h1.information.test == "structured" ||
+    #   opt$h1.information.test == "unstructured") {
+    #    # nothing to do
+    #} else {
+    #    stop("lavaan ERROR: h1.information.se must be either \"structured\" or \"unstructured\"\n")
+    #}
 
     # check information if se == "robust.sem"
     if(opt$se == "robust.sem" && opt$information == "observed") {
