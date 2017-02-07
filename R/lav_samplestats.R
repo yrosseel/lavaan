@@ -97,6 +97,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     missing.        <- vector("list", length=ngroups)
     missing.h1.     <- vector("list", length=ngroups)
     missing.flag.   <- FALSE
+    zero.cell.tables <- vector("list", length=ngroups)
 
     # group weights
     group.w       <- vector("list", length=ngroups)
@@ -234,8 +235,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                               optim.method = optim.method,
                               zero.add = zero.add,
                               zero.keep.margins = zero.keep.margins,
-                              zero.cell.warn = zero.cell.warn,
+                              zero.cell.warn = FALSE,
+                              zero.cell.tables = TRUE,
                               verbose=debug)
+            # empty cell tables
+            zero.cell.tables[[g]] <- CAT$zero.cell.tables
             if(verbose) cat("done\n")
         }
 
@@ -626,8 +630,18 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                        # missingness
                        missing.flag    = missing.flag.,
                        missing         = missing.,
-                       missing.h1      = missing.h1.
+                       missing.h1      = missing.h1.,
+                       zero.cell.tables = zero.cell.tables
                       )
+
+    # just a SINGLE warning if we have empty cells
+    if(categorical && zero.cell.warn && 
+       any(sapply(zero.cell.tables, nrow) > 0L)) {
+        nempty <- sum(sapply(zero.cell.tables, nrow))
+        warning("lavaan WARNING: ", nempty,
+                " bivariate tables have empty cells; to see them, use:\n",
+                "                  lavInspect(fit, \"zero.cell.tables\")")
+    }
 
     lavSampleStats
 }
@@ -694,6 +708,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     missing.        <- vector("list", length=ngroups)
     missing.h1.     <- vector("list", length=ngroups)
     missing.flag.   <- FALSE
+    zero.cell.tables <- vector("list", length=ngroups)
 
     # group weights
     group.w         <- vector("list", length=ngroups)
@@ -940,7 +955,8 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                        # missingness
                        missing.flag     = missing.flag.,
                        missing          = missing.,
-                       missing.h1       = missing.h1.
+                       missing.h1       = missing.h1.,
+                       zero.cell.tables = zero.cell.tables
 
                       )
 

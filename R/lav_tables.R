@@ -114,7 +114,8 @@ lavTables <- function(object,
         }
     }
 
-    if(nrow(out) == 0L) {
+    if( (is.data.frame(out) && nrow(out) == 0L) ||
+        (is.list(out) && length(out) == 0L)) {
         # empty table (perhaps, no categorical variables)
         return(invisible(out))
     }
@@ -1107,7 +1108,8 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
     out
 }
 
-lav_tables_cells_format <- function(out, lavdata = lavdata) {
+lav_tables_cells_format <- function(out, lavdata = lavdata,
+                                    drop.list.single.group = FALSE) {
 
     OUT <- vector("list", length=lavdata@ngroups)
     if(is.null(out$group)) {
@@ -1146,12 +1148,14 @@ lav_tables_cells_format <- function(out, lavdata = lavdata) {
                                    sep="_"))
         OUT[[g]] <- TMP
     }
-    if(lavdata@ngroups > 1L) {
-        out <- OUT
-        names(out) <- lavdata@group.label
+
+    if(lavdata@ngroups == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
     } else {
-        out <- OUT[[1L]]
+        if(length(lavdata@group.label) > 0L) {
+            names(OUT) <- unlist(lavdata@group.label)
+        }
     }
 
-    out
+    OUT
 }

@@ -423,6 +423,12 @@ lavInspect.lavaan <- function(object,
     } else if(what == "test") {
         object@test
 
+    # zero cell tables
+    } else if(what == "zero.cell.tables") {
+        lav_object_inspect_zero_cell_tables(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+
     #### not found ####
     } else {
         stop("unknown `what' argument in inspect function: `", what, "'")
@@ -2138,4 +2144,37 @@ lav_object_inspect_delta <- function(object,
     OUT
 }
 
+lav_object_inspect_zero_cell_tables <- function(object,
+            add.labels = FALSE, add.class = FALSE,
+            drop.list.single.group = FALSE) {
 
+    # categorical?
+    if(!object@Model@categorical) {
+        warning("lavaan WARNING: no categorical variables in fitted model")
+        return(invisible(list()))
+    }
+
+    lavdata <- object@Data
+
+    # create 2-way tables
+    TABLE <- lavTables(object, dimension = 2L, output = "data.frame",
+                       statistic = NULL)
+
+    # select tables with empty cells
+    empty.id <- TABLE$id[which(TABLE$obs.freq == 0)]
+   
+    
+    if(length(empty.id) == 0L) {
+        # only when lavInspect() is used, give message
+        if(add.class) {
+            cat("(There are no tables with empty cells for this fitted model)\n")
+        }
+        return(invisible(list()))
+    } else {
+        OUT <- lav_tables_cells_format(TABLE[TABLE$id %in% empty.id,],
+                   lavdata = lavdata,
+                   drop.list.single.group = drop.list.single.group)
+    }
+
+    OUT
+}
