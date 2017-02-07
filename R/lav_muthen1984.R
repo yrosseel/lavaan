@@ -312,17 +312,43 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     # A12
     A12 <- matrix(0, NROW(A11), NCOL(A22))
 
-    B <- rbind( cbind(A11,A12),
-                cbind(A21,A22) )
+    #B <- rbind( cbind(A11,A12),
+    #            cbind(A21,A22) )
 
-    # invert!
-    ## FIXME: we need to invert B as a partioned matrix
-    B.inv <- try(solve(B), silent = TRUE)
-    if(inherits(B.inv, "try-error")) {
+    # we invert B as a block-triangular matrix (0.5-23)
+    #
+    # B.inv = A11^{-1}                   0
+    #         -A22^{-1} A21 A11^{-1}     A22^{-1}
+    #
+
+    # invert A
+    A11.inv <- try(solve(A11), silent = TRUE)
+    if(inherits(A11.inv, "try-error")) {
         # brute force
-        B.inv <- MASS::ginv(B) 
-        warning("lavaan WARNING: trouble inverting W matrix; used generalized inverse")
+        A11.inv <- MASS::ginv(A11)
+        warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A11 submatrix")
     }
+ 
+    # invert
+    da22 <- diag(A22)
+    if(any(da22 == 0)) {
+        warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A22 submatrix")
+        A22.inv <- MASS::ginv(A22)
+    } else {
+        A22.inv <- A22
+        diag(A22.inv) <- 1/da22
+    }
+
+    # lower-left block
+    A21.inv <- -A22.inv %*% A21 %*% A11.inv
+
+    # upper-left block remains zero
+    A12.inv <- A12
+
+    # construct B.inv
+    B.inv <- rbind( cbind(A11.inv, A12.inv),
+                    cbind(A21.inv, A22.inv) )
+
 
     #  weight matrix (correlation metric)
     WLS.W <- B.inv %*% INNER %*% t(B.inv)
