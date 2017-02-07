@@ -104,6 +104,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     } else if(type == "yhat") {
         out <- lav_predict_yhat(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
+                   lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo,
                    ETA = NULL, method = method, optim.method = optim.method)
 
@@ -578,6 +579,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              # sub objects
                              lavmodel = NULL, lavdata = NULL,
                              lavsamplestats = NULL,
+                             lavimplied = NULL,
                              # new data
                              data.obs = NULL, eXo = NULL,
                              # ETA values
@@ -592,9 +594,10 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
         lavmodel       <- lavobject@Model
         lavdata        <- lavobject@Data
         lavsamplestats <- lavobject@SampleStats
+        lavimplied     <- lavobject@implied
     } else {
         stopifnot(!is.null(lavmodel), !is.null(lavdata), 
-                  !is.null(lavsamplestats))
+                  !is.null(lavsamplestats), !is.null(lavimplied))
     }
 
     # new data?
@@ -609,6 +612,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
     if(is.null(ETA)) {
         ETA <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
+                   lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo, method = method,
                    optim.method = optim.method)
     } else {
