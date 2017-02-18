@@ -864,6 +864,10 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      rsquare = FALSE,
                                                      add.attributes = FALSE) {
 
+    if("lavaan.fsr" %in% class(object)) {
+        return(object$PE)
+    }
+
     # no se if class is not lavaan
     if(class(object) != "lavaan") {
         if(missing(se) || !se) {

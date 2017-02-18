@@ -71,7 +71,9 @@ setClass("lavSampleStats",         # sample moments
 
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information
-        missing.h1="list"          # h1 model
+        missing.h1="list",         # h1 model
+
+        zero.cell.tables="list"    # bivariate tables with empty cells
     )
 )
 

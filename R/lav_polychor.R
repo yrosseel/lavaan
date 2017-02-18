@@ -259,7 +259,8 @@ pc_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y1, nth.y2, freq=NULL) {
 # zero.keep.margins is only used for 2x2 tables
 pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                       method="nlminb", zero.add = c(0.5, 0.0), control=list(),
-                      zero.keep.margins = TRUE, zero.cell.warn = TRUE,
+                      zero.keep.margins = TRUE, zero.cell.warn = FALSE,
+                      zero.cell.flag = FALSE,
                       verbose=FALSE, Y1.name=NULL, Y2.name=NULL) {
 
     # cat("DEBUG: method = ", method, "\n")
@@ -273,6 +274,9 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     stopifnot(min(Y1, na.rm=TRUE) == 1L, min(Y2, na.rm=TRUE) == 1L,
               method %in% c("nlminb", "BFGS", "nlminb.hessian", "optimize"))
 
+    # empty cells or not
+    empty.cells <- FALSE
+
     # exo or not?
     exo <- ifelse(length(fit.y1$slope.idx) > 0L, TRUE, FALSE)
 
@@ -285,13 +289,16 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         nr <- nrow(freq); nc <- ncol(freq)
 
-        # check for empty cells -- FIXME: make this an option!
-        if(zero.cell.warn && any(freq == 0L)) {
-            if(!is.null(Y1.name) && !is.null(Y2.name)) {
+        # check for empty cells
+        if(any(freq == 0L)) {
+            empty.cells <- TRUE
+            if(zero.cell.warn) {
+                if(!is.null(Y1.name) && !is.null(Y2.name)) {
                 warning("lavaan WARNING: empty cell(s) in bivariate table of ",
-                        Y1.name, " x ", Y2.name)
-            } else {
-                warning("lavaan WARNING: empty cell(s) in bivariate table")
+                            Y1.name, " x ", Y2.name)
+                } else {
+                    warning("lavaan WARNING: empty cell(s) in bivariate table")
+                }
             }
         }
 
@@ -302,9 +309,17 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
             if(length(idx) == 2L) {
                 warning("lavaan WARNING: two empty cells in 2x2 table")
                 if(freq[1,1] > 0L) {
-                    return(1.0)
+                    rho <- 1.0
+                    if(zero.cell.flag) {
+                        attr(rho, "zero.cell.flag") <- empty.cells
+                    } 
+                    return(rho)
                 } else {
-                    return(-1.0)
+                    rho <- -1.0
+                    if(zero.cell.flag) {
+                        attr(rho, "zero.cell.flag") <- empty.cells
+                    }
+                    return(rho)
                 }
             } else if(length(idx) == 1L && zero.add[1] > 0.0) {
                 if(zero.keep.margins) {
@@ -337,12 +352,20 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
             # 1. a*d == c*d
             storage.mode(freq) <- "numeric" # to avoid integer overflow
             if(freq[1,1]*freq[2,2] == freq[1,2]*freq[2,1]) {
-                return(0.0)
+                rho <- 0.0
+                if(zero.cell.flag) {
+                    attr(rho, "zero.cell.flag") <- empty.cells
+                }
+                return(rho)
             }
             # 2. equal margins (th1 = th2 = 0)
             if(th.y1[1] == 0L && th.y2[1] == 0L) {
                 # see eg Brown & Benedetti 1977 eq 2
-                return( - cos( 2*pi*freq[1,1]/sum(freq) ) )
+                rho <- - cos( 2*pi*freq[1,1]/sum(freq) )
+                if(zero.cell.flag) {
+                    attr(rho, "zero.cell.flag") <- empty.cells
+                }
+                return(rho)
             }
         }
     }
@@ -469,6 +492,10 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                       control=control)
         if(out$convergence != 0L) warning("no convergence")
         rho <- tanh(out$par)
+    }
+
+    if(zero.cell.flag) {
+        attr(rho, "zero.cell.flag") <- empty.cells
     }
 
     rho

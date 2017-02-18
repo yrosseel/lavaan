@@ -305,6 +305,8 @@ Miscellaneous:
         admissible. A warning is raised if negative variances are found, or if 
         either \code{lavInspect(fit, "cov.lv")} or 
         \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
+    \item{\code{"zero.cell.tables"}:}{List. List of bivariate frequency tables 
+        where at least one cell is empty.}
 }
 
 }

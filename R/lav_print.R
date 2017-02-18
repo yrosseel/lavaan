@@ -546,3 +546,22 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
     NAMES
 }
+
+print.lavaan.fsr <- summary.lavaan.fsr <- function(x, ..., nd = 3L) {
+
+    y <- unclass(x)
+    
+    # print header
+    if(!is.null(y$header)) {
+        cat(y$header)
+        cat("\n")
+    }
+
+    # print PE
+    print.lavaan.parameterEstimates(y$PE, ..., nd = nd) 
+
+    invisible(y)
+}
+
+
+

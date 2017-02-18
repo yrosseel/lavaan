@@ -12,15 +12,21 @@
 
 # YR 26 Nov 2015: move step1 + step2 to external functions
 #
-muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
-                       ov.names.x=character(0L), eXo=NULL, verbose=FALSE,
-                       missing="listwise",
-                       WLS.W=TRUE, # do we need asymptotic variance of stats?
-                       optim.method = "nlminb",
-                       zero.add = c(0.5, 0.0),
+muthen1984 <- function(Data              = NULL, 
+                       ov.names          = NULL, 
+                       ov.types          = NULL, 
+                       ov.levels         = NULL,
+                       ov.names.x        = character(0L),
+                       eXo               = NULL,
+                       verbose           = FALSE,
+                       missing           = "listwise",
+                       WLS.W             = TRUE,
+                       optim.method      = "nlminb",
+                       zero.add          = c(0.5, 0.0),
                        zero.keep.margins = TRUE,
-                       zero.cell.warn = TRUE,
-                       group=1L) { # group only for error messages
+                       zero.cell.warn    = FALSE,
+                       zero.cell.tables  = TRUE,
+                       group             = 1L) { # group only for error messages
 
     # just in case Data is a vector
     Data <- as.matrix(Data)
@@ -102,7 +108,11 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
                                  zero.add = zero.add, 
                                  zero.keep.margins = zero.keep.margins,
                                  zero.cell.warn = zero.cell.warn,
+                                 zero.cell.tables = zero.cell.tables,
                                  optim.method = optim.method)
+    empty.cell.tables <- attr(COR, "zero.cell.tables")
+    attr(COR, "zero.cell.tables") <- NULL
+
     if(verbose) {
         colnames(COR) <- rownames(COR) <- ov.names
         print(COR)
@@ -117,7 +127,7 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
         out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 SC=NULL, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
                 INNER=NULL, A11=NULL, A12=NULL, A21=NULL, A22=NULL,
-                WLS.W=NULL, H=NULL)
+                WLS.W=NULL, H=NULL, zero.cell.tables=matrix("",0,2))
         return(out)
     }
 
@@ -303,26 +313,52 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     ################
     ################
 
-    # A22
+    # A22 (diagonal)
     A22 <- matrix(0, pstar, pstar)
     for(i in seq_len(pstar)) {
         A22[i,i] <- sum( SC.COR[,i]*SC.COR[,i], na.rm=TRUE )
     }
 
-    # A12
+    # A12 (zero)
     A12 <- matrix(0, NROW(A11), NCOL(A22))
 
-    B <- rbind( cbind(A11,A12),
-                cbind(A21,A22) )
+    #B <- rbind( cbind(A11,A12),
+    #            cbind(A21,A22) )
 
-    # invert!
-    ## FIXME: we need to invert B as a partioned matrix
-    B.inv <- try(solve(B), silent = TRUE)
-    if(inherits(B.inv, "try-error")) {
+    # we invert B as a block-triangular matrix (0.5-23)
+    #
+    # B.inv = A11^{-1}                   0
+    #         -A22^{-1} A21 A11^{-1}     A22^{-1}
+    #
+
+    # invert A
+    A11.inv <- try(solve(A11), silent = TRUE)
+    if(inherits(A11.inv, "try-error")) {
         # brute force
-        B.inv <- MASS::ginv(B) 
-        warning("lavaan WARNING: trouble inverting W matrix; used generalized inverse")
+        A11.inv <- MASS::ginv(A11)
+        warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A11 submatrix")
     }
+ 
+    # invert
+    da22 <- diag(A22)
+    if(any(da22 == 0)) {
+        warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A22 submatrix")
+        A22.inv <- MASS::ginv(A22)
+    } else {
+        A22.inv <- A22
+        diag(A22.inv) <- 1/da22
+    }
+
+    # lower-left block
+    A21.inv <- -A22.inv %*% A21 %*% A11.inv
+
+    # upper-left block remains zero
+    A12.inv <- A12
+
+    # construct B.inv
+    B.inv <- rbind( cbind(A11.inv, A12.inv),
+                    cbind(A21.inv, A22.inv) )
+
 
     #  weight matrix (correlation metric)
     WLS.W <- B.inv %*% INNER %*% t(B.inv)
@@ -361,7 +397,8 @@ muthen1984 <- function(Data, ov.names=NULL, ov.types=NULL, ov.levels=NULL,
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 SC=SC, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,
-                WLS.W=WLS.W, H=H)
+                WLS.W=WLS.W, H=H,
+                zero.cell.tables = empty.cell.tables)
     out
 }
 
