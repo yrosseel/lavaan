@@ -1,6 +1,6 @@
 # inspect a lavaanList object
 
-inspect.lavaanList <- function(object, what = "free") {
+inspect.lavaanList <- function(object, what = "free", ...) {
     lavListInspect(object                 = object,
                    what                   = what,
                    add.labels             = TRUE,
