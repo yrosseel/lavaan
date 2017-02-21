@@ -152,7 +152,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         ngroups <- 1L
         x$group <- rep(1L, length(x$lhs))
     } else {
-        ngroups <- max(x$group)
+        ngroups <- lav_partable_ngroups(x)
     }
 
     # round to 3 digits after the decimal point
@@ -547,7 +547,19 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     NAMES
 }
 
-print.lavaan.fsr <- summary.lavaan.fsr <- function(x, ..., nd = 3L) {
+summary.lavaan.fsr <- function(object, ...) {
+    
+    dotdotdot <- list(...)
+    if(!is.null(dotdotdot$nd)) {
+        nd <- dotdotdot$nd
+    } else {
+        nd <- 3L
+    }    
+
+    print.lavaan.fsr(x = object, nd = nd)
+}
+
+print.lavaan.fsr <- function(x, ..., nd = 3L) {
 
     y <- unclass(x)
     

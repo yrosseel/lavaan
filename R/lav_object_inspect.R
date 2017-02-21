@@ -2058,12 +2058,12 @@ lav_object_inspect_delta <- function(object,
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
     nexo           <- lavmodel@nexo
-    ngroups        <- lavmodel@ngroups
+    nblocks        <- lavmodel@nblocks
 
     if(add.labels) {
         PNAMES <- lav_partable_labels(object@ParTable, type="free")
 
-        for(g in 1:ngroups) {
+        for(g in 1:nblocks) {
             colnames(OUT[[g]]) <- PNAMES
 
             if(conditional.x) {
@@ -2133,7 +2133,7 @@ lav_object_inspect_delta <- function(object,
         } # g
     } # labels
 
-    if(ngroups == 1L && drop.list.single.group) {
+    if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
         if(length(object@Data@group.label) > 0L) {

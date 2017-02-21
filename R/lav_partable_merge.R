@@ -12,18 +12,18 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     stopifnot( !is.null(pt1$lhs), !is.null(pt1$op), !is.null(pt1$rhs),
                !is.null(pt2$lhs), !is.null(pt2$op), !is.null(pt2$rhs) )
 
-    # both should have group (or not)
-    if(is.null(pt1$group) && is.null(pt2$group)) {
-        TMP <- rbind(pt1[, c("lhs","op","rhs","group")],
-                     pt2[, c("lhs","op","rhs","group")])
+    # both should have block (or not)
+    if(is.null(pt1$block) && is.null(pt2$block)) {
+        TMP <- rbind(pt1[, c("lhs","op","rhs","block")],
+                     pt2[, c("lhs","op","rhs","block")])
     } else {
-        if(is.null(pt1$group) && !is.null(pt2$group)) {
-            pt1$group <- rep(1L, length(pt1$lhs))
-        } else if(is.null(pt2$group) && !is.null(pt1$group)) {
-            pt2$group <- rep(1L, length(pt2$lhs))
+        if(is.null(pt1$block) && !is.null(pt2$block)) {
+            pt1$block <- rep(1L, length(pt1$lhs))
+        } else if(is.null(pt2$block) && !is.null(pt1$block)) {
+            pt2$block <- rep(1L, length(pt2$lhs))
         }
-        TMP <- rbind(pt1[, c("lhs","op","rhs","group")],
-                     pt2[, c("lhs","op","rhs","group")])
+        TMP <- rbind(pt1[, c("lhs","op","rhs","block")],
+                     pt2[, c("lhs","op","rhs","block")])
     }
 
     # if missing columns, provide default values of the right type 
@@ -111,7 +111,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
             idx <- which(pt2$lhs == pt1$lhs[i] &
                          pt2$op  == pt1$op[i] &
                          pt2$rhs == pt1$rhs[i] &
-                         pt2$group == pt1$group[i])
+                         pt2$block == pt1$block[i])
 
             pt2$start[idx] <- pt1$start[i]
         }

@@ -264,24 +264,26 @@ lav_fit_measures <- function(object, fit.measures="all",
         # this is not strictly needed for ML, but it is for
         # GLS and WLS
         # and MLM and MLR to get the scaling factor(s)!
-        if (!is.null(baseline.model) & is(baseline.model, "lavaan")) {
+        if (!is.null(baseline.model) && is(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
-        } else if (!is.null(object@external$baseline.model) & is(object@external$baseline.model, "lavaan")) {
+        } else if (!is.null(object@external$baseline.model) && 
+                   is(object@external$baseline.model, "lavaan")) {
             fit.indep <- object@external$baseline.model
             ## check baseline converged
             if (!fit.indep@optim$converged) {
-              fit.indep <- NULL
+                fit.indep <- NULL
             } else {
-              ## check test matches and baseline converged
-              sameTest <- object@Options$test == fit.indep@Options$test
-              sameSE <- object@Options$se == fit.indep@Options$se
-              sameEstimator <- object@Options$estimator == fit.indep@Options$estimator
-              if (!all(sameTest, sameSE, sameEstimator)) {
-                fit.indep <- try(update(fit.indep, test = object@Options$test,
-                                        se = object@Options$se,
-                                        estimator = object@Options$estimator),
-                                 silent = TRUE)
-              }
+                ## check test matches and baseline converged
+                sameTest <- ( object@Options$test == fit.indep@Options$test )
+                sameSE <- ( object@Options$se == fit.indep@Options$se )
+                sameEstimator <- ( object@Options$estimator == fit.indep@Options$estimator )
+                if (!all(sameTest, sameSE, sameEstimator)) {
+                    fit.indep <- try(update(fit.indep, 
+                                            test = object@Options$test,
+                                            se   = object@Options$se,
+                                            estimator = object@Options$estimator),
+                                     silent = TRUE)
+                }
             }
         } else {
             fit.indep <- try(lav_object_independence(object), silent = TRUE)

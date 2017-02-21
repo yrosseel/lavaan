@@ -10,7 +10,9 @@ setClass("lavData",
         ngroups="integer",         # number of groups
         group="character",         # group variable
         cluster="character",       # cluster variable(s)
+        block.label="character",   # block labels
         group.label="character",   # group labels
+        level.label="character",   # level labels
         std.ov="logical",          # standardize observed variables?
         nobs="list",               # effective number of observations
         norig="list",              # original number of observations
@@ -90,7 +92,8 @@ setClass("lavModel",          # MATRIX representation of the sem model
         group.w.free="logical",
         link="character",
 
-        ngroups="integer",
+        nblocks="integer",
+        ngroups="integer",   # only for rsem!! (which uses rsem:::computeDelta)
         nmat="integer",
         nvar="integer",
         num.idx="list",

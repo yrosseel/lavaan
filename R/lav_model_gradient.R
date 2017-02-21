@@ -31,6 +31,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     if(estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
 
     # group.weight
+    # FIXME --> block.weight
     if(group.weight) {
         if(estimator %in% c("ML","PML","FML","MML","REML","NTRLS")) {
             group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
@@ -39,7 +40,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
         }
     } else {
-        group.w <- rep(1.0, lavsamplestats@ngroups)
+        group.w <- rep(1.0, lavmodel@nblocks)
     }
 
     # do we need WLS.est?
@@ -79,7 +80,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             if(lavmodel@nexo > 0L) {
                 PI <- computePI(lavmodel = lavmodel)
             } else {
-                PI <- vector("list", length = lavsamplestats@ngroups)
+                PI <- vector("list", length = lavmodel@nblocks)
             }
         }
         if(group.w.free) {
@@ -116,13 +117,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                   estimator=estimator,
                                   meanstructure=FALSE,
                                   conditional.x = conditional.x)
-            Omega.mu <- vector("list", length=lavsamplestats@ngroups)
+            Omega.mu <- vector("list", length = lavmodel@nblocks)
         }
 
         # compute DX (for all elements in every model matrix)
         DX <- vector("list", length=length(GLIST))
       
-        for(g in 1:lavsamplestats@ngroups) {
+        for(g in 1:lavmodel@nblocks) {
             # which mm belong to group g?
             mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
             mm.names <- names( GLIST[mm.in.group] )
@@ -145,7 +146,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             }
 
             # weight by group
-            if(lavsamplestats@ngroups > 1L) {
+            if(lavmodel@nblocks > 1L) {
                 for(mm in mm.in.group) {
                     DX[[mm]] <- group.w[g] * DX[[mm]]
                 }
@@ -155,7 +156,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
         # extract free parameters
         if(type == "free") {
             dx <- numeric( nx.free )
-            for(g in 1:lavsamplestats@ngroups) {
+            for(g in 1:lavmodel@nblocks) {
                 mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
                 for(mm in mm.in.group) {
                       m.free.idx  <- lavmodel@m.free.idx[[mm]]
@@ -187,7 +188,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
         }
 
-        for(g in 1:lavsamplestats@ngroups) {
+        for(g in 1:lavmodel@nblocks) {
             #diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
             #group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
@@ -275,7 +276,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
         }
 
-        for(g in 1:lavsamplestats@ngroups) {
+        for(g in 1:lavmodel@nblocks) {
 
             # augmented mean.x + cov.x matrix
             mean.x <- lavsamplestats@mean.x[[g]]
@@ -361,7 +362,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
         }
 
-        for(g in 1:lavsamplestats@ngroups) {
+        for(g in 1:lavmodel@nblocks) {
 
             #print(GLIST)
             #print(lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST))
@@ -493,7 +494,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     conditional.x    <- lavmodel@conditional.x
     group.w.free     <- lavmodel@group.w.free
     nmat             <- lavmodel@nmat
-    ngroups          <- lavmodel@ngroups
+    nblocks          <- lavmodel@nblocks
     nvar             <- lavmodel@nvar
     num.idx          <- lavmodel@num.idx
     th.idx           <- lavmodel@th.idx
@@ -516,8 +517,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
          type <- "free"
 
     # number of rows in DELTA.group
-    pstar <- integer(ngroups)
-    for(g in 1:ngroups) {
+    pstar <- integer(nblocks)
+    for(g in 1:nblocks) {
         pstar[g] <- as.integer(nvar[g] * (nvar[g] + 1) / 2)
         if(lavmodel@meanstructure) {
             pstar[g] <- nvar[g] + pstar[g]  # first the means, then sigma
@@ -573,8 +574,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
 
     # compute Delta
-    Delta <- vector("list", length=ngroups)
-    for(g in 1:ngroups) {
+    Delta <- vector("list", length=nblocks)
+    for(g in 1:nblocks) {
         Delta.group <- matrix(0, nrow=pstar[g], ncol=NCOL)
 
         # which mm belong to group g?
@@ -736,7 +737,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
 
     representation   <- lavmodel@representation
     nmat             <- lavmodel@nmat
-    ngroups          <- lavmodel@ngroups
+    nblocks          <- lavmodel@nblocks
     num.idx          <- lavmodel@num.idx
     th.idx           <- lavmodel@th.idx
 
@@ -764,8 +765,8 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
     #}
 
     # compute Delta per group
-    Delta <- vector("list", length=ngroups)
-    for(g in 1:ngroups) {
+    Delta <- vector("list", length=nblocks)
+    for(g in 1:nblocks) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         Delta.group <- NULL
         for(mm in mm.in.group) {
@@ -837,10 +838,13 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                          lavsamplestats=NULL, estimator="ML", 
                          meanstructure=FALSE, conditional.x = FALSE) {
 
-    Omega    <- vector("list", length=lavsamplestats@ngroups)
-    Omega.mu <- vector("list", length=lavsamplestats@ngroups)
+    # nblocks
+    nblocks <- length(Sigma.hat)
 
-    for(g in 1:lavsamplestats@ngroups) {
+    Omega    <- vector("list", length = nblocks)
+    Omega.mu <- vector("list", length = nblocks)
+
+    for(g in 1:nblocks) {
 
         # ML
         if(estimator == "ML" || estimator == "REML") {

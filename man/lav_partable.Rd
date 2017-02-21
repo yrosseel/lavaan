@@ -13,8 +13,8 @@
 \description{Utility functions related to the parameter table (partable)}
 \usage{
 # extract information from a parameter table
-lav_partable_df(partable, group = NULL)
-lav_partable_ndat(partable, group = NULL)
+lav_partable_df(partable)
+lav_partable_ndat(partable)
 lav_partable_npar(partable)
 lav_partable_attributes(partable, pta = NULL)
 
@@ -43,7 +43,6 @@ lav_partable_merge(pt1 = NULL, pt2 = NULL, remove.duplicated = FALSE,
 \arguments{
 \item{partable}{A parameter table. see \code{\link{lavParTable}} 
 for more information.}
-\item{group}{Integer. If non-null, only consider this group.}
 \item{blocks}{Character vector. Which columns in the parameter table should be
   taken to distinguish between different blocks/groups of parameters (and hence
   be given different labels)?}

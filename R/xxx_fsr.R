@@ -50,7 +50,7 @@ fsr <- function(model      = NULL,
 
     # change 'default' values for fsr
     if(is.null(dotdotdot$se)) {
-        dotdotdot$se <- "robust.sem"
+        dotdotdot$se <- "none"
     }
     if(is.null(dotdotdot$test)) {
         dotdotdot$test <- "satorra.bentler"

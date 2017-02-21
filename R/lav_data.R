@@ -42,6 +42,10 @@ lavData <- function(data          = NULL,          # data.frame
     if(is.null(warn)) {
         warn <- TRUE
     }
+
+    # block.label, level.label
+    block.label <- group.label   # for now
+    level.label <- character(0L) # for now
     
 
     # four scenarios:
@@ -84,7 +88,9 @@ lavData <- function(data          = NULL,          # data.frame
         lavData <- lav_data_full(data              = data,
                                  group             = group,
                                  cluster           = cluster,
+                                 block.label       = block.label,
                                  group.label       = group.label,
+                                 level.label       = level.label,
                                  ov.names          = ov.names,
                                  ordered           = ordered,
                                  ov.names.x        = ov.names.x,
@@ -181,7 +187,9 @@ lavData <- function(data          = NULL,          # data.frame
                        ngroups     = ngroups, 
                        group       = character(0L),
                        cluster     = character(0L),
+                       block.label = block.label,
                        group.label = group.label,
+                       level.label = level.label,
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
@@ -242,7 +250,9 @@ lavData <- function(data          = NULL,          # data.frame
                        ngroups     = ngroups,
                        group       = character(0L),
                        cluster     = character(0L),
+                       block.label = block.label,
                        group.label = group.label,
+                       level.label = level.label,
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
@@ -266,7 +276,9 @@ lavData <- function(data          = NULL,          # data.frame
 lav_data_full <- function(data          = NULL,          # data.frame
                           group         = NULL,          # multiple groups?
                           cluster       = NULL,
+                          block.label   = NULL,
                           group.label   = NULL,          # custom group labels?
+                          level.label   = NULL,
                           ov.names      = NULL,          # variables needed 
                                                          # in model
                           ordered       = NULL,          # ordered variables
@@ -612,7 +624,9 @@ lav_data_full <- function(data          = NULL,          # data.frame
                       ngroups         = ngroups,
                       group           = group,
                       cluster         = cluster,
+                      block.label     = block.label,
                       group.label     = group.label,
+                      level.label     = level.label,
                       std.ov          = std.ov,
                       nobs            = nobs,
                       norig           = norig,

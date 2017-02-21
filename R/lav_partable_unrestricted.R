@@ -256,6 +256,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                         op          = op,
                         rhs         = rhs,
                         user        = rep(1L,  length(lhs)),
+                        block       = group, # for now
                         group       = group,
                         #mod.idx     = rep(0L,  length(lhs)),
                         free        = free,

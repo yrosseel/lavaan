@@ -59,7 +59,7 @@ function(object, type="raw", labels=TRUE) {
         stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
     }
 
-    G <- object@Data@ngroups
+    G <- object@Model@nblocks
     meanstructure <- object@Model@meanstructure
     ov.names <- object@Data@ov.names
 
@@ -69,7 +69,7 @@ function(object, type="raw", labels=TRUE) {
         # fixed.x idx?
         x.idx <- integer(0)
         if(object@Options$fixed.x) {
-            x.idx <- match(vnames(object@ParTable, "ov.x", group=1L),
+            x.idx <- match(vnames(object@ParTable, "ov.x", block=1L),
                            object@Data@ov.names[[1L]]) ### FIXME!!!! will not
                                                        ### work for different
         }                                              ### models in groups
@@ -137,7 +137,7 @@ function(object, type="raw", labels=TRUE) {
         }
         nvar <- ncol(S)
 
-        # residuals (for this group)
+        # residuals (for this block)
         if(type == "cor.bollen") {
             if(object@Model@conditional.x) {
                 R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$res.cov[[g]])
@@ -192,7 +192,7 @@ function(object, type="raw", labels=TRUE) {
                 R[[g]]$th <- R[[g]]$th[ -NUM.idx ]
             }
             if(labels) {
-                names(R[[g]]$th) <- vnames(object@ParTable, type="th", group=g)
+                names(R[[g]]$th) <- vnames(object@ParTable, type="th", block=g)
             }
         }
 
@@ -332,7 +332,7 @@ function(object, type="raw", labels=TRUE) {
     if(G == 1) {
         R <- R[[1]]
     } else {
-        names(R) <- unlist(object@Data@group.label)
+        names(R) <- unlist(object@Data@block.label)
     }
 
     R
