@@ -331,6 +331,8 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     p0.free.idx <- which(PT.M0.part1$free > 0)
 
     # change 'free' order in m0
+    # NOTE: this only works all the free parameters in h0 are also free
+    # in h1 (and if not, they will become fixed in h0)
     PT.M0.part1$free[p0.free.idx] <- 
     PT.M1.part1$free[ PT.M0.part1$id[p1.id][p0.free.idx] ]
 

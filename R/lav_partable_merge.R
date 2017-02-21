@@ -14,6 +14,8 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
 
     # both should have block (or not)
     if(is.null(pt1$block) && is.null(pt2$block)) {
+        pt1$block <- rep(1L, length(pt1$lhs))
+        pt2$block <- rep(1L, length(pt2$lhs))
         TMP <- rbind(pt1[, c("lhs","op","rhs","block")],
                      pt2[, c("lhs","op","rhs","block")])
     } else {
@@ -28,6 +30,20 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
 
     # if missing columns, provide default values of the right type 
     # (numeric/integer/character)
+
+    # group
+    if(is.null(pt1$group) && !is.null(pt2$group)) {
+        pt1$group <- rep(0L, length(pt1$lhs))
+    } else if(is.null(pt2$group) && !is.null(pt1$group)) {
+        pt2$group <- rep(0L, length(pt2$lhs))
+    }
+
+    # level
+    if(is.null(pt1$level) && !is.null(pt2$level)) {
+        pt1$level <- rep(0L, length(pt1$lhs))
+    } else if(is.null(pt2$level) && !is.null(pt1$level)) {
+        pt2$level <- rep(0L, length(pt2$lhs))
+    }
 
     # user
     if(is.null(pt1$user) && !is.null(pt2$user)) {

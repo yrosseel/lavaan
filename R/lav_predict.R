@@ -548,7 +548,7 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
             if(out$convergence == 0L) {
                 eta.i <- out$par
             } else {
-                eta.i <- rep(as.numeric(NA), nfac2)
+                eta.i <- rep(as.numeric(NA), nfac)
             }
 
             # add dummy ov.y lv values
