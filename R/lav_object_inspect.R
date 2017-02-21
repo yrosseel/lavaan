@@ -1,7 +1,7 @@
 # inspect a fitted lavaan object
 
 # backward compatibility -- wrapper around lavInspect
-inspect.lavaan <- function(object, what = "free") {
+inspect.lavaan <- function(object, what = "free", ...) {
     lavInspect.lavaan(object              = object,
                       what                   = what,
                       add.labels             = TRUE,
