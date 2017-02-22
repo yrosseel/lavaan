@@ -830,16 +830,6 @@ parameterTable <- parametertable <- parTable <- partable <-
     # convert to data.frame
     out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
 
-    # FIXME:!!!!
-    # temporary fix stremo stuff in lvnfy
-    stack <- sys.calls()
-    tmp <- lapply(stack, function(x) as.list(x)[[1]])
-    symbol.idx <- sapply(tmp, is.symbol)
-    history <- as.character(tmp[symbol.idx])
-    if("lvnfy" %in% history) {
-        out$block <- NULL
-    }
-
     class(out) <- c("lavaan.data.frame", "data.frame")
     out
 }
