@@ -69,7 +69,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     if(lavmodel@categorical) {
         nmat <- lavmodel@nmat
         if(lavmodel@representation == "LISREL") {
-            for(g in 1:lavmodel@ngroups) {
+            for(g in 1:lavmodel@nblocks) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
@@ -147,7 +147,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     if(lavmodel@categorical && setDelta && 
        lavmodel@parameterization == "theta") {
         nmat <- lavmodel@nmat
-        for(g in 1:lavmodel@ngroups) {
+        for(g in 1:lavmodel@nblocks) {
             # which mm belong to group g?
             mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
             GLIST[mm.in.group] <-

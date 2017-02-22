@@ -13,6 +13,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     # prepare target list
     if(is.null(target)) target <- partable 
 
+    stopifnot(!is.null(target$block))
+
     # prepare output
     N <- length(target$lhs)
     tmp.mat <- character(N); tmp.row <- integer(N); tmp.col <- integer(N)
@@ -31,44 +33,33 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         gamma <- FALSE
     }
 
-    # number of groups
-    if(is.null(partable$group)) {
-        partable$group <- rep(1L, length(partable$lhs))
-        ngroups <- 1L
-    } else {
-        if(is.character(partable$group)) {
-            group.label <- unique(partable$group)
-            group.label <- group.label[ nchar(group.label) > 0L ]
-            ngroups <- length(group.label)
-        } else {
-            ngroups <- max(partable$group)
-        }
-    }
+    # number of blocks
+    nblocks <- lav_partable_nblocks(partable)
 
-    ov.dummy.names.nox <- vector("list", ngroups)
-    ov.dummy.names.x   <- vector("list", ngroups)
+    ov.dummy.names.nox <- vector("list", nblocks)
+    ov.dummy.names.x   <- vector("list", nblocks)
     if(extra) {
-        REP.mmNames     <- vector("list", ngroups)
-        REP.mmNumber    <- vector("list", ngroups)
-        REP.mmRows      <- vector("list", ngroups)
-        REP.mmCols      <- vector("list", ngroups)
-        REP.mmDimNames  <- vector("list", ngroups)
-        REP.mmSymmetric <- vector("list", ngroups)
+        REP.mmNames     <- vector("list", nblocks)
+        REP.mmNumber    <- vector("list", nblocks)
+        REP.mmRows      <- vector("list", nblocks)
+        REP.mmCols      <- vector("list", nblocks)
+        REP.mmDimNames  <- vector("list", nblocks)
+        REP.mmSymmetric <- vector("list", nblocks)
     }
 
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
 
-        # info from user model per group
+        # info from user model per block
         if(gamma) {
-            ov.names <- vnames(partable, "ov.nox",  group=g)
+            ov.names <- vnames(partable, "ov.nox",  block=g)
         } else {
-            ov.names <- vnames(partable, "ov",  group=g)
+            ov.names <- vnames(partable, "ov",  block=g)
         }
         nvar <- length(ov.names)
-        lv.names   <- vnames(partable, "lv",  group=g); nfac <- length(lv.names)
-        ov.th      <- vnames(partable, "th",  group=g); nth  <- length(ov.th)
-        ov.names.x <- vnames(partable, "ov.x",group=g); nexo <- length(ov.names.x)
-        ov.names.nox <- vnames(partable, "ov.nox",group=g)
+        lv.names   <- vnames(partable, "lv",  block=g); nfac <- length(lv.names)
+        ov.th      <- vnames(partable, "th",  block=g); nth  <- length(ov.th)
+        ov.names.x <- vnames(partable, "ov.x",block=g); nexo <- length(ov.names.x)
+        ov.names.nox <- vnames(partable, "ov.nox",block=g)
 
         # in this representation, we need to create 'phantom/dummy' latent 
         # variables for all `x' and `y' variables not in lv.names
@@ -79,23 +70,23 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             tmp.names <-
                 unique( partable$lhs[(partable$op == "~" | 
                                         partable$op == "<~") &
-                                        partable$group == g] )
+                                        partable$block == g] )
         } else {
             tmp.names <- 
                 unique( c(partable$lhs[(partable$op == "~" | 
                                         partable$op == "<~") & 
-                                        partable$group == g],
+                                        partable$block == g],
                           partable$rhs[(partable$op == "~" | 
                                         partable$op == "<~") & 
-                                        partable$group == g]) )
+                                        partable$block == g]) )
         }
         dummy.names1 <- tmp.names[ !tmp.names %in% lv.names ]
         # covariances involving dummys
-        dummy.cov.idx <- which(partable$op == "~~" & partable$group == g &
+        dummy.cov.idx <- which(partable$op == "~~" & partable$block == g &
                                (partable$lhs %in% dummy.names1 |
                                 partable$rhs %in% dummy.names1))
         # new in 0.5-21: also include covariances involving these covariances...
-        dummy.cov.idx1 <- which(partable$op == "~~" & partable$group == g &
+        dummy.cov.idx1 <- which(partable$op == "~~" & partable$block == g &
                                 (partable$lhs %in% partable$lhs[dummy.cov.idx] |
                                  partable$rhs %in% partable$rhs[dummy.cov.idx]))
         dummy.cov.idx <- unique(c(dummy.cov.idx, dummy.cov.idx1))
@@ -128,21 +119,21 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         }
 
         # 1a. "=~" regular indicators
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "=~" & !(target$rhs %in% lv.names))
         tmp.mat[idx] <- "lambda"
         tmp.row[idx] <- match(target$rhs[idx], ov.names)
         tmp.col[idx] <- match(target$lhs[idx], lv.names)
 
         # 1b. "=~" regular higher-order lv indicators
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "=~" & !(target$rhs %in% ov.names))
         tmp.mat[idx] <- "beta"
         tmp.row[idx] <- match(target$rhs[idx], lv.names)
         tmp.col[idx] <- match(target$lhs[idx], lv.names)
     
         # 1c. "=~" indicators that are both in ov and lv
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "=~" & target$rhs %in% ov.names
                                        & target$rhs %in% lv.names)
         tmp.mat[idx] <- "beta"
@@ -153,7 +144,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         if(gamma) {
             # gamma
             idx <- which(target$rhs %in% ov.names.x &
-                         target$group == g & (target$op == "~" |
+                         target$block == g & (target$op == "~" |
                                               target$op == "<~") )
             tmp.mat[idx] <- "gamma"
             tmp.row[idx] <- match(target$lhs[idx], lv.names)
@@ -161,13 +152,13 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
             # beta
             idx <- which(!target$rhs %in% ov.names.x &
-                         target$group == g & (target$op == "~" |
+                         target$block == g & (target$op == "~" |
                                               target$op == "<~") )
             tmp.mat[idx] <- "beta"
             tmp.row[idx] <- match(target$lhs[idx], lv.names)
             tmp.col[idx] <- match(target$rhs[idx], lv.names)
         } else {
-            idx <- which(target$group == g & (target$op == "~" |
+            idx <- which(target$block == g & (target$op == "~" |
                                               target$op == "<~") )
             tmp.mat[idx] <- "beta"
             tmp.row[idx] <- match(target$lhs[idx], lv.names)
@@ -175,28 +166,28 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         }
   
         # 3a. "~~" ov
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "~~" & !(target$lhs %in% lv.names))
         tmp.mat[idx] <- "theta"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- match(target$rhs[idx], ov.names)
     
         # 3b. "~~" lv
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "~~" & target$rhs %in% lv.names)
         tmp.mat[idx] <- "psi"
         tmp.row[idx] <- match(target$lhs[idx], lv.names)
         tmp.col[idx] <- match(target$rhs[idx], lv.names)
   
         # 4a. "~1" ov
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "~1" & !(target$lhs %in% lv.names))
         tmp.mat[idx] <- "nu"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- 1L
     
         # 4b. "~1" lv
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "~1" & target$lhs %in% lv.names)
         tmp.mat[idx] <- "alpha"
         tmp.row[idx] <- match(target$lhs[idx], lv.names)
@@ -204,7 +195,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
 
         # 5. "|" th
         LABEL <- paste(target$lhs, target$op, target$rhs, sep="")
-        idx <-  which(target$group == g & 
+        idx <-  which(target$block == g & 
                       target$op == "|" & LABEL %in% ov.th)
         TH <- paste(target$lhs[idx], "|", target$rhs[idx], sep="")
         tmp.mat[idx] <- "tau"
@@ -212,7 +203,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.col[idx] <- 1L
 
         # 6. "~*~" scales
-        idx <- which(target$group == g &
+        idx <- which(target$block == g &
                      target$op == "~*~")
         tmp.mat[idx] <- "delta"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
@@ -227,7 +218,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         }
 
         # new 0.5-16: group weights
-        idx <- which(target$group == g & target$lhs == "group" &
+        idx <- which(target$block == g & target$lhs == "group" &
                      target$op == "%")
         tmp.mat[idx] <- "gw"
         tmp.row[idx] <- 1L
@@ -298,7 +289,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             REP.mmDimNames[[g]]  <- mmDimNames[ mmNames ]
             REP.mmSymmetric[[g]] <- unlist(mmSymmetric[ mmNames ])
         } # extra
-    } # ngroups
+    } # nblocks
 
     REP <- list(mat = tmp.mat,
                 row = tmp.row,
@@ -923,7 +914,7 @@ computeVYetax.LISREL <- function(MLIST = NULL, delta = TRUE) {
 # 3) PI
 # 4) SigmaHat == VYx
 
-# compute MuHat for a single group -- only for the continuous case (no eXo)
+# compute MuHat for a single block/group; only for the continuous case (no eXo)
 #
 # this is a special case of E(Y) where 
 # - we have no (explicit) eXogenous variables
@@ -952,7 +943,7 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
     Mu.hat
 }
 
-# compute TH for a single group
+# compute TH for a single block/group
 computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
@@ -1014,7 +1005,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
     as.vector(TH)
 }
 
-# compute PI for a single group
+# compute PI for a single block/group 
 computePI.LISREL <- function(MLIST=NULL) {
 
     LAMBDA <- MLIST$lambda

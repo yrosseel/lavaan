@@ -112,6 +112,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             #        "auto.fix.first", "auto.fix.single", "auto.var",
             #        "auto.cov.lv.x", "auto.cov.y", "auto.th", "auto.delta")
             FLAT <- model
+
+            # fix semTools issue here? for auxiliary() which does not use
+            # block column yet
+            if(!is.null(FLAT$block)) {
+                N <- length(FLAT$lhs)
+                if(length(FLAT$block) != N) {
+                    FLAT$block <- FLAT$group
+                }
+                if(any(is.na(FLAT$block))) {
+                    FLAT$block <- FLAT$group
+                }
+            } else if(!is.null(FLAT$group)) {
+                FLAT$block <- FLAT$group
+            }
+
         } else {
             bare.minimum <- c("lhs", "op", "rhs", "free")
             missing.idx <- is.na(match(bare.minimum, names(model)))
@@ -132,15 +147,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # possibly different set of variables per group/block
         # FIXME: for now (0.5), we only 'recognize' groups
 
-        # how many groups?
-        n.block.groups <- length( unique(FLAT$rhs[FLAT$op == ":" & 
-                                                  FLAT$lhs == "group"]) )
-        ov.names <- lapply(1:n.block.groups,
-                           function(x) vnames(FLAT, type="ov", group=x))
-        ov.names.y <- lapply(1:n.block.groups,
-                           function(x) vnames(FLAT, type="ov.nox", group=x))
-        ov.names.x <- lapply(1:n.block.groups,
-                           function(x) vnames(FLAT, type="ov.x", group=x))
+        # how many blocks?
+        n.blocks <- max(FLAT$block, na.rm = TRUE)
+        ov.names   <- lapply(1:n.blocks,
+                          function(x) vnames(FLAT, type="ov",     block = x))
+        ov.names.y <- lapply(1:n.blocks,
+                          function(x) vnames(FLAT, type="ov.nox", block = x))
+        ov.names.x <- lapply(1:n.blocks,
+                          function(x) vnames(FLAT, type="ov.x",   block = x))
     }
 
     # sanity check ordered argument (just in case, add lhs variables names)
@@ -371,7 +385,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else if(is.list(model)) {
         # we already checked this when creating FLAT
         # but we may need to complete it
-        lavpartable <- as.list(model) # in case model is a data.frame
+        lavpartable <- as.list(FLAT) # in case model is a data.frame
         # complete table
         lavpartable <- lav_partable_complete(lavpartable)
     } else {
@@ -447,14 +461,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            rescale       = lavoptions$sample.cov.rescale)
     } else {
         # no data
-        th.idx <- vector("list", length=lavdata@ngroups)
-        for(g in 1:lavdata@ngroups) {
-            th.idx[[g]] <- lav_partable_ov_idx(lavpartable, type="th")
-        }
         lavsamplestats <- new("lavSampleStats", ngroups=lavdata@ngroups,
                                  nobs=as.list(rep(0L, lavdata@ngroups)),
                                  cov.x=vector("list",length=lavdata@ngroups),
-                                 th.idx=th.idx,
+                                 th.idx=lavpta$vidx$th.mean,
                                  missing.flag=FALSE)
     }
     timing$Sample <- (proc.time()[3] - start.time)

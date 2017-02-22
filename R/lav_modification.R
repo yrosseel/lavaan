@@ -230,7 +230,13 @@ modindices <- function(object,
 
     # remove even more columns 
     LIST$user <- NULL
-    if(max(LIST$group) == 1) LIST$group <- NULL
+
+    # remove block/group/level is only single block
+    if(lav_partable_nblocks(LIST) == 1L) {
+        LIST$block <- NULL
+        LIST$group <- NULL
+        LIST$level <- NULL
+    }
     
     # sort?
     if(sort.) {

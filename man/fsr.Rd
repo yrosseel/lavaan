@@ -5,7 +5,8 @@
 Fit a SEM model using factor score regression.}
 \usage{
 fsr(model = NULL, data = NULL, cmd = "sem", 
-    fsr.method = "Croon", fs.method = "Bartlett", ...)
+    fsr.method = "Croon", fs.method = "Bartlett", 
+    fs.scores = FALSE, Gamma.NT = TRUE, lvinfo = FALSE, ...)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -23,6 +24,14 @@ fsr(model = NULL, data = NULL, cmd = "sem",
 options are \code{naive}, \code{Skrondal-Laake}, and \code{Croon}.}
 \item{fs.method}{Character. Factor score estimation method. Possible
 options are \code{Bartlett} and \code{regression}.}
+\item{fs.scores}{Logical. If \code{TRUE}, explicitly compute factor scores; if
+\code{FALSE}, only compute the mean vector and variance matrix of the
+factor scores.}
+\item{Gamma.NT}{Logical. Only needed when \code{se="robust.sem"} and
+data is missing; if \code{TRUE}, compute Gamma (N times the variance
+matrix of the sample statistics) assuming normality.}
+\item{lvinfo}{Logical. If \code{TRUE}, return latent variable information
+as an attribute to the output.}
 \item{...}{Further arguments that we pass to the \code{"cfa"}, \code{"sem"} or 
            \code{"lavaan"} functions.}
 }

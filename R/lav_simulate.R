@@ -26,7 +26,7 @@ simulateData <- function(
                          # data properties
                          sample.nobs     = 500L,
                          ov.var          = NULL,
-                         group.label     = paste("G", 1:ngroups, sep=""),
+                         group.label     = paste("G", 1:nblocks, sep=""),
                          skewness        = NULL,
                          kurtosis        = NULL,
 
@@ -124,7 +124,7 @@ simulateData <- function(
         # so there is no need to make a distinction between numeric/ordered 
         # here??
         lav2 <- lav
-        ngroups <- max(lav$group)
+        nblocks <- lav_partable_nblocks(lav)
         ov.names <- vnames(lav, "ov")
         ov.nox   <- vnames(lav, "ov.nox")
         lv.names <- vnames(lav, "lv")
@@ -148,20 +148,20 @@ simulateData <- function(
         }
 
         # standardized OV
-        for(g in 1:ngroups) {
-            var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
-                               lav$rhs == lav$lhs & lav$group == g)
+        for(g in 1:nblocks) {
+            var.block <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
+                               lav$rhs == lav$lhs & lav$block == g)
             ov.idx <- match(ov.nox, ov.names)
-            lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
+            lav$ustart[var.block] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
         }
 
         # standardize LV
         if(length(lv.y) > 0L) {
-            for(g in 1:ngroups) {
-                var.group <- which(lav$op == "~~" & lav$lhs %in% lv.y &
-                                   lav$rhs == lav$lhs & lav$group == g)
+            for(g in 1:nblocks) {
+                var.block <- which(lav$op == "~~" & lav$lhs %in% lv.y &
+                                   lav$rhs == lav$lhs & lav$block == g)
                 eta.idx <- match(lv.y, lv.names)
-                lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
+                lav$ustart[var.block] <- 1 - diag(ETA[[g]])[eta.idx]
             }
         }
 
@@ -205,14 +205,14 @@ simulateData <- function(
         if(exists("TH")) print(TH)
     }
 
-    # ngroups
-    ngroups <- length(sample.nobs)
+    # nblocks
+    nblocks <- length(sample.nobs)
 
     # prepare 
-    X <- vector("list", length=ngroups)
-    out <- vector("list", length=ngroups)
+    X <- vector("list", length=nblocks)
+    out <- vector("list", length=nblocks)
 
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
         COV <- Sigma.hat[[g]]
        
         # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML 
@@ -231,7 +231,7 @@ simulateData <- function(
             # first generate Z
             Z <- ValeMaurelli1983(n        = sample.nobs[g], 
                                   COR      = cov2cor(COV),
-                                  skewness = skewness,  # FIXME: per group?
+                                  skewness = skewness,  # FIXME: per block?
                                   kurtosis = kurtosis,
                                   debug    = debug)
             # rescale
@@ -250,13 +250,13 @@ simulateData <- function(
         }
 
         # any categorical variables?
-        ov.ord <- vnames(lav, type="ov.ord", group=g)
+        ov.ord <- vnames(lav, type="ov.ord", block = g)
         if(length(ov.ord) > 0L) {
-            ov.names <- vnames(lav, type="ov", group=g)
+            ov.names <- vnames(lav, type="ov", block = g)
             # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(lav$op == "|" & lav$lhs == o & lav$group == g)
+                th.idx <- which(lav$op == "|" & lav$lhs == o & lav$block == g)
                 th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
                 X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
             }
@@ -266,7 +266,7 @@ simulateData <- function(
     }
 
     if(return.type == "matrix") {
-        if(ngroups == 1L) {
+        if(nblocks == 1L) {
             return(X[[1L]])
         } else {
             return(X)
@@ -276,14 +276,14 @@ simulateData <- function(
         Data <- X[[1L]]
 
         # if multiple groups, add group column
-        if(ngroups > 1L) {
-            for(g in 2:ngroups) {
+        if(nblocks > 1L) {
+            for(g in 2:nblocks) {
                 Data <- rbind(Data, X[[g]])
             }
-            Data$group <- rep(1:ngroups, times=sample.nobs)
+            Data$group <- rep(1:nblocks, times=sample.nobs)
         }
-        var.names <- vnames(fit@ParTable, type="ov", group=1L)
-        if(ngroups > 1L) var.names <- c(var.names, "group")
+        var.names <- vnames(fit@ParTable, type="ov", block=1L)
+        if(nblocks > 1L) var.names <- c(var.names, "group")
         names(Data) <- var.names
         if(return.fit) {
             attr(Data, "fit") <- fit
@@ -291,7 +291,7 @@ simulateData <- function(
         return(Data)
 
     } else if (return.type == "cov") {
-        if(ngroups == 1L) {
+        if(nblocks == 1L) {
             return(cov(X[[1L]]))
         } else {
             cov.list <- lapply(X, cov)

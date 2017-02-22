@@ -5,21 +5,21 @@
 \description{
 Extract variables names from a fitted lavaan object.}
 \usage{
-lavNames(object, type = "ov", group = NULL)
+lavNames(object, type = "ov", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{type}{Character. The type of variables whose names should be extracted. 
 See details for a complete list.}
-\item{group}{If \code{NULL},
-all groups (if any) are used. If an integer (vector), only names from those
-groups are extracted. The group numbers are found in the \code{group}
-column of the parameter table.}
+\item{...}{Additional selection variables. For example \code{"group = 2L"}
+(in a multiple-group analysis) only considers the variables included
+in the model for the second group.}
 }
 \details{
 The order of the variable names, as returned by \code{lavNames} 
 determines the order in which the variables are listed in the parameter
 table, and therefore also in the summary output.
+
 
 The following variable types are available:
 \itemize{

@@ -5,7 +5,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
 
     # get parameter table attributes 
     pta <- lav_partable_attributes(partable = partable, pta = pta)
-    vnames <- pta$vnames; ngroups <- pta$ngroups
+    vnames <- pta$vnames; nblocks <- pta$nblocks
     nvar <- pta$nvar; nfac <- pta$nfac
     
     # sanity check
@@ -25,13 +25,13 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
     }
 
     # model for every i
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
         ov.names <- vnames$ov[[g]]
         lv.names <- vnames$lv[[g]]
         yname <- paste("y", g, sep="")
-        if(ngroups > 1L) {
+        if(nblocks > 1L) {
             TXT <- paste(TXT, t1,
-                "# group ", g, "\n", sep="")
+                "# block ", g, "\n", sep="")
         } else {
             TXT <- paste(TXT, "\n")
         }
@@ -44,7 +44,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             "# ov.nox", sep="")
         for(i in 1:nov) {
             ov.idx <- match(ov.names.nox[i], ov.names)
-            theta.free.idx <- which(partable$group == g &
+            theta.free.idx <- which(partable$block == g &
                                     partable$op == "~~" &
                                     partable$lhs == partable$rhs &
                                     partable$lhs == ov.names.nox[i])
@@ -68,7 +68,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             # find rhs for this observed variable
 
             # 1. intercept?
-            int.idx <- which(partable$group == g &
+            int.idx <- which(partable$block == g &
                              partable$op == "~1" &
                              partable$lhs == ov.names.nox[i])
             if(length(int.idx) == 1L) {
@@ -85,7 +85,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             }
 
             # 2. factor loading?
-            lam.idx <- which(partable$group == g &
+            lam.idx <- which(partable$block == g &
                              partable$op == "=~" &
                              partable$rhs == ov.names.nox[i])
             for(j in lam.idx) {
@@ -104,7 +104,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             }
 
             # 3. regression?
-            r.idx <- which(partable$group == g &
+            r.idx <- which(partable$block == g &
                            partable$op == "~" &
                            partable$lhs == ov.names.nox[i])
             for(j in r.idx) {
@@ -138,7 +138,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                     "# lv.y", sep="")
             lv.y.idx <- match(lv.y, lv.names); ny <- length(lv.y.idx)
             for(j in 1:ny) {
-                theta.free.idx <- which(partable$group == g &
+                theta.free.idx <- which(partable$block == g &
                                         partable$op == "~~" &
                                         partable$lhs == partable$rhs &
                                         partable$lhs == lv.y[j])
@@ -160,7 +160,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
 
                 # lhs elements regression
                 # 1. intercept?
-                int.idx <- which(partable$group == g &
+                int.idx <- which(partable$block == g &
                                  partable$op == "~1" &
                                  partable$lhs == lv.y[j])
                 if(length(int.idx) == 1L) {
@@ -176,7 +176,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                     TXT <- paste(TXT, "0", sep="")
                 }
 
-                rhs.idx <- which(partable$group == g &
+                rhs.idx <- which(partable$block == g &
                                  partable$op == "~" &
                                  partable$lhs == lv.y[j])
                 np <- length(rhs.idx)
@@ -212,9 +212,9 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
 
         # exogenous ov ??? (what to do here?)
 
-        # end of this group
+        # end of this block
         TXT <- paste(TXT, "\n\n", t1,
-                "} # end of group ", g, "\n", sep="")
+                "} # end of block ", g, "\n", sep="")
     }
 
     # priors (both fixed and free)
@@ -224,7 +224,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
     for(i in seq_len(npt)) {
         if(partable$free[i] == 0L) next # skip non-free parameters
         lhs <- partable$lhs[i]; op <- partable$op[i]; rhs <- partable$rhs[i]
-        free.idx <- partable$free[i]; g <- partable$group[i]
+        free.idx <- partable$free[i]; g <- partable$block[i]
         if(op == "=~") {
             # factor loading
             TXT <- paste(TXT, "\n", t1,
@@ -287,8 +287,8 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
 
     TXT <- paste(TXT, "\n\n", t1,
                 "# Priors free parameters (multivariate):", sep="")
-    for(g in 1:ngroups) {
-        lv.phi.idx <- which(partable$group == g &
+    for(g in 1:nblocks) {
+        lv.phi.idx <- which(partable$block == g &
                             partable$op == "~~" &
                             partable$lhs %in% vnames$lv.x[[g]] &
                             partable$rhs %in% vnames$lv.x[[g]])

@@ -8,7 +8,7 @@ setGeneric("fitmeasures",
 
 
 # S3 generics
-inspect <- function(object, what = "free") {
+inspect <- function(object, what = "free", ...) {
     UseMethod("inspect", object)
 }
 

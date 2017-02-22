@@ -6,16 +6,19 @@
 #    returning them all as a list (or just a vector if only 1 type is needed)
 
 # public version
-lavNames <- function(object, type = "ov", group = NULL) {
+lavNames <- function(object, type = "ov", ...) {
 
     if(inherits(object, "lavaan") || inherits(object, "lavaanList")) {
          partable <- object@ParTable
     } else if(class(object) == "list" ||
               inherits(object, "data.frame")) {
         partable <- object
+    } else if(class(object) == "character") {
+        # just a model string?
+        partable <- lavParseModelString(object)
     }
 
-    lav_partable_vnames(partable, type = type, group = group)
+    lav_partable_vnames(partable, type = type, ...)
 }
 
 # alias for backwards compatibility
@@ -26,11 +29,18 @@ lavaanNames <- lavNames
 #   latent, endo/exo/...; default = "ov", but most used is type = "all"
 # - the 'group' argument either selects a single group (if group is an integer)
 #   or returns a list per group
-lav_partable_vnames <- function(partable, type = NULL, group = NULL,
+# - the 'level' argument either selects a single level (if level is an integer)
+#   or returns a list per level
+# - the 'block' argument either selects a single block (if block is an integer)
+#   or returns a list per block
+lav_partable_vnames <- function(partable, type = NULL, ...,
                                 warn = FALSE, ov.x.fatal = FALSE) {
 
     # check for empy table
     if(length(partable$lhs) == 0) return(character(0L))
+
+    # dotdotdot
+    dotdotdot <- list(...)
 
     type.list <- c("ov",          # observed variables (ov)
                    "ov.x",        # (pure) exogenous observed variables
@@ -67,65 +77,85 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         type <- type.list
     }
 
-    # if `group' is missing in partable, just add group=1L
-    if(is.null(partable$group)) {
-        partable$group <- rep(1L, length(partable$lhs))
-        ngroups <- 1L
-    } else {
-        if(is.character(partable$group)) {
-            group.label <- unique(partable$group)
-            group.label <- group.label[ nchar(group.label) > 0L ]
-            ngroups <- length(group.label)
-        } else {
-            ngroups <- max(partable$group)
+    # ALWAYS need `block' column -- create one if missing
+    if(is.null(partable$block)) {
+        partable$block <- rep(1L, length(partable$lhs))
+    } 
+   
+    # nblocks -- block column is integer only
+    nblocks <- lav_partable_nblocks(partable)
+
+    # per default, use full partable
+    tmp <- partable$block[ partable$block > 0L ] # non-zero only
+    block.select <- unique(na.omit(tmp)) # could be, eg, '2' only
+
+    # check for ... selection argument(s)
+    ndotdotdot <- length(dotdotdot)
+    if(ndotdotdot > 0L) {
+        dot.names <- names(dotdotdot)
+        block.select <- rep(TRUE, length(partable$lhs))
+        for(dot in seq_len(ndotdotdot)) {
+        
+            # selection variable?
+            block.var <- dot.names[dot]
+            block.val <- dotdotdot[[block.var]]
+            # do we have this 'block.var' in partable?
+            if(is.null(partable[[block.var]])) {
+                stop("lavaan ERROR: selection variable `", block.var, " not found in the parameter table.")
+            } else {
+                if(!all(block.val %in% partable[[block.var]])) {
+                    stop("lavaan ERROR: ", block.var ,
+                        " column does not contain value `", block.val, "'")
+                }
+                block.select <- ( block.select & 
+                                  partable[[block.var]] %in% block.val )
+            }
+        } # dot
+        block.select <- unique(partable$block[block.select])
+
+        if(length(block.select) == 0L) {
+            warnings("lavaan WARNING: no blocks selected.")
         }
     }
 
-    # handle group argument
-    group.orig <- group
-    if(is.numeric(group)) {
-        group <- as.integer(group)
-        stopifnot(all(group %in% partable$group))
-    } else if(is.null(group) || group == "list") {
-        group <- seq_len(ngroups)
-    }
 
-    # output: list per group
-    OUT                <- vector("list", length=ngroups)
-    OUT$ov             <- vector("list", length=ngroups)
-    OUT$ov.x           <- vector("list", length=ngroups)
-    OUT$ov.nox         <- vector("list", length=ngroups)
-    OUT$ov.model       <- vector("list", length=ngroups)
-    OUT$ov.y           <- vector("list", length=ngroups)
-    OUT$ov.num         <- vector("list", length=ngroups)
-    OUT$ov.ord         <- vector("list", length=ngroups)
-    OUT$ov.ind         <- vector("list", length=ngroups)
-    OUT$ov.orphan      <- vector("list", length=ngroups)
-    OUT$ov.interaction <- vector("list", length=ngroups)
-    OUT$th             <- vector("list", length=ngroups)
-    OUT$th.mean        <- vector("list", length=ngroups)
 
-    OUT$lv             <- vector("list", length=ngroups)
-    OUT$lv.regular     <- vector("list", length=ngroups)
-    OUT$lv.formative   <- vector("list", length=ngroups)
-    OUT$lv.x           <- vector("list", length=ngroups)
-    OUT$lv.y           <- vector("list", length=ngroups)
-    OUT$lv.nox         <- vector("list", length=ngroups)
-    OUT$lv.nonnormal   <- vector("list", length=ngroups)
-    OUT$lv.interaction <- vector("list", length=ngroups)
+    # output: list per block
+    OUT                <- vector("list", length = nblocks)
+    OUT$ov             <- vector("list", length = nblocks)
+    OUT$ov.x           <- vector("list", length = nblocks)
+    OUT$ov.nox         <- vector("list", length = nblocks)
+    OUT$ov.model       <- vector("list", length = nblocks)
+    OUT$ov.y           <- vector("list", length = nblocks)
+    OUT$ov.num         <- vector("list", length = nblocks)
+    OUT$ov.ord         <- vector("list", length = nblocks)
+    OUT$ov.ind         <- vector("list", length = nblocks)
+    OUT$ov.orphan      <- vector("list", length = nblocks)
+    OUT$ov.interaction <- vector("list", length = nblocks)
+    OUT$th             <- vector("list", length = nblocks)
+    OUT$th.mean        <- vector("list", length = nblocks)
 
-    OUT$eqs.y          <- vector("list", length=ngroups)
-    OUT$eqs.x          <- vector("list", length=ngroups)
+    OUT$lv             <- vector("list", length = nblocks)
+    OUT$lv.regular     <- vector("list", length = nblocks)
+    OUT$lv.formative   <- vector("list", length = nblocks)
+    OUT$lv.x           <- vector("list", length = nblocks)
+    OUT$lv.y           <- vector("list", length = nblocks)
+    OUT$lv.nox         <- vector("list", length = nblocks)
+    OUT$lv.nonnormal   <- vector("list", length = nblocks)
+    OUT$lv.interaction <- vector("list", length = nblocks)
 
-    for(g in group) {
+    OUT$eqs.y          <- vector("list", length = nblocks)
+    OUT$eqs.x          <- vector("list", length = nblocks)
+
+    for(b in block.select) {
 
         # always compute lv.names
-        lv.names <- unique( partable$lhs[ partable$group == g  &
+        lv.names <- unique( partable$lhs[ partable$block == b  &
                                           (partable$op == "=~" |
                                            partable$op == "<~")  ] )
 
         # determine lv interactions
-        int.names <- unique(partable$rhs[ partable$group == g  &
+        int.names <- unique(partable$rhs[ partable$block == b  &
                                               grepl(":", partable$rhs) ] )
         n.int <- length(int.names)
         if(n.int > 0L) {
@@ -151,57 +181,57 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # store lv
         if("lv" %in% type) {
-            OUT$lv[[g]] <- lv.names
+            OUT$lv[[b]] <- lv.names
         }
 
         # regular latent variables ONLY (ie defined by =~ only)
         if("lv.regular" %in% type) {
-            out <- unique( partable$lhs[ partable$group == g &
+            out <- unique( partable$lhs[ partable$block == b &
                                          partable$op == "=~"   ] )
-            OUT$lv.regular[[g]] <- out
+            OUT$lv.regular[[b]] <- out
         }
 
         # interaction terms involving latent variables (only)
         if("lv.interaction" %in% type) {
-            OUT$lv.interaction[[g]] <- lv.interaction
+            OUT$lv.interaction[[b]] <- lv.interaction
         }
 
         # formative latent variables ONLY (ie defined by <~ only)
         if("lv.formative" %in% type) {
-            out <- unique( partable$lhs[ partable$group == g &
+            out <- unique( partable$lhs[ partable$block == b &
                                          partable$op == "<~"   ] )
-            OUT$lv.formative[[g]] <- out
+            OUT$lv.formative[[b]] <- out
         }
 
         # eqs.y
         if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
-            eqs.y <- unique( partable$lhs[ partable$group == g  &
+            eqs.y <- unique( partable$lhs[ partable$block == b  &
                                            partable$op == "~"     ] )
         }
 
         # store eqs.y
         if("eqs.y" %in% type) {
-            OUT$eqs.y[[g]] <- eqs.y
+            OUT$eqs.y[[b]] <- eqs.y
         }
 
         # eqs.x
         if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal","lv.x"))) {
-            eqs.x <- unique( partable$rhs[ partable$group == g  &
+            eqs.x <- unique( partable$rhs[ partable$block == b  &
                                            (partable$op == "~"  |
                                             partable$op == "<~")  ] )
         }
 
         # store eqs.x
         if("eqs.x" %in% type) {
-            OUT$eqs.x[[g]] <- eqs.x
+            OUT$eqs.x[[b]] <- eqs.x
         }
 
         # v.ind -- indicators of latent variables
         if(!(length(type) == 1L &&
            type %in% c("lv", "lv.regular", "lv.nonnormal"))) {
-            v.ind <- unique( partable$rhs[ partable$group == g  &
+            v.ind <- unique( partable$rhs[ partable$block == b  &
                                            partable$op == "=~"    ] )
         }
 
@@ -224,14 +254,14 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
              type %in% c("lv", "lv.regular", "lv.nonnormal", "lv.x","lv.y"))) {
 
             # 4. orphaned covariances
-            ov.cov <- c(partable$lhs[ partable$group == g &
+            ov.cov <- c(partable$lhs[ partable$block == b &
                                       partable$op == "~~" &
                                      !partable$lhs %in% lv.names ],
-                        partable$rhs[ partable$group == g &
+                        partable$rhs[ partable$block == b &
                                       partable$op == "~~" &
                                      !partable$rhs %in% lv.names ])
             # 5. orphaned intercepts/thresholds
-            ov.int <- partable$lhs[ partable$group == g &
+            ov.int <- partable$lhs[ partable$block == b &
                                     (partable$op == "~1" |
                                      partable$op == "|") &
                                     !partable$lhs %in% lv.names ]
@@ -243,11 +273,11 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # store ov?
         if("ov" %in% type) {
-            OUT$ov[[g]] <- ov.names
+            OUT$ov[[b]] <- ov.names
         }
 
         if("ov.ind" %in% type) {
-            OUT$ov.ind[[g]] <- ov.ind
+            OUT$ov.ind[[b]] <- ov.ind
         }
 
         if("ov.interaction" %in% type) {
@@ -273,7 +303,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                 ov.interaction <- character(0L)
             }
 
-            OUT$ov.interaction[[g]] <- ov.interaction
+            OUT$ov.interaction[[b]] <- ov.interaction
         }
 
 
@@ -286,13 +316,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             if(is.null(partable$user)) { # FLAT!
                 partable$user <-  rep(1L, length(partable$lhs))
             }
-            vars <- c( partable$lhs[ partable$group == g  &
+            vars <- c( partable$lhs[ partable$block == b  &
                                      partable$op == "~1"  &
                                      partable$user == 1     ],
-                       partable$lhs[ partable$group == g  &
+                       partable$lhs[ partable$block == b  &
                                      partable$op == "~~"  &
                                      partable$user == 1     ],
-                       partable$rhs[ partable$group == g  &
+                       partable$rhs[ partable$block == b  &
                                      partable$op == "~~"  &
                                      partable$user == 1     ] )
             idx.no.x <- which(ov.x %in% vars)
@@ -313,13 +343,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
             # extra
             if(!is.null(partable$exo)) {
-                ov.cov <- c(partable$lhs[ partable$group == g &
+                ov.cov <- c(partable$lhs[ partable$block == b &
                                           partable$op == "~~" &
                                           partable$exo == 1L],
-                            partable$rhs[ partable$group == g &
+                            partable$rhs[ partable$block == b &
                                           partable$op == "~~" &
                                           partable$exo == 1L])
-                ov.int <- partable$lhs[ partable$group == g &
+                ov.int <- partable$lhs[ partable$block == b &
                                         partable$op == "~1" &
                                         partable$exo == 1L ]
                 ov.extra <- unique(c(ov.cov, ov.int))
@@ -331,12 +361,12 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # store ov.x?
         if("ov.x" %in% type) {
-            OUT$ov.x[[g]] <- ov.names.x
+            OUT$ov.x[[b]] <- ov.names.x
         }
 
         # story ov.orphan?
         if("ov.orphan" %in% type) {
-            OUT$ov.orphan[[g]] <- ov.extra
+            OUT$ov.orphan[[b]] <- ov.extra
         }
 
         # ov's withouth ov.x
@@ -347,31 +377,31 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
 
         # store ov.nox
         if("ov.nox" %in% type) {
-            OUT$ov.nox[[g]] <- ov.names.nox
+            OUT$ov.nox[[b]] <- ov.names.nox
         }
 
         # store ov.model
         if("ov.model" %in% type) {
             # if no conditional.x, this is just ov
             # else, this is ov.nox
-            if(any( partable$group == g & partable$op == "~" &
+            if(any( partable$block == b & partable$op == "~" &
                                           partable$exo == 1L )) {
-                OUT$ov.model[[g]] <- ov.names.nox
+                OUT$ov.model[[b]] <- ov.names.nox
             } else {
-                OUT$ov.model[[g]] <- ov.names
+                OUT$ov.model[[b]] <- ov.names
             }
         }
 
         # ov's strictly ordered
         if(any(type %in% c("ov.ord", "th", "th.mean",
                            "ov.num", "lv.nonnormal"))) {
-            tmp <- unique(partable$lhs[ partable$group == g &
+            tmp <- unique(partable$lhs[ partable$block == b &
                                         partable$op == "|" ])
             ord.names <- ov.names[ ov.names %in% tmp ]
         }
 
         if("ov.ord" %in% type) {
-            OUT$ov.ord[[g]] <- ord.names
+            OUT$ov.ord[[b]] <- ord.names
         }
 
         # ov's strictly numeric (but no x)
@@ -380,18 +410,18 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         if("ov.num" %in% type) {
-            OUT$ov.num[[g]] <- ov.num
+            OUT$ov.num[[b]] <- ov.num
         }
 
         # nonnormal lv's
         if("lv.nonnormal" %in% type) {
             # regular lv's
-            lv.reg <- unique( partable$lhs[ partable$group == g &
+            lv.reg <- unique( partable$lhs[ partable$block == b &
                                             partable$op == "=~"   ] )
             if(length(lv.reg) > 0L) {
                 out <- unlist( lapply(lv.reg, function(x) {
                     # get indicators for this lv
-                    tmp.ind <- unique( partable$rhs[ partable$group == g &
+                    tmp.ind <- unique( partable$rhs[ partable$block == b &
                                                      partable$op == "=~" &
                                                      partable$lhs == x     ] )
                     if(!all(tmp.ind %in% ov.num)) {
@@ -400,16 +430,16 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
                         return(character(0))
                     }
                     }) )
-                OUT$lv.nonnormal[[g]] <- out
+                OUT$lv.nonnormal[[b]] <- out
             } else {
-                OUT$lv.nonnormal[[g]] <- character(0)
+                OUT$lv.nonnormal[[b]] <- character(0)
             }
         }
 
         if(any(c("th","th.mean") %in% type)) {
-            TH.lhs <- partable$lhs[ partable$group == g &
+            TH.lhs <- partable$lhs[ partable$block == b &
                                     partable$op == "|" ]
-            TH.rhs <- partable$rhs[ partable$group == g &
+            TH.rhs <- partable$rhs[ partable$block == b &
                                     partable$op == "|" ]
         }
 
@@ -427,7 +457,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             } else {
                 out <- character(0L)
             }
-            OUT$th[[g]] <- out
+            OUT$th[[b]] <- out
         }
 
         # thresholds and mean/intercepts of numeric variables
@@ -448,7 +478,7 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
             } else {
                 out <- character(0L)
             }
-            OUT$th.mean[[g]] <- out
+            OUT$th.mean[[b]] <- out
         }
 
 
@@ -459,25 +489,25 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
         }
 
         if("lv.x" %in% type) {
-            OUT$lv.x[[g]] <- lv.names.x
+            OUT$lv.x[[b]] <- lv.names.x
         }
 
         # dependent ov (but not also indicator or x)
         if("ov.y" %in% type) {
             tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x, lv.names) ]
-            OUT$ov.y[[g]] <- ov.names[ ov.names %in% tmp ]
+            OUT$ov.y[[b]] <- ov.names[ ov.names %in% tmp ]
         }
 
         # dependent lv (but not also indicator or x)
         if("lv.y" %in% type) {
             tmp <- eqs.y[ !eqs.y %in% c(v.ind, eqs.x) &
                            eqs.y %in% lv.names ]
-            OUT$lv.y[[g]] <- lv.names[ lv.names %in% tmp ]
+            OUT$lv.y[[b]] <- lv.names[ lv.names %in% tmp ]
         }
 
         # non-exogenous latent variables
         if("lv.nox" %in% type) {
-            OUT$lv.nox[[g]] <- lv.names[! lv.names %in% lv.names.x ]
+            OUT$lv.nox[[b]] <- lv.names[! lv.names %in% lv.names.x ]
         }
 
     }
@@ -485,15 +515,13 @@ lav_partable_vnames <- function(partable, type = NULL, group = NULL,
     # to mimic old behaviour, if length(type) == 1L
     if(length(type) == 1L) {
         OUT <- OUT[[type]]
-        # to mimic old behaviour, if specific group is requested
-        if(is.null(group.orig)) {
+        # to mimic old behaviour, if specific block is requested
+        if(ndotdotdot == 0L) {
             OUT <- unique(unlist(OUT))
-        } else if(is.numeric(group.orig) && length(group.orig) == 1L) {
-            if(length(group.orig) == 1L) {
-                OUT <- OUT[[group.orig]]
-            } else {
-                OUT <- OUT[group.orig]
-            }
+        } else if(length(block.select) == 1L) {
+            OUT <- OUT[[block.select]]
+        } else {
+            OUT <- OUT[block.select]
         }
     } else {
         OUT <- OUT[type]

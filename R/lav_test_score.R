@@ -219,7 +219,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         # create epc table for the 'free' parameters
         LIST <- parTable(object)
         LIST <- LIST[,c("lhs","op","rhs","group","free","label","plabel")]
-        if(max(LIST$group) == 1L) {
+        if(lav_partable_ngroups(LIST) == 1L) {
             LIST$group <- NULL
         }
         nonpar.idx <- which(LIST$op %in% c("==", ":=", "<", ">"))

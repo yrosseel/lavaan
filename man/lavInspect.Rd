@@ -18,7 +18,7 @@ lavTech(object, what = "free", add.labels = FALSE, add.class = FALSE,
         list.by.group = FALSE,
         drop.list.single.group = FALSE)
 
-inspect(object, what = "free")
+inspect(object, what = "free", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -39,6 +39,7 @@ names for multiple groups.}
     a list, where each element corresponds to a group (even if there is only
     a single group.) If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
+\item{...}{Additional arguments. Not used by lavaan, but by other packages.}
 }
 \details{
 The \code{lavInspect()} and \code{lavTech()} functions only differ in the way

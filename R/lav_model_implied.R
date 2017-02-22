@@ -13,14 +13,14 @@ lav_model_implied <- function(lavmodel = NULL) {
     if(lavmodel@conditional.x) {
         SLOPES <- computePI(lavmodel = lavmodel)
     } else {
-        SLOPES <- vector("list", length = lavmodel@ngroups)
+        SLOPES <- vector("list", length = lavmodel@nblocks)
     }
 
     # if categorical, model-implied thresholds
     if(lavmodel@categorical) {
         TH <- computeTH(lavmodel = lavmodel)
     } else {
-        TH <- vector("list", length = lavmodel@ngroups)
+        TH <- vector("list", length = lavmodel@nblocks)
     }
  
     if(lavmodel@group.w.free) {
@@ -28,7 +28,7 @@ lav_model_implied <- function(lavmodel = NULL) {
         GW <- unname(lavmodel@GLIST[ w.idx ])
         GW <- lapply(GW, as.numeric)
     } else {
-        GW <- vector("list", length = lavmodel@ngroups)
+        GW <- vector("list", length = lavmodel@nblocks)
     }
 
     # FIXME: should we use 'res.cov', 'res.int', 'res.th' if conditionl.x??

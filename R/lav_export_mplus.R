@@ -6,7 +6,7 @@ lav2mplus <- function(lav, group.label=NULL) {
     footer <- "\n"
 
     lav <- as.data.frame(lav, stringsAsFactors=FALSE)
-    ngroups <- max(lav$group)
+    ngroups <- lav_partable_ngroups(lav)
 
     lav_one_group <- function(lav) {
 

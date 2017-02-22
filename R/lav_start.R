@@ -97,7 +97,7 @@ lav_start <- function(start.method    = "default",
     }
 
     # 2. residual lv variances for latent variables
-    lv.names    <- vnames(lavpartable, "lv") # all groups
+    lv.names    <- vnames(lavpartable, "lv") # all blocks
     lv.var.idx <- which(lavpartable$op == "~~"        &
                         lavpartable$lhs %in% lv.names &
                         lavpartable$lhs == lavpartable$rhs)
@@ -109,31 +109,31 @@ lav_start <- function(start.method    = "default",
     start[delta.idx] <- 1.0
 
 
-    # group-specific settings
-    ngroups <- lavsamplestats@ngroups
+    # block-specific settings
+    nblocks <- lav_partable_nblocks(lavpartable)
 
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
 
-        # info from user model for this group
+        # info from user model for this block
         if(conditional.x) {
-            ov.names     <- vnames(lavpartable, "ov.nox", group=g)
+            ov.names     <- vnames(lavpartable, "ov.nox", block = g)
         } else {
-            ov.names     <- vnames(lavpartable, "ov", group=g)
+            ov.names     <- vnames(lavpartable, "ov", block = g)
         }
         if(categorical) {
-            ov.names.num <- vnames(lavpartable, "ov.num", group=g)
-            ov.names.ord <- vnames(lavpartable, "ov.ord", group=g)
+            ov.names.num <- vnames(lavpartable, "ov.num", block = g)
+            ov.names.ord <- vnames(lavpartable, "ov.ord", block = g)
         } else {
             ov.names.num <- ov.names
         }
-        lv.names    <- vnames(lavpartable, "lv",   group=g)
-        ov.names.x  <- vnames(lavpartable, "ov.x", group=g)
+        lv.names    <- vnames(lavpartable, "lv",   block = g)
+        ov.names.x  <- vnames(lavpartable, "ov.x", block = g)
 
         # g1) factor loadings
         if(start.initial %in% c("lavaan", "mplus") && 
            model.type %in% c("sem", "cfa") &&
            #!categorical &&
-           sum( lavpartable$ustart[ lavpartable$op == "=~" & lavpartable$group == g],
+           sum( lavpartable$ustart[ lavpartable$op == "=~" & lavpartable$block == g],
                                    na.rm=TRUE) == length(lv.names) ) {
             # only if all latent variables have a reference item,
             # we use the fabin3 estimator (2sls) of Hagglund (1982)
@@ -142,11 +142,11 @@ lav_start <- function(start.method    = "default",
             # coefficient (y=marker, x=2nd indicator)
             for(f in lv.names) {
                 free.idx <- which( lavpartable$lhs == f & lavpartable$op == "=~"
-                                                 & lavpartable$group == g
+                                                 & lavpartable$block == g
                                                  & lavpartable$free > 0L)
                  
                 user.idx <- which( lavpartable$lhs == f & lavpartable$op == "=~" 
-                                                 & lavpartable$group == g )
+                                                 & lavpartable$block == g )
                 # no second order
                 if(any(lavpartable$rhs[user.idx] %in% lv.names)) next
 
@@ -194,7 +194,7 @@ lav_start <- function(start.method    = "default",
 
         if(model.type == "unrestricted") {
            # fill in 'covariances' from lavsamplestats
-            cov.idx <- which(lavpartable$group == g             &
+            cov.idx <- which(lavpartable$block == g             &
                              lavpartable$op    == "~~"          &
                              lavpartable$lhs != lavpartable$rhs)
             lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
@@ -203,7 +203,7 @@ lav_start <- function(start.method    = "default",
         }
 
         # 2g) residual ov variances (including exo, to be overriden)
-        ov.var.idx <- which(lavpartable$group == g             & 
+        ov.var.idx <- which(lavpartable$block == g             & 
                             lavpartable$op    == "~~"          & 
                             lavpartable$lhs %in% ov.names.num  & 
                             lavpartable$lhs == lavpartable$rhs)
@@ -232,7 +232,7 @@ lav_start <- function(start.method    = "default",
 
         # variances of ordinal variables - set to 1.0     
         if(categorical) {
-            ov.var.ord.idx <- which(lavpartable$group == g            &
+            ov.var.ord.idx <- which(lavpartable$block == g            &
                                     lavpartable$op    == "~~"         &
                                     lavpartable$lhs %in% ov.names.ord &
                                     lavpartable$lhs == lavpartable$rhs)
@@ -240,7 +240,7 @@ lav_start <- function(start.method    = "default",
         }
 
         # 3g) intercepts/means
-        ov.int.idx <- which(lavpartable$group == g         &
+        ov.int.idx <- which(lavpartable$block == g         &
                             lavpartable$op == "~1"         & 
                             lavpartable$lhs %in% ov.names)
         sample.int.idx <- match(lavpartable$lhs[ov.int.idx], ov.names)
@@ -255,14 +255,14 @@ lav_start <- function(start.method    = "default",
         }
         
         # 4g) thresholds
-        th.idx <- which(lavpartable$group == g & lavpartable$op == "|")
+        th.idx <- which(lavpartable$block == g & lavpartable$op == "|")
         if(length(th.idx) > 0L) {
             th.names.lavpartable <- paste(lavpartable$lhs[th.idx], "|",
                                        lavpartable$rhs[th.idx], sep="")
             th.names.sample   <- 
                 lavsamplestats@th.names[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
             # th.names.sample should identical to
-            # vnames(lavpartable, "th", group = g)
+            # vnames(lavpartable, "th", block = g)
             if(conditional.x) {
                 th.values <- 
                  lavsamplestats@res.th[[g]][lavsamplestats@th.idx[[g]] > 0L]
@@ -276,7 +276,7 @@ lav_start <- function(start.method    = "default",
         
         # 5g) exogenous `fixed.x' covariates
         if(!conditional.x && length(ov.names.x) > 0) {
-            exo.idx <- which(lavpartable$group == g          &
+            exo.idx <- which(lavpartable$block == g          &
                              lavpartable$op == "~~"          & 
                              lavpartable$lhs %in% ov.names.x &
                              lavpartable$rhs %in% ov.names.x)
@@ -297,22 +297,22 @@ lav_start <- function(start.method    = "default",
         }
 
         # 6b. exogenous lv variances if single indicator -- new in 0.5-21
-        lv.x <- vnames(lavpartable, "lv.x", group = g)
+        lv.x <- vnames(lavpartable, "lv.x", block = g)
         if(length(lv.x) > 0L) {
             for(ll in lv.x) {
                 ind.idx <- which(lavpartable$op == "=~" &
                                  lavpartable$lhs == ll,
-                                 lavpartable$group == g)
+                                 lavpartable$block == g)
                 if(length(ind.idx) == 1L) {
                     single.ind <- lavpartable$rhs[ind.idx]
                     single.fvar.idx <- which(lavpartable$op == "~~" &
                                              lavpartable$lhs == ll &
                                              lavpartable$rhs == ll &
-                                             lavpartable$group == g)
+                                             lavpartable$block == g)
                     single.var.idx <- which(lavpartable$op == "~~" &
                                             lavpartable$lhs == single.ind &
                                             lavpartable$rhs == single.ind &
-                                            lavpartable$group == g)
+                                            lavpartable$block == g)
                     # user-defined residual variance
                     single.var <- lavpartable$ustart[single.var.idx]
                     if(is.na(single.var)) {
@@ -343,6 +343,7 @@ lav_start <- function(start.method    = "default",
     group.idx <- which(lavpartable$lhs == "group" &
                        lavpartable$op  == "%")
     if(length(group.idx) > 0L) {
+        ngroups <- length(group.idx)
         #prop <- rep(1/ngroups, ngroups)
         # use last group as reference
         #start[group.idx] <- log(prop/prop[ngroups])
@@ -370,11 +371,11 @@ lav_start <- function(start.method    = "default",
     # we only look at the 'est' column for now
     if(!is.null(start.user)) {
 
-        if(is.null(lavpartable$group)) {
-            lavpartable$group <- rep(1L, length(lavpartable$lhs))
+        if(is.null(lavpartable$block)) {
+            lavpartable$block <- rep(1L, length(lavpartable$lhs))
         }
-        if(is.null(start.user$group)) {
-            start.user$group <- rep(1L, length(start.user$lhs))
+        if(is.null(start.user$block)) {
+            start.user$block <- rep(1L, length(start.user$lhs))
         }
 
         # FIXME: avoid for loop!!!
@@ -383,12 +384,12 @@ lav_start <- function(start.method    = "default",
             lhs <- lavpartable$lhs[i]
              op <- lavpartable$op[i] 
             rhs <- lavpartable$rhs[i]
-            grp <- lavpartable$group[i]
+            grp <- lavpartable$block[i]
 
             start.user.idx <- which(start.user$lhs == lhs &
                                     start.user$op  ==  op &
                                     start.user$rhs == rhs &
-                                    start.user$group == grp)
+                                    start.user$block == grp)
             if(length(start.user.idx) == 1L && 
                is.finite(start.user$est[start.user.idx])) {
                 start[i] <- start.user$est[start.user.idx]
@@ -414,17 +415,13 @@ lav_start <- function(start.method    = "default",
 # sanity check: (user-specified) variances smaller than covariances
 lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
 
-    if(is.null(lavpartable$group)) {
-        ngroups <- 1L
-    } else {
-        ngroups <- max(lavpartable$group)
-    }
+    nblocks <- lav_partable_nblocks(lavpartable)
 
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
 
         # collect all non-zero covariances
         cov.idx <- which(lavpartable$op == "~~" &
-                         lavpartable$group == g &
+                         lavpartable$block == g &
                          lavpartable$lhs != lavpartable$rhs &
                          !lavpartable$exo &
                          start != 0)
@@ -439,21 +436,21 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
             var.rhs <- lavpartable$rhs[this.cov.idx]
 
             var.lhs.idx <- which(lavpartable$op == "~~" &
-                                 lavpartable$group == g &
+                                 lavpartable$block == g &
                                  lavpartable$lhs == var.lhs &
                                  lavpartable$lhs == lavpartable$rhs)
 
             var.rhs.idx <- which(lavpartable$op == "~~" &
-                                 lavpartable$group == g &
+                                 lavpartable$block == g &
                                  lavpartable$lhs == var.rhs &
                                  lavpartable$lhs == lavpartable$rhs)
 
             var.lhs.value <- start[var.lhs.idx]
             var.rhs.value <- start[var.rhs.idx]
 
-            group.txt <- ""
-            if(ngroups > 1L) {
-                group.txt <- paste(" [in group ", g, "]", sep = "")
+            block.txt <- ""
+            if(nblocks > 1L) {
+                block.txt <- paste(" [in block ", g, "]", sep = "")
             }
  
             # check for zero variances
@@ -465,11 +462,11 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 } else if(lavpartable$free[this.cov.idx] > 0L) {
                     warning(
   "lavaan WARNING: non-zero covariance element set to zero, due to fixed-to-zero variances\n",
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                     start[this.cov.idx] <- 0
                 } else {
                     stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 }
                 next
             }
@@ -490,14 +487,14 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 # force simple values
                 warning(
   "lavaan WARNING: starting values imply NaN for a correlation value;\n",
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)    
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)    
                 start[var.lhs.idx] <- 1
                 start[var.rhs.idx] <- 1
                 start[this.cov.idx] <- 0
             } else if(abs(COR) > 1) {
                 warning(
   "lavaan WARNING: starting values imply a correlation larger than 1;\n", 
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 
                 # three ways to fix it: rescale cov12, var1 or var2
 
@@ -523,7 +520,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 # nothing? abort
                 } else {
                     stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 }
             } # COR > 1
         } # cov.idx

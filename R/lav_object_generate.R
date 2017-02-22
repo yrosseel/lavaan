@@ -107,7 +107,7 @@ lav_object_extended <- function(object, add = NULL,
                                 do.fit = FALSE) {
 
     # partable original model
-    partable <- object@ParTable[c("lhs","op","rhs","group","free",
+    partable <- object@ParTable[c("lhs","op","rhs","block","free",
                                   "exo","label","plabel")] # do we need 'exo'?
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))
@@ -130,8 +130,9 @@ lav_object_extended <- function(object, add = NULL,
                   !is.null(add$rhs))
         ADD <- add
     } else if(is.character(add)) {
-        ADD <- lavaanify(add, ngroups = object@Data@ngroups)
-        ADD <- ADD[,c("lhs","op","rhs","group","user","label")]
+        ngroups <- lav_partable_ngroups(partable)
+        ADD <- lavaanify(add, ngroups = ngroups)
+        ADD <- ADD[,c("lhs","op","rhs","block","user","label")]
         remove.idx <- which(ADD$user == 0)
         if(length(remove.idx) > 0L) {
             ADD <- ADD[-remove.idx,]
