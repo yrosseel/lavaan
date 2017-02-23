@@ -441,7 +441,7 @@ lavInspect.lavaan <- function(object,
 # been save somewhere)
 lav_object_inspect_est <- function(object) {
     
-    if(class(object) == "lavaan") {
+    if(inherits(object, "lavaan")) {
         # from 0.5-19, they are in the partable
         if(!is.null(object@ParTable$est)) {
             OUT <- object@ParTable$est
