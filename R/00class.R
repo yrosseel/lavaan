@@ -9,8 +9,8 @@ setClass("lavData",
         data.type="character",     # "full", "moment" or "none"
         ngroups="integer",         # number of groups
         group="character",         # group variable
+        nlevels="integer",         # number of levels
         cluster="character",       # cluster variable(s)
-        block.label="character",   # block labels
         group.label="character",   # group labels
         level.label="character",   # level labels
         std.ov="logical",          # standardize observed variables?
@@ -27,6 +27,7 @@ setClass("lavData",
         Mp="list",                 # if not complete, missing patterns
                                    # we need this here, to get nobs right!
         Rp="list",                 # response patterns (categorical only)
+        Lp="list",                 # level patterns
         eXo="list",                # local copy exo only
         X="list"                   # local copy
     )
@@ -35,7 +36,6 @@ setClass("lavData",
 
 setClass("lavSampleStats",         # sample moments
     representation(
-        CAT="list",
         var="list",                # observed variances (per group)
         cov="list",                # observed var/cov matrix (per group)
         mean="list",               # observed mean vector (per group)
@@ -74,6 +74,8 @@ setClass("lavSampleStats",         # sample moments
         missing.flag="logical",    # missing patterns?
         missing="list",            # missingness information
         missing.h1="list",         # h1 model
+
+        YLp = "list",              # cluster/level information
 
         zero.cell.tables="list"    # bivariate tables with empty cells
     )

@@ -81,6 +81,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # clusters
                 cluster            = NULL,
+                level.label        = NULL,
 
                 # estimation
                 estimator              = "default",

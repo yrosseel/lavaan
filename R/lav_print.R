@@ -146,13 +146,26 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             }
         }
     }
-    
+
     # number of groups
     if(is.null(x$group)) {
         ngroups <- 1L
         x$group <- rep(1L, length(x$lhs))
     } else {
         ngroups <- lav_partable_ngroups(x)
+    }
+
+    # number of levels
+    if(is.null(x$level)) {
+        nlevels <- 1L
+        x$level <- rep(1L, length(x$lhs))
+    } else {
+        nlevels <- lav_partable_nlevels(x)
+    }
+
+    # block column
+    if(is.null(x$block)) {
+        x$block <- rep(1L, length(x$lhs))
     }
 
     # round to 3 digits after the decimal point
@@ -166,8 +179,9 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
            }),
            stringsAsFactors = FALSE)
 
-    # always remove group/op/rhs/label/exo columns
+    # always remove /block/level/group/op/rhs/label/exo columns
     y$op <- y$group <- y$rhs <- y$label <- y$exo <- NULL
+    y$block <- y$level <- NULL
 
     # if standardized, remove std.nox column (space reasons only)
     y$std.nox <- NULL
@@ -283,166 +297,177 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
     }
 
-    # first the group-specific sections
+    b <- 0L
+    # group-specific sections
     for(g in 1:ngroups) {
 
+        # block number
+        b <- b + 1L
+
         # ov/lv names
-        ov.names <- lavNames(x, "ov", group = g)
-        lv.names <- lavNames(x, "lv", group = g)
+        ov.names <- lavNames(x, "ov", block = b)
+        lv.names <- lavNames(x, "lv", block = b)
 
         # group header
         if(ngroups > 1L) {
             group.label <- attr(x, "group.label")
-            #if(g > 1L) { 
-                cat("\n\n")
-            #} else {
-            #    cat("\n")
-            #}
+            cat("\n\n")
             cat("Group ", g, " [", group.label[g], "]:\n", sep="")
         }
 
-        # group-specific sections
-        for(s in GSECTIONS) {
-            if(s == "Latent Variables") {
-                row.idx <- which( x$op == "=~" & !x$lhs %in% ov.names & 
-                                  x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "Composites") {
-                row.idx <- which( x$op == "<~" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "Regressions") {
-                row.idx <- which( x$op == "~" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "Covariances") {
-                row.idx <- which(x$op == "~~" & x$lhs != x$rhs & !x$exo &
-                                 x$group == g)
-                if(length(row.idx) == 0L) next
-                # make distinction between residual and plain
-                y.names <- unique( c(lavNames(x, "eqs.y"),
-                                     lavNames(x, "ov.ind")) )
-                PREFIX <- rep("", length(row.idx))
-                PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
-                                           PREFIX = PREFIX)
-                #m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "Intercepts") {
-                row.idx <- which(x$op == "~1" & !x$exo & x$group == g)
-                if(length(row.idx) == 0L) next
-                # make distinction between intercepts and means
-                y.names <- unique( c(lavNames(x, "eqs.y"),
-                                     lavNames(x, "ov.ind")) )
-                PREFIX <- rep("", length(row.idx))
-                PREFIX[ x$lhs[row.idx] %in% y.names ] <- "  ."
-                m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx],
-                                           PREFIX = PREFIX)
-                #m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx])
-            } else if(s == "Thresholds") {
-                row.idx <- which(x$op == "|" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(paste(x$lhs[row.idx], "|", 
-                    x$rhs[row.idx], sep=""), x$label[row.idx])
-            } else if(s == "Variances") {
-                row.idx <- which(x$op == "~~" & x$lhs == x$rhs & !x$exo &
-                                 x$group == g)
-                if(length(row.idx) == 0L) next
-                # make distinction between residual and plain
-                y.names <- unique( c(lavNames(x, "eqs.y"),
-                                     lavNames(x, "ov.ind")) )
-                PREFIX <- rep("", length(row.idx))
-                PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
-                                           PREFIX = PREFIX)
-            } else if(s == "Scales y*") {
-                row.idx <- which(x$op == "~*~" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "Group Weight") {
-                row.idx <- which(x$lhs == "group" & x$op == "%" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else if(s == "R-Square") {
-                row.idx <- which(x$op == "r2" & x$group == g)
-                if(length(row.idx) == 0L) next
-                m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
-            } else {
-                row.idx <- integer(0L)
+        for(l in 1:nlevels) {
+   
+            # level header
+            if(nlevels > 1L) {
+                level.label <- attr(x, "level.label")
+                cat("\n\n")
+                cat("Level ", l, " [", level.label[l], "]:\n", sep="")
             }
 
-            # do we need special formatting for this section?
-            # three types:
-            #  - regular (nothing to do, except row/colnames)
-            #  - R-square
-            #  - Latent Variables (and Composites), Regressions and Covariances
-            #    'bundle' the output per lhs element
-            
-            # bundling
-            if(s %in% c("Latent Variables", "Composites", 
-                        "Regressions", "Covariances")) {
-                nel <- length(row.idx)
-                M <- matrix("", nrow = nel*2, ncol = ncol(m))
-                colnames(M) <- colnames(m)
-                rownames(M) <- rep("", NROW(M))
-                #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
-                LHS <- paste(x$lhs[row.idx], x$op[row.idx])
-                lhs.idx <- seq(1, nel*2L, 2L)
-                rhs.idx <- seq(1, nel*2L, 2L) + 1L
-                if(s == "Covariances") {
+            # group-specific sections
+            for(s in GSECTIONS) {
+                if(s == "Latent Variables") {
+                        row.idx <- which( x$op == "=~" & !x$lhs %in% ov.names & 
+                                      x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "Composites") {
+                    row.idx <- which( x$op == "<~" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "Regressions") {
+                    row.idx <- which( x$op == "~" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "Covariances") {
+                    row.idx <- which(x$op == "~~" & x$lhs != x$rhs & !x$exo &
+                                     x$block == b)
+                    if(length(row.idx) == 0L) next
                     # make distinction between residual and plain
                     y.names <- unique( c(lavNames(x, "eqs.y"),
                                          lavNames(x, "ov.ind")) )
                     PREFIX <- rep("", length(row.idx))
-                    PREFIX[ x$lhs[row.idx] %in% y.names ] <- "."
+                    PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
+                                               PREFIX = PREFIX)
+                    #m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "Intercepts") {
+                    row.idx <- which(x$op == "~1" & !x$exo & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    # make distinction between intercepts and means
+                    y.names <- unique( c(lavNames(x, "eqs.y"),
+                                         lavNames(x, "ov.ind")) )
+                    PREFIX <- rep("", length(row.idx))
+                    PREFIX[ x$lhs[row.idx] %in% y.names ] <- "  ."
+                        m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx],
+                                               PREFIX = PREFIX)
+                    #m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx])
+                } else if(s == "Thresholds") {
+                    row.idx <- which(x$op == "|" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(paste(x$lhs[row.idx], "|", 
+                        x$rhs[row.idx], sep=""), x$label[row.idx])
+                } else if(s == "Variances") {
+                    row.idx <- which(x$op == "~~" & x$lhs == x$rhs & !x$exo &
+                                     x$block == b)
+                    if(length(row.idx) == 0L) next
+                    # make distinction between residual and plain
+                    y.names <- unique( c(lavNames(x, "eqs.y"),
+                                         lavNames(x, "ov.ind")) )
+                    PREFIX <- rep("", length(row.idx))
+                    PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
+                                               PREFIX = PREFIX)
+                } else if(s == "Scales y*") {
+                    row.idx <- which(x$op == "~*~" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "Group Weight") {
+                        row.idx <- which(x$lhs == "group" & x$op == "%" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+                } else if(s == "R-Square") {
+                        row.idx <- which(x$op == "r2" & x$block == b)
+                    if(length(row.idx) == 0L) next
+                    m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
                 } else {
-                    PREFIX <- rep("", length(LHS))
+                        row.idx <- integer(0L)
                 }
-                M[lhs.idx, 1] <- sprintf("%1s%-15s", PREFIX, LHS)
-                M[rhs.idx,  ] <- m[row.idx,]
-                # avoid duplicated LHS labels
-                if(nel > 1L) {
-                    del.idx <- integer(0)
-                    old.lhs <- ""
-                    for(i in 1:nel) {
-                        if(LHS[i] == old.lhs) {
-                            del.idx <- c(del.idx, lhs.idx[i])
+    
+                # do we need special formatting for this section?
+                # three types:
+                #  - regular (nothing to do, except row/colnames)
+                #  - R-square
+                #  - Latent Variables (and Composites), Regressions and Covariances
+                #    'bundle' the output per lhs element
+                
+                # bundling
+                if(s %in% c("Latent Variables", "Composites", 
+                            "Regressions", "Covariances")) {
+                    nel <- length(row.idx)
+                    M <- matrix("", nrow = nel*2, ncol = ncol(m))
+                    colnames(M) <- colnames(m)
+                    rownames(M) <- rep("", NROW(M))
+                    #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
+                    LHS <- paste(x$lhs[row.idx], x$op[row.idx])
+                    lhs.idx <- seq(1, nel*2L, 2L)
+                    rhs.idx <- seq(1, nel*2L, 2L) + 1L
+                    if(s == "Covariances") {
+                        # make distinction between residual and plain
+                        y.names <- unique( c(lavNames(x, "eqs.y"),
+                                             lavNames(x, "ov.ind")) )
+                            PREFIX <- rep("", length(row.idx))
+                        PREFIX[ x$lhs[row.idx] %in% y.names ] <- "."
+                    } else {
+                        PREFIX <- rep("", length(LHS))
+                    }
+                    M[lhs.idx, 1] <- sprintf("%1s%-15s", PREFIX, LHS)
+                    M[rhs.idx,  ] <- m[row.idx,]
+                    # avoid duplicated LHS labels
+                        if(nel > 1L) {
+                        del.idx <- integer(0)
+                        old.lhs <- ""
+                        for(i in 1:nel) {
+                            if(LHS[i] == old.lhs) {
+                                del.idx <- c(del.idx, lhs.idx[i])
+                            }
+                            old.lhs <- LHS[i]
                         }
-                        old.lhs <- LHS[i]
+                            if(length(del.idx) > 0L) {
+                            M <- M[-del.idx,,drop=FALSE]
+                        }
                     }
-                    if(length(del.idx) > 0L) {
-                        M <- M[-del.idx,,drop=FALSE]
-                    }
+                    cat("\n", s, ":\n", sep = "")
+                        #cat("\n")
+                    print(M, quote = FALSE)
+    
+                # R-square
+                } else if(s == "R-Square") {
+                    M <- m[row.idx,1:2,drop=FALSE]
+                    colnames(M) <- colnames(m)[1:2]
+                    rownames(M) <- rep("", NROW(M))
+                    #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
+                    cat("\n", s, ":\n", sep = "")
+                    #cat("\n")
+                    print(M, quote = FALSE)
+    
+                # Regular
+                } else {
+                    #M <- rbind(matrix("", nrow = 1L, ncol = ncol(m)),
+                    #           m[row.idx,])
+                    M <- m[row.idx,,drop=FALSE]
+                    colnames(M) <- colnames(m)
+                    rownames(M) <- rep("", NROW(M))
+                    #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
+                    cat("\n", s, ":\n", sep = "")
+                    #cat("\n")
+                    print(M, quote = FALSE)
                 }
-                cat("\n", s, ":\n", sep = "")
-                #cat("\n")
-                print(M, quote = FALSE)
-
-            # R-square
-            } else if(s == "R-Square") {
-                M <- m[row.idx,1:2,drop=FALSE]
-                colnames(M) <- colnames(m)[1:2]
-                rownames(M) <- rep("", NROW(M))
-                #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
-                cat("\n", s, ":\n", sep = "")
-                #cat("\n")
-                print(M, quote = FALSE)
-
-            # Regular
-            } else {
-                #M <- rbind(matrix("", nrow = 1L, ncol = ncol(m)),
-                #           m[row.idx,])
-                M <- m[row.idx,,drop=FALSE]
-                colnames(M) <- colnames(m)
-                rownames(M) <- rep("", NROW(M))
-                #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
-                cat("\n", s, ":\n", sep = "")
-                #cat("\n")
-                print(M, quote = FALSE)
             }
-        }
+    
+        } # groups
 
-    }    
+    } # levels    
 
     # asections
     for(s in ASECTIONS) {

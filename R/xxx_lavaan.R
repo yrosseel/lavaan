@@ -137,24 +137,31 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
-    # blocks?
-    if(sum(FLAT$op == ":") == 0L) { 
+    # group blocks?
+    if(any(FLAT$op == ":" & FLAT$lhs == "group")) {
+        # here, we only need to figure out:
+        # - ngroups
+        # - ov's per group
+        # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
+        group.idx <- which(FLAT$op == ":" & FLAT$lhs == "group")
+        tmp.group.values <- unique(FLAT$rhs[group.idx])
+        tmp.ngroups <- length(tmp.group.values)
+        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups)
+        ov.names <- ov.names.y <- ov.names.x <- vector("list", 
+                                                       length = tmp.ngroups)
+        for(g in seq_len(tmp.ngroups)) {
+            ov.names[[g]]   <- unique(unlist(lav_partable_vnames(tmp.lav, 
+                                type = "ov", group = tmp.group.values[g])))
+            ov.names.y[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav, 
+                                type = "ov.nox", group = tmp.group.values[g])))
+            ov.names.x[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav, 
+                                type = "ov.x", group = tmp.group.values[g])))
+        }
+    } else {
         # no blocks: same set of variables per group/block
-        ov.names   <- vnames(FLAT, type="ov")
-        ov.names.y <- vnames(FLAT, type="ov.nox")
-        ov.names.x <- vnames(FLAT, type="ov.x")
-    } else { 
-        # possibly different set of variables per group/block
-        # FIXME: for now (0.5), we only 'recognize' groups
-
-        # how many blocks?
-        n.blocks <- max(FLAT$block, na.rm = TRUE)
-        ov.names   <- lapply(1:n.blocks,
-                          function(x) vnames(FLAT, type="ov",     block = x))
-        ov.names.y <- lapply(1:n.blocks,
-                          function(x) vnames(FLAT, type="ov.nox", block = x))
-        ov.names.x <- lapply(1:n.blocks,
-                          function(x) vnames(FLAT, type="ov.x",   block = x))
+        ov.names   <- lav_partable_vnames(FLAT, type = "ov")
+        ov.names.y <- lav_partable_vnames(FLAT, type = "ov.nox")
+        ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
     }
 
     # sanity check ordered argument (just in case, add lhs variables names)
@@ -320,7 +327,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         print(str(lavdata))
     }
 
-
+    # if lavdata@nlevels > 1L, adapt start option (for now)
+    # until we figure out how to handle groups+blocks
+    if(lavdata@nlevels > 1L) {
+        lavoptions$start <- "simple"
+    }
+    
 
 
 
@@ -389,7 +401,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # complete table
         lavpartable <- lav_partable_complete(lavpartable)
     } else {
-        stop("lavaan ERROR: model [type = ", class(model), 
+        stop("lavaan ERROR: model [type = ", class(model),
              "] is not of type character or list")
     }
     if(lavoptions$debug) {

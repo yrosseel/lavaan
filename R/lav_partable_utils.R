@@ -12,6 +12,20 @@ lav_partable_nblocks <- function(partable) {
     nblocks
 }
 
+# what are the block values (not necessarly 1..nb)
+lav_partable_block_values <- function(partable) {
+
+    if(is.null(partable$block)) {
+        block.values <- 1L
+    } else {
+        # always integers
+        tmp <- partable$block[ partable$block > 0L ] # non-zero only
+        block.values <- unique(na.omit(tmp)) # could be, eg, '2' only
+    }
+
+    block.values
+}
+
 # guess number of groups from a partable
 lav_partable_ngroups <- function(partable) {
 

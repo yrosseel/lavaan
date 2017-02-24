@@ -86,8 +86,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     nblocks <- lav_partable_nblocks(partable)
 
     # per default, use full partable
-    tmp <- partable$block[ partable$block > 0L ] # non-zero only
-    block.select <- unique(na.omit(tmp)) # could be, eg, '2' only
+    block.select <- lav_partable_block_values(partable)
 
     # check for ... selection argument(s)
     ndotdotdot <- length(dotdotdot)

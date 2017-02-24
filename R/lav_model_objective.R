@@ -94,6 +94,7 @@ lav_model_objective <- function(lavmodel       = NULL,
     fx <- 0.0
     fx.group <- numeric( lavsamplestats@ngroups )
     logl.group <- rep(as.numeric(NA), lavsamplestats@ngroups)
+
     for(g in 1:lavsamplestats@ngroups) {
 
         # incomplete data and fiml?
@@ -112,7 +113,9 @@ lav_model_objective <- function(lavmodel       = NULL,
         } else if(estimator == "ML" || estimator == "Bayes") {
         # complete data
             # ML and friends
-            if(conditional.x) {
+            if(lavdata@nlevels > 1L) {
+                group.fx <- 0
+            } else if(conditional.x) {
                 group.fx <- estimator.ML_res(
                     Sigma.hat        = Sigma.hat[[g]],
                     Mu.hat           = Mu.hat[[g]],
@@ -216,7 +219,9 @@ lav_model_objective <- function(lavmodel       = NULL,
         }
 
         if(estimator == "ML" || estimator == "REML" || estimator == "NTRLS") {
-            group.fx <- 0.5 * group.fx ## FIXME
+            if(lavdata@nlevels == 1L) {
+                group.fx <- 0.5 * group.fx ## FIXME
+            }
         } else if(estimator == "PML" || estimator == "FML" || 
                   estimator == "MML") {
             # do nothing
@@ -288,4 +293,5 @@ lav_model_objective <- function(lavmodel       = NULL,
 
     fx
 }
+
 
