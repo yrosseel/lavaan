@@ -7,7 +7,8 @@ Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, 
                      zstat = TRUE, pvalue = TRUE, remove.eq = TRUE, 
-                     remove.ineq = TRUE, remove.def = FALSE)
+                     remove.ineq = TRUE, remove.def = FALSE,
+                     GLIST = NULL, est = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -32,6 +33,11 @@ containing equality constraints, if any.}
 rows containing inequality constraints, if any.}
 \item{remove.def}{Logical. If TRUE, filter the ouitput by removing all
 rows containing parameter definitions, if any.}
+\item{GLIST}{List of model matrices. If provided, they will be used
+instead of the GLIST inside the object@Model slot.}
+\item{est}{Numeric. Parameter values (as in the `est' column of a
+parameter table). If provided, they will be used instead of 
+the parameters that can be extract from object.}
 }
 \value{
   A data.frame containing standardized model parameters.

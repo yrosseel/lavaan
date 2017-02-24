@@ -356,7 +356,9 @@ standardizedSolution <- standardizedsolution <- function(object,
                                                          pvalue = TRUE,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
-                                                         remove.def = FALSE) {
+                                                         remove.def = FALSE,
+                                                         GLIST = NULL,
+                                                         est   = NULL) {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
@@ -383,11 +385,11 @@ standardizedSolution <- standardizedsolution <- function(object,
 
     # add std and std.all columns
     if(type == "std.lv") {
-        LIST$est.std     <- standardize.est.lv(object)
+        LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST)
     } else if(type == "std.all") {
-        LIST$est.std <- standardize.est.all(object)
+        LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST)
     } else if(type == "std.nox") {
-        LIST$est.std <- standardize.est.all.nox(object)
+        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST)
     }
 
     if(object@Options$se != "none" && se) {
