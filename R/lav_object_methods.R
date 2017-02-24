@@ -356,7 +356,9 @@ standardizedSolution <- standardizedsolution <- function(object,
                                                          pvalue = TRUE,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
-                                                         remove.def = FALSE) {
+                                                         remove.def = FALSE,
+                                                         GLIST = NULL,
+                                                         est   = NULL) {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
@@ -383,11 +385,11 @@ standardizedSolution <- standardizedsolution <- function(object,
 
     # add std and std.all columns
     if(type == "std.lv") {
-        LIST$est.std     <- standardize.est.lv(object)
+        LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST)
     } else if(type == "std.all") {
-        LIST$est.std <- standardize.est.all(object)
+        LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST)
     } else if(type == "std.nox") {
-        LIST$est.std <- standardize.est.all.nox(object)
+        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST)
     }
 
     if(object@Options$se != "none" && se) {
@@ -523,6 +525,16 @@ parameterEstimates <- parameterestimates <- function(object,
     LIST <- PARTABLE[,c("lhs", "op", "rhs")]
     if(!is.null(PARTABLE$user)) {
         LIST$user <- PARTABLE$user
+    }
+    if(!is.null(PARTABLE$block)) {
+        LIST$block <- PARTABLE$block
+    } else {
+        LIST$block <- rep(1L, length(LIST$lhs))
+    }
+    if(!is.null(PARTABLE$level)) {
+        LIST$level <- PARTABLE$level
+    } else {
+        LIST$level <- rep(1L, length(LIST$lhs))
     }
     if(!is.null(PARTABLE$group)) {
         LIST$group <- PARTABLE$group
@@ -766,8 +778,17 @@ parameterEstimates <- parameterestimates <- function(object,
         LIST$fmi <- 1-(SE.step2*SE.step2/(SE.orig*SE.orig))
     }
 
+    # if single level, remove level column
+    if(object@Data@nlevels == 1L) LIST$level <- NULL
+
     # if single group, remove group column
     if(object@Data@ngroups == 1L) LIST$group <- NULL
+
+    # if single everything, remove block column
+    if(object@Data@nlevels == 1L &&
+       object@Data@ngroups == 1L) {
+        LIST$block <- NULL
+    }
 
     # if no user-defined labels, remove label column
     if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
@@ -809,6 +830,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "information") <- object@Options$information
         attr(LIST, "se") <- object@Options$se
         attr(LIST, "group.label") <- object@Data@group.label
+        attr(LIST, "level.label") <- object@Data@level.label
         attr(LIST, "bootstrap") <- object@Options$bootstrap
         attr(LIST, "bootstrap.successful") <- bootstrap.successful
         attr(LIST, "missing") <- object@Options$missing

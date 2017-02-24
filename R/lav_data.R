@@ -9,6 +9,11 @@
 #
 # initial version: YR 14 April 2012
 
+# YR 23 feb 2017: blocks/levels/groups, but everything is group-based!
+
+# FIXME: if nlevels > 1L, and ngroups > 1L, we should check that
+# group is at the upper-level
+
 # extract the data we need for this particular model
 lavData <- function(data          = NULL,          # data.frame
                     group         = NULL,          # multiple groups?
@@ -26,27 +31,36 @@ lavData <- function(data          = NULL,          # data.frame
 {
 
     # get info from lavoptions
+
+    # group.labels
     group.label <- lavoptions$group.label
     if(is.null(group.label)) {
         group.label <- character(0L)
     }
-    std.ov      <- lavoptions$std.ov
+
+    # level.labels
+    level.label <- lavoptions$level.label
+    if(is.null(level.label)) {
+        level.label <- character(0L)
+    }
+
+    # std.ov?
+    std.ov <- lavoptions$std.ov
     if(is.null(std.ov)) {
         std.ov <- FALSE
     }
-    missing     <- lavoptions$missing
+
+    # missing?
+    missing <- lavoptions$missing
     if(is.null(missing) || missing == "default") {
         missing <- "listwise"
     }
-    warn        <- lavoptions$warn
+    
+    # warn?
+    warn <- lavoptions$warn
     if(is.null(warn)) {
         warn <- TRUE
     }
-
-    # block.label, level.label
-    block.label <- group.label   # for now
-    level.label <- character(0L) # for now
-    
 
     # four scenarios:
     #    0) data is already a lavData object: do nothing
@@ -88,7 +102,6 @@ lavData <- function(data          = NULL,          # data.frame
         lavData <- lav_data_full(data              = data,
                                  group             = group,
                                  cluster           = cluster,
-                                 block.label       = block.label,
                                  group.label       = group.label,
                                  level.label       = level.label,
                                  ov.names          = ov.names,
@@ -104,17 +117,13 @@ lavData <- function(data          = NULL,          # data.frame
     
     # 2) sample moments
     if(is.null(data) && !is.null(sample.cov)) {
+
+        # for now: no levels!!
+        nlevels <- 1L
         
         # we also need the number of observations (per group)
         if(is.null(sample.nobs))
             stop("lavaan ERROR: please specify number of observations")
-
-        # if meanstructure=TRUE, we need sample.mean
-        #if(meanstructure == TRUE && is.null(sample.mean))
-        #    stop("lavaan ERROR: please provide sample.mean if meanstructure=TRUE")
-        # if group.equal contains "intercepts", we need sample.mean
-        #if("intercepts" %in% group.equal && is.null(sample.mean))
-        #    stop("lavaan ERROR: please provide sample.mean if group.equal contains \"intercepts\"")
 
         # list?
         if(is.list(sample.cov)) {
@@ -150,7 +159,7 @@ lavData <- function(data          = NULL,          # data.frame
             ov.names <- lapply(sample.cov, row.names)            
         } else if (!is.list(ov.names)) {
             # duplicate ov.names for each group
-            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
+            tmp <- ov.names; ov.names <- vector("list", length = ngroups)
             ov.names[1:ngroups] <- list(tmp)
         } else {
             if (length(ov.names) != ngroups)
@@ -161,7 +170,7 @@ lavData <- function(data          = NULL,          # data.frame
 
         # handle ov.names.x
         if(!is.list(ov.names.x)) {
-            tmp <- ov.names.x; ov.names.x <- vector("list", length=ngroups)
+            tmp <- ov.names.x; ov.names.x <- vector("list", length = ngroups)
             ov.names.x[1:ngroups] <- list(tmp)
         } else {
             if(length(ov.names.x) != ngroups)
@@ -170,7 +179,7 @@ lavData <- function(data          = NULL,          # data.frame
         }
 
         ov <- list()
-        ov$name <- unique(unlist(c(ov.names,ov.names.x)))
+        ov$name <- unique( unlist(c(ov.names, ov.names.x)) )
         nvar    <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
         ov$nobs <- rep(sample.nobs, nvar)
@@ -186,10 +195,10 @@ lavData <- function(data          = NULL,          # data.frame
                        data.type   = "moment",
                        ngroups     = ngroups, 
                        group       = character(0L),
+                       nlevels     = 1L, # for now
                        cluster     = character(0L),
-                       block.label = block.label,
                        group.label = group.label,
-                       level.label = level.label,
+                       level.label = character(0L),
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
@@ -198,24 +207,30 @@ lavData <- function(data          = NULL,          # data.frame
                        ov          = ov,
                        std.ov      = FALSE,
                        missing     = "listwise",
-                       case.idx    = vector("list", length=ngroups),
-                       Mp          = vector("list", length=ngroups),
-                       Rp          = vector("list", length=ngroups),
-                       X           = vector("list", length=ngroups),
-                       eXo         = vector("list", length=ngroups)
+                       case.idx    = vector("list", length = ngroups),
+                       Mp          = vector("list", length = ngroups),
+                       Rp          = vector("list", length = ngroups),
+                       Lp          = vector("list", length = ngroups),
+                       X           = vector("list", length = ngroups),
+                       eXo         = vector("list", length = ngroups)
                       )
 
     }
 
     # 3) data.type = "none":  both data and sample.cov are NULL
     if(is.null(data) && is.null(sample.cov)) {
+
+        # no levels
+        nlevels <- 1L
+
         if(is.null(sample.nobs)) sample.nobs <- 0L
         sample.nobs <- as.list(sample.nobs)
         ngroups <- length(unlist(sample.nobs))
-        if(ngroups > 1L)
+        if(ngroups > 1L) {
             group.label <- paste("Group ", 1:ngroups, sep="")
-        else
+        } else {
             group.label <- character(0)
+        }
 
         # handle ov.names
         if(is.null(ov.names)) {
@@ -223,7 +238,7 @@ lavData <- function(data          = NULL,          # data.frame
             ov.names <- character(0L)
         }
         if(!is.list(ov.names)) {
-            tmp <- ov.names; ov.names <- vector("list", length=ngroups)
+            tmp <- ov.names; ov.names <- vector("list", length = ngroups)
             ov.names[1:ngroups] <- list(tmp)
         } else {
             if (length(ov.names) != ngroups)
@@ -233,12 +248,12 @@ lavData <- function(data          = NULL,          # data.frame
         }
         # handle ov.names.x
         if(!is.list(ov.names.x)) {
-            tmp <- ov.names.x; ov.names.x <- vector("list", length=ngroups)
+            tmp <- ov.names.x; ov.names.x <- vector("list", length = ngroups)
             ov.names.x[1:ngroups] <- list(tmp)
         }
 
         ov <- list()
-        ov$name <- unique(unlist(c(ov.names,ov.names.x)))
+        ov$name <- unique( unlist(c(ov.names, ov.names.x)) )
         nvar    <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
         ov$nobs <- rep(0L, nvar)
@@ -249,10 +264,10 @@ lavData <- function(data          = NULL,          # data.frame
                        data.type   = "none",
                        ngroups     = ngroups,
                        group       = character(0L),
+                       nlevels     = 1L, # for now
                        cluster     = character(0L),
-                       block.label = block.label,
                        group.label = group.label,
-                       level.label = level.label,
+                       level.label = character(0L),
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
@@ -260,11 +275,12 @@ lavData <- function(data          = NULL,          # data.frame
                        ordered     = as.character(ordered),
                        ov          = ov,
                        missing     = "listwise",
-                       case.idx    = vector("list", length=ngroups),
-                       Mp          = vector("list", length=ngroups),
-                       Rp          = vector("list", length=ngroups),
-                       X           = vector("list", length=ngroups),
-                       eXo         = vector("list", length=ngroups)
+                       case.idx    = vector("list", length = ngroups),
+                       Mp          = vector("list", length = ngroups),
+                       Rp          = vector("list", length = ngroups),
+                       Lp          = vector("list", length = ngroups),
+                       X           = vector("list", length = ngroups),
+                       eXo         = vector("list", length = ngroups)
                       )
     }
 
@@ -276,7 +292,6 @@ lavData <- function(data          = NULL,          # data.frame
 lav_data_full <- function(data          = NULL,          # data.frame
                           group         = NULL,          # multiple groups?
                           cluster       = NULL,
-                          block.label   = NULL,
                           group.label   = NULL,          # custom group labels?
                           level.label   = NULL,
                           ov.names      = NULL,          # variables needed 
@@ -332,13 +347,47 @@ lav_data_full <- function(data          = NULL,          # data.frame
     }
 
     # cluster
-    if(is.null(cluster)) {
-        cluster <- character(0L)
+    # number of levels and level labels
+    if(!is.null(cluster) && length(cluster) > 0L) {
+        # cluster variable in data?
+        if(!all(cluster %in% names(data))) {
+            # which one did we not find?
+            not.ok <- which(!cluster %in% names(data)) 
+
+            stop("lavaan ERROR: cluster variable(s) ", sQuote(cluster[not.ok]),
+                 " not found;\n  ",
+                 "variable names found in data frame are:\n  ", 
+                 paste(names(data), collapse = " "))
+        }
+        # default level.labels
+        if(length(level.label) == 0L) {
+            level.label <- c("within", cluster)
+        } else {
+            # check if length(level.label) = 1 + length(cluster)
+            if(length(level.label) != length(cluster) + 1L) {
+                stop("lavaan ERROR: length(level.label) != length(cluster) + 1L")
+            }
+            # nothing to do
+        }
+        # check for missing values in cluster variable(s)
+        for(cl in 1:length(cluster)) {
+            if(warn && any(is.na(data[[cluster[cl]]]))) {
+                warning("lavaan WARNING: cluster variable ",
+                        sQuote(cluster[cl]),
+                        " contains missing values\n", sep = "")
+            }
+        }
+        nlevels <- length(level.label)
     } else {
-        warning("lavaan ERROR: cluster argument not used (yet)")
+        if(warn && length(level.label) > 0L)
+            warning("lavaan WARNING: `level.label' argument",
+                    " will be ignored if `cluster' argument is missing")
+        nlevels <- 1L
+        level.label <- character(0L)
+        cluster <- character(0L)
     }
 
-    # ov.names
+    # ov.names (still needed???)
     if(is.null(ov.names)) {
         ov.names <- names(data)
         # remove 'group' name from ov.names
@@ -346,8 +395,14 @@ lav_data_full <- function(data          = NULL,          # data.frame
             group.idx <- which(ov.names == group)
             ov.names <- ov.names[-group.idx]
         }
+        # remove 'cluster' names from ov.names
+        if(length(cluster) > 0L) {
+            cluster.idx <- which(ov.names %in% cluster)
+            ov.names <- ov.names[-cluster.idx]
+        }
     }
 
+    # check ov.names vs ngroups
     if(ngroups > 1L) {
         if(is.list(ov.names)) {
             if(length(ov.names) != ngroups)
@@ -355,7 +410,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                      " groups; data contains ", ngroups, " groups")
         } else {
             tmp <- ov.names
-            ov.names <- vector("list", length=ngroups)
+            ov.names <- vector("list", length = ngroups)
             ov.names[1:ngroups] <- list(tmp)
         }
         if(is.list(ov.names.x)) {
@@ -364,7 +419,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                      " groups; data contains ", ngroups, " groups")
         } else {
             tmp <- ov.names.x
-            ov.names.x <- vector("list", length=ngroups)
+            ov.names.x <- vector("list", length = ngroups)
             ov.names.x[1:ngroups] <- list(tmp)
         }
     } else {
@@ -382,7 +437,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         }
     }
 
-    # construct OV list -- FIXME: surely, this can be done more elegantly??
+    # check if all ov.names can be found in the data.frame
     for(g in 1:ngroups) {
         # does the data contain all the observed variables
         # needed in the user-specified model for this group
@@ -418,7 +473,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
     # here, we know for sure all ov.names exist in the data.frame
     # create varTable
-    # FIXME: should we add the 'group' variable (no for now)
+    # FIXME: should we add the 'group'/'cluster' variable (no for now)
     ov <- lav_dataframe_vartable(frame = data, ov.names = ov.names, 
                                  ov.names.x = ov.names.x, ordered = ordered,
                                  as.data.frame. = FALSE)
@@ -484,16 +539,20 @@ lav_data_full <- function(data          = NULL,          # data.frame
         warning("lavaan WARNING: all observed variables are exogenous; model may not be identified")
     }
 
-    # prepare empty list for data.matrix per group
-    case.idx <- vector("list", length=ngroups)
-    nobs     <- vector("list", length=ngroups)
-    norig    <- vector("list", length=ngroups)
-    Mp       <- vector("list", length=ngroups)
-    X        <- vector("list", length=ngroups)
-    eXo      <- vector("list", length=ngroups)
-    Rp       <- vector("list", length=ngroups)
+    # prepare empty lists 
+   
+    # group-based
+    case.idx <- vector("list", length = ngroups)
+    Mp       <- vector("list", length = ngroups)
+    Rp       <- vector("list", length = ngroups)
+    norig    <- vector("list", length = ngroups)
+    nobs     <- vector("list", length = ngroups)
+    X        <- vector("list", length = ngroups)
+    eXo      <- vector("list", length = ngroups)
+    Lp       <- vector("list", length = ngroups)
 
-    # for each group
+
+    # collect information per upper-level group
     for(g in 1:ngroups) {
 
         # extract variables in correct order
@@ -505,7 +564,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         if(ngroups > 1L || length(group.label) > 0L) {
             if(missing == "listwise") {
                 case.idx[[g]] <- which(data[[group]] == group.label[g] &
-                                       complete.cases(data[all.idx]))
+                                           complete.cases(data[all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[[group]] == group.label[g]))
             } else if(missing == "pairwise" && length(exo.idx) > 0L) {
@@ -533,15 +592,14 @@ lav_data_full <- function(data          = NULL,          # data.frame
         }
 
         # extract data
-        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop=FALSE] )
+        X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop = FALSE] )
         dimnames(X[[g]]) <- NULL ### copy?
 
-        # manually construct integers for user-declared 'ordered' factors
+        # construct integers for user-declared 'ordered' factors
         # FIXME: is this really (always) needed???
-        #  (but it is still better than doing lapply(data[,idx], ordered) which
+        #  (but still better than doing lapply(data[,idx], ordered) which
         #   generated even more copies)
-        user.ordered.names <- ov$name[ov$type == "ordered" &
-                                      ov$user == 1L]
+        user.ordered.names <- ov$name[ov$type == "ordered" & ov$user == 1L]
         user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
         if(length(user.ordered.idx) > 0L) {
             for(i in user.ordered.idx) {
@@ -552,18 +610,18 @@ lav_data_full <- function(data          = NULL,          # data.frame
         ## FIXME: 
         ## - why also in X? (for samplestats, for now)
         if(length(exo.idx) > 0L) {
-            eXo[[g]] <- data.matrix( data[case.idx[[g]], exo.idx, drop=FALSE] )
+            eXo[[g]] <- data.matrix(data[case.idx[[g]], exo.idx, drop = FALSE])
             dimnames(eXo[[g]]) <- NULL
         } else {
             eXo[g] <- list(NULL)
         }
-        #print( tracemem(X[[g]]) )
 
         # standardize observed variables? numeric only!
         if(std.ov) {
             num.idx <- which(ov.names[[g]] %in% ov$name & ov$type == "numeric")
             if(length(num.idx) > 0L) {
-                X[[g]][,num.idx]  <- scale(X[[g]][,num.idx,drop=FALSE])[,,drop = FALSE] 
+                X[[g]][,num.idx] <- 
+                   scale(X[[g]][,num.idx,drop = FALSE])[,,drop = FALSE] 
                 # three copies are made!!!!!
             }
             if(length(exo.idx) > 0L) {
@@ -574,26 +632,14 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # missing data
         if(missing != "listwise") {
             # get missing patterns
-            Mp[[g]] <- lav_data_missing_patterns(X[[g]], sort.freq = TRUE,
-                                                 coverage = TRUE)
+            Mp[[g]] <- lav_data_missing_patterns(X[[g]], 
+                           sort.freq = TRUE, coverage = TRUE)
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
-                #X[[g]] <- X[[g]][-Mp[[g]]$empty.idx,,drop=FALSE]
-                # remove from case.idx
-                # idx <- which(case.idx[[g]] %in% Mp[[g]]$empty.idx)
-                #empty.idx <- Mp[[g]]$empty.idx
-                #empty.case.idx <- case.idx[[g]][empty.idx]
                 empty.case.idx <- Mp[[g]]$empty.idx
-                #case.idx[[g]] <- case.idx[[g]][-empty.idx]
-                # remove from eXo
-                #if(length(exo.idx) > 0L) {
-                #    eXo[[g]] <- eXo[[g]][-empty.idx,,drop=FALSE]
-                #}
                 if(warn) {
                     warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
                 }
-                # give empty.idx case.idx? (for multiple groups):
-                #Mp[[g]]$empty.idx <- empty.case.idx
             }
             if(warn && any(Mp[[g]]$coverage < 0.1)) {
                 warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
@@ -617,32 +663,41 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     "\n  nobs = ", nobs[[g]], " nvar = ", nvar)
         }
 
-    } # ngroups
+        # cluster information
+        if(nlevels > 1L) {
+            # extract cluster variable(s), for this group
+            clus <- data.matrix(data[case.idx[[g]], cluster])
+            Lp[[g]] <- lav_data_cluster_patterns(Y = X[[g]], clus = clus,
+                                                 cluster = cluster)
+        }
+
+    } # groups, at first level 
 
     lavData <- new("lavData",
-                      data.type       = "full",
-                      ngroups         = ngroups,
-                      group           = group,
-                      cluster         = cluster,
-                      block.label     = block.label,
-                      group.label     = group.label,
-                      level.label     = level.label,
-                      std.ov          = std.ov,
-                      nobs            = nobs,
-                      norig           = norig,
-                      ov.names        = ov.names,
-                      ov.names.x      = ov.names.x,
-                      #ov.types        = ov.types,
-                      #ov.idx          = ov.idx,
-                      ordered         = as.character(ordered),
-                      ov              = ov,
-                      case.idx        = case.idx,
-                      missing         = missing,
-                      X               = X,
-                      eXo             = eXo,
-                      Mp              = Mp,
-                      Rp              = Rp
-                     )
+                   data.type       = "full",
+                   ngroups         = ngroups,
+                   group           = group,
+                   nlevels         = nlevels,
+                   cluster         = cluster,
+                   group.label     = group.label,
+                   level.label     = level.label,
+                   std.ov          = std.ov,
+                   nobs            = nobs,
+                   norig           = norig,
+                   ov.names        = ov.names,
+                   ov.names.x      = ov.names.x,
+                   #ov.types        = ov.types,
+                   #ov.idx          = ov.idx,
+                   ordered         = as.character(ordered),
+                   ov              = ov,
+                   case.idx        = case.idx,
+                   missing         = missing,
+                   X               = X,
+                   eXo             = eXo,
+                   Mp              = Mp,
+                   Rp              = Rp,
+                   Lp              = Lp
+                  )
     lavData                     
 }
 
@@ -710,34 +765,34 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE) {
 }
 
 # get response patterns (ignore empty cases!)
-lav_data_resp_patterns <- function(X) {
+lav_data_resp_patterns <- function(Y) {
 
     # construct TRUE/FALSE matrix: TRUE if value is observed
-    OBS <- !is.na(X)
+    OBS <- !is.na(Y)
 
     # empty cases
     empty.idx <- which(rowSums(OBS) == 0L)
 
-    # remove empty cases
+    # removeYempty cases
     if(length(empty.idx) > 0L) {
-        X <- X[-empty.idx,,drop = FALSE]
+        Y <- Y[-empty.idx,,drop = FALSE]
     }
 
-    ntotal <- nrow(X); nvar <- ncol(X)
+    ntotal <- nrow(Y); nvar <- ncol(Y)
 
     # identify, label and sort response patterns 
-    id <- apply(X, MARGIN = 1, paste, collapse = "")
+    id <- apply(Y, MARGIN = 1, paste, collapse = "")
 
     # sort patterns (from high occurence to low occurence)
     TABLE <- sort(table(id), decreasing = TRUE)
     order <- names(TABLE)
     npatterns <- length(TABLE)
-    pat <- X[match(order, id), , drop = FALSE]
+    pat <- Y[match(order, id), , drop = FALSE]
     row.names(pat) <- as.character(TABLE)
 
     # handle NA?
-    X[is.na(X)] <- -9
-    total.patterns <- prod(apply(X, 2, function(x) length(unique(x))))
+    Y[is.na(Y)] <- -9
+    total.patterns <- prod(apply(Y, 2, function(x) length(unique(x))))
     empty.patterns <- total.patterns - npatterns
     # return a list
     #out <- list(nobs=ntotal, nvar=nvar,
@@ -747,6 +802,33 @@ lav_data_resp_patterns <- function(X) {
     # only return pat
     out <- list(npatterns=npatterns, pat=pat, total.patterns=total.patterns,
                 empty.patterns=empty.patterns)
+
+    out
+}
+
+# get cluster information
+# - cluster can be a vector!
+# - clus can contain multiple columns!
+lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL) {
+
+    # how many levels?
+    nlevels <- length(cluster)
+
+    # check clus
+    stopifnot(ncol(clus) == nlevels, nrow(Y) == nrow(clus))
+    
+    cluster.size <- vector("list", length = nlevels)
+    cluster.id   <- vector("list", length = nlevels)
+    nclusters    <- vector("list", length = nlevels)
+    # for each clustering variable
+    for(l in 1:nlevels) {
+        cluster.size[[l]] <- as.integer(table(clus[,l]))
+        cluster.id[[l]]   <- unique(clus[,l])
+        nclusters[[l]]    <- length(cluster.size[[l]])
+    }
+
+    out <- list(cluster = cluster, clus = clus, nclusters = nclusters, 
+                cluster.size = cluster.size, cluster.id = cluster.id)
 
     out
 }
