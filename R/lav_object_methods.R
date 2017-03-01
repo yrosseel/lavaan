@@ -19,7 +19,7 @@ short.summary <- function(object) {
                     packageDescription("lavaan", fields="Version"),
                     object@optim$iterations))
         } else {
-            cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n", 
+            cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n",
                 packageDescription("lavaan", fields="Version"),
                 object@optim$iterations))
             cat("** WARNING ** Estimates below are most likely unreliable\n")
@@ -37,7 +37,7 @@ short.summary <- function(object) {
     #t2.txt <- ""
     #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     #cat("\n")
-   
+
     # listwise deletion?
     listwise <- FALSE
     for(g in 1:object@Data@ngroups) {
@@ -50,7 +50,7 @@ short.summary <- function(object) {
 
     if(object@Data@ngroups == 1L) {
         if(listwise) {
-            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"), 
+            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
                                         sprintf("  %10s", "Total"),
                 "\n", sep="")
         }
@@ -61,7 +61,7 @@ short.summary <- function(object) {
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     } else {
         if(listwise) {
-            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),  
+            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
                                         sprintf("  %10s", "Total"),
                 "\n", sep="")
         }
@@ -81,7 +81,7 @@ short.summary <- function(object) {
     if(object@SampleStats@missing.flag) {
         if(object@Data@ngroups == 1L) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
-            t1.txt <- sprintf("  %10i", 
+            t1.txt <- sprintf("  %10i",
                               object@Data@Mp[[1L]]$npatterns)
             cat(t0.txt, t1.txt, "\n\n", sep="")
         } else {
@@ -118,7 +118,7 @@ short.summary <- function(object) {
     #                 object@Options$estimator)
     t0.txt <- sprintf("  %-40s", "Estimator")
     t1.txt <- sprintf("  %10s", object@Options$estimator)
-    t2.txt <- ifelse(scaled, 
+    t2.txt <- ifelse(scaled,
               sprintf("  %10s", "Robust"), "")
     cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
@@ -126,17 +126,17 @@ short.summary <- function(object) {
     if(object@Options$test != "none" && object@Options$estimator != "MML") {
 
         # 1. chi-square values
-        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")  
+        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
         t1.txt <- sprintf("  %10.3f", object@test[[1]]$stat)
-        t2.txt <- ifelse(scaled, 
+        t2.txt <- ifelse(scaled,
                   sprintf("  %10.3f", object@test[[2]]$stat), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
         # 2. degrees of freedom
         t0.txt <- sprintf("  %-40s", "Degrees of freedom")
         t1.txt <- sprintf("  %10i",   object@test[[1]]$df)
-        t2.txt <- ifelse(scaled, 
-                         ifelse(round(object@test[[2]]$df) == 
+        t2.txt <- ifelse(scaled,
+                         ifelse(round(object@test[[2]]$df) ==
                                 object@test[[2]]$df,
                                 sprintf("  %10i",   object@test[[2]]$df),
                                 sprintf("  %10.3f", object@test[[2]]$df)),
@@ -226,7 +226,7 @@ short.summary <- function(object) {
             if(object@Data@ngroups == 1L) {
                 t0.txt <- sprintf("  %-40s", "Shift parameter")
                 t1.txt <- sprintf("  %10s", "")
-                t2.txt <- sprintf("  %10.3f", 
+                t2.txt <- sprintf("  %10.3f",
                                   object@test[[2]]$shift.parameter)
                 cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
             } else { # multiple groups, multiple shift values!
@@ -253,11 +253,11 @@ short.summary <- function(object) {
             for(g in 1:object@Data@ngroups) {
                 t0.txt <- sprintf("  %-40s", object@Data@group.label[[g]])
                 t1.txt <- sprintf("  %10.3f", object@test[[1]]$stat.group[g])
-                t2.txt <- ifelse(scaled, sprintf("  %10.3f", 
+                t2.txt <- ifelse(scaled, sprintf("  %10.3f",
                                  object@test[[2]]$stat.group[g]), "")
                 cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
             }
-        } 
+        }
     } # test != none
 
     if(object@Options$estimator == "MML") {
@@ -278,14 +278,14 @@ function(object) {
 
 setMethod("summary", "lavaan",
 function(object, header       = TRUE,
-                 fit.measures = FALSE, 
+                 fit.measures = FALSE,
                  estimates    = TRUE,
-                 ci           = FALSE, 
+                 ci           = FALSE,
                  fmi          = FALSE,
                  standardized = FALSE,
-                 rsquare      = FALSE, 
-                 std.nox      = FALSE, 
-                 modindices   = FALSE, 
+                 rsquare      = FALSE,
+                 std.nox      = FALSE,
+                 modindices   = FALSE,
                  nd = 3L) {
 
     if(std.nox) standardized <- TRUE
@@ -310,7 +310,7 @@ function(object, header       = TRUE,
         PE <- parameterEstimates(object, ci = ci, standardized = standardized,
                                  rsquare = rsquare, fmi = fmi,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
-                                 remove.ineq = FALSE, remove.def = FALSE, 
+                                 remove.ineq = FALSE, remove.def = FALSE,
                                  add.attributes = TRUE)
         if(standardized && std.nox) {
             PE$std.all <- PE$std.nox
@@ -339,7 +339,7 @@ function(object, type="free", labels=TRUE) {
     }
     EST <- lav_object_inspect_est(object)
     cof <- EST[idx]
-  
+
     # labels?
     if(labels) names(cof) <- lav_partable_labels(object@ParTable, type=type)
 
@@ -396,7 +396,7 @@ standardizedSolution <- standardizedsolution <- function(object,
         # add 'se' for standardized parameters
         VCOV <- try(lav_object_inspect_vcov(object, standardized = TRUE,
                                             type = type, free.only = FALSE,
-                                            add.labels = FALSE, 
+                                            add.labels = FALSE,
                                             add.class = FALSE))
         if(inherits(VCOV, "try-error")) {
             LIST$se <- rep(NA, length(LIST$lhs))
@@ -421,7 +421,7 @@ standardizedSolution <- standardizedsolution <- function(object,
                 tmp[zero.idx] <- 0.0
             }
             LIST$se <- tmp
- 
+
             # add 'z' column
             if(zstat) {
                  tmp.se <- ifelse( LIST$se == 0.0, NA, LIST$se)
@@ -467,10 +467,10 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      se    = TRUE,
                                                      zstat = TRUE,
                                                      pvalue = TRUE,
-                                                     ci = TRUE, 
-                                                     level = 0.95, 
+                                                     ci = TRUE,
+                                                     level = 0.95,
                                                      boot.ci.type = "perc",
-                                                     standardized = FALSE, 
+                                                     standardized = FALSE,
                                                      fmi = FALSE,
                                                      remove.system.eq = TRUE,
                                                      remove.eq = TRUE,
@@ -556,13 +556,13 @@ parameterEstimates <- parameterestimates <- function(object,
         #if("partable" %in% object@meta$store.slots) {
         #    COF <- sapply(object@ParTableList, "[[", "est")
         #    LIST$est <- rowMeans(COF)
-        #} 
+        #}
         LIST$est <- NULL
     } else if(!is.null(PARTABLE$est)) {
         LIST$est <- PARTABLE$est
     } else {
         LIST$est <- lav_model_get_parameters(object@Model, type = "user",
-                                             extra = TRUE)    
+                                             extra = TRUE)
     }
 
 
@@ -570,7 +570,7 @@ parameterEstimates <- parameterestimates <- function(object,
     if(se && object@Options$se != "none") {
         LIST$se <- lav_object_inspect_se(object)
         tmp.se <- ifelse(LIST$se == 0.0, NA, LIST$se)
-        if(zstat) { 
+        if(zstat) {
             LIST$z <- LIST$est / tmp.se
             if(pvalue) {
                 LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
@@ -594,7 +594,7 @@ parameterEstimates <- parameterestimates <- function(object,
             # local copy of 'norm.inter' from boot package (not exported!)
             norm.inter <- function(t, alpha)  {
                 t <- t[is.finite(t)]; R <- length(t); rk <- (R + 1) * alpha
-                if (!all(rk > 1 & rk < R)) 
+                if (!all(rk > 1 & rk < R))
                      warning("extreme order statistics used as endpoints")
                 k <- trunc(rk); inds <- seq_along(k)
                 out <- inds; kvs <- k[k > 0 & k < R]
@@ -619,9 +619,9 @@ parameterEstimates <- parameterestimates <- function(object,
             if(boot.ci.type == "norm") {
                 fac <- qnorm(a)
                 boot.x <- colMeans(BOOT)
-                boot.est <- 
-                    lav_model_get_parameters(object@Model, 
-                                       GLIST=lav_model_x2GLIST(object@Model, boot.x), 
+                boot.est <-
+                    lav_model_get_parameters(object@Model,
+                                       GLIST=lav_model_x2GLIST(object@Model, boot.x),
                                        type="user", extra=TRUE)
                 bias.est <- (boot.est - LIST$est)
                 ci <- (LIST$est - bias.est) + LIST$se %o% fac
@@ -631,7 +631,7 @@ parameterEstimates <- parameterestimates <- function(object,
 
                 # free.idx only
                 qq <- apply(BOOT, 2, norm.inter, alpha)
-                free.idx <- which(object@ParTable$free & 
+                free.idx <- which(object@ParTable$free &
                                   !duplicated(object@ParTable$free))
                 ci[free.idx,] <- 2*ci[free.idx,] - t(qq[c(3,4),])
 
@@ -649,14 +649,14 @@ parameterEstimates <- parameterestimates <- function(object,
                 }
 
                 # TODO: add cin/ceq?
-               
+
             } else if(boot.ci.type == "perc") {
                 ci <- cbind(LIST$est, LIST$est)
                 alpha <- (1 + c(-level, level))/2
 
                 # free.idx only
                 qq <- apply(BOOT, 2, norm.inter, alpha)
-                free.idx <- which(object@ParTable$free & 
+                free.idx <- which(object@ParTable$free &
                                   !duplicated(object@ParTable$free))
                 ci[free.idx,] <- t(qq[c(3,4),])
 
@@ -683,7 +683,7 @@ parameterEstimates <- parameterestimates <- function(object,
                ci <- cbind(LIST$est, LIST$est)
 
                # free.idx only
-               free.idx <- which(object@ParTable$free & 
+               free.idx <- which(object@ParTable$free &
                                  !duplicated(object@ParTable$free))
                x <- LIST$est[free.idx]
                for(i in 1:length(free.idx)) {
@@ -714,13 +714,13 @@ parameterEstimates <- parameterestimates <- function(object,
                        ci[def.idx[i],] <- qq[,2]
                    }
                }
-               
+
                # TODO:
                # - add cin/ceq
             }
         }
 
-        LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]    
+        LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]
     }
 
     # standardized estimates?
@@ -834,7 +834,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "bootstrap") <- object@Options$bootstrap
         attr(LIST, "bootstrap.successful") <- bootstrap.successful
         attr(LIST, "missing") <- object@Options$missing
-        attr(LIST, "observed.information") <- 
+        attr(LIST, "observed.information") <-
             object@Options$observed.information
         attr(LIST, "h1.information") <- object@Options$h1.information
         # FIXME: add more!!
@@ -856,8 +856,8 @@ parameterTable <- parametertable <- parTable <- partable <-
     out
 }
 
-varTable <- vartable <- function(object, ov.names=names(object), 
-                                 ov.names.x=NULL, 
+varTable <- vartable <- function(object, ov.names=names(object),
+                                 ov.names.x=NULL,
                                  ordered = NULL, factor = NULL,
                                  as.data.frame.=TRUE) {
 
@@ -866,13 +866,13 @@ varTable <- vartable <- function(object, ov.names=names(object),
     } else if(inherits(object, "lavData")) {
         VAR <- object@ov
     } else if(inherits(object, "data.frame")) {
-        VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names, 
-                                      ov.names.x = ov.names.x, 
+        VAR <- lav_dataframe_vartable(frame = object, ov.names = ov.names,
+                                      ov.names.x = ov.names.x,
                                       ordered = ordered, factor = factor,
                                       as.data.frame. = FALSE)
     } else {
         stop("object must of class lavaan or a data.frame")
-    } 
+    }
 
     if(as.data.frame.) {
         VAR <- as.data.frame(VAR, stringsAsFactors=FALSE,
@@ -936,7 +936,7 @@ function(object, ...) {
     if(object@optim$npar > 0L && !object@optim$converged) {
         warning("lavaan WARNING: model did not converge")
     }
-    
+
     logl.df <- fitMeasures(object, c("logl", "npar", "ntotal"))
     names(logl.df) <- NULL
     logl <- logl.df[1]
@@ -965,9 +965,16 @@ function(object, model, ..., evaluate = TRUE) {
 
     extras <- match.call(expand.dots = FALSE)$...
 
-    if(!missing(model))
-        #call$formula <- update.formula(formula(object), formula.)
-        call$model <- model
+    if(!missing(model)) {
+      #call$formula <- update.formula(formula(object), formula.)
+      call$model <- model
+    } else if (exists(as.character(object@call$model))) {
+      call$model <- object@call$model
+    } else {
+      call$model <- parTable(object)
+      call$model$est <- NULL
+      call$model$se <- NULL
+    }
 
     if(length(extras) > 0) {
         existing <- !is.na(match(names(extras), names(call)))
@@ -1005,7 +1012,7 @@ function(object, ...) {
         if(!is.null(dots$SB.classic))
             SB.classic <- dots$SB.classic
         if(!is.null(dots$SB.H0))
-            SB.H0 <- dots$SB.H0           
+            SB.H0 <- dots$SB.H0
         dots <- dots[-arg.idx]
     }
 
@@ -1015,8 +1022,8 @@ function(object, ...) {
     NAMES <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
     # use do.call to handle changed dots
-    ans <- do.call("lavTestLRT", c(list(object = object, 
-                   SB.classic = SB.classic, SB.H0 = SB.H0, 
+    ans <- do.call("lavTestLRT", c(list(object = object,
+                   SB.classic = SB.classic, SB.H0 = SB.H0,
                    model.names = NAMES), dots))
 
     ans

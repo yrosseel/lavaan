@@ -34,7 +34,7 @@ Authors@R: c(person(given = "Yves", family = "Rosseel",
              person(given = "Michael", family = "Chow",
                     role = "ctb",
                     email = "machow@princeton.edu"),
-             person(given = "Terrence", family = "Jorgensen",
+             person(given = c("Terrence","D."), family = "Jorgensen",
                     role = "ctb")
             )
 Description: Fit a variety of latent variable models, including confirmatory
