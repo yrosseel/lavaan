@@ -10,7 +10,7 @@
 #     method = "Satorra.Bentler.2010"
 #     method = "mean.var.adjusted.PLRT"
 
-lavTestLRT <- function(object, ..., method = "default", A.method = "exact",
+lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                        H1 = TRUE, type = "Chisq", model.names = NULL) {
 
     if(object@optim$npar > 0L && !object@optim$converged)

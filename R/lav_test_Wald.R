@@ -57,7 +57,13 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     }
 
     # get VCOV
-    VCOV <- vcov(object, labels = FALSE)
+    #VCOV <- vcov(object, labels = FALSE)
+    # avoid S4 dispatch
+    VCOV <- lav_object_inspect_vcov(object, standardized = FALSE,
+                                    free.only = TRUE,
+                                    add.labels = FALSE, 
+                                    add.class = FALSE,
+                                    remove.duplicated = FALSE)
 
     # restricted vcov
     info.r  <- JAC %*% VCOV %*% t(JAC)

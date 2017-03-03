@@ -239,7 +239,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 #
 # 
 #
-lav_test_diff_A <- function(m1, m0, method = "exact", reference = "H1") {
+lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
 
     # FIXME!!!!
 
