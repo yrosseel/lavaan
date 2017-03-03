@@ -266,7 +266,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         # and MLM and MLR to get the scaling factor(s)!
         if (!is.null(baseline.model) && is(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
-        } else if (!is.null(object@external$baseline.model) && 
+        } else if (!is.null(object@external$baseline.model) &&
                    is(object@external$baseline.model, "lavaan")) {
             fit.indep <- object@external$baseline.model
             ## check baseline converged
@@ -278,7 +278,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 sameSE <- ( object@Options$se == fit.indep@Options$se )
                 sameEstimator <- ( object@Options$estimator == fit.indep@Options$estimator )
                 if (!all(sameTest, sameSE, sameEstimator)) {
-                    fit.indep <- try(update(fit.indep, 
+                    fit.indep <- try(update(fit.indep,
                                             test = object@Options$test,
                                             se   = object@Options$se,
                                             estimator = object@Options$estimator),
@@ -399,7 +399,6 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("rni.scaled" %in% fit.measures) {
                 t1 <- X2.scaled - df.scaled
                 t2 <- X2.null.scaled - df.null.scaled
-                t2 <- X2.null - df.null
                 if(is.na(t1) || is.na(t2)) {
                     RNI <- NA
                 } else if(t2 == 0) {
