@@ -26,6 +26,7 @@ Objects can be created via the
 about the data.}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the 
       internal (matrix) representation of the model}
+    \item{\code{meta}:}{List containing additional flags. For internal use only.}
     \item{\code{timingList}:}{List. Timing slot per dataset.}
     \item{\code{ParTableList}:}{List. ParTable slot per dataset.}
     \item{\code{DataList}:}{List. Data slot per dataset.}

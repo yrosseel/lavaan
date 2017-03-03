@@ -159,9 +159,8 @@ export("lavaan", "cfa", "sem", "growth",
 
 # export Classes
 exportClasses(
-              "lavaan" #,
-              "lavaanList" #,
-              #"lavData"
+              "lavaan",
+              "lavaanList" 
              )
 
 # export Methods

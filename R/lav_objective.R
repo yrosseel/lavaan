@@ -620,3 +620,10 @@ estimator.MML <- function(lavmodel      = NULL,
     fx
 }
 
+estimator.2L <- function(lavmodel = NULL,
+                         lavdata  = NULL,
+                         lavsamplestats = NULL,
+                         group = 1L) {
+    return(0)
+}
+

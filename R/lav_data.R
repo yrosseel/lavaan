@@ -817,18 +817,27 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL) {
     # check clus
     stopifnot(ncol(clus) == nlevels, nrow(Y) == nrow(clus))
     
-    cluster.size <- vector("list", length = nlevels)
-    cluster.id   <- vector("list", length = nlevels)
-    nclusters    <- vector("list", length = nlevels)
+    cluster.size   <- vector("list", length = nlevels)
+    cluster.id     <- vector("list", length = nlevels)
+    cluster.idx    <- vector("list", length = nlevels)
+    nclusters      <- vector("list", length = nlevels)
+    cluster.sizes  <- vector("list", length = nlevels)
+    ncluster.sizes <- vector("list", length = nlevels)
     # for each clustering variable
     for(l in 1:nlevels) {
-        cluster.size[[l]] <- as.integer(table(clus[,l]))
-        cluster.id[[l]]   <- unique(clus[,l])
+        CLUS <- clus[,l]
+        cluster.size[[l]] <- as.integer(table(CLUS))
+        cluster.id[[l]]   <- unique(CLUS)
+        cluster.idx[[l]]  <- match(CLUS, cluster.id[[l]])
         nclusters[[l]]    <- length(cluster.size[[l]])
+        cluster.sizes[[l]] <- unique(cluster.size[[l]])
+        ncluster.sizes[[l]] <- length(cluster.sizes[[l]])
     }
 
-    out <- list(cluster = cluster, clus = clus, nclusters = nclusters, 
-                cluster.size = cluster.size, cluster.id = cluster.id)
+    out <- list(cluster = cluster, clus = clus, nclusters = nclusters,
+                cluster.size = cluster.size, cluster.id = cluster.id,
+                cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
+                ncluster.sizes = ncluster.sizes)
 
     out
 }

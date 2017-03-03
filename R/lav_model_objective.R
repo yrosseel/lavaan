@@ -38,7 +38,8 @@ lav_model_objective <- function(lavmodel       = NULL,
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(debug) print(WLS.est)
-    } else if(estimator %in% c("ML", "PML", "FML", "REML")) {
+    } else if(estimator %in% c("ML", "PML", "FML", "REML") && 
+              lavdata@nlevels == 1L) {
         # compute moments for all groups
         #if(conditional.x) {
         #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
@@ -115,6 +116,10 @@ lav_model_objective <- function(lavmodel       = NULL,
             # ML and friends
             if(lavdata@nlevels > 1L) {
                 group.fx <- 0
+                #group.fx <- estimator.2L(lavmodel       = lavmodel,
+                #                         lavdata        = lavdata,
+                #                         lavsamplestats = lavsamplestats,
+                #                         group          = g)
             } else if(conditional.x) {
                 group.fx <- estimator.ML_res(
                     Sigma.hat        = Sigma.hat[[g]],
