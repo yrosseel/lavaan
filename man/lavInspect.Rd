@@ -74,8 +74,7 @@ Model matrices:
         Alias: \code{"starting.values"}.}
     \item{\code{"est"}:}{A list of model matrices. The values represent
         the estimated model parameters. Aliases:
-        \code{"estimates"}, \code{"coef"}, \code{"coefficients"} and
-        \code{"x"}.}
+        \code{"estimates"}, and \code{"x"}.}
     \item{\code{"dx.free"}:}{A list of model matrices. The values represent
         the gradient (first derivative) values of the model parameters.
         If two parameters are constrained to be equal, they will have the
@@ -216,6 +215,8 @@ Optimizer information:
         optimizer.}
     \item{\code{"optim"}:}{List. All available information regarding the
         optimization results.}
+    \item{\code{"npar"}:}{Integer. Number of free parameters (ignoring constraints).}
+    \item{\code{"coef"}:}{Numeric. The estimated parameter vector.}
 }
 
 Gradient, Hessian, observed, expected and first.order information matrices:

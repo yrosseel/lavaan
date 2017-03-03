@@ -48,7 +48,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   ntab <- unlist(lavdata@norig)
   ntot <- sum(ntab)
 
-  npar <- length(coef(object))
+  npar <- lav_object_inspect_npar(object)
   #if(object@Model@eq.constraints) {
   #   npar <- NCOL(object@Model@eq.constraints.K)
   #}
@@ -174,7 +174,8 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   }
 
   # provide column names
-  colnames(Score.mat) <- names(coef(object))
+  colnames(Score.mat) <- names(lav_object_inspect_coef(object,
+                               type = "free", add.labels = TRUE))
 
   # handle general constraints, so that the sum of the columns equals zero
   if(!ignore.constraints &&

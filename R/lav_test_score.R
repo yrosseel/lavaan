@@ -227,7 +227,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             LIST <- LIST[-nonpar.idx,]
         }
 
-        LIST$est[ LIST$free > 0 ] <- coef(object)
+        LIST$est[ LIST$free > 0 ] <- lav_object_inspect_coef(object, type = "free")
         LIST$epc <- rep(as.numeric(NA), length(LIST$lhs))
         LIST$epc[ LIST$free > 0 ] <- EPC.all
         LIST$epv <- LIST$est + LIST$epc

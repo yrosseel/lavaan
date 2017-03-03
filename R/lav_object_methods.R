@@ -328,25 +328,8 @@ function(object, header       = TRUE,
 
 setMethod("coef", "lavaan",
 function(object, type="free", labels=TRUE) {
-
-    if(type == "user" || type == "all") {
-        type <- "user"
-        idx <- 1:length( object@ParTable$lhs )
-    } else if(type == "free") {
-        idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
-    } else {
-        stop("lavaan ERROR: argument `type' must be one of free or user")
-    }
-    EST <- lav_object_inspect_est(object)
-    cof <- EST[idx]
-
-    # labels?
-    if(labels) names(cof) <- lav_partable_labels(object@ParTable, type=type)
-
-    # class
-    class(cof) <- c("lavaan.vector", "numeric")
-
-    cof
+    lav_object_inspect_coef(object = object, type = type, 
+                            add.labels = labels, add.class = TRUE)
 })
 
 standardizedSolution <- standardizedsolution <- function(object,

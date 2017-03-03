@@ -13,7 +13,8 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
     varNames <- as.character(attr(objectTerms, "variables"))[-1]
     responseName <- varNames[responseIndex]
 
-    predCoef  <- coef(object)
+    predCoef  <- lav_object_inspect_coef(object, type = "free", 
+                                         add.labels = TRUE)
     predNames <- names(predCoef)
 
     lhs <- rep(responseName, length(predNames))

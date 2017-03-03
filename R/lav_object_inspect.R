@@ -70,7 +70,6 @@ lavInspect.lavaan <- function(object,
             list.by.group = list.by.group, 
             drop.list.single.group = drop.list.single.group)
     } else if(what == "est"  || what == "estimates" ||
-              what == "coef" || what == "coefficients" ||
               what == "x") {
         lav_object_inspect_modelmatrices(object, what = "est",
             add.labels = add.labels, add.class = add.class,
@@ -284,7 +283,11 @@ lavInspect.lavaan <- function(object,
         object@Model@fixed.x
     } else if(what == "parameterization") {
         object@Model@parameterization
-    
+    } else if(what == "npar") {
+        lav_object_inspect_npar(object, type = "free")
+    } else if(what == "coef") {
+        lav_object_inspect_coef(object, type = "free",
+                                add.labels = add.labels, add.class = add.class)
 
 
     #### NACOV samplestats ####
@@ -453,7 +456,7 @@ lav_object_inspect_est <- function(object) {
             OUT <- rep(as.numeric(NA), length(PT$lhs))
         }
     } else {
-        # try coef()
+        # try generic coef()
         OUT <- coef(object, type = "user")
         if(is.matrix(OUT)) {
             # lavaanList?
@@ -2177,4 +2180,43 @@ lav_object_inspect_zero_cell_tables <- function(object,
     }
 
     OUT
+}
+
+lav_object_inspect_coef <- function(object, type = "free", 
+                                    add.labels = FALSE, add.class = FALSE) {
+
+    if(type == "user" || type == "all") {
+        type <- "user"
+        idx <- 1:length( object@ParTable$lhs )
+    } else if(type == "free") {
+        idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
+    } else {
+        stop("lavaan ERROR: argument `type' must be one of free or user")
+    }
+    EST <- lav_object_inspect_est(object)
+    cof <- EST[idx]
+
+    # labels?
+    if(add.labels) {
+        names(cof) <- lav_partable_labels(object@ParTable, type = type)
+    }
+
+    # class
+    if(add.class) {
+        class(cof) <- c("lavaan.vector", "numeric")
+    }
+
+    cof
+}
+
+lav_object_inspect_npar <- function(object, type = "free") {
+
+    if(type == "free") {
+        npar <- sum(object@ParTable$free > 0L & 
+                    !duplicated(object@ParTable$free))
+    } else {
+        npar <- length(object@ParTable$lhs)
+    }
+
+    npar
 }
