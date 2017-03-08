@@ -18,6 +18,7 @@ setClass("lavData",
         norig="list",              # original number of observations
         ov.names="list",           # variable names (per group)
         ov.names.x="list",         # exo variable names (per group)
+        ov.names.l="list",         # names per level
         #ov.types="list",           # variable types (per group)
         #ov.idx="list",             # column indices (all observed variables)
         ordered="character",       # ordered variables
@@ -190,6 +191,8 @@ setClass("lavaan",
         implied     = "list",            # model implied moments
         vcov        = "list",            # vcov
         test        = "list",            # test
+        h1          = "list",            # unrestricted model results
+        baseline    = "list",            # baseline model results
         external    = "list"             # optional slot, for add-on packages
     ) 
 )

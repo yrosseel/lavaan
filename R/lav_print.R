@@ -301,13 +301,6 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     # group-specific sections
     for(g in 1:ngroups) {
 
-        # block number
-        b <- b + 1L
-
-        # ov/lv names
-        ov.names <- lavNames(x, "ov", block = b)
-        lv.names <- lavNames(x, "lv", block = b)
-
         # group header
         if(ngroups > 1L) {
             group.label <- attr(x, "group.label")
@@ -316,6 +309,13 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
 
         for(l in 1:nlevels) {
+
+            # block number
+            b <- b + 1L
+
+            # ov/lv names
+            ov.names <- lavNames(x, "ov", block = b)
+            lv.names <- lavNames(x, "lv", block = b)
    
             # level header
             if(nlevels > 1L) {
@@ -463,11 +463,11 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     #cat("\n")
                     print(M, quote = FALSE)
                 }
-            }
+            } # GSECTIONS
     
-        } # groups
+        } # levels
 
-    } # levels    
+    } # groups
 
     # asections
     for(s in ASECTIONS) {

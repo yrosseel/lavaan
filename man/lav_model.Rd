@@ -12,7 +12,7 @@ lav_model_get_parameters(lavmodel, GLIST = NULL, type = "free",
                          extra = TRUE)
 
 # compute model-implied statistics
-lav_model_implied(lavmodel)
+lav_model_implied(lavmodel, GLIST = NULL)
 
 # compute standard errors
 lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL)

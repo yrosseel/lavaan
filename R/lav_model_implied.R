@@ -1,31 +1,34 @@
 # compute model implied statistics
-lav_model_implied <- function(lavmodel = NULL) {
+lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
 
     stopifnot(inherits(lavmodel, "lavModel"))
-    
+
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
     # model-implied variance/covariance matrix ('sigma hat')
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
 
     # model-implied mean structure ('mu hat')
-    Mu.hat <-    computeMuHat(lavmodel = lavmodel)
+    Mu.hat <-    computeMuHat(lavmodel = lavmodel,  GLIST = GLIST)
 
     # if conditional.x, slopes
     if(lavmodel@conditional.x) {
-        SLOPES <- computePI(lavmodel = lavmodel)
+        SLOPES <- computePI(lavmodel = lavmodel,  GLIST = GLIST)
     } else {
         SLOPES <- vector("list", length = lavmodel@nblocks)
     }
 
     # if categorical, model-implied thresholds
     if(lavmodel@categorical) {
-        TH <- computeTH(lavmodel = lavmodel)
+        TH <- computeTH(lavmodel = lavmodel,  GLIST = GLIST)
     } else {
         TH <- vector("list", length = lavmodel@nblocks)
     }
  
     if(lavmodel@group.w.free) {
         w.idx <- which(names(lavmodel@GLIST) == "gw")
-        GW <- unname(lavmodel@GLIST[ w.idx ])
+        GW <- unname(GLIST[ w.idx ])
         GW <- lapply(GW, as.numeric)
     } else {
         GW <- vector("list", length = lavmodel@nblocks)

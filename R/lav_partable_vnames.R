@@ -94,13 +94,27 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         dot.names <- names(dotdotdot)
         block.select <- rep(TRUE, length(partable$lhs))
         for(dot in seq_len(ndotdotdot)) {
-        
             # selection variable?
             block.var <- dot.names[dot]
             block.val <- dotdotdot[[block.var]]
             # do we have this 'block.var' in partable?
             if(is.null(partable[[block.var]])) {
-                stop("lavaan ERROR: selection variable `", block.var, " not found in the parameter table.")
+
+                # for historical reasons, treat "group = 1" special
+                if(block.var == "group" && block.val == 1L) {
+                    partable$group <- rep(1L, length(partable$lhs))
+                    # remove block == 0
+                    idx <- which(partable$block == 0L)
+                    if(length(idx) > 0L) {
+                        partable$group[idx] <- 0L
+                    }
+                    block.select <- ( block.select &
+                                  partable[[block.var]] %in% block.val )
+                } else {
+                    stop("lavaan ERROR: selection variable `", 
+                         block.var, " not found in the parameter table.")
+                }
+
             } else {
                 if(!all(block.val %in% partable[[block.var]])) {
                     stop("lavaan ERROR: ", block.var ,

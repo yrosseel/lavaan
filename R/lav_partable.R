@@ -83,7 +83,7 @@ lavaanify <- lavParTable <- function(
 
     # check for wrongly specified variances/covariances/intercepts
     # of exogenous variables in model syntax (if fixed.x=TRUE)
-    if(fixed.x) { # we ignore the groups here!
+    if(fixed.x && warn) { # we ignore the groups here!
         # we only call this function for the warning message
         tmp <- lav_partable_vnames(FLAT, "ov.x", warn = TRUE); rm(tmp)
     }

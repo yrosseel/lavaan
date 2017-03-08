@@ -107,7 +107,7 @@ lav_object_extended <- function(object, add = NULL,
                                 do.fit = FALSE) {
 
     # partable original model
-    partable <- object@ParTable[c("lhs","op","rhs","block","free",
+    partable <- object@ParTable[c("lhs","op","rhs","block","group","free",
                                   "exo","label","plabel")] # do we need 'exo'?
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))

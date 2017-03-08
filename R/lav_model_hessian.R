@@ -3,6 +3,7 @@
 lav_model_hessian <- function(lavmodel       = NULL,
                               lavsamplestats = NULL,
                               lavdata        = NULL,
+                              lavpta         = NULL,
                               lavoptions     = NULL,
                               lavcache       = NULL,
                               group.weight   = TRUE) {
@@ -13,7 +14,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
     Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
     x <- lav_model_get_parameters(lavmodel = lavmodel)
     for(j in 1:lavmodel@nx.free) {
-        h.j <- 10e-6
+        h.j <- 1e-06
         x.left <- x.left2 <- x.right <- x.right2 <- x
         x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
         x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
@@ -24,18 +25,22 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                                             lavmodel, x.left), 
                                lavsamplestats = lavsamplestats, 
                                lavdata        = lavdata, 
+                               lavpta         = lavpta,
                                lavcache       = lavcache,
                                type           = "free", 
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               x = x.left)
         g.left2 <-    
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
                                                             lavmodel, x.left2),
                                lavsamplestats = lavsamplestats, 
                                lavdata        = lavdata, 
+                               lavpta         = lavpta,
                                lavcache       = lavcache,
                                type           = "free", 
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               x = x.left2)
 
         g.right <- 
             lav_model_gradient(lavmodel       = lavmodel,
@@ -43,9 +48,11 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                                             lavmodel, x.right),
                                lavsamplestats = lavsamplestats, 
                                lavdata        = lavdata, 
+                               lavpta         = lavpta,
                                lavcache       = lavcache,
                                type           = "free", 
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               x = x.right)
 
         g.right2 <- 
             lav_model_gradient(lavmodel       = lavmodel,
@@ -53,9 +60,11 @@ lav_model_hessian <- function(lavmodel       = NULL,
                                                             lavmodel, x.right2),
                                lavsamplestats = lavsamplestats, 
                                lavdata        = lavdata, 
+                               lavpta         = lavpta,
                                lavcache       = lavcache,
                                type           = "free", 
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               x = x.right2)
     
         Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
     }
@@ -70,6 +79,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
 lav_model_hessian_complex <- function(lavmodel       = NULL,
                                       lavsamplestats = NULL,
                                       lavdata        = NULL,
+                                      lavpta         = NULL,
                                       lavcache       = NULL,
                                       group.weight   = TRUE) {
 
@@ -79,6 +89,7 @@ lav_model_hessian_complex <- function(lavmodel       = NULL,
                                  GLIST          = GLIST,
                                  lavsamplestats = lavsamplestats,
                                  lavdata        = lavdata,
+                                 lavpta         = lavpta,
                                  lavcache       = lavcache,
                                  type           = "free",
                                  group.weight   = group.weight)

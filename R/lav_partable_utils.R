@@ -1,16 +1,3 @@
-# guess number of blocks from a partable
-lav_partable_nblocks <- function(partable) {
-
-    if(is.null(partable$block)) {
-        nblocks <- 1L
-    } else {
-        # always integers
-        tmp <- partable$block[ partable$block > 0L ] # non-zero only
-        nblocks <- length(unique(na.omit(tmp)))      # all combinations
-    }
-
-    nblocks
-}
 
 # what are the block values (not necessarly 1..nb)
 lav_partable_block_values <- function(partable) {
@@ -26,37 +13,57 @@ lav_partable_block_values <- function(partable) {
     block.values
 }
 
-# guess number of groups from a partable
-lav_partable_ngroups <- function(partable) {
+# guess number of blocks from a partable
+lav_partable_nblocks <- function(partable) {
+    length( lav_partable_block_values(partable) )
+}
+
+# what are the group values (not necessarily integers)
+lav_partable_group_values <- function(partable) {
 
     if(is.null(partable$group)) {
-        ngroups <- 1L
+        group.values <- 1L
     } else if(is.numeric(partable$group)) {
         tmp <- partable$group[ partable$group > 0L ]
-        ngroups <- length(unique(na.omit(tmp)))
+        group.values <- unique(na.omit(tmp))
     } else { # character
         tmp <- partable$group[nchar(partable$group) > 0L]
-        ngroups <- length(unique(na.omit(tmp)))
+        group.values <- unique(na.omit(tmp))
     }
 
-    ngroups
+    group.values
+}
+
+# guess number of groups from a partable
+lav_partable_ngroups <- function(partable) {
+    length( lav_partable_group_values(partable) )
+}
+
+# what are the level values (not necessarily integers)
+lav_partable_level_values <- function(partable) {
+
+    if(is.null(partable$level)) {
+        level.values <- 1L
+    } else if(is.numeric(partable$level)) {
+        tmp <- partable$level[ partable$level > 0L ]
+        level.values <- unique(na.omit(tmp))
+    } else { # character
+        tmp <- partable$level[nchar(partable$level) > 0L]
+        level.values <- unique(na.omit(tmp))
+    }
+
+    level.values
 }
 
 # guess number of levels from a partable
 lav_partable_nlevels <- function(partable) {
-
-    if(is.null(partable$level)) {
-        nlevels. <- 1L
-    } else if(is.numeric(partable$level)) {
-        tmp <- partable$level[ partable$level > 0L ]
-        nlevels. <- length(unique(na.omit(tmp)))
-    } else { # character
-        tmp <- partable$level[nchar(partable$level) > 0L]
-        nlevels. <- length(unique(na.omit(tmp)))
-    }
-
-    nlevels.
+    length( lav_partable_level_values(partable) )
 }
+
+
+
+
+
 
 # number of sample statistics per block
 lav_partable_ndat <- function(partable) {

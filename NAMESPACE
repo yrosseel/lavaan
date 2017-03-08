@@ -11,10 +11,11 @@ importFrom("methods",
            # generics,
 
            "show")
-importFrom("stats", "as.formula", "complete.cases", "cor", "cov", "cov2cor",
+importFrom("stats", 
+           "as.formula", "complete.cases", "cor", "cov", "cov2cor",
            "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq",
            "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif",
-           "sd", "terms", "uniroot", "var", "weighted.mean",
+           "sd", "terms", "uniroot", "var", "weighted.mean", "aggregate",
            # generics
            "coef", "residuals", "resid", "fitted.values", "fitted",
            "predict", "update", "anova", "vcov")

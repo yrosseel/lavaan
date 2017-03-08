@@ -314,19 +314,17 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         } else if(nlevels > 1L) { # continuous, multilevel setting
 
-            # overwrite later with within cov? -- used for starting values
-            cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
-            var[[g]]  <-   diag(cov[[g]])
-            # rescale cov by (N-1)/N? (only COV!)
-            if(rescale) {
-                # we 'transform' the sample cov (divided by n-1)
-                # to a sample cov divided by 'n'
-                cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
-            }
-            mean[[g]] <- colMeans(X[[g]], na.rm = TRUE)
+            # level-based sample statistics
+            YLp[[g]] <- lav_samplestats_cluster_patterns(Y  = X[[g]],
+                                                         Lp = lavdata@Lp[[g]])
 
-            #YLp[[g]] <- lav_samplestats_cluster_patterns(Y  = X[[g]],
-            #                                             Lp = Lp[[g]])
+            # 1. adapt lav_samplestats_cluster_patterns to use 
+            #    within.idx, between.idx, ...
+            # using S.PW for cov[[1]]
+            cov[[g]] <- unname( stats::cov(X[[g]], use="pairwise"))
+            #YLp[[g]][[2]]$S.PW
+            mean[[g]] <- unname( colMeans(X[[g]], na.rm=TRUE) )
+            var[[g]] <- diag(cov[[g]])
 
         } else { # continuous, single-level case
  
@@ -1041,13 +1039,130 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL) {
 lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
     # coerce Y to matrix
-    Y <- as.matrix(Y)
+    Y1 <- as.matrix(Y); N <- NROW(Y1); P <- NCOL(Y1)
 
     if(is.null(Lp)) {
         stop("lavaan ERROR: Lp is NULL")
     }
 
-    YLp <- vector("list", length = length(Lp$cluster))
+    # how many levels?
+    nlevels <- length(Lp$cluster) + 1L
+
+    # compute some sample statistics per level
+    YLp     <- vector("list", length = nlevels)
+    for(l in 2:nlevels) {
+        CLUS           <- Lp$clus[,l-1L]
+        ncluster.sizes <- Lp$ncluster.sizes[[l]]
+        cluster.size   <- Lp$cluster.size[[l]]
+        cluster.sizes  <- Lp$cluster.sizes[[l]]
+        nclusters      <- Lp$nclusters[[l]]
+        both.idx       <- Lp$both.idx[[l]]
+        within.idx     <- Lp$within.idx[[l]]
+        between.idx    <- Lp$between.idx[[l]]
+        cluster.idx    <- Lp$cluster.idx[[l]]
+        ov.idx.1       <- sort.int(c(both.idx, within.idx))
+        ov.idx.2       <- sort.int(c(both.idx, between.idx))
+
+        Y1.means <- colMeans(Y1, na.rm = TRUE)
+        S <- cov(Y1) * (N - 1L)/N
+        both.idx <- all.idx <- seq_len(P)
+        if(length(within.idx) > 0L ||
+           length(between.idx) > 0L) {
+            both.idx <- all.idx[-c(within.idx, between.idx)]
+        }
+
+        Y2 <- unname(as.matrix(aggregate(Y1, by = list(CLUS), FUN = mean)[,-1]))
+        Y2c <- t( t(Y2) - Y1.means )
+        if(length(within.idx) > 0L) {
+        #    Y2[, within.idx] <- 0
+        #    Y2c[,within.idx] <- 0
+        }
+
+        # compute S.w
+        S.w <- matrix(0, P, P)
+        Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
+        S.w <- crossprod(Y1a) / (N - nclusters)
+        S.PW.start <- S.w
+
+        if(length(within.idx) > 0L) {
+            #bw.idx <- c(both.idx, within.idx)
+            #S.w[bw.idx, within.idx] <- S[bw.idx, within.idx]
+            #S.w[within.idx, bw.idx] <- S[within.idx, bw.idx]
+
+            #S.w[within.idx, within.idx] <- 
+            #  S[within.idx, within.idx, drop = FALSE]
+             S.PW.start[within.idx, within.idx] <- 
+                      S[within.idx, within.idx, drop = FALSE]
+        }
+        if(length(between.idx) > 0L) {
+            S.w[between.idx,] <- 0
+            S.w[,between.idx] <- 0
+            S.PW.start[between.idx,] <- 0
+            S.PW.start[,between.idx] <- 0
+        }
+        S.b <- crossprod(Y2c * cluster.size, Y2c) / nclusters
+        #s <- (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))
+        # same as
+        s <- (N - sum(cluster.size^2)/N)/(nclusters - 1)
+        V2 <- (S.b - S.w)/s
+        V2[within.idx,] <- 0
+        V2[,within.idx] <- 0
+
+        Mu.W <- numeric( P )
+        Mu.W[within.idx] <- Y1.means[within.idx]
+
+        Mu.B <- colMeans(Y1)
+        Mu.B[within.idx] <- 0
+
+        if(length(between.idx) > 0L) {
+            # replace between.idx by cov(Y2)[,] elements...
+            Mu.B[between.idx] <- colMeans(Y2[,between.idx,drop = FALSE])
+
+            S2 <- cov(Y2) * (nclusters - 1L) / nclusters
+            #bb.idx <- c(both.idx, between.idx)
+            #V2[bb.idx, between.idx] <- S2[bb.idx, between.idx]
+            #V2[between.idx, bb.idx] <- S2[between.idx, bb.idx]
+            V2[  between.idx, between.idx] <- 
+              S2[between.idx, between.idx, drop = FALSE]
+        }
+
+        # FIXME: Mu.B not quite ok for (fixed.x) x variables if they 
+        # occur both at level 1 AND level 2
+        Mu.B.start <- Mu.B
+
+        # per cluster-size
+        cov.d  <- vector("list", length = ncluster.sizes)
+        mean.d <- vector("list", length = ncluster.sizes)
+        GD     <- vector("list", length = ncluster.sizes)
+
+        ### FIXME  ####
+        Y2 <- unname(as.matrix(aggregate(Y1, by = list(CLUS), FUN = mean)[,-1]))        ### NO zero columns for within.idx columns #####
+
+
+        for(clz in seq_len(ncluster.sizes)) {
+            nd <- cluster.sizes[clz]
+            # select clusters with this size
+            d.idx <- which(cluster.size == nd)
+            # NOTE:!!!!
+            # reorder columns
+            # to match A.inv and m.k later on in objective!!!
+            tmp2 <- Y2[d.idx, 
+                       c(between.idx, sort.int(c(both.idx, within.idx))), 
+                       drop = FALSE]
+            GD[[clz]] <- length(d.idx)
+            mean.d[[clz]] <- colMeans(tmp2)
+            if(length(d.idx) > 1L) {
+                cov.d[[clz]] <- cov(tmp2) * (GD[[clz]]-1) / GD[[clz]]
+            } else {
+                cov.d[[clz]] <- 0
+            }
+        }
+
+        YLp[[l]] <- list(Y2 = Y2, S.PW.start = S.PW.start,
+                         Sigma.W = S.w, Mu.W = Mu.W,
+                         Sigma.B = V2, Mu.B = Mu.B, Mu.B.start = Mu.B.start,
+                         GD = GD, mean.d = mean.d, cov.d = cov.d)
+    } # l
 
     YLp
 }

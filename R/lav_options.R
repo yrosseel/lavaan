@@ -128,6 +128,10 @@ lav_options_default <- function(mimic = "lavaan") {
                 # sanity checks
                 check                  = c("start", "post"),
 
+                # more models
+                h1                     = TRUE,
+                baseline               = TRUE,
+
                 # verbosity
                 verbose                = FALSE,
                 warn                   = TRUE,
@@ -235,6 +239,21 @@ lav_options_set <- function(opt = NULL) {
         opt$representation <- "EQS"
     } else {
         stop("representation must be \"LISREL\" or \"EQS\" \n")
+    }
+
+    # multilevel
+    # brute-force override (for now)
+    if(opt$multilevel) {
+        opt$meanstructure <- TRUE
+        opt$missing <- "listwise"
+        opt$test <- "none"
+        opt$se <- "standard"
+        opt$information <- "observed"
+        #opt$fixed.x = FALSE
+        opt$control <- list(gradient = "numerical")
+        opt$check <- "start" # post calls post_check, which calls
+                             # lavInspect(fit, "cov.lv") which needs
+                             # cov.x per block...
     }
 
 

@@ -11,6 +11,7 @@ lav_model_information <- function(lavmodel       = NULL,
                                   Delta          = NULL,
                                   lavcache       = NULL,
                                   lavoptions     = NULL,
+                                  lavpta         = NULL,
                                   information    = "observed",
                                   extra          = FALSE,
                                   augmented      = FALSE,
@@ -29,7 +30,7 @@ lav_model_information <- function(lavmodel       = NULL,
         E <- lav_model_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
             lavcache = lavcache, group.weight = group.weight,
-            lavoptions = lavoptions,
+            lavoptions = lavoptions, lavpta = lavpta,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else {
         # structured of unstructured? (since 0.5-23)
@@ -201,6 +202,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                            lavsamplestats = NULL,
                                            lavdata        = NULL,
                                            lavcache       = NULL,
+                                           lavpta         = NULL,
                                            lavoptions     = NULL,
                                            group.weight   = TRUE,
                                            augmented      = FALSE,
@@ -233,6 +235,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                      lavdata        = lavdata,
                                      lavoptions     = lavoptions,
                                      lavcache       = lavcache,
+                                     lavpta         = lavpta,
                                      group.weight   = group.weight)
 
         # NOTE! What is the relationship between the Hessian of the objective

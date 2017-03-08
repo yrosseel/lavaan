@@ -4,14 +4,16 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                GLIST          = NULL, 
                                lavsamplestats = NULL, 
                                lavdata        = NULL,
-                               lavcache       = NULL, 
+                               lavcache       = NULL,
+                               lavpta         = NULL,
                                type           = "free", 
                                verbose        = FALSE, 
                                forcePD        = TRUE, 
                                group.weight   = TRUE,
                                Delta          = NULL,
                                m.el.idx       = NULL,
-                               x.el.idx       = NULL) {
+                               x.el.idx       = NULL,
+                               x              = NULL) {
 
     nmat           <- lavmodel@nmat
     estimator      <- lavmodel@estimator
@@ -27,6 +29,37 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    # catch nlevels > 1L
+    if(lavdata@nlevels > 1L) {
+
+        # FIXME: if x == NULL, this comes from VCOV (or elsewhere)
+        # will NOT work with constraints!!!
+        #if(is.null(x)) {
+        #    x <- lav_model_get_parameters(lavmodel, GLIST = GLIST)
+        #}
+
+        # local objective function
+        min.f <- function(x) {
+            if(lavmodel@eq.constraints) {
+                x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+                                lavmodel@eq.constraints.k0
+            }
+            GLIST <- lav_model_x2GLIST(lavmodel, x=x)
+        
+            fx <- lav_model_objective(lavmodel       = lavmodel,
+                                      GLIST          = GLIST,
+                                      lavsamplestats = lavsamplestats,
+                                      lavdata        = lavdata,
+                                      lavpta         = lavpta,
+                                      lavcache       = lavcache,
+                                      verbose        = FALSE)
+            fx
+        }
+
+        dx <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
+        return(dx)
+    }
 
     if(estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
 

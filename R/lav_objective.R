@@ -620,10 +620,50 @@ estimator.MML <- function(lavmodel      = NULL,
     fx
 }
 
-estimator.2L <- function(lavmodel = NULL,
-                         lavdata  = NULL,
+estimator.2L <- function(lavmodel       = NULL,
+                         GLIST          = NULL,
+                         lavdata        = NULL,
+                         lavpta         = NULL,
                          lavsamplestats = NULL,
-                         group = 1L) {
-    return(0)
+                         group          = 1L) {
+
+    if(is.null(lavpta)) {
+        stop("lavpta is NULL")
+    }
+
+    Lp <- lavdata@Lp[[group]]
+    YLp <- lavsamplestats@YLp[[group]]
+
+    # compute model-implied statistics for all blocks
+    implied <- lav_model_implied(lavmodel, GLIST = GLIST)
+    
+    # here, we assume only 2 levels, at [[1]] and [[2]]
+    Sigma.W <- implied$cov[[1]]
+    Mu.W <- implied$mean[[1]]
+
+    # reorder/augment Sigma.B and Mu.B (only) so it includes ALL ov's 
+    # from Sigma.W
+    ov.names <- lavdata@ov.names[[group]]
+    b.idx <- match(lavpta$vnames$ov[[2]], ov.names)
+    Sigma.B <- matrix(0, length(ov.names), length(ov.names))
+    Sigma.B[b.idx, b.idx] <- implied$cov[[2]]
+    Mu.B <- numeric( length(ov.names) )
+    Mu.B[b.idx] <- implied$mean[[2]]
+
+    # add Mu.W to Mu.B (only for fixed.x covariates, zeroes otherwise)
+    w.idx <- match(lavpta$vnames$ov[[1]], ov.names)
+    Mu.B[w.idx] <- Mu.B[w.idx] + Mu.W
+
+    loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
+                  Sigma.W = Sigma.W, Mu.B = Mu.B, Sigma.B = Sigma.B,
+                  method = "size", log2pi = FALSE, minus.two = TRUE)
+
+    # minimize
+    objective <- 1 * loglik
+
+    # divide by (N*2)
+    objective <- objective / (lavsamplestats@ntotal * 2)
+
+    objective
 }
 

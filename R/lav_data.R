@@ -20,6 +20,7 @@ lavData <- function(data          = NULL,          # data.frame
                     cluster       = NULL,          # clusters?
                     ov.names      = NULL,          # variables needed in model
                     ov.names.x    = character(0),  # exo variables
+                    ov.names.l    = list(),  # names per level
                     ordered       = NULL,          # ordered variables
                     sample.cov    = NULL,          # sample covariance(s)
                     sample.mean   = NULL,          # sample mean vector(s)
@@ -107,6 +108,7 @@ lavData <- function(data          = NULL,          # data.frame
                                  ov.names          = ov.names,
                                  ordered           = ordered,
                                  ov.names.x        = ov.names.x,
+                                 ov.names.l        = ov.names.l,
                                  std.ov            = std.ov,
                                  missing           = missing,
                                  warn              = warn,
@@ -203,6 +205,7 @@ lavData <- function(data          = NULL,          # data.frame
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names, 
                        ov.names.x  = ov.names.x,
+                       ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
                        ov          = ov,
                        std.ov      = FALSE,
@@ -272,6 +275,7 @@ lavData <- function(data          = NULL,          # data.frame
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
                        ov.names.x  = ov.names.x,
+                       ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
                        ov          = ov,
                        missing     = "listwise",
@@ -297,7 +301,8 @@ lav_data_full <- function(data          = NULL,          # data.frame
                           ov.names      = NULL,          # variables needed 
                                                          # in model
                           ordered       = NULL,          # ordered variables
-                          ov.names.x    = character(0),  # exo variables
+                          ov.names.x    = character(0L), # exo variables
+                          ov.names.l    = list(),        # var per level
                           std.ov        = FALSE,         # standardize ov's?
                           missing       = "listwise",    # remove missings?
                           warn          = TRUE,          # produce warnings?
@@ -668,7 +673,9 @@ lav_data_full <- function(data          = NULL,          # data.frame
             # extract cluster variable(s), for this group
             clus <- data.matrix(data[case.idx[[g]], cluster])
             Lp[[g]] <- lav_data_cluster_patterns(Y = X[[g]], clus = clus,
-                                                 cluster = cluster)
+                                                 cluster = cluster,
+                                                 ov.names = ov.names[[g]],
+                                                 ov.names.l = ov.names.l)
         }
 
     } # groups, at first level 
@@ -686,6 +693,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                    norig           = norig,
                    ov.names        = ov.names,
                    ov.names.x      = ov.names.x,
+                   ov.names.l      = ov.names.l,
                    #ov.types        = ov.types,
                    #ov.idx          = ov.idx,
                    ordered         = as.character(ordered),
@@ -809,13 +817,14 @@ lav_data_resp_patterns <- function(Y) {
 # get cluster information
 # - cluster can be a vector!
 # - clus can contain multiple columns!
-lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL) {
+lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
+                                      ov.names, ov.names.l) {
 
     # how many levels?
-    nlevels <- length(cluster)
+    nlevels <- length(cluster) + 1L
 
     # check clus
-    stopifnot(ncol(clus) == nlevels, nrow(Y) == nrow(clus))
+    stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
     
     cluster.size   <- vector("list", length = nlevels)
     cluster.id     <- vector("list", length = nlevels)
@@ -823,21 +832,39 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL) {
     nclusters      <- vector("list", length = nlevels)
     cluster.sizes  <- vector("list", length = nlevels)
     ncluster.sizes <- vector("list", length = nlevels)
-    # for each clustering variable
-    for(l in 1:nlevels) {
-        CLUS <- clus[,l]
-        cluster.size[[l]] <- as.integer(table(CLUS))
-        cluster.id[[l]]   <- unique(CLUS)
-        cluster.idx[[l]]  <- match(CLUS, cluster.id[[l]])
-        nclusters[[l]]    <- length(cluster.size[[l]])
-        cluster.sizes[[l]] <- unique(cluster.size[[l]])
+    both.idx       <- vector("list", length = nlevels)
+    within.idx     <- vector("list", length = nlevels)
+    between.idx    <- vector("list", length = nlevels)
+
+    # level-1 is special
+    nclusters[[1]] <- NROW(Y)
+
+    # for the remaining levels...
+    for(l in 2:nlevels) {
+        CLUS <- clus[,(l-1L)]
+        cluster.id[[l]]     <- unique(CLUS)
+        cluster.idx[[l]]    <- match(CLUS, cluster.id[[l]])
+        cluster.size[[l]]   <- tabulate(cluster.idx[[l]])
+        nclusters[[l]]      <- length(cluster.size[[l]])
+        cluster.sizes[[l]]  <- unique(cluster.size[[l]])
         ncluster.sizes[[l]] <- length(cluster.sizes[[l]])
+ 
+        both.idx[[l]]       <- which( ov.names %in% ov.names.l[[1]] & 
+                                      ov.names %in% ov.names.l[[2]])
+        within.idx[[l]]     <- which( ov.names %in% ov.names.l[[1]] & 
+                                     !ov.names %in% ov.names.l[[2]])
+        between.idx[[l]]    <- which(!ov.names %in% ov.names.l[[1]] &
+                                      ov.names %in% ov.names.l[[2]])
     }
 
-    out <- list(cluster = cluster, clus = clus, nclusters = nclusters,
+    out <- list(cluster = cluster, clus = clus, 
+                # per level
+                nclusters = nclusters,
                 cluster.size = cluster.size, cluster.id = cluster.id,
                 cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
-                ncluster.sizes = ncluster.sizes)
+                ncluster.sizes = ncluster.sizes, 
+                both.idx = both.idx, within.idx = within.idx, 
+                between.idx = between.idx)
 
     out
 }

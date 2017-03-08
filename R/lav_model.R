@@ -9,7 +9,8 @@
 # construct MATRIX lavoptions$representation of the model
 lav_model <- function(lavpartable      = NULL,
                       lavoptions       = NULL,
-                      th.idx           = list()) {
+                      th.idx           = list(),
+                      cov.x            = list()) {
 
     # handle bare-minimum partables
     lavpartable <- lav_partable_complete(lavpartable)

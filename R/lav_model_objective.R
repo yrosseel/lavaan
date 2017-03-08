@@ -4,6 +4,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                 GLIST          = NULL,
                                 lavsamplestats = NULL,
                                 lavdata        = NULL,
+                                lavpta         = NULL,
                                 lavcache       = NULL,
                                 verbose        = FALSE,
                                 forcePD        = TRUE,
@@ -115,11 +116,12 @@ lav_model_objective <- function(lavmodel       = NULL,
         # complete data
             # ML and friends
             if(lavdata@nlevels > 1L) {
-                group.fx <- 0
-                #group.fx <- estimator.2L(lavmodel       = lavmodel,
-                #                         lavdata        = lavdata,
-                #                         lavsamplestats = lavsamplestats,
-                #                         group          = g)
+                group.fx <- estimator.2L(lavmodel       = lavmodel,
+                                         GLIST          = GLIST,
+                                         lavdata        = lavdata,
+                                         lavpta         = lavpta,
+                                         lavsamplestats = lavsamplestats,
+                                         group          = g)
             } else if(conditional.x) {
                 group.fx <- estimator.ML_res(
                     Sigma.hat        = Sigma.hat[[g]],

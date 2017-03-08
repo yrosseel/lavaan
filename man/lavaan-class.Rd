@@ -49,6 +49,9 @@ about the data.}
     \item{\code{implied}:}{List. Model implied statistics.}
     \item{\code{vcov}:}{List. Information about the variance matrix (vcov) of the model parameters.}
     \item{\code{test}:}{List. Different test statistics.}
+    \item{\code{h1}:}{List. Information about the unrestricted h1 model (if available).}
+    \item{\code{baseline}:}{List. Information about a baseline model (often
+the independence model) (if available).}
     \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
 }

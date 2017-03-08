@@ -2,6 +2,7 @@
 lav_model_estimate <- function(lavmodel       = NULL,
                                lavsamplestats = NULL,
                                lavdata        = NULL,
+                               lavpta         = NULL,
                                lavoptions     = NULL,
                                lavcache       = list(),
                                do.fit         = TRUE) {
@@ -51,6 +52,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   GLIST          = GLIST, 
                                   lavsamplestats = lavsamplestats, 
                                   lavdata        = lavdata,
+                                  lavpta         = lavpta,
                                   lavcache       = lavcache,
                                   verbose        = verbose,
                                   forcePD        = forcePD)
@@ -84,6 +86,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     first.derivative.param <- function(x, verbose=FALSE, infToMax=FALSE) {
 
+        x.orig <- x
+
         # transform variances back
         #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
@@ -99,10 +103,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  lavsamplestats = lavsamplestats,
                                  lavdata        = lavdata,
                                  lavcache       = lavcache,
+                                 lavpta         = lavpta,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
                                  verbose        = verbose,
-                                 forcePD        = TRUE)
+                                 forcePD        = TRUE,
+                                 x              = x.orig)
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
