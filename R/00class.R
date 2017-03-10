@@ -92,6 +92,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
         representation="character",  # stub, until we define more classes
         meanstructure="logical",
         categorical="logical",
+        multilevel="logical",
         group.w.free="logical",
         link="character",
 

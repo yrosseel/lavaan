@@ -1100,10 +1100,28 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             S.PW.start[between.idx,] <- 0
             S.PW.start[,between.idx] <- 0
         }
-        S.b <- crossprod(Y2c * cluster.size, Y2c) / nclusters
         #s <- (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))
         # same as
         s <- (N - sum(cluster.size^2)/N)/(nclusters - 1)
+
+        # S.b
+        # three parts: within/within, between/between, between/within
+        #S.b <- crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1L)
+        S.b <- crossprod(Y2c * cluster.size, Y2c) / nclusters
+
+        if(length(between.idx) > 0L) {
+            # this is what is needed for MUML:
+            S.b[, between.idx] <- 
+                (s * nclusters/N) * S.b[, between.idx, drop = FALSE]
+            S.b[between.idx, ] <- 
+                (s * nclusters/N) * S.b[between.idx, , drop = FALSE]
+            S.b[between.idx, between.idx] <-
+                ( s * crossprod(Y2c[, between.idx, drop = FALSE],
+              #          Y2c[, between.idx, drop = FALSE]) / (nclusters - 1L))
+                         Y2c[, between.idx, drop = FALSE]) / nclusters  )
+        }
+
+
         V2 <- (S.b - S.w)/s
         V2[within.idx,] <- 0
         V2[,within.idx] <- 0
@@ -1119,9 +1137,12 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             Mu.B[between.idx] <- colMeans(Y2[,between.idx,drop = FALSE])
 
             S2 <- cov(Y2) * (nclusters - 1L) / nclusters
+            #S2 <- cov(Y2)
+
             #bb.idx <- c(both.idx, between.idx)
             #V2[bb.idx, between.idx] <- S2[bb.idx, between.idx]
             #V2[between.idx, bb.idx] <- S2[between.idx, bb.idx]
+
             V2[  between.idx, between.idx] <- 
               S2[between.idx, between.idx, drop = FALSE]
         }
@@ -1158,7 +1179,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             }
         }
 
-        YLp[[l]] <- list(Y2 = Y2, S.PW.start = S.PW.start,
+        YLp[[l]] <- list(Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
                          Sigma.W = S.w, Mu.W = Mu.W,
                          Sigma.B = V2, Mu.B = Mu.B, Mu.B.start = Mu.B.start,
                          GD = GD, mean.d = mean.d, cov.d = cov.d)

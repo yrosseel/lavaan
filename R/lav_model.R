@@ -19,9 +19,17 @@ lav_model <- function(lavpartable      = NULL,
     nblocks <- lav_partable_nblocks(lavpartable)
     meanstructure <- any(lavpartable$op == "~1")
     categorical <- any(lavpartable$op == "|")
-    if(categorical) meanstructure <- TRUE
+    if(categorical) { 
+        meanstructure <- TRUE
+    }
     group.w.free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
-
+    multilevel <- FALSE
+    if(!is.null(lavpartable$level)) {
+        nlevels <- lav_partable_nlevels(lavpartable)
+        if(nlevels > 1L) {
+            multilevel <- TRUE
+        }
+    }
 
     # handle variable definitions and (in)equality constraints
     CON <- lav_constraints_parse(partable = lavpartable,
@@ -213,6 +221,21 @@ lav_model <- function(lavpartable      = NULL,
     #    fixed.x <- TRUE
     #}
 
+    # dirty hack to mimic MUML
+    if(!is.null(lavoptions$tech.muml.scale)) {
+        warning("lavaan WARNING: using muml scale in group 2")
+
+        # find matrix
+        lambda.idx <- which(names(GLIST) == "lambda")[2L]
+
+        # find rows/cols
+        B.names <- paste0("b", ov.names) ## ad-hoc assumption!!!
+        COLS <-  match(B.names, LV.names)
+        ROWS <- seq_len(nvar[2])
+        stopifnot(length(COLS) == length(ROWS))
+        GLIST[[ lambda.idx ]][ cbind(ROWS, COLS) ] <- lavoptions$tech.muml.scale
+    }
+
 
     Model <- new("lavModel",
                  GLIST=GLIST,
@@ -222,6 +245,7 @@ lav_model <- function(lavpartable      = NULL,
                  representation=lavoptions$representation,
                  meanstructure=meanstructure,
                  categorical=categorical,
+                 multilevel=multilevel,
                  link=lavoptions$link,
                  nblocks=nblocks,
                  ngroups=nblocks, # for rsem!!!

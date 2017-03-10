@@ -15,7 +15,7 @@
 
 lavaanify <- lavParTable <- function(
 
-                      model            = NULL, 
+                      model            = NULL,
                       meanstructure    = FALSE,
                       int.ov.free      = FALSE,
                       int.lv.free      = FALSE,
@@ -244,6 +244,31 @@ lavaanify <- lavParTable <- function(
     if(debug) {
         cat("[lavaan DEBUG]: parameter LIST without MODIFIERS:\n")
         print( as.data.frame(LIST, stringsAsFactors=FALSE) )
+    }
+
+    # handle multilevel-specific constraints
+    multilevel <- FALSE
+    if(!is.null(LIST$level)) {
+        nlevels <- lav_partable_nlevels(LIST)
+        if(nlevels > 1L) {
+            multilevel <- TRUE
+        }
+    }
+    if(multilevel && any(LIST$op == "~1")) {
+        # fix ov intercepts for all within ov that also appear at level 2
+        # FIXME: not tested with > 2 levels
+        ov.names <- lav_partable_vnames(LIST, "ov") ## all names
+        level.values <- lav_partable_level_values(LIST)
+        other.names <- LIST$lhs[ LIST$op == "~1" &
+                                 LIST$level %in% level.values[-1L] &
+                                 LIST$lhs %in% ov.names]
+        fix.names.idx <- which(LIST$op == "~1" &
+                               LIST$level %in% level.values[1L] &
+                               LIST$lhs %in% other.names)
+        if(length(fix.names.idx) > 0L) {
+            LIST$free[fix.names.idx] <- 0L
+            LIST$ustart[fix.names.idx] <- 0
+        }
     }
 
     # apply user-specified modifiers
