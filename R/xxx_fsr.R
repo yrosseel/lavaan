@@ -180,8 +180,8 @@ fsr <- function(model      = NULL,
             # we use lavPredict() here to remove unwanted dummy lv's, if any
             SC <- lavPredict(fit.1fac, method = fs.method, fsm = TRUE)
             FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
-            LAMBDA <- computeLAMBDA(fit.1fac@Model, remove.dummy.lv)
-            THETA  <- computeTHETA(fit.1fac@Model)
+            LAMBDA <- computeLAMBDA(fit.1fac@Model) # FIXME: remove dummy lv's?
+            THETA  <- computeTHETA(fit.1fac@Model)  # FIXME: remove not used ov?
         } else {
             SC <- lavPredict(fit.1fac, method = fs.method, fsm = FALSE)
         }

@@ -77,11 +77,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo, method = method,
                    fsm = fsm, optim.method = optim.method)
-
         # remove dummy lv?
-        if(fsm) {
-            FSM <- attr(out, "fsm")
-        }
         out <- lapply(seq_len(lavdata@ngroups), function(g) {
                    lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                                lavmodel@ov.x.dummy.lv.idx[[g]])
@@ -89,19 +85,31 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    if(length(lv.idx) > 0L) {
                        ret <- out[[g]][, -lv.idx, drop=FALSE]
                    }
-                   ret 
-               })
-        FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
-                   lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                               lavmodel@ov.x.dummy.lv.idx[[g]])
-                   ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
-                               lavmodel@ov.x.dummy.ov.idx[[g]])
-                   ret <- FSM[[g]]
-                   if(length(lv.idx) > 0L) {
-                       ret <- FSM[[g]][-lv.idx, -ov.idx, drop=FALSE]
-                   }
                    ret
                })
+        if(fsm) {
+            FSM <- attr(out, "fsm")
+            out <- lapply(seq_len(lavdata@ngroups), function(g) {
+                      lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                                   lavmodel@ov.x.dummy.lv.idx[[g]])
+                       ret <- out[[g]]
+                       if(length(lv.idx) > 0L) {
+                           ret <- out[[g]][, -lv.idx, drop=FALSE]
+                       }
+                       ret 
+                   })
+            FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                                   lavmodel@ov.x.dummy.lv.idx[[g]])
+                       ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
+                                   lavmodel@ov.x.dummy.ov.idx[[g]])
+                       ret <- FSM[[g]]
+                       if(length(lv.idx) > 0L) {
+                           ret <- FSM[[g]][-lv.idx, -ov.idx, drop=FALSE]
+                      }
+                       ret
+                   })
+        }
 
         # label?
         if(label) {
