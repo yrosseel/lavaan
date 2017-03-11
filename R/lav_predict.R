@@ -91,6 +91,17 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    }
                    ret 
                })
+        FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
+                   lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
+                               lavmodel@ov.x.dummy.lv.idx[[g]])
+                   ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
+                               lavmodel@ov.x.dummy.ov.idx[[g]])
+                   ret <- FSM[[g]]
+                   if(length(lv.idx) > 0L) {
+                       ret <- FSM[[g]][-lv.idx, -ov.idx, drop=FALSE]
+                   }
+                   ret
+               })
 
         # label?
         if(label) {

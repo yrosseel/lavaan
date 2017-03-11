@@ -177,13 +177,20 @@ fsr <- function(model      = NULL,
         # compute factor scores
         if(fsr.method %in% c("croon") || 
            lavoptions$se == "robust.sem") {
-            SC <- lav_predict_eta(fit.1fac, method = fs.method, fsm = TRUE)
+            # we use lavPredict() here to remove unwanted dummy lv's, if any
+            SC <- lavPredict(fit.1fac, method = fs.method, fsm = TRUE)
             FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
-            LAMBDA <- computeLAMBDA(fit.1fac@Model)
+            LAMBDA <- computeLAMBDA(fit.1fac@Model, remove.dummy.lv)
             THETA  <- computeTHETA(fit.1fac@Model)
         } else {
-            SC <- lav_predict_eta(fit.1fac, method = fs.method, fsm = FALSE)
+            SC <- lavPredict(fit.1fac, method = fs.method, fsm = FALSE)
         }
+        # if ngroups = 1, make list again
+        if(ngroups == 1L) {
+            # because lavPredict() drops the list
+            SC <- list(SC)
+        }
+  
 
         # store results
         for(g in 1:ngroups) {
@@ -196,7 +203,6 @@ fsr <- function(model      = NULL,
         } # g
 
     } # nfac
-
 
     # cbind factor scores
     FS.SCORES <- lapply(1:ngroups, function(g) {

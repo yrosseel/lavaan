@@ -7,6 +7,10 @@
 # - a single measurement model (1 factor only)
 # ...
 
+
+# FIXME: if we have more than 1 factor, we remove the structural
+# part, but should we add ALL correlations among the latent variables?
+# (NO for now)
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL) {
@@ -29,79 +33,61 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
         lv.names <- list(lv.names)
     }
     
-    # which latent variables should we remove?
-    lv.names.rm <- lapply(1:ngroups, function(g) {
-                       lavpta$vnames$lv.regular[[g]][ 
-                        !lavpta$vnames$lv.regular[[g]] %in% lv.names[[g]] ] 
-                   })
-
-    # remove rows idx
-    rm.idx <- integer(0L)
+    # keep rows idx
+    keep.idx <- integer(0L)
 
     # remove not-needed measurement models
     for(g in 1:ngroups) {
-        # indicators for not-needed latent variables
+        # indicators for latent variables we keep
         IND.idx <- which(  PT$op == "=~"              &
-                          !PT$lhs %in% lv.names[[g]]  &
+                           PT$lhs %in% lv.names[[g]]  &
                            PT$group == g )
         IND <- PT$rhs[ IND.idx ]
 
-        # remove =~
-        rm.idx <- c(rm.idx, IND.idx)
+        # keep =~
+        keep.idx <- c(keep.idx, IND.idx)
 
-        # remove ~~
-        VAR.idx <- which( PT$op == "~~"                     &
-                          ( PT$lhs %in% IND                 |
-                            PT$rhs %in% IND                 |
-                            PT$lhs %in% lv.names.rm[[g]]    |
-                            PT$rhs %in% lv.names.rm[[g]] )  &
-                          PT$group == g )
-        rm.idx <- c(rm.idx, VAR.idx)
-
-        # regressions, involving a latent variable
-        LV.EQS.idx <- which( PT$op == "~"                               &
-                             ( PT$lhs %in% lavpta$vnames$lv.regular[[g]]   |
-                               PT$rhs %in% lavpta$vnames$lv.regular[[g]] ) &
+        # keep ~~
+        OV.VAR.idx <- which( PT$op == "~~"   &
+                             PT$lhs %in% IND &
+                             PT$rhs %in% IND &
                              PT$group == g )
-        rm.idx <- c(rm.idx, LV.EQS.idx)
+        keep.idx <- c(keep.idx, OV.VAR.idx)
 
-        # regressions, involving indicators
-        OV.EQS.idx <- which( PT$op == "~"       &
-                            ( PT$lhs %in% IND   |
-                              PT$rhs %in% IND ) &
-                            PT$group == g )
-        rm.idx <- c(rm.idx, OV.EQS.idx)
+        LV.VAR.idx <- which( PT$op == "~~"             &
+                             PT$lhs %in% lv.names[[g]] &
+                             PT$rhs %in% lv.names[[g]] &
+                             PT$group == g )
+        keep.idx <- c(keep.idx, LV.VAR.idx)
 
         # intercepts indicators
         OV.INT.idx <- which( PT$op == "~1"    &
                              PT$lhs %in% IND  &
                              PT$group == g )
-        rm.idx <- c(rm.idx, OV.INT.idx)
+        keep.idx <- c(keep.idx, OV.INT.idx)
 
         # intercepts latent variables
         LV.INT.idx <- which( PT$op == "~1"                 &
-                             PT$lhs %in% lv.names.rm[[g]]  &
+                             PT$lhs %in% lv.names[[g]]  &
                              PT$group == g )
-        rm.idx <- c(rm.idx, LV.INT.idx)
+        keep.idx <- c(keep.idx, LV.INT.idx)
 
         # thresholds
         TH.idx <- which( PT$op == "|"    &
                          PT$lhs %in% IND &
                          PT$group == g )
-        rm.idx <- c(rm.idx, TH.idx)
+        keep.idx <- c(keep.idx, TH.idx)
 
         # scaling factors
         SC.idx <- which( PT$op == "~*~"  &
                          PT$lhs %in% IND &
                          PT$group == g )
-        rm.idx <- c(rm.idx, SC.idx)
+        keep.idx <- c(keep.idx, SC.idx)
 
         # FIXME: ==, :=, <, >, == involving IND...
     }
     
-    if(length(rm.idx) > 0L) {
-        PT <- PT[-rm.idx,,drop = FALSE]
-    }
+    PT <- PT[keep.idx,,drop = FALSE]
 
     # clean up
     PT <- lav_partable_complete(PT)
