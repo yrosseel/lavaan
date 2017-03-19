@@ -23,15 +23,17 @@ lav_partable_labels(partable, blocks = "group", group.equal = "",
                     group.partial = "", type = "user")
 
 # generate parameter table for specific models
-lav_partable_independence(lavobject = NULL, lavdata = NULL, lavoptions = NULL, 
-    lavsamplestats = NULL, sample.cov = NULL, sample.mean = NULL, 
-    sample.th = NULL, sample.th.idx = NULL)
+lav_partable_independence(lavobject = NULL, lavdata = NULL, 
+    lavoptions = NULL, lavsamplestats = NULL, sample.cov = NULL, 
+    sample.mean = NULL, sample.th = NULL, sample.th.idx = NULL)
 
-lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, lavoptions = NULL, 
-    lavsamplestats = NULL, sample.cov = NULL, sample.mean = NULL, 
-    sample.slopes = NULL, sample.th = NULL, sample.th.idx = NULL)
+lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, 
+    lavpta = NULL, lavoptions = NULL, lavsamplestats = NULL, 
+    sample.cov = NULL, sample.mean = NULL, sample.slopes = NULL, 
+    sample.th = NULL, sample.th.idx = NULL) 
 
-lav_partable_from_lm(object, est = FALSE, label = FALSE, as.data.frame. = FALSE)
+lav_partable_from_lm(object, est = FALSE, label = FALSE, 
+    as.data.frame. = FALSE)
 
 # complete a parameter table only containing a few columns (lhs,op,rhs)
 lav_partable_complete(partable = NULL, start = TRUE)
@@ -59,6 +61,7 @@ are extracted from this object.}
 \item{lavoptions}{A names list. The Options lsot from a lavaan object.}
 \item{lavsamplestats}{An object of class `lavSampleStats'. The SampleStats
 slot from a  lavaan object.}
+\item{lavpta}{The pta (parameter table attributes) slot from a lavaan object.}
 \item{sample.cov}{Optional list of numeric matrices. 
 Each list element contains a sample variance-covariance matrix for this group.
 If provided, these values will be used as starting values.}

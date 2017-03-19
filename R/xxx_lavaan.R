@@ -526,12 +526,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(is.logical(lavoptions$h1) && lavoptions$h1) {
         if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
             # implied h1 statistics
-            implied <- lav_h1_implied(lavdata = lavdata,
+            implied <- lav_h1_implied(lavdata        = lavdata,
                                       lavsamplestats = lavsamplestats,
-                                      lavoptions = lavoptions)
-            logl <- lav_h1_logl(lavdata = lavdata,
+                                      lavoptions     = lavoptions)
+            logl <- lav_h1_logl(lavdata        = lavdata,
                                 lavsamplestats = lavsamplestats,
-                                lavoptions = lavoptions)
+                                lavoptions     = lavoptions)
             # collect in h1 list
             h1 <- list(implied = implied, logl = logl)
         } else {

@@ -1051,7 +1051,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
     # compute some sample statistics per level
     YLp     <- vector("list", length = nlevels)
     for(l in 2:nlevels) {
-        CLUS           <- Lp$clus[,l-1L]
         ncluster.sizes <- Lp$ncluster.sizes[[l]]
         cluster.size   <- Lp$cluster.size[[l]]
         cluster.sizes  <- Lp$cluster.sizes[[l]]
@@ -1071,7 +1070,9 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             both.idx <- all.idx[-c(within.idx, between.idx)]
         }
 
-        Y2 <- unname(as.matrix(aggregate(Y1, by = list(CLUS), FUN = mean)[,-1]))
+        # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
+        Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
+                               FUN = mean)[,-1]))
         Y2c <- t( t(Y2) - Y1.means )
         if(length(within.idx) > 0L) {
         #    Y2[, within.idx] <- 0
@@ -1131,7 +1132,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         Mu.B <- colMeans(Y1)
         Mu.B[within.idx] <- 0
-
         if(length(between.idx) > 0L) {
             # replace between.idx by cov(Y2)[,] elements...
             Mu.B[between.idx] <- colMeans(Y2[,between.idx,drop = FALSE])
@@ -1150,6 +1150,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # FIXME: Mu.B not quite ok for (fixed.x) x variables if they 
         # occur both at level 1 AND level 2
         Mu.B.start <- Mu.B
+        #Mu.B.start[both.idx] <- Mu.B.start[both.idx] - colMeans(Y2c[,both.idx])
 
         # per cluster-size
         cov.d  <- vector("list", length = ncluster.sizes)
@@ -1157,7 +1158,10 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         GD     <- vector("list", length = ncluster.sizes)
 
         ### FIXME  ####
-        Y2 <- unname(as.matrix(aggregate(Y1, by = list(CLUS), FUN = mean)[,-1]))        ### NO zero columns for within.idx columns #####
+        # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
+        Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
+                                         FUN = mean)[,-1]))        
+        ### NO zero columns for within.idx columns #####
 
 
         for(clz in seq_len(ncluster.sizes)) {
