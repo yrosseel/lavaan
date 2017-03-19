@@ -55,13 +55,14 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
 
     } else {
         # invert sample.cov
-        sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov, 
+        sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov,
                               logdet = TRUE, Sinv.method = Sinv.method)
-        loglik <- 
-            lav_mvnorm_h1_loglik_samplestats(sample.mean    = sample.mean,
-                                             sample.cov     = sample.cov,
-                                             sample.nobs    = N,
-                                             sample.cov.inv = sample.cov.inv)
+        logdet <- attr(sample.cov.inv, "logdet")
+
+        loglik <-
+            lav_mvnorm_h1_loglik_samplestats(sample.cov.logdet = logdet,
+                                             sample.nvar       = P,
+                                             sample.nobs       = N)
     }
 
     loglik
@@ -69,28 +70,32 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
 
 
 
-# 1b: input are sample statistics (mean, cov, N) only
-lav_mvnorm_h1_loglik_samplestats <- function(sample.mean    = NULL,
-                                             sample.cov     = NULL,
-                                             sample.nobs    = NULL,
-                                             Sinv.method    = "eigen",
-                                             sample.cov.inv = NULL) {
+# 1b: input are sample statistics only (logdet, N and P)
+lav_mvnorm_h1_loglik_samplestats <- function(sample.cov.logdet = NULL,
+                                             sample.nvar       = NULL,
+                                             sample.nobs       = NULL,
+                                             # or
+                                             sample.cov        = NULL,
+                                             Sinv.method    = "eigen") {
 
-    P <- length(sample.mean); N <- sample.nobs
-    sample.mean <- as.numeric(sample.mean)
+    if(is.null(sample.nvar)) {
+        P <- NCOL(sample.cov)
+    } else {
+        P <- sample.nvar # number of variables
+    }
+
+    N <- sample.nobs
+    stopifnot(!is.null(P), !is.null(N))
+
     LOG.2PI <- log(2 * pi)
 
-    if(is.null(sample.cov.inv)) {
-        sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov, 
+    # all we need is the logdet
+    if(is.null(sample.cov.logdet)) {
+        sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov,
                               logdet = TRUE, Sinv.method = Sinv.method)
         logdet <- attr(sample.cov.inv, "logdet")
     } else {
-        logdet <- attr(sample.cov.inv, "logdet")
-        if(is.null(logdet)) {
-            # compute - ln|S.inv|
-            ev <- eigen(sample.cov.inv, symmetric = TRUE, only.values = TRUE)
-            logdet <- -1 * sum(log(ev$values))
-        }
+        logdet <- sample.cov.logdet
     }
 
     loglik <- -N/2 * (P * LOG.2PI + logdet + P)

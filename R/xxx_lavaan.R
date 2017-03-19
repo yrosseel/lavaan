@@ -529,16 +529,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             implied <- lav_h1_implied(lavdata        = lavdata,
                                       lavsamplestats = lavsamplestats,
                                       lavoptions     = lavoptions)
-            logl <- lav_h1_logl(lavdata        = lavdata,
-                                lavsamplestats = lavsamplestats,
-                                lavoptions     = lavoptions)
+            out <- lav_h1_logl(lavdata        = lavdata,
+                               lavsamplestats = lavsamplestats,
+                               lavoptions     = lavoptions)
             # collect in h1 list
-            h1 <- list(implied = implied, logl = logl)
+            h1 <- list(implied      = implied,
+                       loglik       = out$loglik,
+                       loglik.group = out$loglik.group)
         } else {
             # do nothing for now
         }
     } else {
-        stop("lavaan ERROR: argument `h1' must be logical (for now)")
+        if(!is.logical(lavoptions$h1)) {
+            stop("lavaan ERROR: argument `h1' must be logical (for now)")
+        }
         # TODO: allow h1 to be either a model syntax, a parameter table,
         # or a fitted lavaan object
     }
@@ -880,13 +884,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    ########################
-    #### 11. lavimplied ####
-    ########################
+    #################################
+    #### 11. lavimplied + loglik ####
+    #################################
     lavimplied <- lav_model_implied(lavmodel)
+    lavloglik  <- lav_model_loglik(lavdata        = lavdata,
+                                   lavsamplestats = lavsamplestats,
+                                   lavimplied     = lavimplied,
+                                   lavoptions     = lavoptions)
 
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
+
+    
 
 
 
@@ -1036,6 +1046,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   boot         = lavboot,             # list
                   optim        = lavoptim,            # list
                   implied      = lavimplied,          # list
+                  loglik       = lavloglik,           # list
                   vcov         = lavvcov,             # list
                   test         = lavtest,             # list
                   h1           = h1,                  # list

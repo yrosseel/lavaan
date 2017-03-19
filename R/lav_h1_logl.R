@@ -5,40 +5,65 @@ lav_h1_logl <- function(lavdata        = NULL,
 
     # number of groups
     ngroups <- lavdata@ngroups
-    logl <- rep( as.numeric(NA, ngroups) )
 
-    # only for ML (for now)
-    if(lavoptions$estimator == "ML") {
+    logl.group <- rep(as.numeric(NA), ngroups)
+
+    # should compute logl, or return NA?
+    logl.ok <- FALSE
+    if(lavoptions$estimator %in% c("ML", "MML")) {
+        # check if everything is numeric, OR if we have exogenous
+        # factor with 2 levels only
+        if(all(lavdata@ov$type == "numeric")) {
+            logl.ok <- TRUE
+        } else {
+            not.idx <- which(lavdata@ov$type != "numeric")
+            for(i in not.idx) {
+                if(lavdata@ov$type[i] == "factor" &&
+                   lavdata@ov$exo[i] == 1L &&
+                   lavdata@ov$nlev[i] == 2L) {
+                    logl.ok <- TRUE
+                } else {
+                    logl.ok <- FALSE
+                    break
+                }
+            }
+        }
+    }
+
+    if(logl.ok) {    
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
                 # not ready yet
-                #logl[g] <- lav_mvnorm_cluster_loglik_samplestats_2l()
+                #logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l()
             } else if(lavsamplestats@missing.flag) {
-                logl[g] <-
+                logl.group[g] <-
                     lav_mvnorm_missing_loglik_samplestats(
                         Yp    = lavsamplestats@missing[[g]],
                         Mu    = lavsamplestats@missing.h1[[g]]$mu,
                         Sigma = lavsamplestats@missing.h1[[g]]$sigma)
             } else { # single-level, complete data
+                # all we need is: logdet of covariance matrix, nobs and nvar
                 if(lavoptions$conditional.x) {
-                    # TODO
-                    #logl[g] <- lav_mvreg_loglik_samplestats(
-                    #    sample.res.beta =
-                    #    sample.res.cov=
-                    #    sample.XX=
-                    #    sample.nobs=
-                    #    Beta=
-                    #    Sigma=)
-                } else {
-                    logl[g] <-
+                    logl.group[g] <-
                         lav_mvnorm_h1_loglik_samplestats(
-                            sample.mean = lavsamplestats@mean[[g]],
-                            sample.cov.inv = lavsamplestats@icov[[g]],
-                            sample.nobs = lavsamplestats@nobs[[g]])
+                            sample.cov.logdet =
+                                lavsamplestats@res.cov.log.det[[g]],
+                            sample.nvar       = 
+                                NCOL(lavsamplestats@res.cov[[g]]),
+                            sample.nobs       = lavsamplestats@nobs[[g]])
+                } else {
+                    logl.group[g] <-
+                        lav_mvnorm_h1_loglik_samplestats(
+                            sample.cov.logdet = lavsamplestats@cov.log.det[[g]],
+                            sample.nvar       = NCOL(lavsamplestats@cov[[g]]),
+                            sample.nobs       = lavsamplestats@nobs[[g]])
                 }
             } # complete
         } # g
-    } # ML
+    } # logl.ok is TRUE
 
-    logl
+    out <- list(loglik       = sum(logl.group),
+                loglik.group = logl.group)
+
+    out
 }

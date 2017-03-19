@@ -46,6 +46,7 @@ about the data.}
       results of fitting the model}
     \item{\code{boot}:}{List. Results and information about the bootstrap.}
     \item{\code{optim}:}{List. Information about the optimization.}
+    \item{\code{loglik}:}{List. Information about the loglikelihood of the model (if maximum likelihood was used).}
     \item{\code{implied}:}{List. Model implied statistics.}
     \item{\code{vcov}:}{List. Information about the variance matrix (vcov) of the model parameters.}
     \item{\code{test}:}{List. Different test statistics.}

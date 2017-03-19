@@ -189,6 +189,7 @@ setClass("lavaan",
         Fit         = "Fit",             # fitted results 
         boot        = "list",            # bootstrap results
         optim       = "list",            # optimizer results
+        loglik      = "list",            # loglik values and info
         implied     = "list",            # model implied moments
         vcov        = "list",            # vcov
         test        = "list",            # test
