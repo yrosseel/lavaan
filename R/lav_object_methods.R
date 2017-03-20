@@ -919,12 +919,21 @@ function(object, ...) {
     if(object@optim$npar > 0L && !object@optim$converged) {
         warning("lavaan WARNING: model did not converge")
     }
+   
+    # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
+    if("loglik" %in% slotNames(object)) {
+        LOGL <- object@loglik
+    } else {
+        LOGL <- lav_model_loglik(lavdata        = object@Data,
+                                 lavsamplestats = object@SampleStats,
+                                 lavimplied     = object@implied,
+                                 lavmodel       = object@Model,
+                                 lavoptions     = object@Options)
+    }
 
-    logl.df <- fitMeasures(object, c("logl", "npar", "ntotal"))
-    names(logl.df) <- NULL
-    logl <- logl.df[1]
-    attr(logl, "df") <- logl.df[2]    ### note: must be npar, not df!!
-    attr(logl, "nobs") <- logl.df[3]
+    logl <- LOGL$loglik
+    attr(logl, "df") <- LOGL$npar    ### note: must be npar, not df!!
+    attr(logl, "nobs") <- LOGL$ntotal
     class(logl) <- "logLik"
     logl
 })

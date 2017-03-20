@@ -631,22 +631,23 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # logl H0
-            logl.H0.group <- numeric(G)
-            if(is.finite(logl.H1)) {
-                for(g in 1:G) {
-                    Ng <- object@SampleStats@nobs[[g]]
-                    logl.H0.group[g] <- -Ng * (fx.group[g] -
-                                               logl.H1.group[g]/Ng)
-                }
-                if(G > 1) {
-                    logl.H0 <- sum(logl.H0.group)
-                } else {
-                    logl.H0 <- logl.H0.group[1]
-                }
-            } else if(object@Options$estimator == "MML") {
-                logl.H0 <- -1 * fx
+            if("loglik" %in% slotNames(object)) {
+                logl.H0.group <- object@loglik$loglik.group
+                logl.H0       <- object@loglik$loglik
+                AIC           <- object@loglik$AIC
+                BIC           <- object@loglik$BIC
+                BIC2          <- object@loglik$BIC2
             } else {
-                logl.H0 <- as.numeric(NA)
+                out <- lav_model_loglik(lavdata        = object@Data,
+                                        lavsamplestats = object@SampleStats,
+                                        lavimplied     = object@implied,
+                                        lavmodel       = object@Model,
+                                        lavoptions     = object@Options)
+                logl.H0.group <- out$loglik.group
+                logl.H0       <- out$loglik
+                AIC           <- out$AIC
+                BIC           <- out$BIC
+                BIC2          <- out$BIC2   
             }
 
             if("logl" %in% fit.measures) {
@@ -654,7 +655,6 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # AIC
-            AIC <-  -2*logl.H0 + 2*npar
             if("aic" %in% fit.measures) {
                 indices["aic"] <- AIC
             }
@@ -662,15 +662,9 @@ lav_fit_measures <- function(object, fit.measures="all",
             # BIC
             if("bic" %in% fit.measures ||
                "bic2" %in% fit.measures) {
-                BIC <- -2*logl.H0 + npar*log(N)
                 indices["bic"] <- BIC
-
-                # add sample-size adjusted bic
-                N.star <- (N + 2) / 24
-                BIC2 <- -2*logl.H0 + npar*log(N.star)
                 indices["bic2"] <- BIC2
             }
-
 
             # scaling factor for MLR
             if(object@Options$test == "yuan.bentler") {

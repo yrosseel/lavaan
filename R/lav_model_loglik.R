@@ -1,7 +1,8 @@
 # compute the loglikelihood of the data, given the model
 lav_model_loglik <- function(lavdata        = NULL,
                              lavsamplestats = NULL,
-                             lavimplied        = NULL,
+                             lavimplied     = NULL,
+                             lavmodel       = NULL,
                              lavoptions     = NULL) {
 
     ngroups <- lavdata@ngroups
@@ -38,8 +39,36 @@ lav_model_loglik <- function(lavdata        = NULL,
     if(logl.ok) {
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
-                # not ready yet
-                #logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l()
+                # here, we assume only 2 levels, at [[1]] and [[2]]
+                stopifnot(lavdata@ngroups == 1L)
+                Sigma.W <- lavimplied$cov[[1]]
+                Mu.W <- lavimplied$mean[[1]]
+
+                # reorder/augment Sigma.B + Mu.B (only) so it includes ALL ov's 
+                # from Sigma.W
+                ov.names <- lavdata@ov.names[[g]]
+                b.idx <- match(lavdata@ov.names.l[[2]], ov.names)
+                Sigma.B <- matrix(0, length(ov.names), length(ov.names))
+                Sigma.B[b.idx, b.idx] <- lavimplied$cov[[2]]
+                Mu.B <- numeric( length(ov.names) )
+                Mu.B[b.idx] <- lavimplied$mean[[2]]
+
+                # add Mu.W + Mu.B (only for fixed.x covariates, zeroes otherwise)
+                w.idx <- match(lavdata@ov.names.l[[1]], ov.names)
+                Mu.B[w.idx] <- Mu.B[w.idx] + Mu.W
+
+
+                logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
+                    YLp          = lavsamplestats@YLp[[g]],
+                    Lp           = lavdata@Lp[[g]],
+                    Sigma.W      = Sigma.W,
+                    Mu.B         = Mu.B,
+                    Sigma.B      = Sigma.B,
+                    Sinv.method  = "eigen",
+                    method       = "size",
+                    log2pi       = TRUE,
+                    minus.two    = FALSE)
+
             } else if(lavsamplestats@missing.flag) {
                 logl.group[g] <-
                     lav_mvnorm_missing_loglik_samplestats(
@@ -81,13 +110,43 @@ lav_model_loglik <- function(lavdata        = NULL,
         } # g
     } # logl.ok is TRUE
 
+    # logl
+    logl <- sum(logl.group)
 
+    # number of parameters, taking into account any equality constraints
+    npar <- lavmodel@nx.free
+    if(nrow(lavmodel@con.jac) > 0L) {
+        ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
+        if(length(ceq.idx) > 0L) {
+            neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
+            npar <- npar - neq
+        }
+    }
 
-    out <- list(loglik        = sum(logl.group),
+    # logl
+    logl <- sum(logl.group)
+
+    if(logl.ok) {
+        # AIC
+        AIC <- (-2 * logl) + (2 * npar)
+
+        # BIC
+        BIC <- (-2 * logl) + (npar * log(lavsamplestats@ntotal))
+
+        # BIC2
+        N.star <- (lavsamplestats@ntotal + 2) / 24
+        BIC2 <- (-2 * logl) + (npar * log(N.star))   
+    } else {
+        AIC <- BIC <- BIC2 <- as.numeric(NA)
+    }
+
+    out <- list(loglik        = logl,
                 loglik.group  = logl.group,
-                npar          = 0L,
-                AIC           = as.numeric(NA),
-                BIC           = as.numeric(NA),
+                npar          = npar,
+                ntotal        = lavsamplestats@ntotal,
+                AIC           = AIC,
+                BIC           = BIC,
+                BIC2          = BIC2,
                 estimator     = lavoptions$estimator,
                 conditional.x = lavoptions$conditional.x,
                 fixed.x       = lavoptions$fixed.x)

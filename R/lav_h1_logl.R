@@ -33,8 +33,10 @@ lav_h1_logl <- function(lavdata        = NULL,
     if(logl.ok) {    
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
-                # not ready yet
-                #logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l()
+                # not ready yet:
+                # - we need to fit the saturated model first
+                logl.group[g] <- as.numeric(NA)
+
             } else if(lavsamplestats@missing.flag) {
                 logl.group[g] <-
                     lav_mvnorm_missing_loglik_samplestats(

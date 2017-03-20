@@ -43,6 +43,22 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
         stop("lavaan ERROR: method `", method, " not supported")
     }
 
+    # functions below compute -2 * logl
+    if(!minus.two) {
+        loglik <- loglik / (-2)
+    }
+
+    # constant
+    # Note: total 'N' = (nobs * #within vars) + (nclusters * #between vars)
+    if(log2pi) {
+        LOG.2PI <- log(2 * pi)
+        nWithin <- length(c(Lp$both.idx[[2]], Lp$within.idx[[2]]))
+        nBetween <- length(Lp$between.idx[[2]])
+        P <- Lp$nclusters[[1]]*nWithin + Lp$nclusters[[2]]*nBetween
+        constant <- -(P * LOG.2PI)/2
+        loglik <- loglik + constant
+    }
+
     loglik
 }
 
@@ -87,15 +103,16 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
     mean.d <- YLp[[2]]$mean.d
 
     if(length(between.idx) > 0L) {
-        sigma.xx.inv <- 
-            lav_matrix_symmetric_inverse(S = sigma.xx, logdet = FALSE,
-                                         Sinv.method = Sinv.method)
-
         # components A matrix
         A11 <- sigma.xx
         A12 <- t(sigma.yx)
         A21 <- sigma.yx
         m.k <- c(mu.x, mu.y)
+
+        #sigma.xx.inv <- 
+        #    lav_matrix_symmetric_inverse(S = sigma.xx, logdet = FALSE,
+        #                                 Sinv.method = Sinv.method)
+        #sigma.xx.inv..A12 <- solve(sigma.xx, A12)
 
         S.PW <- YLp[[2]]$Sigma.W[-between.idx,-between.idx, drop = FALSE]
     } else {
@@ -114,14 +131,21 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
             A22 <- (1/nd * sigma.1) + sigma.2
             A <- rbind( cbind(A11, A12), cbind(A21, A22) )
 
-            A.11 <- solve(A11 - A12 %*% solve(A22) %*% A21)
-            A.22 <- solve(A22 - A21 %*% sigma.xx.inv %*% A12)
-            A.12 <- - sigma.xx.inv %*% A12 %*% A.22
-            A.21 <- t(A.12)
-            A.inv <- rbind( cbind(A.11, A.12), cbind(A.21, A.22) )
+            #A.11 <- solve(A11 - A12 %*% solve(A22, A21))
+            #A.22 <- solve(A22 - A21 %*% sigma.xx.inv..A12)
+            #A.12 <- - sigma.xx.inv..A12 %*% A.22
+            #A.21 <- t(A.12)
+            #A.inv <- rbind( cbind(A.11, A.12), cbind(A.21, A.22) )
+            #A.logdet <- log(det(A)) ### FIXME: how to get logdet from 
+                                     ###        A.11, A.22, A.12, A.21?
+            A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = TRUE,
+                                                  Sinv.method = Sinv.method)
+            A.logdet <- attr(A.inv, "logdet")
         } else {
             A <- (1/nd * sigma.1) + sigma.2
-            A.inv <- solve(A)
+            A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = TRUE,
+                                                  Sinv.method = Sinv.method)
+            A.logdet <- attr(A.inv, "logdet")
         }
 
         COV  <- cov.d[[clz]]
@@ -131,7 +155,7 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
         B[clz] <- GD[[clz]] * sum( A.inv * TT ) # eq 33, second 
 
         # logdet (between only)
-        LB[clz] <- GD[[clz]]*log(det(A)) + GD[[clz]]*nrow(sigma.1)*log(nd)
+        LB[clz] <- GD[[clz]]*A.logdet + GD[[clz]]*nrow(sigma.1)*log(nd)
     }
 
     LW <- ( (Lp$nclusters[[1]] - Lp$nclusters[[2]]) *

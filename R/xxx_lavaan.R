@@ -823,7 +823,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         x <- lav_model_estimate(lavmodel        = lavmodel,
                                 lavsamplestats  = lavsamplestats,
                                 lavdata         = lavdata,
-                                lavpta          = lavpta,
                                 lavoptions      = lavoptions,
                                 lavcache        = lavcache)
         lavmodel <- lav_model_set_parameters(lavmodel, x = x)
@@ -844,7 +843,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "control") <- lavoptions$control
         attr(x, "fx") <-
-            lav_model_objective(lavmodel = lavmodel, lavpta = lavpta,
+            lav_model_objective(lavmodel = lavmodel,
                 lavsamplestats = lavsamplestats, lavdata = lavdata,
                 lavcache = lavcache)
 
@@ -891,6 +890,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavloglik  <- lav_model_loglik(lavdata        = lavdata,
                                    lavsamplestats = lavsamplestats,
                                    lavimplied     = lavimplied,
+                                   lavmodel       = lavmodel,
                                    lavoptions     = lavoptions)
 
     timing$Estimate <- (proc.time()[3] - start.time)
@@ -921,7 +921,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavoptions      = lavoptions,
                                lavdata         = lavdata,
                                lavpartable     = lavpartable,
-                               lavpta          = lavpta,
                                lavcache        = lavcache,
                                lavimplied      = lavimplied)
         if(lavoptions$verbose) {
