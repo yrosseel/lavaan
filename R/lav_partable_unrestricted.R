@@ -120,6 +120,11 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
         sample.th     <- SAMPLE.th[[g]]
         sample.th.idx <- SAMPLE.th.idx[[g]]
 
+        # force sample.cov to be pd
+        if(!is.null(sample.cov)) {
+            sample.cov <- lav_matrix_symmetric_force_pd(sample.cov)
+        }
+
         for(l in 1:nlevels) {
 
             # block

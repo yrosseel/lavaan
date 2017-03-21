@@ -1194,3 +1194,26 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
     out
 }
 
+# force a symmetric matrix to be positive definite
+# simple textbook version (see Matrix::nearPD for a more sophisticated version)
+#
+lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
+
+    if(ncol(S) == 1L) {
+        return(matrix(max(S[1,1], tol), 1L, 1L))
+    }
+
+    # eigen decomposition
+    S.eigen <- eigen(S, symmetric = TRUE)
+   
+    # eigen values
+    ev <- S.eigen$values
+
+    # replace small/negative eigen values
+    ev[ev < tol] <- tol*abs(ev[1])
+
+    # reconstruct
+    out <- S.eigen$vectors %*% diag(ev) %*% t(S.eigen$vectors)
+
+    out
+}

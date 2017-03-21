@@ -74,9 +74,11 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     ov.ind <- unique(partable$rhs[partable$op == "=~"])
     lv.names <- unique(partable$lhs[partable$op == "=~"])
     int.fixed <- which(partable$op == "~1" &
-                       partable$user == 0 &
-                       partable$free == 0 &
-                       partable$ustart == 0 &
+                       partable$user == 0L &
+                       partable$free == 0L &
+                       partable$ustart == 0L &
+                       # ignore block/group 1 -- typically within level exo
+                       !partable$block == 1L &
                        # do not include factors
                        !partable$lhs %in% lv.names &
                        # do not include ordered variables

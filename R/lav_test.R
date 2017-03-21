@@ -256,6 +256,8 @@ lav_model_test <- function(lavmodel       = NULL,
                            VCOV           = NULL, 
                            lavcache       = NULL,
                            lavdata        = NULL,
+                           h1             = list(),
+                           loglik         = NULL,
                            test.UGamma.eigvals = FALSE) {
 
 
@@ -312,6 +314,14 @@ lav_model_test <- function(lavmodel       = NULL,
         # get chi.group from PML, since we compare to `unrestricted' model,
         # NOT observed data
         chisq.group <- PML$PLRTH0Sat.group
+    } else if(lavdata@nlevels > 1L) {
+        if(length(h1) > 0L) {
+            # LRT
+            chisq.group <- -2 * (loglik$loglik.group - h1$loglik.group)
+        } else {
+            chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
+        }
+ 
     } else {
         # get fx.group
         fx <- attr(x, "fx")

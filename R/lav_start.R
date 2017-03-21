@@ -481,16 +481,16 @@ lav_start <- function(start.method    = "default",
 # sanity check: (user-specified) variances smaller than covariances
 lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
 
-    ngroups <- lav_partable_ngroups(lavpartable)
+    nblocks <- lav_partable_nblocks(lavpartable)
 
-    for(g in 1:ngroups) {
+    for(g in 1:nblocks) {
 
-        # group values
-        group.values <- lav_partable_group_values(lavpartable)
+        # block values
+        block.values <- lav_partable_block_values(lavpartable)
 
         # collect all non-zero covariances
         cov.idx <- which(lavpartable$op == "~~" &
-                         lavpartable$group == group.values[g] &
+                         lavpartable$block == block.values[g] &
                          lavpartable$lhs != lavpartable$rhs &
                          !lavpartable$exo &
                          start != 0)
@@ -505,21 +505,21 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
             var.rhs <- lavpartable$rhs[this.cov.idx]
 
             var.lhs.idx <- which(lavpartable$op == "~~" &
-                                 lavpartable$group == group.values[g] &
+                                 lavpartable$block == block.values[g] &
                                  lavpartable$lhs == var.lhs &
                                  lavpartable$lhs == lavpartable$rhs)
 
             var.rhs.idx <- which(lavpartable$op == "~~" &
-                                 lavpartable$group == group.values[g] &
+                                 lavpartable$block == block.values[g] &
                                  lavpartable$lhs == var.rhs &
                                  lavpartable$lhs == lavpartable$rhs)
 
             var.lhs.value <- start[var.lhs.idx]
             var.rhs.value <- start[var.rhs.idx]
 
-            group.txt <- ""
-            if(ngroups > 1L) {
-                group.txt <- paste(" [in group ", g, "]", sep = "")
+            block.txt <- ""
+            if(nblocks > 1L) {
+                block.txt <- paste(" [in block ", g, "]", sep = "")
             }
  
             # check for zero variances
@@ -531,11 +531,11 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 } else if(lavpartable$free[this.cov.idx] > 0L) {
                     warning(
   "lavaan WARNING: non-zero covariance element set to zero, due to fixed-to-zero variances\n",
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                     start[this.cov.idx] <- 0
                 } else {
                     stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 }
                 next
             }
@@ -556,14 +556,14 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 # force simple values
                 warning(
   "lavaan WARNING: starting values imply NaN for a correlation value;\n",
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)    
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)    
                 start[var.lhs.idx] <- 1
                 start[var.rhs.idx] <- 1
                 start[this.cov.idx] <- 0
             } else if(abs(COR) > 1) {
                 warning(
   "lavaan WARNING: starting values imply a correlation larger than 1;\n", 
-"                  variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 
                 # three ways to fix it: rescale cov12, var1 or var2
 
@@ -589,7 +589,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 # nothing? abort
                 } else {
                     stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs, group.txt)
+"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 }
             } # COR > 1
         } # cov.idx

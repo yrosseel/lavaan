@@ -126,7 +126,7 @@ short.summary <- function(object) {
     if(object@Options$test != "none" && object@Options$estimator != "MML") {
 
         # 1. chi-square values
-        t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
+        t0.txt <- sprintf("  %-40s", "Model Fit Test Statistic")
         t1.txt <- sprintf("  %10.3f", object@test[[1]]$stat)
         t2.txt <- ifelse(scaled,
                   sprintf("  %10.3f", object@test[[2]]$stat), "")

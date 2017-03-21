@@ -35,7 +35,29 @@ lav_h1_logl <- function(lavdata        = NULL,
             if(lavdata@nlevels > 1L) {
                 # not ready yet:
                 # - we need to fit the saturated model first
-                logl.group[g] <- as.numeric(NA)
+
+                # FIXME: we use samplestatstics for now
+                stopifnot(lavdata@ngroups == 1L)
+                YLp <- lavsamplestats@YLp[[g]]
+                Lp <- lavdata@Lp[[g]]
+
+                between.idx <- Lp$between.idx[[2]]
+                Sigma.W <- YLp[[2]]$Sigma.W[-between.idx, -between.idx, drop = FALSE]
+                Mu.W <- YLp[[2]]$Mu.W
+
+                Sigma.B <- YLp[[2]]$Sigma.B
+                Mu.B <- YLp[[2]]$Mu.W + YLp[[2]]$Mu.B
+
+                logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
+                    YLp          = lavsamplestats@YLp[[g]],
+                    Lp           = lavdata@Lp[[g]],
+                    Sigma.W      = Sigma.W,
+                    Mu.B         = Mu.B,
+                    Sigma.B      = Sigma.B,
+                    Sinv.method  = "eigen",
+                    method       = "size",
+                    log2pi       = TRUE,
+                    minus.two    = FALSE)
 
             } else if(lavsamplestats@missing.flag) {
                 logl.group[g] <-

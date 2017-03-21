@@ -79,6 +79,7 @@ lav_partable_ndat <- function(partable) {
 
     # blocks
     nblocks <- lav_partable_nblocks(partable)
+    nlevels <- lav_partable_nlevels(partable)
     ndat <- integer(nblocks)
 
     for(b in seq_len(nblocks)) {
@@ -96,6 +97,10 @@ lav_partable_ndat <- function(partable) {
         if(meanstructure) {
             pstar <- pstar + nvar
         }
+        # no meanstructure if within level
+        if(nlevels > 1L && b == 1L) {
+            pstar <- pstar - nvar
+        }
 
         ndat[b] <- pstar
 
@@ -105,7 +110,11 @@ lav_partable_ndat <- function(partable) {
             nvar.x <- length(ov.names.x)
             pstar.x <- nvar.x * (nvar.x + 1) / 2
             if(meanstructure) {
-                pstar.x <- pstar.x + nvar.x
+                if(nlevels > 1L && b == 1L) {
+                    # do nothing, they are already removed
+                } else {
+                    pstar.x <- pstar.x + nvar.x
+                }
             }
             ndat[b] <- ndat[b] - pstar.x
         }

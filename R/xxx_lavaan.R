@@ -519,23 +519,57 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    ################
-    #### 5b. h1 ####
-    ################
-    h1 <- list()
+    ###################
+    #### 5b. lavh1 ####
+    ###################
+    lavh1 <- list()
     if(is.logical(lavoptions$h1) && lavoptions$h1) {
         if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
-            # implied h1 statistics
-            implied <- lav_h1_implied(lavdata        = lavdata,
-                                      lavsamplestats = lavsamplestats,
-                                      lavoptions     = lavoptions)
-            out <- lav_h1_logl(lavdata        = lavdata,
-                               lavsamplestats = lavsamplestats,
-                               lavoptions     = lavoptions)
+
+            if(lavdata@nlevels > 1L) {
+                # explicitly fit a saturated model
+                h1.partable <- lav_partable_unrestricted(lavdata = lavdata, 
+                                   lavpta = lavpta, lavoptions = lavoptions, 
+                                   lavsamplestats = lavsamplestats)
+                h1.lavoptions <- lavoptions
+                h1.lavoptions$se <- "none"
+                h1.lavoptions$test <- "none"
+                #h1.lavoptions$verbose <- FALSE
+                h1.lavoptions$warn <- FALSE
+                h1.lavoptions$do.fit <- TRUE
+                h1.lavoptions$check <- ""
+                h1.lavoptions$h1 <- FALSE
+                h1.lavoptions$control <- c(h1.lavoptions$control,
+                                           list(rel.tol=1e-5)) # not too strict
+                if(lavoptions$verbose) {
+                    cat("Fitting unrestricted model ... \n")
+                }
+
+                fit.h1 <- lavaan(model           = h1.partable,
+                                 slotOptions     = h1.lavoptions,
+                                 slotSampleStats = lavsamplestats,
+                                 slotData        = lavdata)
+
+                h1.implied      <- fit.h1@implied
+                h1.loglik       <- fit.h1@loglik$loglik
+                h1.loglik.group <- fit.h1@loglik$loglik.group
+                    
+            } else {
+                # implied h1 statistics
+                h1.implied <- lav_h1_implied(lavdata        = lavdata,
+                                             lavsamplestats = lavsamplestats,
+                                             lavoptions     = lavoptions)
+                out <- lav_h1_logl(lavdata        = lavdata,
+                                   lavsamplestats = lavsamplestats,
+                                   lavoptions     = lavoptions)
+                h1.loglik <- out$loglik
+                h1.loglik.group <- out$loglik.group
+            }
+
             # collect in h1 list
-            h1 <- list(implied      = implied,
-                       loglik       = out$loglik,
-                       loglik.group = out$loglik.group)
+            lavh1 <- list(implied      = h1.implied,
+                          loglik       = h1.loglik,
+                          loglik.group = h1.loglik.group)
         } else {
             # do nothing for now
         }
@@ -883,9 +917,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    #################################
-    #### 11. lavimplied + loglik ####
-    #################################
+    ####################################
+    #### 11. lavimplied + lavloglik ####
+    ####################################
     lavimplied <- lav_model_implied(lavmodel)
     lavloglik  <- lav_model_loglik(lavdata        = lavdata,
                                    lavsamplestats = lavsamplestats,
@@ -985,7 +1019,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                x                   = x,
                                VCOV                = VCOV,
                                lavdata             = lavdata,
-                               lavcache            = lavcache)
+                               lavcache            = lavcache,
+                               h1                  = lavh1,
+                               loglik              = lavloglik)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
@@ -1048,7 +1084,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   loglik       = lavloglik,           # list
                   vcov         = lavvcov,             # list
                   test         = lavtest,             # list
-                  h1           = h1,                  # list
+                  h1           = lavh1,               # list
                   external     = list()               # empty list
                  )
 
