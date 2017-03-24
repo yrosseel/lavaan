@@ -274,13 +274,27 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                 psi    = TRUE)
     
             # which mm's do we need? (always include lambda, theta and psi)
+            # new: 0.6 this block only!!
+            IDX <- which(target$block == g)
             mmNames <- c("lambda", "theta", "psi")
-            if("beta" %in% tmp.mat) mmNames <- c(mmNames, "beta")
-            if(meanstructure) mmNames <- c(mmNames, "nu", "alpha")
-            if("tau" %in% tmp.mat) mmNames <- c(mmNames, "tau")
-            if("delta" %in% tmp.mat) mmNames <- c(mmNames, "delta")
-            if("gamma" %in% tmp.mat) mmNames <- c(mmNames, "gamma")
-            if("gw" %in% tmp.mat) mmNames <- c(mmNames, "gw")
+            if("beta" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "beta")
+            }
+            if(meanstructure) {
+                mmNames <- c(mmNames, "nu", "alpha")
+            }
+            if("tau" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "tau")
+            }
+            if("delta" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "delta")
+            }
+            if("gamma" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "gamma")
+            }
+            if("gw" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "gw")
+            }
 
             REP.mmNames[[g]]     <- mmNames
             REP.mmNumber[[g]]    <- length(mmNames)

@@ -166,6 +166,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # handle ov.names.l
     if(any(FLAT$op == ":" & FLAT$lhs == "level")) {
+
+        # check for cluster argument
+        if(is.null(cluster)) {
+            stop("lavaan ERROR: cluster argument is missing.")
+        }
+
         # here, we only need to figure out:
         # - nlevels
         # - ov's per level

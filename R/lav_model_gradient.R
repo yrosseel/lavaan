@@ -11,8 +11,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                group.weight   = TRUE,
                                Delta          = NULL,
                                m.el.idx       = NULL,
-                               x.el.idx       = NULL,
-                               x              = NULL) {
+                               x.el.idx       = NULL) {
 
     nmat           <- lavmodel@nmat
     estimator      <- lavmodel@estimator
@@ -32,22 +31,21 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # catch nlevels > 1L
     if(lavdata@nlevels > 1L) {
 
-        # FIXME: if x == NULL, this comes from VCOV (or elsewhere)
-        # will NOT work with constraints!!!
-        #if(is.null(x)) {
-        #    x <- lav_model_get_parameters(lavmodel, GLIST = GLIST)
-        #}
+        # extract x from (updated) GLIST
+        x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST)
+        # no need to 'pack' it if we have constraints
 
         # local objective function
         min.f <- function(x) {
-            if(lavmodel@eq.constraints) {
-                x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-                                lavmodel@eq.constraints.k0
-            }
-            GLIST <- lav_model_x2GLIST(lavmodel, x=x)
+            # x is full... no need to unpack it, as in minimize.this.function
+            #if(lavmodel@eq.constraints) {
+            #    x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+            #                    lavmodel@eq.constraints.k0
+            #}
+            local.GLIST <- lav_model_x2GLIST(lavmodel, x = x)
         
             fx <- lav_model_objective(lavmodel       = lavmodel,
-                                      GLIST          = GLIST,
+                                      GLIST          = local.GLIST,
                                       lavsamplestats = lavsamplestats,
                                       lavdata        = lavdata,
                                       lavcache       = lavcache,
@@ -55,7 +53,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
             fx
         }
 
+        # x is the 'long' (unconstrained) version
         dx <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
+
         return(dx)
     }
 

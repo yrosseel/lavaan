@@ -117,6 +117,7 @@ lav_start <- function(start.method    = "default",
     # this function to handle block/group hybrid settings
     if(is.null(lavpartable$group) && ngroups == 1L) {
         lavpartable$group <- rep(1L, length(lavpartable$lhs))
+        lavpartable$group[ lavpartable$block == 0L] <- 0L
     }
     
 

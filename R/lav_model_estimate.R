@@ -84,8 +84,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     first.derivative.param <- function(x, verbose=FALSE, infToMax=FALSE) {
 
-        x.orig <- x
-
         # transform variances back
         #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
 
@@ -104,8 +102,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  type           = "free", 
                                  group.weight   = group.weight, ### check me!!
                                  verbose        = verbose,
-                                 forcePD        = TRUE,
-                                 x              = x.orig)
+                                 forcePD        = TRUE)
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
