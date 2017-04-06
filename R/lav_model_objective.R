@@ -77,7 +77,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(estimator == "PML") {
-            if(lavmodel@nexo > 0L) {
+            if(any(lavmodel@nexo > 0L)) {
                 PI <- computePI(lavmodel = lavmodel)
             } else {
                 PI <- vector("list", length = lavsamplestats@ngroups)
