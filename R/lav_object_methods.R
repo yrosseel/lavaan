@@ -717,9 +717,18 @@ parameterEstimates <- parameterestimates <- function(object,
     if(rsquare) {
         r2 <- lavTech(object, "rsquare", add.labels = TRUE)
         NAMES <- unlist(lapply(r2, names)); nel <- length(NAMES)
-        R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
-                          block = rep(1:length(r2), sapply(r2, length)),
-                          est = unlist(r2), stringsAsFactors = FALSE )
+        if(lav_partable_nlevels(LIST) == 1L) {
+            R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
+                              block = rep(1:length(r2), sapply(r2, length)),
+                              est = unlist(r2), stringsAsFactors = FALSE )
+        } else {
+            # add level column
+            R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
+                              block = rep(1:length(r2), sapply(r2, length)),
+                              level = rep(lav_partable_level_values(LIST),
+                                          sapply(r2, length)),
+                              est = unlist(r2), stringsAsFactors = FALSE )
+        }
         LIST <- lav_partable_merge(pt1 = LIST, pt2 = R2, warn = FALSE)
     }
 

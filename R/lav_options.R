@@ -276,9 +276,6 @@ lav_options_set <- function(opt = NULL) {
 
         #opt$fixed.x = FALSE
         opt$control <- list(gradient = "numerical")
-        opt$check <- "start" # post calls post_check, which calls
-                             # lavInspect(fit, "cov.lv") which needs
-                             # cov.x per block...
     }
 
 

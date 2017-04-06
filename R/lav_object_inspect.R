@@ -914,8 +914,8 @@ lav_object_inspect_case_idx <- function(object,
 lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    G <- object@Data@ngroups
-    OUT <- vector("list", length=G)
+    nblocks <- object@Model@nblocks
+    OUT <- vector("list", length = nblocks)
 
     if(is.null(est.std.all)) {
         est.std.all <- standardize.est.all(object)
@@ -926,15 +926,15 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     # no values > 1.0
     partable$rsquare[partable$rsquare > 1.0] <- as.numeric(NA)
 
-    for(g in 1:G) {
+    for(b in seq_len(nblocks)) {
         ind.names <- partable$rhs[ which(partable$op == "=~" & 
-                                         partable$group == g) ]
+                                         partable$block == b) ]
         eqs.y.names <- partable$lhs[ which(partable$op == "~"  & 
-                                           partable$group == g) ]
+                                           partable$block == b) ]
         y.names <- unique( c(ind.names, eqs.y.names) )
 
-        idx <- which(partable$op == "~~" & partable$lhs %in% y.names & 
-                     partable$rhs == partable$lhs & partable$group == g)
+        idx <- which(partable$op == "~~" & partable$lhs %in% y.names &
+                     partable$rhs == partable$lhs & partable$block == b)
         tmp <- partable$rsquare[idx]
 
         if(add.labels && length(tmp) > 0L) {
@@ -944,14 +944,16 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
             class(tmp) <- c("lavaan.vector", "numeric")
         }
 
-        OUT[[g]] <- tmp
+        OUT[[b]] <- tmp
     }
 
-    if(G == 1L && drop.list.single.group) {
+    if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(length(object@Data@group.label) > 0L) {
+        if(nblocks == 1L && length(object@Data@group.label) > 0L) {
             names(OUT) <- unlist(object@Data@group.label)
+        } else if(nblocks > 1L && length(object@Data@group.label) == 0L) {
+            names(OUT) <- object@Data@level.label
         }
     }
 
