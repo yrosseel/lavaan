@@ -269,7 +269,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
     Sigma.hat <- lavimplied$cov
     Sigma.hat.inv <- lapply(Sigma.hat, solve)
-    VETA   <- computeVETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+    VETA   <- computeVETA(lavmodel = lavmodel)
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
      

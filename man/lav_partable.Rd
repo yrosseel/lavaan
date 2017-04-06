@@ -25,7 +25,8 @@ lav_partable_labels(partable, blocks = "group", group.equal = "",
 # generate parameter table for specific models
 lav_partable_independence(lavobject = NULL, lavdata = NULL, 
     lavoptions = NULL, lavsamplestats = NULL, sample.cov = NULL, 
-    sample.mean = NULL, sample.th = NULL, sample.th.idx = NULL)
+    sample.mean = NULL, sample.th = NULL, sample.th.idx = NULL,
+    sample.cov.x = NULL, sample.mean.x = NULL)
 
 lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, 
     lavpta = NULL, lavoptions = NULL, lavsamplestats = NULL, 
@@ -78,6 +79,14 @@ If provided (and also sample.th.idx is provided),
 these values will be used as starting values.}
 \item{sample.th.idx}{Optional list of integers. Each list contains the
 threshold indices for this group.}
+\item{sample.cov.x}{Optional list of numeric matrices.  Each list element
+contains a sample variance-covariance matrix for the exogenous variables
+for this group (only used when \code{conditional.x = TRUE}).  If provided,
+these values will be used as starting values.}
+\item{sample.mean.x}{Optional list of numeric vectors.
+Each list element contains a sample mean vector for the exogenous variables
+for this group (only used when \code{conditional.x = TRUE}).
+If provided, these values will be used as starting values.}
 \item{est}{Logical. If TRUE, include the fitted estimates in the parameter table.}
 \item{label}{Logical. If TRUE, include parameter labels in the parameter table.}
 \item{as.data.frame.}{Logical. If TRUE, return the parameter table as a data.frame.}

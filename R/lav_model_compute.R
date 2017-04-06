@@ -61,7 +61,6 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
 computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                                 lavsamplestats = NULL,
                                  delta = TRUE, debug = FALSE) {
 
     stopifnot(lavmodel@conditional.x)
@@ -87,7 +86,7 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
             res.Sigma  <- computeSigmaHat.LISREL(MLIST = MLIST, delta = delta)
             res.int    <- computeMuHat.LISREL(MLIST = MLIST)
             res.slopes <- computePI.LISREL(MLIST = MLIST)
-            S.xx       <- lavsamplestats@cov.x[[g]]
+            S.xx       <- MLIST$cov.x
 
             S.yy <- res.Sigma + res.slopes %*% S.xx %*% t(res.slopes)
             S.yx <- res.slopes %*% S.xx
@@ -161,8 +160,7 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 ## Mu (Joint ) = [ Mu.y, Mu.x ] where
 ##     Mu.y = res.int + PI %*% M.x
 ##     Mu.x = M.x
-computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL,
-                              lavsamplestats = NULL) {
+computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -186,7 +184,7 @@ computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL,
             MLIST <- GLIST[ mm.in.group ]
             res.int    <- computeMuHat.LISREL(MLIST = MLIST)
             res.slopes <- computePI.LISREL(MLIST = MLIST)
-            M.x        <- lavsamplestats@mean.x[[g]]
+            M.x        <- MLIST$mean.x
 
             Mu.y <- res.int + res.slopes %*% M.x
             Mu.x <- M.x
@@ -318,8 +316,7 @@ computeGW <- function(lavmodel = NULL, GLIST=NULL) {
 # *unconditional* variance/covariance matrix of Y
 #  - same as Sigma.hat if all Y are continuous)
 #  - if also Gamma, cov.x is used (only if categorical)
-computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                      diagonal.only = FALSE) {
+computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -336,17 +333,8 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        if(!is.null(lavsamplestats)) {
-            cov.x <- lavsamplestats@cov.x[[g]]
-        } else {
-            if(lavmodel@fixed.x) {
-                stop("lavaaan ERROR: fixed.x = TRUE, but cov.x is NULL")
-            }
-            cov.x <- NULL
-        }
-
         if(representation == "LISREL") {
-            VY.g <- computeVY.LISREL(MLIST = MLIST, cov.x = cov.x)
+            VY.g <- computeVY.LISREL(MLIST = MLIST)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -363,7 +351,7 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # V(ETA): latent variances variances/covariances
 computeVETA <- function(lavmodel = NULL, GLIST = NULL, 
-                        remove.dummy.lv = FALSE, lavsamplestats = NULL) {
+                        remove.dummy.lv = FALSE) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -380,17 +368,8 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        if(!is.null(lavsamplestats)) {
-            cov.x <- lavsamplestats@cov.x[[g]]
-        } else {
-            if(lavmodel@fixed.x) {
-                stop("lavaaan ERROR: fixed.x = TRUE, but cov.x is NULL")
-            }
-            cov.x <- NULL
-        }
-       
         if(representation == "LISREL") {
-            ETA.g <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+            ETA.g <- computeVETA.LISREL(MLIST = MLIST)
 
             if(remove.dummy.lv) {
                 # remove all dummy latent variables
@@ -445,8 +424,8 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
 }
 
 # COV: observed+latent variances variances/covariances
-computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-    remove.dummy.lv = FALSE) {
+computeCOV <- function(lavmodel = NULL, GLIST = NULL, 
+                       remove.dummy.lv = FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -464,10 +443,8 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        cov.x <- lavsamplestats@cov.x[[g]]
-
         if(representation == "LISREL") {
-            COV.g <- computeCOV.LISREL(MLIST = MLIST, cov.x = cov.x)
+            COV.g <- computeCOV.LISREL(MLIST = MLIST)
 
             if(remove.dummy.lv) {
                 # remove all dummy latent variables

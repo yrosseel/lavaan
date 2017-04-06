@@ -69,8 +69,7 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
 
     # compute ETA
     LV.ETA <- computeVETA(lavmodel       = lavobject@Model,
-                          GLIST          = GLIST,
-                          lavsamplestats = lavsamplestats)
+                          GLIST          = GLIST)
     
     for(g in 1:lavobject@Model@nblocks) {
 
@@ -234,7 +233,6 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
     stopifnot(N == length(partable$lhs))
 
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
-                    lavsamplestats = lavsamplestats,
                     diagonal.only = TRUE)
 
     for(g in 1:lavobject@Model@nblocks) {
@@ -403,7 +401,6 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
     stopifnot(N == length(partable$lhs))
 
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
-                    lavsamplestats = lavsamplestats,
                     diagonal.only = TRUE)
 
     for(g in 1:lavobject@Model@nblocks) {

@@ -86,7 +86,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
         # compute moments for all groups
         #if(conditional.x) {
         #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
-        #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
+        #                     GLIST = GLIST,
         #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
         #} else {
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
@@ -96,8 +96,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
         # ridge here?
         if(meanstructure && !categorical) {
             #if(conditional.x) {
-            #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST,
-            #                           lavsamplestats = lavsamplestats)
+            #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #} else { 
                 Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #}

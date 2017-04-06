@@ -654,7 +654,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #####################
         lavmodel <- lav_model(lavpartable      = lavpartable,
                               lavoptions       = lavoptions,
-                              th.idx           = lavsamplestats@th.idx)
+                              th.idx           = lavsamplestats@th.idx,
+                              cov.x            = lavsamplestats@cov.x,
+                              mean.x           = lavsamplestats@mean.x)
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 

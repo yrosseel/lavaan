@@ -10,7 +10,10 @@
 lav_model <- function(lavpartable      = NULL,
                       lavoptions       = NULL,
                       th.idx           = list(),
-                      cov.x            = list()) {
+                      cov.x            = list(),
+                      mean.x           = list()) { # for conditional.x only
+                                                   # (not really needed,
+                                                   #  but as a failsafe)
 
     # handle bare-minimum partables
     lavpartable <- lav_partable_complete(lavpartable)
@@ -49,7 +52,7 @@ lav_model <- function(lavpartable      = NULL,
 
     # select model matrices
     if(lavoptions$representation == "LISREL") {
-        REP <- representation.LISREL(lavpartable, target=NULL, extra=TRUE)
+        REP <- representation.LISREL(lavpartable, target = NULL, extra = TRUE)
     } else {
         stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
     }
@@ -181,6 +184,19 @@ lav_model <- function(lavpartable      = NULL,
                 T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
             }
 
+            # 4b. override with cov.x (if conditional.x = TRUE)
+            # new in 0.6-1
+            # shouldn't be needed, if lavpartable$start contains cov.x values
+            if(mmNames[mm] == "cov.x") {
+                tmp <- cov.x[[g]]
+            }
+            # 4c. override with mean.x (if conditional.x = TRUE)
+            # new in 0.6-1
+            # shouldn't be needed, if lavpartable$start contains mean.x values
+            if(mmNames[mm] == "mean.x") {
+                tmp <- as.matrix(mean.x[[g]])
+            }
+
             # representation specific stuff
             if(lavoptions$representation == "LISREL" && mmNames[mm] == "lambda") { 
                 ov.dummy.names.nox <- attr(REP, "ov.dummy.names.nox")[[g]]
@@ -209,7 +225,7 @@ lav_model <- function(lavpartable      = NULL,
                 idx <- which(tmp[,1L] == 0.0)
                 tmp[idx,1L] <- 1.0    
             }
-            
+
             # assign matrix to GLIST
             GLIST[[offset]] <- tmp
         } # mm

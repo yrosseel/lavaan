@@ -148,6 +148,14 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
             A.logdet <- attr(A.inv, "logdet")
         }
 
+        # handle non-pd A
+        # if Sigma.B is not-positive definite, A may be non-pd
+        # and so A.logdet is NA
+        if(is.na(A.logdet)) {
+            #A.logdet <- log(.Machine$double.eps) # -36.04365
+            return(as.numeric(NA))
+        }
+
         COV  <- cov.d[[clz]]
         MEAN <- mean.d[[clz]]
         TT <- COV + tcrossprod(MEAN - m.k)

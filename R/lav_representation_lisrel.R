@@ -7,8 +7,10 @@
 # updates:          YR 2011-12-01: group specific extraction
 #                   YR 2012-05-17: thresholds
 
-representation.LISREL <- function(partable=NULL, target=NULL, 
-                                  extra=FALSE, remove.nonexisting=TRUE) {
+representation.LISREL <- function(partable = NULL, 
+                                  target   = NULL, 
+                                  extra    = FALSE, 
+                                  remove.nonexisting = TRUE) {
 
     # prepare target list
     if(is.null(target)) target <- partable 
@@ -25,7 +27,7 @@ representation.LISREL <- function(partable=NULL, target=NULL,
     group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
 
     # gamma?
-    if(categorical) {
+    if(categorical) { # needed? only if conditional.x
         gamma <- TRUE
     } else if(any(partable$op == "~" & partable$exo == 1L)) {
         gamma <- TRUE
@@ -171,6 +173,15 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.mat[idx] <- "theta"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- match(target$rhs[idx], ov.names)
+
+        # 3aa. "~~" ov.x
+        if(gamma) {
+            idx <- which(target$block == g &
+                         target$op == "~~" & (target$lhs %in% ov.names.x))
+            tmp.mat[idx] <- "cov.x"
+            tmp.row[idx] <- match(target$lhs[idx], ov.names.x)
+            tmp.col[idx] <- match(target$rhs[idx], ov.names.x)
+        }
     
         # 3b. "~~" lv
         idx <- which(target$block == g &
@@ -185,6 +196,15 @@ representation.LISREL <- function(partable=NULL, target=NULL,
         tmp.mat[idx] <- "nu"
         tmp.row[idx] <- match(target$lhs[idx], ov.names)
         tmp.col[idx] <- 1L
+
+        # 4aa, "~1" ov.x
+        if(gamma) {
+            idx <- which(target$block == g &
+                     target$op == "~1" & (target$lhs %in% ov.names.x))
+            tmp.mat[idx] <- "mean.x"
+            tmp.row[idx] <- match(target$lhs[idx], ov.names.x)
+            tmp.col[idx] <- 1L
+        }
     
         # 4b. "~1" lv
         idx <- which(target$block == g &
@@ -234,6 +254,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            alpha  = nfac,
                            beta   = nfac,
                            gamma  = nfac,
+                           cov.x  = nexo,
+                           mean.x = nexo,
                            gw     = 1L,
                            psi    = nfac)
 
@@ -246,20 +268,24 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                            alpha  = 1L,
                            beta   = nfac,
                            gamma  = nexo,
+                           cov.x  = nexo,
+                           mean.x = 1L,
                            gw     = 1L,
                            psi    = nfac)
 
             # dimNames for LISREL model matrices
-            mmDimNames <- list(tau    = list( ov.th,    "threshold"),
-                               delta  = list( ov.names,    "scales"),
-                               nu     = list( ov.names, "intercept"),
-                               lambda = list( ov.names,    lv.names),
-                               theta  = list( ov.names,    ov.names),
-                               alpha  = list( lv.names, "intercept"),
-                               beta   = list( lv.names,    lv.names),
-                               gamma  = list( lv.names,  ov.names.x),
-                               gw     = list( "group",     "weight"),
-                               psi    = list( lv.names,    lv.names))
+            mmDimNames <- list(tau    = list( ov.th,       "threshold"),
+                               delta  = list( ov.names,       "scales"),
+                               nu     = list( ov.names,    "intercept"),
+                               lambda = list( ov.names,       lv.names),
+                               theta  = list( ov.names,       ov.names),
+                               alpha  = list( lv.names,    "intercept"),
+                               beta   = list( lv.names,       lv.names),
+                               gamma  = list( lv.names,     ov.names.x),
+                               cov.x  = list( ov.names.x,   ov.names.x),
+                               mean.x = list( ov.names.x, "intercepts"),
+                               gw     = list( "group",        "weight"),
+                               psi    = list( lv.names,       lv.names))
     
             # isSymmetric
             mmSymmetric <- list(tau    = FALSE,
@@ -270,6 +296,8 @@ representation.LISREL <- function(partable=NULL, target=NULL,
                                 alpha  = FALSE,
                                 beta   = FALSE,
                                 gamma  = FALSE,
+                                cov.x  = TRUE,
+                                mean.x = FALSE,
                                 gw     = FALSE,
                                 psi    = TRUE)
     
@@ -294,6 +322,12 @@ representation.LISREL <- function(partable=NULL, target=NULL,
             }
             if("gw" %in% tmp.mat[IDX]) {
                 mmNames <- c(mmNames, "gw")
+            }
+            if("cov.x" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "cov.x")
+            }
+            if("mean.x" %in% tmp.mat[IDX]) {
+                mmNames <- c(mmNames, "mean.x")
             }
 
             REP.mmNames[[g]]     <- mmNames
@@ -452,7 +486,7 @@ computeEETAx.LISREL <- function(MLIST=NULL, eXo=NULL, N=nrow(eXo),
 #     V(ETA) = (I-B)^-1 PSI (I-B)^-T
 # - if eXo and GAMMA: (cfr lisrel submodel 3a with ksi=x)
 #     V(ETA) = (I-B)^-1 [ GAMMA  cov.x t(GAMMA) + PSI] (I-B)^-T
-computeVETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
+computeVETA.LISREL <- function(MLIST = NULL) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi
@@ -461,9 +495,9 @@ computeVETA.LISREL <- function(MLIST=NULL, cov.x=NULL) {
     GAMMA  <- MLIST$gamma
 
     if(!is.null(GAMMA)) {
-        stopifnot(!is.null(cov.x))
+        COV.X <- MLIST$cov.x
         # we treat 'x' as 'ksi' in the LISREL model; cov.x is PHI
-        PSI <- tcrossprod(GAMMA %*% cov.x, GAMMA) + PSI
+        PSI <- tcrossprod(GAMMA %*% COV.X, GAMMA) + PSI
     }
 
     # beta?
@@ -864,12 +898,12 @@ computeEYetax3.LISREL <- function(MLIST             = NULL,
 #    only in THIS case, VY is different from diag(VYx)
 #
 # V(Y) = LAMBDA V(ETA) t(LAMBDA) + THETA
-computeVY.LISREL <- function(MLIST=NULL, cov.x=NULL) {
+computeVY.LISREL <- function(MLIST = NULL) {
 
     LAMBDA <- MLIST$lambda
     THETA  <- MLIST$theta
  
-    VETA <- computeVETA.LISREL(MLIST = MLIST, cov.x = cov.x)
+    VETA <- computeVETA.LISREL(MLIST = MLIST)
     VY <- tcrossprod(LAMBDA %*% VETA, LAMBDA) + THETA
     VY
 }
@@ -1512,7 +1546,7 @@ setDeltaElements.LISREL <- function(MLIST=NULL, num.idx=NULL) {
 }
 
 # compute Sigma/ETA: variances/covariances of BOTH observed and latent variables
-computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
+computeCOV.LISREL <- function(MLIST = NULL, delta = TRUE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA)
     PSI    <- MLIST$psi;    nlat <- nrow(PSI)
@@ -1546,12 +1580,12 @@ computeCOV.LISREL <- function(MLIST=NULL, cov.x=NULL, delta=TRUE) {
     # if GAMMA, also x part
     GAMMA <- MLIST$gamma
     if(!is.null(GAMMA)) {
-        stopifnot(!is.null(cov.x))
+        COV.X <- MLIST$cov.x
         if(is.null(BETA)) {
-            SX <- tcrossprod(GAMMA %*% cov.x, GAMMA)
+            SX <- tcrossprod(GAMMA %*% COV.X, GAMMA)
         } else {
             IB.inv..GAMMA <- IB.inv %*% GAMMA
-            SX <- tcrossprod(IB.inv..GAMMA %*% cov.x, IB.inv..GAMMA)
+            SX <- tcrossprod(IB.inv..GAMMA %*% COV.X, IB.inv..GAMMA)
         }
         COV[(nvar+1):(nvar+nlat),(nvar+1):(nvar+nlat)] <- 
             COV[(nvar+1):(nvar+nlat),(nvar+1):(nvar+nlat)] + SX
@@ -1681,7 +1715,8 @@ derivative.sigma.LISREL_OLD <- function(m="lambda",
     v.idx <- lav_matrix_vech_idx( nvar ); pstar <- nvar*(nvar+1)/2
 
     # shortcut for gamma, nu, alpha and tau: empty matrix
-    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw") {
+    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw" ||
+       m == "cov.x" || m == "mean.x") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
@@ -1783,8 +1818,9 @@ derivative.sigma.LISREL <- function(m     = "lambda",
     # only lower.tri part of sigma (not same order as elimination matrix?)
     v.idx <- lav_matrix_vech_idx( nvar ); pstar <- nvar*(nvar+1)/2
 
-    # shortcut for gamma, nu, alpha and tau: empty matrix
-    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || m == "gw") {
+    # shortcut for gamma, nu, alpha, tau,.... : empty matrix
+    if(m == "nu" || m == "alpha" || m == "tau" || m == "gamma" || 
+       m == "gw" || m == "cov.x" || m == "mean.x") {
         return( matrix(0.0, nrow=pstar, ncol=length(idx)) )
     }
 
@@ -1875,8 +1911,8 @@ derivative.mu.LISREL <- function(m="alpha",
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
     # shortcut for empty matrices
-    if(m == "gamma" || m == "psi" || m == "theta" || 
-       m == "tau" || m == "delta"|| m == "gw") {
+    if(m == "gamma" || m == "psi" || m == "theta" || m == "tau" || 
+       m == "delta"|| m == "gw" || m == "cov.x" || m == "mean.x") {
         return( matrix(0.0, nrow=nvar, ncol=length(idx) ) )
     }
 
@@ -1956,7 +1992,8 @@ derivative.th.LISREL <- function(m="tau",
     }
 
     # shortcut for empty matrices
-    if(m == "gamma" || m == "psi" || m == "theta" || m == "gw") {
+    if(m == "gamma" || m == "psi" || m == "theta" || m == "gw" ||
+       m == "cov.x" || m == "mean.x") {
         return( matrix(0.0, nrow=length(th.idx), ncol=length(idx) ) )
     }
 
@@ -2025,7 +2062,7 @@ derivative.pi.LISREL <- function(m="lambda",
 
     # shortcut for empty matrices
     if(m == "tau" || m == "nu" || m == "alpha" || m == "psi" || 
-       m == "theta" || m == "gw") {
+       m == "theta" || m == "gw" || m == "cov.x" || m == "mean.x") {
         return( matrix(0.0, nrow=nvar*nexo, ncol=length(idx) ) )
     }
 

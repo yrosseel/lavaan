@@ -77,7 +77,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
 
         # for L-BFGS-B
-        if(infToMax && is.infinite(fx)) fx <- 1e20
+        #if(infToMax && is.infinite(fx)) fx <- 1e20
+        if(!is.finite(fx)) {
+            fx <- 1e20
+        }
 
         fx
     }

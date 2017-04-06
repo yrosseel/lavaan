@@ -293,24 +293,38 @@ lav_start <- function(start.method    = "default",
         }
         
         # 5g) exogenous `fixed.x' covariates
-        if(!conditional.x && length(ov.names.x) > 0) {
+        if(length(ov.names.x) > 0) {
             exo.idx <- which(lavpartable$group == group.values[g]          &
                              lavpartable$op == "~~"          & 
                              lavpartable$lhs %in% ov.names.x &
                              lavpartable$rhs %in% ov.names.x)
-            row.idx <- match(lavpartable$lhs[exo.idx], ov.names)
-            col.idx <- match(lavpartable$rhs[exo.idx], ov.names)
-            if(lavsamplestats@missing.flag) {
-                start[exo.idx] <- 
+            if(!conditional.x) {
+                row.idx <- match(lavpartable$lhs[exo.idx], ov.names)
+                col.idx <- match(lavpartable$rhs[exo.idx], ov.names)
+                if(lavsamplestats@missing.flag) {
+                    start[exo.idx] <- 
                     lavsamplestats@missing.h1[[g]]$sigma[cbind(row.idx,col.idx)]
-                # using slightly smaller starting values for free
-                # variance/covariances (fixed.x = FALSE);
-                # this somehow avoids false convergence in saturated models
-                nobs <- lavsamplestats@nobs[[g]]
-                this.idx <- which( seq_len(length(lavpartable$free)) %in% exo.idx & lavpartable$free > 0L )
-                start[this.idx] <- start[this.idx] * (nobs-1)/nobs
+                    # using slightly smaller starting values for free
+                    # variance/covariances (fixed.x = FALSE);
+                    # this somehow avoids false convergence in saturated models
+                    nobs <- lavsamplestats@nobs[[g]]
+                    this.idx <- which( seq_len(length(lavpartable$free)) %in% exo.idx & lavpartable$free > 0L )
+                    start[this.idx] <- start[this.idx] * (nobs-1)/nobs
+                } else {
+                    start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx,col.idx)]
+                }
             } else {
-                start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx,col.idx)]
+                # cov.x
+                row.idx <- match(lavpartable$lhs[exo.idx], ov.names.x)
+                col.idx <- match(lavpartable$rhs[exo.idx], ov.names.x)
+                start[exo.idx] <- lavsamplestats@cov.x[[g]][cbind(row.idx,
+                                                                  col.idx)]
+                # mean.x
+                exo.int.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$op == "~1"               &
+                                     lavpartable$lhs %in% ov.names.x)
+                int.idx <- match(lavpartable$lhs[exo.int.idx], ov.names.x)
+                start[exo.int.idx] <- lavsamplestats@mean.x[[g]][int.idx]
             }
         }
 

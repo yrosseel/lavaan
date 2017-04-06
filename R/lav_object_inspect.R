@@ -402,6 +402,11 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
+    # multilevel #
+    } else if(what == "icc") {
+        lav_object_inspect_icc(object,
+            add.labels = add.labels, add.class = add.class)
+
     # post-checking
     } else if(what == "post.check" || what == "post") {
         lav_object_post_check(object)
@@ -1211,9 +1216,7 @@ lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
     G <- object@Data@ngroups
 
     # compute lv covar
-    OUT <- computeVETA(lavmodel       = object@Model, 
-                       lavsamplestats = object@SampleStats,
-                       remove.dummy.lv = TRUE)
+    OUT <- computeVETA(lavmodel = object@Model, remove.dummy.lv = TRUE)
 
     # cor + labels + class
     for(g in 1:G) {
@@ -1283,7 +1286,6 @@ lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
 
     # compute extended model implied covariance matrix (both ov and lv)
     OUT <- computeCOV(lavmodel = object@Model, 
-                      lavsamplestats = object@SampleStats,
                       remove.dummy.lv = TRUE)
 
     # cor + labels + class
@@ -1444,7 +1446,6 @@ lav_object_inspect_vy <- function(object,
     #  - if also Gamma, cov.x is used (only if categorical)
 
     OUT <- computeVY(lavmodel = object@Model, GLIST = NULL, 
-                     lavsamplestats = object@SampleStats,
                      diagonal.only = TRUE)
                      
 
@@ -2219,4 +2220,36 @@ lav_object_inspect_npar <- function(object, type = "free") {
     }
 
     npar
+}
+
+lav_object_inspect_icc <- function(object, add.labels = FALSE, 
+                                   add.class = FALSE) {
+
+    lavdata <- object@Data
+
+    # multilevel?
+    if(lavdata@nlevels == 1L) {
+        stop("lavaan ERROR: intraclass correlation only available for clustered data")
+    }
+
+    # do we have h1 slot?
+    if(length(object@h1) > 0L) {
+        implied <- object@h1$implied
+
+        W <- implied$cov[[1]]
+        B <- implied$cov[[2]]
+
+        # FIXME: enlarge matrices so they have the same size
+        ICC <- diag(B)/(diag(W) + diag(B))
+    }
+
+    if(add.labels) {
+        names(ICC) <- lavdata@ov.names[[1]]
+    }
+
+    if(add.class) {
+        class(ICC) <- c("lavaan.vector", "numeric")
+    }
+
+    ICC
 }

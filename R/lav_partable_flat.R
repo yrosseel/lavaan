@@ -135,7 +135,7 @@ lav_partable_flat <- function(FLAT = NULL,
     }
 
     # d) exogenous x covariates: VARIANCES + COVARIANCES
-    if(!conditional.x && (nx <- length(ov.names.x)) > 0L) {
+    if((nx <- length(ov.names.x)) > 0L) {
         idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
@@ -159,11 +159,11 @@ lav_partable_flat <- function(FLAT = NULL,
 
     # 3. INTERCEPTS
     if(meanstructure) {
-        if(conditional.x) {
-            ov.int <- ov.names.nox
-        } else {
+        #if(conditional.x) {
+        #    ov.int <- ov.names.nox
+        #} else {
             ov.int <- ov.names
-        }
+        #}
         # auto-remove ordinal variables
         #idx <- which(ov.int %in% ov.names.ord)
         #if(length(idx)) ov.int <- ov.int[-idx]
@@ -387,9 +387,9 @@ lav_partable_flat <- function(FLAT = NULL,
             ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
               free[exo.var.idx] <- 0L
                exo[exo.var.idx] <- 1L
-        } else if(conditional.x) {
-               exo[exo.var.idx] <- 1L
-        }
+        } #else if(conditional.x) {
+          #     exo[exo.var.idx] <- 1L
+        #}
 
         # 2. intercepts
         exo.int.idx  <- which(op == "~1" &
@@ -399,9 +399,9 @@ lav_partable_flat <- function(FLAT = NULL,
             ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
               free[exo.int.idx] <- 0L
                exo[exo.int.idx] <- 1L
-        } else if(conditional.x) {
-               exo[exo.int.idx] <- 1L
-        }
+        } #else if(conditional.x) {
+          #     exo[exo.int.idx] <- 1L
+        #}
 
         # 3. regressions ov + lv
         exo.reg.idx <- which(op == "~" &

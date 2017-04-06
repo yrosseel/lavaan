@@ -7,7 +7,9 @@ lav_partable_independence <- function(lavobject      = NULL,
                                       sample.cov       = NULL,
                                       sample.mean      = NULL,
                                       sample.th        = NULL, 
-                                      sample.th.idx    = NULL) {
+                                      sample.th.idx    = NULL,
+                                      sample.cov.x     = NULL,
+                                      sample.mean.x    = NULL) {
 
     # grab everything from lavaan lavobject
     if(!is.null(lavobject)) {
@@ -53,6 +55,15 @@ lav_partable_independence <- function(lavobject      = NULL,
     if(is.null(sample.th.idx) && !is.null(lavsamplestats)) {
          sample.th.idx <- lavsamplestats@th.idx
     }
+
+    if(is.null(sample.cov.x) && !is.null(lavsamplestats)) {
+        sample.cov.x <- lavsamplestats@cov.x
+    }
+
+    if(is.null(sample.mean.x) && !is.null(lavsamplestats)) {
+        sample.mean.x <- lavsamplestats@mean.x
+    }
+
 
     ov.names         = lavdata@ov.names
     ov               = lavdata@ov
@@ -238,6 +249,89 @@ lav_partable_independence <- function(lavobject      = NULL,
         }
 
         if(conditional.x && (nx <- length(ov.names.x[[g]])) > 0L) {
+
+            # add variances and intercepts
+            nvar  <- length(ov.names.x[[g]])
+            lhs   <- c(lhs, ov.names.x[[g]])
+            op    <- c(op, rep("~~", nvar))
+            rhs   <- c(rhs, ov.names.x[[g]])
+            group <- c(group, rep(g,  nvar))
+            free  <- c(free,  rep(1L, nvar))
+            exo   <- c(exo,   rep(0L, nvar))
+            
+            # starting values
+            if(!is.null(sample.cov.x)) {
+                ustart <- c(ustart, diag(sample.cov.x[[g]]))
+            } else {
+                ustart <- c(ustart, rep(as.numeric(NA), nvar))
+            }
+
+            # fix variances
+            exo.idx <- which(rhs %in% ov.names.x[[g]] &
+                             lhs %in% ov.names.x[[g]] &
+                             op == "~~" & group == g)
+            if(fixed.x) {
+                exo[exo.idx] <- 1L
+                free[exo.idx] <- 0L
+            }
+
+            # add covariances
+            pstar <- nx*(nx-1)/2
+            if(pstar > 0L) { # only if more than 1 variable
+                tmp <- utils::combn(ov.names.x[[g]], 2)
+                lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+                 op <- c(op,   rep("~~", pstar))
+                rhs <- c(rhs, tmp[2,])
+                group <- c(group, rep(g,  pstar))
+                if(fixed.x) {
+                    free  <- c(free,  rep(0L, pstar))
+                    exo   <- c(exo,   rep(1L, pstar))
+                } else {
+                    free  <- c(free,  rep(1L, pstar))
+                    exo   <- c(exo,   rep(0L, pstar))
+                }
+
+                # starting values
+                if(!is.null(sample.cov.x)) {
+                    rhs.idx <- match(tmp[1,], ov.names.x[[g]])
+                    lhs.idx <- match(tmp[2,], ov.names.x[[g]])
+                    ustart <- c(ustart, 
+                                sample.cov.x[[g]][ cbind(rhs.idx, lhs.idx) ])
+                } else {
+                    ustart <- c(ustart, rep(as.numeric(NA), pstar))
+                }
+            }
+
+            # meanstructure?
+            if(meanstructure) {
+                ov.int <- ov.names.x[[g]]
+
+                nel   <- length(ov.int)
+                lhs   <- c(lhs, ov.int)
+                op    <- c(op, rep("~1", nel))
+                rhs   <- c(rhs, rep("", nel))
+                group <- c(group, rep(g,  nel))
+                free  <- c(free,  rep(1L, nel))
+                exo   <- c(exo,   rep(0L, nel))
+
+                # starting values
+                if(!is.null(sample.mean.x)) {
+                    sample.int.idx <- match(ov.int, ov.names.x[[g]])
+                    ustart <- c(ustart, sample.mean.x[[g]][sample.int.idx])
+                } else {
+                    ustart <- c(ustart, rep(as.numeric(NA), length(ov.int)))
+                }
+            }
+
+            # fix means
+            exo.idx <- which(lhs %in% ov.names.x[[g]] &
+                             op == "~1" & group == g)
+            if(fixed.x) {
+                exo[exo.idx] <- 1L
+                free[exo.idx] <- 0L
+            }
+
+
             # add regressions
             lhs <- c(lhs, rep("dummy", nx))
              op <- c( op, rep("~", nx))
