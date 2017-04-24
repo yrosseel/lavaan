@@ -92,6 +92,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         FLAT <- slotParTable
     } else if(is.character(model)) {
         FLAT <- lavParseModelString(model)
+    } else if( class(model) == "formula" ) {
+        # two typical cases:
+        # 1. regression type formula
+        # 2. no quotes, eg f =~ x1 + x2 + x3
+        tmp <- as.character(model)
+        if(tmp[1] == "~" && length(tmp) == 2L) {
+            # looks like an unquoted single factor model f =~ something
+            warning("lavaan WARNING: model seems to be a formula; please enclose the model syntax between quotes")
+            # create model and hope for the best
+            model.bis <- paste("f =", paste(tmp, collapse= " "), sep = "")
+            FLAT <- lavParseModelString(model.bis)
+        } else if(tmp[1] == "~" && length(tmp) == 3L) {
+            # looks like a (unquoted) regression formula
+            warning("lavaan WARNING: model seems to be a formula; please enclose the model syntax between quotes")
+            # create model and hope for the best
+            model.bis <- paste(tmp[2], tmp[1], tmp[3])
+            FLAT <- lavParseModelString(model.bis)
+        } else {
+            stop("lavaan ERROR: model seems to be a formula; please enclose the model syntax between quotes")
+        }
     } else if(inherits(model, "lavaan")) {
         # hm, a lavaan model; let's try to extract the parameter table
         # and see what happens
@@ -386,7 +406,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ########################
     if(!is.null(slotParTable)) {
         lavpartable <- slotParTable
-    } else if(is.character(model)) {
+    } else if(is.character(model) || 
+              class(model) == "formula") {
         # check FLAT before we proceed
         if(lavoptions$debug) {
             print(as.data.frame(FLAT))
