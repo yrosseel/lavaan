@@ -24,6 +24,9 @@ lav_start <- function(start.method    = "default",
     conditional.x <- any(lavpartable$exo == 1L & lavpartable$op == "~")
     #ord.names <- unique(lavpartable$lhs[ lavpartable$op == "|" ])
 
+    # nlevels?
+    nlevels <- lav_partable_nlevels(lavpartable)
+
     # shortcut for 'simple'
     # be we should also take care of the 'fixed.x' issue
     if(identical(start.method, "simple")) {
@@ -171,7 +174,7 @@ lav_start <- function(start.method    = "default",
                 # get observed indicators for this latent variable
                 ov.idx <- match(lavpartable$rhs[user.idx], ov.names)
                 if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
-                    if(lavsamplestats@missing.flag) {
+                    if(lavsamplestats@missing.flag && nlevels == 1L) {
                         COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
                                                                     ov.idx]
                     } else {
@@ -262,7 +265,7 @@ lav_start <- function(start.method    = "default",
                             lavpartable$op == "~1"         & 
                             lavpartable$lhs %in% ov.names)
         sample.int.idx <- match(lavpartable$lhs[ov.int.idx], ov.names)
-        if(lavsamplestats@missing.flag) {
+        if(lavsamplestats@missing.flag && nlevels == 1L) {
             start[ov.int.idx] <- lavsamplestats@missing.h1[[g]]$mu[sample.int.idx]
         } else {
             if(conditional.x) {
@@ -301,7 +304,7 @@ lav_start <- function(start.method    = "default",
             if(!conditional.x) {
                 row.idx <- match(lavpartable$lhs[exo.idx], ov.names)
                 col.idx <- match(lavpartable$rhs[exo.idx], ov.names)
-                if(lavsamplestats@missing.flag) {
+                if(lavsamplestats@missing.flag && nlevels == 1L) {
                     start[exo.idx] <- 
                     lavsamplestats@missing.h1[[g]]$sigma[cbind(row.idx,col.idx)]
                     # using slightly smaller starting values for free
@@ -374,7 +377,6 @@ lav_start <- function(start.method    = "default",
 
 
     # nlevels > 1L 
-    nlevels <- lav_partable_nlevels(lavpartable)
     if(nlevels > 1L) {
         for(g in 1:ngroups) {
             group.values <- lav_partable_group_values(lavpartable)

@@ -429,9 +429,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # if missing = "fiml", sample statistics per pattern
         if(missing == "ml") {
-            if(nlevels > 1L) {
-                stop("lavaan ERROR: multilevel + fiml not supported yet")
-            }
+            #if(nlevels > 1L) {
+            #    stop("lavaan ERROR: multilevel + fiml not supported yet")
+            #}
             if(conditional.x) {
                 stop("lavaan ERROR: multilevel + conditional.x not supported yet")
             }
@@ -442,7 +442,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                                  Mp = Mp[[g]])
 
             #cat("missing.h1 = "); print(missing.h1); cat("\n")
-            if(missing.h1) {
+            if(missing.h1 && nlevels == 1L) {
                 # estimate moments unrestricted model
                 out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
                           Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
@@ -1063,7 +1063,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         ov.idx.2       <- sort.int(c(both.idx, between.idx))
 
         Y1.means <- colMeans(Y1, na.rm = TRUE)
-        S <- cov(Y1) * (N - 1L)/N
+        S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
         both.idx <- all.idx <- seq_len(P)
         if(length(within.idx) > 0L ||
            length(between.idx) > 0L) {
@@ -1072,7 +1072,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
         Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
-                               FUN = mean)[,-1]))
+                               FUN = mean, na.rm = TRUE)[,-1]))
         Y2c <- t( t(Y2) - Y1.means )
         if(length(within.idx) > 0L) {
         #    Y2[, within.idx] <- 0
@@ -1082,7 +1082,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # compute S.w
         S.w <- matrix(0, P, P)
         Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
-        S.w <- crossprod(Y1a) / (N - nclusters)
+        S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
         S.PW.start <- S.w
 
         if(length(within.idx) > 0L) {
@@ -1108,7 +1108,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # S.b
         # three parts: within/within, between/between, between/within
         #S.b <- crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1L)
-        S.b <- crossprod(Y2c * cluster.size, Y2c) / nclusters
+        S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
 
         if(length(between.idx) > 0L) {
             # this is what is needed for MUML:
@@ -1117,7 +1117,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             S.b[between.idx, ] <- 
                 (s * nclusters/N) * S.b[between.idx, , drop = FALSE]
             S.b[between.idx, between.idx] <-
-                ( s * crossprod(Y2c[, between.idx, drop = FALSE],
+                ( s * lav_matrix_crossprod(Y2c[, between.idx, drop = FALSE],
               #          Y2c[, between.idx, drop = FALSE]) / (nclusters - 1L))
                          Y2c[, between.idx, drop = FALSE]) / nclusters  )
         }
@@ -1130,13 +1130,15 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Mu.W <- numeric( P )
         Mu.W[within.idx] <- Y1.means[within.idx]
 
-        Mu.B <- colMeans(Y1)
+        Mu.B <- colMeans(Y1, na.rm = TRUE)
         Mu.B[within.idx] <- 0
         if(length(between.idx) > 0L) {
             # replace between.idx by cov(Y2)[,] elements...
-            Mu.B[between.idx] <- colMeans(Y2[,between.idx,drop = FALSE])
+            Mu.B[between.idx] <- colMeans(Y2[,between.idx,drop = FALSE], 
+                                          na.rm = TRUE)
 
-            S2 <- cov(Y2) * (nclusters - 1L) / nclusters
+            S2 <- ( cov(Y2, use = "pairwise.complete.obs") * 
+                     (nclusters - 1L) / nclusters )
             #S2 <- cov(Y2)
 
             #bb.idx <- c(both.idx, between.idx)
@@ -1160,9 +1162,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         ### FIXME  ####
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
         Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
-                                         FUN = mean)[,-1]))        
+                                         FUN = mean, na.rm = TRUE)[,-1]))
         ### NO zero columns for within.idx columns #####
-
 
         for(clz in seq_len(ncluster.sizes)) {
             nd <- cluster.sizes[clz]
@@ -1175,9 +1176,10 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                        c(between.idx, sort.int(c(both.idx, within.idx))), 
                        drop = FALSE]
             GD[[clz]] <- length(d.idx)
-            mean.d[[clz]] <- colMeans(tmp2)
+            mean.d[[clz]] <- colMeans(tmp2, na.rm = TRUE)
             if(length(d.idx) > 1L) {
-                cov.d[[clz]] <- cov(tmp2) * (GD[[clz]]-1) / GD[[clz]]
+                cov.d[[clz]] <- ( cov(tmp2, use = "pairwise.complete.obs") * 
+                                      (GD[[clz]]-1) / GD[[clz]] )
             } else {
                 cov.d[[clz]] <- 0
             }

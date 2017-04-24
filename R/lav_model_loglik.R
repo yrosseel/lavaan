@@ -29,6 +29,10 @@ lav_model_loglik <- function(lavdata        = NULL,
                 }
             }
         }
+        # nlevels + fiml
+        if(lavdata@nlevels > 1L && lavsamplestats@missing.flag) {
+            logl.ok <- FALSE
+        }
     }
   
     # lavsamplestats filled in? (not if no data...)

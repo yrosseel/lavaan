@@ -100,13 +100,20 @@ lav_model_objective <- function(lavmodel       = NULL,
 
         # incomplete data and fiml?
         if(lavsamplestats@missing.flag && estimator != "Bayes") {
-            if(estimator == "ML") {
+            if(estimator == "ML" && lavdata@nlevels == 1L) {
                 # FIML
                 if(!attr(Sigma.hat[[g]], "po")) return(Inf)
                 group.fx <- estimator.FIML(Sigma.hat=Sigma.hat[[g]],
                                            Mu.hat=Mu.hat[[g]],
                                            Yp=lavsamplestats@missing[[g]],
                                            h1=lavsamplestats@missing.h1[[g]]$h1,                                           N=lavsamplestats@nobs[[g]])
+            } else if(estimator == "ML" && lavdata@nlevels > 1L) {
+                #group.fx <- estimator.2L(lavmodel       = lavmodel,
+                #                         GLIST          = GLIST,
+                #                         lavdata        = lavdata,
+                #                         lavsamplestats = lavsamplestats,
+                #                         group          = g)
+                group.fx <- 0
             } else {
                 stop("this estimator: `", estimator, 
                      "' can not be used with incomplete data and the missing=\"ml\" option")
