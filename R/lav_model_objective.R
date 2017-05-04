@@ -124,7 +124,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             if(lavdata@nlevels > 1L) {
                 group.fx <- estimator.2L(lavmodel       = lavmodel,
                                          GLIST          = GLIST,
-                                         lavdata        = lavdata,
+                                         Lp             = lavdata@Lp[[g]],
                                          lavsamplestats = lavsamplestats,
                                          group          = g)
             } else if(conditional.x) {

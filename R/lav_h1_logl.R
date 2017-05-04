@@ -42,20 +42,20 @@ lav_h1_logl <- function(lavdata        = NULL,
                 Lp <- lavdata@Lp[[g]]
 
                 between.idx <- Lp$between.idx[[2]]
-                Sigma.W <- YLp[[2]]$Sigma.W[-between.idx, -between.idx, drop = FALSE]
-                Mu.W <- YLp[[2]]$Mu.W
-
+                Sigma.W <- YLp[[2]]$Sigma.W[-between.idx, 
+                                            -between.idx, drop = FALSE]
+                Mu.W    <- YLp[[2]]$Mu.W[-between.idx]
                 Sigma.B <- YLp[[2]]$Sigma.B
-                Mu.B <- YLp[[2]]$Mu.W + YLp[[2]]$Mu.B
+                Mu.B    <- YLp[[2]]$Mu.B
 
                 logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
                     YLp          = lavsamplestats@YLp[[g]],
                     Lp           = lavdata@Lp[[g]],
+                    Mu.W         = Mu.W,
                     Sigma.W      = Sigma.W,
                     Mu.B         = Mu.B,
                     Sigma.B      = Sigma.B,
                     Sinv.method  = "eigen",
-                    method       = "size",
                     log2pi       = TRUE,
                     minus.two    = FALSE)
 

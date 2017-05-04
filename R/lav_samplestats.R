@@ -1051,16 +1051,17 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
     # compute some sample statistics per level
     YLp     <- vector("list", length = nlevels)
     for(l in 2:nlevels) {
-        ncluster.sizes <- Lp$ncluster.sizes[[l]]
-        cluster.size   <- Lp$cluster.size[[l]]
-        cluster.sizes  <- Lp$cluster.sizes[[l]]
-        nclusters      <- Lp$nclusters[[l]]
-        both.idx       <- Lp$both.idx[[l]]
-        within.idx     <- Lp$within.idx[[l]]
-        between.idx    <- Lp$between.idx[[l]]
-        cluster.idx    <- Lp$cluster.idx[[l]]
-        ov.idx.1       <- sort.int(c(both.idx, within.idx))
-        ov.idx.2       <- sort.int(c(both.idx, between.idx))
+        ncluster.sizes  <- Lp$ncluster.sizes[[l]]
+        cluster.size    <- Lp$cluster.size[[l]]
+        cluster.sizes   <- Lp$cluster.sizes[[l]]
+        nclusters       <- Lp$nclusters[[l]]
+        both.idx        <- Lp$both.idx[[l]]
+        within.idx      <- Lp$within.idx[[l]]
+        between.idx     <- Lp$between.idx[[l]]
+        cluster.idx     <- Lp$cluster.idx[[l]]
+        cluster.size.ns <- Lp$cluster.size.ns[[l]]
+        ov.idx.1        <- sort.int(c(both.idx, within.idx))
+        ov.idx.2        <- sort.int(c(both.idx, between.idx))
 
         Y1.means <- colMeans(Y1, na.rm = TRUE)
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
@@ -1157,7 +1158,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # per cluster-size
         cov.d  <- vector("list", length = ncluster.sizes)
         mean.d <- vector("list", length = ncluster.sizes)
-        GD     <- vector("list", length = ncluster.sizes)
 
         ### FIXME  ####
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
@@ -1166,20 +1166,20 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         ### NO zero columns for within.idx columns #####
 
         for(clz in seq_len(ncluster.sizes)) {
-            nd <- cluster.sizes[clz]
+            nj <- cluster.sizes[clz]
             # select clusters with this size
-            d.idx <- which(cluster.size == nd)
+            d.idx <- which(cluster.size == nj)
+            ns <- length(d.idx)
             # NOTE:!!!!
             # reorder columns
             # to match A.inv and m.k later on in objective!!!
             tmp2 <- Y2[d.idx, 
                        c(between.idx, sort.int(c(both.idx, within.idx))), 
                        drop = FALSE]
-            GD[[clz]] <- length(d.idx)
             mean.d[[clz]] <- colMeans(tmp2, na.rm = TRUE)
             if(length(d.idx) > 1L) {
                 cov.d[[clz]] <- ( cov(tmp2, use = "pairwise.complete.obs") * 
-                                      (GD[[clz]]-1) / GD[[clz]] )
+                                      (ns-1) / ns )
             } else {
                 cov.d[[clz]] <- 0
             }
@@ -1188,7 +1188,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         YLp[[l]] <- list(Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
                          Sigma.W = S.w, Mu.W = Mu.W,
                          Sigma.B = V2, Mu.B = Mu.B, Mu.B.start = Mu.B.start,
-                         GD = GD, mean.d = mean.d, cov.d = cov.d)
+                         mean.d = mean.d, cov.d = cov.d)
     } # l
 
     YLp

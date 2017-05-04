@@ -826,28 +826,35 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
     # check clus
     stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
     
-    cluster.size   <- vector("list", length = nlevels)
-    cluster.id     <- vector("list", length = nlevels)
-    cluster.idx    <- vector("list", length = nlevels)
-    nclusters      <- vector("list", length = nlevels)
-    cluster.sizes  <- vector("list", length = nlevels)
-    ncluster.sizes <- vector("list", length = nlevels)
-    both.idx       <- vector("list", length = nlevels)
-    within.idx     <- vector("list", length = nlevels)
-    between.idx    <- vector("list", length = nlevels)
+    cluster.size    <- vector("list", length = nlevels)
+    cluster.id      <- vector("list", length = nlevels)
+    cluster.idx     <- vector("list", length = nlevels)
+    nclusters       <- vector("list", length = nlevels)
+    cluster.sizes   <- vector("list", length = nlevels)
+    ncluster.sizes  <- vector("list", length = nlevels)
+    cluster.size.ns <- vector("list", length = nlevels)
+    ov.idx          <- vector("list", length = nlevels)
+    both.idx        <- vector("list", length = nlevels)
+    within.idx      <- vector("list", length = nlevels)
+    between.idx     <- vector("list", length = nlevels)
 
     # level-1 is special
     nclusters[[1]] <- NROW(Y)
+    ov.idx[[1]]    <- match(ov.names.l[[1]], ov.names)
 
     # for the remaining levels...
     for(l in 2:nlevels) {
         CLUS <- clus[,(l-1L)]
-        cluster.id[[l]]     <- unique(CLUS)
-        cluster.idx[[l]]    <- match(CLUS, cluster.id[[l]])
-        cluster.size[[l]]   <- tabulate(cluster.idx[[l]])
-        nclusters[[l]]      <- length(cluster.size[[l]])
-        cluster.sizes[[l]]  <- unique(cluster.size[[l]])
-        ncluster.sizes[[l]] <- length(cluster.sizes[[l]])
+        cluster.id[[l]]      <- unique(CLUS)
+        cluster.idx[[l]]     <- match(CLUS, cluster.id[[l]])
+        cluster.size[[l]]    <- tabulate(cluster.idx[[l]])
+        nclusters[[l]]       <- length(cluster.size[[l]])
+        cluster.sizes[[l]]   <- unique(cluster.size[[l]])
+        ncluster.sizes[[l]]  <- length(cluster.sizes[[l]])
+        cluster.size.ns[[l]] <- unname(table(cluster.size[[l]]))
+
+        # index of ov.names for this level
+        ov.idx[[l]]         <- match(ov.names.l[[l]], ov.names)
  
         both.idx[[l]]       <- which( ov.names %in% ov.names.l[[1]] & 
                                       ov.names %in% ov.names.l[[2]])
@@ -857,13 +864,14 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
                                       ov.names %in% ov.names.l[[2]])
     }
 
-    out <- list(cluster = cluster, clus = clus, 
+    out <- list(cluster = cluster, # clus = clus, 
                 # per level
                 nclusters = nclusters,
                 cluster.size = cluster.size, cluster.id = cluster.id,
                 cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
                 ncluster.sizes = ncluster.sizes, 
-                both.idx = both.idx, within.idx = within.idx, 
+                cluster.size.ns = cluster.size.ns,
+                ov.idx = ov.idx, both.idx = both.idx, within.idx = within.idx, 
                 between.idx = between.idx)
 
     out
@@ -876,10 +884,17 @@ function(object) {
 })
 
 lav_data_print_short <- function(object) {
-     # flag
-     listwise <- object@missing == "listwise"
 
-     if(object@ngroups == 1L) {
+    # listwise deletion?
+    listwise <- FALSE
+    for(g in 1:object@ngroups) {
+       if(object@nobs[[1L]] != object@norig[[1L]]) {
+           listwise <- TRUE
+           break
+       }
+    }
+
+    if(object@ngroups == 1L) {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
                                         sprintf("  %10s", "Total"),
@@ -890,11 +905,25 @@ lav_data_print_short <- function(object) {
         t2.txt <- ifelse(listwise,
                   sprintf("  %10i", object@norig[[1L]]), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+        if(object@nlevels > 1L) {
+            #cat("\n")
+            for(l in 2:object@nlevels) {
+                t0.txt <- sprintf("  %-40s", 
+                    paste("Number of clusters [", object@cluster[l-1], "]",
+                          sep = ""))
+                t1.txt <- sprintf("  %10i", object@Data@Lp[[1]]$nclusters[[l]])
+                #t2.txt <- ifelse(listwise,
+                #          sprintf("  %10i", object@norig[[1L]]), "")
+                t2.txt <- ""
+                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            }
+        }
     } else {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
-                                        sprintf("  %10s", "Total"),
-                "\n", sep="")
+                                       sprintf("  %10s", "Total"),
+               "\n", sep="")
         }
         t0.txt <- sprintf("  %-40s", "Number of observations per group")
         cat(t0.txt, "\n")
@@ -904,6 +933,21 @@ lav_data_print_short <- function(object) {
             t2.txt <- ifelse(listwise,
                       sprintf("  %10i", object@norig[[g]]), "")
             cat(t.txt, t2.txt, "\n", sep="")
+
+            if(object@nlevels > 1L) {
+                #cat("\n")
+                for(l in 2:object@nlevels) {
+                    t0.txt <- sprintf("  %-40s", 
+                        paste("Number of clusters [", object@cluster[l-1], "]",
+                              sep = ""))
+                    t1.txt <- sprintf("  %10i", 
+                                      object@Data@Lp[[1]]$nclusters[[l]])
+                    #t2.txt <- ifelse(listwise,
+                    #          sprintf("  %10i", object@norig[[1L]]), "")
+                    t2.txt <- ""
+                    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+                }
+            }
         }
     }
     cat("\n")

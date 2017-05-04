@@ -1,47 +1,198 @@
 # loglikelihood clustered data
 
+# YR: first version around Feb 2017
+
+
+# take model-implied mean+variance matrices, and reorder/augment them
+# to facilitate computing of (log)likelihood in the two-level case
+#
+# - sigma.w and sigma.b: same dimensions, level-1 variables only
+# - sigma.zz: level-2 variables only
+# - sigma.yz: cov(level-1, level-2)
+# - mu.y: level-1 variables only
+# - my.z: level-2 variables only
+lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
+                                          implied      = NULL,
+                                          Mu.W         = NULL,
+                                          Mu.B         = NULL,
+                                          Sigma.W      = NULL,
+                                          Sigma.B      = NULL) {
+
+    if(!is.null(implied)) {
+        Sigma.W <- implied$cov[[1]]
+        Mu.W    <- implied$mean[[1]]
+
+        Sigma.B <- implied$cov[[2]]
+        Mu.B    <- implied$mean[[2]]
+    }
+
+    # between.idx 
+    between.idx <- Lp$between.idx[[2]]
+
+    # ov.idx per level
+    ov.idx      <- Lp$ov.idx
+
+    # 'tilde' matrices: ALL variables within and between
+    p.tilde <- length( unique(c(ov.idx[[1]], ov.idx[[2]])) )
+
+    # Sigma.W.tilde
+    Sigma.W.tilde <- matrix(0, p.tilde, p.tilde)
+    Sigma.W.tilde[ ov.idx[[1]], ov.idx[[1]] ] <- Sigma.W
+
+    # Sigma.B.tilde
+    Sigma.B.tilde <- matrix(0, p.tilde, p.tilde)
+    Sigma.B.tilde[ ov.idx[[2]], ov.idx[[2]] ] <- Sigma.B
+
+    # Mu.W.tilde
+    Mu.W.tilde <- numeric( p.tilde )
+    Mu.W.tilde[ ov.idx[[1]] ] <- Mu.W
+
+    # Mu.B.tilde
+    Mu.B.tilde <- numeric( p.tilde )
+    Mu.B.tilde[ ov.idx[[2]] ] <- Mu.B
+
+    # add Mu.W[within.idx] to Mu.B
+    # Mu.B.tilde[ Lp$within.idx[[2]] ] <- Mu.W.tilde[ Lp$within.idx[[2]] ]
+    Mu.B.tilde[ ov.idx[[1]] ] <- ( Mu.B.tilde[ ov.idx[[1]] ] +
+                                   Mu.W.tilde[ ov.idx[[1]] ] )
+
+    # map to matrices needed for loglik
+    if(length(between.idx) > 0L) {
+        mu.z <- Mu.B.tilde[ between.idx ]
+        mu.y <- Mu.B.tilde[-between.idx ]
+
+        sigma.zz <- Sigma.B.tilde[ between.idx, between.idx, drop = FALSE]
+        sigma.yz <- Sigma.B.tilde[-between.idx, between.idx, drop = FALSE]
+        sigma.b  <- Sigma.B.tilde[-between.idx,-between.idx, drop = FALSE]
+        sigma.w  <- Sigma.W.tilde[-between.idx,-between.idx, drop = FALSE]
+    } else {
+        mu.z <- numeric(0L)
+        mu.y <- Mu.B.tilde
+        sigma.zz <- matrix(0, 0L, 0L)
+        sigma.yz <- matrix(0, nrow(Sigma.B.tilde), 0L)
+        sigma.b <- Sigma.B.tilde
+        sigma.w <- Sigma.W.tilde
+    }
+
+    list(sigma.w = sigma.w, sigma.b = sigma.b, sigma.zz = sigma.zz,
+         sigma.yz = sigma.yz, mu.z = mu.z, mu.y = mu.y)
+}
+
+# Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
+# (not yet reordered)
 lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
                                                      Lp           = NULL,
+                                                     Mu.W         = NULL,
                                                      Sigma.W      = NULL,
                                                      Mu.B         = NULL,
                                                      Sigma.B      = NULL,
                                                      Sinv.method  = "eigen",
-                                                     method       = "size",
                                                      log2pi       = FALSE,
                                                      minus.two    = TRUE) {
 
-    between.idx <- Lp$between.idx[[2]]
+    # map implied to 2l matrices
+    out <- lav_mvnorm_cluster_implied22l(Lp = Lp, Mu.W = Mu.W, Mu.B = Mu.B,
+               Sigma.W = Sigma.W, Sigma.B = Sigma.B)
+    mu.y <- out$mu.y; mu.z <- out$mu.z
+    sigma.w <- out$sigma.w; sigma.b <- out$sigma.b 
+    sigma.zz <- out$sigma.zz; sigma.yz <- out$sigma.yz
 
-    # map to matrices needed for loglik
+    # Lp
+    nclusters       <- Lp$nclusters[[2]]
+    cluster.size    <- Lp$cluster.size[[2]]
+    between.idx     <- Lp$between.idx[[2]]
+    cluster.sizes   <- Lp$cluster.sizes[[2]]
+    ncluster.sizes  <- Lp$ncluster.sizes[[2]]
+    cluster.size.ns <- Lp$cluster.size.ns[[2]]
+
+    # Y1
     if(length(between.idx) > 0L) {
-        mu.x <- Mu.B[ between.idx ]
-        mu.y <- Mu.B[-between.idx ]
-
-        sigma.xx <- Sigma.B[ between.idx, between.idx, drop = FALSE]
-        sigma.yx <- Sigma.B[-between.idx, between.idx, drop = FALSE]
-        sigma.2  <- Sigma.B[-between.idx,-between.idx, drop = FALSE]
+        S.PW <- YLp[[2]]$Sigma.W[-between.idx, -between.idx, drop = FALSE]
     } else {
-        mu.x <- numeric(0L)
-        mu.y <- Mu.B
-        sigma.xx <- matrix(0, 0L, 0L)
-        sigma.yx <- matrix(0, nrow(Sigma.B), 0L)
-        sigma.2 <- Sigma.B
+        S.PW <- YLp[[2]]$Sigma.W
     }
-    sigma.1 <- Sigma.W
 
-    if(method == "size") {
-        loglik <- .loglik_cluster_2l_size(YLp = YLp, Lp = Lp,
-                      mu.y = mu.y, mu.x = mu.x, sigma.1 = sigma.1,
-                      sigma.2 = sigma.2, sigma.xx = sigma.xx,
-                      sigma.yx = sigma.yx, Sinv.method = Sinv.method)
-    } else if(method == "cluster") {
-        loglik <- .loglik_cluster_2l_cluster(YLp = YLp, Lp = Lp,
-                      mu.y = mu.y, mu.x = mu.x, sigma.1 = sigma.1,
-                      sigma.2 = sigma.2, sigma.xx = sigma.xx,
-                      sigma.yx = sigma.yx, Sinv.method = Sinv.method)
+    # Y2
+    #Y2 <- YLp[[2]]$Y2
+    #Y2.cm <- t( t(Y2) - mu.b )
+    cov.d <- YLp[[2]]$cov.d
+    mean.d <- YLp[[2]]$mean.d
+
+    # common parts:
+    sigma.w.inv <- lav_matrix_symmetric_inverse(S = sigma.w,
+                       logdet = TRUE, Sinv.method = Sinv.method)
+    sigma.w.logdet <- attr(sigma.w.inv, "logdet")
+    attr(sigma.w.inv, "logdet") <- NULL
+
+    if(length(between.idx) > 0L) {
+        sigma.zz.inv <- lav_matrix_symmetric_inverse(S = sigma.zz,
+                           logdet = TRUE, Sinv.method = Sinv.method)
+        sigma.zz.logdet <- attr(sigma.zz.inv, "logdet")
+        attr(sigma.zz.inv, "logdet") <- NULL
+        sigma.yz.zi <- sigma.yz %*% sigma.zz.inv
+        sigma.zi.zy <- t(sigma.yz.zi)
+        sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
     } else {
-        stop("lavaan ERROR: method `", method, " not supported")
+        sigma.zz.logdet <- 0
+        sigma.b.z <- sigma.b
     }
+
+    # min 2* logliklihood
+    L <- numeric(ncluster.sizes) # logdet
+    B <- numeric(ncluster.sizes) # between qf
+    for(clz in seq_len(ncluster.sizes)) {
+
+        # cluster size
+        nj <- cluster.sizes[clz]
+
+        # data between
+        Y2Yc <- (cov.d[[clz]] + tcrossprod(mean.d[[clz]] - c(mu.z, mu.y)))
+
+        # FIXME: avoid reorder/b.idx, so can use between.idx
+        if(length(between.idx) > 0L) {
+            b.idx <- seq_len(length(Lp$between.idx[[2]]))
+            Y2Yc.zz <- Y2Yc[ b.idx, b.idx, drop = FALSE]
+            Y2Yc.yz <- Y2Yc[-b.idx, b.idx, drop = FALSE]
+            Y2Yc.yy <- Y2Yc[-b.idx,-b.idx, drop = FALSE]
+        } else {
+            Y2Yc.yy <- Y2Yc
+        }
+
+        # construct sigma.j
+        sigma.j <- (nj * sigma.b.z) + sigma.w
+        sigma.j.inv <- lav_matrix_symmetric_inverse(S = sigma.j,
+                       logdet = TRUE, Sinv.method = Sinv.method)
+        sigma.j.logdet <- attr(sigma.j.inv, "logdet")
+        attr(sigma.j.inv, "logdet") <- NULL
+        
+        # logdet -- between only
+        L[clz] <- (sigma.zz.logdet + sigma.j.logdet)
+
+        if(length(between.idx) > 0L) {
+            # part 1 -- zz
+            sigma.ji.yz.zi <- sigma.j.inv %*% sigma.yz.zi
+            Vinv.11 <- sigma.zz.inv + nj*(sigma.zi.zy %*% sigma.ji.yz.zi)
+            q.zz <- sum(Vinv.11 * Y2Yc.zz)
+
+            # part 2 -- yz
+            q.yz <- - nj * sum(sigma.ji.yz.zi * Y2Yc.yz)
+        } else {
+            q.zz <- q.yz <- 0
+        }
+
+        # part 5 -- yyc
+        q.yyc <- -nj * sum(sigma.j.inv * Y2Yc.yy )
+
+        # qf -- between only
+        B[clz] <- q.zz + 2*q.yz - q.yyc
+    }
+    # q.yya + q.yyb
+    q.W <- sum(cluster.size - 1) * sum(sigma.w.inv * S.PW)
+    # logdet within part
+    L.W  <- sum(cluster.size - 1) * sigma.w.logdet
+
+    # -2*times logl (without the constant)
+    loglik <- sum(L * cluster.size.ns) + sum(B * cluster.size.ns) + q.W + L.W
 
     # functions below compute -2 * logl
     if(!minus.two) {
@@ -63,112 +214,3 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
 }
 
 
-.loglik_cluster_2l_cluster <- function(YLp         = NULL,
-                                       Lp          = NULL,
-                                       mu.y        = NULL,
-                                       mu.x        = NULL,
-                                       sigma.1     = NULL,
-                                       sigma.2     = NULL,
-                                       sigma.xx    = NULL,
-                                       sigma.yx    = NULL,
-                                       Sinv.method = "eigen") {
-
-}
-
-.loglik_cluster_2l_size <- function(YLp         = NULL,
-                                    Lp          = NULL,
-                                    mu.y        = NULL,
-                                    mu.x        = NULL,
-                                    sigma.1     = NULL,
-                                    sigma.2     = NULL,
-                                    sigma.xx    = NULL,
-                                    sigma.yx    = NULL,
-                                    Sinv.method = "eigen") {
-
-    between.idx <- Lp$between.idx[[2]]
-
-    # inverses
-    sigma.1.inv <- lav_matrix_symmetric_inverse(S = sigma.1, logdet = TRUE,
-                                                Sinv.method = Sinv.method)
-    sigma.1.logdet <- attr(sigma.1.inv, "logdet")
-    attr(sigma.1.inv, "logdet") <- NULL
-
-    cluster.sizes  <- Lp$cluster.sizes[[2L]]
-    ncluster.sizes <- Lp$ncluster.sizes[[2L]]
-    B  <- numeric(ncluster.sizes)
-    LB <- numeric(ncluster.sizes)
-
-    GD     <- YLp[[2]]$GD
-    cov.d  <- YLp[[2]]$cov.d
-    mean.d <- YLp[[2]]$mean.d
-
-    if(length(between.idx) > 0L) {
-        # components A matrix
-        A11 <- sigma.xx
-        A12 <- t(sigma.yx)
-        A21 <- sigma.yx
-        m.k <- c(mu.x, mu.y)
-
-        #sigma.xx.inv <- 
-        #    lav_matrix_symmetric_inverse(S = sigma.xx, logdet = FALSE,
-        #                                 Sinv.method = Sinv.method)
-        #sigma.xx.inv..A12 <- solve(sigma.xx, A12)
-
-        S.PW <- YLp[[2]]$Sigma.W[-between.idx,-between.idx, drop = FALSE]
-    } else {
-        S.PW <- YLp[[2]]$Sigma.W
-        m.k <- mu.y
-    }
-
-
-    # min 2* logliklihood
-    loglik <- 0
-    for(clz in seq_len(ncluster.sizes)) {
-        nd <- cluster.sizes[clz]
-
-        # construct A matrix (Vk.mini)
-        if(length(between.idx) > 0L) {
-            A22 <- (1/nd * sigma.1) + sigma.2
-            A <- rbind( cbind(A11, A12), cbind(A21, A22) )
-
-            #A.11 <- solve(A11 - A12 %*% solve(A22, A21))
-            #A.22 <- solve(A22 - A21 %*% sigma.xx.inv..A12)
-            #A.12 <- - sigma.xx.inv..A12 %*% A.22
-            #A.21 <- t(A.12)
-            #A.inv <- rbind( cbind(A.11, A.12), cbind(A.21, A.22) )
-            #A.logdet <- log(det(A)) ### FIXME: how to get logdet from 
-                                     ###        A.11, A.22, A.12, A.21?
-            A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = TRUE,
-                                                  Sinv.method = Sinv.method)
-            A.logdet <- attr(A.inv, "logdet")
-        } else {
-            A <- (1/nd * sigma.1) + sigma.2
-            A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = TRUE,
-                                                  Sinv.method = Sinv.method)
-            A.logdet <- attr(A.inv, "logdet")
-        }
-
-        # handle non-pd A
-        # if Sigma.B is not-positive definite, A may be non-pd
-        # and so A.logdet is NA
-        if(is.na(A.logdet)) {
-            #A.logdet <- log(.Machine$double.eps) # -36.04365
-            return(as.numeric(NA))
-        }
-
-        COV  <- cov.d[[clz]]
-        MEAN <- mean.d[[clz]]
-        TT <- COV + tcrossprod(MEAN - m.k)
-
-        B[clz] <- GD[[clz]] * sum( A.inv * TT ) # eq 33, second 
-
-        # logdet (between only)
-        LB[clz] <- GD[[clz]]*A.logdet + GD[[clz]]*nrow(sigma.1)*log(nd)
-    }
-
-    LW <- ( (Lp$nclusters[[1]] - Lp$nclusters[[2]]) *
-            (sigma.1.logdet + sum(sigma.1.inv * S.PW)) )
-    loglik <- sum(LB) + sum(B) + LW
-    
-    loglik
-}

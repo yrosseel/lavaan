@@ -3,98 +3,12 @@
 
 short.summary <- function(object) {
 
-    # catch FAKE run
-    FAKE <- FALSE
-    if(object@Options$optim.method == "none") {
-        FAKE <- TRUE
-    }
-
-    # Convergence or not?
-    if(FAKE) {
-        cat(sprintf("lavaan (%s) -- DRY RUN with 0 iterations\n",
-                    packageDescription("lavaan", fields="Version")))
-    } else if(object@optim$iterations > 0) {
-        if(object@optim$converged) {
-	    cat(sprintf("lavaan (%s) converged normally after %3i iterations\n",
-                    packageDescription("lavaan", fields="Version"),
-                    object@optim$iterations))
-        } else {
-            cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n",
-                packageDescription("lavaan", fields="Version"),
-                object@optim$iterations))
-            cat("** WARNING ** Estimates below are most likely unreliable\n")
-        }
-    } else {
-        cat(sprintf("** WARNING ** lavaan (%s) model has NOT been fitted\n",
-                    packageDescription("lavaan", fields="Version")))
-        cat("** WARNING ** Estimates below are simply the starting values\n")
-    }
-    cat("\n")
-
-    # number of free parameters
-    #t0.txt <- sprintf("  %-40s", "Number of free parameters")
-    #t1.txt <- sprintf("  %10i", object@optim$npar)
-    #t2.txt <- ""
-    #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    #cat("\n")
-
-    # listwise deletion?
-    listwise <- FALSE
-    for(g in 1:object@Data@ngroups) {
-       if(object@Data@nobs[[1L]] != object@Data@norig[[1L]]) {
-           listwise <- TRUE
-           break
-       }
-    }
+    # print header
+    lav_object_print_header(object)
 
 
-    if(object@Data@ngroups == 1L) {
-        if(listwise) {
-            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
-                                        sprintf("  %10s", "Total"),
-                "\n", sep="")
-        }
-        t0.txt <- sprintf("  %-40s", "Number of observations")
-        t1.txt <- sprintf("  %10i", object@Data@nobs[[1L]])
-        t2.txt <- ifelse(listwise,
-                  sprintf("  %10i", object@Data@norig[[1L]]), "")
-        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-    } else {
-        if(listwise) {
-            cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
-                                        sprintf("  %10s", "Total"),
-                "\n", sep="")
-        }
-        t0.txt <- sprintf("  %-40s", "Number of observations per group")
-        cat(t0.txt, "\n")
-        for(g in 1:object@Data@ngroups) {
-            t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
-                                              object@Data@nobs[[g]])
-            t2.txt <- ifelse(listwise,
-                      sprintf("  %10i", object@Data@norig[[g]]), "")
-            cat(t.txt, t2.txt, "\n", sep="")
-        }
-    }
-    cat("\n")
-
-    # missing patterns?
-    if(object@SampleStats@missing.flag) {
-        if(object@Data@ngroups == 1L) {
-            t0.txt <- sprintf("  %-40s", "Number of missing patterns")
-            t1.txt <- sprintf("  %10i",
-                              object@Data@Mp[[1L]]$npatterns)
-            cat(t0.txt, t1.txt, "\n\n", sep="")
-        } else {
-            t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
-            cat(t0.txt, "\n")
-            for(g in 1:object@Data@ngroups) {
-                t.txt <- sprintf("  %-40s  %10i", object@Data@group.label[[g]],
-                                 object@Data@Mp[[g]]$npatterns)
-                cat(t.txt, "\n", sep="")
-            }
-            cat("\n")
-        }
-    }
+    # print lavdata
+    lav_data_print_short(object@Data)
 
     # Print Chi-square value for the user-specified (full/h0) model
 
