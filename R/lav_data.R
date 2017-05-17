@@ -885,36 +885,38 @@ function(object) {
 
 lav_data_print_short <- function(object) {
 
+    lavdata <- object
+
     # listwise deletion?
     listwise <- FALSE
-    for(g in 1:object@ngroups) {
-       if(object@nobs[[1L]] != object@norig[[1L]]) {
+    for(g in 1:lavdata@ngroups) {
+       if(lavdata@nobs[[1L]] != lavdata@norig[[1L]]) {
            listwise <- TRUE
            break
        }
     }
 
-    if(object@ngroups == 1L) {
+    if(lavdata@ngroups == 1L) {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
                                         sprintf("  %10s", "Total"),
                 "\n", sep="")
         }
         t0.txt <- sprintf("  %-40s", "Number of observations")
-        t1.txt <- sprintf("  %10i", object@nobs[[1L]])
+        t1.txt <- sprintf("  %10i", lavdata@nobs[[1L]])
         t2.txt <- ifelse(listwise,
-                  sprintf("  %10i", object@norig[[1L]]), "")
+                  sprintf("  %10i", lavdata@norig[[1L]]), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
-        if(object@nlevels > 1L) {
+        if(lavdata@nlevels > 1L) {
             #cat("\n")
-            for(l in 2:object@nlevels) {
+            for(l in 2:lavdata@nlevels) {
                 t0.txt <- sprintf("  %-40s", 
-                    paste("Number of clusters [", object@cluster[l-1], "]",
+                    paste("Number of clusters [", lavdata@cluster[l-1], "]",
                           sep = ""))
-                t1.txt <- sprintf("  %10i", object@Data@Lp[[1]]$nclusters[[l]])
+                t1.txt <- sprintf("  %10i", lavdata@Lp[[1]]$nclusters[[l]])
                 #t2.txt <- ifelse(listwise,
-                #          sprintf("  %10i", object@norig[[1L]]), "")
+                #          sprintf("  %10i", lavdata@norig[[1L]]), "")
                 t2.txt <- ""
                 cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
             }
@@ -927,23 +929,23 @@ lav_data_print_short <- function(object) {
         }
         t0.txt <- sprintf("  %-40s", "Number of observations per group")
         cat(t0.txt, "\n")
-        for(g in 1:object@ngroups) {
-            t.txt <- sprintf("  %-40s  %10i", object@group.label[[g]],
-                                              object@nobs[[g]])
+        for(g in 1:lavdata@ngroups) {
+            t.txt <- sprintf("  %-40s  %10i", lavdata@group.label[[g]],
+                                              lavdata@nobs[[g]])
             t2.txt <- ifelse(listwise,
-                      sprintf("  %10i", object@norig[[g]]), "")
+                      sprintf("  %10i", lavdata@norig[[g]]), "")
             cat(t.txt, t2.txt, "\n", sep="")
 
-            if(object@nlevels > 1L) {
+            if(lavdata@nlevels > 1L) {
                 #cat("\n")
-                for(l in 2:object@nlevels) {
+                for(l in 2:lavdata@nlevels) {
                     t0.txt <- sprintf("  %-40s", 
-                        paste("Number of clusters [", object@cluster[l-1], "]",
+                        paste("Number of clusters [", lavdata@cluster[l-1], "]",
                               sep = ""))
                     t1.txt <- sprintf("  %10i", 
-                                      object@Data@Lp[[1]]$nclusters[[l]])
+                                      lavdata@Lp[[1]]$nclusters[[l]])
                     #t2.txt <- ifelse(listwise,
-                    #          sprintf("  %10i", object@norig[[1L]]), "")
+                    #          sprintf("  %10i", lavdata@norig[[1L]]), "")
                     t2.txt <- ""
                     cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
                 }
@@ -953,18 +955,18 @@ lav_data_print_short <- function(object) {
     cat("\n")
 
     # missing patterns?
-    if(!is.null(object@Mp[[1L]])) {
-        if(object@ngroups == 1L) {
+    if(!is.null(lavdata@Mp[[1L]])) {
+        if(lavdata@ngroups == 1L) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
             t1.txt <- sprintf("  %10i",
-                              object@Mp[[1L]]$npatterns)
+                              lavdata@Mp[[1L]]$npatterns)
             cat(t0.txt, t1.txt, "\n\n", sep="")
         } else {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
             cat(t0.txt, "\n")
-            for(g in 1:object@ngroups) {
-                t.txt <- sprintf("  %-40s  %10i", object@group.label[[g]],
-                                 object@Mp[[g]]$npatterns)
+            for(g in 1:lavdata@ngroups) {
+                t.txt <- sprintf("  %-40s  %10i", lavdata@group.label[[g]],
+                                 lavdata@Mp[[g]]$npatterns)
                 cat(t.txt, "\n", sep="")
             }
             cat("\n")

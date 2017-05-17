@@ -28,36 +28,36 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-    # catch nlevels > 1L
-    if(lavdata@nlevels > 1L) {
-
-        # extract x from (updated) GLIST
-        x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST)
-        # no need to 'pack' it if we have constraints
-
-        # local objective function
-        min.f <- function(x) {
-            # x is full... no need to unpack it, as in minimize.this.function
-            #if(lavmodel@eq.constraints) {
-            #    x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-            #                    lavmodel@eq.constraints.k0
-            #}
-            local.GLIST <- lav_model_x2GLIST(lavmodel, x = x)
-        
-            fx <- lav_model_objective(lavmodel       = lavmodel,
-                                      GLIST          = local.GLIST,
-                                      lavsamplestats = lavsamplestats,
-                                      lavdata        = lavdata,
-                                      lavcache       = lavcache,
-                                      verbose        = FALSE)
-            fx
-        }
-
-        # x is the 'long' (unconstrained) version
-        dx <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
-
-        return(dx)
-    }
+  # # catch nlevels > 1L
+  # if(lavdata@nlevels > 1L) {
+  #
+  #     # extract x from (updated) GLIST
+  #     x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST)
+  #     # no need to 'pack' it if we have constraints
+  # 
+  #     # local objective function
+  #      min.f <- function(x) {
+  #          # x is full... no need to unpack it, as in minimize.this.function
+  #          #if(lavmodel@eq.constraints) {
+  #          #    x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+  #          #                    lavmodel@eq.constraints.k0
+  #          #}
+  #          local.GLIST <- lav_model_x2GLIST(lavmodel, x = x)
+  #      
+  #          fx <- lav_model_objective(lavmodel       = lavmodel,
+  #                                    GLIST          = local.GLIST,
+  #                                    lavsamplestats = lavsamplestats,
+  #                                    lavdata        = lavdata,
+  #                                    lavcache       = lavcache,
+  #                                    verbose        = FALSE)
+  #          fx
+  #      }
+  #  
+  #      # x is the 'long' (unconstrained) version
+  #      dx1 <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
+  #  
+  # #    return(dx)
+  #  }
 
     if(estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
 
@@ -132,6 +132,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     # 1. ML approach
     if( (estimator == "ML" || estimator == "REML") && 
+        lavdata@nlevels == 1L &&
         !lavmodel@conditional.x ) {
 
         if(meanstructure) {
@@ -382,6 +383,45 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                     x.el.idx = x.el.idx)
         }
     } # ML + conditional.x
+
+    else if(estimator == "ML" && lavdata@nlevels > 1L) {
+        if(type != "free") {
+            stop("FIXME: type != free in lav_model_gradient for estimator ML for nlevels > 1")
+        } else {
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+        }
+ 
+        # FIXME: group == 1L only!
+        dout <- lav_mvnorm_cluster_dlogl_2l(Y1 = lavdata@X[[1]],
+                                            YLp = lavsamplestats@YLp[[1]],
+                                            Lp  = lavdata@Lp[[1]],
+                                            Mu.W    = Mu.hat[[1]],
+                                            Sigma.W = Sigma.hat[[1]],
+                                            Mu.B    = Mu.hat[[2]],
+                                            Sigma.B = Sigma.hat[[2]],
+                                            Sinv.method  = "eigen")
+        dSigma.W <- dout$Sigma.W
+        dSigma.B <- dout$Sigma.B
+        dMu.W    <- dout$Mu.W
+        dMu.B    <- dout$Mu.B
+
+        # delta
+        pw <- length(lavdata@ov.names.l[[1]])
+        pb <- length(lavdata@ov.names.l[[2]])
+        Delta.Mu.W    <- Delta[[1]][1:pw,]
+        Delta.Sigma.W <- Delta[[1]][(pw+1):nrow(Delta[[1]]),]
+        Delta.Mu.B    <- Delta[[2]][1:pb,]
+        Delta.Sigma.B <- Delta[[2]][(pb+1):nrow(Delta[[2]]),]
+
+        dx <- as.numeric(dMu.W %*% Delta.Mu.W +
+                         dMu.B %*% Delta.Mu.B +
+                         lav_matrix_vech(dSigma.W) %*% Delta.Sigma.W +
+                         lav_matrix_vech(dSigma.B) %*% Delta.Sigma.B)
+
+        # divide by 2 * N
+        dx <- dx / (2 * lavsamplestats@ntotal)
+            
+    } # ML + two-level
 
     else if(estimator == "PML" || estimator == "FML" ||
             estimator == "MML") {
