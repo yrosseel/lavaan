@@ -275,8 +275,11 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
     # Lp
     nclusters       <- Lp$nclusters[[2]]
     cluster.size    <- Lp$cluster.size[[2]]
+    cluster.sizes   <- Lp$cluster.sizes[[2]]
     cluster.idx     <- Lp$cluster.idx[[2]]
     between.idx     <- Lp$between.idx[[2]]
+    ncluster.sizes  <- Lp$ncluster.sizes[[2]]
+    cluster.size.ns <- Lp$cluster.size.ns[[2]]
 
     # Y1
     if(length(between.idx) > 0L) {
@@ -303,15 +306,16 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
                        logdet = FALSE, Sinv.method = Sinv.method)
 
     # both level-1 and level-2
-    G.muy      <- matrix(0, nclusters, length(mu.y))
-    G.Sigma.w  <- matrix(0, nclusters, length(lav_matrix_vech(sigma.w)))
-    G.Sigma.b  <- matrix(0, nclusters, length(lav_matrix_vech(sigma.b)))
+    G.muy      <- matrix(0, ncluster.sizes, length(mu.y))
+    G.Sigma.w  <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.w)))
+    G.Sigma.b  <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.b)))
 
     if(length(between.idx) > 0L) {
 
-        G.muz      <- matrix(0, nclusters, length(mu.z))
-        G.Sigma.zz <- matrix(0, nclusters, length(lav_matrix_vech(sigma.zz)))
-        G.Sigma.yz <- matrix(0, nclusters, length(lav_matrix_vec(sigma.yz)))
+        G.muz      <- matrix(0, ncluster.sizes, length(mu.z))
+        G.Sigma.zz <- matrix(0, ncluster.sizes, 
+                                length(lav_matrix_vech(sigma.zz)))
+        G.Sigma.yz <- matrix(0, ncluster.sizes, length(lav_matrix_vec(sigma.yz)))
 
         sigma.zz.inv <- lav_matrix_symmetric_inverse(S = sigma.zz,
                            logdet = FALSE, Sinv.method = Sinv.method)
@@ -320,19 +324,22 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
         sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
 
 
-        for(cl in seq_len(nclusters)) {
+        for(clz in seq_len(ncluster.sizes)) {
             # cluster size
-            nj <- cluster.size[cl]
+            nj <- cluster.sizes[clz]
 
             # data within for the cluster (centered by mu.y)
-            Y1m <- Y1w.cm[cluster.idx == cl,, drop = FALSE]
-            yc <- Y2.cm[cl,-Lp$between.idx[[2]]]
-            zc <- Y2.cm[cl, Lp$between.idx[[2]]]
+            case.idx <- cluster.idx %in% which(cluster.size == nj)
+            Y1m <- Y1w.cm[case.idx,, drop = FALSE]
+
+            cl.idx <- which(cluster.size == nj)
+            yc <- colMeans(Y2.cm[cl.idx, -Lp$between.idx[[2]], drop = FALSE])
+            zc <- colMeans(Y2.cm[cl.idx,  Lp$between.idx[[2]], drop = FALSE])
 
             # data between
-            Y2Yc <- tcrossprod(Y2.cm[cl,])
-            Y2Yc.zz <- Y2Yc[Lp$between.idx[[2]],
-                        Lp$between.idx[[2]], drop = FALSE]
+            Y2Yc <- crossprod(Y2.cm[cluster.size == nj,,drop=FALSE])/cluster.size.ns[clz]
+            Y2Yc.zz <- Y2Yc[ Lp$between.idx[[2]],
+                             Lp$between.idx[[2]], drop = FALSE]
             Y2Yc.yz <- Y2Yc[-Lp$between.idx[[2]],
                              Lp$between.idx[[2]], drop = FALSE]
             Y2Yc.yy <- Y2Yc[-Lp$between.idx[[2]],
@@ -357,27 +364,28 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
 
 
             # Mu.Z
-            G.muz[cl,] <- -2 * as.numeric(
+            G.muz[clz,] <- -2 * as.numeric(
                 (sigma.zz.inv + nj*(sigma.zi.zy.ji %*% sigma.yz.zi)) %*% zc
                  -nj*sigma.zi.zy.ji %*% yc)
 
             # MU.Y
-            G.muy[cl,] <- 2*nj * as.numeric(zc %*% sigma.zi.zy.ji -
+            G.muy[clz,] <- 2*nj * as.numeric(zc %*% sigma.zi.zy.ji -
                                             yc %*% sigma.j.inv)
 
             # SIGMA.W
+            WYW <- crossprod(Y1m)/cluster.size.ns[clz] - nj*Y2Yc.yy
             g.sigma.w <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
+                - sigma.w.inv %*% WYW %*% sigma.w.inv
                 + sigma.j.inv - jYZj )
 
             tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
-            G.Sigma.w[cl,] <- lav_matrix_vech(tmp)
+            G.Sigma.w[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * (sigma.j.inv - jYZj)
 
             tmp <- g.sigma.b*2; diag(tmp) <- diag(g.sigma.b)
-            G.Sigma.b[cl,] <- lav_matrix_vech(tmp)
+            G.Sigma.b[clz,] <- lav_matrix_vech(tmp)
 
 
             # SIGMA.ZZ
@@ -387,7 +395,7 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
                                                 sigma.zz.inv )
 
             tmp <- g.sigma.zz*2; diag(tmp) <- diag(g.sigma.zz)
-            G.Sigma.zz[cl,] <- lav_matrix_vech(tmp)
+            G.Sigma.zz[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.ZY
             g.sigma.yz <- 2 * nj * (
@@ -395,33 +403,39 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
                               (sigma.yz.zi %*% Y2Yc.zz - sigma.yz - Y2Yc.yz)
                                + jYZj %*% sigma.yz) %*% sigma.zz.inv )
 
-            G.Sigma.yz[cl,] <- lav_matrix_vec(g.sigma.yz)
+            G.Sigma.yz[clz,] <- lav_matrix_vec(g.sigma.yz)
         }
 
         # level-1
-        d.mu.y     <- colSums(G.muy)
-        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w))
-        d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b))
+        d.mu.y     <- colSums(G.muy * cluster.size.ns)
+        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
+                                                      cluster.size.ns))
+        d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b * 
+                                                      cluster.size.ns))
 
         # level-2
-        d.mu.z     <- colSums(G.muz)
-        d.sigma.zz <- lav_matrix_vech_reverse(colSums(G.Sigma.zz))
-        d.sigma.yz <- matrix(colSums(G.Sigma.yz), nrow(sigma.yz), 
-                                                  ncol(sigma.yz))
+        d.mu.z     <- colSums(G.muz * cluster.size.ns)
+        d.sigma.zz <- lav_matrix_vech_reverse(colSums(G.Sigma.zz * 
+                                                      cluster.size.ns))
+        d.sigma.yz <- matrix(colSums(G.Sigma.yz * cluster.size.ns), 
+                             nrow(sigma.yz), ncol(sigma.yz))
     } # between.idx 
 
     else { # no level-2 variables
 
-        for(cl in seq_len(nclusters)) {
+        for(clz in seq_len(ncluster.sizes)) {
             # cluster size
-            nj <- cluster.size[cl]
+            nj <- cluster.sizes[clz]
 
             # data within for the cluster (centered by mu.y)
-            Y1m <- Y1w.cm[cluster.idx == cl,, drop = FALSE]
-            yc <- Y2.cm[cl,]
+            case.idx <- cluster.idx %in% which(cluster.size == nj)
+            Y1m <- Y1w.cm[case.idx,, drop = FALSE]
+
+            cl.idx <- which(cluster.size == nj)
+            yc <- colMeans(Y2.cm[cl.idx, , drop = FALSE])
 
             # data between
-            Y2Yc.yy <- tcrossprod(Y2.cm[cl,])
+            Y2Yc.yy <- crossprod(Y2.cm[cluster.size == nj,,drop=FALSE])/cluster.size.ns[clz]
 
             # construct sigma.j
             sigma.j <- (nj * sigma.b) + sigma.w
@@ -431,25 +445,28 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
             jYYj <- nj * sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
 
             # MU.Y
-            G.muy[cl,] <- -2*nj * as.numeric(yc %*% sigma.j.inv)
+            G.muy[clz,] <- -2*nj * as.numeric(yc %*% sigma.j.inv)
 
             # SIGMA.W
+            WYW <- crossprod(Y1m)/cluster.size.ns[clz] - nj*Y2Yc.yy
             g.sigma.w <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
+                - sigma.w.inv %*% WYW %*% sigma.w.inv
                 + sigma.j.inv - jYYj )
             tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
-            G.Sigma.w[cl,] <- lav_matrix_vech(tmp)
+            G.Sigma.w[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * (sigma.j.inv - jYYj)
             tmp <- g.sigma.b*2; diag(tmp) <- diag(g.sigma.b)
-            G.Sigma.b[cl,] <- lav_matrix_vech(tmp)
+            G.Sigma.b[clz,] <- lav_matrix_vech(tmp)
         }
 
         # level-1
-        d.mu.y     <- colSums(G.muy)
-        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w))
-        d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b))
+        d.mu.y     <- colSums(G.muy * cluster.size.ns)
+        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
+                                                      cluster.size.ns))
+        d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b * 
+                                                      cluster.size.ns))
 
         # level-2
         d.mu.z     <- numeric(0L)
