@@ -28,36 +28,36 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-  # # catch nlevels > 1L
-  # if(lavdata@nlevels > 1L) {
-  #
-  #     # extract x from (updated) GLIST
-  #     x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST)
-  #     # no need to 'pack' it if we have constraints
-  # 
-  #     # local objective function
-  #      min.f <- function(x) {
-  #          # x is full... no need to unpack it, as in minimize.this.function
-  #          #if(lavmodel@eq.constraints) {
-  #          #    x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-  #          #                    lavmodel@eq.constraints.k0
-  #          #}
-  #          local.GLIST <- lav_model_x2GLIST(lavmodel, x = x)
-  #      
-  #          fx <- lav_model_objective(lavmodel       = lavmodel,
-  #                                    GLIST          = local.GLIST,
-  #                                    lavsamplestats = lavsamplestats,
-  #                                    lavdata        = lavdata,
-  #                                    lavcache       = lavcache,
-  #                                    verbose        = FALSE)
-  #          fx
-  #      }
-  #  
-  #      # x is the 'long' (unconstrained) version
-  #      dx1 <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
-  #  
-  # #    return(dx)
-  #  }
+ #  # catch nlevels > 1L
+ #  if(lavdata@nlevels > 1L) {
+ # 
+ #      # extract x from (updated) GLIST
+ #      x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST)
+ #      # no need to 'pack' it if we have constraints
+ #  
+ #      # local objective function
+ #       min.f <- function(x) {
+ #           # x is full... no need to unpack it, as in minimize.this.function
+ #           #if(lavmodel@eq.constraints) {
+ #           #    x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
+ #           #                    lavmodel@eq.constraints.k0
+ #           #}
+ #           local.GLIST <- lav_model_x2GLIST(lavmodel, x = x)
+ #       
+ #           fx <- lav_model_objective(lavmodel       = lavmodel,
+ #                                     GLIST          = local.GLIST,
+ #                                     lavsamplestats = lavsamplestats,
+ #                                     lavdata        = lavdata,
+ #                                     lavcache       = lavcache,
+ #                                     verbose        = FALSE)
+ #           fx
+ #       }
+ #   
+ #       # x is the 'long' (unconstrained) version
+ #       dx1 <- numDeriv::grad(func = min.f, x = x, method = "Richardson")
+ #   
+ #  #    return(dx)
+ #   }
 
     if(estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
 
@@ -420,6 +420,9 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
         # divide by 2 * N
         dx <- dx / (2 * lavsamplestats@ntotal)
+
+        #cat("dx1 (numerical) = \n"); print( zapsmall(dx1) )
+        #cat("dx  (analytic)  = \n"); print( zapsmall(dx ) )
             
     } # ML + two-level
 

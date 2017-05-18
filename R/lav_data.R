@@ -851,7 +851,8 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
         nclusters[[l]]       <- length(cluster.size[[l]])
         cluster.sizes[[l]]   <- unique(cluster.size[[l]])
         ncluster.sizes[[l]]  <- length(cluster.sizes[[l]])
-        cluster.size.ns[[l]] <- unname(table(cluster.size[[l]]))
+        cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]], 
+                                 level = as.character(cluster.sizes[[l]]))))
 
         # index of ov.names for this level
         ov.idx[[l]]         <- match(ov.names.l[[l]], ov.names)
