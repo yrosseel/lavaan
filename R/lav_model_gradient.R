@@ -392,14 +392,14 @@ lav_model_gradient <- function(lavmodel       = NULL,
         }
  
         # FIXME: group == 1L only!
-        dout <- lav_mvnorm_cluster_dlogl_2l(Y1 = lavdata@X[[1]],
-                                            YLp = lavsamplestats@YLp[[1]],
-                                            Lp  = lavdata@Lp[[1]],
-                                            Mu.W    = Mu.hat[[1]],
-                                            Sigma.W = Sigma.hat[[1]],
-                                            Mu.B    = Mu.hat[[2]],
-                                            Sigma.B = Sigma.hat[[2]],
-                                            Sinv.method  = "eigen")
+        dout <- 
+          lav_mvnorm_cluster_dlogl_2l_samplestats(YLp = lavsamplestats@YLp[[1]],
+                                                  Lp  = lavdata@Lp[[1]],
+                                                  Mu.W    = Mu.hat[[1]],
+                                                  Sigma.W = Sigma.hat[[1]],
+                                                  Mu.B    = Mu.hat[[2]],
+                                                  Sigma.B = Sigma.hat[[2]],
+                                                  Sinv.method  = "eigen")
         dSigma.W <- dout$Sigma.W
         dSigma.B <- dout$Sigma.B
         dMu.W    <- dout$Mu.W

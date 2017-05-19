@@ -256,14 +256,13 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
 
 
 # first derivate -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
-lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
-                                        YLp          = NULL,
-                                        Lp           = NULL,
-                                        Mu.W         = NULL,
-                                        Sigma.W      = NULL,
-                                        Mu.B         = NULL,
-                                        Sigma.B      = NULL,
-                                        Sinv.method  = "eigen") {
+lav_mvnorm_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
+                                                    Lp           = NULL,
+                                                    Mu.W         = NULL,
+                                                    Sigma.W      = NULL,
+                                                    Mu.B         = NULL,
+                                                    Sigma.B      = NULL,
+                                                    Sinv.method  = "eigen") {
 
     # map implied to 2l matrices
     out <- lav_mvnorm_cluster_implied22l(Lp = Lp, Mu.W = Mu.W, Mu.B = Mu.B,
@@ -283,23 +282,14 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
 
     # Y1
     if(length(between.idx) > 0L) {
-        Y1w <- Y1[,-Lp$between.idx[[2]], drop = FALSE]
+        S.PW <- YLp[[2]]$Sigma.W[-between.idx, -between.idx, drop = FALSE]
     } else {
-        Y1w <- Y1
+        S.PW <- YLp[[2]]$Sigma.W
     }
-    Y1w.cm <- t( t(Y1w) - mu.y )
 
     # Y2
-    Y2 <- YLp[[2]]$Y2
-    # NOTE: ORDER mu.b must match Y2
-    mu.b <- numeric(ncol(Y2))
-    if(length(between.idx) > 0L) {
-        mu.b[-Lp$between.idx[[2]]] <- mu.y
-        mu.b[ Lp$between.idx[[2]]] <- mu.z
-    } else {
-        mu.b <- mu.y
-    }
-    Y2.cm <- t( t(Y2) - mu.b )
+    cov.d <- YLp[[2]]$cov.d
+    mean.d <- YLp[[2]]$mean.d
 
     # common parts:
     sigma.w.inv <- lav_matrix_symmetric_inverse(S = sigma.w,
@@ -328,22 +318,18 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
             # cluster size
             nj <- cluster.sizes[clz]
 
-            # data within for the cluster (centered by mu.y)
-            case.idx <- cluster.idx %in% which(cluster.size == nj)
-            Y1m <- Y1w.cm[case.idx,, drop = FALSE]
+            # level-2 vectors
+            b.idx <- seq_len(length(Lp$between.idx[[2]]))
+            zyc <- mean.d[[clz]] - c(mu.z, mu.y)
+            yc <- zyc[-b.idx]
+            zc <- zyc[ b.idx]
 
-            cl.idx <- which(cluster.size == nj)
-            yc <- colMeans(Y2.cm[cl.idx, -Lp$between.idx[[2]], drop = FALSE])
-            zc <- colMeans(Y2.cm[cl.idx,  Lp$between.idx[[2]], drop = FALSE])
-
-            # data between
-            Y2Yc <- crossprod(Y2.cm[cluster.size == nj,,drop=FALSE])/cluster.size.ns[clz]
-            Y2Yc.zz <- Y2Yc[ Lp$between.idx[[2]],
-                             Lp$between.idx[[2]], drop = FALSE]
-            Y2Yc.yz <- Y2Yc[-Lp$between.idx[[2]],
-                             Lp$between.idx[[2]], drop = FALSE]
-            Y2Yc.yy <- Y2Yc[-Lp$between.idx[[2]],
-                            -Lp$between.idx[[2]], drop = FALSE]
+            # level-2 crossproducts
+            Y2Yc <- (cov.d[[clz]] + tcrossprod(mean.d[[clz]] - c(mu.z, mu.y)))
+            b.idx <- seq_len(length(Lp$between.idx[[2]]))
+            Y2Yc.zz <- Y2Yc[ b.idx, b.idx, drop = FALSE]
+            Y2Yc.yz <- Y2Yc[-b.idx, b.idx, drop = FALSE]
+            Y2Yc.yy <- Y2Yc[-b.idx,-b.idx, drop = FALSE]
 
             # construct sigma.j
             sigma.j <- (nj * sigma.b.z) + sigma.w
@@ -372,21 +358,15 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
             G.muy[clz,] <- 2*nj * as.numeric(zc %*% sigma.zi.zy.ji -
                                             yc %*% sigma.j.inv)
 
-            # SIGMA.W
-            WYW <- crossprod(Y1m)/cluster.size.ns[clz] - nj*Y2Yc.yy
-            g.sigma.w <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% WYW %*% sigma.w.inv
-                + sigma.j.inv - jYZj )
-
+            # SIGMA.W (between part)
+            g.sigma.w <- sigma.j.inv - jYZj
             tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
             G.Sigma.w[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * (sigma.j.inv - jYZj)
-
             tmp <- g.sigma.b*2; diag(tmp) <- diag(g.sigma.b)
             G.Sigma.b[clz,] <- lav_matrix_vech(tmp)
-
 
             # SIGMA.ZZ
             g.sigma.zz <- ( sigma.zz.inv + nj * sigma.zz.inv %*% (
@@ -408,7 +388,7 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
 
         # level-1
         d.mu.y     <- colSums(G.muy * cluster.size.ns)
-        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
+        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
                                                       cluster.size.ns))
         d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b * 
                                                       cluster.size.ns))
@@ -427,15 +407,11 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
             # cluster size
             nj <- cluster.sizes[clz]
 
-            # data within for the cluster (centered by mu.y)
-            case.idx <- cluster.idx %in% which(cluster.size == nj)
-            Y1m <- Y1w.cm[case.idx,, drop = FALSE]
+            # level-2 vectors
+            yc <- mean.d[[clz]] - mu.y
 
-            cl.idx <- which(cluster.size == nj)
-            yc <- colMeans(Y2.cm[cl.idx, , drop = FALSE])
-
-            # data between
-            Y2Yc.yy <- crossprod(Y2.cm[cluster.size == nj,,drop=FALSE])/cluster.size.ns[clz]
+            # level-2 crossproducts
+            Y2Yc.yy <- (cov.d[[clz]] + tcrossprod(mean.d[[clz]] - mu.y))
 
             # construct sigma.j
             sigma.j <- (nj * sigma.b) + sigma.w
@@ -447,11 +423,8 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
             # MU.Y
             G.muy[clz,] <- -2*nj * as.numeric(yc %*% sigma.j.inv)
 
-            # SIGMA.W
-            WYW <- crossprod(Y1m)/cluster.size.ns[clz] - nj*Y2Yc.yy
-            g.sigma.w <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% WYW %*% sigma.w.inv
-                + sigma.j.inv - jYYj )
+            # SIGMA.W (between part)
+            g.sigma.w <- sigma.j.inv - jYYj
             tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
             G.Sigma.w[clz,] <- lav_matrix_vech(tmp)
 
@@ -463,16 +436,23 @@ lav_mvnorm_cluster_dlogl_2l <- function(Y1           = NULL,
 
         # level-1
         d.mu.y     <- colSums(G.muy * cluster.size.ns)
-        d.sigma.w  <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
+        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.Sigma.w * 
                                                       cluster.size.ns))
         d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.Sigma.b * 
                                                       cluster.size.ns))
-
         # level-2
         d.mu.z     <- numeric(0L)
         d.sigma.zz <- matrix(0, 0L, 0L)
         d.sigma.yz <- matrix(0, 0L, 0L)
     }
+
+    # Sigma.W (bis)
+    d.sigma.w2 <- (Lp$nclusters[[1]] - nclusters) * ( sigma.w.inv
+                   - sigma.w.inv %*% S.PW %*% sigma.w.inv )
+    tmp <- d.sigma.w2*2; diag(tmp) <- diag(d.sigma.w2)
+    d.sigma.w2 <- tmp
+
+    d.sigma.w <- d.sigma.w1 + d.sigma.w2
 
     # rearrange 
     dout <- lav_mvnorm_cluster_2l2implied(Lp = Lp,
