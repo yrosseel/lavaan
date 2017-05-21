@@ -350,7 +350,9 @@ lav_start <- function(start.method    = "default",
                                             lavpartable$rhs == single.ind &
                                             lavpartable$group == group.values[g])
                     # user-defined residual variance
-                    single.var <- lavpartable$ustart[single.var.idx]
+                    # fixme: we take the first, in case we have multiple matches
+                    # (eg nlevels)
+                    single.var <- lavpartable$ustart[single.var.idx[1]]
                     if(is.na(single.var)) {
                          single.var <- 1
                     }

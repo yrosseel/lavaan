@@ -31,6 +31,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     if(var.lv.ok && length(lavNames(lavpartable, type="lv.regular")) > 0L) {
         ETA <- lavTech(object, "cov.lv")
         for(g in 1:lavdata@ngroups) {
+            if(nrow(ETA[[g]]) == 0L) next
             txt.group <- ifelse(lavdata@ngroups > 1L,
                                 paste(" in group ", g, sep=""), "")
             eigvals <- eigen(ETA[[g]], symmetric=TRUE, only.values=TRUE)$values

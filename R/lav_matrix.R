@@ -885,7 +885,9 @@ lav_matrix_crossprod <- function(A, B) {
     if(missing(B)) {
         B <- A
     }
-    apply(A, 2L, function(x) colSums(B * x, na.rm=TRUE))
+    out <- apply(A, 2L, function(x) colSums(B * x, na.rm=TRUE))
+
+    as.matrix(out)
 }
 
 

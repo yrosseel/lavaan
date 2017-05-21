@@ -113,7 +113,7 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
     Sigma.B.tilde[ ov.idx[[1]], between.idx ] <- sigma.yz
     Sigma.B.tilde[ between.idx, ov.idx[[1]] ] <- t(sigma.yz)
     Sigma.B.tilde[ between.idx, between.idx ] <- sigma.zz
-    Sigma.B <- Sigma.B.tilde[ ov.idx[[2]], ov.idx[[2]] ]
+    Sigma.B <- Sigma.B.tilde[ ov.idx[[2]], ov.idx[[2]], drop = FALSE ]
 
     list(Mu.W = Mu.W, Mu.B = Mu.B, Sigma.W = Sigma.W, Sigma.B = Sigma.B)
 }
