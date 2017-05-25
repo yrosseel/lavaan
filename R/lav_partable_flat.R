@@ -416,6 +416,7 @@ lav_partable_flat <- function(FLAT = NULL,
     if(length(ov.names.ord) > 0L) {
         ord.idx <- which(lhs %in% ov.names.ord &
                          op == "~~" &
+                         user == 0L & ## New in 0.6-1
                          lhs == rhs)
         ustart[ord.idx] <- 1L ## FIXME!! or 0?? (0 breaks ex3.12)
           free[ord.idx] <- 0L
@@ -424,7 +425,8 @@ lav_partable_flat <- function(FLAT = NULL,
     # 5c latent response scales of ordinal variables?
     #    by default, all fixed to 1.0
     if(length(ov.names.ord) > 0L) {
-        delta.idx <- which(op == "~*~")
+        delta.idx <- which(op == "~*~" &
+                           user == 0L) ## New in 0.6-1
         ustart[delta.idx] <- 1.0
           free[delta.idx] <- 0L
     }

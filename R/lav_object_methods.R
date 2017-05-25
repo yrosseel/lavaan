@@ -466,7 +466,9 @@ parameterEstimates <- parameterestimates <- function(object,
     # add se, zstat, pvalue
     if(se && object@Options$se != "none") {
         LIST$se <- lav_object_inspect_se(object)
-        tmp.se <- ifelse(LIST$se == 0.0, NA, LIST$se)
+        # handle tiny SEs 
+        LIST$se <- ifelse(LIST$se < sqrt(.Machine$double.eps), 0, LIST$se)
+        tmp.se <- ifelse(LIST$se < sqrt(.Machine$double.eps), NA, LIST$se)
         if(zstat) {
             LIST$z <- LIST$est / tmp.se
             if(pvalue) {
