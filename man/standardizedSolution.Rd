@@ -5,9 +5,9 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all", se = TRUE, 
-                     zstat = TRUE, pvalue = TRUE, remove.eq = TRUE, 
-                     remove.ineq = TRUE, remove.def = FALSE,
+standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
+                     pvalue = TRUE, ci = TRUE, level = 0.95, 
+                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
                      GLIST = NULL, est = NULL)
 }
 \arguments{
@@ -27,6 +27,9 @@ by its standard error.}
 \item{pvalue}{Logical. If \code{TRUE}, an extra column is added containing
 the pvalues corresponding to the z-statistic, evaluated under a standard
 normal distribution.}
+\item{ci}{If \code{TRUE}, simple symmetric confidence intervals are added to 
+the output}
+\item{level}{The confidence level required.}
 \item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
 containing equality constraints, if any.}
 \item{remove.ineq}{Logical. If TRUE, filter the output by removing all
