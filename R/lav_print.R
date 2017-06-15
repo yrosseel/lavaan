@@ -184,7 +184,10 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     y$block <- y$level <- NULL
 
     # if standardized, remove std.nox column (space reasons only)
-    y$std.nox <- NULL
+    # unless, std.all is already removed
+    if(!is.null(y$std.all)) {
+        y$std.nox <- NULL
+    }
 
     # convert to character matrix
     m <- as.matrix(format.data.frame(y, na.encode = FALSE, 

@@ -196,11 +196,15 @@ function(object, header       = TRUE,
                  estimates    = TRUE,
                  ci           = FALSE,
                  fmi          = FALSE,
+                 std          = FALSE,
                  standardized = FALSE,
                  rsquare      = FALSE,
                  std.nox      = FALSE,
                  modindices   = FALSE,
                  nd = 3L) {
+ 
+    # this is to avoid partial matching of 'std' with std.nox
+    standardized <- std || standardized
 
     if(std.nox) standardized <- TRUE
 
@@ -227,7 +231,8 @@ function(object, header       = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
                                  add.attributes = TRUE)
         if(standardized && std.nox) {
-            PE$std.all <- PE$std.nox
+            #PE$std.all <- PE$std.nox
+            PE$std.all <- NULL
         }
         print(PE, nd = nd)
     }
