@@ -321,7 +321,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
 
         # exogenous `x' covariates
-        if(any(type %in% c("ov.x","ov.nox","ov.num", "ov.model",
+        if(any(type %in% c("ov.x","ov.nox", "ov.model",
                            "th.mean","lv.nonnormal"))) {
             # correction: is any of these ov.names.x mentioned as a variance,
             #             covariance, or intercept?
@@ -383,7 +383,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         }
 
         # ov's withouth ov.x
-        if(any(type %in% c("ov.nox", "ov.num", "ov.model",
+        if(any(type %in% c("ov.nox", "ov.model",
                            "th.mean", "lv.nonnormal"))) {
             ov.names.nox <- ov.names[! ov.names %in% ov.names.x ]
         }
@@ -417,9 +417,9 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             OUT$ov.ord[[b]] <- ord.names
         }
 
-        # ov's strictly numeric (but no x)
+        # ov's strictly numeric
         if(any(type %in% c("ov.num", "lv.nonnormal"))) {
-            ov.num <- ov.names.nox[! ov.names.nox %in% ord.names ]
+            ov.num <- ov.names[! ov.names %in% ord.names ]
         }
 
         if("ov.num" %in% type) {

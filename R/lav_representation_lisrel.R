@@ -26,10 +26,8 @@ representation.LISREL <- function(partable = NULL,
     categorical   <- any(partable$op == "|")
     group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
 
-    # gamma?
-    if(categorical) { # needed? only if conditional.x
-        gamma <- TRUE
-    } else if(any(partable$op == "~" & partable$exo == 1L)) {
+    # gamma?only if conditional.x
+    if(any(partable$op == "~" & partable$exo == 1L)) {
         gamma <- TRUE
     } else {
         gamma <- FALSE

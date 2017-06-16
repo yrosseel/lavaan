@@ -749,7 +749,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                             DELTA.th[no.num.idx,,drop=FALSE] +
                             (dth.dDelta %*% dDelta.dx)[no.num.idx,,drop=FALSE]
                     }
-                    if(lavmodel@nexo[g] > 0L) {
+                    if(conditional.x && lavmodel@nexo[g] > 0L) {
                         DELTA.pi <- 
                             derivative.pi.LISREL(m=mname,
                                                  idx=m.el.idx[[mm]],

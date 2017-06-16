@@ -102,10 +102,11 @@ lav_model <- function(lavpartable      = NULL,
         ov.num <-       lav_partable_vnames(lavpartable, "ov.num", block = g)
         if(lavoptions$conditional.x) {
             nvar[g] <- length(ov.names.nox)
+            num.idx[[g]] <- which(ov.names.nox %in% ov.num)
         } else {
             nvar[g] <- length(ov.names)
+            num.idx[[g]] <- which(ov.names %in% ov.num)
         }
-        num.idx[[g]] <- match(ov.num, ov.names.nox)
 
         # model matrices for this block
         mmNumber    <- attr(REP, "mmNumber")[[g]]

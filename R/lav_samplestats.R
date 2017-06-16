@@ -234,21 +234,40 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             if(verbose) {
                 cat("Estimating sample thresholds and correlations ... ")
             }
-            CAT <- muthen1984(Data=X[[g]],
-                              ov.names=ov.names[[g]],
-                              ov.types=ov.types,
-                              ov.levels=ov.levels,
-                              ov.names.x=ov.names.x[[g]],
-                              eXo=eXo[[g]],
-                              group = g, # for error messages only
-                              missing = missing, # listwise or pairwise?
-                              WLS.W = WLS.W,
-                              optim.method = optim.method,
-                              zero.add = zero.add,
-                              zero.keep.margins = zero.keep.margins,
-                              zero.cell.warn = FALSE,
-                              zero.cell.tables = TRUE,
-                              verbose=debug)
+
+            if(conditional.x) {
+                CAT <- muthen1984(Data=X[[g]],
+                                  ov.names=ov.names[[g]],
+                                  ov.types=ov.types,
+                                  ov.levels=ov.levels,
+                                  ov.names.x=ov.names.x[[g]],
+                                  eXo=eXo[[g]],
+                                  group = g, # for error messages only
+                                  missing = missing, # listwise or pairwise?
+                                  WLS.W = WLS.W,
+                                  optim.method = optim.method,
+                                  zero.add = zero.add,
+                                  zero.keep.margins = zero.keep.margins,
+                                  zero.cell.warn = FALSE,
+                                  zero.cell.tables = TRUE,
+                                  verbose=debug)
+            } else {
+                CAT <- muthen1984(Data=X[[g]],
+                                  ov.names=ov.names[[g]],
+                                  ov.types=ov.types,
+                                  ov.levels=ov.levels,
+                                  ov.names.x=NULL,
+                                  eXo=NULL,
+                                  group = g, # for error messages only
+                                  missing = missing, # listwise or pairwise?
+                                  WLS.W = WLS.W,
+                                  optim.method = optim.method,
+                                  zero.add = zero.add,
+                                  zero.keep.margins = zero.keep.margins,
+                                  zero.cell.warn = FALSE,
+                                  zero.cell.tables = TRUE,
+                                  verbose=debug)
+            }
             # empty cell tables
             zero.cell.tables[[g]] <- CAT$zero.cell.tables
             if(verbose) cat("done\n")
