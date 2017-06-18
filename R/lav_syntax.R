@@ -32,6 +32,12 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
   
     start.idx <- grep("[~=<>:|%]", model.simple)
+
+    # check for empty start.idx: no operator found (new in 0.6-1)
+    if(length(start.idx) == 0L) {
+        stop("lavaan ERROR: model does not contain lavaan syntax (no operators found)")
+    }
+
     end.idx <- c( start.idx[-1]-1, length(model) )
     model.orig    <- model
     model <- character( length(start.idx) )

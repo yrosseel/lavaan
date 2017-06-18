@@ -279,6 +279,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
 
             # categorical? insert means as fixed-to-zero parameters
             # since 0.5-17
+            # always add ~*~ parameters (since 0.6-1)
             if(categorical) {
                 ov.int <- ov.names
                 idx <- which(ov.int %in% ord.names)
@@ -293,7 +294,19 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                 level <- c(level, rep(l,  nel))
                 free  <- c(free,  rep(0L, nel))
                 exo   <- c(exo,   rep(0L, nel))
-               ustart <- c(ustart, rep(0L, nel))
+               ustart <- c(ustart, rep(0, nel))
+
+                # ~*~
+                nel <- length(ov.int)
+                lhs   <- c(lhs, ov.int)
+                 op   <- c(op, rep("~*~", nel))
+                rhs   <- c(rhs, ov.int)
+                block <- c(block, rep(b,  nel))
+                group <- c(group, rep(g,  nel))
+                level <- c(level, rep(l,  nel))
+                free  <- c(free,  rep(0L, nel))
+                exo   <- c(exo,   rep(0L, nel))
+               ustart <- c(ustart, rep(1, nel))
             }
  
 

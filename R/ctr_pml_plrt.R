@@ -124,13 +124,13 @@ if(is.null(VCOV)) {
                            lavpartable    = lavpartable,
                            lavcache       = lavcache)
 }
-InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV )[index.par, index.par]  #G^psipsi(theta0)
+InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV )[index.par, index.par, drop = FALSE]  #G^psipsi(theta0)
 #below the lavaan function getHessian is used
 #Hattheta0 <- (-1) * H0.Hessian
 #Hattheta0 <- H0.Hessian
 #InvHattheta0 <- solve(Hattheta0)
 InvHattheta0 <- attr(VCOV, "E.inv")
-InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par]   #H^psipsi(theta0)
+InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par, drop = FALSE]   #H^psipsi(theta0)
 if(lavmodel@eq.constraints) {
     IN <- InvH_to_psipsi_attheta0
     IN.npar <- ncol(IN)
@@ -235,7 +235,7 @@ for(g in 1:lavsamplestats@ngroups) {
     }
 
     par.idx <- match(PARLABEL, NAMES)
-    drhodpsi_MAT[[g]] <- delta.g[par.idx, index.par]
+    drhodpsi_MAT[[g]] <- delta.g[par.idx, index.par, drop = FALSE]
 }
 drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
 
