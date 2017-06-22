@@ -76,13 +76,13 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(conditional.x) {
             PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
         }
-        if(estimator == "PML") {
-            if(lavmodel@nexo > 0L) {
-                PI <- computePI(lavmodel = lavmodel)
-            } else {
-                PI <- vector("list", length = lavsamplestats@ngroups)
-            }
-        }
+        #if(estimator == "PML") {
+        #    if(lavmodel@nexo > 0L) {
+        #        PI <- computePI(lavmodel = lavmodel)
+        #    } else {
+        #        PI <- vector("list", length = lavsamplestats@ngroups)
+        #    }
+        #}
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }
@@ -184,15 +184,35 @@ lav_model_objective <- function(lavmodel       = NULL,
 
         } else if(estimator == "PML") {
             # Pairwise maximum likelihood
-            group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
-                                      TH        = TH[[g]],
-                                      PI        = PI[[g]],
-                                      th.idx    = th.idx[[g]],
-                                      num.idx   = num.idx[[g]],
-                                      X         = lavdata@X[[g]],
-                                      eXo       = lavdata@eXo[[g]],
-                                      lavcache  = lavcache[[g]],
-                                      missing   = lavdata@missing)
+            if(lavdata@nlevels  > 1L) {
+                #group.fx <- estimator.PML.2L(lavmodel       = lavmodel,
+                #                             GLIST          = GLIST,
+                #                             Lp             = lavdata@Lp[[g]],
+                #                             lavsamplestats = lavsamplestats,
+                #                             group          = g)   
+                group.fx <- 0 # for now
+                attr(group.fx, "logl") <- 0
+            } else if(conditional.x) {
+                group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                          TH        = TH[[g]],
+                                          PI        = PI[[g]],
+                                          th.idx    = th.idx[[g]],
+                                          num.idx   = num.idx[[g]],
+                                          X         = lavdata@X[[g]],
+                                          eXo       = lavdata@eXo[[g]],
+                                          lavcache  = lavcache[[g]],
+                                          missing   = lavdata@missing)
+            } else {
+                group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                          TH        = TH[[g]],
+                                          PI        = NULL,
+                                          th.idx    = th.idx[[g]],
+                                          num.idx   = num.idx[[g]],
+                                          X         = lavdata@X[[g]],
+                                          eXo       = NULL,
+                                          lavcache  = lavcache[[g]],
+                                          missing   = lavdata@missing)
+            }
             logl.group[g] <- attr(group.fx, "logl")
         } else if(estimator == "FML") { 
             # Full maximum likelihood (underlying multivariate normal)

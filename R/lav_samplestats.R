@@ -218,11 +218,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         ov.levels <- DataOv$nlev[ match(ov.names[[g]], DataOv$name) ]
         CAT <- list()
         if("ordered" %in% ov.types) {
+            categorical <- TRUE
             if(nlevels > 1L) {
-                stop("lavaan ERROR: multilevel + categorical not supported yet.")
-            } else {
-                categorical <- TRUE
-            }
+                warning("lavaan ERROR: multilevel + categorical not supported yet.")
+            } 
         }
 
         if(categorical) {

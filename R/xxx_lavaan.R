@@ -315,14 +315,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.types[ord.idx] <- "ordered"
         }
         # 0. at least some variables must be ordinal
-        if(!any(ov.types == "ordered")) {
-            stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
-        }
+        #if(!any(ov.types == "ordered")) {
+        #    stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
+        #}
         # 1. all variables must be ordinal (for now)
         #    (the mixed continuous/ordinal case will be added later)
-        if(any(ov.types != "ordered")) {
-            stop("lavaan ERROR: estimator=\"PML\" can not handle mixed continuous and ordinal data (yet)")
-        }
+        #if(any(ov.types != "ordered")) {
+        #    stop("lavaan ERROR: estimator=\"PML\" can not handle mixed continuous and ordinal data (yet)")
+        #}
 
         # 2. we can not handle exogenous covariates yet
         #if(length(ovx) > 0L) {
@@ -705,7 +705,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         # prepare cache -- stuff needed for estimation, but also post-estimation
         lavcache <- vector("list", length=lavdata@ngroups)
-        if(lavoptions$estimator == "PML") {
+        if(lavoptions$estimator == "PML" && all(ov.types == "ordered")) {
             TH <- computeTH(lavmodel)
             BI <- lav_tables_pairwise_freq_cell(lavdata)
 

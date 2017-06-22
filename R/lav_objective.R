@@ -209,7 +209,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     cors <- Sigma.hat[lower.tri(Sigma.hat)]
 
     #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
-    if(any(abs(cors) > 1)) {
+    if(any(abs(cors) > 1) || any(is.na(cors))) {
         # question: what is the best approach here??
         OUT <- +Inf
         attr(OUT, "logl") <- as.numeric(NA)
@@ -293,7 +293,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         if (missing =="doubly.robust")  {
 
              # COMPUTE THE SUM OF THE EXPECTED BIVARIATE CONDITIONAL LIKELIHOODS
-             #SUM_{i,j} [ E_{Yi,Yj|y^o}}(lnf(Yi,Yj))) ]
+             #SUM_{i,j} [ E_{Yi,Yj|y^o}(lnf(Yi,Yj))) ]
 
              #First compute the terms of the summand. Since the cells of
              # pairwiseProbGivObs are zero for the pairs of variables that at least 
@@ -310,7 +310,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
              Fmin <- Fmin - SumElnfij
 
              # COMPUTE THE THE SUM OF THE EXPECTED UNIVARIATE CONDITIONAL LIKELIHOODS 
-             # SUM_{i,j} [ E_{Yj|y^o}}(lnf(Yj|yi))) ]
+             # SUM_{i,j} [ E_{Yj|y^o}(lnf(Yj|yi))) ]
 
              #First compute the model-implied conditional univariate probabilities
              # p(y_i=a|y_j=b). Let ModProbY1Gy2 be the vector of these
@@ -415,15 +415,21 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                 if(ov.types[i] == "numeric" && 
                    ov.types[j] == "numeric") {
                     # ordinary pearson correlation
-                    stop("not done yet")
+                    LIK[,pstar.idx] <- pp_lik(Y1 = X[,i], Y2 = X[,j], 
+                                              eXo = eXo,
+                                              rho = Sigma.hat[i,j])
                 } else if(ov.types[i] == "numeric" && 
                           ov.types[j] == "ordered") {
                     # polyserial correlation
-                    stop("not done yet")
+                    LIK[,pstar.idx] <- ps_lik(Y1 = X[,i], Y2 = X[,j], 
+                                              eXo = eXo,
+                                              rho = Sigma.hat[i,j])
                 } else if(ov.types[j] == "numeric" && 
                           ov.types[i] == "ordered") {
                     # polyserial correlation
-                    stop("not done yet")
+                    LIK[,pstar.idx] <- ps_lik(Y1 = X[,j], Y2 = X[,i], 
+                                              eXo = eXo,
+                                              rho = Sigma.hat[i,j])
                 } else if(ov.types[i] == "ordered" && 
                           ov.types[j] == "ordered") {
                     # polychoric correlation

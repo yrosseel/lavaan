@@ -270,6 +270,21 @@ lavaanify <- lavParTable <- function(
             LIST$ustart[fix.names.idx] <- 0
         }
     }
+    if(multilevel && any(LIST$op == "|")) {
+        # fix ALL thresholds at level 1
+        level.values <- lav_partable_level_values(LIST)
+        th.idx <- which(LIST$op == "|" &
+                        LIST$level %in% level.values[1L])
+        LIST$free[th.idx] <- 0L
+        LIST$ustart[th.idx] <- 0
+
+       # fix ALL scaling parmaters at higher levels
+       scale.idx <- which(LIST$op == "~*~" &
+                          LIST$level %in% level.values[-1L])
+       LIST$free[scale.idx] <- 0L
+       LIST$ustart[scale.idx] <- 1
+    }
+
 
     # apply user-specified modifiers
     if(length(MOD)) {
