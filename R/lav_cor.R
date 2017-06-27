@@ -19,6 +19,12 @@ lavCor <- function(object,
                    ...,
                    output = "cor") {
 
+    # shortcut if object = lavaan object
+    if(inherits(object, "lavaan")) {
+        out <- lav_cor_output(object, output = output)
+        return(out)
+    }
+
     # check estimator
     estimator <- tolower(estimator)
     if(estimator %in% c("two.step", "two.stage")) {
@@ -35,14 +41,7 @@ lavCor <- function(object,
     }
 
     # check object class
-    if(inherits(object, "lavaan")) {
-        lav.data <- object@Data
-        if(missing(missing)) {
-            missing <- object@Options$missing
-        } else {
-            missing <- "default"
-        }
-    } else if(inherits(object, "lavData")) {
+    if(inherits(object, "lavData")) {
         lav.data <- object
     } else if(inherits(object, "data.frame")) {
         NAMES <- names(object)
@@ -70,7 +69,9 @@ lavCor <- function(object,
 
     # extract partable options from dots
     dots <- list(...)
-    meanstructure <- FALSE; fixed.x <- FALSE; mimic <- "lavaan"
+    meanstructure <- FALSE 
+    fixed.x       <- FALSE
+    mimic         <- "lavaan"
     conditional.x <- FALSE
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
@@ -101,40 +102,63 @@ lavCor <- function(object,
                                   sample.th     = NULL)
 
     
-    fit <- lavaan(slotParTable = PT.un, slotData = lav.data,
+    FIT <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
                   missing = missing,
                   se = se, estimator = estimator, ...)
 
+    out <- lav_cor_output(FIT, output = output)
+
+    out
+}
+
+lav_cor_output <- function(object, output = "cor") {
+
     # check output
     if(output %in% c("cor","cov")) {
-        out <- inspect(fit, "sampstat")
-        if(fit@Data@ngroups == 1L) {
-            out <- out$cov
+        out <- inspect(object, "sampstat")
+        if(object@Data@ngroups == 1L) {
+            if(object@Model@conditional.x) {
+                out <- out$res.cov
+            } else {
+                out <- out$cov
+            }
             if(output == "cor") {
                 out <- cov2cor(out)
             }
         } else {
-            out <- lapply(out, "[[", "cov")
+            if(object@Model@conditional.x) {
+                out <- lapply(out, "[[", "res.cov")
+            } else {
+                out <- lapply(out, "[[", "cov")
+            }
             if(output == "cor") {
                 out <- lapply(out, cov2cor)
             }
         }
     } else if(output %in% c("th","thresholds")) {
-        out <- inspect(fit, "sampstat")
-        if(fit@Data@ngroups == 1L) {
-            out <- out$th
+        out <- inspect(object, "sampstat")
+        if(object@Data@ngroups == 1L) {
+            if(object@Model@conditional.x) {
+                out <- out$res.th
+            } else {
+                out <- out$th
+            }
         } else {
-            out <- lapply(out, "[[", "th")
+            if(object@Model@conditional.x) {
+                out <- lapply(out, "[[", "res.th")
+            } else {
+                out <- lapply(out, "[[", "th")
+            }
         }
     } else if(output %in% c("sampstat")) {
-        out <- inspect(fit, "sampstat")
+        out <- inspect(object, "sampstat")
     } else if(output %in% c("parameterEstimates", "pe", 
               "parameterestimates", "est")) {
-        #out <- parameterEstimates(fit)
-        out <- standardizedSolution(fit)
+        #out <- parameterEstimates(object)
+        out <- standardizedSolution(object)
     } else {
-        out <- fit
+        out <- object
     }
 
     out
