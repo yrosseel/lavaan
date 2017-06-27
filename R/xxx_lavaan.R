@@ -235,6 +235,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # load default options
         opt <- lav_options_default()
 
+        # catch unknown options
+        ok.names <- names(opt)
+        dot.names <- names(dotdotdot)
+        wrong.idx <- which(!dot.names %in% ok.names)
+        if(length(wrong.idx) > 0L) {
+            idx <- wrong.idx[1L] # only show first one
+            # stop or warning?? stop for now (there could be more)
+            stop("lavaan ERROR: unknown argument `", dot.names[idx],"'")
+        }
+
         # modifyList
         opt <- modifyList(opt, dotdotdot)
 
