@@ -160,7 +160,10 @@ lav_options_set <- function(opt = NULL) {
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
     # except group,group.partial, which may contain capital letters
     opt$group <- opt.old$group
+    opt$group.label <- opt.old$group.label
     opt$group.partial <- opt.old$group.partial
+    opt$cluster <- opt.old$cluster
+    
 
     # do.fit implies se="none and test="none" (unless not default)
     if(!opt$do.fit) {
