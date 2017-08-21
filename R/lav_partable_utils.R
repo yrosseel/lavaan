@@ -189,3 +189,48 @@ lav_partable_df <- function(partable) {
     as.integer(df)
 }
 
+# check order of covariances: we only fill the upper.tri
+# therefore, we 'switch' lhs & rhs if they appear in the wrong order
+lav_partable_covariance_reorder <- function(partable, 
+                                            ov.names = NULL,
+                                            lv.names = NULL) {
+
+    # shortcut
+    cov.idx <- which(partable$op == "~~" & partable$lhs != partable$rhs)
+    if(length(cov.idx) == 0L) {
+        # nothing to do
+        return(partable)
+    }
+
+    # get names
+    if(is.null(ov.names)) {
+        ov.names <- lav_partable_vnames(partable, "ov")
+    } else {
+        ov.names <- unlist(ov.names)
+    }
+    if(is.null(lv.names)) {
+        lv.names <- lav_partable_vnames(partable, "lv")
+    } else {
+        lv.names <- unlist(lv.names)
+    }
+    lv.ov.names <- c(lv.names, ov.names)
+
+    # identify wrong ordering
+    lhs.idx <- match(partable$lhs[ cov.idx ], lv.ov.names)
+    rhs.idx <- match(partable$rhs[ cov.idx ], lv.ov.names)
+    swap.idx <- which(lhs.idx > rhs.idx)
+
+    if(length(swap.idx) == 0L) {
+        # nothing to do
+        return(partable)
+    }
+
+    # swap!
+    tmp <- partable$lhs[ swap.idx ]
+    partable$lhs[ swap.idx ] <- partable$rhs[ swap.idx ]
+    partable$rhs[ swap.idx ] <- tmp
+  
+    partable
+}
+
+

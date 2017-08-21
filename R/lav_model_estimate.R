@@ -253,7 +253,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
             #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
         } else {
             OPTIMIZER <- toupper(lavoptions$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B", "NONE"))
+            stopifnot(OPTIMIZER %in% c("NLMINB0", "NLMINB1", "NLMINB2", 
+                      "NLMINB", "BFGS", "L-BFGS-B", "NONE"))
+            if(OPTIMIZER == "NLMINB1") {
+                OPTIMIZER <- "NLMINB"
+            }
         }
     } else {
         OPTIMIZER <- "NLMINB.CONSTR"
@@ -274,7 +278,50 @@ lav_model_estimate <- function(lavmodel       = NULL,
         start.x <- optim.out$par
     }
 
-    if(OPTIMIZER == "NLMINB") {
+    
+
+    if(OPTIMIZER == "NLMINB0") {
+        if(verbose) cat("Quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
+        #if(debug) control$trace <- 1L;
+        control.nlminb <- list(eval.max=20000L,
+                               iter.max=10000L,
+                               trace=0L,
+                               #abs.tol=1e-20, ### important!! fx never negative
+                               abs.tol=(.Machine$double.eps * 10),
+                               rel.tol=1e-10,
+                               #step.min=2.2e-14, # in =< 0.5-12
+                               step.min=1.0, # 1.0 in < 0.5-21
+                               step.max=1.0,
+                               x.tol=1.5e-8,
+                               xf.tol=2.2e-14)
+        control.nlminb <- modifyList(control.nlminb, lavoptions$control)
+        control <- control.nlminb[c("eval.max", "iter.max", "trace", 
+                                    "step.min", "step.max",
+                                    "abs.tol", "rel.tol", "x.tol", "xf.tol")]
+        #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
+        optim.out <- nlminb(start=start.x,
+                            objective=minimize.this.function,
+                            gradient=NULL,
+                            control=control,
+                            scale=SCALE,
+                            verbose=verbose) 
+        if(verbose) {
+            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("nlminb message says: ", optim.out$message, "\n")
+            cat("number of iterations: ", optim.out$iterations, "\n")
+            cat("number of function evaluations [objective, gradient]: ",
+                optim.out$evaluations, "\n")
+        }
+
+        iterations <- optim.out$iterations
+        x          <- optim.out$par
+        if(optim.out$convergence == 0) {
+            converged <- TRUE
+        } else {
+            converged <- FALSE
+        }
+
+    } else if(OPTIMIZER == "NLMINB") {
         if(verbose) cat("Quasi-Newton steps using NLMINB:\n")
         #if(debug) control$trace <- 1L;
         control.nlminb <- list(eval.max=20000L,

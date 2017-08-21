@@ -13,7 +13,8 @@
 # (NO for now)
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
-                                                  lv.names = NULL) {
+                                                  lv.names = NULL,
+                                                  idx.only = FALSE) {
 
     # PT
     PT <- as.data.frame(PT, stringsAsFactors = FALSE)
@@ -86,6 +87,10 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 
         # FIXME: ==, :=, <, >, == involving IND...
     }
+
+    if(idx.only) {
+        return(keep.idx)
+    }
     
     PT <- PT[keep.idx,,drop = FALSE]
 
@@ -99,7 +104,8 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 }
 
 lav_partable_subset_structural_model <- function(PT = NULL,
-                                                 lavpta = NULL) {
+                                                 lavpta = NULL,
+                                                 idx.only = FALSE) {
 
     # PT
     PT <- as.data.frame(PT, stringsAsFactors = FALSE)
@@ -148,6 +154,10 @@ lav_partable_subset_structural_model <- function(PT = NULL,
                          PT$lhs %in% eqs.names)
 
         keep.idx <- c(keep.idx, reg.idx, var.idx, cov.idx, int.idx)
+    }
+
+    if(idx.only) {
+        return(keep.idx)
     }
 
     PT <- PT[keep.idx, , drop = FALSE]

@@ -327,10 +327,16 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
 
     # change op for intercepts (for convenience only)
     int.idx <- which(FLAT$op == "~" & FLAT$rhs == "")
-    if(length(int.idx) > 0L)
+    if(length(int.idx) > 0L) {
         FLAT$op[int.idx] <- "~1"
+    }
+
+    # new in 0.6, reorder covariances here!
+    FLAT <- lav_partable_covariance_reorder(FLAT)
   
-    if(as.data.frame.) FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
+    if(as.data.frame.) {
+        FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
+    }
   
     attr(FLAT, "modifiers") <- MOD
     attr(FLAT, "constraints") <- CON

@@ -194,34 +194,6 @@ lav_partable_flat <- function(FLAT = NULL,
 
     lv.names     <- lav_partable_vnames(FLAT, type="lv")     # latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
-
-    # check order of covariances: we only fill the upper.tri!
-    cov.idx <- which(op == "~~" & lhs != rhs)
-    for(i in cov.idx) {
-        lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
-        lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
-        if(lv.idx[1] > lv.idx[2]) { # swap!
-            tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
-        }
-        if(lhs[i] %in% lv.names && rhs[i] %in% lv.names) {
-            lv.idx <- match(c(lhs[i], rhs[i]), lv.names)
-            if(lv.idx[1] > lv.idx[2]) { # swap!
-                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
-            }
-        } else if(lhs[i] %in% ov.names && rhs[i] %in% ov.names) {
-            ov.idx <- match(c(lhs[i], rhs[i]), ov.names)
-            if(ov.idx[1] > ov.idx[2]) { # swap!
-                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
-            }
-        } else { # mixed!! # we allow this since 0.4-10
-            lv.ov.names <- c(lv.names, ov.names) ### FIXME!!! OK??
-            lv.idx <- match(c(lhs[i], rhs[i]), lv.ov.names)
-            if(lv.idx[1] > lv.idx[2]) { # swap!
-                tmp <- lhs[i]; lhs[i] <- rhs[i]; rhs[i] <- tmp
-            }
-        }
-    }
-
     USER <- data.frame(lhs=lhs, op=op, rhs=rhs, mod.idx=mod.idx,
                        stringsAsFactors=FALSE)
 

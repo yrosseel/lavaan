@@ -189,7 +189,7 @@ lav_matrix_lower2full <- function(x, diagonal = TRUE) {
 # return the *vector* indices of the diagonal elements of a symmetric
 # matrix of size 'n'
 lav_matrix_diag_idx <- function(n = 1L) {
-    if(n < 1L) return(integer(0L))
+    # if(n < 1L) return(integer(0L))
     1L + (seq_len(n) - 1L)*(n + 1L)
 }
 
@@ -985,7 +985,7 @@ lav_matrix_orthogonal_complement2 <- function(A,
 }
 
 
-# inverse of a positive-definite symmetric matrix
+# inverse of a non-singular (not necessarily positive-definite) symmetric matrix
 # FIXME: error handling?
 lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, 
                                          Sinv.method = "eigen") {
@@ -1007,15 +1007,19 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
     } else if(P == 2L) {
         a11 <- S[1,1]; a12 <- S[1,2]; a21 <- S[2,1]; a22 <- S[2,2]
         tmp <- a11*a22 - a12*a21
-        S.inv <- matrix(c(a22/tmp, -a21/tmp, -a12/tmp, a11/tmp), 2, 2)
-        if(logdet) {
-            attr(S.inv, "logdet") <- log(tmp)
+        if(tmp == 0) {
+        } else {
+            S.inv <- matrix(c(a22/tmp, -a21/tmp, -a12/tmp, a11/tmp), 2, 2)
+            if(logdet) {
+                attr(S.inv, "logdet") <- log(tmp)
+            }
         }
     } else if(Sinv.method == "eigen") {
         EV <- eigen(S, symmetric = TRUE)
         # V %*% diag(1/d) %*% V^{-1}, where V^{-1} = V^T
-        S.inv <- tcrossprod(sweep(EV$vector, 2L, 
-                                  STATS = (1/EV$values), FUN="*"), EV$vector)
+        S.inv <- 
+            tcrossprod(EV$vector / rep(EV$values, each = length(EV$values)),
+                       EV$vector)
         if(logdet) {
             if(all(EV$values >= 0)) {
                 attr(S.inv, "logdet") <- sum(log(EV$values))
