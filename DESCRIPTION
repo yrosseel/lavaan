@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.6-1.1141
+Version: 0.6-1.1142
 Authors@R: c(person(given = "Yves", family = "Rosseel",
                     role  = c("aut", "cre"),
                     email = "Yves.Rosseel@UGent.be"),
@@ -45,4 +45,5 @@ Imports: methods, stats4, stats, utils, graphics, MASS,
 Suggests: testthat
 License: GPL (>= 2)
 LazyData: yes
+ByteCompile: true
 URL: http://lavaan.org
