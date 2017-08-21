@@ -280,7 +280,10 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                     !partable$lhs %in% lv.names ]
 
             ov.tmp <- c(ov.ind, ov.y, ov.x)
-            ov.extra <- unique(c(ov.int, ov.cov)) # changed order in 0.6
+            ov.extra <- unique(c(ov.cov, ov.int)) # must be in this order!
+                                                  # so that 
+                                                  # lav_partable_independence 
+                                                  # retains the same order
             ov.names <- c(ov.tmp, ov.extra[ !ov.extra %in% ov.tmp ])
         }
 

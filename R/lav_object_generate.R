@@ -39,6 +39,15 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     # needed?
     if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
+    # FIXME: it is crucial that the order of the ov's, as returned by
+    # lavNames() remains the same
+    # so lavNames(object) should equal lavNames(lavpartable)
+    # otherwise, we will use the wrong sample statistics!!!
+    #
+    # this seems ok now, because we first generate the covariances in
+    # lavpartable, and they should be in the right order (unlike the
+    # intercepts)
+ 
     FIT <- lavaan(lavpartable,  
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,

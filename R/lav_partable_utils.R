@@ -218,7 +218,7 @@ lav_partable_covariance_reorder <- function(partable,
     # identify wrong ordering
     lhs.idx <- match(partable$lhs[ cov.idx ], lv.ov.names)
     rhs.idx <- match(partable$rhs[ cov.idx ], lv.ov.names)
-    swap.idx <- which(lhs.idx > rhs.idx)
+    swap.idx <- cov.idx[ lhs.idx > rhs.idx ]
 
     if(length(swap.idx) == 0L) {
         # nothing to do
