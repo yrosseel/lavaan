@@ -230,6 +230,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #######################
     if(!is.null(slotOptions)) {
         lavoptions <- slotOptions
+
+        # but what if other 'options' are given anyway (eg 'start = ')?
+        # give a warning!
+        if(length(dotdotdot) > 0L) {
+            dot.names <- names(dotdotdot)
+            op.idx <- which(dot.names %in% names(slotOptions))
+            warning("lavaan WARNING: the following argument(s) override(s) the options in slotOptions:\n\t\t", paste(dot.names[op.idx], collapse = " ")) 
+            lavoptions[ dot.names[op.idx] ] <- dotdotdot[ op.idx ]
+        }
     } else {
 
         # load default options

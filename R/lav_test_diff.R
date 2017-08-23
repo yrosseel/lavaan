@@ -224,8 +224,9 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 
     Options$optim.method          = "none"
     Options$optim.force.converged = TRUE
+    Options$start                 = PE.M0.extended # new in 0.6!
     m10 <- lavaan(model = PT.M1.extended,
-                  start = PE.M0.extended,
+                  #start = PE.M0.extended,
                   slotOptions     = Options,
                   slotSampleStats = m1@SampleStats,
                   slotData        = m1@Data,

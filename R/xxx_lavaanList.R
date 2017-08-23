@@ -168,11 +168,12 @@ lavaanList <- function(model         = NULL,             # model
 
         # fit model with this (new) dataset
         if(cmd %in% c("lavaan", "sem", "cfa", "growth")) {
+            lavoptions$start <- FIT # FIXME: needed?
             lavobject <- try(do.call("lavaan",
                                      args = c(list(slotOptions  = lavoptions,
                                                    slotParTable = lavpartable,
                                                    slotModel    = lavmodel,
-                                                   start        = FIT,
+                                                   #start        = FIT,
                                                    data         = DATA),
                                                    dotdotdot)), 
                              silent = TRUE)
@@ -190,11 +191,12 @@ lavaanList <- function(model         = NULL,             # model
                 fsr.method <- formals(fsr)$fsr.method # default
             }
 
+            lavoptions$start <- FIT # FIXME: needed?
             lavobject <- try(do.call("fsr",
                                      args = c(list(slotOptions  = lavoptions,
                                                    slotParTable = lavpartable,
                                                    slotModel    = lavmodel,
-                                                   start        = FIT,
+                                                   #start        = FIT,
                                                    data         = DATA,
                                                    cmd          = "lavaan", 
                                                    fs.method    = fs.method,
