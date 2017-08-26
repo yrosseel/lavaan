@@ -154,7 +154,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     # srmr
     if(categorical) {
-        fit.srmr <- c("srmr", "wrmr")
+        fit.srmr <- c("srmr")
         fit.srmr2 <- c("rmr", "rmr_nomean",
                        "srmr", # per default equal to srmr_bentler_nomean
                        "srmr_bentler", "srmr_bentler_nomean",
@@ -709,27 +709,29 @@ lav_fit_measures <- function(object, fit.measures="all",
                 # scaling factor
                 c.hat <- TEST[[2]]$scaling.factor
             }
+
+            RMSEA <- sqrt( max( c((X2/N)/df - 1/N, 0) ) )
+            if(scaled && test != "scaled.shifted") {
+                RMSEA.scaled <-
+                     sqrt( max( c((X2/N)/d - 1/N, 0) ) )
+                RMSEA.robust <-
+                     sqrt( max( c((X2/N)/df - c.hat/N, 0) ) )
+            } else if(test == "scaled.shifted") {
+                RMSEA.scaled <-
+                     sqrt( max( c((X2.scaled/N)/df - 1/N, 0)))
+                RMSEA.robust <-
+                     sqrt( max( c((X2/N)/df - c.hat/N, 0) ) )
+            }
+
+            #  multiple group correction
             if(object@Options$mimic %in% c("Mplus", "lavaan")) {
-                RMSEA <- sqrt( max( c((X2/N)/df - 1/N, 0) ) ) * sqrt(G)
-                if(scaled && test != "scaled.shifted") {
-                    RMSEA.scaled <-
-                         sqrt( max( c((X2/N)/d - 1/N, 0) ) ) * sqrt(G)
-                    RMSEA.robust <-
-                         sqrt( max( c((X2/N)/df - c.hat/N, 0) ) ) * sqrt(G)
-                } else if(test == "scaled.shifted") {
-                    RMSEA.scaled <-
-                         sqrt( max( c((X2.scaled/N)/df - 1/N, 0))) * sqrt(G)
-                    RMSEA.robust <-
-                         sqrt( max( c((X2/N)/df - c.hat/N, 0) ) ) * sqrt(G)
-                }
-            } else {
-                # no multiple group correction
-                RMSEA <- sqrt( max( c((X2/N)/df - 1/N, 0) ) )
+                RMSEA <- RMSEA * sqrt(G)
                 if(scaled) {
-                    RMSEA.scaled <- sqrt( max( c((X2/N)/d - 1/N, 0) ) )
-                    RMSEA.robust <- sqrt( max( c((X2/N)/df - c.hat/N, 0) ) )
+                    RMSEA.scaled <- RMSEA.scaled * sqrt(G)
+                    RMSEA.robust <- RMSEA.robust * sqrt(G)
                 }
             }
+
         } else {
             RMSEA <- RMSEA.scaled <- RMSEA.robust <- 0
         }
