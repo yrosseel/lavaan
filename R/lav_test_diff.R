@@ -16,6 +16,11 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     m <- r0 - r1
      
     Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
+    # check for NULL
+    if(is.null(Gamma)) {
+        stop("lavaan ERROR: can not compute Gamma matrix; perhaps missing = \"ml\"?")
+    }
+
     if(H1) {
         WLS.V <- lavTech(m1, "WLS.V")
         PI <- computeDelta(m1@Model)
@@ -167,16 +172,39 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
         M01 <- lav_test_diff_m10(m0, m1, test = TRUE)
         c01 <- M01@test[[2]]$scaling.factor
 
-        # compute c_d
-        # cd.01 <- (r0 * c01 - r1 * c0) / m ???
-        cd <- (r0 * c0 - r1 * c01) / m
+        # check if vcov is positive definite (new in 0.6) 
+        # if not, we may get negative values
+        eigvals <- eigen(lavTech(M10, "information"),
+                         symmetric=TRUE, only.values=TRUE)$values
+        if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
+            warning(
+  "lavaan WARNING: information matrix of the M10 model is not positive definite.\n",
+"                  As a result, the scale-factor can not be computed.")
+            cd <- as.numeric(NA)
+        } else {
+            # compute c_d
+            # cd.01 <- (r0 * c01 - r1 * c0) / m ???
+            cd <- (r0 * c0 - r1 * c01) / m
+        }
+
     } else {
         # M1 with M0 parameters (as in Satorra & Bentler 2010)
         M10 <- lav_test_diff_m10(m1, m0, test = TRUE)
         c10 <- M10@test[[2]]$scaling.factor
 
-        # compute c_d
-        cd <- (r0 * c0 - r1 * c10) / m
+        # check if vcov is positive definite (new in 0.6) 
+        # if not, we may get negative values
+        eigvals <- eigen(lavTech(M10, "information"),
+                         symmetric=TRUE, only.values=TRUE)$values
+        if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
+            warning(
+  "lavaan WARNING: information matrix of the M10 model is not positive definite.\n",
+"                  As a result, the scale-factor can not be computed.")
+            cd <- as.numeric(NA)
+        } else {
+            # compute c_d
+            cd <- (r0 * c0 - r1 * c10) / m
+        }
     }
 
     # compute scaled difference test
