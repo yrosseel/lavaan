@@ -17,20 +17,20 @@ fields = list(
 methods = list(
 
 logl = function(x) {
-    if(!missing(x)) theta <<- x
+    if(!missing(x)) .self$theta <- x
     likelihoods <- lik()
     # FIXME: handle zero/negative/small likelihood values
     sum(log(likelihoods), na.rm=TRUE)
 },
 
 lik = function(x) {
-    if(!missing(x)) theta <<- x
+    if(!missing(x)) .self$theta <- x
     cat("this is dummy function\n")
     return(rep(as.numeric(NA), nobs))
 },
 
 scores = function(x) {
-    if(!missing(x)) theta <<- x
+    if(!missing(x)) .self$theta <- x
     cat("this is dummy function\n")
     return(matrix(as.numeric(NA), nobs, npar))
 }, 

@@ -77,7 +77,13 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo, method = method,
                    fsm = fsm, optim.method = optim.method)
-        # remove dummy lv?
+
+        # extract fsm here
+        if(fsm) {
+            FSM <- attr(out, "fsm")
+        }
+
+        # remove dummy lv? (removes attr!)
         out <- lapply(seq_len(lavdata@ngroups), function(g) {
                    lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                                lavmodel@ov.x.dummy.lv.idx[[g]])
@@ -87,17 +93,9 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    }
                    ret
                })
+
         if(fsm) {
-            FSM <- attr(out, "fsm")
-            out <- lapply(seq_len(lavdata@ngroups), function(g) {
-                      lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                                   lavmodel@ov.x.dummy.lv.idx[[g]])
-                       ret <- out[[g]]
-                       if(length(lv.idx) > 0L) {
-                           ret <- out[[g]][, -lv.idx, drop=FALSE]
-                       }
-                       ret 
-                   })
+            #FSM <- attr(out, "fsm")
             FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
                        lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                                    lavmodel@ov.x.dummy.lv.idx[[g]])
@@ -106,7 +104,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        ret <- FSM[[g]]
                        if(length(lv.idx) > 0L) {
                            ret <- FSM[[g]][-lv.idx, -ov.idx, drop=FALSE]
-                      }
+                       }
                        ret
                    })
         }

@@ -74,40 +74,40 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
                       weights = rep(1, length(y)),
                       offset = rep(0, length(y))) {
     # y
-    y <<- as.integer(y); nth <<- as.integer(y.levels - 1L)
-    nobs <<- length(y)
+    .self$y <- as.integer(y); .self$nth <- as.integer(y.levels - 1L)
+    .self$nobs <- length(y)
     # X
     if(is.null(X)) { 
-        nexo <<- 0L
+        .self$nexo <- 0L
     } else {
-        X <<- unname(X); nexo <<- ncol(X)
+        .self$X <- unname(X); .self$nexo <- ncol(X)
     }
     if(any(is.na(y)) || (!is.null(X) && any(is.na(X)) )) {
-        missing.values <<- TRUE
-        missing.idx <<- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
+        .self$missing.values <- TRUE
+        .self$missing.idx <- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
     } else {
-        missing.values <<- FALSE
+        .self$missing.values <- FALSE
     }
 
     # weights and offset
-    weights <<- weights; offset <<- offset
+    .self$weights <- weights; .self$offset <- offset
     
     # TH matrices (TRUE/FALSE)
-    Y1 <<- matrix(1:nth, nobs, nth, byrow=TRUE) == .self$y
-    Y2 <<- matrix(1:nth, nobs, nth, byrow=TRUE) == (.self$y - 1L)
+    .self$Y1 <- matrix(1:nth, nobs, nth, byrow=TRUE) == .self$y
+    .self$Y2 <- matrix(1:nth, nobs, nth, byrow=TRUE) == (.self$y - 1L)
 
     # indices of free parameters
-    th.idx <<- 1:nth
-    slope.idx <<- seq_len(nexo) + nth
+    .self$th.idx <- 1:nth
+    .self$slope.idx <- seq_len(nexo) + nth
 
     # set up for Optim
-    npar  <<- nth + nexo
-    start(); theta <<- theta.start
+    .self$npar  <- nth + nexo
+    start(); .self$theta <- theta.start
     th.lab <- paste("th",  seq_len(nth), sep="")
     sl.lab <- character(0)
     if(nexo > 0L)
         sl.lab <- paste("beta",seq_len(nexo),sep="")
-    theta.labels <<- c(th.lab, sl.lab)
+    .self$theta.labels <- c(th.lab, sl.lab)
 },
 
 start = function() {
@@ -121,28 +121,28 @@ start = function() {
     #fit.ols <- lavOLS(y=Y, X=X, weights=weights, offset=offset)
     #beta.start <- fit.ols$theta[fit.ols$slope.idx[-1L]]
     #print(beta.start)
-    theta.start <<- c( th.start, beta.start )
+    .self$theta.start <- c( th.start, beta.start )
 },
 
 # formulas: see Maddala 1983 pages 48 + 49
 lik = function(x) {
-    if(!missing(x)) theta <<- x
+    if(!missing(x)) .self$theta <- x
     th <- theta[1:nth]; TH <- c(-Inf, th, +Inf); beta <- theta[-c(1:nth)]
     if(nexo > 0L) {
         eta <- drop(X %*% beta) + offset
     } else {
         eta <- numeric(nobs)
     }
-    z1 <<- pmin( 100, TH[y+1L   ] - eta)
-    z2 <<- pmax(-100, TH[y+1L-1L] - eta)
-    probits <<- pnorm(z1) - pnorm(z2)
+    .self$z1 <- pmin( 100, TH[y+1L   ] - eta)
+    .self$z2 <- pmax(-100, TH[y+1L-1L] - eta)
+    .self$probits <- pnorm(z1) - pnorm(z2)
     probits
 },
 
 scores = function(x) {
     if(!missing(x)) lik(x)
     if(length(probits) == 0L) lik()
-    p1 <<- dnorm(z1); p2 <<- dnorm(z2)
+    .self$p1 <- dnorm(z1); .self$p2 <- dnorm(z2)
 
     # th
     scores.th   <- -1 * (Y2*p2 - Y1*p1) * (weights/probits)
@@ -157,7 +157,7 @@ scores = function(x) {
 
 #gradient = function(x) {
 #    if(!missing(x)) objective(x)
-#    p1 <<- dnorm(z1); p2 <<- dnorm(z2)
+#    .self$p1 <- dnorm(z1); .self$p2 <- dnorm(z2)
 #    
 #    # beta
 #    dx.beta <- numeric(0L)

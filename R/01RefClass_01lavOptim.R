@@ -39,10 +39,10 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
     method <- tolower(method)
     hessian <- FALSE
     if( method == "none" ) {
-        optim.method <<- "none"
+        .self$optim.method <- "none"
     } else if( method %in% c("nlminb", "quasi-newton", "quasi.newton", 
                       "nlminb.hessian") ) {
-        optim.method <<- "nlminb"
+        .self$optim.method <- "nlminb"
         if(verbose)
             control$trace <- 1L
         if(method == "nlminb.hessian")
@@ -56,12 +56,12 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
                                x.tol=1.5e-8,
                                step.min=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, control)
-        optim.control <<- control.nlminb[c("eval.max", "iter.max", "trace",
+        .self$optim.control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                            "abs.tol", "rel.tol", "x.tol",
                                            "step.min")]
         
     } else if( method %in% c("newton", "newton-raphson", "newton.raphson") ) {
-        optim.method <<- "newton"
+        .self$optim.method <- "newton"
         if(verbose)
             control$verbose <- TRUE
         control.nr <- list(grad.tol = 1e-6,
@@ -69,7 +69,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
                            inner.max = 20L,
                            verbose   = FALSE)
         control.nr <- modifyList(control.nr, control)
-        optim.control <<- control.nr[c("grad.tol", "iter.max", "inner.max",
+        .self$optim.control <- control.nr[c("grad.tol", "iter.max", "inner.max",
                                        "verbose")]
     } else {
         stop("unknown optim method: ", optim.method)
@@ -78,7 +78,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
     # user provided starting values?
     if(!is.null(start.values)) { 
         stopifnot(length(start.values) == npar)
-        theta.start <<- start.values
+        .self$theta.start <- start.values
     }
 
     # run objective function to intialize (and see if starting values
@@ -87,7 +87,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
 
     if(optim.method == "newton") {
         out <- lavOptimNewtonRaphson(object=.self, control = optim.control)
-        optim.out <<- out
+        .self$optim.out <- out
     } else if(optim.method == "nlminb") {
         if(!hessian) {
             out <- nlminb(start = theta, objective = .self$minObjective,
@@ -99,7 +99,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
                           control = optim.control)
         }
         # FIXME: use generic fields
-        optim.out <<- out
+        .self$optim.out <- out
     }
     # just in case, a last call to objective() 
     tmp <- minObjective()
@@ -168,7 +168,7 @@ lavOptimNewtonRaphson <- function(object,
             for(j in seq_len(control$inner.max)) {
                 inner <- inner + 1L
                 alpha_k <- alpha_k/2
-                theta <<- object$theta + alpha_k * p_k
+                .self$theta <- object$theta + alpha_k * p_k
                 fx.new <- object$minObjective(theta)
                 if(fx.new < fx.old)
                     break

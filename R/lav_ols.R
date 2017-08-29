@@ -45,36 +45,36 @@ methods = list(
 
 initialize = function(y, X = NULL, ...) {
     # y
-    y <<- y; nobs <<- length(y)
+    .self$y <- y; .self$nobs <- length(y)
 
     # X
     if(!is.null(X)) {
-        nexo <<- ncol(X)
-        X <<- matrix(c(rep.int(1,nobs),X),nobs,nexo+1L)
+        .self$nexo <- ncol(X)
+        .self$X <- matrix(c(rep.int(1,nobs),X),nobs,nexo+1L)
     } else {
-        nexo <<- 0L
-        X <<- matrix(1, nobs, 1L)
+        .self$nexo <- 0L
+        .self$X <- matrix(1, nobs, 1L)
     }
     if(any(is.na(y)) || (!is.null(X) && any(is.na(X)) )) {
-        missing.values <<- TRUE
-        missing.idx <<- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
+        .self$missing.values <- TRUE
+        .self$missing.idx <- which(apply(cbind(y, X), 1, function(x) any(is.na(x))))
     } else {
-        missing.values <<- FALSE
+        .self$missing.values <- FALSE
     }
 
     # indices of free parameters
-      int.idx <<- 1L
-    slope.idx <<- seq_len(nexo) + 1L
-      var.idx <<- 1L + nexo + 1L
+      .self$int.idx <- 1L
+    .self$slope.idx <- seq_len(nexo) + 1L
+      .self$var.idx <- 1L + nexo + 1L
     
     # set up for Optim
-    npar  <<- 1L + nexo + 1L # intercept + slopes + var
-    start(); theta <<- theta.start
+    .self$npar  <- 1L + nexo + 1L # intercept + slopes + var
+    start(); .self$theta <- theta.start
     if(nexo > 0L)
         sl.lab <- paste("beta",seq_len(nexo),sep="")
     else
         sl.lab <- character(0)
-    theta.labels <<- c("int", sl.lab, "var.e")
+    .self$theta.labels <- c("int", sl.lab, "var.e")
 },
 
 start = function() {
@@ -91,17 +91,17 @@ start = function() {
         beta.start <- mean(y, na.rm=TRUE)
          var.start <-  var(y, na.rm=TRUE)*(nobs-1)/nobs # ML
     }
-    theta.start <<- c( beta.start, var.start )
+    .self$theta.start <- c( beta.start, var.start )
 },
 
 lik = function(x) {
-    if(!missing(x)) theta <<- x
+    if(!missing(x)) .self$theta <- x
     beta  <- theta[-npar] # not the variance
     e.var <- theta[npar]  # the variance of the error
     if(nexo > 0L) 
-        yhat <<- drop(X %*% beta)
+        .self$yhat <- drop(X %*% beta)
     else
-        yhat <<- rep(beta[1L], nobs)
+        .self$yhat <- rep(beta[1L], nobs)
     #weights * dnorm(y, mean=yhat, sd=sqrt(e.var))
     dnorm(y, mean=yhat, sd=sqrt(e.var))
 },
