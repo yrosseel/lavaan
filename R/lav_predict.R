@@ -15,13 +15,13 @@ setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
     lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
                fsm = FALSE,
-               optim.method = "nlminb")
+               optim.method = "bfgs")
 })
 
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        se.fit = FALSE, label = TRUE, fsm = FALSE,
-                       optim.method = "nlminb") {
+                       optim.method = "bfgs") {
 
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model
@@ -177,7 +177,7 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
                             # options
                             method = "EBM",
                             fsm = FALSE,
-                            optim.method = "nlminb") {
+                            optim.method = "bfgs") {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -430,9 +430,11 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
                                 lavsamplestats = NULL,
                                 # optional new data
                                 data.obs = NULL, eXo = NULL,
-                                optim.method = "nlminb") {
+                                optim.method = "bfgs") {
 
-    stopifnot(optim.method %in% c("nlminb", "BFGS"))
+    optim.method <- tolower(optim.method)
+
+    stopifnot(optim.method %in% c("nlminb", "bfgs"))
 
     ### FIXME: if all indicators of a factor are normal, can we not
     ###        just use the `classic' regression method??
@@ -555,7 +557,7 @@ lav_predict_eta_ebm <- function(lavobject = NULL,  # for convenience
                               gradient=NULL, # for now
                               control=list(rel.tol=1e-8),
                               y.i=y.i, x.i=x.i, mu.i=mu.i)
-            } else if(optim.method == "BFGS") {
+            } else if(optim.method == "bfgs") {
                 out <- optim(par = START, fn = f.eta.i,
                              gr = NULL,
                              control = list(reltol = 1e-8),
@@ -604,7 +606,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              # options
                              method = "EBM", 
                              duplicate = FALSE,
-                             optim.method = "nlminb") {
+                             optim.method = "bfgs") {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -670,7 +672,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                            # options
                            method = "EBM",
                            log. = FALSE,
-                           optim.method = "nlminb") {
+                           optim.method = "bfgs") {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
