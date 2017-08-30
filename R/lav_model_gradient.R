@@ -103,16 +103,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
         } else if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
+
         if(conditional.x) {
             PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+        } else if(estimator == "PML") {
+            PI <- vector("list", length = lavmodel@nblocks)
         }
-        if(estimator == "PML") {
-            if(lavmodel@nexo > 0L) {
-                PI <- computePI(lavmodel = lavmodel)
-            } else {
-                PI <- vector("list", length = lavmodel@nblocks)
-            }
-        }
+
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }

@@ -355,7 +355,7 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
         Delta <- computeDelta(lavmodel = lavmodel)
         Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
         TH <- computeTH(lavmodel = lavmodel)
-        if(lavmodel@nexo > 0L) {
+        if(lavmodel@conditional.x) {
             PI <- computePI(lavmodel = lavmodel)
         } else {
             PI <- vector("list", length = lavsamplestats@ngroups)

@@ -371,7 +371,9 @@ ValeMaurelli1983 <- function(n=100L, COR, skewness, kurtosis, debug = FALSE) {
                       scale=10,
                       control=list(trace=0),
                       skewness=skewness, kurtosis=kurtosis)
-        if(out$convergence != 0 || out$objective > 1e-5) warning("no convergence")
+        if(out$convergence != 0 || out$objective > 1e-5) {
+            warning("lavaan WARNING: ValeMaurelli1983 method did not convergence, or it did not find the roots")
+        }
         b. <- out$par[1L]; c. <- out$par[2L]; d. <- out$par[3L]; a. <- -c.
         c(a.,b.,c.,d.)
     }

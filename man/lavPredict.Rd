@@ -9,7 +9,7 @@ values for the indicators of these latent variables.}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
            se.fit = FALSE, label = TRUE, fsm = FALSE, 
-           optim.method = "nlminb")
+           optim.method = "bfgs")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -28,9 +28,9 @@ the Empirical Bayes Modal approach.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute. 
            Only for numeric data.}
 \item{optim.method}{Character string. Only used in the categorical case. 
-If \code{"nlminb"} (the default), the \code{"nlminb()"} function is used 
-for the optimization. If \code{"BFGS"}, the \code{"optim()"} function
-is used with the BFGS method.}
+If \code{"nlminb"} (the default in 0.5), the \code{"nlminb()"} function is used 
+for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6), 
+the \code{"optim()"} function is used with the BFGS method.}
 }
 \details{
 The \code{predict()} function calls the \code{lavPredict()} function 
