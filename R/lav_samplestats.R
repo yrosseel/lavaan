@@ -451,7 +451,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             #    stop("lavaan ERROR: multilevel + fiml not supported yet")
             #}
             if(conditional.x) {
-                stop("lavaan ERROR: multilevel + conditional.x not supported yet")
+                stop("lavaan ERROR: missing = \"ml\" + conditional.x not supported yet")
             }
             stopifnot(!conditional.x) # for now
             missing.flag. <- TRUE

@@ -38,6 +38,20 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         stop("lavaan ERROR: model does not contain lavaan syntax (no operators found)")
     }
 
+    # check for non-empty string, without an operator in the first lines
+    # (new in 0.6-1)
+    if(start.idx[1] > 1L) {
+        # two possibilities:
+        # - we have an empty line (ok)
+        # - the element contains no operator (warn!)
+        for(el in 1:(start.idx[1] - 1L)) {
+            # not empty?
+            if(nchar(model.simple[el]) > 0L) {
+                warning("lavaan WARNING: no operator found in this syntax line: ", model.simple[el], "\n", "                  This syntax line will be ignored!")
+            }
+        }
+    }
+
     end.idx <- c( start.idx[-1]-1, length(model) )
     model.orig    <- model
     model <- character( length(start.idx) )

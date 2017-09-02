@@ -274,7 +274,6 @@ bootstrap.internal <- function(object          = NULL,
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
-
         bootSampleStats <- try(lav_samplestats_from_data(
                                lavdata       = NULL,
                                DataX         = dataX,
