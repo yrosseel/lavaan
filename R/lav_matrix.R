@@ -1237,7 +1237,7 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
     ev <- S.eigen$values
 
     # replace small/negative eigen values
-    ev[ev < tol] <- tol*abs(ev[1])
+    ev[ev/abs(ev[1]) < tol] <- tol*abs(ev[1])
 
     # reconstruct
     out <- S.eigen$vectors %*% diag(ev) %*% t(S.eigen$vectors)

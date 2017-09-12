@@ -99,7 +99,7 @@ lav_partable_ndat <- function(partable) {
 
             # no meanstructure if within level, except ov.x which is not
             # decomposed
-            if(nlevels > 1L && b == 1L) {
+            if(nlevels > 1L && (b %% nlevels) == 1L) {
                 pstar <- pstar - nvar
 
                 ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)

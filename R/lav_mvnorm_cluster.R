@@ -19,6 +19,7 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
                                           Sigma.B      = NULL) {
 
     if(!is.null(implied)) {
+        # FIXME: only for single-group analysis!
         Sigma.W <- implied$cov[[1]]
         Mu.W    <- implied$mean[[1]]
 
@@ -205,6 +206,18 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
                        logdet = TRUE, Sinv.method = Sinv.method)
         sigma.j.logdet <- attr(sigma.j.inv, "logdet")
         attr(sigma.j.inv, "logdet") <- NULL
+
+        # check: what if sigma.j is non-pd?
+        if(is.na(sigma.j.logdet)) {
+            # stop, and return NA right away
+            #return(as.numeric(NA))
+            # FORCE?
+            #sigma.j <- lav_matrix_symmetric_force_pd(sigma.j)
+            #sigma.j.inv <- lav_matrix_symmetric_inverse(S = sigma.j,
+            #           logdet = TRUE, Sinv.method = Sinv.method)
+            #sigma.j.logdet <- attr(sigma.j.inv, "logdet")
+            #attr(sigma.j.inv, "logdet") <- NULL
+        }
         
         # logdet -- between only
         L[clz] <- (sigma.zz.logdet + sigma.j.logdet)

@@ -20,6 +20,7 @@ lav_model <- function(lavpartable      = NULL,
  
     # global info from user model
     nblocks <- lav_partable_nblocks(lavpartable)
+    ngroups <- lav_partable_ngroups(lavpartable)
     meanstructure <- any(lavpartable$op == "~1")
     categorical <- any(lavpartable$op == "|")
     if(categorical) { 
@@ -271,7 +272,7 @@ lav_model <- function(lavpartable      = NULL,
                  multilevel=multilevel,
                  link=lavoptions$link,
                  nblocks=nblocks,
-                 ngroups=nblocks, # for rsem!!!
+                 ngroups=ngroups, # breaks rsem????
                  group.w.free=group.w.free,
                  nmat=nmat,
                  nvar=nvar,

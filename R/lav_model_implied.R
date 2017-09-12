@@ -1,4 +1,5 @@
 # compute model implied statistics
+# per block
 lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
 
     stopifnot(inherits(lavmodel, "lavModel"))

@@ -675,7 +675,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
             Lp[[g]] <- lav_data_cluster_patterns(Y = X[[g]], clus = clus,
                                                  cluster = cluster,
                                                  ov.names = ov.names[[g]],
-                                                 ov.names.l = ov.names.l)
+                                                 ov.names.l = ov.names.l[[g]])
         }
 
     } # groups, at first level 
@@ -944,7 +944,7 @@ lav_data_print_short <- function(object) {
                         paste("Number of clusters [", lavdata@cluster[l-1], "]",
                               sep = ""))
                     t1.txt <- sprintf("  %10i", 
-                                      lavdata@Lp[[1]]$nclusters[[l]])
+                                      lavdata@Lp[[g]]$nclusters[[l]])
                     #t2.txt <- ifelse(listwise,
                     #          sprintf("  %10i", lavdata@norig[[1L]]), "")
                     t2.txt <- ""

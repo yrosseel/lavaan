@@ -44,11 +44,10 @@ lav_model_loglik <- function(lavdata        = NULL,
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
                 # here, we assume only 2 levels, at [[1]] and [[2]]
-                stopifnot(lavdata@ngroups == 1L)
-                Sigma.W <- lavimplied$cov[[1]]
-                Mu.W    <- lavimplied$mean[[1]]
-                Sigma.B <- lavimplied$cov[[2]]
-                Mu.B    <- lavimplied$mean[[2]]
+                Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
+                Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
+                Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
+                Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
 
                 logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
                     YLp          = lavsamplestats@YLp[[g]],

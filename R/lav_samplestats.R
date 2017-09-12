@@ -1081,8 +1081,13 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         ov.idx.1        <- sort.int(c(both.idx, within.idx))
         ov.idx.2        <- sort.int(c(both.idx, between.idx))
 
+        #s <- (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))
+        # same as
+        s <- (N - sum(cluster.size^2)/N)/(nclusters - 1)
+        # NOTE: must be (nclusters - 1), otherwise, s is not average cluster
+        # size even in the balanced case
+
         Y1.means <- colMeans(Y1, na.rm = TRUE)
-        S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
         both.idx <- all.idx <- seq_len(P)
         if(length(within.idx) > 0L ||
            length(between.idx) > 0L) {
@@ -1093,63 +1098,59 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
                                FUN = mean, na.rm = TRUE)[,-1]))
         Y2c <- t( t(Y2) - Y1.means )
-        if(length(within.idx) > 0L) {
-        #    Y2[, within.idx] <- 0
-        #    Y2c[,within.idx] <- 0
-        }
 
         # compute S.w
-        S.w <- matrix(0, P, P)
         Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
+
+        # S.b
+        # three parts: within/within, between/between, between/within
+        S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
+
+        # what if (nj*S.b - (nj-s)*S.w)/s is not-pd?
+        NJ <- max(cluster.size)
+        Sigma.j.max <- (NJ*S.b - (NJ-s)*S.w)/s
+        EV <- eigen(Sigma.j.max, symmetric = TRUE, only.values = TRUE)$values
+        if(any(EV < 0)) {
+            # 1. spit out warning
+            warning("lavaan WARNING: Sigma.j.max is not positive-definite.")
+        }
+
+
+        S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
         S.PW.start <- S.w
-
         if(length(within.idx) > 0L) {
-            #bw.idx <- c(both.idx, within.idx)
-            #S.w[bw.idx, within.idx] <- S[bw.idx, within.idx]
-            #S.w[within.idx, bw.idx] <- S[within.idx, bw.idx]
-
-            #S.w[within.idx, within.idx] <- 
-            #  S[within.idx, within.idx, drop = FALSE]
              S.PW.start[within.idx, within.idx] <- 
                       S[within.idx, within.idx, drop = FALSE]
         }
+
         if(length(between.idx) > 0L) {
             S.w[between.idx,] <- 0
             S.w[,between.idx] <- 0
             S.PW.start[between.idx,] <- 0
             S.PW.start[,between.idx] <- 0
         }
-        #s <- (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))
-        # same as
-        s <- (N - sum(cluster.size^2)/N)/(nclusters - 1)
-
-        # S.b
-        # three parts: within/within, between/between, between/within
-        #S.b <- crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1L)
-        S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
 
         if(length(between.idx) > 0L) {
             # this is what is needed for MUML:
-            S.b[, between.idx] <- 
+            S.b[, between.idx] <-
                 (s * nclusters/N) * S.b[, between.idx, drop = FALSE]
-            S.b[between.idx, ] <- 
+            S.b[between.idx, ] <-
                 (s * nclusters/N) * S.b[between.idx, , drop = FALSE]
             S.b[between.idx, between.idx] <-
                 ( s * lav_matrix_crossprod(Y2c[, between.idx, drop = FALSE],
-              #          Y2c[, between.idx, drop = FALSE]) / (nclusters - 1L))
                          Y2c[, between.idx, drop = FALSE]) / nclusters  )
         }
 
+        Sigma.B <- (S.b - S.w)/s
+        Sigma.B[within.idx,] <- 0
+        Sigma.B[,within.idx] <- 0
 
-        V2 <- (S.b - S.w)/s
-        V2[within.idx,] <- 0
-        V2[,within.idx] <- 0
 
         Mu.W <- numeric( P )
         Mu.W[within.idx] <- Y1.means[within.idx]
 
-        Mu.B <- colMeans(Y1, na.rm = TRUE)
+        Mu.B <- Y1.means
         Mu.B[within.idx] <- 0
         if(length(between.idx) > 0L) {
             # replace between.idx by cov(Y2)[,] elements...
@@ -1158,13 +1159,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
             S2 <- ( cov(Y2, use = "pairwise.complete.obs") * 
                      (nclusters - 1L) / nclusters )
-            #S2 <- cov(Y2)
 
-            #bb.idx <- c(both.idx, between.idx)
-            #V2[bb.idx, between.idx] <- S2[bb.idx, between.idx]
-            #V2[between.idx, bb.idx] <- S2[between.idx, bb.idx]
-
-            V2[  between.idx, between.idx] <- 
+            Sigma.B[  between.idx, between.idx] <- 
               S2[between.idx, between.idx, drop = FALSE]
         }
 
@@ -1176,12 +1172,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # per cluster-size
         cov.d  <- vector("list", length = ncluster.sizes)
         mean.d <- vector("list", length = ncluster.sizes)
-
-        ### FIXME  ####
-        # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
-        Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx), 
-                                         FUN = mean, na.rm = TRUE)[,-1]))
-        ### NO zero columns for within.idx columns #####
 
         for(clz in seq_len(ncluster.sizes)) {
             nj <- cluster.sizes[clz]
@@ -1203,9 +1193,21 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             }
         }
 
+        # dirty hack:
+        #dels <- diag(Sigma.B)
+        #tiny.idx <- which( dels/max(dels) < 0.01 )
+        #if(length(tiny.idx) > 0L) {
+        #    diag(Sigma.B)[tiny.idx] <- diag(Sigma.B)[tiny.idx] + 0.020
+        #    diag(S.w)[tiny.idx]     <- diag(S.w)[tiny.idx]     - 0.020
+        #    diag(S.PW.start)[tiny.idx] <- diag(S.PW.start)[tiny.idx] - 0.020
+        #}
+
+        
+
         YLp[[l]] <- list(Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
                          Sigma.W = S.w, Mu.W = Mu.W,
-                         Sigma.B = V2, Mu.B = Mu.B, Mu.B.start = Mu.B.start,
+                         Sigma.B = Sigma.B, Mu.B = Mu.B,
+                         Mu.B.start = Mu.B.start,
                          mean.d = mean.d, cov.d = cov.d)
     } # l
 

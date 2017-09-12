@@ -196,23 +196,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # - nlevels
         # - ov's per level
         # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
+
+        group.idx <- which(FLAT$op == ":" & FLAT$lhs == "group")
+        tmp.group.values <- unique(FLAT$rhs[group.idx])
+        tmp.ngroups <- length(tmp.group.values)
+
         level.idx <- which(FLAT$op == ":" & FLAT$lhs == "level")
         tmp.level.values <- unique(FLAT$rhs[level.idx])
         tmp.nlevels <- length(tmp.level.values)
-        tmp.lav <- lavaanify(FLAT, warn = FALSE) # we assume just 1 group (for now)
-        ov.names.l <- vector("list", length = tmp.nlevels)
+        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE) 
+        ov.names.l <- vector("list", length = tmp.ngroups) # per group
 
-        #tmp.all <- character(0L)
-        for(l in seq_len(tmp.nlevels)) {
-            ov.names.l[[l]] <- unique(unlist(lav_partable_vnames(tmp.lav,
-                                   type = "ov", level = tmp.level.values[l])))
-            #if(l == 1L) {
-            #    ov.names.l[[l]] <- tmp
-            #} else {
-            #    ov.names.l[[l]] <- tmp[ !tmp %in% tmp.all ]
-            #}
-            #tmp.all <- c(tmp.all, tmp)
-        }
+        for(g in seq_len(tmp.ngroups)) {
+                ov.names.l[[g]] <- vector("list", length = tmp.nlevels)
+            for(l in seq_len(tmp.nlevels)) {
+                ov.names.l[[g]][[l]] <- 
+                    unique(unlist(lav_partable_vnames(tmp.lav,
+                                                  type = "ov",
+                                                  group = tmp.group.values[g],
+                                                  level = tmp.level.values[l])))
+            } # levels
+        } # groups
     } else {
         ov.names.l <- list()
     }

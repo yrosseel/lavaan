@@ -21,7 +21,7 @@ lav_model_information <- function(lavmodel       = NULL,
 
     # compute information matrix
     if(information == "observed") {
-        if(lavsamplestats@missing.flag) {
+        if(lavsamplestats@missing.flag || lavdata@nlevels > 1L) {
             group.weight <- FALSE
         } else {
             group.weight <- TRUE
