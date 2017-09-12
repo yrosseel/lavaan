@@ -199,7 +199,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         group.idx <- which(FLAT$op == ":" & FLAT$lhs == "group")
         tmp.group.values <- unique(FLAT$rhs[group.idx])
-        tmp.ngroups <- length(tmp.group.values)
+        tmp.ngroups <- max(c(length(tmp.group.values), 1))
 
         level.idx <- which(FLAT$op == ":" & FLAT$lhs == "level")
         tmp.level.values <- unique(FLAT$rhs[level.idx])
@@ -210,11 +210,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         for(g in seq_len(tmp.ngroups)) {
                 ov.names.l[[g]] <- vector("list", length = tmp.nlevels)
             for(l in seq_len(tmp.nlevels)) {
-                ov.names.l[[g]][[l]] <- 
+                if(tmp.ngroups > 1L) {
+                    ov.names.l[[g]][[l]] <- 
                     unique(unlist(lav_partable_vnames(tmp.lav,
                                                   type = "ov",
                                                   group = tmp.group.values[g],
                                                   level = tmp.level.values[l])))
+                } else {
+                    ov.names.l[[g]][[l]] <-
+                    unique(unlist(lav_partable_vnames(tmp.lav,
+                                                  type = "ov",
+                                                  level = tmp.level.values[l])))
+                }
             } # levels
         } # groups
     } else {
