@@ -405,7 +405,8 @@ lavInspect.lavaan <- function(object,
     # multilevel #
     } else if(what == "icc") {
         lav_object_inspect_icc(object,
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
     # post-checking
     } else if(what == "post.check" || what == "post") {
@@ -877,11 +878,7 @@ lav_object_inspect_sampstat <- function(object, h1 = FALSE,
 
             # cov.x
             if(object@Model@nexo > 0L) {
-                if(h1) {
-                    OUT[[b]]$cov.x  <- H1$cov.x[[b]]
-                } else {
-                    OUT[[b]]$cov.x  <- lavsamplestats@cov.x[[b]]
-                }
+                OUT[[b]]$cov.x  <- lavsamplestats@cov.x[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
                     colnames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
@@ -889,6 +886,17 @@ lav_object_inspect_sampstat <- function(object, h1 = FALSE,
                 if(add.class) {
                     class(OUT[[b]]$cov.x) <- 
                         c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+
+            # mean.x 
+            if(object@Model@nexo > 0L) {
+                OUT[[b]]$mean.x <- as.numeric(object@SampleStats@mean.x[[b]])
+                if(add.labels) {
+                    names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
+                }
+                if(add.class) {
+                    class(OUT[[b]]$mean.x) <- c("lavaan.vector", "numeric")
                 }
             }
 
@@ -1131,6 +1139,18 @@ lav_object_inspect_implied <- function(object,
                 }
             }
 
+            # mean.x 
+            if(object@Model@nexo > 0L) {
+                OUT[[b]]$mean.x  <- as.numeric(object@SampleStats@mean.x[[b]])
+                if(add.labels) {
+                    names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
+                }
+                if(add.class) {
+                    class(OUT[[b]]$mean.x) <- c("lavaan.vector", "numeric")
+                }
+            }
+            
+
         } # conditional.x
 
         # stochastic weights
@@ -1218,6 +1238,13 @@ lav_object_inspect_residuals <- function(object, h1 = TRUE,
                 if(add.class) {
                     class(resList[[b]]$cov.x) <- 
                         c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[b]]$mean.x)) {
+                 resList[[b]]$mean.x <- ( obsList[[b]]$mean.x -
+                                          estList[[b]]$mean.x )
+                if(add.class) {
+                    class(resList[[b]]$mean.x) <- c("lavaan.vector", "numeric")
                 }
             }
 
@@ -2348,33 +2375,62 @@ lav_object_inspect_npar <- function(object, type = "free") {
 }
 
 lav_object_inspect_icc <- function(object, add.labels = FALSE, 
-                                   add.class = FALSE) {
+                                   add.class = FALSE,
+                                   drop.list.single.group = FALSE) {
 
     lavdata <- object@Data
+    G <- lavdata@ngroups
+
+    # get missing covarage
+    OUT <- vector("list", G)
 
     # multilevel?
     if(lavdata@nlevels == 1L) {
         stop("lavaan ERROR: intraclass correlation only available for clustered data")
     }
 
-    # do we have h1 slot?
-    if(length(object@h1) > 0L) {
-        implied <- object@h1$implied
-
-        W <- implied$cov[[1]]
-        B <- implied$cov[[2]]
-
-        # FIXME: enlarge matrices so they have the same size
-        ICC <- diag(B)/(diag(W) + diag(B))
+    if(length(object@h1) == 0L) {
+        stop("lavaan ERROR: h1 slot is of available; refit with h1 = TRUE")
     }
 
-    if(add.labels) {
-        names(ICC) <- lavdata@ov.names[[1]]
+    # implied statistics
+    implied <- object@h1$implied
+
+    for(g in 1:G) {
+        Sigma.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1 ]]
+        Sigma.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2 ]]
+
+        W.diag <- diag(Sigma.W)
+        B.diag <- diag(Sigma.B)
+
+        OUT[[g]] <- numeric(length(W.diag))
+
+        ov.names.l <- lavdata@ov.names.l[[g]]
+        w.idx <- which(ov.names.l[[1]] %in% ov.names.l[[2]])
+        w.names <- ov.names.l[[1]][w.idx]
+        b.idx <- match(w.names, ov.names.l[[2]])
+
+        OUT[[g]][w.idx] <- B.diag[b.idx]/(W.diag[w.idx] + B.diag[b.idx])
+
+        # label
+        if(add.labels) {
+            names(OUT[[g]]) <- ov.names.l[[1]]
+        }
+
+        # class
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    } # g
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
     }
 
-    if(add.class) {
-        class(ICC) <- c("lavaan.vector", "numeric")
-    }
-
-    ICC
+    OUT     
 }
+

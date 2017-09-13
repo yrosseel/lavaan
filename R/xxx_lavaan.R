@@ -596,6 +596,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 h1.lavoptions$do.fit <- TRUE
                 h1.lavoptions$check <- ""
                 h1.lavoptions$h1 <- FALSE
+                h1.lavoptions$baseline <- FALSE
                 h1.lavoptions$control <- c(h1.lavoptions$control,
                                            list(rel.tol=1e-5)) # not too strict
                 if(lavoptions$verbose) {
@@ -979,12 +980,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ####################################
     #### 11. lavimplied + lavloglik ####
     ####################################
-    lavimplied <- lav_model_implied(lavmodel)
-    lavloglik  <- lav_model_loglik(lavdata        = lavdata,
-                                   lavsamplestats = lavsamplestats,
-                                   lavimplied     = lavimplied,
-                                   lavmodel       = lavmodel,
-                                   lavoptions     = lavoptions)
+    lavimplied <- list()
+    if(lavoptions$implied) {
+         lavimplied <- lav_model_implied(lavmodel)
+    } 
+        
+    lavloglik <- list()
+    if(lavoptions$loglik) {
+         lavloglik <- lav_model_loglik(lavdata        = lavdata,
+                                       lavsamplestats = lavsamplestats,
+                                       lavimplied     = lavimplied,
+                                       lavmodel       = lavmodel,
+                                       lavoptions     = lavoptions)
+    }
 
     timing$Estimate <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
@@ -1118,13 +1126,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
+    ######################
+    #### 15. baseline ####
+    ######################
+    lavbaseline <- list()
+    if(is.logical(lavoptions$baseline) && lavoptions$baseline) {
 
-
-
+    }
 
 
     ####################
-    #### 15. lavaan ####
+    #### 16. lavaan ####
     ####################
     lavaan <- new("lavaan",
                   call         = mc,                  # match.call
@@ -1144,6 +1156,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   vcov         = lavvcov,             # list
                   test         = lavtest,             # list
                   h1           = lavh1,               # list
+                  baseline     = list(),              # list
                   external     = list()               # empty list
                  )
 
@@ -1153,6 +1166,37 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if("post" %in% lavoptions$check && lavTech(lavaan, "converged")) {
         lavInspect(lavaan, "post.check")
     }
+
+    ########################
+    #### post: baseline ####
+    ########################
+    #lavbaseline <- list()
+    #if(is.logical(lavoptions$baseline) && lavoptions$baseline) {
+    #    fit.indep <- try(lav_object_independence(lavaan), silent = TRUE)
+    #    X2.null <- df.null <- as.numeric(NA)
+    #    X2.null.scaled <- df.null.scaled <- as.numeric(NA)
+    #    if(inherits(fit.indep, "try-error")) {
+    #        warning("lavaan WARNING: estimation of the baseline model failed.")
+    #    } else {
+    #        X2.null <- fit.indep@test[[1]]$stat
+    #        df.null <- fit.indep@test[[1]]$df
+    #        if(length(fit.indep@test) > 1L) {
+    #            X2.null.scaled <- fit.indep@test[[2]]$stat
+    #            df.null.scaled <- fit.indep@test[[2]]$df
+    #        }
+    #    }
+    #
+    #    # store in list
+    #    lavbaseline <- list(X2.null = X2.null,
+    #                        df.null = df.null,
+    #                        X2.null.scaled = X2.null.scaled,
+    #                        df.null.scaled = df.null.scaled)
+    #
+    #    # add to lavaan object
+    #    lavaan@baseline <- lavbaseline
+    #}
+
+
 
     lavaan
 }

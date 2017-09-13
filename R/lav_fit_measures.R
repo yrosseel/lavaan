@@ -161,12 +161,17 @@ lav_fit_measures <- function(object, fit.measures="all",
                        "srmr_bollen", "srmr_bollen_nomean",
                        "srmr_mplus", "srmr_mplus_nomean")
     } else {
-        fit.srmr <- c("srmr")
-        fit.srmr2 <- c("rmr", "rmr_nomean",
-                       "srmr", # the default
-                       "srmr_bentler", "srmr_bentler_nomean",
-                       "srmr_bollen", "srmr_bollen_nomean",
-                       "srmr_mplus", "srmr_mplus_nomean")
+        if(object@Data@nlevels > 1L) {
+            fit.srmr  <- c("srmr","srmr_within", "srmr_between")
+            fit.srmr2 <- c("srmr","srmr_within", "srmr_between")
+        } else {
+            fit.srmr <- c("srmr")
+            fit.srmr2 <- c("rmr", "rmr_nomean",
+                           "srmr", # the default
+                           "srmr_bentler", "srmr_bentler_nomean",
+                           "srmr_bollen", "srmr_bollen_nomean",
+                           "srmr_mplus", "srmr_mplus_nomean")
+        }
     }
 
     # table
@@ -181,9 +186,13 @@ lav_fit_measures <- function(object, fit.measures="all",
     #}
 
     # various
-    fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")
-    if(!categorical && G == 1) {
-        fit.other <- c(fit.other, "ecvi")
+    if(object@Data@nlevels > 1L) {
+        fit.other <- ""
+    } else {
+        fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")
+        if(!categorical && G == 1) {
+            fit.other <- c(fit.other, "ecvi")
+        }
     }
 
 
@@ -264,10 +273,10 @@ lav_fit_measures <- function(object, fit.measures="all",
         # this is not strictly needed for ML, but it is for
         # GLS and WLS
         # and MLM and MLR to get the scaling factor(s)!
-        if (!is.null(baseline.model) && is(baseline.model, "lavaan")) {
+        if (!is.null(baseline.model) && inherits(baseline.model, "lavaan")) {
             fit.indep <- baseline.model
         } else if (!is.null(object@external$baseline.model) &&
-                   is(object@external$baseline.model, "lavaan")) {
+                   inherits(object@external$baseline.model, "lavaan")) {
             fit.indep <- object@external$baseline.model
             ## check baseline converged
             if (!fit.indep@optim$converged) {
@@ -295,6 +304,13 @@ lav_fit_measures <- function(object, fit.measures="all",
                 X2.null.scaled <- df.null.scaled <- as.numeric(NA)
             }
         } else {
+            if(fit.indep@Data@nlevels > 1L) {
+                fit.indep@test[[1]]$stat <- ( -2 * (fit.indep@loglik$loglik -
+                                                    object@loglik$loglik) )
+                fit.indep@test[[1]]$pvalue <-
+                   1 - pchisq(fit.indep@test[[1]]$stat, fit.indep@test[[1]]$df)
+            } 
+
             X2.null <- fit.indep@test[[1]]$stat
             df.null <- fit.indep@test[[1]]$df
             if(scaled) {
@@ -967,7 +983,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         }
     }
 
-    if(any(c("rmr","srmr") %in% fit.measures)) {
+    if(any(c("rmr","srmr") %in% fit.measures) &&  object@Data@nlevels == 1L) {
         # RMR and SRMR
         rmr.group <- numeric(G)
         rmr_nomean.group <- numeric(G)
@@ -1114,6 +1130,66 @@ lav_fit_measures <- function(object, fit.measures="all",
         }
         indices["rmr_nomean"]          <- RMR_NOMEAN
     }
+
+    # multilevel version
+    if(any(c("srmr_within", "srmr_between", "srmr") %in% fit.measures) &&  
+       object@Data@nlevels > 1L) {
+
+        nlevels <-  object@Data@nlevels > 1L
+        SRMR.within  <- numeric(G)
+        SRMR.between <- numeric(G)
+        for(g in 1:G) {
+            # observed
+            S.within  <- object@h1$implied$cov[[  (g-1)*nlevels + 1 ]]
+            M.within  <- object@h1$implied$mean[[ (g-1)*nlevels + 1 ]]
+            S.between <- object@h1$implied$cov[[  (g-1)*nlevels + 2 ]]
+            M.between <- object@h1$implied$mean[[ (g-1)*nlevels + 2 ]]
+
+            # estimated
+            Sigma.within  <- object@implied$cov[[  (g-1)*nlevels + 1 ]]
+            Mu.within     <- object@implied$mean[[ (g-1)*nlevels + 1 ]]
+            Sigma.between <- object@implied$cov[[  (g-1)*nlevels + 2 ]]
+            Mu.between    <- object@implied$mean[[ (g-1)*nlevels + 2 ]]
+
+            # force pd for between
+            #    S.between <- lav_matrix_symmetric_force_pd(S.between)
+            Sigma.between <- lav_matrix_symmetric_force_pd(Sigma.between)
+        
+            # Bollen approach: simply using cov2cor ('residual correlations')
+            S.within.cor  <- cov2cor(S.within)
+            S.between.cor <- cov2cor(S.between)
+            Sigma.within.cor <- cov2cor(Sigma.within)
+            Sigma.between.cor <- cov2cor(Sigma.between)
+            R.within.cor <- (S.within.cor - Sigma.within.cor)
+            R.between.cor <- (S.between.cor - Sigma.between.cor)
+
+            nvar.within <- NCOL(S.within)
+            nvar.between <- NCOL(S.between)
+            pstar.within <- nvar.within*(nvar.within+1)/2
+            pstar.between <- nvar.between*(nvar.between+1)/2
+            
+            # SRMR
+            SRMR.within[g] <-  sqrt( sum(lav_matrix_vech(R.within.cor)^2) / 
+                                     pstar.within )
+            SRMR.between[g] <- sqrt( sum(lav_matrix_vech(R.between.cor)^2) /
+                                     pstar.between )
+        }
+
+        if(G > 1) {
+            SRMR_WITHIN  <- as.numeric( (unlist(object@SampleStats@nobs) %*% 
+                              SRMR.within)  / object@SampleStats@ntotal )
+            SRMR_BETWEEN <- as.numeric( (unlist(object@SampleStats@nobs) %*%
+                              SRMR.between) / object@SampleStats@ntotal )
+        } else {
+            SRMR_WITHIN  <- SRMR.within[1]
+            SRMR_BETWEEN <- SRMR.between[1]
+        }
+
+        indices["srmr"] <- SRMR_WITHIN + SRMR_BETWEEN
+        indices["srmr_within"]  <- SRMR_WITHIN
+        indices["srmr_between"] <- SRMR_BETWEEN
+    }
+
 
     if(any(c("cn_05", "cn_01") %in% fit.measures)) {
         # catch df=0, X2=0
@@ -1553,7 +1629,7 @@ print.fit.measures <- function(x) {
    }
 
     # SRMR
-    if(any(c("rmr","srmr") %in% names.x)) {
+    if(any(c("rmr","srmr") %in% names.x) && ! "srmr_within" %in% names.x) {
         cat("\nStandardized Root Mean Square Residual:\n\n")
 
         if("rmr" %in% names.x) {
@@ -1578,6 +1654,23 @@ print.fit.measures <- function(x) {
             t0.txt <- sprintf("  %-40s", "SRMR (No Mean)")
             t1.txt <- sprintf("  %10.3f", x["srmr_nomean"])
             t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_nomean"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+    }
+
+    # SRMR -- multilevel
+    if(any(c("srmr_within","srmr_between") %in% names.x)) {
+        cat("\nStandardized Root Mean Square Residual (corr metric):\n\n")
+        if("srmr_within" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "SRMR (within covariance matrix)")
+            t1.txt <- sprintf("  %10.3f", x["srmr_within"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_within"]), "")
+            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        }
+        if("srmr_between" %in% names.x) {
+            t0.txt <- sprintf("  %-40s", "SRMR (between covariance matrix)")
+            t1.txt <- sprintf("  %10.3f", x["srmr_between"])
+            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_between"]), "")
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
         }
     }

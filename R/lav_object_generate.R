@@ -26,6 +26,13 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
         ## FIXME: if test = scaled, we need it anyway?
         lavoptions$se <- "none" 
     }
+
+    # set baseline/h1 to FALSE
+    lavoptions$h1 <- FALSE
+    lavoptions$baseline <- FALSE
+    lavoptions$loglik <- TRUE # eg for multilevel
+    lavoptions$implied <- TRUE #, needed for loglik
+    lavoptions$check <- character(0L)
    
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE

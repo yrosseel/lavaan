@@ -23,15 +23,17 @@ lav_partable_labels(partable, blocks = "group", group.equal = "",
                     group.partial = "", type = "user")
 
 # generate parameter table for specific models
-lav_partable_independence(lavobject = NULL, lavdata = NULL, 
-    lavoptions = NULL, lavsamplestats = NULL, sample.cov = NULL, 
-    sample.mean = NULL, sample.th = NULL, sample.th.idx = NULL,
+lav_partable_independence(lavobject = NULL, lavdata = NULL,
+    lavpta = NULL, lavoptions = NULL, lavsamplestats = NULL,
+    sample.cov = NULL, sample.mean = NULL, sample.slopes = NULL,
+    sample.th = NULL, sample.th.idx = NULL,
     sample.cov.x = NULL, sample.mean.x = NULL)
 
 lav_partable_unrestricted(lavobject = NULL, lavdata = NULL, 
     lavpta = NULL, lavoptions = NULL, lavsamplestats = NULL, 
     sample.cov = NULL, sample.mean = NULL, sample.slopes = NULL, 
-    sample.th = NULL, sample.th.idx = NULL) 
+    sample.th = NULL, sample.th.idx = NULL,
+    sample.cov.x = NULL, sample.mean.x = NULL) 
 
 lav_partable_from_lm(object, est = FALSE, label = FALSE, 
     as.data.frame. = FALSE)
