@@ -468,7 +468,9 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                   TH <- unique(paste(TH.lhs[idx], "|",
                                                      TH.rhs[idx], sep=""))
                                   # make sure the th's are in increasing order
-                                  sort(TH)
+                                  # sort(TH)
+                                  # NO!, don't do that; t10 will be before t2
+                                  # fixed in 0.6-1 (bug report from Myrsini)
                              }))
             } else {
                 out <- character(0L)
