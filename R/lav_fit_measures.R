@@ -478,7 +478,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 #   therefore, t1 can go negative, and TLI can be > 1
                 t1 <- (X2 - df)*df.null
                 t2 <- (X2.null - df.null)*df
-                if(df > 0) {
+                if(df > 0 && t2 != 0) {
                     indices["tli"] <- indices["nnfi"] <- 1 - t1/t2
                 } else {
                     indices["tli"] <- indices["nnfi"] <- 1
@@ -533,7 +533,9 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
             if("rfi" %in% fit.measures) {
-                if(df > 0) {
+                if(df > df.null) {
+                    RLI <- as.numeric(NA)
+                } else if(df > 0 && df.null > 0) {
                     t1 <- X2.null/df.null - X2/df
                     t2 <- X2.null/df.null
                     if(t1 < 0 || t2 < 0) {
@@ -547,7 +549,9 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["rfi"] <- RLI
             }
             if("rfi.scaled" %in% fit.measures) {
-                if(df > 0) {
+                if(df > df.null) {
+                    RLI <- as.numeric(NA)
+                } else if(df > 0) {
                     t1 <- X2.null.scaled/df.null.scaled - X2.scaled/df.scaled
                     t2 <- X2.null.scaled/df.null.scaled
                     if(is.na(t1) || is.na(t2)) {
@@ -565,7 +569,9 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # NFI - normed fit index (Bentler & Bonett, 1980)
             if("nfi" %in% fit.measures) {
-                if(df > 0) {
+                if(df > df.null) {
+                    NFI <- as.numeric(NA)
+                } else if(df > 0) {
                     t1 <- X2.null - X2
                     t2 <- X2.null
                     NFI <- t1/t2
@@ -575,23 +581,35 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["nfi"] <- NFI
             }
             if("nfi.scaled" %in% fit.measures) {
-                t1 <- X2.null.scaled - X2.scaled
-                t2 <- X2.null.scaled
-                NFI <- t1/t2
+                if(df > df.null) {
+                    NFI <- as.numeric(NA)
+                } else {
+                    t1 <- X2.null.scaled - X2.scaled
+                    t2 <- X2.null.scaled
+                    NFI <- t1/t2
+                }
                 indices["nfi.scaled"] <- NFI
             }
 
             # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
             if("pnfi" %in% fit.measures) {
-                t1 <- X2.null - X2
-                t2 <- X2.null
-                PNFI <- (df/df.null) * t1/t2
+                if(df.null > 0) {
+                    t1 <- X2.null - X2
+                    t2 <- X2.null
+                    PNFI <- (df/df.null) * t1/t2
+                } else {
+                    PNFI <- as.numeric(NA)
+                }
                 indices["pnfi"] <- PNFI
             }
             if("pnfi.scaled" %in% fit.measures) {
-                t1 <- X2.null.scaled - X2.scaled
-                t2 <- X2.null.scaled
-                PNFI <- (df/df.null) * t1/t2
+                if(df.null > 0) {
+                    t1 <- X2.null.scaled - X2.scaled
+                    t2 <- X2.null.scaled
+                    PNFI <- (df/df.null) * t1/t2
+                } else {
+                    PNFI <- as.numeric(NA)
+                }
                 indices["pnfi.scaled"] <- PNFI
             }
 
