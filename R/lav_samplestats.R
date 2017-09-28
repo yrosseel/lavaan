@@ -1088,6 +1088,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # size even in the balanced case
 
         Y1.means <- colMeans(Y1, na.rm = TRUE)
+        Y1Y1 <- crossprod(Y1)
         both.idx <- all.idx <- seq_len(P)
         if(length(within.idx) > 0L ||
            length(between.idx) > 0L) {
@@ -1204,7 +1205,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         
 
-        YLp[[l]] <- list(Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
+        YLp[[l]] <- list(Y1Y1 = Y1Y1,
+                         Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
                          Sigma.W = S.w, Mu.W = Mu.W,
                          Sigma.B = Sigma.B, Mu.B = Mu.B,
                          Mu.B.start = Mu.B.start,

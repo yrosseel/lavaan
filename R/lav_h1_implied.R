@@ -1,7 +1,8 @@
 # compute sample statistics for the unrestricted (h1) model
-lav_h1_implied <- function(lavdata        = NULL,
-                           lavsamplestats = NULL,
-                           lavoptions     = NULL) {
+# and also the logl (if available)
+lav_h1_implied_logl <- function(lavdata        = NULL,
+                                lavsamplestats = NULL,
+                                lavoptions     = NULL) {
 
     if(lavdata@nlevels == 1L) {
         if(lavsamplestats@missing.flag) {
@@ -25,17 +26,44 @@ lav_h1_implied <- function(lavdata        = NULL,
                                 th     = lavsamplestats@th)
             }
         } # complete data
+
+        logl <- lav_h1_logl(lavdata        = lavdata,
+                            lavsamplestats = lavsamplestats,
+                            lavoptions     = lavoptions)
     } else {
         # estimate Mu.B, Mu.W, Sigma.B and Sigma.W for unrestricted model
-        # TODO
-        implied <- list()
+        ngroups <- lavdata@ngroups
+        nlevels <- lavdata@nlevels
+        implied <- list(cov  = vector("list", length = ngroups * nlevels),
+                        mean = vector("list", length = ngroups * nlevels))
+        loglik.group <- numeric(lavdata@ngroups)
+
+        for(g in 1:lavdata@ngroups) {
+            if(lavoptions$verbose) {
+                cat("\nFitting unrestricted (H1) model in group ", g, "\n")
+            }
+            OUT <- lav_mvnorm_cluster_em_sat(YLp      = lavsamplestats@YLp[[g]],
+                                             Lp       = lavdata@Lp[[g]],
+                                             verbose  = lavoptions$verbose,
+                                             tol      = 1e-04, # option?
+                                             max.iter = 5000L) # option?
+            if(lavoptions$verbose) {
+                cat("\n")
+            }
+
+            # store in implied
+            implied$cov[[(g-1)*nlevels + 1L]] <- OUT$Sigma.W
+            implied$cov[[(g-1)*nlevels + 2L]] <- OUT$Sigma.B
+            implied$mean[[(g-1)*nlevels + 1L]] <- OUT$Mu.W
+            implied$mean[[(g-1)*nlevels + 2L]] <- OUT$Mu.B
+
+            # store logl per group
+            loglik.group[g] <- OUT$logl
+        }
+
+        logl <- list(loglik = sum(loglik.group), loglik.group = loglik.group)
     }
 
-    implied
+    list(implied = implied, logl = logl)
 }
 
-lav_h1_implied_cluster <- function(lavdata        = NULL,
-                                   lavsamplestats = NULL,
-                                   lavoptions     = NULL) {
-
-}

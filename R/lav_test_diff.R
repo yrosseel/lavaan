@@ -302,6 +302,7 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
         if(m1@Model@eq.constraints) {
             # we need a better solution here...
             warning("lavaan WARNING: H1 contains equality constraints; this routine can not handle this (yet)")
+            return( m0@Model@ceq.JAC )
         }
 
         # take into account equality constraints m1
@@ -315,6 +316,7 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
         #                                                ## Delta1 not corrected
 
         H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
+        #H <- MASS::ginv(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
         A <- t(lav_matrix_orthogonal_complement(H))
     }
  

@@ -583,46 +583,44 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(is.logical(lavoptions$h1) && lavoptions$h1) {
         if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
 
-            if(lavdata@nlevels > 1L) {
+            #if(lavdata@nlevels > 1L) {
                 # explicitly fit a saturated model
-                h1.partable <- lav_partable_unrestricted(lavdata = lavdata, 
-                                   lavpta = lavpta, lavoptions = lavoptions, 
-                                   lavsamplestats = lavsamplestats)
-                h1.lavoptions <- lavoptions
-                h1.lavoptions$se <- "none"
-                h1.lavoptions$test <- "none"
+                #h1.partable <- lav_partable_unrestricted(lavdata = lavdata, 
+                #                   lavpta = lavpta, lavoptions = lavoptions, 
+                #                   lavsamplestats = lavsamplestats)
+                #h1.lavoptions <- lavoptions
+                #h1.lavoptions$se <- "none"
+                #h1.lavoptions$test <- "none"
                 #h1.lavoptions$verbose <- FALSE
-                h1.lavoptions$warn <- FALSE
-                h1.lavoptions$do.fit <- TRUE
-                h1.lavoptions$check <- ""
-                h1.lavoptions$h1 <- FALSE
-                h1.lavoptions$baseline <- FALSE
-                h1.lavoptions$control <- c(h1.lavoptions$control,
-                                           list(rel.tol=1e-5)) # not too strict
-                if(lavoptions$verbose) {
-                    cat("Fitting unrestricted model ... \n")
-                }
+                #h1.lavoptions$warn <- FALSE
+                #h1.lavoptions$do.fit <- TRUE
+                #h1.lavoptions$check <- ""
+                #h1.lavoptions$h1 <- FALSE
+                #h1.lavoptions$baseline <- FALSE
+                #h1.lavoptions$control <- c(h1.lavoptions$control,
+                #                           list(rel.tol=1e-5)) # not too strict
+                #if(lavoptions$verbose) {
+                #    cat("Fitting unrestricted model ... \n")
+                #}
 
-                fit.h1 <- lavaan(model           = h1.partable,
-                                 slotOptions     = h1.lavoptions,
-                                 slotSampleStats = lavsamplestats,
-                                 slotData        = lavdata)
+                #fit.h1 <- lavaan(model           = h1.partable,
+                #                 slotOptions     = h1.lavoptions,
+                #                 slotSampleStats = lavsamplestats,
+                #                 slotData        = lavdata)
 
-                h1.implied      <- fit.h1@implied
-                h1.loglik       <- fit.h1@loglik$loglik
-                h1.loglik.group <- fit.h1@loglik$loglik.group
+                #h1.implied      <- fit.h1@implied
+                #h1.loglik       <- fit.h1@loglik$loglik
+                #h1.loglik.group <- fit.h1@loglik$loglik.group
                     
-            } else {
+            #} else {
                 # implied h1 statistics
-                h1.implied <- lav_h1_implied(lavdata        = lavdata,
-                                             lavsamplestats = lavsamplestats,
-                                             lavoptions     = lavoptions)
-                out <- lav_h1_logl(lavdata        = lavdata,
-                                   lavsamplestats = lavsamplestats,
-                                   lavoptions     = lavoptions)
-                h1.loglik <- out$loglik
-                h1.loglik.group <- out$loglik.group
-            }
+                out <- lav_h1_implied_logl(lavdata        = lavdata,
+                                           lavsamplestats = lavsamplestats,
+                                           lavoptions     = lavoptions)
+                h1.implied      <- out$implied
+                h1.loglik       <- out$logl$loglik
+                h1.loglik.group <- out$logl$loglik.group
+            #}
 
             # collect in h1 list
             lavh1 <- list(implied      = h1.implied,

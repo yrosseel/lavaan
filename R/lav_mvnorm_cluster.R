@@ -89,6 +89,7 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
 
     # between.idx 
     between.idx <- Lp$between.idx[[2]]
+    within.idx  <- Lp$within.idx[[2]]
 
     # ov.idx per level
     ov.idx      <- Lp$ov.idx
@@ -97,7 +98,12 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
     p.tilde <- length( unique(c(ov.idx[[1]], ov.idx[[2]])) )
 
     # Mu.W
-    Mu.W    <- mu.y
+    Mu.W.tilde <- numeric( p.tilde )
+    if(length(within.idx) > 0) {
+        Mu.W.tilde[ ov.idx[[1]] ] <- mu.y
+        Mu.W.tilde[ -within.idx ] <- 0
+    }
+    Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
 
     # Mu.B
     Mu.B.tilde <- numeric(p.tilde)
@@ -703,3 +709,232 @@ lav_mvnorm_cluster_scores_2l <- function(Y1           = NULL,
 
     SCORES
 }
+
+# estimate ML estimates of Mu.W, Mu.B, Sigma.W, Sigma.B
+# using the EM algorithm
+#
+# per cluster-SIZE
+#
+lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
+                                      Lp             = NULL,
+                                      verbose        = TRUE,
+                                      tol            = 1e-04,
+                                      max.iter       = 5000) {
+
+
+    # sample stats    
+    nclusters      <- Lp$nclusters[[2]]
+    cluster.size   <- Lp$cluster.size[[2]]
+    cluster.idx    <- Lp$cluster.idx[[2]]
+    within.idx     <- Lp$within.idx[[2]]
+    between.idx    <- Lp$between.idx[[2]]
+    cluster.sizes  <- Lp$cluster.sizes[[2]]
+    ncluster.sizes <- Lp$ncluster.sizes[[2]]
+    n.s            <- Lp$cluster.size.ns[[2]]
+
+    Y2 <- YLp[[2]]$Y2
+    Y1Y1 <- YLp[[2]]$Y1Y1
+
+    # take care of Mu.W (within only) and Mu.B (between only) estimates
+    Mu.W.tilde <- YLp[[2]]$Mu.W
+    Mu.B.tilde <- YLp[[2]]$Mu.B
+    if(length(between.idx) > 0) {
+        Mu.W <- Mu.W.tilde[-between.idx]
+    } else {
+        Mu.W <- Mu.W.tilde
+    }
+    if(length(within.idx) > 0) {
+        Mu.B <- Mu.B.tilde[-within.idx]
+    } else {
+        Mu.B <- Mu.B.tilde
+    }
+
+    # starting values for Sigma
+    ov.idx <- Lp$ov.idx
+    Sigma.W <- diag( length(ov.idx[[1]]) )
+    #if(length(between.idx) > 0) {
+    #    Sigma.W <- YLp[[2]]$Sigma.W[-between.idx, -between.idx]
+    #} else {
+    #    Sigma.W <- YLp[[2]]$Sigma.W
+    #}
+    Sigma.B <- diag( length(ov.idx[[2]]) )
+
+    # initial logl
+    fx <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp,
+              Lp = Lp, Mu.W = Mu.W, Sigma.W = Sigma.W,
+              Mu.B = Mu.B, Sigma.B = Sigma.B,
+              Sinv.method = "eigen", log2pi = TRUE, minus.two = FALSE)
+
+    # if verbose, report
+    if(verbose) {
+        cat("EM iter:", sprintf("%6d", 0),
+            " fx = ", sprintf("%15.10f", fx),
+            "\n")
+    }
+
+    # translate to internal matrices
+    out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
+              Mu.W = Mu.W, Mu.B = Mu.B,
+               Sigma.W = Sigma.W, Sigma.B = Sigma.B)
+    mu.y <- out$mu.y; mu.z <- out$mu.z
+    sigma.w <- out$sigma.w; sigma.b <- out$sigma.b
+    sigma.zz <- out$sigma.zz; sigma.yz <- out$sigma.yz
+
+    nvar.y <- ncol(sigma.w)
+    nvar.z <- ncol(sigma.zz)
+
+    # sigma.zz can be compute beforehand
+    if(length(between.idx) > 0L) {
+        Z <- Y2[,between.idx,drop=FALSE]
+        zbar <- colMeans(Y2)[between.idx]
+        sigma.zz <- 1/nclusters * crossprod(Z) - tcrossprod(zbar)
+
+        Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
+    }
+
+    # EM iterations
+    fx.old <- fx
+    for(i in 1:max.iter) {
+
+        # E-step
+
+        if(length(between.idx) > 0L) {
+            sigma.1 <- cbind(sigma.yz, sigma.b)
+            mu <- c(mu.z, mu.y)
+        } else {
+            sigma.1 <- sigma.b
+            mu <- mu.y
+        }
+
+        C2.W <- matrix(0, nvar.y, nvar.y)
+        C4.W <- matrix(0, nvar.y, nvar.y)
+        V.J  <- matrix(0, nvar.y, nvar.y)
+        A.J  <- numeric(nvar.y)
+        ZY.J <- matrix(0, nvar.z, nvar.y)
+        for(clz in seq_len(ncluster.sizes)) {
+
+            # cluster size
+            nj <- cluster.sizes[clz]
+
+            # tj
+            if(length(between.idx) > 0L) {
+                ybar.j <- Y2[cluster.size == nj, -between.idx, drop = FALSE]
+                b.j <- cbind(Y2[cluster.size == nj, between.idx, drop = FALSE],
+                             Y2[cluster.size == nj,-between.idx, drop = FALSE])
+            } else {
+                ybar.j <- b.j <- Y2[cluster.size == nj, drop = FALSE]
+           }
+
+            # compute Sigma.j
+            sigma.j <- sigma.w + nj * sigma.b
+            if(length(between.idx) > 0L) {
+                omega.j <- rbind( cbind(sigma.zz, t(sigma.yz)),
+                                  cbind(sigma.yz, 1/nj * sigma.j) )
+            } else {
+                omega.j <- 1/nj * sigma.j
+            }
+            omega.j.inv <- solve(omega.j)
+            sigma.1.j.inv <- sigma.1 %*% omega.j.inv
+
+            # conditional expectation of 'v.j'
+            b.jc <- t( t(b.j) - mu )
+            tmp <- b.jc %*% t(sigma.1.j.inv)
+            a.j <- t(t(tmp) + mu.y)
+
+            # conditional expection of 'v.j %*% t(v.j)'
+            V.j <- n.s[clz]*(sigma.b - (sigma.1.j.inv %*% t(sigma.1))) +
+                           crossprod(a.j)
+
+            # conditional expection of '(x - v.j) %*% t(x - v.j)'
+            # contains 4 parts: xx, xv, vx, vv
+            #C.j  <- ( (1/nj) * crossprod(Y1.j)   # xx
+            #          - crossprod(ybar.j, a.j)  # xv
+            #          - crossprod(a.j, ybar.j)  # vx
+            #          + V.j )                   # vv
+
+            #C1.j <-  (1/nj) * crossprod(Y1.j)   # xx
+            C2.j <-  - crossprod(ybar.j, a.j)  # xv
+            #C3.j <-  - crossprod(a.j, ybar.j)  # vx
+            #C4.j <-  V.j                    # vv
+
+            # sum over clusters
+            V.J <- V.J + V.j
+            A.J <- A.J + colSums(a.j)
+
+            # between only
+            if(length(between.idx) > 0L) {
+                ZY.J <- ZY.J + crossprod(Y2[cluster.size == nj,
+                                         between.idx,drop = FALSE], a.j)
+            }
+
+            # if Sigma.j is the same for all j
+            C2.W <- C2.W + nj*C2.j
+            C4.W <- C4.W + nj*V.j
+        }
+
+        # force symmetry for V.j 
+        # this only seems needed because of t(sigma.1) above, if between.idx > 0
+        V.J <- (V.J + t(V.J))/2
+
+        abar <- 1/nclusters * A.J
+        C.B  <- 1/nclusters * V.J
+
+        C1.W <- Y1Y1
+        C2.W <- C2.W
+        C3.W <- t(C2.W)
+        C4.W <- C4.W
+        C.W  <- 1/sum(cluster.size) * (C1.W + C2.W + C3.W + C4.W)
+
+        # between only
+        if(length(between.idx) > 0L) {
+            A <- 1/nclusters * ZY.J - tcrossprod(zbar, abar)
+        }
+
+        # M-step
+        sigma.w <- C.W
+        sigma.b <- C.B - tcrossprod(abar)
+        mu.y    <- abar
+
+        if(length(between.idx) > 0L) {
+            sigma.yz <- t(A)
+        }
+
+        # back to model-implied dimensions, for fx
+        implied <- lav_mvnorm_cluster_2l2implied(Lp = Lp,
+                       sigma.w = sigma.w, sigma.b = sigma.b,
+                       sigma.zz = sigma.zz, sigma.yz = sigma.yz,
+                       mu.z = mu.z, mu.y = mu.y)
+        fx <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp,
+              Lp = Lp, Mu.W = implied$Mu.W, Sigma.W = implied$Sigma.W,
+              Mu.B = implied$Mu.B, Sigma.B = implied$Sigma.B,
+              Sinv.method = "eigen", log2pi = TRUE, minus.two = FALSE)
+
+        # diff
+        fx.delta <- fx - fx.old
+
+        if(fx.delta < 0) {
+            warning("lavaan WARNING: last EM iteration failed to improve fx")
+        }
+
+        if(verbose) {
+            cat("EM iter:", sprintf("%6d", i),
+                " fx = ", sprintf("%15.10f", fx),
+                #" fx2 = ", sprintf("%15.10f", fx2),
+                " fx.delta = ", sprintf("%15.10f", fx.delta),
+                "\n")
+        }
+
+        # check for convergence
+        if(fx.delta < tol) {
+            break
+        } else {
+            fx.old <- fx
+        }
+
+    } # EM iterations
+
+    list(Sigma.W = implied$Sigma.W, Sigma.B = implied$Sigma.B,
+         Mu.W = implied$Mu.W, Mu.B = implied$Mu.B, logl = fx)
+}
+
+

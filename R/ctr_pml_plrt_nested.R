@@ -42,7 +42,18 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     objH1_h0 <- lav_test_diff_m10(m1 = fit_objH1, m0 = fit_objH0, test = FALSE)
   
     # EqMat
-    EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
+    #EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
+    EqMat <- fit_objH0@Model@ceq.JAC
+
+    # DEBUG YR -- eliminate the constraints also present in H1
+    #          -- if we do this, there is no need to use MASS::ginv later
+    #JAC0 <- fit_objH0@Model@ceq.JAC
+    #JAC1 <- fit_objH1@Model@ceq.JAC
+    #unique.idx <- which(apply(JAC0, 1, function(x) { 
+    #                    !any(apply(JAC1, 1, function(y) { all(x == y) })) }))
+    #if(length(unique.idx) > 0L) {
+    #    EqMat <- EqMat[unique.idx,,drop = FALSE]
+    #}
 
     # Observed information (= for PML, this is Hessian / N)
     Hes.theta0 <- lavTech(objH1_h0, "information.observed")
@@ -61,7 +72,8 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
     MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
     MinvHtM <- EqMat %*% Inv.Hes.theta0 %*% t(EqMat)
-    Inv_MinvHtM <- solve(MinvHtM)
+    #Inv_MinvHtM <- solve(MinvHtM)
+    Inv_MinvHtM <- MASS::ginv(MinvHtM)
     tmp.prod <- MInvGtM %*% Inv_MinvHtM
     tmp.prod2 <- tmp.prod %*% tmp.prod
     sum.eig <- sum(diag(tmp.prod))
@@ -90,7 +102,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
         equalConstr = FALSE
     }
 
-    nsize <- fit_objH0@Data@nobs[[1]]
+    nsize <- fit_objH0@SampleStats@ntotal
     PLRT <- 2 * nsize * (fit_objH0@optim$fx - fit_objH1@optim$fx)
     Npar <- fit_objH1@optim$npar
     MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
@@ -233,7 +245,8 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
         MY.m.el.idx2 = MY.m.el.idx2, MY.x.el.idx2 = MY.x.el.idx2,
         Npar = Npar, equalConstr = equalConstr)
     Hes.theta0 <- NHes.theta0/nsize
-    Inv.Hes.theta0 <- solve(Hes.theta0)
+    #Inv.Hes.theta0 <- solve(Hes.theta0)
+    Inv.Hes.theta0 <- MASS::ginv(Hes.theta0)
 
     NJ.theta0 <- MYgetVariability(object = obj, MY.m.el.idx = MY.m.el.idx,
         MY.x.el.idx = MY.x.el.idx, equalConstr = equalConstr)
@@ -243,7 +256,8 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
     Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
     MInvGtM <- EqMat %*% Inv.G %*% t(EqMat)
     MinvHtM <- EqMat %*% Inv.Hes.theta0 %*% t(EqMat)
-    Inv_MinvHtM <- solve(MinvHtM)    #!!! change names
+    #Inv_MinvHtM <- solve(MinvHtM)    #!!! change names
+    Inv_MinvHtM <- MASS::ginv(MinvHtM)
     tmp.prod <- MInvGtM %*% Inv_MinvHtM  #!!! change names
     tmp.prod2 <- tmp.prod %*% tmp.prod
     sum.eig <- sum(diag(tmp.prod))
