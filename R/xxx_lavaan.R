@@ -16,6 +16,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # variable information
                    ordered            = NULL,
 
+                   # sampling weights
+                   sampling.weights   = NULL,
+
                    # summary data
                    sample.cov         = NULL,
                    sample.mean        = NULL,
@@ -377,17 +380,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$conditional.x) {
             ov.names <- ov.names.y
         }
-        lavdata <- lavData(data         = data,
-                           group        = group,
-                           cluster      = cluster,
-                           ov.names     = ov.names,
-                           ov.names.x   = ov.names.x,
-                           ov.names.l   = ov.names.l,
-                           ordered      = ordered,
-                           sample.cov   = sample.cov,
-                           sample.mean  = sample.mean,
-                           sample.nobs  = sample.nobs,
-                           lavoptions   = lavoptions)
+        lavdata <- lavData(data             = data,
+                           group            = group,
+                           cluster          = cluster,
+                           ov.names         = ov.names,
+                           ov.names.x       = ov.names.x,
+                           ov.names.l       = ov.names.l,
+                           ordered          = ordered,
+                           sampling.weights = sampling.weights,
+                           sample.cov       = sample.cov,
+                           sample.mean      = sample.mean,
+                           sample.nobs      = sample.nobs,
+                           lavoptions       = lavoptions)
     }
     # what have we learned from the data?
     if(lavdata@data.type == "none") {
@@ -1210,6 +1214,9 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
                        # variable information
                        ordered            = NULL,
 
+                       # sampling weights
+                       sampling.weights   = NULL,
+
                        # summary data
                        sample.cov         = NULL,
                        sample.mean        = NULL,
@@ -1270,6 +1277,9 @@ growth <- function(# user-specified model: can be syntax, parameter Table
 
                    # variable information
                    ordered            = NULL,
+
+                   # sampling weights
+                   sampling.weights   = NULL,
 
                    # summary data
                    sample.cov         = NULL,

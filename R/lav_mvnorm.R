@@ -481,6 +481,7 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
                                               Sigma         = NULL,
                                               Sinv.method   = "eigen",
                                               Sigma.inv     = NULL,
+                                              wt            = NULL,
                                               meanstructure = TRUE) {
     N <- NROW(Y)
 
@@ -490,6 +491,10 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
     } else {
         SC <- lav_mvnorm_scores_vech_sigma(Y = Y, Mu = Mu, Sigma = Sigma,
                   Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    }
+
+    if(!is.null(wt)) {
+        SC <- SC * wt
     }
 
     crossprod(SC)/N

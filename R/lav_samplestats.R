@@ -274,13 +274,20 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # fill in the other slots
         if(!is.null(eXo[[g]])) {
-            cov.x[[g]] <- cov(eXo[[g]], use="pairwise")
-            if(rescale) {
-                # we 'transform' the sample cov (divided by n-1) 
-                # to a sample cov divided by 'n'
-                cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
+            if(!is.null(lavdata@weights[[g]])) {
+                out <- stats::cov.wt(eXo[[g]], wt = lavdata@weights[[g]], 
+                                     method = "ML")
+                cov.x[[g]]  <- out$cov
+                mean.x[[g]] <- out$center 
+            } else { 
+                cov.x[[g]] <- cov(eXo[[g]], use="pairwise")
+                if(rescale) {
+                    # we 'transform' the sample cov (divided by n-1) 
+                    # to a sample cov divided by 'n'
+                    cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
+                }
+                mean.x[[g]] <- colMeans(eXo[[g]])
             }
-            mean.x[[g]] <- colMeans(eXo[[g]])
         }
 
         if(categorical) {
@@ -347,6 +354,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         } else { # continuous, single-level case
  
             if(conditional.x) {
+
                 # residual covariances!
 
                 # FIXME: how to handle missing data here?
@@ -399,15 +407,23 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 var[[g]]  <- diag(cov[[g]])
                 mean[[g]] <- missing.h1.[[g]]$mu
             } else {
-                cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
-                var[[g]]  <-   diag(cov[[g]])
-                # rescale cov by (N-1)/N? (only COV!)
-                if(rescale) {
-                    # we 'transform' the sample cov (divided by n-1)
-                    # to a sample cov divided by 'n'
-                    cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                if(!is.null(lavdata@weights[[g]])) {
+                    out <- stats::cov.wt(X[[g]], wt = lavdata@weights[[g]],
+                                         method = "ML")
+                    cov[[g]]  <- out$cov
+                    var[[g]]  <- diag(cov[[g]])
+                    mean[[g]] <- out$center
+                } else {
+                    cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
+                    var[[g]]  <-   diag(cov[[g]])
+                    # rescale cov by (N-1)/N? (only COV!)
+                    if(rescale) {
+                        # we 'transform' the sample cov (divided by n-1)
+                        # to a sample cov divided by 'n'
+                        cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                    }
+                    mean[[g]] <- colMeans(X[[g]], na.rm=TRUE)
                 }
-                mean[[g]] <- colMeans(X[[g]], na.rm=TRUE)
             }
 
 

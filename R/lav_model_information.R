@@ -397,11 +397,13 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                 if(lavmodel@meanstructure) {
                     B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
                               Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                              wt = lavdata@weights[[g]],
                               meanstructure = lavmodel@meanstructure)
                 } else {
                     B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
                               Mu = lavsamplestats@mean[[g]],  # saturated
                               Sigma = Sigma.hat[[g]],
+                              wt = lavdata@weights[[g]],
                               meanstructure = lavmodel@meanstructure)
                 }
             }        

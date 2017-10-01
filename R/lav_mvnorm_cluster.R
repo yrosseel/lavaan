@@ -54,8 +54,8 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
 
     # add Mu.W[within.idx] to Mu.B
     # Mu.B.tilde[ Lp$within.idx[[2]] ] <- Mu.W.tilde[ Lp$within.idx[[2]] ]
-    Mu.B.tilde[ ov.idx[[1]] ] <- ( Mu.B.tilde[ ov.idx[[1]] ] +
-                                   Mu.W.tilde[ ov.idx[[1]] ] )
+    #Mu.B.tilde[ ov.idx[[1]] ] <- ( Mu.B.tilde[ ov.idx[[1]] ] +
+    #                               Mu.W.tilde[ ov.idx[[1]] ] )
 
     # map to matrices needed for loglik
     if(length(between.idx) > 0L) {
@@ -822,7 +822,7 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
                 b.j <- cbind(Y2[cluster.size == nj, between.idx, drop = FALSE],
                              Y2[cluster.size == nj,-between.idx, drop = FALSE])
             } else {
-                ybar.j <- b.j <- Y2[cluster.size == nj, drop = FALSE]
+                ybar.j <- b.j <- Y2[cluster.size == nj, , drop = FALSE]
            }
 
             # compute Sigma.j

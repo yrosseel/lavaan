@@ -15,19 +15,20 @@
 # group is at the upper-level
 
 # extract the data we need for this particular model
-lavData <- function(data          = NULL,          # data.frame
-                    group         = NULL,          # multiple groups?
-                    cluster       = NULL,          # clusters?
-                    ov.names      = NULL,          # variables needed in model
-                    ov.names.x    = character(0),  # exo variables
-                    ov.names.l    = list(),  # names per level
-                    ordered       = NULL,          # ordered variables
-                    sample.cov    = NULL,          # sample covariance(s)
-                    sample.mean   = NULL,          # sample mean vector(s)
-                    sample.nobs   = NULL,          # sample nobs
+lavData <- function(data              = NULL,          # data.frame
+                    group             = NULL,          # multiple groups?
+                    cluster           = NULL,          # clusters?
+                    ov.names          = NULL,          # variables in model
+                    ov.names.x        = character(0),  # exo variables
+                    ov.names.l        = list(),        # names per level
+                    ordered           = NULL,          # ordered variables
+                    sampling.weights  = NULL,          # sampling weights
+                    sample.cov        = NULL,          # sample covariance(s)
+                    sample.mean       = NULL,          # sample mean vector(s)
+                    sample.nobs       = NULL,          # sample nobs
  
-                    lavoptions    = lavOptions(),  # lavoptions
-                    allow.single.case = FALSE      # allow single case (for newdata in predict)
+                    lavoptions        = lavOptions(),  # lavoptions
+                    allow.single.case = FALSE          # for newdata in predict
                    ) 
 {
 
@@ -107,6 +108,7 @@ lavData <- function(data          = NULL,          # data.frame
                                  level.label       = level.label,
                                  ov.names          = ov.names,
                                  ordered           = ordered,
+                                 sampling.weights  = sampling.weights,
                                  ov.names.x        = ov.names.x,
                                  ov.names.l        = ov.names.l,
                                  std.ov            = std.ov,
@@ -207,6 +209,7 @@ lavData <- function(data          = NULL,          # data.frame
                        ov.names.x  = ov.names.x,
                        ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
+                       weights     = vector("list", length = ngroups),
                        ov          = ov,
                        std.ov      = FALSE,
                        missing     = "listwise",
@@ -277,6 +280,7 @@ lavData <- function(data          = NULL,          # data.frame
                        ov.names.x  = ov.names.x,
                        ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
+                       weights     = vector("list", length = ngroups),
                        ov          = ov,
                        missing     = "listwise",
                        case.idx    = vector("list", length = ngroups),
@@ -301,6 +305,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                           ov.names      = NULL,          # variables needed 
                                                          # in model
                           ordered       = NULL,          # ordered variables
+                          sampling.weights = NULL,       # sampling weights
                           ov.names.x    = character(0L), # exo variables
                           ov.names.l    = list(),        # var per level
                           std.ov        = FALSE,         # standardize ov's?
@@ -349,6 +354,27 @@ lav_data_full <- function(data          = NULL,          # data.frame
         ngroups <- 1L
         group.label <- character(0L)
         group <- character(0L)
+    }
+
+    # sampling weights
+    if(!is.null(sampling.weights)) {
+        if(is.character(sampling.weights)) {
+            if(!(sampling.weights %in% names(data))) {
+                stop("lavaan ERROR: sampling weights variable ", 
+                     sQuote(sampling.weights),
+                     " not found;\n  ",
+                     "variable names found in data frame are:\n  ",
+                     paste(names(data), collapse=" "))
+            }
+            # check for missing values in sampling weight variable
+            if(any(is.na(data[[sampling.weights]]))) {
+                stop("lavaan ERROR: sampling.weights variable ",
+                        sQuote(sampling.weights),
+                        " contains missing values\n", sep = "")
+            }
+        } else {
+            stop("lavaan ERROR: sampling weights argument should be a variable name in the data.frame")
+        }
     }
 
     # cluster
@@ -555,7 +581,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
     X        <- vector("list", length = ngroups)
     eXo      <- vector("list", length = ngroups)
     Lp       <- vector("list", length = ngroups)
-
+    weights  <- vector("list", length = ngroups)
 
     # collect information per upper-level group
     for(g in 1:ngroups) {
@@ -599,6 +625,24 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # extract data
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop = FALSE] )
         dimnames(X[[g]]) <- NULL ### copy?
+
+        if(!is.null(sampling.weights)) {
+            WT <- data[[sampling.weights]][case.idx[[g]]]
+            if(any(WT < 0)) {
+                stop("lavaan ERROR: some sampling weights are negative")
+            }
+
+            # check for missing values in sampling weight variable
+            if(any(is.na(WT))) {
+                stop("lavaan ERROR: sampling.weights variable ",
+                        sQuote(sampling.weights),
+                        " contains missing values\n", sep = "")
+            }
+
+            # rescale, so sum equals sample size in this group
+            WT2 <- WT / sum(WT) * nobs[[g]]
+            weights[[g]] <- WT2
+        }
 
         # construct integers for user-declared 'ordered' factors
         # FIXME: is this really (always) needed???
@@ -697,6 +741,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                    #ov.types        = ov.types,
                    #ov.idx          = ov.idx,
                    ordered         = as.character(ordered),
+                   weights         = weights,
                    ov              = ov,
                    case.idx        = case.idx,
                    missing         = missing,

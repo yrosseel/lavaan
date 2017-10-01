@@ -4,7 +4,7 @@
 \description{
 Fit a Confirmatory Factor Analysis (CFA) model.}
 \usage{
-cfa(model = NULL, data = NULL, ordered = NULL,
+cfa(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
     sample.cov = NULL, sample.mean = NULL, sample.nobs = NULL,
     group = NULL, cluster = NULL,
     constraints = "", WLS.V = NULL, NACOV = NULL,
@@ -24,6 +24,14 @@ cfa(model = NULL, data = NULL, ordered = NULL,
     Treat these variables as ordered (ordinal) variables, if they are 
     endogenous in the model. Importantly, all other variables will be treated 
     as numeric (unless they are declared as ordered in the original data.frame.)}
+\item{sampling.weights}{A variable name in the data frame containing
+   sampling weight information. Currently only available for non-clustered 
+   data. Sampling weights must be nonnegative, and sum to the total number
+   of observations. If this is not the case, the weights will be rescaled
+   so that they sum to the total number of observations. Only available
+   if estimator is ML in combination with robust standard errors and
+   a robust test statistic. By default, the estimator will be
+   \code{"MLR"}.}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
