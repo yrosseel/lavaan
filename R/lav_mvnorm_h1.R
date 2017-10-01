@@ -26,12 +26,26 @@
 # 1a: input is raw data
 lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
                                       casewise      = FALSE,
+                                      wt            = NULL,
                                       Sinv.method   = "eigen") {
     P <- NCOL(Y); N <- NROW(Y)
 
     # sample statistics
-    sample.mean <- colMeans(Y)
-    sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+    if(is.null(wt)) {
+        sample.mean <- colMeans(Y)
+        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+    } else {
+        out <- stats::cov.wt(Y, wt = wt, method = "ML")
+        if(casewise) {
+            loglik <- lav_mvnorm_loglik_data(Y, Mu = out$center, 
+                          Sigma = out$cov, casewise = casewise, 
+                          Sinv.method = Sinv.method)
+            return(loglik * WT)
+        } else {
+            sample.mean <- out$center
+            sample.cov  <- out$cov
+        }
+    }
 
     if(casewise) {
         LOG.2PI <- log(2 * pi)
@@ -108,12 +122,13 @@ lav_mvnorm_h1_loglik_samplestats <- function(sample.cov.logdet = NULL,
 
 # 4a: hessian logl Mu and vech(Sigma) from raw data
 lav_mvnorm_h1_logl_hessian_data <- function(Y              = NULL,
+                                            wt             = NULL,
                                             Sinv.method    = "eigen",
                                             sample.cov.inv = NULL) {
     N <- NROW(Y)
 
     # observed information
-    observed <- lav_mvnorm_h1_information_observed_data(Y = Y, 
+    observed <- lav_mvnorm_h1_information_observed_data(Y = Y, wt = wt,
                     Sinv.method = Sinv.method, sample.cov.inv = sample.cov.inv)
 
     -N*observed
@@ -143,15 +158,20 @@ lav_mvnorm_h1_logl_hessian_samplestats <-
 
 # 5a: unit expected information h1
 lav_mvnorm_h1_information_expected <- function(Y              = NULL,
+                                               wt             = NULL,
                                                sample.cov     = NULL,
                                                Sinv.method    = "eigen",
                                                sample.cov.inv = NULL) {
     if(is.null(sample.cov.inv)) {
 
         if(is.null(sample.cov)) {
-            # sample statistics
-            sample.mean <- colMeans(Y); N <- NROW(Y)
-            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            if(is.null(wt)) {
+                sample.mean <- colMeans(Y); N <- NROW(Y)
+                sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            } else {
+                out <- stats::cov.wt(Y, wt = wt, method = "ML")
+                sample.cov <- out$cov
+            }
         }
 
         # invert sample.cov
@@ -168,10 +188,12 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
 
 # 5b: unit observed information h1
 lav_mvnorm_h1_information_observed_data <- function(Y              = NULL,
+                                                    wt             = NULL,
                                                     Sinv.method    = "eigen",
                                                     sample.cov.inv = NULL) {
 
     lav_mvnorm_h1_information_expected(Y = Y, Sinv.method = Sinv.method,
+                                       wt = wt,
                                        sample.cov.inv = sample.cov.inv)
 }
 
@@ -199,10 +221,19 @@ lav_mvnorm_h1_information_observed_samplestats <-
 #     note: first order information h1 == A1 %*% Gamma %*% A1 
 #           (where A1 = obs/exp information h1)
 lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
+                                                 wt             = NULL,
                                                  sample.cov     = NULL,
                                                  Sinv.method    = "eigen",
                                                  sample.cov.inv = NULL,
                                                  Gamma          = NULL) {
+
+    if(!is.null(wt)) {
+        out <- stats::cov.wt(Y, wt = wt, method = "ML")
+        SC <- wt * lav_mvnorm_scores_mu_vech_sigma(Y = Y, Mu = out$center, 
+                                                   Sigma = out$cov)
+        return( crossprod(SC) / NROW(Y) )
+    }
+
     # Gamma
     if(is.null(Gamma)) {
         Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)

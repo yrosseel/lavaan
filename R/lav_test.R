@@ -214,6 +214,7 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
         } else {
             B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
+                          wt    = lavdata@weights[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
                           sample.cov.inv = lavsamplestats@icov[[g]])
@@ -614,6 +615,9 @@ lav_model_test <- function(lavmodel       = NULL,
                                                E.inv       = E.inv,
                                                x.idx       = x.idx)
         } else {
+            if(!is.null(lavdata@weights[[1]])) {
+                stop("lavaan ERROR: weights not supported yet using mimic!")
+            }
             Delta <- computeDelta(lavmodel = lavmodel)
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
             if(lavmodel@meanstructure) {
@@ -644,7 +648,8 @@ lav_model_test <- function(lavmodel       = NULL,
                     }
                     B1.group[[g]] <- lav_mvnorm_information_firstorder(
                             Y = lavdata@X[[g]],
-                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                            wt = lavdata@weights[[g]])
                 }
             }
             trace.UGamma <-

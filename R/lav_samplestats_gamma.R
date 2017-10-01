@@ -75,6 +75,7 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
 
 # NORMAL-THEORY
 lav_samplestats_Gamma_NT <- function(Y              = NULL,
+                                     wt             = NULL,
                                      COV            = NULL,
                                      MEAN           = NULL,
                                      rescale        = FALSE,
@@ -95,17 +96,26 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL,
     
         # coerce to matrix
         Y <- unname(as.matrix(Y)); N <- nrow(Y)
-        COV <- cov(Y)
+        if(is.null(wt)) {
+            COV <- cov(Y)
+        } else {
+            out <- stats::cov.wt(Y, wt = wt, method = "ML")
+            COV <- out$cov
+        }
     }
 
-    if(rescale) {
+    if(rescale && is.null(wt)) {
         COV <- COV * (N-1) / N # ML version
     }
 
     if(conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
        (meanstructure || slopestructure)) {
        stopifnot(!is.null(Y))
-       MEAN <- colMeans(Y)
+       if(is.null(wt)) {
+           MEAN <- colMeans(Y)
+       } else {
+           MEAN <- out$center
+       }
     }
 
     # rename
