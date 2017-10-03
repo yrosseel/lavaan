@@ -38,9 +38,9 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
         if(casewise) {
             loglik <- lav_mvnorm_loglik_data(Y, Mu = out$center, 
-                          Sigma = out$cov, casewise = casewise, 
+                          Sigma = out$cov, casewise = TRUE, 
                           Sinv.method = Sinv.method)
-            return(loglik * WT)
+            return(loglik * wt)
         } else {
             sample.mean <- out$center
             sample.cov  <- out$cov

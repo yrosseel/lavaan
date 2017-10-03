@@ -83,6 +83,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 cluster            = NULL,
                 level.label        = NULL,
 
+                # sampling weights 
+                sampling.weights   = NULL,
+
                 # estimation
                 estimator              = "default",
                 likelihood             = "default",

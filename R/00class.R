@@ -23,6 +23,7 @@ setClass("lavData",
         #ov.idx="list",             # column indices (all observed variables)
         ordered="character",       # ordered variables
         weights="list",            # sampling weights (per group)
+        sampling.weights="character", # sampling weights variable
         ov="list",                 # variable table
         case.idx="list",           # case indices per group
         missing="character",       # "listwise" or not?

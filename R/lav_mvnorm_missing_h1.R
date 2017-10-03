@@ -11,6 +11,7 @@
 lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
                                                    Mp          = NULL,
                                                    Yp          = NULL,
+                                                   wt          = NULL,
                                                    Sinv.method = "eigen",
                                                    verbose     = FALSE,
                                                    max.iter    = 500L,
@@ -24,7 +25,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         Mp <- lav_data_missing_patterns(Y)
     }
     if(is.null(Yp)) {
-        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp)
+        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
     }
 
     # remove empty cases
@@ -47,7 +48,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
     # report
     if(verbose) {
         #fx0 <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
-        fx0 <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp, 
+        fx0 <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp,
                                                      Mu = Mu, Sigma = Sigma,
                                                      log2pi = FALSE, 
                                                      minus.two = TRUE)/N
@@ -60,7 +61,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
     for(i in 1:max.iter) {
 
         # E-step
-        Estep <- lav_mvnorm_missing_estep(Y = Y, Mp = Mp, 
+        Estep <- lav_mvnorm_missing_estep(Y = Y, Mp = Mp, wt = wt,
                                           Mu = Mu, Sigma = Sigma,
                                           Sinv.method = Sinv.method)
         T1 <- Estep$T1
@@ -90,7 +91,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         # report fx
         if(verbose) {
             #fx <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
-            fx <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp, 
+            fx <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp,
                                                         Mu = Mu, Sigma = Sigma,
                                                         log2pi = FALSE,
                                                         minus.two = TRUE)/N
@@ -133,6 +134,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 #                    - (N times the) sandwich estimator for acov(mu,vech(Sigma))
 lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
                                            Mp          = NULL,
+                                           wt          = NULL,
                                            Yp          = NULL,
                                            Sinv.method = "eigen",
                                            Mu          = NULL,
@@ -147,7 +149,7 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
 
     # sample stats per pattern
     if(is.null(Yp) && (information == "observed" || is.null(Sigma))) {
-        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp)
+        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
     }
 
     # Sigma and Mu

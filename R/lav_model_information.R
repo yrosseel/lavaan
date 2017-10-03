@@ -391,8 +391,8 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
             if(lavsamplestats@missing.flag) {
                 B1 <- 
                   lav_mvnorm_missing_information_firstorder(Y = lavdata@X[[g]],
-                      Mp = lavdata@Mp[[g]], Mu = Mu.hat[[g]], 
-                      Sigma = Sigma.hat[[g]])
+                      Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
+                      Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
             } else {
                 if(lavmodel@meanstructure) {
                     B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],

@@ -272,24 +272,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             if(verbose) cat("done\n")
         }
 
-        # fill in the other slots
-        if(!is.null(eXo[[g]])) {
-            if(!is.null(lavdata@weights[[g]])) {
-                out <- stats::cov.wt(eXo[[g]], wt = lavdata@weights[[g]], 
-                                     method = "ML")
-                cov.x[[g]]  <- out$cov
-                mean.x[[g]] <- out$center 
-            } else { 
-                cov.x[[g]] <- cov(eXo[[g]], use="pairwise")
-                if(rescale) {
-                    # we 'transform' the sample cov (divided by n-1) 
-                    # to a sample cov divided by 'n'
-                    cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
-                }
-                mean.x[[g]] <- colMeans(eXo[[g]])
-            }
-        }
-
         if(categorical) {
 
             # convenience
@@ -343,11 +325,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             YLp[[g]] <- lav_samplestats_cluster_patterns(Y  = X[[g]],
                                                          Lp = lavdata@Lp[[g]])
 
-            # 1. adapt lav_samplestats_cluster_patterns to use 
-            #    within.idx, between.idx, ...
-            # using S.PW for cov[[1]]
+            # FIXME: needed?
             cov[[g]] <- unname( stats::cov(X[[g]], use="pairwise"))
-            #YLp[[g]][[2]]$S.PW
             mean[[g]] <- unname( colMeans(X[[g]], na.rm=TRUE) )
             var[[g]] <- diag(cov[[g]])
 
@@ -355,9 +334,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
  
             if(conditional.x) {
 
+                # FIXME!
+                # no handling of missing data yet....
+                if(missing %in% c("ml", "two.stage", "robust.two.stage")) {
+                    stop("lavaan ERROR: missing = ", missing, " + conditional.x not supported yet")
+                }
+
                 # residual covariances!
 
-                # FIXME: how to handle missing data here?
                    Y <- cbind(X[[g]], eXo[[g]])
                  COV <- unname( stats::cov(Y, use="pairwise"))
                 MEAN <- unname( colMeans(Y, na.rm=TRUE) )
@@ -391,12 +375,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             } else if(missing == "two.stage" ||
                       missing == "robust.two.stage") {
-                stopifnot(!conditional.x) # for now
                 missing.flag. <- FALSE #!!! just use sample statistics
                 missing.[[g]] <-
                     lav_samplestats_missing_patterns(Y  = X[[g]],
-                                                     Mp = Mp[[g]])
+                                                     Mp = Mp[[g]],
+                                                     wt = lavdata@weights[[g]])
                 out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
+                          wt = lavdata@weights[[g]],
                           Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
                 missing.h1.[[g]]$sigma <- out$Sigma
                 missing.h1.[[g]]$mu    <- out$Mu
@@ -406,10 +391,45 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 cov[[g]]  <- missing.h1.[[g]]$sigma
                 var[[g]]  <- diag(cov[[g]])
                 mean[[g]] <- missing.h1.[[g]]$mu
+            } else if(missing == "ml") {
+                missing.flag. <- TRUE
+                missing.[[g]] <-
+                    lav_samplestats_missing_patterns(Y  = X[[g]],
+                                                     Mp = Mp[[g]],
+                                                     wt = lavdata@weights[[g]])
+
+                if(missing.h1 && nlevels == 1L) {
+                    # estimate moments unrestricted model
+                    out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
+                              wt = lavdata@weights[[g]],
+                              Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
+                    missing.h1.[[g]]$sigma <- out$Sigma
+                    missing.h1.[[g]]$mu    <- out$Mu
+                    missing.h1.[[g]]$h1    <- out$fx
+                }
+
+                if(!is.null(lavdata@weights[[g]])) {
+                    # here, sample statistics == EM estimates
+                    cov[[g]]  <- missing.h1.[[g]]$sigma
+                    var[[g]]  <- diag(cov[[g]])
+                    mean[[g]] <- missing.h1.[[g]]$mu
+                } else {
+                    # NEEDED? why not just EM-based?
+                    cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
+                    var[[g]]  <-   diag(cov[[g]])
+                    # rescale cov by (N-1)/N? (only COV!)
+                    if(rescale) {
+                        # we 'transform' the sample cov (divided by n-1)
+                        # to a sample cov divided by 'n'
+                        cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                    }
+                    mean[[g]] <- colMeans(X[[g]], na.rm=TRUE)
+                }
             } else {
+                # LISTWISE
                 if(!is.null(lavdata@weights[[g]])) {
                     out <- stats::cov.wt(X[[g]], wt = lavdata@weights[[g]],
-                                         method = "ML")
+                                        method = "ML")
                     cov[[g]]  <- out$cov
                     var[[g]]  <- diag(cov[[g]])
                     mean[[g]] <- out$center
@@ -461,28 +481,28 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         }
 
-        # if missing = "fiml", sample statistics per pattern
-        if(missing == "ml") {
-            #if(nlevels > 1L) {
-            #    stop("lavaan ERROR: multilevel + fiml not supported yet")
-            #}
-            if(conditional.x) {
-                stop("lavaan ERROR: missing = \"ml\" + conditional.x not supported yet")
-            }
-            stopifnot(!conditional.x) # for now
-            missing.flag. <- TRUE
-            missing.[[g]] <- 
-                lav_samplestats_missing_patterns(Y  = X[[g]],
-                                                 Mp = Mp[[g]])
-
-            #cat("missing.h1 = "); print(missing.h1); cat("\n")
-            if(missing.h1 && nlevels == 1L) {
-                # estimate moments unrestricted model
-                out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
-                          Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
-                missing.h1.[[g]]$sigma <- out$Sigma
-                missing.h1.[[g]]$mu    <- out$Mu
-                missing.h1.[[g]]$h1    <- out$fx
+        # fill in the other slots
+        if(!is.null(eXo[[g]])) {
+            if(!is.null(lavdata@weights[[g]])) {
+                if(missing != "listwise") {
+                    cov.x[[g]]  <- missing.h1.[[g]]$sigma[ x.idx[[g]],  
+                                                           x.idx[[g]],
+                                                           drop = FALSE ]
+                    mean.x[[g]] <- missing.h1.[[g]]$mu[  x.idx[[g]] ]
+                } else {
+                    out <- stats::cov.wt(eXo[[g]], wt = lavdata@weights[[g]],
+                                         method = "ML")
+                    cov.x[[g]]  <- out$cov
+                    mean.x[[g]] <- out$center
+                }
+            } else {
+                cov.x[[g]] <- cov(eXo[[g]], use="pairwise")
+                if(rescale) {
+                    # we 'transform' the sample cov (divided by n-1) 
+                    # to a sample cov divided by 'n'
+                    cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
+                }
+                mean.x[[g]] <- colMeans(eXo[[g]])
             }
         }
 
@@ -1033,7 +1053,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 }
 
 # compute sample statistics, per missing pattern
-lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL) {
+lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL) {
 
     # coerce Y to matrix
     Y <- as.matrix(Y)
@@ -1052,18 +1072,31 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL) {
 
         # more than one case
         if (Mp$freq[p] > 1L) {
-            MY <- colMeans(RAW)
-            SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
+            if(!is.null(wt)) {
+                out <- stats::cov.wt(RAW, wt = wt[Mp$case.idx[[p]]],
+                                     method = "ML")
+                SY <- out$cov
+                MY <- out$center
+            } else {
+                MY <- colMeans(RAW)
+                SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
+            }
         }
-        # only a single observation
+        # only a single observation (no need to weight!)
         else {
             SY <- 0
             MY <- as.numeric(RAW)
         }
 
+        if(!is.null(wt)) {
+            FREQ <- sum( wt[Mp$case.idx[[p]]] )
+        } else {
+            FREQ <- Mp$freq[p]
+        }
+
         # store sample statistics, var.idx and freq
         Yp[[p]] <- list(SY = SY, MY = MY, var.idx = Mp$pat[p,],
-                        freq = Mp$freq[p])
+                        freq = FREQ)
     }
 
     Yp

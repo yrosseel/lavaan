@@ -28,6 +28,7 @@
 
 # YR 09 Feb 2016: first version
 # YR 19 Mar 2017: 10)
+# YR 03 Okt 2018: a few functions gain a wt= argument
 
 
 # 1) likelihood
@@ -39,6 +40,7 @@
 #    (much) faster than the other
 lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
                                            Mu          = NULL,
+                                           wt          = NULL,
                                            Sigma       = NULL,
                                            casewise    = FALSE,
                                            pattern     = TRUE,
@@ -47,11 +49,11 @@ lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
                                            minus.two   = FALSE) {
 
     if(pattern) {
-        llik <- lav_mvnorm_missing_llik_pattern(Y = Y, Mu = Mu, 
+        llik <- lav_mvnorm_missing_llik_pattern(Y = Y, wt = wt, Mu = Mu, 
                     Sigma = Sigma, Sinv.method = Sinv.method,
                     log2pi = log2pi, minus.two = minus.two)
     } else {
-        llik <- lav_mvnorm_missing_llik_casewise(Y = Y, Mu = Mu, 
+        llik <- lav_mvnorm_missing_llik_casewise(Y = Y, wt = wt, Mu = Mu, 
                     Sigma = Sigma, Sinv.method = Sinv.method,
                     log2pi = log2pi, minus.two = minus.two)
     }
@@ -128,6 +130,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
 
 # casewise Sinv.method
 lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
+                                             wt          = NULL,
                                              Mu          = NULL,
                                              Sigma       = NULL,
                                              Sinv.method = "eigen",
@@ -193,12 +196,18 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
         llik <- -2 * llik
     }
 
+    # weights?
+    if(!is.null(wt)) {
+        llik <- llik * wt
+    }
+
     llik
 }
 
 # pattern-based, but casewise loglikelihoods
 lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
                                             Mp          = NULL,
+                                            wt          = NULL,
                                             Mu          = NULL,
                                             Sigma       = NULL,
                                             Sinv.method = "eigen",
@@ -271,6 +280,11 @@ lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
         llik <- -2 * llik
     }
 
+    # weights?
+    if(!is.null(wt)) {
+        llik <- llik * wt
+    }
+
     llik
 }
 
@@ -281,12 +295,13 @@ lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
 
 # 2a: derivative logl with respect to mu
 lav_mvnorm_missing_dlogl_dmu <- function(Y           = NULL,
+                                         wt          = NULL,
                                          Mu          = NULL,
                                          Sigma       = NULL,
                                          Sigma.inv   = NULL,
                                          Sinv.method = "eigen") {
 
-    SC <- lav_mvnorm_missing_scores_mu(Y = Y, Mu = Mu, Sigma = Sigma,
+    SC <- lav_mvnorm_missing_scores_mu(Y = Y, wt = wt, Mu = Mu, Sigma = Sigma,
               Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
 
     colSums(SC, na.rm = TRUE)
@@ -340,6 +355,7 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(Yp          = NULL,
 # 2b: derivative logl with respect to Sigma (full matrix, ignoring symmetry)
 lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
                                             Mp          = NULL,
+                                            wt          = NULL, 
                                             Mu          = NULL,
                                             Sigma       = NULL,
                                             Sigma.inv   = NULL,
@@ -383,8 +399,22 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
             sigma.inv <- Sigma.inv
         }
 
+        if(!is.null(wt)) {
+            FREQ <- sum( wt[case.idx] )
+        } else {
+            FREQ <- Mp$freq[p]
+        }
+
         if(length(case.idx) > 1L) {
-            W.tilde <- crossprod(Yc[case.idx, var.idx, drop = FALSE])/Mp$freq[p]
+            if(!is.null(wt)) {
+                out <- stats::cov.wt(Y[case.idx, var.idx, drop = FALSE], 
+                                     wt = wt[Mp$case.idx[[p]]], method = "ML")
+                SY <- out$cov
+                MY <- out$center
+                W.tilde <- SY + tcrossprod(MY - Mu[var.idx])
+            } else {
+                W.tilde <- crossprod(Yc[case.idx, var.idx, drop = FALSE])/FREQ
+            }
         } else {
             W.tilde <- tcrossprod(Yc[case.idx, var.idx])
         }
@@ -395,7 +425,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
                         (sigma.inv %*% W.tilde %*% sigma.inv))
 
         # update dSigma
-        dSigma <- dSigma + (dSigma.pattern * Mp$freq[p])
+        dSigma <- dSigma + (dSigma.pattern * FREQ)
     }
 
     dSigma
@@ -452,13 +482,14 @@ lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp          = NULL,
 
 # 2c: derivative logl with respect to vech(Sigma)
 lav_mvnorm_missing_dlogl_dvechSigma <- function(Y           = NULL,
+                                                wt          = NULL,
                                                 Mu          = NULL,
                                                 Sigma       = NULL,
                                                 Sigma.inv   = NULL,
                                                 Sinv.method = "eigen") {
 
-    FULL <- lav_mvnorm_missing_dlogl_dSigma(Y = Y, Mu = Mu, Sigma = Sigma,
-              Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
+    FULL <- lav_mvnorm_missing_dlogl_dSigma(Y = Y, wt = wt, Mu = Mu, 
+            Sigma = Sigma, Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
     as.numeric( lav_matrix_duplication_pre( as.matrix(lav_matrix_vec(FULL)) ) )
 }
 
@@ -522,6 +553,7 @@ lav_mvnorm_missing_dlogl_dvechSigma_samplestats <-
 
 # 3a: casewise scores with respect to mu
 lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
+                                         wt          = NULL,
                                          Mp          = NULL,
                                          Mu          = NULL,
                                          Sigma       = NULL,
@@ -571,11 +603,16 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
             Yc[case.idx, var.idx, drop = FALSE] %*% sigma.inv
     }
 
+    if(!is.null(wt)) {
+        dmu <- dmu * wt
+    }
+
     dmu
 }
 
 # 3b: casewise scores with respect to vech(Sigma)
 lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
+                                                 wt          = NULL,
                                                  Mp          = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
@@ -644,12 +681,17 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
     # adjust for vech
     SC[,lav_matrix_diagh_idx(P)] <- SC[,lav_matrix_diagh_idx(P)] / 2
 
+    if(!is.null(wt)) {
+        SC <- SC * wt
+    }
+
     SC
 }
 
 # 3c: casewise scores with respect to mu + vech(Sigma)
 lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
                                                     Mp          = NULL,
+                                                    wt          = NULL,
                                                     Mu          = NULL,
                                                     Sigma       = NULL,
                                                     Sigma.inv   = NULL,
@@ -724,19 +766,26 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
     # adjust for vech
     SC[,lav_matrix_diagh_idx(P)] <- SC[,lav_matrix_diagh_idx(P)] / 2
 
-    cbind(dmu, SC)
+    out <- cbind(dmu, SC)
+
+    if(!is.null(wt)) {
+        out <- out * wt
+    }
+
+    out
 }
 
 
 # 4) Hessian of logl
 lav_mvnorm_missing_logl_hessian_data <- function(Y           = NULL,
                                                  Mp          = NULL,
+                                                 wt          = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
                                                  Sinv.method = "eigen",
                                                  Sigma.inv   = NULL) {
     # missing patterns
-    Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp)
+    Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
 
     lav_mvnorm_missing_logl_hessian_samplestats(Yp = Yp, Mu = Mu,
         Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
@@ -816,6 +865,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
 # (old term: Abeta, expected)
 lav_mvnorm_missing_information_expected <- function(Y           = NULL,
                                                     Mp          = NULL,
+                                                    wt          = NULL,
                                                     Mu          = NULL,# unused
                                                     Sigma       = NULL,
                                                     Sigma.inv   = NULL,
@@ -834,7 +884,11 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
     }
 
     # N
-    N <- sum(Mp$freq) # removed empty cases!
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- sum(Mp$freq) # removed empty cases!
+    }
 
     I11 <- matrix(0, P, P)
     I22 <- matrix(0, P*(P+1)/2, P*(P+1)/2)
@@ -861,8 +915,14 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
 
         S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
 
-        I11 <- I11 + Mp$freq[p] * S.inv
-        I22 <- I22 + Mp$freq[p] * S2.inv
+        if(!is.null(wt)) { 
+            FREQ <- sum( wt[ Mp$case.idx[[p]] ] )
+        } else {
+            FREQ <- Mp$freq[p]
+        }
+
+        I11 <- I11 + FREQ * S.inv
+        I22 <- I22 + FREQ * S2.inv
     }
 
     lav_matrix_bdiag(I11, I22)/N
@@ -872,6 +932,7 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
 # (old term: Abeta, observed)
 lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
                                                          Mp          = NULL,
+                                                         wt          = NULL,
                                                          Mu          = NULL,
                                                          Sigma       = NULL,
                                                          Sinv.method = "eigen",
@@ -882,11 +943,15 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
     }
 
     # N
-    N <- sum(Mp$freq)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- sum(Mp$freq)
+    }
 
     # observed information
-    observed <- lav_mvnorm_missing_logl_hessian_data(Y = Y, Mp = Mp, Mu = Mu,
-                    Sigma = Sigma, Sinv.method = Sinv.method, 
+    observed <- lav_mvnorm_missing_logl_hessian_data(Y = Y, Mp = Mp, wt = wt,
+                    Mu = Mu, Sigma = Sigma, Sinv.method = Sinv.method, 
                     Sigma.inv = Sigma.inv)
 
     -observed/N
@@ -914,6 +979,7 @@ lav_mvnorm_missing_information_observed_samplestats <-
 # (old term: Bbeta)
 lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
                                                       Mp          = NULL,
+                                                      wt          = NULL,
                                                       Mu          = NULL,
                                                       Sigma       = NULL,
                                                       Sinv.method = "eigen",
@@ -924,10 +990,15 @@ lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
     }
 
     # N
-    N <- sum(Mp$freq)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- sum(Mp$freq)
+    }
 
-    SC <- lav_mvnorm_missing_scores_mu_vech_sigma(Y = Y, Mp = Mp, Mu = Mu, 
-              Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    SC <- lav_mvnorm_missing_scores_mu_vech_sigma(Y = Y, Mp = Mp, wt = wt, 
+              Mu = Mu, Sigma = Sigma, Sinv.method = Sinv.method, 
+              Sigma.inv = Sigma.inv)
 
     lav_matrix_crossprod(SC)/N
 }
@@ -936,6 +1007,7 @@ lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
 #     from raw data, in one go for efficiency
 lav_mvnorm_missing_information_both <- function(Y           = NULL,
                                                 Mp          = NULL,
+                                                wt          = NULL,
                                                 Mu          = NULL,
                                                 Sigma       = NULL,
                                                 Sinv.method = "eigen",
@@ -961,11 +1033,15 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
     }
 
     if(information == "observed") {
-        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp)
+        Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
     }
 
     # N
-    N <- sum(Mp$freq)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- sum(Mp$freq)
+    }
 
     # subtract Mu
     Yc <- t( t(Y) - Mu )
@@ -1011,11 +1087,17 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
         S.inv <- matrix(0, P, P)
         S.inv[var.idx, var.idx] <- sigma.inv
 
+        if(!is.null(wt)) {
+            FREQ <- sum( wt[case.idx] )
+        } else {
+            FREQ <- Mp$freq[p]
+        }
+
         if(information == "expected") {
             S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
 
-            I11 <- I11 + Mp$freq[p] * S.inv
-            I22 <- I22 + Mp$freq[p] * S2.inv
+            I11 <- I11 + FREQ * S.inv
+            I22 <- I22 + FREQ * S2.inv
         } else {
             pat.freq <- Yp[[p]]$freq
         
@@ -1057,6 +1139,10 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
 
     # add dmu
     SC <- cbind(dmu, SC)
+
+    if(!is.null(wt)) {
+        SC <- SC * wt
+    }
 
     # first order information
     Bbeta <- lav_matrix_crossprod(SC)/N
@@ -1199,6 +1285,7 @@ lav_mvnorm_missing_impute_pattern <- function(Y           = NULL,
 # plus correction
 lav_mvnorm_missing_estep <- function(Y           = NULL,
                                      Mp          = NULL,
+                                     wt          = NULL,
                                      Mu          = NULL,
                                      Sigma       = NULL,
                                      Sigma.inv   = NULL,
@@ -1235,9 +1322,16 @@ lav_mvnorm_missing_estep <- function(Y           = NULL,
 
         # if complete, just compute first and second moments
         if(all(var.idx)) {
-            # complete pattern
-            T1 <- T1 + colSums(O)
-            T2 <- T2 + crossprod(O)
+
+            if(!is.null(wt)) {
+                WT <- wt[Mp$case.idx[[p]]]
+                T1 <- T1 + colSums(WT * O) 
+                T2 <- T2 + crossprod(sqrt(WT) * O)
+            } else {
+                # complete pattern
+                T1 <- T1 + colSums(O)
+                T2 <- T2 + crossprod(O)
+            }
             next
         }
 
@@ -1266,16 +1360,27 @@ lav_mvnorm_missing_estep <- function(Y           = NULL,
         Y.complete[, var.idx] <- O
         Y.complete[,!var.idx] <- Y.missing
 
-        # 1. SUM `completed' pattern
-        T1.pat <- colSums(Y.complete)
+        if(!is.null(wt)) {
+            WT <- wt[Mp$case.idx[[p]]]
+            T1.pat <- colSums(WT * Y.complete)
+            T2.pat <- crossprod(sqrt(WT) * Y.complete)
+        } else {
+            # 1. SUM `completed' pattern
+            T1.pat <- colSums(Y.complete)
 
-        # 2. CROSSPROD `completed' pattern
-        T2.pat <- crossprod(Y.complete)
+            # 2. CROSSPROD `completed' pattern
+            T2.pat <- crossprod(Y.complete)
+        }
 
         # correction for missing cells: conditional covariances
         T2.p11 <- Sigma_11 - (Sigma_12 %*% Sigma_22.inv %*% Sigma_21)
-        T2.pat[!var.idx, !var.idx] <- 
-            T2.pat[!var.idx, !var.idx] + (T2.p11 * Mp$freq[[p]])
+        if(!is.null(wt)) {
+            T2.pat[!var.idx, !var.idx] <-
+                T2.pat[!var.idx, !var.idx] + (T2.p11 * sum(WT))
+        } else {
+            T2.pat[!var.idx, !var.idx] <- 
+                T2.pat[!var.idx, !var.idx] + (T2.p11 * Mp$freq[[p]])
+        }
 
         # accumulate
         T1 <- T1 + T1.pat

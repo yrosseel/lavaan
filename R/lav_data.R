@@ -210,6 +210,7 @@ lavData <- function(data              = NULL,          # data.frame
                        ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
                        weights     = vector("list", length = ngroups),
+                       sampling.weights = character(0L),
                        ov          = ov,
                        std.ov      = FALSE,
                        missing     = "listwise",
@@ -281,6 +282,7 @@ lavData <- function(data              = NULL,          # data.frame
                        ov.names.l  = ov.names.l,
                        ordered     = as.character(ordered),
                        weights     = vector("list", length = ngroups),
+                       sampling.weights = character(0L),
                        ov          = ov,
                        missing     = "listwise",
                        case.idx    = vector("list", length = ngroups),
@@ -724,6 +726,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
     } # groups, at first level 
 
+    if(is.null(sampling.weights)) {
+        sampling.weights <- character(0L)
+    }
+
     lavData <- new("lavData",
                    data.type       = "full",
                    ngroups         = ngroups,
@@ -742,6 +748,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                    #ov.idx          = ov.idx,
                    ordered         = as.character(ordered),
                    weights         = weights,
+                   sampling.weights = sampling.weights,
                    ov              = ov,
                    case.idx        = case.idx,
                    missing         = missing,
@@ -942,6 +949,7 @@ lav_data_print_short <- function(object) {
        }
     }
 
+    #cat("Data information:\n\n")
     if(lavdata@ngroups == 1L) {
         if(listwise) {
             cat(sprintf("  %-40s", ""), sprintf("  %10s", "Used"),
@@ -998,7 +1006,6 @@ lav_data_print_short <- function(object) {
             }
         }
     }
-    cat("\n")
 
     # missing patterns?
     if(!is.null(lavdata@Mp[[1L]])) {
@@ -1006,7 +1013,7 @@ lav_data_print_short <- function(object) {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns")
             t1.txt <- sprintf("  %10i",
                               lavdata@Mp[[1L]]$npatterns)
-            cat(t0.txt, t1.txt, "\n\n", sep="")
+            cat(t0.txt, t1.txt, "\n", sep="")
         } else {
             t0.txt <- sprintf("  %-40s", "Number of missing patterns per group")
             cat(t0.txt, "\n")
@@ -1015,8 +1022,16 @@ lav_data_print_short <- function(object) {
                                  lavdata@Mp[[g]]$npatterns)
                 cat(t.txt, "\n", sep="")
             }
-            cat("\n")
         }
     }
+
+    # sampling weights?
+    if(!is.null(lavdata@weights[[1L]])) {
+        t0.txt <- sprintf("  %-30s", "Sampling Weights variable")
+        t1.txt <- sprintf("  %20s", lavdata@sampling.weights)
+        cat(t0.txt, t1.txt, "\n", sep="")
+    }
+
+    cat("\n")
 }
 

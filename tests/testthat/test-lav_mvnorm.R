@@ -120,10 +120,10 @@ mLL2 <- sum(sapply(1:4, function(pp) {
 #            sigma = mSigma[varnames[pattern[pp,]], varnames[pattern[pp,]]], log = TRUE))
 #}))
 ## functions of actual interest
-mLL4 <- lav_mvnorm_missing_loglik_data(H9miss, mMu, mSigma, pattern = FALSE)
-mLL5 <- lav_mvnorm_missing_loglik_data(H9miss, mMu, mSigma, pattern = TRUE)
+mLL4 <- lav_mvnorm_missing_loglik_data(H9miss, Mu = mMu, Sigma = mSigma, pattern = FALSE)
+mLL5 <- lav_mvnorm_missing_loglik_data(H9miss, Mu = mMu, Sigma = mSigma, pattern = TRUE)
 ## from sample stats
-mLL6 <- lav_mvnorm_missing_loglik_samplestats(mfit@SampleStats@missing[[1]], mMu, mSigma)
+mLL6 <- lav_mvnorm_missing_loglik_samplestats(mfit@SampleStats@missing[[1]], Mu = mMu, Sigma = mSigma)
 
 test_that("6 target-model log-likelihoods match for missing data", {
   expect_equal(mLL1, mLL2)

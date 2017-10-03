@@ -189,7 +189,8 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
             if(information == "expected") {
                 A1 <- lav_mvnorm_missing_information_expected(
                           Y     = lavdata@X[[g]],
-                          Mp    = lavdata@Mp[[g]], 
+                          Mp    = lavdata@Mp[[g]],
+                          wt    = lavdata@weights[[g]],
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
                           Sigma = lavsamplestats@missing.h1[[g]]$sigma)
             } else {
@@ -209,6 +210,7 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
             B1 <- lav_mvnorm_missing_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Mp    = lavdata@Mp[[g]],
+                          wt    = lavdata@weights[[g]],
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
                           Sigma = lavsamplestats@missing.h1[[g]]$sigma)
         } else {
@@ -628,8 +630,9 @@ lav_model_test <- function(lavmodel       = NULL,
             for(g in 1:lavsamplestats@ngroups) {
                 if(lavsamplestats@missing.flag) {
                     out <- lav_mvnorm_missing_information_both(
-                               Y = lavdata@X[[g]],
+                               Y  = lavdata@X[[g]],
                                Mp = lavdata@Mp[[g]],
+                               wt = lavdata@weights[[g]],
                                Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
                                information = information)
                     A1.group[[g]] <- out$Abeta
