@@ -21,6 +21,7 @@
 # YR 07 Feb 2016: first version
 # YR 24 Mar 2016: added firstorder information, hessian logl
 # YR 19 Jan 2017: added lav_mvnorm_inverted_information_expected
+# YR 04 Okt 2018: adding wt= argument, and missing meanstructure=
 
 # 0. densities 
 lav_mvnorm_dmvnorm <- function(Y             = NULL,
@@ -461,12 +462,13 @@ lav_mvnorm_scores_mu_vech_sigma <- function(Y           = NULL,
 # 4. hessian of logl
 
 # 4a: hessian logl Mu and vech(Sigma) from raw data
-lav_mvnorm_logl_hessian_data <- function(Y           = NULL,
-                                         wt          = NULL,
-                                         Mu          = NULL,
-                                         Sigma       = NULL,
-                                         Sinv.method = "eigen",
-                                         Sigma.inv   = NULL) {
+lav_mvnorm_logl_hessian_data <- function(Y             = NULL,
+                                         wt            = NULL,
+                                         Mu            = NULL,
+                                         Sigma         = NULL,
+                                         Sinv.method   = "eigen",
+                                         Sigma.inv     = NULL,
+                                         meanstructure = TRUE) {
     if(!is.null(wt)) {
         N <- sum(wt)
     } else {
@@ -475,27 +477,30 @@ lav_mvnorm_logl_hessian_data <- function(Y           = NULL,
 
     # observed information
     observed <- lav_mvnorm_information_observed_data(Y = Y, wt = wt, Mu = Mu,
-        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv,
+        meanstructure = meanstructure)
 
     -N*observed
 }
 
 # 4b: hessian Mu and vech(Sigma) from samplestats
 lav_mvnorm_logl_hessian_samplestats <-
-    function(sample.mean  = NULL,
-             sample.cov   = NULL,
-             sample.nobs  = NULL,
-             Mu           = NULL,
-             Sigma        = NULL,
-             Sinv.method  = "eigen",
-             Sigma.inv    = NULL) {
+    function(sample.mean   = NULL,
+             sample.cov    = NULL,
+             sample.nobs   = NULL,
+             Mu            = NULL,
+             Sigma         = NULL,
+             Sinv.method   = "eigen",
+             Sigma.inv     = NULL,
+             meanstructure = TRUE) {
 
     N <- sample.nobs
 
     # observed information
     observed <- lav_mvnorm_information_observed_samplestats(sample.mean = 
         sample.mean, sample.cov = sample.cov, Mu = Mu, 
-        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv,
+        meanstructure = meanstructure)
     
     -N*observed
 }
@@ -535,7 +540,8 @@ lav_mvnorm_information_observed_data <- function(Y           = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
                                                  Sinv.method = "eigen",
-                                                 Sigma.inv   = NULL) {
+                                                 Sigma.inv   = NULL,
+                                                 meanstructure = TRUE) {
 
     if(!is.null(wt)) {
         N <- sum(wt)
@@ -551,7 +557,8 @@ lav_mvnorm_information_observed_data <- function(Y           = NULL,
 
     lav_mvnorm_information_observed_samplestats(sample.mean = sample.mean,
         sample.cov = sample.cov, Mu = Mu, Sigma = Sigma,
-        Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+        Sinv.method = Sinv.method, Sigma.inv = Sigma.inv,
+        meanstructure = meanstructure)
 }
 
 # 5b-bis: observed information h0 from sample statistics
@@ -561,7 +568,8 @@ lav_mvnorm_information_observed_samplestats <-
              Mu           = NULL,
              Sigma        = NULL,
              Sinv.method  = "eigen",
-             Sigma.inv    = NULL) {
+             Sigma.inv    = NULL,
+             meanstructure = TRUE) {
 
     sample.mean <- as.numeric(sample.mean); Mu <- as.numeric(Mu)
 
@@ -573,16 +581,25 @@ lav_mvnorm_information_observed_samplestats <-
 
     W.tilde <- sample.cov + tcrossprod(sample.mean - Mu)
     
-    I11 <- Sigma.inv
-    I21 <- lav_matrix_duplication_pre( (Sigma.inv %*% (sample.mean - Mu)) %x%
-                                        Sigma.inv )
-    I12 <- t(I21)
+    if(meanstructure) {
+        I11 <- Sigma.inv
+        I21 <- lav_matrix_duplication_pre( (Sigma.inv %*% 
+                                            (sample.mean - Mu)) %x%
+                                            Sigma.inv )
+        I12 <- t(I21)
+    }
     
     AAA <- Sigma.inv %*% (2*W.tilde - Sigma) %*% Sigma.inv
     I22 <- (1/2) * lav_matrix_duplication_pre_post(Sigma.inv %x% AAA)
 
-    rbind( cbind(I11, I12),
-           cbind(I21, I22) )
+    if(meanstructure) {
+        out <- rbind( cbind(I11, I12),
+                      cbind(I21, I22) )
+    } else {
+        out <- I22
+    }
+
+    out
 }
 
 # 5c: unit first-order information h0
@@ -605,6 +622,7 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
                   Mu = Mu, Sigma = Sigma,
                   Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
     } else {
+        # the caller should use Mu = sample.mean
         SC <- lav_mvnorm_scores_vech_sigma(Y = Y, wt = wt,
                   Mu = Mu, Sigma = Sigma,
                   Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)

@@ -301,7 +301,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # meanstructure
-        if(any(FLAT$op == "~1")) {
+        if(any(FLAT$op == "~1") || !is.null(sample.mean)) {
             opt$meanstructure <- TRUE
         }
         if(!is.null(group) && is.null(dotdotdot$meanstructure)) {

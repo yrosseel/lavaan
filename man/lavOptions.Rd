@@ -147,7 +147,8 @@ Estimation options:
       with robust standard errors and a robust (scaled) test statistic. For
       \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, classic robust standard
       errors are used (\code{se="robust.sem"}); for \code{"MLF"}, standard
-      errors are based on first-order derivatives (\code{se="first.order"});
+      errors are based on first-order derivatives 
+      (\code{information = "first.order"});
       for \code{"MLR"}, `Huber-White' robust standard errors are used
       (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
       a Satorra-Bentler scaled (mean adjusted) test statistic
@@ -180,13 +181,27 @@ Estimation options:
       change).}
     \item{\code{information}:}{If \code{"expected"}, the expected 
       information matrix is used (to compute the standard errors). If 
-      \code{"observed"}, the observed information matrix is used. If 
-      \code{"default"}, the value is set depending on the estimator and the 
-      mimic option.}
+      \code{"observed"}, the observed information matrix is used. 
+      If \code{"first.order"}, the information matrix is based on the
+      outer product of the casewise scores. See also the options
+      \code{"h1.information"} and \code{"observed.information"} for
+      further control. If \code{"default"}, the value is set depending 
+      on the estimator, the missing argument, and the mimic option.}
+   \item{\code{h1.information}:}{If \code{"structured"} (the default), the
+      unrestricted (h1) information part of the (expected, first.order or 
+      observed if h1 is used) information matrix is based on the structured, 
+      or model-implied statistics (model-implied covariance matrix, 
+      model-implied mean vector, etc.). 
+      If \code{"unstructured"}, the unrestricted (h1) information part is
+      based on sample-based statistics (observed covariance matrix, observed
+      mean vector, etc.)}
+   \item{\code{observed.information}:}{If \code{"hessian"}, the observed
+      information matrix is based on the hessian of the objective function.
+      If \code{"h1"}, an approximation is used that is based on 
+      the observed information matrix of the unrestricted (h1) model.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
-      are computed based on inverting the (expected or observed) information
-      matrix. If \code{"first.order"}, standard errors are computed based on
-      first-order derivatives. If \code{"robust.sem"}, conventional robust
+      are computed based on inverting the (expected, observed or first.order) 
+      information matrix. If \code{"robust.sem"}, conventional robust
       standard errors are computed.  If \code{"robust.huber.white"},
       standard errors are computed based on the `mlr' (aka pseudo ML,
       Huber-White) approach.
@@ -264,7 +279,7 @@ Starting values options:
       estimated using the fabin3 estimator (tsls) per factor. 
       If \code{start} is a fitted object of class \code{\linkS4class{lavaan}}, 
       the estimated values of the corresponding parameters will be extracted. 
-      If it is a model list, for example the output of the 
+      If it is a parameter table, for example the output of the 
       \code{paramaterEstimates()} function, the values of the \code{est} or 
       \code{start} or \code{ustart} column (whichever is found first) will be 
       extracted.}

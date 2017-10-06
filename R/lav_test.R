@@ -1,124 +1,3 @@
-testStatisticSatorraBentler <- function(lavsamplestats=lavsamplestats,
-                                        E.inv, Delta, WLS.V, Gamma,
-                                        x.idx=list(integer(0)),
-                                        test.UGamma.eigvals = FALSE) {
-
-    # UG = Gamma %*% [V - V %*% Delta %*% E.inv %*% tDelta %*% V]
-    #    = Gamma %*% V  - Gamma %*% V %*% Delta %*% E.inv %*% tDelta %*% V
-    #    = Gamma %*% A1 - Gamma %*% A1 %*% Delta %*% E.inv %*% tDelta %*% A1
-    # (B1 = A1 %*% Gamma %*% A1)
-    #    = B1 %*% A1.inv - B1 %*% A1.inv %*% Delta %*% E.inv %*% tDelta %*% A1
-    #    
-    # if only the trace is needed, we can use reduce the rhs (after the minus)
-    # to B1 %*% Delta %*% E.inv %*% tDelta (eliminating A1 and A1.inv)
-
-    # we write it like this to allow for fixed.x covariates which affect A1
-    # and B1
-
-    if(is.null(Gamma)) {
-        Gamma <- lavsamplestats@NACOV
-    }
-    nss <- ncol(Gamma[[1]])
-    ngroups <- lavsamplestats@ngroups
-
-    UG.group  <- vector("list", length=ngroups)
-    trace.UGamma2 <- numeric(ngroups)
-    for(g in 1:ngroups) {
-        fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
-        fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
-        Gamma.g <- Gamma[[g]] / fg  ## ?? check this
-        Delta.g <- Delta[[g]]
-
-        # just for testing: regular UG:
-        # WLS.Vg  <- WLS.V[[g]] * fg
-        # UG1 <- Gamma.g %*% (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% WLS.Vg)
-
-        # diagonal WLS.V? we check for this since 0.5-17
-        diagonal <- FALSE
-        if(is.matrix(WLS.V[[g]])) {
-            A1 <- WLS.V[[g]] * fg
-            B1 <- A1 %*% Gamma.g %*% A1
-        } else {
-            diagonal <- TRUE
-            a1 <- WLS.V[[g]] * fg # numeric vector!
-            B1 <- Gamma.g * tcrossprod(a1)
-        }
-        # mask independent 'fixed-x' variables
-        # note: this only affects the saturated H1 model
-        if(length(x.idx[[g]]) > 0L) {
-
-            # we should not be here if we have conditional.x = TRUE
-
-            nvar <- ncol(lavsamplestats@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-                                       meanstructure=TRUE, type="all")
-            if(diagonal) {
-                a1 <- a1[idx]
-            } else {
-                A1 <- A1[idx,idx]
-            }
-            B1      <- B1[idx,idx]
-            Delta.g <- Delta.g[idx,]
-        } 
-
-
-        if(diagonal) {
-            a1.inv <- 1/a1
-            # if fixed.x = TRUE
-            zero.idx <- which(a1 == 0.0)
-            a1.inv[zero.idx] <- 0.0
-            tmp <- t(a1.inv * B1) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
-        } else {
-            A1.inv <- solve(A1)
-            tmp <- (B1 %*% A1.inv) - (B1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
-        }
-        # sanity check 1: sum(diag(UG1)) - sum(diag(tmp))
-        # sanity check 2: sum(diag(UG1 %*% UG1)) - sum(diag(tmp %*% tmp))
-        trace.UGamma2[g] <- sum(tmp * t(tmp))
-
-        UG.group[[g]] <- tmp
-    }
-
-    # NOTE: if A, B, C are matrices
-    # tr(A+B+C) = tr(A) + tr(B) + tr(C)
-    #
-    # BUT:
-    # tr( (A+B+C)^2 ) != tr(A^2) + tr(B^2) + tr(C^2) 
-    # it would seem that we need the latter... (trace.UGamma3) for MLMV and
-    # friends
-
-    UG <- UG.group[[1]]
-    if(ngroups > 1L) {
-        for(g in 2:ngroups) {
-            UG <- UG + UG.group[[g]]
-        }
-    }
-
-    # trace
-    trace.UGamma <- sum(diag(UG))
-
-    # for mean and variance adjusted tr UG^2 (per group)
-    trace.UGamma4 <- trace.UGamma2
-    trace.UGamma2 <- sum(trace.UGamma2) # at least for MLMV in Mplus
-                                        # this is what is needed when multiple
-                                        # groups are used?? 
-    attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
-    attr(trace.UGamma, "trace.UGamma4") <- trace.UGamma4
-
-    # testing only -- alternative interpretation of tr UG^2
-    # tUG <- t(UG); trace.UGamma3 <- sum(UG * tUG) # seems wrong?
-    # attr(trace.UGamma, "trace.UGamma3") <- trace.UGamma3
-
-    # eigen values
-    # this was for the lavaan.survey pval.pFsum() function
-    # but for large problems, this can take a loooong time; not needed anymore
-    if(test.UGamma.eigvals) {
-        attr(trace.UGamma, "eigenvalues") <-  
-            Re(eigen(UG, only.values=TRUE)$values)
-    }
-
-    trace.UGamma
-}
 
 testStatisticYuanBentler <- function(lavsamplestats=lavsamplestats,
                                      A1.group=NULL,
@@ -127,8 +6,8 @@ testStatisticYuanBentler <- function(lavsamplestats=lavsamplestats,
                                      E.inv=NULL,
                                      x.idx=list(integer(0))) {
 
-    # we always assume a meanstructure
-    meanstructure <- TRUE
+    # we always assume a meanstructure (nope, not any longer, since 0.6)
+    #meanstructure <- TRUE
 
     trace.UGamma <- numeric( lavsamplestats@ngroups )
     trace.h1     <- numeric( lavsamplestats@ngroups )
@@ -170,13 +49,14 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
                                            information="observed",
                                            B0.group=NULL,
                                            E.inv=NULL,
-                                           x.idx=list(integer(0))) {
+                                           x.idx=list(integer(0)),
+                                           meanstructure = TRUE) {
     # typical for Mplus:
     # - do NOT use the YB formula, but use an approximation
     #   relying  on A0 ~= Delta'*A1*Delta and the same for B0
 
-    # we always assume a meanstructure
-    meanstructure <- TRUE
+    # we always assume a meanstructure (no, not any longer since 0.6)
+    #meanstructure <- TRUE
     ngroups <- lavsamplestats@ngroups
 
     trace.UGamma <- numeric( lavsamplestats@ngroups )
@@ -203,7 +83,8 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
             # data complete, under h1, expected == observed
             A1 <- lav_mvnorm_h1_information_observed_samplestats(
                       sample.cov     = lavsamplestats@cov[[g]],
-                      sample.cov.inv = lavsamplestats@icov[[g]])
+                      sample.cov.inv = lavsamplestats@icov[[g]],
+                      meanstructure  = meanstructure)
         }     
 
         if(lavsamplestats@missing.flag) {
@@ -214,12 +95,14 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
                           Sigma = lavsamplestats@missing.h1[[g]]$sigma)
         } else {
+            # B1 =  A1 %*% Gamma %*% A1
             B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
                           wt    = lavdata@weights[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
-                          sample.cov.inv = lavsamplestats@icov[[g]])
+                          sample.cov.inv = lavsamplestats@icov[[g]],
+                          meanstructure  = meanstructure)
         }
 
         # mask independent 'fixed-x' variables
@@ -233,6 +116,7 @@ testStatisticYuanBentler.Mplus <- function(lavsamplestats=lavsamplestats,
         }
         A1.inv <- solve(A1)
 
+        # if data is complete, why not just A1 %*% Gamma?
         trace.h1[g]     <- sum( B1 * t( A1.inv ) )
         trace.h0[g]     <- ( lavsamplestats@nobs[[g]]/lavsamplestats@ntotal *
                              sum( B0.group[[g]] * t(E.inv) ) )
@@ -264,10 +148,12 @@ lav_model_test <- function(lavmodel       = NULL,
                            test.UGamma.eigvals = FALSE) {
 
 
-    mimic       <- lavoptions$mimic
-    test        <- lavoptions$test
-    information <- lavoptions$information
-    estimator   <- lavoptions$estimator
+    mimic         <- lavoptions$mimic
+    test          <- lavoptions$test
+    information   <- lavoptions$information
+
+    estimator     <- lavmodel@estimator
+    meanstructure <- lavmodel@meanstructure
 
 
     TEST <- list()
@@ -400,10 +286,10 @@ lav_model_test <- function(lavmodel       = NULL,
     }
 
     # some require meanstructure (for now)
-    if(test %in% c("satorra.bentler", "yuan.bentler") &&
-       !lavoptions$meanstructure) {
-        stop("test (", test, ") requires meanstructure (for now)")
-    }
+    #if(test %in% c("satorra.bentler", "yuan.bentler") &&
+    #   !lavoptions$meanstructure) {
+    #    stop("test (", test, ") requires meanstructure (for now)")
+    #}
 
     # fixed.x idx
     if(lavmodel@fixed.x && estimator == "ML" && !lavmodel@conditional.x) {
@@ -436,138 +322,22 @@ lav_model_test <- function(lavmodel       = NULL,
     } else if(test %in% 
           c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
           df > 0 && lavoptions$estimator != "PML") {
-        # try to extract attr from VCOV (if present)
-        E.inv <- attr(VCOV, "E.inv")
-        Delta <- attr(VCOV, "Delta")
-        WLS.V <- attr(VCOV, "WLS.V")
-        Gamma <- attr(VCOV, "Gamma")
-
-        # if not present (perhaps se.type="standard" or se.type="none")
-        #  we need to compute these again
-        if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
-            # this happens, for example, when we compute the independence
-            # model
-            if(mimic == "Mplus" && estimator == "ML") {
-                # special treatment for Mplus
-                E <- lav_model_information_expected_MLM(lavmodel = lavmodel,
-                         augmented = FALSE, inverted = FALSE,
-                         lavsamplestats=lavsamplestats, extra = TRUE)
-            } else {
-                E <- lav_model_information_expected(lavmodel = lavmodel, 
-                         lavsamplestats = lavsamplestats, lavdata = lavdata,
-                         extra = TRUE)
-            }
-            E.inv <- try(lav_model_information_augment_invert(lavmodel,
-                         information = E, inverted = TRUE), silent=TRUE)
-            if(inherits(E.inv, "try-error")) {
-                TEST[[2]] <- list(test=test, stat=as.numeric(NA), 
-                    stat.group=rep(as.numeric(NA), lavsamplestats@ngroups),
-                    df=df, refdistr=refdistr, pvalue=as.numeric(NA),
-                    scaling.factor=as.numeric(NA))
-                warning("lavaan WARNING: could not compute scaled test statistic\n")
-                return(TEST)                
-            }
-            Delta <- attr(E, "Delta")
-            WLS.V <- attr(E, "WLS.V")
-        }
-
-#        if(mimic == "Mplus" && estimator == "ML") {
-            ### TESTING ONLY FOR FIXED.X !!! ###
-#            if(length(x.idx) > 0L) {
-#                cat("\n\nDEBUG FIXED.X\n\n\n")
-#                augUser <- user
-#                idx <- which(augUser$exo > 0L)
-#                augUser$exo[       idx ] <- 0L
-#                augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
-#                augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-#                augModel <- lav_model(lavpartable       = augUser,
-#                                  representation = lavmodel@representation,
-#                                  conditional.x  = lavoptions$conditional.x,
-#                                  link           = lavmodel@link,
-#                                  debug          = FALSE)
-#
-#                Delta <- computeDelta(lavmodel = augModel)
-#                E <- lav_model_information_expected_MLM(object, lavsamplestats=lavsamplestats,
-#                                                   Delta=Delta)
-#                fixed.x.idx <- max(lavpartable$free) + 1:length(idx)
-#                free.idx    <- 1:max(lavpartable$free)
-#                E[free.idx, fixed.x.idx] <- 0.0
-#                E[fixed.x.idx, free.idx] <- 0.0
-#                E.inv <- solve(E)
-#                x.idx <- integer(0)
-#            }
-#        } 
-
-        trace.UGamma <- 
-            testStatisticSatorraBentler(lavsamplestats = lavsamplestats,
-                                        E.inv       = E.inv, 
-                                        Delta       = Delta, 
-                                        WLS.V       = WLS.V,
-                                        Gamma       = Gamma,
-                                        x.idx       = x.idx)
-        trace.UGamma2 <- attr(trace.UGamma, "trace.UGamma2")
-        # trace.UGamma3 <- attr(trace.UGamma, "trace.UGamma3")
-        trace.UGamma4 <- attr(trace.UGamma, "trace.UGamma4")
-        if(test.UGamma.eigvals) {
-            UGamma.eigenvalues <- attr(trace.UGamma, "eigenvalues")
-        } else {
-            UGamma.eigenvalues <- numeric(0L)
-        }
-        attributes(trace.UGamma) <- NULL
-
-        # adjust df?
-        if(test == "mean.var.adjusted") {
-            if(mimic == "Mplus") {
-                df <- floor(trace.UGamma^2/trace.UGamma2 + 0.5)
-            } else {
-                # more precise, fractional df
-                df <- trace.UGamma^2 / trace.UGamma2
-            }
-        } else if(test == "satorra.bentler") {
-            trace.UGamma2 <- as.numeric(NA)
-        }
-
-        if(test == "scaled.shifted") {
-            # this is the T3 statistic as used by Mplus 6 and higher
-            # see 'Simple Second Order Chi-Square Correction' 2010
-            # www.statmodel.com
-
-            # however, for multiple groups, Mplus reports something else
-            # YR. 30 Aug 2012 -- after much trial and error, it turns out
-            # that the shift-parameter (b) is weighted (while a is not)??
-            # however, the chisq.square per group are different; only
-            # the sum seems ok??
-            fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
-           
-            a <- sqrt(df/trace.UGamma2)
-            #dprime <- trace.UGamma^2 / trace.UGamma2
-            #shift.parameter <- fg * (df - sqrt(df * dprime))
-            shift.parameter <- fg * (df - a*trace.UGamma)
-            scaling.factor  <- 1/a
-            stat.group      <- (chisq.group * a + shift.parameter)
-            chisq.scaled    <- sum(stat.group)
-            pvalue.scaled   <- 1 - pchisq(chisq.scaled, df)
-        } else {
-            scaling.factor <- trace.UGamma/df
-            if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-            stat.group     <- chisq.group / scaling.factor
-            chisq.scaled   <- sum(stat.group)
-            pvalue.scaled  <- 1 - pchisq(chisq.scaled, df)
-            shift.parameter <- as.numeric(NA)
-        }
-
-        TEST[[2]] <- list(test               = test,
-                          stat               = chisq.scaled,
-                          stat.group         = stat.group,
-                          df                 = df,
-                          pvalue             = pvalue.scaled,
-                          scaling.factor     = scaling.factor,
-                          shift.parameter    = shift.parameter,
-                          trace.UGamma       = trace.UGamma,
-                          trace.UGamma4      = trace.UGamma4,
-                          trace.UGamma2      = trace.UGamma2,
-                          UGamma.eigenvalues = UGamma.eigenvalues)
-
+   
+        out <- lav_test_satorra_bentler(lavobject = NULL,
+                         lavsamplestats = lavsamplestats,
+                         lavmodel       = lavmodel,
+                         lavoptions     = lavoptions,
+                         TEST.unscaled  = TEST[[1]],
+                         E.inv          = attr(VCOV, "E.inv"),
+                         Delta          = attr(VCOV, "Delta"),
+                         WLS.V          = attr(VCOV, "WLS.V"),
+                         Gamma          = attr(VCOV, "Gamma"),
+                         test           = test,
+                         mimic          = lavoptions$mimic,
+                         method         = "ABA",
+                         return.ugamma  = FALSE)
+        TEST[[2]] <- out[[test]]
+                           
     } else if(test == "yuan.bentler" && df > 0) {
         # try to extract attr from VCOV (if present)
         E.inv    <- attr(VCOV, "E.inv")
@@ -576,12 +346,12 @@ lav_model_test <- function(lavmodel       = NULL,
         if(is.null(E.inv)) {
             # if se="standard", information is probably expected
             # change it to observed
-            if(lavoptions$se != "robust.mlr") information <- "observed"
+            #if(lavoptions$se != "robust.mlr") information <- "observed"
             E.inv <- lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
                                            lavdata        = lavdata,
                                            lavcache       = lavcache,
-                                           information    = information,
+                                           lavoptions     = lavoptions,
                                            extra          = FALSE,
                                            augmented      = TRUE,
                                            inverted       = TRUE)
@@ -603,6 +373,7 @@ lav_model_test <- function(lavmodel       = NULL,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
                                              lavcache       = lavcache,
+                                             lavoptions     = lavoptions,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
                                              augmented      = FALSE,
@@ -612,10 +383,11 @@ lav_model_test <- function(lavmodel       = NULL,
             trace.UGamma <- 
                 testStatisticYuanBentler.Mplus(lavsamplestats = lavsamplestats,
                                                lavdata        = lavdata,
-                                               information = information,
-                                               B0.group    = B0.group,
-                                               E.inv       = E.inv,
-                                               x.idx       = x.idx)
+                                               information    = information,
+                                               B0.group       = B0.group,
+                                               E.inv          = E.inv,
+                                               x.idx          = x.idx,
+                                               meanstructure  = meanstructure)
         } else {
             if(!is.null(lavdata@weights[[1]])) {
                 stop("lavaan ERROR: weights not supported yet using mimic!")
@@ -638,21 +410,46 @@ lav_model_test <- function(lavmodel       = NULL,
                     A1.group[[g]] <- out$Abeta
                     B1.group[[g]] <- out$Bbeta
                 } else {
-                    if(information == "expected") {
-                        A1.group[[g]] <- lav_mvnorm_information_expected(
-                            Y = lavdata@X[[g]],
-                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
-                    } else {
-                        A1.group[[g]] <- 
-                            lav_mvnorm_information_observed_samplestats(
-                                sample.mean = lavsamplestats@mean[[g]],
-                                sample.cov = lavsamplestats@cov[[g]],
+                    if(meanstructure) {
+                        if(information == "expected") {
+                             A1.group[[g]] <- lav_mvnorm_information_expected(
+                                Y = lavdata@X[[g]],
                                 Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                        } else {
+                            A1.group[[g]] <- 
+                                lav_mvnorm_information_observed_samplestats(
+                                    sample.mean = lavsamplestats@mean[[g]],
+                                    sample.cov = lavsamplestats@cov[[g]],
+                                    Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                        }
+                        B1.group[[g]] <- lav_mvnorm_information_firstorder(
+                                Y = lavdata@X[[g]],
+                                Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                                wt = lavdata@weights[[g]])
+                    } else {
+                        # no meanstructure
+                        if(information == "expected") {
+                             A1.group[[g]] <- lav_mvnorm_information_expected(
+                                Y = lavdata@X[[g]],
+                                Mu = lavsamplestats@mean[[g]],
+                                Sigma = Sigma.hat[[g]],
+                                meanstructure = FALSE)
+                        } else {
+                            A1.group[[g]] <-
+                                lav_mvnorm_information_observed_samplestats(
+                                    sample.mean = lavsamplestats@mean[[g]],
+                                    sample.cov = lavsamplestats@cov[[g]],
+                                    Mu = lavsamplestats@mean[[g]],
+                                    Sigma = Sigma.hat[[g]],
+                                    meanstructure = FALSE)
+                        }
+                        B1.group[[g]] <- lav_mvnorm_information_firstorder(
+                                Y             = lavdata@X[[g]],
+                                Mu            = lavsamplestats@mean[[g]],
+                                Sigma         = Sigma.hat[[g]],
+                                wt            = lavdata@weights[[g]],
+                                meanstructure = FALSE)
                     }
-                    B1.group[[g]] <- lav_mvnorm_information_firstorder(
-                            Y = lavdata@X[[g]],
-                            Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
-                            wt = lavdata@weights[[g]])
                 }
             }
             trace.UGamma <-

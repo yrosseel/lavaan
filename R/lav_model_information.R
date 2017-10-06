@@ -11,13 +11,13 @@ lav_model_information <- function(lavmodel       = NULL,
                                   Delta          = NULL,
                                   lavcache       = NULL,
                                   lavoptions     = NULL,
-                                  information    = "observed",
                                   extra          = FALSE,
                                   augmented      = FALSE,
                                   inverted       = FALSE,
                                   use.ginv       = FALSE) {
 
-    estimator <- lavmodel@estimator
+    estimator   <- lavmodel@estimator
+    information <- lavoptions$information
 
     # compute information matrix
     if(information == "observed") {
@@ -31,18 +31,16 @@ lav_model_information <- function(lavmodel       = NULL,
             lavcache = lavcache, group.weight = group.weight,
             lavoptions = lavoptions,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
-    } else {
-        # structured of unstructured? (since 0.5-23)
-        if(!is.null(lavoptions) &&
-           !is.null(lavoptions$h1.information) &&
-           lavoptions$h1.information == "unstructured") {
-            structured <- FALSE
-        } else {
-            structured <- TRUE
-        }
+    } else if(information == "expected") {
         E <- lav_model_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavcache = lavcache, extra = extra, structured = structured,
+            lavcache = lavcache, lavoptions = lavoptions, extra = extra, 
+            augmented = augmented, inverted = inverted, use.ginv = use.ginv)
+    } else if(information == "first.order") {
+        E <- lav_model_information_firstorder(lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats, lavdata = lavdata,
+            lavcache = lavcache, lavoptions = lavoptions, #extra = extra,
+            check.pd = FALSE,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     }
 
@@ -58,7 +56,7 @@ lav_model_information <- function(lavmodel       = NULL,
 lav_model_information_expected <- function(lavmodel       = NULL,
                                            lavsamplestats = NULL,
                                            lavdata        = NULL,
-                                           structured     = TRUE,
+                                           lavoptions     = NULL,
                                            Delta          = NULL,
                                            lavcache       = NULL,
                                            extra          = FALSE,
@@ -67,6 +65,14 @@ lav_model_information_expected <- function(lavmodel       = NULL,
                                            use.ginv       = FALSE) {
 
     estimator <- lavmodel@estimator
+    # structured of unstructured? (since 0.5-23)
+    if(!is.null(lavoptions) &&
+       !is.null(lavoptions$h1.information) &&
+       lavoptions$h1.information == "unstructured") {
+        structured <- FALSE
+    } else {
+        structured <- TRUE
+    }
 
     if(inverted) {
         augmented <- TRUE
@@ -77,7 +83,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
         Delta <- computeDelta(lavmodel = lavmodel)
     }
 
-    # compute/get WLS.V
+    # compute/get WLS.V == h1 information (A1)
     # if DWLS or ULS, this is the diagonal only! (since 0.5-17)
     WLS.V <- lav_model_wls_v(lavmodel       = lavmodel,
                              lavsamplestats = lavsamplestats,
@@ -225,6 +231,14 @@ lav_model_information_observed <- function(lavmodel       = NULL,
     } else {
         observed.information <- "hessian"
     }
+    # structured?
+    if(!is.null(lavoptions) &&
+       !is.null(lavoptions$h1.information) &&
+       lavoptions$h1.information == "unstructured") {
+        structured <- FALSE
+    } else {
+        structured <- TRUE
+    }
  
 
     if(observed.information == "hessian") {
@@ -266,9 +280,13 @@ lav_model_information_observed <- function(lavmodel       = NULL,
             #     - complete data, unstructured
             #     - incomplete data, structured (default)
             #     - incomplete data, unstructured
-            if(lavoptions$h1.information == "structured") {
+            if(structured) {
                 SIGMA <- computeSigmaHat(lavmodel = lavmodel)
-                MU    <- computeMuHat(lavmodel = lavmodel)
+                if(lavmodel@meanstructure) {
+                    MU <- computeMuHat(lavmodel = lavmodel)
+                } else {
+                    MU <- lavsamplestats@mean
+                }
             } else {
                 SIGMA <- lavsamplestats@cov
                 MU    <- lavsamplestats@mean
@@ -282,7 +300,8 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                         sample.mean = lavsamplestats@mean[[g]],
                         sample.cov  = lavsamplestats@cov[[g]],
                         Mu          = MU[[g]], 
-                        Sigma       = SIGMA[[g]])
+                        Sigma       = SIGMA[[g]],
+                        meanstructure = lavmodel@meanstructure)
             }
         } else {
             stop("lavaan ERROR: observed.information = ", 
@@ -338,12 +357,20 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                                              lavsamplestats = NULL,
                                              lavdata        = NULL,
                                              lavcache       = NULL,
-                                             extra          = FALSE,
+                                             lavoptions     = NULL,
                                              check.pd       = FALSE,
+                                             extra          = FALSE,
                                              augmented      = FALSE,
                                              inverted       = FALSE,
                                              use.ginv       = FALSE) {
     estimator <- lavmodel@estimator
+    if(!is.null(lavoptions) &&
+       !is.null(lavoptions$h1.information) &&
+       lavoptions$h1.information == "unstructured") {
+        structured <- FALSE
+    } else {
+        structured <- TRUE
+    }
 
     if(inverted) {
         augmented <- TRUE
@@ -387,7 +414,7 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
             # outer product
             B0.group[[g]] <- crossprod(group.SC)
 
-        } else {
+        } else if(estimator == "ML") {
             if(lavsamplestats@missing.flag) {
                 B1 <- 
                   lav_mvnorm_missing_information_firstorder(Y = lavdata@X[[g]],
@@ -395,19 +422,34 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                       Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
             } else {
                 if(lavmodel@meanstructure) {
-                    B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
-                              Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                    MEAN <- Mu.hat[[g]]
+                } else {
+                    # NOTE: the information matrix will be the same (minus
+                    # the meanstructure block), but once INVERTED, the
+                    # standard errors will be (slightly) smaller!!!
+                    # This is only visibile when estimator = "MLF"
+                    # (or information = "first.order")
+                    MEAN <- lavsamplestats@mean[[g]] # saturated
+                }
+
+                if(structured) {
+                    B1 <- lav_mvnorm_information_firstorder(
+                              Y = lavdata@X[[g]],
+                              Mu = MEAN, Sigma = Sigma.hat[[g]],
                               wt = lavdata@weights[[g]],
                               meanstructure = lavmodel@meanstructure)
                 } else {
-                    B1 <- lav_mvnorm_information_firstorder(Y = lavdata@X[[g]],
-                              Mu = lavsamplestats@mean[[g]],  # saturated
-                              Sigma = Sigma.hat[[g]],
+                    B1 <- lav_mvnorm_h1_information_firstorder(
+                              Y = lavdata@X[[g]],
+                              sample.cov.inv = lavsamplestats@icov[[g]],
+                              Gamma = lavsamplestats@NACOV[[g]],
                               wt = lavdata@weights[[g]],
                               meanstructure = lavmodel@meanstructure)
                 }
-            }        
+            }
             B0.group[[g]] <- t(Delta[[g]]) %*% B1 %*% Delta[[g]]
+        } else {
+            stop("lavaan ERROR: information = \"first.order\" not available for estimator ", sQuote(estimator))
         }
     } # g
 

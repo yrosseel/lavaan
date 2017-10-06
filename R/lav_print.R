@@ -106,20 +106,38 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     # 3. bootstrap requested/successful draws
     if(!is.null(x$se)) { 
         # 1.
-        t0.txt <- sprintf("  %-40s", "Information")
+        t0.txt <- sprintf("  %-35s", "Information")
         tmp.txt <- attr(x, "information")
-        t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt,1,1)),
+        t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
                          substring(tmp.txt,2), sep=""))
         cat(t0.txt, t1.txt, "\n", sep="")
 
         # 2.
+        if(attr(x, "information") %in% c("expected", "first.order") ||
+           attr(x, "observed.information") == "h1") { 
+            t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
+            tmp.txt <- attr(x, "h1.information")
+            t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
+                                          substring(tmp.txt,2), sep=""))
+            cat(t0.txt, t1.txt, "\n", sep="")
+        }
+        if(attr(x, "information") == "observed") {
+            t0.txt <- sprintf("  %-35s", "Observed information based on")
+            tmp.txt <- attr(x, "observed.information")
+            t1.txt <- sprintf("  %15s", 
+                              paste(toupper(substring(tmp.txt,1,1)),
+                              substring(tmp.txt,2), sep=""))
+            cat(t0.txt, t1.txt, "\n", sep="")
+        }
+
+        # 3.
         t0.txt <- sprintf("  %-31s", "Standard Errors")
         tmp.txt <- attr(x, "se")
         t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
                                           substring(tmp.txt,2), sep=""))
         cat(t0.txt, t1.txt, "\n", sep="")
     
-        # 3.
+        # 4.
         if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
             t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
             t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
@@ -129,22 +147,6 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             cat(t0.txt, t1.txt, "\n", sep="")
         }
 
-        # 4.
-        if(attr(x, "missing") %in% c("two.stage", "robust.two.stage")) {
-            t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
-            tmp.txt <- attr(x, "h1.information")
-            t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
-                                          substring(tmp.txt,2), sep=""))
-            cat(t0.txt, t1.txt, "\n", sep="")
-            if(attr(x, "information") == "observed") {
-                t0.txt <- sprintf("  %-35s", "Observed information based on")
-                tmp.txt <- attr(x, "observed.information")
-                t1.txt <- sprintf("  %15s", 
-                                  paste(toupper(substring(tmp.txt,1,1)),
-                                  substring(tmp.txt,2), sep=""))
-                cat(t0.txt, t1.txt, "\n", sep="")
-            }
-        }
     }
 
     # number of groups

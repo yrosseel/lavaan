@@ -16,7 +16,7 @@ lav_samplestats_Gamma_inverse_NT <- function(Y              = NULL,
                                              COV            = NULL,
                                              ICOV           = NULL,
                                              MEAN           = NULL,
-                                             rescale        = FALSE,
+                                             rescale        = TRUE,
                                              x.idx          = integer(0L),
                                              fixed.x        = FALSE,
                                              conditional.x  = FALSE,
@@ -36,10 +36,9 @@ lav_samplestats_Gamma_inverse_NT <- function(Y              = NULL,
             # coerce to matrix
             Y <- unname(as.matrix(Y)); N <- nrow(Y)
             COV <- cov(Y)
-        }
-
-        if(rescale) {
-            COV <- COV * (N-1) / N # ML version
+            if(rescale) {
+                COV <- COV * (N-1) / N # ML version
+            }
         }
 
         ICOV <- solve(COV)

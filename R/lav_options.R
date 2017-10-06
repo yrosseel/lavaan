@@ -102,6 +102,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 test                   = "default",
                 bootstrap              = 1000L,
                 observed.information   = "hessian",
+                #gamma.unbiased         = FALSE,
 
                 # optimization
                 control                = list(),
@@ -508,10 +509,20 @@ lav_options_set <- function(opt = NULL) {
         opt$estimator <- "ML"
         if(opt$se == "default") {
             opt$se <- "standard"
-        } else if(opt$se %in% c("first.order","bootstrap", "none", 
+        } else if(opt$se %in% c("bootstrap", "none", 
                   "external", "standard", "robust.huber.white",
                   "two.stage", "robust.two.stage", "robust.sem")) {
             # nothing to do
+        } else if(opt$se == "first.order") {
+            # backwards compatibility
+            opt$se <- "standard"
+            opt$information <- "first.order"
+        } else if(opt$se == "observed") {
+            opt$se <- "standard"
+            opt$information <- "observed"
+        } else if(opt$se == "expected") {
+            opt$se <- "standard"
+            opt$information <- "expected"
         } else if(opt$se == "robust") {
             if(opt$missing == "ml") {
                 opt$se <- "robust.huber.white"
@@ -539,25 +550,29 @@ lav_options_set <- function(opt = NULL) {
             }
         }
         opt$estimator <- "ML"
-        opt$meanstructure <- TRUE
+        #opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(!(opt$information %in% c("expected", "default"))) {
-            warning("lavaan WARNING: information will be set to ",
-                    dQuote("expected"), " for estimator = ", 
-                    dQuote(toupper(est.orig)) )
-        }
-        opt$information <- "expected"
+        #if(!(opt$information %in% c("expected", "default"))) {
+        #    warning("lavaan WARNING: information will be set to ",
+        #            dQuote("expected"), " for estimator = ", 
+        #            dQuote(toupper(est.orig)) )
+        #}
+        #opt$information <- "expected"
+        # in 0.6, we allow for information = "observed" as well
         opt$missing <- "listwise"
     } else if(opt$estimator == "mlf") {
         opt$estimator <- "ML"
-        opt$meanstructure <- TRUE
+        #opt$meanstructure <- TRUE
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "first.order"
+        if(opt$se != "none" && opt$se != "external") {
+            opt$se <- "standard"
+            opt$information <- "first.order"    
+        }
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         if(opt$se == "bootstrap") {
@@ -565,7 +580,7 @@ lav_options_set <- function(opt = NULL) {
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.huber.white"
         if(opt$test != "none" && opt$se != "external") opt$test <- "yuan.bentler"
-        opt$meanstructure <- TRUE
+        #opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -836,10 +851,10 @@ lav_options_set <- function(opt = NULL) {
         } else {
             opt$information <- "expected"
         }
-    } else if(opt$information %in% c("observed", "expected")) {
+    } else if(opt$information %in% c("observed", "expected", "first.order")) {
         # nothing to do
     } else {
-        stop("lavaan ERROR: information must be either \"expected\" or \"observed\"\n")
+        stop("lavaan ERROR: information must be either \"expected\", \"observed\", or \"first.order\"\n")
     }
 
     if(opt$h1.information == "structured" ||
@@ -856,11 +871,11 @@ lav_options_set <- function(opt = NULL) {
     #}
 
     # check information if se == "robust.sem"
-    if(opt$se == "robust.sem" && opt$information == "observed") {
-        warning("lavaan WARNING: information will be set to ",
-                dQuote("expected"), " for se = ", dQuote(opt$se))
-        opt$information <- "expected"
-    }
+    #if(opt$se == "robust.sem" && opt$information == "observed") {
+    #    warning("lavaan WARNING: information will be set to ",
+    #            dQuote("expected"), " for se = ", dQuote(opt$se))
+    #    opt$information <- "expected"
+    #}
 
     # conditional.x
     if(is.logical(opt$conditional.x)) {
@@ -909,14 +924,14 @@ lav_options_set <- function(opt = NULL) {
        "means" %in% opt$group.equal) {
         opt$meanstructure <- TRUE
     }
-    if(opt$se == "robust.huber.white" || 
-       opt$se == "robust.sem" ||
-       opt$test == "satorra.bentler" ||
-       opt$test == "mean.var.adjusted" ||
-       opt$test == "scaled.shifted" ||
-       opt$test == "yuan.bentler") {
-        opt$meanstructure <- TRUE
-    }
+    #if(opt$se == "robust.huber.white" || 
+    #   opt$se == "robust.sem" ||
+    #   opt$test == "satorra.bentler" ||
+    #   opt$test == "mean.var.adjusted" ||
+    #   opt$test == "scaled.shifted" ||
+    #   opt$test == "yuan.bentler") {
+    #    opt$meanstructure <- TRUE
+    #}
     stopifnot(is.logical(opt$meanstructure))
     stopifnot(is.logical(opt$verbose))
     stopifnot(is.logical(opt$warn))

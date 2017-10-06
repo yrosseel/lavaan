@@ -1948,8 +1948,9 @@ lav_object_inspect_information <- function(object,
     information = "default", augmented = FALSE, inverted = FALSE,
     add.labels = FALSE, add.class = FALSE) {
 
-    if(information == "default") {
-        information <- object@Options$information
+    if(information != "default") {
+        # override option
+        object@Options$information <- information
     } 
 
     if(information == "expected" || information == "observed") {
@@ -1957,7 +1958,7 @@ lav_object_inspect_information <- function(object,
                   lavsamplestats = object@SampleStats,
                   lavdata        = object@Data,
                   lavcache       = object@Cache,
-                  information    = information,
+                  lavoptions     = object@Options,
                   augmented      = augmented,
                   inverted       = inverted)
     } else if(information == "first.order") {
@@ -1965,6 +1966,7 @@ lav_object_inspect_information <- function(object,
               lavsamplestats = object@SampleStats,
               lavdata        = object@Data,
               lavcache       = object@Cache,
+              lavoptions     = object@Options,
               check.pd       = FALSE,
               augmented      = augmented,
               inverted       = inverted)
@@ -2000,6 +2002,7 @@ lav_object_inspect_firstorder <- function(object,
               lavsamplestats = object@SampleStats,
               lavdata        = object@Data,
               lavcache       = object@Cache,
+              lavoptions     = object@Options,
               check.pd       = FALSE,
               augmented      = FALSE,
               inverted       = FALSE)

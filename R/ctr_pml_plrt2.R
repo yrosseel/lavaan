@@ -99,10 +99,9 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
 # inverted observed information ('H.inv')
 if(is.null(VCOV)) {
-    H0.inv <- lav_model_information(lavmodel = lavmodel, 
+    H0.inv <- lav_model_information_observed(lavmodel = lavmodel, 
                   lavsamplestats = lavsamplestats, lavdata = lavdata, 
-                  lavcache = lavcache, information = "observed", 
-                  augmented = TRUE, inverted = TRUE)
+                  lavcache = lavcache, augmented = TRUE, inverted = TRUE)
 } else {
     H0.inv <- attr(VCOV, "E.inv")
 }

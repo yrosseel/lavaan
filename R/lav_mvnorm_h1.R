@@ -124,12 +124,14 @@ lav_mvnorm_h1_loglik_samplestats <- function(sample.cov.logdet = NULL,
 lav_mvnorm_h1_logl_hessian_data <- function(Y              = NULL,
                                             wt             = NULL,
                                             Sinv.method    = "eigen",
-                                            sample.cov.inv = NULL) {
+                                            sample.cov.inv = NULL,
+                                            meanstructure  = TRUE) {
     N <- NROW(Y)
 
     # observed information
     observed <- lav_mvnorm_h1_information_observed_data(Y = Y, wt = wt,
-                    Sinv.method = Sinv.method, sample.cov.inv = sample.cov.inv)
+                    Sinv.method = Sinv.method, sample.cov.inv = sample.cov.inv,
+                    meanstructure = meanstructure)
 
     -N*observed
 }
@@ -140,28 +142,30 @@ lav_mvnorm_h1_logl_hessian_samplestats <-
              sample.cov     = NULL,
              sample.nobs    = NULL,
              Sinv.method    = "eigen",
-             sample.cov.inv = NULL) {
+             sample.cov.inv = NULL,
+             meanstructcure = TRUE) {
 
     N <- sample.nobs
 
     # observed information
     observed <- lav_mvnorm_h1_information_observed_samplestats(sample.mean = 
         sample.mean, sample.cov = sample.cov, Sinv.method = Sinv.method, 
-        sample.cov.inv = sample.cov.inv)
+        sample.cov.inv = sample.cov.inv, meanstructure = meanstructure)
     
     -N*observed
 }
 
 
 
-# 5) Information h1 (not expected == observed if data is complete!)
+# 5) Information h1 (note: expected == observed if data is complete!)
 
 # 5a: unit expected information h1
 lav_mvnorm_h1_information_expected <- function(Y              = NULL,
                                                wt             = NULL,
                                                sample.cov     = NULL,
                                                Sinv.method    = "eigen",
-                                               sample.cov.inv = NULL) {
+                                               sample.cov.inv = NULL,
+                                               meanstructure  = TRUE) {
     if(is.null(sample.cov.inv)) {
 
         if(is.null(sample.cov)) {
@@ -183,18 +187,26 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
     I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x% 
                                                  sample.cov.inv)
 
-    lav_matrix_bdiag(I11, I22)
+    if(meanstructure) {
+        out <- lav_matrix_bdiag(I11, I22)
+    } else {
+        out <- I22
+    }
+
+    out
 }
 
 # 5b: unit observed information h1
 lav_mvnorm_h1_information_observed_data <- function(Y              = NULL,
                                                     wt             = NULL,
                                                     Sinv.method    = "eigen",
-                                                    sample.cov.inv = NULL) {
+                                                    sample.cov.inv = NULL,
+                                                    meanstructure  = TRUE) {
 
     lav_mvnorm_h1_information_expected(Y = Y, Sinv.method = Sinv.method,
                                        wt = wt,
-                                       sample.cov.inv = sample.cov.inv)
+                                       sample.cov.inv = sample.cov.inv,
+                                       meanstructure = meanstructure)
 }
 
 # 5b-bis: observed information h1 from sample statistics
@@ -202,7 +214,8 @@ lav_mvnorm_h1_information_observed_samplestats <-
     function(sample.mean    = NULL, # unused!
              sample.cov     = NULL, 
              Sinv.method    = "eigen",
-             sample.cov.inv = NULL) {
+             sample.cov.inv = NULL,
+             meanstructure  = TRUE) {
 
     if(is.null(sample.cov.inv)) {
         # invert sample.cov
@@ -214,7 +227,13 @@ lav_mvnorm_h1_information_observed_samplestats <-
     I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x% 
                                                  sample.cov.inv)
 
-    lav_matrix_bdiag(I11, I22)
+    if(meanstructure) {
+        out <- lav_matrix_bdiag(I11, I22)
+    } else {
+        out <- I22
+    }
+
+    out
 }
 
 # 5c: unit first-order information h1
@@ -225,7 +244,8 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
                                                  sample.cov     = NULL,
                                                  Sinv.method    = "eigen",
                                                  sample.cov.inv = NULL,
-                                                 Gamma          = NULL) {
+                                                 Gamma          = NULL,
+                                                 meanstructure  = TRUE) {
 
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
@@ -236,19 +256,25 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
 
     # Gamma
     if(is.null(Gamma)) {
-        Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)
+        Gamma <- lav_samplestats_Gamma(Y, meanstructure = meanstructure)
     }
 
     # sample.cov.in
     if(is.null(sample.cov.inv)) {
         # invert sample.cov
+        if(is.null(sample.cov)) {
+            N <- NROW(Y)
+            sample.mean <- colMeans(Y)
+            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+        }
         sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov,
                               logdet = FALSE, Sinv.method = Sinv.method)
     }
 
     # A1
     A1 <- lav_mvnorm_h1_information_expected(Y = Y, Sinv.method = Sinv.method,
-                                             sample.cov.inv = sample.cov.inv)
+                                             sample.cov.inv = sample.cov.inv,
+                                             meanstructure = meanstructure)
 
     A1 %*% Gamma %*% A1
 }

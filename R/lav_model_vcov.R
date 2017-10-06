@@ -47,11 +47,11 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL, lavsamplestats = NULL,
 # robust `sem' NVCOV (see Browne, 1984,  bentler & dijkstra 1985)
 lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                        lavdata = NULL, lavcache = NULL,
-                                       mimic = "lavaan",
+                                       lavoptions = NULL,
                                        use.ginv = FALSE) {
 
     # compute inverse of the expected(!) information matrix
-    if(lavmodel@estimator == "ML" && mimic == "Mplus") {
+    if(lavmodel@estimator == "ML" && lavoptions$mimic == "Mplus") {
         # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
         # - WLS.V is not based on Sigma.hat and Mu.hat (as it
         #   should be?), but on lavsamplestats@cov and lavsamplestats@mean...
@@ -65,13 +65,14 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
                                            inverted       = TRUE,
                                            use.ginv       = use.ginv)
     } else {
-        E.inv <- lav_model_information_expected(lavmodel = lavmodel, 
-                                        lavsamplestats = lavsamplestats, 
-                                        lavdata        = lavdata, 
-                                        extra          = TRUE,
-                                        augmented      = TRUE,
-                                        inverted       = TRUE,
-                                        use.ginv       = use.ginv)
+        E.inv <- lav_model_information(lavmodel = lavmodel, 
+                                       lavsamplestats = lavsamplestats,
+                                       lavdata        = lavdata,
+                                       lavoptions     = lavoptions,
+                                       extra          = TRUE,
+                                       augmented      = TRUE,
+                                       inverted       = TRUE,
+                                       use.ginv       = use.ginv)
     }
 
     # check if E.inv is ok
@@ -79,13 +80,29 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         return(E.inv)
     }
 
-    Delta <- attr(E.inv, "Delta")
-    WLS.V <- attr(E.inv, "WLS.V")
+    if(lavoptions$information == "expected") {
+        Delta <- attr(E.inv, "Delta")
+        WLS.V <- attr(E.inv, "WLS.V")
+    } else {
+        Delta <- computeDelta(lavmodel)
+        # observed h1 information (structured)
+        WLS.V <- vector("list", length = lavsamplestats@ngroups)
+        implied <- lav_model_implied(lavmodel)
+        for(g in 1:lavsamplestats@ngroups) {
+            WLS.V[[g]] <- 
+                lav_mvnorm_information_observed_samplestats(
+                sample.mean = lavsamplestats@mean[[g]], 
+                sample.cov  = lavsamplestats@cov[[g]],
+                Mu          = implied$mean[[g]],
+                Sigma       = implied$cov[[g]],
+                meanstructure = lavmodel@meanstructure)
+        }
+    }
 
     # Gamma
     Gamma <- lavsamplestats@NACOV
     if(lavmodel@estimator == "ML" && 
-       mimic == "Mplus" && !lavsamplestats@NACOV.user) {
+       lavoptions$mimic == "Mplus" && !lavsamplestats@NACOV.user) {
         # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test 
         # statistic
         for(g in 1:lavsamplestats@ngroups) {
@@ -104,7 +121,10 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
     tDVGVD <- matrix(0, ncol=ncol(E.inv), nrow=nrow(E.inv))
     for(g in 1:lavsamplestats@ngroups) {
         fg  <-  lavsamplestats@nobs[[g]]   /lavsamplestats@ntotal
-        fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
+        #fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
+        # from 0.6 onwards, we use fg1 == fg, to be more consistent with
+        # lav_test()
+        fg1 <- fg
         # fg twice for WLS.V, 1/fg1 once for GaMMA
         # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
         # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
@@ -130,7 +150,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
 lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel, 
                                             lavsamplestats = NULL, 
                                             lavdata        = NULL,
-                                            information    = "observed", 
+                                            lavoptions     = NULL,
                                             lavcache       = NULL, 
                                             use.ginv       = FALSE) {
 
@@ -143,7 +163,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                    lavsamplestats = lavsamplestats,
                                    lavdata        = lavdata,
                                    lavcache       = lavcache,
-                                   information    = information,
+                                   lavoptions     = lavoptions,
                                    extra          = FALSE,
                                    augmented      = TRUE,
                                    inverted       = TRUE,
@@ -160,6 +180,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel      = lavmodel,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
                                          lavcache       = lavcache,
+                                         lavoptions     = lavoptions,
                                          extra          = TRUE,
                                          check.pd       = FALSE,
                                          augmented      = FALSE,
@@ -196,32 +217,25 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
 
     # expected OR observed, depending on lavoptions$information
     if(is.null(lavoptions) && is.null(lavoptions$information)) {
-        lavoptions <- list(information = "observed")
+        lavoptions <- list(information = "observed",
+                           observed.information = "h1",
+                           h1.information = "structured")
     }
 
     
 
     # information matrix
     if(lavoptions$information == "expected") {
-        # structured of unstructured?
-        if(!is.null(lavoptions) &&
-           !is.null(lavoptions$h1.information) &&
-           lavoptions$h1.information == "unstructured") {
-            structured <- FALSE
-        } else {
-            structured <- TRUE
-        }
-
         E.inv <- lav_model_information_expected(lavmodel       = lavmodel,
                                                 lavsamplestats = lavsamplestats,
-                                                structured     = structured,
                                                 lavdata        = NULL,
+                                                lavoptions     = lavoptions,
                                                 extra          = TRUE,
                                                 augmented      = TRUE,
                                                 inverted       = TRUE,
                                                 use.ginv       = use.ginv)
         Delta <- attr(E.inv, "Delta")
-        WLS.V <- attr(E.inv, "WLS.V") # this is 'H' in the literature
+        WLS.V <- attr(E.inv, "WLS.V") # this is 'H' or 'A1' in the literature
         attr(E.inv, "Delta") <- NULL
         attr(E.inv, "WLS.V") <- NULL
     } else {
@@ -234,7 +248,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
                                                 use.ginv       = use.ginv)
         if(lavoptions$observed.information == "h1") {
             Delta <- attr(E.inv, "Delta")
-            WLS.V <- attr(E.inv, "WLS.V") # this is 'H' in the literature
+            WLS.V <- attr(E.inv, "WLS.V") # this is 'H' or 'A1' in the lit.
             attr(E.inv, "Delta") <- NULL
             attr(E.inv, "WLS.V") <- NULL
         } else {
@@ -317,6 +331,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     NVarCov
 }
 
+
+
 lav_model_vcov <- function(lavmodel       = NULL, 
                            lavsamplestats = NULL, 
                            lavoptions     = NULL, 
@@ -336,17 +352,17 @@ lav_model_vcov <- function(lavmodel       = NULL,
     if(se == "none" || se == "external") return(matrix(0,0,0))
 
     # some require meanstructure (for now)
-    if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 
-       !lavoptions$meanstructure) {
-        stop("se (", se, ") requires meanstructure (for now)")
-    }
+    #if(se %in% c("first.order", "robust.sem", "robust.huber.white") && 
+    #   !lavoptions$meanstructure) {
+    #    stop("se (", se, ") requires meanstructure (for now)")
+    #}
 
     if(se == "standard") {
         NVarCov <- lav_model_information(lavmodel       = lavmodel,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
                                          lavcache       = lavcache,
-                                         information    = information,
+                                         lavoptions     = lavoptions,
                                          extra          = FALSE,
                                          augmented      = TRUE,
                                          inverted       = TRUE,
@@ -358,6 +374,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
                                              lavcache       = lavcache,
+                                             lavoptions     = lavoptions,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
                                              augmented      = TRUE,
@@ -368,9 +385,9 @@ lav_model_vcov <- function(lavmodel       = NULL,
         NVarCov <-
             lav_model_nvcov_robust_sem(lavmodel       = lavmodel,
                                        lavsamplestats = lavsamplestats,
-                                       mimic          = mimic,
                                        lavcache       = lavcache,
                                        lavdata        = lavdata,
+                                       lavoptions     = lavoptions,
                                        use.ginv       = use.ginv)
 
     } else if(se == "robust.huber.white") {
@@ -378,8 +395,8 @@ lav_model_vcov <- function(lavmodel       = NULL,
             lav_model_nvcov_robust_sandwich(lavmodel = lavmodel,
                                             lavsamplestats = lavsamplestats,
                                             lavdata        = lavdata,
-                                            information    = information,
                                             lavcache       = lavcache,
+                                            lavoptions     = lavoptions,
                                             use.ginv       = use.ginv)
 
     } else if(se %in% c("two.stage", "robust.two.stage")) {
