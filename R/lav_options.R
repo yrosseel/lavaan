@@ -468,9 +468,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$meanstructure == FALSE) {
             # user explicitly wants meanstructure == FALSE
             # check for conflicting arguments
-            if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv", "pml")) {
-                warning("lavaan WARNING: estimator forces meanstructure = TRUE")
-            }
+            #if(opt$estimator %in% c("mlm", "mlmv", "mlr", "mlf", "ulsm", "ulsmv", "wlsm", "wlsmv", "pml")) {
+            #    warning("lavaan WARNING: estimator forces meanstructure = TRUE")
+            #}
             if(opt$missing %in% c("ml", "two.stage")) {
                 warning("lavaan WARNING: missing argument forces meanstructure = TRUE")
             }

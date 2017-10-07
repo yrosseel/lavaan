@@ -143,7 +143,7 @@ lav_mvnorm_h1_logl_hessian_samplestats <-
              sample.nobs    = NULL,
              Sinv.method    = "eigen",
              sample.cov.inv = NULL,
-             meanstructcure = TRUE) {
+             meanstructure  = TRUE) {
 
     N <- sample.nobs
 

@@ -1,6 +1,3 @@
-##
-## FIXME: does not work yet if WLS.V is diagonal/numeric!!!
-##
 lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel       = NULL,
@@ -70,8 +67,6 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         Delta <- attr(E, "Delta")
         WLS.V <- attr(E, "WLS.V")
     }
-
-    stopifnot(is.matrix(WLS.V[[1]]))
 
     # Gamma
     if(is.null(Gamma)) {
@@ -236,6 +231,12 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
         Delta.g <- Delta[[g]]
         WLS.Vg  <- WLS.V[[g]] * fg
 
+        # check if WLS.Vg is a matrix
+        if(!is.matrix(WLS.Vg)) {
+            # create matrix
+            WLS.Vg <- diag(WLS.Vg)
+        }
+
         U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% 
                                 t(Delta[[g]]) %*% WLS.Vg) 
         trace.UGamma[g] <- sum(U * Gamma.g)
@@ -276,6 +277,12 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
         Gamma.g <- Gamma[[g]] / fg  ## ?? check this
         Delta.g <- Delta[[g]]
         WLS.Vg  <- WLS.V[[g]] * fg
+
+        # check if WLS.Vg is a matrix
+        if(!is.matrix(WLS.Vg)) {
+            # create matrix
+            WLS.Vg <- diag(WLS.Vg)
+        }
 
         # handle equality constraints
         if(lavmodel@eq.constraints) {
@@ -376,7 +383,7 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
             #zero.idx <- which(a1 == 0.0)
             #a1.inv[zero.idx] <- 0.0
             #UG <- t(a1.inv * AGA1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
-            UG <- t(Gamma.g * a1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+            UG <- (Gamma.g * a1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
         } else {
             UG <- (Gamma.g %*% A1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
         }

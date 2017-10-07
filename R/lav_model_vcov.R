@@ -80,24 +80,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL, lavsamplestats = NULL,
         return(E.inv)
     }
 
-    if(lavoptions$information == "expected") {
-        Delta <- attr(E.inv, "Delta")
-        WLS.V <- attr(E.inv, "WLS.V")
-    } else {
-        Delta <- computeDelta(lavmodel)
-        # observed h1 information (structured)
-        WLS.V <- vector("list", length = lavsamplestats@ngroups)
-        implied <- lav_model_implied(lavmodel)
-        for(g in 1:lavsamplestats@ngroups) {
-            WLS.V[[g]] <- 
-                lav_mvnorm_information_observed_samplestats(
-                sample.mean = lavsamplestats@mean[[g]], 
-                sample.cov  = lavsamplestats@cov[[g]],
-                Mu          = implied$mean[[g]],
-                Sigma       = implied$cov[[g]],
-                meanstructure = lavmodel@meanstructure)
-        }
-    }
+    Delta <- attr(E.inv, "Delta")
+    WLS.V <- attr(E.inv, "WLS.V")
 
     # Gamma
     Gamma <- lavsamplestats@NACOV

@@ -29,7 +29,7 @@ lav_model_information <- function(lavmodel       = NULL,
         E <- lav_model_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
             lavcache = lavcache, group.weight = group.weight,
-            lavoptions = lavoptions,
+            lavoptions = lavoptions, extra = extra,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else if(information == "expected") {
         E <- lav_model_information_expected(lavmodel = lavmodel,
@@ -208,6 +208,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                            lavdata        = NULL,
                                            lavcache       = NULL,
                                            lavoptions     = NULL,
+                                           extra          = FALSE,
                                            group.weight   = TRUE,
                                            augmented      = FALSE,
                                            inverted       = FALSE,
@@ -260,11 +261,11 @@ lav_model_information_observed <- function(lavmodel       = NULL,
         if(estimator == "PML" || estimator == "MML") {
             Information <- Information / lavsamplestats@ntotal
         }
+    }
 
 
     # using 'observed h1 information'
-    } else {
-
+    if(observed.information == "h1" || extra) {
         # compute DELTA
         Delta <- computeDelta(lavmodel = lavmodel)
         # compute observed information h1
@@ -303,12 +304,10 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                         Sigma       = SIGMA[[g]],
                         meanstructure = lavmodel@meanstructure)
             }
-        } else {
-            stop("lavaan ERROR: observed.information = ", 
-                 dQuote(observed.information), " not supported for estimator ",
-                 dQuote(lavmodel@estimator) )
         }
+    }
 
+    if(observed.information == "h1") {
         # compute Information per group
         Info.group  <- vector("list", length=lavsamplestats@ngroups)
         for(g in 1:lavsamplestats@ngroups) {
@@ -343,8 +342,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                                  use.ginv    = use.ginv)
     }
 
-    # for two.stage + observed.hession = "h1"
-    if(observed.information != "hessian") {
+    if(extra) {
         attr(Information, "Delta") <- Delta
         attr(Information, "WLS.V") <- WLS.V
     }
