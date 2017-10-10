@@ -281,6 +281,9 @@ lav_model_information_observed <- function(lavmodel       = NULL,
             #     - complete data, unstructured
             #     - incomplete data, structured (default)
             #     - incomplete data, unstructured
+            if(lavmodel@conditional.x) {
+                stop("lavaan ERROR: combination observed.information == \"h1\" (used by se = \"satorra.bentler\") and conditional.x = TRUE not supported yet")
+            }
             if(structured) {
                 SIGMA <- computeSigmaHat(lavmodel = lavmodel)
                 if(lavmodel@meanstructure) {

@@ -36,11 +36,11 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
 
     # check method
     if(method == "default") {
-        method <- "original"
+        method <- "ABA"
     } else if(!all(method %in% c("original", "orthogonal.complement", 
                                  "ABA"))) {
         warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `original'")
-        method <- "original"
+        method <- "ABA"
     }
 
     # do we have E.inv, Delta, WLS.V?
@@ -329,8 +329,8 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
 # if only the trace is needed, we can use reduce the rhs (after the minus)
 # to AGA1 %*% Delta %*% E.inv %*% tDelta (eliminating A1 and A1.inv)
 
-# we write it like this to allow for fixed.x covariates which affect A1
-# and AGA1
+# we write it like this to highlight the connection with MLR
+#
 lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
                                                Delta         = NULL,
                                                WLS.V         = NULL,
@@ -362,30 +362,12 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
             AGA1 <- Gamma.g * tcrossprod(a1)
         }
 
-        # mask independent 'fixed-x' variables
-        # note: this only affects the saturated H1 model
-        #if(length(x.idx[[g]]) > 0L) {
-        #    nvar <- ncol(lavsamplestats@cov[[g]])
-        #    idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-        #                               meanstructure=TRUE, type="all")
-        #    if(diagonal) {
-        #        a1 <- a1[idx]
-        #    } else {
-        #        A1 <- A1[idx,idx]
-        #    }
-        #    AGA1    <- AGA1[idx,idx]
-        #    Delta.g <- Delta.g[idx,]
-        #}
-
         if(diagonal) {
-            #a1.inv <- 1/a1
-            # if fixed.x = TRUE
-            #zero.idx <- which(a1 == 0.0)
-            #a1.inv[zero.idx] <- 0.0
-            #UG <- t(a1.inv * AGA1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
-            UG <- (Gamma.g * a1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+            UG <- (Gamma.g * a1) - 
+                  (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
         } else {
-            UG <- (Gamma.g %*% A1) - (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+            UG <- (Gamma.g %*% A1) - 
+                  (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
         }
 
         trace.UGamma[g] <- sum(diag(UG))

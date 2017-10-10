@@ -126,7 +126,7 @@ lav_model_wls_v <- function(lavmodel       = NULL,
     #         3c: incomplete, FIML, structured
     #         3d: incomplete, FIML, unstructured
     #         3e: incomplete, two.stage, structured
-    #         ef: incomplete, two.stage, unstructured (EM estimates)
+    #         3f: incomplete, two.stage, unstructured (EM estimates)
     } else if(lavmodel@estimator == "ML") {
         WLS.V <- vector("list", length=lavsamplestats@ngroups)
         
@@ -146,26 +146,18 @@ lav_model_wls_v <- function(lavmodel       = NULL,
                 Mu.hat <- NULL
             }
         } else {
-            if(lavmodel@conditional.x) {
-                 # FIXME: wahat to do here?
-                 stop("lavaan ERROR: conditional.x = TRUE, but structured = FALSE?")
-            } else {
-                 # complete data: observed var/cov matrix 'S'
-                 # two.stage + incomplete data: EM estimate of 'S'
-                 Sigma.hat <- lavsamplestats@cov
-            }
+            # complete data: observed var/cov matrix 'S'
+            # two.stage + incomplete data: EM estimate of 'S'
+            # conditional.x: unconditional (full/joint) S
+            Sigma.hat <- lavsamplestats@cov
             if(lavmodel@meanstructure) {
-                if(lavmodel@conditional.x) {
-                    # FIXME!
-                } else {
-                    # complete data: observed mean vector 'ybar'
-                    # two.stage + incomplete data: EM estimate of 'ybar'
-                    Mu.hat <- lavsamplestats@mean
-                }
+                # complete data: observed mean vector 'ybar'
+                # two.stage + incomplete data: EM estimate of 'ybar'
+                # conditional.x: full unconditional mean
+                Mu.hat <- lavsamplestats@mean
             } else {
                 Mu.hat <- NULL
             }
-            
         }
 
         # GW?

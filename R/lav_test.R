@@ -1,10 +1,11 @@
 
-testStatisticYuanBentler <- function(lavsamplestats=lavsamplestats,
-                                     A1.group=NULL,
-                                     B1.group=NULL,
-                                     Delta=NULL,
-                                     E.inv=NULL,
-                                     x.idx=list(integer(0))) {
+testStatisticYuanBentler <- function(lavsamplestats =lavsamplestats,
+                                     meanstructure  = TRUE,
+                                     A1.group       = NULL,
+                                     B1.group       = NULL,
+                                     Delta          = NULL,
+                                     E.inv          = NULL,
+                                     x.idx          = list(integer(0))) {
 
     # we always assume a meanstructure (nope, not any longer, since 0.6)
     #meanstructure <- TRUE
@@ -454,12 +455,13 @@ lav_model_test <- function(lavmodel       = NULL,
                 }
             }
             trace.UGamma <-
-                testStatisticYuanBentler(lavsamplestats=lavsamplestats,
-                                         A1.group=A1.group,
-                                         B1.group=B1.group,
-                                         Delta=Delta,
-                                         E.inv=E.inv,
-                                         x.idx=x.idx)
+                testStatisticYuanBentler(lavsamplestats = lavsamplestats,
+                                         meanstructure  = meanstructure,
+                                         A1.group       = A1.group,
+                                         B1.group       = B1.group,
+                                         Delta          = Delta,
+                                         E.inv          = E.inv,
+                                         x.idx          = x.idx)
         }
 
         scaling.factor       <- sum(trace.UGamma) / df
