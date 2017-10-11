@@ -417,10 +417,20 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
 
         } else if(estimator == "ML") {
             if(lavsamplestats@missing.flag) {
-                B1 <- 
-                  lav_mvnorm_missing_information_firstorder(Y = lavdata@X[[g]],
-                      Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
-                      Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                if(structured) {
+                    B1 <- 
+                      lav_mvnorm_missing_information_firstorder(
+                          Y = lavdata@X[[g]],
+                          Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
+                          Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]])
+                } else {
+                    B1 <-
+                      lav_mvnorm_missing_information_firstorder(
+                          Y = lavdata@X[[g]],
+                          Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
+                          Mu = lavsamplestats@missing.h1[[g]]$mu,
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                }
             } else {
                 if(lavmodel@meanstructure) {
                     MEAN <- Mu.hat[[g]]

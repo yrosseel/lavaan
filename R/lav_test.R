@@ -5,14 +5,16 @@ testStatisticYuanBentler <- function(lavsamplestats =lavsamplestats,
                                      B1.group       = NULL,
                                      Delta          = NULL,
                                      E.inv          = NULL,
-                                     x.idx          = list(integer(0))) {
+                                     x.idx          = list(integer(0)),
+                                     Satterthwaite  = FALSE) {
 
     # we always assume a meanstructure (nope, not any longer, since 0.6)
     #meanstructure <- TRUE
 
-    trace.UGamma <- numeric( lavsamplestats@ngroups )
-    trace.h1     <- numeric( lavsamplestats@ngroups )
-    trace.h0     <- numeric( lavsamplestats@ngroups )
+    trace.UGamma  <- numeric( lavsamplestats@ngroups )
+    trace.UGamma2 <- numeric( lavsamplestats@ngroups )
+    trace.h1      <- numeric( lavsamplestats@ngroups )
+    trace.h0      <- numeric( lavsamplestats@ngroups )
 
     for(g in 1:lavsamplestats@ngroups) {
         A1 <- A1.group[[g]]
@@ -30,17 +32,23 @@ testStatisticYuanBentler <- function(lavsamplestats =lavsamplestats,
         A1.inv <- solve(A1)
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
-        trace.h0[g] <- sum( (B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]])) )
-        trace.UGamma[g] <- abs(trace.h1[g] - trace.h0[g])
+        trace.h0[g] <- sum( B1 * Delta[[g]] %*% E.inv %*% t(Delta[[g]]) )
+        trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
+
+        if(Satterthwaite) {
+            UG <- (A1.inv %*% B1) - (A1.inv %*% B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% A1)
+            trace.UGamma2[g] <- sum(UG * t(UG))
+        }
     }
 
     # traces
     trace.UGamma <- sum(trace.UGamma)
-    #tUG <- t(UG); trace.UGamma2 <- sum(UG * tUG)
-    #attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
-
     attr(trace.UGamma, "h1") <- trace.h1
     attr(trace.UGamma, "h0") <- trace.h0
+
+    if(Satterthwaite) {
+        attr(trace.UGamma, "trace.UGamma2") <- sum(trace.UGamma2)
+    }
 
     trace.UGamma
 }
@@ -348,7 +356,8 @@ lav_model_test <- function(lavmodel       = NULL,
         if(is.null(E.inv)) {
             # if se="standard", information is probably expected
             # change it to observed
-            #if(lavoptions$se != "robust.mlr") information <- "observed"
+            # if(lavoptions$se != "robust.mlr") information <- "observed"
+            # NO longer, since 0.6-1 
             E.inv <- lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
                                            lavdata        = lavdata,
@@ -368,7 +377,7 @@ lav_model_test <- function(lavmodel       = NULL,
             return(TEST)
         }
 
-        if(mimic == "Mplus" || mimic == "lavaan") {
+        if(mimic == "Mplus") { # since 0.6-1
             if(is.null(B0.group)) {
                 B0 <- 
                     lav_model_information_firstorder(lavmodel = lavmodel,
@@ -403,16 +412,30 @@ lav_model_test <- function(lavmodel       = NULL,
             B1.group <- vector("list", length=lavsamplestats@ngroups)
             for(g in 1:lavsamplestats@ngroups) {
                 if(lavsamplestats@missing.flag) {
+                    if(lavoptions$h1.information == "structured") {
+                        SIGMA <- Sigma.hat[[g]]
+                        MEAN  <- Mu.hat[[g]]
+                    } else {
+                        SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
+                        MEAN  <- lavsamplestats@missing.h1[[g]]$mu
+                    }
                     out <- lav_mvnorm_missing_information_both(
                                Y  = lavdata@X[[g]],
                                Mp = lavdata@Mp[[g]],
                                wt = lavdata@weights[[g]],
-                               Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+                               Mu = MEAN,
+                               Sigma = SIGMA,
                                information = information)
                     A1.group[[g]] <- out$Abeta
                     B1.group[[g]] <- out$Bbeta
                 } else {
-                    if(meanstructure) {
+                    # different scenarios:
+                    # - meanstructure + structured 
+                    # - meanstructure + unstructured
+                    # - no meanstructure + structured 
+                    # - no meanstructure + unstructured
+                    if(meanstructure &&
+                       lavoptions$h1.information == "structured") {
                         if(information == "expected") {
                              A1.group[[g]] <- lav_mvnorm_information_expected(
                                 Y = lavdata@X[[g]],
@@ -428,7 +451,8 @@ lav_model_test <- function(lavmodel       = NULL,
                                 Y = lavdata@X[[g]],
                                 Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
                                 wt = lavdata@weights[[g]])
-                    } else {
+                    } else if(!meanstructure &&
+                              lavoptions$h1.information == "structured") {
                         # no meanstructure
                         if(information == "expected") {
                              A1.group[[g]] <- lav_mvnorm_information_expected(
@@ -451,6 +475,34 @@ lav_model_test <- function(lavmodel       = NULL,
                                 Sigma         = Sigma.hat[[g]],
                                 wt            = lavdata@weights[[g]],
                                 meanstructure = FALSE)
+                    } else if(meanstructure &&
+                              !lavoptions$h1.information == "structured") {
+                        # information expected == observed if h1!!
+                        A1.group[[g]] <- lav_mvnorm_h1_information_expected(
+                                Y = lavdata@X[[g]], # for wt
+                                sample.cov.inv = lavsamplestats@icov[[g]],
+                                wt = lavdata@weights[[g]],
+                                meanstructure = TRUE)
+                        B1.group[[g]] <- lav_mvnorm_h1_information_firstorder(
+                                Y = lavdata@X[[g]], # for wt
+                                Gamma = lavsamplestats@NACOV[[g]],
+                                sample.cov.inv = lavsamplestats@icov[[g]],
+                                wt = lavdata@weights[[g]],
+                                meanstructure = TRUE)
+                    } else if(!meanstructure &&
+                              !lavoptions$h1.information == "structured") {
+                        # information expected == observed if h1!!
+                        A1.group[[g]] <- lav_mvnorm_h1_information_expected(
+                                Y = lavdata@X[[g]], # for wt
+                                sample.cov.inv = lavsamplestats@icov[[g]],
+                                wt = lavdata@weights[[g]],
+                                meanstructure = FALSE)
+                        B1.group[[g]] <- lav_mvnorm_h1_information_firstorder(
+                                Y = lavdata@X[[g]], # for wt
+                                Gamma = lavsamplestats@NACOV[[g]],
+                                sample.cov.inv = lavsamplestats@icov[[g]],
+                                wt = lavdata@weights[[g]],
+                                meanstructure = FALSE)
                     }
                 }
             }
@@ -461,7 +513,8 @@ lav_model_test <- function(lavmodel       = NULL,
                                          B1.group       = B1.group,
                                          Delta          = Delta,
                                          E.inv          = E.inv,
-                                         x.idx          = x.idx)
+                                         x.idx          = x.idx,
+                                         Satterthwaite  = TRUE) # for now
         }
 
         scaling.factor       <- sum(trace.UGamma) / df
@@ -474,6 +527,8 @@ lav_model_test <- function(lavmodel       = NULL,
 
         scaling.factor.h1    <- sum( attr(trace.UGamma, "h1") ) / ndat
         scaling.factor.h0    <- sum( attr(trace.UGamma, "h0") ) / npar
+        trace.UGamma2         <- attr(trace.UGamma, "trace.UGamma2")
+        attributes(trace.UGamma) <- NULL
 
         TEST[[2]] <- list(test=test,
                           stat=chisq.scaled,
@@ -483,7 +538,8 @@ lav_model_test <- function(lavmodel       = NULL,
                           scaling.factor=scaling.factor,
                           scaling.factor.h1=scaling.factor.h1,
                           scaling.factor.h0=scaling.factor.h0,
-                          trace.UGamma=trace.UGamma)
+                          trace.UGamma=trace.UGamma,
+                          trace.UGamma2=trace.UGamma2)
 
     } else if(test == "bootstrap" || test == "bollen.stine") {
         # check if we have bootstrap lavdata

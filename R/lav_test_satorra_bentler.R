@@ -362,12 +362,14 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
             AGA1 <- Gamma.g * tcrossprod(a1)
         }
 
+        # note: we have AGA1 at the end, to avoid ending up with
+        # a transposed matrix (both parts are non-symmetric)
         if(diagonal) {
-            UG <- (Gamma.g * a1) - 
-                  (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+            UG <- t(Gamma.g * a1) - 
+                  (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
         } else {
             UG <- (Gamma.g %*% A1) - 
-                  (AGA1 %*% Delta.g %*% tcrossprod(E.inv, Delta.g))
+                  (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
         }
 
         trace.UGamma[g] <- sum(diag(UG))
