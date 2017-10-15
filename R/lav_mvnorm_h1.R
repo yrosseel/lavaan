@@ -249,9 +249,10 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
 
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
-        SC <- wt * lav_mvnorm_scores_mu_vech_sigma(Y = Y, Mu = out$center, 
-                                                   Sigma = out$cov)
-        return( crossprod(SC) / NROW(Y) )
+        res <- lav_mvnorm_information_firstorder(Y = Y, wt = wt, 
+                   Mu = out$center, Sigma = out$cov, 
+                   meanstructure = meanstructure)
+        return( res )
     }
 
     # Gamma

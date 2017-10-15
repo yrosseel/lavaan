@@ -369,6 +369,10 @@ lav_options_set <- function(opt = NULL) {
               opt$test == "yuan.bentler" ||
               opt$test == "yuan-bentler") {
         opt$test <- "yuan.bentler"
+    } else if(opt$test == "yuan.bentler.mplus" ||
+              opt$test == "yuan-bentler.mplus" ||
+              opt$test == "yuan-bentler-mplus") {
+        opt$test <- "yuan.bentler.mplus"
     } else if(opt$test == "m.adjusted" ||
               opt$test == "m" ||
               opt$test == "mean.adjusted" ||
@@ -393,7 +397,7 @@ lav_options_set <- function(opt = NULL) {
         opt$test <- "bollen.stine"
     } else {
         stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\",
-            \"satorra.bentler\", \"yuan.bentler\",
+            \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
             \"mean.var.adjusted\", \"scaled.shifted\",
             \"bollen.stine\", or \"bootstrap\"")
     }
@@ -579,7 +583,13 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.huber.white"
-        if(opt$test != "none" && opt$se != "external") opt$test <- "yuan.bentler"
+        if(opt$test != "none" && opt$se != "external") {
+            if(opt$mimic == "Mplus" || opt$test == "yuan.bentler.mplus") {
+                opt$test <- "yuan.bentler.mplus"
+            } else {
+                opt$test <- "yuan.bentler"
+            }
+        }
         #opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"

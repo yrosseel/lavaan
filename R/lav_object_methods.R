@@ -13,7 +13,9 @@ short.summary <- function(object) {
     # Print Chi-square value for the user-specified (full/h0) model
 
     # robust/scaled statistics?
-    if(object@Options$test %in% c("satorra.bentler", "yuan.bentler",
+    if(object@Options$test %in% c("satorra.bentler",
+                                  "yuan.bentler",
+                                  "yuan.bentler.mplus",
                                   "mean.var.adjusted",
                                   "scaled.shifted") &&
        length(object@test) > 1L) {
@@ -101,11 +103,9 @@ short.summary <- function(object) {
             t2.txt <- sprintf("  %10.3f", object@test[[2]]$scaling.factor)
             cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
             if(object@Options$test == "yuan.bentler") {
-                if(object@Options$mimic == "Mplus") {
-                    cat("    for the Yuan-Bentler correction (Mplus variant)\n")
-                } else {
-                    cat("    for the Yuan-Bentler correction\n")
-                }
+                cat("    for the Yuan-Bentler correction\n")
+            } else if(object@Options$test == "yuan.bentler.mplus") {
+                cat("    for the Yuan-Bentler correction (Mplus variant)\n")
             } else if(object@Options$test == "satorra.bentler") {
                 if(object@Options$mimic == "Mplus" &&
                    object@Options$estimator == "ML") {
