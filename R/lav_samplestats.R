@@ -10,6 +10,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       DataOvnames       = NULL,
                                       DataOvnamesx      = NULL,
                                       DataOv            = NULL,
+                                      DataWT            = NULL,
                                       missing           = "listwise",
                                       rescale           = FALSE,
                                       missing.h1        = TRUE,
@@ -44,6 +45,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         ov.names.x <- lavdata@ov.names.x
         DataOv <- lavdata@ov
         eXo <- lavdata@eXo
+        WT  <- lavdata@weights
     } else if(!is.null(DataX)) {
         stopifnot(is.list(DataX), is.matrix(DataX[[1L]]))
         X <- DataX
@@ -61,6 +63,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         }
         ov.names   <- DataOvnames
         ov.names.x <- DataOvnamesx
+        WT         <- DataWT
     } else {
         stop("both lavdata and DataX argument are NULL")
     }
@@ -379,9 +382,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 missing.[[g]] <-
                     lav_samplestats_missing_patterns(Y  = X[[g]],
                                                      Mp = Mp[[g]],
-                                                     wt = lavdata@weights[[g]])
+                                                     wt = WT[[g]])
                 out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
-                          wt = lavdata@weights[[g]],
+                          wt = WT[[g]],
                           Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
                 missing.h1.[[g]]$sigma <- out$Sigma
                 missing.h1.[[g]]$mu    <- out$Mu
@@ -396,19 +399,19 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 missing.[[g]] <-
                     lav_samplestats_missing_patterns(Y  = X[[g]],
                                                      Mp = Mp[[g]],
-                                                     wt = lavdata@weights[[g]])
+                                                     wt = WT[[g]])
 
                 if(missing.h1 && nlevels == 1L) {
                     # estimate moments unrestricted model
                     out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
-                              wt = lavdata@weights[[g]],
+                              wt = WT[[g]],
                               Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
                     missing.h1.[[g]]$sigma <- out$Sigma
                     missing.h1.[[g]]$mu    <- out$Mu
                     missing.h1.[[g]]$h1    <- out$fx
                 }
 
-                if(!is.null(lavdata@weights[[g]])) {
+                if(!is.null(WT[[g]])) {
                     # here, sample statistics == EM estimates
                     cov[[g]]  <- missing.h1.[[g]]$sigma
                     var[[g]]  <- diag(cov[[g]])
@@ -427,8 +430,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 }
             } else {
                 # LISTWISE
-                if(!is.null(lavdata@weights[[g]])) {
-                    out <- stats::cov.wt(X[[g]], wt = lavdata@weights[[g]],
+                if(!is.null(WT[[g]])) {
+                    out <- stats::cov.wt(X[[g]], wt = WT[[g]],
                                         method = "ML")
                     cov[[g]]  <- out$cov
                     var[[g]]  <- diag(cov[[g]])
@@ -483,14 +486,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # fill in the other slots
         if(!is.null(eXo[[g]])) {
-            if(!is.null(lavdata@weights[[g]])) {
+            if(!is.null(WT[[g]])) {
                 if(missing != "listwise") {
                     cov.x[[g]]  <- missing.h1.[[g]]$sigma[ x.idx[[g]],  
                                                            x.idx[[g]],
                                                            drop = FALSE ]
                     mean.x[[g]] <- missing.h1.[[g]]$mu[  x.idx[[g]] ]
                 } else {
-                    out <- stats::cov.wt(eXo[[g]], wt = lavdata@weights[[g]],
+                    out <- stats::cov.wt(eXo[[g]], wt = WT[[g]],
                                          method = "ML")
                     cov.x[[g]]  <- out$cov
                     mean.x[[g]] <- out$center

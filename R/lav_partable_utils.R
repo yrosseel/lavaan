@@ -155,7 +155,11 @@ lav_partable_ndat <- function(partable) {
             # but additional thresholds
             ndat[b] <- ndat[b] + nth
             # add slopes
-            ndat[b] <- ndat[b] + (nvar * nexo)
+            if(conditional.x) {
+                ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
+                nexo     <- length(ov.names.x)
+                ndat[b] <- ndat[b] + (nvar * nexo)
+            }
         }
 
         # correction for conditional.x not categorical

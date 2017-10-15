@@ -281,6 +281,7 @@ bootstrap.internal <- function(object          = NULL,
                                DataOv        = lavdata@ov,
                                DataOvnames   = lavdata@ov.names,
                                DataOvnamesx  = lavdata@ov.names.x,
+                               DataWT        = lavdata@weights,
                                missing       = lavoptions$missing,
                                rescale       = (lavoptions$estimator == "ML" &&
                                                 lavoptions$likelihood == "normal"),
