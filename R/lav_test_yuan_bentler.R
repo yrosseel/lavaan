@@ -43,7 +43,6 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         E.inv <- try(lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
                                            lavdata        = lavdata,
-                                           lavcache       = lavcache,
                                            lavoptions     = lavoptions,
                                            extra          = FALSE,
                                            augmented      = TRUE,
@@ -155,7 +154,6 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
             B0 <- lav_model_information_firstorder(lavmodel = lavmodel,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
-                                             lavcache       = lavcache,
                                              lavoptions     = lavoptions,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
@@ -261,6 +259,7 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
 
         A1 <- A1.group[[g]]
         B1 <- B1.group[[g]]
+        DELTA <- Delta[[g]]
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
@@ -268,18 +267,19 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
             nvar <- ncol(lavsamplestats@cov[[g]])
             idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
                                        meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
+            A1 <- A1[idx, idx, drop = FALSE]
+            B1 <- B1[idx, idx, drop = FALSE]
+            DELTA <- DELTA[idx, , drop = FALSE]
         }
         A1.inv <- solve(A1)
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
         # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) ) 
-        trace.h0[g] <- fg * sum( B1 * Delta[[g]] %*% E.inv %*% t(Delta[[g]]) )
+        trace.h0[g] <- fg * sum( B1 * DELTA %*% E.inv %*% t(DELTA) )
         trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
 
         if(Satterthwaite) {
-            UG <- (A1.inv %*% B1) - fg * (A1.inv %*% B1 %*% Delta[[g]] %*% E.inv %*% t(Delta[[g]]) %*% A1)
+            UG <- (A1.inv %*% B1) - fg * (A1.inv %*% B1 %*% DELTA %*% E.inv %*% t(DELTA) %*% A1)
             trace.UGamma2[g] <- sum(UG * t(UG))
         }
     }
