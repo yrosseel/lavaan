@@ -22,6 +22,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       group.w.free      = FALSE,
                                       WLS.V             = NULL,
                                       NACOV             = NULL,
+                                      gamma.n.minus.one = FALSE,
                                       se                = "standard",
                                       information       = "expected",
                                       ridge             = 1e-5,
@@ -524,6 +525,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                           conditional.x  = conditional.x,
                                           meanstructure  = meanstructure,
                                           slopestructure = conditional.x,
+                                          gamma.n.minus.one = gamma.n.minus.one,
                                           Mplus.WLS      = FALSE)
             } else if(estimator %in% c("WLS","DWLS","ULS")) {
                 if(!categorical) {
@@ -559,9 +561,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                               conditional.x = conditional.x,
                                               meanstructure = meanstructure,
                                               slopestructure = conditional.x,
+                                              gamma.n.minus.one = gamma.n.minus.one,
                                               Mplus.WLS = (mimic=="Mplus"))
                 } else { # categorical case
-                    NACOV[[g]]  <- CAT$WLS.W  * (nobs[[g]] - 1L)
+                    NACOV[[g]]  <- CAT$WLS.W  * nobs[[g]]
+                    if(gamma.n.minus.one) {
+                        NACOV[[g]] <- NACOV[[g]] * nobs[[g]] / (nobs[[g]] - 1L)
+                    }
                 }
             } else if(estimator == "PML") {
                 # no NACOV ... for now

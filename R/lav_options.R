@@ -102,6 +102,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 test                   = "default",
                 bootstrap              = 1000L,
                 observed.information   = "hessian",
+                gamma.n.minus.one      = FALSE,
                 #gamma.unbiased         = FALSE,
 
                 # optimization

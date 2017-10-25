@@ -74,10 +74,12 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_Gamma_NT <- function(Y              = NULL,
+lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
+                                                            # eXo if 
+                                                            #conditional.x=TRUE
                                      wt             = NULL,
-                                     COV            = NULL,
-                                     MEAN           = NULL,
+                                     COV            = NULL, # joint!
+                                     MEAN           = NULL, # joint!
                                      rescale        = FALSE,
                                      x.idx          = integer(0L),
                                      fixed.x        = FALSE,
@@ -184,13 +186,16 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL,
 
         if(meanstructure) {
             if(slopestructure) {
-                A11 <- solve(C3) %x% Cov.YbarX
+                #A11 <- solve(C3) %x% Cov.YbarX
+                A11 <- Cov.YbarX %x% solve(C3)
             } else {
-                A11 <- solve(C3)[1, 1, drop=FALSE] %x% Cov.YbarX
+                #A11 <- solve(C3)[1, 1, drop=FALSE] %x% Cov.YbarX
+                A11 <- Cov.YbarX %x% solve(C3)[1, 1, drop=FALSE]
             }
         } else {
             if(slopestructure) {
-                A11 <- solve(C3)[-1, -1, drop=FALSE] %x% Cov.YbarX
+                #A11 <- solve(C3)[-1, -1, drop=FALSE] %x% Cov.YbarX
+                A11 <- Cov.YbarX %x% solve(C3)[-1, -1, drop=FALSE]
             } else {
                 A11 <- matrix(0,0,0)
             }
@@ -211,15 +216,21 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL,
 
 # ADF THEORY
 lav_samplestats_Gamma <- function(Y, 
-                                  x.idx          = integer(0L),
-                                  fixed.x        = FALSE,
-                                  conditional.x  = FALSE,
-                                  meanstructure  = FALSE,
-                                  slopestructure = FALSE, 
-                                  Mplus.WLS      = FALSE,
-                                  add.attributes = FALSE) {
+                                  x.idx              = integer(0L),
+                                  fixed.x            = FALSE,
+                                  conditional.x      = FALSE,
+                                  meanstructure      = FALSE,
+                                  slopestructure     = FALSE, 
+                                  gamma.n.minus.one  = FALSE,
+                                  Mplus.WLS          = FALSE,
+                                  add.attributes     = FALSE) {
     # coerce to matrix
     Y <- unname(as.matrix(Y)); N <- nrow(Y)
+
+    # denominator
+    if(gamma.n.minus.one) {
+        N <- N - 1
+    }
 
     # check arguments
     if(length(x.idx) == 0L) {
@@ -303,8 +314,10 @@ lav_samplestats_Gamma <- function(Y,
 
         if(meanstructure) {
             if(slopestructure) {
-                 Xi.idx <- rep(seq_len(ncX), each  = ncY)
-                Res.idx <- rep(seq_len(ncY), times = ncX)
+                # Xi.idx <- rep(seq_len(ncX), each  = ncY)
+                #Res.idx <- rep(seq_len(ncY), times = ncX)
+                 Xi.idx <- rep(seq_len(ncX), times = ncY)
+                Res.idx <- rep(seq_len(ncY), each  = ncX)
                 Z <- cbind( Xi[, Xi.idx, drop = FALSE] *
                            RES[,Res.idx, drop = FALSE],
                            RES[,   idx1, drop = FALSE] * 
@@ -318,9 +331,11 @@ lav_samplestats_Gamma <- function(Y,
             }
         } else {
             if(slopestructure) {
-                 Xi.idx <- rep(seq_len(ncX), each  = ncY)
-                 Xi.idx <- Xi.idx[ -seq_len(ncY) ]
-                Res.idx <- rep(seq_len(ncY), times = (ncX - 1L))
+                # Xi.idx <- rep(seq_len(ncX), each  = ncY)
+                # Xi.idx <- Xi.idx[ -seq_len(ncY) ]
+                Xi.idx <- rep(seq(2,ncX), times = ncY)
+                #Res.idx <- rep(seq_len(ncY), times = (ncX - 1L))
+                Res.idx <- rep(seq_len(ncY), each = (ncX - 1L))
                 Z <- cbind( Xi[, Xi.idx, drop = FALSE] *
                            RES[,Res.idx, drop = FALSE],
                            RES[,   idx1, drop = FALSE] * 

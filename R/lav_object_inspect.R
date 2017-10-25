@@ -317,7 +317,9 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_information(object, information = "observed",
             augmented = FALSE, inverted = FALSE,
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "information.first.order" || what == "first.order") {
+    } else if(what == "information.first.order" || 
+              what == "information.firstorder"  ||
+              what == "first.order") {
         lav_object_inspect_information(object, information = "first.order",
             augmented = FALSE, inverted = FALSE,
             add.labels = add.labels, add.class = add.class)
@@ -1818,10 +1820,14 @@ lav_object_inspect_wls_obs <- function(object,
 lav_object_inspect_wls_v <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    OUT <- lav_model_wls_v(lavmodel       = object@Model,
-                           lavsamplestats = object@SampleStats,
-                           structured     = TRUE,
-                           lavdata        = object@Data)
+    #OUT <- lav_model_wls_v(lavmodel       = object@Model,
+    #                       lavsamplestats = object@SampleStats,
+    #                       structured     = TRUE,
+    #                       lavdata        = object@Data)
+    # WLS.V == (traditionally) h1 expected information
+    OUT <- lav_model_h1_information_expected(lavobject = object)
+    # this affects fit measures gfi, agfi, pgfi
+
 
     # nblocks
     nblocks <- length(OUT)
@@ -1924,10 +1930,11 @@ lav_object_inspect_gradient <- function(object,
 lav_object_inspect_hessian <- function(object,
     add.labels = FALSE, add.class = FALSE) {
 
-    OUT <- lav_model_hessian(lavmodel       = object@Model, 
+    OUT <- lav_model_hessian(lavmodel       = object@Model,
                              lavsamplestats = object@SampleStats,
                              lavdata        = object@Data,
                              lavcache       = object@Cache,
+                             lavoptions     = object@Options,
                              group.weight   = TRUE)
 
     # labels
@@ -1953,26 +1960,15 @@ lav_object_inspect_information <- function(object,
         object@Options$information <- information
     } 
 
-    if(information == "expected" || information == "observed") {
-        OUT <- lav_model_information(lavmodel =  object@Model,
+    OUT <- lav_model_information(lavmodel =  object@Model,
                   lavsamplestats = object@SampleStats,
                   lavdata        = object@Data,
                   lavcache       = object@Cache,
+                  lavimplied     = object@implied,
                   lavoptions     = object@Options,
+                  extra          = FALSE,
                   augmented      = augmented,
                   inverted       = inverted)
-    } else if(information == "first.order") {
-        B0 <- lav_model_information_firstorder(lavmodel =  object@Model,
-              lavsamplestats = object@SampleStats,
-              lavdata        = object@Data,
-              lavcache       = object@Cache,
-              lavoptions     = object@Options,
-              check.pd       = FALSE,
-              augmented      = augmented,
-              inverted       = inverted)
-        attr(B0, "B0.group") <- NULL
-        OUT <- B0
-    }
 
     # labels
     if(add.labels) {

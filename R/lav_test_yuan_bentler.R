@@ -1,6 +1,7 @@
 lav_test_yuan_bentler <- function(lavobject      = NULL,
                                   lavsamplestats = NULL,
                                   lavmodel       = NULL,
+                                  lavimplied     = NULL,
                                   lavoptions     = NULL,
                                   lavdata        = NULL,
                                   TEST.unscaled  = NULL,
@@ -18,6 +19,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         lavmodel       <- lavobject@Model
         lavoptions     <- lavobject@Options
         lavpartable    <- lavobject@ParTable
+        lavimplied     <- lavobject@implied
         lavdata        <- lavobject@Data
         TEST$standard  <- lavobject@test[[1]]
     } else {
@@ -34,7 +36,11 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     # information
     information <- lavoptions$information
     # x.idx
-    x.idx <- lavsamplestats@x.idx
+    if(lavoptions$conditional.x) {
+        x.idx <- NULL
+    } else {
+        x.idx <- lavsamplestats@x.idx
+    }
     # ndat 
     ndat <- numeric(lavsamplestats@ngroups)
     
@@ -43,6 +49,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         E.inv <- try(lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
                                            lavdata        = lavdata,
+                                           lavimplied     = lavimplied,
                                            lavoptions     = lavoptions,
                                            extra          = FALSE,
                                            augmented      = TRUE,
@@ -64,90 +71,24 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     #    Satterthwaite <- TRUE
     #}
 
-    # structured?
-    structured <- TRUE
-    if(lavoptions$h1.information == "unstructured" ||
-       lavoptions$test == "yuan.bentler.mplus") {
-        structured <- FALSE
+    h1.options <- lavoptions
+    if(test == "yuan.bentler.mplus") {
+        # always 'unstructured' H1 information
+        h1.options$h1.information <- "unstructured"
     }
 
-    # model-implied statistics
-    if(structured) {
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
-        if(lavmodel@meanstructure) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel)
-        }
-    }
-
-    # A1 + B1
-    A1.group <- vector("list", length=lavsamplestats@ngroups)
-    B1.group <- vector("list", length=lavsamplestats@ngroups)
-    for(g in 1:lavsamplestats@ngroups) {
-        if(lavsamplestats@missing.flag) {
-            if(structured) {
-                SIGMA <- Sigma.hat[[g]]
-                MU    <- Mu.hat[[g]]
-            } else {
-                SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
-                MU    <- lavsamplestats@missing.h1[[g]]$mu
-            }
-            out <- lav_mvnorm_missing_information_both(
-                       Y           = lavdata@X[[g]],
-                       Mp          = lavdata@Mp[[g]],
-                       wt          = lavdata@weights[[g]],
-                       Mu          = MU,
-                       Sigma       = SIGMA,
-                       information = information)
-            A1.group[[g]] <- out$Abeta
-            B1.group[[g]] <- out$Bbeta
-        } else {
-            # complete data
-            if(structured) {
-                if(lavmodel@meanstructure) {
-                    MU <- Mu.hat[[g]]
-                } else {
-                    MU <- lavsamplestats@mean[[g]]
-                }
-
-                if(information == "expected") {
-                     A1.group[[g]] <- lav_mvnorm_information_expected(
-                        Mu    = MU,
-                        Sigma = Sigma.hat[[g]],
-                        meanstructure = lavmodel@meanstructure)
-                } else {
-                    # no WT needed, cov is already weighted
-                    A1.group[[g]] <-
-                        lav_mvnorm_information_observed_samplestats(
-                            sample.mean   = lavsamplestats@mean[[g]],
-                            sample.cov    = lavsamplestats@cov[[g]],
-                            Mu            = MU,
-                            Sigma         = Sigma.hat[[g]],
-                            meanstructure = lavmodel@meanstructure)
-                }
-                B1.group[[g]] <- lav_mvnorm_information_firstorder(
-                        Y             = lavdata@X[[g]],
-                        wt            = lavdata@weights[[g]],
-                        Mu            = MU,
-                        Sigma         = Sigma.hat[[g]],
-                        meanstructure = lavmodel@meanstructure)
-            } else {
-                # unstructured
-
-                # information expected == observed if h1!!
-                A1.group[[g]] <- lav_mvnorm_h1_information_expected(
-                        Y              = lavdata@X[[g]], # for wt
-                        wt             = lavdata@weights[[g]],
-                        sample.cov.inv = lavsamplestats@icov[[g]],
-                        meanstructure  = lavmodel@meanstructure)
-                B1.group[[g]] <- lav_mvnorm_h1_information_firstorder(
-                        Y              = lavdata@X[[g]], # for wt
-                        wt             = lavdata@weights[[g]],
-                        sample.cov.inv = lavsamplestats@icov[[g]],
-                        Gamma          = lavsamplestats@NACOV[[g]],
-                        meanstructure  = lavmodel@meanstructure)
-            }
-        }
-    } # g
+    # A1 is usually expected or observed
+    A1.group <- lav_model_h1_information(lavmodel       = lavmodel,
+                                         lavsamplestats = lavsamplestats,
+                                         lavdata        = lavdata,
+                                         lavimplied     = lavimplied,
+                                         lavoptions     = h1.options)
+    # B1 is always first.order
+    B1.group <- lav_model_h1_information_firstorder(lavmodel       = lavmodel,
+                                         lavsamplestats = lavsamplestats,
+                                         lavdata        = lavdata,
+                                         lavimplied     = lavimplied,
+                                         lavoptions     = h1.options)
 
     if(test == "yuan.bentler.mplus") {
         if(is.null(B0.group)) {
@@ -271,6 +212,8 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
             B1 <- B1[idx, idx, drop = FALSE]
             DELTA <- DELTA[idx, , drop = FALSE]
         }
+        # note: if we have x.idx, and we do not remove the zero cols/rows,
+        # we should use a generalized inverse instead
         A1.inv <- solve(A1)
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )

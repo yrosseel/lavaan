@@ -42,11 +42,16 @@ lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
                                            Mu          = NULL,
                                            wt          = NULL,
                                            Sigma       = NULL,
+                                           x.idx       = NULL,
                                            casewise    = FALSE,
                                            pattern     = TRUE,
                                            Sinv.method = "eigen",
                                            log2pi      = TRUE,
                                            minus.two   = FALSE) {
+
+    if(!is.null(x.idx) && length(x.idx) > 0L) {
+        warning("lavaan WARNING: x.idx not supported yet (ignored)")
+    }
 
     if(pattern) {
         llik <- lav_mvnorm_missing_llik_pattern(Y = Y, wt = wt, Mu = Mu, 
@@ -71,9 +76,16 @@ lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
 lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
                                                   Mu          = NULL,
                                                   Sigma       = NULL,
+                                                  x.idx       = NULL,
+                                                  x.mean      = NULL,
+                                                  x.cov       = NULL,
                                                   Sinv.method = "eigen",
                                                   log2pi      = TRUE,
                                                   minus.two   = FALSE) {
+
+    if(!is.null(x.idx) && length(x.idx) > 0L) {
+        warning("lavaan WARNING: x.idx not supported yet (ignored)")
+    }
 
     LOG.2PI <- log(2*pi); pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
 

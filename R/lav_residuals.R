@@ -233,6 +233,7 @@ function(object, type="raw", labels=TRUE) {
                     # data complete, under h1, expected == observed
                     A1 <- lav_mvnorm_h1_information_observed_samplestats(
                       sample.cov     = lavsamplestats@cov[[g]],
+                      x.idx          = lavsamplestats@x.idx[[g]],
                       sample.cov.inv = lavsamplestats@icov[[g]])
                 }
 
@@ -246,6 +247,7 @@ function(object, type="raw", labels=TRUE) {
                     B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
+                          x.idx = lavsamplestats@x.idx[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
                           sample.cov.inv = lavsamplestats@icov[[g]])
                 }
@@ -264,6 +266,7 @@ function(object, type="raw", labels=TRUE) {
                     B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
+                          x.idx = lavsamplestats@x.idx[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
                           sample.cov.inv = lavsamplestats@icov[[g]])
                 }

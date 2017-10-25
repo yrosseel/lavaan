@@ -1,49 +1,69 @@
 # the multivariate linear model using maximum likelihood
-# - loglikelihood (from raw data, or sample statitics)
-# - derivatives with respect to Beta, Sigma, vech(Sigma)
-# - casewise scores with respect to Beta, vech(Sigma), Beta + vech(Sigma)
-# - (unit) information of Beta + vech(Sigma)
-# - hessian of Beta + vech(Sigma)
 
-# 1. input is raw data
+# 1) loglikelihood (from raw data, or sample statistics)
+# 2) derivatives with respect to Beta, res.cov, vech(res.cov)
+# 3) casewise scores with respect to Beta, vech(res.cov), Beta + vech(res.cov)
+# 4) hessian Beta + vech(res.cov)
+# 5) information h0 Beta + vech(res.cov)
+#    5a: (unit)    expected information
+#    5b: (unit)    observed information
+#    5c: (unit) first.order information
+
+# YR 24 Mar 2016: first version
+# YR 20 Jan 2017: removed added 'N' in many equations, to be consistent with
+#                 lav_mvnorm_*
+# YR 18 Okt 2018: add 'information' functions, change arguments 
+#                 (X -> eXo, Sigma -> res.cov, Beta -> res.int + res.slopes)
+
+# 1. loglikelihood
+
+# 1a. input is raw data
 lav_mvreg_loglik_data <- function(Y           = NULL,
-                                  X           = NULL, # includes intercept
+                                  eXo         = NULL, # no intercept
                                   Beta        = NULL,
-                                  Sigma       = NULL,
+                                  res.int     = NULL,
+                                  res.slopes  = NULL,
+                                  res.cov     = NULL,
                                   casewise    = FALSE,
                                   Sinv.method = "eigen") {
-    Q <- NCOL(Y); N <- NROW(Y)
+    Y <- unname(Y); Q <- NCOL(Y); N <- NROW(Y)
+    X <- cbind(1, unname(eXo))
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
 
     if(casewise) {
         LOG.2PI <- log(2 * pi)
 
-        # invert Sigma
+        # invert res.cov
         if(Sinv.method == "chol") {
-            cS <- chol(Sigma); icS <- backsolve(cS, diag(Q))
+            cS <- chol(res.cov); icS <- backsolve(cS, diag(Q))
             logdet <- -2 * sum(log(diag(icS)))
 
             RES <- Y - X %*% Beta
             DIST <- rowSums((RES %*% icS)^2)
         } else {
-            Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
+            res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = TRUE,
                                                       Sinv.method = Sinv.method)
-            logdet <- attr(Sigma.inv, "logdet")
+            logdet <- attr(res.cov.inv, "logdet")
 
             RES <- Y - X %*% Beta
-            DIST <- rowSums(RES %*% Sigma.inv * RES)
+            DIST <- rowSums(RES %*% res.cov.inv * RES)
         }
 
         loglik <- -(Q * LOG.2PI + logdet + DIST)/2
 
     } else {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = TRUE,
                                                   Sinv.method = Sinv.method)
-        logdet <- attr(Sigma.inv, "logdet")
+        logdet <- attr(res.cov.inv, "logdet")
 
         RES <- Y - X %*% Beta
-        # TOTAL <- TR( (Y - X%*%Beta) %*% Sigma.inv %*% t(Y - X%*%Beta) )
-        TOTAL <- sum( rowSums(RES %*% Sigma.inv * RES) )
+        # TOTAL <- TR( (Y - X%*%Beta) %*% res.cov.inv %*% t(Y - X%*%Beta) )
+        TOTAL <- sum( rowSums(RES %*% res.cov.inv * RES) )
         loglik <- -(N*Q/2)*log(2*pi) - (N/2)*logdet - (1/2)*TOTAL
     }
 
@@ -51,58 +71,87 @@ lav_mvreg_loglik_data <- function(Y           = NULL,
 }
 
 
-# 2. input are sample statistics (beta, cov, N) only
-lav_mvreg_loglik_samplestats <- function(sample.res.beta = NULL,
-                                         sample.res.cov  = NULL,
-                                         sample.XX       = NULL,
-                                         sample.nobs     = NULL,
-                                         Beta            = NULL,
-                                         Sigma           = NULL,
-                                         Sinv.method     = "eigen",
-                                         Sigma.inv       = NULL) {
+# 2b. input are sample statistics (res.int, res.slopes, res.cov, N) only
+lav_mvreg_loglik_samplestats <- function(sample.res.int    = NULL,
+                                         sample.res.slopes = NULL,
+                                         sample.res.cov    = NULL,
+                                         sample.mean.x     = NULL,
+                                         sample.cov.x      = NULL,
+                                         sample.nobs       = NULL,
+                                         Beta              = NULL, # optional
+                                         res.int           = NULL,
+                                         res.slopes        = NULL,
+                                         res.cov           = NULL,
+                                         Sinv.method       = "eigen",
+                                         res.cov.inv       = NULL) {
 
     Q <- NCOL(sample.res.cov); N <- sample.nobs
     LOG.2PI <- log(2 * pi)
 
-    if(is.null(Sigma.inv)) {
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # construct 'saturated' (sample-based) B
+    sample.B <- rbind(matrix(sample.res.int, nrow = 1), t(sample.res.slopes))
+
+    # construct sample.xx = 1/N*crossprod(X1) (including intercept)
+    sample.xx <- rbind( cbind(1, matrix(sample.mean.x, nrow = 1,)),
+                        cbind(matrix(sample.mean.x, ncol = 1),
+                              sample.cov.x + tcrossprod(sample.mean.x)) )
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = TRUE,
                                                   Sinv.method = Sinv.method)
-        logdet <- attr(Sigma.inv, "logdet")
+        logdet <- attr(res.cov.inv, "logdet")
     } else {
-        logdet <- attr(Sigma.inv, "logdet")
+        logdet <- attr(res.cov.inv, "logdet")
         if(is.null(logdet)) {
-            # compute - ln|Sigma.inv|
-            ev <- eigen(Sigma.inv, symmetric = TRUE, only.values = TRUE)
+            # compute - ln|res.cov.inv|
+            ev <- eigen(res.cov.inv, symmetric = TRUE, only.values = TRUE)
             logdet <- -1 * sum(log(ev$values))
         }
     }
 
-    # tr(Sigma^{-1} %*% S)
-    DIST1 <- sum(Sigma.inv * sample.res.cov)
+    # tr(res.cov^{-1} %*% S)
+    DIST1 <- sum(res.cov.inv * sample.res.cov)
 
-    # tr( Sigma^{-1} (B-beta)' X'X (B-beta) 
-    Diff <- sample.res.beta - Beta
-    DIST2 <- sum(Sigma.inv * crossprod(Diff, (1/N)*sample.XX) %*% Diff)
+    # tr( res.cov^{-1} (B-beta)' X'X (B-beta) 
+    Diff <- sample.B - Beta
+    DIST2 <- sum(res.cov.inv * crossprod(Diff, sample.xx) %*% Diff)
 
     loglik <- -(N/2) * (Q*log(2*pi) + logdet + DIST1 + DIST2)
 
     loglik
 }
 
-# derivative logl with respect to Beta
-# version 1: using Y/X
-#    lav_matrix_vec( t(X) %*% RES %*% Sigma.inv )
-# version 2: using B/S
-#    lav_matrix_vec(XX %*% (B - Beta) %*% Sigma.inv)
+
+
+
+# 2. Derivatives
+
+# 2a. derivative logl with respect to Beta (=intercepts and slopes)
 lav_mvreg_dlogl_dbeta <- function(Y           = NULL,
-                                  X           = NULL,
+                                  eXo         = NULL,
                                   Beta        = NULL,
-                                  Sigma       = NULL,
+                                  res.int     = NULL,
+                                  res.slopes  = NULL,
+                                  res.cov     = NULL,
                                   Sinv.method = "eigen",
-                                  Sigma.inv   = NULL) {
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+                                  res.cov.inv  = NULL) {
+    Y <- unname(Y); X <- cbind(1, unname(eXo))
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }
 
@@ -110,23 +159,32 @@ lav_mvreg_dlogl_dbeta <- function(Y           = NULL,
     RES <- Y - X %*% Beta
 
     # derivative
-    dbeta <- as.numeric( t(X) %*% RES %*% Sigma.inv )
+    dbeta <- as.numeric( t(X) %*% RES %*% res.cov.inv )
 
     dbeta
 }
 
-# derivative logl with respect to Sigma (full matrix, ignoring symmetry)
-lav_mvreg_dlogl_dSigma <- function(Y           = NULL,
-                                   X           = NULL,
-                                   Beta        = NULL,
-                                   Sigma       = NULL,
-                                   Sinv.method = "eigen",
-                                   Sigma.inv   = NULL) {
-    N <- NROW(Y)
+# 2b: derivative logl with respect to res.cov (full matrix, ignoring symmetry)
+lav_mvreg_dlogl_drescov <- function(Y           = NULL,
+                                    eXo         = NULL,
+                                    Beta        = NULL,
+                                    res.cov     = NULL,
+                                    res.int     = NULL,
+                                    res.slopes  = NULL,
+                                    Sinv.method = "eigen",
+                                    res.cov.inv = NULL) {
 
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+    Y <- unname(Y); N <- NROW(Y); X <- cbind(1, unname(eXo))
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # res.cov.in
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }
 
@@ -137,23 +195,32 @@ lav_mvreg_dlogl_dSigma <- function(Y           = NULL,
     W.tilde <- crossprod(RES)/N
 
     # derivative
-    dSigma <- -(N/2)* (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
+    dres.cov <- -(N/2)* (res.cov.inv - (res.cov.inv %*% W.tilde %*% res.cov.inv))
 
-    dSigma
+    dres.cov
 }
 
-# derivative logl with respect to vech(Sigma)
-lav_mvreg_dlogl_dvechSigma <- function(Y           = NULL,
-                                       X           = NULL,
-                                       Beta        = NULL,
-                                       Sigma       = NULL,
-                                       Sinv.method = "eigen",
-                                       Sigma.inv   = NULL) {
-    N <- NROW(Y)
+# 2c: derivative logl with respect to vech(res.cov)
+lav_mvreg_dlogl_dvechrescov <- function(Y           = NULL,
+                                        eXo         = NULL,
+                                        Beta        = NULL,
+                                        res.int     = NULL,
+                                        res.slopes  = NULL,
+                                        res.cov     = NULL,
+                                        Sinv.method = "eigen",
+                                        res.cov.inv = NULL) {
 
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+    Y <- unname(Y); N <- NROW(Y); X <- cbind(1, unname(eXo))
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }
 
@@ -164,34 +231,46 @@ lav_mvreg_dlogl_dvechSigma <- function(Y           = NULL,
     W.tilde <- crossprod(RES)/N
 
     # derivative
-    dSigma <- -(N/2)* (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
-    dvechSigma <- as.numeric( lav_matrix_duplication_pre(
-                                  as.matrix(lav_matrix_vec(dSigma)) ) )
+    dres.cov <- -(N/2)* (res.cov.inv - (res.cov.inv %*% W.tilde %*% res.cov.inv))
+    dvechres.cov <- as.numeric( lav_matrix_duplication_pre(
+                                  as.matrix(lav_matrix_vec(dres.cov)) ) )
 
-    dvechSigma
+    dvechres.cov
 }
 
 
-# casewise scores with respect to Beta
+# 3. Casewise scores
+
+# 3a: casewise scores with respect to Beta (=intercepts and slopes)
+#     column order: Y1_int, Y1_x1, Y1_x2, ...| Y2_int, Y2_x1, Y2_x2, ... |
 lav_mvreg_scores_beta <- function(Y           = NULL,
-                                  X           = NULL,
+                                  eXo         = NULL,
                                   Beta        = NULL,
-                                  Sigma       = NULL,
+                                  res.int     = NULL,
+                                  res.slopes  = NULL,
+                                  res.cov     = NULL,
                                   Sinv.method = "eigen",
-                                  Sigma.inv   = NULL) {
-    Q <- NCOL(Y); P <- NCOL(X)
+                                  res.cov.inv = NULL) {
 
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+    Y <- unname(Y); Q <- NCOL(Y); X <- cbind(1, unname(eXo)); P <- NCOL(X)
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }
 
     # substract Mu
     RES <- Y - X %*% Beta
 
-    # post-multiply with Sigma.inv
-    RES <- RES %*% Sigma.inv
+    # post-multiply with res.cov.inv
+    RES <- RES %*% res.cov.inv
 
     SC.Beta <- X[,  rep(1:P, times = Q), drop = FALSE] * 
                RES[,rep(1:Q,  each = P), drop = FALSE]
@@ -200,29 +279,38 @@ lav_mvreg_scores_beta <- function(Y           = NULL,
 }
 
 
-# casewise scores with respect to vech(Sigma)
+# 3b: casewise scores with respect to vech(res.cov)
 lav_mvreg_scores_vech_sigma <- function(Y           = NULL,
-                                        X           = NULL,
+                                        eXo         = NULL,
                                         Beta        = NULL,
-                                        Sigma       = NULL,
+                                        res.int     = NULL,
+                                        res.slopes  = NULL,
+                                        res.cov     = NULL,
                                         Sinv.method = "eigen",
-                                        Sigma.inv   = NULL) {
-    Q <- NCOL(Y)
+                                        res.cov.inv = NULL) {
+
+    Y <- unname(Y); Q <- NCOL(Y); X <- cbind(1, unname(eXo))
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
     
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }                       
         
-    # vech(Sigma.inv)
-    isigma <- lav_matrix_vech(Sigma.inv)
+    # vech(res.cov.inv)
+    isigma <- lav_matrix_vech(res.cov.inv)
     
     # substract X %*% Beta
     RES <- Y - X %*% Beta
 
-    # postmultiply with Sigma.inv
-    RES <- RES %*% Sigma.inv
+    # postmultiply with res.cov.inv
+    RES <- RES %*% res.cov.inv
     
     # tcrossprod 
     idx1 <- lav_matrix_vech_col_idx(Q)
@@ -239,29 +327,38 @@ lav_mvreg_scores_vech_sigma <- function(Y           = NULL,
 }
 
 
-# casewise scores with respect to beta + vech(Sigma)
+# 3c: casewise scores with respect to beta + vech(res.cov)
 lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
-                                             X           = NULL,
+                                             eXo         = NULL,
                                              Beta        = NULL,
-                                             Sigma       = NULL,
+                                             res.int     = NULL,
+                                             res.slopes  = NULL,
+                                             res.cov     = NULL,
                                              Sinv.method = "eigen",
-                                             Sigma.inv   = NULL) {
-    Q <- NCOL(Y); P <- NCOL(X)
-    
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+                                             res.cov.inv = NULL) {
+
+    Y <- unname(Y); Q <- NCOL(Y); X <- cbind(1, unname(eXo)); P <- NCOL(X)
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
     }                       
         
-    # vech(Sigma.inv)
-    isigma <- lav_matrix_vech(Sigma.inv)
+    # vech(res.cov.inv)
+    isigma <- lav_matrix_vech(res.cov.inv)
     
     # substract X %*% Beta
     RES <- Y - X %*% Beta
 
-    # postmultiply with Sigma.inv
-    RES <- RES %*% Sigma.inv
+    # postmultiply with res.cov.inv
+    RES <- RES %*% res.cov.inv
 
     SC.Beta <- X[,  rep(1:P, times = Q), drop = FALSE] *
                RES[,rep(1:Q,  each = P), drop = FALSE]
@@ -280,53 +377,226 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
     cbind(SC.Beta, SC)
 }
 
-# information Beta and vech(Sigma)
-lav_mvreg_information_beta_vech_sigma_samplestats <- 
-    function(Sigma.inv = NULL,
-             sample.XX = NULL,
-             sample.nobs = NULL) {
+# 4. hessian of logl
 
-    XXN <- (1/sample.nobs) * sample.XX
+# 4a. hessian logl Beta and vech(res.cov) from raw data
+lav_mvreg_logl_hessian_data <- function(Y           = NULL,
+                                        eXo         = NULL, # no int
+                                        Beta        = NULL, # int+slopes
+                                        res.int     = NULL,
+                                        res.slopes  = NULL,
+                                        res.cov     = NULL,
+                                        res.cov.inv = NULL,
+                                        Sinv.method = "eigen") {
 
-    I11 <- Sigma.inv %x% XXN
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
+    # sample size
+    N <- NROW(Y)
+
+    # observed information
+    observed <- lav_mvreg_information_observed_data(Y = Y, eXo = eXo,
+        Beta = Beta, res.int = res.int, res.slopes = res.slopes, 
+        res.cov = res.cov, res.cov.inv = res.cov.inv, 
+        Sinv.method = Sinv.method)
+
+    # hessian
+    -N*observed
+}
+
+# 4b. hessian logl Beta and vech(res.cov) from samplestats
+lav_mvreg_logl_hessian_samplestats <- function(
+             sample.res.int    = NULL,
+             sample.res.slopes = NULL,
+             sample.res.cov    = NULL,
+             sample.mean.x     = NULL,
+             sample.cov.x      = NULL,
+             sample.nobs       = NULL,
+             Beta              = NULL, # int + slopes
+             res.int           = NULL, # intercepts only
+             res.slopes        = NULL, # slopes only (y x x)
+             res.cov           = NULL, # res.cov
+             Sinv.method       = "eigen",
+             res.cov.inv       = NULL) {
+
+    # sample size
+    N <- sample.nobs
+
+    # information
+    observed <- lav_mvreg_information_observed_samplestats(
+        sample.res.int = sample.res.int, sample.res.slopes = sample.res.slopes,
+        sample.res.cov = sample.res.cov, sample.mean.x = sample.mean.x, 
+        sample.cov.x = sample.cov.x, Beta = Beta, res.int = res.int, 
+        res.slopes = res.slopes, res.cov = res.cov, Sinv.method = Sinv.method, 
+        res.cov.inv = res.cov.inv)
+
+    # hessian
+    -N*observed
+}
+
+
+# Information h0
+
+# 5a: unit expected information h0 Beta and vech(res.cov)
+lav_mvreg_information_expected <- function(Y             = NULL, # not used
+                                           eXo           = NULL, # not used
+                                           sample.mean.x = NULL,
+                                           sample.cov.x  = NULL,
+                                           sample.nobs   = NULL,
+                                           Beta          = NULL, # not used
+                                           res.int       = NULL, # not used
+                                           res.slopes    = NULL, # not used
+                                           res.cov       = NULL,
+                                           res.cov.inv   = NULL,
+                                           Sinv.method = "eigen") {
+
+    eXo <- unname(eXo)
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
+                                                    Sinv.method = Sinv.method)
+    }
+
+    # N
+    if(is.null(sample.nobs)) {
+        sample.nobs <- nrow(eXo) # hopefully not NULL either
+    } else {
+        N <- sample.nobs
+    }
+
+    # sample.mean.x + sample.cov.x
+    if(is.null(sample.mean.x)) {
+        sample.mean.x <- colMeans(eXo)
+    }
+    if(is.null(sample.cov.x)) {
+        1/N * crossprod(eXo) - tcrossprod(sample.mean.x)
+    }
+
+    # construct sample.xx = 1/N*crossprod(X1) (including intercept)
+    sample.xx <- rbind( cbind(1, matrix(sample.mean.x, nrow = 1,)),
+                        cbind(matrix(sample.mean.x, ncol = 1),
+                              sample.cov.x + tcrossprod(sample.mean.x)) )
+
+    # expected information
+    I11 <- res.cov.inv %x% sample.xx
+    I22 <- 0.5 * lav_matrix_duplication_pre_post(res.cov.inv %x% res.cov.inv)
 
     lav_matrix_bdiag(I11, I22)
 }
 
+# 5b: unit observed information h0
+lav_mvreg_information_observed_data <- function(Y           = NULL,
+                                                eXo         = NULL, # no int
+                                                Beta        = NULL, # int+slopes
+                                                res.int     = NULL,
+                                                res.slopes  = NULL,
+                                                res.cov     = NULL,
+                                                res.cov.inv = NULL,
+                                                Sinv.method = "eigen") {
 
-# hessian Beta and vech(Sigma)
-lav_mvreg_hessian_beta_vech_sigma <- function(Y           = NULL,
-                                              X           = NULL,
-                                              Beta        = NULL,
-                                              Sigma       = NULL,
-                                              Sinv.method = "eigen",
-                                              Sigma.inv   = NULL) {
+    # create sample statistics
+    Y <- unname(Y); X1 <- cbind(1, unname(eXo)); N <- NROW(Y)
+
+    # find 'B'
+    QR <- qr(X1)
+    sample.B <- qr.coef(QR, Y)
+
+    sample.res.int    <- as.numeric(sample.B[1,])
+    sample.res.slopes <- t(sample.B[-1,,drop = FALSE]) # transpose!
+    sample.res.cov    <- cov(qr.resid(QR, Y)) * (N-1)/N
+    sample.mean.x     <- colMeans(eXo)
+    sample.cov.x      <- 1/N * crossprod(eXo) - tcrossprod(sample.mean.x)
+
+    lav_mvreg_information_observed_samplestats(sample.res.int = sample.res.int,
+        sample.res.slopes = sample.res.slopes, sample.res.cov = sample.res.cov,
+        sample.mean.x = sample.mean.x, sample.cov.x = sample.cov.x,
+        Beta = Beta, res.int = res.int, res.slopes = res.slopes, 
+        res.cov = res.cov, Sinv.method = Sinv.method, res.cov.inv = res.cov.inv)
+}
+
+
+# 5b-bis: observed information h0 from sample statistics
+lav_mvreg_information_observed_samplestats <-
+    function(sample.res.int    = NULL,
+             sample.res.slopes = NULL,
+             sample.res.cov    = NULL,
+             sample.mean.x     = NULL,
+             sample.cov.x      = NULL,
+             Beta              = NULL, # int + slopes
+             res.int           = NULL, # intercepts only
+             res.slopes        = NULL, # slopes only (y x x)
+             res.cov           = NULL, # res.cov
+             Sinv.method       = "eigen",
+             res.cov.inv       = NULL) {
+
+    # construct model-implied Beta
+    if(is.null(Beta)) {
+        Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
+    }
+
+    # construct 'saturated' (sample-based) B
+    sample.B <- rbind(matrix(sample.res.int, nrow = 1), t(sample.res.slopes))
+
+    # construct sample.xx = 1/N*crossprod(X1) (including intercept)
+    sample.xx <- rbind( cbind(1, matrix(sample.mean.x, nrow = 1,)),
+                        cbind(matrix(sample.mean.x, ncol = 1),
+                              sample.cov.x + tcrossprod(sample.mean.x)) )
+
+    # W.tilde = S + t(B - Beta) %*% (1/N)*X'X %*% (B - Beta)
+    W.tilde <- ( sample.res.cov + 
+                 t(sample.B - Beta) %*% sample.xx %*% (sample.B - Beta) )
+
+    # res.cov.inv
+    if(is.null(res.cov.inv)) {
+        # invert res.cov
+        res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
+                                                    Sinv.method = Sinv.method)
+    }
+
+    H11 <- res.cov.inv %x% sample.xx
+    H21 <- lav_matrix_duplication_pre( res.cov.inv %x%
+       (res.cov.inv %*% (crossprod(sample.B - Beta, sample.xx) )) )
+    H12 <- t(H21)
+
+    AAA <- res.cov.inv %*% (2*W.tilde - res.cov) %*% res.cov.inv
+    H22 <- (1/2) * lav_matrix_duplication_pre_post(res.cov.inv %x% AAA)
+
+    out <-  rbind( cbind(H11, H12),
+                   cbind(H21, H22) )
+    out
+}
+
+
+# 5c: unit first-order information h0
+lav_mvreg_information_firstorder <- function(Y           = NULL,
+                                             eXo         = NULL, # no int
+                                             Beta        = NULL, # int+slopes
+                                             res.int     = NULL,
+                                             res.slopes  = NULL,
+                                             res.cov     = NULL,
+                                             res.cov.inv = NULL,
+                                             Sinv.method = "eigen") {
 
     N <- NROW(Y)
 
-    if(is.null(Sigma.inv)) {
-        # invert Sigma
-        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
-                                                  Sinv.method = Sinv.method)
-    }
+    # scores
+    SC <- lav_mvreg_scores_beta_vech_sigma(Y = Y, eXo = eXo, Beta = Beta, 
+              res.int = res.int, res.slopes = res.slopes, res.cov = res.cov, 
+              Sinv.method = Sinv.method, res.cov.inv = res.cov.inv)
 
-    RES <- Y - X %*% Beta
-    W.tilde <- 1/N * crossprod(RES)
-
-    H11 <- Sigma.inv %x% ((1/N) * crossprod(X))
-    H21 <- lav_matrix_duplication_pre( Sigma.inv %x% 
-       (Sigma.inv %*% ((1/N) * crossprod(RES, X))) )
-    H12 <- t(H21)
-
-    AAA <- Sigma.inv %*% (2*W.tilde - Sigma) %*% Sigma.inv
-    H22 <- (1/2) * lav_matrix_duplication_pre_post(Sigma.inv %x% AAA)
-
-    H <- -N * rbind( cbind(H11, H12),
-                     cbind(H21, H22) )
-
-    H
+    crossprod(SC)/N
 }
+
+
+# 6: inverted information h0
+
+# 6a: inverted unit expected information h0 Beta and vech(res.cov)
+#
+#lav_mvreg_inverted_information_expected <- function(Y       = NULL, # unused!
+#}
+
+
+
 
 
 

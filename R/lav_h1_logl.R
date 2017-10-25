@@ -33,38 +33,20 @@ lav_h1_logl <- function(lavdata        = NULL,
     if(logl.ok) {    
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
-                # not ready yet:
-                # - we need to fit the saturated model first
-
-                # FIXME: we use samplestatstics for now
-                stopifnot(lavdata@ngroups == 1L)
-                YLp <- lavsamplestats@YLp[[g]]
-                Lp <- lavdata@Lp[[g]]
-
-                between.idx <- Lp$between.idx[[2]]
-                Sigma.W <- YLp[[2]]$Sigma.W[-between.idx, 
-                                            -between.idx, drop = FALSE]
-                Mu.W    <- YLp[[2]]$Mu.W[-between.idx]
-                Sigma.B <- YLp[[2]]$Sigma.B
-                Mu.B    <- YLp[[2]]$Mu.B
-
-                logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
-                    YLp          = lavsamplestats@YLp[[g]],
-                    Lp           = lavdata@Lp[[g]],
-                    Mu.W         = Mu.W,
-                    Sigma.W      = Sigma.W,
-                    Mu.B         = Mu.B,
-                    Sigma.B      = Sigma.B,
-                    Sinv.method  = "eigen",
-                    log2pi       = TRUE,
-                    minus.two    = FALSE)
-
+                OUT <- lav_mvnorm_cluster_em_sat(YLp  = lavsamplestats@YLp[[g]],
+                                             Lp       = lavdata@Lp[[g]],
+                                             verbose  = FALSE,
+                                             tol      = 1e-04, # option?
+                                             max.iter = 5000L) # option?
+                # store logl per group
+                logl.group[g] <- OUT$logl
             } else if(lavsamplestats@missing.flag) {
                 logl.group[g] <-
                     lav_mvnorm_missing_loglik_samplestats(
                         Yp    = lavsamplestats@missing[[g]],
                         Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                        Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                        Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+                        x.idx = lavsamplestats@x.idx[[g]])
             } else { # single-level, complete data
                 # all we need is: logdet of covariance matrix, nobs and nvar
                 if(lavoptions$conditional.x) {
@@ -80,7 +62,9 @@ lav_h1_logl <- function(lavdata        = NULL,
                         lav_mvnorm_h1_loglik_samplestats(
                             sample.cov.logdet = lavsamplestats@cov.log.det[[g]],
                             sample.nvar       = NCOL(lavsamplestats@cov[[g]]),
-                            sample.nobs       = lavsamplestats@nobs[[g]])
+                            sample.nobs       = lavsamplestats@nobs[[g]],
+                            x.idx             = lavsamplestats@x.idx[[g]],
+                            x.cov             = lavsamplestats@cov.x[[g]])
                 }
             } # complete
         } # g

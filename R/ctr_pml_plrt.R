@@ -227,9 +227,21 @@ for(g in 1:lavsamplestats@ngroups) {
     #ov.names <- lavobject@pta$vnames$ov[[g]]
     th.names <- lavNames(lavpartable, "th")
     ov.names <- lavNames(lavpartable, "ov.nox")
+    ov.names.x <- lavNames(lavpartable, "ov.x")
     tmp <- utils::combn(ov.names, 2)
     cor.names <- paste(tmp[1,], "~~", tmp[2,], sep = "")
-    NAMES <- c(th.names, cor.names)
+
+    # added by YR - 22 Okt 2017 #####################################
+    ov.names.x <- lavNames(lavpartable, "ov.x")
+    if(length(ov.names.x)) {
+        slope.names <- apply(expand.grid(ov.names, ov.names.x), 1L,
+                                 paste, collapse = "~")
+    } else {
+        slope.names <- character(0L)
+    }
+    #################################################################
+
+    NAMES <- c(th.names, slope.names, cor.names)
     if(g > 1L) {
         NAMES <- paste(NAMES, ".g", g, sep = "")
     }

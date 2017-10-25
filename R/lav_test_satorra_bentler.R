@@ -1,6 +1,7 @@
 lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel       = NULL,
+                                     lavimplied     = NULL,
                                      lavoptions     = NULL,
                                      lavdata        = NULL,
                                      TEST.unscaled  = NULL,
@@ -20,6 +21,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         lavmodel       <- lavobject@Model
         lavoptions     <- lavobject@Options
         lavpartable    <- lavobject@ParTable
+        lavimplied     <- lavobject@implied
         lavdata        <- lavobject@Data
         TEST$standard  <- lavobject@test[[1]]
     } else {
@@ -50,7 +52,8 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                      augmented = FALSE, inverted = FALSE,
                      lavsamplestats=lavsamplestats, extra = TRUE)
         } else {
-            E <- lav_model_information(lavmodel = lavmodel,
+            E <- lav_model_information(lavmodel = lavmodel, 
+                     lavimplied = lavimplied,
                      lavsamplestats = lavsamplestats, lavdata = lavdata,
                      lavoptions = lavoptions, extra = TRUE)
         }
@@ -71,6 +74,13 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     # Gamma
     if(is.null(Gamma)) {
         Gamma <- lavsamplestats@NACOV
+    }
+
+    if(mimic == "Mplus" && lavmodel@categorical) {
+        for(g in 1:lavsamplestats@ngroups) {
+            Ng <- lavsamplestats@nobs[[g]]
+            Gamma[[g]] <- Gamma[[g]] / Ng * (Ng - 1L)
+        }
     }
 
     # ngroups
@@ -349,7 +359,6 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
         fg <- nobs[[g]]/ntotal
         Gamma.g <- Gamma[[g]] / fg  ## ?? check this
         Delta.g <- Delta[[g]]
-        WLS.Vg  <- WLS.V[[g]] * fg
 
         # diagonal WLS.V? we check for this since 0.5-17
         diagonal <- FALSE
