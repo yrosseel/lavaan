@@ -286,8 +286,13 @@ lavInspect.lavaan <- function(object,
     } else if(what == "npar") {
         lav_object_inspect_npar(object, type = "free")
     } else if(what == "coef") {
-        lav_object_inspect_coef(object, type = "free",
-                                add.labels = add.labels, add.class = add.class)
+        # this breaks simsem and semTools -- 0.6-1 
+        #lav_object_inspect_coef(object, type = "free",
+        #                        add.labels = add.labels, add.class = add.class)
+        lav_object_inspect_modelmatrices(object, what = "est",
+            type = "free", add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group,
+            drop.list.single.group = drop.list.single.group)
 
 
     #### NACOV samplestats ####

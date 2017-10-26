@@ -153,13 +153,16 @@ lav_partable_full <- function(partable = NULL,
     block <- 1L
     if(nblocks > 1) {
         block   <- rep(1:nblocks, each = length(lhs))
+        group   <- rep(1:nblocks, each = length(lhs)) # group == blocks for now
         lhs     <- rep(lhs,     times = nblocks)
         op      <- rep(op,      times = nblocks)
         rhs     <- rep(rhs,     times = nblocks)
+    } else {
+        group   <- block
     }
 
     LIST <- data.frame(lhs = lhs, op = op, rhs = rhs, block = block,
-                       stringsAsFactors = FALSE)
+                       group = group, stringsAsFactors = FALSE)
 
     if(free) {
         LIST$free <- rep(0L, nrow(LIST))
