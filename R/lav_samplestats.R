@@ -1167,13 +1167,13 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
 
         # what if (nj*S.b - (nj-s)*S.w)/s is not-pd?
-        NJ <- max(cluster.size)
-        Sigma.j.max <- (NJ*S.b - (NJ-s)*S.w)/s
-        EV <- eigen(Sigma.j.max, symmetric = TRUE, only.values = TRUE)$values
-        if(any(EV < 0)) {
-            # 1. spit out warning
-            warning("lavaan WARNING: Sigma.j.max is not positive-definite.")
-        }
+        #NJ <- max(cluster.size)
+        #Sigma.j.max <- (NJ*S.b - (NJ-s)*S.w)/s
+        #EV <- eigen(Sigma.j.max, symmetric = TRUE, only.values = TRUE)$values
+        #if(any(EV < 0)) {
+        #    # 1. spit out warning
+        #    warning("lavaan WARNING: Sigma.j.max is not positive-definite.")
+        #}
 
 
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N

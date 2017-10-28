@@ -27,8 +27,10 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
         Mu.B    <- implied$mean[[2]]
     }
 
-    # between.idx 
+    # within/between.idx 
     between.idx <- Lp$between.idx[[2]]
+    within.idx  <- Lp$within.idx[[2]]
+    both.idx    <- Lp$both.idx[[2]]
 
     # ov.idx per level
     ov.idx      <- Lp$ov.idx
@@ -53,15 +55,14 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
     Mu.B.tilde[ ov.idx[[2]] ] <- Mu.B
 
     # add Mu.W[within.idx] to Mu.B
-    # Mu.B.tilde[ Lp$within.idx[[2]] ] <- Mu.W.tilde[ Lp$within.idx[[2]] ]
-    #Mu.B.tilde[ ov.idx[[1]] ] <- ( Mu.B.tilde[ ov.idx[[1]] ] +
-    #                               Mu.W.tilde[ ov.idx[[1]] ] )
+    Mu.B.tilde[ within.idx ] <- Mu.W.tilde[ within.idx ]
+    Mu.B.tilde[ both.idx ] <- ( Mu.B.tilde[ both.idx ] +
+                                Mu.W.tilde[ both.idx ] )
 
     # map to matrices needed for loglik
     if(length(between.idx) > 0L) {
         mu.z <- Mu.B.tilde[ between.idx ]
         mu.y <- Mu.B.tilde[-between.idx ]
-
         sigma.zz <- Sigma.B.tilde[ between.idx, between.idx, drop = FALSE]
         sigma.yz <- Sigma.B.tilde[-between.idx, between.idx, drop = FALSE]
         sigma.b  <- Sigma.B.tilde[-between.idx,-between.idx, drop = FALSE]
