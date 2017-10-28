@@ -98,6 +98,14 @@ lavaanList <- function(model         = NULL,             # model
     lavpartable <- FIT@ParTable
     lavpta      <- FIT@pta
 
+    # remove any options in lavtoptions from dotdotdot
+    if(length(dotdotdot) > 0L) {
+        rm.idx <- which(names(dotdotdot) %in% names(lavoptions))
+        if(length(rm.idx) > 0L) {
+            dotdotdot <- dotdotdot[ -rm.idx ]
+        }
+    }
+
     # remove start/est/se columns from lavpartable
     lavpartable$start <- lavpartable$est
     lavpartable$est <- lavpartable$se <- NULL
