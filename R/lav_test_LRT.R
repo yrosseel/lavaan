@@ -170,7 +170,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
             } else {
                 method <- "satorra.2000"
             }
-        } else if(method == "meanvaradjustedplrt") {
+        } else if(method == "meanvaradjustedplrt" ||
+                  method == "mean.var.adjusted.PLRT") {
             method <- "mean.var.adjusted.PLRT"
             stopifnot(estimator == "PML")
         } else if(method == "satorra2000") {
@@ -254,7 +255,15 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                           check.names = FALSE)
     }
 
+    # catch Df.delta == 0 cases (reported by Florian Zsok in Zurich)
+    idx <- which(val[,"Df diff"] == 0)
+    if(length(idx) > 0L) {
+        val[idx, "Pr(>Chisq)"] <- as.numeric(NA)
+        warning("lavaan WARNING: some models have the same degrees of freedom")
+    }
+
     if(type == "chisq") {
+
         if(scaled) {
             attr(val, "heading") <- 
                 paste("Scaled Chi Square Difference Test (method = \"",
