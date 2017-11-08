@@ -248,6 +248,9 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
     if(is.null(data.obs)) {
         data.obs <- lavdata@X
+        newdata.flag <- FALSE
+    } else {
+        newdata.flag <- TRUE
     }
     # eXo not needed
 
@@ -255,9 +258,16 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     # impute values under the normal
     if(lavdata@missing == "ml") {
         for(g in seq_len(lavdata@ngroups)) {
+            if(newdata.flag) {
+                DATA <- data.obs[[g]]
+                MP   <- lav_data_missing_patterns(data.obs[[g]])
+            } else {
+                DATA <- lavdata@X[[g]]
+                MP   <- lavdata@Mp[[g]]
+            }
             data.obs[[g]] <- 
-                lav_mvnorm_missing_impute_pattern(Y = lavdata@X[[g]],
-                                                  Mp = lavdata@Mp[[g]],
+                lav_mvnorm_missing_impute_pattern(Y = DATA,
+                                                  Mp = MP,
                                                   Mu = lavimplied$mean[[g]],
                                                   Sigma = lavimplied$cov[[g]])
         }
@@ -354,6 +364,9 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
     if(is.null(data.obs)) {
         data.obs <- lavdata@X
+        newdata.flag <- FALSE
+    } else {
+        newdata.flag <- TRUE
     }
     # eXo not needed
 
@@ -361,13 +374,21 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     # impute values under the normal
     if(lavdata@missing == "ml") {
         for(g in seq_len(lavdata@ngroups)) {
-            data.obs[[g]] <- 
-                lav_mvnorm_missing_impute_pattern(Y = lavdata@X[[g]],
-                                                  Mp = lavdata@Mp[[g]],
+            if(newdata.flag) {
+                DATA <- data.obs[[g]]
+                MP   <- lav_data_missing_patterns(data.obs[[g]])
+            } else {
+                DATA <- lavdata@X[[g]]
+                MP   <- lavdata@Mp[[g]]
+            }
+            data.obs[[g]] <-
+                lav_mvnorm_missing_impute_pattern(Y = DATA,
+                                                  Mp = MP,
                                                   Mu = lavimplied$mean[[g]],
                                                   Sigma = lavimplied$cov[[g]])
         }
     }
+
 
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
     Sigma.hat.inv <- lapply(lavimplied$cov, solve)
