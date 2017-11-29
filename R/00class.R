@@ -67,7 +67,9 @@ setClass("lavSampleStats",         # sample moments
         cov.log.det="list",        # log det of observed cov (per group)
         res.icov="list",
         res.cov.log.det="list",
-        ridge="numeric",           # ridge constant
+        #ridge.constant="numeric",  # ridge constant (per group)
+        #ridge.constant.x="numeric",# ridge constant (per group) for eXo
+        ridge="numeric",
         WLS.obs="list",            # all relevant observed stats in a vector
         WLS.V="list",              # weight matrix for GLS/WLS
         WLS.VD="list",             # diagonal of weight matrix only

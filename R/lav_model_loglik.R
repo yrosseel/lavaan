@@ -14,18 +14,16 @@ lav_model_loglik <- function(lavdata        = NULL,
     if(lavoptions$estimator %in% c("ML", "MML")) {
         # check if everything is numeric, OR if we have exogenous
         # factor with 2 levels only
-        if(all(lavdata@ov$type == "numeric")) {
-            logl.ok <- TRUE
-        } else {
-            not.idx <- which(lavdata@ov$type != "numeric")
-            for(i in not.idx) {
-                if(lavdata@ov$type[i] == "factor" &&
-                   lavdata@ov$exo[i] == 1L &&
-                   lavdata@ov$nlev[i] == 2L) {
-                    logl.ok <- TRUE
-                } else {
+        #if(all(lavdata@ov$type == "numeric")) {
+        logl.ok <- TRUE
+        #} else {
+        if(lavoptions$fixed.x == FALSE) {
+            exo.idx <- which(lavdata@ov$exo == 1L)
+            for(i in exo.idx) {
+                if(lavdata@ov$type[i] %in% 
+                       c("factor", "labelled", "character") &&
+                   lavdata@ov$nlev[i] > 1L) {
                     logl.ok <- FALSE
-                    break
                 }
             }
         }

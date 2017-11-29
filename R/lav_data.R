@@ -889,6 +889,9 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
     both.idx        <- vector("list", length = nlevels)
     within.idx      <- vector("list", length = nlevels)
     between.idx     <- vector("list", length = nlevels)
+    both.names      <- vector("list", length = nlevels)
+    within.names    <- vector("list", length = nlevels)
+    between.names   <- vector("list", length = nlevels)
 
     # level-1 is special
     nclusters[[1]] <- NROW(Y)
@@ -915,6 +918,14 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
                                      !ov.names %in% ov.names.l[[2]])
         between.idx[[l]]    <- which(!ov.names %in% ov.names.l[[1]] &
                                       ov.names %in% ov.names.l[[2]])
+
+        # names
+        both.names[[l]]     <- ov.names[ ov.names %in% ov.names.l[[1]] &
+                                         ov.names %in% ov.names.l[[2]] ]
+        within.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+                                        !ov.names %in% ov.names.l[[2]] ]
+        between.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+                                         ov.names %in% ov.names.l[[2]] ]
     }
 
     out <- list(cluster = cluster, # clus = clus, 
@@ -925,7 +936,9 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
                 ncluster.sizes = ncluster.sizes, 
                 cluster.size.ns = cluster.size.ns,
                 ov.idx = ov.idx, both.idx = both.idx, within.idx = within.idx, 
-                between.idx = between.idx)
+                between.idx = between.idx,
+                both.names = both.names, within.names = within.names,
+                between.names = between.names)
 
     out
 }

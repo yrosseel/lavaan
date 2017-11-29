@@ -9,7 +9,9 @@
 # - sigma.w and sigma.b: same dimensions, level-1 variables only
 # - sigma.zz: level-2 variables only
 # - sigma.yz: cov(level-1, level-2)
-# - mu.y: level-1 variables only
+# - mu.y: level-1 variables only (mu.w + mu.b)
+# - mu.w: y within  part
+# - mu.b: y between part
 # - my.z: level-2 variables only
 lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
                                           implied      = NULL,
@@ -55,29 +57,38 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
     Mu.B.tilde[ ov.idx[[2]] ] <- Mu.B
 
     # add Mu.W[within.idx] to Mu.B
-    Mu.B.tilde[ within.idx ] <- Mu.W.tilde[ within.idx ]
-    Mu.B.tilde[ both.idx ] <- ( Mu.B.tilde[ both.idx ] +
-                                Mu.W.tilde[ both.idx ] )
+    Mu.WB.tilde <- numeric( p.tilde) 
+    Mu.WB.tilde[ within.idx ] <- Mu.W.tilde[ within.idx ]
+    Mu.WB.tilde[ both.idx ] <- ( Mu.B.tilde[ both.idx ] +
+                                 Mu.W.tilde[ both.idx ] )
 
     # map to matrices needed for loglik
     if(length(between.idx) > 0L) {
-        mu.z <- Mu.B.tilde[ between.idx ]
-        mu.y <- Mu.B.tilde[-between.idx ]
+        mu.z <- Mu.WB.tilde[ between.idx ]
+        mu.y <- Mu.WB.tilde[-between.idx ]
+        mu.w <- Mu.W.tilde[ -between.idx ]
         sigma.zz <- Sigma.B.tilde[ between.idx, between.idx, drop = FALSE]
         sigma.yz <- Sigma.B.tilde[-between.idx, between.idx, drop = FALSE]
         sigma.b  <- Sigma.B.tilde[-between.idx,-between.idx, drop = FALSE]
         sigma.w  <- Sigma.W.tilde[-between.idx,-between.idx, drop = FALSE]
     } else {
         mu.z <- numeric(0L)
-        mu.y <- Mu.B.tilde
+        mu.y <- Mu.WB.tilde
+        mu.w <- Mu.W.tilde
         sigma.zz <- matrix(0, 0L, 0L)
         sigma.yz <- matrix(0, nrow(Sigma.B.tilde), 0L)
         sigma.b <- Sigma.B.tilde
         sigma.w <- Sigma.W.tilde
     }
 
+    mu.b <- Mu.B.tilde
+    if(length(within.idx) > 0L) {
+        mu.b[ within.idx ] <- 0
+    }
+
     list(sigma.w = sigma.w, sigma.b = sigma.b, sigma.zz = sigma.zz,
-         sigma.yz = sigma.yz, mu.z = mu.z, mu.y = mu.y)
+         sigma.yz = sigma.yz, mu.z = mu.z, mu.y = mu.y, mu.w = mu.w,
+         mu.b = mu.b)
 }
 
 lav_mvnorm_cluster_2l2implied <- function(Lp, 
@@ -86,7 +97,9 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
                                           sigma.zz = NULL,
                                           sigma.yz = NULL,
                                           mu.z     = NULL,
-                                          mu.y     = NULL) {
+                                          mu.y     = NULL,
+                                          mu.w     = NULL,
+                                          mu.b     = NULL) {
 
     # between.idx 
     between.idx <- Lp$between.idx[[2]]
@@ -98,18 +111,29 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
     # 'tilde' matrices: ALL variables within and between
     p.tilde <- length( unique(c(ov.idx[[1]], ov.idx[[2]])) )
 
+    # if we have mu.y, convert to mu.w and mu.b
+    if(!is.null(mu.y)) {
+        mu.b <- mu.y
+        mu.w.tilde <- numeric( p.tilde )
+        mu.w.tilde[ ov.idx[[1]] ] <- mu.y
+        mu.w.tilde[  -within.idx ] <- 0
+        mu.w <- mu.w.tilde[ ov.idx[[1]] ]
+    }
+
     # Mu.W
     Mu.W.tilde <- numeric( p.tilde )
     if(length(within.idx) > 0) {
-        Mu.W.tilde[ ov.idx[[1]] ] <- mu.y
-        Mu.W.tilde[ -within.idx ] <- 0
+        Mu.W.tilde[ ov.idx[[1]] ] <- mu.w
     }
     Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
 
     # Mu.B
     Mu.B.tilde <- numeric(p.tilde)
-    Mu.B.tilde[ ov.idx[[1]] ] <- mu.y
+    Mu.B.tilde[ ov.idx[[1]] ] <- mu.b
     Mu.B.tilde[ between.idx ] <- mu.z
+    if(length(within.idx) > 0) {
+        Mu.B.tilde[within.idx] <- 0
+    }
     Mu.B <- Mu.B.tilde[ ov.idx[[2]] ]
 
     # Sigma.W

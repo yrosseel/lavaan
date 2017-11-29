@@ -70,7 +70,10 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # summary data
                 sample.cov.rescale = "default",
-                ridge              = 1e-5,
+                ridge              = FALSE,
+                ridge.x            = FALSE,
+                ridge.constant     = "default",
+                ridge.constant.x   = 1e-5,
 
                 # multiple groups
                 group              = NULL,
@@ -255,7 +258,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise"
+        opt$missing <- "listwise"
 
         # test
         if(opt$test == "default") {
@@ -285,7 +288,7 @@ lav_options_set <- function(opt = NULL) {
         }
 
         #opt$fixed.x = FALSE
-        opt$control <- list(gradient = "numerical")
+        #opt$control <- list(gradient = "numerical")
     }
 
 
