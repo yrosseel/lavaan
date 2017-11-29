@@ -198,6 +198,7 @@ function(object, header       = TRUE,
                  fmi          = FALSE,
                  std          = FALSE,
                  standardized = FALSE,
+                 cov.std      = TRUE,
                  rsquare      = FALSE,
                  std.nox      = FALSE,
                  modindices   = FALSE,
@@ -227,6 +228,7 @@ function(object, header       = TRUE,
     if(estimates) {
         PE <- parameterEstimates(object, ci = ci, standardized = standardized,
                                  rsquare = rsquare, fmi = fmi,
+                                 cov.std = cov.std,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
                                  add.attributes = TRUE)
@@ -240,7 +242,7 @@ function(object, header       = TRUE,
     # modification indices?
     if(modindices) {
         cat("Modification Indices:\n\n")
-        print( modificationIndices(object, standardized=TRUE) )
+        print( modificationIndices(object, standardized=TRUE, cov.std = cov.std) )
     }
 })
 
@@ -258,6 +260,7 @@ standardizedSolution <- standardizedsolution <- function(object,
                                                          pvalue = TRUE,
                                                          ci = TRUE,
                                                          level = 0.95,
+                                                         cov.std = TRUE,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
                                                          remove.def = FALSE,
@@ -289,11 +292,13 @@ standardizedSolution <- standardizedsolution <- function(object,
 
     # add std and std.all columns
     if(type == "std.lv") {
-        LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST)
+        LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST,
+                                               cov.std = cov.std)
     } else if(type == "std.all") {
-        LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST)
+        LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST,
+                                            cov.std = cov.std)
     } else if(type == "std.nox") {
-        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST)
+        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST, cov.std = cov.std)
     }
 
     if(object@Options$se != "none" && se) {
@@ -390,6 +395,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      level = 0.95,
                                                      boot.ci.type = "perc",
                                                      standardized = FALSE,
+                                                     cov.std = TRUE,
                                                      fmi = FALSE,
                                                      remove.system.eq = TRUE,
                                                      remove.eq = TRUE,
@@ -646,9 +652,11 @@ parameterEstimates <- parameterestimates <- function(object,
 
     # standardized estimates?
     if(standardized) {
-        LIST$std.lv  <- standardize.est.lv(object)
-        LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std)
-        LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std)
+        LIST$std.lv  <- standardize.est.lv(object, cov.std = cov.std)
+        LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std,
+                                            cov.std = cov.std)
+        LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std,
+                                                cov.std = cov.std)
     }
 
     # rsquare?

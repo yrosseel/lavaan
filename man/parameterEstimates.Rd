@@ -5,11 +5,12 @@
 \description{
 Parameter estimates of a latent variable model.}
 \usage{
-parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
-                   level = 0.95, boot.ci.type = "perc", standardized = FALSE, 
-                   fmi = FALSE, remove.system.eq = TRUE, remove.eq = TRUE, 
-                   remove.ineq = TRUE, remove.def = FALSE, rsquare = FALSE, 
-                   add.attributes = FALSE)
+parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE, 
+                   ci = TRUE, level = 0.95, boot.ci.type = "perc", 
+                   standardized = FALSE, cov.std = TRUE, fmi = FALSE, 
+                   remove.system.eq = TRUE, remove.eq = TRUE, 
+                   remove.ineq = TRUE, remove.def = FALSE, 
+                   rsquare = FALSE, add.attributes = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -33,6 +34,14 @@ normal distribution.}
   bias).}
 \item{standardized}{Logical. If \code{TRUE}, standardized estimates are 
 added to the output}
+\item{cov.std}{Logical. If TRUE, the (residual) observed
+covariances are scaled by the square root of the `Theta' diagonal elements, and
+the (residual) latent covariances are scaled by the square root of the `Psi'
+diagonal elements. If FALSE, the (residual) observed covariances
+are scaled by the square root of the diagonal elements of the observed
+model-implied covariance matrix (Sigma), and the (residual) latent covariances
+are scaled by the square root of diagonal elements of the model-implied
+covariance matrix of the latent variables.}
 \item{fmi}{Logical. If \code{TRUE}, an extra column is added containing the
 fraction of missing information for each estimated parameter. Only
 available if 

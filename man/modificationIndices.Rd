@@ -6,12 +6,12 @@
 \description{
 Modification indices of a latent variable model.}
 \usage{
-modificationIndices(object, standardized = TRUE, power = FALSE, 
-                    delta = 0.1, alpha = 0.05, high.power = 0.75,
-                    sort. = FALSE, minimum.value = 0, 
+modificationIndices(object, standardized = TRUE, cov.std = TRUE,
+                    power = FALSE, delta = 0.1, alpha = 0.05, 
+                    high.power = 0.75, sort. = FALSE, minimum.value = 0, 
                     maximum.number = nrow(LIST), free.remove = TRUE,
                     na.remove = TRUE, op = NULL)
-modindices(object, standardized = TRUE, power = FALSE,
+modindices(object, standardized = TRUE, cov.std = TRUE, power = FALSE,
                     delta = 0.1, alpha = 0.05, high.power = 0.75,
                     sort. = FALSE, minimum.value = 0, 
                     maximum.number = nrow(LIST), free.remove = TRUE,
@@ -25,6 +25,7 @@ standardizization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
 on both the variances of both (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
+\item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{power}{If \code{TRUE}, the (post-hoc) power is computed for each
 modification index, using the values of \code{delta} and \code{alpha}.}
 \item{delta}{The value of the effect size, as used in the post-hoc power 

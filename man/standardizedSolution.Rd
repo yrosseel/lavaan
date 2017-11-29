@@ -7,8 +7,8 @@ Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
                      pvalue = TRUE, ci = TRUE, level = 0.95, 
-                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
-                     GLIST = NULL, est = NULL)
+                     cov.std = TRUE, remove.eq = TRUE, remove.ineq = TRUE, 
+                     remove.def = FALSE, GLIST = NULL, est = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -30,6 +30,14 @@ normal distribution.}
 \item{ci}{If \code{TRUE}, simple symmetric confidence intervals are added to 
 the output}
 \item{level}{The confidence level required.}
+\item{cov.std}{Logical. If TRUE, the (residual) observed
+covariances are scaled by the square root of the `Theta' diagonal elements, and
+the (residual) latent covariances are scaled by the square root of the `Psi'
+diagonal elements. If FALSE, the (residual) observed covariances
+are scaled by the square root of the diagonal elements of the observed
+model-implied covariance matrix (Sigma), and the (residual) latent covariances
+are scaled by the square root of diagonal elements of the model-implied
+covariance matrix of the latent variables.}
 \item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
 containing equality constraints, if any.}
 \item{remove.ineq}{Logical. If TRUE, filter the output by removing all

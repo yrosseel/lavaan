@@ -123,7 +123,8 @@ the independence model) (if available).}
       methods automatically work via \code{logLik()}.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
-    \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
+    \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, 
+ cov.std = TRUE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
       Print a nice summary of the model estimates. 
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.  
