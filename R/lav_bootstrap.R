@@ -294,7 +294,10 @@ bootstrap.internal <- function(object          = NULL,
                                missing.h1    = TRUE,
                                verbose       = FALSE), silent=TRUE) 
         if(inherits(bootSampleStats, "try-error")) {
-            if(verbose) cat("     FAILED: creating sample statistics\n")
+            if(verbose) {
+                cat("     FAILED: creating sample statistics\n")
+                cat(bootSampleStats[1])
+            }
             options(old_options)
             return(NULL)
         }
@@ -353,6 +356,9 @@ bootstrap.internal <- function(object          = NULL,
 
     # this is from the boot function in package boot
     RR <- R
+    if(verbose) {
+        cat("\n")
+    }
     res <- if (ncpus > 1L && (have_mc || have_snow)) {
         if (have_mc) {
             parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)

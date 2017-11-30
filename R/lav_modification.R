@@ -130,13 +130,21 @@ modindices <- function(object,
 
     # standardize?
     if(standardized) {
+
+        EPC <- LIST$epc
+
+        if(cov.std) {
+            # replace epc values for variances by est values
+            var.idx <- which(LIST$op == "~~" & LIST$lhs == LIST$rhs &
+                             LIST$exo == 0L)
+            EPC[ var.idx ] <- LIST$est[ var.idx ]
+        }
+
         # two problems: 
         #   - EPC of variances can be negative, and that is
         #     perfectly legal
         #   - EPC (of variances) can be tiny (near-zero), and we should 
         #     not divide by tiny variables
- 
-        EPC <- LIST$epc
         small.idx <- which(LIST$op == "~~" & 
                            LIST$lhs == LIST$rhs &
                            abs(EPC) < sqrt( .Machine$double.eps ) )
@@ -202,6 +210,12 @@ modindices <- function(object,
         #LIST$decision[ which(mi.significant & !high.power) ] <- "***"
         #LIST$decision[ which(!mi.significant & !high.power) ] <- "(i)"
     }
+
+    # remove rows corresponding to 'fixed.x' exogenous parameters
+    #exo.idx <- which(LIST$exo == 1L & nchar(LIST$plabel) > 0L)
+    #if(length(exo.idx) > 0L) {
+    #    LIST <- LIST[-exo.idx,]
+    #}
 
     # remove some columns
     LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL

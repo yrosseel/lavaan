@@ -608,10 +608,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             # Gamma should be po before we invert
                             ev <- eigen(NACOV[[g]], # symmetric=FALSE, 
                                         only.values=TRUE)$values
-                            if(is.complex(ev) || any(Re(ev) < 0)) {
+                            if(is.complex(ev)) {
                                stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
                             }
-                            WLS.V[[g]] <- inv.chol(NACOV[[g]])
+                            if(any(Re(ev) < 0)) {
+                                stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
+                            }
+                            WLS.V[[g]] <- lav_matrix_symmetric_inverse(NACOV[[g]])
                         } else {
                             # fixed.x: we have zero cols/rows
                             # ginv does the trick, but perhaps this is overkill
