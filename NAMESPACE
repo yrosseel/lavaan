@@ -24,8 +24,8 @@ importFrom("utils",
            "combn", "modifyList", "packageDescription", "read.table",
            "str", "write.table")
 
-importFrom("quadprog",
-           "solve.QP")
+#importFrom("quadprog",
+#           "solve.QP")
 
 importFrom("mnormt",
            "dmnorm",

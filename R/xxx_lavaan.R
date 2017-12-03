@@ -334,7 +334,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # fill in remaining "default" values
         lavoptions <- lav_options_set(opt)
     }
-    timing$InitOptions <- (proc.time()[3] - start.time)
+    timing$Options <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
@@ -421,7 +421,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                  " requires full data or user-provided WLS.V")
         }
     }
-    timing$InitData <- (proc.time()[3] - start.time)
+    timing$Data <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     if(lavoptions$debug) {
         print(str(lavdata))
@@ -578,7 +578,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                  th.idx=lavpta$vidx$th.mean,
                                  missing.flag=FALSE)
     }
-    timing$Sample <- (proc.time()[3] - start.time)
+    timing$SampleStats <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     if(lavoptions$debug) {
         print(str(lavsamplestats))
@@ -647,6 +647,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # or a fitted lavaan object
     }
 
+    timing$h1 <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
+
+
 
 
 
@@ -659,7 +663,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # FIXME
         #lavaanStart <- lav_model_get_parameters(lavmodel, type="user")
         #lavpartable$start <- lavaanStart
-        timing$Start <- (proc.time()[3] - start.time)
+        timing$start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
@@ -704,7 +708,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
 
-        timing$Start <- (proc.time()[3] - start.time)
+        timing$start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
 
@@ -907,6 +911,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
+    timing$cache <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
 
@@ -977,6 +983,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     lavoptim$control        <- attr(x, "control")
 
+    timing$optim <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
 
@@ -1002,7 +1010,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavoptions     = lavoptions)
     }
 
-    timing$Estimate <- (proc.time()[3] - start.time)
+    timing$implied <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
     
@@ -1068,7 +1076,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
-    timing$VCOV <- (proc.time()[3] - start.time)
+    timing$vcov <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
@@ -1110,7 +1118,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # store test in lavtest
     lavtest <- TEST
 
-    timing$TEST <- (proc.time()[3] - start.time)
+    timing$test <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
