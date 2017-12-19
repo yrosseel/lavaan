@@ -21,7 +21,7 @@ function(object, newdata = NULL) {
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        se.fit = FALSE, label = TRUE, fsm = FALSE,
-                       optim.method = "bfgs") {
+                       optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model
@@ -65,7 +65,10 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     }
 
     if(type == "lv") {
-
+        if(!is.null(ETA)) {
+            warning("lavaan WARNING: lvs will be predicted here; supplying ETA has no effect")
+        }
+            
         # post fit check (lv pd?)
         ok <- lav_object_post_check(object)
         #if(!ok) {
@@ -123,7 +126,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo,
-                   ETA = NULL, method = method, optim.method = optim.method)
+                   ETA = ETA, method = method, optim.method = optim.method)
 
         # label?
         if(label) {
@@ -137,7 +140,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         out <- lav_predict_fy(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    data.obs = data.obs, eXo = eXo,
-                   ETA = NULL, method = method, optim.method = optim.method)
+                   ETA = ETA, method = method, optim.method = optim.method)
 
         # label?
         if(label) {
@@ -658,8 +661,8 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
     } else {
         # list
         if(is.matrix(ETA)) { # user-specified?
-            tmp <- ETA; ETA <- vector("list", length=lavdata@ngroups)
-            ETA[seq_len(lavdata@ngroups)] <- list(tmp)
+            tmp <- ETA
+            ETA <- lapply(1:lavdata@ngroups, function(i) tmp[lavdata@case.idx[[i]],])
         } else if(is.list(ETA)) {
             stopifnot(lavdata@ngroups == length(ETA))
         }
