@@ -8,13 +8,16 @@
 #
 # Note: this replaces the (old) lav_model_wls_v() function
 #
-# YR 22 Okt 2017
+# - YR 22 Okt 2017
+# - YR 03 Dec 2017: add lavh1, implied is either lavimplied or lavh1
+#                   add support for clustered data
 
 lav_model_h1_information <- function(lavobject      = NULL,
                                      lavmodel       = NULL,
                                      lavsamplestats = NULL,
                                      lavdata        = NULL,
                                      lavimplied     = NULL,
+                                     lavh1          = NULL,
                                      lavcache       = NULL,
                                      lavoptions     = NULL) {
 
@@ -23,6 +26,7 @@ lav_model_h1_information <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -35,17 +39,17 @@ lav_model_h1_information <- function(lavobject      = NULL,
     if(information == "observed") {
         I1 <- lav_model_h1_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, lavoptions = lavoptions)
     } else if(information == "expected") {
         I1 <- lav_model_h1_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, lavoptions = lavoptions)
     } else if(information == "first.order") {
         I1 <- lav_model_h1_information_firstorder(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, lavoptions = lavoptions)
     }
 
@@ -60,6 +64,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                                               lavdata        = NULL,
                                               lavoptions     = NULL,
                                               lavimplied     = NULL,
+                                              lavh1          = NULL,
                                               lavcache       = NULL) {
 
     if(!is.null(lavobject) && inherits(lavobject, "lavaan")) {
@@ -67,6 +72,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -212,13 +218,16 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                                               lavsamplestats = NULL,
                                               lavdata        = NULL,
                                               lavimplied     = NULL,
+                                              lavh1          = NULL,
                                               lavcache       = NULL,
                                               lavoptions     = NULL) {
+
     if(!is.null(lavobject) && inherits(lavobject, "lavaan")) {
         lavmodel       <- lavobject@Model
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -371,6 +380,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                                                 lavsamplestats = NULL,
                                                 lavdata        = NULL,
                                                 lavimplied     = NULL,
+                                                lavh1          = NULL,
                                                 lavcache       = NULL,
                                                 lavoptions     = NULL) {
 
@@ -379,6 +389,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -401,21 +412,28 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         if(is.null(lavimplied)) {
             lavimplied <- lav_model_implied(lavmodel)
         }
-    } 
+    }
+
+    # structured? lavimplied vs lavh1
+    if(structured) {
+        implied <- lavimplied
+    } else {
+        implied <- lavh1$implied
+    }
 
     B1 <- vector("list", length=lavsamplestats@ngroups)
-    for(g in 1:lavsamplestats@ngroups) {
+    for(g in 1:lavdata@ngroups) {
         if(estimator == "PML") {
             # slow approach: compute outer product of case-wise scores
 
             if(lavmodel@conditional.x) {
-                SIGMA <- lavimplied$res.cov[[g]]
-                TH    <- lavimplied$res.th[[g]]
-                PI    <- lavimplied$res.slopes[[g]]
+                SIGMA <- implied$res.cov[[g]]
+                TH    <- implied$res.th[[g]]
+                PI    <- implied$res.slopes[[g]]
             } else {
-                SIGMA <- lavimplied$cov[[g]]
-                TH    <- lavimplied$th[[g]]
-                PI    <- lavimplied$slopes[[g]]
+                SIGMA <- implied$cov[[g]]
+                TH    <- implied$th[[g]]
+                PI    <- implied$slopes[[g]]
             }
             SC <- pml_deriv1(Sigma.hat  = SIGMA,
                              TH         = TH,
@@ -431,6 +449,24 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
             # information H1
             B1[[g]] <- crossprod(SC)
 
+        } else if(estimator == "ML" && lavdata@nlevels > 1L) {
+
+            MU.W    <- implied$mean[[ (g-1)*lavdata@nlevels + 1L ]]
+            MU.B    <- implied$mean[[ (g-1)*lavdata@nlevels + 2L ]]
+            SIGMA.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1L ]]
+            SIGMA.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2L ]]
+
+            # clustered data
+            B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
+                           Y1           = lavdata@X[[g]],
+                           YLp          = lavsamplestats@YLp[[g]],
+                           Lp           = lavdata@Lp[[g]],
+                           Mu.W         = MU.W,
+                           Sigma.W      = SIGMA.W,
+                           Mu.B         = MU.B,
+                           Sigma.B      = SIGMA.B,
+                           divide.by.two = TRUE)
+
         } else if(estimator == "ML") {
             if(lavsamplestats@missing.flag) {
                 # mvnorm
@@ -443,24 +479,13 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                 } else {
                     MEAN <- lavsamplestats@missing.h1[[g]]$mu
                 }
-
-                if(structured) {
-                    B1[[g]] <- 
-                      lav_mvnorm_missing_information_firstorder(
-                          Y = lavdata@X[[g]],
-                          Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
-                          Mu = MEAN,
-                          # meanstructure = lavmodel@meanstructure,
-                          Sigma = lavimplied$cov[[g]])
-                } else {
-                    B1[[g]] <-
-                      lav_mvnorm_missing_information_firstorder(
-                          Y = lavdata@X[[g]],
-                          Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
-                          Mu = MEAN,
-                          # meanstructure = lavmodel@meanstructure,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
-                }
+ 
+                B1[[g]] <- lav_mvnorm_missing_information_firstorder(
+                               Y = lavdata@X[[g]],
+                              Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
+                              Mu = MEAN,
+                              # meanstructure = lavmodel@meanstructure,
+                              Sigma = implied$cov[[g]])
 
             } else {
                 if(lavmodel@conditional.x) {
@@ -473,26 +498,14 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                         RES.SLOPES <- lavsamplestats@res.slopes[[g]]
                     }
 
-                    if(structured) {
-                        B1[[g]] <- lav_mvreg_information_firstorder(
+                    B1[[g]] <- lav_mvreg_information_firstorder(
                                   Y              = lavdata@X[[g]],
                                   eXo            = lavdata@eXo[[g]],
                                   res.int        = RES.INT,
                                   res.slopes     = RES.SLOPES,
                                   #wt            = lavdata@weights[[g]],
                                   #meanstructure = lavmodel@meanstructure,
-                                  res.cov        = lavimplied$res.cov[[g]])
-                    } else {
-                        B1[[g]] <- lav_mvreg_information_firstorder(
-                               Y              = lavdata@X[[g]],
-                               eXo            = lavdata@eXo[[g]],
-                               res.int        = lavsamplestats@res.int[[g]],
-                               res.slopes     = lavsamplestats@res.slopes[[g]],
-                               #wt = lavdata@weights[[g]],
-                               #meanstructure = lavmodel@meanstructure,
-                               res.cov        = lavsamplestats@res.cov[[g]])
-                    }
-
+                                  res.cov        = implied$res.cov[[g]])
                 } else {
                     # conditional.x = FALSE
                     # mvnorm

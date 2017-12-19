@@ -2,6 +2,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                   lavsamplestats = NULL,
                                   lavmodel       = NULL,
                                   lavimplied     = NULL,
+                                  lavh1          = NULL,
                                   lavoptions     = NULL,
                                   lavdata        = NULL,
                                   TEST.unscaled  = NULL,
@@ -20,6 +21,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         lavoptions     <- lavobject@Options
         lavpartable    <- lavobject@ParTable
         lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
         lavdata        <- lavobject@Data
         TEST$standard  <- lavobject@test[[1]]
     } else {
@@ -88,6 +90,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
                                          lavimplied     = lavimplied,
+                                         lavh1          = lavh1,
                                          lavoptions     = h1.options)
 
     if(test == "yuan.bentler.mplus") {
@@ -95,6 +98,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
             B0 <- lav_model_information_firstorder(lavmodel = lavmodel,
                                              lavsamplestats = lavsamplestats,
                                              lavdata        = lavdata,
+                                             lavh1          = lavh1,
                                              lavoptions     = lavoptions,
                                              extra          = TRUE,
                                              check.pd       = FALSE,
@@ -113,10 +117,6 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     } else if(test == "yuan.bentler") {
 
         Delta <- computeDelta(lavmodel = lavmodel)
-        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
-        if(lavmodel@meanstructure) {
-            Mu.hat <- computeMuHat(lavmodel = lavmodel)
-        }
         trace.UGamma <- lav_test_yuan_bentler_trace(
             lavsamplestats = lavsamplestats,
             meanstructure  = lavmodel@meanstructure,

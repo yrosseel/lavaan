@@ -30,6 +30,24 @@ lav_partable_full <- function(partable = NULL,
     ov.names.ord <- lav_partable_vnames(partable, type="ov.ord")
     ov.names.ind <- lav_partable_vnames(partable, type="ov.ind")
 
+    # eqs.y, eqs.x
+    if(any(partable$op == "~")) {
+        eqs.names <- unique( c(partable$lhs[partable$op == "~"],
+                               partable$rhs[partable$op == "~"]) )
+        eqs.y <- eqs.names
+        if(strict.exo) {
+            x.idx <- which(eqs.names %in% ov.names.x)
+            if(length(x.idx) > 0L) {
+                eqs.y <- eqs.names[-x.idx]
+            }
+        }
+        eqs.x <- eqs.names
+    } else {
+        eqs.y <- character(0L)
+        eqs.x <- character(0L)
+    }
+
+
     # 1 "=~"
     l.lhs <- r.rhs <- op <- character(0)
     l.lhs <- rep(lv.names, each=length(ov.names.nox))
@@ -37,12 +55,12 @@ lav_partable_full <- function(partable = NULL,
 
     # remove factor ~ eqs.y combinations, if any
     # because they also appear as a regression
-    #bad.idx <- which( l.lhs %in% lv.names &
-    #                  l.rhs %in% eqs.y)
-    #if(length(bad.idx) > 0L) {
-    #    l.lhs <- l.lhs[-bad.idx]
-    #    l.rhs <- l.rhs[-bad.idx]
-    #}
+    bad.idx <- which( l.lhs %in% lv.names &
+                      l.rhs %in% eqs.y)
+    if(length(bad.idx) > 0L) {
+        l.lhs <- l.lhs[-bad.idx]
+        l.rhs <- l.rhs[-bad.idx]
+    }
 
     l.op  <- rep("=~", length(l.lhs))
 
@@ -83,25 +101,15 @@ lav_partable_full <- function(partable = NULL,
     r.lhs <- r.rhs <- r.op <- character(0)
     if(any(partable$op == "~")) {
 
-        eqs.names <- unique( c(partable$lhs[partable$op == "~"], 
-                               partable$rhs[partable$op == "~"]) )
-
-        eqs.y <- eqs.names
-        if(strict.exo) {
-            x.idx <- which(eqs.names %in% ov.names.x)
-            if(length(x.idx) > 0L) {
-                eqs.y <- eqs.names[-x.idx]
-            }
-        }
-        eqs.x <- eqs.names
-
-        r.lhs <- rep(eqs.y, each=length(eqs.x))
-        r.rhs <- rep(eqs.x, times=length(eqs.y))
+        r.lhs <- rep(eqs.y, each  = length(eqs.x))
+        r.rhs <- rep(eqs.x, times = length(eqs.y))
 
         # remove self-arrows
         idx <- which(r.lhs == r.rhs)
-        r.lhs <- r.lhs[-idx]
-        r.rhs <- r.rhs[-idx]
+        if(length(idx) > 0L) {
+            r.lhs <- r.lhs[-idx]
+            r.rhs <- r.rhs[-idx]
+        }
 
         # remove indicator ~ factor if they exist
         bad.idx <- which(r.lhs %in% ov.names.ind &

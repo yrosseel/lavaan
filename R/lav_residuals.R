@@ -93,7 +93,9 @@ function(object, type="raw", labels=TRUE) {
                                      lavsamplestats = object@SampleStats,
                                      lavdata        = object@Data,
                                      lavpartable    = object@ParTable,
-                                     lavoptions     = object@Options)
+                                     lavoptions     = object@Options,
+                                     lavimplied     = object@implied,
+                                     lavh1          = object@h1)
             # set cov between free and fixed.x elements to zero
             ###
             ### FIXME: should we not do this on the information level,
@@ -110,7 +112,9 @@ function(object, type="raw", labels=TRUE) {
                                      lavdata        = object@Data,
                                      lavpartable    = object@ParTable,
                                      lavsamplestats = object@SampleStats,
-                                     lavoptions     = object@Options)
+                                     lavoptions     = object@Options,
+                                     lavimplied     = object@implied,
+                                     lavh1          = object@h1)
             Delta  <- computeDelta(lavmodel = object@Model)
         }   
     }

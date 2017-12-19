@@ -48,16 +48,23 @@ lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g,
         if(conditional.x) {
             if(meanstructure) {
                 if(slopestructure) {
-                    WLS.obs <- c(                 res.int.g,
-                                 lav_matrix_vec(  res.slopes.g  ), 
-                                 lav_matrix_vech( res.cov.g     ))
+                    # order = vec(Beta), where first row are intercepts
+                    # cbind(res.int, res.slopes) is t(Beta)
+                    # so we need vecr
+                    WLS.obs <- c( lav_matrix_vecr( cbind(res.int.g,
+                                                         res.slopes.g)),
+                                  lav_matrix_vech( res.cov.g )          
+                                )
+                    #WLS.obs <- c(                 res.int.g,
+                    #             lav_matrix_vec(  res.slopes.g  ), 
+                    #             lav_matrix_vech( res.cov.g     ))
                 } else {
                     WLS.obs <- c(                 res.int.g,
                                  lav_matrix_vech( res.cov.g     ))
                 }
             } else {
                 if(slopestructure) {
-                    WLS.obs <- c(lav_matrix_vec(  res.slopes.g ),
+                    WLS.obs <- c(lav_matrix_vecr( res.slopes.g ),
                                  lav_matrix_vech( res.cov.g    ))
                 } else {
                     WLS.obs <-   lav_matrix_vech( res.cov.g    )

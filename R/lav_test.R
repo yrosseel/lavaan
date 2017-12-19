@@ -2,13 +2,13 @@ lav_model_test <- function(lavmodel       = NULL,
                            lavpartable    = NULL, 
                            lavsamplestats = NULL,
                            lavimplied     = NULL,
+                           lavh1          = list(),
                            lavoptions     = NULL, 
                            x              = NULL, 
                            VCOV           = NULL, 
                            lavcache       = NULL,
                            lavdata        = NULL,
-                           h1             = list(),
-                           loglik         = NULL,
+                           lavloglik      = NULL,
                            test.UGamma.eigvals = FALSE) {
 
 
@@ -68,9 +68,9 @@ lav_model_test <- function(lavmodel       = NULL,
         # NOT observed data
         chisq.group <- PML$PLRTH0Sat.group
     } else if(lavdata@nlevels > 1L) {
-        if(length(h1) > 0L) {
+        if(length(lavh1) > 0L) {
             # LRT
-            chisq.group <- -2 * (loglik$loglik.group - h1$loglik.group)
+            chisq.group <- -2 * (lavloglik$loglik.group - lavh1$loglik.group)
         } else {
             chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
         }
@@ -212,6 +212,7 @@ lav_model_test <- function(lavmodel       = NULL,
                          lavmodel       = lavmodel,
                          lavdata        = lavdata,
                          lavimplied     = lavimplied,
+                         lavh1          = lavh1,
                          lavoptions     = lavoptions,
                          TEST.unscaled  = TEST[[1]],
                          E.inv          = attr(VCOV, "E.inv"),

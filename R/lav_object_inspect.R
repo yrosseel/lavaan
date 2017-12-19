@@ -2042,7 +2042,9 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
                                   lavsamplestats = object@SampleStats,
                                   lavoptions     = object@Options,
                                   lavdata        = object@Data,
-                                  lavcache       = object@Cache
+                                  lavcache       = object@Cache,
+                                  lavimplied     = object@implied,
+                                  lavh1          = object@h1
                                  )
         }
     }

@@ -9,6 +9,7 @@ lav_model_information <- function(lavmodel       = NULL,
                                   lavsamplestats = NULL,
                                   lavdata        = NULL,
                                   lavimplied     = NULL,
+                                  lavh1          = NULL,
                                   Delta          = NULL,
                                   lavcache       = NULL,
                                   lavoptions     = NULL,
@@ -29,20 +30,20 @@ lav_model_information <- function(lavmodel       = NULL,
         }
         E <- lav_model_information_observed(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, group.weight = group.weight,
             lavoptions = lavoptions, extra = extra,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else if(information == "expected") {
         E <- lav_model_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, lavoptions = lavoptions, extra = extra, 
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else if(information == "first.order") {
         E <- lav_model_information_firstorder(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
-            lavimplied = lavimplied,
+            lavimplied = lavimplied, lavh1 = lavh1,
             lavcache = lavcache, lavoptions = lavoptions, #extra = extra,
             check.pd = FALSE,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
@@ -62,6 +63,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
                                            lavdata        = NULL,
                                            lavoptions     = NULL,
                                            lavimplied     = NULL,
+                                           lavh1          = NULL,
                                            Delta          = NULL,
                                            lavcache       = NULL,
                                            extra          = FALSE,
@@ -79,32 +81,40 @@ lav_model_information_expected <- function(lavmodel       = NULL,
     }
 
 
-    # 2. H1 information
-    A1 <- lav_model_h1_information_expected(lavmodel       = lavmodel,
-                                            lavsamplestats = lavsamplestats,
-                                            lavdata        = lavdata,
-                                            lavoptions     = lavoptions,
-                                            lavimplied     = lavimplied,
-                                            lavcache       = lavcache)
+    # 2. H1 information (single level)
+    if(lavdata@nlevels == 1L) {
+        A1 <- lav_model_h1_information_expected(lavmodel       = lavmodel,
+                                                lavsamplestats = lavsamplestats,
+                                                lavdata        = lavdata,
+                                                lavoptions     = lavoptions,
+                                                lavimplied     = lavimplied,
+                                                lavh1          = lavh1,
+                                                lavcache       = lavcache)
+    }
 
     # 3. compute Information per group
     Info.group  <- vector("list", length=lavsamplestats@ngroups)
     for(g in 1:lavsamplestats@ngroups) {
         # note LISREL documentation suggest (Ng - 1) instead of Ng...
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
-        # compute information for this group
-        if(lavmodel@estimator %in% c("DWLS", "ULS")) {
-            # diagonal weight matrix
-            Delta2 <- sqrt(A1[[g]]) * Delta[[g]]
-            Info.group[[g]] <- fg * crossprod(Delta2)
+
+        # multilevel
+        if(lavdata@nlevels > 1L) {
+            Info.g <- 0
+            Info.group[[g]] <- fg * Info.g
         } else {
-            # full weight matrix
-            # Info.group[[g]] <- 
-                # fg * (t(Delta[[g]]) %*% A1[[g]] %*% Delta[[g]])
-            Info.group[[g]] <- 
-                fg * ( crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]] )
+            # compute information for this group
+            if(lavmodel@estimator %in% c("DWLS", "ULS")) {
+                # diagonal weight matrix
+                Delta2 <- sqrt(A1[[g]]) * Delta[[g]]
+                Info.group[[g]] <- fg * crossprod(Delta2)
+            } else {
+                # full weight matrix
+                Info.group[[g]] <- 
+                    fg * ( crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]] )
+            }
         }
-    }
+    } # g
 
     # 4. assemble over groups
     Information <- Info.group[[1]]
@@ -206,6 +216,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                            lavsamplestats = NULL,
                                            lavdata        = NULL,
                                            lavimplied     = NULL,
+                                           lavh1          = NULL,
                                            lavcache       = NULL,
                                            lavoptions     = NULL,
                                            extra          = FALSE,
@@ -269,6 +280,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                                 lavdata        = lavdata,
                                                 lavoptions     = lavoptions,
                                                 lavimplied     = lavimplied,
+                                                lavh1          = lavh1,
                                                 lavcache       = lavcache)
     }
 
@@ -320,6 +332,7 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                                              lavsamplestats = NULL,
                                              lavdata        = NULL,
                                              lavimplied     = NULL,
+                                             lavh1          = NULL,
                                              lavcache       = NULL,
                                              lavoptions     = NULL,
                                              check.pd       = FALSE,
@@ -346,13 +359,24 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
                                               lavdata        = lavdata,
                                               lavoptions     = lavoptions,
                                               lavimplied     = lavimplied,
+                                              lavh1          = lavh1,
                                               lavcache       = lavcache)
 
     # 3. compute Information per group
     Info.group  <- vector("list", length=lavsamplestats@ngroups)
     for(g in 1:lavsamplestats@ngroups) {
-        # unweighted (needed in lav_test?)
-        B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]] 
+
+        if(lavdata@nlevels > 1L) {
+            # delta
+            Delta.W <- Delta[[(g-1)*2 + 1]]
+            Delta.B <- Delta[[(g-1)*2 + 2]]
+            Delta.WB <- rbind(Delta.W, Delta.B)
+
+            B0.group[[g]] <- t(Delta.WB) %*% B1[[g]] %*% Delta.WB
+        } else {
+            # unweighted (needed in lav_test?)
+            B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]] 
+        }
        
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
         # compute information for this group
@@ -462,4 +486,24 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
 
     # augmented/inverted information
     information
+}
+
+lav_model_information_expected_2l <- function(lavmodel       = NULL,
+                                              lavsamplestats = NULL,
+                                              lavdata        = NULL,
+                                              lavoptions     = NULL,
+                                              lavimplied     = NULL,
+                                              lavh1          = NULL,
+                                              g              = 1L) {
+    # see Yuan & Bentler (2002), p.549 top line
+    # I.j = nj. Delta.mu' sigma.j.inv +
+    #       Delta.sigma.j' W.j Delta.sigma.j +
+    #       (nj-1) Delta.sigma.w' W.w Delta.sigma.w
+    #
+    # where 
+    # - sigma.j = sigma.w + n.j * sigma.b
+    # - W.w = 1/2 * D'(sigma.w.inv %x% sigma.w.inv) D
+    # - W.j = 1/2 * D'(sigma.j.inv %x% sigma.j.inv) D
+    
+    
 }

@@ -311,7 +311,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # NOTE: the vecr here, unlike lav_mvreg_dlogl_beta
             #       this is because DELTA has used vec(t(BETA)), 
             #       instead of vec(BETA)
-            # NOT any longer, since 0.6-1!!! 
             #POST.beta <- 2 * lav_matrix_vecr(d.BETA)
             # NOT any longer, since 0.6-1!!! 
             POST.beta <- 2 * lav_matrix_vec(d.BETA)
@@ -694,11 +693,26 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
                 if(!categorical) {
                     if(conditional.x && lavmodel@nexo[g] > 0L) {
+                        # ATTENTION: we need to change the order here
+                        # lav_mvreg_scores_* uses 'Beta' where the
+                        # the intercepts are just the first row
+                        # using the col-major approach, we need to
+                        # interweave the intercepts with the slopes!
                         DELTA.mu <- derivative.mu.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
                         DELTA.pi <- derivative.pi.LISREL(m=mname,
                              idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
-                        DELTA.beta <- rbind(DELTA.mu, DELTA.pi)
+
+                        nEls <- NROW(DELTA.mu) + NROW(DELTA.pi)
+                        # = (nexo + 1 int) * nvar
+
+                        # intercepts on top
+                        tmp <- rbind(DELTA.mu, DELTA.pi)
+                        # change row index
+                        row.idx <- lav_matrix_vec(matrix(seq.int(nEls),
+                            nrow = lavmodel@nexo[g] + 1L,
+                            ncol = lavmodel@nvar[g], byrow = TRUE))
+                        DELTA.beta <- tmp[row.idx,,drop = FALSE]
                         DELTA <- rbind(DELTA.beta, DELTA)
                     } else if(!conditional.x && lavmodel@meanstructure) {
                             DELTA.mu <- derivative.mu.LISREL(m=mname,

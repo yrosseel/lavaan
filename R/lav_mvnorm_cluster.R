@@ -63,10 +63,14 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
                                  Mu.W.tilde[ both.idx ] )
 
     # map to matrices needed for loglik
+    if(length(within.idx) > 0L) {
+        Mu.B.tilde[within.idx] <- 0
+    }
     if(length(between.idx) > 0L) {
-        mu.z <- Mu.WB.tilde[ between.idx ]
+        mu.z <- Mu.B.tilde[  between.idx ]
         mu.y <- Mu.WB.tilde[-between.idx ]
         mu.w <- Mu.W.tilde[ -between.idx ]
+        mu.b <- Mu.B.tilde[ -between.idx ]
         sigma.zz <- Sigma.B.tilde[ between.idx, between.idx, drop = FALSE]
         sigma.yz <- Sigma.B.tilde[-between.idx, between.idx, drop = FALSE]
         sigma.b  <- Sigma.B.tilde[-between.idx,-between.idx, drop = FALSE]
@@ -75,15 +79,11 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
         mu.z <- numeric(0L)
         mu.y <- Mu.WB.tilde
         mu.w <- Mu.W.tilde
+        mu.b <- Mu.B.tilde
         sigma.zz <- matrix(0, 0L, 0L)
         sigma.yz <- matrix(0, nrow(Sigma.B.tilde), 0L)
         sigma.b <- Sigma.B.tilde
         sigma.w <- Sigma.W.tilde
-    }
-
-    mu.b <- Mu.B.tilde
-    if(length(within.idx) > 0L) {
-        mu.b[ within.idx ] <- 0
     }
 
     list(sigma.w = sigma.w, sigma.b = sigma.b, sigma.zz = sigma.zz,
@@ -116,15 +116,20 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
         mu.b <- mu.y
         mu.w.tilde <- numeric( p.tilde )
         mu.w.tilde[ ov.idx[[1]] ] <- mu.y
-        mu.w.tilde[  -within.idx ] <- 0
+        if(length(within.idx) > 0L) {
+            mu.w.tilde[  -within.idx ] <- 0
+        } else {
+            mu.w.tilde[] <- 0
+        }
         mu.w <- mu.w.tilde[ ov.idx[[1]] ]
     }
 
-    # Mu.W
     Mu.W.tilde <- numeric( p.tilde )
-    if(length(within.idx) > 0) {
+########## DEBUG ##############
+    #if(length(within.idx) > 0) {
         Mu.W.tilde[ ov.idx[[1]] ] <- mu.w
-    }
+    #}
+###############################
     Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
 
     # Mu.B
@@ -712,27 +717,59 @@ lav_mvnorm_cluster_scores_2l <- function(Y1           = NULL,
 
         Sigma.B.tilde <- matrix(0, nclusters, p.tilde.star)
 
-        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[1]], ov.idx[[1]] ] )
+        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[1]], ov.idx[[1]],
+                                             drop = FALSE ] )
         Sigma.B.tilde[ , col.idx ] <- G.Sigma.b
 
-        col.idx <- lav_matrix_vec( B.tilde[ ov.idx[[1]], between.idx ] )
+        col.idx <- lav_matrix_vec( B.tilde[ ov.idx[[1]], between.idx,
+                                            drop = FALSE ] )
         Sigma.B.tilde[ , col.idx ] <- G.Sigma.yz
 
-        col.idx <- lav_matrix_vech( B.tilde[ between.idx, between.idx ] )
+        col.idx <- lav_matrix_vech( B.tilde[ between.idx, between.idx,
+                                             drop = FALSE ] )
         Sigma.B.tilde[ , col.idx ] <- G.Sigma.zz
 
-        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[2]], ov.idx[[2]] ] )
-        Sigma.B <- Sigma.B.tilde[ , col.idx ]
+        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[2]], ov.idx[[2]],
+                                             drop = FALSE ] )
+        Sigma.B <- Sigma.B.tilde[ , col.idx, drop = FALSE ]
     } else {
         Sigma.B <- G.Sigma.b
     }
 
-    SCORES <- list(Mu.W    = Mu.W, 
-                   Mu.B    = Mu.B, 
-                   Sigma.W = Sigma.W, 
-                   Sigma.B = Sigma.B)
+    SCORES <- cbind(Mu.W, Sigma.W, Mu.B, Sigma.B)
 
     SCORES
+}
+
+lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
+                                                      YLp          = NULL,
+                                                      Lp           = NULL,
+                                                      Mu.W         = NULL,
+                                                      Sigma.W      = NULL,
+                                                      Mu.B         = NULL,
+                                                      Sigma.B      = NULL,
+                                                      divide.by.two = FALSE,
+                                                      Sinv.method  = "eigen") {
+    N <- NROW(Y1)
+
+    SCORES <- lav_mvnorm_cluster_scores_2l(Y1           = Y1,
+                                           YLp          = YLp,
+                                           Lp           = Lp,
+                                           Mu.W         = Mu.W,
+                                           Sigma.W      = Sigma.W,
+                                           Mu.B         = Mu.B,
+                                           Sigma.B      = Sigma.B,
+                                           Sinv.method  = Sinv.method)
+
+    # divide by 2 (if we want scores wrt objective function)
+    if(divide.by.two) {
+        SCORES <- SCORES / 2
+    }
+
+    # unit information
+    information <- crossprod(SCORES)/N
+
+    information
 }
 
 # estimate ML estimates of Mu.W, Mu.B, Sigma.W, Sigma.B

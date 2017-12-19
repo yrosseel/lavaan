@@ -1039,7 +1039,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavdata         = lavdata,
                                lavpartable     = lavpartable,
                                lavcache        = lavcache,
-                               lavimplied      = lavimplied)
+                               lavimplied      = lavimplied,
+                               lavh1           = lavh1)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
@@ -1099,13 +1100,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavpartable         = lavpartable,
                                lavsamplestats      = lavsamplestats,
                                lavimplied          = lavimplied,
+                               lavh1               = lavh1,
                                lavoptions          = lavoptions,
                                x                   = x,
                                VCOV                = VCOV,
                                lavdata             = lavdata,
                                lavcache            = lavcache,
-                               h1                  = lavh1,
-                               loglik              = lavloglik)
+                               lavloglik           = lavloglik)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }

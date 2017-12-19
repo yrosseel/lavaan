@@ -1,46 +1,20 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) { #,
-                              #cov.x = NULL) {
-
-    # state or final?
-    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL, 
+                              lavimplied = NULL) {
 
     nblocks       <- lavmodel@nblocks
     meanstructure <- lavmodel@meanstructure
     categorical   <- lavmodel@categorical
     group.w.free  <- lavmodel@group.w.free
-    fixed.x       <- lavmodel@fixed.x
     num.idx       <- lavmodel@num.idx
 
-    # compute moments for all groups
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
-                                 extra = FALSE)
-    if(meanstructure && !categorical) {
-        Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
-    } else if(categorical) {
-        TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
-    }
-    if(lavmodel@conditional.x && lavmodel@nexo > 0L) {
-        PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
-    } 
-    if(group.w.free) {
-        GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+    # model-implied statistics
+    if(is.null(lavimplied)) {
+        lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
     }
 
-    WLS.est <- vector("list", length=nblocks)
+    WLS.est <- vector("list", length = nblocks)
     for(g in 1:nblocks) {
-
-        # PI?
-        if(lavmodel@conditional.x && lavmodel@nexo > 0L) {
-            PI.g <- PI[[g]]
-            # Sigma_yy = Sigma_yy|x + PI %*% cov.x %*% t(PI)
-            #if(!categorical) {
-            #    cov.xg <- cov.x[[g]]
-            #    Sigma.hat[[g]] <- Sigma.hat[[g]] + PI.g %*% cov.xg %*% t(PI.g)
-            #}
-        } else {
-            PI.g <- numeric(0L)
-        }
 
         if(categorical) {
             # order of elements is important here:
@@ -48,21 +22,54 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL) { #,
             # 2. slopes (if any, columnwise per exo)
             # 3. variances (if any)
             # 4. correlations (no diagonal!)
-            wls.est <- c(TH[[g]],
-                         lav_matrix_vec(PI.g),
-                         diag(Sigma.hat[[g]])[num.idx[[g]]],
-                         lav_matrix_vech(Sigma.hat[[g]], diagonal=FALSE))
-        } else if(!categorical && meanstructure) {
-            wls.est <- c(Mu.hat[[g]],
-                         lav_matrix_vec(PI.g),
-                         lav_matrix_vech(Sigma.hat[[g]]))
+            if(lavmodel@conditional.x) {
+                wls.est <- c(lavimplied$res.th[[g]],
+                             lav_matrix_vec(lavimplied$res.slopes[[g]]),
+                             diag(lavimplied$res.cov[[g]])[ num.idx[[g]] ],
+                             lav_matrix_vech(lavimplied$res.cov[[g]],
+                                             diagonal = FALSE)
+                            )
+            } else {
+                wls.est <- c(lavimplied$th[[g]],
+                             diag(lavimplied$cov[[g]])[ num.idx[[g]] ],
+                             lav_matrix_vech(lavimplied$cov[[g]], 
+                                             diagonal = FALSE)
+                            )
+           }
+
         } else {
-            wls.est <- c(lav_matrix_vec(PI.g),
-                         lav_matrix_vech(Sigma.hat[[g]]))
-        }
+
+            if(lavmodel@conditional.x && lavmodel@nexo[g] > 0L) {
+                # order = vec(Beta), where first row are intercepts
+                    # cbind(res.int, res.slopes) is t(Beta)
+                    # so we need vecr
+                if(meanstructure) {
+                    wls.est <- c(lav_matrix_vecr( 
+                                     cbind(lavimplied$res.int[[g]], 
+                                           lavimplied$res.slopes[[g]]) ),
+                                 lav_matrix_vech(lavimplied$res.cov[[g]])
+                                )
+                } else {
+                    wls.est <- c(lav_matrix_vecr(lavimplied$res.slopes[[g]]),
+                                 lav_matrix_vech(lavimplied$res.cov[[g]])
+                                )
+                }
+
+            } else {
+                
+                if(meanstructure) {
+                    wls.est <- c(lavimplied$mean[[g]], 
+                                 lav_matrix_vech(lavimplied$cov[[g]]))
+                } else {
+                    wls.est <- lav_matrix_vech(lavimplied$cov[[g]])
+                }
+
+            } # conditional.x = FALSE
+
+        } # categorical = FALSE
+
         if(group.w.free) {
-            #wls.est <- c(log(GW[[g]]/GW[[samplestats@ngroups]]), wls.est)
-             wls.est <- c(GW[[g]], wls.est)
+             wls.est <- c(lavimplied$group.w[[g]], wls.est)
         }
 
         WLS.est[[g]] <- wls.est

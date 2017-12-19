@@ -263,7 +263,7 @@ lav_options_set <- function(opt = NULL) {
         # test
         if(opt$test == "default") {
             opt$test <- "standard"
-        } else if(opt$test %in% c("none", "standard")) {
+        } else if(opt$test %in% c("none", "standard","yuan.bentler")) {
             # nothing to do
         } else {
             stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" in the multilevel case (for now)")
@@ -272,7 +272,7 @@ lav_options_set <- function(opt = NULL) {
         # se
         if(opt$se == "default") {
             opt$se <- "standard"
-        } else if(opt$se %in% c("none", "standard")) {
+        } else if(opt$se %in% c("none", "standard", "robust.huber.white")) {
             # nothing to do
         } else {
             stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" in the multilevel case (for now)")
@@ -281,7 +281,7 @@ lav_options_set <- function(opt = NULL) {
         # information
         if(opt$information == "default") {
             opt$information <- "observed"
-        } else if(opt$information %in% c("observed")) {
+        } else if(opt$information %in% c("observed", "first.order")) {
             # nothing to do
         } else {
             stop("lavaan ERROR: `information' argument must be \"observed\" in the multilevel case (for now)")
