@@ -1000,3 +1000,344 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
 }
 
 
+# this is a temporary solution - 21 Dec 2017
+# based on EM_LeePoon1998_v5.R
+# final version will be different
+lav_mvnorm_cluster_em_h0 <- function(YLp            = NULL,
+                                 Lp             = NULL,
+                                 Y1             = NULL,
+                                 lavpartable    = NULL,
+                                 h1             = NULL,
+                                 ov.names.l     = NULL,
+                                 verbose        = TRUE,
+                                 verbose.x      = FALSE,
+                                 tol            = 1e-04,
+                                 max.iter       = 5000,
+                                 mstep.iter.max = 10000L,
+                                 mstep.rel.tol  = 1e-10) {
+    # sample stats
+    nclusters      <- Lp$nclusters[[2]]
+    cluster.size   <- Lp$cluster.size[[2]]
+    cluster.idx    <- Lp$cluster.idx[[2]]
+    within.idx     <- Lp$within.idx[[2]]
+    between.idx    <- Lp$between.idx[[2]]
+    both.idx       <- Lp$both.idx[[2]]
+    within.names   <- Lp$within.names[[2]]
+    between.names  <- Lp$between.names[[2]]
+#    cluster.sizes  <- Lp$cluster.sizes[[2]]
+#    ncluster.sizes <- Lp$ncluster.sizes[[2]]
+#    n.s            <- Lp$cluster.size.ns[[2]]
+
+    nvar <- NCOL(Y1)
+    nobs <- NROW(Y1)
+
+
+    # data
+    Y1Y1 <- YLp[[2]]$Y1Y1
+    Y2   <- YLp[[2]]$Y2
+    Y1.mean <- colMeans(Y1)
+
+    #############################################################
+    if(length(within.idx) > 0L && !any(lavpartable$exo == 1L)) {
+        pt.within.int.idx <- which(lavpartable$op == "~1" &
+                                   lavpartable$lhs %in% within.names)
+        x.within.int.idx <- lavpartable$free[ pt.within.int.idx ]
+    }
+    if(length(between.idx) > 0L && !any(lavpartable$exo == 1L)) {
+        pt.between.int.idx <- which(lavpartable$op == "~1" &
+                                    lavpartable$lhs %in% between.names)
+        x.between.int.idx <- lavpartable$free[ pt.between.int.idx ]
+        pt.between.var.idx <- which(lavpartable$op == "~~" &
+                                    lavpartable$lhs %in% between.names,
+                                    lavpartable$rhs %in% between.names)
+        # FIXME:
+        # make sure that intercepts/(co)variances of exogenous (but free)
+        # between-only variables are already OK in lavpartable$start!!
+    }
+    ############################################################
+
+    # use h1 to start
+    if(!is.null(h1)) {
+        Mu.W <- h1$implied$mean[[1]]
+        Mu.B <- h1$implied$mean[[2]]
+        Sigma.W <- h1$implied$cov[[1]]
+        Sigma.B <- h1$implied$cov[[2]]
+    } else {
+        # initial values
+        ov.idx <- Lp$ov.idx
+        Mu.W <- numeric( length(ov.idx[[1]]) )
+        Sigma.W <- diag( length(ov.idx[[1]]) )
+        Mu.B <- numeric( length(ov.idx[[2]]) )
+        Sigma.B <- diag( length(ov.idx[[2]]) )
+    }
+    #x.current <- fit@optim$x
+    x.current <- NULL
+    # report initial fx
+    fx <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp,
+              Lp = Lp, Mu.W = Mu.W, Sigma.W = Sigma.W,
+              Mu.B = Mu.B, Sigma.B = Sigma.B,
+              Sinv.method = "eigen", log2pi = TRUE, minus.two = FALSE)
+
+    # if verbose, report
+    if(verbose) {
+        cat("EM iter:", sprintf("%4d", 0),
+            " fx =", sprintf("%14.10f", fx),
+            "\n")
+    }
+
+    ###############################################
+    # override Mu.W if within-only x are included #
+    # --> we fill them in at the very end         #
+    ###############################################
+    if(length(within.idx) > 0L) {
+        Mu.W <- numeric( length(Mu.W) )
+    }
+
+    # translate to internal matrices
+    out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
+              Mu.W = Mu.W, Mu.B = Mu.B,
+               Sigma.W = Sigma.W, Sigma.B = Sigma.B)
+    mu.y <- out$mu.y; mu.z <- out$mu.z
+    sigma.w <- out$sigma.w; sigma.b <- out$sigma.b
+    sigma.zz <- out$sigma.zz; sigma.yz <- out$sigma.yz
+
+    nvar.y <- ncol(sigma.w)
+    nvar.z <- ncol(sigma.zz)
+
+    # mu.z and sigma.zz can be computed beforehand
+    if(length(between.idx) > 0L) {
+        Z <- Y2[, between.idx, drop = FALSE]
+        mu.z <- colMeans(Y2)[between.idx]
+        sigma.zz <- 1/nclusters * crossprod(Z) - tcrossprod(mu.z)
+
+        Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
+    }
+
+    C.j <- vector("list", length = nclusters)
+    D.j <- vector("list", length = nclusters)
+    M.j <- matrix(0, nrow = nclusters, ncol = nvar.y)
+    ZY.j <- vector("list", length = nclusters)
+
+    # EM iterations
+    fx.old <- fx
+    for(i in 1:max.iter) {
+
+        if(length(between.idx) > 0L) {
+            sigma.1 <- cbind(sigma.yz, sigma.b)
+            mu <- c(mu.z, mu.y)
+        } else {
+            sigma.1 <- sigma.b
+            mu <- mu.y
+        }
+
+        # E-step
+        for(cl in seq_len(nclusters)) {
+            nj <- cluster.size[cl]
+
+            # data
+            if(length(between.idx) > 0L) {
+                # z comes first!
+                b.j    <- c(Y2[cl, between.idx],
+                            Y2[cl,-between.idx])
+                ybar.j <- Y2[cl,-between.idx]
+                y1j <- Y1[cluster.idx == cl, -between.idx, drop = FALSE]
+            } else {
+                ybar.j <- b.j <- Y2[cl,]
+                y1j <- Y1[cluster.idx == cl,,drop = FALSE]
+            }
+            sigma.j <- sigma.w + nj*sigma.b
+            if(length(between.idx) > 0L) {
+                omega.j <- rbind( cbind(sigma.zz, t(sigma.yz)),
+                                  cbind(sigma.yz, 1/nj * sigma.j) )
+            } else {
+                omega.j <- 1/nj * sigma.j
+            }
+            omega.j.inv <- solve(omega.j)
+
+            # E(v|y)
+            Ev <- as.numeric(mu.y + (sigma.1 %*% omega.j.inv %*% (b.j - mu)))
+
+            # Cov(v|y)
+            Covv <- sigma.b - (sigma.1 %*% omega.j.inv %*% t(sigma.1))
+
+            # force symmetry
+            Covv <- (Covv + t(Covv))/2
+
+            # E(vv|y) = Cov(v|y) + E(v|y)E(v|y)^T
+            Evv <- Covv + tcrossprod(Ev)
+
+            # C.j for this cluster
+            tmp1 <- 1/nj * crossprod(y1j)  # yy
+            tmp2 <- tcrossprod(ybar.j, Ev) # yv
+            tmp3 <- t(tmp2)                # vy
+            tmp4 <- Evv                    # vv
+            c.j <- (tmp1 - tmp2 - tmp3 + tmp4)
+
+            # D.g
+            tmp1 <- Evv                   # vv
+            tmp2 <- tcrossprod(Ev, mu.y)  # vy
+            tmp3 <- t(tmp2)               # yv
+            tmp4 <- tcrossprod(mu.y)      # yy
+            d.j <- (tmp1 - tmp2 - tmp3 + tmp4)
+
+            C.j[[cl]] <- nj * c.j # multiplied by nj!
+          D.j[[cl]] <- d.j
+            M.j[cl,] <- Ev
+            # between only
+            if(length(between.idx) > 0L) {
+                ZY.j[[cl]] <- tcrossprod(Y2[cl,between.idx], Ev)
+            }
+        }
+        M.b <- 1/nclusters * colSums(M.j)
+        C.b <- 1/nclusters * Reduce("+", D.j)
+        C.w <- 1/nobs * Reduce("+", C.j)
+
+        # between only
+        if(length(between.idx) > 0L) {
+            A <- 1/nclusters * Reduce("+", ZY.j) - tcrossprod(mu.z, M.b)
+        }
+
+        # end of E-step
+
+        # make symmetric (not needed here)
+        C.b <- (C.b + t(C.b))/2
+        C.w <- (C.w + t(C.w))/2
+
+        # M-step
+        sigma.w <- C.w
+        sigma.b <- C.b
+        mu.y    <- M.b # note mu.y[within.idx] = 0
+        if(length(between.idx) > 0L) {
+            sigma.yz <- t(A)
+        }
+
+        # back to model-implied dimensions
+        implied <- lav_mvnorm_cluster_2l2implied(Lp = Lp,
+                       sigma.w = sigma.w, sigma.b = sigma.b,
+                       sigma.zz = sigma.zz, sigma.yz = sigma.yz,
+                       mu.z = mu.z, mu.y = mu.y)
+        rownames(implied$Sigma.W) <- colnames(implied$Sigma.W) <- ov.names.l[[1]]
+        rownames(implied$Sigma.B) <- colnames(implied$Sigma.B) <- ov.names.l[[2]]
+
+        # fit two-group model
+        local.partable <- lavpartable
+        level.idx <- which(names(local.partable) == "level")
+        names(local.partable)[level.idx] <- "group"
+        local.partable$est <- NULL
+        local.partable$se  <- NULL
+        #local.partable$start <- NULL
+
+        # ensure 'fixed' values of exo covariates are in ustart
+        exo.idx <- which(lavpartable$exo == 1L)
+        if(length(exo.idx) > 0L) {
+            local.partable$ustart[ exo.idx ] <- lavpartable$start[ exo.idx ]
+        }
+
+        # give current values as starting values
+        free.idx <- which(lavpartable$free > 0L)
+        if(!is.null(x.current)) {
+            local.partable$ustart[ free.idx ] <- x.current
+        } else {
+            local.partable$ustart[ free.idx ] <- lavpartable$start[ free.idx ]
+
+            # REMOVE within intercepts (fix to zero)!
+            if(length(within.idx) > 0L && !any(lavpartable$exo == 1L)) {
+                local.partable$ustart[ pt.within.int.idx ] <- 0
+            }
+
+            # between-only intercepts (mu.z) (needed?)
+            if(length(between.idx) > 0L && !any(lavpartable$exo == 1L)) {
+                local.partable$ustart[ pt.between.int.idx ] <- mu.z
+            }
+
+            # between-only (co)variances (sigma.zz) (needed?)
+           # between-only (co)variances (sigma.zz) (needed?)
+
+        }
+
+        local.fit <- lavaan(local.partable,
+                            sample.cov   = list(within  = implied$Sigma.W,
+                                                between = implied$Sigma.B),
+                            sample.mean  = list(within  = implied$Mu.W,
+                                                between = implied$Mu.B),
+                            sample.nobs  = Lp$nclusters,
+                            sample.cov.rescale = FALSE,
+                            #verbose = TRUE, 
+                            control = list(iter.max = mstep.iter.max,
+                                           rel.tol  = mstep.rel.tol),
+                            fixed.x = any(lavpartable$exo == 1L),
+                            estimator = "ML",
+                            se = "none",
+                            warn = FALSE,
+                            #debug = TRUE,
+                            test = "none")
+        # end of M-step
+
+        implied2 <- local.fit@implied
+        fx <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp,
+          Lp = Lp, Mu.W = implied2$mean[[1]], Sigma.W = implied2$cov[[1]],
+          Mu.B = implied2$mean[[2]], Sigma.B = implied2$cov[[2]],
+          Sinv.method = "eigen", log2pi = TRUE, minus.two = FALSE)
+
+        # diff
+        fx.delta <- fx - fx.old
+
+        if(verbose) {
+            cat("EM iter:", sprintf("%4d", i),
+                " fx =", sprintf("%17.10f", fx),
+                " fx.delta =", sprintf("%9.8f", fx.delta),
+                " mstep.iter =", sprintf("%3d",
+                                  lavInspect(local.fit, "iterations")),
+                "\n")
+        }
+
+        # convergence check: using parameter values only (for now)
+        if(fx.delta < tol && i > 1L) {
+            break
+        } else {
+            fx.old <- fx
+            x.current <- local.fit@optim$x
+            if(verbose.x) {
+                print(round(x.current, 3))
+            }
+        }
+
+        # translate to internal matrices
+        out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
+                   Mu.W = implied2$mean[[1]], Sigma.W = implied2$cov[[1]],
+                   Mu.B = implied2$mean[[2]], Sigma.B = implied2$cov[[2]])
+        mu.y <- out$mu.y; sigma.w <- out$sigma.w; sigma.b <- out$sigma.b
+        sigma.yz <- out$sigma.yz
+        #mu.z <- out$mu.z
+        #sigma.zz <- out$sigma.zz
+
+        ####################################
+        # remove within.idx part from mu.y #
+        ####################################
+        if(length(within.idx) > 0L) {
+            w.idx <- match(within.names, ov.names.l[[1]])
+            mu.y[w.idx] <- 0
+        }
+
+    } # EM iterations
+
+    final.x <- local.fit@optim$x
+
+    ##############################
+    # add within.only intercepts #
+    ##############################
+    if(length(within.idx) > 0L && !any(lavpartable$exo == 1L)) {
+        final.x[ x.within.int.idx ] <- Y1.mean[ within.idx ]
+    }
+
+    # add attributes
+    attr(final.x, "iterations") <- i
+    attr(final.x, "converged") <- TRUE # always true for EM...
+    attr(final.x, "control") <- list(em.iter.max = max.iter,
+                               em.tol = tol)
+    attr(fx, "fx.group") <- fx # single group for now
+    attr(final.x, "fx") <- fx
+
+    final.x
+}
+

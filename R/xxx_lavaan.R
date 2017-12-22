@@ -928,11 +928,29 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$do.fit && lavoptions$estimator != "none" &&
        lavmodel@nx.free > 0L) {
 
-        x <- lav_model_estimate(lavmodel        = lavmodel,
-                                lavsamplestats  = lavsamplestats,
-                                lavdata         = lavdata,
-                                lavoptions      = lavoptions,
-                                lavcache        = lavcache)
+        if(lavoptions$optim.method == "em") {
+            # multilevel only for now
+            stopifnot(lavdata@nlevels > 1L)
+            # single group only for now
+            stopifnot(lavdata@ngroups == 1L)
+            x <- lav_mvnorm_cluster_em_h0(YLp = lavsamplestats@YLp[[1]],
+                          Lp          = lavdata@Lp[[1]],
+                          lavpartable = lavpartable,
+                          Y1          = lavdata@X[[1]],
+                          h1          = NULL,
+                          ov.names.l  = lavdata@ov.names.l[[1]],
+                          verbose     = lavoptions$verbose,
+                          verbose.x   = FALSE,
+                          max.iter    = lavoptions$em.iter.max,
+                          tol         = lavoptions$em.tol,
+                          mstep.iter.max = 10000L)
+        } else {
+            x <- lav_model_estimate(lavmodel        = lavmodel,
+                                    lavsamplestats  = lavsamplestats,
+                                    lavdata         = lavdata,
+                                    lavoptions      = lavoptions,
+                                    lavcache        = lavcache)
+        }
         lavmodel <- lav_model_set_parameters(lavmodel, x = x)
         # store parameters in @ParTable$est
         lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,

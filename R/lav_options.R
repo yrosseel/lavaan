@@ -115,6 +115,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.force.converged  = FALSE,
                 optim.gradient         = "analytic",
                 optim.init_nelder_mead = FALSE,
+                em.iter.max            = 10000L,
+                em.tol                 = 1e-05,
 
                 # numerical integration
                 integration.ngh        = 21L,
