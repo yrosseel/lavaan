@@ -95,12 +95,27 @@ lav_model_information_expected <- function(lavmodel       = NULL,
     # 3. compute Information per group
     Info.group  <- vector("list", length=lavsamplestats@ngroups)
     for(g in 1:lavsamplestats@ngroups) {
-        # note LISREL documentation suggest (Ng - 1) instead of Ng...
+        # note LISREL documentation suggests (Ng - 1) instead of Ng...
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
 
         # multilevel
         if(lavdata@nlevels > 1L) {
-            Info.g <- 0
+            # here, we assume only 2 levels, at [[1]] and [[2]]
+            Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
+            Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
+            Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
+            Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
+            Lp      <- lavdata@Lp[[g]]
+
+            Info.g <- 
+                lav_mvnorm_cluster_information_expected(Lp           = Lp,
+                                                        Delta        = Delta,
+                                                        g            = g,
+                                                        Mu.W         = Mu.W,
+                                                        Sigma.W      = Sigma.W,
+                                                        Mu.B         = Mu.B,
+                                                        Sigma.B      = Sigma.B,
+                                                        Sinv.method  = "eigen")
             Info.group[[g]] <- fg * Info.g
         } else {
             # compute information for this group

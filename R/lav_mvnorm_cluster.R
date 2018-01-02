@@ -741,6 +741,8 @@ lav_mvnorm_cluster_scores_2l <- function(Y1           = NULL,
     SCORES
 }
 
+
+# first-order information: outer crossprod of scores per cluster
 lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
                                                       YLp          = NULL,
                                                       Lp           = NULL,
@@ -766,11 +768,113 @@ lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
         SCORES <- SCORES / 2
     }
 
-    # unit information
+    # unit information (NOTE: we should use 'nclusters', but vcov assumes N
     information <- crossprod(SCORES)/N
 
     information
 }
+
+# expected information
+# structured only for now
+lav_mvnorm_cluster_information_expected <- function(Lp           = NULL,
+                                                    Delta        = NULL,
+                                                    g            = 1L,
+                                                    Mu.W         = NULL,
+                                                    Sigma.W      = NULL,
+                                                    Mu.B         = NULL,
+                                                    Sigma.B      = NULL,
+                                                    Sinv.method  = "eigen") {
+
+    # translate to internal matrices
+    out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
+              Mu.W = Mu.W, Mu.B = Mu.B,
+               Sigma.W = Sigma.W, Sigma.B = Sigma.B)
+    mu.y <- out$mu.y; mu.z <- out$mu.z
+    sigma.w <- out$sigma.w; sigma.b <- out$sigma.b
+    sigma.zz <- out$sigma.zz; sigma.yz <- out$sigma.yz
+
+    # Delta -- this group
+    Delta.W <- Delta[[(g-1)*2 + 1]]
+    Delta.B <- Delta[[(g-1)*2 + 2]]
+    npar    <- NCOL(Delta.W)
+
+    # create Delta.W.tilde, Delta.B.tilde
+    ov.idx  <- Lp$ov.idx
+    nw <- length(ov.idx[[1]])
+    nb <- length(ov.idx[[2]])
+
+    p.tilde <- length( unique(c(ov.idx[[1]], ov.idx[[2]])) )
+    p.tilde.star <- p.tilde*(p.tilde+1)/2
+    Delta.W.tilde.Mu    <- matrix(0, p.tilde, npar)
+    Delta.W.tilde.Sigma <- matrix(0, p.tilde.star, npar)
+    Delta.B.tilde.Mu    <- matrix(0, p.tilde, npar)
+    Delta.B.tilde.Sigma <- matrix(0, p.tilde.star, npar)
+
+    Delta.W.tilde.Mu[ov.idx[[1]],] <- Delta.W[1:nw,]
+    Delta.B.tilde.Mu[ov.idx[[2]],] <- Delta.B[1:nb,]
+
+    B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
+    w.idx <- lav_matrix_vech( B.tilde[ ov.idx[[1]], ov.idx[[1]], drop = FALSE] )
+    b.idx <- lav_matrix_vech( B.tilde[ ov.idx[[2]], ov.idx[[2]], drop = FALSE] )
+    Delta.W.tilde.Sigma[w.idx,] <- Delta.W[-(1:nw),]
+    Delta.B.tilde.Sigma[b.idx,] <- Delta.B[-(1:nb),]
+
+    Delta.W.tilde <- rbind(Delta.W.tilde.Mu, Delta.W.tilde.Sigma)
+    Delta.B.tilde <- rbind(Delta.B.tilde.Mu, Delta.B.tilde.Sigma)
+
+    nobs           <- Lp$nclusters[[1]]
+    nclusters      <- Lp$nclusters[[2]]
+    cluster.size   <- Lp$cluster.size[[2]]
+    cluster.sizes  <- Lp$cluster.sizes[[2]]
+    ncluster.sizes <- Lp$ncluster.sizes[[2]]
+    n.s            <- Lp$cluster.size.ns[[2]]
+    between.idx    <- Lp$between.idx[[2]]
+
+    information.j <- matrix(0, npar, npar)
+    for(clz in seq_len(ncluster.sizes)) {
+
+        # cluster size
+        nj <- cluster.sizes[clz]
+
+        # Delta.j
+        Delta.j <- Delta.B.tilde + 1/nj * Delta.W.tilde
+
+        # compute Sigma.j
+        sigma.j <- sigma.w + nj * sigma.b
+        if(length(between.idx) > 0L) {
+            omega.j <- matrix(0, p.tilde, p.tilde)
+            omega.j[-between.idx, -between.idx] <- 1/nj * sigma.j
+            omega.j[-between.idx,  between.idx] <- sigma.yz
+            omega.j[ between.idx, -between.idx] <- t(sigma.yz)
+            omega.j[ between.idx,  between.idx] <- sigma.zz
+            #omega.j <- rbind( cbind(sigma.zz, t(sigma.yz)),
+            #                  cbind(sigma.yz, 1/nj * sigma.j) )
+        } else {
+            omega.j <- 1/nj * sigma.j
+        }
+        omega.j.inv <- solve(omega.j)
+
+        I11.j <- omega.j.inv
+        I22.j <- 0.5 * lav_matrix_duplication_pre_post(omega.j.inv %x% omega.j.inv)
+        I.j <- lav_matrix_bdiag(I11.j, I22.j)
+        info.j <- t(Delta.j) %*% I.j %*% Delta.j
+
+        information.j <- information.j + n.s[clz]*info.j
+    }
+
+    Sigma.W.inv <- lav_matrix_symmetric_inverse(S = Sigma.W, logdet = FALSE,
+                                                Sinv.method = Sinv.method)
+    I11.w <- Sigma.W.inv
+    I22.w <- 0.5 * lav_matrix_duplication_pre_post(Sigma.W.inv %x% Sigma.W.inv)
+    I.w <- lav_matrix_bdiag(I11.w, I22.w)
+    information.w <- (nobs - nclusters) * ( t(Delta.W) %*% I.w %*% Delta.W )
+
+    # unit information (NOTE: we should use 'nclusters', but vcov assumes N)
+    information <- 1/nobs * (information.w + information.j)
+
+    information
+}
+
 
 # estimate ML estimates of Mu.W, Mu.B, Sigma.W, Sigma.B
 # using the EM algorithm

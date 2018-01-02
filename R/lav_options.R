@@ -283,11 +283,12 @@ lav_options_set <- function(opt = NULL) {
         # information
         if(opt$information == "default") {
             opt$information <- "observed"
-        } else if(opt$information %in% c("observed", "first.order")) {
-            # nothing to do
-        } else {
-            stop("lavaan ERROR: `information' argument must be \"observed\" in the multilevel case (for now)")
         }
+        #} else if(opt$information %in% c("observed", "first.order")) {
+        #    # nothing to do
+        #} else {
+        #    stop("lavaan ERROR: `information' argument must be \"observed\" in the multilevel case (for now)")
+        #}
 
         #opt$fixed.x = FALSE
         #opt$control <- list(gradient = "numerical")
