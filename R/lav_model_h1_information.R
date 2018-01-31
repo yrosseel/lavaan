@@ -10,7 +10,8 @@
 #
 # - YR 22 Okt 2017
 # - YR 03 Dec 2017: add lavh1, implied is either lavimplied or lavh1
-#                   add support for clustered data
+#                   add support for clustered data: first.order
+# - YR 03 Jan 2018: add support for clustered data: expected
 
 lav_model_h1_information <- function(lavobject      = NULL,
                                      lavmodel       = NULL,
@@ -100,9 +101,9 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         A1 <- lavsamplestats@WLS.VD
     }
 
-    # 3. ML
-    else if(lavmodel@estimator == "ML" ||
-            lavmodel@estimator == "NTRLS") {
+    # 3a. ML single level
+    else if( (lavmodel@estimator == "ML" || lavmodel@estimator == "NTRLS")
+             && lavdata@nlevels == 1L ) {
         A1 <- vector("list", length=lavsamplestats@ngroups)
 
         # structured? compute model-implied statistics
@@ -210,6 +211,40 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         } # g
     } # ML
 
+    # 3b. ML + multilevel
+    else if(lavmodel@estimator == "ML" && lavdata@nlevels > 1L) {
+
+        A1 <- vector("list", length = lavsamplestats@ngroups)
+
+        # structured? compute model-implied statistics
+        if(structured && is.null(lavimplied)) {
+            lavimplied <- lav_model_implied(lavmodel)
+        }
+
+        # structured? lavimplied vs lavh1
+        if(structured) {
+            implied <- lavimplied
+        } else {
+            implied <- lavh1$implied
+        }
+
+        for(g in 1:lavsamplestats@ngroups) {
+
+            MU.W    <- implied$mean[[ (g-1)*lavdata@nlevels + 1L ]]
+            MU.B    <- implied$mean[[ (g-1)*lavdata@nlevels + 2L ]]
+            SIGMA.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1L ]]
+            SIGMA.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2L ]]
+
+            # clustered data
+            A1[[g]] <- lav_mvnorm_cluster_information_expected(
+                           Lp           = lavdata@Lp[[g]],
+                           Mu.W         = MU.W,
+                           Sigma.W      = SIGMA.W,
+                           Mu.B         = MU.B,
+                           Sigma.B      = SIGMA.B)
+        } # g
+    } # ML + multilevel
+
     A1
 }
 
@@ -254,8 +289,8 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         A1 <- lavsamplestats@WLS.VD
     }
 
-    # 3. ML
-    else if(lavmodel@estimator == "ML") {
+    # 3a. ML single level
+    else if(lavmodel@estimator == "ML" && lavdata@nlevels == 1L) {
         A1 <- vector("list", length=lavsamplestats@ngroups)
   
         # structured? compute model-implied statistics
@@ -371,6 +406,41 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         } # g
     } # ML
 
+    # 3b. ML + multilevel
+    else if(lavmodel@estimator == "ML" && lavdata@nlevels > 1L) {
+
+        A1 <- vector("list", length = lavsamplestats@ngroups)
+
+        # structured? compute model-implied statistics
+        if(structured && is.null(lavimplied)) {
+            lavimplied <- lav_model_implied(lavmodel)
+        }
+
+        # structured? lavimplied vs lavh1
+        if(structured) {
+            implied <- lavimplied
+        } else {
+            implied <- lavh1$implied
+        }
+
+        for(g in 1:lavsamplestats@ngroups) {
+
+            MU.W    <- implied$mean[[ (g-1)*lavdata@nlevels + 1L ]]
+            MU.B    <- implied$mean[[ (g-1)*lavdata@nlevels + 2L ]]
+            SIGMA.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1L ]]
+            SIGMA.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2L ]]
+
+            # clustered data
+            A1[[g]] <- lav_mvnorm_cluster_information_observed(
+                           Lp           = lavdata@Lp[[g]],
+                           YLp          = lavsamplestats@YLp[[g]],
+                           Mu.W         = MU.W,
+                           Sigma.W      = SIGMA.W,
+                           Mu.B         = MU.B,
+                           Sigma.B      = SIGMA.B)
+        } # g
+    } # ML + multilevel
+
     A1
 }
 
@@ -467,7 +537,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                            Sigma.B      = SIGMA.B,
                            divide.by.two = TRUE)
 
-        } else if(estimator == "ML") {
+        } else if(estimator == "ML" && lavdata@nlevels == 1L) {
             if(lavsamplestats@missing.flag) {
                 # mvnorm
                 # FIXME: allow for meanstructure = FALSE

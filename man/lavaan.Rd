@@ -11,6 +11,7 @@ lavaan(model = NULL, data = NULL, ordered = NULL,
        constraints = "", WLS.V = NULL, NACOV = NULL,
        slotOptions = NULL, slotParTable = NULL, slotSampleStats = NULL,
        slotData = NULL, slotModel = NULL, slotCache = NULL,
+       sloth1 = NULL,
        ...)
 }
 \arguments{
@@ -82,6 +83,8 @@ lavaan(model = NULL, data = NULL, ordered = NULL,
     no new Model slot will be created by this call.}
 \item{slotCache}{Cache slot from a fitted lavaan object. If provided,
     no new Cache slot will be created by this call.}
+\item{sloth1}{h1 slot from a fitted lavaan object. If provided,
+    no new h1 slot will be created by this call.}
 \item{...}{Many more additional options can be defined, using 'name = value'. 
     See \code{\link{lavOptions}} for a complete list.}
 }

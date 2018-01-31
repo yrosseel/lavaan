@@ -44,6 +44,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    slotData           = NULL,
                    slotModel          = NULL,
                    slotCache          = NULL,
+                   sloth1             = NULL,
 
                    # options (dotdotdot)
                    ...
@@ -228,7 +229,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } # levels
         } # groups
     } else {
-        ov.names.l <- list()
+        # perhaps model is already a parameter table
+        nlevels <- lav_partable_nlevels(FLAT)
+        if(nlevels > 1L) {
+            ngroups <- lav_partable_ngroups(FLAT)
+            ov.names.l <- vector("list", length = ngroups)
+            for(g in 1:ngroups) {
+                ov.names.l[[g]] <- lavNames(FLAT, "ov", group = g)
+            }
+        } else {
+            ov.names.l <- list()
+        }
     }
 
     # sanity check ordered argument (just in case, add lhs variables names)
@@ -516,6 +527,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                categorical = lavoptions$categorical,
                                warn = TRUE)
 
+    # for EM only (for now), force fixed-to-zero (residual) variances
+    # to be slightly larger than zero
+    if(lavoptions$optim.method == "em") {
+        zero.var.idx <- which(lavpartable$op == "~~" &
+                              lavpartable$lhs == lavpartable$rhs &
+                              lavpartable$free == 0L &
+                              lavpartable$ustart == 0)
+        if(length(zero.var.idx) > 0L) {
+            lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset    
+        }
+    }
+
     # 4b. get partable attributes
     lavpta <- lav_partable_attributes(lavpartable)
     timing$ParTable <- (proc.time()[3] - start.time)
@@ -589,40 +612,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ###################
     #### 5b. lavh1 ####
     ###################
-    lavh1 <- list()
-    if(is.logical(lavoptions$h1) && lavoptions$h1) {
-        if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
+    if(!is.null(sloth1)) {
+        lavh1 <- sloth1
+    } else {
+        lavh1 <- list()
+        if(is.logical(lavoptions$h1) && lavoptions$h1) {
+            if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
 
-            #if(lavdata@nlevels > 1L) {
-                # explicitly fit a saturated model
-                #h1.partable <- lav_partable_unrestricted(lavdata = lavdata, 
-                #                   lavpta = lavpta, lavoptions = lavoptions, 
-                #                   lavsamplestats = lavsamplestats)
-                #h1.lavoptions <- lavoptions
-                #h1.lavoptions$se <- "none"
-                #h1.lavoptions$test <- "none"
-                #h1.lavoptions$verbose <- FALSE
-                #h1.lavoptions$warn <- FALSE
-                #h1.lavoptions$do.fit <- TRUE
-                #h1.lavoptions$check <- ""
-                #h1.lavoptions$h1 <- FALSE
-                #h1.lavoptions$baseline <- FALSE
-                #h1.lavoptions$control <- c(h1.lavoptions$control,
-                #                           list(rel.tol=1e-5)) # not too strict
-                #if(lavoptions$verbose) {
-                #    cat("Fitting unrestricted model ... \n")
-                #}
-
-                #fit.h1 <- lavaan(model           = h1.partable,
-                #                 slotOptions     = h1.lavoptions,
-                #                 slotSampleStats = lavsamplestats,
-                #                 slotData        = lavdata)
-
-                #h1.implied      <- fit.h1@implied
-                #h1.loglik       <- fit.h1@loglik$loglik
-                #h1.loglik.group <- fit.h1@loglik$loglik.group
-                    
-            #} else {
                 # implied h1 statistics
                 out <- lav_h1_implied_logl(lavdata        = lavdata,
                                            lavsamplestats = lavsamplestats,
@@ -630,23 +626,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik
                 h1.loglik.group <- out$logl$loglik.group
-            #}
-
-            # collect in h1 list
-            lavh1 <- list(implied      = h1.implied,
-                          loglik       = h1.loglik,
-                          loglik.group = h1.loglik.group)
+    
+                # collect in h1 list
+                lavh1 <- list(implied      = h1.implied,
+                              loglik       = h1.loglik,
+                              loglik.group = h1.loglik.group)
+            } else {
+                # do nothing for now
+            }
         } else {
-            # do nothing for now
+            if(!is.logical(lavoptions$h1)) {
+                stop("lavaan ERROR: argument `h1' must be logical (for now)")
+            }
+            # TODO: allow h1 to be either a model syntax, a parameter table,
+            # or a fitted lavaan object
         }
-    } else {
-        if(!is.logical(lavoptions$h1)) {
-            stop("lavaan ERROR: argument `h1' must be logical (for now)")
-        }
-        # TODO: allow h1 to be either a model syntax, a parameter table,
-        # or a fitted lavaan object
     }
-
     timing$h1 <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
@@ -931,19 +926,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$optim.method == "em") {
             # multilevel only for now
             stopifnot(lavdata@nlevels > 1L)
-            # single group only for now
-            stopifnot(lavdata@ngroups == 1L)
-            x <- lav_mvnorm_cluster_em_h0(YLp = lavsamplestats@YLp[[1]],
-                          Lp          = lavdata@Lp[[1]],
-                          lavpartable = lavpartable,
-                          Y1          = lavdata@X[[1]],
-                          h1          = NULL,
-                          ov.names.l  = lavdata@ov.names.l[[1]],
-                          verbose     = lavoptions$verbose,
-                          verbose.x   = FALSE,
-                          max.iter    = lavoptions$em.iter.max,
-                          tol         = lavoptions$em.tol,
-                          mstep.iter.max = 10000L)
+            x <- lav_mvnorm_cluster_em_h0(lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
+                               lavimplied     = NULL,
+                               lavpartable    = lavpartable,
+                               lavmodel       = lavmodel,
+                               lavoptions     = lavoptions, 
+                               verbose        = lavoptions$verbose,
+                               fx.tol         = lavoptions$em.fx.tol,
+                               dx.tol         = lavoptions$em.dx.tol,
+                               max.iter       = lavoptions$em.iter.max)
         } else {
             x <- lav_model_estimate(lavmodel        = lavmodel,
                                     lavsamplestats  = lavsamplestats,

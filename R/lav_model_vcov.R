@@ -445,7 +445,15 @@ lav_model_vcov <- function(lavmodel       = NULL,
         # denominator!
         if(lavmodel@estimator %in% c("ML","PML","FML") && 
            likelihood == "normal") {
-            N <- lavsamplestats@ntotal
+            if(lavdata@nlevels == 1L) {
+                N <- lavsamplestats@ntotal
+            } else {
+                # total number of clusters (over groups)
+                N <- 0
+                for(g in 1:lavsamplestats@ngroups) {
+                    N <- N + lavdata@Lp[[g]]$nclusters[[2]]
+                }
+            }
         } else {
             N <- lavsamplestats@ntotal - lavsamplestats@ngroups
         }

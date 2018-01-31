@@ -135,9 +135,9 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
     #    fixed.x = FALSE
     #}
 
-    # if multilevel, ALWAYS fixed.x = FALSE
+    # if multilevel
     if(nlevels > 1L) {
-        fixed.x       <- FALSE # for now
+        #fixed.x       <- FALSE # for now
         conditional.x <- FALSE # for now
         categorical   <- FALSE # for now
     }
@@ -194,10 +194,15 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
             # only for multilevel, overwrite sample.cov and sample.mean
             if(nlevels > 1L) {
 
-                # NO FIXED.X!! (because we can not compute samplestats for
-                # them in the unbalanced case)
-                ov.names.x <- character(0L)
-                ov.names.nox <- ov.names
+                if(independent) {
+                    ov.names.x <- lavpta$vnames$ov.x[[b]]
+                    ov.names.nox <- lavpta$vnames$ov.nox[[b]]
+                    sample.cov.x <- NULL # we will estimate them
+                    sample.mean.x <- NULL
+                } else {
+                    ov.names.x <- character(0L)
+                    ov.names.nox <- ov.names
+                }
 
                 block.idx <- match(ov.names, OV.NAMES)
 

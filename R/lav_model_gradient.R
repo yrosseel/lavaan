@@ -364,7 +364,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
         # for each upper-level group....
         for(g in 1:lavmodel@ngroups) {
-            dout <- lav_mvnorm_cluster_dlogl_2l_samplestats(
+            dx <- lav_mvnorm_cluster_dlogl_2l_samplestats(
                        YLp = lavsamplestats@YLp[[g]],
                        Lp  = lavdata@Lp[[g]],
                        Mu.W    = Mu.hat[[(g-1)*2 + 1]],
@@ -373,24 +373,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                        Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
                        Sinv.method  = "eigen")
 
-            dSigma.W <- dout$Sigma.W
-            dSigma.B <- dout$Sigma.B
-            dMu.W    <- dout$Mu.W
-            dMu.B    <- dout$Mu.B
-
-            # delta
-            pw <- length(lavdata@ov.names.l[[g]][[1]])
-            pb <- length(lavdata@ov.names.l[[g]][[2]])
-
-            Delta.Mu.W    <- Delta[[(g-1)*2 + 1]][1:pw,]
-            Delta.Sigma.W <- Delta[[(g-1)*2 + 1]][(pw+1):nrow(Delta[[(g-1)*2 + 1]]),]
-            Delta.Mu.B    <- Delta[[(g-1)*2 + 2]][1:pb,]
-            Delta.Sigma.B <- Delta[[(g-1)*2 + 2]][(pb+1):nrow(Delta[[(g-1)*2 + 2]]),]
-
-            group.dx <- as.numeric(dMu.W %*% Delta.Mu.W +
-                                   dMu.B %*% Delta.Mu.B +
-                                   lav_matrix_vech(dSigma.W) %*% Delta.Sigma.W +
-                                   lav_matrix_vech(dSigma.B) %*% Delta.Sigma.B)
+            group.dx <- as.numeric( dx %*% Delta[[g]] )
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx
@@ -793,6 +776,16 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         Delta[[g]] <- Delta.group
 
     } # g
+
+    # if multilevel, rbind levels within group
+    if(lavmodel@multilevel) {
+        DELTA <- vector("list", length = lavmodel@ngroups)
+        for(g in 1:lavmodel@ngroups) {
+            DELTA[[g]] <- rbind( Delta[[(g-1)*2 + 1]],
+                                 Delta[[(g-1)*2 + 2]] )
+        }
+        Delta <- DELTA
+    }
 
     Delta
 }

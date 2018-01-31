@@ -59,7 +59,8 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
-                  slotCache       = object@Cache)
+                  slotCache       = object@Cache,
+                  sloth1          = object@h1)
 
     FIT
 }
@@ -109,7 +110,8 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
-                  slotCache       = object@Cache)
+                  slotCache       = object@Cache,
+                  sloth1          = object@h1)
 
     FIT
 }
@@ -194,7 +196,8 @@ lav_object_extended <- function(object, add = NULL,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
-                  slotCache       = object@Cache)
+                  slotCache       = object@Cache,
+                  sloth1          = object@h1)
 
     FIT
 }

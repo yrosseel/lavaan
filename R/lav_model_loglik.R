@@ -20,9 +20,7 @@ lav_model_loglik <- function(lavdata        = NULL,
         if(lavoptions$fixed.x == FALSE) {
             exo.idx <- which(lavdata@ov$exo == 1L)
             for(i in exo.idx) {
-                if(lavdata@ov$type[i] %in% 
-                       c("factor", "labelled", "character") &&
-                   lavdata@ov$nlev[i] > 1L) {
+                if(lavdata@ov$nlev[i] > 1L) {
                     logl.ok <- FALSE
                 }
             }

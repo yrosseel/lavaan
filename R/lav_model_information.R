@@ -101,21 +101,27 @@ lav_model_information_expected <- function(lavmodel       = NULL,
         # multilevel
         if(lavdata@nlevels > 1L) {
             # here, we assume only 2 levels, at [[1]] and [[2]]
-            Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
-            Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
-            Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
-            Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
+            if(lavoptions$h1.information == "structured") {
+                Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
+                Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
+                Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
+                Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
+            } else {
+                Sigma.W <- lavh1$implied$cov[[  (g-1)*2 + 1]]
+                Mu.W    <- lavh1$implied$mean[[ (g-1)*2 + 1]]
+                Sigma.B <- lavh1$implied$cov[[  (g-1)*2 + 2]]
+                Mu.B    <- lavh1$implied$mean[[ (g-1)*2 + 2]]
+            }
             Lp      <- lavdata@Lp[[g]]
 
             Info.g <- 
-                lav_mvnorm_cluster_information_expected(Lp           = Lp,
-                                                        Delta        = Delta,
-                                                        g            = g,
-                                                        Mu.W         = Mu.W,
-                                                        Sigma.W      = Sigma.W,
-                                                        Mu.B         = Mu.B,
-                                                        Sigma.B      = Sigma.B,
-                                                        Sinv.method  = "eigen")
+                lav_mvnorm_cluster_information_expected_delta(Lp  = Lp,
+                                                      Delta       = Delta[[g]],
+                                                      Mu.W        = Mu.W,
+                                                      Sigma.W     = Sigma.W,
+                                                      Mu.B        = Mu.B,
+                                                      Sigma.B     = Sigma.B,
+                                                      Sinv.method = "eigen")
             Info.group[[g]] <- fg * Info.g
         } else {
             # compute information for this group
@@ -279,6 +285,15 @@ lav_model_information_observed <- function(lavmodel       = NULL,
         if(lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
             Information <- Information / lavsamplestats@ntotal
         }
+
+        # if multilevel, we should divide by 'J', the number of clusters
+        if(lavdata@nlevels > 1L) {
+            NC <- 0
+            for(g in 1:lavsamplestats@ngroups) {
+                NC <- NC + lavdata@Lp[[g]]$nclusters[[2]]
+            }
+            Information <- Information * lavsamplestats@ntotal / NC
+        }
     }
 
     # using 'observed h1 information'
@@ -381,17 +396,8 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
     Info.group  <- vector("list", length=lavsamplestats@ngroups)
     for(g in 1:lavsamplestats@ngroups) {
 
-        if(lavdata@nlevels > 1L) {
-            # delta
-            Delta.W <- Delta[[(g-1)*2 + 1]]
-            Delta.B <- Delta[[(g-1)*2 + 2]]
-            Delta.WB <- rbind(Delta.W, Delta.B)
-
-            B0.group[[g]] <- t(Delta.WB) %*% B1[[g]] %*% Delta.WB
-        } else {
-            # unweighted (needed in lav_test?)
-            B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]] 
-        }
+        # unweighted (needed in lav_test?)
+        B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]] 
        
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
         # compute information for this group

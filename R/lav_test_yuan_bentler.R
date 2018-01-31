@@ -84,6 +84,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
                                          lavimplied     = lavimplied,
+                                         lavh1          = lavh1,
                                          lavoptions     = h1.options)
     # B1 is always first.order
     B1.group <- lav_model_h1_information_firstorder(lavmodel       = lavmodel,
@@ -204,17 +205,28 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
-        if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(lavsamplestats@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-                                       meanstructure=meanstructure, type="all")
-            A1 <- A1[idx, idx, drop = FALSE]
-            B1 <- B1[idx, idx, drop = FALSE]
-            DELTA <- DELTA[idx, , drop = FALSE]
-        }
+        #if(length(x.idx[[g]]) > 0L) {
+        #    nvar <- ncol(lavsamplestats@cov[[g]])
+        #    idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
+        #                               meanstructure=meanstructure, type="all")
+        #    A1 <- A1[idx, idx, drop = FALSE]
+        #    B1 <- B1[idx, idx, drop = FALSE]
+        #    DELTA <- DELTA[idx, , drop = FALSE]
+        #}
         # note: if we have x.idx, and we do not remove the zero cols/rows,
         # we should use a generalized inverse instead
-        A1.inv <- solve(A1)
+        #
+        # idem for multilevel, where we have zeroes for both.idx elements
+        # in mu.w
+        #A1.inv <- solve(A1)
+        #A1.inv <- MASS::ginv(A1)
+        zero.idx <- which(diag(A1) == 0)
+        if(length(zero.idx) > 0L) {
+            A1.inv <- matrix(0, nrow(A1), ncol(A1))
+            a1 <- A1[-zero.idx, -zero.idx]
+            a1.inv <- solve(a1)
+            A1.inv[-zero.idx, -zero.idx] <- a1.inv
+        }
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
         # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) ) 
@@ -268,14 +280,25 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
 
         # mask independent 'fixed-x' variables
         # note: this only affects the saturated H1 model
-        if(length(x.idx[[g]]) > 0L) {
-            nvar <- ncol(lavsamplestats@cov[[g]])
-            idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-                                       meanstructure=meanstructure, type="all")
-            A1 <- A1[idx,idx]
-            B1 <- B1[idx,idx]
+        #if(length(x.idx[[g]]) > 0L) {
+        #    nvar <- ncol(lavsamplestats@cov[[g]])
+        #    idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
+        #                               meanstructure=meanstructure, type="all")
+        #    A1 <- A1[idx,idx]
+        #    B1 <- B1[idx,idx]
+        #}
+        #A1.inv <- solve(A1)
+        # for multilevel
+        #A1.inv <- MASS::ginv(A1)
+        zero.idx <- which(diag(A1) == 0)
+        if(length(zero.idx) > 0L) {
+            A1.inv <- matrix(0, nrow(A1), ncol(A1))
+            a1 <- A1[-zero.idx, -zero.idx]
+            a1.inv <- solve(a1)
+            A1.inv[-zero.idx, -zero.idx] <- a1.inv
+        } else {
+            A1.inv <- solve(A1)
         }
-        A1.inv <- solve(A1)
 
         # if data is complete, why not just A1 %*% Gamma?
         trace.h1[g]     <- sum( B1 * t( A1.inv ) )

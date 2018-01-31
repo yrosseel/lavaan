@@ -116,7 +116,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.gradient         = "analytic",
                 optim.init_nelder_mead = FALSE,
                 em.iter.max            = 10000L,
-                em.tol                 = 1e-05,
+                em.fx.tol              = 1e-08,
+                em.dx.tol              = 1e-04,
+                em.zerovar.offset      = 0.0001,
 
                 # numerical integration
                 integration.ngh        = 21L,
@@ -267,8 +269,10 @@ lav_options_set <- function(opt = NULL) {
             opt$test <- "standard"
         } else if(opt$test %in% c("none", "standard","yuan.bentler")) {
             # nothing to do
+        } else if(opt$est == "robust") {
+            opt$test <- "yuan.bentler"
         } else {
-            stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" in the multilevel case (for now)")
+            stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" or \"yuan.bentler\" in the multilevel case")
         }
 
         # se
@@ -276,8 +280,10 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "standard"
         } else if(opt$se %in% c("none", "standard", "robust.huber.white")) {
             # nothing to do
+        } else if(opt$se == "robust.sem") {
+            opt$se <- "robust.huber.white"
         } else {
-            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" in the multilevel case (for now)")
+            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" or \"robust.huber.white\" in the multilevel case")
         }
 
         # information
