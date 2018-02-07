@@ -241,7 +241,8 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                            Mu.W         = MU.W,
                            Sigma.W      = SIGMA.W,
                            Mu.B         = MU.B,
-                           Sigma.B      = SIGMA.B)
+                           Sigma.B      = SIGMA.B,
+                           x.idx        = lavsamplestats@x.idx[[g]])
         } # g
     } # ML + multilevel
 
@@ -437,7 +438,8 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                            Mu.W         = MU.W,
                            Sigma.W      = SIGMA.W,
                            Mu.B         = MU.B,
-                           Sigma.B      = SIGMA.B)
+                           Sigma.B      = SIGMA.B,
+                           x.idx        = lavsamplestats@x.idx[[g]])
         } # g
     } # ML + multilevel
 
@@ -535,6 +537,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                            Sigma.W      = SIGMA.W,
                            Mu.B         = MU.B,
                            Sigma.B      = SIGMA.B,
+                           x.idx        = lavsamplestats@x.idx[[g]],
                            divide.by.two = TRUE)
 
         } else if(estimator == "ML" && lavdata@nlevels == 1L) {

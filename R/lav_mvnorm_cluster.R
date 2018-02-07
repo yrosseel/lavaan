@@ -780,6 +780,7 @@ lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
                                                       Sigma.W      = NULL,
                                                       Mu.B         = NULL,
                                                       Sigma.B      = NULL,
+                                                      x.idx        = NULL,
                                                       divide.by.two = FALSE,
                                                       Sinv.method  = "eigen") {
     N <- NROW(Y1)
@@ -801,10 +802,39 @@ lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
     # unit information
     information <- crossprod(SCORES)/Lp$nclusters[[2]]
 
+    # if x.idx, set rows/cols to zero
+    if(length(x.idx) > 0L) {
+
+        nw <- length(as.vector(Mu.W))
+        nw.star <- nw*(nw+1)/2
+        nb <- length(as.vector(Mu.B))
+        ov.idx  <- Lp$ov.idx
+
+        x.idx.w <- which(ov.idx[[1]] %in% x.idx)
+        if(length(x.idx.w) > 0L) {
+            xw.idx <- c(x.idx.w,
+                        nw + lav_matrix_vech_get_idx(n = nw, idx = x.idx.w))
+        } else {
+            xw.idx <- integer(0L)
+        }
+        x.idx.b <- which(ov.idx[[2]] %in% x.idx)
+        if(length(x.idx.b) > 0L) {
+            xb.idx <- c(x.idx.b,
+                        nb + lav_matrix_vech_get_idx(n = nb, idx = x.idx.b))
+        } else {
+            xb.idx <- integer(0L)
+        }
+
+        all.idx <- c(xw.idx, nw + nw.star + xb.idx)
+
+        information[all.idx, ] <- 0
+        information[, all.idx] <- 0
+    }
+
     information
 }
 
-# expected information
+# expected information 'h1' model
 # order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
 # mu.w rows/cols that are splitted within/between are forced to zero
 lav_mvnorm_cluster_information_expected <- function(Lp           = NULL,
@@ -812,6 +842,7 @@ lav_mvnorm_cluster_information_expected <- function(Lp           = NULL,
                                                     Sigma.W      = NULL,
                                                     Mu.B         = NULL,
                                                     Sigma.B      = NULL,
+                                                    x.idx        = integer(0L),
                                                     Sinv.method  = "eigen") {
 
     # translate to internal matrices
@@ -901,6 +932,16 @@ lav_mvnorm_cluster_information_expected <- function(Lp           = NULL,
     # force zero for means both.idx in within part
     information.tilde[Lp$both.idx[[2]],] <- 0
     information.tilde[,Lp$both.idx[[2]]] <- 0
+
+    # if x.idx, set rows/cols to zero
+    if(length(x.idx) > 0L) {
+        xw.idx <- c(x.idx,
+                   p.tilde + lav_matrix_vech_get_idx(n = p.tilde, idx = x.idx))
+        xb.idx <- npar + xw.idx
+        all.idx <- c(xw.idx, xb.idx)
+        information.tilde[all.idx, ] <- 0
+        information.tilde[, all.idx] <- 0
+    }
  
     # remove redundant rows/cols
     ok.idx <- c(ov.idx[[1]], 
@@ -1029,6 +1070,7 @@ lav_mvnorm_cluster_information_observed <- function(Lp           = NULL,
                                                     Sigma.W      = NULL,
                                                     Mu.B         = NULL,
                                                     Sigma.B      = NULL,
+                                                    x.idx        = integer(0L),
                                                     Sinv.method  = "eigen") {
 
     nobs <- Lp$nclusters[[1]]
@@ -1077,6 +1119,30 @@ lav_mvnorm_cluster_information_observed <- function(Lp           = NULL,
 
     # unit information
     information <- information / Lp$nclusters[[2]]
+
+    # if x.idx, set rows/cols to zero
+    if(length(x.idx) > 0L) {
+
+        x.idx.w <- which(ov.idx[[1]] %in% x.idx)
+        if(length(x.idx.w) > 0L) {
+            xw.idx <- c(x.idx.w,
+                        nw + lav_matrix_vech_get_idx(n = nw, idx = x.idx.w))    
+        } else {
+            xw.idx <- integer(0L)
+        }
+        x.idx.b <- which(ov.idx[[2]] %in% x.idx)
+        if(length(x.idx.b) > 0L) {
+            xb.idx <- c(x.idx.b,
+                        nb + lav_matrix_vech_get_idx(n = nb, idx = x.idx.b))
+        } else {
+            xb.idx <- integer(0L)
+        }
+
+        all.idx <- c(xw.idx, nw + nw.star + xb.idx)
+
+        information[all.idx, ] <- 0
+        information[, all.idx] <- 0
+    }
 
     information
 }

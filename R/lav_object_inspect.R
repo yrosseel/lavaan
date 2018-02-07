@@ -2225,8 +2225,16 @@ lav_object_inspect_delta <- function(object,
     if(add.labels) {
         PNAMES <- lav_partable_labels(object@ParTable, type="free")
 
+        if(object@Data@nlevels > 1L) {
+            # store names per block, rbind later
+            NAMES <- vector("list", length = nblocks)
+        }
+
         for(g in 1:nblocks) {
-            colnames(OUT[[g]]) <- PNAMES
+
+            if(object@Data@nlevels == 1L) {
+                colnames(OUT[[g]]) <- PNAMES
+            }
 
             if(conditional.x) {
                 ov.names <- object@pta$vnames$ov.nox[[g]]
@@ -2282,20 +2290,40 @@ lav_object_inspect_delta <- function(object,
                 names.gw <- "w"
             }
 
-            rownames(OUT[[g]]) <- c(names.gw,
-                                    names.th, names.mu, 
-                                    names.pi, 
-                                    names.cov, names.var, names.cor)
-
-            # class
-            if(add.class) {
-                class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+            if(object@Data@nlevels == 1L) {
+                rownames(OUT[[g]]) <- c(names.gw,
+                                        names.th, names.mu, 
+                                        names.pi, 
+                                        names.cov, names.var, names.cor)
+                # class
+                if(add.class) {
+                    class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+                }
+            } else {
+                NAMES[[g]] <- c(names.gw,
+                                names.th, names.mu,
+                                names.pi,
+                                names.cov, names.var, names.cor)
             }
 
         } # g
     } # labels
 
-    if(nblocks == 1L && drop.list.single.group) {
+    # multilevel
+    if(lavmodel@multilevel) {
+        for(g in 1:lavmodel@ngroups) {
+            if(add.labels) {
+                colnames(OUT[[g]]) <- PNAMES
+                rownames(OUT[[g]]) <- c(NAMES[[(g-1)*2 + 1]],
+                                        NAMES[[(g-1)*2 + 2]] )
+            }
+            if(add.class) {
+                class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+            }
+        }
+    }
+
+    if(lavmodel@ngroups == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
         if(length(object@Data@group.label) > 0L) {

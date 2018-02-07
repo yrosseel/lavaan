@@ -230,6 +230,9 @@ eliminate.rowcols <- function(x, el.idx=integer(0)) {
 }
 
 # elimination of rows/cols pstar symmetric matrix
+#
+# type = "all" -> only remove var(el.idx) and cov(el.idx)
+# type = "any" -> remove all rows/cols of el.idx
 eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0), 
                                 meanstructure=FALSE, type="all") {
 
@@ -254,6 +257,7 @@ eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0),
 
     idx
 }
+
 
 
 # construct 'augmented' covariance matrix

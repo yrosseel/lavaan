@@ -210,7 +210,41 @@ lav_matrix_antidiag_idx <- function(n = 1L) {
     1L + seq_len(n)*(n-1L)
 }
 
-
+# return the *vector* indices of 'idx' elements in a vech() matrix
+#
+# eg if n = 4 and type == "and" and idx = c(2,4)
+#    we create matrix A = 
+#       [,1]  [,2]  [,3]  [,4]
+# [1,] FALSE FALSE FALSE FALSE
+# [2,] FALSE  TRUE FALSE  TRUE
+# [3,] FALSE FALSE FALSE FALSE
+# [4,] FALSE  TRUE FALSE  TRUE
+# 
+# and the result is c(5,7,10)
+#
+# eg if n = 4 and type == "or" and idx = c(2,4)
+#    we create matrix A = 
+#       [,1] [,2]  [,3] [,4]
+# [1,] FALSE TRUE FALSE TRUE
+# [2,]  TRUE TRUE  TRUE TRUE
+# [3,] FALSE TRUE FALSE TRUE
+# [4,]  TRUE TRUE  TRUE TRUE
+#
+# and the result is c(2, 4, 5, 6, 7, 9, 10)
+#
+lav_matrix_vech_get_idx <- function(n = 1L, diagonal = TRUE,
+                                    idx = integer(0L), type = "and") {
+    if(length(idx) == 0L) return(integer(0L))
+    n <- as.integer(n)
+    A <- matrix(FALSE, n, n)
+    if(type == "and") {
+        A[idx, idx] <- TRUE
+    } else if(type == "or") {
+        A[idx, ] <- TRUE
+        A[ ,idx] <- TRUE
+    }
+    which(lav_matrix_vech(A, diagonal = diagonal))
+}
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)

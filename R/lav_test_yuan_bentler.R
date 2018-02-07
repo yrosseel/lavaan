@@ -87,7 +87,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                          lavh1          = lavh1,
                                          lavoptions     = h1.options)
     # B1 is always first.order
-    B1.group <- lav_model_h1_information_firstorder(lavmodel       = lavmodel,
+    B1.group <- lav_model_h1_information_firstorder(lavmodel = lavmodel,
                                          lavsamplestats = lavsamplestats,
                                          lavdata        = lavdata,
                                          lavimplied     = lavimplied,
