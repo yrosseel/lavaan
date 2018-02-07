@@ -767,8 +767,8 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                        rhs = rep.int(x[2], ncell),
                      group = rep.int(g, ncell),
                       nobs = rep.int(sum(FREQ), ncell),
-                       row = rep.int(seq_len(ncol), times=nrow),
-                       col = rep(seq_len(nrow), each=ncol),
+                       row = rep.int(seq_len(nrow), times=ncol),
+                       col = rep(seq_len(ncol), each=nrow),
                       obs.freq = lav_matrix_vec(FREQ) # col by col!
                     )
             })
