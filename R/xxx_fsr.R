@@ -13,7 +13,8 @@ fsr <- function(model      = NULL,
                 fs.scores  = FALSE,
                 Gamma.NT   = TRUE,
                 lvinfo     = FALSE,
-                ...) {
+                ...,
+                output     = "fsr") {
    
     # we need full data
     if(is.null(data)) {
@@ -50,7 +51,7 @@ fsr <- function(model      = NULL,
 
     # change 'default' values for fsr
     if(is.null(dotdotdot$se)) {
-        dotdotdot$se <- "none"
+        dotdotdot$se <- "robust.sem"
     }
     if(is.null(dotdotdot$test)) {
         dotdotdot$test <- "satorra.bentler"
@@ -269,8 +270,18 @@ fsr <- function(model      = NULL,
     int.idx <- which(PT.PA$op == "~1")
     PT.PA$free[int.idx] <- 1L
     PT.PA$ustart[int.idx] <- NA
-
     # adjust lavoptions
+
+    #if(is.null(dotdotdot$missing)) {
+    #    lavoptions$missing <- "listwise" # factor scores are always complete
+    #} else {
+    #    lavoptions$missing <- dotdotdot$missing
+    #}
+    #if(is.null(dotdotdot$information)) {
+    #    lavoptions$information <- "expected"
+    #} else {
+    #    lavoptions$information <- dotdotdot$information
+    #}
     if(is.null(dotdotdot$do.fit)) {
         lavoptions$do.fit <- TRUE
     } else {
@@ -291,6 +302,7 @@ fsr <- function(model      = NULL,
     } else {
         lavoptions$sample.cov.rescale <- dotdotdot$sample.cov.rescale
     }
+
     # take care of NACOV, in case we want correct standard errors
     if(lavoptions$se == "robust.sem") {
         Omega.f <- vector("list", length = ngroups)
@@ -388,8 +400,6 @@ fsr <- function(model      = NULL,
                    FSR.COV = FSR.COV,
                    LVINFO = LVINFO)
 
-    PE <- parameterEstimates(fit, add.attributes = TRUE)
-
     # standard errors
     #lavsamplestats <- fit@SampleStats
     #lavsamplestats@NACOV <- Omega.f
@@ -406,14 +416,30 @@ fsr <- function(model      = NULL,
     #    }
     #}
    
-    out <- list(header = "This is fsr (0.1) -- factor score regression.",
-                PE = PE)
+    if(output == "fsr") {
+        PE <- parameterEstimates(fit, add.attributes = TRUE)
+        out <- list(header = "This is fsr (0.1) -- factor score regression.",
+                    PE = PE)
+        if(lvinfo) {
+            out$lvinfo <- extra
+        }
 
-    if(lvinfo) {
-        out$lvinfo <- extra
+        class(out) <- c("lavaan.fsr", "list")
+
+    } else if(output %in% c("lavaan", "fit")) {
+        out <- fit
+    } else if(output == "extra") {
+        out <- extra
+    } else if(output == "lvinfo") {
+        out <- LVINFO
+    } else if(output %in% c("scores", "f.scores", "fs.scores")) {
+        out <- FS.SCORES
+    } else if(output %in% c("FSR.COV", "fsr.cov", "croon", "cov.croon", 
+                            "croon.cov", "COV", "cov")) {
+        out <- FSR.COV
+    } else if(output %in% c("FS.COV", "fs.cov")) {
+        out <- FS.COV
     }
-
-    class(out) <- c("lavaan.fsr", "list")
 
     out
 }

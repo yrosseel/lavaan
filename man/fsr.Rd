@@ -6,7 +6,8 @@ Fit a SEM model using factor score regression.}
 \usage{
 fsr(model = NULL, data = NULL, cmd = "sem", 
     fsr.method = "Croon", fs.method = "Bartlett", 
-    fs.scores = FALSE, Gamma.NT = TRUE, lvinfo = FALSE, ...)
+    fs.scores = FALSE, Gamma.NT = TRUE, lvinfo = FALSE, ...,
+    output = "fsr")
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -17,7 +18,8 @@ fsr(model = NULL, data = NULL, cmd = "sem",
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
     treat them as ordinal variables.}
-\item{cmd}{Charcater. Which command is used to run the sem models. The possible
+\item{cmd}{Character string. Which command is used to run the sem models. 
+     The possible
     choices are \code{"sem"} or \code{"lavaan"}, determining how
     we deal with default options.}
 \item{fsr.method}{Character. Factor score regression method. Possible
@@ -34,6 +36,14 @@ matrix of the sample statistics) assuming normality.}
 as an attribute to the output.}
 \item{...}{Further arguments that we pass to the \code{"cfa"}, \code{"sem"} or 
            \code{"lavaan"} functions.}
+\item{output}{Character. Determines the type of output that is returned. If
+\code{"fsr"}, an object of class \code{"fsr"} is returned. If
+\code{"lavaan"}, a lavaan object (representing the structural part only) 
+is returned.
+If \code{"fs.scores"}, only the factor scores are returned. If \code{"fsr.cov"}, the (possibly corrected) covariance matrix of the factor scores is returned. 
+If \code{"extra"},  a list with information from the measurement models 
+is returned.}
+
 }
 \details{
     The \code{fsr} function implements a two-step procedure to estimate
