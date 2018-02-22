@@ -226,6 +226,8 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
             a1 <- A1[-zero.idx, -zero.idx]
             a1.inv <- solve(a1)
             A1.inv[-zero.idx, -zero.idx] <- a1.inv
+        } else {
+            A1.inv <- solve(A1)
         }
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
