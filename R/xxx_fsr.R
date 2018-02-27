@@ -4,15 +4,22 @@
 #  - naive (regression or Bartlett)
 #  - Skrondal & Laake (2001) (regression models only)
 #  - Croon (2002) (general + robust SE)
+#  - simple: always use Bartlett, replace var(f) by psi estimate
+#
+# TODO
+#  - Hishino & Bentler: this is simple + WLS
 
 fsr <- function(model      = NULL, 
                 data       = NULL, 
                 cmd        = "sem",
-                fsr.method = "Croon", 
-                fs.method  = "Bartlett", 
+                fsr.method = "Croon",
+                fs.method  = "Bartlett",
                 fs.scores  = FALSE,
+                mm.options = list(se = "standard", test = "standard",
+                                  missing = "ml"),
                 Gamma.NT   = TRUE,
                 lvinfo     = FALSE,
+                mm.list    = NULL,
                 ...,
                 output     = "fsr") {
    
@@ -30,6 +37,9 @@ fsr <- function(model      = NULL,
         fsr.method <- "skrondal.laake"
     } else if(fsr.method == "croon") {
         # nothing to do
+    } else if(fsr.method == "simple") {
+        # force fs.method to Bartlett!
+        fs.method <- "Bartlett"
     } else {
         stop("lavaan ERROR: invalid option for argument fsr.method: ",
              fsr.method)
@@ -101,6 +111,8 @@ fsr <- function(model      = NULL,
 
     # any `regular' latent variables?
     lv.names <- unique(unlist(FIT@pta$vnames$lv.regular))
+    # FIXME: detect higher-order factors!
+
     if(length(lv.names) == 0L) {
         stop("lavaan ERROR: model does not contain any latent variables")
     }
@@ -113,6 +125,7 @@ fsr <- function(model      = NULL,
     # find the structural regressions in the parameter table
     eqs.idx <- which(PT$op == "~" & (PT$lhs %in% lv.names |
                                      PT$rhs %in% lv.names))
+    # FIXME: we should allow for just correlations too?
     if(length(eqs.idx) == 0L) {
         stop("lavaan ERROR: regressions do not involve any latent variables")
     }
@@ -130,8 +143,33 @@ fsr <- function(model      = NULL,
     }
 
 
-    # STEP 1a: compute factor scores for each latent variable
+    # STEP 1a: compute factor scores for each measurement model (block)
 
+    # how many measurement models?
+    if(!is.null(mm.list)) {
+
+        if(fsr.method != "simple") {
+            stop("lavaan ERROR: mm.list only available if fsr.method = \"simple\"")
+        }
+
+        nblocks <- length(mm.list)
+        # check each measurement block
+        for(b in seq_len(nblocks)) {
+            if(!all(mm.list[[b]] %in% lv.names)) {
+              stop("lavaan ERROR: mm.list contains unknown latent variable(s):", 
+                paste( mm.list[[b]][ mm.list[[b]] %in% lv.names ], sep = " "),
+                "\n")
+            }
+        }
+    } else {
+        # TODO: here comes the automatic 'detection' of linked
+        #       measurement models
+        #
+        # for now we take a single latent variable per measurement model block
+        mm.list <- as.list(lv.names)
+        nblocks <- length(mm.list)
+    }
+   
     # compute factor scores, per latent variable
     FS.SCORES  <- vector("list", length = ngroups)
     LVINFO     <- vector("list", length = ngroups)
@@ -139,10 +177,10 @@ fsr <- function(model      = NULL,
         names(FS.SCORES) <- names(LVINFO) <- lavInspect(FIT, "group.label")
     }
     for(g in 1:ngroups) {
-        FS.SCORES[[g]]  <- vector("list", length = nfac)
-        names(FS.SCORES[[g]]) <-  lv.names
-        LVINFO[[g]] <- vector("list", length = nfac)
-        names(LVINFO[[g]]) <- lv.names
+        FS.SCORES[[g]]  <- vector("list", length = nblocks)
+        #names(FS.SCORES[[g]]) <-  lv.names
+        LVINFO[[g]] <- vector("list", length = nblocks)
+        #names(LVINFO[[g]]) <- lv.names
     }
 
     # adjust options
@@ -152,18 +190,25 @@ fsr <- function(model      = NULL,
     dotdotdot2$debug <- FALSE
     dotdotdot2$verbose <- FALSE
     dotdotdot2$auto.cov.lv.x <- TRUE # allow correlated exogenous factors
+
+    # override with mm.options
+    dotdotdot2 <- modifyList(dotdotdot2, mm.options)
  
     # we assume the same number/names of lv's per group!!!
-    for(f in 1:nfac) {
+    MM.FIT <- vector("list", nblocks)
+    for(b in 1:nblocks) {
 
-        # create parameter table for this factor only
-        PT.1fac <- lav_partable_subset_measurement_model(PT = PT,
-                                                         lavpta = lavpta,
-                                                         lv.names = lv.names[f])
+        # create parameter table for this measurement block only
+        PT.block <- 
+            lav_partable_subset_measurement_model(PT = PT,
+                                                  lavpta = lavpta,
+                                                  add.lv.cov = TRUE,
+                                                  lv.names = mm.list[[b]])
         # fit 1-factor model
-        fit.1fac <- do.call("lavaan",
-                            args =  c(list(model  = PT.1fac,
+        fit.block <- do.call("lavaan",
+                            args =  c(list(model  = PT.block,
                                            data   = data), dotdotdot2) )
+        MM.FIT[[b]] <- fit.block
 
         # fs.method?
         if(fsr.method == "skrondal.laake") {
@@ -176,15 +221,16 @@ fsr <- function(model      = NULL,
         }
 
         # compute factor scores
-        if(fsr.method %in% c("croon") || 
-           lavoptions$se == "robust.sem") {
+        if(fsr.method %in% c("croon", "simple") ||
+           lavoptions$se == "robust.sem") { 
             # we use lavPredict() here to remove unwanted dummy lv's, if any
-            SC <- lavPredict(fit.1fac, method = fs.method, fsm = TRUE)
+            SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
             FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
-            LAMBDA <- computeLAMBDA(fit.1fac@Model) # FIXME: remove dummy lv's?
-            THETA  <- computeTHETA(fit.1fac@Model)  # FIXME: remove not used ov?
+            LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
+            THETA  <- computeTHETA(fit.block@Model)  # FIXME: remove not used ov?
+            PSI <- computeVETA(fit.block@Model)
         } else {
-            SC <- lavPredict(fit.1fac, method = fs.method, fsm = FALSE)
+            SC <- lavPredict(fit.block, method = fs.method, fsm = FALSE)
         }
         # if ngroups = 1, make list again
         if(ngroups == 1L) {
@@ -195,15 +241,16 @@ fsr <- function(model      = NULL,
 
         # store results
         for(g in 1:ngroups) {
-            FS.SCORES[[g]][[f]] <- SC[[g]]
-            if(fsr.method %in% c("croon") ||
-               lavoptions$se == "robust.sem") {
-                LVINFO[[g]][[f]] <- list(fsm = FSM[[g]], lambda = LAMBDA[[g]],
-                                                         theta  = THETA[[g]])
+            FS.SCORES[[g]][[b]] <- SC[[g]]
+            if(fsr.method %in% c("croon", "simple")) {
+                LVINFO[[g]][[b]] <- list(fsm = FSM[[g]], 
+                                         lambda = LAMBDA[[g]],
+                                         psi    = PSI[[g]],
+                                         theta  = THETA[[g]])
             }
         } # g
 
-    } # nfac
+    } # measurement block
 
     # cbind factor scores
     FS.SCORES <- lapply(1:ngroups, function(g) {
@@ -231,14 +278,21 @@ fsr <- function(model      = NULL,
          FSR.COV <- lav_fsr_croon_correction(FS.COV    = FS.COV,
                                              LVINFO    = LVINFO,
                                              fs.method = fs.method)
+    } else if(fsr.method == "simple") {
+        FSR.COV <- lav_fsr_simple_correction(FS.COV    = FS.COV,
+                                             LVINFO    = LVINFO,
+                                             mm.list   = mm.list,
+                                             force.pd  = FALSE)
     } else {
         FSR.COV <- FS.COV 
     }
 
+    
+
     # STEP 1c: do we need full set of factor scores?
     if(fs.scores) {
         # transform?
-        if(fsr.method == "croon") {
+        if(fsr.method %in% c("croon", "simple")) {
             for(g in 1:ngroups) {
                 OLD.inv <- solve(FS.COV[[g]])
                 OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
@@ -417,9 +471,10 @@ fsr <- function(model      = NULL,
     #}
    
     if(output == "fsr") {
-        PE <- parameterEstimates(fit, add.attributes = TRUE)
-        out <- list(header = "This is fsr (0.1) -- factor score regression.",
-                    PE = PE)
+        #PE <- parameterEstimates(fit, add.attributes = TRUE, ci = FALSE)
+        HEADER <- paste("This is fsr (0.2) -- factor score regression using ",
+                        "fsr.method = ", fsr.method, sep = "")
+        out <- list(header = HEADER, MM.FIT = MM.FIT, STRUC.FIT = fit)
         if(lvinfo) {
             out$lvinfo <- extra
         }

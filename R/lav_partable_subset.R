@@ -14,6 +14,7 @@
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL,
+                                                  add.lv.cov = TRUE,
                                                   idx.only = FALSE) {
 
     # PT
@@ -94,11 +95,29 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     
     PT <- PT[keep.idx,,drop = FALSE]
 
-    # clean up
-    PT <- lav_partable_complete(PT)
-
     # check if we have enough indicators?
     # TODO
+
+    # add covariances among latent variables?
+    if(add.lv.cov) {
+        for(g in 1:ngroups) {
+            if(length(lv.names[[g]]) > 1L) {
+                tmp <- utils::combn(lv.names[[g]], 2L)
+                for(i in ncol(tmp)) {
+                    ADD = list(lhs = tmp[1,i],
+                                op = "~~",
+                               rhs = tmp[2,i],
+                               free = max(PT$free) + 1L,
+                               block = g,
+                               group = g)
+                    PT <- lav_partable_add(PT, add = ADD)
+                }
+            }
+        }
+    }
+
+    # clean up
+    PT <- lav_partable_complete(PT)
     
     PT
 }

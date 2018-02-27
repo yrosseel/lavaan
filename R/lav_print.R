@@ -586,10 +586,10 @@ summary.lavaan.fsr <- function(object, ...) {
         nd <- 3L
     }    
 
-    print.lavaan.fsr(x = object, nd = nd)
+    print.lavaan.fsr(x = object, nd = nd, mm = TRUE, struc = TRUE)
 }
 
-print.lavaan.fsr <- function(x, ..., nd = 3L) {
+print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
 
     y <- unclass(x)
     
@@ -599,8 +599,42 @@ print.lavaan.fsr <- function(x, ..., nd = 3L) {
         cat("\n")
     }
 
+    if(mm && !is.null(y$MM.FIT)) {
+        cat("\n")
+        nblocks <- length(y$MM.FIT)
+        for(b in seq_len(nblocks)) {
+            cat("Measurement block for latent variable(s):",
+                paste(lavNames(y$MM.FIT[[b]], "lv")), "\n")
+ 
+            # fit measures?
+            b.options <- lavInspect(y$MM.FIT[[b]], "options")
+            if(b.options$test != "none") {
+                cat("\n")
+                print(fitMeasures(y$MM.FIT[[b]], c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")))
+            }
+
+            # parameter estimates
+            PE <- parameterEstimates(y$MM.FIT[[b]], add.attributes = TRUE,
+                                     ci = FALSE)
+            print.lavaan.parameterEstimates(PE, ..., nd = nd)
+            cat("\n")
+        }
+    }
+
     # print PE
-    print.lavaan.parameterEstimates(y$PE, ..., nd = nd) 
+    if(struc) {
+        cat("Structural Part\n")
+        cat("\n")
+        #print.lavaan.parameterEstimates(y$PE, ..., nd = nd) 
+
+        short.summary(y$STRUC.FIT)
+        print.fit.measures( fitMeasures(y$STRUC.FIT, fit.measures="default") )
+    }
+    PE <- parameterEstimates(y$STRUC.FIT, ci = FALSE, 
+                             remove.eq = FALSE, remove.system.eq = TRUE,
+                             remove.ineq = FALSE, remove.def = FALSE,
+                             add.attributes = TRUE)
+    print.lavaan.parameterEstimates(PE, ..., nd = nd)
 
     invisible(y)
 }

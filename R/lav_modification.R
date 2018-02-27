@@ -117,9 +117,9 @@ modindices <- function(object,
     #}
   
     # scaled?
-    if(length(object@test) > 1L) {
-        LIST$mi.scaled <- LIST$mi / object@test[[2]]$scaling.factor
-    }
+    #if(length(object@test) > 1L) {
+    #    LIST$mi.scaled <- LIST$mi / object@test[[2]]$scaling.factor
+    #}
 
     # EPC
     d <- (-1 * N) * score

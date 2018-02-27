@@ -193,6 +193,7 @@ lav_partable_npar <- function(partable) {
 }
 
 # global degrees of freedom: ndat - npar
+# ignoring constraints! (not very useful)
 lav_partable_df <- function(partable) {
 
     npar <- lav_partable_npar(partable)
@@ -248,4 +249,40 @@ lav_partable_covariance_reorder <- function(partable,
     partable
 }
 
+# add a single parameter to an existing parameter table
+lav_partable_add <- function(PT, add = list()) {
+
+    # treat PT as list, not as a data.frame
+    PT <- as.list(PT)
+
+    # number of elements
+    nel <- length(PT$lhs)
+
+    # add copy of last row
+    for(c in seq_len(length(PT))) {
+        if(is.integer(PT[[c]][[1]])) {
+            if(PT[[c]][nel] == 0L) {
+                PT[[c]][nel + 1] <- 0L
+            } else if(PT[[c]][nel] == 1L) {
+                PT[[c]][nel + 1] <- 1L
+            } else {
+                PT[[c]][nel + 1] <- PT[[c]][nel] + 1L
+            }
+        } else if(is.character(PT[[c]][[1]])) {
+            PT[[c]][nel + 1] <- ""
+        } else if(is.numeric(PT[[c]][[1]])) {
+            PT[[c]][nel + 1] <- 0
+        } else {
+            PT[[c]][nel + 1] <- PT[[c]][nel]
+        }
+
+        # replace
+        if(names(PT)[c] %in% names(add)) {
+            PT[[c]][nel + 1] <- add[[ names(PT)[c] ]]
+        }
+
+    }
+
+    PT
+}
 
