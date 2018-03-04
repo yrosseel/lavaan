@@ -5,25 +5,35 @@
 \description{
 The \code{lavPredict()} function can be used to compute (or `predict') 
 estimated values for latent variables, and given these values, the model-implied
-values for the indicators of these latent variables.}
+values for the indicators of these latent variables. NOTE: the goal of this
+function is NOT to predict future values of dependent variables as in the
+regression framework!}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
-           se.fit = FALSE, label = TRUE, fsm = FALSE, 
+           se = "none", label = TRUE, fsm = FALSE, 
            optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{type}{A character string. If \code{"lv"}, estimated values for
-the latent variables in the model are computed. If \code{"ov"}, model
-predicted values for the indicators of the latent variables in the model 
-are computed.}
+\item{type}{A character string. If \code{"lv"}, estimated values for the latent
+variables in the model are computed. If \code{"ov"}, model predicted values for
+the indicators of the latent variables in the model are computed. If
+\code{"yhat"}, the estimated value for the observed indicators, given
+user-specified values for the latent variables provided by de \code{ETA}
+argument.  If \code{"fy"}, densities (or probabilities) for each observed
+indicator, given user-specified values for the latent variables provided by de
+\code{ETA} argument.}
 \item{newdata}{An optional data.frame, containing the same variables as
 the data.frame used when fitting the model in object.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
-In the categorical case, the only option (for now) is \code{"EBM"} for
-the Empirical Bayes Modal approach.}
-\item{se.fit}{Not used yet.}
+In the categorical case, the two options are \code{"EBM"} for
+the Empirical Bayes Modal approach, and \code{"ML"} for the maximum 
+likelihood approach.}
+\item{se}{Character. If \code{"none"}, no standard errors are computed. 
+If \code{"standard"}, naive standard errors are computed (assuming the
+parameters of the measurement model are known). The standard errors are
+returned as an attribute.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute. 
            Only for numeric data.}

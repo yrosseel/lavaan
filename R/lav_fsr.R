@@ -90,7 +90,7 @@ lav_fsr_simple_correction <- function(FS.COV, LVINFO, mm.list = NULL,
         # force pd?
         if(force.pd) {
             tmp <- FSR.COV[[g]]
-            tmp2 <- lavaan:::lav_matrix_symmetric_force_pd(tmp)
+            tmp2 <- lav_matrix_symmetric_force_pd(tmp)
             FSR.COV[[g]][] <- tmp2
         }
 

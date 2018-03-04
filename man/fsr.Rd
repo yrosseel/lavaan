@@ -71,16 +71,27 @@ http://epm.sagepub.com/content/early/2015/09/29/0013164415607618.abstract
 }
 \examples{
 ## The industrialization and Political Democracy Example 
-## Bollen (1989), page 332, simplified
+## Bollen (1989), page 332
 model <- ' 
-  # latent variable definitions
-     ind60 =~ x1 + x2 + x3
-     dem60 =~ y1 + y2 + y3 + y4
-
-  # regressions
-    dem60 ~ ind60
+   # latent variable definitions
+      ind60 =~ x1 + x2 + x3
+      dem60 =~ y1 + a*y2 + b*y3 + c*y4
+      dem65 =~ y5 + a*y6 + b*y7 + c*y8
+ 
+   # regressions
+     dem60 ~ ind60
+     dem65 ~ ind60 + dem60
+ 
+   # residual correlations
+     y1 ~~ y5
+     y2 ~~ y4 + y6
+     y3 ~~ y7
+     y4 ~~ y8
+     y6 ~~ y8
 '
-
-fit <- fsr(model, data = PoliticalDemocracy, fsr.method = "Skrondal-Laake")
+mm.list <- list(block1 = "ind60",
+                block2 = c("dem60", "dem65"))
+fit <- fsr(model, data = PoliticalDemocracy, fsr.method = "simple",
+           mm.list = mm.list)
 summary(fit)
 }

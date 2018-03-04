@@ -44,9 +44,9 @@ sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
 \item{sample.nobs}{Number of observations if the full data frame is missing
     and only sample moments are given. For a multiple group analysis, a list
     or a vector with the number of observations for each group.}
-\item{group}{A variable name in the data frame defining the groups in a
-    multiple group analysis.}
-\item{cluster}{Not used yet.}
+\item{group}{Character. A variable name in the data frame defining the groups
+in a multiple group analysis.}
+\item{cluster}{Character. A (single) variable name in the data frame defining the clusters in a two-level dataset.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
 \item{WLS.V}{A user provided weight matrix to be used by estimator \code{"WLS"};

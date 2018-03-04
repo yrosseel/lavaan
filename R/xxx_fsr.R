@@ -15,8 +15,7 @@ fsr <- function(model      = NULL,
                 fsr.method = "Croon",
                 fs.method  = "Bartlett",
                 fs.scores  = FALSE,
-                mm.options = list(se = "standard", test = "standard",
-                                  missing = "ml"),
+                mm.options = list(se = "standard", test = "standard"),
                 Gamma.NT   = TRUE,
                 lvinfo     = FALSE,
                 mm.list    = NULL,
@@ -213,7 +212,7 @@ fsr <- function(model      = NULL,
         # fs.method?
         if(fsr.method == "skrondal.laake") {
             # dependent -> Bartlett
-            if(lv.names[f] %in% eqs.y.names) {
+            if(lv.names[b] %in% eqs.y.names) {
                 fs.method <- "Bartlett"
             } else {
                 fs.method <- "regression"

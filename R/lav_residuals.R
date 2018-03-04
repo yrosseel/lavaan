@@ -59,7 +59,7 @@ function(object, type="raw", labels=TRUE) {
         stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
     }
 
-    G <- object@Model@nblocks
+    G <- object@Model@ngroups
     meanstructure <- object@Model@meanstructure
     ov.names <- object@Data@ov.names
 
@@ -341,7 +341,7 @@ function(object, type="raw", labels=TRUE) {
     if(G == 1) {
         R <- R[[1]]
     } else {
-        names(R) <- unlist(object@Data@block.label)
+        names(R) <- unlist(object@Data@group.label)
     }
 
     R

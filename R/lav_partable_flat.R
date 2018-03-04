@@ -87,6 +87,12 @@ lav_partable_flat <- function(FLAT = NULL,
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
 
+    # std.lv = TRUE, group.equal includes "loadings": give warning
+    if(ngroups > 1L && std.lv && "loadings" %in% group.equal) {
+        # suggested by Michael Hallquist
+        warning("lavaan WARNING: std.lv = TRUE forces all variances to be unity in all groups, despite group.equal = \"loadings\"")
+    }
+
     lhs <- rhs <- character(0)
 
     # 1. THRESHOLDS (based on varTable)

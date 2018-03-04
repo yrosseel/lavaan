@@ -47,7 +47,7 @@ if(getRversion() >= "2.13.0") {
 # export ordinary functions defined in this package
 export("lavaan", "cfa", "sem", "growth",
        "lavaanList", "cfaList", "semList",
-       "fsr",
+       "fsr", "twostep",
        # new name           # old name
        "lavParTable",       "lavaanify",
        "lavNames",          "lavaanNames",
