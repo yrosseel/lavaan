@@ -904,15 +904,15 @@ function(object, ...) {
 
 # see: src/library/stats/R/update.R
 setMethod("update", signature(object = "lavaan"),
-function(object, model, ..., evaluate = TRUE) {
+function(object, model, add, ..., evaluate = TRUE) {
 
     call <- object@call
-    if(is.null(call))
+    if (is.null(call))
         stop("need an object with call slot")
 
     extras <- match.call(expand.dots = FALSE)$...
 
-    if(!missing(model)) {
+    if (!missing(model)) {
       #call$formula <- update.formula(formula(object), formula.)
       call$model <- model
     } else if (exists(as.character(object@call$model))) {
@@ -923,14 +923,35 @@ function(object, model, ..., evaluate = TRUE) {
       call$model$se <- NULL
     }
 
-    if(length(extras) > 0) {
+    if (length(extras) > 0) {
         existing <- !is.na(match(names(extras), names(call)))
-        for(a in names(extras)[existing]) call[[a]] <- extras[[a]]
-        if(any(!existing)) {
+        for (a in names(extras)[existing]) call[[a]] <- extras[[a]]
+        if (any(!existing)) {
             call <- c(as.list(call), extras[!existing])
             call <- as.call(call)
         }
     }
+    
+    if (missing(add) && !evaluate) return(call)
+    ## for any of the other 3 scenarios, we need the updated fit
+    newfit <- eval(call, parent.frame())
+    if (missing(add) && evaluate) return(newfit)
+    
+    ## only remaining situations: "add=" was specified, so update
+    ## the parameter table in the call
+    if (!(mode(add) %in% c("list","character"))) {
+        stop("'add' argument must be model syntax or parameter table. ",
+             "See ?lavaanify help page.")
+    }
+    PT <- lav_object_extended(newfit, add = add)@ParTable
+    PT$user <- NULL # get rid of "10" category used in lavTestScore()
+    ## group == 0L in new rows
+    PT$group[PT$group == 0L] <- PT$block[PT$group == 0L]
+    # PT$plabel == "" in new rows.  Consequences?
+    PT$est <- NULL
+    PT$se <- NULL
+    call$model <- PT
+    
     if (evaluate) {
         eval(call, parent.frame())
     }
