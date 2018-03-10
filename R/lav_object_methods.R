@@ -915,8 +915,11 @@ function(object, model, add, ..., evaluate = TRUE) {
     if (!missing(model)) {
       #call$formula <- update.formula(formula(object), formula.)
       call$model <- model
-    } else if (exists(as.character(object@call$model))) {
-      call$model <- object@call$model
+    } else if (exists(as.character(call$model))) {
+      call$model <- eval(call$model, parent.frame())
+    } else if (is.character(call$model)) {
+      ## do nothing
+      ## call$model <- call$model
     } else {
       call$model <- parTable(object)
       call$model$est <- NULL
@@ -934,11 +937,21 @@ function(object, model, add, ..., evaluate = TRUE) {
     
     if (missing(add) && !evaluate) return(call)
     ## for any of the other 3 scenarios, we need the updated fit
-    newfit <- eval(call, parent.frame())
-    if (missing(add) && evaluate) return(newfit)
     
-    ## only remaining situations: "add=" was specified, so update
-    ## the parameter table in the call
+    ## Check if "add" and "model" are both strings; combine them
+    if (missing(add)) {
+      ADD.already.in.parTable <- TRUE # because nothing to add
+    } else {
+      if (is.character(add) && is.character(call$model)) {
+        call$model <- c(call$model, add)
+        ADD.already.in.parTable <- TRUE
+      } else ADD.already.in.parTable <- FALSE
+    }
+    newfit <- eval(call, parent.frame())
+    if (ADD.already.in.parTable && evaluate) return(newfit)
+    
+    ## only remaining situations: "add" exists, but either "add" or "model"
+    ## is a parameter table, so update the parameter table in the call
     if (!(mode(add) %in% c("list","character"))) {
         stop("'add' argument must be model syntax or parameter table. ",
              "See ?lavaanify help page.")
