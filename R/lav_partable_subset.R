@@ -10,7 +10,7 @@
 
 # FIXME: if we have more than 1 factor, we remove the structural
 # part, but should we add ALL correlations among the latent variables?
-# (NO for now)
+# (YES for now)
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL,
@@ -45,6 +45,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                            PT$lhs %in% lv.names[[g]]  &
                            PT$group == g )
         IND <- PT$rhs[ IND.idx ]
+        IND.plabel <- PT$plabel[ IND.idx ]
 
         # keep =~
         keep.idx <- c(keep.idx, IND.idx)
@@ -87,6 +88,12 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
         keep.idx <- c(keep.idx, SC.idx)
 
         # FIXME: ==, :=, <, >, == involving IND...
+      
+        # `simple' == constraints (simple lhs and rhs)
+        EQ.idx <- which(PT$op == "==" &
+                        PT$lhs %in% IND.plabel &
+                        PT$rhs %in% IND.plabel)
+        keep.idx <- c(keep.idx, EQ.idx)
     }
 
     if(idx.only) {

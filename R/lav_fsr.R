@@ -51,7 +51,7 @@ lav_fsr_croon_correction <- function(FS.COV, LVINFO, fs.method = "bartlett") {
                 A.xx <- as.numeric(crossprod(A.x %*% lambda.x))
             }
 
-            offset.x <- as.numeric(A.x %*% theta.x %*% t(A.x))
+            offset.x <- A.x %*% theta.x %*% t(A.x)
 
             FSR.COV[[g]][i,i] <- (FS.COV[[g]][i, i] - offset.x)/A.xx
         }
