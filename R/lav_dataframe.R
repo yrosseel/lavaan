@@ -86,6 +86,12 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
             type.x <- "numeric"
         }
 
+        # handle the 'labelled' type from the haven package
+        # - if the variable name is not in 'ordered', we assume
+        #   it is numeric (for now) 11 March 2018
+        if(type.x == "labelled" && !(var.names[i] %in% ordered)) {
+            type.x <- "numeric"
+        }
 
         # handle ordered/factor
         if(!is.null(ordered) && var.names[i] %in% ordered) {
