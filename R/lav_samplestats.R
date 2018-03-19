@@ -229,7 +229,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         }
 
         if(categorical) {
-            if(estimator %in% c("ML","REML","PML","FML","MML","none")) {
+            if(estimator %in% c("ML","REML","PML","FML","MML","none","ULS")) {
                 WLS.W <- FALSE
             } else {
                 WLS.W <- TRUE
