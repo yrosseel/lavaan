@@ -96,7 +96,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         FLAT <- slotParTable
     } else if(is.character(model)) {
         FLAT <- lavParseModelString(model)
-    } else if( class(model) == "formula" ) {
+    } else if( inherits(model, "formula") ) {
         # two typical cases:
         # 1. regression type formula
         # 2. no quotes, eg f =~ x1 + x2 + x3
@@ -457,7 +457,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         lavpartable <- slotParTable
     } else if(is.character(model) || 
-              class(model) == "formula") {
+              inherits(model, "formula")) {
         # check FLAT before we proceed
         if(lavoptions$debug) {
             print(as.data.frame(FLAT))
