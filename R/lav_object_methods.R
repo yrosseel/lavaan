@@ -904,33 +904,67 @@ function(object, ...) {
 
 # see: src/library/stats/R/update.R
 setMethod("update", signature(object = "lavaan"),
-function(object, model, ..., evaluate = TRUE) {
+function(object, model, add, ..., evaluate = TRUE) {
 
     call <- object@call
-    if(is.null(call))
+    if (is.null(call))
         stop("need an object with call slot")
 
     extras <- match.call(expand.dots = FALSE)$...
 
-    if(!missing(model)) {
+    if (!missing(model)) {
       #call$formula <- update.formula(formula(object), formula.)
       call$model <- model
-    } else if (exists(as.character(object@call$model))) {
-      call$model <- object@call$model
+    } else if (exists(as.character(call$model))) {
+      call$model <- eval(call$model, parent.frame())
+    } else if (is.character(call$model)) {
+      ## do nothing
+      ## call$model <- call$model
     } else {
       call$model <- parTable(object)
       call$model$est <- NULL
       call$model$se <- NULL
     }
 
-    if(length(extras) > 0) {
+    if (length(extras) > 0) {
         existing <- !is.na(match(names(extras), names(call)))
-        for(a in names(extras)[existing]) call[[a]] <- extras[[a]]
-        if(any(!existing)) {
+        for (a in names(extras)[existing]) call[[a]] <- extras[[a]]
+        if (any(!existing)) {
             call <- c(as.list(call), extras[!existing])
             call <- as.call(call)
         }
     }
+    
+    if (missing(add) && !evaluate) return(call)
+    ## for any of the other 3 scenarios, we need the updated fit
+    
+    ## Check if "add" and "model" are both strings; combine them
+    if (missing(add)) {
+      ADD.already.in.parTable <- TRUE # because nothing to add
+    } else {
+      if (is.character(add) && is.character(call$model)) {
+        call$model <- c(call$model, add)
+        ADD.already.in.parTable <- TRUE
+      } else ADD.already.in.parTable <- FALSE
+    }
+    newfit <- eval(call, parent.frame())
+    if (ADD.already.in.parTable && evaluate) return(newfit)
+    
+    ## only remaining situations: "add" exists, but either "add" or "model"
+    ## is a parameter table, so update the parameter table in the call
+    if (!(mode(add) %in% c("list","character"))) {
+        stop("'add' argument must be model syntax or parameter table. ",
+             "See ?lavaanify help page.")
+    }
+    PT <- lav_object_extended(newfit, add = add)@ParTable
+    PT$user <- NULL # get rid of "10" category used in lavTestScore()
+    ## group == 0L in new rows
+    PT$group[PT$group == 0L] <- PT$block[PT$group == 0L]
+    # PT$plabel == "" in new rows.  Consequences?
+    PT$est <- NULL
+    PT$se <- NULL
+    call$model <- PT
+    
     if (evaluate) {
         eval(call, parent.frame())
     }
