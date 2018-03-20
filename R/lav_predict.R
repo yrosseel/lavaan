@@ -419,7 +419,11 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
         # standard error
         if(se == "standard") {
-            SE[[g]] <- matrix(sqrt(diag(VETA.g - VETA.g %*% t(LAMBDA.g) %*% Sigma.hat.inv.g %*% LAMBDA.g %*% VETA.g)), nrow = 1L)
+            tmp <- (VETA.g - 
+             VETA.g %*% t(LAMBDA.g) %*% Sigma.hat.inv.g %*% LAMBDA.g %*% VETA.g)
+            tmp.d <- diag(tmp)
+            tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
+            SE[[g]] <- matrix(sqrt(tmp.d), nrow = 1L)
         }
 
         RES  <- sweep(data.obs.g,  MARGIN = 2L, STATS = EY.g,   FUN = "-")
@@ -515,7 +519,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
 
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
-    Sigma.hat.inv <- lapply(lavimplied$cov, solve)
+    Sigma.hat.inv <- lapply(lavimplied$cov, MASS::ginv)
     VETA   <- computeVETA(lavmodel = lavmodel) # for se only
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
@@ -527,7 +531,59 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     if(se != "none") {
         SE <- vector("list", length = lavdata@ngroups)
     }
+
     for(g in 1:lavdata@ngroups) {
+
+        if(lavdata@nlevels > 1L) {
+            Lp <- lavdata@Lp[[g]]
+            YLp <- lavsamplestats@YLp[[g]]
+  
+            # implied for this group
+            group.idx <- (g - 1)*lavdata@nlevels + seq_len(lavdata@nlevels)
+            implied.group <- lapply(lavimplied, function(x) x[group.idx])
+
+            # random effects (=random intercepts or cluster means)
+            out <- lav_mvnorm_cluster_implied22l(Lp = Lp, 
+                                                 implied = implied.group)
+            MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
+                        sigma.w = out$sigma.w, sigma.b = out$sigma.b,
+                        sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
+                        mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+                        se = FALSE)
+   
+            ov.idx <- Lp$ov.idx
+
+            if(level == 1L) {
+                data.W <- data.obs[[g]][, ov.idx[[1]] ]
+                data.B <- MB.j[ Lp$cluster.idx[[2]], , drop = FALSE]
+
+                # center
+                data.obs.g <- data.W - data.B
+            } else if(level == 2L) {
+                Data.B <- matrix(0, nrow = nrow(MB.j), 
+                                    ncol = ncol(data.obs[[g]]))
+                Data.B[, ov.idx[[1]] ] <- MB.j
+                data.obs.g <- Data.B[, ov.idx[[2]] ]
+            } else {
+                stop("lavaan ERROR: only 2 levels are supported")
+            }
+
+            gg <- (g-1)*lavdata@nlevels + level
+            VETA.g     <- VETA[[gg]]
+            EETA.g     <- EETA[[gg]]
+            LAMBDA.g   <- LAMBDA[[gg]]
+            EY.g       <- EY[[gg]]
+            Sigma.hat.inv.g <- Sigma.hat.inv[[gg]]
+
+        } else {
+            data.obs.g <- data.obs[[g]]
+            VETA.g     <- VETA[[g]]
+            EETA.g     <- EETA[[g]]
+            LAMBDA.g   <- LAMBDA[[g]]
+            EY.g       <- EY[[g]]
+            Sigma.hat.inv.g <- Sigma.hat.inv[[g]]
+        }
+
         nfac <- length(EETA[[g]])
         if(nfac == 0L) {
             FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
@@ -535,8 +591,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         }
 
         # factor score coefficient matrix 'C'
-        FSC = (MASS::ginv(t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]] %*% LAMBDA[[g]])
-                %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]] )
+        FSC <- ( MASS::ginv(t(LAMBDA.g) %*% Sigma.hat.inv.g %*% LAMBDA.g)
+                %*% t(LAMBDA.g) %*% Sigma.hat.inv.g )
 
         if(fsm) {
             FSM[[g]] <- FSC
@@ -550,14 +606,16 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
             #     solve( t(lambda) %*% solve(sigma) %*% lambda ) - psi
             # to handle negative variances
             # in addition, we use ginv 
-            tmp <- ( MASS::ginv(t(LAMBDA[[g]]) %*% 
-                                  Sigma.hat.inv[[g]] %*% LAMBDA[[g]]) 
-                     - VETA[[g]] )
-            SE[[g]] <- sqrt(diag(tmp))
+            tmp <- ( MASS::ginv(t(LAMBDA.g) %*% 
+                                  Sigma.hat.inv.g %*% LAMBDA.g) 
+                     - VETA.g )
+            tmp.d <- diag(tmp)
+            tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
+            SE[[g]] <- matrix(sqrt(tmp.d), nrow = 1L)
         }
 
-        RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
-        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
+        RES  <- sweep(data.obs.g,  MARGIN = 2L, STATS = EY.g,   FUN = "-")
+        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA.g, FUN = "+")
 
         # remove dummy lv's
         #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -567,11 +625,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         #}
 
         # replace values in dummy lv's by their observed counterpart
-        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L && level == 1L) {
             FS.g[, lavmodel@ov.y.dummy.lv.idx[[g]] ] <-
                 data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
         }
-        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L) {
+        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L && level == 1L) {
             FS.g[, lavmodel@ov.x.dummy.lv.idx[[g]] ] <-
                 data.obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
         }
