@@ -1218,7 +1218,7 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
     for(i in 1:max.iter) {
 
         # E-step
-        estep <- EM_yr_estep_v5b(#Y1 = Y1,
+        estep <- lav_mvnorm_cluster_em_estepb(#Y1 = Y1,
                                  YLp     = YLp,
                                  Lp      = Lp,
                                  sigma.w = sigma.w,
@@ -1271,7 +1271,7 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
 }
 
 
-# based on EM_yr_estep_v5
+# based on lav_mvnorm_cluster_em_estep
 lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
                                      lavdata        = NULL,
                                      lavimplied     = NULL,
@@ -1344,7 +1344,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
     for(i in 1:max.iter) {
 
         # E-step
-        estep <- EM_yr_estep_v5b(YLp     = YLp,
+        estep <- lav_mvnorm_cluster_em_estepb(YLp     = YLp,
                                  Lp      = Lp,
                                  sigma.w = sigma.w,
                                  sigma.b = sigma.b,
@@ -1469,9 +1469,95 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
     x
 }
 
+# get the random effects (here: expected values for cluster means)
+# and optionally a standard error
+lav_mvnorm_cluster_em_estep_ranef <- function(
+                            YLp          = NULL,
+                            Lp           = NULL,
+                            sigma.w      = NULL,
+                            sigma.b      = NULL,
+                            sigma.yz     = NULL,
+                            sigma.zz     = NULL,
+                            mu.z         = NULL,
+                            mu.w         = NULL,
+                            mu.b         = NULL,
+                            se           = FALSE) {
+
+    # sample stats
+    nobs           <- Lp$nclusters[[1]]
+    nclusters      <- Lp$nclusters[[2]]
+    cluster.size   <- Lp$cluster.size[[2]]
+    between.idx    <- Lp$between.idx[[2]]
+
+    Y2 <- YLp[[2]]$Y2
+
+    nvar.y <- ncol(sigma.w)
+    nvar.z <- ncol(sigma.zz)
+
+    MB.j <- matrix(0, nrow = nclusters, ncol = nvar.y)
+    SE.j <- matrix(0, nrow = nclusters, ncol = nvar.y)
+
+    mu.y <- mu.w + mu.b
+
+    if(length(between.idx) > 0L) {
+        sigma.1 <- cbind(sigma.yz, sigma.b)
+        mu <- c(mu.z, mu.y)
+   } else {
+        sigma.1 <- sigma.b
+        mu <- mu.y
+    }
+
+    # E-step
+    for(cl in seq_len(nclusters)) {
+        nj <- cluster.size[cl]
+
+        # data
+        if(length(between.idx) > 0L) {
+            # z comes first!
+            b.j    <- c(Y2[cl, between.idx],
+                        Y2[cl,-between.idx])
+            ybar.j <- Y2[cl,-between.idx]
+        } else {
+            ybar.j <- b.j <- Y2[cl,]
+        }
+
+        sigma.j <- sigma.w + nj*sigma.b
+        if(length(between.idx) > 0L) {
+            omega.j <- rbind( cbind(sigma.zz, t(sigma.yz)),
+                              cbind(sigma.yz, 1/nj * sigma.j) )
+        } else {
+            omega.j <- 1/nj * sigma.j
+        }
+        omega.j.inv <- solve(omega.j)
+
+        # E(v|y)
+        Ev <- as.numeric(mu.b + (sigma.1 %*% omega.j.inv %*% (b.j - mu)))
+        MB.j[cl,] <- Ev
+
+        if(se) {
+            # Cov(v|y)
+            Covv <- sigma.b - (sigma.1 %*% omega.j.inv %*% t(sigma.1))
+
+            # force symmetry
+            Covv <- (Covv + t(Covv))/2
+
+            Covv.diag <- diag(Covv)
+            nonzero.idx <- which(Covv.diag > 0)
+
+            SE.j[cl,] <- numeric( length(Covv.diag) )
+            SE.j[cl, nonzero.idx] <- sqrt(Covv.diag[nonzero.idx])
+        }
+    }
+
+    if(se) {
+        attr(MB.j, "se") <- SE.j
+    }
+
+    MB.j
+}
 
 # per cluster
-EM_yr_estep_v5 <- function(#Y1           = NULL,
+lav_mvnorm_cluster_em_estep <- function(#Y1           = NULL,
                            YLp          = NULL,
                            Lp           = NULL,
                            sigma.w      = NULL,
@@ -1524,13 +1610,9 @@ EM_yr_estep_v5 <- function(#Y1           = NULL,
             b.j    <- c(Y2[cl, between.idx],
                         Y2[cl,-between.idx])
             ybar.j <- Y2[cl,-between.idx]
-            y1j <- Y1[cluster.idx == cl, -between.idx, drop = FALSE]
         } else {
             ybar.j <- b.j <- Y2[cl,]
-            y1j <- Y1[cluster.idx == cl,,drop = FALSE]
         }
-        ycov.j <- 1/nj*crossprod(y1j) - tcrossprod(ybar.j)
-
 
         sigma.j <- sigma.w + nj*sigma.b
         if(length(between.idx) > 0L) {
@@ -1595,7 +1677,7 @@ EM_yr_estep_v5 <- function(#Y1           = NULL,
 }
 
 # per cluster SIZE
-EM_yr_estep_v5b <- function(#Y1           = NULL, # not used!
+lav_mvnorm_cluster_em_estepb <- function(#Y1           = NULL, # not used!
                             YLp          = NULL,
                             Lp           = NULL,
                             sigma.w      = NULL,

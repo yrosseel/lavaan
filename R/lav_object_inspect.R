@@ -414,6 +414,10 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_icc(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "ranef") {
+        lav_object_inspect_ranef(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
     # post-checking
     } else if(what == "post.check" || what == "post") {
@@ -1656,8 +1660,6 @@ lav_object_inspect_missing_coverage <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- object@Data@ngroups
-
-    # get missing covarage
     OUT <- vector("list", G)
    
     for(g in 1:G) {
@@ -1693,8 +1695,6 @@ lav_object_inspect_missing_patterns <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     G <- object@Data@ngroups
-
-    # get missing covarage
     OUT <- vector("list", G)
    
     for(g in 1:G) {
@@ -2414,8 +2414,6 @@ lav_object_inspect_icc <- function(object, add.labels = FALSE,
 
     lavdata <- object@Data
     G <- lavdata@ngroups
-
-    # get missing covarage
     OUT <- vector("list", G)
 
     # multilevel?
@@ -2468,3 +2466,63 @@ lav_object_inspect_icc <- function(object, add.labels = FALSE,
     OUT     
 }
 
+lav_object_inspect_ranef <- function(object, add.labels = FALSE, 
+                                     add.class = FALSE,
+                                     drop.list.single.group = FALSE) {
+
+    lavdata <- object@Data
+    lavsamplestats <- object@SampleStats
+
+    G <- lavdata@ngroups
+    OUT <- vector("list", G)
+
+    # multilevel?
+    if(lavdata@nlevels == 1L) {
+        stop("lavaan ERROR: random effects only available for clustered data (in the long format)")
+    }
+
+    # implied statistics
+    lavimplied <- object@implied
+
+    for(g in 1:G) {
+
+        Lp <- lavdata@Lp[[g]]
+        YLp <- lavsamplestats@YLp[[g]]
+
+        # implied for this group
+        group.idx <- (g - 1)*lavdata@nlevels + seq_len(lavdata@nlevels)
+        implied.group <- lapply(lavimplied, function(x) x[group.idx])
+
+        # random effects (=random intercepts or cluster means)
+        out <- lav_mvnorm_cluster_implied22l(Lp = Lp, implied = implied.group)
+        MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
+                        sigma.w = out$sigma.w, sigma.b = out$sigma.b,
+                        sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
+                        mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+                        se = FALSE)
+        OUT[[g]] <- MB.j
+
+        ov.names.l <- lavdata@ov.names.l[[g]]
+
+        # label
+        if(add.labels) {
+            colnames(OUT[[g]]) <- ov.names.l[[1]]
+        }
+
+        # class
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.matrix", "matrix")
+
+        }
+    } # g
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT     
+}

@@ -20,6 +20,7 @@ function(object, newdata = NULL) {
 
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
+                       level = 1L,
                        se = "none", label = TRUE, fsm = FALSE,
                        optim.method = "bfgs", ETA = NULL) {
 
@@ -39,6 +40,9 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
     # se?
     if(se != "none") {
+        if(is.logical(se) && se) {
+            se <- "standard"
+        }
         if(type != "lv") {
             stop("lavaan ERROR: standard errors only available if type = \"lv\"")
         }
@@ -84,7 +88,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
         out <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
-                   lavimplied = lavimplied, se = se,
+                   lavimplied = lavimplied, se = se, level = level,
                    data.obs = data.obs, eXo = eXo, method = method,
                    fsm = fsm, optim.method = optim.method)
 
@@ -139,7 +143,20 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         # label?
         if(label) {
             for(g in seq_len(lavdata@ngroups)) {
-                colnames(out[[g]]) <- lavpta$vnames$lv[[g]]
+                if(lavdata@nlevels > 1L && level == 2L) {
+                    gg <- (g - 1)*lavdata@nlevels + 2L
+                } else {
+                    gg <- g
+                }
+                colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
+            }
+            if(se != "none") {
+                if(lavdata@nlevels > 1L && level == 2L) {
+                    gg <- (g - 1)*lavdata@nlevels + 2L
+                } else {
+                    gg <- g
+                }
+                colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
             }
         }
 
@@ -210,6 +227,7 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
                             method = "EBM",
                             fsm = FALSE,
                             se = "none",
+                            level = 1L,
                             optim.method = "bfgs") {
 
     # full object?
@@ -234,13 +252,13 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
         if(method == "ebm") {
             out <- lav_predict_eta_normal(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavimplied = lavimplied, se = se,
+                       lavimplied = lavimplied, se = se, level = level,
                        lavsamplestats = lavsamplestats,
                        data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else if(method == "ml") {
             out <- lav_predict_eta_bartlett(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavimplied = lavimplied, se = se,
+                       lavimplied = lavimplied, se = se, level = level,
                        lavsamplestats = lavsamplestats,
                        data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else {
@@ -250,15 +268,15 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
         if(method == "ebm") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se,
-                       data.obs = data.obs, eXo = eXo, ML = FALSE,
-                       optim.method = optim.method)
+                       lavsamplestats = lavsamplestats, se = se, 
+                       level = level, data.obs = data.obs, eXo = eXo, 
+                       ML = FALSE, optim.method = optim.method)
         } else if(method == "ml") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se,
-                       data.obs = data.obs, eXo = eXo, ML = TRUE,
-                       optim.method = optim.method)
+                       lavsamplestats = lavsamplestats, se = se, 
+                       level = level, data.obs = data.obs, eXo = eXo, 
+                       ML = TRUE, optim.method = optim.method)
         } else {
             stop("lavaan ERROR: unkown method: ", method)
         }
@@ -278,7 +296,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                                    lavimplied = NULL,
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
-                                   se = "none",
+                                   se = "none", level = 1L,
                                    fsm = FALSE) { 
 
     # full object?
@@ -319,10 +337,9 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         }
     }
 
-
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
     Sigma.hat <- lavimplied$cov
-    Sigma.hat.inv <- lapply(Sigma.hat, solve)
+    Sigma.hat.inv <- lapply(Sigma.hat, MASS::ginv)
     VETA   <- computeVETA(lavmodel = lavmodel)
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
@@ -334,7 +351,60 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     if(se != "none") {
         SE <- vector("list", length = lavdata@ngroups)
     }
+
     for(g in 1:lavdata@ngroups) {
+
+        if(lavdata@nlevels > 1L) {
+            Lp <- lavdata@Lp[[g]]
+            YLp <- lavsamplestats@YLp[[g]]
+  
+            # implied for this group
+            group.idx <- (g - 1)*lavdata@nlevels + seq_len(lavdata@nlevels)
+            implied.group <- lapply(lavimplied, function(x) x[group.idx])
+
+            # random effects (=random intercepts or cluster means)
+            out <- lav_mvnorm_cluster_implied22l(Lp = Lp, 
+                                                 implied = implied.group)
+            MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
+                        sigma.w = out$sigma.w, sigma.b = out$sigma.b,
+                        sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
+                        mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+                        se = FALSE)
+   
+            ov.idx <- Lp$ov.idx
+
+            if(level == 1L) {
+                data.W <- data.obs[[g]][, ov.idx[[1]] ]
+                data.B <- MB.j[ Lp$cluster.idx[[2]], , drop = FALSE]
+
+                # center
+                data.obs.g <- data.W - data.B
+            } else if(level == 2L) {
+                Data.B <- matrix(0, nrow = nrow(MB.j), 
+                                    ncol = ncol(data.obs[[g]]))
+                Data.B[, ov.idx[[1]] ] <- MB.j
+                data.obs.g <- Data.B[, ov.idx[[2]] ]
+            } else {
+                stop("lavaan ERROR: only 2 levels are supported")
+            }
+
+            gg <- (g-1)*lavdata@nlevels + level
+            VETA.g     <- VETA[[gg]]
+            EETA.g     <- EETA[[gg]]
+            LAMBDA.g   <- LAMBDA[[gg]]
+            EY.g       <- EY[[gg]]
+            Sigma.hat.inv.g <- Sigma.hat.inv[[gg]]
+
+        } else {
+            data.obs.g <- data.obs[[g]]
+            VETA.g     <- VETA[[g]]
+            EETA.g     <- EETA[[g]]
+            LAMBDA.g   <- LAMBDA[[g]]
+            EY.g       <- EY[[g]]
+            Sigma.hat.inv.g <- Sigma.hat.inv[[g]]
+        }
+
+
         nfac <- ncol(VETA[[g]])
         if(nfac == 0L) {
             FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
@@ -342,34 +412,27 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         }
 
         # factor score coefficient matrix 'C'
-        FSC <- VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]]
+        FSC <- VETA.g %*% t(LAMBDA.g) %*% Sigma.hat.inv.g
         if(fsm) {
             FSM[[g]] <- FSC
         }
 
         # standard error
         if(se == "standard") {
-            SE[[g]] <- sqrt(diag(VETA[[g]] - VETA[[g]] %*% t(LAMBDA[[g]]) %*% Sigma.hat.inv[[g]] %*% LAMBDA[[g]] %*% VETA[[g]]))
+            SE[[g]] <- matrix(sqrt(diag(VETA.g - VETA.g %*% t(LAMBDA.g) %*% Sigma.hat.inv.g %*% LAMBDA.g %*% VETA.g)), nrow = 1L)
         }
 
-        RES  <- sweep(data.obs[[g]],  MARGIN = 2L, STATS = EY[[g]],   FUN = "-")
-        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA[[g]], FUN = "+")
-
-        # remove dummy lv's
-        #lv.dummy.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-        #                  lavmodel@ov.x.dummy.lv.idx[[g]])
-        #if(length(lv.dummy.idx) > 0L) {
-        #    FS.g <- FS.g[,-lv.dummy.idx,drop=FALSE]
-        #}
+        RES  <- sweep(data.obs.g,  MARGIN = 2L, STATS = EY.g,   FUN = "-")
+        FS.g <- sweep(RES %*% t(FSC), MARGIN = 2L, STATS = EETA.g, FUN = "+")
 
         # replace values in dummy lv's by their observed counterpart
-        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+        if(length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L && level == 1L) {
             FS.g[, lavmodel@ov.y.dummy.lv.idx[[g]] ] <-
-                data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
+                data.obs.g[, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
         }
-        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L) {
+        if(length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L && level == 1L) {
             FS.g[, lavmodel@ov.x.dummy.lv.idx[[g]] ] <-
-                data.obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
+                data.obs.g[, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
         }
 
         FS[[g]] <- FS.g
@@ -406,7 +469,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                                      lavimplied = NULL,
                                      # optional new data
                                      data.obs = NULL, eXo = NULL,
-                                     se = "none",
+                                     se = "none", level = 1L,
                                      fsm = FALSE) { 
 
     # full object?
@@ -533,7 +596,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
                                    lavsamplestats = NULL,
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
-                                   se = "none",
+                                   se = "none", level = 1L,
                                    ML = FALSE,
                                    optim.method = "bfgs") {
 

@@ -364,7 +364,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
         # for each upper-level group....
         for(g in 1:lavmodel@ngroups) {
-            dx <- lav_mvnorm_cluster_dlogl_2l_samplestats(
+            DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
                        YLp = lavsamplestats@YLp[[g]],
                        Lp  = lavdata@Lp[[g]],
                        Mu.W    = Mu.hat[[(g-1)*2 + 1]],
@@ -373,7 +373,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                        Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
                        Sinv.method  = "eigen")
 
-            group.dx <- as.numeric( dx %*% Delta[[g]] )
+            group.dx <- as.numeric( DX %*% Delta[[g]] )
 
             # group weights (if any)
             group.dx <- group.w[g] * group.dx
