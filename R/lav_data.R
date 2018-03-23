@@ -227,10 +227,29 @@ lavData <- function(data              = NULL,          # data.frame
     # 3) data.type = "none":  both data and sample.cov are NULL
     if(is.null(data) && is.null(sample.cov)) {
 
-        # no levels
-        nlevels <- 1L
+        # multilevel?
+        if(!is.null(cluster) && length(cluster) > 0L) {
+            nlevels <- length(cluster) + 1L
 
-        if(is.null(sample.nobs)) sample.nobs <- 0L
+            # check ov.names.l?
+ 
+            # default level.labels
+            if(length(level.label) == 0L) {
+                level.label <- c("within", cluster)
+            } else {
+                # check if length(level.label) = 1 + length(cluster)
+                if(length(level.label) != length(cluster) + 1L) {
+                    stop("lavaan ERROR: length(level.label) != length(cluster) + 1L")
+                }
+                # nothing to do
+            }
+        } else {
+            nlevels <- 1L
+        }
+
+        if(is.null(sample.nobs)) {
+            sample.nobs <- 0L
+        }
         sample.nobs <- as.list(sample.nobs)
         ngroups <- length(unlist(sample.nobs))
         if(ngroups > 1L) {
@@ -266,15 +285,26 @@ lavData <- function(data              = NULL,          # data.frame
         ov$nobs <- rep(0L, nvar)
         ov$type <- rep("numeric", nvar)
 
+        # collect information per upper-level group
+        Lp <- vector("list", length = ngroups)
+        for(g in 1:ngroups) {
+            if(nlevels > 1L) {
+                Lp[[g]] <- lav_data_cluster_patterns(Y = NULL, clus = NULL,
+                                                 cluster = cluster,
+                                                 ov.names = ov.names[[g]],
+                                                 ov.names.l = ov.names.l[[g]])
+            }
+        } # g
+
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "none",
                        ngroups     = ngroups,
                        group       = character(0L),
-                       nlevels     = 1L, # for now
+                       nlevels     = nlevels,
                        cluster     = character(0L),
                        group.label = group.label,
-                       level.label = character(0L),
+                       level.label = level.label,
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names, 
@@ -288,7 +318,7 @@ lavData <- function(data              = NULL,          # data.frame
                        case.idx    = vector("list", length = ngroups),
                        Mp          = vector("list", length = ngroups),
                        Rp          = vector("list", length = ngroups),
-                       Lp          = vector("list", length = ngroups),
+                       Lp          = Lp,
                        X           = vector("list", length = ngroups),
                        eXo         = vector("list", length = ngroups)
                       )
@@ -875,8 +905,17 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
     # how many levels?
     nlevels <- length(cluster) + 1L
 
+    # did we get any data (or is this just for simulateData)
+    if(!is.null(Y) && !is.null(clus)) {
+        haveData <- TRUE
+    } else {
+        haveData <- FALSE
+    }
+
     # check clus
-    stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
+    if(haveData) {
+        stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
+    }
     
     cluster.size    <- vector("list", length = nlevels)
     cluster.id      <- vector("list", length = nlevels)
@@ -894,20 +933,32 @@ lav_data_cluster_patterns <- function(Y = NULL, clus = NULL, cluster = NULL,
     between.names   <- vector("list", length = nlevels)
 
     # level-1 is special
-    nclusters[[1]] <- NROW(Y)
+    if(haveData) {
+        nclusters[[1]] <- NROW(Y)
+    }
     ov.idx[[1]]    <- match(ov.names.l[[1]], ov.names)
 
     # for the remaining levels...
     for(l in 2:nlevels) {
-        CLUS <- clus[,(l-1L)]
-        cluster.id[[l]]      <- unique(CLUS)
-        cluster.idx[[l]]     <- match(CLUS, cluster.id[[l]])
-        cluster.size[[l]]    <- tabulate(cluster.idx[[l]])
-        nclusters[[l]]       <- length(cluster.size[[l]])
-        cluster.sizes[[l]]   <- unique(cluster.size[[l]])
-        ncluster.sizes[[l]]  <- length(cluster.sizes[[l]])
-        cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]], 
-                                 levels = as.character(cluster.sizes[[l]]))))
+        if(haveData) {
+            CLUS <- clus[,(l-1L)]
+            cluster.id[[l]]      <- unique(CLUS)
+            cluster.idx[[l]]     <- match(CLUS, cluster.id[[l]])
+            cluster.size[[l]]    <- tabulate(cluster.idx[[l]])
+            nclusters[[l]]       <- length(cluster.size[[l]])
+            cluster.sizes[[l]]   <- unique(cluster.size[[l]])
+            ncluster.sizes[[l]]  <- length(cluster.sizes[[l]])
+            cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]], 
+                                     levels = as.character(cluster.sizes[[l]]))))
+        } else {
+            cluster.id[[l]]      <- integer(0L)
+            cluster.idx[[l]]     <- integer(0L)
+            cluster.size[[l]]    <- integer(0L)
+            nclusters[[l]]       <- integer(0L)
+            cluster.sizes[[l]]   <- integer(0L)
+            ncluster.sizes[[l]]  <- integer(0L)
+            cluster.size.ns[[l]] <- integer(0L)
+        }
 
         # index of ov.names for this level
         ov.idx[[l]]         <- match(ov.names.l[[l]], ov.names)

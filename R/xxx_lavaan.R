@@ -232,6 +232,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # perhaps model is already a parameter table
         nlevels <- lav_partable_nlevels(FLAT)
         if(nlevels > 1L) {
+
+            # check for cluster argument
+            if(is.null(cluster)) {
+                stop("lavaan ERROR: cluster argument is missing.")
+            }
+
             ngroups <- lav_partable_ngroups(FLAT)
             ov.names.l <- vector("list", length = ngroups)
             for(g in 1:ngroups) {
