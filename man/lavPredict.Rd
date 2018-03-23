@@ -10,7 +10,7 @@ function is NOT to predict future values of dependent variables as in the
 regression framework!}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
-           se = "none", label = TRUE, fsm = FALSE, 
+           se = "none", label = TRUE, fsm = FALSE, level = 1L,
            optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
@@ -37,6 +37,11 @@ returned as an attribute.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute. 
            Only for numeric data.}
+\item{level}{Integer. Only used in a multilevel SEM.
+If \code{level = 1}, only factor scores for latent variable
+defined at the first (within) level are computed; if \code{level = 2},
+only factor scores for latent variables defined at the second (between) level
+are computed.}
 \item{optim.method}{Character string. Only used in the categorical case. 
 If \code{"nlminb"} (the default in 0.5), the \code{"nlminb()"} function is used 
 for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6), 

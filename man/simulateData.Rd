@@ -9,7 +9,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     orthogonal = FALSE, std.lv = TRUE, auto.fix.first = FALSE, 
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
-    group.label = paste("G", 1:nblocks, sep = ""), skewness = NULL, 
+    group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
     kurtosis = NULL, seed = NULL, empirical = FALSE, 
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)

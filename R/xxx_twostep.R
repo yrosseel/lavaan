@@ -216,9 +216,9 @@ twostep <- function(model      = NULL,
         }
         return(PT)
     } else {
-        return( list(MM = MM, STRUC = STRUC, JOINT = JOINT, SEM = JOINT2,
+        return( list(MM = MM, STRUC = STRUC, JOINT = JOINT, 
                      V = V, V1 = V1, V2 = V2, Sigma.11 = Sigma.11, 
-                     MM.INFO = MM.INFO, PT = PT, PT2 = PT2) )
+                     MM.INFO = MM.INFO, PT = PT) )
     }
 }
 

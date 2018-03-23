@@ -20,8 +20,7 @@ function(object, newdata = NULL) {
 
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
-                       level = 1L,
-                       se = "none", label = TRUE, fsm = FALSE,
+                       se = "none", label = TRUE, fsm = FALSE, level = 1L,
                        optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
