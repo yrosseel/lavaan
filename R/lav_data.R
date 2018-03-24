@@ -227,11 +227,19 @@ lavData <- function(data              = NULL,          # data.frame
     # 3) data.type = "none":  both data and sample.cov are NULL
     if(is.null(data) && is.null(sample.cov)) {
 
-        # multilevel?
-        if(!is.null(cluster) && length(cluster) > 0L) {
-            nlevels <- length(cluster) + 1L
+        # multilevel? --> ov.names.l should be filled in
+        if(length(ov.names.l) > 0L) {
+            nlevels <- length(ov.names.l[[1]]) # we assume the same number
+                                               # of levels in each group!
 
-            # check ov.names.l?
+            # do we have a cluster argument? if not, create one
+            if(is.null(cluster)) {
+                if(nlevels == 2L) {
+                    cluster <- "cluster"
+                } else {
+                    cluster <- paste0("cluster", seq_len(nlevels - 1L))
+                }
+            }
  
             # default level.labels
             if(length(level.label) == 0L) {
@@ -247,35 +255,42 @@ lavData <- function(data              = NULL,          # data.frame
             nlevels <- 1L
         }
 
-        if(is.null(sample.nobs)) {
-            sample.nobs <- 0L
-        }
-        sample.nobs <- as.list(sample.nobs)
-        ngroups <- length(unlist(sample.nobs))
-        if(ngroups > 1L) {
-            group.label <- paste("Group ", 1:ngroups, sep="")
-        } else {
-            group.label <- character(0)
-        }
-
-        # handle ov.names
+        # ngroups -> based on ov.names
         if(is.null(ov.names)) {
             warning("lavaan WARNING: ov.names is NULL")
             ov.names <- character(0L)
-        }
-        if(!is.list(ov.names)) {
-            tmp <- ov.names; ov.names <- vector("list", length = ngroups)
-            ov.names[1:ngroups] <- list(tmp)
+            ngroups <- 1L
+        } else if(!is.list(ov.names)) {
+            ov.names <- list(ov.names)
+            ngroups <- 1L
         } else {
-            if (length(ov.names) != ngroups)
-                stop("lavaan ERROR: ov.names assumes ", length(ov.names),
-                     " groups; sample.nobs suggests ", ngroups, " groups")
-            # nothing to do    
+            ngroups <- length(ov.names)
         }
+
+        if(is.null(sample.nobs)) {
+            sample.nobs <- rep(list(0L), ngroups)
+        } else if(!is.list(sample.nobs)) {
+            sample.nobs <- as.list(sample.nobs)
+        } else {
+            if(length(sample.nobs) != ngroups) {
+                stop("lavaan ERROR: length(sample.nobs) = ",
+                     length(sample.nobs), " but ngroups = ", ngroups)
+            }
+        }
+
+        if(ngroups > 1L) {
+            if(is.null(group)) {
+                group <- "group"
+            }
+            group.label <- paste("Group", 1:ngroups, sep="")
+        } else {
+            group <- character(0L)
+            group.label <- character(0L)
+        }
+
         # handle ov.names.x
         if(!is.list(ov.names.x)) {
-            tmp <- ov.names.x; ov.names.x <- vector("list", length = ngroups)
-            ov.names.x[1:ngroups] <- list(tmp)
+            ov.names.x <- rep(list(ov.names.x), ngroups)
         }
 
         ov <- list()
@@ -284,6 +299,7 @@ lavData <- function(data              = NULL,          # data.frame
         ov$idx  <- rep(NA, nvar)
         ov$nobs <- rep(0L, nvar)
         ov$type <- rep("numeric", nvar)
+        ov$nlev <- rep(0L, nvar)
 
         # collect information per upper-level group
         Lp <- vector("list", length = ngroups)
@@ -300,9 +316,9 @@ lavData <- function(data              = NULL,          # data.frame
         lavData <- new("lavData",
                        data.type   = "none",
                        ngroups     = ngroups,
-                       group       = character(0L),
+                       group       = group,
                        nlevels     = nlevels,
-                       cluster     = character(0L),
+                       cluster     = cluster,
                        group.label = group.label,
                        level.label = level.label,
                        nobs        = sample.nobs,

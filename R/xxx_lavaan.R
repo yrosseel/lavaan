@@ -192,7 +192,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(any(FLAT$op == ":" & FLAT$lhs == "level")) {
 
         # check for cluster argument
-        if(is.null(cluster)) {
+        if(!is.null(data) && is.null(cluster)) {
             stop("lavaan ERROR: cluster argument is missing.")
         }
 
@@ -233,8 +233,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         nlevels <- lav_partable_nlevels(FLAT)
         if(nlevels > 1L) {
 
-            # check for cluster argument
-            if(is.null(cluster)) {
+            # check for cluster argument (only if we have data)
+            if(!is.null(data) && is.null(cluster)) {
                 stop("lavaan ERROR: cluster argument is missing.")
             }
 
@@ -287,6 +287,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # modifyList
         opt <- modifyList(opt, dotdotdot)
+
+        # no data?
+        if(is.null(data) && is.null(sample.cov)) {
+            opt$fixed.x <- FALSE
+            opt$conditional.x <- FALSE
+        }
 
         # categorical mode?
         if(any(FLAT$op == "|")) {
@@ -603,8 +609,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         lavsamplestats <- new("lavSampleStats", ngroups=lavdata@ngroups,
                                  nobs=as.list(rep(0L, lavdata@ngroups)),
-                                 cov.x=vector("list",length=lavdata@ngroups),
-                                 th.idx=lavpta$vidx$th.mean,
+                                 #cov.x=vector("list",length=lavdata@ngroups),
+                                 #mean.x=vector("list",length=lavdata@ngroups),
+                                 th.idx=lavpta$th.idx,
                                  missing.flag=FALSE)
     }
     timing$SampleStats <- (proc.time()[3] - start.time)

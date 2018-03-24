@@ -56,6 +56,15 @@ lav_partable_attributes <- function(partable, pta = NULL) {
     # nfac.nonnormal - for numerical integration
     pta$nfac.nonnormal <- lapply(pta$vnames$lv.nonnormal, length)
 
+    # th.idx (new in 0.6-1)
+    pta$th.idx <- lapply(seq_len(pta$nblocks), function(g) {
+                            out <- numeric( length(pta$vnames$th.mean[[g]]) )
+                            idx <- ( pta$vnames$th.mean[[g]] %in% 
+                                     pta$vnames$th[[g]] )
+                            out[idx] <- pta$vidx$th[[g]]
+                            out
+                        })
+
     pta
 }
 

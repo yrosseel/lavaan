@@ -77,7 +77,7 @@ lav_partable_flat <- function(FLAT = NULL,
             nth <- varTable$nlev[ varTable$name == o ] - 1L
             nth.in.partable <- sum(FLAT$op == "|" & FLAT$lhs == o)
             if(nth != nth.in.partable) {
-                stop("lavaan ERROR: expected ", nth, 
+                stop("lavaan ERROR: expected ", max(0,nth), 
                      " threshold(s) for variable ",
                      sQuote(o), "; syntax contains ", nth.in.partable, "\n")
             }

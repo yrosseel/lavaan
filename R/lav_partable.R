@@ -81,6 +81,13 @@ lavaanify <- lavParTable <- function(
         print( str(CON) )
     }
 
+    # bogus varTable? (if data.type == "none")
+    if(!is.null(varTable)) {
+        if(all(varTable$nobs == 0)) {
+            varTable <- NULL
+        }
+    }
+
     # check for wrongly specified variances/covariances/intercepts
     # of exogenous variables in model syntax (if fixed.x=TRUE)
     if(fixed.x && warn) { # we ignore the groups here!

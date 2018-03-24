@@ -480,15 +480,22 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
         # thresholds and mean/intercepts of numeric variables
         if("th.mean" %in% type) {
-            if(length(ov.names.nox) > 0L) {
+            # if fixed.x -> use ov.names.nox
+            # else -> use ov.names
+            if(is.null(partable$exo) || all(partable$exo == 0L)) {
+                OV.NAMES <- ov.names
+            } else {
+                OV.NAMES <- ov.names.nox
+            }
+            if(length(OV.NAMES) > 0L) {
                 # return in the right order (following ov.names.nox!)
-                out <- unlist(lapply(ov.names.nox, function(x) {
+                out <- unlist(lapply(OV.NAMES, function(x) {
                               if(x %in% ord.names) {
                                   idx <- which(x == TH.lhs)
                                   TH <- unique(paste(TH.lhs[idx], "|",
                                                      TH.rhs[idx], sep=""))
                                   # make sure the th's are in increasing order
-                                  sort(TH)
+                                  #sort(TH)
                               } else {
                                   x
                               }
