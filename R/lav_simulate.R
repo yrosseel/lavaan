@@ -7,7 +7,7 @@
 # - 
 
 
-lavSimulateData <- function(pop.model  = NULL,
+lavSimulateData <- function(model  = NULL,
                             cmd.pop    = "sem",
                             ...,
 
@@ -37,7 +37,7 @@ lavSimulateData <- function(pop.model  = NULL,
     dotdotdot$sample.nobs <- sample.nobs
 
     # 'fit' population model
-    fit.pop <- do.call(cmd.pop, args = c(list(model = pop.model), dotdotdot))
+    fit.pop <- do.call(cmd.pop, args = c(list(model = model), dotdotdot))
 
     # extract model implied statistics and data slot
     lavimplied <- fit.pop@implied
@@ -253,7 +253,7 @@ lavSimulateData <- function(pop.model  = NULL,
     }
 
     if(return.fit) {
-        attr(out, "fit") <- fit
+        attr(out, "fit") <- fit.pop
     }
 
     out

@@ -422,35 +422,4 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
 }
 
 
-# for all parameters in p1, find the 'id' of the corresponding parameter
-# in p2
-lav_partable_map_id_p1_in_p2 <- function(p1, p2) {
-
-    # get all parameters that have a '.p*' plabel
-    # (they exclude "==", "<", ">", ":=")
-    p1.idx <- which(grepl("\\.p", p1$plabel)); np1 <- length(p1.idx)
-
-    # return p2.id
-    p2.id <- integer(np1)
-
-    # check every parameter in p1
-    for(i in seq_len(np1)) {
-        # identify parameter in p1
-        lhs <- p1$lhs[i]; op <- p1$op[i]; rhs <- p1$rhs[i]; group <- p1$group[i]
-
-        # search for corresponding parameter in p2
-        p2.idx <- which(p2$lhs == lhs & p2$op == op & p2$rhs == rhs &
-                        p2$group == group)
-
-        # found?
-        if(length(p2.idx) == 0L) {
-            stop("lavaan ERROR: parameter in p1 not found in p2: ",
-                 paste(lhs, op, rhs, "(group = ", group, ")", sep=" "))
-        } else {
-            p2.id[i] <- p2.idx
-        }
-    }
-
-    p2.id
-}
 

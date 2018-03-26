@@ -20,34 +20,25 @@ lavSimulate <- function(pop.model     = NULL,             # population model
     # dotdotdot
     dotdotdot <- list(...)
 
-    # dotdotdot for fit.orig
-    dotdotdot.orig <- dotdotdot
-    dotdotdot.orig$verbose <- FALSE
-    dotdotdot.orig$debug <- FALSE
-    dotdotdot.orig$data <- NULL
-    dotdotdot.orig$sample.cov <- NULL
+    # dotdotdot for fit.pop
+    dotdotdot.pop <- dotdotdot
+    dotdotdot.pop$verbose <- FALSE
+    dotdotdot.pop$debug <- FALSE
+    dotdotdot.pop$data <- NULL
+    dotdotdot.pop$sample.cov <- NULL
 
-    # 'fit' population model, to get 'true' parameters
-    fit.orig <- do.call(cmd.pop, args = c(list(model = pop.model),
-                                          dotdotdot.orig))
+    # 'fit' population model without data, to get 'true' parameters
+    fit.pop <- do.call(cmd.pop, 
+                       args = c(list(model = pop.model), dotdotdot.pop))
 
-    # create (empty) 'model' object
+    # check model object
     if(is.null(model)) {
-        model <- fit.orig
-    } else {
-        # this is more tricky!! we must 'embed' the model in the original
-        # model, otherwise, the order of the parameters will be different!!
-
-        # TODO
-        stop("model argument not supported yet")
-    }
-
-    # dotdotdot
-    dotdotdot <- list()
+        model <- fit.pop@ParTable
+    } 
 
     # per default, use 'true' values as starting values
     if(is.null(dotdotdot$start)) {
-        dotdotdot$start = fit.orig
+        dotdotdot$start = fit.pop
     }
 
     # generate simulations
@@ -59,9 +50,36 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                    show.progress = show.progress,
                    parallel = parallel, ncpus = ncpus, cl = cl), dotdotdot))
 
-    # store 'true' parameters in meta$est.true
+    # flag this is a simulation
     fit@meta$lavSimulate <- TRUE
-    fit@meta$est.true <- fit.orig@ParTable$est
+
+    # NOTE!!!
+    # if the model != pop.model, we may need to 'reorder' the 
+    # 'true' parameters, so they correspond to the 'model' parameters
+    p2.id <- lav_partable_map_id_p1_in_p2(p1 = fit@ParTable, 
+                                          p2 = fit.pop@ParTable, 
+                                          stopifnotfound = FALSE)
+    est1 <- fit@ParTable$est
+    na.idx <- which(is.na(p2.id))
+    if(length(na.idx) > 0L) {
+        warning("lavaan WARNING: some estimated parameters were not mentioned",
+                "\n\t\t in the population model;",
+                " partable user model idx = ", paste(na.idx))
+
+        # replace NA by '1' (override later!)
+        p2.id[ na.idx ] <- 1L
+    }
+    est.pop <- fit@ParTable$est
+    est.pop <- fit.pop@ParTable$est[ p2.id ]
+
+    # by default, the 'unknown' population values are set to 0.0
+    if(length(na.idx) > 0L) {
+        est.pop[na.idx] <- 0
+    }
+
+    # store 'true' parameters in meta$est.true
+    fit@meta$est.true <- est.pop
 
     fit
 }
+

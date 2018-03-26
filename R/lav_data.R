@@ -253,6 +253,8 @@ lavData <- function(data              = NULL,          # data.frame
             }
         } else {
             nlevels <- 1L
+            cluster <- character(0L)
+            level.label <- character(0L)
         }
 
         # ngroups -> based on ov.names

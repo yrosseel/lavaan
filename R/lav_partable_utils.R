@@ -286,3 +286,57 @@ lav_partable_add <- function(PT, add = list()) {
     PT
 }
 
+
+# look for row idx of p1 elements in p2
+# return NA if not found
+lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE) {
+
+    # check if we have a 'block' column (in both p1 and p2)
+    if(is.null(p1$block)) {
+        if(is.null(p1$group)) {
+            p1$block <- rep.int(1L, length(p1$lhs))
+        } else {
+            p1$block <- p1$group
+        }
+    }
+    if(is.null(p2$block)) {
+        if(is.null(p2$group)) {
+            p2$block <- rep.int(1L, length(p2$lhs))
+        } else {
+            p2$block <- p2$group
+        }
+    }
+
+    # get all parameters that have a '.p*' plabel
+    # (they exclude "==", "<", ">", ":=")
+    p1.idx <- which(grepl("\\.p", p1$plabel))
+    np1 <- length(p1.idx)
+
+    # return p2.id
+    p2.id <- integer(np1)
+
+    # check every parameter in p1
+    for(i in seq_len(np1)) {
+        # identify parameter in p1
+        lhs <- p1$lhs[i]; op <- p1$op[i]; rhs <- p1$rhs[i]; block <- p1$block[i]
+
+        # search for corresponding parameter in p2
+        p2.idx <- which(p2$lhs == lhs & p2$op == op & p2$rhs == rhs &
+                        p2$block == block)
+
+        # found?
+        if(length(p2.idx) == 0L) {
+            if(stopifnotfound) {
+                stop("lavaan ERROR: parameter in p1 not found in p2: ",
+                     paste(lhs, op, rhs, "(block = ", block, ")", sep=" "))
+            } else {
+                p2.id[i] <- as.integer(NA)
+            }
+        } else {
+            p2.id[i] <- p2.idx
+        }
+    }
+
+    p2.id
+}
+

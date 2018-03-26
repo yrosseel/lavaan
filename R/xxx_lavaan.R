@@ -159,6 +159,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                  "\n  lavaan  NOTE: ",
                  "missing column(s) in parameter table: [", missing.txt, "]")
         }
+    } else if(is.null(model)) {
+        stop("lavaan ERROR: model is NULL!")
     }
 
     # group blocks?

@@ -63,7 +63,7 @@ lav_lavaanList_summary <- function(object,
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
             pe$est.ave  <- rowMeans(EST)
             if(est.bias) {
-                pe$est.bias <- pe$est.true - pe$est.ave
+                pe$est.bias <- pe$est.ave - pe$est.true
             }
 
             # SE?
@@ -71,7 +71,7 @@ lav_lavaanList_summary <- function(object,
                 pe$se.obs <- apply(EST, 1L, sd)
                 SE <- lav_lavaanList_partable(object, what = "se", type = "all")
                 pe$se.ave <- rowMeans(SE)
-                pe$se.bias <- pe$se.obs - pe$se.ave
+                pe$se.bias <- pe$se.ave - pe$se.obs
             }
 
         # scenario 2: bootstrap
@@ -113,7 +113,6 @@ lav_lavaanList_summary <- function(object,
         # scenario 4: multiple groups/sets
         } else if(!is.null(object@meta$lavMultipleGroups)) {
             # show individual estimates, for each group
-#   browser()
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
             EST <- as.list(as.data.frame(EST))
             ngroups <- length(EST)
