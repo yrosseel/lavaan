@@ -209,6 +209,13 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             if(!is.null(x$pvalue)) {
                 m[se.idx, "pvalue"] <- ""
             }
+            ## for lavaan.mi-class objects (semTools)
+            if(!is.null(x$t)) {
+                m[se.idx, "t"] <- ""
+            }
+            if(!is.null(x$df)) {
+                m[se.idx, "df"] <- ""
+            }
         }
 
         # handle se == NA
@@ -220,6 +227,13 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             if(!is.null(x$pvalue)) {
                 m[se.idx, "pvalue"] <- ""
             }
+            ## for lavaan.mi-class objects (semTools)
+            if(!is.null(x$t)) {
+                m[se.idx, "t"] <- ""
+            }
+            if(!is.null(x$df)) {
+                m[se.idx, "df"] <- ""
+            }
         }
     }
 
@@ -228,6 +242,10 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         se.idx <- which(x$se == 0)
         if(length(se.idx) > 0L) {
             m[se.idx, "fmi"] <- ""
+            ## for lavaan.mi-class objects (semTools)
+            m[se.idx, "fmi1"] <- ""
+            m[se.idx, "fmi2"] <- ""
+            m[se.idx, "riv"] <- ""
         }
 
         not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
@@ -276,7 +294,15 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     colnames(m)[ colnames(m) == "std.nox"] <- "Std.nox"
     colnames(m)[ colnames(m) == "prior"  ] <- "Prior"
     colnames(m)[ colnames(m) == "fmi"    ] <- "FMI"
- 
+    ## for lavaan.mi-class objects (semTools)
+    if ("t" %in% colnames(m)) {
+      colnames(m)[ colnames(m) == "t"      ] <- "t-value"
+      colnames(m)[ colnames(m) == "P(>|z|)"] <- "P(>|t|)"
+      colnames(m)[ colnames(m) == "fmi1"   ] <- "FMI-1"
+      colnames(m)[ colnames(m) == "fmi2"   ] <- "FMI-2"
+      colnames(m)[ colnames(m) == "riv"    ] <- "RIV"
+    }
+    
     # format column names
     colnames(m) <- sprintf(char.format, colnames(m))
 

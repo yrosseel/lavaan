@@ -6,9 +6,9 @@
 Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
-                     pvalue = TRUE, ci = TRUE, level = 0.95, 
-                     cov.std = TRUE, remove.eq = TRUE, remove.ineq = TRUE, 
-                     remove.def = FALSE, GLIST = NULL, est = NULL)
+                     pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE,
+                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
+                     GLIST = NULL, est = NULL, partable = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -49,6 +49,14 @@ instead of the GLIST inside the object@Model slot.}
 \item{est}{Numeric. Parameter values (as in the `est' column of a
 parameter table). If provided, they will be used instead of 
 the parameters that can be extract from object.}
+\item{partable}{A custom \code{list} or \code{data.frame} in which to store
+the standardized parameter values. If provided, it will be used instead of 
+the parameter table inside the object@ParTable slot.}
+}
+\note{
+The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for
+everyday users, but for authors of external R packages that depend on
+\code{lavaan}. Only to be used with great caution.
 }
 \value{
   A data.frame containing standardized model parameters.

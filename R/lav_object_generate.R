@@ -150,7 +150,7 @@ lav_object_extended <- function(object, add = NULL,
     } else if(is.character(add)) {
         ngroups <- lav_partable_ngroups(partable)
         ADD <- lavaanify(add, ngroups = ngroups)
-        ADD <- ADD[,c("lhs","op","rhs","block","user","label")]
+        ADD <- ADD[,c("lhs","op","rhs","block","group","user","label")]
         remove.idx <- which(ADD$user == 0)
         if(length(remove.idx) > 0L) {
             ADD <- ADD[-remove.idx,]

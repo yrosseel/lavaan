@@ -264,6 +264,7 @@ standardizedSolution <- standardizedsolution <- function(object,
                                                          remove.eq = TRUE,
                                                          remove.ineq = TRUE,
                                                          remove.def = FALSE,
+                                                         partable = NULL,
                                                          GLIST = NULL,
                                                          est   = NULL) {
 
@@ -283,8 +284,10 @@ standardizedSolution <- standardizedsolution <- function(object,
         }
     }
 
-    PARTABLE <- inspect(object, "list")
-    free.idx <- which(PARTABLE$free > 0L)
+    if (is.null(partable)) {
+      PARTABLE <- inspect(object, "list")
+      free.idx <- which(PARTABLE$free > 0L) # not used in this function?
+    } else PARTABLE <- partable
     LIST <- PARTABLE[,c("lhs", "op", "rhs")]
     if(!is.null(PARTABLE$group)) {
         LIST$group <- PARTABLE$group
@@ -293,12 +296,13 @@ standardizedSolution <- standardizedsolution <- function(object,
     # add std and std.all columns
     if(type == "std.lv") {
         LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST,
-                                               cov.std = cov.std)
+                                               partable = partable, cov.std = cov.std)
     } else if(type == "std.all") {
         LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST,
-                                            cov.std = cov.std)
+                                            partable = partable, cov.std = cov.std)
     } else if(type == "std.nox") {
-        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST, cov.std = cov.std)
+        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST,
+                                                partable = partable, cov.std = cov.std)
     }
 
     if(object@Options$se != "none" && se) {
@@ -925,9 +929,18 @@ function(object, model, add, ..., evaluate = TRUE) {
       call$model$est <- NULL
       call$model$se <- NULL
     }
-
+    if (!is.null(call$slotParTable) && is.list(call$model)) call$slotParTable <- call$model
+    
     if (length(extras) > 0) {
-        existing <- !is.na(match(names(extras), names(call)))
+      ## check for call$slotOptions conflicts
+      if (!is.null(call$slotOptions)) {
+        sameNames <- intersect(names(lavOptions()), names(extras))
+        for (i in sameNames) {
+          call$slotOptions[[i]] <- extras[[i]]
+          extras[i] <- NULL # not needed if they are in slotOptions
+        }
+      }
+      existing <- !is.na(match(names(extras), names(call)))
         for (a in names(extras)[existing]) call[[a]] <- extras[[a]]
         if (any(!existing)) {
             call <- c(as.list(call), extras[!existing])

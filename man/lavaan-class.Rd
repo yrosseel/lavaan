@@ -109,11 +109,14 @@ the independence model) (if available).}
       are compared in a sequential order. Test statistics are based on the 
       likelihood ratio test. For more details and
       further options, see the \code{\link{lavTestLRT}} page.} 
-    \item{update}{\code{signature(object = "lavaan", model, ..., 
+    \item{update}{\code{signature(object = "lavaan", model, add, ..., 
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
         that is stored within the lavaan object, which is not necessarily
-        the parent frame.}
+        the parent frame. The \code{add} argument is analogous to the one
+        described in the \code{\link{lavTestScore}} page, and can be used to
+        add parameters to the specified model rather than passing an entirely
+        new \code{model} argument.}
     \item{nobs}{\code{signature(object = "lavaan")}: returns the effective
       number of observations used when fitting the model. In a multiple group
       analysis, this is the sum of all observations per group.}
