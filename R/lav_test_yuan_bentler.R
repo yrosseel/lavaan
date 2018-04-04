@@ -73,6 +73,10 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     #    Satterthwaite <- TRUE
     #}
 
+    # FIXME: should we not always use 'unstructured' here?
+    # if the model is, say, the independence model, the 
+    # 'structured' information (A1) will be so far away from B1
+    # that we will end with 'NA'
     h1.options <- lavoptions
     if(test == "yuan.bentler.mplus") {
         # always 'unstructured' H1 information

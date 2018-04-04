@@ -1,6 +1,5 @@
 # lavaanList: fit the *same* model, on different datasets
 # YR - 29 Jun 2016
-
 # YR - 27 Jan 2017: change lavoptions; add dotdotdot to each call
 
 lavaanList <- function(model         = NULL,             # model
@@ -13,6 +12,7 @@ lavaanList <- function(model         = NULL,             # model
                        store.slots   = c("partable"),    # default is partable
                        FUN           = NULL,             # arbitrary FUN
                        show.progress = FALSE,
+                       store.failed  = FALSE,
                        parallel      = c("no", "multicore", "snow"),
                        ncpus         = max(1L, parallel::detectCores() - 1L),
                        cl            = NULL,
@@ -98,7 +98,7 @@ lavaanList <- function(model         = NULL,             # model
     lavpartable <- FIT@ParTable
     lavpta      <- FIT@pta
 
-    # remove any options in lavtoptions from dotdotdot
+    # remove any options in lavoptions from dotdotdot
     if(length(dotdotdot) > 0L) {
         rm.idx <- which(names(dotdotdot) %in% names(lavoptions))
         if(length(rm.idx) > 0L) {
@@ -107,8 +107,7 @@ lavaanList <- function(model         = NULL,             # model
     }
 
     # remove start/est/se columns from lavpartable
-    lavpartable$start <- lavpartable$est
-    lavpartable$est <- lavpartable$se <- NULL
+    lavpartable$start <- lavpartable$est <- lavpartable$se <- NULL
 
     # empty slots
     timingList <- ParTableList <- DataList <- SampleStatsList <-
@@ -163,6 +162,22 @@ lavaanList <- function(model         = NULL,             # model
             DATA <- dataList[[i]]
         }
 
+        # if categorical, check if we have enough response categories
+        # for each ordered variables in DATA
+        data.ok.flag <- TRUE
+        if(FIT@Model@categorical) {
+            # expected nlev
+            ord.idx <- unlist(FIT@pta$vidx$ov.ord)
+            NLEV.exp <- FIT@Data@ov$nlev[ord.idx]
+            # observed nlev
+            NLEV.obs <- sapply(DATA[,ord.idx,drop=FALSE], 
+                               function(x) length(unique(x)))
+            wrong.idx <- which(NLEV.exp - NLEV.obs != 0)
+            if(length(wrong.idx) > 0L) {
+                data.ok.flag <- FALSE
+            }
+        }
+
         # adapt lavmodel for this new dataset
         # - starting values will be different
         # - ov.x variances/covariances
@@ -175,9 +190,10 @@ lavaanList <- function(model         = NULL,             # model
         #} 
 
         # fit model with this (new) dataset
-        if(cmd %in% c("lavaan", "sem", "cfa", "growth")) {
-            lavoptions$start <- FIT # FIXME: needed?
-            lavobject <- try(do.call("lavaan",
+        if(data.ok.flag) {
+            if(cmd %in% c("lavaan", "sem", "cfa", "growth")) {
+                #lavoptions$start <- FIT # FIXME: needed?
+                lavobject <- try(do.call("lavaan",
                                      args = c(list(slotOptions  = lavoptions,
                                                    slotParTable = lavpartable,
                                                    slotModel    = lavmodel,
@@ -185,22 +201,22 @@ lavaanList <- function(model         = NULL,             # model
                                                    data         = DATA),
                                                    dotdotdot)), 
                              silent = TRUE)
-        } else if(cmd == "fsr") {
-            # extract fs.method and fsr.method from dotdotdot
-            if(!is.null(dotdotdot$fs.method)) {
-                fs.method <- dotdotdot$fs.method
-            } else {
-                fs.method <- formals(fsr)$fs.method # default
-            }
+            } else if(cmd == "fsr") {
+                # extract fs.method and fsr.method from dotdotdot
+                if(!is.null(dotdotdot$fs.method)) {
+                    fs.method <- dotdotdot$fs.method
+                } else {
+                    fs.method <- formals(fsr)$fs.method # default
+                }
  
-            if(!is.null(dotdotdot$fsr.method)) {
-                fsr.method <- dotdotdot$fsr.method
-            } else {
-                fsr.method <- formals(fsr)$fsr.method # default
-            }
+                if(!is.null(dotdotdot$fsr.method)) {
+                    fsr.method <- dotdotdot$fsr.method
+                } else {
+                    fsr.method <- formals(fsr)$fsr.method # default
+                }
 
-            lavoptions$start <- FIT # FIXME: needed?
-            lavobject <- try(do.call("fsr",
+                lavoptions$start <- FIT # FIXME: needed?
+                lavobject <- try(do.call("fsr",
                                      args = c(list(slotOptions  = lavoptions,
                                                    slotParTable = lavpartable,
                                                    slotModel    = lavmodel,
@@ -211,16 +227,17 @@ lavaanList <- function(model         = NULL,             # model
                                                    fsr.method   = fsr.method),
                                                    dotdotdot)),
                              silent = TRUE)
-        } else {
-            stop("lavaan ERROR: unknown cmd: ", cmd)
-        }
+            } else {
+                stop("lavaan ERROR: unknown cmd: ", cmd)
+            }
+        } # data.ok.flag
 
         RES <- list(ok = FALSE, timing = NULL, ParTable = NULL,
                     Data = NULL, SampleStats = NULL, vcov = NULL,
                     test = NULL, optim = NULL, implied = NULL,
                     fun = NULL)
 
-        if(inherits(lavobject, "lavaan") && 
+        if(data.ok.flag && inherits(lavobject, "lavaan") && 
            lavInspect(lavobject, "converged")) {
             RES$ok <- TRUE
 
@@ -264,9 +281,35 @@ lavaanList <- function(model         = NULL,             # model
                 RES$fun <- FUN(lavobject)
             }
 
-        } else {
+        } else { # failed!
             if(show.progress) {
-                cat("     FAILED: no convergence\n")
+                if(data.ok.flag) {
+                    if(inherits(lavobject, "lavaan")) {
+                        cat("   FAILED: no convergence\n")
+                    } else {
+                        cat("   FAILED: could not construct lavobject\n")
+                        print(lavobject)
+                    }
+                } else {
+                    cat("   FAILED: nlev too low for some vars\n")
+                }
+            }
+            if("partable" %in% store.slots) {
+                RES$ParTable <- lavpartable
+                RES$ParTable$est <- RES$ParTable$start
+                RES$ParTable$est[ RES$ParTable$free > 0 ] <- as.numeric(NA)
+                RES$ParTable$se <- numeric( length(lavpartable$lhs) )
+                RES$ParTable$se[ RES$ParTable$free > 0 ] <- as.numeric(NA)
+            }
+            if(store.failed) {
+                tmpfile <- tempfile(pattern = "lavaanListData") 
+                datfile <- paste0(tmpfile, ".csv")
+                write.csv(DATA, file = datfile, row.names = FALSE) 
+                if(data.ok.flag) {
+                    # or only if lavobject is of class lavaan?
+                    objfile <- paste0(tmpfile, ".RData")
+                    write(lavobject, file = objfile)
+                }
             }
         }
 

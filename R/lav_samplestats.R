@@ -1163,7 +1163,17 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         # compute S.w
         Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
+
+        # NOTE: we divide here by 'N - nclusters'
+        # - this is just arbitrary, we could as well divide by 'N'
+        # - this matters when we compute the objective function,
+        #   where we need to 'multiply' again with the same constant
+        # - a slight advantage of the 'N - nclusters' is that the same
+        #   constant is needed for multiplying sigma.w.logdet, so we can
+        #   can combine them
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
+        #S.w <- lav_matrix_crossprod(Y1a) / N
+
 
         # S.b
         # three parts: within/within, between/between, between/within

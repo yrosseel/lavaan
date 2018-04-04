@@ -197,19 +197,25 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                           missing    = NULL) {  # how to deal with missings?
 
     # YR 3 okt 2012
-    # the idea is to compute for each pair of variables, the model-based 
-    # probability (or likelihood in mixed case) (that we observe the data 
-    # for this pair under the model) for *each case* 
-    # after taking logs, the sum over the cases gives the 
-    # log probablity/likelihood for this pair
-    # the sum over all pairs gives the final PML based logl
+    # - the idea is to compute for each pair of variables, the model-based 
+    #   probability (or likelihood in mixed case) (that we observe the data 
+    #   for this pair under the model) 
+    # - if we have exogenous variables + condidional.x, do this for each case*
+    # - after taking logs, the sum over the cases gives the 
+    #   log probablity/likelihood for this pair
+    # - the sum over all pairs gives the final PML based logl
 
     # first of all: check if all correlations are within [-1,1]
     # if not, return Inf; (at least with nlminb, this works well)
-    cors <- Sigma.hat[lower.tri(Sigma.hat)]
+    if(length(num.idx) > 0L) {
+        cors <- lav_matrix_vech(Sigma.hat[-num.idx, -num.idx, drop = FALSE])
+    } else {
+        cors <- lav_matrix_vech(Sigma.hat)
+    }
 
     #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
-    if(any(abs(cors) > 1) || any(is.na(cors))) {
+    if(length(cors) > 0L && (any(abs(cors) > 1) || 
+                             any(is.na(cors)))) {
         # question: what is the best approach here??
         OUT <- +Inf
         attr(OUT, "logl") <- as.numeric(NA)
@@ -408,6 +414,9 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
 
     } else {
         # # order! first i, then j, lav_matrix_vec(table)!
+
+        Cor.hat <- cov2cor(Sigma.hat) # to get correlations (rho!)
+
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {
                 pstar.idx <- PSTAR[i,j]
@@ -415,9 +424,18 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                 if(ov.types[i] == "numeric" && 
                    ov.types[j] == "numeric") {
                     # ordinary pearson correlation
-                    LIK[,pstar.idx] <- pp_lik(Y1 = X[,i], Y2 = X[,j], 
+                    LIK[,pstar.idx] <- pp_lik(Y1 = X[,i], Y2 = X[,j],
+                                              var.y1 = Sigma.hat[i,i], 
+                                              var.y2 = Sigma.hat[j,j],
                                               eXo = eXo,
-                                              rho = Sigma.hat[i,j])
+                                              rho = Cor.hat[i,j])
+                    #LIK[,pstar.idx] <- exp(lav_mvnorm_loglik_data(
+                    #tmp <- exp(lav_mvnorm_loglik_data(
+                    #    Y = X[,c(i,j)],
+                    #    #Mu = c(TH[ th.idx == i ],
+                    #    #       TH[ th.idx == j ]),
+                    #    Mu = colMeans( X[,c(i,j)] ), # for now
+                    #    Sigma = Sigma.hat[c(i,j), c(i,j)]))
                 } else if(ov.types[i] == "numeric" && 
                           ov.types[j] == "ordered") {
                     # polyserial correlation

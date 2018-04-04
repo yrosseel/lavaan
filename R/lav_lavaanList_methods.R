@@ -61,16 +61,16 @@ lav_lavaanList_summary <- function(object,
 
             # EST 
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
-            pe$est.ave  <- rowMeans(EST)
+            pe$est.ave  <- rowMeans(EST, na.rm = TRUE)
             if(est.bias) {
                 pe$est.bias <- pe$est.ave - pe$est.true
             }
 
             # SE?
             if(se.bias) {
-                pe$se.obs <- apply(EST, 1L, sd)
+                pe$se.obs <- apply(EST, 1L, sd, na.rm = TRUE)
                 SE <- lav_lavaanList_partable(object, what = "se", type = "all")
-                pe$se.ave <- rowMeans(SE)
+                pe$se.ave <- rowMeans(SE, na.rm = TRUE)
                 pe$se.bias <- pe$se.ave - pe$se.obs
             }
 
@@ -78,7 +78,7 @@ lav_lavaanList_summary <- function(object,
         } else if(!is.null(object@meta$lavBootstrap)) {
             # print the average value for est
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
-            pe$est.ave <- rowMeans(EST)
+            pe$est.ave <- rowMeans(EST, na.rm = TRUE)
 
         # scenario 3: multiple imputation
         } else if(!is.null(object@meta$lavMultipleImputation)) {
@@ -86,18 +86,19 @@ lav_lavaanList_summary <- function(object,
             # pool est: take the mean
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
             m <- NCOL(EST)
-            pe$est <- rowMeans(EST)
+            pe$est <- rowMeans(EST, na.rm = TRUE)
 
             # pool se
 
             # between-imputation variance
             #B.var <- apply(EST, 1L, var)
-            est1 <- rowMeans(EST); est2 <- rowMeans(EST^2)
+            est1 <- rowMeans(EST, na.rm = TRUE) 
+            est2 <- rowMeans(EST^2, na.rm = TRUE)
             B.var <- (est2 - est1*est1) * m/(m-1)
 
             # within-imputation variance
             SE <- lav_lavaanList_partable(object, what = "se", type = "all")
-            W.var <- rowMeans(SE^2)
+            W.var <- rowMeans(SE^2, na.rm = TRUE)
 
             # total variance: T.var = W.var + B.var + B.var/m
             pe$se <- sqrt(W.var + B.var + (B.var / m))
@@ -128,7 +129,7 @@ lav_lavaanList_summary <- function(object,
         else {
             # print the average value for est
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
-            pe$est.ave  <- rowMeans(EST)
+            pe$est.ave  <- rowMeans(EST, na.rm = TRUE)
 
             # more?
         }

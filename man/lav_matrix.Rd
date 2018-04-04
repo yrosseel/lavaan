@@ -35,6 +35,7 @@
 \alias{lav_matrix_orthogonal_complement}
 \alias{lav_matrix_bdiag}
 \alias{lav_matrix_trace}
+\alias{lav_matrix_cov}
 
 \title{Utility Functions: Matrices and Vectors}
 \description{Utility functions for Matrix and Vector operations.}
@@ -78,6 +79,9 @@ lav_matrix_commutation(m = 1L, n = 1L)
 lav_matrix_commutation_pre(A = matrix(0,0,0))
 lav_matrix_commutation_mn_pre(A, m = 1L, n = 1L)
 
+# sample statistics
+lav_matrix_cov(A, ybar = NULL)
+
 # other matrix operations
 lav_matrix_symmetric_sqrt(S = matrix(0,0,0))
 lav_matrix_orthogonal_complement(A = matrix(0,0,0))
@@ -92,6 +96,7 @@ lav_matrix_trace(..., check = TRUE)
 matrix. If m is also provided, the number of column of the matrix.}
 \item{m}{Integer. The number of rows of a matrix.}
 \item{x}{Numeric. A vector.}
+\item{ybar}{Numeric. The mean vector of the matrix.}
 \item{...}{One or more matrices, or a list of matrices.}
 \item{check}{Logical. If \code{check = TRUE}, we check if the (final) matrix 
 is square.}
@@ -213,6 +218,9 @@ matrix. The matrix A must have n*n rows, where n is an integer.
 The \code{lav_matrix_commutation_mn_pre} function computes the product of the
 commutation matrix with a matrix A, without explicitly creating the commutation
 matrix. The matrix A must have m*n rows, where m and n are integers.
+
+The \code{lav_matrix_cov} function computes the sample covariance matrix of
+its input matrix, where the elements are divided by N (the number of rows).
 
 The \code{lav_matrix_symmetric_sqrt} function computes the square root of a
 positive definite symmetric matrix (using an eigen decomposition).  If some of

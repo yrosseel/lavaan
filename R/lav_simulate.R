@@ -36,12 +36,30 @@ lavSimulateData <- function(model  = NULL,
     # add sample.nobs/group.label to lavaan call
     dotdotdot$sample.nobs <- sample.nobs
 
+    
+    # remove 'ordered' argument: we will first pretend we generate
+    # continuous data only
+    dotdotdot$ordered <- NULL
+
     # 'fit' population model
     fit.pop <- do.call(cmd.pop, args = c(list(model = model), dotdotdot))
 
+    # categorical?
+    if(fit.pop@Model@categorical) {
+        # refit, as if continuous only
+        dotdotdot$ordered <- NULL
+        fit.con <- do.call(cmd.pop, args = c(list(model = model), dotdotdot))
+        # restore
+        dotdotdot$ordered <- dotdotdot.orig$ordered
+    } else {
+        fit.con <- fit.pop
+    }
+
     # extract model implied statistics and data slot
-    lavimplied <- fit.pop@implied
-    lavdata    <- fit.pop@Data
+    lavimplied  <- fit.con@implied # take continuous mean/cov
+    lavdata     <- fit.pop@Data
+    lavmodel    <- fit.pop@Model
+    lavpartable <- fit.pop@ParTable
 
     # number of groups/levels
     ngroups <- lavdata@ngroups
@@ -123,13 +141,17 @@ lavSimulateData <- function(model  = NULL,
                      "\n\t\tthe number of variables = ", NCOL(COV),
                      " in block = ", b)    
             }
-            COV <- COV * sample.nobs[b] / (sample.nobs[b] - 1)
+            if(lavdata@nlevels > 1L && (b %% lavdata@nlevels == 1L)) {
+                COV <- COV * sample.nobs[b] / (sample.nobs[b] - sample.nobs[b+1])
+            } else {
+                COV <- COV * sample.nobs[b] / (sample.nobs[b] - 1)
+            }
         }
 
         # generate normal data
         tmp <- try(MASS::mvrnorm(n = sample.nobs[b],
-                      mu = MU, Sigma = COV, empirical = empirical), 
-                      silent = TRUE)
+                          mu = MU, Sigma = COV, empirical = empirical), 
+                          silent = TRUE)
 
         if(inherits(tmp, "try-error")) {
             # something went wrong; most likely: non-positive COV?
@@ -148,6 +170,10 @@ lavSimulateData <- function(model  = NULL,
         }
 
     } # block
+
+    if(output == "block") {
+        return(X)
+    }
 
     # if multilevel, make a copy, and create X[[g]] per group
     if(lavdata@nlevels > 1L) {
@@ -170,8 +196,32 @@ lavSimulateData <- function(model  = NULL,
             tmp2 <- matrix(0, nrow(X.block[[bb]]), p.tilde + 1L) # the clus id
 
             # level 1
+            #if(empirical) {
+            if(FALSE) {
+                # force the within-cluster means to be zero (for both.idx vars)
+                Y2 <- unname(as.matrix(aggregate(X.block[[bb]],
+                  # NOTE: cluster.idx becomes a factor
+                  # should be 111122223333...
+                  by = list(cluster.idx[[g]]), FUN = mean, na.rm = TRUE)[,-1]))
+                # don't touch within-only variables
+                w.idx <- match(Lp$within.idx[[2]], Lp$ov.idx[[1]])
+                Y2[, w.idx] <- 0
+
+                # center cluster-wise
+                Y1c <- X.block[[bb]] - Y2[cluster.idx[[g]], ,drop = FALSE]
+
+                # this destroys the within covariance matrix
+                sigma.sqrt <- lav_matrix_symmetric_sqrt(lavimplied$cov[[bb]])
+                NY <- NROW(Y1c)
+                S <- cov(Y1c) * (NY-1)/NY
+                S.inv <- solve(S)
+                S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
+
+                # transform
+                X.block[[bb]] <- Y1c %*% S.inv.sqrt %*% sigma.sqrt  
+            }
             tmp1[, Lp$ov.idx[[1]] ] <- X.block[[bb]]
-            
+
             # level 2
             tmp2[, Lp$ov.idx[[2]] ] <- X.block[[bb + 1L]][cluster.idx[[g]],, 
                                                           drop = FALSE]
@@ -192,23 +242,36 @@ lavSimulateData <- function(model  = NULL,
         }
 
         # any categorical variables?
-        ov.ord <- lavNames(fit.pop, "ov.ord", group = 1L)
+        ov.ord <- lavNames(fit.pop, "ov.ord", group = g)
         if(is.list(ov.ord)) {
             # multilvel -> use within level only
             ov.ord <- ov.ord[[1L]]
         }
         if(length(ov.ord) > 0L) {
-            PT <- fit.pop@ParTable
             ov.names <- lavdata@ov.names[[g]]
 
             # which block?
             bb <- (g - 1)*lavdata@nlevels + 1L
+
+            # th/names
+            TH.VAL <- as.numeric(fit.pop@implied$th[[bb]])
+            if(length(lavmodel@num.idx[[bb]]) > 0L) {
+                NUM.idx <- which(lavmodel@th.idx[[bb]] == 0)
+                TH.VAL <- TH.VAL[-NUM.idx]
+            }
+            th.names <- fit.pop@pta$vnames$th[[bb]]
+            TH.NAMES <- sapply(strsplit(th.names, split = "|", 
+                                        fixed = TRUE), "[[", 1L)
+
             # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(PT$op == "|" & PT$lhs == o & PT$block == bb)
-                th.val <- c(-Inf,sort(PT$ustart[th.idx]),+Inf)
-                X[[g]][,o.idx] <- cut(X[[g]][,o.idx], th.val, labels = FALSE)
+                th.idx <- which(o == TH.NAMES)
+                th.val <- c(-Inf, sort(TH.VAL[th.idx]), +Inf)
+                # center (because model-implied 'mean' may be nonzero)
+                tmp <- X[[g]][,o.idx]
+                tmp <- tmp - mean(tmp, na.rm = TRUE)
+                X[[g]][,o.idx] <- cut(tmp, th.val, labels = FALSE)
             }
         }
     }

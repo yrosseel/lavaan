@@ -738,6 +738,35 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavdata@data.type == "none" && lavmodel@categorical) {
             lavmodel <- lav_model_set_parameters(lavmodel = lavmodel,
                             x = lav_model_get_parameters(lavmodel))
+            # re-adjust parameter table
+            lavpartable$start <- lav_model_get_parameters(lavmodel, type="user")
+
+            # check/warn if theta/delta values make sense
+            if(!all(lavpartable$start == lavpartable$ustart)) {
+                if(lavmodel@parameterization == "delta") {
+                    # did the user specify theta values? 
+                    user.var.idx <- which(lavpartable$op == "~~" &
+                           lavpartable$lhs == lavpartable$rhs &
+                           lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+                           lavpartable$user == 1L)
+                    if(length(user.var.idx)) {
+                        warning("lavaan WARNING: ", 
+              "variance (theta) values for categorical variables are ignored", 
+              "\n\t\t  if parameterization = \"delta\"!")
+                    }
+                } else if(lavmodel@parameterization == "theta") {
+                    # did the user specify theta values? 
+                    user.delta.idx <- which(lavpartable$op == "~*~" &
+                            lavpartable$lhs == lavpartable$rhs &
+                            lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+                            lavpartable$user == 1L)
+                    if(length(user.delta.idx)) {
+                        warning("lavaan WARNING: ",
+              "scaling (~*~) values for categorical variables are ignored",
+              "\n\t\t  if parameterization = \"theta\"!")
+                    }
+                }
+            }
         }
 
     } # slotModel

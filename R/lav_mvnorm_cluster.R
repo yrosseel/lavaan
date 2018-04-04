@@ -296,6 +296,8 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
         B[clz] <- q.zz + 2*q.yz - q.yyc
     }
     # q.yya + q.yyb
+    # there reason why we multiply the trace by 'N - nclusters' is
+    # S.PW has been divided by 'N - nclusters'
     q.W <- sum(cluster.size - 1) * sum(sigma.w.inv * S.PW)
     # logdet within part
     L.W  <- sum(cluster.size - 1) * sigma.w.logdet
