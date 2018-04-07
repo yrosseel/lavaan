@@ -46,14 +46,19 @@ for each released constraint.}
     constraint.
 }
 \value{
-  A list containing at least three elements: the Score test statistic 
-  (stat), the degrees of freedom (df), and a p-value under the 
-  chi-square distribution (p.value). If univariate tests were requested,
-  an additional element (TS.univariate) containing a numeric vector of
-  univariate score statistics. If cumulative tests were requested,
-  an additional element (TS.order) showing the order of the univariate
-  test statistics, and an element (TS.cumulative) containing a numeric
-  vector of cumulative multivariate score statistics.
+  A list containing at least one \code{data.frame}:
+  \itemize{
+    \item{\code{$test}: The total score test, with columns for the score
+      test statistic (\code{X2}), the degrees of freedom (\code{df}), and
+      a \emph{p} value under the \eqn{\chi^2} distribution (\code{p.value}).}
+    \item{\code{$uni}: Optional (if \code{univariate=TRUE}).
+      Each 1-\emph{df} score test, equivalent to modification indices.}
+    \item{\code{$cumulative}: Optional (if \code{cumulative=TRUE}).
+      Cumulative score tests.}
+    \item{\code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates, 
+      expected parameter changes, and expected parameter values if all
+      the tested constraints were freed.}
+  }
 }
 \references{
 Bentler, P. M., & Chou, C. P. (1993). Some new covariance structure model
