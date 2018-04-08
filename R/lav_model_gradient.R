@@ -63,13 +63,15 @@ lav_model_gradient <- function(lavmodel       = NULL,
         #}
 
         # ridge here?
-        if(meanstructure && !categorical) {
+        if(meanstructure) {
             #if(conditional.x) {
             #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #} else { 
                 Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #}
-        } else if(categorical) {
+        } 
+
+        if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
 
@@ -412,15 +414,69 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
             if(estimator == "PML") {
-                d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
-                                 TH         = TH[[g]],
-                                 th.idx     = th.idx[[g]],
-                                 num.idx    = num.idx[[g]],
-                                 X          = lavdata@X[[g]],
-                                 lavcache   = lavcache[[g]],
-                                 eXo        = lavdata@eXo[[g]],
-                                 PI         = PI[[g]],
-                                 missing    = lavdata@missing)
+
+                if(lavdata@nlevels  > 1L) {
+                    stop("lavaan ERROR: PL gradient + multilevel not implemented; try optim.gradient = \"numerical\"")
+                } else if(conditional.x) {
+                    d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                                     Mu.hat     = Mu.hat[[g]],
+                                     TH         = TH[[g]],
+                                     th.idx     = th.idx[[g]],
+                                     num.idx    = num.idx[[g]],
+                                     X          = lavdata@X[[g]],
+                                     lavcache   = lavcache[[g]],
+                                     eXo        = lavdata@eXo[[g]],
+                                     PI         = PI[[g]],
+                                     missing    = lavdata@missing)
+                } else {
+                    d1.try <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                                     Mu.hat     = Mu.hat[[g]],
+                                     TH         = TH[[g]],
+                                     th.idx     = th.idx[[g]],
+                                     num.idx    = num.idx[[g]],
+                                     X          = lavdata@X[[g]],
+                                     lavcache   = lavcache[[g]],
+                                     eXo        = NULL,
+                                     PI         = NULL,
+                                     missing    = lavdata@missing)
+
+                #### DEBUG ONLY ##### 
+                tmp_x <- function(x) {
+                    TH2 <- numeric(14)
+                    TH2[1:12] <- x[1:12]
+                    TH2[13:14] <- -x[c(13,14)]
+                    MU.HAT <- numeric(6)
+                    MU.HAT[c(5,6)] <- x[c(13,14)]
+                    SIGMA.HAT <- lav_matrix_vech_reverse(x[17:31],
+                                      diagonal = FALSE)
+                    diag(SIGMA.HAT) <- 1
+                    diag(SIGMA.HAT)[c(5,6)] <- x[c(15,16)]
+
+                    out <- estimator.PML(Sigma.hat = SIGMA.HAT,
+                                         Mu.hat = MU.HAT,
+                                         TH = TH2,
+                                         th.idx     = th.idx[[g]],
+                                         num.idx    = num.idx[[g]],
+                                         X          = lavdata@X[[g]],
+                                         eXo        = NULL)
+                    out
+                }
+                d1 <- numDeriv::grad(func = tmp_x,
+                                     x = c(TH[[g]][1:12],
+                                           Mu.hat[[g]][5:6],
+                                           diag(Sigma.hat[[g]])[c(5,6)],
+                                           lav_matrix_vech(Sigma.hat[[g]],
+                                                           diagonal = FALSE)))
+
+                d1[c(13,14)] <- -1 * d1[c(13,14)] # Mu.hat
+                }
+
+                cat("d1.try = \n")
+                print(d1.try)
+
+                cat("d1 = \n")
+                print(d1)
+stop("for now")
                 # chain rule (fmin)
                 group.dx <- 
                     as.numeric(t(d1) %*% Delta[[g]])

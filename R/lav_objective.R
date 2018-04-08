@@ -182,11 +182,11 @@ estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
 #
 # some changes:
 # - no distinction between x/y (ksi/eta)
-# - loglikelihoods are computed case-wise
 # - 29/03/2016: adapt for exogenous covariates
 # - 21/09/2016: added code for missing = doubly.robust (contributed by 
 #   Myrsini Katsikatsou)
 estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
+                          Mu.hat     = NULL,    # model-based means
                           TH         = NULL,    # model-based thresholds + means
                           PI         = NULL,    # slopes
                           th.idx     = NULL,    # threshold idx per variable
@@ -200,29 +200,30 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     # - the idea is to compute for each pair of variables, the model-based 
     #   probability (or likelihood in mixed case) (that we observe the data 
     #   for this pair under the model) 
-    # - if we have exogenous variables + condidional.x, do this for each case*
+    # - if we have exogenous variables + condidional.x, do this for each case
     # - after taking logs, the sum over the cases gives the 
     #   log probablity/likelihood for this pair
-    # - the sum over all pairs gives the final PML based logl
+    # - the sum over all pairs gives the final PL based logl
 
     # first of all: check if all correlations are within [-1,1]
     # if not, return Inf; (at least with nlminb, this works well)
-    if(length(num.idx) > 0L) {
-        cors <- lav_matrix_vech(Sigma.hat[-num.idx, -num.idx, drop = FALSE])
-    } else {
-        cors <- lav_matrix_vech(Sigma.hat)
-    }
 
-    #cat("[DEBUG objective\n]"); print(range(cors)); print(range(TH)); cat("\n")
+    # diagonal of Sigma.hat is not necessarily 1, even for categorical vars
+    Sigma.hat2 <- Sigma.hat
+    if(length(num.idx) > 0L) {
+        diag(Sigma.hat2)[-num.idx] <- 1
+    } else {
+        diag(Sigma.hat2) <- 1
+    }
+    Cor.hat <- cov2cor(Sigma.hat2) # to get correlations (rho!)
+    cors <- lav_matrix_vech(Cor.hat, diag = FALSE)
+
     if(length(cors) > 0L && (any(abs(cors) > 1) || 
                              any(is.na(cors)))) {
         # question: what is the best approach here??
         OUT <- +Inf
         attr(OUT, "logl") <- as.numeric(NA)
         return(OUT) 
-        #idx <- which( abs(cors) > 0.99 )
-        #cors[idx] <- 0.99 # clip
-        #cat("CLIPPING!\n")
     }
 
     nvar <- nrow(Sigma.hat)
@@ -233,16 +234,23 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     }
     pstar <- nvar*(nvar-1)/2
     ov.types <- rep("ordered", nvar)
-    if(length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
-    #print(Sigma.hat); print(TH); print(th.idx); print(num.idx); print(str(X))
+    if(length(num.idx) > 0L) {
+        ov.types[num.idx] <- "numeric"
+    }
 
-    LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
-    PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
-    PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
-    PROW <- row(PSTAR)
-    PCOL <- col(PSTAR)
 
-    # shortcut for all ordered - tablewise
+    ##### Three cases:
+    ##### 1) all ordered, no exogenous (fast!)
+    ##### 2) mixed ordered + continuous, no exogenous
+    ##### 3) mixed ordered + continuous, exogenous (conditional.x = TRUE)
+   
+
+
+
+    ##### Case 1:
+    #####  all ordered
+    #####  no exogenous covariates
+    #####
     if(all(ov.types == "ordered") && nexo == 0L) {
         # prepare for Myrsini's vectorization scheme
         LONG2 <- LongVecTH.Rho(no.x               = nvar,
@@ -412,10 +420,78 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
 
         } #end of if (missing =="doubly.robust") 
 
-    } else {
-        # # order! first i, then j, lav_matrix_vec(table)!
 
-        Cor.hat <- cov2cor(Sigma.hat) # to get correlations (rho!)
+    ##### Case 2:
+    #####  mixed ordered + numeric
+    #####  no exogenous covariates
+    #####
+    } else if(nexo == 0L) {
+        # mixed ordered/numeric variables, but no exogenous covariates
+        # - no need to compute 'casewise' (log)likelihoods
+
+        PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
+        PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+        N <- NROW(X)
+
+        logLikPair <- numeric(pstar)  # logl per pair (summed over cases)
+        for(j in seq_len(nvar-1L)) {
+            for(i in (j+1L):nvar) {
+                pstar.idx <- PSTAR[i,j]
+                if(ov.types[i] == "numeric" && 
+                   ov.types[j] == "numeric") {
+                    logLikPair[pstar.idx] <- lav_mvnorm_loglik_data(
+                        Y = X[,c(i,j)], Mu = Mu.hat[c(i,j)],
+                        Sigma = Sigma.hat[c(i,j), c(i,j)])
+                } else if(ov.types[i] == "numeric" && 
+                          ov.types[j] == "ordered") {
+                    # polyserial correlation
+                    LIK <- ps_loglik_no_exo(Y1 = X[,i], Y2 = X[,j], 
+                                            var.y1 = Sigma.hat[i,i], 
+                                            eta.y1 = rep(Mu.hat[i], N),
+                                            th.y2 = TH[ th.idx == j ],
+                                            rho = Cor.hat[i,j])
+                    logLikPair[pstar.idx] <- sum(LIK)
+                } else if(ov.types[j] == "numeric" && 
+                          ov.types[i] == "ordered") {
+                    # polyserial correlation
+                    LIK <- ps_loglik_no_exo(Y1 = X[,j], Y2 = X[,i], 
+                                            var.y1 = Sigma.hat[j,j],
+                                            eta.y1 = rep(Mu.hat[j], N),
+                                            th.y2 = TH[ th.idx == i ],
+                                            rho = Cor.hat[i,j])
+                    logLikPair[pstar.idx] <- sum(LIK)
+                } else if(ov.types[i] == "ordered" && 
+                          ov.types[j] == "ordered") {
+                    # polychoric correlation
+                    pairwisePI <- pc_PI(rho   = Cor.hat[i,j], 
+                                        th.y1 = TH[ th.idx == i ],
+                                        th.y2 = TH[ th.idx == j ])
+                    # avoid zeroes
+                    pairwisePI[ pairwisePI < .Machine$double.eps] <- 
+                                             .Machine$double.eps
+                    FREQ <- pc_freq(X[,i], X[,j])
+                    logLikPair[pstar.idx] <- sum(FREQ * log(pairwisePI))
+                }
+            }
+        } # all pairs
+        
+        # sum over pairs
+        logl <- sum(logLikPair)
+
+        # Fmin
+        Fmin <- (-1)*logl
+
+
+    ##### Case 3:
+    #####  mixed ordered + numeric
+    #####  exogenous covariates
+    #####  (conditional.x = TRUE)
+    } else {
+
+        LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
+        PSTAR <- matrix(0, nvar, nvar)   # utility matrix, to get indices
+        PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+        N <- NROW(X)
 
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {
@@ -426,59 +502,44 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                     # ordinary pearson correlation
                     LIK[,pstar.idx] <- pp_lik(Y1 = X[,i], Y2 = X[,j],
                                               var.y1 = Sigma.hat[i,i], 
+                                              eta.y1 = rep(Mu.hat[i], N),
+                                              eta.y2 = rep(Mu.hat[j], N),
                                               var.y2 = Sigma.hat[j,j],
                                               eXo = eXo,
                                               rho = Cor.hat[i,j])
-                    #LIK[,pstar.idx] <- exp(lav_mvnorm_loglik_data(
-                    #tmp <- exp(lav_mvnorm_loglik_data(
-                    #    Y = X[,c(i,j)],
-                    #    #Mu = c(TH[ th.idx == i ],
-                    #    #       TH[ th.idx == j ]),
-                    #    Mu = colMeans( X[,c(i,j)] ), # for now
-                    #    Sigma = Sigma.hat[c(i,j), c(i,j)]))
                 } else if(ov.types[i] == "numeric" && 
                           ov.types[j] == "ordered") {
                     # polyserial correlation
+                    ### FIXME: th.y2 should go into ps_lik!!!
                     LIK[,pstar.idx] <- ps_lik(Y1 = X[,i], Y2 = X[,j], 
+                                              var.y1 = Sigma.hat[i,i], 
+                                              eta.y1 = rep(Mu.hat[i], N),
                                               eXo = eXo,
-                                              rho = Sigma.hat[i,j])
+                                              rho = Cor.hat[i,j])
                 } else if(ov.types[j] == "numeric" && 
                           ov.types[i] == "ordered") {
                     # polyserial correlation
+                    ### FIXME: th.y1 should go into ps_lik!!!
                     LIK[,pstar.idx] <- ps_lik(Y1 = X[,j], Y2 = X[,i], 
+                                              var.y1 = Sigma.hat[j,j],
+                                              eta.y1 = rep(Mu.hat[j], N),
                                               eXo = eXo,
-                                              rho = Sigma.hat[i,j])
+                                              rho = Cor.hat[i,j])
                 } else if(ov.types[i] == "ordered" && 
                           ov.types[j] == "ordered") {
-                    # polychoric correlation
-                    if(nexo == 0L) {
-                        pairwisePI <- pc_PI(rho   = Sigma.hat[i,j], 
-                                            th.y1 = TH[ th.idx == i ],
-                                            th.y2 = TH[ th.idx == j ])
-                        LIK[,pstar.idx] <- pairwisePI[ cbind(X[,i], X[,j]) ]
-                    } else {
-                         LIK[,pstar.idx] <- 
-                             pc_lik_PL_with_cov(Y1          = X[,i],
-                                                Y2          = X[,j],
-                                                Rho         = Sigma.hat[i,j],
-                                                th.y1       = TH[th.idx==i],
-                                                th.y2       = TH[th.idx==j],
-                                                eXo         = eXo,
-                                                PI.y1       = PI[i,],
-                                                PI.y2       = PI[j,],
-                                                missing.ind = missing)
-                             #pc_lik2(Y1 = X[, i], Y2 = X[,j], 
-                             #        rho = Sigma.hat[i, j], 
-                             #        th.y1 = TH[th.idx == i], 
-                             #        th.y2 = TH[th.idx == j], 
-                             #        eXo = eXo, 
-                             #        sl.y1 = PI[i, ], 
-                             #        sl.y2 = PI[j, ])
-                    }
+                     LIK[,pstar.idx] <- 
+                         pc_lik_PL_with_cov(Y1          = X[,i],
+                                            Y2          = X[,j],
+                                            Rho         = Sigma.hat[i,j],
+                                            th.y1       = TH[th.idx==i],
+                                            th.y2       = TH[th.idx==j],
+                                            eXo         = eXo,
+                                            PI.y1       = PI[i,],
+                                            PI.y2       = PI[j,],
+                                            missing.ind = missing)
                 }
-                #cat("Done\n")
             }
-        }
+        } # all pairs
 
         # check for zero likelihoods/probabilities
         # FIXME: or should we replace them with a tiny number?
@@ -495,46 +556,45 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         LogLIK.pairs <- colSums(LogLIK.cases, na.rm = TRUE)
 
         # sum over pairs
-        LogLik <- logl <- sum(LogLIK.pairs)
+        logl <- logl_pairs <- sum(LogLIK.pairs)
 
-        # Fmin
-        Fmin <- (-1)*LogLik
-    }
+        if(missing == "available.cases" && all(ov.types == "ordered") && 
+           nexo != 0L) {
 
-    if(missing == "available.cases" && all(ov.types == "ordered") && 
-       nexo != 0L) {
+           uni_LIK <- matrix(0, nrow(X), ncol(X))
+           for(i in seq_len(nvar)) {
+               uni_LIK[,i] <- uni_lik(Y1    = X[,i],
+                                      th.y1 = TH[th.idx==i],
+                                      eXo   = eXo,
+                                      PI.y1 = PI[i,])
+           }
 
-       uni_LIK <- matrix(0, nrow(X), ncol(X))
-       for(i in seq_len(nvar)) {
-           uni_LIK[,i] <- uni_lik(Y1    = X[,i],
-                                  th.y1 = TH[th.idx==i],
-                                  eXo   = eXo,
-                                  PI.y1 = PI[i,])
-       }
+           if(any(uni_LIK == 0.0, na.rm = TRUE)) {
+               OUT <- +Inf
+               attr(OUT, "logl") <- as.numeric(NA)
+               return(OUT)
+           }
 
-       if(any(uni_LIK == 0.0, na.rm = TRUE)) {
-           OUT <- +Inf
-           attr(OUT, "logl") <- as.numeric(NA)
-           return(OUT)
-       }
+           uni_logLIK_cases <- log(uni_LIK) * lavcache$uniweights.casewise
 
-       uni_logLIK_cases <- log(uni_LIK) * lavcache$uniweights.casewise
+           #sum over cases
+           uni_logLIK_varwise <- colSums(uni_logLIK_cases)
 
-       #sum over cases
-       uni_logLIK_varwise <- colSums(uni_logLIK_cases)
+           #sum over variables
+           uni_logLIK <- sum(uni_logLIK_varwise)
 
-       #sum over variables
-       uni_logLIK <- sum(uni_logLIK_varwise)
-
-       #add with the pairwise part of LogLik
-       LogLik <- logl <- LogLik + uni_logLIK
+           #add with the pairwise part of LogLik
+           logl <- logl_pairs + uni_logLIK
+        }
 
        #we minimise
-       Fmin <- (-1)*LogLik
+       Fmin <- (-1)*logl
     }
 
+
+    # here, we should have two quantities: logl and Fmin
+
     # function value as returned to the minimizer
-    #fx <- -1 * LogLik
     fx <- Fmin
 
     # attach 'loglikelihood' 
@@ -674,4 +734,6 @@ estimator.2L <- function(lavmodel       = NULL,
 
     objective
 }
+
+
 

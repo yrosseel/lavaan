@@ -63,14 +63,16 @@ lav_model_objective <- function(lavmodel       = NULL,
         }
         if(debug) print(Sigma.hat)
 
-        if(meanstructure && !categorical) {
+        if(meanstructure) {
             #if(conditional.x) {
             #    Mu.hat <- computeMuHatJoint(lavmodel = lavmodel, GLIST = GLIST,
             #                           lavsamplestats = lavsamplestats)
             #} else {
                 Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #}
-        } else if(categorical) {
+        } 
+
+        if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
 
@@ -190,6 +192,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                 attr(group.fx, "logl") <- 0
             } else if(conditional.x) {
                 group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                          Mu.hat    = Mu.hat[[g]],
                                           TH        = TH[[g]],
                                           PI        = PI[[g]],
                                           th.idx    = th.idx[[g]],
@@ -200,6 +203,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                           missing   = lavdata@missing)
             } else {
                 group.fx <- estimator.PML(Sigma.hat = Sigma.hat[[g]],
+                                          Mu.hat    = Mu.hat[[g]],
                                           TH        = TH[[g]],
                                           PI        = NULL,
                                           th.idx    = th.idx[[g]],

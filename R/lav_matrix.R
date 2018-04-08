@@ -232,7 +232,7 @@ lav_matrix_antidiag_idx <- function(n = 1L) {
 #
 # and the result is c(2, 4, 5, 6, 7, 9, 10)
 #
-lav_matrix_vech_get_idx <- function(n = 1L, diagonal = TRUE,
+lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
                                     idx = integer(0L), type = "and") {
     if(length(idx) == 0L) return(integer(0L))
     n <- as.integer(n)
@@ -245,6 +245,21 @@ lav_matrix_vech_get_idx <- function(n = 1L, diagonal = TRUE,
     }
     which(lav_matrix_vech(A, diagonal = diagonal))
 }
+
+# similar to lav_matrix_vech_which_idx(), but
+# - only 'type = and'
+# - order of idx matters!
+lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE, 
+                                     idx = integer(0L)) {
+    if (length(idx) == 0L) 
+        return(integer(0L))
+    n <- as.integer(n)
+    pstar <- n*(n+1)/2
+    A <- lav_matrix_vech_reverse(seq_len(pstar))
+    B <- A[idx, idx]
+    lav_matrix_vech(B, diagonal = diagonal)
+}
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)
