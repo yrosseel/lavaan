@@ -39,7 +39,7 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
         diag(Sigma.hat2) <- 1
     }
     Cor.hat <- cov2cor(Sigma.hat2) # to get correlations (rho!)
-    cors <- lav_matrix_vech(Cor.hat, diag = FALSE)
+    cors <- lav_matrix_vech(Cor.hat, diagonal = FALSE)
 
     if(any(abs(cors) > 1)) {
         # what should we do now... force cov2cor?

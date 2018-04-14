@@ -80,7 +80,7 @@ lav_matrix_commutation_pre(A = matrix(0,0,0))
 lav_matrix_commutation_mn_pre(A, m = 1L, n = 1L)
 
 # sample statistics
-lav_matrix_cov(A, ybar = NULL)
+lav_matrix_cov(Y, ybar = NULL)
 
 # other matrix operations
 lav_matrix_symmetric_sqrt(S = matrix(0,0,0))
@@ -91,6 +91,7 @@ lav_matrix_trace(..., check = TRUE)
 \arguments{
 \item{A}{A general matrix.}
 \item{S}{A symmetric matrix.}
+\item{Y}{A matrix representing a (numeric) dataset.}
 \item{diagonal}{Logical. If TRUE, include the diagonal.}
 \item{n}{Integer. When it is the only argument, the dimension of a square 
 matrix. If m is also provided, the number of column of the matrix.}

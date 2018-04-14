@@ -8,9 +8,12 @@
 # ...
 
 
-# FIXME: if we have more than 1 factor, we remove the structural
-# part, but should we add ALL correlations among the latent variables?
-# (YES for now)
+# FIXME: 
+# - if we have more than 1 factor, we remove the structural
+#   part, but should we add ALL correlations among the latent variables?
+#   (YES for now)
+# - keep factor-specific equality constraints
+#
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL,
@@ -90,11 +93,61 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
         # FIXME: ==, :=, <, >, == involving IND...
       
         # `simple' == constraints (simple lhs and rhs)
-        EQ.idx <- which(PT$op == "==" &
-                        PT$lhs %in% IND.plabel &
-                        PT$rhs %in% IND.plabel)
-        keep.idx <- c(keep.idx, EQ.idx)
-    }
+        #EQ.idx <- which(PT$op == "==" &
+        #                PT$lhs %in% IND.plabel &
+        #                PT$rhs %in% IND.plabel)
+
+        con.idx <- which(PT$op %in% c("==","<",">"))
+        if(length(con.idx) > 0L) {
+            ID <- lav_partable_constraints_label_id(PT)
+            LABEL <- names(ID)
+            con.keep <- logical( length(con.idx) )
+            for(con in seq_len(length(con.idx))) {
+
+                lhs.keep <- FALSE
+                rhs.keep <- FALSE
+
+                # lhs
+                LHS.labels <- all.vars(as.formula(paste("~",
+                                       PT[con.idx[con],"lhs"])))
+                if(length(LHS.labels) > 0L) {
+                    # par id
+                    LHS.freeid <- ID[match(LHS.labels, LABEL)]
+
+                    # keep?
+                    if(all(LHS.freeid %in% keep.idx)) {
+                        lhs.keep <- TRUE
+                    }
+                } else {
+                    lhs.keep <- TRUE
+                }
+            
+
+                # rhs
+                RHS.labels <- all.vars(as.formula(paste("~",
+                                       PT[con.idx[con],"rhs"])))
+                if(length(RHS.labels) > 0L) {
+                    # par id
+                    RHS.freeid <- ID[match(RHS.labels, LABEL)]
+
+                    # keep?
+                    if(all(RHS.freeid %in% keep.idx)) {
+                        rhs.keep <- TRUE
+                    }
+                } else {
+                    rhs.keep <- TRUE
+                }
+
+                if(lhs.keep && rhs.keep) {
+                    con.keep[con] <- TRUE
+                }
+            }
+
+            EQ.idx <- con.idx[ con.keep ]
+            keep.idx <- c(keep.idx, EQ.idx)
+        } # con
+
+    } # group
 
     if(idx.only) {
         return(keep.idx)
@@ -129,6 +182,12 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     PT
 }
 
+# this function takes a 'full' SEM (measurement models + structural part)
+# and returns only the structural part
+#
+# - what to do if we have no regressions among the latent variables?
+#   we return all covariances among the latent variables
+#
 lav_partable_subset_structural_model <- function(PT = NULL,
                                                  lavpta = NULL,
                                                  idx.only = FALSE) {
@@ -147,6 +206,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     # eqs.names
     eqs.x.names <- lavpta$vnames$eqs.x
     eqs.y.names <- lavpta$vnames$eqs.y
+    lv.names    <- lavpta$vnames$lv.regular
 
     # keep rows idx
     keep.idx <- integer(0L)
@@ -157,6 +217,8 @@ lav_partable_subset_structural_model <- function(PT = NULL,
         # eqs.names
         eqs.names <- unique( c(lavpta$vnames$eqs.x[[g]],
                                lavpta$vnames$eqs.y[[g]]) )
+        all.names <- unique( c(eqs.names,
+                               lavpta$vnames$lv.regular[[g]]) )
 
         # regressions
         reg.idx <- which(PT$op == "~" & PT$group == g &
@@ -165,19 +227,19 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
         # the variances
         var.idx <- which(PT$op == "~~" & PT$group == g &
-                         PT$lhs %in% eqs.names &
-                         PT$rhs %in% eqs.names &
+                         PT$lhs %in% all.names &
+                         PT$rhs %in% all.names &
                          PT$lhs == PT$rhs)
 
         # optionally covariances (exo!)
         cov.idx <- which(PT$op == "~~" & PT$group == g &
-                         PT$lhs %in% eqs.names &
-                         PT$rhs %in% eqs.names &
+                         PT$lhs %in% all.names &
+                         PT$rhs %in% all.names &
                          PT$lhs != PT$rhs)
 
         # means/intercepts
         int.idx <- which(PT$op == "~1" & PT$group == g &
-                         PT$lhs %in% eqs.names)
+                         PT$lhs %in% all.names)
 
         keep.idx <- c(keep.idx, reg.idx, var.idx, cov.idx, int.idx)
     }
@@ -193,3 +255,4 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
     PT
 }
+

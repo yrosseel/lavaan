@@ -22,7 +22,7 @@ importFrom("stats",
 
 importFrom("utils",
            "combn", "modifyList", "packageDescription", "read.table",
-           "str", "write.table")
+           "str", "write.table", "write.csv")
 
 #importFrom("quadprog",
 #           "solve.QP")

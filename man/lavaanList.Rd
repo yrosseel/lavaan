@@ -8,21 +8,21 @@ Fit the same latent variable model, for a (potentially large) number of datasets
 \usage{
 lavaanList(model = NULL, dataList = NULL, dataFunction = NULL, 
     dataFunction.args = list(), ndat = length(dataList), cmd = "lavaan", 
-    ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE, 
-    parallel = c("no", "multicore", "snow"), ncpus = max(1L, 
-        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
+    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
 semList(model = NULL, dataList = NULL, dataFunction = NULL,
     dataFunction.args = list(), ndat = length(dataList),
     ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
-    parallel = c("no", "multicore", "snow"), ncpus = max(1L,
-        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
 cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     dataFunction.args = list(), ndat = length(dataList),
     ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
-    parallel = c("no", "multicore", "snow"), ncpus = max(1L,
-        parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -50,6 +50,9 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     \code{"all"} selects all slots.}
 \item{FUN}{Function. A function which when applied to the
     \code{\linkS4class{lavaan}} object returns the information of interest.}
+\item{store.failed}{Logical. If \code{TRUE}, write (to tempdir()) the dataset
+     and (if available) the fitted object when the estimation for a particular
+     dataset somehow failed. This will allow posthoc inspection of the problem.}
 \item{parallel}{The type of parallel operation to be used (if any). If
 missing, the default is \code{"no"}.}
 \item{ncpus}{Integer. The number of processes to be used in parallel operation:
