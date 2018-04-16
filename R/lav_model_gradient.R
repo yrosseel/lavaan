@@ -439,51 +439,15 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                      eXo        = NULL,
                                      PI         = NULL,
                                      missing    = lavdata@missing)
-
-              #  #### DEBUG ONLY ##### 
-              #  tmp_x <- function(x) {
-              #      TH2 <- numeric(14)
-              #      TH2[1:12] <- x[1:12]
-              #      TH2[13:14] <- -x[c(13,14)]
-              #      MU.HAT <- numeric(6)
-              #      MU.HAT[c(5,6)] <- x[c(13,14)]
-              #      SIGMA.HAT <- lav_matrix_vech_reverse(x[17:31],
-              #                        diagonal = FALSE)
-              #      diag(SIGMA.HAT) <- 1
-              #      diag(SIGMA.HAT)[c(5,6)] <- x[c(15,16)]
-      
-              #             out <- estimator.PML(Sigma.hat = SIGMA.HAT,
-              #                            Mu.hat = MU.HAT,
-              #                           TH = TH2,
-              #                           th.idx     = th.idx[[g]],
-              #                           num.idx    = num.idx[[g]],
-              #                           X          = lavdata@X[[g]],
-              #                           eXo        = NULL)
-              #      out
-              #  }
-              #  d1.num <- numDeriv::grad(func = tmp_x,
-              #                       x = c(TH[[g]][1:12],
-              #                             Mu.hat[[g]][5:6],
-              #                             diag(Sigma.hat[[g]])[c(5,6)],
-              #                             lav_matrix_vech(Sigma.hat[[g]],
-              #                                             diagonal = FALSE)))
-
-              #  d1[c(13,14)] <- -1 * d1[c(13,14)] # Mu.hat
-                }
-
-                # cat("d1.try = \n")
-                # print(d1.try)
-
-                # cat("d1 = \n")
-                # print(d1)
-                #stop("for now")
-
+                } # not conditional.x
 
                 # chain rule (fmin)
                 group.dx <- 
                     as.numeric(t(d1) %*% Delta[[g]])
 
-            } else if(estimator == "FML") {
+           } # PML
+
+           else if(estimator == "FML") {
                 d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
                                  TH        = TH[[g]],
                                  th.idx    = th.idx[[g]],

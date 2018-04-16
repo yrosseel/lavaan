@@ -494,7 +494,11 @@ lav_options_set <- function(opt = NULL) {
         }
     } else if(opt$meanstructure == "default") {
         # by default: no meanstructure!
-        opt$meanstructure <- FALSE
+        if(opt$estimator == "pml") {
+            opt$meanstructure <- TRUE
+        } else {
+            opt$meanstructure <- FALSE
+        }
         # unless there is a group argument? (added since 0.4-10)
         # if(!is.null(opt$group)) opt$meanstructure <- TRUE
     } else {

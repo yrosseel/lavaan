@@ -246,13 +246,13 @@ ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2, dx.rho=dx.rho)
 }
 
+
+# note: input must be rho, not cov_y1.y2, because the latter
+#       depends on var.y1, and this complicates the gradient
 ps_cor_scores_no_exo <- function(Y1, Y2,
                                  var.y1 = NULL, eta.y1 = NULL,
-                                 th.y2 = NULL, rho = NULL, cov.y12 = NULL) {
-
-    if(is.null(rho)) {
-        rho <- cov.y12 / sqrt(var.y1)
-    }
+                                 th.y2 = NULL, rho = NULL, 
+                                 sigma.correction = FALSE) {
 
     R <- sqrt(1 - rho*rho)
     Z <- (Y1 - eta.y1) / sqrt(var.y1)
@@ -292,6 +292,19 @@ ps_cor_scores_no_exo <- function(Y1, Y2,
     TAUj  <- y.Z1 * (z1*rho - Z)
     TAUj1 <- y.Z2 * (z2*rho - Z)
     dx.rho <- pyx.inv * 1/(R*R*R) * (TAUj - TAUj1)
+
+    if(sigma.correction) {
+        dx.rho.orig <- dx.rho
+        dx.var.y1.orig <- dx.var.y1
+
+        # sigma
+        dx.rho <- dx.rho.orig / y1.SD
+   
+        # var
+        COV <- rho * y1.SD
+        dx.var.y1 <- ( dx.var.y1.orig - 
+                       1/2 * COV/var.y1 * 1/y1.SD * dx.rho.orig )
+    }
 
     list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, dx.th.y2=dx.th.y2,
          dx.rho=dx.rho)

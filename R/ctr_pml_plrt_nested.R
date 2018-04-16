@@ -406,11 +406,12 @@ MYcomputeGradient <- function (object, GLIST, samplestats = NULL, X = NULL,
         GLIST <- object@GLIST
     }
    Sigma.hat <- computeSigmaHat(object, GLIST = GLIST, extra = (estimator ==  "ML"))
+   Mu.hat <- computeMuHat(object, GLIST = GLIST)
    TH <- computeTH(object, GLIST = GLIST)
    g<-1
-   d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
-                             th.idx = th.idx[[g]], num.idx = num.idx[[g]],
-                             X = X[[g]], lavcache = lavcache[[g]])
+   d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], Mu.hat = Mu.hat[[g]], 
+                    TH = TH[[g]], th.idx = th.idx[[g]], num.idx = num.idx[[g]],
+                    X = X[[g]], lavcache = lavcache[[g]])
 
  #!?  if(equalConstr) { #delete the following three commented lines, wrong
  #     Delta <- lavaan:::computeDelta (lavmodel= object, GLIST. = GLIST)
@@ -505,14 +506,15 @@ MYNvcov.first.order <- function (lavmodel, lavsamplestats = NULL,
                                        x.el.idx. = MY.x.el.idx)
   #  }
     Sigma.hat <- computeSigmaHat(lavmodel)
+    Mu.hat <- computeMuHat(lavmodel)
     TH <- computeTH(lavmodel)
     g <-1
 
-    SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
-                              th.idx = lavmodel@th.idx[[g]], 
-                              num.idx = lavmodel@num.idx[[g]],
-                              X = lavdata@X[[g]], lavcache = lavcache,
-                              scores = TRUE, negative = FALSE)
+    SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]], 
+                     Mu.hat = Mu.hat[[g]], th.idx = lavmodel@th.idx[[g]], 
+                     num.idx = lavmodel@num.idx[[g]],
+                     X = lavdata@X[[g]], lavcache = lavcache,
+                     scores = TRUE, negative = FALSE)
     group.SC <- SC %*% Delta[[g]]
     B0.group[[g]] <- crossprod(group.SC)
     #!!!! B0.group[[g]] <- B0.group[[g]]/lavsamplestats@ntotal  !!! skip so that the result

@@ -151,38 +151,53 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                     stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
                 }
 
-                # no exo
-                dx_mu <- lav_mvnorm_dlogl_dmu(Y = X[,c(i,j)],
-                                              Mu = Mu.hat[c(i,j)],
-                                              Sigma = Sigma.hat[c(i,j),
-                                                                c(i,j)])
-                dx_vech_sigma <- lav_mvnorm_dlogl_dvechSigma(Y = X[,c(i,j)],
-                                                  Mu = Mu.hat[c(i,j)],
-                                                  Sigma = Sigma.hat[c(i,j),
-                                                                    c(i,j)])
 
-                if(all(ov.types == "numeric") && nexo == 0L) {
-                    # MU1 + MU2
-                    GRAD[pstar.idx, c(i,j)] <- dx_mu
-                   
-                    # VAR1 + COV_12 + VAR2
-                    GRAD[pstar.idx, nvar +
-                         lav_matrix_vech_match_idx(nvar, idx = c(i,j))] <- 
-                        dx_vech_sigma
-                } else { 
-                    # mixed ordered/continuous
+                if(scores) {
+                    SC <- lav_mvnorm_scores_mu_vech_sigma(Y = X[,c(i,j)],
+                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
 
-                    # MU
-                    GRAD[pstar.idx, th.idx_i] <- -1 * dx_mu[1]
-                    GRAD[pstar.idx, th.idx_j] <- -1 * dx_mu[2]
+                    if(all(ov.types == "numeric") && nexo == 0L) {
+                        # MU1 + MU2
+                        SCORES[, c(i,j)] <- SCORES[, c(i,j)] + SC[, c(1,2)]
+                        # VAR1 + COV_12 + VAR2
+                        var.idx <- ( nvar + 
+                            lav_matrix_vech_match_idx(nvar, idx = c(i,j)) )
+                        SCORES[, var.idx] <- SCORES[, var.idx] + SC[, c(3,4,5)]
+                    } else { # mixed ordered/continuous
+                        # MU
+                        mu.idx <- c(th.idx_i, th.idx_j) 
+                        SCORES[, mu.idx] <- SCORES[, mu.idx] + (-1)*SC[, c(1,2)]
+                        # VAR+COV
+                        var.idx <- c(var.idx_i, cor.idx, var.idx_j)
+                        SCORES[, var.idx] <- SCORES[, var.idx] + SC[, c(3,4,5)]
+                    }
 
-                    # VAR
-                    GRAD[pstar.idx, var.idx_i] <- dx_vech_sigma[1]
-                    GRAD[pstar.idx, var.idx_j] <- dx_vech_sigma[3]
+                } else {
+                    dx_mu <- lav_mvnorm_dlogl_dmu(Y = X[,c(i,j)],
+                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
+                    dx_vech_sigma <- lav_mvnorm_dlogl_dvechSigma(Y = X[,c(i,j)],
+                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
 
-                    # COV
-                    GRAD[pstar.idx, cor.idx] <- dx_vech_sigma[2]
-                }
+                    if(all(ov.types == "numeric") && nexo == 0L) {
+                        # MU1 + MU2
+                        GRAD[pstar.idx, c(i,j)] <- dx_mu
+                        # VAR1 + COV_12 + VAR2
+                        GRAD[pstar.idx, nvar +
+                             lav_matrix_vech_match_idx(nvar, idx = c(i,j))] <- 
+                            dx_vech_sigma
+                    } else { # mixed ordered/continuous
+                        # MU
+                        GRAD[pstar.idx, th.idx_i] <- -1 * dx_mu[1] # note -1!
+                        GRAD[pstar.idx, th.idx_j] <- -1 * dx_mu[2] # note -1!
+                        # VAR
+                        GRAD[pstar.idx, var.idx_i] <- dx_vech_sigma[1]
+                        GRAD[pstar.idx, var.idx_j] <- dx_vech_sigma[3]
+                        # COV
+                        GRAD[pstar.idx,   cor.idx] <- dx_vech_sigma[2]
+                    }
+                } # gradient only
+
+
             } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                 # polyserial correlation
                 if(nexo > 1L) {
@@ -193,27 +208,40 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                                                    var.y1 = Sigma.hat[i,i],
                                                    eta.y1 = rep(Mu.hat[i], N),
                                                    th.y2 = TH[ th.idx == j ],
-                                                   rho = Cor.hat[i,j])
-                # MU  
-                GRAD[pstar.idx, th.idx_i] <- 
-                    -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+                                                   rho = Cor.hat[i,j],
+                                                   sigma.correction = TRUE)
 
-                # TH
-                if(length(th.idx_j) > 1L) {
-                    GRAD[pstar.idx, th.idx_j] <-
-                        colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+                if(scores) {
+
+                    # MU  
+                    SCORES[, th.idx_i] <- ( SCORES[, th.idx_i] +
+                                            -1 * SC.COR.UNI$dx.mu.y1 )
+                    # TH
+                    SCORES[, th.idx_j] <- ( SCORES[, th.idx_j] +
+                                            SC.COR.UNI$dx.th.y2 )
+                    # VAR
+                    SCORES[, var.idx_i] <- ( SCORES[, var.idx_i] +
+                                             SC.COR.UNI$dx.var.y1 )
+                    # COR
+                    SCORES[, cor.idx] <- ( SCORES[, cor.idx] +
+                                           SC.COR.UNI$dx.rho )
+
                 } else {
+
+                    # MU  
+                    GRAD[pstar.idx, th.idx_i] <- 
+                        -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+                    # TH
                     GRAD[pstar.idx, th.idx_j] <-
-                        sum(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
-                }
+                            colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+                    # VAR
+                    GRAD[pstar.idx, var.idx_i] <- 
+                        sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE)
+                    # COR
+                    GRAD[pstar.idx, cor.idx] <- 
+                        sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
 
-                # VAR
-                GRAD[pstar.idx, var.idx_i] <- 
-                    sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE)
-
-                # COR
-                GRAD[pstar.idx, cor.idx] <- 
-                    sum(SC.COR.UNI$dx.rho, na.rm = TRUE)# / sqrt(Sigma.hat[i,i])
+                } # grad only
 
             } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
                 # polyserial correlation
@@ -225,28 +253,40 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                                                    var.y1 = Sigma.hat[j,j],
                                                    eta.y1 = rep(Mu.hat[j], N),
                                                    th.y2 = TH[ th.idx == i ],
-                                                   rho = Cor.hat[i,j])
+                                                   rho = Cor.hat[i,j],
+                                                   sigma.correction = TRUE)
 
-                # MU  
-                GRAD[pstar.idx, th.idx_j] <- 
-                    -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+                if(scores) {
 
-                # TH
-                if(length(th.idx_i) > 1L) {
-                    GRAD[pstar.idx, th.idx_i] <-
-                        colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+                   # MU  
+                    SCORES[, th.idx_j] <- ( SCORES[, th.idx_j] +
+                                            -1 * SC.COR.UNI$dx.mu.y1 )
+                    # TH
+                    SCORES[, th.idx_i] <- ( SCORES[, th.idx_i] +
+                                            SC.COR.UNI$dx.th.y2 )
+                    # VAR
+                    SCORES[, var.idx_j] <- ( SCORES[, var.idx_j] +
+                                             SC.COR.UNI$dx.var.y1 )
+                    # COR
+                    SCORES[, cor.idx] <- ( SCORES[, cor.idx] +
+                                           SC.COR.UNI$dx.rho )
+
                 } else {
+
+                    # MU  
+                    GRAD[pstar.idx, th.idx_j] <-
+                        -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+                    # TH
                     GRAD[pstar.idx, th.idx_i] <-
-                        sum(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
-                }
+                            colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+                    # VAR
+                    GRAD[pstar.idx, var.idx_j] <-
+                        sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE)
+                    # COR
+                    GRAD[pstar.idx, cor.idx] <-
+                        sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
 
-                # VAR
-                GRAD[pstar.idx, var.idx_j] <- 
-                    sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE) # * sqrt( Sigma.hat[j,j] )
-
-                # COR
-                GRAD[pstar.idx, cor.idx] <- 
-                    sum(SC.COR.UNI$dx.rho, na.rm = TRUE) / sqrt(Sigma.hat[j,j])
+                } # grad only
 
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
@@ -377,7 +417,7 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
     if(scores) return(SCORES)
 
     # DEBUG
-    print(GRAD)
+    #:print(GRAD)
     ###########
 
 

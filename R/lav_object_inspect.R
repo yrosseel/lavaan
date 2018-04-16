@@ -2209,10 +2209,25 @@ lav_object_inspect_UGamma <- function(object,
 lav_object_inspect_delta <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    OUT <- computeDelta(object@Model)
+    lavmodel    <- object@Model
+    lavdata     <- object@Data
+    lavpartable <- object@ParTable
+    lavpta      <- object@pta
 
-    # labels
-    lavmodel <- object@Model
+    OUT <- lav_object_inspect_delta_internal(lavmodel = lavmodel, 
+        lavdata = lavdata, lavpartable = lavpartable, lavpta = lavpta,
+        add.labels = add.labels, add.class = add.class, 
+        drop.list.single.group = drop.list.single.group)   
+
+    OUT
+}
+
+lav_object_inspect_delta_internal <- function(lavmodel = NULL, lavdata  = NULL,
+    lavpartable = NULL, lavpta = NULL,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    OUT <- computeDelta(lavmodel)
+
     categorical    <- lavmodel@categorical
     conditional.x  <- lavmodel@conditional.x
     group.w.free   <- lavmodel@group.w.free
@@ -2223,25 +2238,29 @@ lav_object_inspect_delta <- function(object,
     nblocks        <- lavmodel@nblocks
 
     if(add.labels) {
-        PNAMES <- lav_partable_labels(object@ParTable, type="free")
+        PNAMES <- lav_partable_labels(lavpartable, type="free")
 
-        if(object@Data@nlevels > 1L) {
+        if(is.null(lavpta)) {
+            lavpta <- lav_partable_attributes(lavpartable)
+        }
+
+        if(lavdata@nlevels > 1L) {
             # store names per block, rbind later
             NAMES <- vector("list", length = nblocks)
         }
 
         for(g in 1:nblocks) {
 
-            if(object@Data@nlevels == 1L) {
+            if(lavdata@nlevels == 1L) {
                 colnames(OUT[[g]]) <- PNAMES
             }
 
             if(conditional.x) {
-                ov.names <- object@pta$vnames$ov.nox[[g]]
+                ov.names <- lavpta$vnames$ov.nox[[g]]
             } else {
-                ov.names <- object@pta$vnames$ov[[g]]
+                ov.names <- lavpta$vnames$ov[[g]]
             }
-            ov.names.x <- object@pta$vnames$ov.x[[g]]
+            ov.names.x <- lavpta$vnames$ov.x[[g]]
             nvar <- length(ov.names)
 
 
@@ -2252,14 +2271,27 @@ lav_object_inspect_delta <- function(object,
             # Sigma
             # - if continuous: vech(Sigma)
             # - if categorical: first numeric variances, then
-            tmp <- apply(expand.grid(ov.names, ov.names), 1L, 
-                         paste, collapse = "~~")
+            #tmp <- apply(expand.grid(ov.names, ov.names), 1L, 
+            #             paste, collapse = "~~")
+
+            #if(categorical) {
+            #    names.cor <- tmp[lav_matrix_vech_idx(nvar, diagonal = FALSE)]
+            #    names.var <- tmp[lav_matrix_diag_idx(nvar)[num.idx[[g]]]]
+            #} else {
+            #    names.cov <- tmp[lav_matrix_vech_idx(nvar, diagonal = TRUE)]
+            #}
+
+            # NOTE: in 0.6-1, we use the same order, but 'label' in row-wise
+            # format (eg x1 ~~ x2 instead of x2 ~~ x1)
+            tmp <- matrix(apply(expand.grid(ov.names, ov.names), 1L, 
+                          paste, collapse = "~~"), nrow = nvar)
             if(categorical) {
-                names.cor <- tmp[lav_matrix_vech_idx(nvar, diagonal = FALSE)]
-                names.var <- tmp[lav_matrix_diag_idx(nvar)[num.idx[[g]]]]
+                names.cor <- lav_matrix_vechru(tmp, diagonal = FALSE)
+                names.var <- diag(tmp)[num.idx[[g]]]
             } else {
-                names.cov <- tmp[lav_matrix_vech_idx(nvar, diagonal = TRUE)]
+                names.cov <- lav_matrix_vechru(tmp, diagonal = TRUE)
             }
+
 
             # Mu
             if(!categorical && lavmodel@meanstructure) {
@@ -2274,7 +2306,7 @@ lav_object_inspect_delta <- function(object,
 
             # th
             if(categorical) {
-                names.th <- object@pta$vnames$th[[g]]
+                names.th <- lavpta$vnames$th[[g]]
                 # interweave numeric intercepts, if any
                 if(length(num.idx[[g]]) > 0L) {
                     tmp <- character( length(th.idx[[g]]) )
@@ -2290,7 +2322,7 @@ lav_object_inspect_delta <- function(object,
                 names.gw <- "w"
             }
 
-            if(object@Data@nlevels == 1L) {
+            if(lavdata@nlevels == 1L) {
                 rownames(OUT[[g]]) <- c(names.gw,
                                         names.th, names.mu, 
                                         names.pi, 
@@ -2326,8 +2358,8 @@ lav_object_inspect_delta <- function(object,
     if(lavmodel@ngroups == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
+        if(length(lavdata@group.label) > 0L) {
+            names(OUT) <- unlist(lavdata@group.label)
         }
     }
 

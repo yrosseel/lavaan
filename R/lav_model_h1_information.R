@@ -500,14 +500,17 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
             if(lavmodel@conditional.x) {
                 SIGMA <- implied$res.cov[[g]]
+                MU    <- implied$res.mean[[g]]
                 TH    <- implied$res.th[[g]]
                 PI    <- implied$res.slopes[[g]]
             } else {
                 SIGMA <- implied$cov[[g]]
+                MU    <- implied$mean[[g]]
                 TH    <- implied$th[[g]]
                 PI    <- implied$slopes[[g]]
             }
             SC <- pml_deriv1(Sigma.hat  = SIGMA,
+                             Mu.hat     = MU,
                              TH         = TH,
                              th.idx     = lavmodel@th.idx[[g]],
                              num.idx    = lavmodel@num.idx[[g]],

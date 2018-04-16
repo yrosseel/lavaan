@@ -70,7 +70,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             #} else {
                 Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #}
-        } 
+        }
 
         if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
