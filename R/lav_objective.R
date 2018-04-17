@@ -215,6 +215,12 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     } else {
         diag(Sigma.hat2) <- 1
     }
+    # all positive variances? (for continuous variables)
+    if(any(diag(Sigma.hat2) < 0)) {
+        OUT <- +Inf
+        attr(OUT, "logl") <- as.numeric(NA)
+        return(OUT)
+    }
     Cor.hat <- cov2cor(Sigma.hat2) # to get correlations (rho!)
     cors <- lav_matrix_vech(Cor.hat, diagonal = FALSE)
 
@@ -437,29 +443,30 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
         for(j in seq_len(nvar-1L)) {
             for(i in (j+1L):nvar) {
                 pstar.idx <- PSTAR[i,j]
-                if(ov.types[i] == "numeric" && 
+                if(ov.types[i] == "numeric" &&
                    ov.types[j] == "numeric") {
-                    logLikPair[pstar.idx] <- lav_mvnorm_loglik_data(
+                    logLIK <- lav_mvnorm_loglik_data(
                         Y = X[,c(i,j)], Mu = Mu.hat[c(i,j)],
-                        Sigma = Sigma.hat[c(i,j), c(i,j)])
-                } else if(ov.types[i] == "numeric" && 
+                        Sigma = Sigma.hat[c(i,j), c(i,j)], casewise = TRUE)
+                    logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
+                } else if(ov.types[i] == "numeric" &&
                           ov.types[j] == "ordered") {
                     # polyserial correlation
-                    LIK <- ps_loglik_no_exo(Y1 = X[,i], Y2 = X[,j], 
-                                            var.y1 = Sigma.hat[i,i], 
-                                            eta.y1 = rep(Mu.hat[i], N),
-                                            th.y2 = TH[ th.idx == j ],
-                                            rho = Cor.hat[i,j])
-                    logLikPair[pstar.idx] <- sum(LIK)
-                } else if(ov.types[j] == "numeric" && 
+                    logLIK <- ps_loglik_no_exo(Y1 = X[,i], Y2 = X[,j], 
+                                               var.y1 = Sigma.hat[i,i], 
+                                               eta.y1 = rep(Mu.hat[i], N),
+                                               th.y2 = TH[ th.idx == j ],
+                                               rho = Cor.hat[i,j])
+                    logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
+                } else if(ov.types[j] == "numeric" &&
                           ov.types[i] == "ordered") {
                     # polyserial correlation
-                    LIK <- ps_loglik_no_exo(Y1 = X[,j], Y2 = X[,i], 
-                                            var.y1 = Sigma.hat[j,j],
-                                            eta.y1 = rep(Mu.hat[j], N),
-                                            th.y2 = TH[ th.idx == i ],
-                                            rho = Cor.hat[i,j])
-                    logLikPair[pstar.idx] <- sum(LIK)
+                    logLIK <- ps_loglik_no_exo(Y1 = X[,j], Y2 = X[,i], 
+                                               var.y1 = Sigma.hat[j,j],
+                                               eta.y1 = rep(Mu.hat[j], N),
+                                               th.y2 = TH[ th.idx == i ],
+                                               rho = Cor.hat[i,j])
+                    logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
                 } else if(ov.types[i] == "ordered" && 
                           ov.types[j] == "ordered") {
                     # polychoric correlation
@@ -469,12 +476,19 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                     # avoid zeroes
                     pairwisePI[ pairwisePI < .Machine$double.eps] <- 
                                              .Machine$double.eps
+                    # note: missing values are just not counted
                     FREQ <- pc_freq(X[,i], X[,j])
                     logLikPair[pstar.idx] <- sum(FREQ * log(pairwisePI))
                 }
             }
         } # all pairs
-        
+
+        na.idx <- which(is.na(logLikPair))
+        if(length(na.idx) > 0L) {
+            warning("lavaan WARNING: some pairs produces NA values for logl:",
+                    "\n", paste(round(logLikPair, 3), collapse = " "))
+        }
+
         # sum over pairs
         logl <- sum(logLikPair)
 

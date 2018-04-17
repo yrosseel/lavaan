@@ -151,10 +151,10 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                     stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
                 }
 
+                SC <- lav_mvnorm_scores_mu_vech_sigma(Y = X[,c(i,j)],
+                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
 
                 if(scores) {
-                    SC <- lav_mvnorm_scores_mu_vech_sigma(Y = X[,c(i,j)],
-                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
 
                     if(all(ov.types == "numeric") && nexo == 0L) {
                         # MU1 + MU2
@@ -173,28 +173,24 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                     }
 
                 } else {
-                    dx_mu <- lav_mvnorm_dlogl_dmu(Y = X[,c(i,j)],
-                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
-                    dx_vech_sigma <- lav_mvnorm_dlogl_dvechSigma(Y = X[,c(i,j)],
-                        Mu = Mu.hat[c(i,j)], Sigma = Sigma.hat[c(i,j), c(i,j)])
 
                     if(all(ov.types == "numeric") && nexo == 0L) {
+                        mu.idx <- c(i,j)
+                        sigma.idx <- ( nvar +
+                             lav_matrix_vech_match_idx(nvar, idx = c(i,j)) )
                         # MU1 + MU2
-                        GRAD[pstar.idx, c(i,j)] <- dx_mu
-                        # VAR1 + COV_12 + VAR2
-                        GRAD[pstar.idx, nvar +
-                             lav_matrix_vech_match_idx(nvar, idx = c(i,j))] <- 
-                            dx_vech_sigma
-                    } else { # mixed ordered/continuous
-                        # MU
-                        GRAD[pstar.idx, th.idx_i] <- -1 * dx_mu[1] # note -1!
-                        GRAD[pstar.idx, th.idx_j] <- -1 * dx_mu[2] # note -1!
-                        # VAR
-                        GRAD[pstar.idx, var.idx_i] <- dx_vech_sigma[1]
-                        GRAD[pstar.idx, var.idx_j] <- dx_vech_sigma[3]
-                        # COV
-                        GRAD[pstar.idx,   cor.idx] <- dx_vech_sigma[2]
+                        GRAD[pstar.idx, mu.idx] <-
+                            colSums(SC[,c(1,2)], na.rm = TRUE)
+                    } else {
+                        mu.idx <- c(th.idx_i, th.idx_j)
+                        sigma.idx <- c(var.idx_i, cor.idx, var.idx_j)
+                        # MU (reverse sign!)
+                        GRAD[pstar.idx, mu.idx] <-
+                            -1 * colSums(SC[,c(1,2)], na.rm = TRUE)
                     }
+                    # SIGMA
+                    GRAD[pstar.idx, sigma.idx] <-
+                        colSums(SC[,c(3,4,5)], na.rm = TRUE)
                 } # gradient only
 
 
