@@ -296,6 +296,8 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
         B[clz] <- q.zz + 2*q.yz - q.yyc
     }
     # q.yya + q.yyb
+    # there reason why we multiply the trace by 'N - nclusters' is
+    # S.PW has been divided by 'N - nclusters'
     q.W <- sum(cluster.size - 1) * sum(sigma.w.inv * S.PW)
     # logdet within part
     L.W  <- sum(cluster.size - 1) * sigma.w.logdet
@@ -813,14 +815,14 @@ lav_mvnorm_cluster_information_firstorder <- function(Y1           = NULL,
         x.idx.w <- which(ov.idx[[1]] %in% x.idx)
         if(length(x.idx.w) > 0L) {
             xw.idx <- c(x.idx.w,
-                        nw + lav_matrix_vech_get_idx(n = nw, idx = x.idx.w))
+                        nw + lav_matrix_vech_which_idx(n = nw, idx = x.idx.w))
         } else {
             xw.idx <- integer(0L)
         }
         x.idx.b <- which(ov.idx[[2]] %in% x.idx)
         if(length(x.idx.b) > 0L) {
             xb.idx <- c(x.idx.b,
-                        nb + lav_matrix_vech_get_idx(n = nb, idx = x.idx.b))
+                        nb + lav_matrix_vech_which_idx(n = nb, idx = x.idx.b))
         } else {
             xb.idx <- integer(0L)
         }
@@ -936,7 +938,7 @@ lav_mvnorm_cluster_information_expected <- function(Lp           = NULL,
     # if x.idx, set rows/cols to zero
     if(length(x.idx) > 0L) {
         xw.idx <- c(x.idx,
-                   p.tilde + lav_matrix_vech_get_idx(n = p.tilde, idx = x.idx))
+                   p.tilde + lav_matrix_vech_which_idx(n = p.tilde, idx = x.idx))
         xb.idx <- npar + xw.idx
         all.idx <- c(xw.idx, xb.idx)
         information.tilde[all.idx, ] <- 0
@@ -1126,14 +1128,14 @@ lav_mvnorm_cluster_information_observed <- function(Lp           = NULL,
         x.idx.w <- which(ov.idx[[1]] %in% x.idx)
         if(length(x.idx.w) > 0L) {
             xw.idx <- c(x.idx.w,
-                        nw + lav_matrix_vech_get_idx(n = nw, idx = x.idx.w))    
+                        nw + lav_matrix_vech_which_idx(n = nw, idx = x.idx.w))    
         } else {
             xw.idx <- integer(0L)
         }
         x.idx.b <- which(ov.idx[[2]] %in% x.idx)
         if(length(x.idx.b) > 0L) {
             xb.idx <- c(x.idx.b,
-                        nb + lav_matrix_vech_get_idx(n = nb, idx = x.idx.b))
+                        nb + lav_matrix_vech_which_idx(n = nb, idx = x.idx.b))
         } else {
             xb.idx <- integer(0L)
         }

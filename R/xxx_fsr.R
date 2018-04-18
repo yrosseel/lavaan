@@ -122,12 +122,12 @@ fsr <- function(model      = NULL,
     PT$est <- PT$se <- NULL
 
     # find the structural regressions in the parameter table
-    eqs.idx <- which(PT$op == "~" & (PT$lhs %in% lv.names |
-                                     PT$rhs %in% lv.names))
+    #eqs.idx <- which(PT$op == "~" & (PT$lhs %in% lv.names |
+    #                                 PT$rhs %in% lv.names))
     # FIXME: we should allow for just correlations too?
-    if(length(eqs.idx) == 0L) {
-        stop("lavaan ERROR: regressions do not involve any latent variables")
-    }
+    #if(length(eqs.idx) == 0L) {
+    #    stop("lavaan ERROR: regressions do not involve any latent variables")
+    #}
 
     # determine eqs.y and eqs.x names
     eqs.x.names <- unlist(FIT@pta$vnames$eqs.x)

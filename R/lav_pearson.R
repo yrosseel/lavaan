@@ -12,7 +12,10 @@ pp_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 }
 
 # individual likelihoods
-pp_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
+pp_lik <- function(Y1, Y2, eXo=NULL, 
+                   eta.y1 = NULL, eta.y2 = NULL,
+                   var.y1 = NULL, var.y2 = NULL,
+                   rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     stopifnot(!is.null(rho))
     if(is.null(fit.y1)) fit.y1 <- lavOLS(Y1, X=eXo)
@@ -20,10 +23,18 @@ pp_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
     if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(Y2)) Y2 <- fit.y2$y
 
-    var.y1 <- fit.y1$theta[fit.y1$var.idx]
-    var.y2 <- fit.y2$theta[fit.y2$var.idx]
-    eta.y1 <- fit.y1$yhat
-    eta.y2 <- fit.y2$yhat
+    if(is.null(var.y1)) {
+        var.y1 <- fit.y1$theta[fit.y1$var.idx]
+    }
+    if(is.null(var.y2)) {
+        var.y2 <- fit.y2$theta[fit.y2$var.idx]
+    }
+    if(is.null(eta.y1)) {
+        eta.y1 <- fit.y1$yhat
+    }
+    if(is.null(eta.y2)) {
+        eta.y2 <- fit.y2$yhat
+    }
 
     # lik 
     cov.y12 <- rho*sqrt(var.y1)*sqrt(var.y2)
@@ -168,3 +179,41 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2,
          dx.rho=dx.rho)
 }
+
+pp_cor_scores_no_exo <- function(Y1, Y2, 
+                                 eta.y1 = NULL, var.y1 = NULL,
+                                 eta.y2 = NULL, var.y2 = NULL,
+                                 rho = NULL) {
+
+    stopifnot(!is.null(rho))
+
+    R <- (1 - rho*rho)
+
+    Y1c <- Y1 - eta.y1
+    Y2c <- Y2 - eta.y2
+    sd.y1 <- sqrt(var.y1)
+    sd.y2 <- sqrt(var.y2)
+
+    # mu.y1
+    dx.mu.y1 <- (2*Y1c/var.y1 - 2*rho*Y2c/(sd.y1*sd.y2))/(2*R)
+
+    # mu.y2
+    dx.mu.y2 <- - (2*rho*Y1c/(sd.y1*sd.y2) - 2*Y2c/var.y2)/(2*R)
+
+    # var.y1
+    dx.var.y1 <- - (0.5/var.y1 -
+                   ((Y1c*Y1c)/(var.y1*var.y1) - rho*Y1c*Y2c/(var.y1*sd.y1*sd.y2))/(2*R))
+
+    # var.y2
+    dx.var.y2 <- -(0.5/var.y2 +
+                  (rho*Y1c*Y2c/(var.y2*sd.y1*sd.y2) - (Y2c*Y2c)/(var.y2*var.y2))/(2*R))
+
+    # rho
+    z <- (Y1c*Y1c)/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + (Y2c*Y2c)/var.y2
+    dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/(R*R))
+
+    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, 
+         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, 
+         dx.rho=dx.rho)
+}
+

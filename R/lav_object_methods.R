@@ -328,8 +328,9 @@ standardizedSolution <- standardizedsolution <- function(object,
             }
             # now, we can safely take the square root
             tmp <- sqrt(tmp)
+
             # catch near-zero SEs
-            zero.idx <- which(tmp < sqrt(.Machine$double.eps))
+            zero.idx <- which(tmp < .Machine$double.eps^(1/3)) # was 1/2 < 0.6
             if(length(zero.idx) > 0L) {
                 tmp[zero.idx] <- 0.0
             }

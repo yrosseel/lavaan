@@ -12,16 +12,23 @@ ps_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 }
 
 # individual likelihoods
-ps_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
+ps_lik <- function(Y1, Y2, eXo=NULL, var.y1 = NULL, eta.y1 = NULL,
+                   rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     stopifnot(!is.null(rho))
     if(is.null(fit.y1)) fit.y1 <- lavOLS(Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(Y2, X=eXo)
     if(missing(Y1)) Y1 <- fit.y1$y
+    if(is.null(var.y1)) {
+        var.y1 <- fit.y1$theta[fit.y1$var.idx]
+    }
+    if(is.null(eta.y1)) {
+        eta.y1 <- fit.y1$yhat
+    }
 
     R <- sqrt(1 - rho*rho)
-    y1.SD  <- sqrt(fit.y1$theta[fit.y1$var.idx])
-    y1.ETA <- fit.y1$yhat
+    y1.SD  <- sqrt(var.y1)
+    y1.ETA <- eta.y1
     Z <- (Y1 - y1.ETA) / y1.SD
     
     # p(Y2|Y1)
@@ -63,6 +70,45 @@ ps_logl_x <- function(x, Y1, Y2, eXo=NULL, nth.y2) {
 
 
     ps_logl(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
+}
+
+# individual loglikelihoods - no exo!
+ps_loglik_no_exo <- function(Y1, Y2, var.y1 = NULL, eta.y1 = NULL, rho=NULL,
+                             cov.y12 = NULL, th.y2 = NULL) {
+
+    if(is.null(rho)) {
+        rho <- cov.y12 / sqrt(var.y1)
+    }
+
+    #if(abs(rho) > 1) {
+    #    # should never happen
+    #    cat("rho = ", rho, "\n")
+    #    cat("cov = ", cov.y12, "\n")
+    #    cat("var.y1 = ", var.y1, "\n")
+    #    stop("rho > 1")
+    #}
+
+    R <- sqrt(1 - rho*rho)
+    Z <- (Y1 - eta.y1) / sqrt(var.y1)
+    
+    # p(Y2|Y1)
+    TH <- c(-Inf, th.y2, +Inf)
+    z1 <- pmin( 100, TH[Y2 + 1L])
+    z2 <- pmax(-100, TH[Y2 + 1L - 1L])
+
+    tauj.star  <- (z1 - rho*Z)/R
+    tauj1.star <- (z2 - rho*Z)/R
+    py2y1 <- pnorm(tauj.star) - pnorm(tauj1.star)
+    py2y1[py2y1 < .Machine$double.eps] <- .Machine$double.eps
+    py2y1.log <- log(py2y1)
+
+    # p(Y1)
+    py1.log <- dnorm(Y1, mean=eta.y1, sd=sqrt(var.y1), log = TRUE)
+
+    # loglik
+    loglik <- py1.log + py2y1.log
+ 
+    loglik
 }
 
 # polyserial correlation
@@ -199,3 +245,68 @@ ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, dx.th.y2=dx.th.y2,
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2, dx.rho=dx.rho)
 }
+
+
+# note: input must be rho, not cov_y1.y2, because the latter
+#       depends on var.y1, and this complicates the gradient
+ps_cor_scores_no_exo <- function(Y1, Y2,
+                                 var.y1 = NULL, eta.y1 = NULL,
+                                 th.y2 = NULL, rho = NULL, 
+                                 sigma.correction = FALSE) {
+
+    R <- sqrt(1 - rho*rho)
+    Z <- (Y1 - eta.y1) / sqrt(var.y1)
+    y1.SD <- sqrt(var.y1)
+
+    nth <- length(th.y2)
+    nobs <- length(Y1)
+    y2.Y1 <- matrix(1:nth, nobs, nth, byrow=TRUE) == Y2
+    y2.Y2 <- matrix(1:nth, nobs, nth, byrow=TRUE) == Y2 - 1L
+
+
+    # p(Y2|Y1)
+    TH <- c(-Inf, th.y2, +Inf)
+    z1 <- pmin( 100, TH[Y2 + 1L])
+    z2 <- pmax(-100, TH[Y2 + 1L - 1L])
+
+    tauj.star  <- (z1 - rho*Z)/R
+    tauj1.star <- (z2 - rho*Z)/R
+    y.Z1  <- dnorm(tauj.star); y.Z2 <- dnorm(tauj1.star)
+
+    # p(Y2|Y1)
+    py2y1 <- pnorm(tauj.star) - pnorm(tauj1.star)
+    py2y1[py2y1 < .Machine$double.eps] <- .Machine$double.eps
+    pyx.inv <- 1/py2y1
+
+    # mu.y1
+    y.Z1.y.Z2 <- y.Z1-y.Z2
+    dx.mu.y1 <- 1/y1.SD * (Z + (pyx.inv * (rho/R) * y.Z1.y.Z2))
+
+    # var.y1
+    dx.var.y1 <-  1/(2*var.y1) * ( ((Z*Z)-1) + (pyx.inv*rho*Z/R)*(y.Z1.y.Z2) )
+
+    # th.y2
+    dx.th.y2 <- (y2.Y1*y.Z1 - y2.Y2*y.Z2) * 1/R * pyx.inv
+
+    # rho
+    TAUj  <- y.Z1 * (z1*rho - Z)
+    TAUj1 <- y.Z2 * (z2*rho - Z)
+    dx.rho <- pyx.inv * 1/(R*R*R) * (TAUj - TAUj1)
+
+    if(sigma.correction) {
+        dx.rho.orig <- dx.rho
+        dx.var.y1.orig <- dx.var.y1
+
+        # sigma
+        dx.rho <- dx.rho.orig / y1.SD
+   
+        # var
+        COV <- rho * y1.SD
+        dx.var.y1 <- ( dx.var.y1.orig - 
+                       1/2 * COV/var.y1 * 1/y1.SD * dx.rho.orig )
+    }
+
+    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, dx.th.y2=dx.th.y2,
+         dx.rho=dx.rho)
+}
+

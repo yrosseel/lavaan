@@ -13,6 +13,7 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                         store.slots   = c("partable"),
                         FUN           = NULL,
                         show.progress = FALSE,
+                        store.failed  = FALSE,
                         parallel      = c("no", "multicore", "snow"),
                         ncpus         = max(1L, parallel::detectCores() - 1L),
                         cl            = NULL) {
@@ -41,6 +42,9 @@ lavSimulate <- function(pop.model     = NULL,             # population model
         dotdotdot$start = fit.pop
     }
 
+    # no warnings during/after the simulations
+    # dotdotdot$warn <- FALSE
+
     # generate simulations
     fit <- do.call("lavaanList", args = c(list(model = model, 
                    dataFunction = dataFunction,
@@ -48,6 +52,7 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                    ndat = ndat, cmd = cmd,
                    store.slots = store.slots, FUN = FUN,
                    show.progress = show.progress,
+                   store.failed = store.failed,
                    parallel = parallel, ncpus = ncpus, cl = cl), dotdotdot))
 
     # flag this is a simulation
@@ -69,7 +74,6 @@ lavSimulate <- function(pop.model     = NULL,             # population model
         # replace NA by '1' (override later!)
         p2.id[ na.idx ] <- 1L
     }
-    est.pop <- fit@ParTable$est
     est.pop <- fit.pop@ParTable$est[ p2.id ]
 
     # by default, the 'unknown' population values are set to 0.0

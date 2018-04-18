@@ -363,42 +363,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
 
-    # some additional checks for estimator="PML"
-    if(lavoptions$estimator == "PML") {
-        ovy <- unique( unlist(ov.names.y) )
-        ovx <- unique( unlist(ov.names.x) )
-        if(!is.null(slotData)) {
-            ov.types <- slotData@ov$type[ slotData@ov$name %in% ovy ]
-        } else {
-            ov.types <- lav_dataframe_check_vartype(data, ov.names=ov.names.y)
-        }
-        # ordered argument?
-        if(length(ordered) > 0L) {
-            ord.idx <- which(ovy %in% ordered)
-            ov.types[ord.idx] <- "ordered"
-        }
-        # 0. at least some variables must be ordinal
-        #if(!any(ov.types == "ordered")) {
-        #    stop("lavaan ERROR: estimator=\"PML\" is only available if some variables are ordinal")
-        #}
-        # 1. all variables must be ordinal (for now)
-        #    (the mixed continuous/ordinal case will be added later)
-        #if(any(ov.types != "ordered")) {
-        #    stop("lavaan ERROR: estimator=\"PML\" can not handle mixed continuous and ordinal data (yet)")
-        #}
-
-        # 2. we can not handle exogenous covariates yet
-        #if(length(ovx) > 0L) {
-        #    stop("lavaan ERROR: estimator=\"PML\" can not handle exogenous covariates (yet)")
-        #}
-    }
-
-
-
-
-
-
-
 
 
     #####################
@@ -738,6 +702,35 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavdata@data.type == "none" && lavmodel@categorical) {
             lavmodel <- lav_model_set_parameters(lavmodel = lavmodel,
                             x = lav_model_get_parameters(lavmodel))
+            # re-adjust parameter table
+            lavpartable$start <- lav_model_get_parameters(lavmodel, type="user")
+
+            # check/warn if theta/delta values make sense
+            if(!all(lavpartable$start == lavpartable$ustart)) {
+                if(lavmodel@parameterization == "delta") {
+                    # did the user specify theta values? 
+                    user.var.idx <- which(lavpartable$op == "~~" &
+                           lavpartable$lhs == lavpartable$rhs &
+                           lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+                           lavpartable$user == 1L)
+                    if(length(user.var.idx)) {
+                        warning("lavaan WARNING: ", 
+              "variance (theta) values for categorical variables are ignored", 
+              "\n\t\t  if parameterization = \"delta\"!")
+                    }
+                } else if(lavmodel@parameterization == "theta") {
+                    # did the user specify theta values? 
+                    user.delta.idx <- which(lavpartable$op == "~*~" &
+                            lavpartable$lhs == lavpartable$rhs &
+                            lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+                            lavpartable$user == 1L)
+                    if(length(user.delta.idx)) {
+                        warning("lavaan WARNING: ",
+              "scaling (~*~) values for categorical variables are ignored",
+              "\n\t\t  if parameterization = \"theta\"!")
+                    }
+                }
+            }
         }
 
     } # slotModel
@@ -758,6 +751,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         # prepare cache -- stuff needed for estimation, but also post-estimation
         lavcache <- vector("list", length=lavdata@ngroups)
+
+        # ov.types? (for PML check)
+        ov.types <- lavdata@ov$type
+        if(lavmodel@conditional.x && lavmodel@nexo > 0L) {
+            # remove ov.x
+            ov.x.idx <- unlist(lavpta$vidx$ov.x)   
+            ov.types <- ov.types[-ov.x.idx]
+        } 
+
         if(lavoptions$estimator == "PML" && all(ov.types == "ordered")) {
             TH <- computeTH(lavmodel)
             BI <- lav_tables_pairwise_freq_cell(lavdata)

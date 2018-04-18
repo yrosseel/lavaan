@@ -22,7 +22,7 @@ importFrom("stats",
 
 importFrom("utils",
            "combn", "modifyList", "packageDescription", "read.table",
-           "str", "write.table")
+           "str", "write.table", "write.csv")
 
 #importFrom("quadprog",
 #           "solve.QP")
@@ -121,6 +121,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_matrix_orthogonal_complement",
        "lav_matrix_bdiag",
        "lav_matrix_trace",
+       "lav_matrix_cov",
 
        # lav_partable
        "lav_partable_independence",   # used by semTools!

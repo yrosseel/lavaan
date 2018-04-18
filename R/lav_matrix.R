@@ -232,7 +232,7 @@ lav_matrix_antidiag_idx <- function(n = 1L) {
 #
 # and the result is c(2, 4, 5, 6, 7, 9, 10)
 #
-lav_matrix_vech_get_idx <- function(n = 1L, diagonal = TRUE,
+lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
                                     idx = integer(0L), type = "and") {
     if(length(idx) == 0L) return(integer(0L))
     n <- as.integer(n)
@@ -245,6 +245,21 @@ lav_matrix_vech_get_idx <- function(n = 1L, diagonal = TRUE,
     }
     which(lav_matrix_vech(A, diagonal = diagonal))
 }
+
+# similar to lav_matrix_vech_which_idx(), but
+# - only 'type = and'
+# - order of idx matters!
+lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE, 
+                                     idx = integer(0L)) {
+    if (length(idx) == 0L) 
+        return(integer(0L))
+    n <- as.integer(n)
+    pstar <- n*(n+1)/2
+    A <- lav_matrix_vech_reverse(seq_len(pstar))
+    B <- A[idx, idx, drop = FALSE]
+    lav_matrix_vech(B, diagonal = diagonal)
+}
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)
@@ -1277,4 +1292,37 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
     out <- S.eigen$vectors %*% diag(ev) %*% t(S.eigen$vectors)
 
     out
+}
+
+# compute sample covariance matrix, divided by 'N' (not N-1, as in cov)
+lav_matrix_cov <- function(Y, ybar = NULL) {
+    NY <- NROW(Y)
+    if(is.null(ybar)) {
+        ybar <- colMeans(Y)
+    }
+    S <- 1/NY * crossprod(Y) - tcrossprod(ybar)
+    S
+}
+
+# transform a matrix to match a given target mean/covariance
+lav_matrix_transform_mean_cov <- function(Y, 
+                                          target.mean = numeric( NCOL(Y) ),
+                                          target.cov = diag( NCOL(Y) )) {
+
+    # convert to vector
+    target.mean <- as.vector(target.mean)
+
+    S <- lav_matrix_cov(Y)
+    S.inv <- solve(S)
+    S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
+    target.cov.sqrt <- lav_matrix_symmetric_sqrt(target.cov)
+    
+    # transform cov
+    X <- Y %*% S.inv.sqrt %*% target.cov.sqrt
+
+    # shift mean
+    xbar <- colMeans(X)
+    X <- t( t(X) - xbar + target.mean )
+    
+    X
 }

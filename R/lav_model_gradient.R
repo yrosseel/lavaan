@@ -63,13 +63,15 @@ lav_model_gradient <- function(lavmodel       = NULL,
         #}
 
         # ridge here?
-        if(meanstructure && !categorical) {
+        if(meanstructure) {
             #if(conditional.x) {
             #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #} else { 
                 Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
             #}
-        } else if(categorical) {
+        } 
+
+        if(categorical) {
             TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
         }
 
@@ -412,20 +414,40 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # compute partial derivative of logLik with respect to 
             # thresholds/means, slopes, variances, correlations
             if(estimator == "PML") {
-                d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
-                                 TH         = TH[[g]],
-                                 th.idx     = th.idx[[g]],
-                                 num.idx    = num.idx[[g]],
-                                 X          = lavdata@X[[g]],
-                                 lavcache   = lavcache[[g]],
-                                 eXo        = lavdata@eXo[[g]],
-                                 PI         = PI[[g]],
-                                 missing    = lavdata@missing)
+
+                if(lavdata@nlevels  > 1L) {
+                    stop("lavaan ERROR: PL gradient + multilevel not implemented; try optim.gradient = \"numerical\"")
+                } else if(conditional.x) {
+                    d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                                     Mu.hat     = Mu.hat[[g]],
+                                     TH         = TH[[g]],
+                                     th.idx     = th.idx[[g]],
+                                     num.idx    = num.idx[[g]],
+                                     X          = lavdata@X[[g]],
+                                     lavcache   = lavcache[[g]],
+                                     eXo        = lavdata@eXo[[g]],
+                                     PI         = PI[[g]],
+                                     missing    = lavdata@missing)
+                } else {
+                    d1 <- pml_deriv1(Sigma.hat  = Sigma.hat[[g]],
+                                     Mu.hat     = Mu.hat[[g]],
+                                     TH         = TH[[g]],
+                                     th.idx     = th.idx[[g]],
+                                     num.idx    = num.idx[[g]],
+                                     X          = lavdata@X[[g]],
+                                     lavcache   = lavcache[[g]],
+                                     eXo        = NULL,
+                                     PI         = NULL,
+                                     missing    = lavdata@missing)
+                } # not conditional.x
+
                 # chain rule (fmin)
                 group.dx <- 
                     as.numeric(t(d1) %*% Delta[[g]])
 
-            } else if(estimator == "FML") {
+           } # PML
+
+           else if(estimator == "FML") {
                 d1 <- fml_deriv1(Sigma.hat = Sigma.hat[[g]],
                                  TH        = TH[[g]],
                                  th.idx    = th.idx[[g]],
