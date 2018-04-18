@@ -51,6 +51,8 @@ lav_lavaanList_summary <- function(object,
 
     if(estimates && "partable" %in% object@meta$store.slots) {
         pe <- parameterEstimates(object, se = FALSE, 
+                                 remove.system.eq = TRUE, remove.eq = TRUE, 
+                                 remove.ineq = TRUE, remove.def = FALSE,
                                  # zstat = FALSE, pvalue = FALSE, ci = FALSE, 
                                  standardized = FALSE,
                                  add.attributes = print)
@@ -58,19 +60,34 @@ lav_lavaanList_summary <- function(object,
         # scenario 1: simulation
         if(!is.null(object@meta$lavSimulate)) {
             pe$est.true <- object@meta$est.true
+            nel <- length(pe$est.true)
 
             # EST 
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
-            pe$est.ave  <- rowMeans(EST, na.rm = TRUE)
+            AVE <- rowMeans(EST, na.rm = TRUE)
+ 
+            # remove things like equality constraints
+            if(length(AVE) > nel) {
+                AVE <- AVE[seq_len(nel)]
+            }
+            pe$est.ave  <- AVE
             if(est.bias) {
                 pe$est.bias <- pe$est.ave - pe$est.true
             }
 
             # SE?
             if(se.bias) {
-                pe$se.obs <- apply(EST, 1L, sd, na.rm = TRUE)
+                SE.OBS <- apply(EST, 1L, sd, na.rm = TRUE)
+                if(length(SE.OBS) > nel) {
+                    SE.OBS <- SE.OBS[seq_len(nel)]
+                }
+                pe$se.obs <- SE.OBS
                 SE <- lav_lavaanList_partable(object, what = "se", type = "all")
-                pe$se.ave <- rowMeans(SE, na.rm = TRUE)
+                SE.AVE <- rowMeans(SE, na.rm = TRUE)
+                if(length(SE.AVE) > nel) {
+                    SE.AVE <- SE.AVE[seq_len(nel)]
+                }
+                pe$se.ave <- SE.AVE
                 pe$se.bias <- pe$se.ave - pe$se.obs
             }
 

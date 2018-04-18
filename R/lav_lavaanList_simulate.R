@@ -74,7 +74,6 @@ lavSimulate <- function(pop.model     = NULL,             # population model
         # replace NA by '1' (override later!)
         p2.id[ na.idx ] <- 1L
     }
-    est.pop <- fit@ParTable$est
     est.pop <- fit.pop@ParTable$est[ p2.id ]
 
     # by default, the 'unknown' population values are set to 0.0

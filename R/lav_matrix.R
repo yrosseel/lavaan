@@ -256,7 +256,7 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     n <- as.integer(n)
     pstar <- n*(n+1)/2
     A <- lav_matrix_vech_reverse(seq_len(pstar))
-    B <- A[idx, idx]
+    B <- A[idx, idx, drop = FALSE]
     lav_matrix_vech(B, diagonal = diagonal)
 }
 
