@@ -243,8 +243,6 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         if(length(se.idx) > 0L) {
             m[se.idx, "fmi"] <- ""
             ## for lavaan.mi-class objects (semTools)
-            m[se.idx, "fmi1"] <- ""
-            m[se.idx, "fmi2"] <- ""
             m[se.idx, "riv"] <- ""
         }
 
