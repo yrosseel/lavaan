@@ -243,13 +243,15 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         if(length(se.idx) > 0L) {
             m[se.idx, "fmi"] <- ""
             ## for lavaan.mi-class objects (semTools)
-            m[se.idx, "riv"] <- ""
+            if (!is.null(x$riv)) m[se.idx, "riv"] <- ""
         }
 
         not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
         if(length(not.idx) > 0L) {
             if(!is.null(x$fmi)) {
                 m[not.idx, "fmi"] <- ""
+                ## for lavaan.mi-class objects (semTools)
+                if (!is.null(x$riv)) m[not.idx, "riv"] <- ""
             }
         }
     }
