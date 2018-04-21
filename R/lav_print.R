@@ -298,8 +298,6 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     if ("t" %in% colnames(m)) {
       colnames(m)[ colnames(m) == "t"      ] <- "t-value"
       colnames(m)[ colnames(m) == "P(>|z|)"] <- "P(>|t|)"
-      colnames(m)[ colnames(m) == "fmi1"   ] <- "FMI-1"
-      colnames(m)[ colnames(m) == "fmi2"   ] <- "FMI-2"
       colnames(m)[ colnames(m) == "riv"    ] <- "RIV"
     }
     
