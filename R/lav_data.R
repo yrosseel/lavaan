@@ -257,29 +257,42 @@ lavData <- function(data              = NULL,          # data.frame
             level.label <- character(0L)
         }
 
-        # ngroups -> based on ov.names
+        # ngroups: ov.names (when group: is used), or sample.nobs
         if(is.null(ov.names)) {
             warning("lavaan WARNING: ov.names is NULL")
             ov.names <- character(0L)
-            ngroups <- 1L
+            if(is.null(sample.nobs)) {
+                ngroups <- 1L
+                sample.nobs <- rep(list(0L), ngroups)
+            } else {
+                sample.nobs <- as.list(sample.nobs)
+                ngroups <- length(sample.nobs)
+            }
         } else if(!is.list(ov.names)) {
-            ov.names <- list(ov.names)
-            ngroups <- 1L
-        } else {
+            if(is.null(sample.nobs)) {
+                ngroups <- 1L
+                sample.nobs <- rep(list(0L), ngroups)
+            } else {
+                sample.nobs <- as.list(sample.nobs)
+                ngroups <- length(sample.nobs)
+            }
+            ov.names <- rep(list(ov.names), ngroups)
+        } else if(is.list(ov.names)) {
             ngroups <- length(ov.names)
-        }
-
-        if(is.null(sample.nobs)) {
-            sample.nobs <- rep(list(0L), ngroups)
-        } else if(!is.list(sample.nobs)) {
-            sample.nobs <- as.list(sample.nobs)
-        } else {
-            if(length(sample.nobs) != ngroups) {
-                stop("lavaan ERROR: length(sample.nobs) = ",
-                     length(sample.nobs), " but ngroups = ", ngroups)
+            if(is.null(sample.nobs)) {
+                sample.nobs <- rep(list(0L), ngroups)
+            } else {
+                sample.nobs <- as.list(sample.nobs)
+                if(length(sample.nobs) != ngroups) {
+                    stop("lavaan ERROR: length(sample.nobs) = ",
+                          length(sample.nobs), 
+                         " but syntax implies ngroups = ", ngroups)
+                }
             }
         }
 
+
+        # group.label
         if(ngroups > 1L) {
             if(is.null(group)) {
                 group <- "group"
