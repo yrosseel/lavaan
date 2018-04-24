@@ -86,4 +86,16 @@ newpar = '
     textual =~ x3
 '
 lavTestScore(fit, add = newpar)
+
+# equivalently, "add" can be a parameter table specifying parameters to free,
+# but must include some additional information:
+PT.add <- data.frame(lhs = c("visual","textual"),
+                     op = c("=~","=~"),
+                     rhs = c("x9","x3"),
+                     user = 10L, # needed to identify new parameters
+                     free = 1, # arbitrary numbers > 0
+                     start = 0) # null-hypothesized value
+PT.add
+lavTestScore(fit, add = PT.add) # same result as above
+
 }

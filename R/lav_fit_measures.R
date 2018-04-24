@@ -1289,12 +1289,12 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     # ECVI - cross-validation index (Brown & Cudeck, 1989)
     # not defined for multiple groups and/or models with meanstructures
+    # TDJ: According to Dudgeon (2004, p. 317), "ECVI requires no adjustment
+    #      when a model is fitted simultaneously in multiple samples."
+    #      And I think the lack of mean structure in Brown & Cudeck (1989)
+    #      was a matter of habitual simplification back then, not necessity.
     if("ecvi" %in% fit.measures) {
-        if(G > 1 || meanstructure) {
-            ECVI <- as.numeric(NA)
-        } else {
-            ECVI <- X2/N + (2*npar)/N
-        }
+        ECVI <- X2/N + (2*npar)/N
         indices["ecvi"] <- ECVI
     }
 
