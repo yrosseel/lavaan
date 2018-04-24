@@ -604,7 +604,7 @@ lav_options_set <- function(opt = NULL) {
             if(opt$mimic == "Mplus" || opt$test == "yuan.bentler.mplus") {
                 opt$test <- "yuan.bentler.mplus"
             } else {
-                opt$test <- "yuan.bentler"
+                opt$test <- "yuan.bentler.mplus" # for now
             }
         }
         #opt$meanstructure <- TRUE
