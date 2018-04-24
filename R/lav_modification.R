@@ -83,7 +83,7 @@ modindices <- function(object,
     I22 <- information[model.idx, model.idx, drop = FALSE]
 
     # ALWAYS use *expected* information (for now)
-    I22.inv <- lavTech(object, "inverted.information.expected")
+    I22.inv <- try(lavTech(object, "inverted.information.expected"), silent = TRUE)
     # just in case...
     if(inherits(I22.inv, "try-error")) {
         stop("lavaan ERROR: could not compute modification indices; information matrix is singular")

@@ -37,7 +37,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     if(!is.null(add) && nchar(add) > 0L) {
         # check release argument
         if(!is.null(release)) {
-            stop("lavaan ERROR: `add' and `release' arguments can be used together.")
+            stop("lavaan ERROR: `add' and `release' arguments cannot be used together.")
         }
 
         # extend model with extra set of parameters
@@ -84,7 +84,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         score <- lavTech(object, "gradient")
         information <- lavTech(object, "information.expected")
-        J.inv <- MASS::ginv(information)
+        J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))? 
+        #                 else written over with Z1.plus if(is.numeric(release))
         #R <- object@Model@con.jac[,]
 
         if(is.null(release)) {
@@ -217,8 +218,14 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
 
         # create epc table for the 'free' parameters
-        LIST <- parTable(object)
-        LIST <- LIST[,c("lhs","op","rhs","group","free","label","plabel")]
+        if (!is.null(add) && nchar(add) > 0L) {
+          LIST <- parTable(FIT)[,c("lhs","op","rhs","group",
+                                   "user","free","label","plabel")]
+        } else {
+          ## release mode
+          LIST <- parTable(object)[,c("lhs","op","rhs","group",
+                                      "user","free","label","plabel")]
+        }
         if(lav_partable_ngroups(LIST) == 1L) {
             LIST$group <- NULL
         }
@@ -227,10 +234,13 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             LIST <- LIST[-nonpar.idx,]
         }
 
-        LIST$est[ LIST$free > 0 ] <- lav_object_inspect_coef(object, type = "free")
+        LIST$est[ LIST$free > 0 & LIST$user != 10 ] <- lav_object_inspect_coef(object, type = "free")
+        LIST$est[ LIST$user == 10L ] <- 0
         LIST$epc <- rep(as.numeric(NA), length(LIST$lhs))
         LIST$epc[ LIST$free > 0 ] <- EPC.all
         LIST$epv <- LIST$est + LIST$epc
+        LIST$free[ LIST$user == 10L ] <- 0
+        LIST$user <- NULL
 
         attr(LIST, "header") <- "expected parameter changes (epc) and expected parameter values (epv):"
 

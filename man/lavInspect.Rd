@@ -230,7 +230,7 @@ Gradient, Hessian, observed, expected and first.order information matrices:
         parameters.}
     \item{\code{"information"}:}{Matrix containing either the observed or
         the expected information matrix (depending on the information option
-        of the fitted model.}
+        of the fitted model). This is unit-information, not total-information.}
     \item{\code{"information.expected"}:}{Matrix containing the expected
         information matrix for the free model parameters.}
     \item{\code{"information.observed"}:}{Matrix containing the observed

@@ -127,6 +127,17 @@ lav_object_extended <- function(object, add = NULL,
     # partable original model
     partable <- object@ParTable[c("lhs","op","rhs","block","group","free",
                                   "exo","label","plabel")] # do we need 'exo'?
+    
+    # TDJ: Added to prevent error when lav_partable_merge() is called below.
+    #      Problematic if object@ParTable is missing one of the requested slots,
+    #      which returns a NULL slot with a missing <NA> name.  For example: 
+    #        example(cfa)
+    #        lav_partable_independence(lavdata = fit@Data, lavpta = fit@pta,
+    #                                  lavoptions = lavInspect(fit, "options"))
+    #     Has no "label" or "plabel" elements.
+    empties <- which(sapply(partable, is.null))
+    if (length(empties)) partable[empties] <- NULL
+    
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))
         non.free.idx <- which(partable$free == 0L & partable$op != "==" &
@@ -150,7 +161,7 @@ lav_object_extended <- function(object, add = NULL,
     } else if(is.character(add)) {
         ngroups <- lav_partable_ngroups(partable)
         ADD <- lavaanify(add, ngroups = ngroups)
-        ADD <- ADD[,c("lhs","op","rhs","block","user","label")]
+        ADD <- ADD[,c("lhs","op","rhs","block","group","user","label")]
         remove.idx <- which(ADD$user == 0)
         if(length(remove.idx) > 0L) {
             ADD <- ADD[-remove.idx,]
