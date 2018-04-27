@@ -84,7 +84,8 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
                                                   minus.two   = FALSE) {
 
     if(!is.null(x.idx) && length(x.idx) > 0L) {
-        warning("lavaan WARNING: x.idx not supported yet (ignored)")
+        #warning("lavaan WARNING: x.idx not supported yet (ignored)")
+        
     }
 
     LOG.2PI <- log(2*pi); pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
@@ -133,6 +134,28 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
 
     if(minus.two) {
         loglik <- -2 * loglik
+    }
+
+    # x.idx
+    if(!is.null(x.idx) && length(x.idx) > 0L) {
+        #warning("lavaan WARNING: x.idx not supported yet (ignored)")
+        P.x <- length(x.idx); N <- sum(sapply(Yp, "[[", "freq"))
+        Sigma.x <- Sigma[x.idx, x.idx, drop = FALSE]
+        Sigma.inv.x <- lav_matrix_symmetric_inverse(S = Sigma.x, logdet = TRUE,
+                                              Sinv.method = Sinv.method)
+        logdet.x <- attr(Sigma.inv.x, "logdet")
+
+        if(log2pi) {
+            loglik.x <- -N/2 * (P.x * LOG.2PI + logdet.x + P.x)
+        } else {
+            loglik.x <- -N/2 * (logdet.x + P.x)
+        }
+
+        if(minus.two) {
+            loglik.x <- -2 * loglik.x
+        }
+
+        loglik <- loglik - loglik.x
     }
 
     loglik

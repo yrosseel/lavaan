@@ -284,10 +284,11 @@ standardizedSolution <- standardizedsolution <- function(object,
         }
     }
 
-    if (is.null(partable)) {
-      PARTABLE <- inspect(object, "list")
-      free.idx <- which(PARTABLE$free > 0L) # not used in this function?
-    } else PARTABLE <- partable
+    if(is.null(partable)) {
+        PARTABLE <- inspect(object, "list")
+    } else {
+        PARTABLE <- partable
+    }
     LIST <- PARTABLE[,c("lhs", "op", "rhs")]
     if(!is.null(PARTABLE$group)) {
         LIST$group <- PARTABLE$group

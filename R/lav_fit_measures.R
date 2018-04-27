@@ -1177,7 +1177,13 @@ lav_fit_measures <- function(object, fit.measures="all",
             S.within.cor  <- cov2cor(S.within)
             S.between.cor <- cov2cor(S.between)
             Sigma.within.cor <- cov2cor(Sigma.within)
-            Sigma.between.cor <- cov2cor(Sigma.between)
+            if(all(diag(Sigma.between) > 0)) {
+                Sigma.between.cor <- cov2cor(Sigma.between)
+            } else {
+                Sigma.between.cor <- matrix(as.numeric(NA),
+                                         nrow = nrow(Sigma.between),
+                                         ncol = ncol(Sigma.between))
+            }
             R.within.cor <- (S.within.cor - Sigma.within.cor)
             R.between.cor <- (S.between.cor - Sigma.between.cor)
 

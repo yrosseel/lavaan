@@ -6,9 +6,9 @@
 Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
-                     pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE,
-                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
-                     GLIST = NULL, est = NULL, partable = NULL)
+                     pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE, 
+                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE, 
+                     partable = NULL, GLIST = NULL, est = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}

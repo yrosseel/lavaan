@@ -164,12 +164,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # group blocks?
-    if(any(FLAT$op == ":" & FLAT$lhs == "group")) {
+    if(any(FLAT$op == ":" & tolower(FLAT$lhs) == "group")) {
         # here, we only need to figure out:
         # - ngroups
         # - ov's per group
         # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
-        group.idx <- which(FLAT$op == ":" & FLAT$lhs == "group")
+        group.idx <- which(FLAT$op == ":" & tolower(FLAT$lhs) == "group")
+        # replace by 'group' (in case we got 'Group'):
+        FLAT$lhs[group.idx] <- "group"
         tmp.group.values <- unique(FLAT$rhs[group.idx])
         tmp.ngroups <- length(tmp.group.values)
         tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE)
@@ -191,7 +193,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # handle ov.names.l
-    if(any(FLAT$op == ":" & FLAT$lhs == "level")) {
+    if(any(FLAT$op == ":" & tolower(FLAT$lhs) == "level")) {
 
         # check for cluster argument
         if(!is.null(data) && is.null(cluster)) {
@@ -207,7 +209,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         tmp.group.values <- unique(FLAT$rhs[group.idx])
         tmp.ngroups <- max(c(length(tmp.group.values), 1))
 
-        level.idx <- which(FLAT$op == ":" & FLAT$lhs == "level")
+        level.idx <- which(FLAT$op == ":" & tolower(FLAT$lhs) == "level")
+        # replace by "level" (in case we got 'Level')
+        FLAT$lhs[level.idx] <- "level"
         tmp.level.values <- unique(FLAT$rhs[level.idx])
         tmp.nlevels <- length(tmp.level.values)
         tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE) 

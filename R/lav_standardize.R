@@ -225,12 +225,26 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
                     diagonal.only = TRUE)
 
+
     for(g in 1:lavobject@Model@nblocks) {
 
         ov.names <- vnames(lavobject@ParTable, "ov", block = g) # not user
         lv.names <- vnames(lavobject@ParTable, "lv", block = g)
 
-        OV  <- sqrt(VY[[g]])
+        OV2 <- VY[[g]]
+        # replace zero values by NA (but keep negative values)
+        zero.idx <- which(abs(OV2) < .Machine$double.eps)
+        if(length(zero.idx) > 0L) {
+            OV2[zero.idx] <- as.numeric(NA)
+        }
+     
+        # replace negative values by NA (for sqrt)
+        tmp.OV2 <- OV2
+        neg.idx <- which(tmp.OV2 < 0)
+        if(length(neg.idx) > 0L) {
+            tmp.OV2[neg.idx] <- as.numeric(NA)
+        }
+        OV  <- sqrt(tmp.OV2)
 
         if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
@@ -274,8 +288,10 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
         rv.idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) & 
                         partable$lhs == partable$rhs &
                         partable$block == g)
-        out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
-                                     / OV[ match(partable$rhs[rv.idx], ov.names) ] )
+        #out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
+        #                             / OV[ match(partable$rhs[rv.idx], ov.names) ] )
+        out[rv.idx] <- ( out[rv.idx] / 
+                             OV2[ match(partable$lhs[rv.idx], ov.names) ] )
 
         # covariances ov
         # three types:
@@ -388,6 +404,7 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
     VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
                     diagonal.only = TRUE)
 
+
     for(g in 1:lavobject@Model@nblocks) {
 
         ov.names     <- vnames(lavobject@ParTable, "ov",     block = g) 
@@ -395,7 +412,20 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
         ov.names.nox <- vnames(lavobject@ParTable, "ov.nox", block = g)
         lv.names     <- vnames(lavobject@ParTable, "lv",     block = g)
 
-        OV  <- sqrt(VY[[g]])
+        OV2 <- VY[[g]]
+        # replace zero values by NA (but keep negative values)
+        zero.idx <- which(abs(OV2) < .Machine$double.eps)
+        if(length(zero.idx) > 0L) {
+            OV2[zero.idx] <- as.numeric(NA)
+        }
+
+        # replace negative values by NA (for sqrt)
+        tmp.OV2 <- OV2
+        neg.idx <- which(tmp.OV2 < 0)
+        if(length(neg.idx) > 0L) {
+            tmp.OV2[neg.idx] <- as.numeric(NA)
+        }
+        OV  <- sqrt(tmp.OV2)
 
         if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
@@ -440,8 +470,10 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
                         !(partable$lhs %in% ov.names.x) &
                         partable$lhs == partable$rhs &
                         partable$block == g)
-        out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
-                                     / OV[ match(partable$rhs[rv.idx], ov.names) ] )
+        #out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
+         #                            / OV[ match(partable$rhs[rv.idx], ov.names) ] )
+        out[rv.idx] <- ( out[rv.idx] / 
+                             OV2[ match(partable$lhs[rv.idx], ov.names) ] )
 
         # covariances ov
         # three types:
