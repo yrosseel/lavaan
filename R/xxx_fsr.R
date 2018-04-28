@@ -92,8 +92,9 @@ fsr <- function(model      = NULL,
     # restore
     lavoptions$se   <- dotdotdot$se
     lavoptions$test <- dotdotdot$test
-    ngroups    <- lavInspect(FIT, "ngroups")
-    lavpta     <- FIT@pta
+    ngroups     <- lavInspect(FIT, "ngroups")
+    lavpta      <- FIT@pta
+    lavpartable <- FIT@ParTable
 
     # FIXME: not ready for multiple groups yet
     if(ngroups > 1L) {
@@ -110,10 +111,24 @@ fsr <- function(model      = NULL,
 
     # any `regular' latent variables?
     lv.names <- unique(unlist(FIT@pta$vnames$lv.regular))
-    # FIXME: detect higher-order factors!
+    ov.names <- unique(unlist(FIT@pta$vnames$ov))
+
+    # check for higher-order factors
+    good.idx <- logical( length(lv.names) )
+    for(f in seq_len(length(lv.names))) {
+        # check the indicators
+        FAC <- lv.names[f]
+        IND <- lavpartable$rhs[ lavpartable$lhs == FAC &
+                                lavpartable$op  == "=~" ]
+        if(all(IND %in% ov.names)) {
+            good.idx[f] <- TRUE
+        }
+        # FIXME: check for mixed lv/ov indicators
+    }
+    lv.names <- lv.names[ good.idx ]
 
     if(length(lv.names) == 0L) {
-        stop("lavaan ERROR: model does not contain any latent variables")
+        stop("lavaan ERROR: model does not contain any (measured) latent variables")
     }
     nfac     <- length(lv.names)
 
@@ -319,8 +334,8 @@ fsr <- function(model      = NULL,
 
     PT.PA <- lav_partable_subset_structural_model(PT, lavpta = lavpta)
 
-    # free all means/intercepts
-    int.idx <- which(PT.PA$op == "~1")
+    # free all means/intercepts (of observed variables only)
+    int.idx <- which(PT.PA$op == "~1" & !PT.PA$lhs %in% lv.names)
     PT.PA$free[int.idx] <- 1L
     PT.PA$ustart[int.idx] <- NA
     # adjust lavoptions

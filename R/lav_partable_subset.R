@@ -188,6 +188,8 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 # - what to do if we have no regressions among the latent variables?
 #   we return all covariances among the latent variables
 #
+# - also, we should check if we have any 'higher' order factors
+#  
 lav_partable_subset_structural_model <- function(PT = NULL,
                                                  lavpta = NULL,
                                                  idx.only = FALSE) {
@@ -213,6 +215,11 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
     # remove not-needed measurement models
     for(g in 1:ngroups) {
+
+        # higher-order factor loadings
+        fac.idx <- which(PT$op == "=~" & PT$group == g &
+                         PT$lhs %in% lavpta$vnames$lv.regular[[g]] &
+                         PT$rhs %in% lavpta$vnames$lv.regular[[g]])
 
         # eqs.names
         eqs.names <- unique( c(lavpta$vnames$eqs.x[[g]],
@@ -241,7 +248,8 @@ lav_partable_subset_structural_model <- function(PT = NULL,
         int.idx <- which(PT$op == "~1" & PT$group == g &
                          PT$lhs %in% all.names)
 
-        keep.idx <- c(keep.idx, reg.idx, var.idx, cov.idx, int.idx)
+        keep.idx <- c(keep.idx, reg.idx, var.idx, cov.idx, int.idx,
+                      fac.idx)
     }
 
     if(idx.only) {
