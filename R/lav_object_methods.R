@@ -408,7 +408,8 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.ineq = TRUE,
                                                      remove.def = FALSE,
                                                      rsquare = FALSE,
-                                                     add.attributes = FALSE) {
+                                                     add.attributes = FALSE,
+                                                     header = TRUE) {
 
     if("lavaan.fsr" %in% class(object)) {
         return(object$PE)
@@ -785,6 +786,7 @@ parameterEstimates <- parameterestimates <- function(object,
         attr(LIST, "observed.information") <-
             object@Options$observed.information
         attr(LIST, "h1.information") <- object@Options$h1.information
+        attr(LIST, "header") <- header
         # FIXME: add more!!
     } else {
         LIST$exo <- NULL

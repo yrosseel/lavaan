@@ -164,13 +164,23 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
             if(length(lv.names[[g]]) > 1L) {
                 tmp <- utils::combn(lv.names[[g]], 2L)
                 for(i in ncol(tmp)) {
-                    ADD = list(lhs = tmp[1,i],
-                                op = "~~",
-                               rhs = tmp[2,i],
-                               free = max(PT$free) + 1L,
-                               block = g,
-                               group = g)
-                    PT <- lav_partable_add(PT, add = ADD)
+
+                    # already present?
+                    cov1.idx <- which(PT$op == "~~" & PT$group == g &
+                                      PT$lhs == tmp[1,i] & PT$rhs == tmp[2,i])
+                    cov2.idx <- which(PT$op == "~~" & PT$group == g &
+                                      PT$lhs == tmp[2,i] & PT$rhs == tmp[1,i])
+
+                    # if not, add
+                    if(length(c(cov1.idx, cov2.idx)) == 0L) {
+                        ADD = list(lhs = tmp[1,i],
+                                    op = "~~",
+                                   rhs = tmp[2,i],
+                                   free = max(PT$free) + 1L,
+                                   block = g,
+                                   group = g)
+                        PT <- lav_partable_add(PT, add = ADD)
+                    }
                 }
             }
         }

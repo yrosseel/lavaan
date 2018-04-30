@@ -335,7 +335,8 @@ fsr <- function(model      = NULL,
     PT.PA <- lav_partable_subset_structural_model(PT, lavpta = lavpta)
 
     # free all means/intercepts (of observed variables only)
-    int.idx <- which(PT.PA$op == "~1" & !PT.PA$lhs %in% lv.names)
+    lv.names.pa <- lavNames(PT.PA, "lv")
+    int.idx <- which(PT.PA$op == "~1" & !PT.PA$lhs %in% lv.names.pa)
     PT.PA$free[int.idx] <- 1L
     PT.PA$ustart[int.idx] <- NA
     # adjust lavoptions

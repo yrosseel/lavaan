@@ -98,55 +98,62 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     ASECTIONS <- c("Defined Parameters", 
                    "Constraints")
 
-    cat("\nParameter Estimates:\n\n")
+    # header?
+    header <- attr(x, "header")
 
-    # info about standard errors (if we have x$se only)
-    # 1. information
-    # 2. se
-    # 3. bootstrap requested/successful draws
-    if(!is.null(x$se)) { 
-        # 1.
-        t0.txt <- sprintf("  %-35s", "Information")
-        tmp.txt <- attr(x, "information")
-        t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
-                         substring(tmp.txt,2), sep=""))
-        cat(t0.txt, t1.txt, "\n", sep="")
+    if(header) {
+        cat("\nParameter Estimates:\n\n")
 
-        # 2.
-        if(attr(x, "information") %in% c("expected", "first.order") ||
-           attr(x, "observed.information") == "h1") { 
-            t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
-            tmp.txt <- attr(x, "h1.information")
+        # info about standard errors (if we have x$se only)
+        # 1. information
+        # 2. se
+        # 3. bootstrap requested/successful draws
+        if(!is.null(x$se)) { 
+            # 1.
+            t0.txt <- sprintf("  %-35s", "Information")
+            tmp.txt <- attr(x, "information")
             t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
-                                          substring(tmp.txt,2), sep=""))
+                             substring(tmp.txt,2), sep=""))
             cat(t0.txt, t1.txt, "\n", sep="")
-        }
-        if(attr(x, "information") == "observed") {
-            t0.txt <- sprintf("  %-35s", "Observed information based on")
-            tmp.txt <- attr(x, "observed.information")
-            t1.txt <- sprintf("  %15s", 
-                              paste(toupper(substring(tmp.txt,1,1)),
-                              substring(tmp.txt,2), sep=""))
-            cat(t0.txt, t1.txt, "\n", sep="")
-        }
 
-        # 3.
-        t0.txt <- sprintf("  %-31s", "Standard Errors")
-        tmp.txt <- attr(x, "se")
-        t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
+            # 2.
+            if(attr(x, "information") %in% c("expected", "first.order") ||
+               attr(x, "observed.information") == "h1") { 
+                t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
+                tmp.txt <- attr(x, "h1.information")
+                t1.txt <- sprintf("  %15s", 
+                                  paste(toupper(substring(tmp.txt,1,1)),
                                           substring(tmp.txt,2), sep=""))
-        cat(t0.txt, t1.txt, "\n", sep="")
+                cat(t0.txt, t1.txt, "\n", sep="")
+            }
+            if(attr(x, "information") == "observed") {
+                t0.txt <- sprintf("  %-35s", "Observed information based on")
+                tmp.txt <- attr(x, "observed.information")
+                t1.txt <- sprintf("  %15s", 
+                                  paste(toupper(substring(tmp.txt,1,1)),
+                                  substring(tmp.txt,2), sep=""))
+                cat(t0.txt, t1.txt, "\n", sep="")
+            }
+
+            # 3.
+            t0.txt <- sprintf("  %-31s", "Standard Errors")
+            tmp.txt <- attr(x, "se")
+            t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
+                                              substring(tmp.txt,2), sep=""))
+            cat(t0.txt, t1.txt, "\n", sep="")
     
-        # 4.
-        if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
-            t0.txt <- sprintf("  %-40s", "Number of requested bootstrap draws")
-            t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
-            cat(t0.txt, t1.txt, "\n", sep="")
-            t0.txt <- sprintf("  %-40s", "Number of successful bootstrap draws")
-            t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
-            cat(t0.txt, t1.txt, "\n", sep="")
+            # 4.
+            if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
+                t0.txt <- 
+                    sprintf("  %-40s", "Number of requested bootstrap draws")
+                t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
+                cat(t0.txt, t1.txt, "\n", sep="")
+                t0.txt <- 
+                    sprintf("  %-40s", "Number of successful bootstrap draws")
+                t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
+                cat(t0.txt, t1.txt, "\n", sep="")
+            }
         }
-
     }
 
     # number of groups
@@ -652,7 +659,10 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
         #print.lavaan.parameterEstimates(y$PE, ..., nd = nd) 
 
         short.summary(y$STRUC.FIT)
-        print.fit.measures( fitMeasures(y$STRUC.FIT, fit.measures="default") )
+        FIT <- fitMeasures(y$STRUC.FIT, fit.measures="default")
+        if(FIT["df"] > 0) {
+            print.fit.measures( FIT )
+        }
     }
     PE <- parameterEstimates(y$STRUC.FIT, ci = FALSE, 
                              remove.eq = FALSE, remove.system.eq = TRUE,
