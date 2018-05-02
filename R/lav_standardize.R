@@ -249,7 +249,9 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
         if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", block = g)
-            ov.names <- c(ov.names, ov.names.x)
+            ov.names.nox <- vnames(lavobject@ParTable, "ov.nox", block = g)
+            ov.names <- c(ov.names.nox, ov.names.x)
+            OV2 <- c(OV2, diag(lavobject@SampleStats@cov.x[[g]]))
             OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
         }
 
@@ -430,7 +432,8 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
         if(lavobject@Model@conditional.x) {
             # extend OV with ov.names.x
             ov.names.x <- vnames(lavobject@ParTable, "ov.x", block = g)
-            ov.names <- c(ov.names, ov.names.x)
+            ov.names <- c(ov.names.nox, ov.names.x)
+            OV2 <- c(OV2, diag(lavobject@SampleStats@cov.x[[g]]))
             OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
         }
 

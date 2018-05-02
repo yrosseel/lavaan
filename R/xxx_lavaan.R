@@ -367,6 +367,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
 
+    # fixed.x = FALSE? set ov.names.x = character(0L)
+    # new in 0.6-1
+    if(!lavoptions$fixed.x) {
+        ov.names.x <- character(0L)
+    }
 
 
     #####################

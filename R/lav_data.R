@@ -86,7 +86,7 @@ lavData <- function(data              = NULL,          # data.frame
             if(is.matrix(data)) {
                 if(nrow(data) == ncol(data)) {
                     # perhaps it is a covariance matrix?
-                    if(data[2,1] == data[1,2]) { # not perfect...
+                    if(data[2,1] == data[1,2] && warn) { # not perfect...
                         warning("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
                     }
                 } 
@@ -188,7 +188,7 @@ lavData <- function(data              = NULL,          # data.frame
         ov$type <- rep("numeric", nvar)
 
         # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
-        if(std.ov) {
+        if(std.ov && warn) {
             warning("lavaan WARNING: std.ov argument is ignored if only sample statistics are provided.")
         }
 
@@ -553,7 +553,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
             }
         }
 
-        # check for missing obsered variables
+        # check for missing observed variables
         idx.missing <- which(!(ov.all %in% names(data)))
 
         if(length(idx.missing)) {
@@ -621,13 +621,13 @@ lav_data_full <- function(data          = NULL,          # data.frame
             min.var <- min(ov$var[num.idx])
             max.var <- max(ov$var[num.idx])
             rel.var <- max.var/min.var
-            if(rel.var > 1000) {
+            if(warn && rel.var > 1000) {
                 warning("lavaan WARNING: some observed variances are (at least) a factor 1000 times larger than others; use varTable(fit) to investigate")
             }
         }
     }
     # check for all-exogenous variables (eg in f <~ x1 + x2 + x3)
-    if(all(ov$exo == 1L)) {
+    if(warn && all(ov$exo == 1L)) {
         warning("lavaan WARNING: all observed variables are exogenous; model may not be identified")
     }
 
@@ -659,11 +659,22 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                            complete.cases(data[all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[[group]] == group.label[g]))
-            } else if(missing == "pairwise" && length(exo.idx) > 0L) {
+            #} else if(missing == "pairwise" && length(exo.idx) > 0L) {
+            #    case.idx[[g]] <- which(data[[group]] == group.label[g] &
+            #                           complete.cases(data[exo.idx]))
+            #    nobs[[g]] <- length(case.idx[[g]])
+            #    norig[[g]] <- length(which(data[[group]] == group.label[g]))
+            } else if(length(exo.idx) > 0L) {
                 case.idx[[g]] <- which(data[[group]] == group.label[g] &
                                        complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[[group]] == group.label[g]))
+                if(warn && (nobs[[g]] < norig[[g]])) {
+                    warning("lavaan WARNING: ", (nobs[[g]] - norig[[g]]),
+                        " cases were deleted in group ", group.label[g], 
+                        " due to missing values in ",
+                        "\n\t\t  exogenous variable(s), while fixed.x = TRUE.")
+                }
             } else {
                 case.idx[[g]] <- which(data[[group]] == group.label[g])
                 nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])
@@ -673,10 +684,19 @@ lav_data_full <- function(data          = NULL,          # data.frame
                 case.idx[[g]] <- which(complete.cases(data[all.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
-            } else if(missing == "pairwise" && length(exo.idx) > 0L) {
+            #} else if(missing == "pairwise" && length(exo.idx) > 0L) {
+            #    case.idx[[g]] <- which(complete.cases(data[exo.idx]))
+            #    nobs[[g]] <- length(case.idx[[g]])
+            #    norig[[g]] <- nrow(data)
+            } else if(length(exo.idx) > 0L) {
                 case.idx[[g]] <- which(complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)
+                if(warn && (nobs[[g]] < norig[[g]])) {
+                    warning("lavaan WARNING: ", (norig[[g]] - nobs[[g]]),
+                        " cases were deleted due to missing values in ",
+                        "\n\t\t  exogenous variable(s), while fixed.x = TRUE.")
+                }
             } else {
                 case.idx[[g]] <- 1:nrow(data)
                 nobs[[g]] <- norig[[g]] <- length(case.idx[[g]])

@@ -256,7 +256,16 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     }
 
     # catch Df.delta == 0 cases (reported by Florian Zsok in Zurich)
+    # but only if there are no inequality constraints! (0.6-1)
     idx <- which(val[,"Df diff"] == 0)
+    if(length(idx) > 0L) {
+        # remove models with inequality constraints
+        ineq.idx <- which(sapply(lapply(mods, function(x) slot(slot(x, "Model"), "x.cin.idx")), length) > 0L)
+        rm.idx <- which(idx %in% ineq.idx)
+        if(length(rm.idx) > 0L) {
+            idx <- idx[-rm.idx]
+        }
+    }
     if(length(idx) > 0L) {
         val[idx, "Pr(>Chisq)"] <- as.numeric(NA)
         warning("lavaan WARNING: some models have the same degrees of freedom")
