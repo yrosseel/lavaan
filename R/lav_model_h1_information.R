@@ -524,7 +524,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                              scores     = TRUE,
                              negative   = FALSE)
             # information H1
-            B1[[g]] <- crossprod(SC)
+            B1[[g]] <- lav_matrix_crossprod(SC)
 
         } else if(estimator == "ML" && lavdata@nlevels > 1L) {
 

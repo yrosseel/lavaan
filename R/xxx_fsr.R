@@ -1,6 +1,6 @@
 # factor score regression
 
-# three methods:
+# four methods:
 #  - naive (regression or Bartlett)
 #  - Skrondal & Laake (2001) (regression models only)
 #  - Croon (2002) (general + robust SE)
@@ -53,6 +53,10 @@ fsr <- function(model      = NULL,
     } else {
         stop("lavaan ERROR: invalid option for argument fs.method: ",
              fs.method)
+    }
+
+    if(output %in% c("scores", "fs.scores", "fsr.scores")) {
+        fs.scores <- TRUE
     }
     
     # dot dot dot
@@ -509,7 +513,9 @@ fsr <- function(model      = NULL,
         out <- FSR.COV
     } else if(output %in% c("FS.COV", "fs.cov")) {
         out <- FS.COV
-    }
+    } else {
+        stop("lavaan ERROR: unknown output= argument: ", output)
+    } 
 
     out
 }

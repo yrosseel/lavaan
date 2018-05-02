@@ -10,7 +10,7 @@ parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE,
                    standardized = FALSE, cov.std = TRUE, fmi = FALSE, 
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
-                   rsquare = FALSE, add.attributes = FALSE)
+                   rsquare = FALSE, add.attributes = FALSE, header = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -64,6 +64,11 @@ to indicate that the values in the \code{est} column are rsquare values.}
 (class \code{lavaan.parameterEstimates}) and other attributes to be used by
 the print function for this class (\code{print.lavaan.parameterEstimates}). 
 This is used by the \code{summary()} function, to prettify the output.}
+\item{header}{Logical. Only used if \code{add.attributes = TRUE}. If
+\code{TRUE}, print a header at the top of the parameter list. This header
+contains information about the information matrix, if saturated (h1) model
+is structured or unstructured, and which type of standard errors are shown
+in the output.}
 }
 \value{
   A data.frame containing the estimated parameters,

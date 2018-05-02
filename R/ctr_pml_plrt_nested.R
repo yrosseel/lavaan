@@ -516,7 +516,7 @@ MYNvcov.first.order <- function (lavmodel, lavsamplestats = NULL,
                      X = lavdata@X[[g]], lavcache = lavcache,
                      scores = TRUE, negative = FALSE)
     group.SC <- SC %*% Delta[[g]]
-    B0.group[[g]] <- crossprod(group.SC)
+    B0.group[[g]] <- lav_matrix_crossprod(group.SC)
     #!!!! B0.group[[g]] <- B0.group[[g]]/lavsamplestats@ntotal  !!! skip so that the result
     # is in line with the 0.5-18 version of lavaan
 
