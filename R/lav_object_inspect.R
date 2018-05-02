@@ -427,6 +427,10 @@ lavInspect.lavaan <- function(object,
     } else if(what == "options" || what == "lavoptions") {
         object@Options
 
+    # version
+    } else if(what == "version") {
+        object@version
+
     # call
     } else if(what == "call") {
         as.list( object@call )

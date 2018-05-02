@@ -1193,6 +1193,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #### 16. lavaan ####
     ####################
     lavaan <- new("lavaan",
+                  version      = as.character(packageVersion("lavaan")),
                   call         = mc,                  # match.call
                   timing       = timing,              # list
                   Options      = lavoptions,          # list

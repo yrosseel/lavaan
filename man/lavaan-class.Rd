@@ -28,6 +28,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
+    \item{\code{version}:}{The lavaan package version used to create this objects.}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{timing}:}{The elapsed time (user+system) for various parts of 
       the program as a list, including the total time.}

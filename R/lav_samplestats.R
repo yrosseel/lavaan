@@ -231,9 +231,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         if(categorical) {
             if(estimator %in% c("ML","REML","PML","FML","MML","none","ULS")) {
                 WLS.W <- FALSE
-                if(estimator == "ULS" && ( se == "robust.sem" || 
-                        test %in% c("satorra.bentler", "scaled.shifted",
-                                    "mean.var.adjusted"))) {
+                if(estimator == "ULS" && se == "robust.sem") { #|| 
+                        #test %in% c("satorra.bentler", "scaled.shifted",
+                        #            "mean.var.adjusted"))) {
                     WLS.W <- TRUE
                 }
             } else {

@@ -181,6 +181,7 @@ setClass("Fit",
 
 setClass("lavaan",
     representation(
+        version     = "character",       # lavaan version
         call        = "call",            # matched call
         timing      = "list",            # timing information
         Options     = "list",            # lavOptions
