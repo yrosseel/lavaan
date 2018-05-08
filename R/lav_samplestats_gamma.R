@@ -238,7 +238,7 @@ lav_samplestats_Gamma <- function(Y,
         model.based <- TRUE
         if(meanstructure) {
             stopifnot(!is.null(Mu))
-            sigma <- c(as.numeric(MU), lav_matrix_vech(Sigma))
+            sigma <- c(as.numeric(Mu), lav_matrix_vech(Sigma))
         } else {
             sigma <- lav_matrix_vech(Sigma)
         }

@@ -7,7 +7,7 @@ importFrom("graphics",
            "plot")
 
 importFrom("methods",
-           "is", "new", "slot", "slotNames",
+           "is", "new", "slot", "slotNames", ".hasSlot",
            # generics,
 
            "show")
@@ -22,7 +22,7 @@ importFrom("stats",
 
 importFrom("utils",
            "combn", "modifyList", "packageDescription", "read.table",
-           "str", "write.table", "write.csv")
+           "str", "write.table", "write.csv", "packageVersion")
 
 #importFrom("quadprog",
 #           "solve.QP")
