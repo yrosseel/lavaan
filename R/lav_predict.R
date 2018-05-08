@@ -696,7 +696,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
         }
     }
     EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-                          eXo = eXo, remove.dummy.lv = TRUE) ## FIXME? 
+                          eXo = eXo, nobs = lavdata@norig, 
+                          remove.dummy.lv = TRUE) ## FIXME? 
     TH    <- computeTH(   lavmodel = lavmodel)
     THETA <- computeTHETA(lavmodel = lavmodel)
 
@@ -792,21 +793,25 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
 
             START <- numeric(nfac) # initial values for eta
 
-            # find best values for eta.i
-            if(optim.method == "nlminb") {
-                out <- nlminb(start=START, objective=f.eta.i,
-                              gradient=NULL, # for now
-                              control=list(rel.tol=1e-8),
-                              y.i=y.i, x.i=x.i, mu.i=mu.i)
-            } else if(optim.method == "bfgs") {
-                out <- optim(par = START, fn = f.eta.i,
-                             gr = NULL, 
-                             control = list(reltol = 1e-8, fnscale = 1.1),
-                             method = "BFGS",
-                             y.i = y.i, x.i = x.i, mu.i = mu.i)
-            }
-            if(out$convergence == 0L) {
-                eta.i <- out$par
+            if(!all(is.na(y.i))) {
+                # find best values for eta.i
+                if(optim.method == "nlminb") {
+                    out <- nlminb(start=START, objective=f.eta.i,
+                                  gradient=NULL, # for now
+                                  control=list(rel.tol=1e-8),
+                                  y.i=y.i, x.i=x.i, mu.i=mu.i)
+                } else if(optim.method == "bfgs") {
+                    out <- optim(par = START, fn = f.eta.i,
+                                 gr = NULL, 
+                                 control = list(reltol = 1e-8, fnscale = 1.1),
+                                 method = "BFGS",
+                                 y.i = y.i, x.i = x.i, mu.i = mu.i)
+                }
+                if(out$convergence == 0L) {
+                    eta.i <- out$par
+                } else {
+                    eta.i <- rep(as.numeric(NA), nfac)
+                }
             } else {
                 eta.i <- rep(as.numeric(NA), nfac)
             }
@@ -899,6 +904,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
 
     YHAT <- computeYHAT(lavmodel = lavmodel, GLIST = NULL,
                         lavsamplestats = lavsamplestats, eXo = eXo,
+                        nobs = lavdata@norig,
                         ETA = ETA, duplicate = duplicate)
 
     # if conditional.x, paste eXo

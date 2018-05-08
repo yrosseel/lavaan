@@ -213,9 +213,14 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
 #       2) fixed.x       (conditional.x = FALSE, fixed.x = TRUE)
 #       3) conditional.x (conditional.x = TRUE)
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
+#
+#  - new in 0.6-1: if Mu/Sigma is provided, compute 'model-based' Gamma
+#                  (only if !conditional.x for now)
 
 # ADF THEORY
-lav_samplestats_Gamma <- function(Y, 
+lav_samplestats_Gamma <- function(Y,
+                                  Mu                 = NULL,
+                                  Sigma              = NULL,
                                   x.idx              = integer(0L),
                                   fixed.x            = FALSE,
                                   conditional.x      = FALSE,
@@ -226,6 +231,20 @@ lav_samplestats_Gamma <- function(Y,
                                   add.attributes     = FALSE) {
     # coerce to matrix
     Y <- unname(as.matrix(Y)); N <- nrow(Y)
+
+    # model-based?
+    if(!is.null(Sigma)) {
+        stopifnot(!conditional.x)
+        model.based <- TRUE
+        if(meanstructure) {
+            stopifnot(!is.null(Mu))
+            sigma <- c(as.numeric(MU), lav_matrix_vech(Sigma))
+        } else {
+            sigma <- lav_matrix_vech(Sigma)
+        }
+    } else {
+        model.based <- FALSE
+    }
 
     # denominator
     if(gamma.n.minus.one) {
@@ -275,11 +294,15 @@ lav_samplestats_Gamma <- function(Y,
         }
 
         #Gamma = (N-1)/N * cov(Z, use = "pairwise")
-        # we center so we can use crossprod instead of cov
-        Zc <- base::scale(Z, center = TRUE, scale = FALSE)
-
-        # note: centering is the same as substracting lav_matrix_vech(S),
-        # where S is the sample covariance matrix (divided by N)
+        if(model.based) {
+            Zc <- t( t(Z) - sigma )
+        } else {
+            # we center so we can use crossprod instead of cov
+            #Zc <- base::scale(Z, center = TRUE, scale = FALSE)
+            Zc <- t( t(Z) - colMeans(Z) )
+            # note: centering is the same as substracting lav_matrix_vech(S),
+            # where S is the sample covariance matrix (divided by N)
+        }
 
         if(anyNA(Zc)) {
             Gamma <- lav_matrix_crossprod(Zc) / N

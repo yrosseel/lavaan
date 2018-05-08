@@ -203,12 +203,31 @@ lav_object_extended <- function(object, add = NULL,
     # needed?
     if(any(LIST$op == "~1")) lavoptions$meanstructure <- TRUE
 
-    FIT <- lavaan(LIST,
-                  slotOptions     = lavoptions,
-                  slotSampleStats = object@SampleStats,
-                  slotData        = object@Data,
-                  slotCache       = object@Cache,
-                  sloth1          = object@h1)
+    if(.hasSlot(object, "h1")) { # >= 0.6-1
+        FIT <- lavaan(LIST,
+                      slotOptions     = lavoptions,
+                      slotSampleStats = object@SampleStats,
+                      slotData        = object@Data,
+                      slotCache       = object@Cache,
+                      sloth1          = object@h1)
+    } else {
+        # old object -- for example 'usemmodelfit' in package 'pompom'
+
+        # add a few fields 
+        lavoptions$h1 <- FALSE
+        lavoptions$implied <- FALSE
+        lavoptions$baseline <- FALSE
+        lavoptions$loglik <- FALSE
+
+        # add a few slots
+        object@Data@weights <- vector("list", object@Data@ngroups)
+
+        FIT <- lavaan(LIST,
+                      slotOptions     = lavoptions,
+                      slotSampleStats = object@SampleStats,
+                      slotData        = object@Data,
+                      slotCache       = object@Cache)
+    }
 
     FIT
 }

@@ -1075,7 +1075,8 @@ lav_data_print_short <- function(object) {
                   sprintf("  %10i", lavdata@norig[[1L]]), "")
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
-        if(lavdata@nlevels > 1L) {
+        if( (.hasSlot(lavdata, "nlevels")) && # in case we have an old obj
+            (lavdata@nlevels > 1L) ) {
             #cat("\n")
             for(l in 2:lavdata@nlevels) {
                 t0.txt <- sprintf("  %-40s", 
@@ -1103,7 +1104,8 @@ lav_data_print_short <- function(object) {
                       sprintf("  %10i", lavdata@norig[[g]]), "")
             cat(t.txt, t2.txt, "\n", sep="")
 
-            if(lavdata@nlevels > 1L) {
+            if( (.hasSlot(lavdata, "nlevels")) &&
+                (lavdata@nlevels > 1L) ) {
                 #cat("\n")
                 for(l in 2:lavdata@nlevels) {
                     t0.txt <- sprintf("  %-40s", 
@@ -1139,7 +1141,8 @@ lav_data_print_short <- function(object) {
     }
 
     # sampling weights?
-    if(!is.null(lavdata@weights[[1L]])) {
+    if( (.hasSlot(lavdata, "weights")) && # in case we have an old object
+        (!is.null(lavdata@weights[[1L]])) ) {
         t0.txt <- sprintf("  %-30s", "Sampling Weights variable")
         t1.txt <- sprintf("  %20s", lavdata@sampling.weights)
         cat(t0.txt, t1.txt, "\n", sep="")

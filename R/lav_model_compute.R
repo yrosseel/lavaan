@@ -518,7 +518,7 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
 computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
-                         eXo = NULL, remove.dummy.lv = FALSE) {
+                         eXo = NULL, nobs = NULL, remove.dummy.lv = FALSE) {
   
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -539,12 +539,12 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         EXO <- eXo[[g]]
         if(is.null(EXO)) {
             # create empty matrix
-            EXO <- matrix(0, lavsamplestats@nobs[[g]], 0L)
+            EXO <- matrix(0, nobs[[g]], 0L)
         }
 
         if(representation == "LISREL") {
             EETAx.g <- computeEETAx.LISREL(MLIST, 
-                eXo=EXO, N=lavsamplestats@nobs[[g]],
+                eXo=EXO, N=nobs[[g]],
                 sample.mean=lavsamplestats@mean[[g]],
                 ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
                 ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]],
@@ -682,7 +682,7 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
 computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
-                        eXo = NULL, ETA = NULL, duplicate = FALSE) {
+                        eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE) {
   
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -701,7 +701,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(is.null(eXo[[g]]) && duplicate) {
-            Nobs <- lavsamplestats@nobs[[g]]
+            Nobs <- nobs[[g]]
         } else {
             Nobs <- 1L
         }
