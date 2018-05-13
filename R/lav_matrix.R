@@ -238,10 +238,10 @@ lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
     n <- as.integer(n)
     A <- matrix(FALSE, n, n)
     if(type == "and") {
-        A[idx, idx, drop = FALSE] <- TRUE
+        A[idx, idx] <- TRUE
     } else if(type == "or") {
-        A[idx, , drop = FALSE] <- TRUE
-        A[ ,idx, drop = FALSE] <- TRUE
+        A[idx, ] <- TRUE
+        A[ ,idx] <- TRUE
     }
     which(lav_matrix_vech(A, diagonal = diagonal))
 }

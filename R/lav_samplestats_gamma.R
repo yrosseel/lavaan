@@ -215,7 +215,7 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 #
 #  - new in 0.6-1: if Mu/Sigma is provided, compute 'model-based' Gamma
-#                  (only if !conditional.x for now)
+#                  (only if conditional.x = FALSE, for now)
 
 # ADF THEORY
 lav_samplestats_Gamma <- function(Y,
@@ -260,48 +260,84 @@ lav_samplestats_Gamma <- function(Y,
         stopifnot(!conditional.x, !fixed.x)
     }
 
-    if(!conditional.x) {
-        # center only, so we can use crossprod instead of cov
-        Yc <- base::scale(Y, center = TRUE, scale = FALSE)
+    if(!conditional.x && !fixed.x) {
+        # center, so we can use crossprod instead of cov
+        if(model.based) {
+            Yc <- t( t(Y) - as.numeric(Mu) )
+        } else {
+            Yc <- t( t(Y) - colMeans(Y) )
+        }
         p <- ncol(Y)
 
         # create Z where the rows_i contain the following elements:
-        #  - intercepts (if meanstructure is TRUE)
+        #  - Y_i (if meanstructure is TRUE)
         #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
         idx1 <- lav_matrix_vech_col_idx(p)
         idx2 <- lav_matrix_vech_row_idx(p)
         if(meanstructure) {
-            Z <- cbind(Yc, Yc[,idx1] * Yc[,idx2])
+            Z <- cbind(Y, Yc[,idx1] * Yc[,idx2])
         } else {
             Z <- Yc[,idx1] * Yc[,idx2]
         }
 
-        # handle fixed.x = TRUE
-        if(fixed.x) {
-            YX <- Yc
-            # here, we do not need the intercepts, data is centered
-            QR <- qr(Yc[, x.idx, drop = FALSE])
-            RES <- qr.resid(QR, Yc[,-x.idx, drop = FALSE])
-            # substract residuals from original Yc's
-            YX[, -x.idx] <- Yc[, -x.idx, drop = FALSE] - RES
-            if(meanstructure) {
-                Z2 <- cbind(YX, YX[,idx1] * YX[,idx2])
-            } else {
-                Z2 <- YX[,idx1] * YX[,idx2]
-            }
-            # substract Z2 from original Z
-            Z <- Z - Z2
-        }
-
-        #Gamma = (N-1)/N * cov(Z, use = "pairwise")
         if(model.based) {
+            if(meanstructure) {
+                stopifnot(!is.null(Mu))
+                sigma <- c(as.numeric(Mu), lav_matrix_vech(Sigma))
+            } else {
+                sigma <- lav_matrix_vech(Sigma)
+            }
             Zc <- t( t(Z) - sigma )
         } else {
-            # we center so we can use crossprod instead of cov
-            #Zc <- base::scale(Z, center = TRUE, scale = FALSE)
             Zc <- t( t(Z) - colMeans(Z) )
-            # note: centering is the same as substracting lav_matrix_vech(S),
-            # where S is the sample covariance matrix (divided by N)
+        }
+
+        if(anyNA(Zc)) {
+            Gamma <- lav_matrix_crossprod(Zc) / N
+        } else {
+            Gamma <- base::crossprod(Zc) / N
+        }
+    } else if(!conditional.x && fixed.x) {
+
+        if(model.based) {
+            Y.bar <- colMeans(Y)
+            res.cov <- ( Sigma[-x.idx, -x.idx, drop = FALSE] -
+                         Sigma[-x.idx, x.idx, drop = FALSE] %*%
+                          solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
+                         Sigma[x.idx, -x.idx, drop = FALSE] )
+            res.slopes <- ( solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
+                            Sigma[x.idx, -x.idx, drop = FALSE] )
+            res.int <- ( Y.bar[-x.idx] -
+                 as.numeric(colMeans(Y[,x.idx,drop = FALSE]) %*% res.slopes) )
+            x.bar <- Y.bar[x.idx]
+            yhat.bar <- as.numeric(res.int + as.numeric(x.bar) %*% res.slopes)
+            YHAT.bar <- numeric( ncol(Y) )
+            YHAT.bar[-x.idx] <- yhat.bar; YHAT.bar[x.idx] <- x.bar
+            YHAT.cov <- Sigma
+            YHAT.cov[-x.idx, -x.idx] <- Sigma[-x.idx, -x.idx] - res.cov
+
+
+            yhat <- cbind(1, Y[,x.idx]) %*% rbind(res.int, res.slopes)
+            YHAT <- cbind(yhat, Y[,x.idx])
+            YHATc <- t( t(YHAT) - YHAT.bar )
+            Z <- ( cbind(Y, Yc[,idx1] * Yc[,idx2]) -
+                   cbind(YHAT, YHATc[,idx1] * YHATc[,idx2]) )
+
+            sigma1 <- c(Mu, lav_matrix_vech(Sigma))
+            sigma2 <- c(YHAT.bar, lav_matrix_vech(YHAT.cov))
+            Zc <- t( t(Z) - (sigma1 - sigma2) )
+        } else {
+            QR <- qr(cbind(1, Y[, x.idx, drop = FALSE]))
+            yhat <- qr.fitted(QR, Y[, -x.idx, drop = FALSE])
+            YHAT <- cbind(yhat, Y[,x.idx])
+
+            Yc <- t( t(Y) - colMeans(Y) )
+            YHATc <- t( t(YHAT) - colMeans(YHAT) )
+            idx1 <- lav_matrix_vech_col_idx(p)
+            idx2 <- lav_matrix_vech_row_idx(p)
+            Z <- ( cbind(Y, Yc[,idx1] * Yc[,idx2]) - 
+                   cbind(YHAT, YHATc[,idx1] * YHATc[,idx2]) )
+            Zc <- t( t(Z) - colMeans(Z) )
         }
 
         if(anyNA(Zc)) {
@@ -368,7 +404,12 @@ lav_samplestats_Gamma <- function(Y,
             }
         }
 
-        Zc <- base::scale(Z, center = TRUE, scale = FALSE)
+        if(model.based) {
+            Zc <- t( t(Z) - sigma )
+        } else {
+            Zc <- t( t(Z) - colMeans(Z) )
+        }
+
         if(anyNA(Zc)) {
             Gamma <- lav_matrix_crossprod(Zc) / N
         } else {
