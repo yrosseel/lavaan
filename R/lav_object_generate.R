@@ -54,13 +54,21 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     # this seems ok now, because we first generate the covariances in
     # lavpartable, and they should be in the right order (unlike the
     # intercepts)
+
+    if(.hasSlot(object, "h1"))  {
+        lavh1 <- object@h1
+    } else {
+        lavh1 <- lav_h1_logl(lavdata = object@Data,
+                             lavsamplestats = object@SampleStats,
+                             lavoptions = object@Options)
+    }
  
     FIT <- lavaan(lavpartable,  
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
                   slotCache       = object@Cache,
-                  sloth1          = object@h1)
+                  sloth1          = lavh1)
 
     FIT
 }
@@ -106,12 +114,20 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
     # needed?
     if(any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
+    if(.hasSlot(object, "h1"))  {
+        lavh1 <- object@h1
+    } else {
+        lavh1 <- lav_h1_logl(lavdata = object@Data,
+                             lavsamplestats = object@SampleStats,
+                             lavoptions = object@Options)
+    }
+
     FIT <- lavaan(lavpartable,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
                   slotCache       = object@Cache,
-                  sloth1          = object@h1)
+                  sloth1          = lavh1)
 
     FIT
 }
@@ -203,13 +219,8 @@ lav_object_extended <- function(object, add = NULL,
     # needed?
     if(any(LIST$op == "~1")) lavoptions$meanstructure <- TRUE
 
-    if(.hasSlot(object, "h1")) { # >= 0.6-1
-        FIT <- lavaan(LIST,
-                      slotOptions     = lavoptions,
-                      slotSampleStats = object@SampleStats,
-                      slotData        = object@Data,
-                      slotCache       = object@Cache,
-                      sloth1          = object@h1)
+    if(.hasSlot(object, "h1"))  {
+        lavh1 <- object@h1
     } else {
         # old object -- for example 'usemmodelfit' in package 'pompom'
 
@@ -218,16 +229,22 @@ lav_object_extended <- function(object, add = NULL,
         lavoptions$implied <- FALSE
         lavoptions$baseline <- FALSE
         lavoptions$loglik <- FALSE
-
+ 
         # add a few slots
         object@Data@weights <- vector("list", object@Data@ngroups)
+        object@Model@estimator <- object@Options$estimator
 
-        FIT <- lavaan(LIST,
-                      slotOptions     = lavoptions,
-                      slotSampleStats = object@SampleStats,
-                      slotData        = object@Data,
-                      slotCache       = object@Cache)
+        lavh1 <- lav_h1_logl(lavdata = object@Data,
+                             lavsamplestats = object@SampleStats,
+                             lavoptions = object@Options)
     }
+
+    FIT <- lavaan(LIST,
+                  slotOptions     = lavoptions,
+                  slotSampleStats = object@SampleStats,
+                  slotData        = object@Data,
+                  slotCache       = object@Cache,
+                  sloth1          = lavh1)
 
     FIT
 }

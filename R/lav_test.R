@@ -99,7 +99,7 @@ lav_model_test <- function(lavmodel       = NULL,
     chisq <- sum(chisq.group)
 
     # reference distribution: always chi-square, except for the
-    # non-robust version of ULS
+    # non-robust version of ULS and PML
     if(estimator == "ULS" || estimator == "PML") {
         refdistr <- "unknown"
         pvalue <- as.numeric(NA)
@@ -133,6 +133,7 @@ lav_model_test <- function(lavmodel       = NULL,
                       pvalue=pvalue) 
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
+                              "yuan.bentler.mplus",
                               "mean.var.adjusted", "scaled.shifted")) {
         TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
                           df=df, refdistr=refdistr, pvalue=pvalue, 

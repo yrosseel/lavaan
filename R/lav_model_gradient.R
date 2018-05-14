@@ -800,7 +800,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     } # g
 
     # if multilevel, rbind levels within group
-    if(lavmodel@multilevel) {
+    if(.hasSlot(lavmodel, "multilevel") && lavmodel@multilevel) {
         DELTA <- vector("list", length = lavmodel@ngroups)
         for(g in 1:lavmodel@ngroups) {
             DELTA[[g]] <- rbind( Delta[[(g-1)*2 + 1]],

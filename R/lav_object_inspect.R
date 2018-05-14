@@ -469,7 +469,7 @@ lav_object_inspect_est <- function(object) {
         # from 0.5-19, they are in the partable
         if(!is.null(object@ParTable$est)) {
             OUT <- object@ParTable$est
-        } else if("Fit" %in% slotNames(object)) {
+        } else if(.hasSlot(object, "Fit")) {
             # in < 0.5-19, we should look in @Fit@est
             OUT <- object@Fit@est
         } else {
@@ -493,7 +493,7 @@ lav_object_inspect_se <- function(object) {
     # from 0.5-19, they are in the partable
     if(!is.null(object@ParTable$se)) {
         OUT <- object@ParTable$se
-    } else if("Fit" %in% slotNames(object)) {
+    } else if(.hasSlot(object, "Fit")) {
         # in < 0.5-19, we should look in @Fit@se
         OUT <- object@Fit@se
     } else {
@@ -759,7 +759,7 @@ lav_object_inspect_sampstat <- function(object, h1 = FALSE,
     }
 
     # check if we have a non-empty @h1 slot
-    if(!"h1" %in% slotNames(object)) {
+    if(!.hasSlot(object, "h1")) {
         h1 <- FALSE
     } else if(length(object@h1) == 0L) {
         h1 <- FALSE

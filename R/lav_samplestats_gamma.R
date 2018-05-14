@@ -230,7 +230,7 @@ lav_samplestats_Gamma <- function(Y,
                                   Mplus.WLS          = FALSE,
                                   add.attributes     = FALSE) {
     # coerce to matrix
-    Y <- unname(as.matrix(Y)); N <- nrow(Y)
+    Y <- unname(as.matrix(Y)); N <- nrow(Y); p <- ncol(Y)
 
     # model-based?
     if(!is.null(Sigma)) {
@@ -267,7 +267,6 @@ lav_samplestats_Gamma <- function(Y,
         } else {
             Yc <- t( t(Y) - colMeans(Y) )
         }
-        p <- ncol(Y)
 
         # create Z where the rows_i contain the following elements:
         #  - Y_i (if meanstructure is TRUE)
@@ -275,9 +274,11 @@ lav_samplestats_Gamma <- function(Y,
         idx1 <- lav_matrix_vech_col_idx(p)
         idx2 <- lav_matrix_vech_row_idx(p)
         if(meanstructure) {
-            Z <- cbind(Y, Yc[,idx1] * Yc[,idx2])
+            Z <- cbind(Y, Yc[,idx1, drop = FALSE] * 
+                          Yc[,idx2, drop = FALSE] )
         } else {
-            Z <- Yc[,idx1] * Yc[,idx2]
+            Z <- ( Yc[,idx1, drop = FALSE] * 
+                   Yc[,idx2, drop = FALSE] )
         }
 
         if(model.based) {
@@ -311,7 +312,7 @@ lav_samplestats_Gamma <- function(Y,
                  as.numeric(colMeans(Y[,x.idx,drop = FALSE]) %*% res.slopes) )
             x.bar <- Y.bar[x.idx]
             yhat.bar <- as.numeric(res.int + as.numeric(x.bar) %*% res.slopes)
-            YHAT.bar <- numeric( ncol(Y) )
+            YHAT.bar <- numeric(p)
             YHAT.bar[-x.idx] <- yhat.bar; YHAT.bar[x.idx] <- x.bar
             YHAT.cov <- Sigma
             YHAT.cov[-x.idx, -x.idx] <- Sigma[-x.idx, -x.idx] - res.cov
@@ -320,11 +321,21 @@ lav_samplestats_Gamma <- function(Y,
             yhat <- cbind(1, Y[,x.idx]) %*% rbind(res.int, res.slopes)
             YHAT <- cbind(yhat, Y[,x.idx])
             YHATc <- t( t(YHAT) - YHAT.bar )
-            Z <- ( cbind(Y, Yc[,idx1] * Yc[,idx2]) -
-                   cbind(YHAT, YHATc[,idx1] * YHATc[,idx2]) )
-
-            sigma1 <- c(Mu, lav_matrix_vech(Sigma))
-            sigma2 <- c(YHAT.bar, lav_matrix_vech(YHAT.cov))
+            if(meanstructure) {
+                Z <- ( cbind(Y, Yc[,idx1, drop = FALSE] * 
+                                Yc[,idx2, drop = FALSE] ) -
+                       cbind(YHAT, YHATc[,idx1, drop = FALSE] * 
+                                   YHATc[,idx2, drop = FALSE]) )
+                sigma1 <- c(Mu, lav_matrix_vech(Sigma))
+                sigma2 <- c(YHAT.bar, lav_matrix_vech(YHAT.cov))
+            } else {
+                Z <- ( Yc[,idx1, drop = FALSE] *
+                       Yc[,idx2, drop = FALSE]  -
+                       YHATc[,idx1, drop = FALSE] *
+                       YHATc[,idx2, drop = FALSE] )
+                sigma1 <- lav_matrix_vech(Sigma)
+                sigma2 <- lav_matrix_vech(YHAT.cov)
+            }
             Zc <- t( t(Z) - (sigma1 - sigma2) )
         } else {
             QR <- qr(cbind(1, Y[, x.idx, drop = FALSE]))
@@ -335,8 +346,17 @@ lav_samplestats_Gamma <- function(Y,
             YHATc <- t( t(YHAT) - colMeans(YHAT) )
             idx1 <- lav_matrix_vech_col_idx(p)
             idx2 <- lav_matrix_vech_row_idx(p)
-            Z <- ( cbind(Y, Yc[,idx1] * Yc[,idx2]) - 
-                   cbind(YHAT, YHATc[,idx1] * YHATc[,idx2]) )
+            if(meanstructure) {
+                Z <- ( cbind(Y, Yc[,idx1, drop = FALSE] * 
+                                Yc[,idx2, drop = FALSE]) - 
+                       cbind(YHAT, YHATc[,idx1, drop = FALSE] * 
+                                   YHATc[,idx2, drop = FALSE]) )
+            } else {
+                Z <- ( Yc[,idx1, drop = FALSE] * 
+                       Yc[,idx2, drop = FALSE] -
+                       YHATc[,idx1, drop = FALSE] * 
+                       YHATc[,idx2, drop = FALSE] )
+            }
             Zc <- t( t(Z) - colMeans(Z) )
         }
 
@@ -400,7 +420,7 @@ lav_samplestats_Gamma <- function(Y,
                            RES[,   idx1, drop = FALSE] * 
                            RES[,   idx2, drop = FALSE] )
             } else {
-                Z <- RES[,idx1,drop = FALSE] * RES[,idx2,drop = FALSE]
+                Z <- RES[,idx1, drop = FALSE] * RES[,idx2, drop = FALSE]
             }
         }
 

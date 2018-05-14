@@ -648,7 +648,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         if(estimator == "ML" || estimator == "MML") {
 
             # do we have a @h1 slot?
-            if("h1" %in% slotNames(object) && length(object@h1) > 0L) {
+            if(.hasSlot(object, "h1") && length(object@h1) > 0L) {
                 logl.H1.group <- object@h1$loglik.group
                 logl.H1       <- object@h1$loglik
             } else {
@@ -665,7 +665,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # logl H0
-            if("loglik" %in% slotNames(object)) {
+            if(.hasSlot(object, "loglik")) {
                 logl.H0.group <- object@loglik$loglik.group
                 logl.H0       <- object@loglik$loglik
                 AIC           <- object@loglik$AIC

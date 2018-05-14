@@ -18,8 +18,18 @@ lav_model_information <- function(lavmodel       = NULL,
                                   inverted       = FALSE,
                                   use.ginv       = FALSE) {
 
-    estimator   <- lavmodel@estimator
+    if(.hasSlot(lavmodel, "estimator")) {
+        estimator   <- lavmodel@estimator
+    } else {
+        estmator    <- lavoptions$estimator
+    }
     information <- lavoptions$information
+
+    if(is.null(lavh1)) {
+        lavh1 <- lav_h1_logl(lavdata = lavdata,
+                             lavsamplestats = lavsamplestats,
+                             lavoptions = lavoptions)
+    }
 
     # compute information matrix
     if(information == "observed") {

@@ -27,7 +27,13 @@ lav_model_h1_information <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
-        lavh1          <- lavobject@h1
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1      <- lavobject@h1
+        } else {
+            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+                                      lavsamplestats = lavobject@SampleStats,
+                                      lavoptions = lavobject@Options)
+        }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -73,11 +79,16 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
-        lavh1          <- lavobject@h1
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1      <- lavobject@h1
+        } else {
+            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+                                      lavsamplestats = lavobject@SampleStats,
+                                      lavoptions = lavobject@Options)
+        }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
-
 
     estimator <- lavmodel@estimator
 
@@ -107,11 +118,17 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         A1 <- vector("list", length=lavsamplestats@ngroups)
 
         # structured? compute model-implied statistics
-        if(structured && is.null(lavimplied)) {
+        if(structured && length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
         }
 
         for(g in 1:lavsamplestats@ngroups) {
+
+            if(.hasSlot(lavdata, "weights")) {
+                WT <- lavdata@weights[[g]]
+            } else {
+                WT <- NULL
+            }
 
             if(lavsamplestats@missing.flag) {
                 # mvnorm
@@ -130,7 +147,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                       lav_mvnorm_missing_information_expected(
                           Y = lavdata@X[[g]],
                           Mp = lavdata@Mp[[g]],
-                          wt = lavdata@weights[[g]],
+                          wt = WT,
                           Mu = MEAN,
                           # meanstructure = lavmodel@meanstructure,
                           Sigma = lavimplied$cov[[g]])
@@ -161,7 +178,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                             sample.nobs       = lavsamplestats@nobs[[g]],
                             res.int           = RES.INT,
                             res.slopes        = RES.SLOPES,
-                            #wt               = lavdata@weights[[g]],
+                            #wt               = WT,
                             #meanstructure    = lavmodel@meanstructure,
                             res.cov           = lavimplied$res.cov[[g]])
                     } else {
@@ -171,7 +188,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                             sample.nobs       = lavsamplestats@nobs[[g]],
                             res.int           = lavsamplestats@res.int[[g]],
                             res.slopes        = lavsamplestats@res.slopes[[g]],
-                            #wt               = lavdata@weights[[g]],
+                            #wt               = WT,
                             #meanstructure    = lavmodel@meanstructure,
                             res.cov           = lavsamplestats@res.cov[[g]])
                     }
@@ -188,13 +205,13 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                     if(structured) {
                         A1[[g]] <- lav_mvnorm_information_expected(
                                   Sigma         = lavimplied$cov[[g]],
-                                  #wt = lavdata@weights[[g]], # not needed
+                                  #wt = WT, # not needed
                                   x.idx         = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure)
                     } else {
                         A1[[g]] <- lav_mvnorm_h1_information_expected(
                                   sample.cov.inv = lavsamplestats@icov[[g]],
-                                  #wt = lavdata@weights[[g]], not needed
+                                  #wt = WT, not needed
                                   x.idx          = lavsamplestats@x.idx[[g]],
                                   meanstructure  = lavmodel@meanstructure)
                     }
@@ -217,7 +234,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         A1 <- vector("list", length = lavsamplestats@ngroups)
 
         # structured? compute model-implied statistics
-        if(structured && is.null(lavimplied)) {
+        if(structured && length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
         }
 
@@ -263,7 +280,13 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
-        lavh1          <- lavobject@h1
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1      <- lavobject@h1
+        } else {
+            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+                                      lavsamplestats = lavobject@SampleStats,
+                                      lavoptions = lavobject@Options)
+        }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -295,7 +318,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         A1 <- vector("list", length=lavsamplestats@ngroups)
   
         # structured? compute model-implied statistics
-        if(structured && is.null(lavimplied)) {
+        if(structured && length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
         }
 
@@ -317,7 +340,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                     A1[[g]] <- 
                       lav_mvnorm_missing_information_observed_samplestats(
                           Yp = lavsamplestats@missing[[g]],
-                          #wt = lavdata@weights[[g]], ?
+                          #wt = WT, ?
                           Mu = MEAN,
                           # meanstructure = lavmodel@meanstructure,
                           Sigma = lavimplied$cov[[g]])
@@ -325,7 +348,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                     A1[[g]] <-
                       lav_mvnorm_missing_information_observed_samplestats(
                           Yp = lavsamplestats@missing[[g]],
-                          #wt = lavdata@weights[[g]], ?
+                          #wt = WT, ?
                           Mu = MEAN,
                           # meanstructure = lavmodel@meanstructure,
                           Sigma = lavsamplestats@missing.h1[[g]]$sigma)
@@ -350,7 +373,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                             sample.cov.x      = lavsamplestats@cov.x[[g]],
                             res.int           = RES.INT,
                             res.slopes        = RES.SLOPES,
-                            #wt               = lavdata@weights[[g]],
+                            #wt               = WT,
                             #meanstructure    = lavmodel@meanstructure,
                             res.cov           = lavimplied$res.cov[[g]])
                     } else {
@@ -362,7 +385,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                             sample.cov.x      = lavsamplestats@cov.x[[g]],
                             res.int           = lavsamplestats@res.int[[g]],
                             res.slopes        = lavsamplestats@res.slopes[[g]],
-                            #wt               = lavdata@weights[[g]],
+                            #wt               = WT,
                             #meanstructure    = lavmodel@meanstructure,
                             res.cov           = lavsamplestats@res.cov[[g]])
                     }
@@ -382,7 +405,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                                   sample.cov    = lavsamplestats@cov[[g]],
                                   Mu            = MEAN,
                                   Sigma         = lavimplied$cov[[g]],
-                                  #wt = lavdata@weights[[g]], # not needed
+                                  #wt           = WT, # not needed
                                   x.idx         = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure)
                     } else {
@@ -390,7 +413,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                                   sample.mean    = lavsamplestats@mean[[g]],
                                   sample.cov     = lavsamplestats@cov[[g]],
                                   sample.cov.inv = lavsamplestats@icov[[g]],
-                                  #wt = lavdata@weights[[g]], not needed
+                                  #wt            = WT, not needed
                                   x.idx          = lavsamplestats@x.idx[[g]],
                                   meanstructure  = lavmodel@meanstructure)
                     }
@@ -413,7 +436,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         A1 <- vector("list", length = lavsamplestats@ngroups)
 
         # structured? compute model-implied statistics
-        if(structured && is.null(lavimplied)) {
+        if(structured && length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
         }
 
@@ -461,7 +484,13 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavdata        <- lavobject@Data
         lavimplied     <- lavobject@implied
-        lavh1          <- lavobject@h1
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1      <- lavobject@h1
+        } else {
+            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+                                      lavsamplestats = lavobject@SampleStats,
+                                      lavoptions = lavobject@Options)
+        }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
     }
@@ -481,7 +510,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
     # structured? compute model-implied statistics
     if(estimator == "PML" || structured) {
-        if(is.null(lavimplied)) {
+        if(length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
         }
     }
@@ -495,6 +524,13 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
     B1 <- vector("list", length=lavsamplestats@ngroups)
     for(g in 1:lavdata@ngroups) {
+
+        if(.hasSlot(lavdata, "weights")) {
+            WT <- lavdata@weights[[g]]
+        } else {
+            WT <- NULL
+        }
+
         if(estimator == "PML") {
             # slow approach: compute outer product of case-wise scores
 
@@ -560,7 +596,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
  
                 B1[[g]] <- lav_mvnorm_missing_information_firstorder(
                                Y = lavdata@X[[g]],
-                              Mp = lavdata@Mp[[g]], wt = lavdata@weights[[g]],
+                              Mp = lavdata@Mp[[g]], wt = WT,
                               Mu = MEAN,
                               # meanstructure = lavmodel@meanstructure,
                               Sigma = implied$cov[[g]])
@@ -581,7 +617,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                                   eXo            = lavdata@eXo[[g]],
                                   res.int        = RES.INT,
                                   res.slopes     = RES.SLOPES,
-                                  #wt            = lavdata@weights[[g]],
+                                  #wt            = WT,
                                   #meanstructure = lavmodel@meanstructure,
                                   res.cov        = implied$res.cov[[g]])
                 } else {
@@ -602,7 +638,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                         B1[[g]] <- lav_mvnorm_information_firstorder(
                                   Y = lavdata@X[[g]],
                                   Mu = MEAN, Sigma = lavimplied$cov[[g]],
-                                  wt = lavdata@weights[[g]],
+                                  wt = WT,
                                   x.idx = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure)
                     } else {
@@ -610,7 +646,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                                   Y = lavdata@X[[g]],
                                   sample.cov.inv = lavsamplestats@icov[[g]],
                                   Gamma = lavsamplestats@NACOV[[g]],
-                                  wt = lavdata@weights[[g]],
+                                  wt = WT,
                                   x.idx = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure)
                     }

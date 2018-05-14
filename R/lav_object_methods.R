@@ -888,7 +888,7 @@ function(object, ...) {
     }
    
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
-    if("loglik" %in% slotNames(object)) {
+    if(.hasSlot(object, "loglik")) {
         LOGL <- object@loglik
     } else {
         LOGL <- lav_model_loglik(lavdata        = object@Data,
