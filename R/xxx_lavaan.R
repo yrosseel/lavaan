@@ -325,7 +325,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # constraints
-        if(nchar(constraints) > 0L) {
+        if(nchar(constraints) > 0L && opt$estimator %in% c("ML")) {
             opt$information <- "observed"
         }
 

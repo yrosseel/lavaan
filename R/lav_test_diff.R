@@ -3,7 +3,12 @@
 lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
                                       A = NULL,
                                       Satterthwaite = FALSE,
+                                      scaled.shifted = FALSE,
                                       debug = FALSE) {
+
+    if(scaled.shifted) {
+        Satterthwaite <- TRUE
+    }
 
     # extract information from m1 and m2
     T1 <- m1@test[[1]]$stat
@@ -26,20 +31,18 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         PI <- computeDelta(m1@Model)
         P <- lavTech(m1, "information")
         # needed? (yes, if H1 already has eq constraints)
-        #P.inv <- lav_model_information_augment_invert(m1@Model,
-        #                                              information = P,
-        #                                              inverted = TRUE)
-        #if(inherits(P.inv, "try-error")) {
-        #     return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
-        #}
-        #P.inv <- solve(P)
-        P.inv <- MASS:::ginv(P)
-    
+        P.inv <- lav_model_information_augment_invert(m1@Model,
+                                                      information = P,
+                                                      inverted = TRUE)
         # compute 'A' matrix 
         # NOTE: order of parameters may change between H1 and H0, so be
         # careful!
         if(is.null(A)) {
             A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H1")
+            # take into account equality constraints m1
+            if(m1@Model@eq.constraints) {
+                A <- A %*% t(m1@Model@eq.constraints.K)
+            }
             if(debug) print(A)
         }
     } else {
@@ -49,13 +52,9 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         PI <- computeDelta(m0@Model)
         P <- lavTech(m0, "information")
         # needed?
-        #P.inv <- lav_model_information_augment_invert(m0@Model,
-        #                                              information = P,
-        #                                              inverted = TRUE)
-        #if(inherits(P.inv, "try-error")) {
-        #     return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
-        #}
-        P.inv <- MASS::ginv(P)
+        P.inv <- lav_model_information_augment_invert(m0@Model,
+                                                      information = P,
+                                                      inverted = TRUE)
 
         # compute 'A' matrix 
         # NOTE: order of parameters may change between H1 and H0, so be
@@ -63,6 +62,10 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         if(is.null(A)) {
             # m1, m0 OR m0, m1 (works for delta, but not for exact)
             A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H0")
+            # take into account equality constraints m1
+            if(m0@Model@eq.constraints) {
+                A <- A %*% t(m0@Model@eq.constraints.K)
+            }
             if(debug) print(A)
         }
     }
@@ -89,7 +92,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     trace.UGamma  <- numeric(ngroups)
     trace.UGamma2 <- numeric(ngroups)
     for(g in 1:ngroups) {
-        UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*% 
+        UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
                     PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
         trace.UGamma[g]  <- sum(diag(UG.group))
         if(Satterthwaite) {
@@ -100,18 +103,32 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     # compute scaling factor
     fg <- unlist(m1@SampleStats@nobs)/m1@SampleStats@ntotal
 
+    trace.UGamma <- sum(fg * trace.UGamma)
     if(Satterthwaite) {
-        cd <- sum(fg * trace.UGamma2) / sum(fg * trace.UGamma)
-        df.delta <- (sum(fg * trace.UGamma))^2 / sum(fg * trace.UGamma2)
-    } else {
-        cd <- 1/m * sum(fg * trace.UGamma)
-        df.delta <- m
+        trace.UGamma2 <- sum(fg * trace.UGamma2)
     }
 
-    # compute scaled difference test      
-    T.delta <- (T0 - T1)/cd
+    if(Satterthwaite && !scaled.shifted) {
+        cd <- trace.UGamma2 / trace.UGamma
+        df.delta <- trace.UGamma^2 / trace.UGamma2
+        T.delta <- (T0 - T1)/cd
+        a <- as.numeric(NA); b <- as.numeric(NA)
+    } else if(Satterthwaite && scaled.shifted) {
+        a <- sqrt(m/trace.UGamma2)
+        #b <- m - sqrt(m * trace.UGamma^2 / trace.UGamma2)
+        b <- m - a * trace.UGamma
+        df.delta <- m
+        T.delta <- (T0 - T1)*a + b
+        cd <- as.numeric(NA)
+    } else {
+        cd <- 1/m * trace.UGamma
+        df.delta <- m
+        T.delta <- (T0 - T1)/cd
+        a <- as.numeric(NA); b <- as.numeric(NA)
+    }
 
-    list(T.delta = T.delta, scaling.factor = cd, df.delta = df.delta)
+    list(T.delta = T.delta, scaling.factor = cd, df.delta = df.delta, 
+         a = a, b = b)
 }
 
 lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
@@ -300,11 +317,9 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
         }
 
         # take into account equality constraints m1
-        #if(m1@Model@eq.constraints) {
-        #    Delta1 <- Delta1 %*% m1@Model@eq.constraints.K
-        #}
-        # NO, don't do this, as this would require P.inv to be reduced
-        # to its full rank version
+        if(m1@Model@eq.constraints) {
+            Delta1 <- Delta1 %*% m1@Model@eq.constraints.K
+        }
 
         #H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
         H <- MASS::ginv(Delta1) %*% Delta0

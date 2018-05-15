@@ -11,6 +11,7 @@
 #     method = "mean.var.adjusted.PLRT"
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
+                       scaled.shifted = TRUE,
                        H1 = TRUE, type = "Chisq", model.names = NULL) {
 
     if(object@optim$npar > 0L && !object@optim$converged)
@@ -213,6 +214,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                 out <- lav_test_diff_Satorra2000(mods[[m]], mods[[m+1]],
                                                  H1 = TRUE,
                                                  Satterthwaite = Satterthwaite,
+                                                 scaled.shifted = scaled.shifted,
                                                  A.method = A.method)
                 STAT.delta[m+1] <- out$T.delta
                   Df.delta[m+1] <- out$df.delta

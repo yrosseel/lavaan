@@ -10,6 +10,7 @@
 LRT test for comparing (nested) lavaan models.}
 \usage{
 lavTestLRT(object, ..., method = "default", A.method = "delta",
+           scaled.shifted = TRUE,
            H1 = TRUE, type = "Chisq", model.names = NULL)
 anova(object, ...)
 }
@@ -24,6 +25,9 @@ anova(object, ...)
 and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
 It determines how the Jacobian of the constraint function (the matrix A)
 will be computed.}
+\item{scaled.shifted}{Logical. Only used when method = \code{"satorra.2000"}.
+If \code{TRUE}, we use a scaled and shifted test statistic; if \code{FALSE},
+we use a mean and variance adjusted (Satterthwaite style) test statistic.}
 \item{type}{Character. If \code{"Chisq"}, the test statistic for each
   model is the (scaled or unscaled) model fit test statistic. If \code{"Cf"}, 
   the test statistic for each model is computed by the 
