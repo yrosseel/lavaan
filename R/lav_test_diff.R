@@ -72,17 +72,18 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
 
     # safety check: A %*% P.inv %*% t(A) should NOT contain all-zero
     # rows/columns
+    # FIXME: is this really needed? As we use ginv later on
     APA <- A %*% P.inv %*% t(A)
     cSums <- colSums(APA)
     rSums <- rowSums(APA)
     empty.idx <- which( abs(cSums) < .Machine$double.eps^0.5 & 
-                        abs(rSums) < .Machine$double.eps ^0.5 )
+                        abs(rSums) < .Machine$double.eps^0.5 )
     if(length(empty.idx) > 0) {
         A <- A[-empty.idx,, drop = FALSE]
     }
 
     # PAAPAAP
-    PAAPAAP <- P.inv %*% t(A) %*% solve(A %*% P.inv %*% t(A)) %*% A %*% P.inv
+    PAAPAAP <- P.inv %*% t(A) %*% MASS::ginv(A %*% P.inv %*% t(A)) %*% A %*% P.inv
 
     trace.UGamma  <- numeric(ngroups)
     trace.UGamma2 <- numeric(ngroups)
@@ -299,11 +300,11 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
         }
 
         # take into account equality constraints m1
-        if(m1@Model@eq.constraints) {
-            # we need a better solution here...
-            warning("lavaan WARNING: H1 contains equality constraints; this routine can not handle this (yet)")
-            return( m0@Model@ceq.JAC )
-        }
+        #if(m1@Model@eq.constraints) {
+        #    # we need a better solution here...
+        #    warning("lavaan WARNING: H1 contains equality constraints; this routine can not handle this (yet)")
+        #    return( m0@Model@ceq.JAC )
+        #}
 
         # take into account equality constraints m1
         #tDelta1Delta1 <- crossprod(Delta1)
