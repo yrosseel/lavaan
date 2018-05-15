@@ -26,13 +26,14 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         PI <- computeDelta(m1@Model)
         P <- lavTech(m1, "information")
         # needed? (yes, if H1 already has eq constraints)
-        P.inv <- lav_model_information_augment_invert(m1@Model,
-                                                      information = P,
-                                                      inverted = TRUE)
-        if(inherits(P.inv, "try-error")) {
-             return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
-        }
+        #P.inv <- lav_model_information_augment_invert(m1@Model,
+        #                                              information = P,
+        #                                              inverted = TRUE)
+        #if(inherits(P.inv, "try-error")) {
+        #     return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
+        #}
         #P.inv <- solve(P)
+        P.inv <- MASS:::ginv(P)
     
         # compute 'A' matrix 
         # NOTE: order of parameters may change between H1 and H0, so be
@@ -48,13 +49,13 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         PI <- computeDelta(m0@Model)
         P <- lavTech(m0, "information")
         # needed?
-        P.inv <- lav_model_information_augment_invert(m0@Model,
-                                                      information = P,
-                                                      inverted = TRUE)
-        if(inherits(P.inv, "try-error")) {
-             return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
-        }
-        #P.inv <- solve(P)
+        #P.inv <- lav_model_information_augment_invert(m0@Model,
+        #                                              information = P,
+        #                                              inverted = TRUE)
+        #if(inherits(P.inv, "try-error")) {
+        #     return(list(T.delta = NA, scaling.factor = NA, df.delta = NA))
+        #}
+        P.inv <- MASS::ginv(P)
 
         # compute 'A' matrix 
         # NOTE: order of parameters may change between H1 and H0, so be
@@ -295,29 +296,18 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
 
         # take into account equality constraints m0
         if(m0@Model@eq.constraints) {
-            # the normalization creates a lot of distortion...
             Delta0 <- Delta0 %*% m0@Model@eq.constraints.K
         }
 
         # take into account equality constraints m1
         #if(m1@Model@eq.constraints) {
-        #    # we need a better solution here...
-        #    warning("lavaan WARNING: H1 contains equality constraints; this routine can not handle this (yet)")
-        #    return( m0@Model@ceq.JAC )
+        #    Delta1 <- Delta1 %*% m1@Model@eq.constraints.K
         #}
+        # NO, don't do this, as this would require P.inv to be reduced
+        # to its full rank version
 
-        # take into account equality constraints m1
-        #tDelta1Delta1 <- crossprod(Delta1)
-        #tDelta1Delta1.inv <- 
-        #    lav_model_information_augment_invert(m1@Model,
-        #                                         information = tDelta1Delta1,
-        #                                         inverted = TRUE)
         #H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
-        #H <- tDelta1Delta1.inv %*% t(Delta1) %*% Delta0 ## still wrong?
-        #                                                ## Delta1 not corrected
-
-        H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
-        #H <- MASS::ginv(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
+        H <- MASS::ginv(Delta1) %*% Delta0
         A <- t(lav_matrix_orthogonal_complement(H))
     }
  
