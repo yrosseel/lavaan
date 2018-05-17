@@ -87,7 +87,7 @@ Data options:
       standardized before entering the analysis.}
     \item{\code{missing}:}{If \code{"listwise"}, cases with missing values 
       are removed listwise from the data frame before analysis. If 
-      \code{direct} or \code{"ml"} or \code{"fiml"} and the estimator is 
+      \code{"direct"} or \code{"ml"} or \code{"fiml"} and the estimator is 
       maximum likelihood, Full Information Maximum Likelihood (FIML) 
       estimation is used using all available data in the data frame. This is 
       only valid if the data are missing completely at random (MCAR) or 
