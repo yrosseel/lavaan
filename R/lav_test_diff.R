@@ -250,12 +250,14 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     PT.M1 <- m1@ParTable
 
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-    PT.M1.FULL <- lav_partable_full(PT.M1, free = TRUE, start = TRUE)
+    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta, 
+                                    free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 
     # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-    PT.M0.FULL <- lav_partable_full(PT.M0, free = TRUE, start = TRUE)
+    PT.M0.FULL <- lav_partable_full(partable = PT.M0, lavpta = m0@pta,
+                                    free = TRUE, start = TRUE)
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 
@@ -378,12 +380,14 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     PT.M1 <- rbind(PT.M1.part1, PT.M1.part2)
     
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-    PT.M1.FULL <- lav_partable_full(PT.M1, free = TRUE, start = TRUE)
+    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta, 
+                                    free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 
     # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-    PT.M0.FULL <- lav_partable_full(PT.M0, free = TRUE, start = TRUE)
+    PT.M0.FULL <- lav_partable_full(partable = PT.M0, lavpta = m0@pta,
+                                    free = TRUE, start = TRUE)
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 

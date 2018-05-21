@@ -42,7 +42,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # extend model with extra set of parameters
         FIT <- lav_object_extended(object, add = add)
-        score <- lavTech(FIT, "gradient")
+        
+        score <- lavTech(FIT, "gradient.logl")
         information <- lavTech(FIT, "information.expected")
 
         npar <- object@Model@nx.free
@@ -82,7 +83,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             stop("lavaan ERROR: no equality constraints found in model.")
         }
 
-        score <- lavTech(object, "gradient")
+        score <- lavTech(object, "gradient.logl")
         information <- lavTech(object, "information.expected")
         J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))? 
         #                 else written over with Z1.plus if(is.numeric(release))
@@ -119,9 +120,19 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         class(Table) <- c("lavaan.data.frame", "data.frame")
     }
 
-    N <- nobs(object)
-    if(lavoptions$mimic == "EQS") {
-        N <- N - 1
+    if(object@Data@nlevels == 1L) {
+        N <- object@SampleStats@ntotal
+        if(lavoptions$mimic == "EQS") {
+            N <- N - 1
+        }
+    } else {
+        # total number of clusters (over groups)   
+        N <- 0
+        for(g in 1:object@SampleStats@ngroups) {
+            N <- N + object@Data@Lp[[g]]$nclusters[[2]]
+        }
+        #score <- score * (2 * object@SampleStats@ntotal) / N
+        score <- score / 2 # -2 * LRT
     }
     
     if(lavoptions$se == "standard") {

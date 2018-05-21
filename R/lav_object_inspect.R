@@ -305,7 +305,10 @@ lavInspect.lavaan <- function(object,
     #### gradient, Hessian, information, first.order, vcov ####
     } else if(what == "gradient") {
         lav_object_inspect_gradient(object,
-            add.labels = add.labels, add.class = add.class)
+            add.labels = add.labels, add.class = add.class, logl = FALSE)
+    } else if(what == "gradient.logl") {
+        lav_object_inspect_gradient(object,
+            add.labels = add.labels, add.class = add.class, logl = TRUE)
     } else if(what == "hessian") {
         lav_object_inspect_hessian(object,
             add.labels = add.labels, add.class = add.class)
@@ -1905,7 +1908,7 @@ lav_object_inspect_sampstat_gamma <- function(object,
 
 
 lav_object_inspect_gradient <- function(object,
-    add.labels = FALSE, add.class = FALSE) {
+    add.labels = FALSE, add.class = FALSE, logl = FALSE) {
 
     if(object@SampleStats@missing.flag ||
        object@Options$estimator == "PML") {
@@ -1922,6 +1925,36 @@ lav_object_inspect_gradient <- function(object,
                               type           = "free",
                               verbose        = FALSE,
                               group.weight   = group.weight)
+
+    # if logl, rescale to get gradient wrt the loglikelihood
+    if(logl) {
+        lavdata <- object@Data
+        if(object@Model@estimator %in% c("ML")) {
+            if(lavdata@nlevels == 1L) {
+                # currently, this is just a sign switch
+                OUT <- -1 * OUT
+            } else {
+                lavpartable <- object@ParTable
+                # gradient.log = gradient.obj * (2 * N) / nclusters
+
+                if(lavdata@ngroups == 1L) {
+                    N <- lavdata@Lp[[1]]$nclusters[[1]]
+                    nclusters <- lavdata@Lp[[1]]$nclusters[[2]]
+                    OUT <- OUT * (2 * N) / nclusters
+                } else {               
+                    for(g in seq_len(lavdata@ngroups)) {
+                        N <- lavdata@Lp[[g]]$nclusters[[1]]
+                        nclusters <- lavdata@Lp[[g]]$nclusters[[2]]
+                        g.idx <-
+                          which((lavpartable$group == g)[lavpartable$free > 0L])
+                        OUT[g.idx] <- OUT[g.idx] * (2 * N) / nclusters
+                    }
+                }
+            }
+        } else {
+            # do nothing (for now)
+        }
+    }
 
     # labels
     if(add.labels) {

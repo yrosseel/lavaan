@@ -19,8 +19,8 @@ lav_partable_npar(partable)
 lav_partable_attributes(partable, pta = NULL)
 
 # generate parameter labels
-lav_partable_labels(partable, blocks = "group", group.equal = "", 
-                    group.partial = "", type = "user")
+lav_partable_labels(partable, blocks = c("group", "level"), 
+                    group.equal = "", group.partial = "", type = "user")
 
 # generate parameter table for specific models
 lav_partable_independence(lavobject = NULL, lavdata = NULL,
@@ -49,8 +49,14 @@ lav_partable_merge(pt1 = NULL, pt2 = NULL, remove.duplicated = FALSE,
 \item{partable}{A parameter table. see \code{\link{lavParTable}} 
 for more information.}
 \item{blocks}{Character vector. Which columns in the parameter table should be
-  taken to distinguish between different blocks/groups of parameters (and hence
-  be given different labels)?}
+  taken to distinguish between different blocks of parameters (and hence
+  be given different labels)? If \code{"blocks"} includes \code{"group"}, a
+  suffix \code{".g"} and the group number (or group label) is added for 
+  the parameters of  all but the first group. If \code{"blocks"} includes 
+  \code{"level"}, a suffix \code{".l"} and the level number is added for 
+  the parameters of all but the first level. If \code{"blocks"} includes, 
+  say \code{"foo"}, a suffix \code{".foo"} and the corresponding value of
+  \code{"foo"} is added to all parameters.}
 \item{group.equal}{The same options can be used here as in the fitting functions. Parameters that are constrained to be equal across groups will be given the
 same label.}
 \item{group.partial}{A vector of character strings containing the labels

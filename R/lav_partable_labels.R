@@ -1,6 +1,6 @@
 # generate labels for each parameter
 lav_partable_labels <- function(partable,
-                                blocks = "group",
+                                blocks = c("group", "level"),
                                 group.equal = "", group.partial = "",
                                 type = "user") {
 
@@ -127,8 +127,15 @@ lav_partable_labels <- function(partable,
     for(block in blocks) {
         if(block == "group") {
             next
+        } else if(block == "level" && !is.null(partable[[block]])) {
+            # all but first level
+            lev_vals <- lav_partable_level_values(partable)
+            idx <- which(partable[[block]] != lev_vals[1])
+            label[idx] <- paste(label[idx], ".", "l",
+                                partable[[block]][idx], sep = "")
+        } else if(!is.null(partable[[block]])) {
+            label <- paste(label, ".", block, partable[[block]], sep = "")
         }
-        label <- paste(label, ".", partable[[block]], sep = "")
     }
 
     # user-specified labels -- override everything!!

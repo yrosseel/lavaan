@@ -39,7 +39,9 @@ modindices <- function(object,
     if(object@Model@fixed.x && object@Model@categorical) {
         strict.exo <- TRUE ## truly conditional.x
     }
-    FULL <- lav_partable_full(object@ParTable, free = TRUE, start = TRUE,
+    FULL <- lav_partable_full(partable = object@ParTable,
+                              lavpta = object@pta,
+                              free = TRUE, start = TRUE,
                               strict.exo = strict.exo)
     FULL$free <- rep(1L, nrow(FULL))
     FULL$user <- rep(10L, nrow(FULL))
@@ -52,7 +54,7 @@ modindices <- function(object,
     information <- lavTech(FIT, "information.expected")
 
     # compute gradient 'extended model'
-    score <- lavTech(FIT, "gradient")
+    score <- lavTech(FIT, "gradient.logl")
 
     # Saris, Satorra & Sorbom 1987
     # partition Q into Q_11, Q_22 and Q_12/Q_21
@@ -99,7 +101,17 @@ modindices <- function(object,
     }
 
     # create and fill in mi
-    N <- object@SampleStats@ntotal
+    if(object@Data@nlevels == 1L) {
+        N <- object@SampleStats@ntotal
+    } else {
+        # total number of clusters (over groups)   
+        N <- 0                      
+        for(g in 1:object@SampleStats@ngroups) {
+            N <- N + object@Data@Lp[[g]]$nclusters[[2]]
+        }
+        #score <- score * (2 * object@SampleStats@ntotal) / N
+        score <- score / 2 # -2 * LRT
+    }
     mi <- numeric( length(score) )
     mi[extra.idx] <- N * (score[extra.idx]*score[extra.idx]) / V.diag
     if(length(model.idx) > 0L) {

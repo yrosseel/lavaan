@@ -141,8 +141,25 @@ lav_object_extended <- function(object, add = NULL,
                                 do.fit = FALSE) {
 
     # partable original model
-    partable <- object@ParTable[c("lhs","op","rhs","block","group","free",
-                                  "exo","label","plabel")] # do we need 'exo'?
+    partable <- object@ParTable[c("lhs", "op", "rhs", "free", "exo", "label",
+                                 "plabel")]
+
+    # always add block/group/level
+    if(!is.null(object@ParTable$group)) {
+        partable$group <- object@ParTable$group
+    } else {
+        partable$group <- rep(1L, length(partable$lhs))
+    }
+    if(!is.null(object@ParTable$level)) {
+        partable$level <- object@ParTable$level
+    } else {
+        partable$level <- rep(1L, length(partable$lhs))
+    }
+    if(!is.null(object@ParTable$block)) {
+        partable$block <- object@ParTable$block
+    } else {
+        partable$block <- rep(1L, length(partable$lhs))
+    }
     
     # TDJ: Added to prevent error when lav_partable_merge() is called below.
     #      Problematic if object@ParTable is missing one of the requested slots,
@@ -152,7 +169,9 @@ lav_object_extended <- function(object, add = NULL,
     #                                  lavoptions = lavInspect(fit, "options"))
     #     Has no "label" or "plabel" elements.
     empties <- which(sapply(partable, is.null))
-    if (length(empties)) partable[empties] <- NULL
+    if(length(empties)) {
+        partable[empties] <- NULL
+    }
     
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))
@@ -165,8 +184,9 @@ lav_object_extended <- function(object, add = NULL,
  
     # replace 'start' column, since lav_model will fill these in in GLIST
     partable$start <- parameterEstimates(object, remove.system.eq = FALSE,
-                          remove.def = FALSE,
-                          remove.eq = FALSE, remove.ineq = FALSE)$est
+                                         remove.def = FALSE,
+                                         remove.eq = FALSE, 
+                                         remove.ineq = FALSE)$est
 
     # add new parameters, extend model
     if(is.list(add)) {
@@ -176,8 +196,26 @@ lav_object_extended <- function(object, add = NULL,
         ADD <- add
     } else if(is.character(add)) {
         ngroups <- lav_partable_ngroups(partable)
-        ADD <- lavaanify(add, ngroups = ngroups)
-        ADD <- ADD[,c("lhs","op","rhs","block","group","user","label")]
+        ADD.orig <- lavaanify(add, ngroups = ngroups)
+        ADD <- ADD.orig[,c("lhs","op","rhs","user","label")] # minimum
+
+        # always add block/group/level
+        if(!is.null(ADD.orig$group)) {
+            ADD$group <- ADD.orig$group
+        } else {
+            ADD$group <- rep(1L, length(ADD$lhs))
+        }
+        if(!is.null(ADD.orig$level)) {
+            ADD$level <- ADD.orig$level
+        } else {
+            ADD$level <- rep(1L, length(ADD$lhs))
+        }
+        if(!is.null(ADD.orig$block)) {
+            ADD$block <- ADD.orig$block
+        } else {
+            ADD$block <- rep(1L, length(ADD$lhs))
+        }
+        
         remove.idx <- which(ADD$user == 0)
         if(length(remove.idx) > 0L) {
             ADD <- ADD[-remove.idx,]

@@ -38,6 +38,9 @@ lav_partable_attributes <- function(partable, pta = NULL) {
                 })
     names(pta$vidx) <- names(pta$vnames)
 
+    # meanstructure
+    pta$meanstructure <- any(partable$op == "~1")
+
     # nblocks
     pta$nblocks <- nblocks
 
