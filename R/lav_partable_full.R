@@ -41,8 +41,8 @@ lav_partable_full <- function(partable = NULL,
             ov.names     <- lavpta$vnames$ov[[b]]
             ov.names.nox <- lavpta$vnames$ov.nox[[b]]
             ov.names.x   <- lavpta$vnames$ov.x[[b]]
-            ov.names.ind <- lavpta$vnames$ov.names.ind[[b]]
-            ov.names.ord <- lavpta$vnames$ov.names.ord[[b]]
+            ov.names.ind <- lavpta$vnames$ov.ind[[b]]
+            ov.names.ord <- lavpta$vnames$ov.ord[[b]]
   
             lv.names     <- lavpta$vnames$lv[[b]]
 
@@ -70,7 +70,7 @@ lav_partable_full <- function(partable = NULL,
             # remove factor ~ eqs.y combinations, if any
             # because they also appear as a regression
             bad.idx <- which( l.lhs %in% lv.names &
-                          l.rhs %in% eqs.y)
+                              l.rhs %in% eqs.y)
             if(length(bad.idx) > 0L) {
                 l.lhs <- l.lhs[-bad.idx]
                 l.rhs <- l.rhs[-bad.idx]
