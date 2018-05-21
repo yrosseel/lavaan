@@ -288,6 +288,8 @@ Miscellaneous:
         matrices as used by the Satorra-Bentler correction. The trace of
         this matrix, divided by the degrees of freedom, gives the scaling 
         factor.}
+    \item{\code{"UfromUGamma"}:}{Matrix containing the 'U' matrix
+        as used by the Satorra-Bentler correction. Alias: \code{"U"}.}
     \item{\code{"list"}:}{The parameter table. The same output as given
         by \code{parTable()}.}
     \item{\code{"fit"}:}{The fit measures. Aliases: \code{"fitmeasures"},

@@ -405,6 +405,10 @@ lavInspect.lavaan <- function(object,
     } else if(what == "ugamma" || what == "ug" || what == "u.gamma") {
         lav_object_inspect_UGamma(object,
             add.labels = add.labels, add.class = add.class)
+    } else if(what == "ufromugamma" || what == "u") {
+        lav_object_inspect_UfromUGamma(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
     ### jacobians ####
     } else if(what == "delta") {
@@ -1893,10 +1897,17 @@ lav_object_inspect_sampstat_gamma <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
+        if(add.class) { 
+            class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+        }
     } else {
-        if(object@Data@nlevels == 1L &&    
-           length(object@Data@group.label) > 0L) {
+        if(object@Data@nlevels == 1L && length(object@Data@group.label) > 0L) {
             names(OUT) <- unlist(object@Data@group.label)
+            if(add.class) {
+                for(g in seq_len(lavmodel@ngroups)) {
+                    class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
         } else if(object@Data@nlevels > 1L &&
                   length(object@Data@group.label) == 0L) {
             names(OUT) <- object@Data@level.label
@@ -2226,6 +2237,7 @@ lav_object_inspect_UGamma <- function(object,
     add.labels = FALSE, add.class = FALSE) {
 
     out <- lav_test_satorra_bentler(lavobject     = object,
+                                    method        = "original",
                                     return.ugamma = TRUE)
     OUT <- out$UGamma
 
@@ -2241,6 +2253,43 @@ lav_object_inspect_UGamma <- function(object,
 
     OUT
 }
+
+lav_object_inspect_UfromUGamma <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    out <- lav_test_satorra_bentler(lavobject     = object,
+                                    method        = "original",
+                                    return.u      = TRUE)
+    OUT <- out$UfromUGamma
+
+    # labels
+    #if(add.labels) {
+       # colnames(OUT) <- rownames(OUT) <-
+    #}
+
+    lavmodel <- object@Model
+    lavdata  <- object@Data
+
+    if(lavmodel@ngroups == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+        # class
+        if(add.class) {
+            class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
+        }
+    } else {
+        if(length(lavdata@group.label) > 0L) {
+            names(OUT) <- unlist(lavdata@group.label)
+        }
+        if(add.class) {
+            for(g in seq_len(lavmodel@ngroups)) {
+                class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+            }
+        }
+    }
+
+    OUT
+}
+
 
 # Delta (jacobian: d samplestats / d free_parameters)
 lav_object_inspect_delta <- function(object,
