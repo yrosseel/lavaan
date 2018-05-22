@@ -19,7 +19,12 @@ lav_partable_full <- function(partable = NULL,
     }
 
     # meanstructure
-    meanstructure <- lavpta$meanstructure
+    if(!is.null(lavpta$meanstructure)) {
+        meanstructure <- lavpta$meanstructure
+    } else {
+        # old object
+        meanstructure <- any(partable$op == "~1")
+    }
 
     # number of blocks
     nblocks <- lavpta$nblocks
