@@ -34,11 +34,7 @@ sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
-    for each group. Note that if maximum likelihood estimation is used and 
-    \code{likelihood="normal"}, the user provided covariance matrix is
-    internally rescaled by multiplying it with a factor (N-1)/N, to ensure
-    that the covariance matrix has been divided by N. This can be turned off
-    by setting the \code{sample.cov.rescale} argument to \code{FALSE}.}
+    for each group.}
 \item{sample.mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
 \item{sample.nobs}{Number of observations if the full data frame is missing

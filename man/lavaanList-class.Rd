@@ -44,7 +44,7 @@ about the data.}
   \describe{
     \item{coef}{\code{signature(object = "lavaanList", type = "free")}: Returns 
       the estimates of the parameters in the model as the columns in a matrix;
-      each column corresponds to a different datasets.
+      each column corresponds to a different dataset.
       If \code{type="free"}, only the free parameters are returned.
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}

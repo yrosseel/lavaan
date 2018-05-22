@@ -18,7 +18,7 @@ mplus2lavaan.modelSyntax(syntax)
 A character string of converted \code{lavaan} model syntax.
 }
 \author{Michael Hallquist}
-\seealso{\code{\link{mplus2lavaan}}.}
+\seealso{\code{\link{mplus2lavaan}}}
 \examples{
 \dontrun{
 syntax <- '

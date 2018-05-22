@@ -1904,7 +1904,7 @@ lav_object_inspect_sampstat_gamma <- function(object,
         if(object@Data@nlevels == 1L && length(object@Data@group.label) > 0L) {
             names(OUT) <- unlist(object@Data@group.label)
             if(add.class) {
-                for(g in seq_len(lavmodel@ngroups)) {
+                for(g in seq_len(object@Data@ngroups)) {
                     class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
                 }
             }

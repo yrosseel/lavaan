@@ -32,7 +32,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-lavParseModelString(model.syntax = '', as.data.frame.=FALSE, warn=TRUE, debug=FALSE)
+lavParseModelString(model.syntax = '', as.data.frame. = FALSE, 
+                    warn = TRUE, debug = FALSE)
 
 }
 \arguments{
@@ -282,8 +283,8 @@ a character string (starting with a letter).
 For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter 
 corresponding with the factor loading of
 \code{x3} will be named \code{"mylabel"}.
-An alternative way to specify
-the label is as follows: \code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
+An alternative way to specify the label is as follows: 
+\code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
 where the label is the argument of special function \code{label()};
 this can be useful if the label contains a space, or an operator (like "~").
 

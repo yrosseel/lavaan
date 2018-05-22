@@ -127,8 +127,5 @@ lav_partable_npar(lav)
 
 # how many sample statistics?
 lav_partable_ndat(lav)
-
-# how many degrees of freedom?
-lav_partable_df(lav)
 }
 

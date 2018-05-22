@@ -72,7 +72,7 @@ created for the duration of the \code{lavaanList} call.}
   are available, including a \code{summary} method.
 }
 \seealso{
-\code{\linkS4class{lavaanList}}
+class \code{\linkS4class{lavaanList}}
 }
 \examples{
 # The Holzinger and Swineford (1939) example

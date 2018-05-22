@@ -28,7 +28,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{version}:}{The lavaan package version used to create this objects.}
+    \item{\code{version}:}{The lavaan package version used to create this objects}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{timing}:}{The elapsed time (user+system) for various parts of 
       the program as a list, including the total time.}
@@ -44,7 +44,7 @@ about the data.}
       internal (matrix) representation of the model}
     \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
     \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the 
-      results of fitting the model}
+      results of fitting the model. No longer used.}
     \item{\code{boot}:}{List. Results and information about the bootstrap.}
     \item{\code{optim}:}{List. Information about the optimization.}
     \item{\code{loglik}:}{List. Information about the loglikelihood of the model (if maximum likelihood was used).}
@@ -127,8 +127,10 @@ the independence model) (if available).}
       methods automatically work via \code{logLik()}.}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
       of the model fit}
-    \item{summary}{\code{signature(object = "lavaan", header = TRUE, fit.measures=FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, standardized = FALSE, 
- cov.std = TRUE, rsquare=FALSE, std.nox = FALSE, modindices=FALSE, ci=FALSE, nd = 3L)}: 
+    \item{summary}{\code{signature(object = "lavaan", header = TRUE, 
+     fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, 
+     standardized = FALSE, cov.std = TRUE, rsquare = FALSE, std.nox = FALSE, 
+     modindices = FALSE, ci = FALSE, nd = 3L)}: 
       Print a nice summary of the model estimates. 
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.  

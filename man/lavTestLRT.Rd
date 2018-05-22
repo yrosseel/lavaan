@@ -24,7 +24,9 @@ anova(object, ...)
 \item{A.method}{Character string. The possible options are \code{"exact"}
 and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
 It determines how the Jacobian of the constraint function (the matrix A)
-will be computed.}
+will be computed. Note that if \code{A.method = "exact"}, the models must
+    be nested in the parameter sense, while if \code{A.method = "delta"}, they
+    only need to be nested in the covariance matrix sense.}
 \item{scaled.shifted}{Logical. Only used when method = \code{"satorra.2000"}.
 If \code{TRUE}, we use a scaled and shifted test statistic; if \code{FALSE},
 we use a mean and variance adjusted (Satterthwaite style) test statistic.}
@@ -48,14 +50,12 @@ we use a mean and variance adjusted (Satterthwaite style) test statistic.}
     If \code{type = "Chisq"} and the test statistics are scaled, a
     special scaled difference test statistic is computed. If method is
     \code{"satorra.bentler.2001"}, a simple approximation is used
-    described in Satorra \& Bentler (2001). In some settings,
+    described in Satorra & Bentler (2001). In some settings,
     this can lead to a negative test statistic. To ensure a positive
     test statistic, we can use the method proposed by 
-    Satorra \& Bentler (2010). Alternatively, when method is
+    Satorra & Bentler (2010). Alternatively, when method is
     \code{"satorra.2000"}, the original formulas of Satorra (2000) are
-    used. Note that for the Satorra (2000) method, the models must
-    be nested in the parameter sense, while for the other methods, they
-    only need to be nested in the covariance matrix sense.
+    used.
 }
 \references{
 Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample

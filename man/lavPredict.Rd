@@ -3,9 +3,9 @@
 \alias{lavpredict}
 \title{Predict the values of latent variables (and their indicators).}
 \description{
-The \code{lavPredict()} function can be used to compute (or `predict') 
-estimated values for latent variables, and given these values, the model-implied
-values for the indicators of these latent variables. NOTE: the goal of this
+The main purpose of the \code{lavPredict()} function is to compute (or 
+`predict') estimated values for the latent variables in the model 
+(`factor scores'). NOTE: the goal of this
 function is NOT to predict future values of dependent variables as in the
 regression framework!}
 \usage{

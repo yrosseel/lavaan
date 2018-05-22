@@ -158,7 +158,8 @@ Estimation options:
       and variance adjusted test statistic (scaled and shifted)
       (\code{test="scaled.shifted"}), and \code{"MLR"} will
       compute a test statistic which is asymptotically
-      equivalent to the Yuan-Bentler T2-star test statistic. Analogously,
+      equivalent to the Yuan-Bentler T2-star test statistic
+      (\code{test="yuan.bentler.mplus"}). Analogously,
       the estimators \code{"WLSM"} and \code{"WLSMV"} imply the \code{"DWLS"}
       estimator (not the \code{"WLS"} estimator) with robust standard errors
       and a mean or mean and variance adjusted test statistic. Estimators
@@ -216,7 +217,10 @@ Estimation options:
    \item{\code{test}:}{If \code{"standard"}, a conventional chi-square test 
      is computed. If \code{"Satorra.Bentler"}, a Satorra-Bentler scaled test 
      statistic is computed. If \code{"Yuan.Bentler"}, a Yuan-Bentler scaled 
-     test statistic is computed. If \code{"mean.var.adjusted"} or 
+     test statistic is computed. If \code{"Yuan.Bentler.Mplus"}, a 
+     test statistic is computed that is asymptotically equal to the
+     Yuan-Bentler scaled
+     test statistic. If \code{"mean.var.adjusted"} or 
      \code{"Satterthwaite"}, a mean and variance adjusted test statistic is 
      compute. If \code{"scaled.shifted"}, an alternative mean and variance 
      adjusted test statistic is computed (as in Mplus version 6 or higher).
