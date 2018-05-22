@@ -214,7 +214,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         FLAT$lhs[level.idx] <- "level"
         tmp.level.values <- unique(FLAT$rhs[level.idx])
         tmp.nlevels <- length(tmp.level.values)
+
+        # we need at least 2 levels (for now)
+        if(tmp.nlevels < 2L) {
+            stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)")
+        }
+
         tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE) 
+        # check for empty levels
+        if(max(tmp.lav$level) < 2L) {
+            stop("lavaan ERROR: at least one level has no model syntax; you must specify a model for each level in the model syntax (for now); see example(Demo.twolevel)")
+        }
         ov.names.l <- vector("list", length = tmp.ngroups) # per group
 
         for(g in seq_len(tmp.ngroups)) {
@@ -250,7 +260,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 ov.names.l[[g]] <- lavNames(FLAT, "ov", group = g)
             }
         } else {
+            # no level: in model syntax
             ov.names.l <- list()
+            if(length(cluster) > 0L) {
+                stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)") 
+            }
         }
     }
 
