@@ -374,7 +374,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("cfi.robust" %in% fit.measures) {
 
                 if(TEST[[2]]$test %in% 
-                  c("satorra.bentler", "mplus.yuan.benter", "yuan.bentler")) {
+                  c("satorra.bentler", "yuan.bentler.mplus", "yuan.bentler")) {
 
                     # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
