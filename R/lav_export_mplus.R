@@ -155,7 +155,7 @@ lav_mplus_estimator <- function(object) {
     }
 
     if(estimator == "ML") {
-        if(object@Options$test == "yuan.bentler") {
+        if(object@Options$test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
             estimator <- "MLR"
         } else if(object@Options$test == "satorra.bentler") {
             estimator <- "MLM"

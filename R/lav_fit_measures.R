@@ -139,7 +139,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         fit.logl <- c("logl", "unrestricted.logl", "aic", "bic",
                       "ntotal", "bic2")
     }
-    if(scaled && object@Options$test == "yuan.bentler") {
+    if(scaled && object@Options$test %in% 
+                 c("yuan.bentler", "yuan.bentler.mplus")) {
         fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
     }
 
@@ -372,7 +373,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
             if("cfi.robust" %in% fit.measures) {
 
-                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                if(TEST[[2]]$test %in% 
+                  c("satorra.bentler", "mplus.yuan.benter", "yuan.bentler")) {
 
                     # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
@@ -426,7 +428,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
             if("rni.robust" %in% fit.measures) {
 
-                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                if(TEST[[2]]$test %in% 
+                   c("satorra.bentler", "yuan.bentler.mplus", "yuan.bentler")) {
                     # see Brosseau-Liard & Savalei MBR 2014, equation 15
 
                     # what to do if X2 = 0 and df = 0? in this case,
@@ -502,7 +505,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("tli.robust" %in% fit.measures ||
                "nnfi.robust" %in% fit.measures) {
 
-                if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+                if(TEST[[2]]$test %in% 
+                   c("satorra.bentler", "yuan.bentler.mplus", "yuan.bentler")) {
                     #  see Brosseau-Liard & Savalei MBR 2014, equation 16
 
                     # what to do if X2 = 0 and df = 0? in this case,
@@ -701,7 +705,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             # scaling factor for MLR
-            if(object@Options$test == "yuan.bentler") {
+            if(object@Options$test %in% 
+               c("yuan.bentler", "yuan.bentler.mplus")) {
                 indices["scaling.factor.h1"] <-
                     TEST[[2]]$scaling.factor.h1
                 indices["scaling.factor.h0"] <-
@@ -772,7 +777,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         indices["rmsea"] <- RMSEA
         if(scaled) {
             indices["rmsea.scaled"] <- RMSEA.scaled
-            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus", 
+                                     "yuan.bentler")) {
                 indices["rmsea.robust"] <- RMSEA.robust
             } else {
                 indices["rmsea.robust"] <- NA
@@ -833,7 +839,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["rmsea.ci.lower.scaled"] <- sqrt( lambda.l/(N*df2) )
             }
 
-            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus", 
+                                     "yuan.bentler")) {
                 # robust
                 XX2 <- X2.scaled
                 df2 <- df
@@ -912,7 +919,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                     sqrt( lambda.u/(N*df2) )
             }
 
-            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus", 
+                                     "yuan.bentler")) {
                 # robust
                 XX2 <- X2.scaled
                 df2 <- df
@@ -976,7 +984,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                     1 - pchisq(XX2, df=df2, ncp=(N*df2*0.05^2))
             }
 
-            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler")) {
+            if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus", 
+                                     "yuan.bentler")) {
                 # robust
                 XX2 <- X2.scaled
                 df2 <- df

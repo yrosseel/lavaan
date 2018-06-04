@@ -108,7 +108,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     }
 
     mods.scaled <- unlist( lapply(mods, function(x) {
-        any(c("satorra.bentler", "yuan.bentler", 
+        any(c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
               "mean.var.adjusted", "scaled.shifted") %in% 
             unlist(sapply(slot(x, "test"), "[", "test")) ) }))
 
@@ -166,7 +166,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         if(method == "default") {
             if(estimator == "PML") {
                 method <- "mean.var.adjusted.PLRT"
-            } else if(TEST %in% c("satorra.bentler", "yuan.bentler")) {
+            } else if(TEST %in% c("satorra.bentler", "yuan.bentler",
+                                  "yuan.bentler.mplus")) {
                 method <- "satorra.bentler.2001"
             } else {
                 method <- "satorra.2000"
@@ -206,7 +207,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
             }
         } else if(method == "satorra.2000") {
             for(m in seq_len(length(mods) - 1L)) {
-                if(TEST %in% c("satorra.bentler", "yuan.bentler")) {
+                if(TEST %in% c("satorra.bentler", "yuan.bentler", 
+                               "yuan.bentler.mplus")) {
                     Satterthwaite <- FALSE
                 } else {
                     Satterthwaite <- TRUE
