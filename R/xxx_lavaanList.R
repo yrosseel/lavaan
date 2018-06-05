@@ -37,7 +37,7 @@ lavaanList <- function(model         = NULL,             # model
         #dataList  <- vector("list", length = ndat)
     } else {
         firstData <- dataList[[1]]
-    } 
+    }
 
     # check data
     if(is.matrix(firstData)) {
@@ -65,7 +65,7 @@ lavaanList <- function(model         = NULL,             # model
         } else if (parallel == "snow") {
             have_snow <- TRUE
         }
-        if (!have_mc && !have_snow) { 
+        if (!have_mc && !have_snow) {
             ncpus <- 1L
         }
         loadNamespace("parallel")
@@ -111,7 +111,7 @@ lavaanList <- function(model         = NULL,             # model
 
     # empty slots
     timingList <- ParTableList <- DataList <- SampleStatsList <-
-        CacheList <- vcovList <- testList <- optimList <- 
+        CacheList <- vcovList <- testList <- optimList <-
         impliedList <- funList <- list()
 
     # prepare store.slotsd slots
@@ -170,7 +170,7 @@ lavaanList <- function(model         = NULL,             # model
             ord.idx <- unlist(FIT@pta$vidx$ov.ord)
             NLEV.exp <- FIT@Data@ov$nlev[ord.idx]
             # observed nlev
-            NLEV.obs <- sapply(DATA[,ord.idx,drop=FALSE], 
+            NLEV.obs <- sapply(DATA[,unlist(FIT@pta$vnames$ov.ord),drop=FALSE],
                                function(x) length(unique(x)))
             wrong.idx <- which(NLEV.exp - NLEV.obs != 0)
             if(length(wrong.idx) > 0L) {
@@ -184,10 +184,10 @@ lavaanList <- function(model         = NULL,             # model
         # FIXME: can we not make the changes internally?
         #if(lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
             #for(g in 1:FIT@Data@ngroups) {
-            #    
-            #}           
+            #
+            #}
             lavmodel <- NULL
-        #} 
+        #}
 
         # fit model with this (new) dataset
         if(data.ok.flag) {
@@ -199,7 +199,7 @@ lavaanList <- function(model         = NULL,             # model
                                                    slotModel    = lavmodel,
                                                    #start        = FIT,
                                                    data         = DATA),
-                                                   dotdotdot)), 
+                                                   dotdotdot)),
                              silent = TRUE)
             } else if(cmd == "fsr") {
                 # extract fs.method and fsr.method from dotdotdot
@@ -208,7 +208,7 @@ lavaanList <- function(model         = NULL,             # model
                 } else {
                     fs.method <- formals(fsr)$fs.method # default
                 }
- 
+
                 if(!is.null(dotdotdot$fsr.method)) {
                     fsr.method <- dotdotdot$fsr.method
                 } else {
@@ -222,7 +222,7 @@ lavaanList <- function(model         = NULL,             # model
                                                    slotModel    = lavmodel,
                                                    #start        = FIT,
                                                    data         = DATA,
-                                                   cmd          = "lavaan", 
+                                                   cmd          = "lavaan",
                                                    fs.method    = fs.method,
                                                    fsr.method   = fsr.method),
                                                    dotdotdot)),
@@ -237,13 +237,13 @@ lavaanList <- function(model         = NULL,             # model
                     test = NULL, optim = NULL, implied = NULL,
                     fun = NULL)
 
-        if(data.ok.flag && inherits(lavobject, "lavaan") && 
+        if(data.ok.flag && inherits(lavobject, "lavaan") &&
            lavInspect(lavobject, "converged")) {
             RES$ok <- TRUE
 
             if(show.progress) {
                 cat("   OK -- niter = ",
-                        sprintf("%3d", lavInspect(lavobject, "iterations")), 
+                        sprintf("%3d", lavInspect(lavobject, "iterations")),
                         "\n")
             }
 
@@ -275,7 +275,7 @@ lavaanList <- function(model         = NULL,             # model
             if("implied" %in% store.slots) {
                 RES$implied <- lavobject@implied
             }
- 
+
             # custom FUN
             if(!is.null(FUN)) {
                 RES$fun <- FUN(lavobject)
@@ -302,9 +302,9 @@ lavaanList <- function(model         = NULL,             # model
                 RES$ParTable$se[ RES$ParTable$free > 0 ] <- as.numeric(NA)
             }
             if(store.failed) {
-                tmpfile <- tempfile(pattern = "lavaanListData") 
+                tmpfile <- tempfile(pattern = "lavaanListData")
                 datfile <- paste0(tmpfile, ".csv")
-                write.csv(DATA, file = datfile, row.names = FALSE) 
+                write.csv(DATA, file = datfile, row.names = FALSE)
                 if(data.ok.flag) {
                     # or only if lavobject is of class lavaan?
                     objfile <- paste0(tmpfile, ".RData")
@@ -315,7 +315,7 @@ lavaanList <- function(model         = NULL,             # model
 
         RES
     }
-    
+
     # the next 20 lines are based on the boot package
     RES <- if (ncpus > 1L && (have_mc || have_snow)) {
         if (have_mc) {
@@ -334,10 +334,10 @@ lavaanList <- function(model         = NULL,             # model
                 parallel::parLapply(cl, seq_len(ndat), fn)
             }
         }
-    } else { 
+    } else {
         lapply(seq_len(ndat), fn)
     }
- 
+
 
     # restructure
     meta <- list(ndat = ndat, ok = sapply(RES, "[[", "ok"),
@@ -420,24 +420,24 @@ semList <- function(model         = NULL,
                     cl            = NULL,
                     iseed         = NULL) {
 
-    lavaanList(model = model, dataList = dataList, 
-               dataFunction = dataFunction, 
-               dataFunction.args = dataFunction.args, ndat = ndat, 
+    lavaanList(model = model, dataList = dataList,
+               dataFunction = dataFunction,
+               dataFunction.args = dataFunction.args, ndat = ndat,
                cmd = "sem",
-               ..., store.slots = store.slots, 
+               ..., store.slots = store.slots,
                FUN = FUN, show.progress = show.progress,
                store.failed = store.failed,
                parallel = parallel, ncpus = ncpus, cl = cl, iseed = iseed)
 }
 
-cfaList <- function(model         = NULL,             
-                    dataList      = NULL,             
-                    dataFunction  = NULL,             
-                    dataFunction.args = list(),       
-                    ndat          = length(dataList), 
+cfaList <- function(model         = NULL,
+                    dataList      = NULL,
+                    dataFunction  = NULL,
+                    dataFunction.args = list(),
+                    ndat          = length(dataList),
                     ...,
-                    store.slots   = c("partable"),    
-                    FUN           = NULL,             
+                    store.slots   = c("partable"),
+                    FUN           = NULL,
                     show.progress = FALSE,
                     store.failed  = FALSE,
                     parallel      = c("no", "multicore", "snow"),
@@ -445,11 +445,11 @@ cfaList <- function(model         = NULL,
                     cl            = NULL,
                     iseed         = NULL) {
 
-    lavaanList(model = model, dataList = dataList, 
-               dataFunction = dataFunction, 
-               dataFunction.args = dataFunction.args, ndat = ndat, 
+    lavaanList(model = model, dataList = dataList,
+               dataFunction = dataFunction,
+               dataFunction.args = dataFunction.args, ndat = ndat,
                cmd = "cfa",
-               ..., store.slots = store.slots, 
+               ..., store.slots = store.slots,
                FUN = FUN, show.progress = show.progress,
                store.failed = store.failed,
                parallel = parallel, ncpus = ncpus, cl = cl,
