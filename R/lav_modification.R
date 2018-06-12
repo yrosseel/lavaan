@@ -170,21 +170,21 @@ modindices <- function(object,
         # get the sign
         EPC.sign <- sign(LIST$epc)
 
-        LIST$sepc.lv <- EPC.sign * standardize.est.lv(object, 
+        LIST$sepc.lv <- EPC.sign * lav_standardize_lv(object, 
                                                       partable = LIST, 
                                                       est = abs(EPC),
                                                       cov.std = cov.std)
         if(length(small.idx) > 0L) {
             LIST$sepc.lv[small.idx] <- 0
         }
-        LIST$sepc.all <- EPC.sign * standardize.est.all(object, 
+        LIST$sepc.all <- EPC.sign * lav_standardize_all(object, 
                                                         partable = LIST, 
                                                         est = abs(EPC),
                                                         cov.std = cov.std)
         if(length(small.idx) > 0L) {
             LIST$sepc.all[small.idx] <- 0
         }
-        LIST$sepc.nox <- EPC.sign * standardize.est.all.nox(object, 
+        LIST$sepc.nox <- EPC.sign * lav_standardize_all_nox(object, 
                                                             partable = LIST,
                                                             est = abs(EPC),
                                                             cov.std = cov.std)
@@ -199,7 +199,7 @@ modindices <- function(object,
         LIST$delta <- delta
         # FIXME: this is using epc in unstandardized metric
         #        this would be much more useful in standardized metric
-        #        we need a standardize.est.all.reverse function...
+        #        we need a lav_standardize_all.reverse function...
         LIST$ncp <- (LIST$mi / (LIST$epc*LIST$epc)) * (delta*delta)
         LIST$power <- 1 - pchisq(qchisq((1.0 - alpha), df=1),
                                  df=1, ncp=LIST$ncp)

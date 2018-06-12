@@ -572,11 +572,11 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                 Delta          = NULL)
         names(GLIST) <- names(object@Model@GLIST)
     } else if (what == "std.all") {
-        STD <- standardize.est.all(object)
+        STD <- lav_standardize_all(object)
     } else if (what == "std.lv") {
-        STD <- standardize.est.lv(object)
+        STD <- lav_standardize_lv(object)
     } else if (what == "std.nox") {
-        STD <- standardize.est.all.nox(object)
+        STD <- lav_standardize_all_nox(object)
     } else if(what == "se") {
         SE <- lav_object_inspect_se(object)
     } else if (what == "start") {
@@ -1003,7 +1003,7 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     OUT <- vector("list", length = nblocks)
 
     if(is.null(est.std.all)) {
-        est.std.all <- standardize.est.all(object)
+        est.std.all <- lav_standardize_all(object)
     }
 
     partable <- object@ParTable
@@ -2109,26 +2109,26 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # standardized?
     if(standardized) {
         if(type == "std.lv") {
-            JAC <- try(lav_func_jacobian_complex(func = standardize.est.lv.x,
+            JAC <- try(lav_func_jacobian_complex(func = lav_standardize_lv_x,
                 x = object@optim$x, lavobject = object), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = standardize.est.lv.x,
+                JAC <- lav_func_jacobian_simple(func = lav_standardize_lv_x,
                     x = object@optim$x, lavobject = object)
             }
         } else if(type == "std.all") {
-            JAC <- try(lav_func_jacobian_complex(func = standardize.est.all.x,
+            JAC <- try(lav_func_jacobian_complex(func = lav_standardize_all_x,
                 x = object@optim$x, object = object), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = standardize.est.all.x,
+                JAC <- lav_func_jacobian_simple(func = lav_standardize_all_x,
                     x = object@optim$x, lavobject = object)
             }
         } else if(type == "std.nox") {
             JAC <- 
-                try(lav_func_jacobian_complex(func = standardize.est.all.nox.x,
+                try(lav_func_jacobian_complex(func = lav_standardize_all_nox_x,
                     x = object@optim$x, lavobject = object), silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
                 JAC <- 
-                    lav_func_jacobian_simple(func = standardize.est.all.nox.x,
+                    lav_func_jacobian_simple(func = lav_standardize_all_nox_x,
                         x = object@optim$x, lavobject = object)
             }
         }

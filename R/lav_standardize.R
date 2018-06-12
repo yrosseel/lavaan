@@ -1,4 +1,4 @@
-standardize.est.lv.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
+lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
     est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
@@ -9,11 +9,11 @@ standardize.est.lv.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) 
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    standardize.est.lv(lavobject = lavobject, partable = partable, est = est, 
+    lav_standardize_lv(lavobject = lavobject, partable = partable, est = est, 
                        GLIST = GLIST, cov.std = cov.std)
 }
 
-standardize.est.all.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
+lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
     est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
@@ -24,11 +24,11 @@ standardize.est.all.x <- function(x, lavobject, partable = NULL, cov.std = TRUE)
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    standardize.est.all(lavobject = lavobject, partable = partable, est = est,
+    lav_standardize_all(lavobject = lavobject, partable = partable, est = est,
                         est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
 
-standardize.est.all.nox.x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
+lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL, cov.std = TRUE) {
     # embed x in est
     est <- lav_object_inspect_est(lavobject)
     free.idx <- which(lavobject@ParTable$free > 0L)
@@ -39,38 +39,63 @@ standardize.est.all.nox.x <- function(x, lavobject, partable = NULL, cov.std = T
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    standardize.est.all.nox(lavobject = lavobject, partable = partable, est = est, 
+    lav_standardize_all_nox(lavobject = lavobject, partable = partable, est = est, 
                             est.std = NULL, GLIST = GLIST, cov.std = cov.std)
 }
 
-unstandardize.est.ov.x <- function(x, lavobject) {
+lav_unstandardize_ov_x <- function(x, lavobject) {
     partable <- lavobject@ParTable
     partable$ustart <- x
-    unstandardize.est.ov(partable=partable, ov.var=lavobject@SampleStats@var, 
-                         cov.std=TRUE)
+    lav_unstandardize_ov(partable = partable, 
+                         ov.var   = lavobject@SampleStats@var, 
+                         cov.std  = TRUE)
 }
 
-standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
-                               cov.std = TRUE) {
 
-    if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est))   est <- lav_object_inspect_est(lavobject)
-    if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+lav_standardize_lv <- function(lavobject = NULL, 
+                               partable = NULL, est = NULL, GLIST = NULL,
+                               cov.std = TRUE,
+                               lavmodel = NULL, lavpartable = NULL) {
+
+    if(is.null(lavobject)) {
+        stopifnot(!is.null(lavmodel))
+        stopifnot(!is.null(lavpartable))
+        if(is.null(est)) {
+            if(!is.null(lavpartable$est)) {
+                est <- lavpartable$est
+            } else {
+                stop("lavaan ERROR: could not find `est' in lavpartable")
+            }
+        }
+    } else {
+        lavmodel <- lavobject@Model
+        lavpartable <- lavobject@ParTable
+        if(is.null(est)) {
+            est <- lav_object_inspect_est(lavobject)
+        }
+    }
+
+    if(is.null(partable)) {
+        partable <- lavpartable
+    }
+    if(is.null(GLIST)) {
+        GLIST <- lavmodel@GLIST
+    }
 
     out <- est; N <- length(est)
     stopifnot(N == length(partable$lhs))
 
-    nmat <- lavobject@Model@nmat
+    nmat <- lavmodel@nmat
 
     # compute ETA
-    LV.ETA <- computeVETA(lavmodel       = lavobject@Model,
+    LV.ETA <- computeVETA(lavmodel       = lavmodel,
                           GLIST          = GLIST)
     
-    for(g in 1:lavobject@Model@nblocks) {
+    for(g in 1:lavmodel@nblocks) {
 
-        ov.names <- vnames(lavobject@ParTable, "ov", block=g) # not user, 
+        ov.names <- vnames(lavpartable, "ov", block=g) # not user, 
                                                        # which may be incomplete
-        lv.names <- vnames(lavobject@ParTable, "lv", block=g)
+        lv.names <- vnames(lavpartable, "lv", block=g)
        
         # shortcut: no latents in this block, nothing to do
         if(length(lv.names) == 0L)
@@ -188,71 +213,103 @@ standardize.est.lv <- function(lavobject, partable=NULL, est=NULL, GLIST=NULL,
     idx <- which(partable$op == ":=")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@def.function(x)
+        out[idx] <- lavmodel@def.function(x)
     }
 
     # 5b "=="
     idx <- which(partable$op == "==")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@ceq.function(x)
+        out[idx] <- lavmodel@ceq.function(x)
     }
 
     # 5c. "<" or ">"
     idx <- which((partable$op == "<" | partable$op == ">"))
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@cin.function(x)
+        out[idx] <- lavmodel@cin.function(x)
     }
 
     out
 }
 
-standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL,
-                                GLIST = NULL, cov.std = TRUE) {
+lav_standardize_all <- function(lavobject = NULL,
+                                partable = NULL, est = NULL, est.std = NULL,
+                                GLIST = NULL, cov.std = TRUE, ov.var = NULL,
+                                lavmodel = NULL, lavpartable = NULL,
+                                cov.x = NULL) {
 
-    if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est)) est <- lav_object_inspect_est(lavobject)
-    if(is.null(est.std)) {
-        est.std <- standardize.est.lv(lavobject, partable = partable, est = est,
-                                      GLIST = GLIST, cov.std = cov.std)
+    if(is.null(lavobject)) {
+        stopifnot(!is.null(lavmodel))
+        stopifnot(!is.null(lavpartable))
+        if(is.null(est)) { 
+            if(!is.null(lavpartable$est)) {
+                est <- lavpartable$est
+            } else {
+                stop("lavaan ERROR: could not find `est' in lavpartable")
+            }
+        }
+    } else {
+        lavmodel <- lavobject@Model
+        lavpartable <- lavobject@ParTable
+        if(is.null(est)) {
+            est <- lav_object_inspect_est(lavobject)
+        }
+        cov.x <- lavobject@SampleStats@cov.x
     }
-    if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+
+    if(is.null(partable)) {
+        partable <- lavpartable
+    }
+    if(is.null(GLIST)) {
+        GLIST <- lavmodel@GLIST
+    }
+    if(is.null(est.std)) {
+        est.std <- lav_standardize_lv(lavobject = lavobject, 
+                       partable = partable, est = est, GLIST = GLIST,
+                       cov.std = cov.std, lavmodel = lavmodel, 
+                       lavpartable = lavpartable)
+    }
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
+    VY <- computeVY(lavmodel = lavmodel, GLIST = GLIST,
                     diagonal.only = TRUE)
 
 
-    for(g in 1:lavobject@Model@nblocks) {
+    for(g in 1:lavmodel@nblocks) {
 
-        ov.names <- vnames(lavobject@ParTable, "ov", block = g) # not user
-        lv.names <- vnames(lavobject@ParTable, "lv", block = g)
+        ov.names <- vnames(lavpartable, "ov", block = g) # not user
+        lv.names <- vnames(lavpartable, "lv", block = g)
 
-        OV2 <- VY[[g]]
-        # replace zero values by NA (but keep negative values)
-        zero.idx <- which(abs(OV2) < .Machine$double.eps)
-        if(length(zero.idx) > 0L) {
-            OV2[zero.idx] <- as.numeric(NA)
-        }
+        if(is.null(ov.var)) {
+            OV2 <- VY[[g]]
+            # replace zero values by NA (but keep negative values)
+            zero.idx <- which(abs(OV2) < .Machine$double.eps)
+            if(length(zero.idx) > 0L) {
+                OV2[zero.idx] <- as.numeric(NA)
+            }
      
-        # replace negative values by NA (for sqrt)
-        tmp.OV2 <- OV2
-        neg.idx <- which(tmp.OV2 < 0)
-        if(length(neg.idx) > 0L) {
-            tmp.OV2[neg.idx] <- as.numeric(NA)
+            # replace negative values by NA (for sqrt)
+            tmp.OV2 <- OV2
+            neg.idx <- which(tmp.OV2 < 0)
+            if(length(neg.idx) > 0L) {
+                tmp.OV2[neg.idx] <- as.numeric(NA)
+            }
+            OV  <- sqrt(tmp.OV2)
+        } else {
+            OV2 <- ov.var[[g]]
+            OV  <- sqrt(OV2)
         }
-        OV  <- sqrt(tmp.OV2)
 
-        if(lavobject@Model@conditional.x) {
+        if(lavmodel@conditional.x) {
             # extend OV with ov.names.x
-            ov.names.x <- vnames(lavobject@ParTable, "ov.x", block = g)
-            ov.names.nox <- vnames(lavobject@ParTable, "ov.nox", block = g)
+            ov.names.x <- vnames(lavpartable, "ov.x", block = g)
+            ov.names.nox <- vnames(lavpartable, "ov.nox", block = g)
             ov.names <- c(ov.names.nox, ov.names.x)
-            OV2 <- c(OV2, diag(lavobject@SampleStats@cov.x[[g]]))
-            OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
+            OV2 <- c(OV2, diag(cov.x[[g]]))
+            OV <- c(OV, sqrt(diag(cov.x[[g]])))
         }
 
         # 1a. "=~" regular indicators
@@ -367,74 +424,107 @@ standardize.est.all <- function(lavobject, partable=NULL, est=NULL, est.std=NULL
     idx <- which(partable$op == ":=")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@def.function(x)
+        out[idx] <- lavmodel@def.function(x)
     }
 
     # 5b "=="
     idx <- which(partable$op == "==")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@ceq.function(x)
+        out[idx] <- lavmodel@ceq.function(x)
     }
 
     # 5c. "<" or ">"
     idx <- which((partable$op == "<" | partable$op == ">"))
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@cin.function(x)
+        out[idx] <- lavmodel@cin.function(x)
     }
 
     out
 }
 
 
-standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
-                                    est.std=NULL, GLIST = NULL,
-                                    cov.std = TRUE) {
+lav_standardize_all_nox <- function(lavobject = NULL, 
+                                    partable = NULL, est = NULL, est.std = NULL,
+                                    GLIST = NULL, cov.std = TRUE, ov.var = NULL,
+                                    lavmodel = NULL, lavpartable = NULL,
+                                    cov.x = NULL) {
 
-    if(is.null(partable)) partable <- lavobject@ParTable
-    if(is.null(est))   est <- lav_object_inspect_est(lavobject)
-    if(is.null(est.std)) {
-        est.std <- standardize.est.lv(lavobject, partable = partable, est = est,
-                                      GLIST = GLIST, cov.std = cov.std)
+    if(is.null(lavobject)) {
+        stopifnot(!is.null(lavmodel))
+        stopifnot(!is.null(lavpartable))
+        if(is.null(est)) {
+            if(!is.null(lavpartable$est)) {
+                est <- lavpartable$est
+            } else {
+                stop("lavaan ERROR: could not find `est' in lavpartable")
+            }
+        }
+    } else {
+        lavmodel <- lavobject@Model
+        lavpartable <- lavobject@ParTable
+        if(is.null(est)) {
+            est <- lav_object_inspect_est(lavobject)
+        }
+        cov.x <- lavobject@SampleStats@cov.x
     }
-    if(is.null(GLIST)) GLIST <- lavobject@Model@GLIST
+
+    if(is.null(partable)) {
+        partable <- lavpartable
+    }
+    if(is.null(GLIST)) {
+        GLIST <- lavmodel@GLIST
+    }
+    if(is.null(est.std)) {
+        est.std <- lav_standardize_lv(lavobject = lavobject,
+                       partable = partable, est = est, GLIST = GLIST,
+                       cov.std = cov.std, lavmodel = lavmodel,
+                       lavpartable = lavpartable)
+    }
+
 
     out <- est.std; N <- length(est.std)
     stopifnot(N == length(partable$lhs))
 
-    VY <- computeVY(lavmodel = lavobject@Model, GLIST = GLIST,
+    VY <- computeVY(lavmodel = lavmodel, GLIST = GLIST,
                     diagonal.only = TRUE)
 
 
-    for(g in 1:lavobject@Model@nblocks) {
+    for(g in 1:lavmodel@nblocks) {
 
-        ov.names     <- vnames(lavobject@ParTable, "ov",     block = g) 
-        ov.names.x   <- vnames(lavobject@ParTable, "ov.x",   block = g)
-        ov.names.nox <- vnames(lavobject@ParTable, "ov.nox", block = g)
-        lv.names     <- vnames(lavobject@ParTable, "lv",     block = g)
+        ov.names     <- vnames(lavpartable, "ov",     block = g) 
+        ov.names.x   <- vnames(lavpartable, "ov.x",   block = g)
+        ov.names.nox <- vnames(lavpartable, "ov.nox", block = g)
+        lv.names     <- vnames(lavpartable, "lv",     block = g)
 
-        OV2 <- VY[[g]]
-        # replace zero values by NA (but keep negative values)
-        zero.idx <- which(abs(OV2) < .Machine$double.eps)
-        if(length(zero.idx) > 0L) {
-            OV2[zero.idx] <- as.numeric(NA)
+        if(is.null(ov.var)) {
+            OV2 <- VY[[g]]
+            # replace zero values by NA (but keep negative values)
+            zero.idx <- which(abs(OV2) < .Machine$double.eps)
+            if(length(zero.idx) > 0L) {
+                  OV2[zero.idx] <- as.numeric(NA)
+              }
+ 
+            # replace negative values by NA (for sqrt)
+            tmp.OV2 <- OV2
+            neg.idx <- which(tmp.OV2 < 0)
+            if(length(neg.idx) > 0L) {
+                tmp.OV2[neg.idx] <- as.numeric(NA)
+            }
+            OV  <- sqrt(tmp.OV2)
+        } else {
+            OV2 <- ov.var[[g]]
+            OV  <- sqrt(OV2)
         }
 
-        # replace negative values by NA (for sqrt)
-        tmp.OV2 <- OV2
-        neg.idx <- which(tmp.OV2 < 0)
-        if(length(neg.idx) > 0L) {
-            tmp.OV2[neg.idx] <- as.numeric(NA)
-        }
-        OV  <- sqrt(tmp.OV2)
 
-        if(lavobject@Model@conditional.x) {
+        if(lavmodel@conditional.x) {
             # extend OV with ov.names.x
-            ov.names.x <- vnames(lavobject@ParTable, "ov.x", block = g)
+            ov.names.x <- vnames(lavpartable, "ov.x", block = g)
             ov.names <- c(ov.names.nox, ov.names.x)
-            OV2 <- c(OV2, diag(lavobject@SampleStats@cov.x[[g]]))
-            OV <- c(OV, sqrt(diag(lavobject@SampleStats@cov.x[[g]])))
+            OV2 <- c(OV2, diag(cov.x[[g]]))
+            OV <- c(OV, sqrt(diag(cov.x[[g]])))
         }
 
         # 1a. "=~" regular indicators
@@ -553,27 +643,27 @@ standardize.est.all.nox <- function(lavobject, partable=NULL, est=NULL,
     idx <- which(partable$op == ":=")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@def.function(x)
+        out[idx] <- lavmodel@def.function(x)
     }
 
     # 5b "=="
     idx <- which(partable$op == "==")
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@ceq.function(x)
+        out[idx] <- lavmodel@ceq.function(x)
     }
 
     # 5c. "<" or ">"
     idx <- which((partable$op == "<" | partable$op == ">"))
     if(length(idx) > 0L) {
         x <- out[ partable$free & !duplicated(partable$free) ]
-        out[idx] <- lavobject@Model@cin.function(x)
+        out[idx] <- lavmodel@cin.function(x)
     }
 
     out
 }
 
-unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
+lav_unstandardize_ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
 
     # check if ustart is missing; if so, look for est
     if(is.null(partable$ustart)) 
@@ -684,4 +774,3 @@ unstandardize.est.ov <- function(partable, ov.var=NULL, cov.std=TRUE) {
 
     out
 }
-

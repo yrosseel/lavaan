@@ -1,5 +1,7 @@
 # model estimation
 lav_model_estimate <- function(lavmodel       = NULL,
+                               lavpartable    = NULL, # for parscale = "stand"
+                               lavh1          = NULL, # for multilevel + parsc
                                lavsamplestats = NULL,
                                lavdata        = NULL,
                                lavoptions     = NULL,
@@ -24,28 +26,134 @@ lav_model_estimate <- function(lavmodel       = NULL,
         PENV$PARTRACE <- matrix(NA, nrow=0, ncol=lavmodel@nx.free + 1L)
     }
 
-    # function to be minimized
-    minimize.this.function <- function(x, verbose=FALSE, infToMax=FALSE) {
-      
-        #cat("DEBUG: x = ", x, "\n")
+    # starting values (ignoring equality constraints)
+    x.unpack <- lav_model_get_parameters(lavmodel)
 
-        # current strategy: forcePD is by default FALSE, except
-        # if missing patterns are used
-        #if(any(lavsamplestats@missing.flag)) {
-        #    forcePD <- TRUE
-        #} else {
-            forcePD <- FALSE
+    # 1. parameter scaling (to handle data scaling, not parameter scaling)
+    parscale <- rep(1.0, length(x.unpack))
+    if(lavoptions$optim.parscale == "none") {
+        # do nothing, but still set SCALE, as before
+    } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
+                                               "standarized", "stand.all")) {
+        # rescale parameters as if the data was standardized
+        # new in 0.6-2
+        #
+        # FIXME: this works well, as long as the variances of the 
+        #        latent variables (which we do not know) are more or less
+        #        equal to 1.0 (eg std.lv = TRUE)
+        #
+        #        Once we have better estimates of those variances, we could
+        #        use them to set the scale
+        #
+
+        if(lavdata@nlevels > 1L) {
+            if(length(lavh1) > 0L) {
+                OV.VAR <- lapply(lavh1$implied$cov, diag)
+            } else {
+                OV.VAR <- lapply(do.call(c, lapply(lavdata@Lp, "[[", "ov.idx")),
+                                     function(x) rep(1, length(x) ))
+            }
+        } else {
+            if(lavoptions$conditional.x) {
+                OV.VAR <- lavsamplestats@res.var
+            } else {
+                OV.VAR <- lavsamplestats@var
+            }
+        }
+
+        if(lavoptions$std.lv) {
+            parscale <- lav_standardize_all(lavobject = NULL, 
+                            est = rep(1, length(lavpartable$lhs)),
+                            est.std = rep(1, length(lavpartable$lhs)),
+                            cov.std = FALSE, ov.var = OV.VAR,
+                            lavmodel = lavmodel, lavpartable = lavpartable,
+                            cov.x = lavsamplestats@cov.x)
+        } else {
+            # needs good estimates for lv variances!
+            parscale <- lav_standardize_all(lavobject = NULL,
+                            est = rep(1, length(lavpartable$lhs)),
+                            #est.std = rep(1, length(lavpartable$lhs)),
+                            # here, we use whatever the starting values are
+                            # for the latent variances...
+                            cov.std = FALSE, ov.var = OV.VAR,
+                            lavmodel = lavmodel, lavpartable = lavpartable,
+                            cov.x = lavsamplestats@cov.x)
+        }
+
+        # in addition, take sqrt for variance parameters
+        var.idx <- which(lavpartable$op == "~~" &
+                         lavpartable$lhs == lavpartable$rhs)
+        if(length(var.idx) > 0L) {
+            parscale[var.idx] <- sqrt(abs(parscale[var.idx]))
+        }
+        parscale <- parscale[ lavpartable$free > 0 ]
+    }
+    # parscale should obey the equality constraints
+    if(lavmodel@eq.constraints && lavoptions$optim.parscale != "none") {
+        # pack
+        p.pack <- as.numeric( (parscale - lavmodel@eq.constraints.k0) %*%
+                               lavmodel@eq.constraints.K )
+        # unpack
+        parscale <- as.numeric(lavmodel@eq.constraints.K %*% p.pack) +
+                               lavmodel@eq.constraints.k0
+    }
+    if(debug) {
+        cat("parscale = ", parscale, "\n")
+    }
+    z.unpack <- x.unpack * parscale
+
+    # 2. pack (apply equality constraints)
+    if(lavmodel@eq.constraints) {
+        z.pack <- as.numeric( (z.unpack - lavmodel@eq.constraints.k0) %*%
+                              lavmodel@eq.constraints.K )
+    } else {
+        z.pack <- z.unpack
+    }
+
+    # 3. transform (already constrained) variances to standard deviations?
+    # TODO
+    #if(lavoptions$optim.var.transform == "sqrt" &&
+    #       length(lavmodel@x.free.var.idx) > 0L) {
+    #    # transforming variances using atan (or another sigmoid function?)
+    #    # FIXME: better approach?
+    #    #start.x[lavmodel@x.free.var.idx] <- 
+    #    #    atan(start.x[lavmodel@x.free.var.idx])
+    #    start.x[lavmodel@x.free.var.idx] <-
+    #        sqrt(start.x[lavmodel@x.free.var.idx]) # assuming positive var
+    #}
+
+    # final starting values for optimizer
+    start.x <- z.pack
+    if(debug) {
+        cat("start.x = ", start.x, "\n")
+    }
+
+
+
+    # function to be minimized
+    objective_function <- function(x, verbose = FALSE, infToMax = FALSE) {
+
+        # 3. standard deviations to variances 
+        # WARNING: x is still packed here!
+        #if(lavoptions$optim.var.transform == "sqrt" &&
+        #   length(lavmodel@x.free.var.idx) > 0L) {
+        #    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+        #    x.var <- x[lavmodel@x.free.var.idx]
+        #    x.var.sign <- sign(x.var)
+        #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
         #}
 
-        # transform variances back
-        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
-
-        # update GLIST (change `state') and make a COPY!
+        # 2. unpack
         if(lavmodel@eq.constraints) {
-            x <- as.numeric(lavmodel@eq.constraints.K %*% x) + 
+            x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
                             lavmodel@eq.constraints.k0
         }
-        GLIST <- lav_model_x2GLIST(lavmodel, x=x)
+
+        # 1. unscale
+        x <- x / parscale
+
+        # update GLIST (change `state') and make a COPY!
+        GLIST <- lav_model_x2GLIST(lavmodel, x = x)
 
         fx <- lav_model_objective(lavmodel       = lavmodel, 
                                   GLIST          = GLIST, 
@@ -53,7 +161,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
                                   verbose        = verbose,
-                                  forcePD        = forcePD)
+                                  forcePD        = FALSE)
 
         # only for PML: divide by N (to speed up convergence)
         if(estimator == "PML") {
@@ -85,17 +193,28 @@ lav_model_estimate <- function(lavmodel       = NULL,
         fx
     }
 
-    first.derivative.param <- function(x, verbose=FALSE, infToMax=FALSE) {
+    gradient_function <- function(x, verbose = FALSE, infToMax = FALSE) {
 
         # transform variances back
-        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+        #if(lavoptions$optim.var.transform == "sqrt" &&
+        #   length(lavmodel@x.free.var.idx) > 0L) {
+        #    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+        #    x.var <- x[lavmodel@x.free.var.idx]
+        #    x.var.sign <- sign(x.var)
+        #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
+        #}
 
-        # update GLIST (change `state') and make a COPY!
+        # 2. unpack
         if(lavmodel@eq.constraints) {
             x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
                             lavmodel@eq.constraints.k0
         }
-        GLIST <- lav_model_x2GLIST(lavmodel, x=x)
+
+        # 1. unscale
+        x <- x / parscale
+
+        # update GLIST (change `state') and make a COPY!
+        GLIST <- lav_model_x2GLIST(lavmodel, x = x)
 
         dx <- lav_model_gradient(lavmodel       = lavmodel, 
                                  GLIST          = GLIST, 
@@ -111,13 +230,24 @@ lav_model_estimate <- function(lavmodel       = NULL,
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
         }
 
-        #print( dx %*% lavmodel@eq.constraints.K )
-        #stop("for now")
+        # 1. scale (note: divide, not multiply!)
+        dx <- dx / parscale
 
-        # handle linear equality constraints
+        # 2. pack
         if(lavmodel@eq.constraints) {
             dx <- as.numeric( dx %*% lavmodel@eq.constraints.K )
         }
+
+        # 3. transform variances back
+        #if(lavoptions$optim.var.transform == "sqrt" &&
+        #   length(lavmodel@x.free.var.idx) > 0L) {
+        #    x.var <- x[lavmodel@x.free.var.idx] # here in 'var' metric
+        #    x.var.sign <- sign(x.var)
+        #    x.var <- abs(x.var)
+        #    x.sd <- sqrt(x.var)
+        #    dx[lavmodel@x.free.var.idx] <- 
+        #        ( 2 * x.var.sign * dx[lavmodel@x.free.var.idx] * x.sd )
+        #}
 
         # only for PML: divide by N (to speed up convergence)
         if(estimator == "PML") {
@@ -129,12 +259,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
 
         dx
-    } 
+    }
 
-    first.derivative.param.numerical <- function(x, verbose=FALSE) {
+    gradient_function_numerical <- function(x, verbose=FALSE) {
 
-        # transform variances back
-        #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+        # NOTE: no need to 'tranform' anything here (var/eq)
+        # this is done anyway in objective_function
 
         # numerical approximation using the Richardson method
         npar <- length(x)
@@ -146,14 +276,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
             x.left <- x.left2 <- x.right <- x.right2 <- x
             x.left[i]  <- x[i] - h; x.left2[i]  <- x[i] - 2*h
             x.right[i] <- x[i] + h; x.right2[i] <- x[i] + 2*h
-            fx.left   <- minimize.this.function(x.left)
-            fx.left2  <- minimize.this.function(x.left2)
-            fx.right  <- minimize.this.function(x.right)
-            fx.right2 <- minimize.this.function(x.right2)
+            fx.left   <- objective_function(x.left)
+            fx.left2  <- objective_function(x.left2)
+            fx.right  <- objective_function(x.right)
+            fx.right2 <- objective_function(x.right2)
             dx[i] <- (fx.left2 - 8*fx.left + 8*fx.right - fx.right2)/(12*h)
         }
 
-        #dx <- lavGradientC(func=minimize.this.function, x=x)
+        #dx <- lavGradientC(func=objective_function, x=x)
         # does not work if pnorm is involved... (eg PML)
 
         if(debug) {
@@ -163,17 +293,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
         dx
     }
  
-    # starting values
-    start.x <- lav_model_get_parameters(lavmodel)
-    if(lavmodel@eq.constraints) {
-        start.x <- as.numeric( (start.x - lavmodel@eq.constraints.k0) %*% 
-                                lavmodel@eq.constraints.K )
-    }
-
-    if(debug) {
-        #cat("start.unco = ", lav_model_get_parameters(lavmodel, type="unco"), "\n")
-        cat("start.x = ", start.x, "\n")
-    }
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
@@ -186,7 +305,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                     paste(" in group ",g,".",sep=""), ".")
                 if(debug) print(Sigma.hat[[g]])
                 stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
-                # FIXME: should we stop here?? or try anyway?
                 x <- start.x
                 fx <- as.numeric(NA)
                 attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
@@ -199,23 +317,21 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
     }
 
-    # scaling factors
+
+    # parameter scaling
     # FIXME: what is the best way to set the scale??
     # current strategy: if startx > 1.0, we rescale by using
     # 1/startx
     SCALE <- rep(1.0, length(start.x))
-    #idx <- which(abs(start.x) > 10.0)
-    idx <- which(abs(start.x) > 1.0)
-    if(length(idx) > 0L) SCALE[idx] <- abs(1.0/start.x[idx])
-    #idx <- which(abs(start.x) < 1.0 & start.x != 0.0)
-    #if(length(idx) > 0L) SCALE[idx] <- abs(1.0/start.x[idx])
+    if(lavoptions$optim.parscale == "none") {
+        idx <- which(abs(start.x) > 1.0)
+        if(length(idx) > 0L) {
+            SCALE[idx] <- abs(1.0/start.x[idx])
+        }
+    }
     if(debug) {
         cat("SCALE = ", SCALE, "\n")
     }
-
-    # transforming variances using atan (or another sigmoid function?)
-    # FIXME: better approach?
-    #start.x[lavmodel@x.free.var.idx] <- atan(start.x[lavmodel@x.free.var.idx])
 
 
     # first some nelder mead steps? (default = FALSE)
@@ -224,9 +340,9 @@ lav_model_estimate <- function(lavmodel       = NULL,
     # gradient: analytic, numerical or NULL?
     if(is.character(lavoptions$optim.gradient)) {
         if(lavoptions$optim.gradient %in% c("analytic","analytical")) {
-            GRADIENT <- first.derivative.param
+            GRADIENT <- gradient_function
         } else if(lavoptions$optim.gradient %in% c("numerical", "numeric")) {
-            GRADIENT <- first.derivative.param.numerical
+            GRADIENT <- gradient_function_numerical
         } else if(lavoptions$optim.gradient %in% c("NULL", "null")) {
             GRADIENT <- NULL
         } else {
@@ -234,16 +350,16 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
     } else if(is.logical(lavoptions$optim.gradient)) {
         if(lavoptions$optim.gradient) {
-            GRADIENT <- first.derivative.param
+            GRADIENT <- gradient_function
         } else {
             GRADIENT <- NULL
         }
     } else if(is.null(lavoptions$optim.gradient)) {
-        GRADIENT <- first.derivative.param
+        GRADIENT <- gradient_function
     }
 
 
-    # optimizer
+    # default optimizer
     if(length(lavmodel@ceq.nonlinear.idx) == 0L &&
        length(lavmodel@cin.linear.idx)    == 0L &&
        length(lavmodel@cin.nonlinear.idx) == 0L) {
@@ -267,7 +383,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         if(verbose) cat("Initial Nelder-Mead step:\n")
         trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
-                           fn=minimize.this.function,
+                           fn=objective_function,
                            method="Nelder-Mead",
                            #control=list(maxit=10L, 
                            #             parscale=SCALE,
@@ -300,7 +416,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
         #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
         optim.out <- nlminb(start=start.x,
-                            objective=minimize.this.function,
+                            objective=objective_function,
                             gradient=NULL,
                             control=control,
                             scale=SCALE,
@@ -341,7 +457,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
         #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
         optim.out <- nlminb(start=start.x,
-                            objective=minimize.this.function,
+                            objective=objective_function,
                             gradient=GRADIENT,
                             control=control,
                             scale=SCALE,
@@ -379,7 +495,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   "maxit", "abstol", "reltol", "REPORT")]
         #trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
-                           fn=minimize.this.function,
+                           fn=objective_function,
                            gr=GRADIENT,
                            method="BFGS",
                            control=control,
@@ -418,7 +534,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                     "ndeps", "maxit", "REPORT", "lmm", 
                                     "factr", "pgtol")]
         optim.out <- optim(par=start.x,
-                           fn=minimize.this.function,
+                           fn=objective_function,
                            gr=GRADIENT,
                            method="L-BFGS-B",
                            control=control,
@@ -463,7 +579,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         if(!is.null(body(lavmodel@ceq.jacobian))) ceq.jac <- lavmodel@ceq.jacobian
         trace <- FALSE; if(verbose) trace <- TRUE
         optim.out <- nlminb.constr(start = start.x,
-                                   objective=minimize.this.function,
+                                   objective=objective_function,
                                    gradient=GRADIENT,
                                    control=control,
                                    scale=SCALE,
@@ -496,20 +612,32 @@ lav_model_estimate <- function(lavmodel       = NULL,
         optim.out <- list()
     }
 
-    fx <- minimize.this.function(x) # to get "fx.group" attribute
+    fx <- objective_function(x) # to get "fx.group" attribute
+
     # transform back
+    # 3. 
+    #if(lavoptions$optim.var.transform == "sqrt" &&
+    #       length(lavmodel@x.free.var.idx) > 0L) {
+    #    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+    #    x.var <- x[lavmodel@x.free.var.idx]
+    #    x.var.sign <- sign(x.var)
+    #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
+    #}
+
+    # 2. unpack
     if(lavmodel@eq.constraints) {
         x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
                         lavmodel@eq.constraints.k0
     }
 
-    # transform variances back
-    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])
+    # 1. unscale
+    x <- x / parscale
 
     attr(x, "converged")  <- converged
     attr(x, "iterations") <- iterations
     attr(x, "control")    <- control
     attr(x, "fx")         <- fx
+    attr(x, "parscale")   <- parscale
     if(!is.null(optim.out$con.jac)) attr(x, "con.jac")    <- optim.out$con.jac
     if(!is.null(optim.out$lambda))  attr(x, "con.lambda") <- optim.out$lambda
     if(lavoptions$partrace) {

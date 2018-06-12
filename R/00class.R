@@ -120,7 +120,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
         x.def.idx="integer",
         x.ceq.idx="integer",
         x.cin.idx="integer",
-        #x.free.var.idx="integer",
+        x.free.var.idx="integer",
 
         eq.constraints="logical",
         eq.constraints.K="matrix",

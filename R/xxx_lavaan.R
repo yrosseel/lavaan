@@ -81,7 +81,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             dotdotdot$optim.gradient <- dotdotdot$gradient
         }
         # init_nelder_mead
-        if(!!is.null(dotdotdot$control$init_nelder_mead)) {
+        if(!is.null(dotdotdot$control$init_nelder_mead)) {
             dotdotdot$optim.init_nelder_mead <-
                 dotdotdot$control$init_nelder_mead
         }
@@ -978,6 +978,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                max.iter       = lavoptions$em.iter.max)
         } else {
             x <- lav_model_estimate(lavmodel        = lavmodel,
+                                    lavpartable     = lavpartable,
                                     lavsamplestats  = lavsamplestats,
                                     lavdata         = lavdata,
                                     lavoptions      = lavoptions,
@@ -1021,6 +1022,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim$npar <- length(x)
     lavoptim$iterations <- attr(x, "iterations")
     lavoptim$converged  <- attr(x, "converged")
+    lavoptim$parscale   <- attr(x, "parscale")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx
     lavoptim$fx.group   <- attr(fx.copy, "fx.group")

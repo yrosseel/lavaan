@@ -296,13 +296,13 @@ standardizedSolution <- standardizedsolution <- function(object,
 
     # add std and std.all columns
     if(type == "std.lv") {
-        LIST$est.std     <- standardize.est.lv(object, est = est, GLIST = GLIST,
+        LIST$est.std     <- lav_standardize_lv(object, est = est, GLIST = GLIST,
                                                partable = partable, cov.std = cov.std)
     } else if(type == "std.all") {
-        LIST$est.std <- standardize.est.all(object, est = est, GLIST = GLIST,
+        LIST$est.std <- lav_standardize_all(object, est = est, GLIST = GLIST,
                                             partable = partable, cov.std = cov.std)
     } else if(type == "std.nox") {
-        LIST$est.std <- standardize.est.all.nox(object, est = est, GLIST = GLIST,
+        LIST$est.std <- lav_standardize_all_nox(object, est = est, GLIST = GLIST,
                                                 partable = partable, cov.std = cov.std)
     }
 
@@ -659,10 +659,10 @@ parameterEstimates <- parameterestimates <- function(object,
 
     # standardized estimates?
     if(standardized) {
-        LIST$std.lv  <- standardize.est.lv(object, cov.std = cov.std)
-        LIST$std.all <- standardize.est.all(object, est.std=LIST$est.std,
+        LIST$std.lv  <- lav_standardize_lv(object, cov.std = cov.std)
+        LIST$std.all <- lav_standardize_all(object, est.std=LIST$est.std,
                                             cov.std = cov.std)
-        LIST$std.nox <- standardize.est.all.nox(object, est.std=LIST$est.std,
+        LIST$std.nox <- lav_standardize_all_nox(object, est.std=LIST$est.std,
                                                 cov.std = cov.std)
     }
 

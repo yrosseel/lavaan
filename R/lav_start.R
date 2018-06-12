@@ -100,13 +100,13 @@ lav_start <- function(start.method    = "default",
         start[ which(lavpartable$op == "=~") ] <- 1.0
     }
 
-    # 2. residual lv variances for latent variables
+    # 2. (residual) lv variances for latent variables
     lv.names    <- vnames(lavpartable, "lv") # all groups
     lv.var.idx <- which(lavpartable$op == "~~"        &
                         lavpartable$lhs %in% lv.names &
                         lavpartable$lhs == lavpartable$rhs)
     start[lv.var.idx] <- 0.05
-
+    #start[lv.var.idx] <- 0.5 # new in 0.6-2? (for optim.parscale = "stand")
 
     # 3. latent response scales (if any)
     delta.idx <- which(lavpartable$op == "~*~")
@@ -162,12 +162,14 @@ lav_start <- function(start.method    = "default",
             # 9 Okt 2013: if only 2 indicators, we use the regression
             # coefficient (y=marker, x=2nd indicator)
             for(f in lv.names) {
-                free.idx <- which( lavpartable$lhs == f & lavpartable$op == "=~"
-                                                 & lavpartable$group == group.values[g] 
-                                                 & lavpartable$free > 0L)
+                free.idx <- which( lavpartable$lhs == f & 
+                                   lavpartable$op == "=~" & 
+                                   lavpartable$group == group.values[g] & 
+                                   lavpartable$free > 0L)
                  
-                user.idx <- which( lavpartable$lhs == f & lavpartable$op == "=~" 
-                                                 & lavpartable$group == group.values[g] )
+                user.idx <- which( lavpartable$lhs == f & 
+                                   lavpartable$op == "=~" & 
+                                   lavpartable$group == group.values[g] )
                 # no second order
                 if(any(lavpartable$rhs[user.idx] %in% lv.names)) next
 
@@ -201,7 +203,9 @@ lav_start <- function(start.method    = "default",
                 }
 
                 # standardized?
-                var.f.idx <- which(lavpartable$lhs == f & lavpartable$op == "~~" &
+                var.f.idx <- which(lavpartable$lhs == f & 
+                                   lavpartable$op == "~~" &
+                                   lavpartable$group == group.values[g] &
                                    lavpartable$rhs == f)
                 if(length(var.f.idx) > 0L && 
                    lavpartable$free[var.f.idx] == 0 &&
@@ -333,6 +337,7 @@ lav_start <- function(start.method    = "default",
 
         # 6b. exogenous lv variances if single indicator -- new in 0.5-21
         lv.x <- vnames(lavpartable, "lv.x", group = group.values[g])
+        # FIXME: also for multilevel?
         lv.x <- unique(unlist(lv.x))
         if(length(lv.x) > 0L) {
             for(ll in lv.x) {
@@ -373,9 +378,77 @@ lav_start <- function(start.method    = "default",
             }
         }
 
-
         # 7g) regressions "~"
-    }
+
+      #  # 8 latent variances (new in 0.6-2)
+      #  lv.names.y <- vnames(lavpartable, "lv.y", group = group.values[g])
+      #  lv.names.x <- vnames(lavpartable, "lv.x", group = group.values[g])
+      #  # multilevel? take first level only
+      #  if(is.list(lv.names.y)) {
+      #      lv.names.y <- unlist(lv.names.y) # for now
+      #  }
+      #  if(is.list(lv.names.x)) {
+      #      lv.names.x <- unlist(lv.names.x) # for now
+      #  }
+      #  lv.names.xy <- unique(c(lv.names.x, lv.names.y))
+ 
+
+      #  if(length(lv.names.xy) > 0L) {
+      #      free.var.idx <- which(lavpartable$op == "~~" &
+      #                            lavpartable$lhs %in% lv.names.xy &
+      #                            lavpartable$rhs == lavpartable$lhs &
+      #                            lavpartable$group == group.values[g])
+      #      if(length(free.var.idx) > 0L) {
+      #          this.lv.names <- lavpartable$lhs[free.var.idx]
+      #          for(v in seq_len(length(free.var.idx))) {
+      #              # single marker item?
+      #              ind.idx <- which(lavpartable$op == "=~" &
+      #                               lavpartable$lhs %in% this.lv.names[v] &
+      #                               #lavpartable$rhs %in% ov.names.num &
+      #                               lavpartable$free == 0L &
+      #                               lavpartable$group == group.values[g])
+      #              if(length(ind.idx) == 0) {
+      #                  next
+      #              } else if(length(ind.idx) > 1L) {
+      #                  # FIXME! perhaps a random effect? do something clever
+      #                  next
+      #              } else if(length(ind.idx) == 1L) {
+      #                  marker.ind <- lavpartable$rhs[ind.idx]
+      #                  ov.idx <- match(marker.ind, ov.names)
+      #                  if(conditional.x) {
+      #                      ov.var <- diag(lavsamplestats@res.cov[[g]])[ov.idx]
+      #                  } else {
+      #                      ov.var <- diag(lavsamplestats@cov[[g]])[ov.idx]
+      #                  }
+      #  
+      #                  # exogenous? assume rel = 0.50
+      #                  lambda <- lavpartable$ustart[ind.idx]
+      #                  tmp <- (0.50 * ov.var)/lambda^2
+      #                  if(this.lv.names[v] %in% lv.names.y) {
+      #                      # endogenous, assume R2 = 0.2
+      #                      tmp <- 0.8 * tmp
+      #                  }
+      #                  # within variance?
+      #                  if(nlevels > 1L &&
+      #                     lavpartable$level[ free.var.idx[v] ] == 1L) {
+      #                      tmp <- tmp * 0.75
+      #                  }
+      #                  # between variance?
+      #                  if(nlevels > 1L &&
+      #                     lavpartable$level[ free.var.idx[v] ] > 1L) {
+      #                      tmp <- tmp * 0.25
+      #                  }
+      #                  # just in case
+      #                  if(is.na(tmp) || tmp < 0.05) {
+      #                      tmp <- 0.05
+      #                  }
+      #                  start[ free.var.idx[v] ] <- tmp
+      #              }
+      #          } # v
+      #      } # free.var.idx
+      #  } # lv var
+
+    } # groups
 
 
     # nlevels > 1L 

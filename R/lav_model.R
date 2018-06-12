@@ -260,6 +260,14 @@ lav_model <- function(lavpartable      = NULL,
         GLIST[[ lambda.idx ]][ cbind(ROWS, COLS) ] <- lavoptions$tech.muml.scale
     }
 
+    # which free parameters are observed variances?
+    ov.names <- vnames(lavpartable, "ov")
+    x.free.var.idx <- lavpartable$free[ lavpartable$free & 
+                                        #!duplicated(lavpartable$free) &
+                                        lavpartable$lhs %in% ov.names &
+                                        lavpartable$op == "~~" & 
+                                        lavpartable$lhs == lavpartable$rhs ]
+
 
     Model <- new("lavModel",
                  GLIST=GLIST,
@@ -283,6 +291,7 @@ lav_model <- function(lavpartable      = NULL,
                  nx.user=max(lavpartable$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,
+                 x.free.var.idx=x.free.var.idx,
                  #m.unco.idx=m.unco.idx,
                  #x.unco.idx=x.unco.idx,
                  m.user.idx=m.user.idx,

@@ -177,7 +177,7 @@ simulateData <- function(
         # FIXME: if ov.var is named, check the order of the elements
 
         # 1. unstandardize observed variables
-        lav$ustart <- unstandardize.est.ov(partable=lav, ov.var=ov.var)
+        lav$ustart <- lav_unstandardize_ov(partable = lav, ov.var = ov.var)
 
         # 2. unstandardized latent variables
 
