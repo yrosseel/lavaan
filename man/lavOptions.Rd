@@ -295,7 +295,11 @@ Check options:
     \item{\code{check}:}{Character vector. If \code{check} includes 
       \code{"start"}, the starting values are checked for possibly 
       inconsistent values (for example values implying correlations larger 
-      than one); if \code{check} includes \code{"post"}, a check is performed 
+      than one); if \code{check} includes \code{"gradient"}, a warning 
+      is given if the optimizer decided that the model converged, but 
+      not all elements of the gradient are (near) zero, as
+      they should be (the tolerance used is 0.001);
+      if \code{check} includes \code{"post"}, a check is performed 
       after (post) fitting, to check if the solution is admissable.}
 }
 
