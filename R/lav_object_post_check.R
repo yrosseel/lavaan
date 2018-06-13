@@ -39,7 +39,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
                 warning(
 "lavaan WARNING: covariance matrix of latent variables\n",
 "                is not positive definite", txt.group, ";\n", 
-"                use inspect(fit,\"cov.lv\") to investigate.")
+"                use lavInspect(fit, \"cov.lv\") to investigate.")
                 result.ok <- FALSE
             }
         }
@@ -61,7 +61,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
                     warning(
 "lavaan WARNING: the covariance matrix of the residuals of the observed\n", 
 "                variables (theta) is not positive definite", txt.group, ";\n",
-"                use inspect(fit,\"theta\") to investigate.")
+"                use lavInspect(fit, \"theta\") to investigate.")
                     result.ok <- FALSE
                 }
             }

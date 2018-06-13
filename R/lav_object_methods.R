@@ -508,6 +508,19 @@ parameterEstimates <- parameterestimates <- function(object,
             LIST$z <- LIST$est / tmp.se
             if(pvalue) {
                 LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
+                # remove p-value if bounds have been used
+                if(!is.null(PARTABLE$lower)) {
+                   b.idx <- which(PARTABLE$lower > -Inf)
+                   if(length(b.idx) > 0L) {
+                       LIST$pvalue[b.idx] <- as.numeric(NA)
+                   }
+                }
+                if(!is.null(PARTABLE$upper)) {
+                   b.idx <- which(PARTABLE$upper < Inf)
+                   if(length(b.idx) > 0L) {
+                       LIST$pvalue[b.idx] <- as.numeric(NA)
+                   }
+                }
             }
         }
     }

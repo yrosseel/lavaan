@@ -1233,9 +1233,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    # post-fitting check
+    # post-fitting check of parameters
     if("post" %in% lavoptions$check && lavTech(lavaan, "converged")) {
         lavInspect(lavaan, "post.check")
+    }
+
+    # new in 0.6-2
+    if("gradient" %in% lavoptions$check && lavTech(lavaan, "converged")) {
+        grad <- lavInspect(lavaan, "gradient")
+        large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
+        if(length(large.idx) > 0L) {
+            warning(
+  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
+"                  the optimizer may not have found a local solution;\n",
+"                  use lavInspect(fit, \"gradient\") to investigate")
+        }
     }
 
     ########################

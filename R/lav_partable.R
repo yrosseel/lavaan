@@ -298,7 +298,7 @@ lavaanify <- lavParTable <- function(
         for(el in 1:length(MOD)) {
             idx <- which(LIST$mod.idx == el) # for each group
 
-            # 0.5-21: check is idx exists
+            # 0.5-21: check if idx exists
             # perhaps the corresponding element was duplicated, and removed
             if(length(idx) == 0L) {
                 next
@@ -306,6 +306,8 @@ lavaanify <- lavParTable <- function(
 
             MOD.fixed <- MOD[[el]]$fixed  
             MOD.start <- MOD[[el]]$start
+            MOD.lower <- MOD[[el]]$lower
+            MOD.upper <- MOD[[el]]$upper
             MOD.label <- MOD[[el]]$label 
             MOD.prior <- MOD[[el]]$prior
 
@@ -315,6 +317,8 @@ lavaanify <- lavParTable <- function(
                 # A) here we force same behavior across groups
                 if(length(MOD.fixed) == 1L) MOD.fixed <- rep(MOD.fixed, ngroups)
                 if(length(MOD.start) == 1L) MOD.start <- rep(MOD.start, ngroups)
+                if(length(MOD.lower) == 1L) MOD.lower <- rep(MOD.lower, ngroups)
+                if(length(MOD.upper) == 1L) MOD.upper <- rep(MOD.upper, ngroups)
                 if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
                 # B) here we do NOT! otherwise, it would imply an equality 
                 #                    constraint...
@@ -332,6 +336,8 @@ lavaanify <- lavParTable <- function(
             nidx <- length(idx)
             if( (!is.null(MOD.fixed) && nidx != length(MOD.fixed)) ||
                 (!is.null(MOD.start) && nidx != length(MOD.start)) ||
+                (!is.null(MOD.lower) && nidx != length(MOD.lower)) ||
+                (!is.null(MOD.upper) && nidx != length(MOD.upper)) ||
                 (!is.null(MOD.prior) && nidx != length(MOD.prior)) ||
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
@@ -363,6 +369,20 @@ lavaanify <- lavParTable <- function(
                     LIST$prior <- character( length(LIST$lhs) )
                 }
                 LIST$prior[idx] <- MOD.prior
+            }
+            if(!is.null(MOD.lower)) {
+                # do we already have a `lower' column? if not, create one
+                if(is.null(LIST$lower)) {
+                    LIST$lower <- rep(-Inf, length(LIST$lhs) )
+                }
+                LIST$lower[idx] <- as.numeric(MOD.lower)
+            }
+            if(!is.null(MOD.upper)) {
+                # do we already have a `upper' column? if not, create one
+                if(is.null(LIST$upper)) {
+                    LIST$upper <- rep(Inf, length(LIST$lhs) )
+                }
+                LIST$upper[idx] <- as.numeric(MOD.upper)
             }
             if(!is.null(MOD.label)) {
                 LIST$label[idx] <- MOD.label

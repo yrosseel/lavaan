@@ -140,7 +140,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 start                  = "default",
 
                 # sanity checks
-                check                  = c("start", "post"),
+                check                  = c("start", "post", "gradient"),
 
                 # more models/info
                 h1                     = TRUE,

@@ -128,6 +128,36 @@ lav_model_estimate <- function(lavmodel       = NULL,
         cat("start.x = ", start.x, "\n")
     }
 
+  
+    # bounds? (new in 0.6-2)
+    if(is.null(lavpartable$lower)) {
+        lower <- -Inf
+    } else {
+        lower <- lavpartable$lower[ lavpartable$free > 0 ]
+        if(lavmodel@eq.constraints) {
+            # pack
+            l.pack <- as.numeric( (lower - lavmodel@eq.constraints.k0) %*%
+                                  lavmodel@eq.constraints.K )
+            # unpack
+            lower <- as.numeric(lavmodel@eq.constraints.K %*% l.pack) +
+                                lavmodel@eq.constraints.k0
+        }
+    }
+    if(is.null(lavpartable$upper)) {
+        upper <- +Inf
+    } else {
+        upper <- lavpartable$upper[ lavpartable$free > 0 ]
+        if(lavmodel@eq.constraints) {
+            # pack
+            u.pack <- as.numeric( (upper - lavmodel@eq.constraints.k0) %*%
+                                  lavmodel@eq.constraints.K )
+            # unpack
+            upper <- as.numeric(lavmodel@eq.constraints.K %*% u.pack) +
+                                lavmodel@eq.constraints.k0
+        }
+    }
+    
+
 
 
     # function to be minimized
@@ -418,6 +448,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
         optim.out <- nlminb(start=start.x,
                             objective=objective_function,
                             gradient=NULL,
+                            lower=lower,
+                            upper=upper,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 
@@ -459,6 +491,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
         optim.out <- nlminb(start=start.x,
                             objective=objective_function,
                             gradient=GRADIENT,
+                            lower=lower,
+                            upper=upper,
                             control=control,
                             scale=SCALE,
                             verbose=verbose) 
@@ -537,6 +571,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            fn=objective_function,
                            gr=GRADIENT,
                            method="L-BFGS-B",
+                           lower=lower,
+                           upper=upper,
                            control=control,
                            hessian=FALSE,
                            verbose=verbose,

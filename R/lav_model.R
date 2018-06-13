@@ -268,7 +268,6 @@ lav_model <- function(lavpartable      = NULL,
                                         lavpartable$op == "~~" & 
                                         lavpartable$lhs == lavpartable$rhs ]
 
-
     Model <- new("lavModel",
                  GLIST=GLIST,
                  dimNames=dimNames,

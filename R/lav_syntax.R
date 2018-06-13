@@ -92,6 +92,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
   
     FLAT.fixed       <- character(0)  # only for display purposes! 
     FLAT.start       <- character(0)  # only for display purposes!
+    FLAT.lower       <- character(0)  # only for display purposes!
+    FLAT.upper       <- character(0)  # only for display purposes!
     FLAT.label       <- character(0)  # only for display purposes!
     FLAT.prior       <- character(0)
     FLAT.idx <- 0L
@@ -188,6 +190,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             FLAT.rhs[FLAT.idx] <- rhs
             FLAT.fixed[FLAT.idx] <- ""
             FLAT.start[FLAT.idx] <- ""
+            FLAT.lower[FLAT.idx] <- ""
+            FLAT.upper[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
             FLAT.prior[FLAT.idx] <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
@@ -284,6 +288,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 FLAT.fixed[FLAT.idx] <- ""
                 FLAT.start[FLAT.idx] <- ""
                 FLAT.label[FLAT.idx] <- ""
+                FLAT.lower[FLAT.idx] <- ""
+                FLAT.upper[FLAT.idx] <- ""
                 FLAT.prior[FLAT.idx] <- ""
         
                 mod <- list()
@@ -296,6 +302,16 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 if(length(out[[j]]$start) > 0L) {
                     mod$start <- out[[j]]$start
                     FLAT.start[FLAT.idx] <- paste(mod$start, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(length(out[[j]]$lower) > 0L) {
+                    mod$lower <- out[[j]]$lower
+                    FLAT.lower[FLAT.idx] <- paste(mod$lower, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(length(out[[j]]$upper) > 0L) {
+                    mod$upper <- out[[j]]$upper
+                    FLAT.upper[FLAT.idx] <- paste(mod$upper, collapse=";")
                     rhs.mod <- 1L
                 }
                 if(length(out[[j]]$label) > 0L) {
@@ -337,6 +353,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT <- list(lhs=FLAT.lhs, op=FLAT.op, rhs=FLAT.rhs,
                  mod.idx=FLAT.rhs.mod.idx, block=FLAT.block,
                  fixed=FLAT.fixed, start=FLAT.start,
+                 lower=FLAT.lower, upper=FLAT.upper,
                  label=FLAT.label, prior=FLAT.prior)
 
     # change op for intercepts (for convenience only)
@@ -488,6 +505,14 @@ lav_syntax_get_modifier <- function(mod) {
         cof <- unlist(lapply(as.list(mod)[-1], 
                              eval, envir=NULL, enclos=NULL))
         return( list(start=cof) )
+    } else if(mod[[1L]] == "lower") {
+        cof <- unlist(lapply(as.list(mod)[-1],
+                             eval, envir=NULL, enclos=NULL))
+        return( list(lower=cof) )
+    } else if(mod[[1L]] == "upper") {
+        cof <- unlist(lapply(as.list(mod)[-1],
+                             eval, envir=NULL, enclos=NULL))
+        return( list(upper=cof) )
     } else if(mod[[1L]] == "equal") {
         label <- unlist(lapply(as.list(mod)[-1],    
                         eval, envir=NULL, enclos=NULL))
