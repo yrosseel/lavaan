@@ -1136,8 +1136,8 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
                     }
                 }
             } else {
-                stop("lavaan ERROR: unknown type: ", 
-                      lavdata@ov$type[v], " for variable", 
+                stop("lavaan ERROR: unknown type: `", 
+                      lavdata@ov$type[v], "' for variable: ", 
                       lavdata@ov$name[v])
             }
         }

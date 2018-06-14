@@ -573,9 +573,16 @@ lav_data_full <- function(data          = NULL,          # data.frame
     # do some checking
     # check for unordered factors (but only if nlev > 2)
     if("factor" %in%  ov$type) {
-        f.names <- ov$name[ov$type == "factor" & ov$nlev > 2L]
-        if(warn && any(f.names %in% unlist(ov.names)))
-            warning(paste("lavaan WARNING: unordered factor(s) with more than 2 levels detected in data:", paste(f.names, collapse=" ")))
+        f.names     <- ov$name[ov$type == "factor" & ov$nlev > 2L]
+        f.names.all <- ov$name[ov$type == "factor"]
+        OV.names <- unlist(ov.names)
+        OV.names.x <- unlist(ov.names.x)
+        OV.names.nox <- OV.names[! OV.names %in% OV.names.x]
+        if(any(f.names %in% OV.names.x)) {
+            stop(paste("lavaan ERROR: unordered factor(s) with more than 2 levels detected as exogenous covariate(s):", paste(f.names, collapse=" ")))
+        } else if(any(f.names.all %in% OV.names.nox)) {
+            stop(paste("lavaan ERROR: unordered factor(s) detected; make them numeric or ordered:", paste(f.names.all, collapse=" ")))
+        }
     }
     # check for ordered exogenous variables
     if("ordered" %in% ov$type[ov$name %in% unlist(ov.names.x)]) {
