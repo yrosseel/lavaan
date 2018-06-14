@@ -6,6 +6,8 @@ short.summary <- function(object) {
     # print header
     lav_object_print_header(object)
 
+    # print optim info
+    lav_object_print_optim(object)
 
     # print lavdata
     lav_data_print_short(object@Data)

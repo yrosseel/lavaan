@@ -309,6 +309,9 @@ lavInspect.lavaan <- function(object,
     } else if(what == "gradient.logl") {
         lav_object_inspect_gradient(object,
             add.labels = add.labels, add.class = add.class, logl = TRUE)
+    } else if(what == "optim.gradient") {
+        lav_object_inspect_gradient(object,
+            add.labels = add.labels, add.class = add.class, optim = TRUE)
     } else if(what == "hessian") {
         lav_object_inspect_hessian(object,
             add.labels = add.labels, add.class = add.class)
@@ -1919,18 +1922,27 @@ lav_object_inspect_sampstat_gamma <- function(object,
 
 
 lav_object_inspect_gradient <- function(object,
-    add.labels = FALSE, add.class = FALSE, logl = FALSE) {
+    add.labels = FALSE, add.class = FALSE, logl = FALSE,
+    optim = FALSE) {
 
-    if(object@SampleStats@missing.flag ||
+    lavmodel       <- object@Model
+    lavdata        <- object@Data
+    lavsamplestats <- object@SampleStats
+
+    if(optim) {
+        logl <- FALSE
+    }
+
+    if(lavsamplestats@missing.flag ||
        object@Options$estimator == "PML") {
         group.weight <- FALSE
     } else {
         group.weight <- TRUE
     }
 
-    OUT <- lav_model_gradient(lavmodel       = object@Model,
+    dx <- lav_model_gradient(lavmodel       = lavmodel,
                               GLIST          = NULL,
-                              lavsamplestats = object@SampleStats,
+                              lavsamplestats = lavsamplestats,
                               lavdata        = object@Data,
                               lavcache       = object@Cache,
                               type           = "free",
@@ -1939,11 +1951,10 @@ lav_object_inspect_gradient <- function(object,
 
     # if logl, rescale to get gradient wrt the loglikelihood
     if(logl) {
-        lavdata <- object@Data
-        if(object@Model@estimator %in% c("ML")) {
+        if(lavmodel@estimator %in% c("ML")) {
             if(lavdata@nlevels == 1L) {
                 # currently, this is just a sign switch
-                OUT <- -1 * OUT
+                dx <- -1 * dx
             } else {
                 lavpartable <- object@ParTable
                 # gradient.log = gradient.obj * (2 * N) / nclusters
@@ -1951,14 +1962,14 @@ lav_object_inspect_gradient <- function(object,
                 if(lavdata@ngroups == 1L) {
                     N <- lavdata@Lp[[1]]$nclusters[[1]]
                     nclusters <- lavdata@Lp[[1]]$nclusters[[2]]
-                    OUT <- OUT * (2 * N) / nclusters
+                    dx <- dx * (2 * N) / nclusters
                 } else {               
                     for(g in seq_len(lavdata@ngroups)) {
                         N <- lavdata@Lp[[g]]$nclusters[[1]]
                         nclusters <- lavdata@Lp[[g]]$nclusters[[2]]
                         g.idx <-
                           which((lavpartable$group == g)[lavpartable$free > 0L])
-                        OUT[g.idx] <- OUT[g.idx] * (2 * N) / nclusters
+                        dx[g.idx] <- dx[g.idx] * (2 * N) / nclusters
                     }
                 }
             }
@@ -1967,17 +1978,35 @@ lav_object_inspect_gradient <- function(object,
         }
     }
 
+    # optim?
+    if(optim) {
+        # 1. scale (note: divide, not multiply!)
+        dx <- dx / object@optim$parscale
+        # 2. pack
+        if(lavmodel@eq.constraints) {
+            dx <- as.numeric( dx %*% lavmodel@eq.constraints.K )
+        }
+        # only for PML: divide by N (to speed up convergence)
+        if(lavmodel@estimator == "PML") {
+            dx <- dx / lavsamplestats@ntotal
+        }
+    }
+
     # labels
     if(add.labels) {
-        names(OUT) <- lav_partable_labels(object@ParTable, type="free")
+        if(optim && lavmodel@eq.constraints) {
+            # FIXME
+        } else {
+            names(dx) <- lav_partable_labels(object@ParTable, type="free")
+        }
     }
 
     # class
     if(add.class) {
-        class(OUT) <- c("lavaan.vector", "numeric")
+        class(dx) <- c("lavaan.vector", "numeric")
     }
 
-    OUT
+    dx
 }
 
 lav_object_inspect_hessian <- function(object,

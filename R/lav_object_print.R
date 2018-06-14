@@ -2,6 +2,9 @@
 
 # header
 lav_object_print_header <- function(object) {
+
+    cat(sprintf("lavaan %s ", 
+                packageDescription("lavaan", fields="Version")))
     
     # catch FAKE run
     FAKE <- FALSE
@@ -11,22 +14,18 @@ lav_object_print_header <- function(object) {
 
     # Convergence or not?
     if(FAKE) {
-        cat(sprintf("lavaan (%s) -- DRY RUN with 0 iterations\n",
-                    packageDescription("lavaan", fields="Version")))
+        cat("-- DRY RUN with 0 iterations --\n")
     } else if(object@optim$iterations > 0) {
         if(object@optim$converged) {
-        cat(sprintf("lavaan (%s) converged normally after %3i iterations\n",
-                    packageDescription("lavaan", fields="Version"),
+        cat(sprintf("optimization ended normally (%i iterations)\n",
                     object@optim$iterations))
         } else {
-            cat(sprintf("** WARNING ** lavaan (%s) did NOT converge after %i iterations\n",
-                packageDescription("lavaan", fields="Version"),
+            cat(sprintf("** WARNING ** optimization did NOT end normally after %i iterations\n",
                 object@optim$iterations))
             cat("** WARNING ** Estimates below are most likely unreliable\n")
         }
     } else {
-        cat(sprintf("** WARNING ** lavaan (%s) model has NOT been fitted\n",
-                    packageDescription("lavaan", fields="Version")))
+        cat("** WARNING ** model has NOT been fitted\n")
         cat("** WARNING ** Estimates below are simply the starting values\n")
     }
     cat("\n")
@@ -40,6 +39,33 @@ lav_object_print_header <- function(object) {
 }
 
 # optim
+lav_object_print_optim <- function(object) {
 
+    #cat("Optimization information:\n\n")
+
+    t0.txt <- sprintf("  %-40s", "Optimization method")
+    t1.txt <- sprintf("  %10s", toupper(object@Options$optim.method))
+    t2.txt <- ""
+    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+    t0.txt <- sprintf("  %-40s", "Number of free parameters")
+    t1.txt <- sprintf("  %10i",   object@optim$npar)
+    t2.txt <- ""
+    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+    if(object@Model@eq.constraints) {
+        t0.txt <- sprintf("  %-40s", "Number of equality constraints")
+        t1.txt <- sprintf("  %10i", nrow(object@Model@ceq.JAC))
+        t2.txt <- ""
+        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    }
+    if(nrow(object@Model@cin.JAC) > 0L) {
+        t0.txt <- sprintf("  %-40s", "Number of inequality constraints")
+        t1.txt <- sprintf("  %10i", nrow(object@Model@cin.JAC))
+        t2.txt <- ""
+        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    }
+
+}
 
 
