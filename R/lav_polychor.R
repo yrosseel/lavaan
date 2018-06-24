@@ -32,7 +32,7 @@ pc_PI <- function(rho, th.y1, th.y2) {
         PI.ij <- outer(rowPI, colPI)
         return(PI.ij)
     }
- 
+
     # prepare for a single call to pbinorm
     upper.y <- rep(th.y2, times=rep.int(nth.y1, nth.y2))
     upper.x <- rep(th.y1, times=ceiling(length(upper.y))/nth.y1)
@@ -129,16 +129,16 @@ pc_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL,
     if(length(fit.y1$slope.idx) == 0L) {
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
         # grouped lik
-        PI <- pc_PI(rho, th.y1=fit.y1$theta[fit.y1$th.idx], 
+        PI <- pc_PI(rho, th.y1=fit.y1$theta[fit.y1$th.idx],
                          th.y2=fit.y2$theta[fit.y2$th.idx])
-        if(all(PI > 0)) 
+        if(all(PI > 0))
             logl <- sum( freq * log(PI) )
         else logl <- -Inf
     } else {
         lik <- pc_lik(Y1=Y1, Y2=Y2, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
         if(all(lik > 0, na.rm = TRUE))
             logl <- sum( log(lik), na.rm = TRUE )
-        else logl <- -Inf 
+        else logl <- -Inf
     }
 
     logl
@@ -174,7 +174,7 @@ pc_lik2 <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
     if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(Y2)) Y2 <- fit.y2$y
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X
-   
+
     # lik
     lik <- pc_lik(rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
 
@@ -188,7 +188,7 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(y=Y2, X=eXo)
-    
+
     # if no eXo, use shortcut (grouped)
     if(length(fit.y1$slope.idx) == 0L) {
         # probability per cell
@@ -220,7 +220,7 @@ pc_lik <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
             lik <- pbinorm(upper.x=fit.y1$z1, upper.y=fit.y2$z1,
                            lower.x=fit.y1$z2, lower.y=fit.y2$z2, rho=rho)
         }
-        
+
     }
 
     lik
@@ -283,7 +283,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     # thresholds
     th.y1 <- fit.y1$theta[fit.y1$th.idx]
     th.y2 <- fit.y2$theta[fit.y2$th.idx]
-    
+
     # freq
     if(!exo) {
         if(is.null(freq)) freq <- pc_freq(fit.y1$y,fit.y2$y)
@@ -302,7 +302,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
             }
         }
 
-        # treat 2x2 tables 
+        # treat 2x2 tables
         if(nr == 2L && nc == 2L) {
             idx <- which(freq == 0L)
             # catch 2 empty cells: perfect correlation!
@@ -312,7 +312,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
                     rho <- 1.0
                     if(zero.cell.flag) {
                         attr(rho, "zero.cell.flag") <- empty.cells
-                    } 
+                    }
                     return(rho)
                 } else {
                     rho <- -1.0
@@ -437,6 +437,10 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
         rho.init <- cor(Y1,Y2, use="pairwise.complete.obs")
     #}
 
+    # if rho.init is missing, set starting value to zero
+    if(is.na(rho.init)) {
+      rho.init <- 0.0
+    }
     # check range of rho.init is within [-1,+1]
     if(abs(rho.init) >= 1.0) {
         rho.init <- 0.0
@@ -465,7 +469,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     } else if(method == "BFGS") {
         # NOTE: known to fail if rho.init is too far from final value
         # seems to be better with parscale = 0.1??
-        out <- optim(par = atanh(rho.init), fn = objectiveFunction, 
+        out <- optim(par = atanh(rho.init), fn = objectiveFunction,
                      gr = gradientFunction,
                      control = list(parscale = 0.1, reltol = 1e-10,
                                     trace = ifelse(verbose, 1L, 0L),
@@ -501,7 +505,7 @@ pc_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL, freq=NULL,
     rho
 }
 
-pc_cor_gradient_noexo <- function(Y1, Y2, rho, th.y1=NULL, th.y2=NULL, 
+pc_cor_gradient_noexo <- function(Y1, Y2, rho, th.y1=NULL, th.y2=NULL,
                                   freq=NULL) {
 
     R <- sqrt(1- rho*rho)
@@ -531,7 +535,7 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
                           sl.y1=NULL, sl.y2=NULL,
                           na.zero=FALSE) {
 
-    # check if rho > 
+    # check if rho >
 
     R <- sqrt(1 - rho*rho)
     if(is.null(fit.y1)) fit.y1 <- lavProbit(y=Y1, X=eXo)
@@ -558,7 +562,7 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
     if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(Y2)) Y2 <- fit.y2$y
     if(missing(eXo) && length(fit.y1$slope.idx) > 0L) eXo <- fit.y1$X
-   
+
     # lik
     lik <- pc_lik(rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
 
@@ -608,7 +612,7 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
 
     # rho
     if(length(fit.y1$slope.idx) == 0L) {
-        phi <- pc_PHI(rho, th.y1=fit.y1$theta[fit.y1$th.idx], 
+        phi <- pc_PHI(rho, th.y1=fit.y1$theta[fit.y1$th.idx],
                            th.y2=fit.y2$theta[fit.y2$th.idx])
         #PP <- phi/PI
         dx <- phi[cbind(Y1,Y2)]
@@ -623,6 +627,6 @@ pc_cor_scores <- function(Y1, Y2, eXo=NULL, rho, fit.y1=NULL, fit.y2=NULL,
         dx.rho[is.na(dx.rho)] <- 0
     }
 
-    list(dx.th.y1=dx.th.y1, dx.th.y2=dx.th.y2, 
+    list(dx.th.y1=dx.th.y1, dx.th.y2=dx.th.y2,
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2, dx.rho=dx.rho)
 }
