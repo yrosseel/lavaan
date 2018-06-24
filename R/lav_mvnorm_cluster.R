@@ -1421,7 +1421,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
                 "\n")
         }
 
-        # convergence check
+        # stopping rule check
         if(fx.delta < fx.tol) {
             if(verbose) {
                 cat("EM stopping rule reached: fx.delta < ", fx.tol, "\n")
@@ -1435,7 +1435,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
             }
         }
 
-        # second convergence check -- derivatives
+        # second stopping rule check -- derivatives
         if(max.dx < dx.tol) {
             if(verbose) {
                 cat("EM stopping rule reached: max.dx < ", dx.tol, "\n")
@@ -1457,7 +1457,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
 
     # add attributes
     if(i < max.iter) {
-        attr(x, "converged") <- TRUE
+        attr(x, "converged") <- TRUE 
     } else {
         attr(x, "converged") <- FALSE
     }

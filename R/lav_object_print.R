@@ -17,15 +17,15 @@ lav_object_print_header <- function(object) {
         cat("-- DRY RUN with 0 iterations --\n")
     } else if(object@optim$iterations > 0) {
         if(object@optim$converged) {
-        cat(sprintf("optimization ended normally (%i iterations)\n",
+        cat(sprintf("ended normally after %i iterations\n",
                     object@optim$iterations))
         } else {
-            cat(sprintf("** WARNING ** optimization did NOT end normally after %i iterations\n",
+            cat(sprintf("did NOT end normally after %i iterations\n",
                 object@optim$iterations))
             cat("** WARNING ** Estimates below are most likely unreliable\n")
         }
     } else {
-        cat("** WARNING ** model has NOT been fitted\n")
+        cat("did not run (perhaps do.fit = FALSE)?\n")
         cat("** WARNING ** Estimates below are simply the starting values\n")
     }
     cat("\n")

@@ -1995,7 +1995,14 @@ lav_object_inspect_gradient <- function(object,
     # labels
     if(add.labels) {
         if(optim && lavmodel@eq.constraints) {
-            # FIXME
+            NAMES.all <- lav_partable_labels(object@ParTable, type="free")
+            SEQ <- seq_len( length(NAMES.all) )
+            pack.SEQ <- as.numeric( (SEQ - lavmodel@eq.constraints.k0) %*%
++                                   lavmodel@eq.constraints.K )
+            ok.idx <- which(pack.SEQ %in% SEQ)
+            NAMES <- rep("(eq.con)", length(pack.SEQ))
+            NAMES[ok.idx] <- NAMES.all[ pack.SEQ[ok.idx] ]
+            names(dx) <- NAMES
         } else {
             names(dx) <- lav_partable_labels(object@ParTable, type="free")
         }
