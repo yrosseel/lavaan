@@ -4,7 +4,7 @@
 ps_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     lik <- ps_lik(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
-    if(all(lik > 0, na.rm = TRUE)) 
+    if(all(lik > 0, na.rm = TRUE))
         logl <- sum(log(lik), na.rm = TRUE)
     else
         logl <- -Inf
@@ -30,7 +30,7 @@ ps_lik <- function(Y1, Y2, eXo=NULL, var.y1 = NULL, eta.y1 = NULL,
     y1.SD  <- sqrt(var.y1)
     y1.ETA <- eta.y1
     Z <- (Y1 - y1.ETA) / y1.SD
-    
+
     # p(Y2|Y1)
     tauj.star  <- (fit.y2$z1 - rho*Z)/R
     tauj1.star <- (fit.y2$z2 - rho*Z)/R
@@ -90,7 +90,7 @@ ps_loglik_no_exo <- function(Y1, Y2, var.y1 = NULL, eta.y1 = NULL, rho=NULL,
 
     R <- sqrt(1 - rho*rho)
     Z <- (Y1 - eta.y1) / sqrt(var.y1)
-    
+
     # p(Y2|Y1)
     TH <- c(-Inf, th.y2, +Inf)
     z1 <- pmin( 100, TH[Y2 + 1L])
@@ -107,7 +107,7 @@ ps_loglik_no_exo <- function(Y1, Y2, var.y1 = NULL, eta.y1 = NULL, rho=NULL,
 
     # loglik
     loglik <- py1.log + py2y1.log
- 
+
     loglik
 }
 
@@ -119,7 +119,7 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
 
     if(is.null(fit.y1)) fit.y1 <- lavOLS(Y1, X=eXo)
     if(is.null(fit.y2)) fit.y2 <- lavProbit(Y2, X=eXo)
-    if(missing(Y1)) Y1 <- fit.y1$y 
+    if(missing(Y1)) Y1 <- fit.y1$y
     if(missing(Y2)) Y2 <- fit.y2$y else as.integer(Y2)
     if(missing(eXo) && length(fit.y2$slope.idx) > 0L) eXo <- fit.y2$X
 
@@ -169,6 +169,10 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
                       sum(dnorm(fit.y2$theta[fit.y2$th.idx])) )
     }
 
+    # if rho.init is missing, set starting value to zero
+    if(is.na(rho.init)) {
+      rho.init <- 0.0
+    }
     # check range of rho.init is within [-1,+1]
     if(abs(rho.init) >= 1.0) {
         rho.init <- 0.0
@@ -193,7 +197,7 @@ ps_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
     rho
 }
 
-ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL, 
+ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
                           fit.y1=NULL, fit.y2=NULL) {
 
     stopifnot(!is.null(rho))
@@ -251,7 +255,7 @@ ps_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
 #       depends on var.y1, and this complicates the gradient
 ps_cor_scores_no_exo <- function(Y1, Y2,
                                  var.y1 = NULL, eta.y1 = NULL,
-                                 th.y2 = NULL, rho = NULL, 
+                                 th.y2 = NULL, rho = NULL,
                                  sigma.correction = FALSE) {
 
     R <- sqrt(1 - rho*rho)
@@ -299,10 +303,10 @@ ps_cor_scores_no_exo <- function(Y1, Y2,
 
         # sigma
         dx.rho <- dx.rho.orig / y1.SD
-   
+
         # var
         COV <- rho * y1.SD
-        dx.var.y1 <- ( dx.var.y1.orig - 
+        dx.var.y1 <- ( dx.var.y1.orig -
                        1/2 * COV/var.y1 * 1/y1.SD * dx.rho.orig )
     }
 
