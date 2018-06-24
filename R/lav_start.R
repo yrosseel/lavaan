@@ -186,7 +186,7 @@ lav_start <- function(start.method    = "default",
                             COV <- lavsamplestats@cov[[g]][ov.idx,ov.idx]
                         }
                     }
-                    start[user.idx] <- fabin3.uni(COV)
+                    start[user.idx] <- lav_cfa_1fac_fabin(COV)
                 } else if(length(free.idx) == 1L && length(ov.idx) == 2L) {
                     if(conditional.x) {
                         REG2 <- ( lavsamplestats@res.cov[[g]][ov.idx[1],
