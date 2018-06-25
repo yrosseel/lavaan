@@ -73,7 +73,7 @@ lav_partable_ndat <- function(partable) {
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
     conditional.x <- any(partable$exo > 0L & partable$op == "~")
     categorical <- any(partable$op == "|")
-    if(categorical) { 
+    if(categorical) {
         meanstructure <- TRUE
     }
 
@@ -111,10 +111,10 @@ lav_partable_ndat <- function(partable) {
                 if(length(ov.names.y) > 0L) {
                     pstar <- pstar + length(ov.names.y)
                 }
- 
+
                 # except within-only 'x' (unless fixed.x)
                 ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
-                ov.names.x2 <- unlist(lav_partable_vnames(partable, "ov.x", 
+                ov.names.x2 <- unlist(lav_partable_vnames(partable, "ov.x",
                                       block = seq_len(nblocks)[-b]))
                 ov.names.x <- ov.names.x[ !ov.names.x %in% ov.names.x2 ]
                 if(!fixed.x && length(ov.names.x) > 0L) {
@@ -207,7 +207,7 @@ lav_partable_df <- function(partable) {
 
 # check order of covariances: we only fill the upper.tri
 # therefore, we 'switch' lhs & rhs if they appear in the wrong order
-lav_partable_covariance_reorder <- function(partable, 
+lav_partable_covariance_reorder <- function(partable,
                                             ov.names = NULL,
                                             lv.names = NULL) {
 
@@ -245,7 +245,7 @@ lav_partable_covariance_reorder <- function(partable,
     tmp <- partable$lhs[ swap.idx ]
     partable$lhs[ swap.idx ] <- partable$rhs[ swap.idx ]
     partable$rhs[ swap.idx ] <- tmp
-  
+
     partable
 }
 

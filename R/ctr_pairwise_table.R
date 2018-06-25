@@ -8,10 +8,10 @@
 # data : matrix or data frame containing the data. The rows correspond to
 #       different observations and the columns to different observed categorical
 #       (ordinal or nominal) variables. No continuous variables or covariates
-#       should be contained in data. If the variables contained in the data are 
-#       distinguished into indicators of exogenous latent variables (lv) and 
-#       indicators of endogenous latent variables, those for exogenous lv should 
-#       be presented first (in the first columns of data) followed by the 
+#       should be contained in data. If the variables contained in the data are
+#       distinguished into indicators of exogenous latent variables (lv) and
+#       indicators of endogenous latent variables, those for exogenous lv should
+#       be presented first (in the first columns of data) followed by the
 #       indicators for endogenous lv.
 # var.levels: NULL or vector or list, specifies the levels (response categories)
 #            for each categorical variable contained in data.
@@ -20,30 +20,30 @@
 #            defined.
 #            If vector, that implies that all variables have the same levels as
 #            given in the vector.
-#            If list, the components of the list are vectors, as many as the 
+#            If list, the components of the list are vectors, as many as the
 #            number of variables in data. Each vector gives the levels of
 #            the corresponding categorical variable in data.
 # no.x : NULL or integer, gives the number of indicators for exogenous lv.
 #        The default value is NULL indicating that data contains only
-#        indicators of exogenous latent variables. 
+#        indicators of exogenous latent variables.
 # perc : TRUE/FALSE. If FALSE the observed frequencies are reported, otherwise
 #        the observed percentages are given.
 # na.exclude : TRUE/FALSE. If TRUE, listwise deletion is applied to data.
-#              Otherwise, cases with missing values are preserved and and an 
+#              Otherwise, cases with missing values are preserved and and an
 #              extra level with label NA is included in the tables.
 
 # The output of the function:
-# It is a list of three components: $pairTables, $VarLevels and $Ncases_del. 
+# It is a list of three components: $pairTables, $VarLevels and $Ncases_del.
 # pairTables : a list of so many tables as the number of variable pairs formed
-#              by data. If there are indicators of both exogenous and endogenous 
-#              variables, then first all the matrices referring to pairs of 
-#              indicators of exogenous lv are reported, followed by all the  
+#              by data. If there are indicators of both exogenous and endogenous
+#              variables, then first all the matrices referring to pairs of
+#              indicators of exogenous lv are reported, followed by all the
 #              matrices referring to pairs of indicators of endogenous lv, which
-#              in turn folowed by all the matrices of pairs: one indicator of an 
+#              in turn folowed by all the matrices of pairs: one indicator of an
 #              exogenous - one indicator of an endogenous lv.
 # VarLevels : a list of as many vectors as the number of variables in the data.
 #             Each vector gives the levels/ response categories of each variable
-# Ncases_del : An integer reporting the number of cases deleted by data because 
+# Ncases_del : An integer reporting the number of cases deleted by data because
 #              of missing values (listwise deletion) when na.exclude=TRUE.
 
 
@@ -61,7 +61,7 @@ pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
  if(no.var<2) {
     stop("there are less than 2 variables")
  }
- 
+
  # no.x < no.var  ?
  if(no.x > no.var) {
     stop("number of indicators for exogenous latent variables is larger than the total number of variables in data")
@@ -145,35 +145,35 @@ pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
     for(i in 1:no.pairs ) {
         res[[i]] <- table( data[, pairs.index[,i] ],  useNA="ifany" )
     }
- } else { 
+ } else {
     no.y <- no.var - no.x
     pairs.xixj.index <- utils::combn(no.x,2)  # row 1 gives i index, row 2 j index, j runs faster than i
     pairs.yiyj.index <- utils::combn(no.y,2)
     pairs.xiyj.index <- expand.grid(1:no.y, 1:no.x)
     pairs.xiyj.index <- rbind( pairs.xiyj.index[,2], pairs.xiyj.index[,1] ) # row 1 gives i index, row 2 j index, j runs faster than i
-   
+
     no.pairs.xixj <- dim(pairs.xixj.index)[2]
     no.pairs.yiyj <- dim(pairs.yiyj.index)[2]
     no.pairs.xiyj <- dim(pairs.xiyj.index)[2]
-    no.all.pairs <- no.pairs.xixj + no.pairs.yiyj + no.pairs.xiyj 
-    
+    no.all.pairs <- no.pairs.xixj + no.pairs.yiyj + no.pairs.xiyj
+
     data.x <- data[,1:no.x]
     data.y <- data[,(no.x+1):no.var]
-    
+
     res <- vector("list", no.all.pairs)
     for(i in 1:no.pairs.xixj) {
         res[[i]] <- table(data.x[,pairs.xixj.index[,i]], useNA="ifany" )
     }
-    
-    j <- 0 
+
+    j <- 0
     for(i in (no.pairs.xixj+1):(no.pairs.xixj+no.pairs.yiyj) ) {
         j <- j+1
         res[[i]] <- table(data.y[,pairs.yiyj.index[,j]], useNA="ifany" )
     }
-    
+
     j <-0
-    for(i in (no.pairs.xixj+no.pairs.yiyj+1):no.all.pairs ) { 
-        j <- j+1  
+    for(i in (no.pairs.xixj+no.pairs.yiyj+1):no.all.pairs ) {
+        j <- j+1
         res[[i]] <- table(cbind(data.x[,pairs.xiyj.index[1,j], drop=FALSE],
                                 data.y[,pairs.xiyj.index[2,j], drop=FALSE]),
                           useNA="ifany" )
@@ -192,6 +192,6 @@ pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
  } else {
    Ncases_deleted <- 0
  }
- 
+
  list(pairTables=res, VarLevels=var.levels, Ncases_del= Ncases_deleted)
 }

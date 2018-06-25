@@ -3,7 +3,7 @@
 # initial version: YR 25/03/2009: `methods' for the Model class
 # - YR 14 Jan 2014: rename object -> lavmodel, all functions as lav_model_*
 
-lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL, 
+lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
                                      type = "free", extra = TRUE) {
 
     # type == "free": only non-redundant free parameters (x)
@@ -25,7 +25,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
         if(type == "free") {
             m.idx <- lavmodel@m.free.idx[[mm]]
             x.idx <- lavmodel@x.free.idx[[mm]]
-        #} else if(type == "unco") { 
+        #} else if(type == "unco") {
         #    m.idx <- lavmodel@m.unco.idx[[mm]]
         #    x.idx <- lavmodel@x.unco.idx[[mm]]
         } else if(type == "user") {
@@ -36,10 +36,10 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
     }
 
     if(type == "user" && extra && sum(lavmodel@x.def.idx,
-                                      lavmodel@x.ceq.idx, 
+                                      lavmodel@x.ceq.idx,
                                       lavmodel@x.cin.idx) > 0L) {
         # we need 'free' x
-        x.free <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST, 
+        x.free <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST,
                                            type = "free")
         if(length(lavmodel@x.def.idx) > 0L) {
             x[lavmodel@x.def.idx] <- lavmodel@def.function(x.free)
@@ -75,7 +75,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
                 if(lavmodel@estimator %in% c("WLS","DWLS","ULS","PML")) {
                     if(lavmodel@parameterization == "delta") {
-                        tmp[mm.in.group] <- 
+                        tmp[mm.in.group] <-
                         setResidualElements.LISREL(MLIST = tmp[mm.in.group],
                             num.idx = lavmodel@num.idx[[g]],
                             ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
@@ -106,7 +106,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
 # create a standalone GLIST, filled with (new) x values
 # (avoiding a copy of lavmodel)
-lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL, 
+lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
                               type = "free", setDelta = TRUE,
                               m.el.idx = NULL, x.el.idx = NULL) {
 
@@ -144,7 +144,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
 
     # theta parameterization: delta must be reset!
-    if(lavmodel@categorical && setDelta && 
+    if(lavmodel@categorical && setDelta &&
        lavmodel@parameterization == "theta") {
         nmat <- lavmodel@nmat
         for(g in 1:lavmodel@nblocks) {

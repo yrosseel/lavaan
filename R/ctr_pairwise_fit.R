@@ -1,4 +1,4 @@
-# This code is written by YR (using lavaan components), but based on 
+# This code is written by YR (using lavaan components), but based on
 # research code written by Mariska Barendse (Groningen/Amsterdam, NL)
 #
 # September 2013
@@ -28,14 +28,14 @@
 
 lavTablesFitCp <- function(object, alpha = 0.05) {
 
-    lavdata <- object@Data  
+    lavdata <- object@Data
 
     if(!all(lavdata@ov$type == "ordered")) {
-        return(list(G2=as.numeric(NA), df=as.numeric(NA), 
+        return(list(G2=as.numeric(NA), df=as.numeric(NA),
                p.value=as.numeric(NA), p.value.Bonferroni=as.numeric(NA)))
     }
 
-    TF <- lavTables(object, dimension = 2L, type = "table", 
+    TF <- lavTables(object, dimension = 2L, type = "table",
                     statistic = "G2", p.value = TRUE)
 
     # Bonferonni adjusted p-value
@@ -47,7 +47,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {
     # find largest G2
     max.idx <- which(TF$G2 == max(TF$G2))
 
-    extra <- list(G2=unname(TF$G2[max.idx]), df=unname(TF$df[max.idx]), 
+    extra <- list(G2=unname(TF$G2[max.idx]), df=unname(TF$df[max.idx]),
                   lhs=TF$lhs[max.idx],
                   rhs=TF$rhs[max.idx],
                   group=TF$group[max.idx],
@@ -122,7 +122,7 @@ lavTablesFitCf <- function(object) {
     attr(CF, "DF")       <- DF
     attr(CF, "rpat.observed") <- sapply(lavdata@Rp, "[[", "npatterns")
     attr(CF, "rpat.total")    <- sapply(lavdata@Rp, "[[", "total.patterns")
-    attr(CF, "rpat.empty")    <- sapply(lavdata@Rp, "[[", "empty.patterns") 
+    attr(CF, "rpat.empty")    <- sapply(lavdata@Rp, "[[", "empty.patterns")
 
     class(CF) <- c("lavaan.tables.fit.Cf", "numeric")
 

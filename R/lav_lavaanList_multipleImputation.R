@@ -1,7 +1,7 @@
 # lavMultipleImputation: fit the *same* model, on a set of imputed datasets
 # YR - 11 July 2016
 
-lavMultipleImputation <- 
+lavMultipleImputation <-
     function(model         = NULL,
              dataList      = NULL,
              ndat          = length(dataList),
@@ -19,7 +19,7 @@ lavMultipleImputation <-
     dotdotdot <- list()
 
     # fit multiple times
-    fit <- do.call("lavaanList", args = c(list(model = model, 
+    fit <- do.call("lavaanList", args = c(list(model = model,
                    dataList = dataList, ndat = ndat, cmd = cmd,
                    store.slots = store.slots, FUN = FUN,
                    show.progress = show.progress,

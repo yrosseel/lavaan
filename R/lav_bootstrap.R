@@ -3,12 +3,12 @@
 # free parameters for each bootstrap sample
 #
 # return COEF matrix of size R x npar (R = number of bootstrap samples)
-# 
+#
 # Ed. 9 mar 2012
 #
 # Notes: - faulty runs are simply ignored (with a warning)
 #        - default R=1000
-# 
+#
 # Updates: - now we have a separate @data slot, we only need to transform once
 #            for the bollen.stine bootstrap (13 dec 2011)
 #          - bug fix: we need to 'update' the fixed.x variances/covariances
@@ -19,10 +19,10 @@
 
 
 
-bootstrapLavaan <- function(object, 
-                            R           = 1000L, 
+bootstrapLavaan <- function(object,
+                            R           = 1000L,
                             type        = "ordinary",
-                            verbose     = FALSE, 
+                            verbose     = FALSE,
                             FUN         = "coef",
                             warn        = -1L,
                             return.boot = FALSE,
@@ -43,7 +43,7 @@ bootstrapLavaan <- function(object,
     # check if options$se is not bootstrap, otherwise, we get an infinite loop
     if(object@Options$se == "bootstrap")
         stop("lavaan ERROR: se == \"bootstrap\"; please refit model with another option for \"se\"")
-     
+
     # check if options$test is not bollen.stine
     if(object@Options$test == "bollen.stine")
         stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
@@ -53,7 +53,7 @@ bootstrapLavaan <- function(object,
         stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
     }
 
-    lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl, 
+    lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl,
                         iseed = iseed)
 
     bootstrap.internal(object          = object,
@@ -184,7 +184,7 @@ bootstrap.internal <- function(object          = NULL,
 
     # if yuan, transform data here
     if(type == "yuan") {
-        # page numbers refer to Yuan et al, 2007      
+        # page numbers refer to Yuan et al, 2007
         # Define a function to find appropriate value of a
         # (p. 272); code supplied 16 jun 2016 by Cheng & Wu
         search.a <- function(F0, d, p) {
@@ -245,7 +245,7 @@ bootstrap.internal <- function(object          = NULL,
             S.inv.sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats@icov[[g]])
 
             X <- lavdata@X[[g]]
-            X <- X %*% S.inv.sqrt %*% S.a.sqrt            
+            X <- X %*% S.inv.sqrt %*% S.a.sqrt
 
             # transformed data
             dataX[[g]] <- X
@@ -292,7 +292,7 @@ bootstrap.internal <- function(object          = NULL,
                                group.w.free  = lavoptions$group.w.free,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,
-                               verbose       = FALSE), silent=TRUE) 
+                               verbose       = FALSE), silent=TRUE)
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) {
                 cat("     FAILED: creating sample statistics\n")
@@ -310,7 +310,7 @@ bootstrap.internal <- function(object          = NULL,
       ### FIXME #####
         #if(lavmodel@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
         #    for(g in 1:lavsamplestats@ngroups) {
-        #        
+        #
         #    }
         #}
         if(lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
@@ -329,17 +329,17 @@ bootstrap.internal <- function(object          = NULL,
             if(verbose) cat("     FAILED: no convergence\n")
             options(old_options)
             return(NULL)
-        } 
-        
+        }
+
         # extract information we need
         if(is.null(object)) { # internal use only!
             if(FUN == "coef") {
                 out <- fit.boot@optim$x
-            } else if(FUN == "test") { 
+            } else if(FUN == "test") {
                 out <- fit.boot@test[[1L]]$stat
-            } else if(FUN == "coeftest") { 
+            } else if(FUN == "coeftest") {
                 out <- c(fit.boot@optim$x, fit.boot@test[[1L]]$stat)
-            } 
+            }
         } else { # general use
             out <- try(FUN(fit.boot, ...), silent=TRUE)
         }
@@ -347,8 +347,8 @@ bootstrap.internal <- function(object          = NULL,
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")
             options(old_options)
             return(NULL)
-        } 
-        if(verbose) cat("   OK -- niter = ", 
+        }
+        if(verbose) cat("   OK -- niter = ",
                         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
                         sprintf("%13.9f", fit.boot@optim$fx), "\n")
         out
@@ -399,7 +399,7 @@ bootstrap.internal <- function(object          = NULL,
     # NOT DONE YET
     if(return.boot) {
         # mimic output boot function
-    } 
+    }
 
     # restore options
     options(old_options)

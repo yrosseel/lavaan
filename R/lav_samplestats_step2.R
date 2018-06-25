@@ -8,7 +8,7 @@ lav_samplestats_step2 <- function(UNI               = NULL,
 
                                   # keep track of tables with zero cells?
                                   zero.cell.tables  = TRUE,
- 
+
                                   optim.method      = "nlminb") {
 
     nvar <- length(UNI)
@@ -22,7 +22,7 @@ lav_samplestats_step2 <- function(UNI               = NULL,
     # one-by-one (for now)
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
-            #if(verbose) { cat(" i = ", i, " j = ", j, 
+            #if(verbose) { cat(" i = ", i, " j = ", j,
             #                  "[",ov.names[i], "-", ov.names[j], "] ",
             #                  "(",ov.types[i], "-", ov.types[j], ")\n") }
             #pstar.idx <- PSTAR[i,j]
@@ -35,12 +35,12 @@ lav_samplestats_step2 <- function(UNI               = NULL,
                     Y1 <- UNI[[i]]$y; Y2 <- UNI[[j]]$y
                 }
                 COR[i,j] <- COR[j,i] <- cor(Y1, Y2, use="pairwise.complete.obs")
-            } else if(class(UNI[[i]]) == "lavOLS" && 
+            } else if(class(UNI[[i]]) == "lavOLS" &&
                       class(UNI[[j]]) == "lavProbit") {
                 # polyserial
                 out <- ps_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]])
                 COR[i,j] <- COR[j,i] <- out
-            } else if(class(UNI[[j]]) == "lavOLS" && 
+            } else if(class(UNI[[j]]) == "lavOLS" &&
                       class(UNI[[i]]) == "lavProbit") {
                 # polyserial
                 out <- ps_cor_TS(fit.y1=UNI[[j]], fit.y2=UNI[[i]])
@@ -50,7 +50,7 @@ lav_samplestats_step2 <- function(UNI               = NULL,
                 # polychoric correlation
                 out <- pc_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]],
                                  method = optim.method,
-                                 zero.add = zero.add, 
+                                 zero.add = zero.add,
                                  zero.keep.margins = zero.keep.margins,
                                  zero.cell.warn = zero.cell.warn,
                                  zero.cell.flag = zero.cell.tables,

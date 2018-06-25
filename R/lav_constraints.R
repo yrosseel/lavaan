@@ -116,8 +116,8 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     ceq.only.flag      <- ceq.flag && !cin.flag
     cin.only.flag      <- cin.flag && !ceq.flag
 
-    ceq.linear.only.flag <- (  ceq.linear.flag    && 
-                              !ceq.nonlinear.flag && 
+    ceq.linear.only.flag <- (  ceq.linear.flag    &&
+                              !ceq.nonlinear.flag &&
                               !cin.flag )
 
     # additional info if ceq.linear.flag
@@ -125,15 +125,15 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         ## NEW: 18 nov 2014: handle general *linear* constraints
         ##
         ## see Nocedal & Wright (2006) 15.3
-        ## - from x to x.red: 
+        ## - from x to x.red:
         ##       x.red <- MASS::ginv(Q2) %*% (x - Q1 %*% solve(t(R)) %*% b)
         ##   or
-        ##       x.red <- as.numeric((x - b %*% qr.coef(QR,diag(npar))) %*% Q2) 
-        ## 
+        ##       x.red <- as.numeric((x - b %*% qr.coef(QR,diag(npar))) %*% Q2)
+        ##
         ## - from x.red to x
-        ##       x <- as.numeric(Q1 %*% solve(t(R)) %*% b + Q2 %*% x.red) 
+        ##       x <- as.numeric(Q1 %*% solve(t(R)) %*% b + Q2 %*% x.red)
         ##   or
-        ##       x <- as.numeric(b %*% qr.coef(QR, diag(npar))) + 
+        ##       x <- as.numeric(b %*% qr.coef(QR, diag(npar))) +
         ##                       as.numeric(Q2 %*% x.red)
         ##
         ## we write eq.constraints.K = Q2
@@ -202,10 +202,10 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     OUT
 }
 
-lav_constraints_linear_idx <- function(func = NULL, npar = NULL) { 
+lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
 
     if(is.null(func) || is.null(body(func))) return(integer(0L))
-    
+
     # seed 1: rnorm
     A0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
 
@@ -217,8 +217,8 @@ lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
     which(linear)
 }
 
-lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {   
-  
+lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {
+
     if(is.null(func) || is.null(body(func))) return(integer(0L))
 
     # seed 1: rnorm
@@ -242,7 +242,7 @@ lav_constraints_check_linear <- function(model) {
          A.ceq <- t(lav_func_jacobian_complex(func=model@ceq.function, x=rnorm(model@nx.free)))
      if(!is.null(body(model@cin.function)))
          A.cin <- t(lav_func_jacobian_complex(func=model@cin.function, x=rnorm(model@nx.free)))
-     A0 <- cbind(A.ceq, A.cin)    
+     A0 <- cbind(A.ceq, A.cin)
 
      # seed 2: rnorm
      A.ceq <- A.cin <- matrix(0, model@nx.free, 0)
@@ -290,7 +290,7 @@ lav_constraints_R2K <- function(lavmodel = NULL, R = NULL) {
         K[idx2, idx1] <- 1
     }
 
-    # remove redundant columns 
+    # remove redundant columns
     neg.idx <- which(colSums(R) < 0)
     K <- K[,-neg.idx]
 
@@ -298,7 +298,7 @@ lav_constraints_R2K <- function(lavmodel = NULL, R = NULL) {
 }
 
 lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
-    
+
     # compute factor 'pre' so that pre %*% g = lambda
     method <- tolower(method)
 

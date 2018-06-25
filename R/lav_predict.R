@@ -34,7 +34,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     type <- tolower(type)
     if(type %in% c("latent", "lv", "factor", "factor.score", "factorscore"))
         type <- "lv"
-    if(type %in% c("ov","yhat")) 
+    if(type %in% c("ov","yhat"))
         type <- "yhat"
 
     # se?
@@ -78,7 +78,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         if(!is.null(ETA)) {
             warning("lavaan WARNING: lvs will be predicted here; supplying ETA has no effect")
         }
-            
+
         # post fit check (lv pd?)
         ok <- lav_object_post_check(object)
         #if(!ok) {
@@ -179,7 +179,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     } else if(type == "fy") {
         out <- lav_predict_fy(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
-                   lavimplied = lavimplied, 
+                   lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo,
                    ETA = ETA, method = method, optim.method = optim.method)
 
@@ -206,7 +206,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     if(fsm) {
         attr(out, "fsm") <- FSM
     }
-   
+
     if(se != "none") {
         attr(out, "se") <- SE
     }
@@ -267,14 +267,14 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
         if(method == "ebm") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se, 
-                       level = level, data.obs = data.obs, eXo = eXo, 
+                       lavsamplestats = lavsamplestats, se = se,
+                       level = level, data.obs = data.obs, eXo = eXo,
                        ML = FALSE, optim.method = optim.method)
         } else if(method == "ml") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se, 
-                       level = level, data.obs = data.obs, eXo = eXo, 
+                       lavsamplestats = lavsamplestats, se = se,
+                       level = level, data.obs = data.obs, eXo = eXo,
                        ML = TRUE, optim.method = optim.method)
         } else {
             stop("lavaan ERROR: unkown method: ", method)
@@ -286,17 +286,17 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
 
 
 # factor scores - normal case
-# NOTE: this is the classic 'regression' method; for the linear/continuous 
+# NOTE: this is the classic 'regression' method; for the linear/continuous
 #       case, this is equivalent to both EB and EBM
 lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                                    # sub objects
-                                   lavmodel = NULL, lavdata = NULL, 
+                                   lavmodel = NULL, lavdata = NULL,
                                    lavsamplestats = NULL,
                                    lavimplied = NULL,
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
                                    se = "none", level = 1L,
-                                   fsm = FALSE) { 
+                                   fsm = FALSE) {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -328,7 +328,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                 DATA <- lavdata@X[[g]]
                 MP   <- lavdata@Mp[[g]]
             }
-            data.obs[[g]] <- 
+            data.obs[[g]] <-
                 lav_mvnorm_missing_impute_pattern(Y = DATA,
                                                   Mp = MP,
                                                   Mu = lavimplied$mean[[g]],
@@ -342,7 +342,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     VETA   <- computeVETA(lavmodel = lavmodel)
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-     
+
     FS <- vector("list", length = lavdata@ngroups)
     if(fsm) {
         FSM <- vector("list", length = lavdata@ngroups)
@@ -356,20 +356,20 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
         if(lavdata@nlevels > 1L) {
             Lp <- lavdata@Lp[[g]]
             YLp <- lavsamplestats@YLp[[g]]
-  
+
             # implied for this group
             group.idx <- (g - 1)*lavdata@nlevels + seq_len(lavdata@nlevels)
             implied.group <- lapply(lavimplied, function(x) x[group.idx])
 
             # random effects (=random intercepts or cluster means)
-            out <- lav_mvnorm_cluster_implied22l(Lp = Lp, 
+            out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
                                                  implied = implied.group)
             MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
                         sigma.w = out$sigma.w, sigma.b = out$sigma.b,
                         sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
                         mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
                         se = FALSE)
-   
+
             ov.idx <- Lp$ov.idx
 
             if(level == 1L) {
@@ -379,7 +379,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                 # center
                 data.obs.g <- data.W - data.B
             } else if(level == 2L) {
-                Data.B <- matrix(0, nrow = nrow(MB.j), 
+                Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
@@ -418,7 +418,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
         # standard error
         if(se == "standard") {
-            tmp <- (VETA.g - 
+            tmp <- (VETA.g -
              VETA.g %*% t(LAMBDA.g) %*% Sigma.hat.inv.g %*% LAMBDA.g %*% VETA.g)
             tmp.d <- diag(tmp)
             tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
@@ -452,28 +452,28 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 }
 
 # factor scores - normal case - Bartlett method
-# NOTES: 1) this is the classic 'Bartlett' method; for the linear/continuous 
+# NOTES: 1) this is the classic 'Bartlett' method; for the linear/continuous
 #           case, this is equivalent to 'ML'
-#        2) the usual formula is: 
+#        2) the usual formula is:
 #               FSC = solve(lambda' theta.inv lambda) (lambda' theta.inv)
-#           BUT to deal with zero or negative variances, we use the 
+#           BUT to deal with zero or negative variances, we use the
 #           'GLS' version instead:
 #               FSC = solve(lambda' sigma.inv lambda) (lambda' sigma.inv)
-#           Reference: Bentler & Yuan (1997) 'Optimal Conditionally Unbiased 
-#                      Equivariant Factor Score Estimators' 
-#                      in Berkane (Ed) 'Latent variable modeling with 
+#           Reference: Bentler & Yuan (1997) 'Optimal Conditionally Unbiased
+#                      Equivariant Factor Score Estimators'
+#                      in Berkane (Ed) 'Latent variable modeling with
 #                      applications to causality' (Springer-Verlag)
 #        3) instead of solve(), we use MASS::ginv, for special settings where
 #           -by construction- (lambda' sigma.inv lambda) is singular
 lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                                      # sub objects
-                                     lavmodel = NULL, lavdata = NULL, 
+                                     lavmodel = NULL, lavdata = NULL,
                                      lavsamplestats = NULL,
                                      lavimplied = NULL,
                                      # optional new data
                                      data.obs = NULL, eXo = NULL,
                                      se = "none", level = 1L,
-                                     fsm = FALSE) { 
+                                     fsm = FALSE) {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -522,7 +522,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     VETA   <- computeVETA(lavmodel = lavmodel) # for se only
     EETA   <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
     EY     <- computeEY(  lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-     
+
     FS <- vector("list", length = lavdata@ngroups)
     if(fsm) {
         FSM <- vector("list", length = lavdata@ngroups)
@@ -536,20 +536,20 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         if(lavdata@nlevels > 1L) {
             Lp <- lavdata@Lp[[g]]
             YLp <- lavsamplestats@YLp[[g]]
-  
+
             # implied for this group
             group.idx <- (g - 1)*lavdata@nlevels + seq_len(lavdata@nlevels)
             implied.group <- lapply(lavimplied, function(x) x[group.idx])
 
             # random effects (=random intercepts or cluster means)
-            out <- lav_mvnorm_cluster_implied22l(Lp = Lp, 
+            out <- lav_mvnorm_cluster_implied22l(Lp = Lp,
                                                  implied = implied.group)
             MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
                         sigma.w = out$sigma.w, sigma.b = out$sigma.b,
                         sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
                         mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
                         se = FALSE)
-   
+
             ov.idx <- Lp$ov.idx
 
             if(level == 1L) {
@@ -559,7 +559,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                 # center
                 data.obs.g <- data.W - data.B
             } else if(level == 2L) {
-                Data.B <- matrix(0, nrow = nrow(MB.j), 
+                Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
@@ -599,14 +599,14 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
         # standard error
         if(se == "standard") {
-            # the traditional formula is: 
+            # the traditional formula is:
             #     solve(t(lambda) %*% solve(theta) %*% lambda)
-            # but we replace it by 
+            # but we replace it by
             #     solve( t(lambda) %*% solve(sigma) %*% lambda ) - psi
             # to handle negative variances
-            # in addition, we use ginv 
-            tmp <- ( MASS::ginv(t(LAMBDA.g) %*% 
-                                  Sigma.hat.inv.g %*% LAMBDA.g) 
+            # in addition, we use ginv
+            tmp <- ( MASS::ginv(t(LAMBDA.g) %*%
+                                  Sigma.hat.inv.g %*% LAMBDA.g)
                      - VETA.g )
             tmp.d <- diag(tmp)
             tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
@@ -696,8 +696,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
         }
     }
     EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-                          eXo = eXo, nobs = lavdata@norig, 
-                          remove.dummy.lv = TRUE) ## FIXME? 
+                          eXo = eXo, nobs = lavdata@norig,
+                          remove.dummy.lv = TRUE) ## FIXME?
     TH    <- computeTH(   lavmodel = lavmodel)
     THETA <- computeTHETA(lavmodel = lavmodel)
 
@@ -716,7 +716,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
         log.fy <- lav_predict_fy_eta.i(lavmodel       = lavmodel,
                                        lavdata        = lavdata,
                                        lavsamplestats = lavsamplestats,
-                                       y.i            = y.i, 
+                                       y.i            = y.i,
                                        x.i            = x.i,
                                        eta.i          = matrix(x2, nrow=1L), # <---- eta!
                                        theta.sd       = theta.sd,
@@ -730,7 +730,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
             #    a pattern of all (in)correct drives the 'theta' parameter
             #    towards +/- Inf
             # - therefore, we add a vague prior, just to stabilize
-            #    
+            #
             diff <- t(x) - mu.i
             V <- diag( length(x) ) * 1e-05
             tmp <- as.numeric(0.5 * diff %*% V %*% t(diff))
@@ -752,11 +752,11 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
             nfac2 <- nfac2 + length(lavmodel@ov.y.dummy.lv.idx[[g]])
         }
         FS[[g]] <- matrix(as.numeric(NA), nrow(data.obs[[g]]), nfac2)
-   
+
         # special case: no regular lv's
         if(nfac == 0) {
             # impute dummy ov.y (if any)
-            FS[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]] ] <- 
+            FS[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]] ] <-
                 data.obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
             next
         }
@@ -802,7 +802,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
                                   y.i=y.i, x.i=x.i, mu.i=mu.i)
                 } else if(optim.method == "bfgs") {
                     out <- optim(par = START, fn = f.eta.i,
-                                 gr = NULL, 
+                                 gr = NULL,
                                  control = list(reltol = 1e-8, fnscale = 1.1),
                                  method = "BFGS",
                                  y.i = y.i, x.i = x.i, mu.i = mu.i)
@@ -833,7 +833,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
 # variable scores
 # `measurement part':
 #     y*_i = nu + lambda eta_i + K x_i + epsilon_i
-# 
+#
 #    where eta_i = latent variable value for i (either given or from predict)
 #
 # Two types: 1) nrow(ETA) = nrow(X) (factor scores)
@@ -850,7 +850,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              # ETA values
                              ETA = NULL,
                              # options
-                             method = "EBM", 
+                             method = "EBM",
                              duplicate = FALSE,
                              optim.method = "bfgs") {
 
@@ -861,7 +861,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
         lavsamplestats <- lavobject@SampleStats
         lavimplied     <- lavobject@implied
     } else {
-        stopifnot(!is.null(lavmodel), !is.null(lavdata), 
+        stopifnot(!is.null(lavmodel), !is.null(lavdata),
                   !is.null(lavsamplestats), !is.null(lavimplied))
     }
 
@@ -884,7 +884,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
         # matrix
         if(is.matrix(ETA)) { # user-specified?
             if(nrow(ETA) == 1L) {
-                tmp <- matrix(ETA, lavsamplestats@ntotal, length(ETA), 
+                tmp <- matrix(ETA, lavsamplestats@ntotal, length(ETA),
                               byrow = TRUE)
             } else if(nrow(ETA) != lavsamplestats@ntotal) {
                 stop("lavaan ERROR: nrow(ETA) != lavsamplestats@ntotal")
@@ -969,9 +969,9 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
     FY <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
         FY[[g]] <- lav_predict_fy_internal(X = data.obs[[g]], yhat = YHAT[[g]],
-                       TH = TH[[g]], THETA = THETA[[g]], 
+                       TH = TH[[g]], THETA = THETA[[g]],
                        num.idx = lavmodel@num.idx[[g]],
-                       th.idx  = lavmodel@th.idx[[g]], 
+                       th.idx  = lavmodel@th.idx[[g]],
                        link    = lavmodel@link, log. = log.)
     }
 
@@ -980,12 +980,12 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
 
 
 # single group, internal function
-lav_predict_fy_internal <- function(X = NULL, yhat = NULL, 
+lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
                                     TH = NULL, THETA = NULL,
-                                    num.idx = NULL, th.idx = NULL, 
+                                    num.idx = NULL, th.idx = NULL,
                                     link = NULL, log. = FALSE) {
 
-    
+
     # shortcuts
     theta.var <- diag(THETA)
 
@@ -1000,7 +1000,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
     #        tmp <- (X - yhat)^2
     #    } else {
     #        tmp <- sweep(X, MARGIN=2, STATS=yhat, FUN="-")^2
-    #    } 
+    #    }
     #    tmp1 <- sweep(tmp, MARGIN=2, theta.var, "/")
     #    tmp2 <- exp( -0.5 * tmp1 )
     #    tmp3 <- sweep(tmp2, MARGIN=2, sqrt(2*pi*theta.var), "/")
@@ -1017,15 +1017,15 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
     # first, NUMERIC variables
     if(length(num.idx) > 0L) {
         # multivariate
-        # FY.group[,num.idx] <- 
-        #    dmnorm(X[,num.idx], 
-        #           mean = yhat[n,num.idx], 
+        # FY.group[,num.idx] <-
+        #    dmnorm(X[,num.idx],
+        #           mean = yhat[n,num.idx],
             #           varcov = THETA[[g]][num.idx, num.idx], log = log.)
         for(v in num.idx) {
-            FY.group[,v] <- dnorm(X[,v], 
+            FY.group[,v] <- dnorm(X[,v],
                                   # YHAT may change or not per case
-                                  mean = yhat[,v], 
-                                  sd   = sqrt(theta.var[v]), 
+                                  mean = yhat[,v],
+                                  sd   = sqrt(theta.var[v]),
                                   log  = log.)
         }
     }
@@ -1059,7 +1059,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
         if(length(idx) > 0L) {
             fy[idx] <- .Machine$double.eps
         }
-        
+
         # log?
         if(log.) {
             fy <- log(fy)
@@ -1078,7 +1078,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
     FY.group
 }
 
-                                    
+
 
 # conditional density y -- assuming independence!!
 # f(y_i | eta_i, x_i)
@@ -1088,7 +1088,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
 lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
                                  lavsamplestats = NULL,
                                  y.i = NULL, x.i = NULL,
-                                 eta.i = NULL, theta.sd = NULL, g = 1L, 
+                                 eta.i = NULL, theta.sd = NULL, g = 1L,
                                  th = NULL, th.idx = NULL, log = TRUE) {
 
     mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
@@ -1114,7 +1114,7 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
         for(v in seq_len(lavmodel@nvar[g])) {
             if(lavdata@ov$type[v] == "numeric") {
                 ### FIXME!!! we can do all numeric vars at once!!
-                FY[v] <- dnorm(y.i[v], mean = YHAT[v], sd = theta.sd[v], 
+                FY[v] <- dnorm(y.i[v], mean = YHAT[v], sd = theta.sd[v],
                                log = log)
             } else if(lavdata@ov$type[v] == "ordered") {
                 # handle missing value
@@ -1136,8 +1136,8 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
                     }
                 }
             } else {
-                stop("lavaan ERROR: unknown type: `", 
-                      lavdata@ov$type[v], "' for variable: ", 
+                stop("lavaan ERROR: unknown type: `",
+                      lavdata@ov$type[v], "' for variable: ",
                       lavdata@ov$name[v])
             }
         }

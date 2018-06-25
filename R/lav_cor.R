@@ -1,19 +1,19 @@
-# user-visible routine to 
+# user-visible routine to
 # compute polychoric/polyserial/... correlations
 #
 # YR 17 Sept 2013
-# 
+#
 # - YR 26 Nov 2013: big change - make it a wrapper around lavaan()
 #                   estimator = "none" means two.step (starting values)
 
-lavCor <- function(object, 
+lavCor <- function(object,
                    # lav.data options
-                   ordered    = NULL, 
-                   group      = NULL, 
+                   ordered    = NULL,
+                   group      = NULL,
                    missing    = "listwise",
-                   ov.names.x = NULL, 
+                   ov.names.x = NULL,
                    # lavaan options
-                   se         = "none", 
+                   se         = "none",
                    estimator  = "two.step",
                    # other options (for lavaan)
                    ...,
@@ -48,7 +48,7 @@ lavCor <- function(object,
         if(!is.null(group)) {
             NAMES <- NAMES[- match(group, NAMES)]
         }
-        lav.data <- lavData(data = object, group = group, 
+        lav.data <- lavData(data = object, group = group,
                             ov.names = NAMES, ordered = ordered,
                             ov.names.x = ov.names.x,
                             lavoptions = list(missing = missing))
@@ -69,13 +69,13 @@ lavCor <- function(object,
 
     # extract partable options from dots
     dots <- list(...)
-    meanstructure <- FALSE 
+    meanstructure <- FALSE
     fixed.x       <- FALSE
     mimic         <- "lavaan"
     conditional.x <- FALSE
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
-    } 
+    }
     if(categorical) {
         meanstructure <- TRUE
     }
@@ -90,7 +90,7 @@ lavCor <- function(object,
     }
 
     # generate partable for unrestricted model
-    PT.un <- 
+    PT.un <-
         lav_partable_unrestricted(lavobject     = NULL,
                                   lavdata       = lav.data,
                                   lavoptions    = list(meanstructure = meanstructure,
@@ -101,7 +101,7 @@ lavCor <- function(object,
                                   sample.mean   = NULL,
                                   sample.th     = NULL)
 
-    
+
     FIT <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
                   missing = missing,
@@ -153,7 +153,7 @@ lav_cor_output <- function(object, output = "cor") {
         }
     } else if(output %in% c("sampstat")) {
         out <- inspect(object, "sampstat")
-    } else if(output %in% c("parameterEstimates", "pe", 
+    } else if(output %in% c("parameterEstimates", "pe",
               "parameterestimates", "est")) {
         #out <- parameterEstimates(object)
         out <- standardizedSolution(object)

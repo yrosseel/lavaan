@@ -1,11 +1,11 @@
-lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g, 
+lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g,
                                     th.g, th.idx.g,
                                     res.int.g, res.cov.g, res.var.g, res.th.g,
-                                    res.slopes.g, 
-                                    group.w.g, 
-                                    categorical    = FALSE, 
+                                    res.slopes.g,
+                                    group.w.g,
+                                    categorical    = FALSE,
                                     conditional.x  = FALSE,
-                                    meanstructure  = FALSE, 
+                                    meanstructure  = FALSE,
                                     slopestructure = FALSE,
                                     group.w.free   = FALSE) {
 
@@ -53,10 +53,10 @@ lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g,
                     # so we need vecr
                     WLS.obs <- c( lav_matrix_vecr( cbind(res.int.g,
                                                          res.slopes.g)),
-                                  lav_matrix_vech( res.cov.g )          
+                                  lav_matrix_vech( res.cov.g )
                                 )
                     #WLS.obs <- c(                 res.int.g,
-                    #             lav_matrix_vec(  res.slopes.g  ), 
+                    #             lav_matrix_vec(  res.slopes.g  ),
                     #             lav_matrix_vech( res.cov.g     ))
                 } else {
                     WLS.obs <- c(                 res.int.g,
@@ -70,7 +70,7 @@ lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g,
                     WLS.obs <-   lav_matrix_vech( res.cov.g    )
                 }
             }
- 
+
         } else {
             if(meanstructure) {
                  WLS.obs <- c(                 mean.g,

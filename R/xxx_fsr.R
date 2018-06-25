@@ -9,8 +9,8 @@
 # TODO
 #  - Hishino & Bentler: this is simple + WLS
 
-fsr <- function(model      = NULL, 
-                data       = NULL, 
+fsr <- function(model      = NULL,
+                data       = NULL,
                 cmd        = "sem",
                 fsr.method = "Croon",
                 fs.method  = "Bartlett",
@@ -21,7 +21,7 @@ fsr <- function(model      = NULL,
                 mm.list    = NULL,
                 ...,
                 output     = "fsr") {
-   
+
     # we need full data
     if(is.null(data)) {
         stop("lavaan ERROR: full data is required for factor score regression")
@@ -58,7 +58,7 @@ fsr <- function(model      = NULL,
     if(output %in% c("scores", "fs.scores", "fsr.scores")) {
         fs.scores <- TRUE
     }
-    
+
     # dot dot dot
     dotdotdot <- list(...)
 
@@ -87,8 +87,8 @@ fsr <- function(model      = NULL,
     # TODO
 
     # initial processing of the model, no fitting
-    FIT <- do.call(cmd, 
-                   args =  c(list(model  = model, 
+    FIT <- do.call(cmd,
+                   args =  c(list(model  = model,
                                   data   = data,
                                   #meanstructure = TRUE,
                                   do.fit = FALSE), dotdotdot0) )
@@ -174,7 +174,7 @@ fsr <- function(model      = NULL,
         # check each measurement block
         for(b in seq_len(nblocks)) {
             if(!all(mm.list[[b]] %in% lv.names)) {
-              stop("lavaan ERROR: mm.list contains unknown latent variable(s):", 
+              stop("lavaan ERROR: mm.list contains unknown latent variable(s):",
                 paste( mm.list[[b]][ mm.list[[b]] %in% lv.names ], sep = " "),
                 "\n")
             }
@@ -187,7 +187,7 @@ fsr <- function(model      = NULL,
         mm.list <- as.list(lv.names)
         nblocks <- length(mm.list)
     }
-   
+
     # compute factor scores, per latent variable
     FS.SCORES  <- vector("list", length = ngroups)
     LVINFO     <- vector("list", length = ngroups)
@@ -211,13 +211,13 @@ fsr <- function(model      = NULL,
 
     # override with mm.options
     dotdotdot2 <- modifyList(dotdotdot2, mm.options)
- 
+
     # we assume the same number/names of lv's per group!!!
     MM.FIT <- vector("list", nblocks)
     for(b in 1:nblocks) {
 
         # create parameter table for this measurement block only
-        PT.block <- 
+        PT.block <-
             lav_partable_subset_measurement_model(PT = PT,
                                                   lavpta = lavpta,
                                                   add.lv.cov = TRUE,
@@ -240,7 +240,7 @@ fsr <- function(model      = NULL,
 
         # compute factor scores
         if(fsr.method %in% c("croon", "simple") ||
-           lavoptions$se == "robust.sem") { 
+           lavoptions$se == "robust.sem") {
             # we use lavPredict() here to remove unwanted dummy lv's, if any
             SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
             FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
@@ -255,13 +255,13 @@ fsr <- function(model      = NULL,
             # because lavPredict() drops the list
             SC <- list(SC)
         }
-  
+
 
         # store results
         for(g in 1:ngroups) {
             FS.SCORES[[g]][[b]] <- SC[[g]]
             if(fsr.method %in% c("croon", "simple")) {
-                LVINFO[[g]][[b]] <- list(fsm = FSM[[g]], 
+                LVINFO[[g]][[b]] <- list(fsm = FSM[[g]],
                                          lambda = LAMBDA[[g]],
                                          psi    = PSI[[g]],
                                          theta  = THETA[[g]])
@@ -302,10 +302,10 @@ fsr <- function(model      = NULL,
                                              mm.list   = mm.list,
                                              force.pd  = FALSE)
     } else {
-        FSR.COV <- FS.COV 
+        FSR.COV <- FS.COV
     }
 
-    
+
 
     # STEP 1c: do we need full set of factor scores?
     if(fs.scores) {
@@ -325,7 +325,7 @@ fsr <- function(model      = NULL,
 
         # unlist if multiple groups, add group column
         if(ngroups == 1L) {
-            FS.SCORES <- as.data.frame(FS.SCORES[[1]])           
+            FS.SCORES <- as.data.frame(FS.SCORES[[1]])
         } else {
             stop("fix this!")
         }
@@ -401,7 +401,7 @@ fsr <- function(model      = NULL,
                     }
                     Omega.y <- lav_matrix_symmetric_inverse(Info)
                 } else {
-                    stop("lavaan ERROR: can not handle missing = ", 
+                    stop("lavaan ERROR: can not handle missing = ",
                          lavoptions$missing)
                 }
 
@@ -420,7 +420,7 @@ fsr <- function(model      = NULL,
                              Mu = MU, Sigma = SIGMA,
                              information = lavoptions$information)
                 } else {
-                    stop("lavaan ERROR: can not handle missing = ", 
+                    stop("lavaan ERROR: can not handle missing = ",
                          lavoptions$missing)
                 }
             }
@@ -461,15 +461,15 @@ fsr <- function(model      = NULL,
     #lavoptions2$se <- "none"
     #lavoptions2$test <- "none"
     lavoptions2$missing <- "listwise" # always complete data anyway...
-    fit <- lavaan(PT.PA, 
-                  sample.cov = FSR.COV, 
+    fit <- lavaan(PT.PA,
+                  sample.cov = FSR.COV,
                   sample.mean = FS.MEAN,
                   sample.nobs = FIT@SampleStats@nobs,
                   NACOV       = Omega.f,
                   slotOptions = lavoptions2)
 
     # extra info
-    extra <- list( FS.COV =  FS.COV,  FS.SCORES =  FS.SCORES, 
+    extra <- list( FS.COV =  FS.COV,  FS.SCORES =  FS.SCORES,
                    FSR.COV = FSR.COV,
                    LVINFO = LVINFO)
 
@@ -488,7 +488,7 @@ fsr <- function(model      = NULL,
     #        PE$pvalue <- 2 * (1 - pnorm( abs(PE$z) ))
     #    }
     #}
-   
+
     if(output == "fsr") {
         #PE <- parameterEstimates(fit, add.attributes = TRUE, ci = FALSE)
         HEADER <- paste("This is fsr (0.2) -- factor score regression using ",
@@ -508,14 +508,14 @@ fsr <- function(model      = NULL,
         out <- LVINFO
     } else if(output %in% c("scores", "f.scores", "fs.scores")) {
         out <- FS.SCORES
-    } else if(output %in% c("FSR.COV", "fsr.cov", "croon", "cov.croon", 
+    } else if(output %in% c("FSR.COV", "fsr.cov", "croon", "cov.croon",
                             "croon.cov", "COV", "cov")) {
         out <- FSR.COV
     } else if(output %in% c("FS.COV", "fs.cov")) {
         out <- FS.COV
     } else {
         stop("lavaan ERROR: unknown output= argument: ", output)
-    } 
+    }
 
     out
 }

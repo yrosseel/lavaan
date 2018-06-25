@@ -1,7 +1,7 @@
 # classic score test (= Lagrange Multiplier test)
 #
 # this function can run in two modes:
-# 
+#
 # MODE 1: 'add'
 #   add new parameters that are currently not included in de model
 #   (aka fixed to zero), but should be released
@@ -42,7 +42,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # extend model with extra set of parameters
         FIT <- lav_object_extended(object, add = add)
-        
+
         score <- lavTech(FIT, "gradient.logl")
         information <- lavTech(FIT, "information.expected")
 
@@ -85,7 +85,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         score <- lavTech(object, "gradient.logl")
         information <- lavTech(object, "information.expected")
-        J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))? 
+        J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))?
         #                 else written over with Z1.plus if(is.numeric(release))
         #R <- object@Model@con.jac[,]
 
@@ -126,7 +126,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             N <- N - 1
         }
     } else {
-        # total number of clusters (over groups)   
+        # total number of clusters (over groups)
         N <- 0
         for(g in 1:object@SampleStats@ngroups) {
             N <- N + object@Data@Lp[[g]]$nclusters[[2]]
@@ -134,7 +134,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         #score <- score * (2 * object@SampleStats@ntotal) / N
         score <- score / 2 # -2 * LRT
     }
-    
+
     if(lavoptions$se == "standard") {
         stat <- as.numeric(N * score %*% J.inv %*% score)
     } else {
@@ -142,18 +142,18 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         if(warn) {
             warning("lavaan WARNING: se is not `standard'; not implemented yet; falling back to ordinary score test")
         }
- 
+
         # NOTE!!!
         # we can NOT use VCOV here, because it reflects the constraints,
         # and the whole point is to test for these constraints...
-        
+
         stat <- as.numeric(N * score %*% J.inv %*% score)
     }
 
     # compute df, taking into account that some of the constraints may
     # be needed to identify the model (and hence information is singular)
     # information.plus <- information + crossprod(R)
-    #df <- qr(R[r.idx,,drop = FALSE])$rank + 
+    #df <- qr(R[r.idx,,drop = FALSE])$rank +
     #          ( qr(information)$rank - qr(information.plus)$rank )
     df <- nrow( R[r.idx,,drop = FALSE] )
     pvalue <- 1 - pchisq(stat, df=df)
@@ -163,7 +163,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     class(TEST) <- c("lavaan.data.frame", "data.frame")
     attr(TEST, "header") <- "total score test:"
 
-    OUT <- list(test = TEST) 
+    OUT <- list(test = TEST)
 
     if(univariate) {
         TS <- numeric( nrow(R) )

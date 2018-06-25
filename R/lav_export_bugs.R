@@ -3,14 +3,14 @@
 # we assume that N1, N2, ... are in data
 lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
 
-    # get parameter table attributes 
+    # get parameter table attributes
     pta <- lav_partable_attributes(partable = partable, pta = pta)
     vnames <- pta$vnames; nblocks <- pta$nblocks
     nvar <- pta$nvar; nfac <- pta$nfac
-    
+
     # sanity check
     partable <- lav2check(partable)
-    
+
     # tabs
     t1 <- paste(rep(" ", 2L), collapse="")
     t2 <- paste(rep(" ", 4L), collapse="")
@@ -49,7 +49,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                                     partable$lhs == partable$rhs &
                                     partable$lhs == ov.names.nox[i])
             if(length(theta.free.idx) != 1L) {
-                stop("lavaan ERROR: parameter for residual variance ", 
+                stop("lavaan ERROR: parameter for residual variance ",
                      ov.names.nox[i], " not found")
             } else {
                 theta.idx <- partable$free[ theta.free.idx ]
@@ -74,7 +74,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             if(length(int.idx) == 1L) {
                 # fixed or free?
                 if(partable$free[int.idx] == 0L) {
-                    TXT <- paste(TXT, 
+                    TXT <- paste(TXT,
                         partable$ustart[int.idx], sep="")
                 } else {
                     TXT <- paste(TXT,
@@ -92,12 +92,12 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                 # fixed or free?
                 if(partable$free[j] == 0L) {
                     TXT <- paste(TXT, " + ",
-                        partable$ustart[j], "*eta", g, "[i,", 
+                        partable$ustart[j], "*eta", g, "[i,",
                         match(partable$lhs[j], lv.names)
                         , "]", sep="")
                 } else {
                     TXT <- paste(TXT, " + ",
-                        "theta[", partable$free[j], "]*eta", g, "[i,", 
+                        "theta[", partable$free[j], "]*eta", g, "[i,",
                         match(partable$lhs[j], lv.names)
                         , "]", sep="")
                 }
@@ -150,7 +150,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                 }
                 TXT <- paste(TXT, "\n", t2,
                     # dnorm for now
-                    "eta", g, "[i,", lv.y.idx[j], "] ~ dnorm(mu.eta", g, "[i,", 
+                    "eta", g, "[i,", lv.y.idx[j], "] ~ dnorm(mu.eta", g, "[i,",
                     lv.y.idx[j], "], itheta[", theta.idx, "])", sep="")
             }
             for(j in 1:ny) {
@@ -183,15 +183,15 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
                 for(p in 1:np) {
                     TXT <- paste(TXT, " + ",
                         "theta[", partable$free[rhs.idx[p]],
-                        "]*eta", g, "[i,", 
-                        match(partable$rhs[rhs.idx[p]], lv.names), 
+                        "]*eta", g, "[i,",
+                        match(partable$rhs[rhs.idx[p]], lv.names),
                         "]", sep="")
                 }
             }
         }
-            
-        # exogenous lv -- FIXME: we assume the lv.x array is continous 
-        # (eg 3,4,5, but NOT 3,5,6) 
+
+        # exogenous lv -- FIXME: we assume the lv.x array is continous
+        # (eg 3,4,5, but NOT 3,5,6)
         # var(lv.x) = PHI (lisrel style)
         lv.x <- vnames$lv.x[[g]]
         if(length(lv.x) > 0L) {
@@ -200,8 +200,8 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             lv.x.idx <- match(lv.x, lv.names); nx <- length(lv.x.idx)
             TXT <- paste(TXT, "\n", t2,
                 # dmnorm for now
-                "eta", g, "[i,", min(lv.x.idx), ":", max(lv.x.idx), 
-                "] ~ dmnorm(mu.eta", g, "[i,", min(lv.x.idx), ":", 
+                "eta", g, "[i,", min(lv.x.idx), ":", max(lv.x.idx),
+                "] ~ dmnorm(mu.eta", g, "[i,", min(lv.x.idx), ":",
                 max(lv.x.idx), "], iphi", g, "[1:", nx, ",1:", nx, "])", sep="")
             for(j in 1:nx) {
                 TXT <- paste(TXT, "\n", t2,
@@ -237,7 +237,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             # variance
             # 1. lv.x + lv.x (skip -> multivariate)
             # 2. lv.y + lv.y
-            # 3. observed + observed 
+            # 3. observed + observed
             # 4. else -> fix (upgrade to latent?)
             if(lhs %in% vnames$lv.x[[g]] && rhs %in% vnames$lv.x[[g]]) {
                 # lv.x: move to multivariate... (dwish)
@@ -260,7 +260,7 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
             # covariance
             # 1. lv.x + lv.x (skip -> multivariate)
             # 2. lv.y + lv.y
-            # 3. observed + observed 
+            # 3. observed + observed
             # 4. else -> fix (upgrade to latent?)
             if(lhs %in% vnames$lv.x[[g]] && rhs %in% vnames$lv.x[[g]]) {
                 # exo lv covariance
@@ -295,10 +295,10 @@ lav2bugs <- function(partable, pta = NULL, as.function.=FALSE) {
         nx <- length(vnames$lv.x[[g]])
         if(length(nx) > 0L) {
             TXT <- paste(TXT, "\n", t1,
-                "iphi", g, "[1:", nx, ",1:", nx, "] ~ dwish(R", g, "[1:", 
+                "iphi", g, "[1:", nx, ",1:", nx, "] ~ dwish(R", g, "[1:",
                            nx, ",1:", nx, "], 5)", sep="")
             TXT <- paste(TXT, "\n", t1,
-                "phi", g, "[1:", nx, ",1:", nx, "] <- inverse(iphi", g, "[1:", 
+                "phi", g, "[1:", nx, ",1:", nx, "] <- inverse(iphi", g, "[1:",
                           nx, ",1:", nx, "])", sep="")
             for(idx in lv.phi.idx) {
                 TXT <- paste(TXT, "\n", t1,

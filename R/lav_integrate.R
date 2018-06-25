@@ -11,7 +11,7 @@ lav_integration_gaussian_product <- function(mus = NULL, sds = NULL, vars = NULL
 
     # variance product
     var.prod <- 1/sum(1/vars)
-     
+
     # mean product
     mu.prod <- sum(mus/vars)*var.prod
 
@@ -27,11 +27,11 @@ lav_integration_gaussian_product <- function(mus = NULL, sds = NULL, vars = NULL
 # return list: x = nodes, w = quadrature weights
 #
 
-# As noted by Wilf (1962, chapter 2, ex 9), the nodes are given by 
+# As noted by Wilf (1962, chapter 2, ex 9), the nodes are given by
 # the eigenvalues of the Jacobi matrix; weights are given by the squares of the
 # first components of the (normalized) eigenvectors, multiplied by sqrt(pi)
 #
-# (This is NOT identical to Golub & Welsch, 1968: as they used a specific 
+# (This is NOT identical to Golub & Welsch, 1968: as they used a specific
 #  method tailored for tridiagonal symmetric matrices)
 #
 # TODO: look at https://github.com/ajt60gaibb/FastGaussQuadrature.jl/blob/master/src/gausshermite.jl

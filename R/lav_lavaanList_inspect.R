@@ -9,11 +9,11 @@ inspect.lavaanList <- function(object, what = "free", ...) {
 }
 
 # the `tech' version: no labels, full matrices, ... for further processing
-lavTech.lavaanList <- function(object, 
+lavTech.lavaanList <- function(object,
                                what                   = "free",
                                add.labels             = FALSE,
                                add.class              = FALSE,
-                               list.by.group          = FALSE,  
+                               list.by.group          = FALSE,
                                drop.list.single.group = FALSE) {
 
     lavListInspect(object = object, what = what,
@@ -70,19 +70,19 @@ lavListInspect <- function(object,
 
     #### model matrices, with different contents ####
     if(what == "free") {
-        lav_lavaanList_inspect_modelmatrices(object, what = "free", 
+        lav_lavaanList_inspect_modelmatrices(object, what = "free",
             type = "free", add.labels = add.labels, add.class = add.class,
-            list.by.group = list.by.group, 
+            list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "partable" || what == "user") {
-        lav_lavaanList_inspect_modelmatrices(object, what = "free", 
+        lav_lavaanList_inspect_modelmatrices(object, what = "free",
             type="partable", add.labels = add.labels, add.class = add.class,
-            list.by.group = list.by.group, 
+            list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "start" || what == "starting.values") {
         lav_lavaanList_inspect_modelmatrices(object, what = "start",
             add.labels = add.labels, add.class = add.class,
-            list.by.group = list.by.group, 
+            list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
 
 
@@ -118,7 +118,7 @@ lavListInspect <- function(object,
         object@Model@fixed.x
     } else if(what == "parameterization") {
         object@Model@parameterization
-    
+
     # options
     } else if(what == "options" || what == "lavoptions") {
         object@Options
@@ -184,7 +184,7 @@ lav_lavaanList_inspect_modelmatrices <- function(object, what = "free",
             x.user.idx <- object@Model@x.user.idx[[mm]]
             START <- lav_lavaanList_inspect_start(object)
             GLIST[[mm]][m.user.idx] <- START[x.user.idx]
-        } 
+        }
 
         # class
         if(add.class) {
@@ -209,7 +209,7 @@ lav_lavaanList_inspect_modelmatrices <- function(object, what = "free",
         LABEL <- names(ID)
         for(con in 1:nrow(CON)) {
             # lhs
-            LHS.labels <- all.vars(as.formula(paste("~",CON[con,"lhs"]))) 
+            LHS.labels <- all.vars(as.formula(paste("~",CON[con,"lhs"])))
 
             if(length(LHS.labels) > 0L) {
                 # par id
@@ -241,7 +241,7 @@ lav_lavaanList_inspect_modelmatrices <- function(object, what = "free",
         # add this info at the top
         #GLIST <- c(constraints = list(CON), GLIST)
         #no, not a good idea, it does not work with list.by.group
-  
+
         # add it as a 'header' attribute?
         attr(CON, "header") <- "Note: model contains equality constraints:"
         con.flag <- TRUE

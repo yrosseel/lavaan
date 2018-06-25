@@ -31,7 +31,7 @@ lav_partable_full <- function(partable = NULL,
     ngroups <- lavpta$ngroups
     nlevels <- lavpta$nlevels
 
- 
+
     lhs <- rhs <- op <- character(0L)
     block <- group <- level <- integer(0L)
 
@@ -48,7 +48,7 @@ lav_partable_full <- function(partable = NULL,
             ov.names.x   <- lavpta$vnames$ov.x[[b]]
             ov.names.ind <- lavpta$vnames$ov.ind[[b]]
             ov.names.ord <- lavpta$vnames$ov.ord[[b]]
-  
+
             lv.names     <- lavpta$vnames$lv[[b]]
 
             # eqs.y, eqs.x
@@ -119,14 +119,14 @@ lav_partable_full <- function(partable = NULL,
 
                 r.lhs <- rep(eqs.y, each  = length(eqs.x))
                 r.rhs <- rep(eqs.x, times = length(eqs.y))
-      
+
                 # remove self-arrows
                 idx <- which(r.lhs == r.rhs)
                 if(length(idx) > 0L) {
                     r.lhs <- r.lhs[-idx]
                     r.rhs <- r.rhs[-idx]
                 }
-   
+
                 # remove indicator ~ factor if they exist
                 bad.idx <- which(r.lhs %in% ov.names.ind &
                                  r.rhs %in% lv.names)
@@ -167,16 +167,16 @@ lav_partable_full <- function(partable = NULL,
                 delta.rhs <- ov.names.ord
                 delta.op  <- rep("~*~", length(delta.lhs))
             }
-    
+
             # combine
-            this.lhs <- c(l.lhs, ov.lhs, lv.lhs, r.lhs, int.lhs, th.lhs, 
+            this.lhs <- c(l.lhs, ov.lhs, lv.lhs, r.lhs, int.lhs, th.lhs,
                           delta.lhs)
-            this.rhs <- c(l.rhs, ov.rhs, lv.rhs, r.rhs, int.rhs, th.rhs, 
+            this.rhs <- c(l.rhs, ov.rhs, lv.rhs, r.rhs, int.rhs, th.rhs,
                           delta.rhs)
-            this.op  <- c(l.op,  ov.op,  lv.op,  r.op,  int.op,  th.op,  
+            this.op  <- c(l.op,  ov.op,  lv.op,  r.op,  int.op,  th.op,
                           delta.op)
             n.el <- length(this.lhs)
-         
+
             lhs   <- c(lhs, this.lhs)
             rhs   <- c(rhs, this.rhs)
             op    <- c(op, this.op)

@@ -4,14 +4,14 @@
 # this is to replace sapply(frame, function(x) class(x)[1])
 # try (in R3.0.0):
 # N <- 100000
-# frame <- data.frame(a=factor(sample(1:5, size=N, replace=TRUE)), 
+# frame <- data.frame(a=factor(sample(1:5, size=N, replace=TRUE)),
 #                     b=factor(sample(1:5, size=N, replace=TRUE)),
 #                     c=rnorm(N))
 # system.time(replicate(1000, sapply(frame, function(x) class(x)[1])))
-# #   user  system elapsed 
+# #   user  system elapsed
 # #  1.223   0.000   1.222
 # system.time(replicate(1000, lav_dataframe_check_vartype(frame)))
-# #   user  system elapsed 
+# #   user  system elapsed
 # #  0.093   0.000   0.093
 lav_dataframe_check_vartype <- function(frame = NULL, ov.names = character(0)) {
     if(missing(ov.names)) {
@@ -48,7 +48,7 @@ lav_dataframe_check_ordered <- function(frame = NULL, ov.names = character(0)) {
 
 # construct vartable, but allow 'ordered/factor' argument to intervene
 # we do NOT change the data.frame
-lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL, 
+lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
                                    ov.names.x = NULL,
                                    ordered = NULL,
                                    factor = NULL,
@@ -73,7 +73,7 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
     nlev <- integer(nvar); lnam <- character(nvar)
     for(i in seq_len(nvar)) {
         x <- frame[[var.idx[i]]]
-        
+
         type.x <- class(x)[1L]
 
         # correct for matrix with 1 column
@@ -98,7 +98,7 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
             type.x <- "ordered"
             lev <- sort(unique(x)) # we assume integers!
             nlev[i] <- length(lev)
-            lnam[i] <- paste(lev, collapse="|")   
+            lnam[i] <- paste(lev, collapse="|")
             user[i] <- 1L
         } else if(!is.null(factor) && var.names[i] %in% factor) {
             type.x <- "factor"
@@ -113,9 +113,9 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
 
         type[i] <- type.x
         nobs[i] <- sum(!is.na(x))
-        mean[i] <- ifelse(type.x == "numeric", mean(x, na.rm=TRUE), 
+        mean[i] <- ifelse(type.x == "numeric", mean(x, na.rm=TRUE),
                           as.numeric(NA))
-        var[i]  <- ifelse(type.x == "numeric", var(x, na.rm=TRUE), 
+        var[i]  <- ifelse(type.x == "numeric", var(x, na.rm=TRUE),
                           as.numeric(NA))
     }
 

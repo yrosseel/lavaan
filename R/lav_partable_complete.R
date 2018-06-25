@@ -13,7 +13,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
     stopifnot(!is.null(partable$lhs),
               !is.null(partable$op),
               !is.null(partable$rhs))
-        
+
     # number of elements
     N <- length(partable$lhs)
     if(!is.data.frame(partable)) {
@@ -29,10 +29,10 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
              for(i in short.idx) {
                  too.short <- N - nel[i]
                  if(is.integer(partable[[i]])) {
-                     partable[[i]] <- c(partable[[i]], 
+                     partable[[i]] <- c(partable[[i]],
                                            integer( too.short ))
                  } else if(is.numeric(partable[[i]])) {
-                     partable[[i]] <- c(partable[[i]], 
+                     partable[[i]] <- c(partable[[i]],
                                            numeric( too.short ))
                  } else {
                      partable[[i]] <- c(partable[[i]],
@@ -105,7 +105,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
         partable$label <- as.character( partable$label )
     }
 
-    # add eq.id column 
+    # add eq.id column
     #if(is.null(partable$eq.id)) {
     #    partable$eq.id <- rep(0, N)
     #}
@@ -122,7 +122,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
 
     # order them nicely: id lhs op rhs group
     #idx <- match(c("id", "lhs","op","rhs", "group","user",
-    #               "free","ustart","exo","label","eq.id","unco"), 
+    #               "free","ustart","exo","label","eq.id","unco"),
     #             names(partable))
     tmp <- partable[idx]
     partable <- c(tmp, partable[-idx])

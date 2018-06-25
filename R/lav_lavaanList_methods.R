@@ -23,7 +23,7 @@ function(object, header       = TRUE,
                  estimates    = TRUE,
                  print        = TRUE,
                  nd           = 3L) {
-    lav_lavaanList_summary(object, 
+    lav_lavaanList_summary(object,
                            header = header, estimates = estimates,
                            print = print, nd = nd)
 })
@@ -42,7 +42,7 @@ lav_lavaanList_summary <- function(object,
 
     if(header) {
         output$header <- lav_lavaanList_short_summary(object, print = print)
- 
+
         #if(print) {
         #    # show only basic information
         #    lav_lavaanList_short_summary(object)
@@ -50,22 +50,22 @@ lav_lavaanList_summary <- function(object,
     }
 
     if(estimates && "partable" %in% object@meta$store.slots) {
-        pe <- parameterEstimates(object, se = FALSE, 
-                                 remove.system.eq = TRUE, remove.eq = TRUE, 
+        pe <- parameterEstimates(object, se = FALSE,
+                                 remove.system.eq = TRUE, remove.eq = TRUE,
                                  remove.ineq = TRUE, remove.def = FALSE,
-                                 # zstat = FALSE, pvalue = FALSE, ci = FALSE, 
+                                 # zstat = FALSE, pvalue = FALSE, ci = FALSE,
                                  standardized = FALSE,
                                  add.attributes = print)
-        
+
         # scenario 1: simulation
         if(!is.null(object@meta$lavSimulate)) {
             pe$est.true <- object@meta$est.true
             nel <- length(pe$est.true)
 
-            # EST 
+            # EST
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
             AVE <- rowMeans(EST, na.rm = TRUE)
- 
+
             # remove things like equality constraints
             if(length(AVE) > nel) {
                 AVE <- AVE[seq_len(nel)]
@@ -109,7 +109,7 @@ lav_lavaanList_summary <- function(object,
 
             # between-imputation variance
             #B.var <- apply(EST, 1L, var)
-            est1 <- rowMeans(EST, na.rm = TRUE) 
+            est1 <- rowMeans(EST, na.rm = TRUE)
             est2 <- rowMeans(EST^2, na.rm = TRUE)
             B.var <- (est2 - est1*est1) * m/(m-1)
 
@@ -167,11 +167,11 @@ lav_lavaanList_summary <- function(object,
 
 setMethod("coef", "lavaanList",
 function(object, type = "free", labels = TRUE) {
-    lav_lavaanList_partable(object = object, what = "est", type = type, 
+    lav_lavaanList_partable(object = object, what = "est", type = type,
                             labels = labels)
 })
 
-lav_lavaanList_partable <- function(object, what = "est", 
+lav_lavaanList_partable <- function(object, what = "est",
                                     type = "free", labels = TRUE) {
 
     if("partable" %in% object@meta$store.slots) {

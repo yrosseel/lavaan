@@ -19,7 +19,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
 
     if(is.null(x)) {
-        # compute 'fx' = objective function value 
+        # compute 'fx' = objective function value
         # (NOTE: since 0.5-18, NOT divided by N!!)
         fx <- lav_model_objective(lavmodel       = lavmodel,
                                   lavsamplestats = lavsamplestats,
@@ -56,28 +56,28 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
     # we also need a `saturated model', but where the moments are based
     # on the model-implied sample statistics under H0
-    ModelSat2 <- 
+    ModelSat2 <-
         lav_partable_unrestricted(lavobject      = NULL,
                                   lavdata        = lavdata,
                                   lavoptions     = lavoptions,
                                   lavpta         = lavpta,
                                   lavsamplestats = NULL,
                                   sample.cov     = computeSigmaHat(lavmodel),
-                                  sample.mean    = computeMuHat(lavmodel), 
+                                  sample.mean    = computeMuHat(lavmodel),
                                   sample.th      = computeTH(lavmodel),
                                   sample.th.idx  = lavsamplestats@th.idx)
 
     Options2 <- Options
     Options2$optim.method <- "none"
     Options2$optim.force.converged <- TRUE
-    fittedSat2 <- lavaan(ModelSat2, 
+    fittedSat2 <- lavaan(ModelSat2,
                          slotOptions = Options2,
                          slotSampleStats = lavsamplestats,
                          slotData = lavdata, slotCache = lavcache)
 
     # the code below was contributed by Myrsini Katsikatsou (Jan 2015)
 
-# for now, only a single group is supported:    
+# for now, only a single group is supported:
 # g = 1L
 
 
@@ -85,7 +85,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
 # First define the number of non-redundant elements of the (fitted)
 # covariance/correlation matrix of the underlying variables.
-#nvar <- lavmodel@nvar[[g]] 
+#nvar <- lavmodel@nvar[[g]]
 #dSat <- nvar*(nvar-1)/2
 #if(length(lavmodel@num.idx[[g]]) > 0L) {
 #    dSat <- dSat + length(lavmodel@num.idx[[g]])
@@ -159,7 +159,7 @@ if(lavmodel@eq.constraints) {
         }
     }
 } else {
-    Inv_of_InvH_to_psipsi_attheta0 <- 
+    Inv_of_InvH_to_psipsi_attheta0 <-
         solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
 }
 
@@ -173,7 +173,7 @@ var_tww <- 2* sum(diag(H0tmp_prod2)) #variance of the first quadratic quantity
 # using the estimates of SEM parameters derived under the fitted model
 # which is the model of the null hypothesis. We also need to compute the
 # vcov matrix of these estimates (estimates of polychoric correlations)
-# as well as the related hessian and variability matrix. 
+# as well as the related hessian and variability matrix.
 tmp.options <- fittedSat2@Options
 tmp.options$se <- lavoptions$se
 VCOV.Sat2 <- lav_model_vcov(lavmodel       = fittedSat2@Model,
@@ -222,7 +222,7 @@ for(g in 1:lavsamplestats@ngroups) {
     # for now, we can assume that computeDelta will always return
     # the thresholds first, then the correlations
     #
-    # later, we should add a (working) add.labels = TRUE option to 
+    # later, we should add a (working) add.labels = TRUE option to
     # computeDelta
     #th.names <- lavobject@pta$vnames$th[[g]]
     #ov.names <- lavobject@pta$vnames$ov[[g]]
@@ -257,7 +257,7 @@ for(g in 1:lavsamplestats@ngroups) {
 
     par.idx <- match(PARLABEL, NAMES)
     if(any(is.na(par.idx))) {
-        warning("lavaan WARNING: [ctr_pml_plrt] mismatch between DELTA labels and PAR labels!\n", "PARLABEL:\n", paste(PARLABEL, collapse = " "), 
+        warning("lavaan WARNING: [ctr_pml_plrt] mismatch between DELTA labels and PAR labels!\n", "PARLABEL:\n", paste(PARLABEL, collapse = " "),
        "\nDELTA LABELS:\n", paste(NAMES, collapse = " "))
     }
 
@@ -294,10 +294,10 @@ if(asym_mean_PLRTH0Sat == 0) {
     scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat/2) )
     FSA_PLRT_SEM <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat/2) )* PLRTH0Sat
     adjusted_df  <- (asym_mean_PLRTH0Sat*asym_mean_PLRTH0Sat) / (asym_var_PLRTH0Sat/2)
-    # In some very few cases (simulations show very few cases in small 
+    # In some very few cases (simulations show very few cases in small
     # sample sizes) the adjusted_df is a negative number, we should then
     # print a warning like: "The adjusted df is computed to be a negative number
-    # and for this the first and second moment adjusted PLRT is not computed." 
+    # and for this the first and second moment adjusted PLRT is not computed."
     if(scaling.factor > 0) {
         pvalue <- 1-pchisq(FSA_PLRT_SEM, df=adjusted_df )
     } else {
@@ -306,7 +306,7 @@ if(asym_mean_PLRTH0Sat == 0) {
 }
 
 list(PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
-     stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue, 
+     stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue,
      scaling.factor = scaling.factor)
 }
 ############################################################################
@@ -325,13 +325,13 @@ ctr_pml_aic_bic <- function(lavobject) {
     logPL <- lavobject@optim$logl
     nsize <- lavobject@SampleStats@ntotal
 
-    # inverted observed unit information 
+    # inverted observed unit information
     H.inv <- lavTech(lavobject, "inverted.information.observed")
 
     # first order unit information
     J <- lavTech(lavobject, "information.first.order")
 
-    # trace (J %*% H.inv) = sum (J * t(H.inv)) 
+    # trace (J %*% H.inv) = sum (J * t(H.inv))
     dimTheta <- sum(J * H.inv)
 
 

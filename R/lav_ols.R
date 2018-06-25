@@ -1,12 +1,12 @@
 # simple wrapper around lm.fit to get scores()
-# 
+#
 # YR 25 June 2012
 #
 # NOTES: - X should NOT already contain a column of 1's for the intercept!
 #        - weights not used yet
 
 # wrapper function
-lavOLS <- function(y, X = NULL, 
+lavOLS <- function(y, X = NULL,
                    method = "none", start.values = NULL,
                    control = list(), verbose = FALSE) {
 
@@ -33,7 +33,7 @@ lavRefOLS <- setRefClass("lavOLS",
 contains = "lavML",
 
 # fields
-fields = list(X = "matrix", nexo = "integer", 
+fields = list(X = "matrix", nexo = "integer",
               # housekeeping
               int.idx = "integer", slope.idx = "integer", var.idx = "integer",
               missing.values = "logical", missing.idx = "integer",
@@ -66,7 +66,7 @@ initialize = function(y, X = NULL, ...) {
       .self$int.idx <- 1L
     .self$slope.idx <- seq_len(nexo) + 1L
       .self$var.idx <- 1L + nexo + 1L
-    
+
     # set up for Optim
     .self$npar  <- 1L + nexo + 1L # intercept + slopes + var
     start(); .self$theta <- theta.start
@@ -98,7 +98,7 @@ lik = function(x) {
     if(!missing(x)) .self$theta <- x
     beta  <- theta[-npar] # not the variance
     e.var <- theta[npar]  # the variance of the error
-    if(nexo > 0L) 
+    if(nexo > 0L)
         .self$yhat <- drop(X %*% beta)
     else
         .self$yhat <- rep(beta[1L], nobs)
@@ -152,7 +152,7 @@ hessian = function(x) {
     } else {
         dx.beta.var <- -1/(e.var*e.var) * sum(y-yhat)
     }
-    # var - var           
+    # var - var
     sq.e.var <- sqrt(e.var)
     sq.e.var6 <- sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var
     #dx2.var <- nobs/(2*e.var*e.var) - 1/sq.e.var6 * crossprod(y-yhat)

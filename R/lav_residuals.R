@@ -17,7 +17,7 @@ function(object, type="raw", labels=TRUE) {
     if(type %in% c("casewise","case","obs","observations","ov")) {
         return( lav_residuals_casewise(object, labels = labels) )
     }
- 
+
     # checks
     if(type %in% c("normalized", "standardized")) {
         if(object@Options$estimator != "ML") {
@@ -35,7 +35,7 @@ function(object, type="raw", labels=TRUE) {
     }
     # NOTE: for some reason, Mplus does not compute the normalized/standardized
     # residuals if estimator = MLM !!!
- 
+
 
     # check type
     if(!type %in% c("raw", "cor",
@@ -43,7 +43,7 @@ function(object, type="raw", labels=TRUE) {
         "normalized", "standardized", "casewise")) {
         stop("type must be one of \"raw\", \"cor\", \"cor.bollen\", \"cor.bentler\", \"normalized\" or \"standardized\" or \"casewise\"")
     }
-    
+
     # if cor, choose 'default'
     if(type == "cor") {
         if(object@Options$mimic == "EQS") {
@@ -83,13 +83,13 @@ function(object, type="raw", labels=TRUE) {
             augUser <- object@ParTable
             idx <- which(augUser$exo > 0L)
             augUser$exo[       idx ] <- 0L
-            augUser$free[      idx ] <- max(augUser$free) + 1:length(idx) 
-            #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx) 
+            augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
+            #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
             augModel <- lav_model(lavpartable    = augUser,
                                   lavoptions     = object@Options,
                                   cov.x          = object@SampleStats@cov.x,
                                   mean.x         = object@SampleStats@mean.x)
-            VarCov <- lav_model_vcov(lavmodel       = augModel, 
+            VarCov <- lav_model_vcov(lavmodel       = augModel,
                                      lavsamplestats = object@SampleStats,
                                      lavdata        = object@Data,
                                      lavpartable    = object@ParTable,
@@ -101,7 +101,7 @@ function(object, type="raw", labels=TRUE) {
             ### FIXME: should we not do this on the information level,
             ###        *before* we compute VarCov?
             ###
-            fixed.x.idx <- max(object@ParTable$free) + 1:length(idx) 
+            fixed.x.idx <- max(object@ParTable$free) + 1:length(idx)
             free.idx    <- 1:max(object@ParTable$free)
             VarCov[free.idx, fixed.x.idx] <- 0.0
             VarCov[fixed.x.idx, free.idx] <- 0.0
@@ -116,7 +116,7 @@ function(object, type="raw", labels=TRUE) {
                                      lavimplied     = object@implied,
                                      lavh1          = object@h1)
             Delta  <- computeDelta(lavmodel = object@Model)
-        }   
+        }
     }
 
     R <- vector("list", length=G)
@@ -147,8 +147,8 @@ function(object, type="raw", labels=TRUE) {
         if(type == "cor.bollen") {
             if(object@Model@conditional.x) {
                 R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$res.cov[[g]])
-                R[[g]]$mean <- ( M/sqrt(diag(S)) - 
-                                 ( object@implied$res.int[[g]] / 
+                R[[g]]$mean <- ( M/sqrt(diag(S)) -
+                                 ( object@implied$res.int[[g]] /
                                    sqrt(diag(object@implied$res.cov[[g]])) ) )
             } else {
                 R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$cov[[g]])
@@ -203,7 +203,7 @@ function(object, type="raw", labels=TRUE) {
         }
 
         if(type == "normalized" || type == "standardized") {
-         
+
             # compute normalized residuals
             N <- object@SampleStats@nobs[[g]]; nvar <- length(R[[g]]$mean)
             idx.mean <- 1:nvar
@@ -211,7 +211,7 @@ function(object, type="raw", labels=TRUE) {
             if(object@Options$se == "standard" ||
                object@Options$se == "none") {
                 dS <- diag(S)
-                Var.mean <- Var.sample.mean <- dS / N 
+                Var.mean <- Var.sample.mean <- dS / N
                 Var.cov  <- Var.sample.cov  <- (tcrossprod(dS) + S*S) / N
                 # this is identical to solve(A1)/N for complete data!!
             } else if(object@Options$se == "robust.huber.white" ||
@@ -283,7 +283,7 @@ function(object, type="raw", labels=TRUE) {
         if(type == "standardized") {
 
             Var.model <- diag(Delta[[g]] %*% VarCov %*% t(Delta[[g]]))
- 
+
             if(meanstructure) {
                 Var.model.mean <- Var.model[idx.mean]
                 Var.model.cov  <- lav_matrix_vech_reverse(Var.model[-idx.mean])
@@ -314,7 +314,7 @@ function(object, type="raw", labels=TRUE) {
             tol <- 1.0e-5
             R[[g]]$mean[ which(abs(R[[g]]$mean) < tol)] <- 0.0
             R[[g]]$cov[ which(abs(R[[g]]$cov) < tol)] <- 0.0
-            
+
             R[[g]]$mean <- R[[g]]$mean / sqrt( Var.mean )
             R[[g]]$cov  <- R[[g]]$cov  / sqrt( Var.cov  )
         }
@@ -372,8 +372,8 @@ lav_residuals_casewise <- function(object, labels = labels) {
     M <- lav_predict_yhat(object)
     # Note: if M has already class lavaan.matrix, print goes crazy
     # with Error: C stack usage is too close to the limit
-    OUT <- lapply(seq_len(G), function(x) { 
-               out <- X[[x]] - M[[x]] 
+    OUT <- lapply(seq_len(G), function(x) {
+               out <- X[[x]] - M[[x]]
                class(out) <- c("lavaan.matrix", "matrix")
                out
            })

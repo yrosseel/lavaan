@@ -21,8 +21,8 @@ twostep <- function(model      = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
-    dotdotdot0$se     <- "none"   
-    dotdotdot0$test   <- "none" 
+    dotdotdot0$se     <- "none"
+    dotdotdot0$test   <- "none"
 
     # check for arguments that we do not want?
     # TODO
@@ -70,9 +70,9 @@ twostep <- function(model      = NULL,
     if(npar < 1L) {
         stop("lavaan ERROR: model does not contain any free parameters")
     }
-    
 
-    # make a copy 
+
+    # make a copy
     PT.orig <- PT
 
     # est equals ustart by default
@@ -116,11 +116,11 @@ twostep <- function(model      = NULL,
 
         # fit this measurement block, store the fitted object in the MM list
         MM[[f]] <- lavaan::lavaan(model = PTM, ...) ## FIXME: reuse slots!
-                 
+
         # fill in point estimates measurement block
         PT$est[ seq_len(length(PT$lhs)) %in% mm.idx &
-                PT$free > 0L ] <- MM[[f]]@ParTable$est[ PTM$free > 0L ] 
- 
+                PT$free > 0L ] <- MM[[f]]@ParTable$est[ PTM$free > 0L ]
+
         # fill in standard errors measurement block
         PT$se[ seq_len(length(PT$lhs)) %in% mm.idx &
                PT$free > 0L ] <- MM[[f]]@ParTable$se[ PTM$free > 0L ]
@@ -147,8 +147,8 @@ twostep <- function(model      = NULL,
     # remove 'exogenous' factor variances (if any) from reg.idx
     lv.names.x <- lv.names[ lv.names %in% unlist(lavpta$vnames$eqs.x) ]
     if(length(lv.names.x) > 0L) {
-        var.idx <- which(PT$lhs %in% lv.names.x &  
-                         PT$op == "~~" & 
+        var.idx <- which(PT$lhs %in% lv.names.x &
+                         PT$op == "~~" &
                          PT$lhs == PT$rhs)
         rm.idx <- which(reg.idx %in% var.idx)
         if(length(rm.idx) > 0L) {
@@ -216,8 +216,8 @@ twostep <- function(model      = NULL,
         }
         return(PT)
     } else {
-        return( list(MM = MM, STRUC = STRUC, JOINT = JOINT, 
-                     V = V, V1 = V1, V2 = V2, Sigma.11 = Sigma.11, 
+        return( list(MM = MM, STRUC = STRUC, JOINT = JOINT,
+                     V = V, V1 = V1, V2 = V2, Sigma.11 = Sigma.11,
                      MM.INFO = MM.INFO, PT = PT) )
     }
 }

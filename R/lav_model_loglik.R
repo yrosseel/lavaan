@@ -30,7 +30,7 @@ lav_model_loglik <- function(lavdata        = NULL,
             logl.ok <- FALSE
         }
     }
-  
+
     # lavsamplestats filled in? (not if no data...)
     if(length(lavsamplestats@ntotal) == 0L) {
         logl.ok <- FALSE
@@ -123,7 +123,7 @@ lav_model_loglik <- function(lavdata        = NULL,
 
         # BIC2
         N.star <- (lavsamplestats@ntotal + 2) / 24
-        BIC2 <- (-2 * logl) + (npar * log(N.star))   
+        BIC2 <- (-2 * logl) + (npar * log(N.star))
     } else {
         AIC <- BIC <- BIC2 <- as.numeric(NA)
     }

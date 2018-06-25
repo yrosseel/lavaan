@@ -19,7 +19,7 @@ lavaanify <- lavParTable <- function(
                       meanstructure    = FALSE,
                       int.ov.free      = FALSE,
                       int.lv.free      = FALSE,
-                      orthogonal       = FALSE, 
+                      orthogonal       = FALSE,
                       std.lv           = FALSE,
                       conditional.x    = FALSE,
                       fixed.x          = TRUE,
@@ -43,7 +43,7 @@ lavaanify <- lavParTable <- function(
                       group.w.free     = FALSE,
                       debug            = FALSE,
                       warn             = TRUE,
-                      
+
                       as.data.frame.   = TRUE) {
 
 
@@ -71,7 +71,7 @@ lavaanify <- lavParTable <- function(
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
     }
-   
+
     if(debug) {
         cat("[lavaan DEBUG]: FLAT (flattened user model):\n")
         print(FLAT)
@@ -107,8 +107,8 @@ lavaanify <- lavParTable <- function(
             auto.cov.y      = TRUE
             auto.th         = TRUE
             auto.delta      = TRUE
-        } else 
-        
+        } else
+
         if(model.type == "growth") {
             model.type      = "growth"
             int.ov.free     = FALSE
@@ -118,7 +118,7 @@ lavaanify <- lavParTable <- function(
             auto.var        = TRUE
             auto.cov.lv.x   = TRUE
             auto.cov.y      = TRUE
-            auto.th         = TRUE    
+            auto.th         = TRUE
             auto.delta      = TRUE
         }
     }
@@ -135,14 +135,14 @@ lavaanify <- lavParTable <- function(
         # what are the block lhs labels?
         BLOCKS <- tolower(FLAT$lhs[FLAT$op == ":"])
         BLOCK.lhs <- unique(BLOCKS)
-  
+
         # block op == ":" indices
         BLOCK.op.idx <- which(FLAT$op == ":")
 
         # check for wrong spelled 'group' lhs
         if(length(grep("group", BLOCK.lhs)) > 1L) {
             warning("lavaan WARNING: ambiguous block identifiers for group:",
-                    "\n\t\t  ", paste(BLOCK.lhs[grep("group", BLOCK.lhs)], 
+                    "\n\t\t  ", paste(BLOCK.lhs[grep("group", BLOCK.lhs)],
                                       collapse = ", "))
         }
 
@@ -205,8 +205,8 @@ lavaanify <- lavParTable <- function(
                 varTable = varTable, group.equal = NULL,
                 group.w.free = group.w.free, ngroups = 1L)
             LIST.block <- as.data.frame(LIST.block, stringsAsFactors = FALSE)
- 
-            # add block columns with current values in BLOCK.rhs 
+
+            # add block columns with current values in BLOCK.rhs
             for(b in seq_len(length(BLOCK.lhs))) {
                 block.lhs <- BLOCK.lhs[b]
                 block.rhs <- BLOCK.rhs[b]
@@ -226,7 +226,7 @@ lavaanify <- lavParTable <- function(
         for(b in seq_len(length(BLOCK.lhs))) {
             block.lhs <- BLOCK.lhs[b]
             block.rhs <- BLOCK.rhs[b]
-            tmp <- try(scan(text = LIST[[block.lhs]], what = integer(), 
+            tmp <- try(scan(text = LIST[[block.lhs]], what = integer(),
                        quiet = TRUE), silent = TRUE)
             if(class(tmp) == "integer") {
                  LIST[[block.lhs]] <- tmp
@@ -234,20 +234,20 @@ lavaanify <- lavParTable <- function(
         }
 
     } else {
-        LIST <- lav_partable_flat(FLAT, blocks = "group", 
-            meanstructure = meanstructure, 
+        LIST <- lav_partable_flat(FLAT, blocks = "group",
+            meanstructure = meanstructure,
             int.ov.free = int.ov.free, int.lv.free = int.lv.free,
-            orthogonal = orthogonal, std.lv = std.lv, 
+            orthogonal = orthogonal, std.lv = std.lv,
             conditional.x = conditional.x, fixed.x = fixed.x,
             parameterization = parameterization,
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-            auto.cov.y = auto.cov.y, auto.th = auto.th, 
+            auto.cov.y = auto.cov.y, auto.th = auto.th,
             auto.delta = auto.delta,
-            varTable = varTable, group.equal = group.equal, 
+            varTable = varTable, group.equal = group.equal,
             group.w.free = group.w.free,
             ngroups = ngroups)
-    }        
+    }
     if(debug) {
         cat("[lavaan DEBUG]: parameter LIST without MODIFIERS:\n")
         print( as.data.frame(LIST, stringsAsFactors=FALSE) )
@@ -302,13 +302,13 @@ lavaanify <- lavParTable <- function(
             # perhaps the corresponding element was duplicated, and removed
             if(length(idx) == 0L) {
                 next
-            } 
+            }
 
-            MOD.fixed <- MOD[[el]]$fixed  
+            MOD.fixed <- MOD[[el]]$fixed
             MOD.start <- MOD[[el]]$start
             MOD.lower <- MOD[[el]]$lower
             MOD.upper <- MOD[[el]]$upper
-            MOD.label <- MOD[[el]]$label 
+            MOD.label <- MOD[[el]]$label
             MOD.prior <- MOD[[el]]$prior
 
             # check for single argument if multiple groups
@@ -320,7 +320,7 @@ lavaanify <- lavParTable <- function(
                 if(length(MOD.lower) == 1L) MOD.lower <- rep(MOD.lower, ngroups)
                 if(length(MOD.upper) == 1L) MOD.upper <- rep(MOD.upper, ngroups)
                 if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
-                # B) here we do NOT! otherwise, it would imply an equality 
+                # B) here we do NOT! otherwise, it would imply an equality
                 #                    constraint...
                 #    except if group.equal="loadings"!
                 if(length(MOD.label) == 1L) {
@@ -342,7 +342,7 @@ lavaanify <- lavParTable <- function(
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
                 stop("lavaan ERROR: wrong number of arguments in modifier (",
-                    paste(MOD.label, collapse=","), ") of element ", 
+                    paste(MOD.label, collapse=","), ") of element ",
                     LIST$lhs[el.idx], LIST$op[el.idx], LIST$rhs[el.idx])
             }
 
@@ -403,7 +403,7 @@ lavaanify <- lavParTable <- function(
     } else {
         blocks <- "group"
     }
-    LABEL <- lav_partable_labels(partable = LIST, 
+    LABEL <- lav_partable_labels(partable = LIST,
                                  blocks = blocks,
                                  group.equal = group.equal,
                                  group.partial = group.partial)
@@ -427,10 +427,10 @@ lavaanify <- lavParTable <- function(
         CON <- lapply(CON, function(x) {x$user <- 1L; x} )
         for(idx in idx.eq.label) {
             eq.label <- LABEL[idx]
-            all.idx <- which(LABEL == eq.label) # all same-label parameters   
-            ref.idx <- all.idx[1L]              # the first one only 
+            all.idx <- which(LABEL == eq.label) # all same-label parameters
+            ref.idx <- all.idx[1L]              # the first one only
 
-            # two possibilities: 
+            # two possibilities:
             # 1. all.idx contains a fixed parameter: in this case,
             #    we fix them all (hopefully to the same value)
             # 2. all.idx contains only free parameters
@@ -457,7 +457,7 @@ lavaanify <- lavParTable <- function(
                                       # be equal to the 'fixed' parameter
                                       # (Note: Mplus ignores this)
 
-                # just in case: if ref.idx is not equal to fixed.idx, 
+                # just in case: if ref.idx is not equal to fixed.idx,
                 # fix this one too
                 LIST$ustart[ref.idx] <- LIST$ustart[fixed.idx]
                 LIST$free[ref.idx] <- 0L
@@ -470,8 +470,8 @@ lavaanify <- lavParTable <- function(
                 #    lhs.lab <- PLABEL[ref.idx]
                 #}
                 CON.idx <- CON.idx + 1L
-                CON[[CON.idx]] <- list(op   = "==", 
-                                       lhs  = LIST$plabel[ref.idx], 
+                CON[[CON.idx]] <- list(op   = "==",
+                                       lhs  = LIST$plabel[ref.idx],
                                        rhs  = LIST$plabel[idx],
                                        user = 2L)
 
@@ -517,7 +517,7 @@ lavaanify <- lavParTable <- function(
         LIST$op[IDX]    <- unlist(lapply(CON, "[[",  "op"))
         LIST$rhs[IDX]   <- unlist(lapply(CON, "[[", "rhs"))
         LIST$user[IDX]  <- unlist(lapply(CON, "[[", "user"))
- 
+
         # zero is nicer?
         LIST$free[IDX] <- rep(0L, nCon)
         LIST$exo[IDX]  <- rep(0L, nCon)
@@ -551,7 +551,7 @@ lavaanify <- lavParTable <- function(
     LIST$label[def.idx] <- LIST$lhs[def.idx]
 
 
-    if(debug) { 
+    if(debug) {
         cat("[lavaan DEBUG] lavParTable\n")
         print( as.data.frame(LIST) )
     }

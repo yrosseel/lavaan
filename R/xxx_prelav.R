@@ -6,9 +6,9 @@
 
 prelav <- function(object = NULL, ordered = NULL, ov.names.x = NULL,
                    group = NULL, missing = "pairwise",
-                   output = list(MA ="none", # moment matrix 
+                   output = list(MA ="none", # moment matrix
                                  SR = FALSE, # transformed raw data
-                                 RA = FALSE, # transformed raw data 
+                                 RA = FALSE, # transformed raw data
                                  SA = FALSE, # asymptotic covariance matrix
                                  AC = FALSE, # asymptotic covariance matrix
                                  SV = FALSE, # asymptotic variances
@@ -85,6 +85,6 @@ print.prelav <- function(x, ..., nd=3) {
     cat("Univariate information:\n")
     # varTable!
     print(as.data.frame(lav.data@ov))
-    
+
     invisible(x)
 }

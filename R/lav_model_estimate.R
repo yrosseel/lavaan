@@ -38,7 +38,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # rescale parameters as if the data was standardized
         # new in 0.6-2
         #
-        # FIXME: this works well, as long as the variances of the 
+        # FIXME: this works well, as long as the variances of the
         #        latent variables (which we do not know) are more or less
         #        equal to 1.0 (eg std.lv = TRUE)
         #
@@ -62,7 +62,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
 
         if(lavoptions$std.lv) {
-            parscale <- lav_standardize_all(lavobject = NULL, 
+            parscale <- lav_standardize_all(lavobject = NULL,
                             est = rep(1, length(lavpartable$lhs)),
                             est.std = rep(1, length(lavpartable$lhs)),
                             cov.std = FALSE, ov.var = OV.VAR,
@@ -116,7 +116,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     #       length(lavmodel@x.free.var.idx) > 0L) {
     #    # transforming variances using atan (or another sigmoid function?)
     #    # FIXME: better approach?
-    #    #start.x[lavmodel@x.free.var.idx] <- 
+    #    #start.x[lavmodel@x.free.var.idx] <-
     #    #    atan(start.x[lavmodel@x.free.var.idx])
     #    start.x[lavmodel@x.free.var.idx] <-
     #        sqrt(start.x[lavmodel@x.free.var.idx]) # assuming positive var
@@ -128,7 +128,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         cat("start.x = ", start.x, "\n")
     }
 
-  
+
     # bounds? (new in 0.6-2)
     if(is.null(lavpartable$lower)) {
         lower <- -Inf
@@ -140,7 +140,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
             lowerb <- lower
             lowerb[lower == -Inf] <- -999999
- 
+
             # pack
             l.pack <- as.numeric( (lowerb - lavmodel@eq.constraints.k0) %*%
                                   lavmodel@eq.constraints.K )
@@ -166,14 +166,14 @@ lav_model_estimate <- function(lavmodel       = NULL,
             upper[!(upper %in% not.inf.val)] <- Inf
         }
     }
-    
+
 
 
 
     # function to be minimized
     objective_function <- function(x, verbose = FALSE, infToMax = FALSE) {
 
-        # 3. standard deviations to variances 
+        # 3. standard deviations to variances
         # WARNING: x is still packed here!
         #if(lavoptions$optim.var.transform == "sqrt" &&
         #   length(lavmodel@x.free.var.idx) > 0L) {
@@ -195,9 +195,9 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # update GLIST (change `state') and make a COPY!
         GLIST <- lav_model_x2GLIST(lavmodel, x = x)
 
-        fx <- lav_model_objective(lavmodel       = lavmodel, 
-                                  GLIST          = GLIST, 
-                                  lavsamplestats = lavsamplestats, 
+        fx <- lav_model_objective(lavmodel       = lavmodel,
+                                  GLIST          = GLIST,
+                                  lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
                                   verbose        = verbose,
@@ -210,8 +210,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
 
 
-        if(debug || verbose) { 
-            cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="") 
+        if(debug || verbose) {
+            cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="")
         }
         if(debug) {
             #cat("Current unconstrained parameter values =\n")
@@ -256,12 +256,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # update GLIST (change `state') and make a COPY!
         GLIST <- lav_model_x2GLIST(lavmodel, x = x)
 
-        dx <- lav_model_gradient(lavmodel       = lavmodel, 
-                                 GLIST          = GLIST, 
+        dx <- lav_model_gradient(lavmodel       = lavmodel,
+                                 GLIST          = GLIST,
                                  lavsamplestats = lavsamplestats,
                                  lavdata        = lavdata,
                                  lavcache       = lavcache,
-                                 type           = "free", 
+                                 type           = "free",
                                  group.weight   = group.weight, ### check me!!
                                  verbose        = verbose,
                                  forcePD        = TRUE)
@@ -285,7 +285,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         #    x.var.sign <- sign(x.var)
         #    x.var <- abs(x.var)
         #    x.sd <- sqrt(x.var)
-        #    dx[lavmodel@x.free.var.idx] <- 
+        #    dx[lavmodel@x.free.var.idx] <-
         #        ( 2 * x.var.sign * dx[lavmodel@x.free.var.idx] * x.sd )
         #}
 
@@ -310,7 +310,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         npar <- length(x)
         h <- 10e-6
         dx <- numeric( npar )
- 
+
         ## FIXME: call lav_model_objective directly!!
         for(i in 1:npar) {
             x.left <- x.left2 <- x.right <- x.right2 <- x
@@ -328,11 +328,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
         if(debug) {
             cat("Gradient function (numerical) =\n"); print(dx); cat("\n")
-        }        
+        }
 
         dx
     }
- 
+
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
@@ -341,7 +341,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         Sigma.hat <- computeSigmaHat(lavmodel, extra=TRUE, debug=lavoptions$debug)
         for(g in 1:ngroups) {
             if(!attr(Sigma.hat[[g]], "po")) {
-                group.txt <- ifelse(ngroups > 1, 
+                group.txt <- ifelse(ngroups > 1,
                                     paste(" in group ",g,".",sep=""), ".")
                 if(debug) print(Sigma.hat[[g]])
                 stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
@@ -409,7 +409,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
             #OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
         } else {
             OPTIMIZER <- toupper(lavoptions$optim.method)
-            stopifnot(OPTIMIZER %in% c("NLMINB0", "NLMINB1", "NLMINB2", 
+            stopifnot(OPTIMIZER %in% c("NLMINB0", "NLMINB1", "NLMINB2",
                       "NLMINB", "BFGS", "L-BFGS-B", "NONE"))
             if(OPTIMIZER == "NLMINB1") {
                 OPTIMIZER <- "NLMINB"
@@ -425,7 +425,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         optim.out <- optim(par=start.x,
                            fn=objective_function,
                            method="Nelder-Mead",
-                           #control=list(maxit=10L, 
+                           #control=list(maxit=10L,
                            #             parscale=SCALE,
                            #             trace=trace),
                            hessian=FALSE,
@@ -434,7 +434,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         start.x <- optim.out$par
     }
 
-    
+
 
     if(OPTIMIZER == "NLMINB0") {
         if(verbose) cat("Quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
@@ -451,7 +451,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, lavoptions$control)
-        control <- control.nlminb[c("eval.max", "iter.max", "trace", 
+        control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                     "step.min", "step.max",
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
         #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
@@ -462,7 +462,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             upper=upper,
                             control=control,
                             scale=SCALE,
-                            verbose=verbose) 
+                            verbose=verbose)
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("nlminb message says: ", optim.out$message, "\n")
@@ -494,7 +494,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                x.tol=1.5e-8,
                                xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, lavoptions$control)
-        control <- control.nlminb[c("eval.max", "iter.max", "trace", 
+        control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                     "step.min", "step.max",
                                     "abs.tol", "rel.tol", "x.tol", "xf.tol")]
         #cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
@@ -505,7 +505,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             upper=upper,
                             control=control,
                             scale=SCALE,
-                            verbose=verbose) 
+                            verbose=verbose)
         if(verbose) {
             cat("convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("nlminb message says: ", optim.out$message, "\n")
@@ -527,7 +527,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # (but WLS works!)
         # - BB.ML works too
 
-        control.bfgs <- list(trace=0L, fnscale=1, 
+        control.bfgs <- list(trace=0L, fnscale=1,
                              parscale=SCALE, ## or not?
                              ndeps=1e-3,
                              maxit=10000,
@@ -574,8 +574,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                factr=1e7,
                                pgtol=0)
         control.lbfgsb <- modifyList(control.lbfgsb, lavoptions$control)
-        control <- control.lbfgsb[c("trace", "fnscale", "parscale", 
-                                    "ndeps", "maxit", "REPORT", "lmm", 
+        control <- control.lbfgsb[c("trace", "fnscale", "parscale",
+                                    "ndeps", "maxit", "REPORT", "lmm",
                                     "factr", "pgtol")]
         optim.out <- optim(par=start.x,
                            fn=objective_function,
@@ -661,7 +661,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     fx <- objective_function(x) # to get "fx.group" attribute
 
     # transform back
-    # 3. 
+    # 3.
     #if(lavoptions$optim.var.transform == "sqrt" &&
     #       length(lavmodel@x.free.var.idx) > 0L) {
     #    #x[lavmodel@x.free.var.idx] <- tan(x[lavmodel@x.free.var.idx])

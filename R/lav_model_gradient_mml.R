@@ -8,7 +8,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                                    sample.mean.x = NULL,
                                    lavcache    = NULL) {
 
-    if(lavmodel@link == "logit") 
+    if(lavmodel@link == "logit")
         stop("logit link not implemented yet; use probit")
 
     # shortcut
@@ -117,7 +117,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         tmp[cbind(i, i)] <- 1
         IB.inv <- solve(tmp)
     }
-    
+
     # fix GAMMA
     GAMMA <- MLIST$gamma
     if(is.null(GAMMA)) {
@@ -198,7 +198,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                           TH = TH, THETA = THETA,
                           num.idx = num.idx, th.idx  = th.idx,
                           link = lavmodel@link, log. = TRUE)
-        
+
         # if log, fy is just the sum of log.fy.var
         log.fy <- apply(log.fy.var, 1L, sum)
 
@@ -216,7 +216,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
         PRE <- matrix(0, nobs, nvar)
         if(length(num.idx) > 0L) {
             tmp <- X[,num.idx,drop=FALSE] - yhat[,num.idx,drop=FALSE]
-            theta.var <- diag(THETA)[num.idx] 
+            theta.var <- diag(THETA)[num.idx]
             PRE[,num.idx] <- sweep(tmp, MARGIN=2, STATS=1/theta.var, FUN="*")
         }
 
@@ -246,10 +246,10 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
                      (dth %*% DD$tau[which(th.idx==p),,drop=FALSE])
             }
         }
-        
+
         if(length(num.idx) > 0L) {
             # THETA (num only)
-            dsigma2 <- sweep(0.5*PRE[,num.idx]*PRE[,num.idx], MARGIN=2, 
+            dsigma2 <- sweep(0.5*PRE[,num.idx]*PRE[,num.idx], MARGIN=2,
                              STATS=1/(2*theta.var), FUN="-")
             dFYp.q <- dFYp.q + (dsigma2 %*% DD$theta)
 
@@ -267,7 +267,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
             #dlambda <- sweep(PRE, MARGIN=1, STATS=eta, FUN="*")
         }
         dFYp.q <- dFYp.q + (dlambda %*% DD$lambda)
-        
+
         # PSI
         #if(nrow(ksi) == 1L) {
             dpsi <- PRE %*% kronecker(LAMBDA[,,drop=FALSE], ksi)
@@ -313,7 +313,7 @@ lav_model_gradient_mml <- function(lavmodel    = NULL,
     dFYp <- 1/lik * dFYp
 
     dx <- apply(dFYp, 2, sum)
-  
+
     # integration
     #dx <- apply(as.numeric(GH$w) * dLdx, 2, sum)
 

@@ -19,7 +19,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
 
     # m = difference between the df's
     m <- r0 - r1
-     
+
     Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
     # check for NULL
     if(is.null(Gamma)) {
@@ -34,7 +34,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         P.inv <- lav_model_information_augment_invert(m1@Model,
                                                       information = P,
                                                       inverted = TRUE)
-        # compute 'A' matrix 
+        # compute 'A' matrix
         # NOTE: order of parameters may change between H1 and H0, so be
         # careful!
         if(is.null(A)) {
@@ -56,7 +56,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
                                                       information = P,
                                                       inverted = TRUE)
 
-        # compute 'A' matrix 
+        # compute 'A' matrix
         # NOTE: order of parameters may change between H1 and H0, so be
         # careful!
         if(is.null(A)) {
@@ -80,7 +80,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     APA <- A %*% P.inv %*% t(A)
     cSums <- colSums(APA)
     rSums <- rowSums(APA)
-    empty.idx <- which( abs(cSums) < .Machine$double.eps^0.5 & 
+    empty.idx <- which( abs(cSums) < .Machine$double.eps^0.5 &
                         abs(rSums) < .Machine$double.eps^0.5 )
     if(length(empty.idx) > 0) {
         A <- A[-empty.idx,, drop = FALSE]
@@ -127,12 +127,12 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         a <- as.numeric(NA); b <- as.numeric(NA)
     }
 
-    list(T.delta = T.delta, scaling.factor = cd, df.delta = df.delta, 
+    list(T.delta = T.delta, scaling.factor = cd, df.delta = df.delta,
          a = a, b = b)
 }
 
 lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
-    
+
     # extract information from m1 and m2
     T1 <- m1@test[[1]]$stat
     r1 <- m1@test[[1]]$df
@@ -157,7 +157,7 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
         cd <- as.numeric(NA)
     }
 
-    # compute scaled difference test      
+    # compute scaled difference test
     T.delta <- (T0 - T1)/cd
 
     list(T.delta = T.delta, scaling.factor = cd, df.delta = m)
@@ -191,7 +191,7 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
         M01 <- lav_test_diff_m10(m0, m1, test = TRUE)
         c01 <- M01@test[[2]]$scaling.factor
 
-        # check if vcov is positive definite (new in 0.6) 
+        # check if vcov is positive definite (new in 0.6)
         # if not, we may get negative values
         eigvals <- eigen(lavTech(M10, "information"),
                          symmetric=TRUE, only.values=TRUE)$values
@@ -211,7 +211,7 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
         M10 <- lav_test_diff_m10(m1, m0, test = TRUE)
         c10 <- M10@test[[2]]$scaling.factor
 
-        # check if vcov is positive definite (new in 0.6) 
+        # check if vcov is positive definite (new in 0.6)
         # if not, we may get negative values
         eigvals <- eigen(lavTech(M10, "information"),
                          symmetric=TRUE, only.values=TRUE)$values
@@ -229,11 +229,11 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
     # compute scaled difference test
     T.delta <- (T0 - T1)/cd
 
-    list(T.delta = T.delta, scaling.factor = cd, df.delta = m, 
+    list(T.delta = T.delta, scaling.factor = cd, df.delta = m,
          T.delta.unscaled = (T0 - T1))
 }
 
-# create a new model 'm10', where we use model 'm1', but we 
+# create a new model 'm10', where we use model 'm1', but we
 # inject it with the values of 'm0'
 lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 
@@ -250,7 +250,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     PT.M1 <- m1@ParTable
 
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta, 
+    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta,
                                     free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
@@ -287,7 +287,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 # compute the `A' matrix: the jacobian of the constraint function a(\delta)
 # (see Satorra 2000)
 #
-# 
+#
 #
 lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
 
@@ -327,7 +327,7 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
         H <- MASS::ginv(Delta1) %*% Delta0
         A <- t(lav_matrix_orthogonal_complement(H))
     }
- 
+
     A
 }
 
@@ -372,15 +372,15 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     # change 'free' order in m0
     # NOTE: this only works all the free parameters in h0 are also free
     # in h1 (and if not, they will become fixed in h0)
-    PT.M0.part1$free[p0.free.idx] <- 
+    PT.M0.part1$free[p0.free.idx] <-
     PT.M1.part1$free[ PT.M0.part1$id[p1.id][p0.free.idx] ]
 
     # paste back
     PT.M0 <- rbind(PT.M0.part1, PT.M0.part2)
     PT.M1 <- rbind(PT.M1.part1, PT.M1.part2)
-    
+
     # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta, 
+    PT.M1.FULL <- lav_partable_full(partable = PT.M1, lavpta = m1@pta,
                                     free = TRUE, start = TRUE)
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
@@ -443,7 +443,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     DEFCON.txt <- lav_partable_constraints_ceq(P0, txtOnly=TRUE)
     BODY.txt <- paste(BODY.txt, DEFCON.txt, "\n", sep="")
 
-   
+
     # for each parameter in p1, we 'check' is it is fixed to a constant in p0
     ncon <- length( which(P0$op == "==") )
     for(i in seq_len(np1)) {
@@ -457,7 +457,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
         p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
                         p0$group == group)
         if(length(p0.idx) == 0L) {
-            stop("lavaan ERROR: parameter in H1 not found in H0: ", 
+            stop("lavaan ERROR: parameter in H1 not found in H0: ",
                  paste(lhs, op, rhs, "(group = ", group, ")", sep=" "))
         }
 
@@ -467,7 +467,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
                 # match, nothing to do
             } else {
                 warning("lavaan WARNING: fixed parameter in H1 is free in H0: ",
-                     paste("\"", lhs, " ", op, " ", rhs, 
+                     paste("\"", lhs, " ", op, " ", rhs,
                            "\" (group = ", group, ")", sep=""))
             }
         } else {

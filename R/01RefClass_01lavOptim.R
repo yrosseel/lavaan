@@ -32,7 +32,7 @@ minGradient = function(x) {
 minHessian = function(x) {
     cat("this is dummy a function [minHessian]\n")
     return(matrix(as.numeric(NA), npar, npar))
-}, 
+},
 
 optimize = function(method = "nlminb", control = list(), verbose = FALSE,
                     start.values = NULL) {
@@ -40,7 +40,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
     hessian <- FALSE
     if( method == "none" ) {
         .self$optim.method <- "none"
-    } else if( method %in% c("nlminb", "quasi-newton", "quasi.newton", 
+    } else if( method %in% c("nlminb", "quasi-newton", "quasi.newton",
                       "nlminb.hessian") ) {
         .self$optim.method <- "nlminb"
         if(verbose)
@@ -59,7 +59,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
         .self$optim.control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                            "abs.tol", "rel.tol", "x.tol",
                                            "step.min")]
-        
+
     } else if( method %in% c("newton", "newton-raphson", "newton.raphson") ) {
         .self$optim.method <- "newton"
         if(verbose)
@@ -76,7 +76,7 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
     }
 
     # user provided starting values?
-    if(!is.null(start.values)) { 
+    if(!is.null(start.values)) {
         stopifnot(length(start.values) == npar)
         .self$theta.start <- start.values
     }
@@ -94,14 +94,14 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
                           gradient = .self$minGradient, control = optim.control)
         } else {
             out <- nlminb(start = theta, objective = .self$minObjective,
-                          gradient = .self$minGradient, 
+                          gradient = .self$minGradient,
                           hessian = .self$minHessian,
                           control = optim.control)
         }
         # FIXME: use generic fields
         .self$optim.out <- out
     }
-    # just in case, a last call to objective() 
+    # just in case, a last call to objective()
     tmp <- minObjective()
 
 }
@@ -114,10 +114,10 @@ optimize = function(method = "nlminb", control = list(), verbose = FALSE,
 # - it assumes that the hessian is always positive definite (no check!)
 # - it may do some backstepping, but there is no guarantee that it will
 #   converge
-# this function is NOT for general-purpose optimization, but should only be 
-# used or simple (convex!) problems (eg. estimating polychoric/polyserial 
+# this function is NOT for general-purpose optimization, but should only be
+# used or simple (convex!) problems (eg. estimating polychoric/polyserial
 # correlations, probit regressions, ...)
-# 
+#
 lavOptimNewtonRaphson <- function(object,
                                   control = list(iter.max  = 100L,
                                                  grad.tol  = 1e-6,
@@ -140,8 +140,8 @@ lavOptimNewtonRaphson <- function(object,
     for(i in seq_len(control$iter.max)) {
 
         if(control$verbose) {
-            cat("NR step ", sprintf("%2d", (i-1L)), ": max.grad = ", 
-                sprintf("%12.9f", max.grad), " norm.grad = ", 
+            cat("NR step ", sprintf("%2d", (i-1L)), ": max.grad = ",
+                sprintf("%12.9f", max.grad), " norm.grad = ",
                 sprintf("%12.9f", norm.grad), "\n", sep="")
         }
 

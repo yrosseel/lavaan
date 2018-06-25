@@ -16,11 +16,11 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                                       sample.cov.x   = NULL,
                                       sample.mean.x  = NULL) {
 
-    lav_partable_indep_or_unrestricted(lavobject = lavobject, 
-        lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions, 
-        lavsamplestats = lavsamplestats, sample.cov = sample.cov, 
-        sample.mean = sample.mean , sample.slopes = sample.slopes, 
-        sample.th = sample.th, sample.th.idx = sample.th.idx, 
+    lav_partable_indep_or_unrestricted(lavobject = lavobject,
+        lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
+        lavsamplestats = lavsamplestats, sample.cov = sample.cov,
+        sample.mean = sample.mean , sample.slopes = sample.slopes,
+        sample.th = sample.th, sample.th.idx = sample.th.idx,
         independent = FALSE)
 
 }
@@ -119,9 +119,9 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
     ngroups       <- lavdata@ngroups
     nlevels       <- lavdata@nlevels
 
-    # what with fixed.x? 
+    # what with fixed.x?
     # - does not really matter; fit will be saturated any way
-    # - fixed.x = TRUE may avoid convergence issues with non-numeric 
+    # - fixed.x = TRUE may avoid convergence issues with non-numeric
     #             x-covariates
     #if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
         fixed.x = lavoptions$fixed.x
@@ -207,11 +207,11 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 block.idx <- match(ov.names, OV.NAMES)
 
                 if(l == 1L) {
-                    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx, 
+                    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
                                                     drop = FALSE]
                     sample.mean <- YLp[[2]]$Mu.W[block.idx]
                 } else {
-                    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx, 
+                    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx,
                                                     drop = FALSE]
                     sample.mean <- YLp[[2]]$Mu.B[block.idx]
                 }
@@ -219,14 +219,14 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 # force local sample.cov to be strictly pd (and exaggerate)
                 # just for starting values anyway, but at least the first
                 # evaluation will be feasible
-                sample.cov <- lav_matrix_symmetric_force_pd(sample.cov, 
+                sample.cov <- lav_matrix_symmetric_force_pd(sample.cov,
                                                             tol = 1e-03)
             }
 
 
             # a) VARIANCES (all ov's, if !conditional.x, also exo's)
             nvar  <- length(ov.names)
-    
+
             lhs   <- c(lhs, ov.names)
              op   <- c(op, rep("~~", nvar))
             rhs   <- c(rhs, ov.names)
@@ -257,29 +257,29 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     free  <- c(free,  rep(1L, pstar))
                     exo   <- c(exo,   rep(0L, pstar))
                 }
-    
+
                 # starting values -- covariances
                 if(!is.null(sample.cov)) {
-                    ustart <- c(ustart, lav_matrix_vech(sample.cov, 
+                    ustart <- c(ustart, lav_matrix_vech(sample.cov,
                                                         diagonal = FALSE))
                 } else {
                     ustart <- c(ustart, rep(as.numeric(NA), pstar))
                 }
             }
-    
+
             # ordered? fix variances, add thresholds
             ord.names <- character(0L)
             if(categorical) {
                 ord.names <- ov$name[ ov$type == "ordered" ]
                 # only for this group
                 ord.names <- ov.names[ which(ov.names %in% ord.names) ]
-                
+
                 if(length(ord.names) > 0L) {
                     # fix variances to 1.0
                     idx <- which(lhs %in% ord.names & op == "~~" & lhs == rhs)
                     ustart[idx] <- 1.0
                     free[idx] <- 0L
-    
+
                     # add thresholds
                     lhs.th <- character(0); rhs.th <- character(0)
                     for(o in ord.names) {
@@ -297,7 +297,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     level <- c(level, rep(l,  nel))
                      free <- c(free, rep(1L, nel))
                       exo <- c(exo, rep(0L, nel))
-    
+
                     # starting values
                     if(!is.null(sample.th) && !is.null(sample.th.idx)) {
                         th.start <- sample.th[ sample.th.idx > 0L ]
@@ -332,7 +332,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                    ustart <- c(ustart, rep(1, nel))
                 }
             } # categorical
- 
+
 
             # meanstructure?
             if(meanstructure) {
@@ -398,13 +398,13 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 }
 
                 if(fixed.x) {
-                    # fix variances/covariances 
+                    # fix variances/covariances
                     exo.idx <- which(rhs %in% ov.names.x &
                                      lhs %in% ov.names.x &
                                      op == "~~" & group == g)
                     exo[exo.idx] <- 1L
                     free[exo.idx] <- 0L
-    
+
                     # fix means
                     exo.idx <- which(lhs %in% ov.names.x &
                                      op == "~1" & group == g)
@@ -537,7 +537,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     # unrestricted
                     nnox <- length(ov.names.nox)
                     nel  <- nnox * nx
-    
+
                     lhs <- c(lhs, rep(ov.names.nox, times = nx))
                      op <- c(op,  rep("~", nel))
                     rhs <- c(rhs, rep(ov.names.x, each = nnox))
@@ -546,7 +546,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     level <- c(level, rep(l,  nel))
                     free <- c(free,  rep(1L, nel))
                     exo <- c(exo,   rep(1L, nel))
-  
+
                     # starting values -- slopes
                     if(!is.null(sample.slopes)) {
                         ustart <- c(ustart, lav_matrix_vec(sample.slopes))
@@ -583,7 +583,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                         #unco        = free
                    )
 
-    
+
     # keep level column if no levels? (no for now)
     if(nlevels < 2L) {
         LIST$level <- NULL

@@ -23,8 +23,8 @@ derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
         dx.Mu[var.idx, 1] <-  ( dx.Mu[var.idx, 1] + nobs/ntotal *
                                   -2 * t(t(MX - Mu) %*% Sigma.inv) )
 
-        dx.Sigma[var.idx, var.idx] <- 
-            ( dx.Sigma[var.idx, var.idx] - nobs/ntotal * 2 * 
+        dx.Sigma[var.idx, var.idx] <-
+            ( dx.Sigma[var.idx, var.idx] - nobs/ntotal * 2 *
               # in the 'textbook' formula's, the Sigma.inv below is often
               # replaced by [0.5 * D'(Sigma.inv %x% Sigma.inv) D]
               # but we do not use the 'vecs' notation here, and
@@ -32,7 +32,7 @@ derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
               (Sigma.inv %*%
               (TT - Sigma.hat[var.idx,var.idx]) %*% Sigma.inv ) )
     }
- 
+
     # compensate for symmetry
     diag(dx.Sigma) <- diag(dx.Sigma)/2
 
@@ -47,8 +47,8 @@ derivative.FIML <- function(Sigma.hat, Mu.hat, M) {
 # Sigma <- cov(X2); Mu <- colMeans(X2)
 
 # logl of the MVM, no constants, factor 0.5, factor -1
-# summary statistics version 
-logl.MVN.complete <- function(Sigma, Mu, 
+# summary statistics version
+logl.MVN.complete <- function(Sigma, Mu,
                               X=NULL, data.cov=NULL, data.mean=NULL) {
 
     if(is.null(data.cov)) {
@@ -64,7 +64,7 @@ logl.MVN.complete <- function(Sigma, Mu,
     diff <- as.matrix(data.mean - Mu)
     TT <- data.cov + tcrossprod(diff)
 
-    logl <- Sigma.log.det + sum(TT * Sigma.inv) # - S.log.det - nvar 
+    logl <- Sigma.log.det + sum(TT * Sigma.inv) # - S.log.det - nvar
     logl <- 0.5 * logl
 
     logl
@@ -146,7 +146,7 @@ hessian.MVN.saturated <- function(Sigma=NULL, Mu=NULL,
     #
     #    # compute numerical approximation of the Hessian
     #    H <- numDeriv::hessian(func=objective.function, x=param2x(Sigma,Mu))
-    # 
+    #
     #} else {
 
         Sigma.inv <- inv.chol(Sigma, logdet=FALSE)

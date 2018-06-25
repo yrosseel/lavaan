@@ -1,15 +1,15 @@
 # contributed by Ed Merkle (17 Jan 2013)
 
 
-# YR 12 Feb 2013: small changes to match the results of lav_model_gradient 
+# YR 12 Feb 2013: small changes to match the results of lav_model_gradient
 #                 in the multiple group case
 # YR 30 May 2014: handle 1-variable case (fixing apply in lines 56, 62, 108)
-# YR 05 Nov 2015: add remove.duplicated = TRUE, to cope with strucchange in 
+# YR 05 Nov 2015: add remove.duplicated = TRUE, to cope with strucchange in
 #                 case of simple equality constraints
 # YR 19 Nov 2015: if constraints have been used, compute case-wise Lagrange
 #                 multipliers, and define the scores as: SC + (t(R) lambda)
 # YR 05 Feb 2016: catch conditional.x = TRUE: no support (for now), until
-#                 we can use the generic 0.6 infrastructure for scores, 
+#                 we can use the generic 0.6 infrastructure for scores,
 #                 including the missing-values case
 # YR 16 Feb 2016: adapt to changed @Mp slot elements; add remove.empty.cases=
 #                 argument
@@ -21,7 +21,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
 
   stopifnot(inherits(object, "lavaan"))
 
-  # what if estimator != ML? 
+  # what if estimator != ML?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if(object@Options$estimator != "ML") {
       warning("lavaan WARNING: scores only availalbe if estimator is ML")
@@ -53,7 +53,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   #   npar <- NCOL(object@Model@eq.constraints.K)
   #}
   Score.mat <- matrix(NA, ntot, npar)
-  
+
   for(g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1){
       moments <- fitted(object)[[g]]
@@ -67,7 +67,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
     } else {
         N1 <- 1
     }
-  
+
     if(!lavsamplestats@missing.flag) { # complete data
       #if(lavmodel@meanstructure) { # mean structure
         nvar <- ncol(lavsamplestats@cov[[g]])
@@ -115,7 +115,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
       nvar <- ncol(lavsamplestats@cov[[g]])
       score.sigma   <- matrix(0, nsub, nvar*(nvar+1)/2)
       score.mu <- matrix(0, nsub, nvar)
-    
+
       for(p in 1:length(M)) {
         ## Data
         #X <- M[[p]][["X"]]
@@ -127,7 +127,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
         ## (Used to keep track of scores in score.sigma)
         var.idx.mat <- tcrossprod(var.idx)
         Sigma.idx <- which(var.idx.mat[lower.tri(var.idx.mat, diag=T)]==1)
-      
+
         J <- matrix(1, 1L, nobs) #[var.idx]
         J2 <- matrix(1, nvar, nvar)[var.idx, var.idx, drop = FALSE]
         diag(J2) <- 0.5
@@ -148,7 +148,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
         scores.H1 <- group.w[g] * scores.H1
       }
     } # missing
-    
+
     Delta <- computeDelta(lavmodel = lavmodel)[[g]]
     #if(lavmodel@eq.constraints) {
     #    Delta <- Delta %*% lavmodel@eq.constraints.K # + lavmodel@eq.constraints.k0
@@ -160,12 +160,12 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
     if(scaling){
       Score.mat[wi,] <- (-1/ntot) * Score.mat[wi,]
     }
-    
+
   } # g
 
   # handle empty rows
   if(remove.empty.cases) {
-      #empty.idx <- which( apply(Score.mat, 1L, 
+      #empty.idx <- which( apply(Score.mat, 1L,
       #                        function(x) sum(is.na(x))) == ncol(Score.mat) )
       empty.idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
       if(length(empty.idx) > 0L) {

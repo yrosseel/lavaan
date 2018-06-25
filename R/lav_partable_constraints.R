@@ -14,7 +14,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
 
     # get := definitions
     def.idx <- which(partable$op == ":=")
-    
+
     # catch empty def
     if(length(def.idx) == 0L) {
         if(txtOnly) {
@@ -89,7 +89,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
 #     eg. if b1 + b2 == 2 (and b1 correspond to, say,  x[10] and x[17])
 #         ceq <- function(x) {
 #             out <- rep(NA, 1)
-#             b1 = x[10]; b2 = x[17] 
+#             b1 = x[10]; b2 = x[17]
 #             out[1] <- b1 + b2 - 2
 #         }
 lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
@@ -104,7 +104,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
         partable$op  <- c(partable$op,  con$op )
         partable$rhs <- c(partable$rhs, con$rhs)
     }
-    
+
     # get equality constraints
     eq.idx <- which(partable$op == "==")
 
@@ -145,13 +145,13 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
     # get user-labels ids
     ulab.idx <- which(eq.labels %in% partable$label)
     if(length(ulab.idx) > 0L) {
-        eq.x.idx[ ulab.idx] <- partable$free[match(eq.labels[ulab.idx], 
+        eq.x.idx[ ulab.idx] <- partable$free[match(eq.labels[ulab.idx],
                                                    partable$label)]
     }
     # get plabels ids
     plab.idx <- which(eq.labels %in% partable$plabel)
     if(length(plab.idx) > 0L) {
-        eq.x.idx[ plab.idx] <- partable$free[match(eq.labels[plab.idx],  
+        eq.x.idx[ plab.idx] <- partable$free[match(eq.labels[plab.idx],
                                                    partable$plabel)]
     }
 
@@ -192,7 +192,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
     for(i in 1:length(eq.idx)) {
         lhs <- partable$lhs[ eq.idx[i] ]
         rhs <- partable$rhs[ eq.idx[i] ]
-        if(rhs == "0") { 
+        if(rhs == "0") {
             eq.string <- lhs
         } else {
             eq.string <- paste(lhs, " - (", rhs, ")", sep="")
@@ -224,7 +224,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
 #     eg. if b1 + b2 > 2 (and b1 correspond to, say,  x[10] and x[17])
 #         cin <- function(x) {
 #             out <- rep(NA, 1)
-#             b1 = x[10]; b2 = x[17] 
+#             b1 = x[10]; b2 = x[17]
 #             out[1] <- b1 + b2 - 2
 #         }
 #
@@ -243,7 +243,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
         partable$op  <- c(partable$op,  con$op )
         partable$rhs <- c(partable$rhs, con$rhs)
     }
-    
+
     # get inequality constraints
     ineq.idx <- which(partable$op == ">" | partable$op == "<")
 
@@ -283,13 +283,13 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
     # get user-labels ids
     ulab.idx <- which(ineq.labels %in% partable$label)
     if(length(ulab.idx) > 0L) {
-        ineq.x.idx[ ulab.idx] <- partable$free[match(ineq.labels[ulab.idx], 
+        ineq.x.idx[ ulab.idx] <- partable$free[match(ineq.labels[ulab.idx],
                                                    partable$label)]
     }
     # get plabels ids
     plab.idx <- which(ineq.labels %in% partable$plabel)
     if(length(plab.idx) > 0L) {
-        ineq.x.idx[ plab.idx] <- partable$free[match(ineq.labels[plab.idx],  
+        ineq.x.idx[ plab.idx] <- partable$free[match(ineq.labels[plab.idx],
                                                    partable$plabel)]
     }
 
@@ -370,7 +370,7 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
         partable$op  <- c(partable$op,  con$op )
         partable$rhs <- c(partable$rhs, con$rhs)
     }
-    
+
     # get constraints
     con.idx <- which(partable$op %in% c("==", "<", ">"))
 
@@ -399,13 +399,13 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
     # get user-labels ids
     ulab.idx <- which(con.labels %in% partable$label)
     if(length(ulab.idx) > 0L) {
-        con.x.idx[ ulab.idx] <- partable$free[match(con.labels[ulab.idx], 
+        con.x.idx[ ulab.idx] <- partable$free[match(con.labels[ulab.idx],
                                                    partable$label)]
     }
     # get plabels ids
     plab.idx <- which(con.labels %in% partable$plabel)
     if(length(plab.idx) > 0L) {
-        con.x.idx[ plab.idx] <- partable$free[match(con.labels[plab.idx],  
+        con.x.idx[ plab.idx] <- partable$free[match(con.labels[plab.idx],
                                                    partable$plabel)]
     }
 

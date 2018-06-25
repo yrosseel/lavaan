@@ -31,16 +31,16 @@ inv.chol <- function(S, logdet=FALSE) {
 cor2cov <- function(R, sds, names=NULL) {
 
     p <- (d <- dim(R))[1L]
-    if(!is.numeric(R) || length(d) != 2L || p != d[2L]) 
+    if(!is.numeric(R) || length(d) != 2L || p != d[2L])
         stop("'V' is not a square numeric matrix")
 
-    if(any(!is.finite(sds))) 
+    if(any(!is.finite(sds)))
         warning("sds had 0 or NA entries; non-finite result is doubtful")
 
-    #if(sum(diag(R)) != p) 
+    #if(sum(diag(R)) != p)
     #    stop("The diagonal of a correlation matrix should be all ones.")
 
-    if(p != length(sds)) 
+    if(p != length(sds))
         stop("The standard deviation vector and correlation matrix have a different number of variables")
 
     S <- R
@@ -53,7 +53,7 @@ cor2cov <- function(R, sds, names=NULL) {
     }
 
     S
-} 
+}
 
 # convert characters within single quotes to numeric vector
 # eg. s <- '3 4.3 8e-3 2.0'
@@ -64,7 +64,7 @@ char2num <- function(s = '') {
     tc <- textConnection(s.)
     x <- scan(tc, quiet=TRUE)
     close(tc)
-    x 
+    x
 }
 
 # create full matrix based on lower.tri or upper.tri elements; add names
@@ -75,7 +75,7 @@ getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
     # check x and sds
     if(is.character(x)) x <- char2num(x)
     if(is.character(sds)) sds <- char2num(sds)
-   
+
     nels <- length(x)
     if(lower) {
         COV <- lav_matrix_lower2full(x, diagonal = diagonal)
@@ -113,7 +113,7 @@ rowcol2vec <- function(row.idx, col.idx, nrow, symmetric=FALSE) {
 }
 
 # dummy function to 'pretty' print a vector with fixed width
-pprint.vector <- function(x, 
+pprint.vector <- function(x,
                           digits.after.period=3,
                           ncols=NULL, max.col.width=11,
                           newline=TRUE) {
@@ -147,7 +147,7 @@ pprint.vector <- function(x,
         for(nc in 1:rest) {
             vname <- substr(var.names[(nr-1)*ncols + nc], 1, max.col.width)
             cat(sprintf(string.format, vname))
-        }        
+        }
         cat("\n")
         for(nc in 1:rest) {
             cat(sprintf(number.format, x[(nr-1)*ncols + nc]))
@@ -159,7 +159,7 @@ pprint.vector <- function(x,
 }
 
 # print only lower half of symmetric matrix
-pprint.matrix.symm <- function(x, 
+pprint.matrix.symm <- function(x,
                                digits.after.period=3,
                                ncols=NULL, max.col.width=11,
                                newline=TRUE) {
@@ -170,7 +170,7 @@ pprint.matrix.symm <- function(x,
 
     total.width = getOption("width")
 
-    max.width <- max(nchar(var.names)) 
+    max.width <- max(nchar(var.names))
     if( max.width < max.col.width) { # shrink
         max.col.width <- max( max.width, digits.after.period+2)
     }
@@ -198,7 +198,7 @@ pprint.matrix.symm <- function(x,
         for(nc in 1:rest) {
             vname <- substr(var.names[(nb-1)*ncols + nc], 1, max.col.width)
             cat(sprintf(string.format, vname))
-        }        
+        }
         cat("\n")
         row.start <- (nb-1)*ncols + 1
         for(nr in row.start:nrow) {
@@ -220,7 +220,7 @@ pprint.matrix.symm <- function(x,
 # elimination of rows/cols symmetric matrix
 eliminate.rowcols <- function(x, el.idx=integer(0)) {
 
-    if(length(el.idx) == 0) { 
+    if(length(el.idx) == 0) {
         return( x )
     }
     stopifnot(ncol(x) == nrow(x))
@@ -233,16 +233,16 @@ eliminate.rowcols <- function(x, el.idx=integer(0)) {
 #
 # type = "all" -> only remove var(el.idx) and cov(el.idx)
 # type = "any" -> remove all rows/cols of el.idx
-eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0), 
+eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0),
                                 meanstructure=FALSE, type="all") {
 
     if(length(el.idx) > 0) {
         stopifnot(min(el.idx) > 0 && max(el.idx) <= nvar)
     }
- 
+
     XX <- utils::combn(1:(nvar+1),2)
     XX[2,] <- XX[2,] - 1
-    
+
     if(type == "all") {
         idx <- !(apply(apply(XX, 2, function(x) {x %in% el.idx}), 2, all))
     } else {
@@ -252,7 +252,7 @@ eliminate.pstar.idx <- function(nvar=1, el.idx=integer(0),
     if(meanstructure) {
         idx <- c(!(1:nvar %in% el.idx), idx)
         #idx <- c(rep(TRUE, nvar), idx)
-        
+
     }
 
     idx
@@ -278,7 +278,7 @@ augmented.covariance <- function(S., mean) {
     out[p+1,1:p] <- t(m)
     out[1:p,p+1] <- m
     out[p+1,p+1] <- 1
-    
+
     out
 }
 
@@ -367,7 +367,7 @@ steepest.descent <- function(start, objective, gradient, iter.max, verbose) {
                 alpha <- optimize(f.alpha, lower=-1, upper=0.0)$minimum
             }
         }
-        
+
 
         # steepest descent step
         old.x <- x
@@ -385,7 +385,7 @@ steepest.descent <- function(start, objective, gradient, iter.max, verbose) {
             norm.gx <- sqrt(gx %*% gx)
             if(verbose) {
                 cat(sprintf("%4d   %11.7E %10.7f %10.7f %11.5E %11.5E",
-                            iter, fx.new, abs.change, rel.change, alpha, norm.gx), 
+                            iter, fx.new, abs.change, rel.change, alpha, norm.gx),
                     "\n")
             }
         }

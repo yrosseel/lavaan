@@ -1,5 +1,5 @@
 # class definitions
-# 
+#
 # initial version: YR 25/03/2009
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
@@ -50,7 +50,7 @@ setClass("lavSampleStats",         # sample moments
         res.var="list",            # residual variances
         res.th="list",             # residual thresholds
         res.th.nox="list",         # residual thresholds ignoring x
-        res.slopes="list",         # slopes exo (if conditional.x) 
+        res.slopes="list",         # slopes exo (if conditional.x)
         res.int="list",            # intercepts (if conditional.x)
 
         mean.x="list",             # mean exo
@@ -191,7 +191,7 @@ setClass("lavaan",
         SampleStats = "lavSampleStats",  # sample statistics
         Model       = "lavModel",        # internal matrix representation
         Cache       = "list",            # housekeeping stuff
-        Fit         = "Fit",             # fitted results 
+        Fit         = "Fit",             # fitted results
         boot        = "list",            # bootstrap results
         optim       = "list",            # optimizer results
         loglik      = "list",            # loglik values and info
@@ -201,7 +201,7 @@ setClass("lavaan",
         h1          = "list",            # unrestricted model results
         baseline    = "list",            # baseline model results
         external    = "list"             # optional slot, for add-on packages
-    ) 
+    )
 )
 
 setClass("lavaanList",
@@ -234,4 +234,4 @@ setClass("lavaanList",
 
 
 
-                      
+

@@ -36,6 +36,6 @@ lavutils_mplus_readdifftest <- function(file="deriv.dat") {
     # just for fun, M1
     # M1 <- (P1 - P1 %*% H %*% solve(t(H) %*% P1 %*% H) %*% t(H) %*% P1) %*% V1
 
-    list(T1=T1, ngroups=ngroups, ndat=ndat, npar=npar, pstar=pstar, 
+    list(T1=T1, ngroups=ngroups, ndat=ndat, npar=npar, pstar=pstar,
          Delta=Delta, P1=P1, V1=V1)
 }

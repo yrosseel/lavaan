@@ -1,19 +1,19 @@
 # univariate modification indices
 #
 
-modindices <- function(object, 
-                       standardized = TRUE, 
+modindices <- function(object,
+                       standardized = TRUE,
                        cov.std = TRUE,
 
                        # power statistics?
-                       power = FALSE, 
-                       delta = 0.1, 
-                       alpha = 0.05, 
+                       power = FALSE,
+                       delta = 0.1,
+                       alpha = 0.05,
                        high.power = 0.75,
 
                        # customize output
-                       sort. = FALSE, 
-                       minimum.value = 0.0, 
+                       sort. = FALSE,
+                       minimum.value = 0.0,
                        maximum.number = nrow(LIST),
                        free.remove = TRUE,
                        na.remove = TRUE,
@@ -28,7 +28,7 @@ modindices <- function(object,
     if(object@Options$estimator == "PML") {
         stop("lavaan WARNING: modification indices for estimator PML are not implemented yet.")
     }
- 
+
     # sanity check
     if(power) {
         standardized <- TRUE
@@ -70,15 +70,15 @@ modindices <- function(object,
         } else {
             warning("lavaan WARNING: list with extra parameters is empty; to release equality\n                  constraints, use lavTestScore()")
         }
-        LIST <- data.frame(lhs = character(0), op = character(0),  
-                           rhs = character(0), group = integer(0), 
-                           mi = numeric(0), epc = numeric(0), 
+        LIST <- data.frame(lhs = character(0), op = character(0),
+                           rhs = character(0), group = integer(0),
+                           mi = numeric(0), epc = numeric(0),
                            sepc.lv = numeric(0), sepc.all = numeric(0),
                            sepc.nox = numeric(0))
         return(LIST)
     }
- 
-    # partition 
+
+    # partition
     I11 <- information[extra.idx, extra.idx, drop = FALSE]
     I12 <- information[extra.idx, model.idx, drop = FALSE]
     I21 <- information[model.idx, extra.idx, drop = FALSE]
@@ -107,8 +107,8 @@ modindices <- function(object,
             score <- -1 * score # due to gradient.logl
         }
     } else {
-        # total number of clusters (over groups)   
-        N <- 0                      
+        # total number of clusters (over groups)
+        N <- 0
         for(g in 1:object@SampleStats@ngroups) {
             N <- N + object@Data@Lp[[g]]$nclusters[[2]]
         }
@@ -130,7 +130,7 @@ modindices <- function(object,
     #    OUT <- lavTestScore(object, warn = FALSE)
     #    LIST$mi[ eq.idx ] <- OUT$uni$X2
     #}
-  
+
     # scaled?
     #if(length(object@test) > 1L) {
     #    LIST$mi.scaled <- LIST$mi / object@test[[2]]$scaling.factor
@@ -155,12 +155,12 @@ modindices <- function(object,
             EPC[ var.idx ] <- LIST$est[ var.idx ]
         }
 
-        # two problems: 
+        # two problems:
         #   - EPC of variances can be negative, and that is
         #     perfectly legal
-        #   - EPC (of variances) can be tiny (near-zero), and we should 
+        #   - EPC (of variances) can be tiny (near-zero), and we should
         #     not divide by tiny variables
-        small.idx <- which(LIST$op == "~~" & 
+        small.idx <- which(LIST$op == "~~" &
                            LIST$lhs == LIST$rhs &
                            abs(EPC) < sqrt( .Machine$double.eps ) )
         if(length(small.idx) > 0L) {
@@ -170,28 +170,28 @@ modindices <- function(object,
         # get the sign
         EPC.sign <- sign(LIST$epc)
 
-        LIST$sepc.lv <- EPC.sign * lav_standardize_lv(object, 
-                                                      partable = LIST, 
+        LIST$sepc.lv <- EPC.sign * lav_standardize_lv(object,
+                                                      partable = LIST,
                                                       est = abs(EPC),
                                                       cov.std = cov.std)
         if(length(small.idx) > 0L) {
             LIST$sepc.lv[small.idx] <- 0
         }
-        LIST$sepc.all <- EPC.sign * lav_standardize_all(object, 
-                                                        partable = LIST, 
+        LIST$sepc.all <- EPC.sign * lav_standardize_all(object,
+                                                        partable = LIST,
                                                         est = abs(EPC),
                                                         cov.std = cov.std)
         if(length(small.idx) > 0L) {
             LIST$sepc.all[small.idx] <- 0
         }
-        LIST$sepc.nox <- EPC.sign * lav_standardize_all_nox(object, 
+        LIST$sepc.nox <- EPC.sign * lav_standardize_all_nox(object,
                                                             partable = LIST,
                                                             est = abs(EPC),
                                                             cov.std = cov.std)
         if(length(small.idx) > 0L) {
             LIST$sepc.nox[small.idx] <- 0
         }
- 
+
     }
 
     # power?
@@ -210,15 +210,15 @@ modindices <- function(object,
                                   TRUE, FALSE )
         high.power <- LIST$power > high.power
         # FIXME: sepc.all or epc??
-        #epc.high <- LIST$sepc.all > LIST$delta   
+        #epc.high <- LIST$sepc.all > LIST$delta
         epc.high <- LIST$epc > LIST$delta
 
         LIST$decision[ which(!mi.significant & !high.power)] <- "(i)"
         LIST$decision[ which( mi.significant & !high.power)] <- "**(m)**"
         LIST$decision[ which(!mi.significant &  high.power)] <- "(nm)"
-        LIST$decision[ which( mi.significant &  high.power & 
+        LIST$decision[ which( mi.significant &  high.power &
                              !epc.high)] <-  "epc:nm"
-        LIST$decision[ which( mi.significant &  high.power & 
+        LIST$decision[ which( mi.significant &  high.power &
                               epc.high)] <-  "*epc:m*"
 
         #LIST$decision[ which(mi.significant &  high.power) ] <- "epc"
@@ -256,9 +256,9 @@ modindices <- function(object,
     eq.idx <- which(LIST$op == "==")
     if(length(eq.idx) > 0L) {
         LIST <- LIST[-eq.idx,]
-    } 
+    }
 
-    # remove even more columns 
+    # remove even more columns
     LIST$user <- NULL
 
     # remove block/group/level is only single block
@@ -267,13 +267,13 @@ modindices <- function(object,
         LIST$group <- NULL
         LIST$level <- NULL
     }
-    
+
     # sort?
     if(sort.) {
         LIST <- LIST[order(LIST$mi, decreasing = TRUE),]
     }
     if(minimum.value > 0.0) {
-        LIST <- LIST[!is.na(LIST$mi) & LIST$mi > minimum.value,]  
+        LIST <- LIST[!is.na(LIST$mi) & LIST$mi > minimum.value,]
     }
     if(maximum.number < nrow(LIST)) {
         LIST <- LIST[seq_len(maximum.number),]
@@ -293,7 +293,7 @@ modindices <- function(object,
 
     # add header
     # TODO: small explanation of the columns in the header?
-#    attr(LIST, "header") <- 
+#    attr(LIST, "header") <-
 # c("modification indices for newly added parameters only; to\n",
 #   "see the effects of releasing equality constraints, use the\n",
 #   "lavTestScore() function")

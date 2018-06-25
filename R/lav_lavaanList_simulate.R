@@ -5,7 +5,7 @@ lavSimulate <- function(pop.model     = NULL,             # population model
                         model         = NULL,             # user model
                         dataFunction  = simulateData,
                         dataFunction.args = list(model = pop.model,
-                                                 sample.nobs = 1000L),   
+                                                 sample.nobs = 1000L),
                         ndat          = 1000L,
                         cmd           = "sem",
                         cmd.pop       = "sem",
@@ -29,13 +29,13 @@ lavSimulate <- function(pop.model     = NULL,             # population model
     dotdotdot.pop$sample.cov <- NULL
 
     # 'fit' population model without data, to get 'true' parameters
-    fit.pop <- do.call(cmd.pop, 
+    fit.pop <- do.call(cmd.pop,
                        args = c(list(model = pop.model), dotdotdot.pop))
 
     # check model object
     if(is.null(model)) {
         model <- fit.pop@ParTable
-    } 
+    }
 
     # per default, use 'true' values as starting values
     if(is.null(dotdotdot$start)) {
@@ -46,7 +46,7 @@ lavSimulate <- function(pop.model     = NULL,             # population model
     # dotdotdot$warn <- FALSE
 
     # generate simulations
-    fit <- do.call("lavaanList", args = c(list(model = model, 
+    fit <- do.call("lavaanList", args = c(list(model = model,
                    dataFunction = dataFunction,
                    dataFunction.args = dataFunction.args,
                    ndat = ndat, cmd = cmd,
@@ -59,10 +59,10 @@ lavSimulate <- function(pop.model     = NULL,             # population model
     fit@meta$lavSimulate <- TRUE
 
     # NOTE!!!
-    # if the model != pop.model, we may need to 'reorder' the 
+    # if the model != pop.model, we may need to 'reorder' the
     # 'true' parameters, so they correspond to the 'model' parameters
-    p2.id <- lav_partable_map_id_p1_in_p2(p1 = fit@ParTable, 
-                                          p2 = fit.pop@ParTable, 
+    p2.id <- lav_partable_map_id_p1_in_p2(p1 = fit@ParTable,
+                                          p2 = fit.pop@ParTable,
                                           stopifnotfound = FALSE)
     est1 <- fit@ParTable$est
     na.idx <- which(is.na(p2.id))

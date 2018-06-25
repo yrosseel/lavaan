@@ -21,7 +21,7 @@ lav_tables_mvb_getPiDot <- function(PROP, order. = nitems) {
             IDX <- utils::combn(1:nitems, Order)
             tmp <- apply(IDX, 2L, function(idx)
                 as.numeric(apply(PROP, idx, sum))[1L])
-            tmp 
+            tmp
         })
     )
 
@@ -37,7 +37,7 @@ lav_tables_mvb_getT <- function(nitems = 3L, order. = nitems, rbind. = FALSE) {
     T.r <- lapply(1:order., function(Order) {
         IDX <- utils::combn(1:nitems, Order)
         TT <- matrix(0L, ncol(IDX), 2^nitems)
-        TT <- do.call("rbind", 
+        TT <- do.call("rbind",
             lapply(1:ncol(IDX), function(i) {
                 TRue <- as.list(rep(TRUE, nitems)); TRue[ IDX[,i] ] <- 1L
                 ARGS <- c(list(INDEX), TRue)
@@ -57,7 +57,7 @@ lav_tables_mvb_getT <- function(nitems = 3L, order. = nitems, rbind. = FALSE) {
 
 # simple test function to check that  pidot = T %*% prop
 lav_tables_mvb_test <- function(nitems = 3L, verbose = FALSE) {
-    
+
     freq <- sample( 5:50, 2^nitems, replace=TRUE)
     prop <- freq/sum(freq)
     TABLE <- array(freq, dim=rep(2, nitems))
@@ -78,14 +78,14 @@ lav_tables_mvb_test <- function(nitems = 3L, verbose = FALSE) {
 }
 
 # L_r test of Maydeu-Olivares & Joe (2005) eq (4)
-lav_tables_mvb_Lr <- function(nitems = 0L, 
+lav_tables_mvb_Lr <- function(nitems = 0L,
                               obs.prop = NULL, est.prop = NULL, nobs = 0L,
                               order. = 2L) {
 
     # recreate tables
     obs.PROP <- array(obs.prop, dim = rep(2L, nitems))
     est.PROP <- array(est.prop, dim = rep(2L, nitems))
-    
+
     # compute {obs,est}.prop.dot
     obs.prop.dot <- lav_tables_mvb_getPiDot(obs.PROP, order. = order.)
     est.prop.dot <- lav_tables_mvb_getPiDot(est.PROP, order. = order.)

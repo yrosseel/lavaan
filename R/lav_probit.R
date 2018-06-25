@@ -1,5 +1,5 @@
 # ordered probit regression
-# 
+#
 # YR 21 June 2012
 #
 # why not using MASS::polr?
@@ -14,9 +14,9 @@
 
 
 # wrapper function
-lavProbit <- function(y, X=NULL, y.levels=length(tabulate(y)), 
+lavProbit <- function(y, X=NULL, y.levels=length(tabulate(y)),
                       weights = rep(1, length(y)),
-                      offset = rep(0, length(y)), fast=FALSE, 
+                      offset = rep(0, length(y)), fast=FALSE,
                       method = "nlminb.hessian", control = list(),
                       verbose = FALSE) {
 
@@ -33,7 +33,7 @@ lavProbit <- function(y, X=NULL, y.levels=length(tabulate(y)),
         stop("zero counts in middle categories; please recode")
 
     # initialize ref class
-    lavR <- lavRefProbit$new(y = y, X = X, y.levels=y.levels, 
+    lavR <- lavRefProbit$new(y = y, X = X, y.levels=y.levels,
                              weights = weights, offset = offset)
 
     # optimize (only if X)
@@ -56,8 +56,8 @@ lavRefProbit <- setRefClass("lavProbit",
 contains = "lavML",
 
 # fields
-fields = list(y = "integer", X = "matrix", 
-              nobs = "integer", nexo = "integer", nth = "integer", 
+fields = list(y = "integer", X = "matrix",
+              nobs = "integer", nexo = "integer", nth = "integer",
               weights = "numeric", offset = "numeric",
               missing.values = "logical", missing.idx = "integer",
               Y1 = "matrix", Y2 = "matrix",
@@ -77,7 +77,7 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
     .self$y <- as.integer(y); .self$nth <- as.integer(y.levels - 1L)
     .self$nobs <- length(y)
     # X
-    if(is.null(X)) { 
+    if(is.null(X)) {
         .self$nexo <- 0L
     } else {
         .self$X <- unname(X); .self$nexo <- ncol(X)
@@ -91,7 +91,7 @@ initialize = function(y, X=NULL, y.levels=length(tabulate(y)),
 
     # weights and offset
     .self$weights <- weights; .self$offset <- offset
-    
+
     # TH matrices (TRUE/FALSE)
     .self$Y1 <- matrix(1:nth, nobs, nth, byrow=TRUE) == .self$y
     .self$Y2 <- matrix(1:nth, nobs, nth, byrow=TRUE) == (.self$y - 1L)
@@ -158,7 +158,7 @@ scores = function(x) {
 #gradient = function(x) {
 #    if(!missing(x)) objective(x)
 #    .self$p1 <- dnorm(z1); .self$p2 <- dnorm(z2)
-#    
+#
 #    # beta
 #    dx.beta <- numeric(0L)
 #    if(nexo > 0L)
@@ -187,7 +187,7 @@ hessian = function(x) {
         .Y2 <- Y2[-missing.idx,,drop=FALSE]
         .z1 <- z1[-missing.idx]
         .z2 <- z2[-missing.idx]
-        .X <- X[-missing.idx,,drop=FALSE] 
+        .X <- X[-missing.idx,,drop=FALSE]
         .p1 <- p1[-missing.idx]
         .p2 <- p2[-missing.idx]
     } else {
@@ -212,7 +212,7 @@ hessian = function(x) {
 
     dxb <-  .X*.p1 - .X*.p2
     dx2.beta <- -1 * (crossprod(dxb, (dxb * .wtpr / .probits)) -
-                       ( crossprod(.X * gnorm(.z1) * .wtpr, .X) - 
+                       ( crossprod(.X * gnorm(.z1) * .wtpr, .X) -
                          crossprod(.X * gnorm(.z2) * .wtpr, .X) ) )
 
     dx.ab <- crossprod(.dxa, (dxb * .wtpr / .probits)) -

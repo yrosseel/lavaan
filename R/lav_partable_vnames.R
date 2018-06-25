@@ -80,8 +80,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     # ALWAYS need `block' column -- create one if missing
     if(is.null(partable$block)) {
         partable$block <- rep(1L, length(partable$lhs))
-    } 
-   
+    }
+
     # nblocks -- block column is integer only
     nblocks <- lav_partable_nblocks(partable)
 
@@ -111,7 +111,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                     block.select <- ( block.select &
                                   partable[[block.var]] %in% block.val )
                 } else {
-                    stop("lavaan ERROR: selection variable `", 
+                    stop("lavaan ERROR: selection variable `",
                          block.var, " not found in the parameter table.")
                 }
 
@@ -120,7 +120,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                     stop("lavaan ERROR: ", block.var ,
                         " column does not contain value `", block.val, "'")
                 }
-                block.select <- ( block.select & 
+                block.select <- ( block.select &
                                   partable[[block.var]] %in% block.val )
             }
         } # dot
@@ -281,8 +281,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
             ov.tmp <- c(ov.ind, ov.y, ov.x)
             ov.extra <- unique(c(ov.cov, ov.int)) # must be in this order!
-                                                  # so that 
-                                                  # lav_partable_independence 
+                                                  # so that
+                                                  # lav_partable_independence
                                                   # retains the same order
             ov.names <- c(ov.tmp, ov.extra[ !ov.extra %in% ov.tmp ])
         }

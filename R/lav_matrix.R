@@ -4,7 +4,7 @@
 
 # vec operator
 #
-# the vec operator (for 'vectorization') transforms a matrix into 
+# the vec operator (for 'vectorization') transforms a matrix into
 # a vector by stacking the *columns* of the matrix one underneath the other
 #
 # M&N book: page 30
@@ -17,7 +17,7 @@ lav_matrix_vec <- function(A) {
 
 # vecr operator
 #
-# the vecr operator ransforms a matrix into 
+# the vecr operator ransforms a matrix into
 # a vector by stacking the *rows* of the matrix one underneath the other
 lav_matrix_vecr <- function(A) {
 
@@ -29,10 +29,10 @@ lav_matrix_vecr <- function(A) {
 }
 
 
-# vech 
-# 
-# the vech operator (for 'half vectorization') transforms a *symmetric* matrix 
-# into a vector by stacking the *columns* of the matrix one underneath the 
+# vech
+#
+# the vech operator (for 'half vectorization') transforms a *symmetric* matrix
+# into a vector by stacking the *columns* of the matrix one underneath the
 # other, but eliminating all supradiagonal elements
 #
 # see Henderson & Searle, 1979
@@ -45,7 +45,7 @@ lav_matrix_vech <- function(S, diagonal = TRUE) {
 }
 
 
-# the vechr operator transforms a *symmetric* matrix 
+# the vechr operator transforms a *symmetric* matrix
 # into a vector by stacking the *rows* of the matrix one after the
 # other, but eliminating all supradiagonal elements
 lav_matrix_vechr <- function(S, diagonal = TRUE) {
@@ -53,7 +53,7 @@ lav_matrix_vechr <- function(S, diagonal = TRUE) {
 }
 
 
-# the vechu operator transforms a *symmetric* matrix 
+# the vechu operator transforms a *symmetric* matrix
 # into a vector by stacking the *columns* of the matrix one after the
 # other, but eliminating all infradiagonal elements
 lav_matrix_vechu <- function(S, diagonal = TRUE) {
@@ -61,7 +61,7 @@ lav_matrix_vechu <- function(S, diagonal = TRUE) {
 }
 
 
-# the vechru operator transforms a *symmetric* matrix 
+# the vechru operator transforms a *symmetric* matrix
 # into a vector by stacking the *rows* of the matrix one after the
 # other, but eliminating all infradiagonal elements
 #
@@ -73,7 +73,7 @@ lav_matrix_vechru <- function(S, diagonal = TRUE) {
 
 
 
-# return the *vector* indices of the lower triangular elements of a 
+# return the *vector* indices of the lower triangular elements of a
 # symmetric matrix of size 'n'
 lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
     # FIXME: is there a way to avoid creating ROW/COL matrices?
@@ -83,7 +83,7 @@ lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
     if(diagonal) which(ROW >= COL) else which(ROW > COL)
 }
 
-# return the *row* indices of the lower triangular elements of a 
+# return the *row* indices of the lower triangular elements of a
 # symmetric matrix of size 'n'
 lav_matrix_vech_row_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
@@ -94,7 +94,7 @@ lav_matrix_vech_row_idx <- function(n = 1L, diagonal = TRUE) {
     }
 }
 
-# return the *col* indices of the lower triangular elements of a 
+# return the *col* indices of the lower triangular elements of a
 # symmetric matrix of size 'n'
 lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
@@ -105,9 +105,9 @@ lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
 }
 
 
- 
 
-# return the *vector* indices of the lower triangular elements of a 
+
+# return the *vector* indices of the lower triangular elements of a
 # symmetric matrix of size 'n' -- ROW-WISE
 lav_matrix_vechr_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
@@ -117,7 +117,7 @@ lav_matrix_vechr_idx <- function(n = 1L, diagonal = TRUE) {
     if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
 }
 
-# return the *vector* indices of the upper triangular elements of a 
+# return the *vector* indices of the upper triangular elements of a
 # symmetric matrix of size 'n' -- COLUMN-WISE
 lav_matrix_vechu_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
@@ -126,7 +126,7 @@ lav_matrix_vechu_idx <- function(n = 1L, diagonal = TRUE) {
     if(diagonal) which(ROW <= COL) else which(ROW < COL)
 }
 
-# return the *vector* indices of the upper triangular elements of a 
+# return the *vector* indices of the upper triangular elements of a
 # symmetric matrix of size 'n' -- ROW-WISE
 #
 # FIXME!! make this more efficient (without creating 3 n*n matrices!)
@@ -142,10 +142,10 @@ lav_matrix_vechru_idx <- function(n = 1L, diagonal = TRUE) {
 
 # vech.reverse and vechru.reverse (aka `upper2full')
 #
-# given the output of vech(S) --or vechru(S) which is identical-- 
+# given the output of vech(S) --or vechru(S) which is identical--
 # reconstruct S
-lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <- 
-lav_matrix_upper2full <- 
+lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <-
+lav_matrix_upper2full <-
 function(x, diagonal = TRUE) {
     # guess dimensions
     if(diagonal) {
@@ -158,7 +158,7 @@ function(x, diagonal = TRUE) {
     S[lav_matrix_vech_idx(  p, diagonal = diagonal)] <- x
     S[lav_matrix_vechru_idx(p, diagonal = diagonal)] <- x
 
-    attr(S, "dim") <- c(p, p)   
+    attr(S, "dim") <- c(p, p)
     S
 }
 
@@ -167,7 +167,7 @@ function(x, diagonal = TRUE) {
 #
 # given the output of vechr(S) --or vechu(S) which is identical--
 # reconstruct S
-lav_matrix_vechr_reverse <- lav_matrix_vechu_reverse <- 
+lav_matrix_vechr_reverse <- lav_matrix_vechu_reverse <-
 lav_matrix_lower2full <- function(x, diagonal = TRUE) {
     # guess dimensions
     if(diagonal) {
@@ -213,17 +213,17 @@ lav_matrix_antidiag_idx <- function(n = 1L) {
 # return the *vector* indices of 'idx' elements in a vech() matrix
 #
 # eg if n = 4 and type == "and" and idx = c(2,4)
-#    we create matrix A = 
+#    we create matrix A =
 #       [,1]  [,2]  [,3]  [,4]
 # [1,] FALSE FALSE FALSE FALSE
 # [2,] FALSE  TRUE FALSE  TRUE
 # [3,] FALSE FALSE FALSE FALSE
 # [4,] FALSE  TRUE FALSE  TRUE
-# 
+#
 # and the result is c(5,7,10)
 #
 # eg if n = 4 and type == "or" and idx = c(2,4)
-#    we create matrix A = 
+#    we create matrix A =
 #       [,1] [,2]  [,3] [,4]
 # [1,] FALSE TRUE FALSE TRUE
 # [2,]  TRUE TRUE  TRUE TRUE
@@ -249,9 +249,9 @@ lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
 # similar to lav_matrix_vech_which_idx(), but
 # - only 'type = and'
 # - order of idx matters!
-lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE, 
+lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
                                      idx = integer(0L)) {
-    if (length(idx) == 0L) 
+    if (length(idx) == 0L)
         return(integer(0L))
     n <- as.integer(n)
     pstar <- n*(n+1)/2
@@ -293,7 +293,7 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     r3 <- seq.int(from = 2*n+1, by = n,      length.out = n-1)
 
     # is there a more elegant way to do this?
-    rr <- unlist(lapply((n-1):1, 
+    rr <- unlist(lapply((n-1):1,
                 function(x) { c(rbind(r1[1:x], r2[1:x]), r3[n-x]) }))
 
     idx <- c(1L, cumsum(rr) + 1L)
@@ -317,7 +317,7 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     if(n > 255L) {
         stop("n is too large")
     }
-    
+
     nstar <- n * (n+1)/2
     n2    <- n * n
     # THIS is the real bottleneck: allocating an ocean of zeroes...
@@ -355,7 +355,7 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
 
     idx <- (1:n2) + (lav_matrix_vec(tmp)-1L) * n2
 
-    x[idx] <- 1.0   
+    x[idx] <- 1.0
 
     attr(x, "dim") <- c(n2, nstar)
     x
@@ -407,7 +407,7 @@ lav_matrix_duplication_pre <- function(A = matrix(0,0,0)) {
 
     OUT <- A[idx1, , drop = FALSE] + A[idx2 , , drop = FALSE]
     u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0
-    
+
     OUT
 }
 
@@ -480,7 +480,7 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
     OUT
 }
 
-# create the generalized inverse of the duplication matrix (D^+_n): 
+# create the generalized inverse of the duplication matrix (D^+_n):
 # it removes the duplicated elements in vec(S) to create vech(S)
 #
 # D^+ %*% vec(S) == vech(S)
@@ -597,7 +597,7 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
 
     # dimension
     n <- sqrt(n2)
-   
+
     idx1 <- lav_matrix_vech_idx(n); idx2 <- lav_matrix_vechru_idx(n)
     OUT <- (A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]) / 2
     OUT <- (OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]) / 2
@@ -607,7 +607,7 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
 
 
 
-# create the commutation matrix (K_mn) 
+# create the commutation matrix (K_mn)
 # the mn x mx commutation matrix is a permutation matrix which
 # transforms vec(A) into vec(A')
 #
@@ -618,7 +618,7 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
 #
 # note: K_mn is a permutation matrix, so it is orthogonal: t(K_mn) = K_mn^-1
 #       K_nm %*% K_mn == I_mn
-# 
+#
 # it is called the 'commutation' matrix because it enables us to interchange
 # ('commute') the two matrices of a Kronecker product, eg
 #   K_pm (A %x% B) K_nq == (B %x% A)
@@ -637,7 +637,7 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
     if ((n < 1L) | (round(n) != n)) {
         stop("n must be a positive integer")
     }
-    
+
     p <- m*n
     x <- numeric( p*p )
 
@@ -671,7 +671,7 @@ lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
     row.idx <- rep(1:n, each = n) + (0:(n-1L))*n
 
     OUT <- A[row.idx, , drop = FALSE]
-    OUT   
+    OUT
 }
 
 # compute K_mn %*% A without explicitly computing K
@@ -713,7 +713,7 @@ lav_matrix_kronecker_square <- function(A, check = TRUE) {
     # break up in n*n pieces, and rearrange
     dim(out) <- c(n,n,n,n)
     out <- aperm(out, perm = c(3,1,4,2))
-    
+
     # reshape again, to form n2 x n2 matrix
     dim(out) <- c(n2, n2)
 
@@ -723,22 +723,22 @@ lav_matrix_kronecker_square <- function(A, check = TRUE) {
 # (simplified) faster kronecker product for symmetric matrices
 # note: not faster, but the logic extends to vech versions
 lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
-    
+
     dimS <- dim(S); n <- dimS[1L]; n2 <- n*n
     if(check) {
         stopifnot(dimS[2L] == n)
     }
-    
+
     # all possible combinations
     out <- tcrossprod(as.vector(S))
-    
+
     # break up in n*(n*n) pieces, and rearrange
-    dim(out) <- c(n,n*n,n) 
+    dim(out) <- c(n,n*n,n)
     out <- aperm(out, perm = c(3L,2L,1L))
-    
+
     # reshape again, to form n2 x n2 matrix
     dim(out) <- c(n2, n2)
-    
+
     out
 }
 
@@ -794,7 +794,7 @@ lav_matrix_symmetric_sqrt <- function(S = matrix(0,0,0)) {
 # decomposition P = HVH', where H is a p* x (p* - q) matrix of full column rank,
 # and V is a (p* - q) x (p* - q) diagonal matrix. It is obvious that H'A = 0;
 # hence, H is the desired orthogonal complement. This method of constructing an
-# orthogonal complement was proposed by Heinz Neudecker (1990, pers. comm.). 
+# orthogonal complement was proposed by Heinz Neudecker (1990, pers. comm.).
 #
 # update YR 21 okt 2014:
 # - note that A %*% solve(t(A) %*% A) %*% t(A) == tcrossprod(qr.Q(qr(A)))
@@ -840,7 +840,7 @@ lav_matrix_bdiag <- function(...) {
     trows <- sum(nrows)
     tcols <- sum(ncols)
     x <- numeric(trows * tcols)
-   
+
     for(m in seq_len(nmat)) {
         if(m > 1L) {
             rcoffset <- trows*ccols[m-1] + crows[m-1]
@@ -849,7 +849,7 @@ lav_matrix_bdiag <- function(...) {
         }
         m.idx <- ( rep((0:(ncols[m] - 1L))*trows, each=nrows[m]) +
                    rep(1:nrows[m], ncols[m]) + rcoffset )
-        x[m.idx] <- mlist[[m]]        
+        x[m.idx] <- mlist[[m]]
     }
 
     attr(x, "dim") <- c(trows, tcols)
@@ -898,13 +898,13 @@ lav_matrix_trace <- function(..., check = TRUE) {
         # below is the logic; to be coded inline
         # DIAG <- numeric( NROW(A) )
         # for(i in seq_len(NROW(A))) {
-        #     DIAG[i] <- sum( rep(A[i,], times = NCOL(B)) * 
-        #                  as.vector(B) * 
+        #     DIAG[i] <- sum( rep(A[i,], times = NCOL(B)) *
+        #                  as.vector(B) *
         #                  rep(C[,i], each=NROW(B)) )
         # }
         # out <- sum(DIAG)
 
-        # FIXME: 
+        # FIXME:
 
         # dimension check is automatic
         B2 <- B %*% C
@@ -1019,13 +1019,13 @@ lav_matrix_orthogonal_complement2 <- function(A,
 
     if(nfree) {
         R <- out$R
- 
+
         # remove all-zero rows
         zero.idx <- which(apply(R, 1, function(x) { all(abs(x) < tol) }))
         if(length(zero.idx) > 0) {
             R <- R[-zero.idx,, drop = FALSE]
         }
- 
+
         FREE <- R[, -out$pivot, drop = FALSE]
         I <- diag( nfree )
         N <- rbind(-FREE, I)
@@ -1039,7 +1039,7 @@ lav_matrix_orthogonal_complement2 <- function(A,
 
 # inverse of a non-singular (not necessarily positive-definite) symmetric matrix
 # FIXME: error handling?
-lav_matrix_symmetric_inverse <- function(S, logdet = FALSE, 
+lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
                                          Sinv.method = "eigen") {
 
     P <- NCOL(S)
@@ -1069,7 +1069,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
     } else if(Sinv.method == "eigen") {
         EV <- eigen(S, symmetric = TRUE)
         # V %*% diag(1/d) %*% V^{-1}, where V^{-1} = V^T
-        S.inv <- 
+        S.inv <-
             tcrossprod(EV$vector / rep(EV$values, each = length(EV$values)),
                        EV$vector)
         if(logdet) {
@@ -1143,7 +1143,7 @@ lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
 # - only removal for now!
 #
 lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
-                                                logdet = FALSE, 
+                                                logdet = FALSE,
                                                 S.logdet = NULL) {
 
     ndel <- length(rm.idx)
@@ -1179,7 +1179,7 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
     # erase all col/rows...
     } else if(ndel == NCOL(S.inv)) {
         out <- matrix(0,0,0)
-    } 
+    }
 
     else {
         stop("lavaan ERROR: column indices exceed number of columns in S.inv")
@@ -1247,7 +1247,7 @@ lav_matrix_symmetric_det_update <- function(det.S, S.inv, rm.idx = integer(0L)){
 # update log determinant of S, after removing 1 or more rows (and corresponding
 # colums) from S, a symmetric matrix
 #
-lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv, 
+lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
                                                rm.idx = integer(0L)) {
 
     ndel <- length(rm.idx)
@@ -1284,7 +1284,7 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
 
     # eigen decomposition
     S.eigen <- eigen(S, symmetric = TRUE)
-   
+
     # eigen values
     ev <- S.eigen$values
 
@@ -1308,7 +1308,7 @@ lav_matrix_cov <- function(Y, ybar = NULL) {
 }
 
 # transform a matrix to match a given target mean/covariance
-lav_matrix_transform_mean_cov <- function(Y, 
+lav_matrix_transform_mean_cov <- function(Y,
                                           target.mean = numeric( NCOL(Y) ),
                                           target.cov = diag( NCOL(Y) )) {
 
@@ -1319,13 +1319,13 @@ lav_matrix_transform_mean_cov <- function(Y,
     S.inv <- solve(S)
     S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
     target.cov.sqrt <- lav_matrix_symmetric_sqrt(target.cov)
-    
+
     # transform cov
     X <- Y %*% S.inv.sqrt %*% target.cov.sqrt
 
     # shift mean
     xbar <- colMeans(X)
     X <- t( t(X) - xbar + target.mean )
-    
+
     X
 }

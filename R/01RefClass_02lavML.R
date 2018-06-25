@@ -33,7 +33,7 @@ scores = function(x) {
     if(!missing(x)) .self$theta <- x
     cat("this is dummy function\n")
     return(matrix(as.numeric(NA), nobs, npar))
-}, 
+},
 
 gradient = function(x) {
     SCORES <- scores(x)

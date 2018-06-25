@@ -1,4 +1,4 @@
-computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE, 
+computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
                             delta = TRUE, debug = FALSE) {
 
     # state or final?
@@ -19,7 +19,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
         MLIST <- GLIST[mm.in.group]
 
         if(representation == "LISREL") {
-            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST, 
+            Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST,
                                                      delta = delta)
         } else {
             stop("only representation LISREL has been implemented for now")
@@ -54,9 +54,9 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ## only if conditional.x = TRUE
 ## compute the (larger) unconditional 'joint' covariance matrix (y,x)
 ##
-## Sigma (Joint ) = [ (S11, S12), 
+## Sigma (Joint ) = [ (S11, S12),
 ##                    (S21, S22) ] where
-##     S11 = Sigma.res + PI %*% cov.x %*% t(PI) 
+##     S11 = Sigma.res + PI %*% cov.x %*% t(PI)
 ##     S12 = PI %*% cov.x
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
@@ -219,7 +219,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL) {
             TH[[g]] <- numeric(0L)
             next
         }
-   
+
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
 
@@ -350,7 +350,7 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
 }
 
 # V(ETA): latent variances variances/covariances
-computeVETA <- function(lavmodel = NULL, GLIST = NULL, 
+computeVETA <- function(lavmodel = NULL, GLIST = NULL,
                         remove.dummy.lv = FALSE) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -411,7 +411,7 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
         if(representation == "LISREL") {
             lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                         lavmodel@ov.x.dummy.lv.idx[[g]])
-            ETA.g <- computeVETAx.LISREL(MLIST = MLIST, 
+            ETA.g <- computeVETAx.LISREL(MLIST = MLIST,
                                          lv.dummy.idx = lv.idx)
         } else {
             stop("only representation LISREL has been implemented for now")
@@ -424,7 +424,7 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
 }
 
 # COV: observed+latent variances variances/covariances
-computeCOV <- function(lavmodel = NULL, GLIST = NULL, 
+computeCOV <- function(lavmodel = NULL, GLIST = NULL,
                        remove.dummy.lv = FALSE) {
 
     # state or final?
@@ -452,7 +452,7 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
                             lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(!is.null(lv.idx)) {
                     # offset for ov
-                    lambda.names <- 
+                    lambda.names <-
                         lavmodel@dimNames[[which(names(GLIST) == "lambda")[g]]][[1L]]
                     lv.idx <- lv.idx + length(lambda.names)
                     COV.g <- COV.g[-lv.idx, -lv.idx, drop=FALSE]
@@ -470,9 +470,9 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
 
 
 # E(ETA): expectation (means) of latent variables (return vector)
-computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                         remove.dummy.lv = FALSE) {
-  
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -490,7 +490,7 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            EETA.g <- computeEETA.LISREL(MLIST, 
+            EETA.g <- computeEETA.LISREL(MLIST,
                 mean.x=lavsamplestats@mean.x[[g]],
                 sample.mean=lavsamplestats@mean[[g]],
                 ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -517,9 +517,9 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
-computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                          eXo = NULL, nobs = NULL, remove.dummy.lv = FALSE) {
-  
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -543,7 +543,7 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
 
         if(representation == "LISREL") {
-            EETAx.g <- computeEETAx.LISREL(MLIST, 
+            EETAx.g <- computeEETAx.LISREL(MLIST,
                 eXo=EXO, N=nobs[[g]],
                 sample.mean=lavsamplestats@mean[[g]],
                 ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -570,9 +570,9 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 }
 
 # return 'regular' LAMBDA
-computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL, 
+computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
                           remove.dummy.lv = FALSE) {
-  
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -643,7 +643,7 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
 computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
-  
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -661,7 +661,7 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            EY.g <- computeEY.LISREL(MLIST = MLIST, 
+            EY.g <- computeEY.LISREL(MLIST = MLIST,
                                      mean.x=lavsamplestats@mean.x[[g]],
                                      sample.mean=lavsamplestats@mean[[g]],
                              ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
@@ -681,9 +681,9 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
 
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
-computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL, 
+computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                         eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE) {
-  
+
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 

@@ -25,7 +25,7 @@ lav_partable_flat <- function(FLAT = NULL,
     categorical <- FALSE
 
     ### DEFAULT elements: parameters that are typically not specified by
-    ###                   users, but should typically be considered, 
+    ###                   users, but should typically be considered,
     ###                   either free or fixed
 
     # extract `names' of various types of variables:
@@ -33,7 +33,7 @@ lav_partable_flat <- function(FLAT = NULL,
     #lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular") # regular latent variables
     lv.names.f   <- lav_partable_vnames(FLAT, type="lv.formative") # formative latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
-    ov.names.x   <- lav_partable_vnames(FLAT, type="ov.x")   # exogenous x covariates 
+    ov.names.x   <- lav_partable_vnames(FLAT, type="ov.x")   # exogenous x covariates
     ov.names.nox <- lav_partable_vnames(FLAT, type="ov.nox")
     lv.names.x   <- lav_partable_vnames(FLAT, type="lv.x")   # exogenous lv
     ov.names.y   <- lav_partable_vnames(FLAT, type="ov.y")   # dependent ov
@@ -51,7 +51,7 @@ lav_partable_flat <- function(FLAT = NULL,
             warning("lavaan WARNING: thresholds are defined for exogenous variables: ", paste(ov.names.ord1[idx], collapse=" "))
         }
     }
- 
+
     if(!is.null(varTable)) {
         ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
         # remove fixed.x variables
@@ -77,7 +77,7 @@ lav_partable_flat <- function(FLAT = NULL,
             nth <- varTable$nlev[ varTable$name == o ] - 1L
             nth.in.partable <- sum(FLAT$op == "|" & FLAT$lhs == o)
             if(nth != nth.in.partable) {
-                stop("lavaan ERROR: expected ", max(0,nth), 
+                stop("lavaan ERROR: expected ", max(0,nth),
                      " threshold(s) for variable ",
                      sQuote(o), "; syntax contains ", nth.in.partable, "\n")
             }
@@ -115,7 +115,7 @@ lav_partable_flat <- function(FLAT = NULL,
     # 2. default (residual) variances and covariances
 
     # a) (residual) VARIANCES (all ov's except exo, and all lv's)
-    # NOTE: change since 0.5-17: we ALWAYS include the vars in the 
+    # NOTE: change since 0.5-17: we ALWAYS include the vars in the
     #       parameter table; but only if auto.var = TRUE, we set them free
     #if(auto.var) {
         ov.var <- ov.names.nox
@@ -146,7 +146,7 @@ lav_partable_flat <- function(FLAT = NULL,
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
     }
- 
+
     # create 'op' (thresholds come first, then variances)
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
 
@@ -154,7 +154,7 @@ lav_partable_flat <- function(FLAT = NULL,
     #    NOTE: - new in 0.5-19: ALWAYS include scaling parameters in partable,
     #            but only free them if auto.delta = TRUE (and parameterization
     #            is "delta"
-    #if(auto.delta && auto.th && length(ov.names.ord) > 0L && 
+    #if(auto.delta && auto.th && length(ov.names.ord) > 0L &&
     #   # length(lv.names) > 0L &&
     #   (ngroups > 1L || any(FLAT$op == "~*~") || parameterization == "theta")) {
     if(length(ov.names.ord) > 0L) {
@@ -184,7 +184,7 @@ lav_partable_flat <- function(FLAT = NULL,
     if(group.w.free) {
         lhs <- c(lhs, "group")
         rhs <- c(rhs, "w")
-         op <- c(op,  "%") 
+         op <- c(op,  "%")
     }
 
     DEFAULT <- data.frame(lhs=lhs, op=op, rhs=rhs,
@@ -207,11 +207,11 @@ lav_partable_flat <- function(FLAT = NULL,
     TMP <- USER[,1:3]
     idx <- which(duplicated(TMP))
     if(length(idx) > 0L) {
-        txt <- sapply(1:length(idx), function(i) { 
-            paste("    ", TMP[idx[i],"lhs"], 
-                          TMP[idx[i], "op"], 
+        txt <- sapply(1:length(idx), function(i) {
+            paste("    ", TMP[idx[i],"lhs"],
+                          TMP[idx[i], "op"],
                           TMP[idx[i],"rhs"]) })
-        warning("duplicated elements in model syntax have been ignored:\n", 
+        warning("duplicated elements in model syntax have been ignored:\n",
                 paste(txt, collapse = "\n"))
         USER <- USER[-idx,]
     }
@@ -219,7 +219,7 @@ lav_partable_flat <- function(FLAT = NULL,
     # check for duplicated elements in DEFAULT
     # - FIXME: can we not avoid this somehow??
     # - for example, if the user model includes 'x1 ~~ x1'
-    #   or 'x1 ~ 1' 
+    #   or 'x1 ~ 1'
     # - remove them from DEFAULT
     TMP <- rbind(DEFAULT[,1:3], USER[,1:3])
     idx <- which(duplicated(TMP, fromLast=TRUE)) # idx should be in DEFAULT
@@ -503,7 +503,7 @@ lav_partable_flat <- function(FLAT = NULL,
         # for now, only group
         LIST$block <- group
     }
-    
+
     # block columns (typically only group)
     for(block in blocks) {
         if(block == "group") {

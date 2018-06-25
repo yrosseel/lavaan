@@ -43,9 +43,9 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     } else {
         x.idx <- lavsamplestats@x.idx
     }
-    # ndat 
+    # ndat
     ndat <- numeric(lavsamplestats@ngroups)
-    
+
 
     if(is.null(E.inv)) {
         E.inv <- try(lav_model_information(lavmodel       = lavmodel,
@@ -74,7 +74,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     #}
 
     # FIXME: should we not always use 'unstructured' here?
-    # if the model is, say, the independence model, the 
+    # if the model is, say, the independence model, the
     # 'structured' information (A1) will be so far away from B1
     # that we will end with 'NA'
     h1.options <- lavoptions
@@ -111,7 +111,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                              inverted       = FALSE)
            B0.group <- attr(B0, "B0.group")
         }
-        trace.UGamma <- 
+        trace.UGamma <-
             lav_test_yuan_bentler_mplus_trace(lavsamplestats = lavsamplestats,
                                               A1.group       = A1.group,
                                               B1.group       = B1.group,
@@ -133,7 +133,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
             Satterthwaite  = TRUE) # for now
     }
 
-    # unscaled test 
+    # unscaled test
     df <- TEST$standard$df
     chisq.group <- TEST$standard$stat.group
 
@@ -151,7 +151,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     attributes(trace.UGamma) <- NULL
 
     if("yuan.bentler" %in% test) {
-        TEST$yuan.bentler <- 
+        TEST$yuan.bentler <-
             list(test              = test,
                  stat              = chisq.scaled,
                  stat.group        = (chisq.group / scaling.factor),
@@ -235,7 +235,7 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
         }
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
-        # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) ) 
+        # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
         trace.h0[g] <- fg * sum( B1 * DELTA %*% E.inv %*% t(DELTA) )
         trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
 

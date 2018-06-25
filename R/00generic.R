@@ -1,9 +1,9 @@
 # for blavaan
-setGeneric("fitMeasures", 
-    function(object, fit.measures = "all", baseline.model = NULL) 
+setGeneric("fitMeasures",
+    function(object, fit.measures = "all", baseline.model = NULL)
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
-    function(object, fit.measures = "all", baseline.model = NULL) 
+    function(object, fit.measures = "all", baseline.model = NULL)
     standardGeneric("fitmeasures"))
 
 

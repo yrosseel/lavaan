@@ -30,7 +30,7 @@ lav_h1_logl <- function(lavdata        = NULL,
         }
     }
 
-    if(logl.ok) {    
+    if(logl.ok) {
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
                 OUT <- lav_mvnorm_cluster_em_sat(YLp  = lavsamplestats@YLp[[g]],
@@ -54,7 +54,7 @@ lav_h1_logl <- function(lavdata        = NULL,
                         lav_mvnorm_h1_loglik_samplestats(
                             sample.cov.logdet =
                                 lavsamplestats@res.cov.log.det[[g]],
-                            sample.nvar       = 
+                            sample.nvar       =
                                 NCOL(lavsamplestats@res.cov[[g]]),
                             sample.nobs       = lavsamplestats@nobs[[g]])
                 } else {

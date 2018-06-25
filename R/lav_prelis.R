@@ -1,5 +1,5 @@
 # small utility functions to deal with PRELIS
-# Y.R.: 11 dec 2012 
+# Y.R.: 11 dec 2012
 prelis.read.cor <- function(file = "") {
 
     # read in numbers as characters
@@ -27,20 +27,20 @@ prelis.read.acm <- function(file = "", rescale=1e-3) {
 
     # scale numbers
     raw <- raw*rescale
- 
+
     ACM <- lav_matrix_lower2full(raw, diagonal = TRUE)
     ACM
 }
 
-prelis.write.data <- function(data, file = "prelis", na.rm = TRUE, 
+prelis.write.data <- function(data, file = "prelis", na.rm = TRUE,
                               labels = FALSE, std.ov = FALSE) {
 
     dfile <- paste(file, ".raw", sep = "")
-    write.table(data, file = dfile, na = "-999999", col.names = FALSE, 
+    write.table(data, file = dfile, na = "-999999", col.names = FALSE,
         row.names = FALSE, quote = FALSE)
     if (labels) {
         lfile <- paste(file, ".lab", sep = "")
-        write.table(unique(names(data)), file = lfile, row.names = F, 
+        write.table(unique(names(data)), file = lfile, row.names = F,
             col.names = F, quote = F)
     }
 }

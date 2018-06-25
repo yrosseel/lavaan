@@ -220,7 +220,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)")
         }
 
-        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE) 
+        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE)
         # check for empty levels
         if(max(tmp.lav$level) < 2L) {
             stop("lavaan ERROR: at least one level has no model syntax; you must specify a model for each level in the model syntax (for now); see example(Demo.twolevel)")
@@ -231,7 +231,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 ov.names.l[[g]] <- vector("list", length = tmp.nlevels)
             for(l in seq_len(tmp.nlevels)) {
                 if(tmp.ngroups > 1L) {
-                    ov.names.l[[g]][[l]] <- 
+                    ov.names.l[[g]][[l]] <-
                     unique(unlist(lav_partable_vnames(tmp.lav,
                                                   type = "ov",
                                                   group = tmp.group.values[g],
@@ -263,7 +263,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # no level: in model syntax
             ov.names.l <- list()
             if(length(cluster) > 0L) {
-                stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)") 
+                stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)")
             }
         }
     }
@@ -287,7 +287,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(dotdotdot) > 0L) {
             dot.names <- names(dotdotdot)
             op.idx <- which(dot.names %in% names(slotOptions))
-            warning("lavaan WARNING: the following argument(s) override(s) the options in slotOptions:\n\t\t", paste(dot.names[op.idx], collapse = " ")) 
+            warning("lavaan WARNING: the following argument(s) override(s) the options in slotOptions:\n\t\t", paste(dot.names[op.idx], collapse = " "))
             lavoptions[ dot.names[op.idx] ] <- dotdotdot[ op.idx ]
         }
     } else {
@@ -457,7 +457,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ########################
     if(!is.null(slotParTable)) {
         lavpartable <- slotParTable
-    } else if(is.character(model) || 
+    } else if(is.character(model) ||
               inherits(model, "formula")) {
         # check FLAT before we proceed
         if(lavoptions$debug) {
@@ -536,7 +536,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               lavpartable$free == 0L &
                               lavpartable$ustart == 0)
         if(length(zero.var.idx) > 0L) {
-            lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset    
+            lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
         }
     }
 
@@ -628,7 +628,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik
                 h1.loglik.group <- out$logl$loglik.group
-    
+
                 # collect in h1 list
                 lavh1 <- list(implied      = h1.implied,
                               loglik       = h1.loglik,
@@ -731,18 +731,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # check/warn if theta/delta values make sense
             if(!all(lavpartable$start == lavpartable$ustart)) {
                 if(lavmodel@parameterization == "delta") {
-                    # did the user specify theta values? 
+                    # did the user specify theta values?
                     user.var.idx <- which(lavpartable$op == "~~" &
                            lavpartable$lhs == lavpartable$rhs &
                            lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
                            lavpartable$user == 1L)
                     if(length(user.var.idx)) {
-                        warning("lavaan WARNING: ", 
-              "variance (theta) values for categorical variables are ignored", 
+                        warning("lavaan WARNING: ",
+              "variance (theta) values for categorical variables are ignored",
               "\n\t\t  if parameterization = \"delta\"!")
                     }
                 } else if(lavmodel@parameterization == "theta") {
-                    # did the user specify theta values? 
+                    # did the user specify theta values?
                     user.delta.idx <- which(lavpartable$op == "~*~" &
                             lavpartable$lhs == lavpartable$rhs &
                             lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
@@ -779,9 +779,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         ov.types <- lavdata@ov$type
         if(lavmodel@conditional.x && lavmodel@nexo > 0L) {
             # remove ov.x
-            ov.x.idx <- unlist(lavpta$vidx$ov.x)   
+            ov.x.idx <- unlist(lavpta$vidx$ov.x)
             ov.types <- ov.types[-ov.x.idx]
-        } 
+        }
 
         if(lavoptions$estimator == "PML" && all(ov.types == "ordered")) {
             TH <- computeTH(lavmodel)
@@ -971,7 +971,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavimplied     = NULL,
                                lavpartable    = lavpartable,
                                lavmodel       = lavmodel,
-                               lavoptions     = lavoptions, 
+                               lavoptions     = lavoptions,
                                verbose        = lavoptions$verbose,
                                fx.tol         = lavoptions$em.fx.tol,
                                dx.tol         = lavoptions$em.dx.tol,
@@ -1051,8 +1051,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavimplied <- list()
     if(lavoptions$implied) {
          lavimplied <- lav_model_implied(lavmodel)
-    } 
-        
+    }
+
     lavloglik <- list()
     if(lavoptions$loglik) {
          lavloglik <- lav_model_loglik(lavdata        = lavdata,
@@ -1065,7 +1065,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$implied <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    
+
 
 
 

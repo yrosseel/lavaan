@@ -14,7 +14,7 @@ lav_partable_independence <- function(lavobject      = NULL,
                                       sample.th.idx  = NULL,
                                       sample.cov.x   = NULL,
                                       sample.mean.x  = NULL) {
-    
+
     lav_partable_indep_or_unrestricted(lavobject = lavobject,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
         lavsamplestats = lavsamplestats, sample.cov = sample.cov,

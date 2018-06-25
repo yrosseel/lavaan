@@ -26,7 +26,7 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
     } else {
         TH <- vector("list", length = lavmodel@nblocks)
     }
- 
+
     if(lavmodel@group.w.free) {
         w.idx <- which(names(lavmodel@GLIST) == "gw")
         GW <- unname(GLIST[ w.idx ])

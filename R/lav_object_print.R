@@ -3,9 +3,9 @@
 # header
 lav_object_print_header <- function(object) {
 
-    cat(sprintf("lavaan %s ", 
+    cat(sprintf("lavaan %s ",
                 packageDescription("lavaan", fields="Version")))
-    
+
     # catch FAKE run
     FAKE <- FALSE
     if(object@Options$optim.method == "none") {

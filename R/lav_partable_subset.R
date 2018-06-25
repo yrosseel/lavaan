@@ -8,7 +8,7 @@
 # ...
 
 
-# FIXME: 
+# FIXME:
 # - if we have more than 1 factor, we remove the structural
 #   part, but should we add ALL correlations among the latent variables?
 #   (YES for now)
@@ -37,7 +37,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     } else if(!is.list(lv.names)) {
         lv.names <- list(lv.names)
     }
-    
+
     # keep rows idx
     keep.idx <- integer(0L)
 
@@ -91,7 +91,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
         keep.idx <- c(keep.idx, SC.idx)
 
         # FIXME: ==, :=, <, >, == involving IND...
-      
+
         # `simple' == constraints (simple lhs and rhs)
         #EQ.idx <- which(PT$op == "==" &
         #                PT$lhs %in% IND.plabel &
@@ -121,7 +121,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                 } else {
                     lhs.keep <- TRUE
                 }
-            
+
 
                 # rhs
                 RHS.labels <- all.vars(as.formula(paste("~",
@@ -152,7 +152,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     if(idx.only) {
         return(keep.idx)
     }
-    
+
     PT <- PT[keep.idx,,drop = FALSE]
 
     # check if we have enough indicators?
@@ -188,7 +188,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 
     # clean up
     PT <- lav_partable_complete(PT)
-    
+
     PT
 }
 
@@ -199,7 +199,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 #   we return all covariances among the latent variables
 #
 # - also, we should check if we have any 'higher' order factors
-#  
+#
 lav_partable_subset_structural_model <- function(PT = NULL,
                                                  lavpta = NULL,
                                                  idx.only = FALSE) {

@@ -4,8 +4,8 @@
 # 3. model + extra parameters (for modindices/lavTestScore)
 
 
-# 1. fit an 'independence' model 
-#    note that for ML (and ULS and DWLS), the 'estimates' of the 
+# 1. fit an 'independence' model
+#    note that for ML (and ULS and DWLS), the 'estimates' of the
 #    independence model are simply the observed variances
 #    but for GLS and WLS, this is not the case!!
 lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
@@ -24,7 +24,7 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
         }
     } else {
         ## FIXME: if test = scaled, we need it anyway?
-        lavoptions$se <- "none" 
+        lavoptions$se <- "none"
     }
 
     # set baseline/h1 to FALSE
@@ -33,7 +33,7 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     lavoptions$loglik <- TRUE # eg for multilevel
     lavoptions$implied <- TRUE #, needed for loglik
     lavoptions$check <- character(0L)
-   
+
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE
 
@@ -62,8 +62,8 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
                              lavsamplestats = object@SampleStats,
                              lavoptions = object@Options)
     }
- 
-    FIT <- lavaan(lavpartable,  
+
+    FIT <- lavaan(lavpartable,
                   slotOptions     = lavoptions,
                   slotSampleStats = object@SampleStats,
                   slotData        = object@Data,
@@ -91,9 +91,9 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
         }
     } else {
         ## FIXME: if test = scaled, we need it anyway?
-        lavoptions$se <- "none" 
+        lavoptions$se <- "none"
     }
-   
+
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE
 
@@ -137,7 +137,7 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
 lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
                                 all.free = FALSE,
-                                verbose = FALSE, warn = FALSE, 
+                                verbose = FALSE, warn = FALSE,
                                 do.fit = FALSE) {
 
     # partable original model
@@ -160,10 +160,10 @@ lav_object_extended <- function(object, add = NULL,
     } else {
         partable$block <- rep(1L, length(partable$lhs))
     }
-    
+
     # TDJ: Added to prevent error when lav_partable_merge() is called below.
     #      Problematic if object@ParTable is missing one of the requested slots,
-    #      which returns a NULL slot with a missing <NA> name.  For example: 
+    #      which returns a NULL slot with a missing <NA> name.  For example:
     #        example(cfa)
     #        lav_partable_independence(lavdata = fit@Data, lavpta = fit@pta,
     #                                  lavoptions = lavInspect(fit, "options"))
@@ -172,7 +172,7 @@ lav_object_extended <- function(object, add = NULL,
     if(length(empties)) {
         partable[empties] <- NULL
     }
-    
+
     if(all.free) {
         partable$user <- rep(1L, length(partable$lhs))
         non.free.idx <- which(partable$free == 0L & partable$op != "==" &
@@ -181,11 +181,11 @@ lav_object_extended <- function(object, add = NULL,
         partable$free[ non.free.idx ] <- 1L
         partable$user[ non.free.idx ] <- 10L
     }
- 
+
     # replace 'start' column, since lav_model will fill these in in GLIST
     partable$start <- parameterEstimates(object, remove.system.eq = FALSE,
                                          remove.def = FALSE,
-                                         remove.eq = FALSE, 
+                                         remove.eq = FALSE,
                                          remove.ineq = FALSE)$est
 
     # add new parameters, extend model
@@ -215,7 +215,7 @@ lav_object_extended <- function(object, add = NULL,
         } else {
             ADD$block <- rep(1L, length(ADD$lhs))
         }
-        
+
         remove.idx <- which(ADD$user == 0)
         if(length(remove.idx) > 0L) {
             ADD <- ADD[-remove.idx,]
@@ -241,7 +241,7 @@ lav_object_extended <- function(object, add = NULL,
     # redo 'free'
     free.idx <- which(LIST$free > 0)
     LIST$free[free.idx] <- 1:length(free.idx)
-    
+
     # adapt options
     lavoptions <- object@Options
 
@@ -262,12 +262,12 @@ lav_object_extended <- function(object, add = NULL,
     } else {
         # old object -- for example 'usemmodelfit' in package 'pompom'
 
-        # add a few fields 
+        # add a few fields
         lavoptions$h1 <- FALSE
         lavoptions$implied <- FALSE
         lavoptions$baseline <- FALSE
         lavoptions$loglik <- FALSE
- 
+
         # add a few slots
         object@Data@weights <- vector("list", object@Data@ngroups)
         object@Model@estimator <- object@Options$estimator

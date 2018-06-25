@@ -5,19 +5,19 @@
 # a) H0 states that some parameters are equal to 0
 # b) H0 states that some parameters are equal to some others.
 #Note that for the latter I haven't checked if it is ok when equality constraints
-#are imposed on parameters that refer to different groups in a multi-group 
+#are imposed on parameters that refer to different groups in a multi-group
 #analysis. All the code below has been developed for a single-group analysis.
 
 # Let fit_objH0 and fit_objH1 be the outputs of lavaan() function when we fit
 # a model under the null hypothesis and under the alternative, respectively.
 # The argument equalConstr is logical (T/F) and it is TRUE if  equality constraints
-# are imposed on subsets of the parameters. 
+# are imposed on subsets of the parameters.
 
 # The main idea of the code below is that we consider the parameter vector
 # under the alternative H1 evaluated at the values derived under H0 and for these
 # values we should evaluate the Hessian, the variability matrix (denoted by J)
 # and Godambe matrix.
-  
+
 ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
     # sanity check, perhaps we misordered H0 and H1 in the function call??
@@ -33,14 +33,14 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     } else {
         equalConstr = FALSE
     }
-  
+
     nsize <- fit_objH0@SampleStats@ntotal
     PLRT <- 2 * (fit_objH1@optim$logl - fit_objH0@optim$logl)
 
     # create a new object 'objH1_h0': the object 'H1', but where
     # the parameter values are from H0
     objH1_h0 <- lav_test_diff_m10(m1 = fit_objH1, m0 = fit_objH0, test = FALSE)
-  
+
     # EqMat
     #EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
     EqMat <- fit_objH0@Model@ceq.JAC
@@ -49,7 +49,7 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     #          -- if we do this, there is no need to use MASS::ginv later
     #JAC0 <- fit_objH0@Model@ceq.JAC
     #JAC1 <- fit_objH1@Model@ceq.JAC
-    #unique.idx <- which(apply(JAC0, 1, function(x) { 
+    #unique.idx <- which(apply(JAC0, 1, function(x) {
     #                    !any(apply(JAC1, 1, function(y) { all(x == y) })) }))
     #if(length(unique.idx) > 0L) {
     #    EqMat <- EqMat[unique.idx,,drop = FALSE]
@@ -59,14 +59,14 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     Hes.theta0 <- lavTech(objH1_h0, "information.observed")
 
     # handle possible constraints in H1 (and therefore also in objH1_h0)
-    Inv.Hes.theta0 <- 
+    Inv.Hes.theta0 <-
         lav_model_information_augment_invert(lavmodel = objH1_h0@Model,
                                              information = Hes.theta0,
                                              inverted = TRUE)
 
     # the estimated variability matrix is given (=unit information first order)
     J.theta0 <- lavTech(objH1_h0, "first.order")
- 
+
     # the Inverse of the G matrix
     Inv.G <- Inv.Hes.theta0 %*% J.theta0 %*% Inv.Hes.theta0
 
@@ -111,7 +111,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
     MY.x.el.idx <- MY.x.el.idx2
 
    #MY.m.el.idx2 <- fit_objH1@Model@m.free.idx
-   # MY.m.el.idx2 gives the POSITION index of the free parameters within each 
+   # MY.m.el.idx2 gives the POSITION index of the free parameters within each
    # parameter matrix under H1 model.
    # The index numbering restarts from 1 when we move to a new parameter matrix.
    # Within each matrix the index numbering "moves" columnwise.
@@ -120,7 +120,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
    # MY.x.el.idx2 ENUMERATES the free parameters within each parameter matrix.
    # The numbering continues as we move from one parameter matrix to the next one.
 
-   # In the case of the symmetric matrices, Theta and Psi,in some functions below 
+   # In the case of the symmetric matrices, Theta and Psi,in some functions below
    # we need to give as input MY.m.el.idx2 and MY.x.el.idx2 after
    # we have eliminated the information about the redundant parameters
    # (those placed above the main diagonal).
@@ -145,7 +145,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
    #  MY.m.el.idx[[2]] <- MY.m.el.idx[[2]][MY.m.el.idx[[2]] %in% tmp_keep]
    #  MY.x.el.idx[[2]] <- unique( MY.x.el.idx2[[2]] )
    # }
- 
+
    #below the commands to find the row-column indices of the Hessian that correspond to
    #the parameters to be tested equal to 0
    #tmp.ind contains these indices
@@ -161,7 +161,7 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
    # YR: use partable to find which parameters are restricted in H0
    #     (this should work in multiple groups too)
-   #h0.par.idx <- which(   PT.H1.extended$free[PT.H1.extended$user < 2] > 0  & 
+   #h0.par.idx <- which(   PT.H1.extended$free[PT.H1.extended$user < 2] > 0  &
    #                     !(PT.H0.extended$free[PT.H0.extended$user < 2] > 0)   )
    #tmp.ind <- PT.H1.extended$free[ h0.par.idx ]
    #print(tmp.ind)
@@ -194,10 +194,10 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
  # where g(theta) is the function that represents the equality constraints. g(theta) is
  # an rx1 vector where r are the equality constraints. In the null hypothesis
  # we test H0: g(theta)=0. The matrix of derivatives is of dimension:
- # nrows= number of free non-redundant parameters under H0, namely 
+ # nrows= number of free non-redundant parameters under H0, namely
  # NparH0 <- fit_objH0[[1]]@optim$npar , and ncols= number of free non-redundant
  # parameters under H1, namely NparH1 <- fit_objH0[[1]]@optim$npar.
- # The matrix of derivatives of g(theta) is composed of 0's, 1's, -1's, and 
+ # The matrix of derivatives of g(theta) is composed of 0's, 1's, -1's, and
  # in the rows that refer to odd number of parameters that are equal there is one -2.
  # The 1's, -1's (and possibly -2) are the contrast coefficients of the parameters.
  # The sum of the rows should be equal to 0.
@@ -223,11 +223,11 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 
  # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
  # so that the adjustment to PLRT can be applied.
- # Here a couple of functions (e.g. MYgetHessian) which are modifications of 
- # lavaan functions (e.g. getHessian) are needed. These are defined in the end of the file.  
+ # Here a couple of functions (e.g. MYgetHessian) which are modifications of
+ # lavaan functions (e.g. getHessian) are needed. These are defined in the end of the file.
 
  #the quantity below follows the same logic as getHessian of lavaan 0.5-18
- #and it actually gives N*Hessian. That's why the command following the command below. 
+ #and it actually gives N*Hessian. That's why the command following the command below.
  # NHes.theta0 <- MYgetHessian (object = obj@Model,
  #                           samplestats = obj@SampleStats ,
  #                           X = obj@Data@X ,
@@ -282,13 +282,13 @@ ctr_pml_plrt_nested2 <- function (fit_objH0, fit_objH1) {
 # library(lavaan)
 
 # To run an example for the functions below the following input is needed.
-# obj <- fit.objH0[[i]] 
-# object <- obj@Model 
-# samplestats = obj@SampleStats 
-# X = obj@Data@X 
-# estimator = "PML" 
+# obj <- fit.objH0[[i]]
+# object <- obj@Model
+# samplestats = obj@SampleStats
+# X = obj@Data@X
+# estimator = "PML"
 # lavcache = obj@Cache
-# MY.m.el.idx = MY.m.el.idx 
+# MY.m.el.idx = MY.m.el.idx
 # MY.x.el.idx = MY.x.el.idx
 # MY.m.el.idx2 = MY.m.el.idx2 # input for MYx2GLIST
 # MY.x.el.idx2 = MY.x.el.idx2 # input for MYx2GLIST
@@ -300,7 +300,7 @@ MYgetHessian <- function (object, samplestats , X ,
                            MY.m.el.idx, MY.x.el.idx,
                            MY.m.el.idx2, MY.x.el.idx2, # input for MYx2GLIST
                            Npar,     #Npar is the number of parameters under H1
-                           equalConstr  ) { # takes TRUE/ FALSE  
+                           equalConstr  ) { # takes TRUE/ FALSE
     if(equalConstr){   #!!! added line
     }
     Hessian <- matrix(0, Npar, Npar) #
@@ -396,7 +396,7 @@ MYgetModelParameters  <- function (object, GLIST = NULL, N, #N the number of par
 #the difference are the input arguments MY.m.el.idx, MY.x.el.idx
 #used  in  lavaan:::computeDelta
 MYcomputeGradient <- function (object, GLIST, samplestats = NULL, X = NULL,
-                               lavcache = NULL, estimator = "PML", 
+                               lavcache = NULL, estimator = "PML",
                                MY.m.el.idx, MY.x.el.idx, equalConstr  ) {
    if(equalConstr){  #added line
     }
@@ -409,7 +409,7 @@ MYcomputeGradient <- function (object, GLIST, samplestats = NULL, X = NULL,
    Mu.hat <- computeMuHat(object, GLIST = GLIST)
    TH <- computeTH(object, GLIST = GLIST)
    g<-1
-   d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], Mu.hat = Mu.hat[[g]], 
+   d1 <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], Mu.hat = Mu.hat[[g]],
                     TH = TH[[g]], th.idx = th.idx[[g]], num.idx = num.idx[[g]],
                     X = X[[g]], lavcache = lavcache[[g]])
 
@@ -417,7 +417,7 @@ MYcomputeGradient <- function (object, GLIST, samplestats = NULL, X = NULL,
  #     Delta <- lavaan:::computeDelta (lavmodel= object, GLIST. = GLIST)
  #  } else {
       Delta <- computeDelta (lavmodel= object, GLIST. = GLIST,
-                                      m.el.idx. = MY.m.el.idx , 
+                                      m.el.idx. = MY.m.el.idx ,
                                       x.el.idx. = MY.x.el.idx)
   # }
 
@@ -452,7 +452,7 @@ MYgetVariability <- function (object, MY.m.el.idx, MY.x.el.idx, equalConstr ) {
                                  lavdata = object@Data,
                                  estimator = "PML",
                                  MY.m.el.idx=MY.m.el.idx,
-                                 MY.x.el.idx= MY.x.el.idx, 
+                                 MY.x.el.idx= MY.x.el.idx,
                                  equalConstr = equalConstr)
     if(equalConstr){  #added lines
     }
@@ -474,13 +474,13 @@ MYgetVariability <- function (object, MY.m.el.idx, MY.x.el.idx, equalConstr ) {
 
 ##############################################################################
 # example
-# obj <- fit.objH0[[i]] 
-# object <- obj@Model 
-# samplestats = obj@SampleStats 
-# X = obj@Data@X 
-# estimator = "PML" 
+# obj <- fit.objH0[[i]]
+# object <- obj@Model
+# samplestats = obj@SampleStats
+# X = obj@Data@X
+# estimator = "PML"
 # lavcache = obj@Cache
-# MY.m.el.idx = MY.m.el.idx 
+# MY.m.el.idx = MY.m.el.idx
 # MY.x.el.idx = MY.x.el.idx
 # MY.m.el.idx2 = MY.m.el.idx2 # input for MYx2GLIST
 # MY.x.el.idx2 = MY.x.el.idx2 # input for MYx2GLIST
@@ -490,7 +490,7 @@ MYgetVariability <- function (object, MY.m.el.idx, MY.x.el.idx, equalConstr ) {
 
 MYNvcov.first.order <- function (lavmodel, lavsamplestats = NULL,
                                  lavdata = NULL, lavcache = NULL,
-                                 estimator = "PML",  
+                                 estimator = "PML",
                                  MY.m.el.idx, MY.x.el.idx,
                                  equalConstr ) {    #equalConstr takes TRUE/FALSE
     if(equalConstr){ #added lines
@@ -510,8 +510,8 @@ MYNvcov.first.order <- function (lavmodel, lavsamplestats = NULL,
     TH <- computeTH(lavmodel)
     g <-1
 
-    SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]], 
-                     Mu.hat = Mu.hat[[g]], th.idx = lavmodel@th.idx[[g]], 
+    SC <- pml_deriv1(Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
+                     Mu.hat = Mu.hat[[g]], th.idx = lavmodel@th.idx[[g]],
                      num.idx = lavmodel@num.idx[[g]],
                      X = lavdata@X[[g]], lavcache = lavcache,
                      scores = TRUE, negative = FALSE)

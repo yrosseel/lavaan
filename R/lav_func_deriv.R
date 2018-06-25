@@ -7,9 +7,9 @@
 
 # YR 17 July 2012
 
-lav_func_gradient_complex <- function(func, x, 
-                                      h = .Machine$double.eps, ... , 
-                                      check.scalar = TRUE, 
+lav_func_gradient_complex <- function(func, x,
+                                      h = .Machine$double.eps, ... ,
+                                      check.scalar = TRUE,
                                       fallback.simple = TRUE) {
 
     # check current point, see if it is a scalar function
@@ -48,8 +48,8 @@ lav_func_gradient_complex <- function(func, x,
 }
 
 # as a backup, if func() is not happy about non-numeric arguments
-lav_func_gradient_simple <- function(func, x, 
-                                     h = sqrt(.Machine$double.eps), ... , 
+lav_func_gradient_simple <- function(func, x,
+                                     h = sqrt(.Machine$double.eps), ... ,
                                      check.scalar = TRUE) {
 
     # check current point, see if it is a scalar function
@@ -78,7 +78,7 @@ lav_func_gradient_simple <- function(func, x,
     dx
 }
 
-lav_func_jacobian_complex <- function(func, x, 
+lav_func_jacobian_complex <- function(func, x,
                                       h = .Machine$double.eps, ... ,
                                       fallback.simple = TRUE) {
 
@@ -110,7 +110,7 @@ lav_func_jacobian_complex <- function(func, x,
     dx
 }
 
-lav_func_jacobian_simple <- function(func, x, 
+lav_func_jacobian_simple <- function(func, x,
                                      h = sqrt(.Machine$double.eps), ...) {
 
     f0 <- func(x, ...)
@@ -134,8 +134,8 @@ lav_func_jacobian_simple <- function(func, x,
 }
 
 # this is based on the Ridout (2009) paper, and the code snippet for 'h4'
-lav_func_hessian_complex <- function(func, x, 
-                                     h = .Machine$double.eps, ... , 
+lav_func_hessian_complex <- function(func, x,
+                                     h = .Machine$double.eps, ... ,
                                      check.scalar = TRUE) {
 
     # check current point, see if it is a scalar function
@@ -166,10 +166,10 @@ lav_func_hessian_complex <- function(func, x,
                 delta <- delta1
             }
             H[i,j] <- H[j,i] <-
-                Im(func(x + delta*1i*(seq.int(nvar) == i)*x + 
+                Im(func(x + delta*1i*(seq.int(nvar) == i)*x +
                             delta*(seq.int(nvar) == j)*x, ...) -
-                   func(x + delta*1i*(seq.int(nvar) == i)*x - 
-                            delta*(seq.int(nvar) == j)*x, ...)) / 
+                   func(x + delta*1i*(seq.int(nvar) == i)*x -
+                            delta*(seq.int(nvar) == j)*x, ...)) /
                    (2*delta*delta*x[i]*x[j])
         }
     }

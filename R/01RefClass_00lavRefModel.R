@@ -1,7 +1,7 @@
 # generic statistical model -- YR 10 july 2012
 
 
-# super class -- virtual statistical model 
+# super class -- virtual statistical model
 lavRefModel <- setRefClass("lavRefModel",
 
 # fields

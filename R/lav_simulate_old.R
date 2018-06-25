@@ -56,9 +56,9 @@ simulateData <- function(
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
     } else {
-        lav <- lavaanify(model = model, 
+        lav <- lavaanify(model = model,
                          meanstructure=meanstructure,
-                         int.ov.free=int.ov.free, 
+                         int.ov.free=int.ov.free,
                          int.lv.free=int.lv.free,
                          conditional.x=conditional.x,
                          fixed.x=fixed.x,
@@ -91,7 +91,7 @@ simulateData <- function(
     idx <- which(lav$op == "~~" & is.na(lav$ustart) & lav$lhs == lav$rhs)
     if(length(idx) > 0L) lav$ustart[idx] <- 1.0
 
-    idx <- which(lav$op == "~" & is.na(lav$ustart)) 
+    idx <- which(lav$op == "~" & is.na(lav$ustart))
     if(length(idx) > 0L) {
         warning("lavaan WARNING: some regression coefficients are unspecified and will be set to zero")
     }
@@ -106,7 +106,7 @@ simulateData <- function(
 
     # set residual variances to enforce a standardized solution
     # but only if no *residual* variances have been specified in the syntax
-    
+
     if(standardized) {
         # check if factor loadings are smaller than 1.0
         lambda.idx <- which(lav$op == "=~")
@@ -121,7 +121,7 @@ simulateData <- function(
         }
 
         # for ordered observed variables, we will get '0.0', but that is ok
-        # so there is no need to make a distinction between numeric/ordered 
+        # so there is no need to make a distinction between numeric/ordered
         # here??
         lav2 <- lav
         ngroups <- lav_partable_ngroups(lav)
@@ -129,7 +129,7 @@ simulateData <- function(
         ov.nox   <- vnames(lav, "ov.nox")
         lv.names <- vnames(lav, "lv")
         lv.y     <- vnames(lav, "lv.y")
-        ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
+        ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
                             lav$rhs == lav$lhs)
         lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.y &
                             lav$rhs == lav$lhs)
@@ -148,7 +148,7 @@ simulateData <- function(
 
         # standardized OV
         for(g in 1:ngroups) {
-            var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox & 
+            var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
                                lav$rhs == lav$lhs & lav$group == g)
             ov.idx <- match(ov.nox, ov.names)
             lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
@@ -168,11 +168,11 @@ simulateData <- function(
         if(debug) {
             cat("after standardisation lav\n")
             print(as.data.frame(lav))
-        }    
+        }
     }
 
 
-    # unstandardize 
+    # unstandardize
     if(!is.null(ov.var)) {
         # FIXME: if ov.var is named, check the order of the elements
 
@@ -207,14 +207,14 @@ simulateData <- function(
     # ngroups
     ngroups <- length(sample.nobs)
 
-    # prepare 
+    # prepare
     X <- vector("list", length=ngroups)
     out <- vector("list", length=ngroups)
 
     for(g in 1:ngroups) {
         COV <- Sigma.hat[[g]]
-       
-        # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML 
+
+        # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML
         # returns exact results
         if(empirical) {
             COV <- COV * sample.nobs[g] / (sample.nobs[g] - 1)
@@ -228,7 +228,7 @@ simulateData <- function(
                                     empirical = empirical)
         } else {
             # first generate Z
-            Z <- ValeMaurelli1983(n        = sample.nobs[g], 
+            Z <- ValeMaurelli1983(n        = sample.nobs[g],
                                   COR      = cov2cor(COV),
                                   skewness = skewness,  # FIXME: per group?
                                   kurtosis = kurtosis,
@@ -239,9 +239,9 @@ simulateData <- function(
             # this was reported by Jordan Brace (9 may 2014)
             #X[[g]] <- scale(Z, center = -Mu.hat[[g]],
             #                   scale  = 1/sqrt(diag(COV)))
-            
-            # first, we scale 
-            TMP <- scale(Z, center = FALSE, 
+
+            # first, we scale
+            TMP <- scale(Z, center = FALSE,
                          scale = 1/sqrt(diag(COV)))[,,drop=FALSE]
 
             # then, we center
@@ -318,13 +318,13 @@ Kurtosis <- function(x., N1=TRUE) {
     kurtosis
 }
 
-# NOTE: as pointed out in Fleishman (1978), a real solution does not 
+# NOTE: as pointed out in Fleishman (1978), a real solution does not
 # always exist (for a/b/c/d) for all values of skew/kurtosis
 #
 # for example: skew = 3, only valid if kurtosis > 14 (approximately)
 #
 # fleishman eq 21 suggests: skew^2 < 0.0629576*kurtosis + 0.0717247
-# see figure 1 page 527 
+# see figure 1 page 527
 #
 # note also that the a/b/c/d solution is not unique, although this seems
 # not to matter for generating the data

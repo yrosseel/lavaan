@@ -4,7 +4,7 @@
 pp_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 
     lik <- pp_lik(Y1=Y1, Y2=Y2, eXo=eXo, rho=rho, fit.y1=fit.y1, fit.y2=fit.y2)
-    if(all(lik > 0, na.rm = TRUE)) 
+    if(all(lik > 0, na.rm = TRUE))
         logl <- sum(log(lik), na.rm = TRUE)
     else
         logl <- -Inf
@@ -12,7 +12,7 @@ pp_logl <- function(Y1, Y2, eXo=NULL, rho=NULL, fit.y1=NULL, fit.y2=NULL) {
 }
 
 # individual likelihoods
-pp_lik <- function(Y1, Y2, eXo=NULL, 
+pp_lik <- function(Y1, Y2, eXo=NULL,
                    eta.y1 = NULL, eta.y2 = NULL,
                    var.y1 = NULL, var.y2 = NULL,
                    rho=NULL, fit.y1=NULL, fit.y2=NULL) {
@@ -36,12 +36,12 @@ pp_lik <- function(Y1, Y2, eXo=NULL,
         eta.y2 <- fit.y2$yhat
     }
 
-    # lik 
+    # lik
     cov.y12 <- rho*sqrt(var.y1)*sqrt(var.y2)
     sigma <- matrix(c(var.y1,cov.y12,cov.y12,var.y2), 2L, 2L)
     #lik <- numeric(length(Y1))
     #for(i in 1:length(Y1))
-    #    lik[i] <- dmvnorm(c(Y1[i],Y2[i]), mean=c(eta.y1[i], eta.y2[i]), 
+    #    lik[i] <- dmvnorm(c(Y1[i],Y2[i]), mean=c(eta.y1[i], eta.y2[i]),
     #                      sigma=sigma)
     lik <- dmnorm( cbind(Y1,Y2), mean=cbind(eta.y1, eta.y2), varcov=sigma)
 
@@ -129,7 +129,7 @@ pp_cor_TS <- function(Y1, Y2, eXo=NULL, fit.y1=NULL, fit.y2=NULL,
     rho
 }
 
-pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL, 
+pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
                           fit.y1=NULL, fit.y2=NULL) {
 
     stopifnot(!is.null(rho))
@@ -174,13 +174,13 @@ pp_cor_scores <- function(Y1, Y2, eXo=NULL, rho=NULL,
     z <- (Y1c*Y1c)/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + (Y2c*Y2c)/var.y2
     dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/(R*R))
 
-    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, 
-         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, 
+    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1,
+         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2,
          dx.sl.y1=dx.sl.y1, dx.sl.y2=dx.sl.y2,
          dx.rho=dx.rho)
 }
 
-pp_cor_scores_no_exo <- function(Y1, Y2, 
+pp_cor_scores_no_exo <- function(Y1, Y2,
                                  eta.y1 = NULL, var.y1 = NULL,
                                  eta.y2 = NULL, var.y2 = NULL,
                                  rho = NULL) {
@@ -212,8 +212,8 @@ pp_cor_scores_no_exo <- function(Y1, Y2,
     z <- (Y1c*Y1c)/var.y1 - 2*rho*Y1c*Y2c/(sd.y1*sd.y2) + (Y2c*Y2c)/var.y2
     dx.rho <- rho/R + (Y1c*Y2c/(sd.y1*sd.y2*R) - z*rho/(R*R))
 
-    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1, 
-         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2, 
+    list(dx.mu.y1=dx.mu.y1, dx.var.y1=dx.var.y1,
+         dx.mu.y2=dx.mu.y2, dx.var.y2=dx.var.y2,
          dx.rho=dx.rho)
 }
 

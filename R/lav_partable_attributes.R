@@ -62,7 +62,7 @@ lav_partable_attributes <- function(partable, pta = NULL) {
     # th.idx (new in 0.6-1)
     pta$th.idx <- lapply(seq_len(pta$nblocks), function(g) {
                             out <- numeric( length(pta$vnames$th.mean[[g]]) )
-                            idx <- ( pta$vnames$th.mean[[g]] %in% 
+                            idx <- ( pta$vnames$th.mean[[g]] %in%
                                      pta$vnames$th[[g]] )
                             out[idx] <- pta$vidx$th[[g]]
                             out

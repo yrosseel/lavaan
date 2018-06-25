@@ -1,10 +1,10 @@
-# special functions for the one-factor model 
+# special functions for the one-factor model
 # YR 24 June 2018
 
 # 1-factor model with (only) three indicators:
 # no iterations needed; can be solved analytically
 
-# denote s11, s22, s33 the diagonal elements, and  
+# denote s11, s22, s33 the diagonal elements, and
 # s21, s31, s32 the off-diagonal elements
 
 # under the 1-factor model; typically, either psi == 1, or l1 == 1
@@ -27,10 +27,10 @@
 #
 # (note: all eigenvalues are positive)
 
-lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE, 
+lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
                               warn.neg.triad = TRUE) {
-    
-    # check sample cov 
+
+    # check sample cov
     stopifnot(is.matrix(sample.cov))
     nRow <- NROW(sample.cov); nCol <- NCOL(sample.cov)
     stopifnot(nRow == 3L, nCol == 3L)
@@ -44,48 +44,77 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
         warning("lavaan WARNING: product of the three covariances is negative!")
     }
 
-    # solution
+    # first, we assume l1 = 1
+    psi <- (s21*s31)/s32
+    l1 <- 1
+    l2 <- s32/s31 # l2 <- s21/psi
+    l3 <- s32/s21 # l3 <- s31/psi
+    theta1 <- s11 - psi
+    theta2 <- s22 - l2*l2*psi
+    theta3 <- s33 - l3*l3*psi
+    lambda <- c(l1, l2, l3)
+    theta <- c(theta1, theta2, theta3)
+
+    # std.lv?
     if(std.lv) {
+        # we allow for negative psi
+        lambda <- lambda * sign(psi) * sqrt(abs(psi))
         psi <- 1
-        l1.square <- (s21*s31)/s32
-        l2.square <- (s21*s32)/s31
-        l3.square <- (s31*s32)/s21
-        theta1 <- s11 - l1.square
-        theta2 <- s22 - l2.square
-        theta3 <- s33 - l3.square
-        l1 <- sign(l1.square) * sqrt( abs(l1.square) )
-        l2 <- sign(l2.square) * sqrt( abs(l2.square) )
-        l3 <- sign(l3.square) * sqrt( abs(l3.square) )
-    } else {
-        psi <- (s21*s31)/s32
-        l1 <- 1
-        l2 <- s32/s31 # l2 <- s21/psi
-        l3 <- s32/s21 # l3 <- s31/psi
-        theta1 <- s11 - psi
-        theta2 <- s22 - l2*l2*psi
-        theta3 <- s33 - l3*l3*psi
     }
-    
-    list(lambda = c(l1,l2,l3), psi = psi, theta = c(theta1, theta2, theta3))
+
+    list(lambda = lambda, theta = theta, psi = psi)
 }
 
 # FABIN (Hagglund, 1982)
-# 1-factor only (in this case fabin2 == fabin3)
-lav_cfa_1fac_fabin <- function(S) {
+# 1-factor only
+lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
+                               std.lv = FALSE, extra = NULL) {
 
     nvar <- NCOL(S)
-    if(nvar < 3) {
-        return( rep(1, nvar) )
+
+    # catch nvar < 4
+    if(nvar < 4L) {
+        lav_cfa_1fac_3ind(sample.cov = S, std.lv = std.lv,
+                          warn.neg.triad = FALSE)
     }
 
-    out <- numeric( nvar ); out[1L] <- 1.0
+    # 1. lambda
+    lambda <- numeric( nvar ); lambda[1L] <- 1.0
     for(i in 2:nvar) {
         idx3 <- (1:nvar)[-c(i, 1L)]
         s23 <- S[i, idx3]
         S31 <- S13 <- S[idx3, 1L]
-        out[i] <- ( s23 / S31 )
+        if(method == "fabin3") {
+            S33 <- S[idx3,idx3]
+            tmp <- solve(S33, S31) # GaussJordanPivot is slighty more efficient
+            lambda[i] <- sum(s23 * tmp) / sum(S13 * tmp)
+        } else {
+            lambda[i] <- sum(s23 * S31) / sum(S13^2)
+        }
     }
 
-    out
+    if(lambda.only) {
+        return(list(lambda = lambda, psi = as.numeric(NA),
+                    theta = rep(as.numeric(NA), nvar))
+              )
+    }
+
+    # 2. theta
+    D <- tcrossprod(lambda) / sum(lambda^2)
+    theta <- solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
+
+    # 3. psi
+    S1 <- S - diag(theta)
+    l2 <- sum(lambda^2)
+    psi <- sum(colSums(as.numeric(lambda) * S1) * lambda) / (l2 * l2)
+
+    # std.lv?
+    if(std.lv) {
+        # we allow for negative psi
+        lambda <- lambda * sign(psi) * sqrt(abs(psi))
+        psi <- 1
+    }
+
+    list(lambda = lambda, theta = theta, psi = psi)
 }
 

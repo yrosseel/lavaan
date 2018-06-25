@@ -1,14 +1,14 @@
-# constrained optimization 
+# constrained optimization
 # - references: * Nocedal & Wright (2006) Chapter 17
 #               * Optimization with constraints by Madsen, Nielsen & Tingleff
 #               * original papers: Powell, 1969 and Rockafeller, 1974
 # - using 'nlminb' for the unconstrained subproblem
 # - convergence scheme is based on the auglag function in the alabama package
-nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL, 
+nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
                           ..., scale = 1, control = list(),
                           lower = -Inf, upper = Inf,
                           ceq = NULL, ceq.jac = NULL,
-                          cin = NULL, cin.jac = NULL, 
+                          cin = NULL, cin.jac = NULL,
                           control.outer = list()) {
 
     # we need a gradient
@@ -56,7 +56,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
                                   itmax   = 100L,
                                   verbose = FALSE)
     control.outer <- modifyList(control.outer.default, control.outer)
-    
+
 
     # construct augmented lagrangian function
     auglag <- function(x, ...) {
@@ -77,7 +77,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
         # jacobian
         JAC <- rbind(ceq.jac(x, ...), cin.jac(x, ...))
         lambda.JAC <- lambda * JAC
-  
+
         # handle inactive constraints
         if(ncin > 0L) {
             slack <- lambda/mu
@@ -88,7 +88,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
                 con0 <- con0[-inactive.idx]
             }
         }
-      
+
         if(nrow(JAC) > 0L) {
             ( gradient(x, ...) - colSums(lambda.JAC) +
                                  mu * as.numeric(t(JAC) %*% con0) )
@@ -132,14 +132,14 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
     x.par <- start
     for (i in 1:control.outer$itmax) {
         x.old <- x.par
-        r.old <- r 
+        r.old <- r
         ############################################################
-        if(control.outer$verbose) { 
+        if(control.outer$verbose) {
             cat("\nStarting inner optimization [",i,"]:\n")
             cat("lambda: ", lambda, "\n")
             cat("mu: ", mu, "\n")
         }
-        optim.out <- nlminb(start = x.par, objective = auglag, 
+        optim.out <- nlminb(start = x.par, objective = auglag,
                             gradient = fgrad, control = control,
                             scale = scale, ...)
         ############################################################
@@ -178,12 +178,12 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
         pconv <- max(abs(x.par - x.old))
         if(pconv < control.outer$tol) {
             ilack <- ilack + 1L
-        } else { 
+        } else {
             ilack <- 0L
         }
 
-        if( (is.finite(r) && is.finite(r.old) && 
-             abs(r - r.old) < control.outer$tol && K < control.outer$tol) | 
+        if( (is.finite(r) && is.finite(r.old) &&
+             abs(r - r.old) < control.outer$tol && K < control.outer$tol) |
              ilack >= 3 ) break
     }
 
@@ -205,12 +205,12 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
     a$lambda <- lambda
     a$mu <- mu
     #a$value <- objective(a$start, ...)
-    #a$cin <- cin(a$start, ...) 
+    #a$cin <- cin(a$start, ...)
     #a$ceq <- ceq(a$start, ...)
     a$evaluations <- c(feval, geval)
     a$iterations  <- niter
-    #a$kkt1 <- max(abs(a$fgrad)) <= 0.01 * (1 + abs(a$value)) 
-    #a$kkt2 <- any(eigen(a$hessian)$value * control.optim$objectivescale> 0) 
+    #a$kkt1 <- max(abs(a$fgrad)) <= 0.01 * (1 + abs(a$value))
+    #a$kkt2 <- any(eigen(a$hessian)$value * control.optim$objectivescale> 0)
 
     # jacobian of ceq and 'active' cin
     ceq0 <- ceq(a$par, ...); cin0 <- cin(a$par, ...); con0 <- c(ceq0, cin0)

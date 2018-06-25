@@ -4,7 +4,7 @@
 #
 # - calls lavaan directly to get model-implied statistics
 # - allows for groups with different sets of variables
-# - 
+# -
 
 
 lavSimulateData <- function(model  = NULL,
@@ -17,7 +17,7 @@ lavSimulateData <- function(model  = NULL,
 
                             # control
                             empirical       = FALSE,
- 
+
                             # output
                             add.labels      = TRUE,
                             return.fit      = FALSE,
@@ -32,11 +32,11 @@ lavSimulateData <- function(model  = NULL,
     dotdotdot$debug <- FALSE
     dotdotdot$data <- NULL
     dotdotdot$sample.cov <- NULL
-    
+
     # add sample.nobs/group.label to lavaan call
     dotdotdot$sample.nobs <- sample.nobs
 
-    
+
     # remove 'ordered' argument: we will first pretend we generate
     # continuous data only
     dotdotdot$ordered <- NULL
@@ -64,14 +64,14 @@ lavSimulateData <- function(model  = NULL,
     # number of groups/levels
     ngroups <- lavdata@ngroups
     nblocks <- length(fit.pop@implied$cov) # usually ngroups * nlevels
-    
+
     # check sample.nobs argument
     if(lavdata@nlevels > 1L) {
         # multilevel
         if(is.null(cluster.idx)) {
             # default? -> 1000 per block
             if(is.null(sample.nobs)) {
-                sample.nobs <- rep.int( c(1000L, 
+                sample.nobs <- rep.int( c(1000L,
                                           rep.int(100L, lavdata@nlevels - 1L)),
                                         times = ngroups )
             } else {
@@ -131,7 +131,7 @@ lavSimulateData <- function(model  = NULL,
         COV <- lavimplied$cov[[b]]
         MU  <- lavimplied$mean[[b]]
 
-        # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML 
+        # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML
         # returns exact results
         if(empirical) {
             # check if sample.nobs is large enough
@@ -139,7 +139,7 @@ lavSimulateData <- function(model  = NULL,
                 stop("lavaan ERROR: empirical = TRUE requires sample.nobs = ",
                      sample.nobs[b], " to be larger than",
                      "\n\t\tthe number of variables = ", NCOL(COV),
-                     " in block = ", b)    
+                     " in block = ", b)
             }
             if(lavdata@nlevels > 1L && (b %% lavdata@nlevels == 1L)) {
                 COV <- COV * sample.nobs[b] / (sample.nobs[b] - sample.nobs[b+1])
@@ -150,7 +150,7 @@ lavSimulateData <- function(model  = NULL,
 
         # generate normal data
         tmp <- try(MASS::mvrnorm(n = sample.nobs[b],
-                          mu = MU, Sigma = COV, empirical = empirical), 
+                          mu = MU, Sigma = COV, empirical = empirical),
                           silent = TRUE)
 
         if(inherits(tmp, "try-error")) {
@@ -180,10 +180,10 @@ lavSimulateData <- function(model  = NULL,
         X.block <- X
         X <- vector("list", length = ngroups)
     }
-    
+
     # assemble data per group
     for(g in 1:ngroups) {
-        
+
         # multilevel?
         if(lavdata@nlevels > 1L) {
 
@@ -218,12 +218,12 @@ lavSimulateData <- function(model  = NULL,
                 S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
 
                 # transform
-                X.block[[bb]] <- Y1c %*% S.inv.sqrt %*% sigma.sqrt  
+                X.block[[bb]] <- Y1c %*% S.inv.sqrt %*% sigma.sqrt
             }
             tmp1[, Lp$ov.idx[[1]] ] <- X.block[[bb]]
 
             # level 2
-            tmp2[, Lp$ov.idx[[2]] ] <- X.block[[bb + 1L]][cluster.idx[[g]],, 
+            tmp2[, Lp$ov.idx[[2]] ] <- X.block[[bb + 1L]][cluster.idx[[g]],,
                                                           drop = FALSE]
             # final
             X[[g]] <- tmp1 + tmp2
@@ -260,7 +260,7 @@ lavSimulateData <- function(model  = NULL,
                 TH.VAL <- TH.VAL[-NUM.idx]
             }
             th.names <- fit.pop@pta$vnames$th[[bb]]
-            TH.NAMES <- sapply(strsplit(th.names, split = "|", 
+            TH.NAMES <- sapply(strsplit(th.names, split = "|",
                                         fixed = TRUE), "[[", 1L)
 
             # use thresholds to cut

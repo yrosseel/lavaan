@@ -23,7 +23,7 @@ lav_fsr_croon_correction <- function(FS.COV, LVINFO, fs.method = "bartlett") {
 
                 if(nfac > 1L) {
                     for(j in (i+1):nfac) {
-    
+
                         A.x <- LVINFO[[g]][[j]]$fsm
                         lambda.x <- LVINFO[[g]][[j]]$lambda
 
@@ -37,7 +37,7 @@ lav_fsr_croon_correction <- function(FS.COV, LVINFO, fs.method = "bartlett") {
                     }
                 } # nfac > 1L
             } # i
-        } 
+        }
 
         # correct variances
         for(i in 1:nfac) {

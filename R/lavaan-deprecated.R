@@ -54,7 +54,7 @@ upper2full <- function(x, diagonal = TRUE) {
 
 duplicationMatrix <- function(n = 1L) {
     .Deprecated("lav_matrix_duplication",  package = "lavaan")
-    lav_matrix_duplication(n = n)     
+    lav_matrix_duplication(n = n)
 }
 
 commutationMatrix <- function(m = 1L, n = 1L) {

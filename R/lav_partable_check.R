@@ -20,7 +20,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
             warning("lavaan WARNING: parameter table does not contain thresholds ")
         }
     }
-    
+
     # we should have a (residual) variance for *each* ov/lv
     # note: if lavaanify() has been used, this is always TRUE
     var.idx <- which(partable$op == "~~" &
@@ -56,7 +56,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     # this is not necessarily problematic!
     # eg. in latent change score models
     # therefore, we do NOT give a warning
-    
+
     # var.fixed <- which(partable$op == "~~" &
     #                   partable$lhs == partable$rhs &
     #                   partable$user == 0 &
@@ -67,7 +67,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     #        warning("lavaan WARNING: missing (residual) variances are set to zero: [", paste(partable$lhs[var.fixed],  collapse = " "), "]")
     #    }
     # }
-    
+
     # do we have added intercepts (user = 0) that are fixed to zero?
     # this is not necessarily problematic; perhaps only for
     # exogenous variables?

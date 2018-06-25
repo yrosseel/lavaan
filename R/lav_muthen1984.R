@@ -1,20 +1,20 @@
 # This function was written in January 2012 -- Yves Rosseel
 # First success: Friday 20 Jan 2012: the standard errors for
-#                thresholds and polychoric correlations (in an 
+#                thresholds and polychoric correlations (in an
 #                unrestricted/saturated model) are spot on!
 # Second success: Saturday 9 June 2012: support for mixed (ordinal + metric)
-#                 variables; thanks to the delta method to get the ACOV 
+#                 variables; thanks to the delta method to get the ACOV
 #                 right (see H matrix)
 # Third success: Monday 2 July 2012: support for fixed.x covariates
-# 
+#
 # Friday 13 July 2012: merge exo + non-exo code
 # Monday 16 July 2012: fixed sign numeric in WLS.W; I think we got it right now
 
 # YR 26 Nov 2015: move step1 + step2 to external functions
 #
-muthen1984 <- function(Data              = NULL, 
-                       ov.names          = NULL, 
-                       ov.types          = NULL, 
+muthen1984 <- function(Data              = NULL,
+                       ov.names          = NULL,
+                       ov.types          = NULL,
                        ov.levels         = NULL,
                        ov.names.x        = character(0L),
                        eXo               = NULL,
@@ -79,7 +79,7 @@ muthen1984 <- function(Data              = NULL,
     VAR <- step1$VAR; SLOPES <- step1$SLOPES
     SC.TH <- step1$SC.TH; SC.SL <- step1$SC.SL; SC.VAR <- step1$SC.VAR
     th.start.idx <- step1$th.start.idx; th.end.idx <- step1$th.end.idx
-     
+
     # rm SC.VAR columns from ordinal variables
     if(WLS.W && length(ord.idx) > 0L) {
         SC.VAR <- SC.VAR[,-ord.idx, drop=FALSE]
@@ -102,10 +102,10 @@ muthen1984 <- function(Data              = NULL,
     }
 
     # stage two -- correlations
- 
+
     if(verbose) cat("\n\nSTEP 2: covariances/correlations:\n")
     COR <- lav_samplestats_step2(UNI = FIT, ov.names = ov.names,
-                                 zero.add = zero.add, 
+                                 zero.add = zero.add,
                                  zero.keep.margins = zero.keep.margins,
                                  zero.cell.warn = zero.cell.warn,
                                  zero.cell.tables = zero.cell.tables,
@@ -193,7 +193,7 @@ muthen1984 <- function(Data              = NULL,
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[i]) * sqrt(VAR[j])
             } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
                 SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[i]], 
+                                            fit.y1=FIT[[i]],
                                             fit.y2=FIT[[j]])
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
@@ -218,7 +218,7 @@ muthen1984 <- function(Data              = NULL,
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[i])
             } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
                 SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[j]], 
+                                            fit.y1=FIT[[j]],
                                             fit.y2=FIT[[i]])
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
@@ -243,16 +243,16 @@ muthen1984 <- function(Data              = NULL,
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[j])
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
-                SC.COR.UNI <- pc_cor_scores(rho=COR[i,j], 
-                                            fit.y1=FIT[[i]], 
+                SC.COR.UNI <- pc_cor_scores(rho=COR[i,j],
+                                            fit.y1=FIT[[i]],
                                             fit.y2=FIT[[j]])
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
 
                 # TH
-                A21[pstar.idx, th.idx_i] <- 
+                A21[pstar.idx, th.idx_i] <-
                     lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y1)
-                A21[pstar.idx, th.idx_j] <- 
+                A21[pstar.idx, th.idx_j] <-
                     lav_crossprod2(SC.COR[,pstar.idx], SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
@@ -276,7 +276,7 @@ muthen1984 <- function(Data              = NULL,
     }
 
     # A11
-    # new approach (2 June 2012): A11 is just a 'sparse' version of 
+    # new approach (2 June 2012): A11 is just a 'sparse' version of
     # (the left upper block of) INNER
     A11 <- matrix(0, A11.size, A11.size)
     for(i in 1:nvar) {
@@ -338,7 +338,7 @@ muthen1984 <- function(Data              = NULL,
         A11.inv <- MASS::ginv(A11)
         warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A11 submatrix")
     }
- 
+
     # invert
     da22 <- diag(A22)
     if(any(da22 == 0)) {
@@ -393,7 +393,7 @@ muthen1984 <- function(Data              = NULL,
         WLS.W[NUM.idx,] <- -WLS.W[NUM.idx,]
         WLS.W[,NUM.idx] <- -WLS.W[,NUM.idx]
     }
-    
+
     out <- list(TH=TH, SLOPES=SLOPES, VAR=VAR, COR=COR, COV=COV,
                 SC=SC, TH.NOX=TH.NOX,TH.NAMES=TH.NAMES, TH.IDX=TH.IDX,
                 INNER=INNER, A11=A11, A12=A12, A21=A21, A22=A22,

@@ -1,8 +1,8 @@
-# lavMultipleGroups: fit the *same* model, on (typically a small number of) 
+# lavMultipleGroups: fit the *same* model, on (typically a small number of)
 #                    groups/sets
 # YR - 11 July 2016
 
-lavMultipleGroups <- 
+lavMultipleGroups <-
     function(model     = NULL,
              dataList  = NULL,
              ndat      = length(dataList),
@@ -20,7 +20,7 @@ lavMultipleGroups <-
     dotdotdot <- list()
 
     # fit multiple times
-    fit <- do.call("lavaanList", args = c(list(model = model, 
+    fit <- do.call("lavaanList", args = c(list(model = model,
                    dataList = dataList, ndat = ndat, cmd = cmd,
                    store.slots = store.slots, FUN = FUN,
                    show.progress = show.progress,

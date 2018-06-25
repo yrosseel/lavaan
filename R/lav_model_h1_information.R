@@ -143,7 +143,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                 }
 
                 if(structured) {
-                    A1[[g]] <- 
+                    A1[[g]] <-
                       lav_mvnorm_missing_information_expected(
                           Y = lavdata@X[[g]],
                           Mp = lavdata@Mp[[g]],
@@ -301,7 +301,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
     } else {
         structured <- TRUE
     }
- 
+
     # 1. WLS.V (=A1) for GLS/WLS
     if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
         A1 <- lavsamplestats@WLS.V
@@ -316,7 +316,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
     # 3a. ML single level
     else if(lavmodel@estimator == "ML" && lavdata@nlevels == 1L) {
         A1 <- vector("list", length=lavsamplestats@ngroups)
-  
+
         # structured? compute model-implied statistics
         if(structured && length(lavimplied) == 0L) {
             lavimplied <- lav_model_implied(lavmodel)
@@ -337,7 +337,7 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
                 }
 
                 if(structured) {
-                    A1[[g]] <- 
+                    A1[[g]] <-
                       lav_mvnorm_missing_information_observed_samplestats(
                           Yp = lavsamplestats@missing[[g]],
                           #wt = WT, ?
@@ -593,7 +593,7 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                 } else {
                     MEAN <- lavsamplestats@missing.h1[[g]]$mu
                 }
- 
+
                 B1[[g]] <- lav_mvnorm_missing_information_firstorder(
                                Y = lavdata@X[[g]],
                               Mp = lavdata@Mp[[g]], wt = WT,

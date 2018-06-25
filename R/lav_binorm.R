@@ -2,7 +2,7 @@
 # YR
 # TODO: better handling of rho=1.0
 
-# density of a bivariate standard normal 
+# density of a bivariate standard normal
 dbinorm <- function(u, v, rho) {
     # dirty hack to handle extreme large values for rho
     # note that u, v, and rho are vectorized!
@@ -75,12 +75,12 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
             lower.x <- rep(lower.x, N)
         if(length(lower.y) == 1L)
             lower.y <- rep(lower.y, N)
-    }    
+    }
 
    upper.only <- all(lower.x == -Inf & lower.y == -Inf)
    if(upper.only) {
         upper.x[upper.x == +Inf] <-  exp(10) # better pnorm?
-        upper.y[upper.y == +Inf] <-  exp(10) 
+        upper.y[upper.y == +Inf] <-  exp(10)
         upper.x[upper.x == -Inf] <- -exp(10)
         upper.y[upper.y == -Inf] <- -exp(10)
         res <- pbivnorm(upper.x, upper.y, rho=rho)
@@ -88,9 +88,9 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
         # pbivnorm does not handle -Inf well...
         lower.x[lower.x == -Inf] <- -exp(10)
         lower.y[lower.y == -Inf] <- -exp(10)
-        res <- pbivnorm(upper.x, upper.y, rho=rho) - 
-               pbivnorm(lower.x, upper.y, rho=rho) - 
-               pbivnorm(upper.x, lower.y, rho=rho) + 
+        res <- pbivnorm(upper.x, upper.y, rho=rho) -
+               pbivnorm(lower.x, upper.y, rho=rho) -
+               pbivnorm(upper.x, lower.y, rho=rho) +
                pbivnorm(lower.x, lower.y, rho=rho)
     }
 
@@ -109,14 +109,14 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
 #        #        corr=matrix(c(1,rho,rho,1),2L,2L))
 #
 #        # MNORMT
-#        biv.nt.prob(df=0, 
+#        biv.nt.prob(df=0,
 #                    lower=c(lower.x, lower.y),
 #                    upper=c(upper.x, upper.y),
 #                    mean=c(0,0),
 #                    S=matrix(c(1,rho,rho,1),2L,2L))
 #
 #        # PBIVNORM
-#       
+#
 #    }
 #
 #    N <- length(upper.x)
@@ -125,7 +125,7 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
 #        if(length(rho) == 1L)
 #            rho <- rep(rho, N)
 #        if(length(lower.x) == 1L)
-#            lower.x <- rep(lower.x, N) 
+#            lower.x <- rep(lower.x, N)
 #        if(length(lower.y) == 1L)
 #            lower.y <- rep(lower.y, N)
 #    }
@@ -135,10 +135,10 @@ pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
 #    # biv.nt.prob does allow abs(rho) > 1
 #    stopifnot(all(abs(rho) <= 1))
 #
-#    # vectorize (this would be faster if the loop is in the fortran code!) 
+#    # vectorize (this would be faster if the loop is in the fortran code!)
 #    res <- sapply(seq_len(N), function(i)
 #                      p2_i(lower.x[i], lower.y[i],
-#                           upper.x[i], upper.y[i], 
+#                           upper.x[i], upper.y[i],
 #                           rho[i]))
 #    res
 #}

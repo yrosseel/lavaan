@@ -38,7 +38,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
             if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
                 warning(
 "lavaan WARNING: covariance matrix of latent variables\n",
-"                is not positive definite", txt.group, ";\n", 
+"                is not positive definite", txt.group, ";\n",
 "                use lavInspect(fit, \"cov.lv\") to investigate.")
                 result.ok <- FALSE
             }
@@ -59,7 +59,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
                                  only.values = TRUE)$values
                 if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
                     warning(
-"lavaan WARNING: the covariance matrix of the residuals of the observed\n", 
+"lavaan WARNING: the covariance matrix of the residuals of the observed\n",
 "                variables (theta) is not positive definite", txt.group, ";\n",
 "                use lavInspect(fit, \"theta\") to investigate.")
                     result.ok <- FALSE

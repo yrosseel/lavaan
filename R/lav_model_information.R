@@ -1,7 +1,7 @@
 # here, we compute various versions of the `information' matrix
 # NOTE:
 # 1) we ALWAYS compute the UNIT information (not the total information)
-# 
+#
 # 2) by default, we ignore the constraints (we deal with this when we
 #    take the inverse later on)
 
@@ -48,7 +48,7 @@ lav_model_information <- function(lavmodel       = NULL,
         E <- lav_model_information_expected(lavmodel = lavmodel,
             lavsamplestats = lavsamplestats, lavdata = lavdata,
             lavimplied = lavimplied, lavh1 = lavh1,
-            lavcache = lavcache, lavoptions = lavoptions, extra = extra, 
+            lavcache = lavcache, lavoptions = lavoptions, extra = extra,
             augmented = augmented, inverted = inverted, use.ginv = use.ginv)
     } else if(information == "first.order") {
         E <- lav_model_information_firstorder(lavmodel = lavmodel,
@@ -124,7 +124,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
             }
             Lp      <- lavdata@Lp[[g]]
 
-            Info.g <- 
+            Info.g <-
                 lav_mvnorm_cluster_information_expected_delta(Lp  = Lp,
                                                       Delta       = Delta[[g]],
                                                       Mu.W        = Mu.W,
@@ -141,7 +141,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
                 Info.group[[g]] <- fg * crossprod(Delta2)
             } else {
                 # full weight matrix
-                Info.group[[g]] <- 
+                Info.group[[g]] <-
                     fg * ( crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]] )
             }
         }
@@ -157,7 +157,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
 
     # 5. augmented information?
     if(augmented) {
-        Information <- 
+        Information <-
             lav_model_information_augment_invert(lavmodel    = lavmodel,
                                                  information = Information,
                                                  inverted    = inverted,
@@ -174,8 +174,8 @@ lav_model_information_expected <- function(lavmodel       = NULL,
 }
 
 # only for Mplus MLM
-lav_model_information_expected_MLM <- function(lavmodel       = NULL, 
-                                               lavsamplestats = NULL, 
+lav_model_information_expected_MLM <- function(lavmodel       = NULL,
+                                               lavsamplestats = NULL,
                                                Delta          = NULL,
                                                extra          = FALSE,
                                                augmented      = FALSE,
@@ -261,10 +261,10 @@ lav_model_information_observed <- function(lavmodel       = NULL,
 
     # observed.information:
     #     - "hessian": second derivative of objective function
-    #     - "h1": observed information matrix of saturated (h1) model, 
+    #     - "h1": observed information matrix of saturated (h1) model,
     #             pre- and post-multiplied by the jacobian of the model
     #             parameters (Delta), usually evaluated at the structured
-    #             sample statistics (but this depends on the h1.information 
+    #             sample statistics (but this depends on the h1.information
     #             option)
     if(!is.null(lavoptions) &&
        !is.null(lavoptions$observed.information) &&
@@ -285,7 +285,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
 
         # NOTE! What is the relationship between the Hessian of the objective
         # function, and the `information' matrix (unit or total)
-      
+
         # 1. in lavaan, we ALWAYS minimize, so the Hessian is already pos def
         # 2. currently, all estimators give unit information, except MML and PML
         #    so, no need to divide by N
@@ -314,7 +314,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
         Delta <- computeDelta(lavmodel = lavmodel)
 
         # 2. H1 information
-    
+
         A1 <- lav_model_h1_information_observed(lavmodel       = lavmodel,
                                                 lavsamplestats = lavsamplestats,
                                                 lavdata        = lavdata,
@@ -407,8 +407,8 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
     for(g in 1:lavsamplestats@ngroups) {
 
         # unweighted (needed in lav_test?)
-        B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]] 
-       
+        B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]]
+
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
         # compute information for this group
         Info.group[[g]] <- fg * B0.group[[g]]
@@ -473,7 +473,7 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
             lambda <- lambda[-inactive.idx]
         }
         if(nrow(H) > 0L) {
-            is.augmented <- TRUE   
+            is.augmented <- TRUE
             H0 <- matrix(0,nrow(H),nrow(H))
             H10 <- matrix(0, ncol(information), nrow(H))
             DL <- 2*diag(lambda, nrow(H), nrow(H))
@@ -481,12 +481,12 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
             E3 <- rbind( cbind(     information,  H10, t(H)),
                          cbind(          t(H10),   DL,  H0),
                          cbind(               H,   H0,  H0)  )
-            information <- E3   
+            information <- E3
         }
     }
 
     if(check.pd) {
-        eigvals <- eigen(information, symmetric = TRUE, 
+        eigvals <- eigen(information, symmetric = TRUE,
                          only.values = TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
             warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the model may not be identified")
@@ -498,10 +498,10 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
             # note: default tol in MASS::ginv is sqrt(.Machine$double.eps)
             #       which seems a bit too conservative
             #       from 0.5-20, we changed this to .Machine$double.eps^(3/4)
-            information <- 
-                try( MASS::ginv(information, 
-                                tol = .Machine$double.eps^(3/4))[1:npar, 
-                                                                 1:npar, 
+            information <-
+                try( MASS::ginv(information,
+                                tol = .Machine$double.eps^(3/4))[1:npar,
+                                                                 1:npar,
                                                                  drop = FALSE],
                      silent = TRUE )
         } else {
@@ -531,10 +531,10 @@ lav_model_information_expected_2l <- function(lavmodel       = NULL,
     #       Delta.sigma.j' W.j Delta.sigma.j +
     #       (nj-1) Delta.sigma.w' W.w Delta.sigma.w
     #
-    # where 
+    # where
     # - sigma.j = sigma.w + n.j * sigma.b
     # - W.w = 1/2 * D'(sigma.w.inv %x% sigma.w.inv) D
     # - W.j = 1/2 * D'(sigma.j.inv %x% sigma.j.inv) D
-    
-    
+
+
 }

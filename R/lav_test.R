@@ -1,11 +1,11 @@
-lav_model_test <- function(lavmodel       = NULL, 
-                           lavpartable    = NULL, 
+lav_model_test <- function(lavmodel       = NULL,
+                           lavpartable    = NULL,
                            lavsamplestats = NULL,
                            lavimplied     = NULL,
                            lavh1          = list(),
-                           lavoptions     = NULL, 
-                           x              = NULL, 
-                           VCOV           = NULL, 
+                           lavoptions     = NULL,
+                           x              = NULL,
+                           VCOV           = NULL,
                            lavcache       = NULL,
                            lavdata        = NULL,
                            lavloglik      = NULL,
@@ -25,7 +25,7 @@ lav_model_test <- function(lavmodel       = NULL,
     # degrees of freedom
     df <- lav_partable_df(lavpartable)
 
-    # handle equality constraints (note: we ignore inequality constraints, 
+    # handle equality constraints (note: we ignore inequality constraints,
     # active or not!)
     # we use the rank of con.jac (even if the constraints are nonlinear)
     if(nrow(lavmodel@con.jac) > 0L) {
@@ -53,7 +53,7 @@ lav_model_test <- function(lavmodel       = NULL,
                           refdistr="unknown",
                           pvalue=as.numeric(NA))
         return(TEST)
-    }    
+    }
 
     if(lavoptions$estimator == "PML" && test != "none") {
         PML <- ctr_pml_plrt(lavobject = NULL,
@@ -74,7 +74,7 @@ lav_model_test <- function(lavmodel       = NULL,
         } else {
             chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
         }
- 
+
     } else {
         # get fx.group
         fx <- attr(x, "fx")
@@ -88,7 +88,7 @@ lav_model_test <- function(lavmodel       = NULL,
             NFAC <- NFAC / 2
             NFAC <- NFAC - 1
             NFAC <- NFAC * 2
-        } 
+        }
         chisq.group <- fx.group * NFAC
     }
 
@@ -126,17 +126,17 @@ lav_model_test <- function(lavmodel       = NULL,
     }
 
     TEST[[1]] <- list(test="standard",
-                      stat=chisq, 
-                      stat.group=chisq.group, 
+                      stat=chisq,
+                      stat.group=chisq.group,
                       df=df,
                       refdistr=refdistr,
-                      pvalue=pvalue) 
+                      pvalue=pvalue)
 
     if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
                               "yuan.bentler.mplus",
                               "mean.var.adjusted", "scaled.shifted")) {
         TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
-                          df=df, refdistr=refdistr, pvalue=pvalue, 
+                          df=df, refdistr=refdistr, pvalue=pvalue,
                           scaling.factor=as.numeric(NA))
         return(TEST)
     }
@@ -184,10 +184,10 @@ lav_model_test <- function(lavmodel       = NULL,
         } else {
             warning("test option ", test, " not available for estimator PML")
         }
-    } else if(test %in% 
+    } else if(test %in%
           c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
           df > 0 && lavoptions$estimator != "PML") {
-   
+
         out <- lav_test_satorra_bentler(lavobject = NULL,
                          lavsamplestats = lavsamplestats,
                          lavmodel       = lavmodel,
@@ -204,7 +204,7 @@ lav_model_test <- function(lavmodel       = NULL,
                          method         = "ABA",
                          return.ugamma  = FALSE)
         TEST[[2]] <- out[[test]]
-                           
+
     } else if(test %in% c("yuan.bentler", "yuan.bentler.mplus") && df > 0 &&
               lavoptions$estimator != "PML") {
 
@@ -234,14 +234,14 @@ lav_model_test <- function(lavmodel       = NULL,
                 R <- 1000L
             }
             boot.type <- "bollen.stine"
-            BOOT.TEST <- 
+            BOOT.TEST <-
                 bootstrap.internal(object          = NULL,
-                                   lavmodel.       = lavmodel, 
-                                   lavsamplestats. = lavsamplestats, 
+                                   lavmodel.       = lavmodel,
+                                   lavsamplestats. = lavsamplestats,
                                    lavpartable.    = lavpartable,
-                                   lavoptions.     = lavoptions, 
+                                   lavoptions.     = lavoptions,
                                    lavdata.        = lavdata,
-                                   R               = R, 
+                                   R               = R,
                                    verbose         = lavoptions$verbose,
                                    type            = boot.type,
                                    FUN             = "test",

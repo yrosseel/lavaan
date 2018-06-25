@@ -1,7 +1,7 @@
 # export `lavaan' lav model description to third-party software
-# 
+#
 
-lavExport <- function(object, target="lavaan", prefix="sem", 
+lavExport <- function(object, target="lavaan", prefix="sem",
                       dir.name="lavExport", export=TRUE) {
 
     stopifnot(inherits(object, "lavaan"))
@@ -27,11 +27,11 @@ lavExport <- function(object, target="lavaan", prefix="sem",
         footer <- ""
         out <- paste(header, syntax, footer, sep="")
     } else if(target == "mplus") {
-        header <- lav_mplus_header(data.file=data.file, 
+        header <- lav_mplus_header(data.file=data.file,
             group.label=object@Data@group.label,
             ov.names=vnames(object@ParTable, "ov"),
             ov.ord.names=vnames(object@ParTable, "ov.ord"),
-            estimator=lav_mplus_estimator(object), 
+            estimator=lav_mplus_estimator(object),
             data.type=object@Data@data.type,
             nobs=object@Data@nobs[[1L]]
             )
@@ -49,7 +49,7 @@ lavExport <- function(object, target="lavaan", prefix="sem",
     } else {
         stop("lavaan ERROR: target", target, "has not been implemented yet")
     }
-    
+
     # export to file?
     if(export) {
         dir.create(path=dir.name)
@@ -116,7 +116,7 @@ lav2check <- function(lav) {
     #    lav$label <- paste("p",as.character(lav$eq.id), sep="")
     #    lav$label[lav$label == "p0"] <- ""
     #}
- 
+
     lav
 }
 
@@ -137,13 +137,13 @@ lav2lavaan <- lav2lav <- function(lav) {
     lav2 <- ifelse(lav$free != 0L,
                    ifelse(lav$label == "",
                           paste(lav$lhs, lav$op, lav$rhs, sep=""),
-                          paste(lav$lhs, lav$op, lav$label, "*", lav$rhs, 
+                          paste(lav$lhs, lav$op, lav$label, "*", lav$rhs,
                                 sep="")
                    ),
                    ifelse(lav$label == "",
-                          paste(lav$lhs, lav$op, lav$ustart, "*", lav$rhs, 
+                          paste(lav$lhs, lav$op, lav$ustart, "*", lav$rhs,
                                 sep=""),
-                          paste(lav$lhs, lav$op, lav$ustart, "*", lav$rhs, 
+                          paste(lav$lhs, lav$op, lav$ustart, "*", lav$rhs,
                                 "+", lav$label, "*", lav$rhs, sep="")
                    )
             )

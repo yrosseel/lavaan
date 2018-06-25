@@ -1,5 +1,5 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL, 
+lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
                               lavimplied = NULL) {
 
     nblocks       <- lavmodel@nblocks
@@ -32,7 +32,7 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
             } else {
                 wls.est <- c(lavimplied$th[[g]],
                              diag(lavimplied$cov[[g]])[ num.idx[[g]] ],
-                             lav_matrix_vech(lavimplied$cov[[g]], 
+                             lav_matrix_vech(lavimplied$cov[[g]],
                                              diagonal = FALSE)
                             )
            }
@@ -44,8 +44,8 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
                     # cbind(res.int, res.slopes) is t(Beta)
                     # so we need vecr
                 if(meanstructure) {
-                    wls.est <- c(lav_matrix_vecr( 
-                                     cbind(lavimplied$res.int[[g]], 
+                    wls.est <- c(lav_matrix_vecr(
+                                     cbind(lavimplied$res.int[[g]],
                                            lavimplied$res.slopes[[g]]) ),
                                  lav_matrix_vech(lavimplied$res.cov[[g]])
                                 )
@@ -56,9 +56,9 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
                 }
 
             } else {
-                
+
                 if(meanstructure) {
-                    wls.est <- c(lavimplied$mean[[g]], 
+                    wls.est <- c(lavimplied$mean[[g]],
                                  lav_matrix_vech(lavimplied$cov[[g]]))
                 } else {
                     wls.est <- lav_matrix_vech(lavimplied$cov[[g]])

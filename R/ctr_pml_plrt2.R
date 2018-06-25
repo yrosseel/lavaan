@@ -19,7 +19,7 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
 
     if(is.null(x)) {
-        # compute 'fx' = objective function value 
+        # compute 'fx' = objective function value
         # (NOTE: since 0.5-18, NOT divided by N!!)
         fx <- lav_model_objective(lavmodel       = lavmodel,
                                   lavsamplestats = lavsamplestats,
@@ -56,28 +56,28 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
     # we also need a `saturated model', but where the moments are based
     # on the model-implied sample statistics under H0
-    ModelSat2 <- 
+    ModelSat2 <-
         lav_partable_unrestricted(lavobject      = NULL,
                                   lavdata        = lavdata,
                                   lavoptions     = lavoptions,
                                   lavpta         = lavpta,
                                   lavsamplestats = NULL,
                                   sample.cov     = computeSigmaHat(lavmodel),
-                                  sample.mean    = computeMuHat(lavmodel), 
+                                  sample.mean    = computeMuHat(lavmodel),
                                   sample.th      = computeTH(lavmodel),
                                   sample.th.idx  = lavsamplestats@th.idx)
 
     Options2 <- Options
     Options2$optim.method          <- "none"
     Options2$optim.force.converged <- TRUE
-    fittedSat2 <- lavaan(ModelSat2, 
+    fittedSat2 <- lavaan(ModelSat2,
                         slotOptions = Options2,
                         slotSampleStats = lavsamplestats,
                         slotData = lavdata, slotCache = lavcache)
 
     # the code below was contributed by Myrsini Katsikatsou (Jan 2015)
 
-# for now, only a single group is supported:    
+# for now, only a single group is supported:
 # g = 1L
 
 
@@ -99,8 +99,8 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
 # inverted observed information ('H.inv')
 if(is.null(VCOV)) {
-    H0.inv <- lav_model_information_observed(lavmodel = lavmodel, 
-                  lavsamplestats = lavsamplestats, lavdata = lavdata, 
+    H0.inv <- lav_model_information_observed(lavmodel = lavmodel,
+                  lavsamplestats = lavsamplestats, lavdata = lavdata,
                   lavcache = lavcache, augmented = TRUE, inverted = TRUE)
 } else {
     H0.inv <- attr(VCOV, "E.inv")
@@ -110,7 +110,7 @@ if(is.null(VCOV)) {
 if(is.null(VCOV)) {
     J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
                   lavsamplestats = lavsamplestats, lavdata = lavdata,
-                  lavcache = lavcache)[,] 
+                  lavcache = lavcache)[,]
 } else {
     # we do not get J, but J.group, FIXME?
     J0 <- lav_model_information_firstorder(lavmodel = lavmodel,
@@ -145,7 +145,7 @@ H_at_vartheta0 <- solve(attr(VCOV.Sat2, "E.inv")) # should always work
 # H1tmp_prod1 <- H1.inv %*% J1
 H1tmp_prod1 <- InvG_at_vartheta0 %*% H_at_vartheta0
 H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
-E_tzz <- sum(diag(H1tmp_prod1)) 
+E_tzz <- sum(diag(H1tmp_prod1))
 var_tzz <- 2* sum(diag(H1tmp_prod2))
 
 
@@ -166,7 +166,7 @@ for(g in 1:lavsamplestats@ngroups) {
     # for now, we can assume that computeDelta will always return
     # the thresholds first, then the correlations
     #
-    # later, we should add a (working) add.labels = TRUE option to 
+    # later, we should add a (working) add.labels = TRUE option to
     # computeDelta
     th.names <- lavobject@pta$vnames$th[[g]]
     ov.names <- lavobject@pta$vnames$ov[[g]]
@@ -183,7 +183,7 @@ for(g in 1:lavsamplestats@ngroups) {
 drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
 
 # tmp_prod <- ( t(drhodpsi_mat) %*% H_at_vartheta0 %*%
-#                 drhodpsi_mat %*% InvG_attheta0 %*%  
+#                 drhodpsi_mat %*% InvG_attheta0 %*%
 #                 H_attheta0 %*% InvG_attheta0 )
 tmp_prod <- ( t(drhodpsi_mat) %*% H_at_vartheta0 %*%
                 drhodpsi_mat %*% H0.inv %*% J0 %*% G0.inv )
@@ -204,7 +204,7 @@ adjusted_df  <- (asym_mean_PLRTH0Sat*asym_mean_PLRTH0Sat) / (asym_var_PLRTH0Sat/
 pvalue <- 1-pchisq(FSA_PLRT_SEM, df=adjusted_df )
 
 list(PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
-     stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue, 
+     stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue,
      scaling.factor = scaling.factor)
 }
 ############################################################################

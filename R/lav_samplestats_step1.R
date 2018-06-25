@@ -1,13 +1,13 @@
-lav_samplestats_step1 <- function(Y, 
-                                  ov.names    = NULL, 
-                                  ov.types    = NULL, 
+lav_samplestats_step1 <- function(Y,
+                                  ov.names    = NULL,
+                                  ov.types    = NULL,
                                   ov.levels   = NULL,
-                                  ov.names.x  = character(0L), 
-                                  eXo         = NULL, 
+                                  ov.names.x  = character(0L),
+                                  eXo         = NULL,
                                   scores.flag = TRUE, # scores?
                                   group       = 1L) { # for error message
 
-    
+
     # just in case Y is a vector
     Y <- as.matrix(Y)
 
@@ -88,7 +88,7 @@ lav_samplestats_step1 <- function(Y,
                 SC.SL[,sl.idx] <- scores[,fit$slope.idx,drop=FALSE]
             }
             VAR[i] <- 1.0
-            TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]), 
+            TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]),
                                    sep="")
             TH.IDX[[i]] <- rep(i, length(TH[[i]]))
         } else {

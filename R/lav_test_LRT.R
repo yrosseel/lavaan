@@ -24,7 +24,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
-  
+
     modp <- if(length(dots))
         sapply(dots, is, "lavaan") else logical(0)
 
@@ -65,7 +65,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if(!is.null(model.names)) {
         names(mods) <- model.names
     } else {
-        names(mods) <- sapply(as.list(mcall)[which(c(FALSE, TRUE, modp))], 
+        names(mods) <- sapply(as.list(mcall)[which(c(FALSE, TRUE, modp))],
                               deparse)
     }
 
@@ -79,7 +79,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     #}
 
     # put them in order (using degrees of freedom)
-    ndf <- sapply(mods, function(x) x@test[[1]]$df)    
+    ndf <- sapply(mods, function(x) x@test[[1]]$df)
     mods <- mods[order(ndf)]
 
     # here come the checks
@@ -96,12 +96,12 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         #    stop("lavaan ERROR: models must be fit to the same data")
         #}
         # 2. nested models? *different* npars?
-     
+
         # TODO!
-        
+
         # 3. all meanstructure?
         mean.structure <- sapply(mods, inspect, "meanstructure")
-        if(sum(mean.structure) > 0L && 
+        if(sum(mean.structure) > 0L &&
            sum(mean.structure) < length(mean.structure)) {
             warning("lavaan WARNING: not all models have a meanstructure")
         }
@@ -109,7 +109,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
 
     mods.scaled <- unlist( lapply(mods, function(x) {
         any(c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-              "mean.var.adjusted", "scaled.shifted") %in% 
+              "mean.var.adjusted", "scaled.shifted") %in%
             unlist(sapply(slot(x, "test"), "[", "test")) ) }))
 
     if(all(mods.scaled)) {
@@ -124,8 +124,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     }
 
     # which models have used a MEANSTRUCTURE?
-    mods.meanstructure <- sapply(mods, function(x) { 
-                                 unlist(slot(slot(x, "Model"), 
+    mods.meanstructure <- sapply(mods, function(x) {
+                                 unlist(slot(slot(x, "Model"),
                                                      "meanstructure"))})
     if(all(mods.meanstructure)) {
         meanstructure <- "ok"
@@ -143,7 +143,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else {
         stop("lavaan ERROR: test type unknown: ", type)
     }
-    
+
 
     if(type == "chisq") {
         STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
@@ -156,9 +156,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     }
 
     # difference statistics
-    STAT.delta  <- c(NA, diff(STAT)) 
+    STAT.delta  <- c(NA, diff(STAT))
     Df.delta     <- c(NA, diff(Df))
-    
+
     # correction for scaled test statistics
     if(type == "chisq" && scaled) {
 
@@ -207,7 +207,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
             }
         } else if(method == "satorra.2000") {
             for(m in seq_len(length(mods) - 1L)) {
-                if(TEST %in% c("satorra.bentler", "yuan.bentler", 
+                if(TEST %in% c("satorra.bentler", "yuan.bentler",
                                "yuan.bentler.mplus")) {
                     Satterthwaite <- FALSE
                 } else {
@@ -255,7 +255,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                           "Chisq diff" = STAT.delta,
                           "Df diff" = Df.delta,
                           "Pr(>Chisq)" = Pvalue.delta,
-                          row.names = names(mods), 
+                          row.names = names(mods),
                           check.names = FALSE)
     }
 
@@ -278,7 +278,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if(type == "chisq") {
 
         if(scaled) {
-            attr(val, "heading") <- 
+            attr(val, "heading") <-
                 paste("Scaled Chi Square Difference Test (method = \"",
                       method, "\")\n", sep="")
         } else {

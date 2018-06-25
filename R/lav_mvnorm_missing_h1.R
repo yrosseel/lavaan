@@ -50,7 +50,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         #fx0 <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
         fx0 <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp,
                                                      Mu = Mu, Sigma = Sigma,
-                                                     log2pi = FALSE, 
+                                                     log2pi = FALSE,
                                                      minus.two = TRUE)/N
         cat("  EM iteration:", sprintf("%4d", 0),
             " fx = ", sprintf("%15.10f", fx0),
@@ -76,7 +76,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         tol <- 1e-6 # FIXME!
         if(any(ev$values < tol)) {
             #too.small <- which( ev$values < tol )
-            #ev$values[too.small] <- tol 
+            #ev$values[too.small] <- tol
             #ev$values <- ev$values + tol
             #Sigma <- ev$vectors %*% diag(ev$values) %*% t(ev$vectors)
 
@@ -85,7 +85,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         }
 
         # max absolute difference in parameter values
-        DELTA <- max(abs(c(Mu,  lav_matrix_vech(Sigma)) - 
+        DELTA <- max(abs(c(Mu,  lav_matrix_vech(Sigma)) -
                          c(Mu0, lav_matrix_vech(Sigma0))))
 
         # report fx
@@ -162,11 +162,11 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
 
     # information matrices
     info <- lav_mvnorm_missing_information_both(Y = Y, Mp = Mp, Mu = Mu,
-                Sigma = Sigma, Sinv.method = Sinv.method, 
+                Sigma = Sigma, Sinv.method = Sinv.method,
                 Sigma.inv = Sigma.inv, information = information)
 
     A <- info$Abeta
-    A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = FALSE, 
+    A.inv <- lav_matrix_symmetric_inverse(S = A, logdet = FALSE,
                                           Sinv.method = Sinv.method)
     B <- info$Bbeta
 

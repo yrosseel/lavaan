@@ -18,45 +18,45 @@ lav_model_hessian <- function(lavmodel       = NULL,
         x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
         x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
 
-        g.left <- 
-            lav_model_gradient(lavmodel       = lavmodel, 
-                               GLIST          = lav_model_x2GLIST(lavmodel = 
-                                                            lavmodel, x.left), 
-                               lavsamplestats = lavsamplestats, 
-                               lavdata        = lavdata, 
+        g.left <-
+            lav_model_gradient(lavmodel       = lavmodel,
+                               GLIST          = lav_model_x2GLIST(lavmodel =
+                                                            lavmodel, x.left),
+                               lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
                                lavcache       = lavcache,
-                               type           = "free", 
+                               type           = "free",
                                group.weight   = group.weight)
-        g.left2 <-    
+        g.left2 <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
                                                             lavmodel, x.left2),
-                               lavsamplestats = lavsamplestats, 
-                               lavdata        = lavdata, 
+                               lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
                                lavcache       = lavcache,
-                               type           = "free", 
+                               type           = "free",
                                group.weight   = group.weight)
 
-        g.right <- 
+        g.right <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
                                                             lavmodel, x.right),
-                               lavsamplestats = lavsamplestats, 
-                               lavdata        = lavdata, 
+                               lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
                                lavcache       = lavcache,
-                               type           = "free", 
+                               type           = "free",
                                group.weight   = group.weight)
 
-        g.right2 <- 
+        g.right2 <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
                                                             lavmodel, x.right2),
-                               lavsamplestats = lavsamplestats, 
-                               lavdata        = lavdata, 
+                               lavsamplestats = lavsamplestats,
+                               lavdata        = lavdata,
                                lavcache       = lavcache,
-                               type           = "free", 
+                               type           = "free",
                                group.weight   = group.weight)
-    
+
         Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
     }
 

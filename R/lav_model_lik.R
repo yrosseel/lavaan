@@ -51,7 +51,7 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
 
     # cholesky?
     #if(is.null(lavmodel@control$cholesky)) {
-        CHOLESKY <- TRUE    
+        CHOLESKY <- TRUE
     #} else {
     #    CHOLESKY <- as.logical(lavmodel@control$cholesky)
         #if(nfac > 1L && !CHOLESKY) {
@@ -79,7 +79,7 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
                         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
                         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
             } else {
-                EETA <- computeEETA.LISREL(MLIST = MLIST, 
+                EETA <- computeEETA.LISREL(MLIST = MLIST,
                         mean.x = sample.mean.x,
                         sample.mean = sample.mean,
                         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
@@ -99,11 +99,11 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
 
         # current value(s) for ETA
         #eta <- matrix(0, nrow = 1, ncol = ncol(MLIST$lambda))
-   
+
         # non-dummy elements -> quadrature points
         #eta[1L, -lv.dummy.idx] <- GH$x[q,,drop=FALSE]
         XQ <- GH$x[q,,drop=FALSE]
-     
+
         # rescale/unwhiten
         if(CHOLESKY) {
             # un-orthogonalize
@@ -149,7 +149,7 @@ lav_model_lik_mml <- function(lavmodel      = NULL,
                     ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
                     ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]])
         }
- 
+
         # compute fy.var, for this node (eta): P(Y_i =  y_i | eta_i, x_i)
         log.fy.var <- lav_predict_fy_internal(X = X, yhat = yhat,
                           TH = TH, THETA = THETA,

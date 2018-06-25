@@ -1,6 +1,6 @@
 # merge two parameter tables
 # - but allow different number of columns
-lav_partable_merge <- function(pt1 = NULL, pt2 = NULL, 
+lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                                remove.duplicated = FALSE,
                                fromLast=FALSE,
                                warn = TRUE) {
@@ -28,7 +28,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                      pt2[, c("lhs","op","rhs","block")])
     }
 
-    # if missing columns, provide default values of the right type 
+    # if missing columns, provide default values of the right type
     # (numeric/integer/character)
 
     # group
@@ -94,7 +94,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
         pt2$start <- rep(as.numeric(NA), length(pt2$lhs))
     }
 
-    # est 
+    # est
     if(is.null(pt1$est) && !is.null(pt2$est)) {
         pt1$est <- rep(0, length(pt1$lhs))
     } else if(is.null(pt2$est) && !is.null(pt1$est)) {
@@ -106,8 +106,8 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     if(remove.duplicated) {
         # if fromLast = TRUE, idx is in pt1
         # if fromLast = FALSE, idx is in pt2
-        idx <- which(duplicated(TMP, fromLast=fromLast)) 
-    
+        idx <- which(duplicated(TMP, fromLast=fromLast))
+
         if(length(idx)) {
             if(warn) {
                 warning("lavaan WARNING: duplicated parameters are ignored:\n",

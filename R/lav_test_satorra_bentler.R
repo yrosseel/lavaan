@@ -44,7 +44,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     # check method
     if(method == "default") {
         method <- "ABA"
-    } else if(!all(method %in% c("original", "orthogonal.complement", 
+    } else if(!all(method %in% c("original", "orthogonal.complement",
                                  "ABA"))) {
         warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `original'")
         method <- "ABA"
@@ -57,7 +57,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                      augmented = FALSE, inverted = FALSE,
                      lavsamplestats=lavsamplestats, extra = TRUE)
         } else {
-            E <- lav_model_information(lavmodel = lavmodel, 
+            E <- lav_model_information(lavmodel = lavmodel,
                      lavimplied = lavimplied,
                      lavsamplestats = lavsamplestats, lavdata = lavdata,
                      lavoptions = lavoptions, extra = TRUE)
@@ -99,8 +99,8 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
 
     if(method == "original") {
         out <- lav_test_satorra_bentler_trace_original(Gamma = Gamma,
-                   Delta = Delta, WLS.V = WLS.V, E.inv = E.inv, 
-                   ngroups = ngroups, nobs = lavsamplestats@nobs, 
+                   Delta = Delta, WLS.V = WLS.V, E.inv = E.inv,
+                   ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal, return.u = return.u,
                    return.ugamma = return.ugamma,
                    Satterthwaite = Satterthwaite)
@@ -204,7 +204,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
 
         # scaled test statistic global
         stat <- sum(stat.group)
-        
+
         TEST$scaled.shifted <-
             list(test            = "scaled.shifted",
                  stat            = stat,
@@ -240,7 +240,7 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
                                                     return.u      = FALSE,
                                                     return.ugamma = FALSE,
                                                     Satterthwaite = FALSE) {
- 
+
     # trace of UGamma per group
     trace.UGamma  <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
 
@@ -260,8 +260,8 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
             WLS.Vg <- diag(WLS.Vg)
         }
 
-        U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*% 
-                                t(Delta[[g]]) %*% WLS.Vg) 
+        U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
+                                t(Delta[[g]]) %*% WLS.Vg)
         trace.UGamma[g] <- sum(U * Gamma.g)
 
         if(return.u) {
@@ -279,7 +279,7 @@ lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
     trace.UGamma <- sum(trace.UGamma)
     trace.UGamma2 <- sum(trace.UGamma2)
 
-    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2, 
+    list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
          UGamma = UG, UfromUGamma = UfromUGamma)
 }
 
@@ -352,7 +352,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
 #
 #    = A1.inv %*% AGA1 -
 #      A1.inv %*% AGA1 %*% Delta %*% E.inv %*% tDelta %*% A1
-#    
+#
 # if only the trace is needed, we can use reduce the rhs (after the minus)
 # to AGA1 %*% Delta %*% E.inv %*% tDelta (eliminating A1 and A1.inv)
 
@@ -391,10 +391,10 @@ lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
         # note: we have AGA1 at the end, to avoid ending up with
         # a transposed matrix (both parts are non-symmetric)
         if(diagonal) {
-            UG <- t(Gamma.g * a1) - 
+            UG <- t(Gamma.g * a1) -
                   (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
         } else {
-            UG <- (Gamma.g %*% A1) - 
+            UG <- (Gamma.g %*% A1) -
                   (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
         }
 

@@ -12,7 +12,7 @@
 # YR 24 Mar 2016: first version
 # YR 20 Jan 2017: removed added 'N' in many equations, to be consistent with
 #                 lav_mvnorm_*
-# YR 18 Okt 2018: add 'information' functions, change arguments 
+# YR 18 Okt 2018: add 'information' functions, change arguments
 #                 (X -> eXo, Sigma -> res.cov, Beta -> res.int + res.slopes)
 
 # 1. loglikelihood
@@ -118,7 +118,7 @@ lav_mvreg_loglik_samplestats <- function(sample.res.int    = NULL,
     # tr(res.cov^{-1} %*% S)
     DIST1 <- sum(res.cov.inv * sample.res.cov)
 
-    # tr( res.cov^{-1} (B-beta)' X'X (B-beta) 
+    # tr( res.cov^{-1} (B-beta)' X'X (B-beta)
     Diff <- sample.B - Beta
     DIST2 <- sum(res.cov.inv * crossprod(Diff, sample.xx) %*% Diff)
 
@@ -272,7 +272,7 @@ lav_mvreg_scores_beta <- function(Y           = NULL,
     # post-multiply with res.cov.inv
     RES <- RES %*% res.cov.inv
 
-    SC.Beta <- X[,  rep(1:P, times = Q), drop = FALSE] * 
+    SC.Beta <- X[,  rep(1:P, times = Q), drop = FALSE] *
                RES[,rep(1:Q,  each = P), drop = FALSE]
 
     SC.Beta
@@ -295,24 +295,24 @@ lav_mvreg_scores_vech_sigma <- function(Y           = NULL,
     if(is.null(Beta)) {
         Beta <- rbind(matrix(res.int, nrow = 1), t(res.slopes))
     }
-    
+
     # res.cov.inv
     if(is.null(res.cov.inv)) {
         # invert res.cov
         res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
-    }                       
-        
+    }
+
     # vech(res.cov.inv)
     isigma <- lav_matrix_vech(res.cov.inv)
-    
+
     # substract X %*% Beta
     RES <- Y - X %*% Beta
 
     # postmultiply with res.cov.inv
     RES <- RES %*% res.cov.inv
-    
-    # tcrossprod 
+
+    # tcrossprod
     idx1 <- lav_matrix_vech_col_idx(Q)
     idx2 <- lav_matrix_vech_row_idx(Q)
     Z <- RES[,idx1] * RES[,idx2]
@@ -349,11 +349,11 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
         # invert res.cov
         res.cov.inv <- lav_matrix_symmetric_inverse(S = res.cov, logdet = FALSE,
                                                   Sinv.method = Sinv.method)
-    }                       
-        
+    }
+
     # vech(res.cov.inv)
     isigma <- lav_matrix_vech(res.cov.inv)
-    
+
     # substract X %*% Beta
     RES <- Y - X %*% Beta
 
@@ -362,8 +362,8 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y           = NULL,
 
     SC.Beta <- X[,  rep(1:P, times = Q), drop = FALSE] *
                RES[,rep(1:Q,  each = P), drop = FALSE]
-    
-    # tcrossprod 
+
+    # tcrossprod
     idx1 <- lav_matrix_vech_col_idx(Q)
     idx2 <- lav_matrix_vech_row_idx(Q)
     Z <- RES[,idx1] * RES[,idx2]
@@ -394,8 +394,8 @@ lav_mvreg_logl_hessian_data <- function(Y           = NULL,
 
     # observed information
     observed <- lav_mvreg_information_observed_data(Y = Y, eXo = eXo,
-        Beta = Beta, res.int = res.int, res.slopes = res.slopes, 
-        res.cov = res.cov, res.cov.inv = res.cov.inv, 
+        Beta = Beta, res.int = res.int, res.slopes = res.slopes,
+        res.cov = res.cov, res.cov.inv = res.cov.inv,
         Sinv.method = Sinv.method)
 
     # hessian
@@ -423,9 +423,9 @@ lav_mvreg_logl_hessian_samplestats <- function(
     # information
     observed <- lav_mvreg_information_observed_samplestats(
         sample.res.int = sample.res.int, sample.res.slopes = sample.res.slopes,
-        sample.res.cov = sample.res.cov, sample.mean.x = sample.mean.x, 
-        sample.cov.x = sample.cov.x, Beta = Beta, res.int = res.int, 
-        res.slopes = res.slopes, res.cov = res.cov, Sinv.method = Sinv.method, 
+        sample.res.cov = sample.res.cov, sample.mean.x = sample.mean.x,
+        sample.cov.x = sample.cov.x, Beta = Beta, res.int = res.int,
+        res.slopes = res.slopes, res.cov = res.cov, Sinv.method = Sinv.method,
         res.cov.inv = res.cov.inv)
 
     # hessian
@@ -510,7 +510,7 @@ lav_mvreg_information_observed_data <- function(Y           = NULL,
     lav_mvreg_information_observed_samplestats(sample.res.int = sample.res.int,
         sample.res.slopes = sample.res.slopes, sample.res.cov = sample.res.cov,
         sample.mean.x = sample.mean.x, sample.cov.x = sample.cov.x,
-        Beta = Beta, res.int = res.int, res.slopes = res.slopes, 
+        Beta = Beta, res.int = res.int, res.slopes = res.slopes,
         res.cov = res.cov, Sinv.method = Sinv.method, res.cov.inv = res.cov.inv)
 }
 
@@ -543,7 +543,7 @@ lav_mvreg_information_observed_samplestats <-
                               sample.cov.x + tcrossprod(sample.mean.x)) )
 
     # W.tilde = S + t(B - Beta) %*% (1/N)*X'X %*% (B - Beta)
-    W.tilde <- ( sample.res.cov + 
+    W.tilde <- ( sample.res.cov +
                  t(sample.B - Beta) %*% sample.xx %*% (sample.B - Beta) )
 
     # res.cov.inv
@@ -580,8 +580,8 @@ lav_mvreg_information_firstorder <- function(Y           = NULL,
     N <- NROW(Y)
 
     # scores
-    SC <- lav_mvreg_scores_beta_vech_sigma(Y = Y, eXo = eXo, Beta = Beta, 
-              res.int = res.int, res.slopes = res.slopes, res.cov = res.cov, 
+    SC <- lav_mvreg_scores_beta_vech_sigma(Y = Y, eXo = eXo, Beta = Beta,
+              res.int = res.int, res.slopes = res.slopes, res.cov = res.cov,
               Sinv.method = Sinv.method, res.cov.inv = res.cov.inv)
 
     crossprod(SC)/N
