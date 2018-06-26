@@ -41,9 +41,24 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     # the parameter values are from H0
     objH1_h0 <- lav_test_diff_m10(m1 = fit_objH1, m0 = fit_objH0, test = FALSE)
 
-    # EqMat
-    #EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
-    EqMat <- fit_objH0@Model@ceq.JAC
+    # EqMat # YR: from 0.6-2, use lav_test_diff_A() again
+    #             this should allow us to test models that are
+    #             nested in the covariance matrix sense, but not
+    #             in the parameter (table) sense
+    EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
+    #if (equalConstr == TRUE) {
+    #    EqMat <- fit_objH0@Model@ceq.JAC
+    #} else {
+    #    PT0 <- fit_objH0@ParTable
+    #    PT1 <- fit_objH1@ParTable
+    #    h0.par.idx <- which(PT1$free > 0 & !(PT0$free > 0))
+    #    tmp.ind <- PT1$free[ h0.par.idx ]
+    #
+    #    no.par0 <- length(tmp.ind)
+    #    tmp.ind2 <- cbind(1:no.par0, tmp.ind ) # matrix indices
+    #    EqMat <- matrix(0, nrow=no.par0, ncol=fit_objH1@Model@nx.free)
+    #    EqMat[tmp.ind2] <- 1
+    #}
 
     # DEBUG YR -- eliminate the constraints also present in H1
     #          -- if we do this, there is no need to use MASS::ginv later

@@ -210,10 +210,10 @@ lav_start <- function(start.method    = "default",
                                                       ov.idx, drop = FALSE]
                     } else {
                         if(conditional.x) {
-                            COV <- lavsamplestats@res.cov[[g]][ov.idx, 
+                            COV <- lavsamplestats@res.cov[[g]][ov.idx,
                                                       ov.idx, drop = FALSE]
                         } else {
-                            COV <- lavsamplestats@cov[[g]][ov.idx, 
+                            COV <- lavsamplestats@cov[[g]][ov.idx,
                                                       ov.idx, drop = FALSE]
                         }
                     }
@@ -236,7 +236,7 @@ lav_start <- function(start.method    = "default",
                     #    if(length(y.idx) > 0L) {
                     #        # how much explained variance do we expect?
                     #        # we take 0.50
-                    #        start[var.f.idx] <- 0.5 * start[var.f.idx] 
+                    #        start[var.f.idx] <- 0.5 * start[var.f.idx]
                     #    }
                     #    # no negative variances (we get these if we have an
                     #    # inconsistent triad (eg, covariance signs are +,+,-)
@@ -254,7 +254,7 @@ lav_start <- function(start.method    = "default",
                     #                 lavpartable$group == group.values[g] &
                     #                 lavpartable$rhs == lavpartable$lhs)
                     #start[res.idx] <- fabin$theta
-                    
+
                     # negative variances?
                     #neg.idx <- which(start[res.idx] < 0)
                     #if(length(neg.idx) > 0L) {

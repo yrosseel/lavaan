@@ -88,7 +88,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
         theta <- theta[1]
     } else if(nvar == 2L) {
         lambda <- lambda[1:2]
-        theta <- theta[1:2] 
+        theta <- theta[1:2]
         psi <- psi / 2 # smaller works better?
     }
 

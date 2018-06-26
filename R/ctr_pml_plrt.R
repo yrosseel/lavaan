@@ -159,8 +159,13 @@ if(lavmodel@eq.constraints) {
         }
     }
 } else {
-    Inv_of_InvH_to_psipsi_attheta0 <-
-        solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
+    # YR 26 June 2018: check for empty index.par (eg independence model)
+    if(length(index.par) > 0L) {
+        Inv_of_InvH_to_psipsi_attheta0 <-
+            solve(InvH_to_psipsi_attheta0) #[H^psipsi(theta0)]^(-1)
+    } else {
+        Inv_of_InvH_to_psipsi_attheta0 <- matrix(0, 0, 0)
+    }
 }
 
 H0tmp_prod1 <- Inv_of_InvH_to_psipsi_attheta0 %*% InvG_to_psipsi_attheta0
