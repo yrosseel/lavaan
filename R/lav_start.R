@@ -150,86 +150,8 @@ lav_start <- function(start.method    = "default",
         lv.names <- unique(unlist(lv.names))
         ov.names.x <- unique(unlist(ov.names.x))
 
-        # g1) factor loadings
-        if(start.initial %in% c("lavaan", "mplus") &&
-           model.type %in% c("sem", "cfa") &&
-           #!categorical &&
-           sum( lavpartable$ustart[ lavpartable$op == "=~" &
-                                    lavpartable$group == group.values[g] ],
-                                    na.rm = TRUE) == length(lv.names) ) {
-            # only if all latent variables have a reference item,
-            # we use the fabin3 estimator (2sls) of Hagglund (1982)
-            # per factor
-            # 9 Okt 2013: if only 2 indicators, we use the regression
-            # coefficient (y=marker, x=2nd indicator)
-            for(f in lv.names) {
-                free.idx <- which( lavpartable$lhs == f &
-                                   lavpartable$op == "=~" &
-                                   lavpartable$group == group.values[g] &
-                                   lavpartable$free > 0L)
 
-                user.idx <- which( lavpartable$lhs == f &
-                                   lavpartable$op == "=~" &
-                                   lavpartable$group == group.values[g] )
-                # no second order
-                if(any(lavpartable$rhs[user.idx] %in% lv.names)) next
-
-                # get observed indicators for this latent variable
-                ov.idx <- match(lavpartable$rhs[user.idx], ov.names)
-                if(length(ov.idx) > 2L && !any(is.na(ov.idx))) {
-                    if(lavsamplestats@missing.flag && nlevels == 1L) {
-                        COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
-                                                                    ov.idx]
-                    } else {
-                        if(conditional.x) {
-                            COV <- lavsamplestats@res.cov[[g]][ov.idx,ov.idx]
-                        } else {
-                            COV <- lavsamplestats@cov[[g]][ov.idx,ov.idx]
-                        }
-                    }
-                    fabin <- lav_cfa_1fac_fabin(COV, lambda.only = TRUE)$lambda
-                    start[user.idx] <- fabin
-                } else if(length(free.idx) == 1L && length(ov.idx) == 2L) {
-                    if(conditional.x) {
-                        REG2 <- ( lavsamplestats@res.cov[[g]][ov.idx[1],
-                                                              ov.idx[2]] /
-                                  lavsamplestats@res.cov[[g]][ov.idx[1],
-                                                              ov.idx[1]] )
-                    } else {
-                        REG2 <- ( lavsamplestats@cov[[g]][ov.idx[1],
-                                                          ov.idx[2]] /
-                                  lavsamplestats@cov[[g]][ov.idx[1],
-                                                          ov.idx[1]] )
-                    }
-                    start[free.idx] <- REG2
-                }
-
-                # standardized?
-                var.f.idx <- which(lavpartable$lhs == f &
-                                   lavpartable$op == "~~" &
-                                   lavpartable$group == group.values[g] &
-                                   lavpartable$rhs == f)
-                if(length(var.f.idx) > 0L &&
-                   lavpartable$free[var.f.idx] == 0 &&
-                   lavpartable$ustart[var.f.idx] == 1) {
-                   # make sure factor loadings are between -0.7 and 0.7
-                    x <- start[user.idx]
-                    start[user.idx] <- (x / max(abs(x))) * 0.7
-                }
-            }
-        } # fabin
-
-        if(model.type == "unrestricted") {
-           # fill in 'covariances' from lavsamplestats
-            cov.idx <- which(lavpartable$group == group.values[g]             &
-                             lavpartable$op    == "~~"          &
-                             lavpartable$lhs != lavpartable$rhs)
-            lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
-            rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
-            start[cov.idx] <- lavsamplestats@cov[[g]][ cbind(lhs.idx, rhs.idx) ]
-        }
-
-        # 2g) residual ov variances (including exo, to be overriden)
+        # residual ov variances (including exo/ind, to be overriden)
         ov.var.idx <- which(lavpartable$group == group.values[g]             &
                             lavpartable$op    == "~~"          &
                             lavpartable$lhs %in% ov.names.num  &
@@ -255,6 +177,101 @@ lav_start <- function(start.method    = "default",
                     (1.0 - 0.50)*diag(lavsamplestats@cov[[g]])[sample.var.idx]
                 }
             }
+        }
+
+        # 1-fac measurement models: loadings, psi, theta
+        if(start.initial %in% c("lavaan", "mplus") &&
+           model.type %in% c("sem", "cfa") ) {
+            # fabin3 estimator (2sls) of Hagglund (1982) per factor
+            for(f in lv.names) {
+                lambda.idx <- which( lavpartable$lhs == f &
+                                     lavpartable$op == "=~" &
+                                     lavpartable$group == group.values[g] )
+                # standardized?
+                std.lv <- FALSE
+                var.f.idx <- which(lavpartable$lhs == f &
+                                   lavpartable$op == "~~" &
+                                   lavpartable$group == group.values[g] &
+                                   lavpartable$rhs == f)
+                if(length(var.f.idx) > 0L &&
+                   lavpartable$free[var.f.idx] == 0 &&
+                   lavpartable$ustart[var.f.idx] == 1) {
+                    std.lv <- TRUE
+                }
+
+                # no second order
+                if(any(lavpartable$rhs[lambda.idx] %in% lv.names)) next
+
+                # get observed indicators for this latent variable
+                ov.idx <- match(lavpartable$rhs[lambda.idx], ov.names)
+                if(length(ov.idx) > 0L && !any(is.na(ov.idx))) {
+                    if(lavsamplestats@missing.flag && nlevels == 1L) {
+                        COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
+                                                      ov.idx, drop = FALSE]
+                    } else {
+                        if(conditional.x) {
+                            COV <- lavsamplestats@res.cov[[g]][ov.idx, 
+                                                      ov.idx, drop = FALSE]
+                        } else {
+                            COV <- lavsamplestats@cov[[g]][ov.idx, 
+                                                      ov.idx, drop = FALSE]
+                        }
+                    }
+
+                    # fabin for 1-factor
+                    fabin <- lav_cfa_1fac_fabin(COV, std.lv = std.lv,
+                                                lambda.only = TRUE,
+                                                method = "fabin3")
+
+                    # factor loadings
+                    start[lambda.idx] <- fabin$lambda
+
+                    # factor variance
+                    #if(!std.lv) {
+                    #    start[var.f.idx] <- fabin$psi
+                    #    # if residual var, make smaller
+                    #    y.idx <- which(lavpartable$lhs == f &
+                    #                   lavpartable$group == group.values[g] &
+                    #                   lavpartable$op == "~")
+                    #    if(length(y.idx) > 0L) {
+                    #        # how much explained variance do we expect?
+                    #        # we take 0.50
+                    #        start[var.f.idx] <- 0.5 * start[var.f.idx] 
+                    #    }
+                    #    # no negative variances (we get these if we have an
+                    #    # inconsistent triad (eg, covariance signs are +,+,-)
+                    #    if(start[var.f.idx] < 0) {
+                    #        start[var.f.idx] <- 0.05
+                    #    }
+                    #}
+
+                    # NOTE: fabin (sometimes) gives residual variances
+                    # that are larger than the original variances...
+
+                    # residual variances -- order?
+                    #res.idx <- which(lavpartable$lhs %in% ov.names[ov.idx] &
+                    #                 lavpartable$op == "~~" &
+                    #                 lavpartable$group == group.values[g] &
+                    #                 lavpartable$rhs == lavpartable$lhs)
+                    #start[res.idx] <- fabin$theta
+                    
+                    # negative variances?
+                    #neg.idx <- which(start[res.idx] < 0)
+                    #if(length(neg.idx) > 0L) {
+                    #    start[res.idx][neg.idx] <- 0.05
+                    #}
+                }
+            }
+        } # fabin
+
+        if(model.type == "unrestricted") {
+           # fill in 'covariances' from lavsamplestats
+            cov.idx <- which(lavpartable$group == group.values[g]             &
+                             lavpartable$op    == "~~"          &
+                             lavpartable$lhs != lavpartable$rhs)
+            lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
+            rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
+            start[cov.idx] <- lavsamplestats@cov[[g]][ cbind(lhs.idx, rhs.idx) ]
         }
 
         # variances of ordinal variables - set to 1.0

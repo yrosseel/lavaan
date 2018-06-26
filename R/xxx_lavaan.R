@@ -1241,7 +1241,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # new in 0.6-2
     # FIXME: not scale independent (should use solve(Hessian) %*% g)
     # but Hessian is not always available (or expensive to compute)
-    if("gradient" %in% lavoptions$check && lavTech(lavaan, "converged")) {
+    if("gradient" %in% lavoptions$check && lavTech(lavaan, "converged") &&
+       length(constraints) == 0L) {
         grad <- lavInspect(lavaan, "optim.gradient")
         large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
         if(length(large.idx) > 0L) {

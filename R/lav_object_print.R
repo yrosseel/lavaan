@@ -66,6 +66,7 @@ lav_object_print_optim <- function(object) {
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     }
 
+    cat("\n")
 }
 
 

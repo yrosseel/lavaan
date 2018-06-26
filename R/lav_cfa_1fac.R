@@ -33,7 +33,27 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     # check sample cov
     stopifnot(is.matrix(sample.cov))
     nRow <- NROW(sample.cov); nCol <- NCOL(sample.cov)
-    stopifnot(nRow == 3L, nCol == 3L)
+    stopifnot(nRow == nCol, nRow < 4L, nCol < 4L)
+    nvar <- nRow
+
+    # we expect a 3x3 sample covariance matrix
+    # however, if we get a 2x2 (or 1x1 covariance matrix), do something
+    # useful anyways...
+    if(nvar == 1L) {
+        # lambda = 1, theta = 0
+        sample.cov <- matrix(1, 3L, 3L) * sample.cov[1,1]
+    } else if(nvar == 2L) {
+        # hm, we could force both lambda's to be 1, but if the second
+        # one is negative, this will surely lead to non-convergence issues
+        #
+        # just like lavaan < 0.6.2, we will use the regression of y=marker
+        # on x=item2
+        mean.2var <- mean(diag(sample.cov))
+        max.var <- max(diag(sample.cov))
+        extra <- c(mean.2var, sample.cov[2,1])
+        sample.cov <- rbind( cbind(sample.cov, extra, deparse.level = 0),
+                             c(extra, max.var), deparse.level = 0)
+    }
 
     s11 <- sample.cov[1,1]; s22 <- sample.cov[2,2]; s33 <- sample.cov[3,3]
     stopifnot(s11 > 0, s22 > 0, s33 > 0)
@@ -62,6 +82,16 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
         psi <- 1
     }
 
+    # special cases
+    if(nvar == 1L) {
+        lambda <- lambda[1]
+        theta <- theta[1]
+    } else if(nvar == 2L) {
+        lambda <- lambda[1:2]
+        theta <- theta[1:2] 
+        psi <- psi / 2 # smaller works better?
+    }
+
     list(lambda = lambda, theta = theta, psi = psi)
 }
 
@@ -70,12 +100,18 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
                                std.lv = FALSE, extra = NULL) {
 
+    # check arguments
+    if(std.lv) {
+        lambda.only = FALSE # we need psi
+    }
+
     nvar <- NCOL(S)
 
     # catch nvar < 4
     if(nvar < 4L) {
-        lav_cfa_1fac_3ind(sample.cov = S, std.lv = std.lv,
-                          warn.neg.triad = FALSE)
+        out <- lav_cfa_1fac_3ind(sample.cov = S, std.lv = std.lv,
+                                 warn.neg.triad = FALSE)
+        return(out)
     }
 
     # 1. lambda
