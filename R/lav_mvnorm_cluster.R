@@ -1,4 +1,4 @@
-# loglikelihood clustered data
+# loglikelihood clustered/twolevel data
 
 # YR: first version around Feb 2017
 

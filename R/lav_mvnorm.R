@@ -22,6 +22,7 @@
 # YR 24 Mar 2016: added firstorder information, hessian logl
 # YR 19 Jan 2017: added lav_mvnorm_inverted_information_expected
 # YR 04 Okt 2018: adding wt= argument, and missing meanstructure=
+# YR 27 Jun 2018: adding cluster.idx= argument for information_firstorder
 
 # 0. densities
 lav_mvnorm_dmvnorm <- function(Y             = NULL,
@@ -746,6 +747,7 @@ lav_mvnorm_information_observed_samplestats <-
 # 5c: unit first-order information h0
 lav_mvnorm_information_firstorder <- function(Y             = NULL,
                                               wt            = NULL,
+                                              cluster.idx   = NULL,
                                               Mu            = NULL,
                                               Sigma         = NULL,
                                               x.idx         = NULL,
@@ -768,6 +770,12 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
         SC <- lav_mvnorm_scores_vech_sigma(Y = Y, wt = wt,
                   Mu = Mu, Sigma = Sigma,
                   Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+    }
+
+    if(!is.null(cluster.idx)) {
+        # take the sum within each cluster
+        SC <- unname(as.matrix(aggregate(SC, by = list(cluster.idx),
+                               FUN = sum, na.rm = TRUE)[,-1]))
     }
 
     crossprod(SC)/N

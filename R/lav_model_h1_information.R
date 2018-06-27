@@ -500,12 +500,37 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         stop("lavaan ERROR: information = \"first.order\" not available for estimator ", sQuote(estimator))
     }
 
+    # structured?
     if(!is.null(lavoptions) &&
        !is.null(lavoptions$h1.information) &&
        lavoptions$h1.information == "unstructured") {
         structured <- FALSE
     } else {
         structured <- TRUE
+    }
+
+    # clustered?
+    if(!is.null(lavoptions) &&
+       !is.null(lavoptions$clustered) &&
+       lavoptions$clustered) {
+        clustered <- TRUE
+        if(is.null(lavdata@Lp[[1]])) {
+            stop("lavaan ERROR: lavdata@Lp is empty, while clustered = TRUE")
+        }
+        if(estimator == "PML") {
+            stop("lavaan ERROR: clustered information is not (yet) available when estimator = \"PML\"")
+        }
+        if(lavsamplestats@missing.flag) {
+            stop("lavaan ERROR: clustered information is not (yet) available when missing = \"ML\"")
+        }
+        if(lavmodel@conditional.x) {
+            stop("lavaan ERROR: clustered information is not (yet) available when conditional.x = TRUE")
+        }
+        if(!structured) {
+            stop("lavaan ERROR: clustered information is not (yet) available when h1.information = \"unstructured\"")
+        }
+    } else {
+        clustered <- FALSE
     }
 
     # structured? compute model-implied statistics
@@ -639,6 +664,8 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                                   Y = lavdata@X[[g]],
                                   Mu = MEAN, Sigma = lavimplied$cov[[g]],
                                   wt = WT,
+                                  cluster.idx =
+                                      lavdata@Lp[[g]]$cluster.idx[[2]],
                                   x.idx = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure)
                     } else {

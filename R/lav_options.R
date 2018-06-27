@@ -260,6 +260,49 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: representation must be \"LISREL\" or \"EQS\" \n")
     }
 
+    # clustered
+    # brute-force override (for now)
+    if(opt$clustered && !opt$multilevel) {
+        #opt$meanstructure <- TRUE
+        opt$missing <- "listwise"
+
+        # test
+        if(opt$test == "default") {
+            opt$test <- "yuan.bentler"
+        } else if(opt$test %in% c("none", "standard",
+                                  "yuan.bentler","yuan.bentler.mplus")) {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$test <- "yuan.bentler"
+        } else {
+            stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" or \"yuan.bentler\" in the clustered case")
+        }
+
+        # se
+        if(opt$se == "default") {
+            opt$se <- "robust.cluster"
+        } else if(opt$se %in% c("none", "standard", "robust.cluster")) {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$se <- "robust.cluster"
+        } else {
+            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" or \"robust.cluster\" in the clustered case")
+        }
+
+        # information
+        if(opt$information == "default") {
+            opt$information <- "observed"
+        }
+        #} else if(opt$information %in% c("observed", "first.order")) {
+        #    # nothing to do
+        #} else {
+        #    stop("lavaan ERROR: `information' argument must be \"observed\" in the multilevel case (for now)")
+        #}
+
+        #opt$fixed.x = FALSE
+        #opt$control <- list(gradient = "numerical")
+    }
+
     # multilevel
     # brute-force override (for now)
     if(opt$multilevel) {
@@ -271,7 +314,7 @@ lav_options_set <- function(opt = NULL) {
             opt$test <- "standard"
         } else if(opt$test %in% c("none", "standard","yuan.bentler")) {
             # nothing to do
-        } else if(opt$est == "robust") {
+        } else if(opt$se == "robust") {
             opt$test <- "yuan.bentler"
         } else {
             stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" or \"yuan.bentler\" in the multilevel case")
@@ -534,6 +577,7 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "standard"
         } else if(opt$se %in% c("bootstrap", "none",
                   "external", "standard", "robust.huber.white",
+                  "robust.cluster",
                   "two.stage", "robust.two.stage", "robust.sem")) {
             # nothing to do
         } else if(opt$se == "first.order") {

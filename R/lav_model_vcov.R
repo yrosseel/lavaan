@@ -405,7 +405,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                        lavoptions     = lavoptions,
                                        use.ginv       = use.ginv)
 
-    } else if(se == "robust.huber.white") {
+    } else if(se == "robust.huber.white" || se == "robust.cluster") {
         NVarCov <-
             lav_model_nvcov_robust_sandwich(lavmodel = lavmodel,
                                             lavsamplestats = lavsamplestats,

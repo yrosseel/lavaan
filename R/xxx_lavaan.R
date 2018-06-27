@@ -257,22 +257,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ngroups <- lav_partable_ngroups(FLAT)
             ov.names.l <- vector("list", length = ngroups)
             for(g in 1:ngroups) {
+                # note: lavNames() will return a list if any level:
                 ov.names.l[[g]] <- lavNames(FLAT, "ov", group = g)
             }
         } else {
             # no level: in model syntax
             ov.names.l <- list()
-            if(length(cluster) > 0L) {
-                stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)")
-            }
         }
     }
 
     # sanity check ordered argument (just in case, add lhs variables names)
     ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
-
-
-
 
 
 
@@ -326,8 +321,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             opt$categorical <- FALSE
         }
 
+        # clustered?
+        if(length(cluster) > 0L) {
+            opt$clustered <- TRUE
+        } else {
+            opt$clustered <- FALSE
+        }
+
         # multilevel?
-        if(length(ov.names.l) > 0L) {
+        if(length(ov.names.l) > 0L && length(ov.names.l[[1]]) > 1L) {
             opt$multilevel <- TRUE
         } else {
             opt$multilevel <- FALSE
