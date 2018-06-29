@@ -302,6 +302,7 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
                                                  wt             = NULL,
                                                  sample.cov     = NULL,
                                                  x.idx          = NULL,
+                                                 cluster.idx    = NULL,
                                                  Sinv.method    = "eigen",
                                                  sample.cov.inv = NULL,
                                                  Gamma          = NULL,
@@ -319,13 +320,15 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
             Gamma <- lav_samplestats_Gamma(Y, x.idx = x.idx, fixed.x = TRUE,
+                                           cluster.idx = cluster.idx,
                                            meanstructure = meanstructure)
         } else {
-            Gamma <- lav_samplestats_Gamma(Y, meanstructure = meanstructure)
+            Gamma <- lav_samplestats_Gamma(Y, meanstructure = meanstructure,
+                                           cluster.idx = cluster.idx)
         }
     }
 
-    # sample.cov.in
+    # sample.cov.inv
     if(is.null(sample.cov.inv)) {
         # invert sample.cov
         if(is.null(sample.cov)) {

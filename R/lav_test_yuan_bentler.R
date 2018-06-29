@@ -142,7 +142,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     chisq.scaled         <- sum(chisq.group / scaling.factor)
     pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
 
-    ndat <- sum(sapply(A1.group, NCOL))
+    ndat <- sum(attr(trace.UGamma, "h1.ndat"))
     npar <- lavmodel@nx.free
 
     scaling.factor.h1    <- sum( attr(trace.UGamma, "h1") ) / ndat
@@ -197,6 +197,7 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
     trace.UGamma2 <- numeric( lavsamplestats@ngroups )
     trace.h1      <- numeric( lavsamplestats@ngroups )
     trace.h0      <- numeric( lavsamplestats@ngroups )
+    h1.ndat       <- numeric( lavsamplestats@ngroups )
 
     for(g in 1:lavsamplestats@ngroups) {
 
@@ -208,22 +209,6 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
         DELTA <- Delta[[g]]
 
         # mask independent 'fixed-x' variables
-        # note: this only affects the saturated H1 model
-        #if(length(x.idx[[g]]) > 0L) {
-        #    nvar <- ncol(lavsamplestats@cov[[g]])
-        #    idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-        #                               meanstructure=meanstructure, type="all")
-        #    A1 <- A1[idx, idx, drop = FALSE]
-        #    B1 <- B1[idx, idx, drop = FALSE]
-        #    DELTA <- DELTA[idx, , drop = FALSE]
-        #}
-        # note: if we have x.idx, and we do not remove the zero cols/rows,
-        # we should use a generalized inverse instead
-        #
-        # idem for multilevel, where we have zeroes for both.idx elements
-        # in mu.w
-        #A1.inv <- solve(A1)
-        #A1.inv <- MASS::ginv(A1)
         zero.idx <- which(diag(A1) == 0)
         if(length(zero.idx) > 0L) {
             A1.inv <- matrix(0, nrow(A1), ncol(A1))
@@ -233,14 +218,18 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
         } else {
             A1.inv <- solve(A1)
         }
+        h1.ndat[g] <- ncol(A1) - length(zero.idx)
+
+        D.Einv.tD <- DELTA %*% tcrossprod(E.inv, DELTA)
 
         trace.h1[g] <- sum( B1 * t( A1.inv ) )
         # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
-        trace.h0[g] <- fg * sum( B1 * DELTA %*% E.inv %*% t(DELTA) )
+        trace.h0[g] <- fg * sum( B1 * D.Einv.tD )
         trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
 
         if(Satterthwaite) {
-            UG <- (A1.inv %*% B1) - fg * (A1.inv %*% B1 %*% DELTA %*% E.inv %*% t(DELTA) %*% A1)
+            A1invB1 <- A1.inv %*% B1
+            UG <- A1invB1 - fg * (A1invB1 %*% D.Einv.tD %*% A1)
             trace.UGamma2[g] <- sum(UG * t(UG))
         }
     }
@@ -249,6 +238,7 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
     trace.UGamma <- sum(trace.UGamma)
     attr(trace.UGamma, "h1") <- trace.h1
     attr(trace.UGamma, "h0") <- trace.h0
+    attr(trace.UGamma, "h1.ndat") <- h1.ndat
 
     if(Satterthwaite) {
         attr(trace.UGamma, "trace.UGamma2") <- sum(trace.UGamma2)
@@ -266,15 +256,19 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
                                               meanstructure = TRUE) {
     # typical for Mplus:
     # - do NOT use the YB formula, but use an approximation
-    #   relying  on A0 ~= Delta'*A1*Delta and the same for B0
+    #   relying  on A0 ~= Delta' A1 Delta and the same for B0
+    #
+    # NOTE: if A0 is based on the hessian, then A0 only approximates 
+    #       Delta' A1 Delta
+    #
+    # - always use h1.information = "unstructured"!!!
 
-    # we always assume a meanstructure (no, not any longer since 0.6)
-    #meanstructure <- TRUE
     ngroups <- lavsamplestats@ngroups
 
     trace.UGamma <- numeric( lavsamplestats@ngroups )
     trace.h1     <- numeric( lavsamplestats@ngroups )
     trace.h0     <- numeric( lavsamplestats@ngroups )
+    h1.ndat      <- numeric( lavsamplestats@ngroups )
 
     for(g in 1:lavsamplestats@ngroups) {
 
@@ -285,17 +279,6 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
         B1 <- B1.group[[g]]
 
         # mask independent 'fixed-x' variables
-        # note: this only affects the saturated H1 model
-        #if(length(x.idx[[g]]) > 0L) {
-        #    nvar <- ncol(lavsamplestats@cov[[g]])
-        #    idx <- eliminate.pstar.idx(nvar=nvar, el.idx=x.idx[[g]],
-        #                               meanstructure=meanstructure, type="all")
-        #    A1 <- A1[idx,idx]
-        #    B1 <- B1[idx,idx]
-        #}
-        #A1.inv <- solve(A1)
-        # for multilevel
-        #A1.inv <- MASS::ginv(A1)
         zero.idx <- which(diag(A1) == 0)
         if(length(zero.idx) > 0L) {
             A1.inv <- matrix(0, nrow(A1), ncol(A1))
@@ -305,6 +288,7 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
         } else {
             A1.inv <- solve(A1)
         }
+        h1.ndat[g] <- ncol(A1) - length(zero.idx)
 
         # if data is complete, why not just A1 %*% Gamma?
         trace.h1[g]     <- sum( B1 * t( A1.inv ) )
@@ -317,6 +301,7 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
 
     attr(trace.UGamma, "h1") <- trace.h1
     attr(trace.UGamma, "h0") <- trace.h0
+    attr(trace.UGamma, "h1.ndat") <- h1.ndat
 
     trace.UGamma
 }

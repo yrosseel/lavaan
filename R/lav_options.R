@@ -263,35 +263,51 @@ lav_options_set <- function(opt = NULL) {
     # clustered
     # brute-force override (for now)
     if(opt$clustered && !opt$multilevel) {
-        #opt$meanstructure <- TRUE
+        opt$meanstructure <- TRUE
         opt$missing <- "listwise"
+
+        if(opt$estimator == "mlr") {
+            opt$estimator <- "ml"
+            opt$test <- "yuan.bentler.mplus"
+            opt$se <- "robust.cluster"
+        } else if(opt$estimator == "mlm") {
+            opt$estimator <- "ml"
+            opt$test <- "satorra.bentler"
+            opt$se <- "robust.cluster.sem"
+        }
 
         # test
         if(opt$test == "default") {
-            opt$test <- "yuan.bentler"
+            opt$test <- "yuan.bentler.mplus"
         } else if(opt$test %in% c("none", "standard",
+                                  "satorra.bentler",
                                   "yuan.bentler","yuan.bentler.mplus")) {
             # nothing to do
         } else if(opt$se == "robust") {
-            opt$test <- "yuan.bentler"
+            opt$test <- "yuan.bentler.mplus"
         } else {
-            stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" or \"yuan.bentler\" in the clustered case")
+            stop("lavaan ERROR: `test' argument must one of \"none\", \"yuan.bentler\", \"yuan.bentler.mplus\" or \"satorra.bentler\" in the clustered case")
         }
 
         # se
         if(opt$se == "default") {
             opt$se <- "robust.cluster"
-        } else if(opt$se %in% c("none", "standard", "robust.cluster")) {
+        } else if(opt$se %in% c("none", "robust.cluster",
+                                "robust.cluster.sem")) {
             # nothing to do
         } else if(opt$se == "robust") {
             opt$se <- "robust.cluster"
         } else {
-            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" or \"robust.cluster\" in the clustered case")
+            stop("lavaan ERROR: `se' argument must one of \"none\", \"robust.cluster\", or \"robust.cluster.sem\" in the clustered case")
         }
 
         # information
         if(opt$information == "default") {
-            opt$information <- "observed"
+            if(opt$se == "robust.cluster") {
+                opt$information <- "observed"
+            } else {
+                opt$information <- "expected"
+            }
         }
         #} else if(opt$information %in% c("observed", "first.order")) {
         #    # nothing to do
@@ -577,7 +593,7 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "standard"
         } else if(opt$se %in% c("bootstrap", "none",
                   "external", "standard", "robust.huber.white",
-                  "robust.cluster",
+                  "robust.cluster", "robust.cluster.sem",
                   "two.stage", "robust.two.stage", "robust.sem")) {
             # nothing to do
         } else if(opt$se == "first.order") {

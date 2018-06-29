@@ -772,13 +772,22 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
                   Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
     }
 
+    # handle clustering
     if(!is.null(cluster.idx)) {
         # take the sum within each cluster
-        SC <- unname(as.matrix(aggregate(SC, by = list(cluster.idx),
-                               FUN = sum, na.rm = TRUE)[,-1]))
+        SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
     }
 
-    crossprod(SC)/N
+    # unit information
+    out <- crossprod(SC)/N
+
+    # clustered -> scaling
+    if(!is.null(cluster.idx)) {
+        nC <- nrow(SC)
+        out <- out * nC/(nC-1)
+    }
+
+    out
 }
 
 

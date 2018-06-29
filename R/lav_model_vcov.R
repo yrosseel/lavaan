@@ -394,7 +394,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                                              inverted       = TRUE,
                                              use.ginv       = use.ginv)
 
-    } else if(se == "robust.sem") {
+    } else if(se == "robust.sem" || se == "robust.cluster.sem") {
         NVarCov <-
             lav_model_nvcov_robust_sem(lavmodel       = lavmodel,
                                        lavsamplestats = lavsamplestats,

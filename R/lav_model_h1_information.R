@@ -526,9 +526,9 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         if(lavmodel@conditional.x) {
             stop("lavaan ERROR: clustered information is not (yet) available when conditional.x = TRUE")
         }
-        if(!structured) {
-            stop("lavaan ERROR: clustered information is not (yet) available when h1.information = \"unstructured\"")
-        }
+        #if(!structured) {
+        #    stop("lavaan ERROR: clustered information is not (yet) available when h1.information = \"unstructured\"")
+        #}
     } else {
         clustered <- FALSE
     }

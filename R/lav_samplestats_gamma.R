@@ -216,12 +216,14 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
 #
 #  - new in 0.6-1: if Mu/Sigma is provided, compute 'model-based' Gamma
 #                  (only if conditional.x = FALSE, for now)
+#  - new in 0.6-2: if cluster.idx is not NULL, correct for clustering
 
 # ADF THEORY
 lav_samplestats_Gamma <- function(Y,
                                   Mu                 = NULL,
                                   Sigma              = NULL,
                                   x.idx              = integer(0L),
+                                  cluster.idx        = NULL,
                                   fixed.x            = FALSE,
                                   conditional.x      = FALSE,
                                   meanstructure      = FALSE,
@@ -293,6 +295,11 @@ lav_samplestats_Gamma <- function(Y,
             Zc <- t( t(Z) - colMeans(Z) )
         }
 
+        # clustered?
+        if(length(cluster.idx) > 0L) {
+            Zc <- rowsum(Zc, cluster.idx)
+        }
+
         if(anyNA(Zc)) {
             Gamma <- lav_matrix_crossprod(Zc) / N
         } else {
@@ -358,6 +365,11 @@ lav_samplestats_Gamma <- function(Y,
                        YHATc[,idx2, drop = FALSE] )
             }
             Zc <- t( t(Z) - colMeans(Z) )
+        }
+
+        # clustered?
+        if(length(cluster.idx) > 0L) {
+            Zc <- rowsum(Zc, cluster.idx)
         }
 
         if(anyNA(Zc)) {
@@ -430,6 +442,11 @@ lav_samplestats_Gamma <- function(Y,
             Zc <- t( t(Z) - colMeans(Z) )
         }
 
+        # clustered?
+        if(length(cluster.idx) > 0L) {
+            Zc <- rowsum(Zc, cluster.idx)
+        }
+
         if(anyNA(Zc)) {
             Gamma <- lav_matrix_crossprod(Zc) / N
         } else {
@@ -459,6 +476,12 @@ lav_samplestats_Gamma <- function(Y,
             Gamma[seq_len(p),-seq_len(p)] <- Gamma[seq_len(p),-seq_len(p)] * N1
             Gamma[-seq_len(p),seq_len(p)] <- Gamma[-seq_len(p),seq_len(p)] * N1
         }
+    }
+
+    # clustered?
+    if(length(cluster.idx) > 0L) {
+        nC <- nrow(Zc)
+        Gamma <- Gamma * nC / (nC - 1)
     }
 
     Gamma
