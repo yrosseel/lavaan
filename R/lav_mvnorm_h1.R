@@ -311,6 +311,7 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
         res <- lav_mvnorm_information_firstorder(Y = Y, wt = wt,
+                   cluster.idx = cluster.idx,
                    Mu = out$center, Sigma = out$cov, x.idx = x.idx,
                    meanstructure = meanstructure)
         return( res )

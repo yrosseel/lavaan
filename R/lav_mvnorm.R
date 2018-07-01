@@ -336,7 +336,7 @@ lav_mvnorm_dlogl_dmu <- function(Y           = NULL,
     dmu <- as.numeric(Sigma.inv %*% colSums(Yc))
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         dmu[x.idx] <- 0
     }
 
@@ -383,7 +383,7 @@ lav_mvnorm_dlogl_dSigma <- function(Y           = NULL,
     dSigma <- -(N/2)* (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         dSigma[x.idx, x.idx] <- 0
     }
 
@@ -430,7 +430,7 @@ lav_mvnorm_dlogl_dvechSigma <- function(Y           = NULL,
     dSigma <- -(N/2)* (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         dSigma[x.idx, x.idx] <- 0
     }
 
@@ -470,7 +470,7 @@ lav_mvnorm_scores_mu <- function(Y           = NULL,
     }
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         SC[, x.idx] <- 0
     }
 
@@ -518,7 +518,7 @@ lav_mvnorm_scores_vech_sigma <- function(Y           = NULL,
     }
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         not.x <- eliminate.pstar.idx(P, el.idx = x.idx)
         SC[, !not.x] <- 0
     }
@@ -569,7 +569,7 @@ lav_mvnorm_scores_mu_vech_sigma <- function(Y           = NULL,
     }
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         not.x <- eliminate.pstar.idx(P, el.idx = x.idx, meanstructure = TRUE)
         out[, !not.x] <- 0
     }
@@ -654,7 +654,7 @@ lav_mvnorm_information_expected <- function(Y             = NULL, # unused!
     }
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         not.x <- eliminate.pstar.idx(nvar = NCOL(Sigma.inv),
                                      el.idx = x.idx,
                                      meanstructure = meanstructure)
@@ -733,7 +733,7 @@ lav_mvnorm_information_observed_samplestats <-
     }
 
     # fixed.x?
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         not.x <- eliminate.pstar.idx(nvar = length(sample.mean),
                                      el.idx = x.idx,
                                      meanstructure = meanstructure)
@@ -776,16 +776,15 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
     if(!is.null(cluster.idx)) {
         # take the sum within each cluster
         SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
+        
+        # lower bias is number of clusters is not very high
+        nC <- nrow(SC)
+        correction.factor <- nC / (nC - 1)
+        SC <- SC * sqrt(correction.factor)
     }
 
     # unit information
     out <- crossprod(SC)/N
-
-    # clustered -> scaling
-    if(!is.null(cluster.idx)) {
-        nC <- nrow(SC)
-        out <- out * nC/(nC-1)
-    }
 
     out
 }
@@ -805,7 +804,7 @@ lav_mvnorm_inverted_information_expected <- function(Y       = NULL, # unused!
                                                      x.idx   = NULL,
                                                      meanstructure = TRUE) {
 
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         # cov(Y|X) = A - B C^{-1} B'
         # where A = cov(Y), B = cov(Y,X), C = cov(X)
         A <- Sigma[-x.idx, -x.idx, drop = FALSE]

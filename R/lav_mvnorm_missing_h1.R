@@ -135,10 +135,12 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
                                            Mp          = NULL,
                                            wt          = NULL,
+                                           cluster.idx = NULL,
                                            Yp          = NULL,
                                            Sinv.method = "eigen",
                                            Mu          = NULL,
                                            Sigma       = NULL,
+                                           x.idx       = NULL,
                                            Sigma.inv   = NULL,
                                            information = "observed") {
 
@@ -154,15 +156,15 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y           = NULL,
 
     # Sigma and Mu
     if(is.null(Sigma) || is.null(Mu)) {
-        out <- lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp,
-                                                               Yp = Yp)
+        out <- lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp, Yp = Yp)
         Mu <- out$Mu
         Sigma <- out$Sigma
     }
 
     # information matrices
     info <- lav_mvnorm_missing_information_both(Y = Y, Mp = Mp, Mu = Mu,
-                Sigma = Sigma, Sinv.method = Sinv.method,
+                wt = wt, cluster.idx = cluster.idx,
+                Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
                 Sigma.inv = Sigma.inv, information = information)
 
     A <- info$Abeta

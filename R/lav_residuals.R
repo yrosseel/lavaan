@@ -225,13 +225,18 @@ function(object, type="raw", labels=TRUE) {
                         A1 <- lav_mvnorm_missing_information_expected(
                           Y     = lavdata@X[[g]],
                           Mp    = lavdata@Mp[[g]],
+                          wt    = lavdata@weights[[g]],
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+                          x.idx = lavsamplestats@x.idx[[g]])
                     } else {
-                        A1 <- lav_mvnorm_missing_information_observed_samplestats(
+                        A1 <- 
+                            lav_mvnorm_missing_information_observed_samplestats(
                           Yp    = lavsamplestats@missing[[g]],
+                          # wt not needed
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+                          x.idx = lavsamplestats@x.idx[[g]])
                     }
                 } else {
                     # data complete, under h1, expected == observed
@@ -242,16 +247,26 @@ function(object, type="raw", labels=TRUE) {
                 }
 
                 if(lavsamplestats@missing.flag) {
+                    if(length(lavdata$cluster) > 0L) {
+                        cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+                    } else {
+                        cluster.idx <- NULL
+                    }
                     B1 <- lav_mvnorm_missing_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Mp    = lavdata@Mp[[g]],
+                          wt    = lavdata@weights[[g]],
+                          cluster.idx = cluster.idx,
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+                          x.idx = lavsamplestats@x.idx[[g]])
                 } else {
                     B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
                           x.idx = lavsamplestats@x.idx[[g]],
+                          wt    = lavdata@weights[[g]],
+                          cluster.idx = cluster.idx,
                           sample.cov = lavsamplestats@cov[[g]],
                           sample.cov.inv = lavsamplestats@icov[[g]])
                 }
@@ -260,16 +275,26 @@ function(object, type="raw", labels=TRUE) {
                 Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
                 Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
             } else if(object@Options$se == "first.order") {
+                if(length(lavdata@cluster) > 0L) {
+                    cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+                } else {
+                    cluster.idx <- NULL
+                }
                 if(lavsamplestats@missing.flag) {
                     B1 <- lav_mvnorm_missing_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Mp    = lavdata@Mp[[g]],
+                          wt    = lavdata@weights[[g]],
+                          cluster.idx = cluster.idx,
                           Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma)
+                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+                          x.idx = lavsamplestats@x.idx[[g]])
                 } else {
                     B1 <- lav_mvnorm_h1_information_firstorder(
                           Y     = lavdata@X[[g]],
                           Gamma = lavsamplestats@NACOV[[g]],
+                          wt    = lavdata@weights[[g]],
+                          cluster.idx = cluster.idx,
                           x.idx = lavsamplestats@x.idx[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
                           sample.cov.inv = lavsamplestats@icov[[g]])

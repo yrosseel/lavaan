@@ -29,6 +29,7 @@
 # YR 09 Feb 2016: first version
 # YR 19 Mar 2017: 10)
 # YR 03 Okt 2018: a few functions gain a wt= argument
+# YR 01 Jul 2018: first_order functions gain cluster.idx= argument
 
 
 # 1) likelihood
@@ -49,7 +50,7 @@ lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
                                            log2pi      = TRUE,
                                            minus.two   = FALSE) {
 
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
+    if(length(x.idx) > 0L) {
         warning("lavaan WARNING: x.idx not supported yet (ignored)")
     }
 
@@ -137,8 +138,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
     }
 
     # x.idx
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
-        #warning("lavaan WARNING: x.idx not supported yet (ignored)")
+    if(length(x.idx) > 0L) {
         P.x <- length(x.idx); N <- sum(sapply(Yp, "[[", "freq"))
         Sigma.x <- Sigma[x.idx, x.idx, drop = FALSE]
         Sigma.inv.x <- lav_matrix_symmetric_inverse(S = Sigma.x, logdet = TRUE,
@@ -164,6 +164,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
 ## casewise loglikelihoods
 
 # casewise Sinv.method
+# FIXME: use x.idx=
 lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
                                              wt          = NULL,
                                              Mu          = NULL,
@@ -240,6 +241,7 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
 }
 
 # pattern-based, but casewise loglikelihoods
+# FIXME: use x.idx
 lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
                                             Mp          = NULL,
                                             wt          = NULL,
@@ -333,11 +335,12 @@ lav_mvnorm_missing_dlogl_dmu <- function(Y           = NULL,
                                          wt          = NULL,
                                          Mu          = NULL,
                                          Sigma       = NULL,
+                                         x.idx       = NULL,
                                          Sigma.inv   = NULL,
                                          Sinv.method = "eigen") {
 
     SC <- lav_mvnorm_missing_scores_mu(Y = Y, wt = wt, Mu = Mu, Sigma = Sigma,
-              Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
+              x.idx = x.idx, Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
 
     colSums(SC, na.rm = TRUE)
 }
@@ -346,6 +349,7 @@ lav_mvnorm_missing_dlogl_dmu <- function(Y           = NULL,
 lav_mvnorm_missing_dlogl_dmu_samplestats <- function(Yp          = NULL,
                                                      Mu          = NULL,
                                                      Sigma       = NULL,
+                                                     x.idx       = NULL,
                                                      Sigma.inv   = NULL,
                                                      Sinv.method = "eigen") {
     pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
@@ -382,6 +386,11 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(Yp          = NULL,
         dmu[var.idx] <- dmu[var.idx] + (dmu.pattern * Yp[[p]]$freq)
     }
 
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        dmu[x.idx] <- 0
+    }
+
     dmu
 }
 
@@ -393,6 +402,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
                                             wt          = NULL,
                                             Mu          = NULL,
                                             Sigma       = NULL,
+                                            x.idx       = NULL,
                                             Sigma.inv   = NULL,
                                             Sinv.method = "eigen") {
     P <- NCOL(Y); N <- NROW(Y); Mu <- as.numeric(Mu)
@@ -463,6 +473,11 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
         dSigma <- dSigma + (dSigma.pattern * FREQ)
     }
 
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        dSigma[x.idx, x.idx] <- 0
+    }
+
     dSigma
 }
 
@@ -470,6 +485,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
 lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp          = NULL,
                                                         Mu          = NULL,
                                                         Sigma       = NULL,
+                                                        x.idx       = NULL,
                                                         Sigma.inv   = NULL,
                                                         Sinv.method = "eigen") {
     pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
@@ -511,6 +527,11 @@ lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp          = NULL,
         dSigma <- dSigma + (dSigma.pattern * Yp[[p]]$freq)
     }
 
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        dSigma[x.idx, x.idx] <- 0
+    }
+
     dSigma
 }
 
@@ -519,13 +540,19 @@ lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp          = NULL,
 lav_mvnorm_missing_dlogl_dvechSigma <- function(Y           = NULL,
                                                 wt          = NULL,
                                                 Mu          = NULL,
+                                                x.idx       = NULL,
                                                 Sigma       = NULL,
                                                 Sigma.inv   = NULL,
                                                 Sinv.method = "eigen") {
 
-    FULL <- lav_mvnorm_missing_dlogl_dSigma(Y = Y, wt = wt, Mu = Mu,
-            Sigma = Sigma, Sigma.inv = Sigma.inv, Sinv.method = Sinv.method)
-    as.numeric( lav_matrix_duplication_pre( as.matrix(lav_matrix_vec(FULL)) ) )
+    dSigma <- lav_mvnorm_missing_dlogl_dSigma(Y = Y, wt = wt, Mu = Mu,
+            Sigma = Sigma, x.idx = x.idx, Sigma.inv = Sigma.inv, 
+            Sinv.method = Sinv.method)
+
+    dvechSigma <- as.numeric( lav_matrix_duplication_pre( 
+                                  as.matrix(lav_matrix_vec(dSigma)) ) )
+
+    dvechSigma
 }
 
 # 2cbis: using samplestats
@@ -533,6 +560,7 @@ lav_mvnorm_missing_dlogl_dvechSigma_samplestats <-
     function(Yp          = NULL,
              Mu          = NULL,
              Sigma       = NULL,
+             x.idx       = NULL,
              Sigma.inv   = NULL,
              Sinv.method = "eigen") {
     pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
@@ -570,6 +598,11 @@ lav_mvnorm_missing_dlogl_dvechSigma_samplestats <-
         dSigma.pattern[var.idx, var.idx] <- -(1/2) * (sigma.inv -
                         (sigma.inv %*% W.tilde %*% sigma.inv))
 
+        # fixed.x?
+        if(length(x.idx) > 0L) {
+            dSigma.pattern[x.idx, x.idx] <- 0
+        }
+
         # convert to vechSigma
         dvechSigma.pattern <- as.numeric( lav_matrix_duplication_pre(
                                   as.matrix(lav_matrix_vec(dSigma.pattern)) ) )
@@ -592,6 +625,7 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
                                          Mp          = NULL,
                                          Mu          = NULL,
                                          Sigma       = NULL,
+                                         x.idx       = NULL,
                                          Sigma.inv   = NULL,
                                          Sinv.method = "eigen") {
 
@@ -638,8 +672,14 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
             Yc[case.idx, var.idx, drop = FALSE] %*% sigma.inv
     }
 
+    # weights
     if(!is.null(wt)) {
         dmu <- dmu * wt
+    }
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        dmu[, x.idx] <- 0
     }
 
     dmu
@@ -651,6 +691,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
                                                  Mp          = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
+                                                 x.idx       = NULL,
                                                  Sigma.inv   = NULL,
                                                  Sinv.method = "eigen") {
 
@@ -716,8 +757,15 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
     # adjust for vech
     SC[,lav_matrix_diagh_idx(P)] <- SC[,lav_matrix_diagh_idx(P)] / 2
 
+    # weights
     if(!is.null(wt)) {
         SC <- SC * wt
+    }
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(P, el.idx = x.idx)
+        SC[, !not.x] <- 0
     }
 
     SC
@@ -729,6 +777,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
                                                     wt          = NULL,
                                                     Mu          = NULL,
                                                     Sigma       = NULL,
+                                                    x.idx       = NULL,
                                                     Sigma.inv   = NULL,
                                                     Sinv.method = "eigen") {
 
@@ -803,8 +852,15 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
 
     out <- cbind(dmu, SC)
 
+    # weights
     if(!is.null(wt)) {
         out <- out * wt
+    }
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(P, el.idx = x.idx, meanstructure = TRUE)
+        out[, !not.x] <- 0
     }
 
     out
@@ -817,19 +873,23 @@ lav_mvnorm_missing_logl_hessian_data <- function(Y           = NULL,
                                                  wt          = NULL,
                                                  Mu          = NULL,
                                                  Sigma       = NULL,
+                                                 x.idx       = NULL,
                                                  Sinv.method = "eigen",
                                                  Sigma.inv   = NULL) {
     # missing patterns
     Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
 
     lav_mvnorm_missing_logl_hessian_samplestats(Yp = Yp, Mu = Mu,
-        Sigma = Sigma, Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
+        Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method, 
+        Sigma.inv = Sigma.inv)
 }
 
 lav_mvnorm_missing_logl_hessian_samplestats <-
     function(Yp          = NULL,
+             # wt not needed
              Mu          = NULL,
              Sigma       = NULL,
+             x.idx       = NULL,
              Sinv.method = "eigen",
              Sigma.inv   = NULL) {
 
@@ -886,8 +946,18 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
 
     H12 <- t(H21)
 
-    -1 * rbind( cbind(H11, H12),
-                cbind(H21, H22) )
+    out <- -1 * rbind( cbind(H11, H12),
+                       cbind(H21, H22) )
+   
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(nvar = P, el.idx = x.idx,
+                                     meanstructure = TRUE)
+        out[, !not.x] <- 0
+        out[!not.x, ] <- 0
+    }
+
+    out
 }
 
 
@@ -903,6 +973,7 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
                                                     wt          = NULL,
                                                     Mu          = NULL,# unused
                                                     Sigma       = NULL,
+                                                    x.idx       = NULL,
                                                     Sigma.inv   = NULL,
                                                     Sinv.method = "eigen") {
 
@@ -960,7 +1031,17 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
         I22 <- I22 + FREQ * S2.inv
     }
 
-    lav_matrix_bdiag(I11, I22)/N
+    out <- lav_matrix_bdiag(I11, I22)/N
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(nvar = P, el.idx = x.idx,
+                                     meanstructure = TRUE)
+        out[!not.x, ] <- 0
+        out[, !not.x] <- 0
+    }
+
+    out
 }
 
 # 5b: unit observed information Mu and vech(Sigma) from raw data
@@ -970,6 +1051,7 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
                                                          wt          = NULL,
                                                          Mu          = NULL,
                                                          Sigma       = NULL,
+                                                         x.idx       = NULL,
                                                          Sinv.method = "eigen",
                                                          Sigma.inv   = NULL) {
     # missing patterns
@@ -986,8 +1068,8 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
 
     # observed information
     observed <- lav_mvnorm_missing_logl_hessian_data(Y = Y, Mp = Mp, wt = wt,
-                    Mu = Mu, Sigma = Sigma, Sinv.method = Sinv.method,
-                    Sigma.inv = Sigma.inv)
+                    Mu = Mu, Sigma = Sigma, x.idx = x.idx, 
+                    Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
 
     -observed/N
 }
@@ -995,8 +1077,10 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
 # 5b-bis: unit observed information Mu and vech(Sigma) from samplestats
 lav_mvnorm_missing_information_observed_samplestats <-
     function(Yp          = NULL,
+             # wt not needed
              Mu          = NULL,
              Sigma       = NULL,
+             x.idx       = NULL,
              Sinv.method = "eigen",
              Sigma.inv   = NULL) {
 
@@ -1004,7 +1088,7 @@ lav_mvnorm_missing_information_observed_samplestats <-
 
     # observed information
     observed <- lav_mvnorm_missing_logl_hessian_samplestats(Yp = Yp, Mu = Mu,
-                    Sigma = Sigma, Sinv.method = Sinv.method,
+                    Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
                     Sigma.inv = Sigma.inv)
 
     -observed/N
@@ -1015,8 +1099,10 @@ lav_mvnorm_missing_information_observed_samplestats <-
 lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
                                                       Mp          = NULL,
                                                       wt          = NULL,
+                                                      cluster.idx = NULL,
                                                       Mu          = NULL,
                                                       Sigma       = NULL,
+                                                      x.idx       = NULL,
                                                       Sinv.method = "eigen",
                                                       Sigma.inv   = NULL) {
     # missing patterns
@@ -1032,8 +1118,19 @@ lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
     }
 
     SC <- lav_mvnorm_missing_scores_mu_vech_sigma(Y = Y, Mp = Mp, wt = wt,
-              Mu = Mu, Sigma = Sigma, Sinv.method = Sinv.method,
+              Mu = Mu, Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
               Sigma.inv = Sigma.inv)
+
+    # handle clustering
+    if(!is.null(cluster.idx)) {
+        # take the sum within each cluster
+        SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
+
+        # lower bias is number of clusters is not very high
+        nC <- nrow(SC)
+        correction.factor <- nC / (nC - 1)
+        SC <- SC * sqrt(correction.factor)
+    }
 
     lav_matrix_crossprod(SC)/N
 }
@@ -1043,8 +1140,10 @@ lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
 lav_mvnorm_missing_information_both <- function(Y           = NULL,
                                                 Mp          = NULL,
                                                 wt          = NULL,
+                                                cluster.idx = NULL,
                                                 Mu          = NULL,
                                                 Sigma       = NULL,
+                                                x.idx       = NULL,
                                                 Sinv.method = "eigen",
                                                 Sigma.inv   = NULL,
                                                 information = "observed") {
@@ -1175,8 +1274,26 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
     # add dmu
     SC <- cbind(dmu, SC)
 
+    # weights
     if(!is.null(wt)) {
         SC <- SC * wt
+    }
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(P, el.idx = x.idx, meanstructure = TRUE)
+        SC[, !not.x] <- 0
+    }
+
+    # handle clustering
+    if(!is.null(cluster.idx)) {
+        # take the sum within each cluster
+        SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
+
+        # lower bias is number of clusters is not very high
+        nC <- nrow(SC)
+        correction.factor <- nC / (nC - 1)
+        SC <- SC * sqrt(correction.factor)
     }
 
     # first order information
@@ -1188,6 +1305,14 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
     } else {
         Abeta <-  rbind( cbind(I11, t(I21) ),
                          cbind(I21,   I22) )/N
+    }
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        not.x <- eliminate.pstar.idx(nvar = P, el.idx = x.idx,
+                                     meanstructure = TRUE)
+        Abeta[!not.x, ] <- 0
+        Abeta[, !not.x] <- 0
     }
 
     list(Abeta = Abeta, Bbeta = Bbeta)

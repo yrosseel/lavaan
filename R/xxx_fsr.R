@@ -393,11 +393,16 @@ fsr <- function(model      = NULL,
                     if(lavoptions$information == "expected") {
                         Info <- lav_mvnorm_missing_information_expected(
                                     Y = DATA, Mp = FIT@Data@Mp[[g]],
-                                    Mu = MU, Sigma = SIGMA)
+                                    wt = FIT@Data@weights[[g]],
+                                    Mu = MU, Sigma = SIGMA,
+                                    x.idx = FIT@SampleStats@x.idx[[g]])
                     } else {
-                        Info <- lav_mvnorm_missing_information_observed_samplestats(
+                        Info <- 
+                            lav_mvnorm_missing_information_observed_samplestats(
                                 Yp = FIT@SampleStats@missing[[g]],
-                                Mu = MU, Sigma = SIGMA)
+                                # wt not needed
+                                Mu = MU, Sigma = SIGMA,
+                                x.idx = FIT@SampleStats@x.idx[[g]])
                     }
                     Omega.y <- lav_matrix_symmetric_inverse(Info)
                 } else {
@@ -418,6 +423,7 @@ fsr <- function(model      = NULL,
                              DATA, Mp = FIT@Data@Mp[[g]],
                              Yp = FIT@SampleStats@missing[[g]],
                              Mu = MU, Sigma = SIGMA,
+                             x.idx = FIT@SampleStats@x.idx[[g]],
                              information = lavoptions$information)
                 } else {
                     stop("lavaan ERROR: can not handle missing = ",

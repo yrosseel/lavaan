@@ -304,21 +304,33 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
             if(lavoptions$information == "expected") {
                 Info <- lav_mvnorm_missing_information_expected(
                             Y = lavdata@X[[g]], Mp = lavdata@Mp[[g]],
-                            Mu = MU, Sigma = SIGMA)
+                            wt = lavdata@weights[[g]],
+                            Mu = MU, Sigma = SIGMA,
+                            x.idx = lavsamplestats@x.idx[[g]])
             } else {
                 Info <- lav_mvnorm_missing_information_observed_samplestats(
                             Yp = lavsamplestats@missing[[g]],
-                            Mu = MU, Sigma = SIGMA)
+                            # wt not needed
+                            Mu = MU, Sigma = SIGMA,
+                            x.idx = lavsamplestats@x.idx[[g]])
             }
             Gamma[[g]] <- lav_matrix_symmetric_inverse(Info)
         } else { # we assume "robust.two.stage"
                  # NACOV is here incomplete Gamma
                  # Savalei & Falk (2014)
                  #
+            if(length(lavdata@cluster) > 0L) {
+                cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+            } else {
+                cluster.idx <- NULL
+            }
             Gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(Y =
                              lavdata@X[[g]], Mp = lavdata@Mp[[g]],
                              Yp = lavsamplestats@missing[[g]],
+                             wt = lavdata@weights[[g]], 
+                             cluster.idx = cluster.idx,
                              Mu = MU, Sigma = SIGMA,
+                             x.idx = lavsamplestats@x.idx[[g]],
                              information = lavoptions$information)
         }
 

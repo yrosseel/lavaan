@@ -264,7 +264,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$clustered && !opt$multilevel) {
         opt$meanstructure <- TRUE
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
 
         if(opt$estimator == "mlr") {
             opt$estimator <- "ml"

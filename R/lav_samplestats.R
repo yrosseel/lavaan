@@ -1163,6 +1163,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             both.idx <- all.idx[-c(within.idx, between.idx)]
         }
 
+        # cluster-means
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
         Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx),
                                FUN = mean, na.rm = TRUE)[,-1]))
