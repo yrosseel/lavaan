@@ -41,11 +41,14 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
     # the parameter values are from H0
     objH1_h0 <- lav_test_diff_m10(m1 = fit_objH1, m0 = fit_objH0, test = FALSE)
 
-    # EqMat # YR: from 0.6-2, use lav_test_diff_A() again
+    # EqMat # YR: from 0.6-2, use lav_test_diff_A() (again)
     #             this should allow us to test models that are
     #             nested in the covariance matrix sense, but not
     #             in the parameter (table) sense
     EqMat <- lav_test_diff_A(m1 = fit_objH1, m0 = fit_objH0)
+    if(objH1_h0@Model@eq.constraints) {
+        EqMat <- EqMat %*% t(objH1_h0@Model@eq.constraints.K)
+    }
     #if (equalConstr == TRUE) {
     #    EqMat <- fit_objH0@Model@ceq.JAC
     #} else {
