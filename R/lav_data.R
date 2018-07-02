@@ -628,6 +628,16 @@ lav_data_full <- function(data          = NULL,          # data.frame
             }
         }
     }
+    # check for really large variances (perhaps -999999 for missing?)
+    if(!std.ov && warn && any(ov$type == "numeric")) {
+        num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
+        if(length(num.idx) > 0L) {
+            max.var <- max(ov$var[num.idx])
+            if(warn && max.var > 1000000) {
+                warning("lavaan WARNING: some observed variances are larger than 1000000\n", "  lavaan NOTE: use varTable(fit) to investigate")
+            }
+        }
+    }
     # check for all-exogenous variables (eg in f <~ x1 + x2 + x3)
     if(warn && all(ov$exo == 1L)) {
         warning("lavaan WARNING: all observed variables are exogenous; model may not be identified")
@@ -1173,7 +1183,7 @@ lav_data_print_short <- function(object) {
     # sampling weights?
     if( (.hasSlot(lavdata, "weights")) && # in case we have an old object
         (!is.null(lavdata@weights[[1L]])) ) {
-        t0.txt <- sprintf("  %-30s", "Sampling Weights variable")
+        t0.txt <- sprintf("  %-30s", "Sampling weights variable")
         t1.txt <- sprintf("  %20s", lavdata@sampling.weights)
         cat(t0.txt, t1.txt, "\n", sep="")
     }
