@@ -23,9 +23,9 @@ function(object, type="raw", labels=TRUE) {
         if(object@Options$estimator != "ML") {
             stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
         }
-        if(object@optim$npar > 0L && !object@optim$converged) {
-            stop("lavaan ERROR: model dit not converge")
-        }
+        #if(object@optim$npar > 0L && !object@optim$converged) {
+        #    stop("lavaan ERROR: model dit not converge")
+        #}
         if(object@Model@conditional.x && type == "standardized") {
             stop("lavaan ERROR: resid + standardized + conditional.x not supported yet")
         }
@@ -33,8 +33,8 @@ function(object, type="raw", labels=TRUE) {
             stop("lavaan ERROR: resid + normalized + conditional.x not supported yet")
         }
     }
-    # NOTE: for some reason, Mplus does not compute the normalized/standardized
-    # residuals if estimator = MLM !!!
+    # NOTE: for some reason, Mplus (at least up to version 8) does not
+    # compute the normalized/standardized residuals if estimator = MLM ?
 
 
     # check type
@@ -230,7 +230,7 @@ function(object, type="raw", labels=TRUE) {
                           Sigma = lavsamplestats@missing.h1[[g]]$sigma,
                           x.idx = lavsamplestats@x.idx[[g]])
                     } else {
-                        A1 <- 
+                        A1 <-
                             lav_mvnorm_missing_information_observed_samplestats(
                           Yp    = lavsamplestats@missing[[g]],
                           # wt not needed

@@ -258,7 +258,7 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
     # - do NOT use the YB formula, but use an approximation
     #   relying  on A0 ~= Delta' A1 Delta and the same for B0
     #
-    # NOTE: if A0 is based on the hessian, then A0 only approximates 
+    # NOTE: if A0 is based on the hessian, then A0 only approximates
     #       Delta' A1 Delta
     #
     # - always use h1.information = "unstructured"!!!

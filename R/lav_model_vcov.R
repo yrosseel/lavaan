@@ -327,7 +327,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
             Gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(Y =
                              lavdata@X[[g]], Mp = lavdata@Mp[[g]],
                              Yp = lavsamplestats@missing[[g]],
-                             wt = lavdata@weights[[g]], 
+                             wt = lavdata@weights[[g]],
                              cluster.idx = cluster.idx,
                              Mu = MU, Sigma = SIGMA,
                              x.idx = lavsamplestats@x.idx[[g]],

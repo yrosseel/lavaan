@@ -1981,7 +1981,10 @@ lav_object_inspect_gradient <- function(object,
     # optim?
     if(optim) {
         # 1. scale (note: divide, not multiply!)
-        dx <- dx / object@optim$parscale
+        if(!is.null(object@optim$parscale)) {
+            dx <- dx / object@optim$parscale
+        }
+
         # 2. pack
         if(lavmodel@eq.constraints) {
             dx <- as.numeric( dx %*% lavmodel@eq.constraints.K )

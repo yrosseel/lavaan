@@ -397,7 +397,7 @@ fsr <- function(model      = NULL,
                                     Mu = MU, Sigma = SIGMA,
                                     x.idx = FIT@SampleStats@x.idx[[g]])
                     } else {
-                        Info <- 
+                        Info <-
                             lav_mvnorm_missing_information_observed_samplestats(
                                 Yp = FIT@SampleStats@missing[[g]],
                                 # wt not needed

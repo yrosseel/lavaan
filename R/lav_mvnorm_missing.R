@@ -546,10 +546,10 @@ lav_mvnorm_missing_dlogl_dvechSigma <- function(Y           = NULL,
                                                 Sinv.method = "eigen") {
 
     dSigma <- lav_mvnorm_missing_dlogl_dSigma(Y = Y, wt = wt, Mu = Mu,
-            Sigma = Sigma, x.idx = x.idx, Sigma.inv = Sigma.inv, 
+            Sigma = Sigma, x.idx = x.idx, Sigma.inv = Sigma.inv,
             Sinv.method = Sinv.method)
 
-    dvechSigma <- as.numeric( lav_matrix_duplication_pre( 
+    dvechSigma <- as.numeric( lav_matrix_duplication_pre(
                                   as.matrix(lav_matrix_vec(dSigma)) ) )
 
     dvechSigma
@@ -880,7 +880,7 @@ lav_mvnorm_missing_logl_hessian_data <- function(Y           = NULL,
     Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
 
     lav_mvnorm_missing_logl_hessian_samplestats(Yp = Yp, Mu = Mu,
-        Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method, 
+        Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
         Sigma.inv = Sigma.inv)
 }
 
@@ -948,7 +948,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
 
     out <- -1 * rbind( cbind(H11, H12),
                        cbind(H21, H22) )
-   
+
     # fixed.x?
     if(length(x.idx) > 0L) {
         not.x <- eliminate.pstar.idx(nvar = P, el.idx = x.idx,
@@ -1068,7 +1068,7 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
 
     # observed information
     observed <- lav_mvnorm_missing_logl_hessian_data(Y = Y, Mp = Mp, wt = wt,
-                    Mu = Mu, Sigma = Sigma, x.idx = x.idx, 
+                    Mu = Mu, Sigma = Sigma, x.idx = x.idx,
                     Sinv.method = Sinv.method, Sigma.inv = Sigma.inv)
 
     -observed/N

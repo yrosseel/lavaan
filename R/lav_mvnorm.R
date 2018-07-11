@@ -776,7 +776,7 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
     if(!is.null(cluster.idx)) {
         # take the sum within each cluster
         SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
-        
+
         # lower bias is number of clusters is not very high
         nC <- nrow(SC)
         correction.factor <- nC / (nC - 1)

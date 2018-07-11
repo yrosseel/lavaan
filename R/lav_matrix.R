@@ -1299,6 +1299,9 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
 
 # compute sample covariance matrix, divided by 'N' (not N-1, as in cov)
 lav_matrix_cov <- function(Y, ybar = NULL) {
+    # coerce to matrix
+    Y <- as.matrix(Y)
+
     NY <- NROW(Y)
     if(is.null(ybar)) {
         ybar <- colMeans(Y)
@@ -1311,6 +1314,8 @@ lav_matrix_cov <- function(Y, ybar = NULL) {
 lav_matrix_transform_mean_cov <- function(Y,
                                           target.mean = numeric( NCOL(Y) ),
                                           target.cov = diag( NCOL(Y) )) {
+    # coerce to matrix
+    Y <- as.matrix(Y)
 
     # convert to vector
     target.mean <- as.vector(target.mean)
