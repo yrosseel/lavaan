@@ -103,8 +103,14 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
         # remove dummy lv? (removes attr!)
         out <- lapply(seq_len(lavdata@ngroups), function(g) {
-                   lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                               lavmodel@ov.x.dummy.lv.idx[[g]])
+                   # determine block
+                   if(lavdata@nlevels == 1L) {
+                        bb <- g
+                   } else {
+                        bb <- (g - 1)*lavdata@nlevels + level
+                   }
+                   lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
+                               lavmodel@ov.x.dummy.lv.idx[[bb]])
                    ret <- out[[g]]
                    if(length(lv.idx) > 0L) {
                        ret <- out[[g]][, -lv.idx, drop=FALSE]
@@ -115,10 +121,16 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         if(fsm) {
             #FSM <- attr(out, "fsm")
             FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
-                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                                   lavmodel@ov.x.dummy.lv.idx[[g]])
-                       ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[g]],
-                                   lavmodel@ov.x.dummy.ov.idx[[g]])
+                       # determine block
+                       if(lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                           bb <- (g - 1)*lavdata@nlevels + level
+                       }
+                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
+                                   lavmodel@ov.x.dummy.lv.idx[[bb]])
+                       ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[bb]],
+                                   lavmodel@ov.x.dummy.ov.idx[[bb]])
                        ret <- FSM[[g]]
                        if(length(lv.idx) > 0L) {
                            ret <- FSM[[g]][-lv.idx, -ov.idx, drop=FALSE]
@@ -129,8 +141,14 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
         if(se != "none") {
             SE <- lapply(seq_len(lavdata@ngroups), function(g) {
-                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
-                                   lavmodel@ov.x.dummy.lv.idx[[g]])
+                       # determine block
+                       if(lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                           bb <- (g - 1)*lavdata@nlevels + level
+                       }
+                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
+                                   lavmodel@ov.x.dummy.lv.idx[[bb]])
                        ret <- SE[[g]]
                        if(length(lv.idx) > 0L) {
                            ret <- SE[[g]][, -lv.idx, drop=FALSE]
