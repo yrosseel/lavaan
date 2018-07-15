@@ -470,7 +470,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
 
         # check if VarCov is pd -- new in 0.6-2
         # mostly important if we have (in)equality constraints (MASS::ginv!)
-        if(!is.null(lavoptions$check.cov) && lavoptions$check.vcov) {
+        if(!is.null(lavoptions$check.vcov) && lavoptions$check.vcov) {
             eigvals <- eigen(VarCov, symmetric = TRUE,
                              only.values = TRUE)$values
             # correct for (in)equality constraints

@@ -354,12 +354,12 @@ standardizedSolution <- standardizedsolution <- function(object,
     if(se && object@Options$se != "none" && ci) {
         # next three lines based on confint.lm
         a <- (1 - level)/2; a <- c(a, 1 - a)
-        if(object@Options$se != "bootstrap") {
-            fac <- qnorm(a)
+        fac <- qnorm(a)
+        #if(object@Options$se != "bootstrap") {
             ci <- LIST$est + LIST$se %o% fac
-        } else {
-            ci <- rep(as.numeric(NA), length(LIST$est)) + LIST$se %o% fac
-        }
+        #} else {
+        #    ci <- rep(as.numeric(NA), length(LIST$est)) + LIST$se %o% fac
+        #}
 
         LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]
     }
