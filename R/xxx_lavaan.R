@@ -698,7 +698,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                debug          = lavoptions$debug)
 
             # sanity check
-            if("start" %in% lavoptions$check) {
+            if(!is.null(lavoptions$check.start) && lavoptions$check.start) {
                 START <- lav_start_check_cov(lavpartable = lavpartable,
                                              start       = START)
             }
@@ -1236,15 +1236,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     # post-fitting check of parameters
-    if("post" %in% lavoptions$check && lavTech(lavaan, "converged")) {
+    if(!is.null(lavoptions$check.post) && lavoptions$check.post &&
+       lavTech(lavaan, "converged")) {
         lavInspect(lavaan, "post.check")
     }
 
     # new in 0.6-2
     # FIXME: not scale independent (should use solve(Hessian) %*% g)
     # but Hessian is not always available (or expensive to compute)
-    if("gradient" %in% lavoptions$check && lavTech(lavaan, "converged") &&
-       length(constraints) == 0L) {
+    hasExplicitConstraints <- FALSE
+    if(is.character(constraints) && nchar(constraints) > 0L) {
+        hasExplicitConstraints <- TRUE
+    }
+    if(!is.null(lavoptions$check.gradient) &&
+       lavoptions$check.gradient && lavTech(lavaan, "converged") &&
+       !hasExplicitConstraints) {
         grad <- lavInspect(lavaan, "optim.gradient")
         large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
         if(length(large.idx) > 0L) {

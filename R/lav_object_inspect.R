@@ -1641,7 +1641,11 @@ lav_object_inspect_theta <- function(object, correlation.metric = FALSE,
     for(b in seq_len(nblocks)) {
 
         if(correlation.metric && nrow(OUT[[b]]) > 0L) {
-            OUT[[b]] <- cov2cor(OUT[[b]])
+            if(all(OUT[[b]] == 0)) {
+                OUT[[b]] <- OUT[[b]]
+            } else {
+                OUT[[b]] <- cov2cor(OUT[[b]])
+            }
         }
 
         if(add.labels && length(OUT[[b]]) > 0L) {

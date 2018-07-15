@@ -370,13 +370,9 @@ lav_model_vcov <- function(lavmodel       = NULL,
     mimic       <- lavoptions$mimic
 
     # special cases
-    if(se == "none" || se == "external") return(matrix(0,0,0))
-
-    # some require meanstructure (for now)
-    #if(se %in% c("first.order", "robust.sem", "robust.huber.white") &&
-    #   !lavoptions$meanstructure) {
-    #    stop("se (", se, ") requires meanstructure (for now)")
-    #}
+    if(se == "none" || se == "external") {
+        return( matrix(0, 0, 0) )
+    }
 
     if(se == "standard") {
         NVarCov <- lav_model_information(lavmodel       = lavmodel,
@@ -472,10 +468,80 @@ lav_model_vcov <- function(lavmodel       = NULL,
 
         VarCov <- 1/N * NVarCov
 
+        # check if VarCov is pd -- new in 0.6-2
+        # mostly important if we have (in)equality constraints (MASS::ginv!)
+        if(!is.null(lavoptions$check.cov) && lavoptions$check.vcov) {
+            eigvals <- eigen(VarCov, symmetric = TRUE,
+                             only.values = TRUE)$values
+            # correct for (in)equality constraints
+            neq <- 0L
+            niq <- 0L
+            if(nrow(lavmodel@con.jac) > 0L) {
+                ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
+                cin.idx <- attr(lavmodel@con.jac, "cin.idx")
+                ina.idx <- attr(lavmodel@con.jac, "inactive.idx")
+                if(length(ceq.idx) > 0L) {
+                    neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
+                }
+                if(length(cin.idx) > 0L) {
+                    niq <- length(cin.idx) - length(ina.idx) # only active
+                }
+                # total number of relevant constraints
+                neiq <- neq + niq
+                if(neiq > 0L) {
+                    eigvals <- rev(eigvals)[- seq_len(neiq)]
+                }
+            }
+            min.val <- min(eigvals)
+            #if(any(eigvals < -1 * sqrt(.Machine$double.eps)) &&
+            if(min.val < .Machine$double.eps^(3/4) && lavoptions$warn) {
+                #VarCov.chol <- suppressWarnings(try(chol(VarCov,
+                #                   pivot = TRUE), silent = TRUE))
+                #VarCov.rank <- attr(VarCov.chol, "rank")
+                #VarCov.pivot <- attr(VarCov.chol, "pivot")
+                #VarCov.badidx <- VarCov.pivot[ VarCov.rank + 1L ]
+                #pt.idx <- which(lavpartable$free == VarCov.badidx)
+                #par.string <- paste(lavpartable$lhs[pt.idx],
+                #                    lavpartable$op[ pt.idx],
+                #                    lavpartable$rhs[pt.idx])
+                #if(lavdata@ngroups > 1L) {
+                #    par.string <- paste0(par.string, " in group ",
+                #                         lavpartable$group[pt.idx])
+                #}
+                #if(lavdata@nlevels > 1L) {
+                #    par.string <- paste0(par.string, " in level ",
+                #                         lavpartable$level[pt.idx])
+                #}
+
+                if(min.val > 0) {
+                    txt <- c("The variance-covariance matrix of the estimated
+                        parameters (vcov) does not appear to be positive
+                        definite! The smallest eigenvalue (= ",
+                        sprintf("%e", min(min.val)), ") is close to zero.
+                        This may be a symptom that the model is not
+                        identified.")
+                    warning(lav_txt2message(txt))
+                } else {
+                    txt <- c("The variance-covariance matrix of the estimated
+                        parameters (vcov) does not appear to be positive
+                        definite! The smallest eigenvalue (= ",
+                        sprintf("%e", min(min.val)), ") is smaller than zero.
+                        This may be a symptom that the model is not
+                        identified.")
+                    warning(lav_txt2message(txt))
+                }
+            }
+        }
+
     } else {
-        warning("lavaan WARNING: could not compute standard errors!\n  lavaan NOTE: this may be a symptom that the model is not identified.\n")
+        if(lavoptions$warn) {
+            txt <- "Could not compute standard errors! The information matrix
+                    could not be inverted. This may be a symptom that the model
+                    is not identified."
+            warning(lav_txt2message(txt))
+        }
         VarCov <- NULL
-    }
+    } # could not invert
 
     VarCov
 }

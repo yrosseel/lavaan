@@ -31,6 +31,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     # 1. parameter scaling (to handle data scaling, not parameter scaling)
     parscale <- rep(1.0, length(x.unpack))
+
+    # for < 0.6 compatibility
+    if(is.null(lavoptions$optim.parscale)) {
+        lavoptions$optim.parscale <- "none"
+    }
+
     if(lavoptions$optim.parscale == "none") {
         # do nothing, but still set SCALE, as before
     } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",

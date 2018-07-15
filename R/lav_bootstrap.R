@@ -160,6 +160,10 @@ bootstrap.internal <- function(object          = NULL,
         dataX <- lavdata@X
     }
     dataeXo <- lavdata@eXo
+    dataWT  <- lavdata@weights
+    dataMp  <- lavdata@Mp
+    dataRp  <- lavdata@Rp
+    dataLp  <- lavdata@Lp
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
@@ -261,9 +265,34 @@ bootstrap.internal <- function(object          = NULL,
                 boot.idx <- sample(x=lavsamplestats@nobs[[g]],
                                    size=lavsamplestats@nobs[[g]], replace=TRUE)
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
-                if(!is.null(dataeXo[[g]]))
+                if(!is.null(dataeXo[[g]])) {
                     dataeXo[[g]] <- dataeXo[[g]][boot.idx,,drop=FALSE]
-            }
+                }
+                if(!is.null(dataWT[[g]])) {
+                    dataWT[[g]] <- dataWT[[g]][boot.idx]
+                }
+                if(lavoptions$missing != "listwise") {
+                    dataMp[[g]] <- lav_data_missing_patterns(dataX[[g]],
+                                       sort.freq = FALSE, coverage = FALSE)
+                }
+                if(length(lavdata@ov.names.x[[g]]) == 0L &&
+                   all(lavdata@ov.names[[g]] %in%
+                       lavdata@ov$name[lavdata@ov$type == "ordered"])) {
+                    dataRp[[g]] <- lav_data_resp_patterns(dataX[[g]])
+                }
+                if(lavdata@nlevels > 1L) {
+                    # extract cluster variable(s), for this group
+                    clus <- matrix(0, nrow(dataX[[g]]), lavdata@nlevels - 1L)
+                    for(l in 2:lavdata@nlevels) {
+                        clus[,(l-1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
+                    }
+                    dataLp[[g]] <- lav_data_cluster_patterns(Y = dataX[[g]],
+                                        clus = clus,
+                                        cluster = lavdata@cluster,
+                                        ov.names = lavdata@ov.names[[g]],
+                                        ov.names.l = lavdata@ov.names.l[[g]])
+                }
+            } # g
         } else { # parametric!
             for(g in 1:lavsamplestats@ngroups) {
                 dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
@@ -272,16 +301,19 @@ bootstrap.internal <- function(object          = NULL,
             }
         }
 
+        # create new lavdata@ object (new in 0.6-2)
+        newData         <- lavdata
+        newData@X       <- dataX
+        newData@eXo     <- dataeXo
+        newData@weights <- dataWT
+        newData@Mp      <- dataMp
+        newData@Rp      <- dataRp
+        newData@Lp      <- dataLp
+
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
         bootSampleStats <- try(lav_samplestats_from_data(
-                               lavdata       = NULL,
-                               DataX         = dataX,
-                               DataeXo       = dataeXo,
-                               DataOv        = lavdata@ov,
-                               DataOvnames   = lavdata@ov.names,
-                               DataOvnamesx  = lavdata@ov.names.x,
-                               DataWT        = lavdata@weights,
+                               lavdata       = newData,
                                missing       = lavoptions$missing,
                                rescale       = (lavoptions$estimator == "ML" &&
                                                 lavoptions$likelihood == "normal"),
@@ -302,17 +334,6 @@ bootstrap.internal <- function(object          = NULL,
             return(NULL)
         }
 
-        # just in case we need the new X in the data slot (lm!)
-        lavdata@X <- dataX
-
-        # adjust model slot if fixed.x variances/covariances
-        # have changed:
-      ### FIXME #####
-        #if(lavmodel@fixed.x && length(vnames(partable, "ov.x")) > 0L) {
-        #    for(g in 1:lavsamplestats@ngroups) {
-        #
-        #    }
-        #}
         if(lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
             model.boot <- NULL
         } else {

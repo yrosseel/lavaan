@@ -489,7 +489,7 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
         eigvals <- eigen(information, symmetric = TRUE,
                          only.values = TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
-            warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the model may not be identified")
+            warning("lavaan WARNING: information matrix is not positive definite; the model may not be identified")
         }
     }
 

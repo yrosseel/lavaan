@@ -5,12 +5,6 @@
 # YR 5/01/2016: add rescov, resvar, ... if conditional.x = TRUE
 
 lav_samplestats_from_data <- function(lavdata           = NULL,
-                                      DataX             = NULL,
-                                      DataeXo           = NULL,
-                                      DataOvnames       = NULL,
-                                      DataOvnamesx      = NULL,
-                                      DataOv            = NULL,
-                                      DataWT            = NULL,
                                       missing           = "listwise",
                                       rescale           = FALSE,
                                       missing.h1        = TRUE,
@@ -36,38 +30,19 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     # ridge default
     ridge.eps <- 0.0
 
-    # get X and Mp
-    if(!is.null(lavdata)) {
-        X <- lavdata@X; Mp <- lavdata@Mp
-        ngroups <- lavdata@ngroups
-        nlevels <- lavdata@nlevels
-        nobs <- lavdata@nobs
-        ov.names <- lavdata@ov.names
-        ov.names.x <- lavdata@ov.names.x
-        DataOv <- lavdata@ov
-        eXo <- lavdata@eXo
-        WT  <- lavdata@weights
-    } else if(!is.null(DataX)) {
-        stopifnot(is.list(DataX), is.matrix(DataX[[1L]]))
-        X <- DataX
-        eXo <- DataeXo
-        ngroups <- length(X)
-        nlevels <- 1L # for now
-        Mp   <- vector("list", length = ngroups)
-        nobs <- vector("list", length = ngroups)
-        for(g in 1:ngroups) {
-            if(missing != "listwise") {
-                Mp[[g]] <- lav_data_missing_patterns(X[[g]], sort.freq = FALSE,
-                               coverage = FALSE)
-            }
-            nobs[[g]] <- nrow(X[[g]])
-        }
-        ov.names   <- DataOvnames
-        ov.names.x <- DataOvnamesx
-        WT         <- DataWT
-    } else {
-        stop("both lavdata and DataX argument are NULL")
-    }
+    # check lavdata
+    stopifnot(!is.null(lavdata))
+
+    # lavdata slots (FIXME: keep lavdata@ names)
+    X <- lavdata@X; Mp <- lavdata@Mp
+    ngroups <- lavdata@ngroups
+    nlevels <- lavdata@nlevels
+    nobs <- lavdata@nobs
+    ov.names <- lavdata@ov.names
+    ov.names.x <- lavdata@ov.names.x
+    DataOv <- lavdata@ov
+    eXo <- lavdata@eXo
+    WT  <- lavdata@weights
 
     # sample statistics per group
 
@@ -523,10 +498,17 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 } else {
                     Y <- X[[g]]
                 }
+
+                if(length(lavdata@cluster) > 0L) {
+                    cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+                } else {
+                    cluster.idx <- NULL
+                }
+
                 NACOV[[g]] <-
                     lav_samplestats_Gamma(Y              = Y,
                                           x.idx          = x.idx[[g]],
-                                          cluster.idx    = lavdata@Lp[[g]]$cluster.idx[[2]],
+                                          cluster.idx    = cluster.idx,
                                           fixed.x        = fixed.x,
                                           conditional.x  = conditional.x,
                                           meanstructure  = meanstructure,
@@ -560,10 +542,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     } else {
                         Y <- X[[g]]
                     }
+
+                    if(length(lavdata@cluster) > 0L) {
+                        cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+                    } else {
+                        cluster.idx <- NULL
+                    }
                     NACOV[[g]] <-
                         lav_samplestats_Gamma(Y             = Y,
                                               x.idx         = x.idx[[g]],
-                                              cluster.idx    = lavdata@Lp[[g]]$cluster.idx[[2]],
+                                              cluster.idx   = cluster.idx,
                                               fixed.x       = fixed.x,
                                               conditional.x = conditional.x,
                                               meanstructure = meanstructure,
@@ -1272,17 +1260,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                 cov.d[[clz]] <- 0
             }
         }
-
-        # dirty hack:
-        #dels <- diag(Sigma.B)
-        #tiny.idx <- which( dels/max(dels) < 0.01 )
-        #if(length(tiny.idx) > 0L) {
-        #    diag(Sigma.B)[tiny.idx] <- diag(Sigma.B)[tiny.idx] + 0.020
-        #    diag(S.w)[tiny.idx]     <- diag(S.w)[tiny.idx]     - 0.020
-        #    diag(S.PW.start)[tiny.idx] <- diag(S.PW.start)[tiny.idx] - 0.020
-        #}
-
-
 
         YLp[[l]] <- list(Y1Y1 = Y1Y1,
                          Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,

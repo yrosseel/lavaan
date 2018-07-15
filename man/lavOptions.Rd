@@ -292,15 +292,27 @@ Starting values options:
 Check options:
 
 \describe{
-    \item{\code{check}:}{Character vector. If \code{check} includes 
-      \code{"start"}, the starting values are checked for possibly 
+    \item{\code{check.start}:}{Logical. If \code{TRUE},
+      the starting values are checked for possibly 
       inconsistent values (for example values implying correlations larger 
-      than one); if \code{check} includes \code{"gradient"}, a warning 
-      is given if the optimizer decided that the model converged, but 
-      not all elements of the gradient are (near) zero, as
-      they should be (the tolerance used is 0.001);
-      if \code{check} includes \code{"post"}, a check is performed 
-      after (post) fitting, to check if the solution is admissable.}
+      than one). If needed, a warning is given.}
+    \item{\code{check.gradient}:}{Logical. If \code{TRUE}, and the model
+      converged, a warning
+      is given if the optimizer decided that a (local) solution has
+      been found, while not all elements of the (unscaled) gradient (as 
+      seen by the optimizer) are (near) zero, as
+      they should be (the tolerance used is 0.001).}
+    \item{\code{check.post}:}{Logical. If \code{TRUE}, and the model
+      converged, a check is performed after (post) fitting, to verify if 
+      the solution is admissable. This implies that all variances are
+      non-negative, and all the model-implied covariance matrices are 
+      positive (semi-)definite. For the latter test, we tolerate a tiny 
+      negative eigenvalue that is smaller than .Machine$double.eps^(3/4), 
+      treating it as being zero.}
+    \item{\code{check.vcov}:}{Logical. If \code{TRUE}, and the model converged,
+      we check if the variance-covariance matrix of the free parameters
+      is positive definite. We take into account possible equality and
+      acitive inequality constraints. If needed, a warning is given.}
 }
 
 Verbosity options:

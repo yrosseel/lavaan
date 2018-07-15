@@ -109,31 +109,37 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         # 2. se
         # 3. bootstrap requested/successful draws
         if(!is.null(x$se)) {
-            # 1.
-            t0.txt <- sprintf("  %-35s", "Information")
-            tmp.txt <- attr(x, "information")
-            t1.txt <- sprintf("  %15s", paste(toupper(substring(tmp.txt,1,1)),
-                             substring(tmp.txt,2), sep=""))
-            cat(t0.txt, t1.txt, "\n", sep="")
 
-            # 2.
-            if(attr(x, "information") %in% c("expected", "first.order") ||
-               attr(x, "observed.information") == "h1") {
-                t0.txt <- sprintf("  %-35s", "Information saturated (h1) model")
-                tmp.txt <- attr(x, "h1.information")
-                t1.txt <- sprintf("  %15s",
-                                  paste(toupper(substring(tmp.txt,1,1)),
-                                          substring(tmp.txt,2), sep=""))
-                cat(t0.txt, t1.txt, "\n", sep="")
-            }
-            if(attr(x, "information") == "observed") {
-                t0.txt <- sprintf("  %-35s", "Observed information based on")
-                tmp.txt <- attr(x, "observed.information")
+            if(attr(x, "se") != "bootstrap") {
+                # 1.
+                t0.txt <- sprintf("  %-35s", "Information")
+                tmp.txt <- attr(x, "information")
                 t1.txt <- sprintf("  %15s",
                                   paste(toupper(substring(tmp.txt,1,1)),
                                   substring(tmp.txt,2), sep=""))
                 cat(t0.txt, t1.txt, "\n", sep="")
-            }
+
+                # 2.
+                if(attr(x, "information") %in% c("expected", "first.order") ||
+                   attr(x, "observed.information") == "h1") {
+                    t0.txt <- sprintf("  %-35s",
+                                      "Information saturated (h1) model")
+                    tmp.txt <- attr(x, "h1.information")
+                    t1.txt <- sprintf("  %15s",
+                                      paste(toupper(substring(tmp.txt,1,1)),
+                                            substring(tmp.txt,2), sep=""))
+                    cat(t0.txt, t1.txt, "\n", sep="")
+                }
+                if(attr(x, "information") == "observed") {
+                    t0.txt <- sprintf("  %-35s",
+                                      "Observed information based on")
+                    tmp.txt <- attr(x, "observed.information")
+                    t1.txt <- sprintf("  %15s",
+                                      paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt,2), sep=""))
+                    cat(t0.txt, t1.txt, "\n", sep="")
+                }
+            } # no bootstrap
 
             # 3.
             t0.txt <- sprintf("  %-31s", "Standard Errors")
@@ -674,4 +680,58 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
 }
 
 
+# print warnings/errors in a consistent way
+# YR 12 July 2018
+
+lav_txt2message <- function(txt, header = "lavaan WARNING:",
+                            footer = "", txt.width = 70L, shift = 3L) {
+    # make sure we only have a single string
+    txt <- paste(txt, collapse = "")
+
+    # split the txt in little chunks
+    chunks <- strsplit(txt, "\\s+", fixed = FALSE)[[1]]
+
+    # chunk size (number of characters)
+    chunk.size <- nchar(chunks)
+
+    # remove empty chunks (needed?)
+    empty.idx <- which(chunk.size == 0)
+    if(length(empty.idx) > 0L) {
+        chunks <- chunks[-empty.idx]
+        chunk.size <- chunk.size[-empty.idx]
+    }
+
+    # insert "\n" so the txt never gets wider than txt.width
+    num.lines <- floor((sum(chunk.size) + length(chunk.size))/txt.width + 0.5)
+    target <- character(num.lines)
+
+    line.size <- shift
+    line.num <- 1L
+    start.chunk <- 1L
+    end.chunck <- 1L
+    for(ch in seq_len( length(chunks) )) {
+        line.size <- line.size + chunk.size[ch] + 1L
+        if(line.size > txt.width) {
+            end.chunk <- ch - 1L
+            target[line.num] <- paste(c(rep(" ", (shift-1)),
+                                        chunks[ start.chunk:end.chunk ]),
+                                      collapse = " ")
+            line.num <- line.num + 1L
+            start.chunk <- ch
+            line.size <- shift + chunk.size[ch] + 1L
+        }
+    }
+    # last line
+    target[line.num] <- paste(c(rep(" ", (shift-1)),
+                              chunks[ start.chunk:ch ]), collapse = " ")
+
+    body <- paste(target, collapse = "\n")
+    if(nchar(footer) == 0L) {
+       out <- paste(c(header, body), collapse = "\n")
+    } else {
+       out <- paste(c(header, body, footer), collapse = "\n")
+    }
+
+    out
+}
 
