@@ -8,10 +8,11 @@ importFrom("graphics",
 
 importFrom("methods",
            "is", "new", "slot", "slotNames", ".hasSlot",
+           "setClass", "representation", "setGeneric",  "setRefClass", "setMethod",
            # generics,
+           "show", "signature")
 
-           "show")
-importFrom("stats", 
+importFrom("stats",
            "as.formula", "complete.cases", "cor", "cov", "cov2cor", "cov.wt",
            "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq",
            "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif",
@@ -162,7 +163,7 @@ export("lavaan", "cfa", "sem", "growth",
 # export Classes
 exportClasses(
               "lavaan",
-              "lavaanList" 
+              "lavaanList"
              )
 
 # export Methods
