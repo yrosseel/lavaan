@@ -1,9 +1,10 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.6-2.1279
-Authors@R: c(person(given = "Yves", family = "Rosseel",
-                    role  = c("aut", "cre"),
-                    email = "Yves.Rosseel@UGent.be"),
+Version: 0.6-2.1282
+Authors@R: c(person(given   = "Yves", family = "Rosseel",
+                    role    = c("aut", "cre"),
+                    email   = "Yves.Rosseel@UGent.be",
+                    comment = c(ORCID = "0000-0002-4129-4477")),
              person(given = "Daniel", family = "Oberski",
                     role = "ctb",
                     email = "daniel.oberski@gmail.com"),
@@ -47,4 +48,3 @@ License: GPL (>= 2)
 LazyData: yes
 ByteCompile: true
 URL: http://lavaan.org
-RoxygenNote: 6.0.1
