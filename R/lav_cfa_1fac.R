@@ -40,8 +40,9 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     # however, if we get a 2x2 (or 1x1 covariance matrix), do something
     # useful anyways...
     if(nvar == 1L) {
-        # lambda = 1, theta = 0
-        sample.cov <- matrix(1, 3L, 3L) * sample.cov[1,1]
+        # lambda = 1, theta = 0, psi = sample.cov[1,1] 
+        # lambda = 1, theta = 0, psi = 1 (for now, until NlsyLinks is fixed)
+        sample.cov <- matrix(1, 3L, 3L) * 1.0
     } else if(nvar == 2L) {
         # hm, we could force both lambda's to be 1, but if the second
         # one is negative, this will surely lead to non-convergence issues
