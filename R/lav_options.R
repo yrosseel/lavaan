@@ -342,12 +342,13 @@ lav_options_set <- function(opt = NULL) {
         # se
         if(opt$se == "default") {
             opt$se <- "standard"
-        } else if(opt$se %in% c("none", "standard", "robust.huber.white")) {
+        } else if(opt$se %in% c("none", "standard", "robust.huber.white", "bootstrap")) {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             opt$se <- "robust.huber.white"
         } else {
-            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" or \"robust.huber.white\" in the multilevel case")
+            stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\", "\bootstrap\"
+                 or \"robust.huber.white\" in the multilevel case")
         }
 
         # information
