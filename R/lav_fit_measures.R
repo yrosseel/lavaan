@@ -630,7 +630,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
             if("ifi.scaled" %in% fit.measures) {
                 t1 <- X2.null.scaled - X2.scaled
-                t2 <- X2.null.scaled
+                t2 <- X2.null.scaled - df.scaled
                 if(is.na(t2)) {
                     IFI <- NA
                 } else if(t2 < 0) {
