@@ -40,7 +40,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     # however, if we get a 2x2 (or 1x1 covariance matrix), do something
     # useful anyways...
     if(nvar == 1L) {
-        # lambda = 1, theta = 0, psi = sample.cov[1,1] 
+        # lambda = 1, theta = 0, psi = sample.cov[1,1]
         # lambda = 1, theta = 0, psi = 1 (for now, until NlsyLinks is fixed)
         sample.cov <- matrix(1, 3L, 3L) * 1.0
     } else if(nvar == 2L) {
@@ -123,7 +123,7 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
         S31 <- S13 <- S[idx3, 1L]
         if(method == "fabin3") {
             S33 <- S[idx3,idx3]
-            tmp <- try(solve(S33, S31), silent = TRUE) # GaussJordanPivot is 
+            tmp <- try(solve(S33, S31), silent = TRUE) # GaussJordanPivot is
                                                        # slighty more efficient
             if(inherits(tmp, "try-error")) {
                 lambda[i] <- sum(s23 * S31) / sum(S13^2)
