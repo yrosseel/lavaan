@@ -763,13 +763,15 @@ lav_fit_measures <- function(object, fit.measures="all",
             }
 
             #  multiple group correction
-            if(object@Options$mimic %in% c("Mplus", "lavaan")) {
+            #  note: recent builds of EQS also use this 'correction'
+            #        perhaps we should have an option to obtain the 'old' one
+            #if(object@Options$mimic %in% c("Mplus", "lavaan")) {
                 RMSEA <- RMSEA * sqrt(G)
                 if(scaled) {
                     RMSEA.scaled <- RMSEA.scaled * sqrt(G)
                     RMSEA.robust <- RMSEA.robust * sqrt(G)
                 }
-            }
+            #}
 
         } else {
             RMSEA <- RMSEA.scaled <- RMSEA.robust <- 0
@@ -798,13 +800,13 @@ lav_fit_measures <- function(object, fit.measures="all",
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=X2)$root,
                             silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.lower"] <-
                     sqrt( lambda.l/((N-GG)*df) ) * sqrt(G)
-            } else {
-                indices["rmsea.ci.lower"] <- sqrt( lambda.l/(N*df) )
-            }
+            #} else {
+            #    indices["rmsea.ci.lower"] <- sqrt( lambda.l/(N*df) )
+            #}
         }
     }
 
@@ -831,13 +833,13 @@ lav_fit_measures <- function(object, fit.measures="all",
             lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
                             silent=TRUE)
             if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 indices["rmsea.ci.lower.scaled"] <-
                         sqrt( lambda.l/(N*df2) ) * sqrt(G)
-            } else {
-                # no multiple group correction
-                indices["rmsea.ci.lower.scaled"] <- sqrt( lambda.l/(N*df2) )
-            }
+            #} else {
+            #    # no multiple group correction
+            #    indices["rmsea.ci.lower.scaled"] <- sqrt( lambda.l/(N*df2) )
+            #}
 
             if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus",
                                      "yuan.bentler")) {
@@ -850,14 +852,14 @@ lav_fit_measures <- function(object, fit.measures="all",
                 lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=XX2)$root,
                                 silent=TRUE)
                 if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
-                if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+                #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                     indices["rmsea.ci.lower.robust"] <-
                             sqrt( (c.hat*lambda.l)/(N*df2) ) * sqrt(G)
-                } else {
-                    # no multiple group correction
-                    indices["rmsea.ci.lower.robust"] <-
-                        sqrt( (c.hat*lambda.l)/(N*df2) )
-                }
+                #} else {
+                #    # no multiple group correction
+                #    indices["rmsea.ci.lower.robust"] <-
+                #        sqrt( (c.hat*lambda.l)/(N*df2) )
+                #}
             } else {
                 indices["rmsea.ci.lower.robust"] <- NA
             }
@@ -876,13 +878,13 @@ lav_fit_measures <- function(object, fit.measures="all",
             lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                             silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 GG <- 0
                 indices["rmsea.ci.upper"] <-
                     sqrt( lambda.u/((N-GG)*df) ) * sqrt(G)
-            } else {
-                indices["rmsea.ci.upper"] <- sqrt( lambda.u/(N*df) )
-            }
+            #} else {
+            #    indices["rmsea.ci.upper"] <- sqrt( lambda.u/(N*df) )
+            #}
         }
     }
 
@@ -910,14 +912,14 @@ lav_fit_measures <- function(object, fit.measures="all",
             lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                             silent=TRUE)
             if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 indices["rmsea.ci.upper.scaled"] <-
                     sqrt( lambda.u/(N*df2) ) * sqrt(G)
-            } else {
-                # no multiple group correction
-                indices["rmsea.ci.upper.scaled"] <-
-                    sqrt( lambda.u/(N*df2) )
-            }
+            #} else {
+            #    # no multiple group correction
+            #    indices["rmsea.ci.upper.scaled"] <-
+            #        sqrt( lambda.u/(N*df2) )
+            #}
 
             if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus",
                                      "yuan.bentler")) {
@@ -930,14 +932,14 @@ lav_fit_measures <- function(object, fit.measures="all",
                 lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                                 silent=TRUE)
                 if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-                if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+             #   if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                     indices["rmsea.ci.upper.robust"] <-
                         sqrt( (c.hat*lambda.u)/(N*df2) ) * sqrt(G)
-                } else {
-                    # no multiple group correction
-                    indices["rmsea.ci.upper.robust"] <-
-                        sqrt( (c.hat*lambda.u)/(N*df2) )
-                }
+             #   } else {
+             #       # no multiple group correction
+             #       indices["rmsea.ci.upper.robust"] <-
+             #           sqrt( (c.hat*lambda.u)/(N*df2) )
+             #   }
             } else {
                 indices["rmsea.ci.upper.robust"] <- NA
             }
@@ -948,14 +950,14 @@ lav_fit_measures <- function(object, fit.measures="all",
         if(is.na(X2) || is.na(df)) {
             indices["rmsea.pvalue"] <- as.numeric(NA)
         } else if(df > 0) {
-            if(object@Options$mimic %in% c("lavaan","Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan","Mplus")) {
                 ncp <- N*df*0.05^2/G
                 indices["rmsea.pvalue"] <-
                     1 - pchisq(X2, df=df, ncp=ncp)
-            } else {
-                indices["rmsea.pvalue"] <-
-                    1 - pchisq(X2, df=df, ncp=(N*df*0.05^2))
-            }
+            #} else {
+            #    indices["rmsea.pvalue"] <-
+            #        1 - pchisq(X2, df=df, ncp=(N*df*0.05^2))
+            #}
         } else {
             indices["rmsea.pvalue"] <- NA # used to be 1 in < 0.5-21
         }
@@ -975,14 +977,14 @@ lav_fit_measures <- function(object, fit.measures="all",
             indices["rmsea.pvalue.robust"] <- as.numeric(NA)
         } else if(df > 0) {
             # scaled
-            if(object@Options$mimic %in% c("lavaan", "Mplus")) {
+            #if(object@Options$mimic %in% c("lavaan", "Mplus")) {
                 ncp <- N*df2*0.05^2/G
                 indices["rmsea.pvalue.scaled"] <-
                     1 - pchisq(XX2, df=df2, ncp=ncp)
-            } else {
-                indices["rmsea.pvalue.scaled"] <-
-                    1 - pchisq(XX2, df=df2, ncp=(N*df2*0.05^2))
-            }
+            #} else {
+            #    indices["rmsea.pvalue.scaled"] <-
+            #        1 - pchisq(XX2, df=df2, ncp=(N*df2*0.05^2))
+            #}
 
             if(TEST[[2]]$test %in% c("satorra.bentler", "yuan.bentler.mplus",
                                      "yuan.bentler")) {
