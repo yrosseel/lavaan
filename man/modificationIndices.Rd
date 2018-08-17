@@ -4,7 +4,9 @@
 \alias{modindices}
 \title{Modification Indices}
 \description{
-Modification indices of a latent variable model.}
+Given a fitted lavaan object, compute the modification indices 
+(= univariate score tests) for a selected set of fixed-to-zero parameters.
+}
 \usage{
 modificationIndices(object, standardized = TRUE, cov.std = TRUE,
                     power = FALSE, delta = 0.1, alpha = 0.05, 
@@ -45,11 +47,26 @@ maximum number rows. Most useful when combined with the \code{sort.} option.}
 corresponding to free (unconstrained) parameters in the original model.}
 \item{na.remove}{Logical. If TRUE, filter output by removing all rows with
 NA values for the modification indices.}
-\item{op}{Character string. Filter the output by selectin only those rows with
+\item{op}{Character string. Filter the output by selecting only those rows with
 operator \code{op}.}
 }
 \value{
   A data.frame containing modification indices and EPC's.
+}
+\details{
+  Modification indices are just 1-df (or univariate) score tests. The
+  modification index (or score test) for a single parameter reflects 
+  (approximately) the improvement in model fit (in terms of the chi-square
+  test statistic), if we would refit the model but allow this parameter to 
+  be free.
+  This function is a convenience function in the sense that it produces a 
+  (hopefully sensible) table of currently fixed-to-zero (of fixed to another
+  constant) parameters. For each of these parameters, a modification index
+  is computed, together with an expected parameter change (epc) value.
+  It is important to realize that this function will only consider 
+  fixed-to-zero parameters. If you have equality constraints in the model, 
+  and you wish to examine what happens if you release all (or some) of these
+  equality constraints, use the \code{\link{lavTestScore}} function.
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
@@ -57,5 +74,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-modindices(fit)
+modindices(fit, minimum.value = 10, sort = TRUE)
 }
