@@ -378,7 +378,7 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
         #if(opt$categorical && opt$estimator != "mml") {
         if(opt$categorical) {
-            stop("lavaan ERROR: missing = ", dQuote(opt$missing), 
+            stop("lavaan ERROR: missing = ", dQuote(opt$missing),
                  " not available in the categorical setting")
         }
         opt$missing <- "ml"

@@ -320,7 +320,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
                 # FIXME!
                 # no handling of missing data yet....
-                if(missing %in% c("ml", "ml.x", 
+                if(missing %in% c("ml", "ml.x",
                                   "two.stage", "robust.two.stage")) {
                     stop("lavaan ERROR: missing = ", missing, " + conditional.x not supported yet")
                 }

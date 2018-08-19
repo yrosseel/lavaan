@@ -97,7 +97,12 @@ Data options:
       case by case, using all available data from that case. Note
       that if the model contains exogenous observed covariates, and
       \code{fixed.x = TRUE} (the default), all cases with any missing values
-      on these covariates will be deleted first. If you wish to use multiple
+      on these covariates will be deleted first. The option \code{"ml.x"}
+      (alias: \code{"fiml.x"} or \code{"direct.x"}) is similar to \code{"ml"},
+      but does not delete any cases with missing values for the exogenous
+      covariates, even if \code{fixed.x = TRUE}. (Note: all lavaan versions
+      < 0.6 used \code{"ml.x"} instead of \code{"ml"}).
+      If you wish to use multiple
       imputation, you need to use an external package (eg. mice) to
       generate imputed datasets, which can then be analyzed using
       the \code{\link{semList}} function. The semTools package contains

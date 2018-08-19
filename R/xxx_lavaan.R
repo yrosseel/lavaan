@@ -1248,9 +1248,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(is.character(constraints) && nchar(constraints) > 0L) {
         hasExplicitConstraints <- TRUE
     }
-    if(!is.null(lavoptions$check.gradient) &&
-       lavoptions$check.gradient && lavTech(lavaan, "converged") &&
-       !hasExplicitConstraints) {
+    hasNonLinearEqConstraints <- FALSE
+    if(length(lavmodel@ceq.nonlinear.idx) > 0L) {
+        hasNonLinearEqConstraints <- TRUE
+    }
+    hasIneqConstraints <- FALSE
+    if(length(lavmodel@cin.linear.idx) > 0L ||
+       length(lavmodel@cin.nonlinear.idx) > 0L) {
+        hasIneqConstraints <- TRUE
+    }
+    if(!is.null(lavoptions$check.gradient) && lavoptions$check.gradient &&
+       lavTech(lavaan, "converged") &&
+       !hasExplicitConstraints      &&
+       !hasNonLinearEqConstraints   &&
+       !hasIneqConstraints) {
         grad <- lavInspect(lavaan, "optim.gradient")
         large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
         if(length(large.idx) > 0L) {
