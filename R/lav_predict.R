@@ -337,7 +337,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
     # missings? and missing = "ml"?
     # impute values under the normal
-    if(lavdata@missing == "ml") {
+    if(lavdata@missing %in% c("ml", "ml.x")) {
         for(g in seq_len(lavdata@ngroups)) {
             if(newdata.flag) {
                 DATA <- data.obs[[g]]
@@ -517,7 +517,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     #
     # FIXME: THIS IS NOT CORRECT; we should use FIML!!!
     #
-    if(lavdata@missing == "ml") {
+    if(lavdata@missing %in% c("ml", "ml.x")) {
         for(g in seq_len(lavdata@ngroups)) {
             if(newdata.flag) {
                 DATA <- data.obs[[g]]

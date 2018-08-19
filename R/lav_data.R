@@ -676,7 +676,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
             #                           complete.cases(data[exo.idx]))
             #    nobs[[g]] <- length(case.idx[[g]])
             #    norig[[g]] <- length(which(data[[group]] == group.label[g]))
-            } else if(length(exo.idx) > 0L) {
+            } else if(length(exo.idx) > 0L && missing != "ml.x") {
                 case.idx[[g]] <- which(data[[group]] == group.label[g] &
                                        complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
@@ -700,7 +700,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
             #    case.idx[[g]] <- which(complete.cases(data[exo.idx]))
             #    nobs[[g]] <- length(case.idx[[g]])
             #    norig[[g]] <- nrow(data)
-            } else if(length(exo.idx) > 0L) {
+            } else if(length(exo.idx) > 0L && missing != "ml.x") {
                 case.idx[[g]] <- which(complete.cases(data[exo.idx]))
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- nrow(data)

@@ -386,7 +386,7 @@ fsr <- function(model      = NULL,
                     Omega.y <- lav_samplestats_Gamma_NT(Y = DATA,
                                    meanstructure = lavoptions$meanstructure,
                                    rescale = TRUE, fixed.x = FALSE)
-                } else if(lavoptions$missing == "ml") {
+                } else if(lavoptions$missing %in% c("ml", "ml.x")) {
                     # we assume UNSTRUCTURED Mu and Sigma!!
                     MU    <- FIT@SampleStats@missing.h1[[g]]$mu
                     SIGMA <- FIT@SampleStats@missing.h1[[g]]$sigma
@@ -415,7 +415,7 @@ fsr <- function(model      = NULL,
                     Omega.y <- lav_samplestats_Gamma(Y = DATA,
                                    meanstructure = lavoptions$meanstructure,
                                    fixed.x = FALSE)
-                } else if(lavoptions$missing == "ml") {
+                } else if(lavoptions$missing %in% c("ml", "ml.x")) {
                     # we assume UNSTRUCTURED Mu and Sigma!!
                     MU    <- FIT@SampleStats@missing.h1[[g]]$mu
                     SIGMA <- FIT@SampleStats@missing.h1[[g]]$sigma

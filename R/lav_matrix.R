@@ -1072,6 +1072,11 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
         S.inv <-
             tcrossprod(EV$vector / rep(EV$values, each = length(EV$values)),
                        EV$vector)
+
+        # 0.5 version
+        #S.inv <- tcrossprod(sweep(EV$vector, 2L,
+        #                          STATS = (1/EV$values), FUN="*"), EV$vector)
+
         if(logdet) {
             if(all(EV$values >= 0)) {
                 attr(S.inv, "logdet") <- sum(log(EV$values))

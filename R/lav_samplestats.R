@@ -320,7 +320,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
                 # FIXME!
                 # no handling of missing data yet....
-                if(missing %in% c("ml", "two.stage", "robust.two.stage")) {
+                if(missing %in% c("ml", "ml.x", 
+                                  "two.stage", "robust.two.stage")) {
                     stop("lavaan ERROR: missing = ", missing, " + conditional.x not supported yet")
                 }
 
@@ -375,7 +376,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 cov[[g]]  <- missing.h1.[[g]]$sigma
                 var[[g]]  <- diag(cov[[g]])
                 mean[[g]] <- missing.h1.[[g]]$mu
-            } else if(missing == "ml") {
+            } else if(missing %in% c("ml", "ml.x")) {
                 missing.flag. <- TRUE
                 missing.[[g]] <-
                     lav_samplestats_missing_patterns(Y  = X[[g]],
@@ -432,7 +433,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
 
             # icov and cov.log.det (but not if missing)
-            if(missing != "ml") {
+            if(!missing %in% c("ml", "ml.x")) {
                 out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
