@@ -21,7 +21,7 @@ function(object, type="raw", labels=TRUE) {
     # checks
     if(type %in% c("normalized", "standardized")) {
         if(object@Options$estimator != "ML") {
-            stop("standardized and normalized residuals only availabe if estimator = ML (or MLF, MLR, MLM\n")
+            stop("standardized and normalized residuals only available if estimator = ML (or MLF, MLR, MLM)\n")
         }
         #if(object@optim$npar > 0L && !object@optim$converged) {
         #    stop("lavaan ERROR: model dit not converge")
@@ -243,7 +243,8 @@ function(object, type="raw", labels=TRUE) {
                     A1 <- lav_mvnorm_h1_information_observed_samplestats(
                       sample.cov     = lavsamplestats@cov[[g]],
                       x.idx          = lavsamplestats@x.idx[[g]],
-                      sample.cov.inv = lavsamplestats@icov[[g]])
+                      sample.cov.inv = lavsamplestats@icov[[g]],
+                      meanstructure  = object@Model@meanstructure)
                 }
 
                 if(lavsamplestats@missing.flag) {
@@ -268,12 +269,18 @@ function(object, type="raw", labels=TRUE) {
                           wt    = lavdata@weights[[g]],
                           cluster.idx = cluster.idx,
                           sample.cov = lavsamplestats@cov[[g]],
-                          sample.cov.inv = lavsamplestats@icov[[g]])
+                          sample.cov.inv = lavsamplestats@icov[[g]],
+                          meanstructure = object@Model@meanstructure)
                 }
 
                 Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
-                Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
+                if(meanstructure) {
+                    Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
+                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
+                } else {
+                    Var.mean <- Var.sample.mean <- rep(1, nvar)
+                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info))
+                }
             } else if(object@Options$se == "first.order") {
                 if(length(lavdata@cluster) > 0L) {
                     cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
@@ -297,11 +304,18 @@ function(object, type="raw", labels=TRUE) {
                           cluster.idx = cluster.idx,
                           x.idx = lavsamplestats@x.idx[[g]],
                           sample.cov = lavsamplestats@cov[[g]],
-                          sample.cov.inv = lavsamplestats@icov[[g]])
+                          sample.cov.inv = lavsamplestats@icov[[g]],
+                          meanstructure = object@Model@meanstructure)
                 }
                 Info <- solve(B1) / N
-                Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
+                if(meanstructure) {
+                    Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
+                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
+                } else {
+                    Var.mean <- Var.sample.mean <- rep(1, nvar)
+                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info))
+
+                }
             }
         }
 
