@@ -8,15 +8,154 @@
 #}
 
 setMethod("residuals", "lavaan",
-function(object, type="raw", labels=TRUE) {
+function(object, type = "raw", labels = TRUE) {
 
     # lowercase type
     type <- tolower(type)
 
-    # catch type="casewise"
+    # type = "casewise"
     if(type %in% c("casewise","case","obs","observations","ov")) {
         return( lav_residuals_casewise(object, labels = labels) )
+    } else {
+        return( lav_residuals_old(object = object, type = type, 
+                                  labels = labels) )
     }
+})
+
+setMethod("resid", "lavaan",
+function(object, type="raw") {
+    residuals(object, type=type)
+})
+
+lav_residuals <- function(object, type = "raw", h1 = TRUE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # type
+    type <- tolower(type)
+
+    # unstandardized residuals
+    obsList <- lav_object_inspect_sampstat(object, h1 = h1,
+                                           add.labels = add.labels,
+                                           add.class  = FALSE,
+                                           drop.list.single.group = FALSE)
+    estList <- lav_object_inspect_implied(object,
+                                          add.labels = add.labels,
+                                          add.class  = FALSE,
+                                          drop.list.single.group = FALSE)
+    # blocks
+    nblocks <- length(obsList)
+
+    resList <- vector("list", length = nblocks)
+    for(b in seq_len(nblocks)) {
+        resList[[b]]$type <- type
+        if(object@Model@conditional.x) {
+            if(!is.null(estList[[b]]$res.cov)) {
+                resList[[b]]$res.cov <- ( obsList[[b]]$res.cov -
+                                          estList[[b]]$res.cov )
+                if(add.class) {
+                    class(resList[[b]]$res.cov) <-
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[b]]$res.int)) {
+                 resList[[b]]$res.int <- ( obsList[[b]]$res.int -
+                                           estList[[b]]$res.int )
+                if(add.class) {
+                    class(resList[[b]]$res.int) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+            if(!is.null(estList[[b]]$res.th)) {
+                resList[[b]]$res.th  <- ( obsList[[b]]$res.th  -
+                                          estList[[b]]$res.th )
+                if(add.class) {
+                    class(resList[[b]]$res.th) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+            if(!is.null(estList[[b]]$res.slopes)) {
+                resList[[b]]$res.slopes <- ( obsList[[b]]$res.slopes -
+                                             estList[[b]]$res.slopes )
+                if(add.class) {
+                    class(resList[[b]]$res.slopes) <-
+                        c("lavaan.matrix", "matrix")
+                }
+            }
+            if(!is.null(estList[[b]]$cov.x)) {
+                resList[[b]]$cov.x  <- ( obsList[[b]]$cov.x  -
+                                         estList[[b]]$cov.x )
+                if(add.class) {
+                    class(resList[[b]]$cov.x) <-
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[b]]$mean.x)) {
+                 resList[[b]]$mean.x <- ( obsList[[b]]$mean.x -
+                                          estList[[b]]$mean.x )
+                if(add.class) {
+                    class(resList[[b]]$mean.x) <- c("lavaan.vector", "numeric")
+                }
+            }
+
+        # unconditional
+        } else {
+            if(!is.null(estList[[b]]$cov)) {
+                resList[[b]]$cov <- ( obsList[[b]]$cov -
+                                      estList[[b]]$cov )
+                if(add.class) {
+                    class(resList[[b]]$cov) <-
+                        c("lavaan.matrix.symmetric", "matrix")
+                }
+            }
+            if(!is.null(estList[[b]]$mean)) {
+                 resList[[b]]$mean <- ( obsList[[b]]$mean -
+                                        estList[[b]]$mean )
+                 if(add.class) {
+                    class(resList[[b]]$mean) <-
+                        c("lavaan.vector", "numeric")
+                 }
+            }
+            if(!is.null(estList[[b]]$th)) {
+                resList[[b]]$th  <- ( obsList[[b]]$th  -
+                                      estList[[b]]$th )
+                if(add.class) {
+                    class(resList[[b]]$th) <-
+                        c("lavaan.vector", "numeric")
+                }
+            }
+        }
+
+        # free group.w
+        if(!is.null(estList[[b]]$group.w)) {
+            resList[[b]]$group.w <- ( obsList[[b]]$group.w  -
+                                      estList[[b]]$group.w )
+            if(add.class) {
+                class(resList[[b]]$group.w) <-
+                    c("lavaan.vector", "numeric")
+            }
+        }
+    }
+
+    OUT <- resList
+    if(nblocks == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(object@Data@nlevels == 1L &&
+           length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        } else if(object@Data@nlevels > 1L &&
+                  length(object@Data@group.label) == 0L) {
+            names(OUT) <- object@Data@level.label
+        }
+    }
+
+    OUT
+}
+
+
+lav_residuals_old <- function(object = NULL, type = "raw", labels = TRUE) {
+
+    type <- tolower(type)
 
     # checks
     if(type %in% c("normalized", "standardized")) {
@@ -384,12 +523,7 @@ function(object, type="raw", labels=TRUE) {
     }
 
     R
-})
-
-setMethod("resid", "lavaan",
-function(object, type="raw") {
-    residuals(object, type=type)
-})
+}
 
 lav_residuals_casewise <- function(object, labels = labels) {
 
