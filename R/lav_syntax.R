@@ -172,22 +172,6 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             rhs <- substr(rhs, 2, nchar(rhs))
         }
 
-        # new in 0.6-3
-        # check if all lhs names are valid (in R); see ?make.names and ?reserved
-        # for example, 'NA' is a reserved keyword, and should not be used
-        # this usually only happens for latent variable names
-        LHS <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
-        if(!all(make.names(LHS) == LHS)) {
-            stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
-                 lhs, " ", op, " ", rhs,
-                 "\n    contains a reserved word (in R): ", 
-                 dQuote(LHS[!make.names(LHS) == LHS]),
-                 "\n    see ?reserved for a list of reserved words in R",
-                 "\n    please use a variable name that is not a reserved word in R")
-        }
-
-
-
         # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
         if(op == "==" || op == "<" || op == ">" || op == ":=") {
             # remove quotes, if any
@@ -220,9 +204,27 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         }
 
         # 3. parse left hand
-        #    lhs modifiers will be ignored for now
-        lhs.formula <- as.formula(paste("~",lhs))
 
+        # new in 0.6-3
+        # first check if all lhs names are valid (in R); see ?make.names 
+        # and ?reserved
+        # for example, 'NA' is a reserved keyword, and should not be used
+        # this usually only happens for latent variable names
+        #
+        # check should not come earlier, as we do not need it for :,==,<,>,:=
+        LHS <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
+        # remove modifiers
+        LHS <- gsub("^\\S*\\*", "", LHS)
+        if( !all(make.names(LHS) == LHS) ) { 
+            stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
+                 lhs, " ", op, " ", rhs,
+                 "\n    contains a reserved word (in R): ", 
+                 dQuote(LHS[!make.names(LHS) == LHS]),
+                 "\n    see ?reserved for a list of reserved words in R",
+                 "\n    please use a variable name that is not a reserved word in R")
+        }   
+
+        lhs.formula <- as.formula(paste("~",lhs))
         out <- lav_syntax_parse_rhs(rhs=lhs.formula[[2L]])
         lhs.names <- names(out)
         # check if we have modifiers
@@ -251,7 +253,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                     if(op == "~") {
                         rhs.name <- ""
                     } else {
-                        stop("lavaan ERROR: right-hand side of formula contains an intercept, but operator is \"", op, "\" in: ", x)
+                        # either number (1), or reserved name?
+                        stop("lavaan ERROR: right-hand side of formula contains an invalid variable name:\n    ", x)
                     }
                 } else if(names(out)[j] == "..zero.." && op == "~") {
                     rhs.name <- ""
