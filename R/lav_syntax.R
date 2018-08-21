@@ -162,15 +162,31 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             op.idx <- regexpr(op, x)
         }
         lhs <- substr(x, 1L, op.idx-1L)
-        # fix for 'NA' names in lhs; not likely to happen to ov.names
-        # since 'NA' is not a valid name for list elements/data.frame columns
-        if(lhs == "NA") lhs <- "NA."
+
+        # right-hand side string
         rhs <- substr(x, op.idx+attr(op.idx, "match.length"), nchar(x))
 
-        # check if first character is '+'; if so, remove silently
+        # check if first character of rhs is '+'; if so, remove silently
+        # (for those who copied multiline R input from a website/pdf)
         if(substr(rhs, 1, 1) == "+") {
             rhs <- substr(rhs, 2, nchar(rhs))
         }
+
+        # new in 0.6-3
+        # check if all lhs names are valid (in R); see ?make.names and ?reserved
+        # for example, 'NA' is a reserved keyword, and should not be used
+        # this usually only happens for latent variable names
+        LHS <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
+        if(!all(make.names(LHS) == LHS)) {
+            stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
+                 lhs, " ", op, " ", rhs,
+                 "\n    contains a reserved word (in R): ", 
+                 dQuote(LHS[!make.names(LHS) == LHS]),
+                 "\n    see ?reserved for a list of reserved words in R",
+                 "\n    please use a variable name that is not a reserved word in R")
+        }
+
+
 
         # 2b. if operator is "==" or "<" or ">" or ":=", put it in CON
         if(op == "==" || op == "<" || op == ">" || op == ":=") {
@@ -206,6 +222,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # 3. parse left hand
         #    lhs modifiers will be ignored for now
         lhs.formula <- as.formula(paste("~",lhs))
+
         out <- lav_syntax_parse_rhs(rhs=lhs.formula[[2L]])
         lhs.names <- names(out)
         # check if we have modifiers
