@@ -1,6 +1,7 @@
 # lavaanList: fit the *same* model, on different datasets
 # YR - 29 Jun 2016
 # YR - 27 Jan 2017: change lavoptions; add dotdotdot to each call
+# TDJ - 23 Aug 2018: change wrappers to preserve arguments from match.call()
 
 lavaanList <- function(model         = NULL,             # model
                        dataList      = NULL,             # list of datasets
@@ -420,14 +421,10 @@ semList <- function(model         = NULL,
                     cl            = NULL,
                     iseed         = NULL) {
 
-    lavaanList(model = model, dataList = dataList,
-               dataFunction = dataFunction,
-               dataFunction.args = dataFunction.args, ndat = ndat,
-               cmd = "sem",
-               ..., store.slots = store.slots,
-               FUN = FUN, show.progress = show.progress,
-               store.failed = store.failed,
-               parallel = parallel, ncpus = ncpus, cl = cl, iseed = iseed)
+  mc <- match.call(expand.dots = TRUE)
+  mc$cmd <- "sem"
+  mc[[1L]] <- quote(lavaan::lavaanList)
+  eval(mc, parent.frame())
 }
 
 cfaList <- function(model         = NULL,
@@ -445,14 +442,9 @@ cfaList <- function(model         = NULL,
                     cl            = NULL,
                     iseed         = NULL) {
 
-    lavaanList(model = model, dataList = dataList,
-               dataFunction = dataFunction,
-               dataFunction.args = dataFunction.args, ndat = ndat,
-               cmd = "cfa",
-               ..., store.slots = store.slots,
-               FUN = FUN, show.progress = show.progress,
-               store.failed = store.failed,
-               parallel = parallel, ncpus = ncpus, cl = cl,
-               iseed = iseed)
+  mc <- match.call(expand.dots = TRUE)
+  mc$cmd <- "cfa"
+  mc[[1L]] <- quote(lavaan::lavaanList)
+  eval(mc, parent.frame())
 }
 
