@@ -11,7 +11,7 @@ fixed or constrained parameters in model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
              univariate = TRUE, cumulative = FALSE, epc = FALSE,
-             verbose = FALSE, warn = TRUE)
+             verbose = FALSE, warn = TRUE, use.exp.info = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -24,24 +24,28 @@ constraints as they appear in the parameter table.}
 \item{univariate}{Logical. If \code{TRUE}, compute the univariate score
 statistics, one for each constraints.}
 \item{cumulative}{Logical. If \code{TRUE}, order the univariate score
-statistics from large to small, and compute a series of 
+statistics from large to small, and compute a series of
 multivariate score statistics, each time adding an additional constraint.}
 \item{epc}{Logical. If \code{TRUE}, and we are releasing existing constraints,
 compute the expected parameter changes for the existing (free) parameters,
 for each released constraint.}
-\item{verbose}{Logical. Not used for now.} 
+\item{verbose}{Logical. Not used for now.}
 \item{warn}{Logical. If \code{TRUE}, print out warnings if they occur.}
+\item{use.exp.info}{Logical, indicating whether to use the expected information
+matrix (default: \code{TRUE}, which provides better control of Type I errors)
+or whichever type of information was used to estimate the standard errors
+(check \code{\link{lavInspect}(object, "options")$information}).}
 }
 \details{
     This function can be used to compute both multivariate and univariate
     score tests. There are two modes: 1) releasing fixed-to-zero parameters
-    (using the \code{add} argument), and 2) releasing existing equality 
+    (using the \code{add} argument), and 2) releasing existing equality
     constraints (using the \code{release} argument). The two modes can not
     be used simultaneously.
 
     When adding new parameters, they should not already be part of the model
-    (i.e. not listed in the parameter table). If you want to test for 
-    a parameter that was explicitly fixed to a constant (say to zero), 
+    (i.e. not listed in the parameter table). If you want to test for
+    a parameter that was explicitly fixed to a constant (say to zero),
     it is better to label the parameter, and use an explicit equality
     constraint.
 }
@@ -55,7 +59,7 @@ for each released constraint.}
       Each 1-\emph{df} score test, equivalent to modification indices.}
     \item{\code{$cumulative}: Optional (if \code{cumulative=TRUE}).
       Cumulative score tests.}
-    \item{\code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates, 
+    \item{\code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates,
       expected parameter changes, and expected parameter values if all
       the tested constraints were freed.}
   }

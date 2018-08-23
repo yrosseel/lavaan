@@ -11,7 +11,8 @@
 #
 lavTestScore <- function(object, add = NULL, release = NULL,
                          univariate = TRUE, cumulative = FALSE,
-                         epc = FALSE, verbose = FALSE, warn = TRUE) {
+                         epc = FALSE, verbose = FALSE, warn = TRUE,
+                         use.exp.info = TRUE) {
 
     # check object
     stopifnot(inherits(object, "lavaan"))
@@ -44,7 +45,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         FIT <- lav_object_extended(object, add = add)
 
         score <- lavTech(FIT, "gradient.logl")
-        information <- lavTech(FIT, "information.expected")
+        if (use.exp.info) {
+          information <- lavTech(FIT, "information.expected")
+        } else {
+          information <- lavTech(FIT, "information")
+        }
 
         npar <- object@Model@nx.free
         nadd <- FIT@Model@nx.free - npar
@@ -84,7 +89,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         }
 
         score <- lavTech(object, "gradient.logl")
-        information <- lavTech(object, "information.expected")
+        if (use.exp.info) {
+          information <- lavTech(FIT, "information.expected")
+        } else {
+          information <- lavTech(FIT, "information")
+        }
         J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))?
         #                 else written over with Z1.plus if(is.numeric(release))
         #R <- object@Model@con.jac[,]

@@ -4,6 +4,7 @@
 modindices <- function(object,
                        standardized = TRUE,
                        cov.std = TRUE,
+                       use.exp.info = TRUE,
 
                        # power statistics?
                        power = FALSE,
@@ -51,7 +52,11 @@ modindices <- function(object,
 
     # compute information matrix 'extended model'
     # ALWAYS use *expected* information (for now)
-    information <- lavTech(FIT, "information.expected")
+    if (use.exp.info) {
+      information <- lavTech(FIT, "information.expected")
+    } else {
+      information <- lavTech(FIT, "information")
+    }
 
     # compute gradient 'extended model'
     score <- lavTech(FIT, "gradient.logl")
@@ -85,7 +90,11 @@ modindices <- function(object,
     I22 <- information[model.idx, model.idx, drop = FALSE]
 
     # ALWAYS use *expected* information (for now)
-    I22.inv <- try(lavTech(object, "inverted.information.expected"), silent = TRUE)
+    if (use.exp.info) {
+      I22.inv <- try(lavTech(object, "inverted.information.expected"), silent = TRUE)
+    } else {
+      I22.inv <- try(lavTech(object, "inverted.information"), silent = TRUE)
+    }
     # just in case...
     if(inherits(I22.inv, "try-error")) {
         stop("lavaan ERROR: could not compute modification indices; information matrix is singular")
