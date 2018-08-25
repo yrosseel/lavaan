@@ -159,7 +159,7 @@ lav_fit_measures <- function(object, fit.measures="all",
         fit.srmr2 <- c("rmr", "rmr_nomean",
                        "srmr", # per default equal to srmr_bentler_nomean
                        "srmr_bentler", "srmr_bentler_nomean",
-                       "srmr_bollen", "srmr_bollen_nomean",
+                       "crmr", "crmr_nomean",
                        "srmr_mplus", "srmr_mplus_nomean")
     } else {
         if(object@Data@nlevels > 1L) {
@@ -170,7 +170,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             fit.srmr2 <- c("rmr", "rmr_nomean",
                            "srmr", # the default
                            "srmr_bentler", "srmr_bentler_nomean",
-                           "srmr_bollen", "srmr_bollen_nomean",
+                           "crmr", "crmr_nomean",
                            "srmr_mplus", "srmr_mplus_nomean")
         }
     }
@@ -1018,8 +1018,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         rmr_nomean.group <- numeric(G)
         srmr_bentler.group <- numeric(G)
         srmr_bentler_nomean.group <- numeric(G)
-        srmr_bollen.group <- numeric(G)
-        srmr_bollen_nomean.group <- numeric(G)
+        crmr.group <- numeric(G)
+        crmr_nomean.group <- numeric(G)
         srmr_mplus.group <- numeric(G)
         srmr_mplus_nomean.group <- numeric(G)
 
@@ -1074,7 +1074,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                            sum(R.mean^2))/ e )
                 rmr.group[g] <- sqrt( (sum(RR[lower.tri(RR, diag=TRUE)]^2) +
                                        sum(RR.mean^2))/ e )
-                srmr_bollen.group[g] <-
+                crmr.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2)  +
                            sum(R.cor.mean^2)) / (e - nvar) )
                 # see http://www.statmodel.com/download/SRMR.pdf
@@ -1088,7 +1088,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                     sqrt(  sum( R[lower.tri( R, diag=TRUE)]^2) / e )
                 rmr_nomean.group[g] <-
                     sqrt(  sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                srmr_bollen_nomean.group[g] <-
+                crmr_nomean.group[g] <-
                     sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
                 srmr_mplus_nomean.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
@@ -1099,7 +1099,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                     sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
                 rmr_nomean.group[g] <- rmr.group[g] <-
                     sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                srmr_bollen_nomean.group[g] <- srmr_bollen.group[g] <-
+                crmr_nomean.group[g] <- crmr.group[g] <-
                     sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
                 srmr_mplus_nomean.group[g] <- srmr_mplus.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
@@ -1111,8 +1111,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             ## FIXME: get the scaling right
             SRMR_BENTLER <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler.group) / object@SampleStats@ntotal )
             SRMR_BENTLER_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler_nomean.group) / object@SampleStats@ntotal )
-            SRMR_BOLLEN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bollen.group) / object@SampleStats@ntotal )
-            SRMR_BOLLEN_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bollen_nomean.group) / object@SampleStats@ntotal )
+            crmr <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr.group) / object@SampleStats@ntotal )
+            crmr_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr_nomean.group) / object@SampleStats@ntotal )
             SRMR_MPLUS <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus.group) / object@SampleStats@ntotal )
             SRMR_MPLUS_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus_nomean.group) / object@SampleStats@ntotal )
             RMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr.group) / object@SampleStats@ntotal )
@@ -1120,8 +1120,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         } else {
             SRMR_BENTLER <- srmr_bentler.group[1]
             SRMR_BENTLER_NOMEAN <- srmr_bentler_nomean.group[1]
-            SRMR_BOLLEN <- srmr_bollen.group[1]
-            SRMR_BOLLEN_NOMEAN <- srmr_bollen_nomean.group[1]
+            crmr <- crmr.group[1]
+            crmr_NOMEAN <- crmr_nomean.group[1]
             SRMR_MPLUS <- srmr_mplus.group[1]
             SRMR_MPLUS_NOMEAN <- srmr_mplus_nomean.group[1]
             RMR <- rmr.group[1]
@@ -1148,8 +1148,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         # the others
         indices["srmr_bentler"]        <- SRMR_BENTLER
         indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
-        indices["srmr_bollen"]         <- SRMR_BOLLEN
-        indices["srmr_bollen_nomean"]  <- SRMR_BOLLEN_NOMEAN
+        indices["crmr"]         <- crmr
+        indices["crmr_nomean"]  <- crmr_NOMEAN
         indices["srmr_mplus"]          <- SRMR_MPLUS
         indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
         if(categorical) {
