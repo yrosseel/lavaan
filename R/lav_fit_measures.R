@@ -1076,7 +1076,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                                        sum(RR.mean^2))/ e )
                 srmr_bollen.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2)  +
-                           sum(R.cor.mean^2)) / e )
+                           sum(R.cor.mean^2)) / (e - nvar) )
                 # see http://www.statmodel.com/download/SRMR.pdf
                 srmr_mplus.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
@@ -1089,7 +1089,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 rmr_nomean.group[g] <-
                     sqrt(  sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
                 srmr_bollen_nomean.group[g] <-
-                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / e )
+                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
                 srmr_mplus_nomean.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
                            sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
@@ -1100,7 +1100,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 rmr_nomean.group[g] <- rmr.group[g] <-
                     sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
                 srmr_bollen_nomean.group[g] <- srmr_bollen.group[g] <-
-                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / e )
+                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
                 srmr_mplus_nomean.group[g] <- srmr_mplus.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
                            sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )

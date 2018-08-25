@@ -132,7 +132,18 @@ lavInspect.lavaan <- function(object,
               what == "sample" ||
               what == "samplestatistics") {
         # new in 0.6-3: always use h1 = TRUE!!!
-        lav_object_inspect_sampstat(object, h1 = TRUE,
+        lav_object_inspect_sampstat(object, h1 = TRUE, std = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "obs.std" ||
+              what == "observed.std" ||
+              what == "sampstat.std" ||
+              what == "sampstats.std" ||
+              what == "samplestats.std" ||
+              what == "samp.std" ||
+              what == "sample.std" ||
+              what == "samplestatistics.std") {
+        lav_object_inspect_sampstat(object, h1 = TRUE, std = TRUE,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "h1" || what == "missing.h1" || what == "sampstat.h1") {
@@ -754,8 +765,9 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
 #    for ML, we have both joint and residual cov/var/...; but for
 #    categorical = TRUE, we only have residual cov/var...; so, we
 #    only return residual in both cases, whenever residual
-# - since 0.6-1, we extract the values from the @h1 slot (if present)
+# - since 0.6-3, we always extract the values from the @h1 slot (if present)
 lav_object_inspect_sampstat <- function(object, h1 = TRUE,
+    std = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     nblocks <- object@Model@nblocks
@@ -794,6 +806,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             } else {
                 OUT[[b]]$cov  <- lavsamplestats@cov[[b]]
             }
+            if(std) {
+                diag.orig <- diag(OUT[[b]]$cov)
+                OUT[[b]]$cov <- cov2cor(OUT[[b]]$cov)
+            }
             if(add.labels && !is.null(OUT[[b]]$cov)) {
                 rownames(OUT[[b]]$cov) <- colnames(OUT[[b]]$cov) <-
                     ov.names[[b]]
@@ -807,6 +823,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
                 OUT[[b]]$mean <- as.numeric(H1$mean[[b]])
             } else {
                 OUT[[b]]$mean <- as.numeric(lavsamplestats@mean[[b]])
+            }
+            if(std) {
+                diag.orig[ diag.orig < .Machine$double.eps ] <- NA
+                OUT[[b]]$mean <- OUT[[b]]$mean/sqrt(diag.orig)
             }
             if(add.labels) {
                 names(OUT[[b]]$mean) <- ov.names[[b]]
@@ -826,6 +846,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
                     NUM.idx <- which(object@Model@th.idx[[b]] == 0)
                     OUT[[b]]$th <- OUT[[b]]$th[ -NUM.idx ]
                 }
+                # FIXME: what to do if std = TRUE (depends on delta/theta)
                 if(add.labels) {
                     names(OUT[[b]]$th) <- object@pta$vnames$th[[b]]
                 }
@@ -843,6 +864,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             } else {
                 OUT[[b]]$res.cov  <- lavsamplestats@res.cov[[b]]
             }
+            if(std) {
+                diag.orig <- diag(OUT[[b]]$res.cov)
+                OUT[[b]]$res.cov <- cov2cor(OUT[[b]]$res.cov)
+            }
             if(add.labels) {
                 rownames(OUT[[b]]$res.cov) <- colnames(OUT[[b]]$res.cov) <-
                     ov.names.res[[b]]
@@ -858,6 +883,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
                     OUT[[b]]$res.int <- as.numeric(H1$res.int[[b]])
                 } else {
                     OUT[[b]]$res.int <- as.numeric(lavsamplestats@res.int[[b]])
+                }
+                if(std) {
+                    diag.orig[ diag.orig < .Machine$double.eps ] <- NA
+                    OUT[[b]]$res.int <- OUT[[b]]$res.int/sqrt(diag.orig)
                 }
                 if(add.labels) {
                     names(OUT[[b]]$res.int) <- ov.names.res[[b]]
@@ -878,6 +907,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
                     NUM.idx <- which(object@Model@th.idx[[b]] == 0)
                     OUT[[b]]$res.th <- OUT[[b]]$res.th[ -NUM.idx ]
                 }
+                # FIXME: if std: what to do?
                 if(add.labels) {
                     names(OUT[[b]]$res.th) <- object@pta$vnames$th[[b]]
                 }
@@ -893,6 +923,16 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
                 } else {
                     OUT[[b]]$res.slopes  <- lavsamplestats@res.slopes[[b]]
                 }
+                # FIXME: if std: what to do? (here: b.z = b * s.x /s.y)
+                if(std) {
+                    tmp.y <- matrix(sqrt(diag.orig),
+                                    nrow(OUT[[b]]$res.slopes),
+                                    ncol(OUT[[b]]$res.slopes))
+                    tmp.x <- matrix(sqrt(diag(lavsamplestats@cov.x[[b]])),
+                                    nrow(OUT[[b]]$res.slopes),
+                                    ncol(OUT[[b]]$res.slopes), byrow = TRUE)
+                    OUT[[b]]$res.slopes <- OUT[[b]]$res.slopes / tmp.y * tmp.x
+                }
                 if(add.labels) {
                     rownames(OUT[[b]]$res.slopes) <- ov.names.res[[b]]
                     colnames(OUT[[b]]$res.slopes) <- ov.names.x[[b]]
@@ -905,6 +945,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             # cov.x
             if(object@Model@nexo > 0L) {
                 OUT[[b]]$cov.x  <- lavsamplestats@cov.x[[b]]
+                if(std) {
+                    diag.orig <- diag(OUT[[b]]$cov.x)
+                    OUT[[b]]$cov.x <- cov2cor(OUT[[b]]$cov.x)
+                }
                 if(add.labels) {
                     rownames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
                     colnames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
@@ -918,6 +962,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             # mean.x
             if(object@Model@nexo > 0L) {
                 OUT[[b]]$mean.x <- as.numeric(object@SampleStats@mean.x[[b]])
+                if(std) {
+                    diag.orig[ diag.orig < .Machine$double.eps ] <- NA
+                    OUT[[b]]$mean.x <- OUT[[b]]$mean.x/sqrt(diag.orig)
+                }
                 if(add.labels) {
                     names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
                 }
@@ -1212,7 +1260,7 @@ lav_object_inspect_residuals <- function(object, h1 = TRUE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
     lav_residuals(object, type = "raw", h1 = h1,
-                  add.labels = add.labels, add.class = add.class, 
+                  add.labels = add.labels, add.class = add.class,
                   drop.list.single.group = drop.list.single.group)
 }
 

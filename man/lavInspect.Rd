@@ -144,16 +144,22 @@ Information about the data (including missing patterns):
 Observed sample statistics:
 
 \describe{
-    \item{\code{"sampstat"}:}{Observed sample statistics. Aliases: 
-        \code{"samp"}, \code{"sample"}, \code{"samplestatistics"}. In the 
-        presence of missing values, the sample covariance matrix is computed
-        using \code{use="pairwise"}, while listwise deletion is used for the
-        means (and thresholds, if any).}
-    \item{\code{"sampstat.h1"}:}{If all variables are continuous, and 
-        \code{missing = "ml"} (or \code{"fiml"}), 
-        the EM algorithm is used to compute an 
-        estimate of the sample covariance matrix and mean vector under 
-        the unrestricted (H1) model. Aliases: \code{"h1"}, \code{"missing.h1"}.}
+    \item{\code{"sampstat"}:}{Observed sample statistics. Aliases:  
+         \code{"obs"}, \code{"observed"}, \code{"samp"}, \code{"sample"}, 
+         \code{"samplestatistics"}. Since
+         0.6-3, we always check if an h1 slot is available (the estimates
+         for the unrestricted model); if present, we extract the sample
+         statistics from this slot. This implies that if variables are
+         continuous, and \code{missing = "ml"} (or \code{"fiml"}), we
+         return the covariance matrix (and mean vector) as computed by
+         the EM algorithm under the unrestricted (h1) model. If the h1 is
+         not present (perhaps, because the model was fitted with 
+         \code{h1 = FALSE}), we return the sample statistics from the
+         SampleStats slot. Here, pairwise deletion is used for the elements
+         of the covariance matrix (or correlation matrix), and 
+         listwise deletion for all univariate statistics (means, intercepts
+         and thresholds).}
+    \item{\code{"sampstat.h1"}:}{Deprecated. Do not use any longer.}
     \item{\code{"wls.obs"}:}{The observed sample statistics (covariance
         elements, intercepts/thresholds, etc.) in a single vector.}
     \item{\code{"wls.v"}:}{The weight vector as used in weighted least
