@@ -179,7 +179,9 @@ lavInspect.lavaan <- function(object,
     } else if(what == "group") {
         object@Data@group
     } else if(what == "cluster") {
-        object@Data@cluster
+      object@Data@cluster
+    } else if(what == "nlevels") {
+      object@Data@nlevels
     } else if(what == "ordered") {
         object@Data@ordered
     } else if(what == "group.label") {
