@@ -8,10 +8,11 @@
 #
 # Note: this replaces the (old) lav_model_wls_v() function
 #
-# - YR 22 Okt 2017
+# - YR 22 Okt 2017: initial version
 # - YR 03 Dec 2017: add lavh1, implied is either lavimplied or lavh1
 #                   add support for clustered data: first.order
 # - YR 03 Jan 2018: add support for clustered data: expected
+# - YR 23 Aug 2018: lav_model_h1_acov (0.6-3)
 
 lav_model_h1_information <- function(lavobject      = NULL,
                                      lavmodel       = NULL,
@@ -38,8 +39,7 @@ lav_model_h1_information <- function(lavobject      = NULL,
         lavoptions     <- lavobject@Options
     }
 
-
-    estimator   <- lavmodel@estimator
+    # information
     information <- lavoptions$information
 
     # compute information matrix
@@ -700,4 +700,103 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
     B1
 }
+
+
+# asymptotic variance matrix (=Gamma/N) of the unrestricted (H1)
+# sample statistics
+lav_model_h1_acov <- function(lavobject      = NULL,
+                              lavmodel       = NULL,
+                              lavsamplestats = NULL,
+                              lavdata        = NULL,
+                              lavoptions     = NULL,
+                              lavimplied     = NULL,
+                              lavh1          = NULL,
+                              lavcache       = NULL,
+                              meanstructure  = NULL,  # if specified, use it
+                              h1.information = NULL,  # if specified, use it
+                              se = NULL) {            # if specified, use it
+
+    if(!is.null(lavobject) && inherits(lavobject, "lavaan")) {
+        lavmodel       <- lavobject@Model
+        lavsamplestats <- lavobject@SampleStats
+        lavdata        <- lavobject@Data
+        lavimplied     <- lavobject@implied
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1      <- lavobject@h1
+        } else {
+            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+                                      lavsamplestats = lavobject@SampleStats,
+                                      lavoptions = lavobject@Options)
+        }
+        lavcache       <- lavobject@Cache
+        lavoptions     <- lavobject@Options
+    }
+
+    # override
+    if(!is.null(meanstructure)) {
+        lavoptions$meanstructure <- meanstructure
+    }
+    if(!is.null(h1.information)) {
+        lavoptions$h1.information <- h1.information
+    }
+    if(!is.null(se)) {
+        lavoptions$se <- se
+    }
+
+    # information
+    information <- lavoptions$information
+
+    # compute information matrix
+    if(information == "observed") {
+        I1 <- lav_model_h1_information_observed(lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats, lavdata = lavdata,
+            lavimplied = lavimplied, lavh1 = lavh1,
+            lavcache = lavcache, lavoptions = lavoptions)
+    } else if(information == "expected") {
+        I1 <- lav_model_h1_information_expected(lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats, lavdata = lavdata,
+            lavimplied = lavimplied, lavh1 = lavh1,
+            lavcache = lavcache, lavoptions = lavoptions)
+    } else if(information == "first.order") {
+        I1 <- lav_model_h1_information_firstorder(lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats, lavdata = lavdata,
+            lavimplied = lavimplied, lavh1 = lavh1,
+            lavcache = lavcache, lavoptions = lavoptions)
+    }
+
+    if(lavoptions$se %in% c("robust.huber.white", "robust.sem")) {
+        J1 <- lav_model_h1_information_firstorder(lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats, lavdata = lavdata,
+            lavimplied = lavimplied, lavh1 = lavh1,
+            lavcache = lavcache, lavoptions = lavoptions)
+    }
+
+    # compute ACOV per group
+    ACOV <- vector("list", length = lavdata@ngroups)
+    for(g in 1:lavdata@ngroups) {
+
+        # denominator
+        if(lavdata@nlevels == 1L) {
+            Ng <- lavsamplestats@nobs[[g]]
+        } else {
+            Ng <- lavdata@Lp[[g]]$nclusters[[2]]
+        }
+
+        # invert information
+        I1.g.inv <- try(solve(I1[[g]]), silent = TRUE)
+        if(inherits(I1.g.inv, "try-error")) {
+            stop("lavaan ERROR: could not invert h1 information matrix in group ", g)
+        }
+
+        # which type of se?
+        if(lavoptions$se %in% c("standard", "none")) {
+            ACOV[[g]] <- 1/Ng * I1.g.inv
+        } else if(lavoptions$se %in% c("robust.huber.white", "robust.sem")) {
+            ACOV[[g]] <- 1/Ng * (I1.g.inv %*% J1[[g]] %*% I1.g.inv)
+        }
+    }
+
+    ACOV
+}
+
 

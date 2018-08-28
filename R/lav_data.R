@@ -760,7 +760,8 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
         # standardize observed variables? numeric only!
         if(std.ov) {
-            num.idx <- which(ov.names[[g]] %in% ov$name & ov$type == "numeric")
+            num.idx <- which(ov$name %in% ov.names[[g]] &
+                             ov$type == "numeric" & ov$exo == 0L)
             if(length(num.idx) > 0L) {
                 X[[g]][,num.idx] <-
                    scale(X[[g]][,num.idx,drop = FALSE])[,,drop = FALSE]

@@ -206,7 +206,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # 3. parse left hand
 
         # new in 0.6-3
-        # first check if all lhs names are valid (in R); see ?make.names 
+        # first check if all lhs names are valid (in R); see ?make.names
         # and ?reserved
         # for example, 'NA' is a reserved keyword, and should not be used
         # this usually only happens for latent variable names
@@ -215,14 +215,14 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         LHS <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
         # remove modifiers
         LHS <- gsub("^\\S*\\*", "", LHS)
-        if( !all(make.names(LHS) == LHS) ) { 
+        if( !all(make.names(LHS) == LHS) ) {
             stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
                  lhs, " ", op, " ", rhs,
-                 "\n    contains a reserved word (in R): ", 
+                 "\n    contains a reserved word (in R): ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
                  "\n    see ?reserved for a list of reserved words in R",
                  "\n    please use a variable name that is not a reserved word in R")
-        }   
+        }
 
         lhs.formula <- as.formula(paste("~",lhs))
         out <- lav_syntax_parse_rhs(rhs=lhs.formula[[2L]])
