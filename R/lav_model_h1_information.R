@@ -783,7 +783,7 @@ lav_model_h1_acov <- function(lavobject      = NULL,
         }
 
         # invert information
-        I1.g.inv <- try(solve(I1[[g]]), silent = TRUE)
+        I1.g.inv <- try(lav_matrix_symmetric_inverse(I1[[g]]), silent = TRUE)
         if(inherits(I1.g.inv, "try-error")) {
             stop("lavaan ERROR: could not invert h1 information matrix in group ", g)
         }

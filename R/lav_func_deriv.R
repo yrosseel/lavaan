@@ -177,8 +177,25 @@ lav_func_hessian_complex <- function(func, x,
     H
 }
 
+lav_deriv_cov2corB <- function(COV = NULL) {
+    nvar <- nrow(COV)
+    dS.inv <- 1/diag(COV)
+    R <- cov2cor(COV)
+    A <-  -R %x% (0.5 * diag(dS.inv))
+    B <- (0.5 * diag(dS.inv)) %x% -R
+    DD <- diag(lav_matrix_vec(diag(nvar)))
+    A2 <- A %*% DD
+    B2 <- B %*% DD
+    out <- A2 + B2 + diag(lav_matrix_vec(tcrossprod(sqrt(dS.inv))))
+    D <- lav_matrix_duplication(nvar)
+    out.vech <- 0.5 * (t(D) %*% out %*% D)
+    out.vech
+
+}
+
 # quick and dirty (FIXME!!!) way to get
 # surely there must be a more elegant way?
+# see lav_deriv_cov2corB, if no num.idx...
 # dCor/dCov
 lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
 

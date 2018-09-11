@@ -9,49 +9,6 @@ lav_utils_logsumexp <- function(x) {
     a + log(sum(exp(x - a)))
 }
 
-# x is a list with sample statistics (eg output of inspect(fit, "sampstat")
-# y is another (possibly the same) list with sample statistics
-lav_utils_samplestats_rescale <- function(x,
-                                          y = NULL,
-                                          scale.cov = 1, scale.mean = 1) {
-
-    if(!is.null(y)) {
-        if(!is.null(y$res.cov)) {
-            diag.cov <- diag(y$res.cov)
-        } else if(!is.null(y$cov)) {
-            diag.cov <- diag(y$cov)
-        }
-
-        # make sure we can take the sqrt and invert
-        diag.cov[!is.finite(diag.cov)] <- NA
-        diag.cov[ diag.cov < .Machine$double.eps ] <- NA
-
-        scale.cov <- tcrossprod(1/sqrt(diag.cov))
-        scale.mean <- 1/sqrt(diag.cov)
-    } else {
-        stopifnot(!is.null(scale.cov), !is.null(scale.mean))
-    }
-
-    # rescale cov
-    if(!is.null(x$cov)) {
-        x$cov[] <- x$cov * scale.cov
-    }
-    if(!is.null(x$res.cov)) {
-        x$rescov[] <- x$rescov * scale.cov
-    }
-
-    # rescale int/mean
-    if(!is.null(x$res.int)) {
-        x$res.int <- x$res.int * scale.mean
-    }
-    if(!is.null(x$mean)) {
-        x$mean <- x$mean * scale.mean
-    }
-
-    # FIXME: do something sensible for th, slopes, ...
-
-    x
-}
 
 # invert positive definite symmetric matrix (eg cov matrix)
 # using choleski decomposition

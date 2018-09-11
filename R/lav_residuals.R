@@ -1,14 +1,21 @@
-# residuals
+# residual diagnostics
 
 # two types:
 # 1) residuals for summary statistics
 # 2) case-wise residuals
 
-# this (new) version written around Aug 2018 for 0.6-3
+# this (new) version written around Aug/Sept 2018 for 0.6-3
 # - based on obsList (inspect_sampstat) and estList (inspect_implied)
 # - pre-scaling for type = "cor.bollen" and type = "cor.bentler"
-# - type = "normalized" is based on lav_model_h1_acov()
-# - ...
+# - summary statistics: rmr, srmr, crmr, urmr, usrmr, ucrmr; standard errors,
+#       z-statistics (exact test, close test), p-values   
+# - type = "normalized" is based on lav_model_h1_acov(), and should now work
+#   for all estimators
+# - type = "standardized" now uses the correct formula, and should work for
+#   for all estimators
+# - type = "standardized.mplus" uses the simplified Mplus/LISREL version,
+#   often resulting in NAs due to negative var(resid) estimates
+#   (this was "standardized" in lavaan < 0.6.3
 
 setMethod("residuals", "lavaan",
 function(object, type = "raw", labels = TRUE) {
@@ -20,17 +27,46 @@ function(object, type = "raw", labels = TRUE) {
     if(type %in% c("casewise","case","obs","observations","ov")) {
         return( lav_residuals_casewise(object, labels = labels) )
     } else {
-        return( lav_residuals_old(object = object, type = type,
-                                  labels = labels) )
+        return( lav_residuals(object = object, type = type, h1 = TRUE,
+                              add.labels = labels, add.class = TRUE,
+                              drop.list.single.group = TRUE) )
     }
 })
 
 setMethod("resid", "lavaan",
-function(object, type="raw") {
-    residuals(object, type=type)
+function(object, type = "raw") {
+    residuals(object, type = type, labels = TRUE)
 })
 
+
+# user-visible function
+lavResiduals <- function(object, type = "cor.bentler",
+                         se = FALSE, zstat = TRUE, summary = TRUE,
+                         h1.acov = "unstructured", 
+                         add.type = TRUE, add.labels = TRUE, add.class = TRUE,
+                         drop.list.single.group = TRUE) {
+
+    out <- lav_residuals(object = object, type = type, h1 = TRUE, 
+               se = se, zstat = zstat, summary = summary,
+               summary.options = list(se = TRUE, zstat = TRUE, pvalue = TRUE,
+                   unbiased = TRUE, unbiased.se = TRUE, unbiased.zstat = FALSE,
+                   unbiased.test.val = 0.05, unbiased.pvalue = FALSE),
+               h1.acov = h1.acov, add.type = add.type, 
+               add.labels = add.labels, add.class = add.class,
+               drop.list.single.group = drop.list.single.group)
+
+    # no pretty printing yet...
+    out
+}
+
+# main function
 lav_residuals <- function(object, type = "raw", h1 = TRUE,
+                          se = FALSE, zstat = FALSE, summary = FALSE,
+                          summary.options = list(se = TRUE, zstat = TRUE,
+                            pvalue = TRUE, unbiased = TRUE, unbiased.se = TRUE,
+                            unbiased.zstat = FALSE, unbiased.test.val = 0.05, 
+                            unbiased.pvalue = FALSE),
+                          h1.acov = "unstructured", add.type = FALSE,
                           add.labels = FALSE, add.class = FALSE,
                           drop.list.single.group = FALSE) {
 
@@ -39,7 +75,8 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
 
     # check type
     if(!type %in% c("raw", "cor", "cor.bollen", "cor.bentler", "cor.eqs",
-                    "normalized", "standardized")) {
+                    "rmr", "srmr", "crmr",
+                    "normalized", "standardized", "standardized.mplus")) {
         stop("lavaan ERROR: unknown argument for type: ", dQuote(type))
     }
 
@@ -54,190 +91,154 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     if(type == "cor.eqs") {
         type <- "cor.bentler"
     }
+    if(type == "rmr") {
+        type <- "raw"
+    }
+    if(type == "srmr") {
+        type <- "cor.bentler"
+    }
+    if(type == "crmr") {
+        type <- "cor.bollen"
+    }
 
     # slots
     lavdata  <- object@Data
     lavmodel <- object@Model
 
-    # unstandardized residuals
+    # observed and fitted sample statistics
     obsList <- lav_object_inspect_sampstat(object, h1 = h1,
-                                           add.labels = add.labels,
-                                           add.class  = FALSE,
-                                           drop.list.single.group = FALSE)
+                   add.labels = add.labels, add.class  = add.class,
+                   drop.list.single.group = FALSE)
     estList <- lav_object_inspect_implied(object,
-                                          add.labels = add.labels,
-                                          add.class  = FALSE,
-                                          drop.list.single.group = FALSE)
+                   add.labels = add.labels, add.class = add.class,
+                   drop.list.single.group = FALSE)
     # blocks
     nblocks <- length(obsList)
 
 
     # pre-scale?
-    if(type == "cor.bollen") { # r_obs - r_est
+    if(type %in% c("cor.bentler", "cor.bollen")) {
         for(b in seq_len(nblocks)) {
-            obsList[[b]] <- lav_utils_samplestats_rescale(x = obsList[[b]],
-                                                          y = obsList[[b]])
-            estList[[b]] <- lav_utils_samplestats_rescale(x = estList[[b]],
-                                                          y = estList[[b]])
-        }
-    } else if(type == "cor.bentler") { # both cov_obs and cov_est scaled by obs
-        for(b in seq_len(nblocks)) {
-            obsList.b.orig <- obsList[[b]]
-            obsList[[b]] <- lav_utils_samplestats_rescale(x = obsList[[b]],
-                                                          y = obsList[[b]])
-            estList[[b]] <- lav_utils_samplestats_rescale(x = estList[[b]],
-                                                          y = obsList.b.orig)
+            var.obs <- if(lavmodel@conditional.x) { 
+                diag(obsList[[b]]$res.cov) } else { diag(obsList[[b]]$cov) }
+            var.est <- if(lavmodel@conditional.x) { 
+                diag(estList[[b]]$res.cov) } else { diag(estList[[b]]$cov) }
+
+            # rescale obsList
+            obsList[[b]] <- 
+                lav_residuals_rescale(x = obsList[[b]], diag.cov = var.obs)
+            # rescale estList
+            if(type == "cor.bentler") { # use obsList
+                estList[[b]] <- 
+                    lav_residuals_rescale(x = estList[[b]], diag.cov = var.obs)
+            } else if(type == "cor.bollen") { # use estList for COV only
+                estList[[b]] <- lav_residuals_rescale(x = estList[[b]],
+                                    diag.cov  = var.est, diag.cov2 = var.obs)
+            }
         }
     }
 
-    # compute residuals: observed - implied
+    # compute residuals: (observed - implied)
     resList <- vector("list", length = nblocks)
     for(b in seq_len(nblocks)) {
-        resList[[b]]$type <- type
-        if(lavmodel@conditional.x) {
-            if(!is.null(estList[[b]]$res.cov)) {
-                resList[[b]]$res.cov <- ( obsList[[b]]$res.cov -
-                                          estList[[b]]$res.cov )
-                if(add.class) {
-                    class(resList[[b]]$res.cov) <-
-                        c("lavaan.matrix.symmetric", "matrix")
-                }
-            }
-            if(!is.null(estList[[b]]$res.int)) {
-                 resList[[b]]$res.int <- ( obsList[[b]]$res.int -
-                                           estList[[b]]$res.int )
-                if(add.class) {
-                    class(resList[[b]]$res.int) <- c("lavaan.vector", "numeric")
-                }
-            }
-            if(!is.null(estList[[b]]$res.th)) {
-                resList[[b]]$res.th  <- ( obsList[[b]]$res.th  -
-                                          estList[[b]]$res.th )
-                if(add.class) {
-                    class(resList[[b]]$res.th) <- c("lavaan.vector", "numeric")
-                }
-            }
-            if(!is.null(estList[[b]]$res.slopes)) {
-                resList[[b]]$res.slopes <- ( obsList[[b]]$res.slopes -
-                                             estList[[b]]$res.slopes )
-                if(add.class) {
-                    class(resList[[b]]$res.slopes) <-
-                        c("lavaan.matrix", "matrix")
-                }
-            }
-            if(!is.null(estList[[b]]$cov.x)) {
-                resList[[b]]$cov.x  <- ( obsList[[b]]$cov.x  -
-                                         estList[[b]]$cov.x )
-                if(add.class) {
-                    class(resList[[b]]$cov.x) <-
-                        c("lavaan.matrix.symmetric", "matrix")
-                }
-            }
-            if(!is.null(estList[[b]]$mean.x)) {
-                 resList[[b]]$mean.x <- ( obsList[[b]]$mean.x -
-                                          estList[[b]]$mean.x )
-                if(add.class) {
-                    class(resList[[b]]$mean.x) <- c("lavaan.vector", "numeric")
-                }
-            }
-
-        # unconditional
-        } else {
-            if(!is.null(estList[[b]]$cov)) {
-                resList[[b]]$cov <- ( obsList[[b]]$cov -
-                                      estList[[b]]$cov )
-                if(add.class) {
-                    class(resList[[b]]$cov) <-
-                        c("lavaan.matrix.symmetric", "matrix")
-                }
-                if(type == "raw") {
-                    tmp <- lav_matrix_vech(resList[[b]]$cov)
-                    resList[[b]]$rmr.cov <- sqrt(sum(tmp^2)/length(tmp))
-                } else if(type == "cor.bentler") {
-                    tmp <- lav_matrix_vech(resList[[b]]$cov)
-                    resList[[b]]$srmr.cov <- sqrt(sum(tmp^2)/length(tmp))
-                } else if(type == "cor.bollen") {
-                    tmp <- lav_matrix_vech(resList[[b]]$cov, diagonal = FALSE)
-                    resList[[b]]$crmr.cov <- sqrt(sum(tmp^2)/length(tmp))
-                }
-            }
-            if(!is.null(estList[[b]]$mean)) {
-                 resList[[b]]$mean <- ( obsList[[b]]$mean -
-                                        estList[[b]]$mean )
-                 if(add.class) {
-                    class(resList[[b]]$mean) <- c("lavaan.vector", "numeric")
-                 }
-            }
-            if(!is.null(estList[[b]]$th)) {
-                resList[[b]]$th  <- ( obsList[[b]]$th  -
-                                      estList[[b]]$th )
-                if(add.class) {
-                    class(resList[[b]]$th) <- c("lavaan.vector", "numeric")
-                }
-            }
-        }
-
-        # free group.w
-        if(!is.null(estList[[b]]$group.w)) {
-            resList[[b]]$group.w <- ( obsList[[b]]$group.w  -
-                                      estList[[b]]$group.w )
-            if(add.class) {
-                class(resList[[b]]$group.w) <- c("lavaan.vector", "numeric")
-            }
-        }
+        resList[[b]] <- lapply(seq_len(length(obsList[[b]])), 
+                               FUN = function(el) {
+                               obsList[[b]][[el]] - estList[[b]][[el]]})
+        # always name the elements, even if add.labels = FALSE
+        NAMES <- names(obsList[[b]])
+        names(resList[[b]]) <- NAMES
     }
 
+    # do we need seList?
+    if(se || zstat) {
+        seList <- lav_residuals_se(object, type = type, z.type = "standardized",
+                               h1.acov = h1.acov,
+                               add.class = add.class, add.labels = add.labels)
+    } else if(type %in% c("normalized", "standardized", "standardized.mplus")) {
+        seList <- lav_residuals_se(object, type = "raw", z.type = type,
+                               h1.acov = h1.acov,
+                               add.class = add.class, add.labels = add.labels)
+    } else {
+        seList <- NULL
+    }
 
     # normalize/standardize?
-    if(type %in% c("normalized", "standardized")) {
-
-        # compute ACOV for observed h1 sample statistics (ACOV == Gamma/N)
-        ACOV.obs <- lav_model_h1_acov(lavobject = object,
-                                      h1.information = "unstructured")
-
-        for(g in seq_len(lavdata@ngroups)) {
-
-            nvar <- object@pta$nvar[[g]] # block or group-based?
-
-            diag.ACOV <- diag(ACOV.obs[[g]])
-            diag.ACOV[!is.finite(diag.ACOV)] <- NA
-            diag.ACOV[ diag.ACOV < .Machine$double.eps ] <- NA
-
-            # categorical
-            if(lavmodel@categorical) {
-                stop("not ready yet")
-
-            # continuous -- single level
-            } else if(lavdata@nlevels == 1L) {
-                if(lavmodel@conditional.x) {
-                    stop("not ready yet")
-                } else {
-                    if(lavmodel@meanstructure) {
-                        tmp <- 1/sqrt(diag.ACOV[-(1:nvar)])
-                        scale.cov <- lav_matrix_vech_reverse(tmp)
-                        scale.mean <- 1/sqrt(diag.ACOV[1:nvar])
-                    } else {
-                        scale.cov <- lav_matrix_vech_reverse(1/sqrt(diag.ACOV))
-                        scale.mean <- rep(1, nvar)
-                    }
-                }
-
-
-            # continuous -- multilevel
-            } else if(lavdata@nlevels > 1L) {
-                stop("not ready yet")
+    if(type %in% c("normalized", "standardized", "standardized.mplus")) {
+        for(b in seq_len(nblocks)) {
+            if(add.labels) {
+                NAMES <- names(resList[[b]])
             }
+            resList[[b]] <- lapply(seq_len(length(resList[[b]])), 
+                                   FUN = function(el) {
+                                       A <- resList[[b]][[el]]
+                                       B <-  seList[[b]][[el]]
+                                       near.zero.idx <- which(abs(A) < 1e-05)
+                                       if(length(near.zero.idx) > 0L) {
+                                           B[near.zero.idx] <- 1
+                                       }
+                                       A/B })
+            if(add.labels) {
+                names(resList[[b]]) <- NAMES
+            }
+        }
+    }
 
-
-            resList[[g]] <-
-                lav_utils_samplestats_rescale(x = resList[[g]],
-                                              y = NULL,
-                                              scale.cov = scale.cov,
-                                              scale.mean = scale.mean)
+    # add se
+    resList.orig <- resList
+    if(se) {
+        for(b in seq_len(nblocks)) {
+            NAMES.res <- names(resList[[b]])
+            NAMES.se  <- paste0(NAMES.res, ".se")
+            resList[[b]] <- c(resList[[b]], seList[[b]])
+            names(resList[[b]]) <- c(NAMES.res, NAMES.se)
         }
     }
 
 
+    # add zstat
+    if(zstat) {
+        for(b in seq_len(nblocks)) {
+            NAMES.res <- names(resList[[b]])
+            NAMES.z   <- paste0(names(resList.orig[[b]]), ".z")
+            tmp <- lapply(seq_len(length(resList.orig[[b]])), 
+                                   FUN = function(el) {
+                                       A <- resList.orig[[b]][[el]]
+                                       B <-  seList[[b]][[el]]
+                                       near.zero.idx <- which(abs(A) < 1e-05)
+                                       if(length(near.zero.idx) > 0L) {
+                                           B[near.zero.idx] <- 1
+                                       }
+                                       A/B })
+            resList[[b]] <- c(resList[[b]], tmp)
+            names(resList[[b]]) <- c(NAMES.res, NAMES.z)
+        }
+    }
+
+    # add summary statistics (rms, mabs)
+    if(summary) {
+        args <- c(list(object = object, type = type, h1.acov = h1.acov, 
+                       add.class = add.class), summary.options)
+        sumStat <- do.call("lav_residuals_summary", args)
+        for(b in seq_len(nblocks)) {
+            NAMES <- names(resList[[b]])
+            resList[[b]] <- c(resList[[b]], list(sumStat[[b]][[1]])) # only 1
+            NAMES <- c(NAMES, "summary")
+            names(resList[[b]]) <- NAMES
+        }
+    }
+
+    # last: add type
+    if(add.type) {
+        for(b in seq_len(nblocks)) {
+            NAMES <- names(resList[[b]])
+            resList[[b]] <- c(type, resList[[b]])
+            NAMES <- c("type", NAMES)
+            names(resList[[b]]) <- NAMES
+        }
+    }
+
+
+    # output
     OUT <- resList
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
@@ -254,417 +255,595 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     OUT
 }
 
-
-lav_residuals_old <- function(object = NULL, type = "raw", labels = TRUE) {
-
-    type <- tolower(type)
-
-    # checks
-    if(type %in% c("normalized", "standardized")) {
-        if(object@Options$estimator != "ML") {
-            stop("standardized and normalized residuals only available if estimator = ML (or MLF, MLR, MLM)\n")
-        }
-        #if(object@optim$npar > 0L && !object@optim$converged) {
-        #    stop("lavaan ERROR: model dit not converge")
-        #}
-        if(object@Model@conditional.x && type == "standardized") {
-            stop("lavaan ERROR: resid + standardized + conditional.x not supported yet")
-        }
-        if(object@Model@conditional.x && type == "normalized") {
-            stop("lavaan ERROR: resid + normalized + conditional.x not supported yet")
-        }
-    }
-    # NOTE: for some reason, Mplus (at least up to version 8) does not
-    # compute the normalized/standardized residuals if estimator = MLM ?
-
+# return ACOV as list per group
+lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
+                               h1.acov = "unstructured") {
 
     # check type
-    if(!type %in% c("raw", "cor",
-        "cor.bollen", "cor.bentler", "cor.eqs",
-        "normalized", "standardized", "casewise")) {
-        stop("type must be one of \"raw\", \"cor\", \"cor.bollen\", \"cor.bentler\", \"normalized\" or \"standardized\" or \"casewise\"")
+    if(z.type %in% c("normalized", "standardized.mplus") && type != "raw") {
+        stop("lavaan ERROR: z.type = ", dQuote(z.type), " can only be used ",
+             "with type = ", dQuote("raw"))
     }
 
-    # if cor, choose 'default'
-    if(type == "cor") {
-        if(object@Options$mimic == "EQS") {
-            type <- "cor.bentler"
-        } else {
-            type <- "cor.bollen"
-        }
-    }
+    # slots
+    lavdata  <- object@Data
+    lavmodel <- object@Model
 
-    # check for 0 parameters if type == standardized
-    if(type == "standardized" &&
-       object@optim$npar == 0) {
-        stop("lavaan ERROR: can not compute standardized residuals if there are no free parameters in the model")
-    }
+    # return list per group
+    ACOV.res <- vector("list", length = lavdata@ngroups)
 
-    G <- object@Model@ngroups
-    meanstructure <- object@Model@meanstructure
-    ov.names <- object@Data@ov.names
+    # compute ACOV for observed h1 sample statistics (ACOV == Gamma/N)
+    ACOV.obs <- lav_model_h1_acov(lavobject = object, h1.information = h1.acov)
 
-    # if type == standardized, we need VarCov and Delta
-    if(type == "standardized") {
-
-        # fixed.x idx?
-        x.idx <- integer(0)
-        if(object@Options$fixed.x) {
-            x.idx <- match(vnames(object@ParTable, "ov.x", block=1L),
-                           object@Data@ov.names[[1L]]) ### FIXME!!!! will not
-                                                       ### work for different
-        }                                              ### models in groups
-
-        if(length(x.idx) > 0L) {
-            # we need to:
-            # 1) to `augment' VarCov and Delta with the fixed.x  elements
-            # 2) set cov between free and fixed.x elements in VarCov to zero
-
-            # create 'augmented' User object (as if fixed.x=FALSE was used)
-            augUser <- object@ParTable
-            idx <- which(augUser$exo > 0L)
-            augUser$exo[       idx ] <- 0L
-            augUser$free[      idx ] <- max(augUser$free) + 1:length(idx)
-            #augUser$unco[idx ] <- max(augUser$unco) + 1:length(idx)
-            augModel <- lav_model(lavpartable    = augUser,
-                                  lavoptions     = object@Options,
-                                  cov.x          = object@SampleStats@cov.x,
-                                  mean.x         = object@SampleStats@mean.x)
-            VarCov <- lav_model_vcov(lavmodel       = augModel,
-                                     lavsamplestats = object@SampleStats,
-                                     lavdata        = object@Data,
-                                     lavpartable    = object@ParTable,
-                                     lavoptions     = object@Options,
-                                     lavimplied     = object@implied,
-                                     lavh1          = object@h1)
-            # set cov between free and fixed.x elements to zero
-            ###
-            ### FIXME: should we not do this on the information level,
-            ###        *before* we compute VarCov?
-            ###
-            fixed.x.idx <- max(object@ParTable$free) + 1:length(idx)
-            free.idx    <- 1:max(object@ParTable$free)
-            VarCov[free.idx, fixed.x.idx] <- 0.0
-            VarCov[fixed.x.idx, free.idx] <- 0.0
-
-            Delta  <- computeDelta(lavmodel = augModel)
-        } else {
-            VarCov <- lav_model_vcov(lavmodel       = object@Model,
-                                     lavdata        = object@Data,
-                                     lavpartable    = object@ParTable,
-                                     lavsamplestats = object@SampleStats,
-                                     lavoptions     = object@Options,
-                                     lavimplied     = object@implied,
-                                     lavh1          = object@h1)
-            Delta  <- computeDelta(lavmodel = object@Model)
-        }
-    }
-
-    R <- vector("list", length=G)
-    for(g in 1:G) {
-
-        # add type
-        R[[g]]$type <- type
-
-        # sample moments
-        if(!object@SampleStats@missing.flag) {
-            if(object@Model@conditional.x) {
-                S <- object@SampleStats@res.cov[[g]]
-                M <- object@SampleStats@res.int[[g]]
-            } else {
-                S <- object@SampleStats@cov[[g]]
-                M <- object@SampleStats@mean[[g]]
-            }
-        } else {
-            S <- object@SampleStats@missing.h1[[g]]$sigma
-            M <- object@SampleStats@missing.h1[[g]]$mu
-        }
-        if(!meanstructure) {
-            M <- numeric( length(M) )
-        }
-        nvar <- ncol(S)
-
-        # residuals (for this block)
-        if(type == "cor.bollen") {
-            if(object@Model@conditional.x) {
-                R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$res.cov[[g]])
-                R[[g]]$mean <- ( M/sqrt(diag(S)) -
-                                 ( object@implied$res.int[[g]] /
-                                   sqrt(diag(object@implied$res.cov[[g]])) ) )
-            } else {
-                R[[g]]$cov  <- cov2cor(S) - cov2cor(object@implied$cov[[g]])
-                R[[g]]$mean <- ( M/sqrt(diag(S)) -
-                    object@implied$mean[[g]]/sqrt(diag(object@implied$cov[[g]])) )
-            }
-        } else if(type == "cor.bentler" || type == "cor.eqs") {
-            # Bentler EQS manual: divide by (sqrt of) OBSERVED variances
-            delta <- 1/sqrt(diag(S))
-            DELTA <- diag(delta, nrow=nvar, ncol=nvar)
-            if(object@Model@conditional.x) {
-                R[[g]]$cov  <- DELTA %*% (S - object@implied$res.cov[[g]]) %*% DELTA
-                R[[g]]$mean <- (M - object@implied$res.int[[g]])/sqrt(diag(S))
-            } else {
-                R[[g]]$cov  <- DELTA %*% (S - object@implied$cov[[g]]) %*% DELTA
-                R[[g]]$mean <- (M - object@implied$mean[[g]])/sqrt(diag(S))
-            }
-        } else {
-            # covariance/raw residuals
-            if(object@Model@conditional.x) {
-                R[[g]]$cov  <- S - object@implied$res.cov[[g]]
-                R[[g]]$mean <- M - object@implied$res.int[[g]]
-            } else {
-                R[[g]]$cov  <- S - object@implied$cov[[g]]
-                R[[g]]$mean <- M - object@implied$mean[[g]]
-            }
-        }
-        if(labels) {
-            rownames(R[[g]]$cov) <- colnames(R[[g]]$cov) <- ov.names[[g]]
-        }
-        if(object@Model@conditional.x) {
-            R[[g]]$slopes <- ( object@SampleStats@res.slopes[[g]] -
-                               object@implied$res.slopes[[g]] )
-            if(labels) {
-                rownames(R[[g]]$slopes) <- ov.names[[g]]
-                colnames(R[[g]]$slopes) <- object@Data@ov.names.x[[g]]
-            }
-        }
-        if(object@Model@categorical) {
-            if(object@Model@conditional.x) {
-                R[[g]]$th <- object@SampleStats@res.th[[g]] - object@implied$res.th[[g]]
-            } else {
-                R[[g]]$th <- object@SampleStats@th[[g]] - object@implied$th[[g]]
-            }
-            if(length(object@Model@num.idx[[g]]) > 0L) {
-                NUM.idx <- which(object@Model@th.idx[[g]] == 0)
-                R[[g]]$th <- R[[g]]$th[ -NUM.idx ]
-            }
-            if(labels) {
-                names(R[[g]]$th) <- vnames(object@ParTable, type="th", block=g)
-            }
-        }
-
-        if(type == "normalized" || type == "standardized") {
-
-            # compute normalized residuals
-            N <- object@SampleStats@nobs[[g]]; nvar <- length(R[[g]]$mean)
-            idx.mean <- 1:nvar
-
-            if(object@Options$se == "standard" ||
-               object@Options$se == "none") {
-                dS <- diag(S)
-                Var.mean <- Var.sample.mean <- dS / N
-                Var.cov  <- Var.sample.cov  <- (tcrossprod(dS) + S*S) / N
-                # this is identical to solve(A1)/N for complete data!!
-            } else if(object@Options$se == "robust.huber.white" ||
-                      object@Options$se == "robust.sem") {
-
-                lavdata <- object@Data
-                lavsamplestats <- object@SampleStats
-
-                if(lavsamplestats@missing.flag) {
-                    if(object@Options$information == "expected") {
-                        A1 <- lav_mvnorm_missing_information_expected(
-                          Y     = lavdata@X[[g]],
-                          Mp    = lavdata@Mp[[g]],
-                          wt    = lavdata@weights[[g]],
-                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-                          x.idx = lavsamplestats@x.idx[[g]])
-                    } else {
-                        A1 <-
-                            lav_mvnorm_missing_information_observed_samplestats(
-                          Yp    = lavsamplestats@missing[[g]],
-                          # wt not needed
-                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-                          x.idx = lavsamplestats@x.idx[[g]])
-                    }
-                } else {
-                    # data complete, under h1, expected == observed
-                    A1 <- lav_mvnorm_h1_information_observed_samplestats(
-                      sample.cov     = lavsamplestats@cov[[g]],
-                      x.idx          = lavsamplestats@x.idx[[g]],
-                      sample.cov.inv = lavsamplestats@icov[[g]],
-                      meanstructure  = object@Model@meanstructure)
-                }
-
-                if(lavsamplestats@missing.flag) {
-                    if(length(lavdata$cluster) > 0L) {
-                        cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
-                    } else {
-                        cluster.idx <- NULL
-                    }
-                    B1 <- lav_mvnorm_missing_information_firstorder(
-                          Y     = lavdata@X[[g]],
-                          Mp    = lavdata@Mp[[g]],
-                          wt    = lavdata@weights[[g]],
-                          cluster.idx = cluster.idx,
-                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-                          x.idx = lavsamplestats@x.idx[[g]])
-                } else {
-                    B1 <- lav_mvnorm_h1_information_firstorder(
-                          Y     = lavdata@X[[g]],
-                          Gamma = lavsamplestats@NACOV[[g]],
-                          x.idx = lavsamplestats@x.idx[[g]],
-                          wt    = lavdata@weights[[g]],
-                          cluster.idx = cluster.idx,
-                          sample.cov = lavsamplestats@cov[[g]],
-                          sample.cov.inv = lavsamplestats@icov[[g]],
-                          meanstructure = object@Model@meanstructure)
-                }
-
-                Info <- (solve(A1) %*% B1 %*% solve(A1)) / N
-                if(meanstructure) {
-                    Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
-                } else {
-                    Var.mean <- Var.sample.mean <- rep(1, nvar)
-                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info))
-                }
-            } else if(object@Options$se == "first.order") {
-                if(length(lavdata@cluster) > 0L) {
-                    cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
-                } else {
-                    cluster.idx <- NULL
-                }
-                if(lavsamplestats@missing.flag) {
-                    B1 <- lav_mvnorm_missing_information_firstorder(
-                          Y     = lavdata@X[[g]],
-                          Mp    = lavdata@Mp[[g]],
-                          wt    = lavdata@weights[[g]],
-                          cluster.idx = cluster.idx,
-                          Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                          Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-                          x.idx = lavsamplestats@x.idx[[g]])
-                } else {
-                    B1 <- lav_mvnorm_h1_information_firstorder(
-                          Y     = lavdata@X[[g]],
-                          Gamma = lavsamplestats@NACOV[[g]],
-                          wt    = lavdata@weights[[g]],
-                          cluster.idx = cluster.idx,
-                          x.idx = lavsamplestats@x.idx[[g]],
-                          sample.cov = lavsamplestats@cov[[g]],
-                          sample.cov.inv = lavsamplestats@icov[[g]],
-                          meanstructure = object@Model@meanstructure)
-                }
-                Info <- solve(B1) / N
-                if(meanstructure) {
-                    Var.mean <- Var.sample.mean <- diag(Info)[idx.mean]
-                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info)[-idx.mean])
-                } else {
-                    Var.mean <- Var.sample.mean <- rep(1, nvar)
-                    Var.cov  <- Var.sample.cov  <- lav_matrix_vech_reverse(diag(Info))
-
-                }
-            }
-        }
-
-        if(type == "standardized") {
-
-            Var.model <- diag(Delta[[g]] %*% VarCov %*% t(Delta[[g]]))
-
-            if(meanstructure) {
-                Var.model.mean <- Var.model[idx.mean]
-                Var.model.cov  <- lav_matrix_vech_reverse(Var.model[-idx.mean])
-            } else {
-                Var.model.mean <- rep(0, nvar)
-                Var.model.cov  <- lav_matrix_vech_reverse(Var.model)
-            }
-
-            Var.mean <- (Var.sample.mean - Var.model.mean)
-            Var.cov  <- (Var.sample.cov  - Var.model.cov )
-
-            # not for fixed x covariates
-            if(length(x.idx) > 0L) {
-                Var.mean[x.idx] <- 1.0
-                Var.cov[x.idx,x.idx] <- 1.0
-            }
-
-            # avoid negative variances
-            Var.mean[which(Var.mean < 0)] <- NA
-            Var.cov[ which(Var.cov  < 0)] <- NA
-        }
-
-        # normalize/standardize
-        if(type == "normalized" || type == "standardized") {
-            # avoid small number (< 1.0e-15) to be divided
-            # by another small number and get bigger...
-            # FIXME!!!
-            tol <- 1.0e-5
-            R[[g]]$mean[ which(abs(R[[g]]$mean) < tol)] <- 0.0
-            R[[g]]$cov[ which(abs(R[[g]]$cov) < tol)] <- 0.0
-
-            R[[g]]$mean <- R[[g]]$mean / sqrt( Var.mean )
-            R[[g]]$cov  <- R[[g]]$cov  / sqrt( Var.cov  )
-        }
-
-        # prepare for pretty printing
-        R[[g]]$mean <- as.numeric(R[[g]]$mean)
-        if(labels) names(R[[g]]$mean) <- ov.names[[g]]
-        class(R[[g]]$mean) <- c("lavaan.vector", "numeric")
-        class(R[[g]]$cov) <- c("lavaan.matrix.symmetric", "matrix")
-        if(object@Model@conditional.x) {
-            class(R[[g]]$slopes) <- c("lavaan.matrix", "matrix")
-        }
-    }
-
-    # replace 'cov' by 'cor' if type == "cor"
-    if(type %in% c("cor","cor.bollen","cor.eqs","cor.bentler")) {
-        if("th" %in% names(R[[1]])) {
-            R <- lapply(R, "names<-", c("type", "cor", "mean", "th") )
-        } else {
-            R <- lapply(R, "names<-", c("type", "cor", "mean") )
-        }
-    }
-
-    if(G == 1) {
-        R <- R[[1]]
+    # shortcut for normalized
+    if(z.type == "normalized") {
+        ACOV.res <- ACOV.obs
+        return(ACOV.res)
     } else {
-        names(R) <- unlist(object@Data@group.label)
+        if(z.type == "standardized") {
+            A1 <- lav_model_h1_information(object)
+            if(type %in% c("cor.bentler", "cor.bollen")) {
+                sampstat <- lavTech(object, "sampstat")
+            }
+        } else if(z.type == "standardized.mplus") {
+            VCOV  <- lavTech(object, "vcov")
+        }
+        DELTA <- lavTech(object, "delta")
     }
 
-    R
+    # for each group, compute ACOV
+    for(g in seq_len(lavdata@ngroups)) {
+
+        if(z.type == "standardized.mplus") { # simplified formula
+                                             # also used by LISREL?
+            # see https://www.statmodel.com/download/StandardizedResiduals.pdf
+
+            ACOV.est.g <- DELTA[[g]] %*% VCOV %*% t(DELTA[[g]])
+            ACOV.res[[g]] <- ACOV.obs[[g]] - ACOV.est.g
+
+        } else if(z.type == "standardized") {
+            # see Ogasawara (2001) using Bentler & Dijkstra (1985) eq 1.7.4
+
+            A0.g <- t(DELTA[[g]]) %*% A1[[g]] %*% DELTA[[g]]
+            A0.g.inv <- lav_model_information_augment_invert(object@Model,
+                          information = A0.g, inverted = TRUE)
+            ACOV.est.g <- DELTA[[g]] %*% A0.g.inv %*% t(DELTA[[g]])
+            Q <- diag(nrow = nrow(ACOV.est.g)) - ACOV.est.g %*% A1[[g]]
+            ACOV.res[[g]] <- Q %*% ACOV.obs[[g]] %*% t(Q)
+
+            # correct ACOV.res for type = "cor.bentler" or type = "cor.bollen"
+            if(type == "cor.bentler") {
+                if(lavmodel@categorical || lavmodel@conditional.x) {
+                    stop("lavaan ERROR: SE for cor.bentler not available (yet) if categorical = TRUE, or conditional.x = TRUE")
+                }
+                # Ogasawara (2001), eq (13), or
+                # Maydeu-Olivares (2017), eq (16)
+                COV <- if(lavmodel@conditional.x) { 
+                           sampstat[[g]]$res.cov } else { sampstat[[g]]$cov }
+                SS <- 1/sqrt(diag(COV))
+                tmp <- lav_matrix_vech(tcrossprod(SS))
+                G.inv.sqrt <- diag( tmp, nrow = length(tmp) )
+                if(lavmodel@meanstructure) {
+                    GG <- lav_matrix_bdiag(diag(SS, nrow = length(SS)),
+                                           G.inv.sqrt)
+                } else {
+                    GG <- G.inv.sqrt
+                }
+                ACOV.res[[g]] <- GG %*% ACOV.res[[g]] %*% GG
+            } else if(type == "cor.bollen") {
+                if(lavmodel@categorical || lavmodel@conditional.x) {
+                    stop("lavaan ERROR: SE for cor.bollen not available (yet) if categorical = TRUE, or conditional.x = TRUE")
+                }
+                # here we use the Maydeu-Olivares (2017) approach, see eq 17
+                COV <- if(lavmodel@conditional.x) {
+                           sampstat[[g]]$res.cov } else { sampstat[[g]]$cov }
+                F1 <- lav_deriv_cov2corB(COV)
+                if(lavmodel@meanstructure) {
+                    SS <- 1/sqrt(diag(COV))
+                    FF <- lav_matrix_bdiag(diag(SS, nrow = length(SS)), F1)
+                } else {
+                    FF <- F1
+                }
+                ACOV.res[[g]] <- FF %*% ACOV.res[[g]] %*% t(FF)
+            }
+        } # z.type = "standardized"
+
+    } # g
+
+    ACOV.res
 }
 
-lav_residuals_casewise <- function(object, labels = labels) {
+# return resList with 'se' values for each residual
+lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
+                             h1.acov = "unstructured",
+                             add.class = FALSE, add.labels = FALSE) {
 
-    # check if we have full data
-    if(object@Data@data.type != "full") {
-        stop("lavaan ERROR: casewise residuals not available if sample statistics were used for fitting the model")
+    # slots
+    lavdata    <- object@Data
+    lavmodel   <- object@Model
+    lavpta     <- object@pta
+
+    # return list per group
+    seList <- vector("list", length = lavdata@ngroups)
+
+    # get ACOV per group
+    ACOV.res <- lav_residuals_acov(object = object, type = type,
+                                   z.type = z.type, h1.acov = h1.acov)
+
+    # labels
+    if(add.labels) {
+        ov.names <- object@pta$vnames$ov
+        ov.names.res <- object@pta$vnames$ov.nox
+        ov.names.x   <- object@pta$vnames$ov.x
     }
 
-    G <- object@Data@ngroups
-    ov.names <- object@Data@ov.names
+    # for each group, compute 'se' values, and fill list
+    for(g in seq_len(lavdata@ngroups)) {
 
-    X <- object@Data@X
-    if(object@Model@categorical) {
-        # add 'eXo' columns to X
-        X <- lapply(seq_len(object@Data@ngroups), function(g) {
-                    ret <- cbind(X[[g]], object@Data@eXo[[g]])
-                    ret })
+        nvar <- object@pta$nvar[[g]] # block or group-based?
+        diag.ACOV <- diag(ACOV.res[[g]])
+
+        # take care of negative, or non-finite diag.ACOV elements
+        diag.ACOV[!is.finite(diag.ACOV)] <- NA
+        diag.ACOV[ diag.ACOV < 0 ] <- NA
+
+        # categorical
+        if(lavmodel@categorical) {
+            stop("not ready yet")
+
+        # continuous -- single level
+        } else if(lavdata@nlevels == 1L) {
+            if(lavmodel@conditional.x) {
+                stop("not ready yet")
+            } else {
+                if(lavmodel@meanstructure) {
+                    tmp <- sqrt(diag.ACOV[-(1:nvar)])
+                    cov.se <- lav_matrix_vech_reverse(tmp)
+                    mean.se <- sqrt(diag.ACOV[1:nvar])
+                    if(add.class) {
+                        class(cov.se) <- c("lavaan.matrix.symmetric", "matrix")
+                        class(mean.se) <- c("lavaan.vector", "numeric")
+                    }
+                    if(add.labels) {
+                        rownames(cov.se) <- colnames(cov.se) <- ov.names[[g]]
+                        names(mean.se) <- ov.names[[g]]
+                    }
+                    seList[[g]] <- list(cov.se = cov.se, mean.se = mean.se)
+                } else {
+                    cov.se <- lav_matrix_vech_reverse(sqrt(diag.ACOV))
+                    if(add.class) {
+                        class(cov.se) <- c("lavaan.matrix.symmetric", "matrix")
+                    }
+                    if(add.labels) {
+                        rownames(cov.se) <- colnames(cov.se) <- ov.names[[g]]
+                    }
+                    seList[[g]] <- list(cov.se = cov.se)
+                }
+            }
+
+        # continuous -- multilevel
+        } else if(lavdata@nlevels > 1L) {
+            stop("not ready yet")
+        }
+
+    } # g
+
+    seList
+}
+
+# return summary statistics as list per group
+lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
+                                  h1.acov = "unstructured",
+                                  se = FALSE, zstat = FALSE, pvalue = FALSE,
+                                  unbiased = FALSE, unbiased.se = FALSE,
+                                  unbiased.zstat = FALSE, 
+                                  unbiased.test.val = 0.05,
+                                  unbiased.pvalue = FALSE,
+                                  add.class = FALSE) {
+
+    # arguments
+    if(pvalue) {
+        zstat <- TRUE
     }
-    M <- lav_predict_yhat(object)
-    # Note: if M has already class lavaan.matrix, print goes crazy
-    # with Error: C stack usage is too close to the limit
-    OUT <- lapply(seq_len(G), function(x) {
-               out <- X[[x]] - M[[x]]
-               class(out) <- c("lavaan.matrix", "matrix")
-               out
-           })
+    if(zstat) {
+        se <- TRUE
+    }
+    if(unbiased.pvalue) {
+        unbiased.zstat <- TRUE
+    }
+    if(unbiased.zstat) {
+        unbiased.se <- TRUE
+    }
 
-    if(labels) {
-        for(g in 1:G) {
-            colnames(OUT[[g]]) <- object@pta$vnames$ov[[g]]
+    if(!all(type %in% c("rmr", "srmr", "crmr", 
+                        "raw", "cor.bentler", "cor.bollen"))) {
+        stop("lavaan ERROR: unknown type: ", dQuote(type))
+    }
+
+    # change type name
+    idx <- which(type == "raw")
+    if(length(idx) > 0L) {
+        type[idx] <- "rmr"
+    }
+    idx <- which(type == "cor.bentler")
+    if(length(idx) > 0L) {
+        type[idx] <- "srmr"
+    }
+    idx <- which(type == "cor.bollen")
+    if(length(idx) > 0L) {
+        type[idx] <- "crmr"
+    }
+
+    # slots
+    lavdata  <- object@Data
+    lavmodel <- object@Model
+
+    
+    rmrFlag <- srmrFlag <- crmrFlag <- FALSE
+    if("rmr" %in% type || "raw" %in% type) {
+        rmrList <- lav_residuals(object = object, type = "raw")
+        if(se || unbiased) {
+            rmrList.se <- lav_residuals_acov(object = object, type = "raw",
+                                             z.type = "standardized",
+                                             h1.acov = "unstructured")
+        }
+    } 
+    if("srmr" %in% type || "cor.bentler" %in% type || "cor" %in% type) {
+        srmrList <- lav_residuals(object = object, type = "cor.bentler")
+        if(se || unbiased) {
+            srmrList.se <- lav_residuals_acov(object = object, 
+                                              type = "cor.bentler",
+                                              z.type = "standardized",
+                                              h1.acov = "unstructured")
+        }
+    }
+    if("crmr" %in% type || "cor.bollen" %in% type) {
+        crmrList <- lav_residuals(object = object, type = "cor.bollen")
+        if(se || unbiased) {
+            crmrList.se <- lav_residuals_acov(object = object,
+                                              type = "cor.bollen",
+                                              z.type = "standardized",
+                                              h1.acov = "unstructured")
         }
     }
 
-    if(G == 1) {
-        OUT <- OUT[[1]]
-    } else {
-        names(OUT) <- unlist(object@Data@group.label)
+    # return list per group
+    sumStat <- vector("list", length = lavdata@ngroups)
+
+    # for each group, compute ACOV
+    for(g in seq_len(lavdata@ngroups)) {
+
+        nvar <- object@pta$nvar[[g]] # block or group-based?
+        
+        # categorical
+        if(lavmodel@categorical) {
+            stop("not ready yet")
+
+        # continuous -- single level
+        } else if(lavdata@nlevels == 1L) {
+            if(lavmodel@conditional.x) {
+                stop("not ready yet")
+            } else {
+
+                OUT <- vector("list", length(type))
+                names(OUT) <- type
+               
+                for(typ in seq_len(length(type))) {
+
+                    if(type[typ] == "rmr") {
+                        rmsList.g <- rmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- rmrList.se[[g]]
+                        }
+                    } else if(type[typ] == "srmr") {
+                        rmsList.g <- srmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- srmrList.se[[g]]
+                        }
+                    } else if(type[typ] == "crmr") {
+                        rmsList.g <- crmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- crmrList.se[[g]]
+                        }
+                    }
+ 
+                    # COV
+                    STATS <- lav_matrix_vech(rmsList.g$cov);
+                    pstar <- length(STATS); ACOV  <- NULL
+                    if(type[typ] == "crmr") {
+                        pstar <- pstar - nvar
+                    }
+                    if(se || unbiased) {
+                        ACOV <- if(lavmodel@meanstructure) {
+                                  rmsList.se.g[-seq_len(nvar),
+                                               -seq_len(nvar), drop = FALSE]
+                                } else { rmsList.se.g }
+                    }
+                    RMS.COV <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue, 
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.zstat = unbiased.zstat, 
+                        unbiased.test.val = unbiased.test.val, 
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+                    # MEAN
+                    if(lavmodel@meanstructure) {
+                        STATS <- rmsList.g$mean
+                        pstar <- length(STATS); ACOV  <- NULL
+                        if(se || unbiased) {
+                            ACOV <- rmsList.se.g[seq_len(nvar),
+                                                 seq_len(nvar), drop = FALSE]
+                        }
+                        RMS.MEAN <- lav_residuals_summary_rms(STATS = STATS,
+                            ACOV = ACOV, 
+                            se = se, zstat = zstat, pvalue = pvalue,
+                            unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.zstat = unbiased.zstat, 
+                            unbiased.test.val = unbiased.test.val,
+                            unbiased.pvalue = unbiased.pvalue,
+                            pstar = pstar, type = type[typ])
+                    }
+
+                    # TOTAL
+                    if(lavmodel@meanstructure) {
+                        STATS <- c(rmsList.g$mean,
+                                   lav_matrix_vech(rmsList.g$cov))
+                        pstar <- length(STATS); ACOV  <- NULL
+                        if(type[typ] == "crmr") {
+                            pstar <- pstar - nvar
+                        }
+                        if(se || unbiased) {
+                            ACOV <- rmsList.se.g
+                        }
+                        RMS.TOTAL <- lav_residuals_summary_rms(STATS = STATS,
+                            ACOV = ACOV, 
+                            se = se, zstat = zstat, pvalue = pvalue,
+                            unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.zstat = unbiased.zstat,
+                            unbiased.test.val = unbiased.test.val,
+                            unbiased.pvalue = unbiased.pvalue,
+                            pstar = pstar, type = type[typ])
+                    } 
+
+                    if(lavmodel@meanstructure) {
+                        TABLE <- as.data.frame(rbind(RMS.COV, 
+                                                     RMS.MEAN, 
+                                                     RMS.TOTAL))
+                        rownames(TABLE) <- c("cov", "mean", "total")
+                    } else {
+                        TABLE <- as.data.frame(rbind(RMS.COV))
+                        rownames(TABLE) <- "cov"
+                    }
+                    if(add.class) {
+                        class(TABLE) <- c("lavaan.data.frame", "data.frame")
+                    }
+                    OUT[[typ]] <- TABLE
+
+                } # type
+
+                sumStat[[g]] <- OUT
+            } # continuous, single-level, unconditional
+
+        # continuous -- multilevel
+        } else if(lavdata@nlevels > 1L) {
+            stop("not ready yet")
+        }
+    } # g
+
+    sumStat
+}
+
+
+lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL, 
+                                      se = FALSE, zstat = FALSE, pvalue = FALSE,
+                                      unbiased = FALSE, unbiased.se = FALSE,
+                                      unbiased.zstat = FALSE,
+                                      unbiased.test.val = 0.05, 
+                                      unbiased.pvalue = FALSE,
+                                      pstar = 0, type = "rms") {
+
+    OUT <- vector("list", length = 0L)
+
+    # covariance matrix
+    rms <- sqrt(sum(STATS * STATS)/pstar)
+
+    # default is NULL
+    rms.se <- rms.z <- rms.pvalue <- NULL
+    urms <- urms.se <- urms.z <- urms.pvalue <- NULL
+
+    if(se || unbiased) {
+        TR2 <- sum(diag( ACOV %*% ACOV ))
+        TR1 <- sum(diag( ACOV ))
+        if(se) {
+            rms.avar <- TR2/(TR1 * 2 * pstar)
+            if(!is.finite(rms.avar) || rms.avar < .Machine$double.eps) {
+                rms.se <- as.numeric(NA)
+            } else {
+                rms.se <- sqrt(rms.avar)
+            }
+        }
     }
 
-    OUT
+    if(zstat) {
+        E.rms <- ( sqrt(TR1/pstar) * (4 * TR1 * TR1 - TR2) / (4 * TR1 * TR1) )
+        rms.z <- max((rms - E.rms), 0) / rms.se
+        if(pvalue) {
+            rms.pvalue <- 1 - pnorm(rms.z)
+        }
+    }
+
+    if(unbiased) {
+        T.cov <- as.numeric( crossprod(STATS) )
+        eVe <- as.numeric(t(STATS) %*% ACOV %*% STATS)
+        k.cov <- 1 - (TR2 + 2 * eVe) / (4 * T.cov * T.cov)
+        urms <- ( 1/k.cov * sqrt( max((T.cov - TR1), 0) / pstar ) )
+        if(unbiased.se) {
+            urms.avar <- ( 1/(k.cov*k.cov) * (TR2 + 2*eVe) / (2*pstar * T.cov) )
+            if(!is.finite(urms.avar) || urms.avar < .Machine$double.eps) {
+                urms.se <- as.numeric(NA)
+            } else {
+                urms.se <- sqrt(urms.avar)
+            }
+            if(unbiased.zstat) {
+                urms.z <- (urms - unbiased.test.val) / urms.se
+                if(unbiased.pvalue) {
+                    urms.pvalue <- 1 - pnorm(urms.z)
+                }
+            }
+        }
+    }
+
+    # labels
+    if(type == "rmr") {
+        OUT <- list(rmr = rms, rmr.se = rms.se, 
+                    rmr.z = rms.z, rmr.pvalue = rms.pvalue,
+                    urmr = urms, urmr.se = urms.se, 
+                    urmr.z = urms.z, urmr.pvalue = urms.pvalue)
+    } else if(type == "srmr") {
+        OUT <- list(srmr = rms, srmr.se = rms.se, 
+                    srmr.z = rms.z, srmr.pvalue = rms.pvalue,
+                    usrmr = urms, usrmr.se = urms.se,
+                    usrmr.z = urms.z, usrmr.pvalue = urms.pvalue)
+    } else if(type == "crmr") {
+        OUT <- list(crmr = rms, crmr.se = rms.se, 
+                    crmr.z = rms.z, crmr.pvalue = rms.pvalue,
+                    ucrmr = urms, ucrmr.se = urms.se,
+                    ucrmr.z = urms.z, ucrmr.pvalue = urms.pvalue)
+    }
+
+    unlist(OUT)
+}
+
+# generate summary statistics for the residuals
+lav_residuals_summary_old <- function(resList = NULL, 
+                                  add.class = FALSE, add.labels = FALSE) {
+
+    # per block
+    nblocks <- length(resList)
+
+    for(b in seq_len(nblocks)) {
+
+        # create new list, including with summary statistics interleaved
+        x <- vector("list", length = 0L)
+        nel <- length(resList[[b]])
+        NAMES <- names(resList[[b]])
+
+        for(el in seq_len(nel)) {
+
+            EL <- resList[[b]][[el]]
+            if(!is.null(NAMES)) {
+                NAME <- NAMES[el]
+            }
+
+            if(is.character(EL)) {
+                new.x <- list(EL); 
+                if(add.labels) {
+                    names(new.x) <- "type"
+                } 
+                x <- c(x, new.x)
+
+            } else if(is.matrix(EL) && isSymmetric(EL)) {
+                tmp <- na.omit(lav_matrix_vech(EL))
+                rms <- sqrt(sum(tmp*tmp)/length(tmp))
+                mabs <- mean(abs(tmp))
+                tmp2 <- na.omit(lav_matrix_vech(EL, diagonal = FALSE))
+                rms.nodiag <- sqrt(sum(tmp2*tmp2)/length(tmp2))
+                mabs.nodiag <- mean(abs(tmp2))
+                cov.summary <- c(rms, rms.nodiag, mabs, mabs.nodiag)
+                if(add.labels) {
+                    names(cov.summary) <-
+                        c("rms", "rms.nodiag", "mabs", "mabs.nodiag")
+                }
+                if(add.class) {
+                    class(cov.summary) <- c("lavaan.vector", "numeric")
+                }
+                new.x <- list(EL, cov.summary)
+                if(add.labels && !is.null(NAMES)) {
+                    names(new.x) <- c(NAME, paste0(NAME,".summary"))
+                }
+                x <- c(x, new.x)
+
+            } else {
+                tmp <- na.omit(EL)
+                rms <- sqrt(sum(tmp*tmp)/length(tmp))
+                mabs <- mean(abs(tmp))
+                mean.summary <- c(rms, mabs)
+                if(add.labels) {
+                    names(mean.summary) <- c("rms", "mabs")
+                }
+                if(add.class) {
+                    class(mean.summary) <- c("lavaan.vector", "numeric")
+                }
+                new.x <- list(EL, mean.summary)
+                if(add.labels && !is.null(NAMES)) {
+                    names(new.x) <- c(NAME, paste0(NAME,".summary"))
+                }
+                x <- c(x, new.x)
+            }
+
+        } # nel
+
+        # fill in block including summary statistics
+        resList[[b]] <- x
+    } # nblocks
+
+    resList
+}
+
+
+# x is a list with sample statistics (eg output of inspect(fit, "sampstat")
+# y is another (possibly the same) list with sample statistics
+#
+# to avoid many 'NAs', we set the scale-factor to 1
+# if the to-be-scaled value is < 1e-05 (in absolute value)
+lav_residuals_rescale <- function(x, diag.cov = NULL, diag.cov2 = NULL) {
+
+    if(is.null(diag.cov2)) {
+        diag.cov2 <- diag.cov
+    }
+        
+    # make sure we can take the sqrt and invert
+    diag.cov[!is.finite(diag.cov)] <- NA
+    diag.cov[ diag.cov < .Machine$double.eps ] <- NA
+    scale.cov <- tcrossprod(1/sqrt(diag.cov))
+
+    # for the mean, we use diag.cov2
+    diag.cov2[!is.finite(diag.cov2)] <- NA
+    diag.cov2[ diag.cov2 < .Machine$double.eps ] <- NA
+    scale.mean <- 1/sqrt(diag.cov2)
+
+    # rescale cov
+    if(!is.null(x$cov)) {
+        # catch (near) zero elements in x$cov
+        near.zero.idx <- which(abs(x$cov) < 1e-05)
+        scale.cov[near.zero.idx] <- 1
+        x$cov[] <- x$cov * scale.cov
+    }
+    if(!is.null(x$res.cov)) {
+        # catch (near) zero elements in x$res.cov
+        near.zero.idx <- which(abs(x$res.cov) < 1e-05)
+        scale.cov[near.zero.idx] <- 1
+        x$res.cov[] <- x$res.cov * scale.cov
+    }
+
+    # rescale int/mean
+    if(!is.null(x$res.int)) {
+        # catch (near) zero elements in x$res.int
+        near.zero.idx <- which(abs(x$res.int) < 1e-05)
+        scale.mean[near.zero.idx] <- 1
+        x$res.int <- x$res.int * scale.mean
+    }
+
+    if(!is.null(x$mean)) {
+        # catch (near) zero elements in x$mean
+        near.zero.idx <- which(abs(x$mean) < 1e-05)
+        scale.mean[near.zero.idx] <- 1
+        x$mean <- x$mean * scale.mean
+    }
+
+    # FIXME: do something sensible for th, slopes, ...
+
+    x
 }
 
