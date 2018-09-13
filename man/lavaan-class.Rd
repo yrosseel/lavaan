@@ -30,7 +30,7 @@ Objects can be created via the
   \describe{
     \item{\code{version}:}{The lavaan package version used to create this objects}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
-    \item{\code{timing}:}{The elapsed time (user+system) for various parts of 
+    \item{\code{timing}:}{The elapsed time (user+system) for various parts of
       the program as a list, including the total time.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
@@ -38,12 +38,12 @@ Objects can be created via the
     \item{\code{pta}:}{Named list containing parameter table attributes.}
     \item{\code{Data}:}{Object of internal class \code{"Data"}: information
 about the data.}
-    \item{\code{SampleStats}:}{Object of internal class \code{"SampleStats"}: sample 
+    \item{\code{SampleStats}:}{Object of internal class \code{"SampleStats"}: sample
       statistics}
-    \item{\code{Model}:}{Object of internal class \code{"Model"}: the 
+    \item{\code{Model}:}{Object of internal class \code{"Model"}: the
       internal (matrix) representation of the model}
     \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
-    \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the 
+    \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the
       results of fitting the model. No longer used.}
     \item{\code{boot}:}{List. Results and information about the bootstrap.}
     \item{\code{optim}:}{List. Information about the optimization.}
@@ -59,16 +59,16 @@ the independence model) (if available).}
 }
 \section{Methods}{
   \describe{
-    \item{coef}{\code{signature(object = "lavaan", type = "free")}: Returns 
+    \item{coef}{\code{signature(object = "lavaan", type = "free")}: Returns
       the estimates of the parameters in the model as a named numeric vector.
       If \code{type="free"}, only the free parameters are returned.
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
-    \item{fitted.values}{\code{signature(object = "lavaan")}: Returns the 
-      implied moments of the model as a list with two elements (per group): 
-      \code{cov} for the implied covariance matrix, 
-      and \code{mean} for the implied mean 
-      vector. If only the covariance matrix was analyzed, the implied mean 
+    \item{fitted.values}{\code{signature(object = "lavaan")}: Returns the
+      implied moments of the model as a list with two elements (per group):
+      \code{cov} for the implied covariance matrix,
+      and \code{mean} for the implied mean
+      vector. If only the covariance matrix was analyzed, the implied mean
       vector will be zero.}
     \item{fitted}{\code{signature(object = "lavaan")}: an alias for
         \code{fitted.values}.}
@@ -102,16 +102,16 @@ the independence model) (if available).}
     \item{predict}{\code{signature(object = "lavaan")}: compute
       factor scores for all cases that are provided in the data frame. For
       complete data only.}
-    \item{anova}{\code{signature(object = "lavaan")}: returns 
+    \item{anova}{\code{signature(object = "lavaan")}: returns
       model comparison statistics. This method is just a wrapper around
       the function \code{\link{lavTestLRT}}.
       If only a single argument (a fitted
       model) is provided, this model is compared to the unrestricted
       model. If two or more arguments (fitted models) are provided, the models
-      are compared in a sequential order. Test statistics are based on the 
+      are compared in a sequential order. Test statistics are based on the
       likelihood ratio test. For more details and
-      further options, see the \code{\link{lavTestLRT}} page.} 
-    \item{update}{\code{signature(object = "lavaan", model, add, ..., 
+      further options, see the \code{\link{lavTestLRT}} page.}
+    \item{update}{\code{signature(object = "lavaan", model, add, ...,
         evaluate=TRUE)}: update a fitted lavaan object and evaluate it
         (unless \code{evaluate=FALSE}). Note that we use the environment
         that is stored within the lavaan object, which is not necessarily
@@ -126,35 +126,38 @@ the independence model) (if available).}
       returns the log-likelihood of the fitted model, if maximum likelihood estimation
       was used. The \code{\link[stats]{AIC}} and \code{\link[stats]{BIC}}
       methods automatically work via \code{logLik()}.}
-    \item{show}{\code{signature(object = "lavaan")}: Print a short summary 
+    \item{show}{\code{signature(object = "lavaan")}: Print a short summary
       of the model fit}
-    \item{summary}{\code{signature(object = "lavaan", header = TRUE, 
-     fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE, 
-     standardized = FALSE, cov.std = TRUE, rsquare = FALSE, std.nox = FALSE, 
-     modindices = FALSE, ci = FALSE, nd = 3L)}: 
-      Print a nice summary of the model estimates. 
+    \item{summary}{\code{signature(object = "lavaan", header = TRUE,
+     fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
+     standardized = FALSE, cov.std = TRUE, rsquare = FALSE, std.nox = FALSE,
+     modindices = FALSE, ci = FALSE, nd = 3L)}:
+      Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
-      printed.  
+      printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
       header section.
       If \code{estimates = TRUE}, print the parameter estimates section.
       If \code{ci = TRUE}, add confidence intervals to the parameter estimates
       section.
-      If \code{fmi = TRUE}, add the fmi (fraction of missing information) 
+      If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
       If \code{standardized=TRUE},
-      the standardized solution is also printed.  
+      the standardized solution is also printed.  Note that \emph{SE}s and
+      tests are still based on unstandardized estimates. Use
+      \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
+      statistics for standardized estimates.
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
-      in the model are printed. 
-      If \code{std.nox = TRUE}, the \code{std.all} column contains the 
+      in the model are printed.
+      If \code{std.nox = TRUE}, the \code{std.all} column contains the
       the \code{std.nox} column from the parameterEstimates() output.
       If \code{modindices=TRUE}, modification indices
-      are printed for all fixed parameters. 
+      are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.)
-      Nothing is returned (use 
-      \code{lavInspect} or another extractor function 
+      Nothing is returned (use
+      \code{lavInspect} or another extractor function
       to extract information from a fitted model).}
   }
 }
@@ -167,7 +170,7 @@ Standardized Residuals in Mplus. Document retrieved from URL
 http://www.statmodel.com/download/StandardizedResiduals.pdf
 }
 \seealso{
-\code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}, 
+\code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}},
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},
 \code{\link{parameterEstimates}}, \code{\link{lavInspect}},
 \code{\link{modindices}}

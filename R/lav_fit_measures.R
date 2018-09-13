@@ -1,11 +1,15 @@
+# TDJ: add "..." to make the method generic, so lavaan.mi can add arguments to
+#      pass to lavTestLRT() and lavTestLRT.mi() about how to pool chi-squared.
+#      NOT sure this is necessary for the lavaan-method, perhaps only the
+#      generic needs "..."?
 setMethod("fitMeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL) {
+function(object, fit.measures = "all", baseline.model = NULL, ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
                      baseline.model = baseline.model)
 })
 
 setMethod("fitmeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL) {
+function(object, fit.measures = "all", baseline.model = NULL, ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
                      baseline.model = baseline.model)
 })

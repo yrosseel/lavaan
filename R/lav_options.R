@@ -83,10 +83,17 @@ lav_options_default <- function(mimic = "lavaan") {
                 group.w.free       = FALSE,
 
                 # clusters
+                #FIXME: Is this meant to be the logical "clustered"?
+                #       Variable name stored in @Data, not @Options.
+                #       Also not on ?lavOptions help page.
                 cluster            = NULL,
                 level.label        = NULL,
 
                 # sampling weights
+                #FIXME: Is this meant to be logical too?
+                #       Perhaps call it "any.sampling.weights" or "use.sampling.weights"
+                #       Variable name stored in @Data, not @Options.
+                #       Also not on ?lavOptions help page.
                 sampling.weights   = NULL,
 
                 # estimation
