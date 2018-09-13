@@ -90,9 +90,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         score <- lavTech(object, "gradient.logl")
         if (use.exp.info) {
-          information <- lavTech(FIT, "information.expected")
+          information <- lavTech(object, "information.expected")
         } else {
-          information <- lavTech(FIT, "information")
+          information <- lavTech(object, "information")
         }
         J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))?
         #                 else written over with Z1.plus if(is.numeric(release))
