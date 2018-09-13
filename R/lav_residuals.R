@@ -28,6 +28,7 @@ function(object, type = "raw", labels = TRUE) {
         return( lav_residuals_casewise(object, labels = labels) )
     } else {
         return( lav_residuals(object = object, type = type, h1 = TRUE,
+                              add.type = TRUE,
                               add.labels = labels, add.class = TRUE,
                               drop.list.single.group = TRUE) )
     }

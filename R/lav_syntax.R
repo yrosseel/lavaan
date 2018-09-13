@@ -452,32 +452,62 @@ lav_syntax_parse_rhs <- function(rhs, op="") {
             names(out)[1L] <- NAME
             break
         } else if(rhs[[1L]] == "+") { # not last one!
-            i.var <- all.vars(rhs[[3L]], unique=FALSE)
-            n.var <- length(i.var)
 
-            # catch interaction term
-            rhs3.names <- all.names(rhs[[3L]])
-            if(length(i.var) > 1L && ":" %in% rhs3.names) {
-               colon.idx <- which(rhs3.names == ":")
-               i.var <- i.var[seq_len(n.var - 1L)]
-               n.var <- n.var - 1L
-               i.var[n.var] <- paste(rhs3.names[colon.idx + 1L], ":",
-                                     rhs3.names[colon.idx + 2L], sep = "")
-            }
+            # three possibilities:
+            # 1. length(rhs[[3]] == 3), and rhs[[3L]][[1]] == "*" -> modifier
+            # 2. length(rhs[[3]] == 3), and rhs[[3L]][[1]] == ":" -> interaction
+            # 3. length(rhs[[3]] == 1) -> single element
 
             out <- c(vector("list", 1L), out)
-            if(length(i.var) > 0L) {
-                names(out)[1L] <- i.var[n.var]
-            } else {
-                names(out)[1L] <- "intercept"
+
+            # modifier or not?
+            if(length(rhs[[3L]]) == 3L && rhs[[3L]][[1]] == "*") {
+                # modifier!!
+                NAME <- all.vars(rhs[[3L]][[3]])
+
+                if(length(NAME) > 0L) { # not an intercept
+                    # catch interaction term
+                    rhs3.names <- all.names(rhs[[3L]][[3]])
+                    if(rhs3.names[1L] == ":") {
+                        NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                    }
+                    names(out)[1L] <- NAME
+                } else { # intercept
+                    names(out)[1L] <- "intercept"
+                }
+                i.var <- all.vars(rhs[[3]][[2L]], unique = FALSE)
+                if(length(i.var) > 0L) {
+                    # modifier are unquoted labels
+                    out[[1L]]$label <- i.var
+                } else {
+                    # modifer is something else
+                    out[[1L]] <- lav_syntax_get_modifier(rhs[[3]][[2L]])
+                }
+
+            # interaction term?
+            } else if(length(rhs[[3L]]) == 3L && rhs[[3L]][[1]] == ":") {
+                # interaction term, without modifier
+                NAME <- all.vars(rhs[[3L]])
+                NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                names(out)[1L] <- NAME
+
+            } else { # no modifier!!
+                NAME <- all.vars(rhs[[3]])
+                if(length(NAME) > 0L) {
+                    names(out)[1L] <- NAME
+                } else { # intercept or zero?
+                    if(as.character(rhs[[3]]) == "1") {
+                        names(out)[1L] <- "intercept"
+                    } else if(as.character(rhs[[3]]) == "0") {
+                        names(out)[1L] <- "..zero.."
+                        out[[1L]]$fixed <- 0
+                    } else {
+                        names(out)[1L] <- "..constant.."
+                        out[[1L]]$fixed <- 0
+                    }
+                }
             }
-            if(n.var > 1L) {
-                # modifier are unquoted labels
-                out[[1L]]$label <- i.var[-n.var]
-            } else if(length(rhs[[3L]]) == 3L && rhs3.names[1L] == "*") {
-                # modifiers!!
-                out[[1L]] <- lav_syntax_get_modifier(rhs[[3L]][[2L]])
-            }
+
 
             # next element
             rhs <- rhs[[2L]]
