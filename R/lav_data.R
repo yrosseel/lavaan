@@ -99,6 +99,11 @@ lavData <- function(data              = NULL,          # data.frame
             }
         }
 
+        # no ov.names?
+        if(is.null(ov.names)) {
+            ov.names <- names(data)
+        }
+
         lavData <- lav_data_full(data              = data,
                                  group             = group,
                                  cluster           = cluster,
