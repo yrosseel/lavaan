@@ -768,6 +768,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
 #    categorical = TRUE, we only have residual cov/var...; so, we
 #    only return residual in both cases, whenever residual
 # - since 0.6-3, we always extract the values from the @h1 slot (if present)
+#   if meanstructure = FALSE, do NOT include $mean elements any longer
 lav_object_inspect_sampstat <- function(object, h1 = TRUE,
     std = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
@@ -776,7 +777,10 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
     ov.names <- object@pta$vnames$ov
     ov.names.res <- object@pta$vnames$ov.nox
     ov.names.x   <- object@pta$vnames$ov.x
+
+    # slots
     lavsamplestats <- object@SampleStats
+    lavmodel <- object@Model
 
     # if nlevels, override h1 to be TRUE
     if(object@Data@nlevels > 1L) {
@@ -800,7 +804,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
     OUT <- vector("list", length = nblocks)
     for(b in seq_len(nblocks)) {
 
-        if(!object@Model@conditional.x) {
+        if(!lavmodel@conditional.x) {
 
             # covariance matrix
             if(h1) {
@@ -821,31 +825,33 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # mean vector
-            if(h1) {
-                OUT[[b]]$mean <- as.numeric(H1$mean[[b]])
-            } else {
-                OUT[[b]]$mean <- as.numeric(lavsamplestats@mean[[b]])
-            }
-            if(std) {
-                diag.orig[ diag.orig < .Machine$double.eps ] <- NA
-                OUT[[b]]$mean <- OUT[[b]]$mean/sqrt(diag.orig)
-            }
-            if(add.labels) {
-                names(OUT[[b]]$mean) <- ov.names[[b]]
-            }
-            if(add.class) {
-                class(OUT[[b]]$mean) <- c("lavaan.vector", "numeric")
+            if(lavmodel@meanstructure) {
+                if(h1) {
+                    OUT[[b]]$mean <- as.numeric(H1$mean[[b]])
+                } else {
+                    OUT[[b]]$mean <- as.numeric(lavsamplestats@mean[[b]])
+                }
+                if(std) {
+                    diag.orig[ diag.orig < .Machine$double.eps ] <- NA
+                    OUT[[b]]$mean <- OUT[[b]]$mean/sqrt(diag.orig)
+                }
+                if(add.labels) {
+                    names(OUT[[b]]$mean) <- ov.names[[b]]
+                }
+                if(add.class) {
+                    class(OUT[[b]]$mean) <- c("lavaan.vector", "numeric")
+                }
             }
 
             # thresholds
-            if(object@Model@categorical) {
+            if(lavmodel@categorical) {
                 if(h1) {
                     OUT[[b]]$th <- as.numeric(H1$th[[b]])
                 } else {
                     OUT[[b]]$th <- as.numeric(lavsamplestats@th[[b]])
                 }
-                if(length(object@Model@num.idx[[b]]) > 0L) {
-                    NUM.idx <- which(object@Model@th.idx[[b]] == 0)
+                if(length(lavmodel@num.idx[[b]]) > 0L) {
+                    NUM.idx <- which(lavmodel@th.idx[[b]] == 0)
                     OUT[[b]]$th <- OUT[[b]]$th[ -NUM.idx ]
                 }
                 # FIXME: what to do if std = TRUE (depends on delta/theta)
@@ -880,7 +886,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # intercepts
-            if(object@Model@meanstructure) {
+            if(lavmodel@meanstructure) {
                 if(h1) {
                     OUT[[b]]$res.int <- as.numeric(H1$res.int[[b]])
                 } else {
@@ -899,14 +905,14 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # thresholds
-            if(object@Model@categorical) {
+            if(lavmodel@categorical) {
                 if(h1) {
                     OUT[[b]]$res.th <- as.numeric(H1$res.th[[b]])
                 } else {
                     OUT[[b]]$res.th <- as.numeric(lavsamplestats@res.th[[b]])
                 }
-                if(length(object@Model@num.idx[[b]]) > 0L) {
-                    NUM.idx <- which(object@Model@th.idx[[b]] == 0)
+                if(length(lavmodel@num.idx[[b]]) > 0L) {
+                    NUM.idx <- which(lavmodel@th.idx[[b]] == 0)
                     OUT[[b]]$res.th <- OUT[[b]]$res.th[ -NUM.idx ]
                 }
                 # FIXME: if std: what to do?
@@ -919,7 +925,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # slopes
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 if(h1) {
                     OUT[[b]]$res.slopes  <- H1$res.slopes[[b]]
                 } else {
@@ -945,7 +951,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # cov.x
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 OUT[[b]]$cov.x  <- lavsamplestats@cov.x[[b]]
                 if(std) {
                     diag.orig <- diag(OUT[[b]]$cov.x)
@@ -962,7 +968,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # mean.x
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 OUT[[b]]$mean.x <- as.numeric(object@SampleStats@mean.x[[b]])
                 if(std) {
                     diag.orig[ diag.orig < .Machine$double.eps ] <- NA
@@ -979,7 +985,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
         } # conditional.x
 
         # stochastic weights
-        if(object@Model@group.w.free) {
+        if(lavmodel@group.w.free) {
             # to be consistent with the 'implied' values,
             # transform so group.w is the 'log(group.freq)'
             OUT[[b]]$group.w <-
@@ -1109,12 +1115,15 @@ lav_object_inspect_implied <- function(object,
     ov.names <- object@pta$vnames$ov
     ov.names.res <- object@pta$vnames$ov.nox
     ov.names.x   <- object@pta$vnames$ov.x
+
+    # slots
     lavimplied <- object@implied
+    lavmodel   <- object@Model
 
     OUT <- vector("list", length = nblocks)
     for(b in seq_len(nblocks)) {
 
-        if(!object@Model@conditional.x) {
+        if(!lavmodel@conditional.x) {
 
             # covariance matrix
             OUT[[b]]$cov  <- lavimplied$cov[[b]]
@@ -1127,16 +1136,18 @@ lav_object_inspect_implied <- function(object,
             }
 
             # mean vector
-            OUT[[b]]$mean <- as.numeric(lavimplied$mean[[b]])
-            if(add.labels) {
-                names(OUT[[b]]$mean) <- ov.names[[b]]
-            }
-            if(add.class) {
-                class(OUT[[b]]$mean) <- c("lavaan.vector", "numeric")
+            if(lavmodel@meanstructure) {
+                OUT[[b]]$mean <- as.numeric(lavimplied$mean[[b]])
+                if(add.labels) {
+                    names(OUT[[b]]$mean) <- ov.names[[b]]
+                }
+                if(add.class) {
+                    class(OUT[[b]]$mean) <- c("lavaan.vector", "numeric")
+                }
             }
 
             # thresholds
-            if(object@Model@categorical) {
+            if(lavmodel@categorical) {
                 OUT[[b]]$th <- as.numeric(lavimplied$th[[b]])
                 if(length(object@Model@num.idx[[b]]) > 0L) {
                     NUM.idx <- which(object@Model@th.idx[[b]] == 0)
@@ -1165,7 +1176,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # intercepts
-            if(object@Model@meanstructure) {
+            if(lavmodel@meanstructure) {
                 OUT[[b]]$res.int <- as.numeric(lavimplied$res.int[[b]])
                 if(add.labels) {
                     names(OUT[[b]]$res.int) <- ov.names.res[[b]]
@@ -1176,7 +1187,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # thresholds
-            if(object@Model@categorical) {
+            if(lavmodel@categorical) {
                 OUT[[b]]$res.th <- as.numeric(lavimplied$res.th[[b]])
                 if(length(object@Model@num.idx[[b]]) > 0L) {
                     NUM.idx <- which(object@Model@th.idx[[b]] == 0)
@@ -1191,7 +1202,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # slopes
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 OUT[[b]]$res.slopes  <- lavimplied$res.slopes[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$res.slopes) <- ov.names.res[[b]]
@@ -1203,7 +1214,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # cov.x
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 OUT[[b]]$cov.x  <- object@SampleStats@cov.x[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
@@ -1216,7 +1227,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # mean.x
-            if(object@Model@nexo > 0L) {
+            if(lavmodel@nexo > 0L) {
                 OUT[[b]]$mean.x  <- as.numeric(object@SampleStats@mean.x[[b]])
                 if(add.labels) {
                     names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
@@ -1230,7 +1241,7 @@ lav_object_inspect_implied <- function(object,
         } # conditional.x
 
         # stochastic weights
-        if(object@Model@group.w.free) {
+        if(lavmodel@group.w.free) {
             OUT[[b]]$group.w <- lavimplied$group.w[[b]]
             if(add.labels) {
                 names(OUT[[b]]$group.w) <- "w" # somewhat redundant

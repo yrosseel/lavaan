@@ -72,28 +72,29 @@ the independence model) (if available).}
       vector will be zero.}
     \item{fitted}{\code{signature(object = "lavaan")}: an alias for
         \code{fitted.values}.}
-    \item{residuals}{\code{signature(object = "lavaan", type="raw")}:
-      If \code{type="raw"}, this function returns the raw (=unstandardized)
-      difference between the implied moments and the observed moments as
-      a list of two elements: \code{cov} for the residual covariance matrix,
-      and \code{mean} for the residual mean vector.
-      If only the covariance matrix was analyzed, the residual mean vector
-      will be zero.
-      If \code{type="cor"}, the observed and model implied covariance matrix
-      is first transformed to a correlation matrix (using \code{cov2cor}),
-      before the residuals are computed.
-      If \code{type="normalized"}, the residuals are
-      divided by the square root of an asymptotic variance estimate of the
-      corresponding sample statistic (the variance estimate depends on the
-      choice for the \code{se} argument).
-      If \code{type="standardized"}, the residuals are divided by the square
-      root of the difference between an asymptotic variance estimate of the
-      corresponding sample statistic and an asymptotic variance estimate of
-      the corresponding model-implied statistic.
-      In the latter case, the residuals have a metric similar
-      to z-values. On the other hand, they may often result in \code{NA} values;      for these cases, it may be better to use the normalized residuals. For
-      more information about the normalized and standardized residuals, see
-      the Mplus reference below.}
+    \item{residuals}{\code{signature(object = "lavaan", type="raw")}: 
+	  If \code{type = "raw"}, this function returns the raw (= unscaled)
+      difference between the observed and the expected (model-implied) summary
+      statistics.
+	  If \code{type = "cor"}, or \code{type = "cor.bollen"}, the observed and
+      model implied covariance matrices are first transformed to a correlation 
+      matrix (using \code{cov2cor()}), before the residuals are computed.  
+	  If \code{type = "cor.bentler"}, both the observed and model implied
+      covariance matrices are rescaled by dividing the elements by the square 
+      roots of the corresponding variances of the observed covariance matrix.  
+      If \code{type="normalized"}, the residuals are divided by the square 
+      root of the asymptotic variance of the corresponding summary statistic 
+      (the variance estimate depends on the choice for the \code{se} argument).
+      Unfortunately, the corresponding standard errors are too large, and this 
+      option is only available for historical interest.  
+      If \code{type="standardized"}, the residuals are divided by the square 
+      root of the asymptotic variance of these residuals. The resulting 
+      standardized residuals elements can be interpreted as z-scores.  
+      If \code{type="standardized.mplus"}, the residuals are divided by the 
+      square root of the asymptotic variance of these residuals. However, a 
+      simplified formula is used (see the Mplus reference below) which often 
+      results in negative estimates for the variances, resulting in many 
+      \code{NA} values for the standardized residuals.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
     \item{vcov}{\code{signature(object = "lavaan")}: returns the

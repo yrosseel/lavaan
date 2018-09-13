@@ -1115,8 +1115,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             ## FIXME: get the scaling right
             SRMR_BENTLER <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler.group) / object@SampleStats@ntotal )
             SRMR_BENTLER_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler_nomean.group) / object@SampleStats@ntotal )
-            crmr <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr.group) / object@SampleStats@ntotal )
-            crmr_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr_nomean.group) / object@SampleStats@ntotal )
+            CRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr.group) / object@SampleStats@ntotal )
+            CRMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr_nomean.group) / object@SampleStats@ntotal )
             SRMR_MPLUS <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus.group) / object@SampleStats@ntotal )
             SRMR_MPLUS_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus_nomean.group) / object@SampleStats@ntotal )
             RMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr.group) / object@SampleStats@ntotal )
@@ -1124,8 +1124,8 @@ lav_fit_measures <- function(object, fit.measures="all",
         } else {
             SRMR_BENTLER <- srmr_bentler.group[1]
             SRMR_BENTLER_NOMEAN <- srmr_bentler_nomean.group[1]
-            crmr <- crmr.group[1]
-            crmr_NOMEAN <- crmr_nomean.group[1]
+            CRMR <- crmr.group[1]
+            CRMR_NOMEAN <- crmr_nomean.group[1]
             SRMR_MPLUS <- srmr_mplus.group[1]
             SRMR_MPLUS_NOMEAN <- srmr_mplus_nomean.group[1]
             RMR <- rmr.group[1]
@@ -1152,15 +1152,15 @@ lav_fit_measures <- function(object, fit.measures="all",
         # the others
         indices["srmr_bentler"]        <- SRMR_BENTLER
         indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
-        indices["crmr"]         <- crmr
-        indices["crmr_nomean"]  <- crmr_NOMEAN
+        indices["crmr"]                <- CRMR
+        indices["crmr_nomean"]         <- CRMR_NOMEAN
         indices["srmr_mplus"]          <- SRMR_MPLUS
         indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
-        if(categorical) {
+        #if(categorical) {
             indices["rmr"]             <- RMR
-        } else {
-            indices["rmr"]             <- RMR_NOMEAN
-        }
+        #} else {
+        #    indices["rmr"]             <- RMR_NOMEAN
+        #}
         indices["rmr_nomean"]          <- RMR_NOMEAN
     }
 

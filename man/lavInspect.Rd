@@ -37,7 +37,7 @@ a flattened list is returned containing all model matrices, with repeated
 names for multiple groups.}
 \item{drop.list.single.group}{If \code{FALSE}, the results are returned as
     a list, where each element corresponds to a group (even if there is only
-    a single group.) If \code{TRUE}, the list will be unlisted if there is
+    a single group). If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
 \item{...}{Additional arguments. Not used by lavaan, but by other packages.}
 }
@@ -330,7 +330,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
-fit <- cfa(HS.model, data=HolzingerSwineford1939, group = "school")
+     
+fit <- cfa(HS.model, data = HolzingerSwineford1939, group = "school")
 
 # extract information
 lavInspect(fit, "sampstat")
