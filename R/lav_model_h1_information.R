@@ -704,6 +704,9 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
 # asymptotic variance matrix (=Gamma/N) of the unrestricted (H1)
 # sample statistics
+#
+# FIXME: make this work for categorical/GLS/WLS/...
+#
 lav_model_h1_acov <- function(lavobject      = NULL,
                               lavmodel       = NULL,
                               lavsamplestats = NULL,
@@ -742,6 +745,8 @@ lav_model_h1_acov <- function(lavobject      = NULL,
     if(!is.null(se)) {
         lavoptions$se <- se
     }
+
+
 
     # information
     information <- lavoptions$information

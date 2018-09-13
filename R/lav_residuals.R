@@ -105,6 +105,13 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     lavdata  <- object@Data
     lavmodel <- object@Model
 
+    # change options if categorical or conditional.x, for now
+    if(lavmodel@categorical ||
+       lavmodel@conditional.x) {
+        zstat <- se <- FALSE 
+        summary <- FALSE
+    }
+
     # observed and fitted sample statistics
     obsList <- lav_object_inspect_sampstat(object, h1 = h1,
                    add.labels = add.labels, add.class  = add.class,
