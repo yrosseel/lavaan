@@ -8,7 +8,7 @@
 # - based on obsList (inspect_sampstat) and estList (inspect_implied)
 # - pre-scaling for type = "cor.bollen" and type = "cor.bentler"
 # - summary statistics: rmr, srmr, crmr, urmr, usrmr, ucrmr; standard errors,
-#       z-statistics (exact test, close test), p-values   
+#       z-statistics (exact test, close test), p-values
 # - type = "normalized" is based on lav_model_h1_acov(), and should now work
 #   for all estimators
 # - type = "standardized" now uses the correct formula, and should work for
@@ -42,16 +42,16 @@ function(object, type = "raw") {
 # user-visible function
 lavResiduals <- function(object, type = "cor.bentler",
                          se = FALSE, zstat = TRUE, summary = TRUE,
-                         h1.acov = "unstructured", 
+                         h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE) {
 
-    out <- lav_residuals(object = object, type = type, h1 = TRUE, 
+    out <- lav_residuals(object = object, type = type, h1 = TRUE,
                se = se, zstat = zstat, summary = summary,
                summary.options = list(se = TRUE, zstat = TRUE, pvalue = TRUE,
                    unbiased = TRUE, unbiased.se = TRUE, unbiased.zstat = FALSE,
                    unbiased.test.val = 0.05, unbiased.pvalue = FALSE),
-               h1.acov = h1.acov, add.type = add.type, 
+               h1.acov = h1.acov, add.type = add.type,
                add.labels = add.labels, add.class = add.class,
                drop.list.single.group = drop.list.single.group)
 
@@ -64,7 +64,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           se = FALSE, zstat = FALSE, summary = FALSE,
                           summary.options = list(se = TRUE, zstat = TRUE,
                             pvalue = TRUE, unbiased = TRUE, unbiased.se = TRUE,
-                            unbiased.zstat = FALSE, unbiased.test.val = 0.05, 
+                            unbiased.zstat = FALSE, unbiased.test.val = 0.05,
                             unbiased.pvalue = FALSE),
                           h1.acov = "unstructured", add.type = FALSE,
                           add.labels = FALSE, add.class = FALSE,
@@ -119,17 +119,17 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     # pre-scale?
     if(type %in% c("cor.bentler", "cor.bollen")) {
         for(b in seq_len(nblocks)) {
-            var.obs <- if(lavmodel@conditional.x) { 
+            var.obs <- if(lavmodel@conditional.x) {
                 diag(obsList[[b]]$res.cov) } else { diag(obsList[[b]]$cov) }
-            var.est <- if(lavmodel@conditional.x) { 
+            var.est <- if(lavmodel@conditional.x) {
                 diag(estList[[b]]$res.cov) } else { diag(estList[[b]]$cov) }
 
             # rescale obsList
-            obsList[[b]] <- 
+            obsList[[b]] <-
                 lav_residuals_rescale(x = obsList[[b]], diag.cov = var.obs)
             # rescale estList
             if(type == "cor.bentler") { # use obsList
-                estList[[b]] <- 
+                estList[[b]] <-
                     lav_residuals_rescale(x = estList[[b]], diag.cov = var.obs)
             } else if(type == "cor.bollen") { # use estList for COV only
                 estList[[b]] <- lav_residuals_rescale(x = estList[[b]],
@@ -141,7 +141,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     # compute residuals: (observed - implied)
     resList <- vector("list", length = nblocks)
     for(b in seq_len(nblocks)) {
-        resList[[b]] <- lapply(seq_len(length(obsList[[b]])), 
+        resList[[b]] <- lapply(seq_len(length(obsList[[b]])),
                                FUN = function(el) {
                                obsList[[b]][[el]] - estList[[b]][[el]]})
         # always name the elements, even if add.labels = FALSE
@@ -168,7 +168,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
             if(add.labels) {
                 NAMES <- names(resList[[b]])
             }
-            resList[[b]] <- lapply(seq_len(length(resList[[b]])), 
+            resList[[b]] <- lapply(seq_len(length(resList[[b]])),
                                    FUN = function(el) {
                                        A <- resList[[b]][[el]]
                                        B <-  seList[[b]][[el]]
@@ -200,7 +200,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
         for(b in seq_len(nblocks)) {
             NAMES.res <- names(resList[[b]])
             NAMES.z   <- paste0(names(resList.orig[[b]]), ".z")
-            tmp <- lapply(seq_len(length(resList.orig[[b]])), 
+            tmp <- lapply(seq_len(length(resList.orig[[b]])),
                                    FUN = function(el) {
                                        A <- resList.orig[[b]][[el]]
                                        B <-  seList[[b]][[el]]
@@ -216,7 +216,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
 
     # add summary statistics (rms, mabs)
     if(summary) {
-        args <- c(list(object = object, type = type, h1.acov = h1.acov, 
+        args <- c(list(object = object, type = type, h1.acov = h1.acov,
                        add.class = add.class), summary.options)
         sumStat <- do.call("lav_residuals_summary", args)
         for(b in seq_len(nblocks)) {
@@ -294,6 +294,9 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
     # for each group, compute ACOV
     for(g in seq_len(lavdata@ngroups)) {
 
+        # group weight
+        gw <- object@SampleStats@nobs[[g]] / object@SampleStats@ntotal
+
         if(z.type == "standardized.mplus") { # simplified formula
                                              # also used by LISREL?
             # see https://www.statmodel.com/download/StandardizedResiduals.pdf
@@ -304,10 +307,20 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
         } else if(z.type == "standardized") {
             # see Ogasawara (2001) using Bentler & Dijkstra (1985) eq 1.7.4
 
-            A0.g <- t(DELTA[[g]]) %*% A1[[g]] %*% DELTA[[g]]
-            A0.g.inv <- lav_model_information_augment_invert(object@Model,
-                          information = A0.g, inverted = TRUE)
-            ACOV.est.g <- DELTA[[g]] %*% A0.g.inv %*% t(DELTA[[g]])
+            # NVarCov, but always 'not' robust
+            A0.g.inv <- lav_model_information(lavmodel  = lavmodel,
+                                         lavsamplestats = object@SampleStats,
+                                         lavdata        = lavdata,
+                                         lavcache       = object@Cache,
+                                         lavimplied     = object@implied,
+                                         lavh1          = object@h1,
+                                         lavoptions     = object@Options,
+                                         extra          = FALSE,
+                                         augmented      = TRUE,
+                                         inverted       = TRUE,
+                                         use.ginv       = TRUE)
+
+            ACOV.est.g <- gw * (DELTA[[g]] %*% A0.g.inv %*% t(DELTA[[g]]))
             Q <- diag(nrow = nrow(ACOV.est.g)) - ACOV.est.g %*% A1[[g]]
             ACOV.res[[g]] <- Q %*% ACOV.obs[[g]] %*% t(Q)
 
@@ -318,7 +331,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                 }
                 # Ogasawara (2001), eq (13), or
                 # Maydeu-Olivares (2017), eq (16)
-                COV <- if(lavmodel@conditional.x) { 
+                COV <- if(lavmodel@conditional.x) {
                            sampstat[[g]]$res.cov } else { sampstat[[g]]$cov }
                 SS <- 1/sqrt(diag(COV))
                 tmp <- lav_matrix_vech(tcrossprod(SS))
@@ -436,7 +449,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                   h1.acov = "unstructured",
                                   se = FALSE, zstat = FALSE, pvalue = FALSE,
                                   unbiased = FALSE, unbiased.se = FALSE,
-                                  unbiased.zstat = FALSE, 
+                                  unbiased.zstat = FALSE,
                                   unbiased.test.val = 0.05,
                                   unbiased.pvalue = FALSE,
                                   add.class = FALSE) {
@@ -455,7 +468,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         unbiased.se <- TRUE
     }
 
-    if(!all(type %in% c("rmr", "srmr", "crmr", 
+    if(!all(type %in% c("rmr", "srmr", "crmr",
                         "raw", "cor.bentler", "cor.bollen"))) {
         stop("lavaan ERROR: unknown type: ", dQuote(type))
     }
@@ -478,7 +491,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     lavdata  <- object@Data
     lavmodel <- object@Model
 
-    
+
     rmrFlag <- srmrFlag <- crmrFlag <- FALSE
     if("rmr" %in% type || "raw" %in% type) {
         rmrList <- lav_residuals(object = object, type = "raw")
@@ -487,11 +500,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                              z.type = "standardized",
                                              h1.acov = "unstructured")
         }
-    } 
+    }
     if("srmr" %in% type || "cor.bentler" %in% type || "cor" %in% type) {
         srmrList <- lav_residuals(object = object, type = "cor.bentler")
         if(se || unbiased) {
-            srmrList.se <- lav_residuals_acov(object = object, 
+            srmrList.se <- lav_residuals_acov(object = object,
                                               type = "cor.bentler",
                                               z.type = "standardized",
                                               h1.acov = "unstructured")
@@ -514,7 +527,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     for(g in seq_len(lavdata@ngroups)) {
 
         nvar <- object@pta$nvar[[g]] # block or group-based?
-        
+
         # categorical
         if(lavmodel@categorical) {
             stop("not ready yet")
@@ -527,7 +540,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                 OUT <- vector("list", length(type))
                 names(OUT) <- type
-               
+
                 for(typ in seq_len(length(type))) {
 
                     if(type[typ] == "rmr") {
@@ -546,7 +559,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             rmsList.se.g <- crmrList.se[[g]]
                         }
                     }
- 
+
                     # COV
                     STATS <- lav_matrix_vech(rmsList.g$cov);
                     pstar <- length(STATS); ACOV  <- NULL
@@ -560,10 +573,10 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                 } else { rmsList.se.g }
                     }
                     RMS.COV <- lav_residuals_summary_rms(STATS = STATS,
-                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue, 
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
                         unbiased = unbiased, unbiased.se = unbiased.se,
-                        unbiased.zstat = unbiased.zstat, 
-                        unbiased.test.val = unbiased.test.val, 
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
                         unbiased.pvalue = unbiased.pvalue,
                         pstar = pstar, type = type[typ])
 
@@ -576,10 +589,10 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                                  seq_len(nvar), drop = FALSE]
                         }
                         RMS.MEAN <- lav_residuals_summary_rms(STATS = STATS,
-                            ACOV = ACOV, 
+                            ACOV = ACOV,
                             se = se, zstat = zstat, pvalue = pvalue,
                             unbiased = unbiased, unbiased.se = unbiased.se,
-                            unbiased.zstat = unbiased.zstat, 
+                            unbiased.zstat = unbiased.zstat,
                             unbiased.test.val = unbiased.test.val,
                             unbiased.pvalue = unbiased.pvalue,
                             pstar = pstar, type = type[typ])
@@ -597,18 +610,18 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             ACOV <- rmsList.se.g
                         }
                         RMS.TOTAL <- lav_residuals_summary_rms(STATS = STATS,
-                            ACOV = ACOV, 
+                            ACOV = ACOV,
                             se = se, zstat = zstat, pvalue = pvalue,
                             unbiased = unbiased, unbiased.se = unbiased.se,
                             unbiased.zstat = unbiased.zstat,
                             unbiased.test.val = unbiased.test.val,
                             unbiased.pvalue = unbiased.pvalue,
                             pstar = pstar, type = type[typ])
-                    } 
+                    }
 
                     if(lavmodel@meanstructure) {
-                        TABLE <- as.data.frame(rbind(RMS.COV, 
-                                                     RMS.MEAN, 
+                        TABLE <- as.data.frame(rbind(RMS.COV,
+                                                     RMS.MEAN,
                                                      RMS.TOTAL))
                         rownames(TABLE) <- c("cov", "mean", "total")
                     } else {
@@ -635,11 +648,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 }
 
 
-lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL, 
+lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
                                       se = FALSE, zstat = FALSE, pvalue = FALSE,
                                       unbiased = FALSE, unbiased.se = FALSE,
                                       unbiased.zstat = FALSE,
-                                      unbiased.test.val = 0.05, 
+                                      unbiased.test.val = 0.05,
                                       unbiased.pvalue = FALSE,
                                       pstar = 0, type = "rms") {
 
@@ -696,17 +709,17 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
 
     # labels
     if(type == "rmr") {
-        OUT <- list(rmr = rms, rmr.se = rms.se, 
+        OUT <- list(rmr = rms, rmr.se = rms.se,
                     rmr.z = rms.z, rmr.pvalue = rms.pvalue,
-                    urmr = urms, urmr.se = urms.se, 
+                    urmr = urms, urmr.se = urms.se,
                     urmr.z = urms.z, urmr.pvalue = urms.pvalue)
     } else if(type == "srmr") {
-        OUT <- list(srmr = rms, srmr.se = rms.se, 
+        OUT <- list(srmr = rms, srmr.se = rms.se,
                     srmr.z = rms.z, srmr.pvalue = rms.pvalue,
                     usrmr = urms, usrmr.se = urms.se,
                     usrmr.z = urms.z, usrmr.pvalue = urms.pvalue)
     } else if(type == "crmr") {
-        OUT <- list(crmr = rms, crmr.se = rms.se, 
+        OUT <- list(crmr = rms, crmr.se = rms.se,
                     crmr.z = rms.z, crmr.pvalue = rms.pvalue,
                     ucrmr = urms, ucrmr.se = urms.se,
                     ucrmr.z = urms.z, ucrmr.pvalue = urms.pvalue)
@@ -716,7 +729,7 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
 }
 
 # generate summary statistics for the residuals
-lav_residuals_summary_old <- function(resList = NULL, 
+lav_residuals_summary_old <- function(resList = NULL,
                                   add.class = FALSE, add.labels = FALSE) {
 
     # per block
@@ -737,10 +750,10 @@ lav_residuals_summary_old <- function(resList = NULL,
             }
 
             if(is.character(EL)) {
-                new.x <- list(EL); 
+                new.x <- list(EL);
                 if(add.labels) {
                     names(new.x) <- "type"
-                } 
+                }
                 x <- c(x, new.x)
 
             } else if(is.matrix(EL) && isSymmetric(EL)) {
@@ -802,7 +815,7 @@ lav_residuals_rescale <- function(x, diag.cov = NULL, diag.cov2 = NULL) {
     if(is.null(diag.cov2)) {
         diag.cov2 <- diag.cov
     }
-        
+
     # make sure we can take the sqrt and invert
     diag.cov[!is.finite(diag.cov)] <- NA
     diag.cov[ diag.cov < .Machine$double.eps ] <- NA
