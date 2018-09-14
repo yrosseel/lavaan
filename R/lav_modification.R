@@ -37,8 +37,8 @@ modindices <- function(object,
 
     # extended list (fixed-to-zero parameters)
     strict.exo <- FALSE
-    if(object@Model@fixed.x && object@Model@categorical) {
-        strict.exo <- TRUE ## truly conditional.x
+    if(object@Model@conditional.x) {
+        strict.exo <- TRUE
     }
     FULL <- lav_partable_full(partable = object@ParTable,
                               lavpta = object@pta,
