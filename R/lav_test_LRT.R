@@ -116,7 +116,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         scaled <- TRUE
         # which type?
         TEST <- object@test[[2]]$test
-    } else if(!all(mods.scaled)) {
+    } else if(!any(mods.scaled)) { # thanks to R.M. Bee to fix this
         scaled <- FALSE
         TEST <- "standard"
     } else {
@@ -138,15 +138,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # collect statistics for each model
     if(type == "chisq") {
         Df <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
-    } else if(type == "cf") {
-        Df <- rep(as.numeric(NA), length(mods))
-    } else {
-        stop("lavaan ERROR: test type unknown: ", type)
-    }
-
-
-    if(type == "chisq") {
-        STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
+        STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)     
     } else if(type == "cf") {
         tmp <- lapply(mods, lavTablesFitCf)
         STAT <- unlist(tmp)
@@ -154,6 +146,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else {
         stop("lavaan ERROR: test type unknown: ", type)
     }
+
 
     # difference statistics
     STAT.delta  <- c(NA, diff(STAT))
