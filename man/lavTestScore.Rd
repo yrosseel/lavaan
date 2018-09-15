@@ -11,7 +11,7 @@ fixed or constrained parameters in model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
              univariate = TRUE, cumulative = FALSE, epc = FALSE,
-             verbose = FALSE, warn = TRUE, use.exp.info = TRUE)
+             verbose = FALSE, warn = TRUE, information = "expected")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -31,10 +31,9 @@ compute the expected parameter changes for the existing (free) parameters,
 for each released constraint.}
 \item{verbose}{Logical. Not used for now.}
 \item{warn}{Logical. If \code{TRUE}, print out warnings if they occur.}
-\item{use.exp.info}{Logical, indicating whether to use the expected information
-matrix (default: \code{TRUE}, which provides better control of Type I errors)
-or whichever type of information was used to estimate the standard errors
-(check \code{\link{lavInspect}(object, "options")$information}).}
+\item{information}{\code{character} indicating the type of information matrix
+to use (check \code{\link{lavInspect}} for available options). \code{"expected"}
+information is the default, which provides better control of Type I errors.}
 }
 \details{
     This function can be used to compute both multivariate and univariate
