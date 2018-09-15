@@ -86,8 +86,8 @@ modindices <- function(object,
     I22 <- information[model.idx, model.idx, drop = FALSE]
 
     # ALWAYS use *expected* information (for now)
-    I22.inv <- try(lavTech(object, lavTech(FIT, paste("inverted.information",
-                                                      information, sep = "."))),
+    I22.inv <- try(lavTech(object, paste("inverted.information",
+                                         information, sep = ".")),
                    silent = TRUE)
     # just in case...
     if(inherits(I22.inv, "try-error")) {
