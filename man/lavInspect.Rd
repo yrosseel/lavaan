@@ -186,6 +186,11 @@ Model features:
 Model-implied sample statistics:
 
 \describe{
+    \item{\code{"implied"}:}{The model-implied summary statistics.
+        Alias: \code{"fitted"}, \code{"expected"}, \code{"exp"}.}
+    \item{\code{"resid"}:}{The difference between observed and model-implied 
+        summary statistics.
+        Alias: \code{"residuals"}, \code{"residual"}, \code{"res"}.}
     \item{\code{"cov.lv"}:}{The model-implied variance-covariance matrix
         of the latent variables. Alias: \code{"veta"} [for V(eta)].}
     \item{\code{"cor.lv"}:}{The model-implied correlation matrix of the
@@ -318,6 +323,8 @@ Miscellaneous:
         \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
     \item{\code{"zero.cell.tables"}:}{List. List of bivariate frequency tables
         where at least one cell is empty.}
+    \item{\code{"version"}:}{The lavaan version number that was used to 
+        construct the fitted lavaan object.}
 }
 
 }

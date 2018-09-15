@@ -138,7 +138,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # collect statistics for each model
     if(type == "chisq") {
         Df <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
-        STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)     
+        STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
     } else if(type == "cf") {
         tmp <- lapply(mods, lavTablesFitCf)
         STAT <- unlist(tmp)

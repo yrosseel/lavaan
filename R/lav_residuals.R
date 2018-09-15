@@ -27,11 +27,16 @@ function(object, type = "raw", labels = TRUE) {
     if(type %in% c("casewise","case","obs","observations","ov")) {
         return( lav_residuals_casewise(object, labels = labels) )
     } else {
-        return( lav_residuals(object = object, type = type, h1 = TRUE,
-                              add.type = TRUE,
-                              add.labels = labels, add.class = TRUE,
-                              drop.list.single.group = TRUE) )
+        out <- lav_residuals(object = object, type = type, h1 = TRUE,
+                             add.type = TRUE,
+                             rename.cov.cor = FALSE, # should become FALSE!
+                                                    # after packages (eg jmv)
+                                                    # have adapted 0.6-3 style
+                             add.labels = labels, add.class = TRUE,
+                             drop.list.single.group = TRUE)
     }
+
+    out
 })
 
 setMethod("resid", "lavaan",
@@ -68,6 +73,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                             unbiased.zstat = FALSE, unbiased.test.val = 0.05,
                             unbiased.pvalue = FALSE),
                           h1.acov = "unstructured", add.type = FALSE,
+                          rename.cov.cor = FALSE,
                           add.labels = FALSE, add.class = FALSE,
                           drop.list.single.group = FALSE) {
 
@@ -109,7 +115,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     # change options if categorical or conditional.x, for now
     if(lavmodel@categorical ||
        lavmodel@conditional.x) {
-        zstat <- se <- FALSE 
+        zstat <- se <- FALSE
         summary <- FALSE
     }
 
@@ -241,6 +247,15 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
             NAMES <- names(resList[[b]])
             resList[[b]] <- c(type, resList[[b]])
             NAMES <- c("type", NAMES)
+            names(resList[[b]]) <- NAMES
+        }
+    }
+
+    # optional: rename 'cov' to 'cor' (if type = "cor")
+    if(rename.cov.cor && type %in% c("cor.bentler", "cor.bollen")) {
+        for(b in seq_len(nblocks)) {
+            NAMES <- names(resList[[b]])
+            NAMES <- gsub("cov", "cor", NAMES)
             names(resList[[b]]) <- NAMES
         }
     }

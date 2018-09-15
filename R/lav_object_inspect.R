@@ -213,7 +213,8 @@ lavInspect.lavaan <- function(object,
 
 
     #### model-implied sample statistics ####
-    } else if(what == "implied" || what == "fitted") {
+    } else if(what == "implied" || what == "fitted" ||
+              what == "expected" || what == "exp") {
         lav_object_inspect_implied(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
