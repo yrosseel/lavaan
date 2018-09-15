@@ -86,7 +86,6 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         score <- lavTech(object, "gradient.logl")
         information <- lavTech(FIT, paste("information", information, sep = "."))
-
         J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))?
         #                 else written over with Z1.plus if(is.numeric(release))
         #R <- object@Model@con.jac[,]

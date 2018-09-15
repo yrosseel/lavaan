@@ -89,6 +89,11 @@ lavCor <- function(object,
         conditional.x <- dots$conditional.x
     }
 
+    # override, only for backwards compatibility (eg moments() in JWileymisc)
+    #if(missing %in% c("ml", "fiml")) {
+    #    meanstructure = TRUE
+    #}
+
     # generate partable for unrestricted model
     PT.un <-
         lav_partable_unrestricted(lavobject     = NULL,

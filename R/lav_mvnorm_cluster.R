@@ -1390,7 +1390,10 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
                             fixed.x = any(lavpartable$exo == 1L),
                             estimator = "ML",
                             warn = FALSE, # no warnings
-                            check = "",   # no warnings
+                            check.start = FALSE,
+                            check.post = FALSE,
+                            check.gradient = FALSE,
+                            check.vcov = FALSE,
                             se = "none",
                             test = "none")
 

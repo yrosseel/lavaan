@@ -37,7 +37,7 @@ a flattened list is returned containing all model matrices, with repeated
 names for multiple groups.}
 \item{drop.list.single.group}{If \code{FALSE}, the results are returned as
     a list, where each element corresponds to a group (even if there is only
-    a single group.) If \code{TRUE}, the list will be unlisted if there is
+    a single group). If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
 \item{...}{Additional arguments. Not used by lavaan, but by other packages.}
 }
@@ -186,6 +186,11 @@ Model features:
 Model-implied sample statistics:
 
 \describe{
+    \item{\code{"implied"}:}{The model-implied summary statistics.
+        Alias: \code{"fitted"}, \code{"expected"}, \code{"exp"}.}
+    \item{\code{"resid"}:}{The difference between observed and model-implied 
+        summary statistics.
+        Alias: \code{"residuals"}, \code{"residual"}, \code{"res"}.}
     \item{\code{"cov.lv"}:}{The model-implied variance-covariance matrix
         of the latent variables. Alias: \code{"veta"} [for V(eta)].}
     \item{\code{"cor.lv"}:}{The model-implied correlation matrix of the
@@ -318,6 +323,8 @@ Miscellaneous:
         \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
     \item{\code{"zero.cell.tables"}:}{List. List of bivariate frequency tables
         where at least one cell is empty.}
+    \item{\code{"version"}:}{The lavaan version number that was used to 
+        construct the fitted lavaan object.}
 }
 
 }
@@ -330,7 +337,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
-fit <- cfa(HS.model, data=HolzingerSwineford1939, group = "school")
+     
+fit <- cfa(HS.model, data = HolzingerSwineford1939, group = "school")
 
 # extract information
 lavInspect(fit, "sampstat")
