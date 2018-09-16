@@ -9,12 +9,12 @@ Given a fitted lavaan object, compute the modification indices
 }
 \usage{
 modificationIndices(object, standardized = TRUE, cov.std = TRUE,
-                    use.exp.info = TRUE,
+                    information = "expected",
                     power = FALSE, delta = 0.1, alpha = 0.05,
                     high.power = 0.75, sort. = FALSE, minimum.value = 0,
                     maximum.number = nrow(LIST), free.remove = TRUE,
                     na.remove = TRUE, op = NULL)
-modindices(object, standardized = TRUE, cov.std = TRUE, use.exp.info = TRUE,
+modindices(object, standardized = TRUE, cov.std = TRUE, information = "expected",
                     power = FALSE, delta = 0.1, alpha = 0.05, high.power = 0.75,
                     sort. = FALSE, minimum.value = 0,
                     maximum.number = nrow(LIST), free.remove = TRUE,
@@ -29,10 +29,9 @@ variables. In the second column (sepc.all), standardization is based
 on both the variances of both (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
 \item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
-\item{use.exp.info}{Logical, indicating whether to use the expected information
-matrix (default: \code{TRUE}, which provides better control of Type I errors)
-or whichever type of information was used to estimate the standard errors
-(check \code{\link{lavInspect}(object, "options")$information}).}
+\item{information}{\code{character} indicating the type of information matrix
+to use (check \code{\link{lavInspect}} for available options). \code{"expected"}
+information is the default, which provides better control of Type I errors.}
 \item{power}{If \code{TRUE}, the (post-hoc) power is computed for each
 modification index, using the values of \code{delta} and \code{alpha}.}
 \item{delta}{The value of the effect size, as used in the post-hoc power
