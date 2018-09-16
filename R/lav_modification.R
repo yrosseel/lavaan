@@ -52,7 +52,7 @@ modindices <- function(object,
 
     # compute information matrix 'extended model'
     # ALWAYS use *expected* information (for now)
-    information <- lavTech(FIT, paste("information", information, sep = "."))
+    Information <- lavTech(FIT, paste("information", information, sep = "."))
 
     # compute gradient 'extended model'
     score <- lavTech(FIT, "gradient.logl")
@@ -80,10 +80,10 @@ modindices <- function(object,
     }
 
     # partition
-    I11 <- information[extra.idx, extra.idx, drop = FALSE]
-    I12 <- information[extra.idx, model.idx, drop = FALSE]
-    I21 <- information[model.idx, extra.idx, drop = FALSE]
-    I22 <- information[model.idx, model.idx, drop = FALSE]
+    I11 <- Information[extra.idx, extra.idx, drop = FALSE]
+    I12 <- Information[extra.idx, model.idx, drop = FALSE]
+    I21 <- Information[model.idx, extra.idx, drop = FALSE]
+    I22 <- Information[model.idx, model.idx, drop = FALSE]
 
     # ALWAYS use *expected* information (for now)
     I22.inv <- try(lavTech(object, paste("inverted.information",

@@ -45,7 +45,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         FIT <- lav_object_extended(object, add = add)
 
         score <- lavTech(FIT, "gradient.logl")
-        information <- lavTech(FIT, paste("information", information, sep = "."))
+        Information <- lavTech(FIT, paste("information", information, sep = "."))
 
         npar <- object@Model@nx.free
         nadd <- FIT@Model@nx.free - npar
@@ -57,15 +57,15 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             R.add   <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
             R       <- rbind(R.model, R.add)
 
-            Z <- cbind(rbind(information, R.model),
+            Z <- cbind(rbind(Information, R.model),
                        rbind(t(R.model),matrix(0,nrow(R.model),nrow(R.model))))
             Z.plus <- MASS::ginv(Z)
-            J.inv  <- Z.plus[ 1:nrow(information), 1:nrow(information) ]
+            J.inv  <- Z.plus[ 1:nrow(Information), 1:nrow(Information) ]
 
             r.idx <- seq_len(nadd) + nrow(R.model)
         } else {
             R <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
-            J.inv <- MASS::ginv(information)
+            J.inv <- MASS::ginv(Information)
 
             r.idx <- seq_len(nadd)
         }
@@ -85,9 +85,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         }
 
         score <- lavTech(object, "gradient.logl")
-        information <- lavTech(object,
+        Information <- lavTech(object,
                            paste("information", information, sep = "."))
-        J.inv <- MASS::ginv(information) #FIXME: move into if(is.null(release))?
+        J.inv <- MASS::ginv(Information) #FIXME: move into if(is.null(release))?
         #                 else written over with Z1.plus if(is.numeric(release))
         #R <- object@Model@con.jac[,]
 
@@ -103,10 +103,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
             # neutralize the non-needed constraints
             R1 <- R[-r.idx,,drop = FALSE]
-            Z1 <- cbind( rbind(information, R1),
+            Z1 <- cbind( rbind(Information, R1),
                          rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
             Z1.plus <- MASS::ginv(Z1)
-            J.inv <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            J.inv <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
         } else if(is.character(release)) {
             stop("not implemented yet")
         }
@@ -153,10 +153,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     }
 
     # compute df, taking into account that some of the constraints may
-    # be needed to identify the model (and hence information is singular)
-    # information.plus <- information + crossprod(R)
+    # be needed to identify the model (and hence Information is singular)
+    # Information.plus <- Information + crossprod(R)
     #df <- qr(R[r.idx,,drop = FALSE])$rank +
-    #          ( qr(information)$rank - qr(information.plus)$rank )
+    #          ( qr(Information)$rank - qr(Information.plus)$rank )
     df <- nrow( R[r.idx,,drop = FALSE] )
     pvalue <- 1 - pchisq(stat, df=df)
 
@@ -171,10 +171,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         TS <- numeric( nrow(R) )
         for(r in r.idx) {
             R1 <- R[-r,,drop = FALSE]
-            Z1 <- cbind( rbind(information, R1),
+            Z1 <- cbind( rbind(Information, R1),
                          rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
             Z1.plus <- MASS::ginv(Z1)
-            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
@@ -193,10 +193,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             rcumul.idx <- TS.order[1:r]
 
             R1 <- R[-rcumul.idx,,drop = FALSE]
-            Z1 <- cbind( rbind(information, R1),
+            Z1 <- cbind( rbind(Information, R1),
                          rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
             Z1.plus <- MASS::ginv(Z1)
-            Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+            Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
@@ -213,10 +213,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         #for(i in 1:length(r.idx)) {
         #    r <- r.idx[i]
         #    R1 <- R[-r,,drop = FALSE]
-        #    Z1 <- cbind( rbind(information, R1),
+        #    Z1 <- cbind( rbind(Information, R1),
         #                 rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
         #    Z1.plus <- MASS::ginv(Z1)
-        #    Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+        #    Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
         #    EPC[[i]] <- -1 * as.numeric(score %*%  Z1.plus1)
         #}
         #
@@ -224,10 +224,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # alltogether
         R1 <- R[-r.idx,,drop = FALSE]
-        Z1 <- cbind( rbind(information, R1),
+        Z1 <- cbind( rbind(Information, R1),
                      rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
         Z1.plus <- MASS::ginv(Z1)
-        Z1.plus1 <- Z1.plus[ 1:nrow(information), 1:nrow(information) ]
+        Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
         EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
 
         # create epc table for the 'free' parameters
