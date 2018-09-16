@@ -90,9 +90,9 @@ lavCor <- function(object,
     }
 
     # override, only for backwards compatibility (eg moments() in JWileymisc)
-    #if(missing %in% c("ml", "fiml")) {
-    #    meanstructure = TRUE
-    #}
+    if(missing %in% c("ml", "fiml")) {
+        meanstructure = TRUE
+    }
 
     # generate partable for unrestricted model
     PT.un <-

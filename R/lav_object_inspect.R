@@ -1451,7 +1451,7 @@ lav_object_inspect_cov_ov <- function(object, correlation.metric = FALSE,
 lav_object_inspect_mean_ov <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-    # compute lv means
+    # compute ov means
     if(object@Model@conditional.x) {
         OUT <- object@implied$res.int
     } else {
