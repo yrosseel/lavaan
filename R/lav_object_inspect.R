@@ -169,7 +169,7 @@ lavInspect.lavaan <- function(object,
 
     #### data + missingness ####
     } else if(what == "data") {
-        lav_object_inspect_data(object,
+        lav_object_inspect_data(object, add.labels = add.labels,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "case.idx") {
         lav_object_inspect_case_idx(object,
@@ -1020,11 +1020,24 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
                                     drop.list.single.group = FALSE) {
 
     G <- object@Data@ngroups
-    OUT <- object@Data@X
+    if(object@Model@conditional.x) {
+        OUT <- vector("list", length = G)
+        for(g in 1:G) {
+            OUT[[g]] <- cbind(object@Data@X[[g]], 
+                              object@Data@eXo[[g]])
+        }
+    } else {
+        OUT <- object@Data@X
+    }
 
     if(add.labels) {
         for(g in 1:G) {
-            colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
+            if(object@Model@conditional.x) {
+                colnames(OUT[[g]]) <- c(object@Data@ov.names[[g]],
+                                        object@Data@ov.names.x[[g]])
+            } else {
+                colnames(OUT[[g]]) <- object@Data@ov.names[[g]]
+            }
         }
     }
 
