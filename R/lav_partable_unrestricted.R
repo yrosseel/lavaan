@@ -120,20 +120,10 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
     nlevels       <- lavdata@nlevels
 
     # what with fixed.x?
-    # - does not really matter; fit will be saturated any way
+    # - does not really matter; fit will be saturated anyway
     # - fixed.x = TRUE may avoid convergence issues with non-numeric
     #             x-covariates
-    #if(lavoptions$mimic %in% c("lavaan", "Mplus")) {
-        fixed.x = lavoptions$fixed.x
-    #} else if(lavoptions$mimic == "EQS") {
-        # always ignore fixed.x
-    #    ov.names.x = NULL
-    #    fixed.x = FALSE
-    #} else if(lavoptions$mimic == "LISREL") {
-    #    # always ignore fixed.x??? CHECKME!!
-    #    ov.names.x = NULL
-    #    fixed.x = FALSE
-    #}
+    fixed.x = lavoptions$fixed.x
 
     # if multilevel
     if(nlevels > 1L) {
@@ -498,65 +488,41 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     }
                 }
 
-
                 # slopes
+                nnox <- length(ov.names.nox)
+                nel  <- nnox * nx
+
+                  lhs <- c(lhs,   rep(ov.names.nox, times = nx))
+                   op <- c(op,    rep("~", nel))
+                  rhs <- c(rhs,   rep(ov.names.x, each = nnox))
+                block <- c(block, rep(b,  nel))
+                group <- c(group, rep(g,  nel))
+                level <- c(level, rep(l,  nel))
                 if(independent) {
-                    lhs <- c(lhs, rep("dummy", nx))
-                     op <- c( op, rep("~", nx))
-                    rhs <- c(rhs, ov.names.x)
-
-                    # add dummy latent
-                    lhs <- c(lhs,"dummy")
-                     op <- c(op, "=~")
-                    rhs <- c(rhs, "dummy")
-                    lhs <- c(lhs,"dummy")
-                     op <- c(op, "~~")
-                    rhs <- c(rhs, "dummy")
-
-                    exo <- c(exo,    rep(1L, nx))
-                    exo <- c(exo,   c(0L,0L))
-                  group <- c(group,  rep(g,  nx + 2L))
-                  block <- c(block,  rep(b,  nx + 2L))
-                  level <- c(level,  rep(l,  nx + 2L))
-                   free <- c(free,   rep(0L, nx + 2L))
-                 ustart <- c(ustart, rep(0,  nx + 2L))
-
-                    if(meanstructure) {
-                        lhs <- c(lhs,"dummy")
-                         op <- c(op, "~1")
-                        rhs <- c(rhs, "")
-
-                        exo    <- c(exo,    0L)
-                        group  <- c(group,  g)
-                        block  <- c(block,  b)
-                        level  <- c(level,  l)
-                        free   <- c(free,   0L)
-                        ustart <- c(ustart, 0)
-                    }
+                 free <- c(free,  rep(0L, nel))
                 } else {
-                    # unrestricted
-                    nnox <- length(ov.names.nox)
-                    nel  <- nnox * nx
+                 free <- c(free,  rep(1L, nel))
+                }
+                  exo <- c(exo,   rep(1L, nel))
 
-                    lhs <- c(lhs, rep(ov.names.nox, times = nx))
-                     op <- c(op,  rep("~", nel))
-                    rhs <- c(rhs, rep(ov.names.x, each = nnox))
-                    block <- c(block, rep(b,  nel))
-                    group <- c(group, rep(g,  nel))
-                    level <- c(level, rep(l,  nel))
-                    free <- c(free,  rep(1L, nel))
-                    exo <- c(exo,   rep(1L, nel))
+                # starting values -- slopes
+                if(independent) {
+                    # FIXME: zero slope-structure provides a fit that
+                    # is equal to the conditional.x = FALSE version;
+                    # we in principle, we could just fix the slope-structure
+                    # to the sample-based slopes
 
-                    # starting values -- slopes
-                    if(!is.null(sample.slopes)) {
-                        ustart <- c(ustart, lav_matrix_vec(sample.slopes))
-                    } else {
-                        ustart <- c(ustart, rep(as.numeric(NA), nel))
-                    }
+                    # to get the old behaviour:
+                    ustart <- c(ustart, rep(0, nel))
+                    # but we probably should do:
+                    # ustart <- c(ustart, lav_matrix_vec(sample.slopes))
+                } else if(!is.null(sample.slopes)) {
+                    ustart <- c(ustart, lav_matrix_vec(sample.slopes))
+                } else {
+                    ustart <- c(ustart, rep(as.numeric(NA), nel))
                 }
 
             } # conditional.x
-
 
 
 
