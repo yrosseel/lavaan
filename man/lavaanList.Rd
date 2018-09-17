@@ -46,8 +46,8 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
 \item{store.slots}{Character vector. Which slots (from a lavaan object) 
     should be stored for each dataset? The possible choices are
     \code{"timing"}, \code{"partable"}, \code{"data"}, \code{"samplestats"},
-    \code{"vcov"}, \code{"test"}, \code{"optim"} or \code{"implied"}. Finally,
-    \code{"all"} selects all slots.}
+    \code{"vcov"}, \code{"test"}, \code{"optim"}, \code{"h1"}, \code{"loglik"},
+    or \code{"implied"}. Finally, \code{"all"} selects all slots.}
 \item{FUN}{Function. A function which when applied to the
     \code{\linkS4class{lavaan}} object returns the information of interest.}
 \item{store.failed}{Logical. If \code{TRUE}, write (to tempdir()) the dataset

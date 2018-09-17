@@ -26,6 +26,7 @@ lavaanList <- function(model         = NULL,             # model
     store.slots <- tolower(store.slots)
     if(length(store.slots) == 1L && store.slots == "all") {
         store.slots <- c("timing", "partable", "data", "samplestats",
+                         "cache", "loglik", "h1", "baseline", "external",
                          "vcov", "test", "optim", "implied")
     }
 
@@ -113,6 +114,7 @@ lavaanList <- function(model         = NULL,             # model
     # empty slots
     timingList <- ParTableList <- DataList <- SampleStatsList <-
         CacheList <- vcovList <- testList <- optimList <-
+        h1List <- loglikList <-
         impliedList <- funList <- list()
 
     # prepare store.slotsd slots
@@ -143,6 +145,13 @@ lavaanList <- function(model         = NULL,             # model
     if("implied" %in% store.slots) {
         impliedList <- vector("list", length = ndat)
     }
+    if("loglik" %in% store.slots) {
+        loglikList <- vector("list", length = ndat)
+    }
+    if("h1" %in% store.slots) {
+        h1List <- vector("list", length = ndat)
+    }
+
     if(!is.null(FUN)) {
         funList <- vector("list", length = ndat)
     }
@@ -276,6 +285,12 @@ lavaanList <- function(model         = NULL,             # model
             if("implied" %in% store.slots) {
                 RES$implied <- lavobject@implied
             }
+            if("loglik" %in% store.slots) {
+                RES$loglik <- lavobject@loglik
+            }
+            if("h1" %in% store.slots) {
+                RES$h1 <- lavobject@h1
+            }
 
             # custom FUN
             if(!is.null(FUN)) {
@@ -372,6 +387,12 @@ lavaanList <- function(model         = NULL,             # model
     if("implied" %in% store.slots) {
         impliedList <- lapply(RES, "[[", "implied")
     }
+    if("h1" %in% store.slots) {
+        h1List <- lapply(RES, "[[", "h1")
+    }
+    if("loglik" %in% store.slots) {
+        loglikList <- lapply(RES, "[[", "loglik")
+    }
     if(!is.null(FUN)) {
         funList <- lapply(RES, "[[", "fun")
     }
@@ -398,6 +419,9 @@ lavaanList <- function(model         = NULL,             # model
                       testList        = testList,
                       optimList       = optimList,
                       impliedList     = impliedList,
+                      h1List          = h1List,
+                      loglikList      = loglikList,
+                      
                       funList         = funList,
 
                       external     = list()

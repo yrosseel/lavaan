@@ -36,6 +36,8 @@ about the data.}
     \item{\code{testList}:}{List. test slot per dataset.}
     \item{\code{optimList}:}{List. optim slot per dataset.}
     \item{\code{impliedList}:}{List. implied slot per dataset.}
+    \item{\code{h1List}:}{List. h1 slot per dataset.}
+    \item{\code{loglikList}:}{List. loglik slot per dataset.}
     \item{\code{funList}:}{List. fun slot per dataset.}
     \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
