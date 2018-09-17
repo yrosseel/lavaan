@@ -637,6 +637,11 @@ parameterEstimates <- parameterestimates <- function(object,
                x <- LIST$est[free.idx]
                for(i in 1:length(free.idx)) {
                    t <- BOOT[,i]; t <- t[is.finite(t)]; t0 <- x[i]
+                   # check if we have variance (perhaps constrained to 0?)
+                   # new in 0.6-3
+                   if(var(t) == 0) {
+                       next
+                   }
                    w <- qnorm(sum(t < t0)/length(t))
                    a <- 0.0 #### !!! ####
                    adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
