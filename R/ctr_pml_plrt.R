@@ -70,6 +70,10 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     Options2 <- Options
     Options2$optim.method <- "none"
     Options2$optim.force.converged <- TRUE
+    Options2$check.start <- FALSE
+    Options2$check.gradient <- FALSE
+    Options2$check.post <- FALSE
+    Options2$check.vcov <- FALSE
     fittedSat2 <- lavaan(ModelSat2,
                          slotOptions = Options2,
                          slotSampleStats = lavsamplestats,

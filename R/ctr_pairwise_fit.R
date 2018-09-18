@@ -30,7 +30,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {
 
     lavdata <- object@Data
 
-    if(!all(lavdata@ov$type == "ordered")) {
+    if(!any(lavdata@ov$type == "ordered")) {
         return(list(G2=as.numeric(NA), df=as.numeric(NA),
                p.value=as.numeric(NA), p.value.Bonferroni=as.numeric(NA)))
     }
@@ -86,7 +86,7 @@ lavTablesFitCf <- function(object) {
     DF.group <- rep(as.numeric(NA), lavdata@ngroups)
 
     # check if all ordered
-    if(!all(lavdata@ov$type == "ordered")) {
+    if(!any(lavdata@ov$type == "ordered")) {
         CF <- as.numeric(NA)
         attr(CF, "CF.group") <- CF.group
         attr(CF, "DF.group") <- DF.group

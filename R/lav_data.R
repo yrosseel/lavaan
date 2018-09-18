@@ -102,6 +102,16 @@ lavData <- function(data              = NULL,          # data.frame
         # no ov.names?
         if(is.null(ov.names)) {
             ov.names <- names(data)
+            # remove group variable, if provided
+            if(length(group) > 0L) {
+                group.idx <- which(ov.names == group)
+                ov.names <- ov.names[-group.idx]
+            }
+            # remove cluster variable, if provided
+            if(length(cluster) > 0L) {
+                cluster.idx <- which(ov.names == cluster)
+                ov.names <- ov.names[-cluster.idx]
+            }
         }
 
         lavData <- lav_data_full(data              = data,
@@ -796,10 +806,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
             nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)
         }
 
-        # response patterns (categorical only, no exogenous variables)
-        all.ordered <- all(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
-        if(length(exo.idx) == 0L && all.ordered) {
-            Rp[[g]] <- lav_data_resp_patterns(X[[g]])
+        # response patterns (ordered variables only)
+        ord.idx <- which(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
+        if(length(ord.idx) > 0L) {
+            Rp[[g]] <- lav_data_resp_patterns(X[[g]][,ord.idx])
         }
 
         # warn if we have a small number of observations (but NO error!)

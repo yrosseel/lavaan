@@ -311,6 +311,7 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     out <- lav_tables_pairwise_freq_cell(lavdata = lavdata,
                                          as.data.frame. = TRUE)
     out$obs.prop <- out$obs.freq/out$nobs
+
     if(any(c("cor.un", "th.un", "X2.un", "G2.un") %in% statistic)) {
         PI <- lav_tables_pairwise_sample_pi(lavobject = lavobject,
                                             lavdata   = lavdata)
@@ -650,8 +651,13 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
         if("th.un" %in% statistic) {
             # sample based
             th <- unlist(lapply(1:lavdata@ngroups, function(x) {
-                      TH <- lavobject@SampleStats@th[[x]][
+                      if(lavobject@Model@conditional.x) {
+                          TH <- lavobject@SampleStats@res.th[[x]][
                                 lavobject@SampleStats@th.idx[[x]] > 0 ]
+                      } else {
+                          TH <- lavobject@SampleStats@th[[x]][
+                                lavobject@SampleStats@th.idx[[x]] > 0 ]
+                      }
                       TH.IDX <- lavobject@SampleStats@th.idx[[x]][
                                 lavobject@SampleStats@th.idx[[x]] > 0 ]
                   unname(unlist(tapply(TH,
@@ -878,7 +884,7 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
         TH.IDX <- lavobject@SampleStats@th.idx
     } else if(!is.null(lavdata)) {
         fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
-        if(lavobject@Model@conditional.x) {
+        if(fit.un@Model@conditional.x) {
             COR    <- fit.un@SampleStats@res.cov
             TH     <- fit.un@SampleStats@res.th
         } else {
@@ -951,10 +957,10 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
 
     # shortcuts
     if(!is.null(lavobject)) {
-        ngroups <- lavdata@ngroups
         lavmodel <- lavobject@Model
         implied  <- lavobject@implied
     }
+    ngroups <- lavdata@ngroups
 
     # h0 or unrestricted?
     if(est == "h0") {
