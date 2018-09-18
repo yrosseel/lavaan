@@ -384,6 +384,15 @@ Miscellaneous:
     \item{\code{representation}:}{If \code{"LISREL"} the classical LISREL 
       matrix representation is used to represent the model (using the all-y 
       variant). No other options are available (for now).}
+    \item{\code{implied}:}{Logical. If \code{TRUE}, compute the model-implied
+      statistics, and store them in the implied slot.}
+    \item{\code{h1}:}{Logical. If \code{TRUE}, compute the unrestricted model
+      and store the unrestricted summary statistics (and perhaps a 
+      loglikelihood) in the h1 slot.}
+    \item{\code{baseline:}}{Not used yet.}
+    \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
+      and \code{conditional.x = TRUE}, the (default) baseline model will
+      allow the slopestructure to be unrestricted.}
 }
 
 }

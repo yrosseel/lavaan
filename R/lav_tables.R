@@ -950,9 +950,11 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
                                est = "h0") {
 
     # shortcuts
-    ngroups <- lavdata@ngroups
-    lavmodel <- lavobject@Model
-    implied  <- lavobject@implied
+    if(!is.null(lavobject)) {
+        ngroups <- lavdata@ngroups
+        lavmodel <- lavobject@Model
+        implied  <- lavobject@implied
+    }
 
     # h0 or unrestricted?
     if(est == "h0") {

@@ -143,6 +143,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 # more models/info
                 h1                     = TRUE,
                 baseline               = TRUE,
+                baseline.conditional.x.free.slopes = TRUE,
                 implied                = TRUE,
                 loglik                 = TRUE,
 

@@ -513,9 +513,12 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     # to the sample-based slopes
 
                     # to get the old behaviour:
-                    ustart <- c(ustart, rep(0, nel))
-                    # but we probably should do:
-                    # ustart <- c(ustart, lav_matrix_vec(sample.slopes))
+                    if(!lavoptions$baseline.conditional.x.free.slopes) {
+                        ustart <- c(ustart, rep(0, nel))
+                    } else {
+                        # but we probably should do:
+                        ustart <- c(ustart, lav_matrix_vec(sample.slopes))
+                    }
                 } else if(!is.null(sample.slopes)) {
                     ustart <- c(ustart, lav_matrix_vec(sample.slopes))
                 } else {

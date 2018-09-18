@@ -1504,7 +1504,7 @@ setResidualElements.LISREL <- function(MLIST=NULL,
     } else {
         delta <- MLIST$delta
     }
-    # theta = DELTA^(-1/2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
+    # theta = DELTA^(-2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
     RESIDUAL <- as.vector(1/(delta*delta) - diag.Sigma)
     if(length(num.idx) > 0L) {
         diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
