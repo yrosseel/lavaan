@@ -5,8 +5,8 @@
 Fit a Structural Equation Model (SEM).}
 \usage{
 sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
-    sample.cov = NULL, sample.mean = NULL, sample.nobs = NULL, 
-    group = NULL, cluster = NULL, 
+    sample.cov = NULL, sample.mean = NULL, sample.th = NULL,
+    sample.nobs = NULL, group = NULL, cluster = NULL, 
     constraints = "", WLS.V = NULL, NACOV = NULL,
     ...)
 }
@@ -37,6 +37,8 @@ sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
     for each group.}
 \item{sample.mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
+\item{sample.th}{Vector of sample-based thresholds. For a multiple group 
+    analysis, a list with a vector of thresholds for each group.}
 \item{sample.nobs}{Number of observations if the full data frame is missing
     and only sample moments are given. For a multiple group analysis, a list
     or a vector with the number of observations for each group.}

@@ -25,6 +25,7 @@ lavData <- function(data              = NULL,          # data.frame
                     sampling.weights  = NULL,          # sampling weights
                     sample.cov        = NULL,          # sample covariance(s)
                     sample.mean       = NULL,          # sample mean vector(s)
+                    sample.th         = NULL,          # sample thresholds
                     sample.nobs       = NULL,          # sample nobs
 
                     lavoptions        = lavOptions(),  # lavoptions
@@ -139,14 +140,18 @@ lavData <- function(data              = NULL,          # data.frame
         nlevels <- 1L
 
         # we also need the number of observations (per group)
-        if(is.null(sample.nobs))
+        if(is.null(sample.nobs)) {
             stop("lavaan ERROR: please specify number of observations")
+        }
 
         # list?
         if(is.list(sample.cov)) {
             # multiple groups, multiple cov matrices
             if(!is.null(sample.mean)) {
                 stopifnot(length(sample.mean) == length(sample.cov))
+            }
+            if(!is.null(sample.th)) {
+                stopifnot(length(sample.th) == length(sample.cov))
             }
             # multiple groups, multiple cov matrices
             ngroups     <- length(sample.cov)
@@ -199,8 +204,23 @@ lavData <- function(data              = NULL,          # data.frame
         ov$name <- unique( unlist(c(ov.names, ov.names.x)) )
         nvar    <- length(ov$name)
         ov$idx  <- rep(NA, nvar)
-        ov$nobs <- rep(sample.nobs, nvar)
+        ov$nobs <- rep(sum(unlist(sample.nobs)), nvar)
         ov$type <- rep("numeric", nvar)
+        ov$nlev <- rep(0, nvar)
+        # check for categorical
+        if(!is.null(sample.th)) {
+            th.idx <- attr(sample.th, "th.idx")
+            if(is.list(th.idx)) {
+                th.idx <- th.idx[[1]] ## FIRST group only (assuming same ths!)
+            }
+            if(any(th.idx > 0)) {
+                TAB <- table(th.idx[th.idx > 0])
+                ord.idx <- as.numeric(names(TAB))
+                nlev <- as.integer(unname(TAB) + 1)
+                ov$type[ord.idx ] <- "ordered"
+                ov$nlev[ord.idx ] <- nlev
+            }
+        }
 
         # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
         if(std.ov && warn) {

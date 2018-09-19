@@ -32,7 +32,10 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     lavoptions$baseline <- FALSE
     lavoptions$loglik <- TRUE # eg for multilevel
     lavoptions$implied <- TRUE #, needed for loglik
-    lavoptions$check <- character(0L)
+    lavoptions$check.start <- FALSE
+    lavoptions$check.gradient <- FALSE
+    lavoptions$check.post <- FALSE
+    lavoptions$check.vcov <- FALSE
 
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE

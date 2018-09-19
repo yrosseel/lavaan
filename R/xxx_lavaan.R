@@ -22,6 +22,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # summary data
                    sample.cov         = NULL,
                    sample.mean        = NULL,
+                   sample.th          = NULL,
                    sample.nobs        = NULL,
 
                    # multiple groups?
@@ -303,16 +304,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # modifyList
         opt <- modifyList(opt, dotdotdot)
 
-        # no data?
-        if(is.null(data) && is.null(sample.cov)) {
-            opt$fixed.x <- FALSE
-            opt$conditional.x <- FALSE
-        }
-
         # categorical mode?
         if(any(FLAT$op == "|")) {
             opt$categorical <- TRUE
         } else if(!is.null(data) && length(ordered) > 0L) {
+            opt$categorical <- TRUE
+        } else if(!is.null(sample.th)) {
             opt$categorical <- TRUE
         } else if(is.data.frame(data) &&
             lav_dataframe_check_ordered(frame = data, ov.names = ov.names.y)) {
@@ -396,19 +393,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotData)) {
         lavdata <- slotData
     } else {
-        if(lavoptions$conditional.x) {
-            ov.names <- ov.names.y
-        }
+        # FIXME: ov.names should always contain both y and x!
+        OV.NAMES <- if(lavoptions$conditional.x) { ov.names.y } else {ov.names}
         lavdata <- lavData(data             = data,
                            group            = group,
                            cluster          = cluster,
-                           ov.names         = ov.names,
+                           ov.names         = OV.NAMES,
                            ov.names.x       = ov.names.x,
                            ov.names.l       = ov.names.l,
                            ordered          = ordered,
                            sampling.weights = sampling.weights,
                            sample.cov       = sample.cov,
                            sample.mean      = sample.mean,
+                           sample.th        = sample.th,
                            sample.nobs      = sample.nobs,
                            lavoptions       = lavoptions)
     }
@@ -586,11 +583,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavsamplestats <- lav_samplestats_from_moments(
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
+                           sample.th     = sample.th,
                            sample.nobs   = sample.nobs,
-                           ov.names      = lavpta$vnames$ov,
+                           ov.names      = ov.names,
+                           ov.names.x    = ov.names.x,
                            estimator     = lavoptions$estimator,
                            mimic         = lavoptions$mimic,
-                           meanstructure = lavoptions$meanstructure,
                            group.w.free  = lavoptions$group.w.free,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
@@ -779,7 +777,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # ov.types? (for PML check)
         ov.types <- lavdata@ov$type
-        if(lavmodel@conditional.x && lavmodel@nexo > 0L) {
+        if(lavmodel@conditional.x && sum(lavmodel@nexo) > 0L) {
             # remove ov.x
             ov.x.idx <- unlist(lavpta$vidx$ov.x)
             ov.types <- ov.types[-ov.x.idx]
@@ -1323,6 +1321,7 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
                        # summary data
                        sample.cov         = NULL,
                        sample.mean        = NULL,
+                       sample.th          = NULL,
                        sample.nobs        = NULL,
 
                        # multiple groups?
@@ -1387,6 +1386,7 @@ growth <- function(# user-specified model: can be syntax, parameter Table
                    # summary data
                    sample.cov         = NULL,
                    sample.mean        = NULL,
+                   sample.th          = NULL,
                    sample.nobs        = NULL,
 
                    # multiple groups?

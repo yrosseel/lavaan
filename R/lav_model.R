@@ -324,7 +324,6 @@ lav_model <- function(lavpartable      = NULL,
                  nexo                = nexo,
                  fixed.x             = lavoptions$fixed.x,
                  conditional.x       = lavoptions$conditional.x,
-                 #x.idx               = x.idx,
                  parameterization    = lavoptions$parameterization,
 
                  ov.x.dummy.ov.idx   = ov.x.dummy.ov.idx,

@@ -743,51 +743,138 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
 lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                          sample.mean   = NULL,
+                                         sample.th     = NULL,
                                          sample.nobs   = NULL,
                                          rescale       = FALSE,
-                                         ov.names      = NULL,
+                                         ov.names      = NULL, # including x
+                                         ov.names.x    = NULL, 
                                          estimator     = "ML",
                                          mimic         = "lavaan",
                                          WLS.V         = NULL,
                                          NACOV         = NULL,
                                          ridge         = 1e-5,
-                                         meanstructure = FALSE,
                                          group.w.free  = FALSE) {
+
+    # no multilevel yet
+    nlevels <- 1L
 
     # ridge default
     ridge.eps <- 0.0
 
-    # matrix -> list
-    if(!is.list(sample.cov)) sample.cov  <- list(sample.cov)
-    if(!is.null(sample.mean) && !is.list(sample.mean)) {
-        # check if sample.mean is string (between single quotes)
-        if(is.character(sample.mean)) {
-            sample.mean <- char2num(sample.mean)
+    # new in 0.6-3:
+    # check if sample.cov has attributes if conditional.x = TRUE
+    sample.res.slopes <- attr(sample.cov, "res.slopes")
+    sample.cov.x      <- attr(sample.cov, "cov.x")
+    sample.mean.x     <- attr(sample.cov, "mean.x")
+    if(!is.null(sample.res.slopes)) {
+        conditional.x = TRUE
+        # strip attributes
+        attr(sample.cov, "res.slopes") <- NULL
+        attr(sample.cov, "cov.x") <- NULL
+        attr(sample.cov, "mean.x") <- NULL
+        # make list
+        if(!is.list(sample.res.slopes)) {
+            sample.res.slopes <- list(sample.res.slopes)
         }
-        sample.mean <- list(sample.mean)
+        if(!is.list(sample.cov.x)) {
+            sample.cov.x <- list(sample.cov.x)
+        }
+        if(!is.list(sample.mean.x)) {
+            sample.mean.x <- list(sample.mean.x)
+        }
+    } else if(!is.null(sample.cov.x)) {
+        conditional.x <- FALSE
+        fixed.x <- TRUE
+
+        # strip attributes
+        attr(sample.cov, "cov.x") <- NULL
+        attr(sample.cov, "mean.x") <- NULL
+        # make list
+        if(!is.list(sample.cov.x)) {
+            sample.cov.x <- list(sample.cov.x)
+        }
+        if(!is.list(sample.mean.x)) {
+            sample.mean.x <- list(sample.mean.x)
+        }
+    } else {
+        conditional.x <- FALSE
+        fixed.x <- FALSE
+    }
+
+    # matrix -> list
+    if(!is.list(sample.cov)) { 
+        sample.cov  <- list(sample.cov)
     }
 
     # number of groups
     ngroups <- length(sample.cov)
 
+    # ov.names                           
+    if(!is.list(ov.names)) {             
+        ov.names <- rep(list(ov.names), ngroups)
+    }                                    
+    if(!is.list(ov.names.x)) {           
+        ov.names.x <- rep(list(ov.names.x), ngroups)
+    }
+
+    if(!is.null(sample.mean)) {
+        meanstructure <- TRUE
+        if(!is.list(sample.mean)) {
+            # check if sample.mean is string (between single quotes)
+            if(is.character(sample.mean)) {
+                sample.mean <- char2num(sample.mean)
+            }
+            sample.mean <- list(unname(sample.mean))
+        } else {
+            sample.mean <- lapply(lapply(sample.mean, unname), unclass)
+        } 
+    } else {
+        meanstructure <- FALSE
+    }
+
+    if(!is.null(sample.th)) {
+        th.idx <- attr(sample.th, "th.idx")
+        attr(sample.th, "th.idx") <- NULL
+        if(is.null(th.idx)) {
+            stop("lavaan ERROR: sample.th should have a th.idx attribute")
+        } else {
+            if(is.list(th.idx)) {
+                th.names <- lapply(th.idx, names)
+                th.idx <- lapply(lapply(th.idx, unname), unclass)
+            } else {
+                th.names <- list(names(th.idx))
+                th.idx   <- list(unclass(unname(th.idx)))
+            }
+        }
+        if(is.list(sample.th)) {
+            # strip names and lavaan.vector class
+            sample.th <- lapply(lapply(sample.th, unname), unclass)
+        } else {
+            # strip names and lavaan.vector class, make list
+            sample.th <- list(unclass(unname(sample.th)))
+        }
+    } else {
+        th.idx <- vector("list", length = ngroups)
+        th.names <- vector("list", length = ngroups)
+    }
 
     # sample statistics per group
     cov         <- vector("list", length = ngroups)
     var         <- vector("list", length = ngroups)
     mean        <- vector("list", length = ngroups)
     th          <- vector("list", length = ngroups)
-    th.idx      <- vector("list", length = ngroups)
-    th.names    <- vector("list", length = ngroups)
+    #th.idx      <- vector("list", length = ngroups)
+    #th.names    <- vector("list", length = ngroups)
 
     # residual (y | x)
     res.cov     <- vector("list", length = ngroups)
     res.var     <- vector("list", length = ngroups)
-    res.th      <- vector("list", length = ngroups)
-    res.th.nox  <- vector("list", length = ngroups)
     res.slopes  <- vector("list", length = ngroups)
     res.int     <- vector("list", length = ngroups)
+    res.th      <- vector("list", length = ngroups)
+    res.th.nox  <- vector("list", length = ngroups)
 
-    # fixed.x
+    # fixed.x / conditional.x
     mean.x      <- vector("list", length = ngroups)
     cov.x       <- vector("list", length = ngroups)
 
@@ -809,12 +896,10 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     group.w         <- vector("list", length = ngroups)
     x.idx           <- vector("list", length = ngroups)
 
-    # for now, we do NOT support categorical data (using moments only),
-    # fixed.x, and conditional.x
     categorical <- FALSE
-    fixed.x <- FALSE
-    conditional.x <- FALSE
-
+    if(!is.null(sample.th)) {
+        categorical <- TRUE
+    }
 
     WLS.VD <- vector("list", length = ngroups)
     if(is.null(WLS.V)) {
@@ -823,15 +908,17 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     } else {
         if(!is.list(WLS.V)) {
             if(ngroups == 1L) {
-                WLS.V <- list(WLS.V)
+                WLS.V <- list(unclass(WLS.V))
             } else {
                 stop("lavaan ERROR: WLS.V argument should be a list of length ",
                      ngroups)
             }
         } else {
-            if(length(WLS.V) != ngroups)
+            if(length(WLS.V) != ngroups) {
                 stop("lavaan ERROR: WLS.V assumes ", length(WLS.V),
                      " groups; data contains ", ngroups, " groups")
+            }
+            WLS.V <- lapply(WLS.V, unclass)
         }
 
         # is WLS.V full? check first
@@ -842,6 +929,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         } else {
             # create WLS.VD
             WLS.VD <- lapply(WLS.V, diag)
+            # we could remove WLS.V to save space...
         }
 
         WLS.V.user <- TRUE
@@ -854,15 +942,17 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     } else {
         if(!is.list(NACOV)) {
             if(ngroups == 1L) {
-                NACOV <- list(NACOV)
+                NACOV <- list(unclass(NACOV))
             } else {
                 stop("lavaan ERROR: NACOV argument should be a list of length ",
                      ngroups)
             }
         } else {
-            if(length(NACOV) != ngroups)
+            if(length(NACOV) != ngroups) {
                 stop("lavaan ERROR: NACOV assumes ", length(NACOV),
                      " groups; data contains ", ngroups, " groups")
+            }
+            NACOV <- lapply(NACOV, unclass)
         }
         NACOV.user <- TRUE
         # FIXME: check dimension of NACOV!!
@@ -873,11 +963,28 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
     for(g in 1:ngroups) {
 
-        # FIXME: if the user provides x.idx, we could use this!!!
         # exogenous x?
-        x.idx[[g]] <- integer(0L)
-        conditional.x <- FALSE
-        fixed.x <- FALSE
+        nexo <- length(ov.names.x[[g]])
+        if(nexo) {
+            # two cases: ov.names contains 'x' variables, or not
+            if(conditional.x) {
+                # ov.names.x are NOT in ov.names
+                x.idx[[g]] <- which(ov.names[[g]] %in% ov.names.x[[g]])
+            } else {
+                if(fixed.x) {
+                    # ov.names.x are a subset of ov.names
+                    x.idx[[g]] <- match(ov.names.x[[g]], ov.names[[g]])
+                    stopifnot( !anyNA(x.idx[[g]]) )
+                } else {
+                    x.idx[[g]] <- integer(0L)
+                }
+            }
+        } else {
+            x.idx[[g]] <- integer(0L)
+            conditional.x <- FALSE
+            fixed.x <- FALSE
+        }
+
 
         # group weight
         group.w[[g]] <- nobs[[g]] / sum(unlist(nobs))
@@ -899,7 +1006,11 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         }
 
         # extract only the part we need (using ov.names)
-        idx <- match(ov.names[[g]], cov.names)
+        if(conditional.x) {
+            idx <- match(ov.names[[g]][-x.idx[[g]]], cov.names)
+        } else {
+            idx <- match(ov.names[[g]], cov.names)
+        }
         if(any(is.na(idx))) {
             cat("found: ", cov.names, "\n")
             cat("expected: ", ov.names[[g]], "\n")
@@ -919,36 +1030,118 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             tmp.mean <- numeric(ncol(tmp.cov))
         } else {
             # extract only the part we need
-            tmp.mean <- as.numeric(sample.mean[[g]][idx])
+            tmp.mean <- unclass(sample.mean[[g]][idx])
         }
 
-        cov[[g]]  <- tmp.cov
-        var[[g]]  <- diag(tmp.cov)
-        mean[[g]] <- tmp.mean
 
-        # rescale cov by (N-1)/N?
-        if(rescale) {
-            # we 'transform' the sample cov (divided by n-1)
-            # to a sample cov divided by 'n'
-            cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
-        }
 
-        # FIXME: create res.cov if conditional.x = TRUE!!!
-        stopifnot(!conditional.x)
+        if(categorical) {
 
-        # icov and cov.log.det
-        out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
-                   x.idx = x.idx[[g]],
-                   ngroups = ngroups, g = g, warn = TRUE)
-        icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
+            # categorical + conditional.x = TRUE
+            if(conditional.x) {
 
-        # the same for res.cov if conditional.x = TRUE
-        if(conditional.x) {
-            out <- lav_samplestats_icov(COV = res.cov[[g]], ridge = ridge,
+                th.g <- numeric( length(th.idx[[g]]) )
+                ord.idx <- which(th.idx[[g]] > 0)
+                num.idx <- which(th.idx[[g]] == 0)
+                if(length(ord.idx) > 0L) {
+                    th.g[ord.idx] <- sample.th[[g]]
+                }
+                if(length(num.idx) > 0L) {
+                    ord.var.idx <- unique(th.idx[[g]][th.idx[[g]] > 0])
+                    th.g[num.idx] <- -1 * sample.mean[[g]][ -ord.var.idx ]
+                }
+                res.th[[g]] <- th.g
+                res.th.nox[[g]] <- sample.th[[g]]
+
+                res.cov[[g]] <- tmp.cov
+                res.var[[g]] <- diag(tmp.cov)
+                res.int[[g]] <- tmp.mean
+
+                res.slopes[[g]] <- unclass(unname(sample.res.slopes[[g]]))
+                cov.x[[g]]      <- unclass(unname(sample.cov.x[[g]]))
+                mean.x[[g]]     <- unclass(unname(sample.mean.x[[g]]))
+
+                # th.idx and th.names are already ok
+
+            # categorical + conditional.x = FALSE
+            } else {
+
+                th.g <- numeric( length(th.idx[[g]]) )
+                ord.idx <- which(th.idx[[g]] > 0)
+                num.idx <- which(th.idx[[g]] == 0)
+                if(length(ord.idx) > 0L) {
+                    th.g[ord.idx] <- sample.th[[g]]
+                }
+                if(length(num.idx) > 0L) {
+                    ord.var.idx <- unique(th.idx[[g]][th.idx[[g]] > 0])
+                    th.g[num.idx] <- -1 * sample.mean[[g]][ -ord.var.idx ]
+                }
+                th[[g]] <- th.g
+
+                cov[[g]]  <- tmp.cov
+                var[[g]]  <- diag(tmp.cov)
+                mean[[g]] <- tmp.mean
+
+                # fixed.x? (needed?)
+                if(fixed.x) {
+                    cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
+                    mean.x[[g]] <- unclass(unname(sample.mean.x[[g]]))
+                }
+          
+                # th, th.idx and th.names are already ok
+            }
+
+        # multilevel
+        } else if(nlevels > 1L) {
+            stop("lavaan ERROR: multilevel + sample stats not ready yet")
+
+
+        # single level
+        } else {
+
+            # single-level + continuous + conditional.x = TRUE
+            if(conditional.x) {
+                res.cov[[g]] <- tmp.cov
+                res.var[[g]] <- diag(tmp.cov)
+                res.int[[g]] <- tmp.mean
+                res.slopes[[g]] <- unclass(unname(sample.res.slopes[[g]]))
+                cov.x[[g]]      <- unclass(unname(sample.cov.x[[g]]))
+                mean.x[[g]]     <- unclass(unname(sample.mean.x[[g]]))
+
+                # no rescale!
+
+                # icov and cov.log.det
+                out <- lav_samplestats_icov(COV = res.cov[[g]], ridge = ridge,
                        x.idx = x.idx[[g]],
                        ngroups = ngroups, g = g, warn = TRUE)
-            res.icov[[g]] <- out$icov
-            res.cov.log.det[[g]] <- out$cov.log.det
+                res.icov[[g]] <- out$icov
+                res.cov.log.det[[g]] <- out$cov.log.det
+
+            # continuous + conditional.x = FALSE
+            } else {
+                cov[[g]]  <- tmp.cov
+                var[[g]]  <- diag(tmp.cov)
+                mean[[g]] <- tmp.mean
+
+                # rescale cov by (N-1)/N?
+                if(rescale) {
+                    # we 'transform' the sample cov (divided by n-1)
+                    # to a sample cov divided by 'n'
+                    cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                }
+
+                # icov and cov.log.det
+                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
+                           x.idx = x.idx[[g]], ngroups = ngroups, g = g, 
+                           warn = TRUE)
+                icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
+
+                # fixed.x?
+                if(fixed.x) {
+                    cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
+                    mean.x[[g]] <- unclass(unname(sample.mean.x[[g]]))
+                }
+            }
         }
 
         # WLS.obs
@@ -961,12 +1154,6 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             categorical = categorical, conditional.x = conditional.x,
             meanstructure = meanstructure, slopestructure = conditional.x,
             group.w.free = group.w.free)
-
-        # NACOV
-        # NACOV (=GAMMA)
-        #if(!NACOV.user) {
-            # nothing to do here; only used if provided by user
-        #}
 
         # WLS.V
         if(!WLS.V.user) {

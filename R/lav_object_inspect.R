@@ -265,6 +265,10 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_th(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "th.idx") {
+        lav_object_inspect_th_idx(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "vy") {
         lav_object_inspect_vy(object,
             add.labels = add.labels, add.class = add.class,
@@ -926,7 +930,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # slopes
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 if(h1) {
                     OUT[[b]]$res.slopes  <- H1$res.slopes[[b]]
                 } else {
@@ -952,7 +956,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # cov.x
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 OUT[[b]]$cov.x  <- lavsamplestats@cov.x[[b]]
                 if(std) {
                     diag.orig <- diag(OUT[[b]]$cov.x)
@@ -969,7 +973,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
             }
 
             # mean.x
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 OUT[[b]]$mean.x <- as.numeric(object@SampleStats@mean.x[[b]])
                 if(std) {
                     diag.orig[ diag.orig < .Machine$double.eps ] <- NA
@@ -1216,7 +1220,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # slopes
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 OUT[[b]]$res.slopes  <- lavimplied$res.slopes[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$res.slopes) <- ov.names.res[[b]]
@@ -1228,7 +1232,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # cov.x
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 OUT[[b]]$cov.x  <- object@SampleStats@cov.x[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
@@ -1241,7 +1245,7 @@ lav_object_inspect_implied <- function(object,
             }
 
             # mean.x
-            if(lavmodel@nexo > 0L) {
+            if(lavmodel@nexo[b] > 0L) {
                 OUT[[b]]$mean.x  <- as.numeric(object@SampleStats@mean.x[[b]])
                 if(add.labels) {
                     names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
@@ -1526,6 +1530,40 @@ lav_object_inspect_th <- function(object,
         }
         if(add.labels && length(OUT[[b]]) > 0L) {
             names(OUT[[b]]) <- object@pta$vnames$th[[b]]
+        }
+        if(add.class) {
+            class(OUT[[b]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(nblocks == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(object@Data@nlevels == 1L &&
+           length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        } else if(object@Data@nlevels > 1L &&
+                  length(object@Data@group.label) == 0L) {
+            names(OUT) <- object@Data@level.label
+        }
+    }
+
+    OUT
+}
+
+lav_object_inspect_th_idx <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # thresholds idx
+    OUT <- object@SampleStats@th.idx
+
+    # nblocks
+    nblocks <- length(OUT)
+
+    # labels + class
+    for(b in seq_len(nblocks)) {
+        if(add.labels && length(OUT[[b]]) > 0L) {
+            names(OUT[[b]]) <- object@SampleStats@th.names[[b]]
         }
         if(add.class) {
             class(OUT[[b]]) <- c("lavaan.vector", "numeric")
