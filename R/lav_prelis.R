@@ -29,6 +29,9 @@ prelis.read.acm <- function(file = "", rescale=1e-3) {
     raw <- raw*rescale
 
     ACM <- lav_matrix_lower2full(raw, diagonal = TRUE)
+
+    # elements are divided by 2??
+    ACM <- ACM * 2
     ACM
 }
 

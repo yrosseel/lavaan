@@ -747,7 +747,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                          sample.nobs   = NULL,
                                          rescale       = FALSE,
                                          ov.names      = NULL, # including x
-                                         ov.names.x    = NULL, 
+                                         ov.names.x    = NULL,
                                          estimator     = "ML",
                                          mimic         = "lavaan",
                                          WLS.V         = NULL,
@@ -802,18 +802,18 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
     }
 
     # matrix -> list
-    if(!is.list(sample.cov)) { 
+    if(!is.list(sample.cov)) {
         sample.cov  <- list(sample.cov)
     }
 
     # number of groups
     ngroups <- length(sample.cov)
 
-    # ov.names                           
-    if(!is.list(ov.names)) {             
+    # ov.names
+    if(!is.list(ov.names)) {
         ov.names <- rep(list(ov.names), ngroups)
-    }                                    
-    if(!is.list(ov.names.x)) {           
+    }
+    if(!is.list(ov.names.x)) {
         ov.names.x <- rep(list(ov.names.x), ngroups)
     }
 
@@ -827,7 +827,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             sample.mean <- list(unname(sample.mean))
         } else {
             sample.mean <- lapply(lapply(sample.mean, unname), unclass)
-        } 
+        }
     } else {
         meanstructure <- FALSE
     }
@@ -1087,7 +1087,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                     cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
                     mean.x[[g]] <- unclass(unname(sample.mean.x[[g]]))
                 }
-          
+
                 # th, th.idx and th.names are already ok
             }
 
@@ -1132,7 +1132,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
                 # icov and cov.log.det
                 out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
-                           x.idx = x.idx[[g]], ngroups = ngroups, g = g, 
+                           x.idx = x.idx[[g]], ngroups = ngroups, g = g,
                            warn = TRUE)
                 icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
 

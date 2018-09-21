@@ -1027,7 +1027,7 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
     if(object@Model@conditional.x) {
         OUT <- vector("list", length = G)
         for(g in 1:G) {
-            OUT[[g]] <- cbind(object@Data@X[[g]], 
+            OUT[[g]] <- cbind(object@Data@X[[g]],
                               object@Data@eXo[[g]])
         }
     } else {

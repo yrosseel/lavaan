@@ -421,7 +421,7 @@ lavaanList <- function(model         = NULL,             # model
                       impliedList     = impliedList,
                       h1List          = h1List,
                       loglikList      = loglikList,
-                      
+
                       funList         = funList,
 
                       external     = list()

@@ -202,3 +202,6 @@ S3method(lavInspect, lavaan)
 S3method(lavTech,    lavaan)
 S3method(lavInspect, lavaanList)
 S3method(lavTech,    lavaanList)
+if(getRversion() >= "3.6.0") {
+    S3method(sandwich::estfun, lavaan)
+}

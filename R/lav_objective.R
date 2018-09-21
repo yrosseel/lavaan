@@ -134,6 +134,7 @@ estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
     # since 0.5-17, we use crossprod twice
     diff <- WLS.obs - WLS.est
     fx <- as.numeric( crossprod(crossprod(WLS.V, diff), diff) )
+    # (faster?) alternative: sum(WLS.V * tcrossprod(diff))
 
     # no negative values
     if(is.finite(fx) && fx < 0.0) fx <- 0.0

@@ -829,7 +829,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         # response patterns (ordered variables only)
         ord.idx <- which(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
         if(length(ord.idx) > 0L) {
-            Rp[[g]] <- lav_data_resp_patterns(X[[g]][,ord.idx])
+            Rp[[g]] <- lav_data_resp_patterns(X[[g]][,ord.idx, drop = FALSE])
         }
 
         # warn if we have a small number of observations (but NO error!)
