@@ -186,8 +186,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.names.x[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav,
                                 type = "ov.x", group = tmp.group.values[g])))
         }
+    } else if(!is.null(FLAT$group)) {
+        # user-provided full partable with group column!
+        ngroups <- lav_partable_ngroups(FLAT)
+        if(ngroups > 1L) {
+            group.values <- lav_partable_group_values(FLAT)
+            ov.names <- ov.names.y <- ov.names.x <- vector("list",
+                                                       length = ngroups)
+            for(g in seq_len(ngroups)) {
+                ov.names[[g]]   <- lav_partable_vnames(FLAT, type = "ov",
+                                                       group = group.values[g])
+                ov.names.y[[g]] <- lav_partable_vnames(FLAT, type = "ov.y",
+                                                       group = group.values[g])
+                ov.names.x[[g]] <- lav_partable_vnames(FLAT, type = "ov.x",
+                                                       group = group.values[g])
+            }
+        } else {
+            ov.names   <- lav_partable_vnames(FLAT, type = "ov")
+            ov.names.y <- lav_partable_vnames(FLAT, type = "ov.nox")
+            ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
+        }
     } else {
-        # no blocks: same set of variables per group/block
         ov.names   <- lav_partable_vnames(FLAT, type = "ov")
         ov.names.y <- lav_partable_vnames(FLAT, type = "ov.nox")
         ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")

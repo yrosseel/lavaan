@@ -5,7 +5,7 @@ setGeneric("fitMeasures",
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
     function(object, fit.measures = "all", baseline.model = NULL, ...)
-    standardGeneric("fitMeasures"))
+    standardGeneric("fitmeasures"))
 
 
 # S3 generics

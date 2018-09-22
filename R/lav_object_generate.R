@@ -147,21 +147,33 @@ lav_object_extended <- function(object, add = NULL,
     partable <- object@ParTable[c("lhs", "op", "rhs", "free", "exo", "label",
                                  "plabel")]
 
+    # new in 0.6-3: check for non-parameters
+    nonpar.idx <- which(partable$op %in% c("==", ":=", "<", ">"))
+
     # always add block/group/level
     if(!is.null(object@ParTable$group)) {
         partable$group <- object@ParTable$group
     } else {
         partable$group <- rep(1L, length(partable$lhs))
+        if(length(nonpar.idx) > 0L) {
+            partable$group[nonpar.idx] <- 0L
+        }
     }
     if(!is.null(object@ParTable$level)) {
         partable$level <- object@ParTable$level
     } else {
         partable$level <- rep(1L, length(partable$lhs))
+        if(length(nonpar.idx) > 0L) {
+            partable$level[nonpar.idx] <- 0L
+        }
     }
     if(!is.null(object@ParTable$block)) {
         partable$block <- object@ParTable$block
     } else {
         partable$block <- rep(1L, length(partable$lhs))
+        if(length(nonpar.idx) > 0L) {
+            partable$block[nonpar.idx] <- 0L
+        }
     }
 
     # TDJ: Added to prevent error when lav_partable_merge() is called below.

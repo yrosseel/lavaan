@@ -511,8 +511,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     }
 
     # slots
-    lavdata  <- object@Data
-    lavmodel <- object@Model
+    lavdata        <- object@Data
+    lavmodel       <- object@Model
 
 
     rmrFlag <- srmrFlag <- crmrFlag <- FALSE
@@ -561,6 +561,12 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                 stop("not ready yet")
             } else {
 
+                nvar.x <- pstar.x <- 0L
+                if(lavmodel@fixed.x) {
+                    nvar.x <- lavmodel@nexo[g]
+                    pstar.x <- nvar.x * (nvar.x + 1) / 2
+                }
+
                 OUT <- vector("list", length(type))
                 names(OUT) <- type
 
@@ -584,11 +590,13 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     }
 
                     # COV
-                    STATS <- lav_matrix_vech(rmsList.g$cov);
-                    pstar <- length(STATS); ACOV  <- NULL
+                    STATS <- lav_matrix_vech(rmsList.g$cov)
+                    pstar <- ( length(STATS) - pstar.x )
                     if(type[typ] == "crmr") {
-                        pstar <- pstar - nvar
+                        pstar <- pstar - ( nvar - nvar.x )
                     }
+                    
+                    ACOV <- NULL
                     if(se || unbiased) {
                         ACOV <- if(lavmodel@meanstructure) {
                                   rmsList.se.g[-seq_len(nvar),
@@ -606,7 +614,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     # MEAN
                     if(lavmodel@meanstructure) {
                         STATS <- rmsList.g$mean
-                        pstar <- length(STATS); ACOV  <- NULL
+                        pstar <- ( length(STATS) - nvar.x )
+                        ACOV  <- NULL
                         if(se || unbiased) {
                             ACOV <- rmsList.se.g[seq_len(nvar),
                                                  seq_len(nvar), drop = FALSE]
@@ -625,10 +634,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     if(lavmodel@meanstructure) {
                         STATS <- c(rmsList.g$mean,
                                    lav_matrix_vech(rmsList.g$cov))
-                        pstar <- length(STATS); ACOV  <- NULL
+                        pstar <- ( length(STATS) - ( pstar.x + nvar.x) )
                         if(type[typ] == "crmr") {
-                            pstar <- pstar - nvar
+                            pstar <- pstar - ( nvar - nvar.x )
                         }
+                        ACOV  <- NULL
                         if(se || unbiased) {
                             ACOV <- rmsList.se.g
                         }

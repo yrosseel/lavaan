@@ -31,9 +31,18 @@ lav_partable_full <- function(partable = NULL,
     ngroups <- lavpta$ngroups
     nlevels <- lavpta$nlevels
 
-
     lhs <- rhs <- op <- character(0L)
     block <- group <- level <- integer(0L)
+
+    # new in 0.6-3:
+    GROUP.values <- lav_partable_group_values(partable)
+    LEVEL.values <- lav_partable_level_values(partable)
+    if(is.character(GROUP.values[1])) {
+        group <- character(0L)
+    }
+    if(is.character(LEVEL.values[1L])) {
+        level <- character(0L)
+    }
 
     # block number
     b <- 0L
@@ -181,8 +190,8 @@ lav_partable_full <- function(partable = NULL,
             rhs   <- c(rhs, this.rhs)
             op    <- c(op, this.op)
             block <- c(block, rep(b, n.el))
-            group <- c(group, rep(g, n.el))
-            level <- c(level, rep(l, n.el))
+            group <- c(group, rep(GROUP.values[g], n.el))
+            level <- c(level, rep(LEVEL.values[l], n.el))
 
         } # level
     } # group

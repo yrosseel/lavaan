@@ -357,7 +357,8 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("cfi" %in% fit.measures) {
                 t1 <- max( c(X2 - df, 0) )
                 t2 <- max( c(X2 - df, X2.null - df.null, 0) )
-                if(t1 == 0 && t2 == 0) {
+                if(isTRUE(all.equal(t1,0)) && 
+                   isTRUE(all.equal(t2,0))) {
                     indices["cfi"] <- 1
                 } else {
                     indices["cfi"] <- 1 - t1/t2
@@ -369,7 +370,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                              X2.null.scaled - df.null.scaled, 0) )
                 if(is.na(t1) || is.na(t2)) {
                     indices["cfi.scaled"] <- NA
-                } else if(t1 == 0 && t2 == 0) {
+                } else if(isTRUE(all.equal(t1,0)) && 
+                          isTRUE(all.equal(t2,0))) {
                     indices["cfi.scaled"] <- 1
                 } else {
                     indices["cfi.scaled"] <- 1 - t1/t2
@@ -396,7 +398,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                     t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
                     if(is.na(t1) || is.na(t2)) {
                         indices["cfi.robust"] <- NA
-                    } else if(t1 == 0 && t2 == 0) {
+                    } else if(isTRUE(all.equal(t1,0)) && 
+                              isTRUE(all.equal(t2,0))) {
                         indices["cfi.robust"] <- 1
                     } else {
                         indices["cfi.robust"] <- 1 - t1/t2
@@ -411,7 +414,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("rni" %in% fit.measures) {
                 t1 <- X2 - df
                 t2 <- X2.null - df.null
-                if(t2 == 0) {
+                if(isTRUE(all.equal(t2,0))) {
                     RNI <- NA
                 } else {
                     RNI <- 1 - t1/t2
@@ -423,7 +426,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 t2 <- X2.null.scaled - df.null.scaled
                 if(is.na(t1) || is.na(t2)) {
                     RNI <- NA
-                } else if(t2 == 0) {
+                } else if(isTRUE(all.equal(t2,0))) {
                     RNI <- NA
                 } else {
                     RNI <- 1 - t1/t2
@@ -450,7 +453,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                     t2 <- X2.null - cb*df.null
                     if(is.na(t1) || is.na(t2)) {
                         RNI <- NA
-                    } else if(t2 == 0) {
+                    } else if(isTRUE(all.equal(t2,0))) {
                         RNI <- NA
                     } else {
                         RNI <- 1 - t1/t2
@@ -485,7 +488,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 #   therefore, t1 can go negative, and TLI can be > 1
                 t1 <- (X2 - df)*df.null
                 t2 <- (X2.null - df.null)*df
-                if(df > 0 && t2 != 0) {
+                if(df > 0 && abs(t2) > 0) {
                     indices["tli"] <- indices["nnfi"] <- 1 - t1/t2
                 } else {
                     indices["tli"] <- indices["nnfi"] <- 1
@@ -499,7 +502,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 t2 <- (X2.null.scaled - df.null.scaled)*df.scaled
                 if(is.na(t1) || is.na(t2)) {
                     indices["tli.scaled"] <- indices["nnfi.scaled"] <- NA
-                } else if(df > 0 && t2 != 0) {
+                } else if(df > 0 && abs(t2) > 0) {
                     indices["tli.scaled"] <- indices["nnfi.scaled"] <- 1 - t1/t2
                 } else {
                     indices["tli.scaled"] <- indices["nnfi.scaled"] <- 1
@@ -527,7 +530,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                     t2 <- (X2.null - cb*df.null)*df
                     if(is.na(t1) || is.na(t2)) {
                         indices["tli.robust"] <- indices["nnfi.robust"] <- NA
-                    } else if(df > 0 && t2 != 0) {
+                    } else if(df > 0 && abs(t2) > 0) {
                         indices["tli.robust"] <- indices["nnfi.robust"] <- 1 - t1/t2
                     } else {
                         indices["tli.robust"] <- indices["nnfi.robust"] <- 1
@@ -577,7 +580,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # NFI - normed fit index (Bentler & Bonett, 1980)
             if("nfi" %in% fit.measures) {
-                if(df > df.null) {
+                if(df > df.null || isTRUE(all.equal(X2.null,0))) {
                     NFI <- as.numeric(NA)
                 } else if(df > 0) {
                     t1 <- X2.null - X2
@@ -589,7 +592,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["nfi"] <- NFI
             }
             if("nfi.scaled" %in% fit.measures) {
-                if(df > df.null) {
+                if(df > df.null || isTRUE(all.equal(X2.null.scaled,0))) {
                     NFI <- as.numeric(NA)
                 } else {
                     t1 <- X2.null.scaled - X2.scaled
@@ -601,7 +604,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 
             # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
             if("pnfi" %in% fit.measures) {
-                if(df.null > 0) {
+                if(df.null > 0 && X2.null > 0) {
                     t1 <- X2.null - X2
                     t2 <- X2.null
                     PNFI <- (df/df.null) * t1/t2
@@ -611,7 +614,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                 indices["pnfi"] <- PNFI
             }
             if("pnfi.scaled" %in% fit.measures) {
-                if(df.null > 0) {
+                if(df.null > 0 && X2.null.scaled > 0) {
                     t1 <- X2.null.scaled - X2.scaled
                     t2 <- X2.null.scaled
                     PNFI <- (df/df.null) * t1/t2
@@ -627,6 +630,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                 t2 <- X2.null - df
                 if(t2 < 0) {
                     IFI <- 1
+                } else if(isTRUE(all.equal(t2,0))) {
+                    IFI <- as.numeric(NA)
                 } else {
                     IFI <- t1/t2
                 }
@@ -639,6 +644,8 @@ lav_fit_measures <- function(object, fit.measures="all",
                     IFI <- NA
                 } else if(t2 < 0) {
                     IFI <- 1
+                } else if(isTRUE(all.equal(t2,0))) {
+                    IFI <- as.numeric(NA)
                 } else {
                     IFI <- t1/t2
                 }
@@ -1092,8 +1099,12 @@ lav_fit_measures <- function(object, fit.measures="all",
                     sqrt(  sum( R[lower.tri( R, diag=TRUE)]^2) / e )
                 rmr_nomean.group[g] <-
                     sqrt(  sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                crmr_nomean.group[g] <-
+                if((e - nvar) > 0) {
+                    crmr_nomean.group[g] <-
                     sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
+                } else {
+                    crmr_nomean.group[g] <- as.numeric(NA)
+                }
                 srmr_mplus_nomean.group[g] <-
                     sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
                            sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )

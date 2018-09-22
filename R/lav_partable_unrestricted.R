@@ -499,9 +499,13 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 group <- c(group, rep(g,  nel))
                 level <- c(level, rep(l,  nel))
                 if(independent) {
-                 free <- c(free,  rep(0L, nel))
+                    if(lavoptions$baseline.conditional.x.free.slopes) {
+                        free <- c(free,  rep(1L, nel))
+                    } else {
+                        free <- c(free,  rep(0L, nel))
+                    }
                 } else {
-                 free <- c(free,  rep(1L, nel))
+                    free <- c(free,  rep(1L, nel))
                 }
                   exo <- c(exo,   rep(1L, nel))
 
@@ -509,7 +513,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 if(independent) {
                     # FIXME: zero slope-structure provides a fit that
                     # is equal to the conditional.x = FALSE version;
-                    # we in principle, we could just fix the slope-structure
+                    # in principle, we could just fix the slope-structure
                     # to the sample-based slopes
 
                     # to get the old behaviour:
