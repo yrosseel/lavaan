@@ -29,7 +29,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
         if(extra) {
             # check if matrix is positive definite
             ev <- eigen(Sigma.hat[[g]], symmetric=TRUE, only.values=TRUE)$values
-            if(any(ev < .Machine$double.eps) || sum(ev) == 0) {
+            if(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0) {
                 Sigma.hat.inv <-  MASS::ginv(Sigma.hat[[g]])
                 Sigma.hat.log.det <- log(.Machine$double.eps)
                 attr(Sigma.hat[[g]], "po") <- FALSE

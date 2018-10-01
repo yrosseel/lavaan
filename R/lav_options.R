@@ -574,6 +574,8 @@ lav_options_set <- function(opt = NULL) {
         # by default: no meanstructure!
         if(opt$estimator == "pml") {
             opt$meanstructure <- TRUE
+        } else if(opt$mimic == "Mplus") {
+            opt$meanstructure <- TRUE
         } else {
             opt$meanstructure <- FALSE
         }
