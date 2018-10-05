@@ -357,7 +357,7 @@ lav_fit_measures <- function(object, fit.measures="all",
             if("cfi" %in% fit.measures) {
                 t1 <- max( c(X2 - df, 0) )
                 t2 <- max( c(X2 - df, X2.null - df.null, 0) )
-                if(isTRUE(all.equal(t1,0)) && 
+                if(isTRUE(all.equal(t1,0)) &&
                    isTRUE(all.equal(t2,0))) {
                     indices["cfi"] <- 1
                 } else {
@@ -370,7 +370,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                              X2.null.scaled - df.null.scaled, 0) )
                 if(is.na(t1) || is.na(t2)) {
                     indices["cfi.scaled"] <- NA
-                } else if(isTRUE(all.equal(t1,0)) && 
+                } else if(isTRUE(all.equal(t1,0)) &&
                           isTRUE(all.equal(t2,0))) {
                     indices["cfi.scaled"] <- 1
                 } else {
@@ -398,7 +398,7 @@ lav_fit_measures <- function(object, fit.measures="all",
                     t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
                     if(is.na(t1) || is.na(t2)) {
                         indices["cfi.robust"] <- NA
-                    } else if(isTRUE(all.equal(t1,0)) && 
+                    } else if(isTRUE(all.equal(t1,0)) &&
                               isTRUE(all.equal(t2,0))) {
                         indices["cfi.robust"] <- 1
                     } else {

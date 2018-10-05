@@ -595,7 +595,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     if(type[typ] == "crmr") {
                         pstar <- pstar - ( nvar - nvar.x )
                     }
-                    
+
                     ACOV <- NULL
                     if(se || unbiased) {
                         ACOV <- if(lavmodel@meanstructure) {
