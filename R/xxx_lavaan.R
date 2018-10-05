@@ -196,7 +196,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             for(g in seq_len(ngroups)) {
                 ov.names[[g]]   <- lav_partable_vnames(FLAT, type = "ov",
                                                        group = group.values[g])
-                ov.names.y[[g]] <- lav_partable_vnames(FLAT, type = "ov.y",
+                ov.names.y[[g]] <- lav_partable_vnames(FLAT, type = "ov.nox",
                                                        group = group.values[g])
                 ov.names.x[[g]] <- lav_partable_vnames(FLAT, type = "ov.x",
                                                        group = group.values[g])

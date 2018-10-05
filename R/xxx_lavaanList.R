@@ -177,10 +177,11 @@ lavaanList <- function(model         = NULL,             # model
         data.ok.flag <- TRUE
         if(FIT@Model@categorical) {
             # expected nlev
-            ord.idx <- unlist(FIT@pta$vidx$ov.ord)
+            ord.idx <- unique(unlist(FIT@pta$vidx$ov.ord))
             NLEV.exp <- FIT@Data@ov$nlev[ord.idx]
             # observed nlev
-            NLEV.obs <- sapply(DATA[,unlist(FIT@pta$vnames$ov.ord),drop=FALSE],
+            NLEV.obs <- sapply(DATA[,unique(unlist(FIT@pta$vnames$ov.ord)),
+                                    drop=FALSE],
                                function(x) length(unique(x)))
             wrong.idx <- which(NLEV.exp - NLEV.obs != 0)
             if(length(wrong.idx) > 0L) {
