@@ -878,7 +878,7 @@ function(object, type = "moments", labels=TRUE) {
 
 
 setMethod("vcov", "lavaan",
-function(object, labels = TRUE, remove.duplicated = FALSE) {
+function(object, type = "free", labels = TRUE, remove.duplicated = FALSE) {
 
     # check for convergence first!
     if(object@optim$npar > 0L && !object@optim$converged)
@@ -888,10 +888,22 @@ function(object, labels = TRUE, remove.duplicated = FALSE) {
         stop("lavaan ERROR: vcov not available if se=\"none\"")
     }
 
-    VarCov <- lav_object_inspect_vcov(object,
-                                      add.labels = labels,
-                                      add.class = TRUE,
-                                      remove.duplicated = remove.duplicated)
+    if(type == "user" || type == "joint" || type == "all" || type == "full" ||
+       type == "complete") {
+        if(remove.duplicated) {
+            stop("lavaan ERROR: argument \"remove.duplicated\" not supported if type = \"user\"")
+        }
+        VarCov <- lav_object_inspect_vcov_def(object, joint = TRUE,
+                                          add.labels = labels,
+                                          add.class = TRUE)
+    } else if(type == "free") {
+        VarCov <- lav_object_inspect_vcov(object,
+                                          add.labels = labels,
+                                          add.class = TRUE,
+                                          remove.duplicated = remove.duplicated)
+    } else {
+        stop("lavaan ERROR: type argument should be \"user\" or \"free\"")
+    }
 
     VarCov
 })
