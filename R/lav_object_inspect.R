@@ -407,23 +407,44 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_vcov(object,
             standardized = TRUE, type = "std.nox",
             add.labels = add.labels, add.class = add.class)
+
     } else if(what == "vcov.def") {
-        lav_object_inspect_vcov_def(object,
+        lav_object_inspect_vcov_def(object, joint = FALSE,
             standardized = FALSE,
             add.labels = add.labels, add.class = add.class)
     } else if(what == "vcov.def.std.all" || what == "vcov.def.standardized" ||
               what == "vcov.def.std") {
-        lav_object_inspect_vcov_def(object,
+        lav_object_inspect_vcov_def(object, joint = FALSE,
             standardized = TRUE, type = "std.all",
             add.labels = add.labels, add.class = add.class)
     } else if(what == "vcov.def.std.lv") {
-        lav_object_inspect_vcov_def(object,
+        lav_object_inspect_vcov_def(object, joint = FALSE,
             standardized = TRUE, type = "std.lv",
             add.labels = add.labels, add.class = add.class)
     } else if(what == "vcov.def.std.nox") {
-        lav_object_inspect_vcov_def(object,
+        lav_object_inspect_vcov_def(object, joint = FALSE,
             standardized = TRUE, type = "std.nox",
             add.labels = add.labels, add.class = add.class)
+
+    } else if(what == "vcov.def.joint") {
+        lav_object_inspect_vcov_def(object, joint = TRUE,
+            standardized = FALSE,
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.joint.std.all" || 
+              what == "vcov.def.joint.standardized" ||
+              what == "vcov.def.joint.std") {
+        lav_object_inspect_vcov_def(object, joint = TRUE,
+            standardized = TRUE, type = "std.all",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.joint.std.lv") {
+        lav_object_inspect_vcov_def(object, joint = TRUE,
+            standardized = TRUE, type = "std.lv",
+            add.labels = add.labels, add.class = add.class)
+    } else if(what == "vcov.def.joint.std.nox") {
+        lav_object_inspect_vcov_def(object, joint = TRUE,
+            standardized = TRUE, type = "std.nox",
+            add.labels = add.labels, add.class = add.class)
+
     } else if(what == "ugamma" || what == "ug" || what == "u.gamma") {
         lav_object_inspect_UGamma(object,
             add.labels = add.labels, add.class = add.class)
@@ -2211,14 +2232,19 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     OUT
 }
 
-lav_object_inspect_vcov_def <- function(object, standardized = FALSE,
-    type = "std.all", add.labels = FALSE, add.class = FALSE) {
+lav_object_inspect_vcov_def <- function(object, joint = FALSE, 
+    standardized = FALSE, type = "std.all", 
+    add.labels = FALSE, add.class = FALSE) {
 
     lavmodel    <- object@Model
     lavpartable <- object@ParTable
+    free.idx <- which(lavpartable$free > 0L)
     def.idx <- which(lavpartable$op == ":=")
+    joint.idx <- c(free.idx, def.idx)
 
-    if(length(def.idx) == 0L) {
+    if(!joint && length(def.idx) == 0L) {
+        return( matrix(0,0,0) )
+    } else if(joint && length(joint.idx) == 0L) {
         return( matrix(0,0,0) )
     }
 
@@ -2228,7 +2254,11 @@ lav_object_inspect_vcov_def <- function(object, standardized = FALSE,
                                         standardized = TRUE,
                                         type = type, free.only = FALSE,
                                         add.labels = FALSE, add.class = FALSE)
-        OUT <- VCOV[def.idx, def.idx, drop = FALSE]
+        if(joint) {
+            OUT <- VCOV[joint.idx, joint.idx, drop = FALSE]
+        } else {
+            OUT <- VCOV[def.idx, def.idx, drop = FALSE]
+        }
     } else {
 
         # get free parameters
@@ -2259,13 +2289,22 @@ lav_object_inspect_vcov_def <- function(object, standardized = FALSE,
                 JAC <- lav_func_jacobian_simple(func = lavmodel@def.function,
                                                 x = x)
             }
-            OUT <- JAC %*% VCOV %*% t(JAC)
+            if(joint) {
+                JAC2 <- rbind( diag(nrow = ncol(JAC)), JAC )
+                OUT <- JAC2 %*% VCOV %*% t(JAC2)
+            } else {
+                OUT <- JAC %*% VCOV %*% t(JAC)
+            }
         }
     }
 
     # labels
     if(add.labels) {
-        LHS.names <- lavpartable$lhs[def.idx]
+        if(joint) {
+            LHS.names <- lavpartable$lhs[joint.idx]
+        } else {
+            LHS.names <- lavpartable$lhs[def.idx]
+        }
         colnames(OUT) <- rownames(OUT) <- LHS.names
     }
 

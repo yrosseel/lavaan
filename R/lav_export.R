@@ -31,7 +31,10 @@ lavExport <- function(object, target="lavaan", prefix="sem",
             group.label=object@Data@group.label,
             ov.names=vnames(object@ParTable, "ov"),
             ov.ord.names=vnames(object@ParTable, "ov.ord"),
+            listwise = lavInspect(object, "options")$missing == "listwise",
             estimator=lav_mplus_estimator(object),
+            information = lavInspect(object, "options")$information,
+            meanstructure = lavInspect(object, "meanstructure"),
             data.type=object@Data@data.type,
             nobs=object@Data@nobs[[1L]]
             )

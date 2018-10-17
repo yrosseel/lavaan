@@ -291,6 +291,34 @@ Variance covariance matrix of the model parameters:
         matrix of the standardized estimated model parameters. Standardization
         is done with respect to both observed and latent variables, but
         ignoring any exogenous observed covariates.}
+    \item{\code{"vcov.def"}:}{Matrix containing the variance covariance matrix
+        of the user-defined (using the := operator) parameters.}
+    \item{\code{"vcov.def.std.all"}:}{Matrix containing the variance covariance
+        matrix of the standardized user-defined parameters. Standardization
+        is done with respect to both observed and latent variables.}
+    \item{\code{"vcov.def.std.lv"}:}{Matrix containing the variance covariance
+        matrix of the standardized user-defined parameters. Standardization
+        is done with respect to the latent variables only.}
+    \item{\code{"vcov.def.std.nox"}:}{Matrix containing the variance covariance
+        matrix of the standardized user-defined parameters. Standardization
+        is done with respect to both observed and latent variables, but
+        ignoring any exogenous observed covariates.}
+    \item{\code{"vcov.def.joint"}:}{Matrix containing the joint variance 
+        covariance matrix of both the estimated model parameters and
+        the defined (using the := operator) parameters.}
+    \item{\code{"vcov.def.joint.std.all"}:}{Matrix containing the joint
+        variance covariance matrix of both the standardized model parameters
+        and the user-defined parameters. Standardization
+        is done with respect to both observed and latent variables.}
+    \item{\code{"vcov.def.joint.std.lv"}:}{Matrix containing the joint 
+        variance covariance matrix of both the standardized model parameters
+        and the user-defined parameters. Standardization
+        is done with respect to the latent variables only.}   
+    \item{\code{"vcov.def.joint.std.nox"}:}{Matrix containing the joint 
+        variance covariance matrix of both the standardized model parameters
+        and the user-defined parameters. Standardization
+        is done with respect to both observed and latent variables, but
+        ignoring any exogenous observed covariates.}
 }
 
 Miscellaneous:

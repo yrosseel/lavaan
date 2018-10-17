@@ -41,8 +41,9 @@ lav2mplus <- function(lav, group.label=NULL) {
                            paste("@",lav$ustart,sep=""),
                            paste("*",lav$ustart,sep=""))
         lav$plabel <- gsub("\\.", "", lav$plabel)
-        lav$plabel <- ifelse(lav$plabel == "", lav$plabel,
-                            paste(" (",lav$plabel,")",sep=""))
+        LABEL <- ifelse(lav$label == "", lav$plabel, lav$label)
+        lav$plabel <- ifelse(LABEL == "", LABEL,
+                             paste(" (", LABEL, ")",sep=""))
 
         # remove variances for ordered variables
         ov.names.ord <- vnames(lav, type="ov.ord")
@@ -178,7 +179,10 @@ lav_mplus_estimator <- function(object) {
 }
 
 lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
+                             listwise = FALSE,
                              ov.ord.names="", estimator="ML",
+                             meanstructure = FALSE,
+                             information = "observed",
                              data.type="full", nobs=NULL) {
 
     # replace '.' by '_' in all variable names
@@ -209,6 +213,9 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
     }
     if(data.type == "full") {
         c.DATA <- paste(c.DATA, "  type is individual;\n", sep="")
+        if(listwise) {
+            c.DATA <- paste(c.DATA, "  listwise = on;\n", sep = "")
+        }
     } else if(data.type == "moment") {
         c.DATA <- paste(c.DATA, "  type is fullcov;\n", sep="")
         c.DATA <- paste(c.DATA, "  nobservations are ", nobs, ";\n", sep="")
@@ -247,6 +254,12 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
     c.ANALYSIS <- paste("ANALYSIS:\n  type = general;\n", sep="")
     c.ANALYSIS <- paste(c.ANALYSIS, "  estimator = ", toupper(estimator),
                         ";\n", sep="")
+    c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information,
+                        ";\n", sep="")
+    if(!meanstructure) {
+        c.ANALYSIS <- paste(c.ANALYSIS, "  model = nomeanstructure;\n", 
+                            sep = "")
+    }
 
     # MODEL command
     c.MODEL <- paste("MODEL:\n")
