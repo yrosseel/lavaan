@@ -200,7 +200,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
-        Table3 <- Table
+        Table3 <- Table[TS.order,]
         Table3$X2 <- TS
         Table3$df <- seq_len( length(TS) )
         Table3$p.value <- 1 - pchisq(Table3$X2, df = Table3$df)
