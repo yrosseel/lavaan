@@ -717,7 +717,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                 nobs[[g]] <- length(case.idx[[g]])
                 norig[[g]] <- length(which(data[[group]] == group.label[g]))
                 if(warn && (nobs[[g]] < norig[[g]])) {
-                    warning("lavaan WARNING: ", (nobs[[g]] - norig[[g]]),
+                    warning("lavaan WARNING: ", (norig[[g]] - nobs[[g]]),
                         " cases were deleted in group ", group.label[g],
                         " due to missing values in ",
                         "\n\t\t  exogenous variable(s), while fixed.x = TRUE.")
