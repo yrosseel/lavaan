@@ -11,7 +11,8 @@
 #
 lavTestScore <- function(object, add = NULL, release = NULL,
                          univariate = TRUE, cumulative = FALSE,
-                         epc = FALSE, verbose = FALSE, warn = TRUE,
+                         epc = FALSE, standardized = epc, cov.std = epc,
+                         verbose = FALSE, warn = TRUE,
                          information = "expected") {
 
     # check object
@@ -240,11 +241,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # create epc table for the 'free' parameters
         if (!is.null(add) && nchar(add) > 0L) {
-          LIST <- parTable(FIT)[,c("lhs","op","rhs","group",
+          LIST <- parTable(FIT)[,c("lhs","op","rhs","group","exo",
                                    "user","free","label","plabel")]
         } else {
           ## release mode
-          LIST <- parTable(object)[,c("lhs","op","rhs","group",
+          LIST <- parTable(object)[,c("lhs","op","rhs","group","exo",
                                       "user","free","label","plabel")]
         }
         if(lav_partable_ngroups(LIST) == 1L) {
@@ -262,6 +263,57 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         LIST$epv <- LIST$est + LIST$epc
         LIST$free[ LIST$user == 10L ] <- 0
         LIST$user <- NULL
+
+        if (standardized) {
+
+          EPC <- LIST$epc
+
+          if (cov.std) {
+            # replace epc values for variances by est values
+            var.idx <- which(LIST$op == "~~" & LIST$lhs == LIST$rhs &
+                               LIST$exo == 0L)
+            EPC[ var.idx ] <- LIST$est[ var.idx ]
+          }
+
+          # two problems:
+          #   - EPC of variances can be negative, and that is
+          #     perfectly legal
+          #   - EPC (of variances) can be tiny (near-zero), and we should
+          #     not divide by tiny variables
+          small.idx <- which(LIST$op == "~~" &
+                               LIST$lhs == LIST$rhs &
+                               abs(EPC) < sqrt( .Machine$double.eps ) )
+          if (length(small.idx) > 0L) {
+            EPC[ small.idx ] <- as.numeric(NA)
+          }
+
+          # get the sign
+          EPC.sign <- sign(LIST$epc)
+
+          LIST$sepc.lv <- EPC.sign * lav_standardize_lv(object,
+                                                        partable = LIST,
+                                                        est = abs(EPC),
+                                                        cov.std = cov.std)
+          if (length(small.idx) > 0L) {
+            LIST$sepc.lv[small.idx] <- 0
+          }
+          LIST$sepc.all <- EPC.sign * lav_standardize_all(object,
+                                                          partable = LIST,
+                                                          est = abs(EPC),
+                                                          cov.std = cov.std)
+          if (length(small.idx) > 0L) {
+            LIST$sepc.all[small.idx] <- 0
+          }
+          LIST$sepc.nox <- EPC.sign * lav_standardize_all_nox(object,
+                                                              partable = LIST,
+                                                              est = abs(EPC),
+                                                              cov.std = cov.std)
+          if (length(small.idx) > 0L) {
+            LIST$sepc.nox[small.idx] <- 0
+          }
+
+        }
+        LIST$exo <- NULL
 
         attr(LIST, "header") <- "expected parameter changes (epc) and expected parameter values (epv):"
 

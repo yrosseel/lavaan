@@ -23,8 +23,8 @@ modindices(object, standardized = TRUE, cov.std = TRUE, information = "expected"
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{standardized}{If \code{TRUE}, two extra columns (sepc.lv and sepc.all)
-will contain standardized values for the epc's. In the first column (sepc.lv),
-standardizization is based on the variances of the (continuous) latent
+will contain standardized values for the EPCs. In the first column (sepc.lv),
+standardization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
 on both the variances of both (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
