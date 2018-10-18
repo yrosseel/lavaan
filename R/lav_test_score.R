@@ -169,6 +169,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
     if(univariate) {
         TS <- numeric( nrow(R) )
+        EPC.uni <- numeric( nrow(R) ) # ignored in release= mode
         for(r in r.idx) {
             R1 <- R[-r,,drop = FALSE]
             Z1 <- cbind( rbind(Information, R1),
@@ -176,12 +177,19 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             Z1.plus <- MASS::ginv(Z1)
             Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
+            if (epc && !is.null(add)) {
+              EPC.uni[r] <- -1 * utils::tail(as.numeric(score %*%  Z1.plus1),
+                                             n = nrow(R))[r]
+            }
         }
 
         Table2 <- Table
         Table2$X2 <- TS[r.idx]
         Table2$df <- rep(1, length(r.idx))
         Table2$p.value <- 1 - pchisq(Table2$X2, df = Table2$df)
+        if (epc && !is.null(add)) {
+          Table2$epc <- EPC.uni[r.idx]
+        }
         attr(Table2, "header") <- "univariate score tests:"
         OUT$uni <- Table2
     }
