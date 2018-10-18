@@ -197,6 +197,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
     if(cumulative) {
         TS.order <- sort.int(TS, index.return = TRUE, decreasing = TRUE)$ix
+        ROW.order <- sort.int(TS[r.idx], index.return = TRUE, decreasing = TRUE)$ix
         TS <- numeric( length(r.idx) )
         for(r in 1:length(r.idx)) {
             rcumul.idx <- TS.order[1:r]
@@ -209,7 +210,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
         }
 
-        Table3 <- Table[TS.order,]
+        Table3 <- Table[ROW.order, ]
         Table3$X2 <- TS
         Table3$df <- seq_len( length(TS) )
         Table3$p.value <- 1 - pchisq(Table3$X2, df = Table3$df)
@@ -241,12 +242,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
         # create epc table for the 'free' parameters
         if (!is.null(add) && nchar(add) > 0L) {
-          LIST <- parTable(FIT)[,c("lhs","op","rhs","group","exo",
-                                   "user","free","label","plabel")]
+          LIST <- parTable(FIT)
         } else {
           ## release mode
-          LIST <- parTable(object)[,c("lhs","op","rhs","group","exo",
-                                      "user","free","label","plabel")]
+          LIST <- parTable(object)
         }
         if(lav_partable_ngroups(LIST) == 1L) {
             LIST$group <- NULL
@@ -261,8 +260,6 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         LIST$epc <- rep(as.numeric(NA), length(LIST$lhs))
         LIST$epc[ LIST$free > 0 ] <- EPC.all
         LIST$epv <- LIST$est + LIST$epc
-        LIST$free[ LIST$user == 10L ] <- 0
-        LIST$user <- NULL
 
         if (standardized) {
 
@@ -313,7 +310,16 @@ lavTestScore <- function(object, add = NULL, release = NULL,
           }
 
         }
-        LIST$exo <- NULL
+
+        LIST$free[ LIST$user == 10L ] <- 0
+        LIST$user <- NULL
+        # remove some more columns
+        LIST$id <- LIST$ustart <- LIST$exo <- LIST$start <- LIST$se <- LIST$prior <- NULL
+        if(lav_partable_nblocks(LIST) == 1L) {
+          LIST$block <- NULL
+          LIST$group <- NULL
+          LIST$level <- NULL
+        }
 
         attr(LIST, "header") <- "expected parameter changes (epc) and expected parameter values (epv):"
 
