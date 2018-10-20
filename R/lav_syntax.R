@@ -218,10 +218,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         if( !all(make.names(LHS) == LHS) ) {
             stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
                  lhs, " ", op, " ", rhs,
-                 "\n    contains a reserved word (in R): ",
+                 "\n    contains either a reserved word (in R) or an illegal charachter: ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
                  "\n    see ?reserved for a list of reserved words in R",
-                 "\n    please use a variable name that is not a reserved word in R")
+                 "\n    please use a variable name that is not a reserved word in R", 
+                 "\n    and use only characters, digits, or the dot symbol.")
         }
 
         lhs.formula <- as.formula(paste("~",lhs))
