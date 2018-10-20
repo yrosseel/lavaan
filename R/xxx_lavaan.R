@@ -435,21 +435,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavoptions$se     <- "none"
         lavoptions$test   <- "none"
     } else if(lavdata@data.type == "moment") {
+
+        # check user-specified options first
+        if(!is.null(dotdotdot$estimator)) {
+            if(dotdotdot$estimator %in%
+                  c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS") && 
+               is.null(NACOV)) {
+                stop("lavaan ERROR: estimator ", dotdotdot$estimator,
+                 " requires full data or user-provided NACOV")
+            } else if(dotdotdot$estimator %in%
+                          c("WLS", "WLSM", "WLSMV", "WLSMVS", "DWLS") &&
+                      is.null(WLS.V)) {
+                stop("lavaan ERROR: estimator ", dotdotdot$estimator,
+                 " requires full data or user-provided WLS.V and NACOV")
+            }
+        }
+       
         # catch here some options that will not work with moments
         if(lavoptions$se == "bootstrap") {
             stop("lavaan ERROR: bootstrapping requires full data")
         }
-        if(lavoptions$estimator %in% c("MLM", "MLMV", "MLMVS", "MLR", "ULSM",
-           "ULSMV", "ULSMVS") && is.null(NACOV)) {
-            stop("lavaan ERROR: estimator ", lavoptions$estimator,
-                 " requires full data or user-provided NACOV")
-        }
-        if(lavoptions$estimator %in%
-               c("WLS", "WLSM", "WLSMV", "WLSMVS", "DWLS") &&
-           is.null(WLS.V)) {
-            stop("lavaan ERROR: estimator ", lavoptions$estimator,
-                 " requires full data or user-provided WLS.V")
-        }
+        # more needed?
     }
     timing$Data <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
