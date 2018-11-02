@@ -45,10 +45,24 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
             OUT <- lav_mvnorm_cluster_em_sat(YLp      = lavsamplestats@YLp[[g]],
                                              Lp       = lavdata@Lp[[g]],
                                              verbose  = lavoptions$verbose,
-                                             tol      = 1e-04, # option?
-                                             max.iter = 5000L) # option?
+                                             tol      = 1e-04,     # option?
+                                             min.variance = 1e-05, # option?
+                                             max.iter = 5000L)     # option?
             if(lavoptions$verbose) {
                 cat("\n")
+            }
+
+            # if any near-zero within variance(s), produce warning here
+            zero.var <- which(diag(OUT$Sigma.W) <= 1e-05)
+            if(length(zero.var)) {
+                gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { " " }
+                txt <- c("H1 estimation resulted in a within covariance matrix",
+                          gtxt, "with (near) zero variances for some of the 
+                          level-1 variables: ",
+                         lavdata@ov.names.l[[g]][[1]][zero.var])
+                warning(lav_txt2message(txt))
             }
 
             # store in implied

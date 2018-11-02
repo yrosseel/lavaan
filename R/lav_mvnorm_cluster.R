@@ -1158,7 +1158,8 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
                                       Lp             = NULL,
                                       verbose        = TRUE,
                                       tol            = 1e-04,
-                                      max.iter       = 5000) {
+                                      max.iter       = 5000,
+                                      min.variance   = 1e-05) {
 
     # lavdata
     between.idx <- Lp$between.idx[[2]]
@@ -1244,8 +1245,18 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
                        mu.z = mu.z,
                        mu.y = NULL, mu.w = estep$mu.w, mu.b = estep$mu.b)
 
+        # check for (near-zero) variances at the within level, and set
+        # them to min.variance
+        Sigma.W <- implied2$Sigma.W
+        zero.var <- which(diag(Sigma.W) < min.variance)
+        if(length(zero.var) > 0L) {
+            Sigma.W[,zero.var] <- sigma.w[,zero.var] <- 0
+            Sigma.W[zero.var,] <- sigma.w[zero.var,] <- 0
+            diag(Sigma.W)[zero.var] <- diag(sigma.w)[zero.var] <- min.variance
+        }
+
         fx <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp,
-          Lp = Lp, Mu.W = implied2$Mu.W, Sigma.W = implied2$Sigma.W,
+          Lp = Lp, Mu.W = implied2$Mu.W, Sigma.W = Sigma.W,
           Mu.B = implied2$Mu.B, Sigma.B = implied2$Sigma.B,
           Sinv.method = "eigen", log2pi = TRUE, minus.two = FALSE)
 

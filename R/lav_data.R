@@ -855,7 +855,44 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                                  multilevel = multilevel,
                                                  ov.names = ov.names[[g]],
                                                  ov.names.l = ov.names.l[[g]])
-        }
+
+            # new in 0.6-4
+            # check for 'level-1' variables with zero within variance
+            l1.idx <- c(Lp[[g]]$within.idx[[2]], # within only
+                        Lp[[g]]$both.idx[[2]])
+            l1.names <- c(Lp[[g]]$within.names[[2]],
+                          Lp[[g]]$both.names[[2]])
+            for(v in l1.idx) {
+                within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
+                                     FUN = var)
+                zero.var <- which(within.var < .Machine$double.eps)
+                if(length(zero.var) == 0L) {
+                    # all is good
+                } else if(length(zero.var) == length(within.var)) {
+                    # all zero! possibly a between-level variable
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                             " has no variance at the within level", gtxt,
+                             " The variable appears to be a between-level
+                             variable. Please remove this variable from
+                             the level 1 section in the model syntax.")
+                    warning(lav_txt2message(txt))
+                } else {
+                    # some zero variances!
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                             " has no variance within some clusters", gtxt,
+                             " The cluster numbers with zero within variance are:\n",
+                             paste(zero.var, collapse = " "))
+                    warning(lav_txt2message(txt))
+                }
+            }
+
+        } # clustered data
 
     } # groups, at first level
 
