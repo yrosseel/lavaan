@@ -864,7 +864,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
                           Lp[[g]]$both.names[[2]])
             for(v in l1.idx) {
                 within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
-                                     FUN = var)
+                                     FUN = var, na.rm = TRUE)
+                # ignore singeltons
+                singleton.idx <- which( Lp[[g]]$cluster.size[[2]] == 1L )
+                if(length(singleton.idx) > 0L) {
+                    within.var[singleton.idx] <- 10 # non-zero variance
+                }
                 zero.var <- which(within.var < .Machine$double.eps)
                 if(length(zero.var) == 0L) {
                     # all is good
@@ -885,9 +890,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
                     txt <- c("Level-1 variable ", dQuote(l1.names[v]),
-                             " has no variance within some clusters", gtxt,
-                             " The cluster numbers with zero within variance are:\n",
-                             paste(zero.var, collapse = " "))
+                       " has no variance within some clusters", gtxt,
+                       " The cluster ids with zero within variance are:\n",
+                       paste( Lp[[g]]$cluster.id[[2]][zero.var], 
+                              collapse = " "))
                     warning(lav_txt2message(txt))
                 }
             }
