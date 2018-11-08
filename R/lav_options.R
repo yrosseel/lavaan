@@ -684,6 +684,8 @@ lav_options_set <- function(opt = NULL) {
         if(opt$test != "none" && opt$se != "external") {
             if(opt$mimic == "Mplus" || opt$test == "yuan.bentler.mplus") {
                 opt$test <- "yuan.bentler.mplus"
+            } else if(opt$mimic == "EQS") {
+                opt$test <- "yuan.bentler"
             } else {
                 opt$test <- "yuan.bentler.mplus" # for now
             }
