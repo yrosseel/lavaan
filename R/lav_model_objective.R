@@ -30,12 +30,12 @@ lav_model_objective <- function(lavmodel       = NULL,
 
     # do we need WLS.est?
     if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS")) {
- 
+
         lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
         # check for COV with negative diagonal elements?
-        for(g in 1:lavsamplestats@ngroups) {    
-            COV <- if(lavmodel@conditional.x) { 
-                       lavimplied$res.cov[[g]] 
+        for(g in 1:lavsamplestats@ngroups) {
+            COV <- if(lavmodel@conditional.x) {
+                       lavimplied$res.cov[[g]]
                    } else { lavimplied$cov[[g]] }
             dCOV <- diag(COV)
             if(any(dCOV < 0)) {

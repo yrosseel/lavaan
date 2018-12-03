@@ -64,6 +64,10 @@ lav_options_default <- function(mimic = "lavaan") {
                 auto.th            = FALSE,
                 auto.delta         = FALSE,
 
+                # seat belts
+                safe.ov.var.ub     = FALSE,
+                save.ov.var.lb     = FALSE,
+
                 # full data
                 std.ov             = FALSE,
                 missing            = "default",
@@ -112,6 +116,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.init_nelder_mead = FALSE,
                 optim.var.transform    = "none",
                 optim.parscale         = "none",
+                optim.dx.tol           = 1e-04,
                 em.iter.max            = 10000L,
                 em.fx.tol              = 1e-08,
                 em.dx.tol              = 1e-04,

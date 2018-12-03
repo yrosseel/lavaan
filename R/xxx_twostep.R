@@ -87,6 +87,7 @@ twostep <- function(model      = NULL,
     #         FIXME: measurement block == single lv for now!!
     MM <- vector("list", length = nfac)
     MM.INFO <- matrix(0, npar, npar)
+    step1.idx <- integer(0L)
     for(f in seq_len(nfac)) {
 
         # which parameters are related to this measurement block?
@@ -132,6 +133,9 @@ twostep <- function(model      = NULL,
         par.idx <- PT.orig$free[ seq_len(length(PT$lhs)) %in% mm.idx &
                                  PT$free > 0L ]
         MM.INFO[par.idx, par.idx] <- mm.info
+
+        # store indices in step1.idx
+        step1.idx <- c(step1.idx, par.idx)
     }
 
     # the measurement model parameters now become fixed ustart values
@@ -146,7 +150,7 @@ twostep <- function(model      = NULL,
 
     # remove 'exogenous' factor variances (if any) from reg.idx
     lv.names.x <- lv.names[ lv.names %in% unlist(lavpta$vnames$eqs.x) ]
-    if(length(lv.names.x) > 0L) {
+    if(lavoptions$fixed.x && length(lv.names.x) > 0L) {
         var.idx <- which(PT$lhs %in% lv.names.x &
                          PT$op == "~~" &
                          PT$lhs == PT$rhs)
@@ -162,6 +166,9 @@ twostep <- function(model      = NULL,
                    PT$free > 0L ] <- 0L
     PTS$free[ PTS$free > 0L ] <- seq_len( sum(PTS$free > 0L) )
 
+    # set 'ustart' values for free STRUC parameter to NA
+    PTS$ustart[ PTS$free > 0L ] <- as.numeric(NA)
+
     # estimate structural part
     STRUC <- lavaan::lavaan(model = PTS, ...)  ### FIXME: reuse slots
 
@@ -171,13 +178,14 @@ twostep <- function(model      = NULL,
 
     # construct JOINT model
     JOINT <- lavaan::lavaan(PT, ..., optim.method = "none",
+                            check.gradient = FALSE, # often not ok
                             se = "external")
 
     # TOTAL information
     INFO <- lavInspect(JOINT, "information") * nobs(FIT)
 
-    step1.idx <- PT$free[ !seq_len(length(PT$lhs)) %in% reg.idx &
-                           PT$free > 0L ]
+    #step1.idx <- PT$free[ !seq_len(length(PT$lhs)) %in% reg.idx &
+    #                       PT$free > 0L ]
     step2.idx <- PT$free[  seq_len(length(PT$lhs)) %in% reg.idx &
                            PT$free > 0L ]
 
@@ -186,10 +194,25 @@ twostep <- function(model      = NULL,
     I.21 <- INFO[step2.idx, step1.idx]
 
     # compute Sigma.11
-    # remove reg.idx columns from MM.INFO
-    MM.INFO <- MM.INFO[-step2.idx, -step2.idx, drop = FALSE]
+    # note: step1.idx and step2.idx have some overlap, but removing
+    #       the step2.idx parameters from step1.idx BEFORE we take
+    #       the inverse, results in std.errors that are lower than ML,
+    #       in addition, fixed.x = TRUE/FALSE give different results
+    #       for SE of beta
+    #
+    # the solution seems to be to keep ALL step1.idx elements in MM.INFO
+    # for the inversion, and then set rows/cols of Sigma.11 to zero if
+    # the overlap with reg.idx (YR, 28 nov 2018; lavaan 0.6-4)
 
+    MM.INFO <- MM.INFO[step1.idx, step1.idx, drop = FALSE]
     Sigma.11 <- solve(MM.INFO)
+
+    # overlap? set corresponding rows/cols of Sigma.11 to zero
+    both.idx <- which(step1.idx %in% step2.idx)
+    if(length(both.idx) > 0L) {
+        Sigma.11[both.idx,] <- 0
+        Sigma.11[,both.idx] <- 0
+    }
 
     # V2
     I.22.inv <- solve(I.22)
@@ -207,7 +230,7 @@ twostep <- function(model      = NULL,
 
     if(output == "lavaan") {
         FINAL <- lavaan::lavaan(PT, ..., optim.method = "none",
-                            se = "external")
+                            se = "external", check.gradient = FALSE)
         return(FINAL)
     } else if(output == "PT") {
         # for pretty printing only

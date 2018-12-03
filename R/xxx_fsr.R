@@ -9,6 +9,9 @@
 # TODO
 #  - Hishino & Bentler: this is simple + WLS
 
+# changes 28 nov 2018: add analytic SE ('standad') if fs.method = "Bartlett"
+#                      make this the new default
+
 fsr <- function(model      = NULL,
                 data       = NULL,
                 cmd        = "sem",
@@ -64,7 +67,7 @@ fsr <- function(model      = NULL,
 
     # change 'default' values for fsr
     if(is.null(dotdotdot$se)) {
-        dotdotdot$se <- "robust.sem"
+        dotdotdot$se <- "standard"
     }
     if(is.null(dotdotdot$test)) {
         dotdotdot$test <- "satorra.bentler"
@@ -226,6 +229,12 @@ fsr <- function(model      = NULL,
         fit.block <- do.call("lavaan",
                             args =  c(list(model  = PT.block,
                                            data   = data), dotdotdot2) )
+        # check convergence
+        if(!lavInspect(fit.block, "converged")) {
+            stop("lavaan ERROR: measurement model for ",
+                 paste(mm.list[[b]], collapse = " "), " did not converge.")
+        }
+        # check fit
         MM.FIT[[b]] <- fit.block
 
         # fs.method?
@@ -305,6 +314,16 @@ fsr <- function(model      = NULL,
         FSR.COV <- FS.COV
     }
 
+    # check if FSR.COV is positive definite for all groups
+    for(g in 1:ngroups) {
+        txt.group <- ifelse(ngroups > 1L, paste(" in group ", g, sep=""), "")
+        eigvals <- eigen(FSR.COV[[g]], symmetric=TRUE, only.values=TRUE)$values
+            if(any(eigvals < .Machine$double.eps^(3/4))) {
+                stop(
+"lavaan ERROR: corrected covariance matrix of factor scores\n",
+"                is not positive definite", txt.group, ";\n")
+            }
+    }
 
 
     # STEP 1c: do we need full set of factor scores?
@@ -464,7 +483,9 @@ fsr <- function(model      = NULL,
 
     # fit structural model
     lavoptions2 <- lavoptions
-    #lavoptions2$se <- "none"
+    #if(lavoptions$se == "standard") {
+    #    lavoptions2$se <- "external"
+    #}
     #lavoptions2$test <- "none"
     lavoptions2$missing <- "listwise" # always complete data anyway...
     fit <- lavaan(PT.PA,

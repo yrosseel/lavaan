@@ -439,7 +439,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # check user-specified options first
         if(!is.null(dotdotdot$estimator)) {
             if(dotdotdot$estimator %in%
-                  c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS") && 
+                  c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS") &&
                is.null(NACOV)) {
                 stop("lavaan ERROR: estimator ", dotdotdot$estimator,
                  " requires full data or user-provided NACOV")
@@ -450,7 +450,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                  " requires full data or user-provided WLS.V and NACOV")
             }
         }
-       
+
         # catch here some options that will not work with moments
         if(lavoptions$se == "bootstrap") {
             stop("lavaan ERROR: bootstrapping requires full data")
@@ -783,7 +783,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     } # slotModel
 
-
+    #######################
+    #### 7. seat belts #### # TODO: bounds,...
+    #######################
+    #if(lavoptions$safe.ov.var.ub) {
+    #
+    #}
+    #if(lavoptions$safe.ov.var.lb) {
+    #}
 
 
 

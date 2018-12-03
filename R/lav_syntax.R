@@ -189,8 +189,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             if(nchar(rhs) == 0L) {
                 txt <- c("syntax contains block identifier ", dQuote(lhs),
                          " with missing number/label.",
-                         " The correct syntax 
-                           is: \"LHS: RHS\", where LHS is a block identifier 
+                         " The correct syntax
+                           is: \"LHS: RHS\", where LHS is a block identifier
                            (eg group or level), and
                            RHS is the group/level/block number or label.")
                 stop(lav_txt2message(txt, header = "lavaan ERROR:"))
@@ -201,7 +201,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             lhs <- tolower(lhs)
             if(!lhs %in% c("group", "level", "block")) {
                 txt <- c("unknown block identifier: ", dQuote(lhs.orig), ".",
-                         " Block identifier should be 
+                         " Block identifier should be
                            group, level or block.")
                 stop(lav_txt2message(txt, header = "lavaan ERROR:"))
             }
@@ -243,7 +243,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  "\n    contains either a reserved word (in R) or an illegal charachter: ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
                  "\n    see ?reserved for a list of reserved words in R",
-                 "\n    please use a variable name that is not a reserved word in R", 
+                 "\n    please use a variable name that is not a reserved word in R",
                  "\n    and use only characters, digits, or the dot symbol.")
         }
 

@@ -892,7 +892,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     txt <- c("Level-1 variable ", dQuote(l1.names[v]),
                        " has no variance within some clusters", gtxt,
                        " The cluster ids with zero within variance are:\n",
-                       paste( Lp[[g]]$cluster.id[[2]][zero.var], 
+                       paste( Lp[[g]]$cluster.id[[2]][zero.var],
                               collapse = " "))
                     warning(lav_txt2message(txt))
                 }

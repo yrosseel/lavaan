@@ -59,7 +59,7 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
                                 paste(" in group ", g, ".", sep = "")
                             } else { " " }
                 txt <- c("H1 estimation resulted in a within covariance matrix",
-                          gtxt, "with (near) zero variances for some of the 
+                          gtxt, "with (near) zero variances for some of the
                           level-1 variables: ",
                          lavdata@ov.names.l[[g]][[1]][zero.var])
                 warning(lav_txt2message(txt))
