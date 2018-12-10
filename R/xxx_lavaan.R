@@ -1113,6 +1113,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ###############################
     VCOV <- NULL
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
+       lavoptions$se != "twostep" &&
        lavmodel@nx.free > 0L && attr(x, "converged")) {
         if(lavoptions$verbose) {
             cat("Computing VCOV for se =", lavoptions$se, "...")
@@ -1147,7 +1148,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     vcov = VCOV1)
 
     # store se in partable
-    if(lavoptions$se != "external") {
+    if(lavoptions$se != "external" && lavoptions$se != "twostep") {
         lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
                                             lavpartable = lavpartable,
                                             VCOV = VCOV,

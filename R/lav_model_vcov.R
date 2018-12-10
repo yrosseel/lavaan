@@ -370,7 +370,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
     mimic       <- lavoptions$mimic
 
     # special cases
-    if(se == "none" || se == "external") {
+    if(se == "none" || se == "external" || se == "twostep") {
         return( matrix(0, 0, 0) )
     }
 
