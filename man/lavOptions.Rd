@@ -47,8 +47,8 @@ Model features (always available):
       are considered random, and the means, variances and covariances are free 
       parameters. If \code{"default"}, the value is set depending on the mimic 
       option.}
-    \item{\code{orthogonal}:}{If \code{TRUE}, the exogenous latent variables
-      are assumed to be uncorrelated.}
+    \item{\code{orthogonal}:}{If \code{TRUE}, all covariances among
+      latent variables are set to zero.}
     \item{\code{std.lv}:}{If \code{TRUE}, the metric of each latent variable 
       is determined by fixing their (residual) variances to 1.0. If 
       \code{FALSE}, the metric of each latent variable is determined by fixing 

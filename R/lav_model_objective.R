@@ -30,7 +30,23 @@ lav_model_objective <- function(lavmodel       = NULL,
 
     # do we need WLS.est?
     if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS")) {
-        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST) #,
+
+        lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
+        # check for COV with negative diagonal elements?
+        for(g in 1:lavsamplestats@ngroups) {
+            COV <- if(lavmodel@conditional.x) {
+                       lavimplied$res.cov[[g]]
+                   } else { lavimplied$cov[[g]] }
+            dCOV <- diag(COV)
+            if(any(dCOV < 0)) {
+                # return NA
+                fx <- as.numeric(NA)
+                attr(fx, "fx.group") <- rep(as.numeric(NA), lavsamplestats@ngroups)
+                return(fx)
+            }
+        }
+        WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST,
+                                     lavimplied = lavimplied) #,
                                      #cov.x = lavsamplestats@cov.x)
         if(estimator == "NTRLS") {
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,

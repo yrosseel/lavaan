@@ -1,101 +1,165 @@
-# use the `Croon' method to correct the covariance matrix
-# of the factor scores
-lav_fsr_croon_correction <- function(FS.COV, LVINFO, fs.method = "bartlett") {
+# compute the jacobian: dtheta_2/dtheta_1:
+#
+# theta_2: - in the rows
+#          - the croon corrections, expressed as 
+#              1) scaled offsets (scoffset), and 
+#              2) scaling factors
+# theta_1: - in the columns
+#          - the free parameters of the measurement model
+#
+lav_fsr_delta21 <- function(object, FSM = NULL) {
 
-    # ngroups
-    ngroups <- length(FS.COV)
+    lavmodel <- object@Model
+    nmat     <- lavmodel@nmat
 
-    # FSR.COV
-    FSR.COV <- FS.COV
-
-    for(g in 1:ngroups) {
-
-        # number of factors - lv.names
-        nfac <- nrow(FS.COV[[g]])
-
-        # correct covariances only
-        if(fs.method != "bartlett") {
-            for(i in 1:(nfac-1)) {
-                if(i == 0L) break
-
-                A.y <- LVINFO[[g]][[i]]$fsm
-                lambda.y <- LVINFO[[g]][[i]]$lambda
-
-                if(nfac > 1L) {
-                    for(j in (i+1):nfac) {
-
-                        A.x <- LVINFO[[g]][[j]]$fsm
-                        lambda.x <- LVINFO[[g]][[j]]$lambda
-
-                        # always 1 if Bartlett
-                        A.xy <- as.numeric(crossprod(A.x %*% lambda.x,
-                                                     A.y %*% lambda.y))
-
-                        # corrected covariance
-                        FSR.COV[[g]][i,j] <- FSR.COV[[g]][j,i] <-
-                        FS.COV[[g]][i,j] / A.xy
-                    }
-                } # nfac > 1L
-            } # i
+    NCOL <- lavmodel@nx.free
+    m.el.idx <- x.el.idx <- vector("list", length = length(lavmodel@GLIST))
+    for(mm in seq_len(length(lavmodel@GLIST))) {
+        m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
+        x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+        # handle symmetric matrices
+        if(lavmodel@isSymmetric[mm]) {
+            # since we use 'x.free.idx', only symmetric elements
+            # are duplicated (not the equal ones, only in x.free.free)
+            dix <- duplicated(x.el.idx[[mm]])
+            if(any(dix)) {
+                m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]
+                x.el.idx[[mm]] <- x.el.idx[[mm]][!dix]
+            }
         }
+    }
 
-        # correct variances
-        for(i in 1:nfac) {
-            A.x <- LVINFO[[g]][[i]]$fsm
-            lambda.x <- LVINFO[[g]][[i]]$lambda
-            theta.x <- LVINFO[[g]][[i]]$theta
+    # Delta per group (or block?)
+    Delta <- vector("list", length = lavmodel@ngroups)
+   
+    for(g in 1:lavmodel@ngroups) {
 
-            if(fs.method == "bartlett") {
-                A.xx <- 1.0
+        fsm <- FSM[[g]]
+
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- lavmodel@GLIST[ mm.in.group ]
+
+        nrow.scoffset <- ncol(MLIST$lambda)
+        nrow.scale    <- ncol(MLIST$lambda)
+        NROW <- nrow.scoffset + nrow.scale
+        Delta.group <- matrix(0, nrow = NROW, ncol = NCOL)
+
+        # prepare some computations
+        AL.inv <- solve(fsm %*% MLIST$lambda)
+        ATA <- fsm %*% MLIST$theta  %*% t(fsm)
+
+        for(mm in mm.in.group) {
+            mname <- names(lavmodel@GLIST)[mm]
+
+            # skip empty ones
+            if(!length(m.el.idx[[mm]])) next
+
+            if(mname == "lambda") {
+
+                dL <- ( -1 * (ATA %*% AL.inv + AL.inv %*% ATA) %*%
+                  (AL.inv %x% AL.inv) %*% fsm )
+
+                delta.scoffset <- dL
+                delta.scale    <- fsm  ## only ok for 1 row!!!
+                delta <- rbind(delta.scoffset, delta.scale)
+
+                Delta.group[, x.el.idx[[mm]]] <- delta[, m.el.idx[[mm]]]
+            
+            } else if(mname == "theta") {
+
+                dT <- lav_matrix_vec( (t(AL.inv) %*% fsm) %x% 
+                                      (t(fsm) %*% AL.inv) )
+                delta.scoffset <- dT
+                delta.scale    <- matrix(0, nrow = nrow.scale,
+                                         ncol = length(MLIST$theta))
+                delta <- rbind(delta.scoffset, delta.scale)
+
+                Delta.group[, x.el.idx[[mm]]] <- delta[, m.el.idx[[mm]]]
+
+            } else if(mname %in% c("psi", "nu", "alpha")) {
+
+                # zero
+                next
+
             } else {
-                A.xx <- as.numeric(crossprod(A.x %*% lambda.x))
+                stop("lavaan ERROR: model matrix ", mname, " is not lambda/theta/psi")
             }
 
-            offset.x <- A.x %*% theta.x %*% t(A.x)
+        } # mm
 
-            FSR.COV[[g]][i,i] <- (FS.COV[[g]][i, i] - offset.x)/A.xx
-        }
+        Delta[[g]] <- Delta.group
     } # g
 
-    FSR.COV
+    Delta
 }
 
+lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
 
-# simple version of Croon's correction:
-# - we always assume ML/Bartlett factor scores, so there is no need to
-#   adjust the covariances
-# - we simply replace the variances (of the observed factor scores) by
-#   the estimated variances of the factors (PSI elements)
-lav_fsr_simple_correction <- function(FS.COV, LVINFO, mm.list = NULL,
-                                      force.pd = FALSE) {
+    PT.orig <- PT
+
+    # remove se column (if any)
+    if(!is.null(PT$se)) {
+        PT$se <- NULL
+    }
 
     # ngroups
-    ngroups <- length(FS.COV)
+    ngroups <- lav_partable_ngroups(PT)
 
-    # FSR.COV
-    FSR.COV <- FS.COV
+    lhs <- rhs <- op <- character(0)
+    group <- block <- level <- free <- exo <- integer(0)
+    ustart <- est <- start <- numeric(0)
 
-    for(g in 1:ngroups) {
+    for(g in seq_len(ngroups)) {
+        nMM <- length(LVINFO[[g]])
+        for(mm in seq_len(nMM)) {
+            lvinfo <- LVINFO[[g]][[mm]]
+            lv.names <- lvinfo$lv.names
+ 
+            nfac <- length(lv.names)
+            if(nfac > 1L) {
+                stop("lavaan ERROR: more than 1 factor in measurement block")
+            }
 
-        # number of measurement blocks
-        nblocks <- length(mm.list)
-
-        # correct variances only
-        for(b in seq_len(nblocks)) {
-            psi.x <- LVINFO[[g]][[b]]$psi
-            idx <- match(mm.list[[b]], unlist(mm.list, use.names = FALSE))
-            FSR.COV[[g]][idx, idx] <- psi.x
+            LV <- lv.names
+            ind <- paste(LV, ".si", sep = "")
+            scoffset <- lvinfo$scoffset[1,1]
+            scale    <- lvinfo$scale[1,1]
+               
+            lhs <- c(lhs, LV, ind, ind, ind)
+             op <- c( op, "=~", "~~", "~*~", "~1")
+            rhs <- c(rhs, ind, ind, ind, "")
+          block <- c(block, rep(g, 4L))
+           free <- c(free, 0L, 1L, 1L, 0L)
+         ustart <- c(ustart, 1, scoffset, scale, 0)
+            exo <- c(exo, rep(0L, 4L))
+          group <- c(group, rep(g, 4L))
+          start <- c(start, 1, scoffset, scale, 0)
+            est <- c(est,  1, scoffset, scale, 0)
+            
         }
+    }
 
-        # force pd?
-        if(force.pd) {
-            tmp <- FSR.COV[[g]]
-            tmp2 <- lav_matrix_symmetric_force_pd(tmp)
-            FSR.COV[[g]][] <- tmp2
-        }
+    # ree counter
+    idx.free <- which(free > 0)
+    free[idx.free] <- max(PT$free) + 1:length(idx.free)
 
-    } # g
+    LIST   <- list(     id          = max(PT$id) + 1:length(lhs),
+                        lhs         = lhs,
+                        op          = op,
+                        rhs         = rhs,
+                        user        = rep(10L,  length(lhs)),
+                        block       = block,
+                        group       = group,
+                        level       = rep(1L, length(lhs)),
+                        free        = free,
+                        ustart      = ustart,
+                        exo         = exo,
+                        start       = start,
+                        est         = est
+                   )
 
-    FSR.COV
+    PT.si <- lav_partable_merge(PT, LIST)
+
+    PT.si
 }
-

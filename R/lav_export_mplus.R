@@ -257,7 +257,7 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
     c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information,
                         ";\n", sep="")
     if(!meanstructure) {
-        c.ANALYSIS <- paste(c.ANALYSIS, "  model = nomeanstructure;\n", 
+        c.ANALYSIS <- paste(c.ANALYSIS, "  model = nomeanstructure;\n",
                             sep = "")
     }
 

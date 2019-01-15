@@ -184,6 +184,28 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
 
         # 2c if operator is ":", put it in BLOCK
         if(op == ":") {
+
+            # check if rhs is empty (new in 0.6-4)
+            if(nchar(rhs) == 0L) {
+                txt <- c("syntax contains block identifier ", dQuote(lhs),
+                         " with missing number/label.",
+                         " The correct syntax
+                           is: \"LHS: RHS\", where LHS is a block identifier
+                           (eg group or level), and
+                           RHS is the group/level/block number or label.")
+                stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+            }
+
+            # check lhs (new in 0.6-4)
+            lhs.orig <- lhs
+            lhs <- tolower(lhs)
+            if(!lhs %in% c("group", "level", "block")) {
+                txt <- c("unknown block identifier: ", dQuote(lhs.orig), ".",
+                         " Block identifier should be
+                           group, level or block.")
+                stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+            }
+
             FLAT.idx <- FLAT.idx + 1L
             FLAT.lhs[FLAT.idx] <- lhs
             FLAT.op[ FLAT.idx] <- op
@@ -218,10 +240,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         if( !all(make.names(LHS) == LHS) ) {
             stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
                  lhs, " ", op, " ", rhs,
-                 "\n    contains a reserved word (in R): ",
+                 "\n    contains either a reserved word (in R) or an illegal charachter: ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
                  "\n    see ?reserved for a list of reserved words in R",
-                 "\n    please use a variable name that is not a reserved word in R")
+                 "\n    please use a variable name that is not a reserved word in R",
+                 "\n    and use only characters, digits, or the dot symbol.")
         }
 
         lhs.formula <- as.formula(paste("~",lhs))

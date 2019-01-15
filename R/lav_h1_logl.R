@@ -36,8 +36,9 @@ lav_h1_logl <- function(lavdata        = NULL,
                 OUT <- lav_mvnorm_cluster_em_sat(YLp  = lavsamplestats@YLp[[g]],
                                              Lp       = lavdata@Lp[[g]],
                                              verbose  = FALSE,
-                                             tol      = 1e-04, # option?
-                                             max.iter = 5000L) # option?
+                                             tol      = 1e-04,     # option?
+                                             min.variance = 1e-05, # option?
+                                             max.iter = 5000L)     # option?
                 # store logl per group
                 logl.group[g] <- OUT$logl
             } else if(lavsamplestats@missing.flag) {

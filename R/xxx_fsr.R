@@ -9,6 +9,9 @@
 # TODO
 #  - Hishino & Bentler: this is simple + WLS
 
+# changes 09 dec 2018: add analytic SE ('standard')
+#                      make this the new default
+
 fsr <- function(model      = NULL,
                 data       = NULL,
                 cmd        = "sem",
@@ -20,7 +23,7 @@ fsr <- function(model      = NULL,
                 lvinfo     = FALSE,
                 mm.list    = NULL,
                 ...,
-                output     = "fsr") {
+                output     = "lavaan") {
 
     # we need full data
     if(is.null(data)) {
@@ -64,10 +67,10 @@ fsr <- function(model      = NULL,
 
     # change 'default' values for fsr
     if(is.null(dotdotdot$se)) {
-        dotdotdot$se <- "robust.sem"
+        dotdotdot$se <- "standard"
     }
     if(is.null(dotdotdot$test)) {
-        dotdotdot$test <- "satorra.bentler"
+        dotdotdot$test <- "standard"
     }
     if(is.null(dotdotdot$missing)) {
         dotdotdot$missing <- "ml"
@@ -80,18 +83,18 @@ fsr <- function(model      = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
-    dotdotdot0$se <- "none"   # to avoid warning about missing="listwise"
-    dotdotdot0$test <- "none" # to avoid warning about missing="listwise"
+    dotdotdot0$se     <- "none" # to avoid warning about missing="listwise"
+    dotdotdot0$test   <- "none" # to avoid warning about missing="listwise"
 
     # check for arguments that we do not want (eg sample.cov)?
     # TODO
 
     # initial processing of the model, no fitting
-    FIT <- do.call(cmd,
+    FIT <- suppressWarnings(do.call(cmd,
                    args =  c(list(model  = model,
                                   data   = data,
                                   #meanstructure = TRUE,
-                                  do.fit = FALSE), dotdotdot0) )
+                                  do.fit = FALSE), dotdotdot0) ))
     lavoptions <- lavInspect(FIT, "options")
     # restore
     lavoptions$se   <- dotdotdot$se
@@ -111,7 +114,6 @@ fsr <- function(model      = NULL,
         OV <- unique(unlist(lavpta$vnames$ov))
         data <- na.omit(data[,OV])
     }
-
 
     # any `regular' latent variables?
     lv.names <- unique(unlist(FIT@pta$vnames$lv.regular))
@@ -134,27 +136,21 @@ fsr <- function(model      = NULL,
     if(length(lv.names) == 0L) {
         stop("lavaan ERROR: model does not contain any (measured) latent variables")
     }
-    nfac     <- length(lv.names)
+    nfac <- length(lv.names)
 
     # check parameter table
     PT <- parTable(FIT)
     PT$est <- PT$se <- NULL
 
-    # find the structural regressions in the parameter table
-    #eqs.idx <- which(PT$op == "~" & (PT$lhs %in% lv.names |
-    #                                 PT$rhs %in% lv.names))
-    # FIXME: we should allow for just correlations too?
-    #if(length(eqs.idx) == 0L) {
-    #    stop("lavaan ERROR: regressions do not involve any latent variables")
-    #}
-
-    # determine eqs.y and eqs.x names
-    eqs.x.names <- unlist(FIT@pta$vnames$eqs.x)
-    eqs.y.names <- unlist(FIT@pta$vnames$eqs.y)
-    eqs.names <- unique( c(eqs.x.names, eqs.y.names) )
+    # extract structural part
+    PT.PA <- lav_partable_subset_structural_model(PT, lavpta = lavpta)
 
     # check if we can use skrondal & laake (no mediational terms?)
     if(fsr.method == "skrondal.laake") {
+        # determine eqs.y and eqs.x names
+        eqs.x.names <- unlist(FIT@pta$vnames$eqs.x)
+        eqs.y.names <- unlist(FIT@pta$vnames$eqs.y)
+        eqs.names <- unique( c(eqs.x.names, eqs.y.names) )
         if(any(eqs.x.names %in% eqs.y.names)) {
             stop("lavaan ERROR: mediational relationships are not allowed for the Skrondal.Laake method; use ", sQuote("Croon"), " instead.")
         }
@@ -214,6 +210,7 @@ fsr <- function(model      = NULL,
 
     # we assume the same number/names of lv's per group!!!
     MM.FIT <- vector("list", nblocks)
+    Sigma2.block <- vector("list", nblocks)
     for(b in 1:nblocks) {
 
         # create parameter table for this measurement block only
@@ -226,6 +223,12 @@ fsr <- function(model      = NULL,
         fit.block <- do.call("lavaan",
                             args =  c(list(model  = PT.block,
                                            data   = data), dotdotdot2) )
+        # check convergence
+        if(!lavInspect(fit.block, "converged")) {
+            stop("lavaan ERROR: measurement model for ",
+                 paste(mm.list[[b]], collapse = " "), " did not converge.")
+        }
+        # store fitted measurement model
         MM.FIT[[b]] <- fit.block
 
         # fs.method?
@@ -239,72 +242,148 @@ fsr <- function(model      = NULL,
         }
 
         # compute factor scores
-        if(fsr.method %in% c("croon", "simple") ||
-           lavoptions$se == "robust.sem") {
-            # we use lavPredict() here to remove unwanted dummy lv's, if any
-            SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
-            FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
-            LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
-            THETA  <- computeTHETA(fit.block@Model)  # FIXME: remove not used ov?
-            PSI <- computeVETA(fit.block@Model)
-        } else {
-            SC <- lavPredict(fit.block, method = fs.method, fsm = FALSE)
-        }
+        SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
+        FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
+        LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
+        THETA  <- computeTHETA(fit.block@Model)  # FIXME: remove not used ov?
+        PSI <- computeVETA(fit.block@Model)
+ 
         # if ngroups = 1, make list again
         if(ngroups == 1L) {
             # because lavPredict() drops the list
             SC <- list(SC)
         }
 
-
         # store results
         for(g in 1:ngroups) {
             FS.SCORES[[g]][[b]] <- SC[[g]]
             if(fsr.method %in% c("croon", "simple")) {
-                LVINFO[[g]][[b]] <- list(fsm = FSM[[g]],
+                offset <- FSM[[g]] %*% THETA[[g]] %*% t(FSM[[g]])
+                scale  <- FSM[[g]] %*% LAMBDA[[g]]
+                scale.inv <- solve(scale)
+                scoffset <- scale.inv %*% offset %*% scale.inv
+
+                LVINFO[[g]][[b]] <- list(lv.names = mm.list[[b]],
+                                         fsm = FSM[[g]],
                                          lambda = LAMBDA[[g]],
                                          psi    = PSI[[g]],
-                                         theta  = THETA[[g]])
+                                         theta  = THETA[[g]],
+                                         offset = offset,
+                                         scale  = scale,
+                                         scale.inv = scale.inv,
+                                         scoffset = scoffset)
             }
         } # g
 
+        # Delta.21: list per group
+        Delta.21 <- lav_fsr_delta21(fit.block, FSM)
+        
+        # vcov
+        Sigma1.block <- vcov(fit.block)
+        tmp <- matrix(0, nrow(Delta.21[[1]]), nrow(Delta.21[[1]]))
+        lavsamplestats <- fit.block@SampleStats
+        for(g in 1:ngroups) {
+            fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
+            tmp <- 
+               tmp + fg * (Delta.21[[g]] %*% Sigma1.block %*% t(Delta.21[[g]]))
+        }
+        Sigma2.block[[b]] <- tmp
+
     } # measurement block
 
-    # cbind factor scores
-    FS.SCORES <- lapply(1:ngroups, function(g) {
-        SC <- as.data.frame(FS.SCORES[[g]])
-        SC
-    })
+    # Sigma.2 = Delta.21 %*% Sigma.1  %*% t(Delta.21)
+    Sigma.2 <- lav_matrix_bdiag(Sigma2.block)
 
-    # compute empirical covariance matrix factor scores
-    FS.COV <- lapply(1:ngroups, function(g) {
-        COV <- cov(FS.SCORES[[g]]) ## divided by N-1!!!
+
+    # compute empirical covariance matrix factor scores + observed variables
+    # in structural part
+    group.values <- lav_partable_group_values(PT.PA)
+    FS.COV   <- vector("list", length = ngroups)
+    FSR.COV  <- vector("list", length = ngroups)
+    FSR.COV2 <- vector("list", length = ngroups)
+    Y        <- vector("list", length = ngroups)
+    if(lavoptions$meanstructure) {
+        FS.MEAN <- vector("list", length = ngroups)
+    } else {
+        FS.MEAN <- NULL
+    }
+    for(g in seq_len(ngroups)) {
+
+        # full data for structural model
+        struc.names <- lavNames(PT.PA, "ov", group = group.values[g])
+        struc.ov.idx <- which(! struc.names %in% lv.names )
+        struc.lv.idx <- which(  struc.names %in% lv.names )
+        if(length(struc.ov.idx) > 0L) {
+            ov.idx <- which(FIT@Data@ov.names[[g]] %in%
+                            struc.names[struc.ov.idx])
+            Y.g <- matrix(0, nrow = nrow(FS.SCORES[[g]][[1]]),
+                             ncol = length(struc.names))
+            Y.g[,struc.lv.idx] <- do.call("cbind", FS.SCORES[[g]])
+            Y.g[,struc.ov.idx] <- FIT@Data@X[[g]][,ov.idx,drop = FALSE]
+        } else {
+            Y.g <- do.call("cbind", FS.SCORES[[g]])
+        }
+        Y[[g]] <- Y.g
+
+        # sample statistics for structural model
+        COV <- cov(Y.g) # divided by N-1
         if(lavoptions$likelihood == "normal") {
             Ng <- lavInspect(FIT, "nobs")[g]
             COV <- COV * (Ng - 1) / Ng
         }
-        COV
-    })
-    if(lavoptions$meanstructure) {
-        FS.MEAN <- lapply(1:ngroups, function(g) { colMeans(FS.SCORES[[g]]) })
-    } else {
-        FS.MEAN <- NULL
-    }
+        FS.COV[[g]] <- COV
 
-    # STEP 1b: if using `Croon' method: correct COV matrix:
-    if(fsr.method %in% c("croon")) {
-         FSR.COV <- lav_fsr_croon_correction(FS.COV    = FS.COV,
-                                             LVINFO    = LVINFO,
-                                             fs.method = fs.method)
-    } else if(fsr.method == "simple") {
-        FSR.COV <- lav_fsr_simple_correction(FS.COV    = FS.COV,
-                                             LVINFO    = LVINFO,
-                                             mm.list   = mm.list,
-                                             force.pd  = FALSE)
-    } else {
-        FSR.COV <- FS.COV
-    }
+        if(lavoptions$meanstructure) {
+            FS.MEAN[[g]] <- colMeans(Y.g)
+        } 
 
+        # STEP 1b: if using `Croon' method: correct COV matrix:
+        if(fsr.method %in% c("croon")) {
+
+            scoffset  <- lav_matrix_bdiag(lapply(LVINFO[[g]],"[[","scoffset"))
+            scale.inv <- lav_matrix_bdiag(lapply(LVINFO[[g]],"[[","scale.inv"))
+
+            SCOFFSET <- matrix(0, nrow = length(struc.names), 
+                                  ncol = length(struc.names))
+            SCOFFSET[struc.lv.idx, struc.lv.idx] <- scoffset
+
+            SCALE.INV <- diag(length(struc.names))
+            SCALE.INV[struc.lv.idx, struc.lv.idx] <- scale.inv
+      
+            FSR.COV[[g]] <- SCALE.INV %*% FS.COV[[g]] %*% SCALE.INV - SCOFFSET
+
+        } else if(fsr.method == "simple") {
+
+            psi <- lav_matrix_bdiag(lapply(LVINFO[[g]],"[[","psi"))
+
+            FSR.COV[[g]] <- FS.COV[[g]]
+            # scalar version only (for now)
+            diag(FSR.COV[[g]])[struc.lv.idx] <- psi
+
+        } else {
+            FSR.COV[[g]] <- FS.COV[[g]]
+        }
+
+        # copy with different labels
+        FSR.COV2[[g]] <- FSR.COV[[g]]
+
+        # add row/col names
+        rownames(FS.COV[[g]]) <- colnames(FS.COV[[g]]) <- struc.names
+        rownames(FSR.COV[[g]]) <- colnames(FSR.COV[[g]]) <- struc.names
+        rownames(FSR.COV2[[g]]) <- colnames(FSR.COV2[[g]]) <- struc.names
+        rownames(FSR.COV2[[g]])[struc.lv.idx] <-
+            colnames(FSR.COV2[[g]])[struc.lv.idx] <- 
+                paste(lv.names, ".si", sep = "")
+
+        # check if FSR.COV is positive definite for all groups
+        txt.group <- ifelse(ngroups > 1L, paste(" in group ", g, sep=""), "")
+        eigvals <- eigen(FSR.COV[[g]], symmetric=TRUE, only.values=TRUE)$values
+            if(any(eigvals < .Machine$double.eps^(3/4))) {
+                stop(
+"lavaan ERROR: corrected covariance matrix of factor scores\n",
+"                is not positive definite", txt.group, ";\n")
+            }
+    } # g
 
 
     # STEP 1c: do we need full set of factor scores?
@@ -315,17 +394,17 @@ fsr <- function(model      = NULL,
                 OLD.inv <- solve(FS.COV[[g]])
                 OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
                 FSR.COV.sqrt <- lav_matrix_symmetric_sqrt(FSR.COV[[g]])
-                SC <- as.matrix(FS.SCORES[[g]])
+                SC <- as.matrix(Y[[g]])
                 SC <- SC %*% OLD.inv.sqrt %*% FSR.COV.sqrt
                 SC <- as.data.frame(SC)
                 names(SC) <- lv.names
-                FS.SCORES[[g]] <- SC
+                Y[[g]] <- SC
             }
         }
 
         # unlist if multiple groups, add group column
         if(ngroups == 1L) {
-            FS.SCORES <- as.data.frame(FS.SCORES[[1]])
+            Y <- as.data.frame(Y[[1]])
         } else {
             stop("fix this!")
         }
@@ -336,37 +415,28 @@ fsr <- function(model      = NULL,
 
     # STEP 2: fit structural model using (corrected?) factor scores
 
-    PT.PA <- lav_partable_subset_structural_model(PT, lavpta = lavpta)
-
     # free all means/intercepts (of observed variables only)
     lv.names.pa <- lavNames(PT.PA, "lv")
     int.idx <- which(PT.PA$op == "~1" & !PT.PA$lhs %in% lv.names.pa)
     PT.PA$free[int.idx] <- 1L
+    PT.PA$free[ PT.PA$free > 0L ] <- seq_len( sum(PT.PA$free > 0L) )
     PT.PA$ustart[int.idx] <- NA
-    # adjust lavoptions
 
-    #if(is.null(dotdotdot$missing)) {
-    #    lavoptions$missing <- "listwise" # factor scores are always complete
-    #} else {
-    #    lavoptions$missing <- dotdotdot$missing
-    #}
-    #if(is.null(dotdotdot$information)) {
-    #    lavoptions$information <- "expected"
-    #} else {
-    #    lavoptions$information <- dotdotdot$information
-    #}
+
+
+    # adjust lavoptions
     if(is.null(dotdotdot$do.fit)) {
         lavoptions$do.fit <- TRUE
     } else {
         lavoptions$do.fit <- dotdotdot$do.fit
     }
     if(is.null(dotdotdot$se)) {
-        lavoptions$se <- "robust.sem"
+        lavoptions$se <- "standard"
     } else {
         lavoptions$se <- dotdotdot$se
     }
     if(is.null(dotdotdot$test)) {
-        lavoptions$test <- "satorra.bentler"
+        lavoptions$test <- "standard"
     } else {
         lavoptions$test <- dotdotdot$test
     }
@@ -376,108 +446,67 @@ fsr <- function(model      = NULL,
         lavoptions$sample.cov.rescale <- dotdotdot$sample.cov.rescale
     }
 
-    # take care of NACOV, in case we want correct standard errors
-    if(lavoptions$se == "robust.sem") {
-        Omega.f <- vector("list", length = ngroups)
-        for(g in 1:ngroups) {
-            DATA <- FIT@Data@X[[g]]
-            if(Gamma.NT) {
-                if(lavoptions$missing == "listwise") {
-                    Omega.y <- lav_samplestats_Gamma_NT(Y = DATA,
-                                   meanstructure = lavoptions$meanstructure,
-                                   rescale = TRUE, fixed.x = FALSE)
-                } else if(lavoptions$missing %in% c("ml", "ml.x")) {
-                    # we assume UNSTRUCTURED Mu and Sigma!!
-                    MU    <- FIT@SampleStats@missing.h1[[g]]$mu
-                    SIGMA <- FIT@SampleStats@missing.h1[[g]]$sigma
-                    if(lavoptions$information == "expected") {
-                        Info <- lav_mvnorm_missing_information_expected(
-                                    Y = DATA, Mp = FIT@Data@Mp[[g]],
-                                    wt = FIT@Data@weights[[g]],
-                                    Mu = MU, Sigma = SIGMA,
-                                    x.idx = FIT@SampleStats@x.idx[[g]])
-                    } else {
-                        Info <-
-                            lav_mvnorm_missing_information_observed_samplestats(
-                                Yp = FIT@SampleStats@missing[[g]],
-                                # wt not needed
-                                Mu = MU, Sigma = SIGMA,
-                                x.idx = FIT@SampleStats@x.idx[[g]])
-                    }
-                    Omega.y <- lav_matrix_symmetric_inverse(Info)
-                } else {
-                    stop("lavaan ERROR: can not handle missing = ",
-                         lavoptions$missing)
-                }
-
-            } else {
-                if(lavoptions$missing == "listwise") {
-                    Omega.y <- lav_samplestats_Gamma(Y = DATA,
-                                   meanstructure = lavoptions$meanstructure,
-                                   fixed.x = FALSE)
-                } else if(lavoptions$missing %in% c("ml", "ml.x")) {
-                    # we assume UNSTRUCTURED Mu and Sigma!!
-                    MU    <- FIT@SampleStats@missing.h1[[g]]$mu
-                    SIGMA <- FIT@SampleStats@missing.h1[[g]]$sigma
-                    Omega.y <- lav_mvnorm_missing_h1_omega_sw(Y =
-                             DATA, Mp = FIT@Data@Mp[[g]],
-                             Yp = FIT@SampleStats@missing[[g]],
-                             Mu = MU, Sigma = SIGMA,
-                             x.idx = FIT@SampleStats@x.idx[[g]],
-                             information = lavoptions$information)
-                } else {
-                    stop("lavaan ERROR: can not handle missing = ",
-                         lavoptions$missing)
-                }
-            }
-
-            # factor score matrices
-            A <- lav_matrix_bdiag(lapply(LVINFO[[g]], "[[", "fsm"))
-
-            # compensate for Croon correction
-            if(fs.method == "regression") {
-                if(!exists("OLD.inv.sqrt")) {
-                    OLD.inv <- solve(FS.COV[[g]])
-                    OLD.inv.sqrt <- lav_matrix_symmetric_sqrt(OLD.inv)
-                }
-                if(!exists("FSR.COV.sqrt")) {
-                    FSR.COV.sqrt <- lav_matrix_symmetric_sqrt(FSR.COV[[g]])
-                }
-                A <- OLD.inv.sqrt %*% FSR.COV.sqrt %*% A
-            }
-
-            # mean + vech(sigma)
-            A22 <- lav_matrix_duplication_post(
-                   lav_matrix_duplication_ginv_pre(A %x% A))
-            if(lavoptions$meanstructure) {
-                A11 <- A
-                A.tilde <- lav_matrix_bdiag(A11, A22)
-            } else {
-                A.tilde <- A22
-            }
-            Omega.f[[g]] <- A.tilde %*% Omega.y %*% t(A.tilde)
-        } # g
-    } else {
-        Omega.f <- NULL
-    }
-
-
-    # fit structural model
+    # fit structural model -- point estimation ONLY
     lavoptions2 <- lavoptions
-    #lavoptions2$se <- "none"
+    #if(lavoptions$se == "standard") {
+    #    lavoptions2$se <- "external"
+    #}
     #lavoptions2$test <- "none"
+    lavoptions2$se <- "none"
+    lavoptions2$test <- "none"
     lavoptions2$missing <- "listwise" # always complete data anyway...
     fit <- lavaan(PT.PA,
                   sample.cov = FSR.COV,
                   sample.mean = FS.MEAN,
                   sample.nobs = FIT@SampleStats@nobs,
-                  NACOV       = Omega.f,
                   slotOptions = lavoptions2)
 
+    # only to correct the SE, we create another model, augmented with
+    # the croon parameters
+    PT.PA2 <- parTable(fit)
+    PT.si <- lav_fsr_pa2si(PT.PA2, LVINFO = LVINFO)
+    idx1 <- PT.si$free[ PT.si$user == 10L & PT.si$free > 0L ]
+    idx2 <- PT.si$free[ PT.si$user != 10L & PT.si$free > 0L ]
+
+    lavoptions3 <- lavoptions2
+    lavoptions3$optim.method <- "none"
+    lavoptions3$test <- "standard"
+    lavoptions3$se <- "none"
+    lavoptions3$check.gradient <- FALSE
+    lavoptions3$information <- "expected" ## FIXME: lav_model_gradient + delta
+    fit.si2 <- lavaan(PT.si,
+                     sample.cov  = FSR.COV2,
+                     sample.mean = FS.MEAN,
+                     sample.nobs = FIT@SampleStats@nobs,
+                     slotOptions = lavoptions3)
+    Info.all <- lavTech(fit.si2, "information") * nobs(fit)
+    I33 <- Info.all[idx2, idx2]
+    I32 <- Info.all[idx2, idx1]
+    I23 <- Info.all[idx1, idx2]
+    I22 <- Info.all[idx1, idx1]
+
+    I33.inv <- solve(I33)
+
+    V1 <- I33.inv
+    V2 <- I33.inv %*% I32 %*% Sigma.2  %*% t(I32) %*% I33.inv
+    VCOV <- V1 + V2
+
+    # fill in standard errors step 2
+    PT.PA2$se[ PT.PA2$free > 0L ] <- sqrt( diag(VCOV) )
+
+    if(output == "lavaan" || output == "fsr") {
+        lavoptions3$se <- "twostep"
+        fit <- lavaan::lavaan(PT.PA2, sample.cov = FSR.COV,
+                     sample.mean = FS.MEAN,
+                     sample.nobs = FIT@SampleStats@nobs,
+                     slotOptions = lavoptions3)
+        fit@vcov$vcov <- VCOV
+    }
+
     # extra info
-    extra <- list( FS.COV =  FS.COV,  FS.SCORES =  FS.SCORES,
+    extra <- list( FS.COV =  FS.COV,  FS.SCORES = Y,
                    FSR.COV = FSR.COV,
-                   LVINFO = LVINFO)
+                   LVINFO = LVINFO, Sigma.2 = Sigma.2)
 
     # standard errors
     #lavsamplestats <- fit@SampleStats
@@ -513,7 +542,7 @@ fsr <- function(model      = NULL,
     } else if(output == "lvinfo") {
         out <- LVINFO
     } else if(output %in% c("scores", "f.scores", "fs.scores")) {
-        out <- FS.SCORES
+        out <- Y 
     } else if(output %in% c("FSR.COV", "fsr.cov", "croon", "cov.croon",
                             "croon.cov", "COV", "cov")) {
         out <- FSR.COV
