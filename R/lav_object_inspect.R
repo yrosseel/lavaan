@@ -430,7 +430,7 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_vcov_def(object, joint = TRUE,
             standardized = FALSE,
             add.labels = add.labels, add.class = add.class)
-    } else if(what == "vcov.def.joint.std.all" || 
+    } else if(what == "vcov.def.joint.std.all" ||
               what == "vcov.def.joint.standardized" ||
               what == "vcov.def.joint.std") {
         lav_object_inspect_vcov_def(object, joint = TRUE,
@@ -2232,8 +2232,8 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     OUT
 }
 
-lav_object_inspect_vcov_def <- function(object, joint = FALSE, 
-    standardized = FALSE, type = "std.all", 
+lav_object_inspect_vcov_def <- function(object, joint = FALSE,
+    standardized = FALSE, type = "std.all",
     add.labels = FALSE, add.class = FALSE) {
 
     lavmodel    <- object@Model

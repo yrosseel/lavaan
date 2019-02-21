@@ -480,7 +480,15 @@ lav_model_estimate <- function(lavmodel       = NULL,
         iterations <- optim.out$iterations
         x          <- optim.out$par
         if(optim.out$convergence == 0) {
-            converged <- TRUE
+            # optimizer is happy, but do we have a zero gradient
+            # check 'unscaled' gradient (for now)
+            grad <- gradient_function_numerical(x)
+            if( all(abs(grad) < lavoptions$optim.dx.tol) ) {
+                converged <- TRUE
+            } else {
+                # warning here?
+                converged <- FALSE
+            }
         } else {
             converged <- FALSE
         }
@@ -523,7 +531,19 @@ lav_model_estimate <- function(lavmodel       = NULL,
         iterations <- optim.out$iterations
         x          <- optim.out$par
         if(optim.out$convergence == 0) {
-            converged <- TRUE
+            # optimizer is happy, but do we have a zero gradient
+            # check 'unscaled' gradient (for now)
+
+            # should we treat bounds differently?
+
+
+            grad <- gradient_function(x)
+            if( all(abs(grad) < lavoptions$optim.dx.tol) ) {
+                converged <- TRUE
+            } else {
+                # warning here?
+                converged <- FALSE
+            }
         } else {
             converged <- FALSE
         }
