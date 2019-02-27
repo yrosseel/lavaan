@@ -10,7 +10,8 @@ Score test (or Lagrange Multiplier test) for releasing one or more
 fixed or constrained parameters in model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
-             univariate = TRUE, cumulative = FALSE, epc = FALSE,
+             univariate = TRUE, cumulative = FALSE,
+             epc = FALSE, standardized = epc, cov.std = epc,
              verbose = FALSE, warn = TRUE, information = "expected")
 }
 \arguments{
@@ -29,6 +30,14 @@ multivariate score statistics, each time adding an additional constraint.}
 \item{epc}{Logical. If \code{TRUE}, and we are releasing existing constraints,
 compute the expected parameter changes for the existing (free) parameters,
 for each released constraint.}
+\item{standardized}{If \code{TRUE}, two extra columns (sepc.lv and sepc.all)
+in the \code{$epc} table
+will contain standardized values for the EPCs. In the first column (sepc.lv),
+standardization is based on the variances of the (continuous) latent
+variables. In the second column (sepc.all), standardization is based
+on both the variances of both (continuous) observed and latent variables.
+(Residual) covariances are standardized using (residual) variances.}
+\item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{verbose}{Logical. Not used for now.}
 \item{warn}{Logical. If \code{TRUE}, print out warnings if they occur.}
 \item{information}{\code{character} indicating the type of information matrix
@@ -55,7 +64,10 @@ information is the default, which provides better control of Type I errors.}
       test statistic (\code{X2}), the degrees of freedom (\code{df}), and
       a \emph{p} value under the \eqn{\chi^2} distribution (\code{p.value}).}
     \item{\code{$uni}: Optional (if \code{univariate=TRUE}).
-      Each 1-\emph{df} score test, equivalent to modification indices.}
+      Each 1-\emph{df} score test, equivalent to modification indices.
+      If \code{epc=TRUE} when \code{add}ing parameters (not when releasing
+      constraints), an unstandardized EPC is provided for each added parameter,
+      as would be returned by \code{\link{modificationIndices}}.}
     \item{\code{$cumulative}: Optional (if \code{cumulative=TRUE}).
       Cumulative score tests.}
     \item{\code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates,
