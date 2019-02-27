@@ -45,10 +45,18 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
   #  hyphens <- gregexpr("(?!<(\\*|\\.))\\w+(?!(\\*|\\.))\\s*-\\s*(?!<(\\*|\\.))\\w+(?!(\\*|\\.))", cmd, perl=TRUE)[[1]]
   #}
 
-  hyphens <- gregexpr("(?!<(\\*|\\.))\\w+(?!(\\*|\\.))\\s*-\\s*(?!<(\\*|\\.))\\w+(?!(\\*|\\.))", cmd, perl=TRUE)[[1]]
+  #hyphens <- gregexpr("(?!<(\\*|\\.))\\w+(?!(\\*|\\.))\\s*-\\s*(?!<(\\*|\\.))\\w+(?!(\\*|\\.))", cmd, perl=TRUE)[[1]]
+  
+  #support trailing @XXX. Still still fail on Trait1-Trait3*XXX
+  hyphens <- gregexpr("(?!<(\\*|\\.))\\w+(?!(\\*|\\.))\\s*-\\s*(?!<(\\*|\\.))\\w+(?!(\\*|\\.))(@[\\d\\.-]+)?", cmd, perl=TRUE)[[1]]
 
+  #Promising, but this is still failing in the case of x3*1 -4.25*x4
+  #On either side of a hyphen, require alpha character followed by alphanumeric
+  #This enforces that neither side of the hyphen can be a number
+  #Alternatively, match digits on either side alone
+  #hyphens <- gregexpr("([A-z]+\\w*\\s*-\\s*[A-z]+\\w*(@[\\d\\.-]+)?|\\d+\\s*-\\s*\\d+)", cmd, perl=TRUE)[[1]]
+  
   if (hyphens[1L] > 0) {
-
     cmd.expand <- c()
     ep <- 1
 
@@ -58,6 +66,20 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
 
       v_pre <- argsplit[1]
       v_post <- argsplit[2]
+      
+      v_post.suffix <- sub("^([^@]+)(@[\\d-.]+)?$", "\\2", v_post, perl=TRUE) #will be empty string if not present
+      v_post <- sub("@[\\d-.]+$", "", v_post, perl=TRUE) #trim @ suffix
+      
+      #If v_pre and v_post contain leading alpha characters, verify that these prefixes match.
+      #Otherwise, there is nothing to expand, as in the case of MODEL CONSTRAINT: e1e2=e1-e2_n.
+      v_pre.alpha <- sub("\\d+$", "", v_pre, perl=TRUE)
+      v_post.alpha <- sub("\\d+$", "", v_post, perl=TRUE)
+
+      #only enforce prefix match if we have leading alpha characters (i.e., not simple numeric 1 - 3 syntax)
+      if (length(v_pre.alpha) > 0L && length(v_post.alpha) > 0L) {
+        # if alpha prefixes do match, assume that the hyphen is not for expansion (e.g., in subtraction case)
+        if (v_pre.alpha != v_post.alpha) { return(cmd) }
+      }
 
       #the basic positive lookbehind blows up with pure numeric constraints (1 - 3) because no alpha char precedes digit
       #can use an non-capturing alternation grouping to allow for digits only or the final digits after alphas (as in v_post.num)
@@ -65,7 +87,7 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
 
       v_post.match <- regexpr("^(?:\\w*(?<=[A-Za-z_])(\\d+)|(\\d+))$", v_post, perl=TRUE)
       stopifnot(v_post.match[1L] > 0)
-
+      
       #match mat be under capture[1] or capture[2] because of alternation above
       whichCapture <- which(attr(v_post.match, "capture.start") > 0)
 
@@ -73,10 +95,32 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
       v_post.prefix <- substr(v_post, 1, attr(v_post.match, "capture.start")[whichCapture] - 1) #just trusting that pre and post match
 
       if (is.na(v_pre.num) || is.na(v_post.num)) stop("Cannot expand variables: ", v_pre, ", ", v_post)
-      v_expand <- paste(v_post.prefix, v_pre.num:v_post.num, sep="", collapse=" ")
+      v_expand <- paste(v_post.prefix, v_pre.num:v_post.num, v_post.suffix, sep="", collapse=" ")
 
       #for first hyphen, there may be non-hyphenated syntax preceding the initial match
       cmd.expand[ep] <- joinRegexExpand(cmd, v_expand, hyphens, v)
+
+      #This won't really work because the cmd.expand element may contain other variables
+      #that are at the beginning or end, prior to hyphen stuff
+      #This is superseded by logic above where @ is included in hyphen match, then trapped as suffix
+      #I don't think it will work yet for this Mplus syntax: y1-y10*5 -- the 5 wouldn't propagate
+      # handle the case of @ fixed values or * starting values used in a list
+      # example: Trait1-Trait3@1
+      ## if (grepl("@|\\*", cmd.expand[ep], perl=TRUE)) {
+      ##   exp_split <- strsplit(cmd.expand[ep], "\\s+", perl=TRUE)[[1]]
+      ##   suffixes <- sub("^([^@\\*]+)([@*][\\d\\.-]+)?$", "\\2", exp_split, perl=TRUE)
+      ##   variables <- sub("^([^@\\*]+)([@*][\\d\\.-]+)?$", "\\1", exp_split, perl=TRUE)
+      ##   suffixes <- suffixes[suffixes != ""]
+      ##   if (length(unique(suffixes)) > 1L) {
+      ##     browser()
+         
+      ##     #stop("Don't know how to interpret syntax: ", cmd)
+      ##   } else {
+      ##     variables <- paste0(variables, suffixes[1])
+      ##     cmd.expand[ep] <- paste(variables, collapse=" ")
+      ##   }
+      ## }
+      
       ep <- ep + 1
 
     }
@@ -91,6 +135,11 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
 parseFixStart <- function(cmd) {
   cmd.parse <- c()
   ep <- 1L
+  
+  #support ESEM-like syntax: F BY a1* a2*
+  #The easy path: putting in 1s before we proceed on parsing
+  cmd <- gsub("([A-z]+\\w*)\\s*\\*(?=\\s+[A-z]+|\\s*$)", "\\1*1", cmd, perl=TRUE)
+
   if ((fixed.starts <- gregexpr("[\\w\\.-]+\\s*([@*])\\s*[\\w\\.-]+", cmd, perl=TRUE)[[1]])[1L] > 0) { #shouldn't it be \\*, not * ?! Come back to this.
     for (f in 1:length(fixed.starts)) {
 
@@ -136,11 +185,12 @@ parseConstraints <- function(cmd) {
   cmd.split <- strsplit(cmd, "\n")[[1]]
 
   #drop empty lines (especially leading newline)
-  cmd.split <- if(length(emptyPos <- which(cmd.split == "")) > 0L) {cmd.split[-1*emptyPos]} else {cmd.split}
+  cmd.split <- if(length(emptyPos <- which(cmd.split == "")) > 0L) { cmd.split[-1*emptyPos] } else { cmd.split }
 
-  #Create a version of the command with no constraint specifications.
-  #This is useful for constraint specs that use the params on the LHS and RHS. Example: v1 ~~ conB*v1
-  cmd.noconstraints <- paste0(gsub("\\s*\\([^\\)]+\\)\\s*", "", cmd.split, perl=TRUE), collapse=" ")
+  #Create a version of the command with no modifiers (constraints, starting values, etc.) specifications.
+  #This is useful for syntax that uses the params on the LHS and with a modified RHS. Example: v1 ~~ conB*v1
+  cmd.nomodifiers <- paste0(gsub("(start\\([^\\)]+\\)\\*|[\\d-\\.]+\\*)", "", cmd.split, perl=TRUE), collapse=" ") #peel off premultiplication
+  cmd.nomodifiers <- gsub("\\([^\\)]+\\)", "", cmd.nomodifiers, perl=TRUE)
 
   cmd.tojoin <- c() #will store all chunks divided by newlines, which will be joined at the end.
 
@@ -256,7 +306,7 @@ parseConstraints <- function(cmd) {
 
   #eliminate newlines in this function so that they don't mess up \\s+ splits downstream
   toReturn <- paste(cmd.tojoin, collapse=" ")
-  attr(toReturn, "noConstraints") <- cmd.noconstraints
+  attr(toReturn, "noModifiers") <- cmd.nomodifiers
 
   return(toReturn)
 
@@ -464,6 +514,27 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
 }
 
 mplus2lavaan.modelSyntax <- function(syntax) {
+  if (length(syntax) > 1L) { stop("mplus2lavaan.modelSyntax syntax argument should be a single string, not a vector") }
+  if (!is.character(syntax)) { stop("mplus2lavaan.modelSyntax accepts a single character string containing all model syntax") }
+  
+  #because this is now exposed as a function in the package, handle the case of the user passing in full .inp file as text
+  #we should only be interested in the MODEL and MODEL CONSTRAINT sections
+  by_line <- strsplit(syntax, "\r?\n", perl=TRUE)[[1]]
+  inputHeaders <- grep("^\\s*(title:|data.*:|variable:|define:|analysis:|model.*:|output:|savedata:|plot:|montecarlo:)", by_line, ignore.case=TRUE, perl=TRUE)
+  con_syntax <- c()
+  if (length(inputHeaders) > 0L) {
+    #warning("mplus2lavaan.modelSyntax is intended to accept only the model section, not an entire .inp file. For the .inp file case, use mplus2lavaan")
+    parsed_syntax <- divideInputIntoSections(by_line, "local")
+
+    #handle model constraint
+    if ("model.constraint" %in% names(parsed_syntax)) {
+      con_syntax <- strsplit(mplus2lavaan.constraintSyntax(parsed_syntax$model.constraint), "\n")[[1]]
+    }
+
+    #just keep model syntax before continuing
+    syntax <- parsed_syntax$model    
+  }
+
   #initial strip of leading/trailing whitespace, which can interfere with splitting on spaces
   #strsplit generates character(0) for empty strings, which causes problems in paste because paste actually includes it as a literal
   #example: paste(list(character(0), "asdf", character(0)), collapse=" ")
@@ -502,7 +573,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
   #vector of lavaan syntax
   lavaan.out <- c()
-
+  
   for (cmd in syntax.split) {
     if (grepl("^\\s*#", cmd, perl=TRUE)) { #comment line
       lavaan.out <- c(lavaan.out, gsub("\n", "", cmd, fixed=TRUE)) #drop any newlines (otherwise done by parseConstraints)
@@ -512,12 +583,9 @@ mplus2lavaan.modelSyntax <- function(syntax) {
       #hyphen expansion
       cmd <- expandCmd(cmd)
 
-      #blow up on growth syntax for now
-#      if (grepl("|", cmd, fixed=TRUE)) stop("Growth modeling syntax using | not supported at the moment.")
-
       #parse fixed parameters and starting values
       cmd <- parseFixStart(cmd)
-
+      
       #parse any constraints here (avoid weird logic below)
       cmd <- parseConstraints(cmd)
 
@@ -564,11 +632,11 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
         params <- substr(cmd, attr(means.scales, "capture.start")[2L], attr(means.scales, "capture.start")[2L] + attr(means.scales, "capture.length")[2L] - 1)
 
-        #obtain parameters with no constraint specification for LHS
-        params.noconstraints <- sub("^\\s*[\\[\\{]([^\\]\\}]+)[\\]\\}]\\s*$", "\\1", attr(cmd, "noConstraints"), perl=TRUE)
+        #obtain parameters with no modifiers specified for LHS
+        params.noModifiers <- sub("^\\s*[\\[\\{]([^\\]\\}]+)[\\]\\}]\\s*$", "\\1", attr(cmd, "noModifiers"), perl=TRUE)
 
         means.scales.split <- strsplit(params, "\\s+")[[1]] #trimSpace(
-        means.scales.noConstraints.split <- strsplit(params.noconstraints, "\\s+")[[1]] #trimSpace(
+        means.scales.noModifiers.split <- strsplit(params.noModifiers, "\\s+")[[1]] #trimSpace(
 
         if (operator == "[") {
           #Tricky syntax shift (and corresponding kludge). For means, need to put constraint on RHS as pre-multiplier of 1 (e.g., x1 ~ 5*1).
@@ -586,14 +654,15 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
         } else if (operator == "{"){
           #only include constraints on RHS
-          cmd <- sapply(1:length(means.scales.split), function(v) paste(means.scales.noConstraints.split[v], "~*~", means.scales.split[v]))
+          cmd <- sapply(1:length(means.scales.split), function(v) paste(means.scales.noModifiers.split[v], "~*~", means.scales.split[v]))
         } else { stop("What's the operator?!") }
       } else if (grepl("|", cmd, fixed=TRUE)) {
         #expand growth modeling language
         cmd <- expandGrowthCmd(cmd)
       } else { #no operator, no means, must be variance.
         #cat("assuming vars: ", cmd, "\n")
-        vars.lhs <- strsplit(attr(cmd, "noConstraints"), "\\s+")[[1]] #trimSpace(
+
+        vars.lhs <- strsplit(attr(cmd, "noModifiers"), "\\s+")[[1]] #trimSpace(
         vars.rhs <- strsplit(cmd, "\\s+")[[1]] #trimSpace(
 
         cmd <- sapply(1:length(vars.lhs), function(v) paste(vars.lhs[v], "~~", vars.rhs[v]))
@@ -607,6 +676,10 @@ mplus2lavaan.modelSyntax <- function(syntax) {
     }
   }
 
+
+  #tack on constraint syntax, if included
+  lavaan.out <- c(lavaan.out, con_syntax)
+
   #for now, include a final trimSpace call since some arguments have leading/trailing space stripped.
   wrap <- paste(wrapAfterPlus(lavaan.out, width=90, exdent=5), collapse="\n") #trimSpace(
   return(wrap)
@@ -615,7 +688,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
 mplus2lavaan <- function(inpfile, run=TRUE) {
   stopifnot(length(inpfile) == 1L)
-  stopifnot(grepl("\\.inp$", inpfile))
+  stopifnot(grepl("\\.inp$", inpfile, ignore.case=TRUE))
   if (!file.exists(inpfile)) { stop("Could not find file: ", inpfile) }
 
   #for future consideration. For now, require a .inp file
@@ -646,7 +719,6 @@ mplus2lavaan <- function(inpfile, run=TRUE) {
   if(!is.null(mplus.inp$analysis$information)) {
     information <- tolower(mplus.inp$analysis$information)
   }
-
 
   estimator <- "default"
   if (!is.null(est <- mplus.inp$analysis$estimator)) {
