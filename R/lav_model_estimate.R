@@ -206,8 +206,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                   lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,
-                                  verbose        = verbose,
-                                  forcePD        = FALSE)
+                                  verbose        = verbose)
 
         # only for PML: divide by N (to speed up convergence)
         if(estimator == "PML") {
@@ -269,8 +268,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  lavcache       = lavcache,
                                  type           = "free",
                                  group.weight   = group.weight, ### check me!!
-                                 verbose        = verbose,
-                                 forcePD        = TRUE)
+                                 verbose        = verbose)
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")

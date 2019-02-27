@@ -6,7 +6,6 @@ lav_model_objective <- function(lavmodel       = NULL,
                                 lavdata        = NULL,
                                 lavcache       = NULL,
                                 verbose        = FALSE,
-                                forcePD        = TRUE,
                                 debug          = FALSE) {
 
     # state or final?
