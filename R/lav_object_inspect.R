@@ -599,7 +599,6 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                  lavcache       = object@Cache,
                                  type           = "free",
                                  verbose        = FALSE,
-                                 forcePD        = TRUE,
                                  group.weight   = TRUE,
                                  Delta          = NULL)
     } else if (what == "dx.all") {
@@ -610,7 +609,6 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                 lavcache       = object@Cache,
                                 type           = "allofthem",
                                 verbose        = FALSE,
-                                forcePD        = TRUE,
                                 group.weight   = TRUE,
                                 Delta          = NULL)
         names(GLIST) <- names(object@Model@GLIST)

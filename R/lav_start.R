@@ -662,6 +662,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
 
             # check
             COR <- start[this.cov.idx] / sqrt(var.lhs.value * var.rhs.value)
+            # NOTE: we treat this as an unconditional COR!
 
             if(!is.finite(COR)) {
                 # force simple values
@@ -672,8 +673,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 start[var.rhs.idx] <- 1
                 start[this.cov.idx] <- 0
             } else if(abs(COR) > 1) {
-                warning(
-  "lavaan WARNING: starting values imply a correlation larger than 1;\n",
+                txt <- paste("lavaan WARNING: starting values imply a correlation larger than 1;\n", 
 "                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
 
                 # three ways to fix it: rescale cov12, var1 or var2
@@ -681,26 +681,33 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 # we prefer a free parameter, and not user-specified
                 if(        lavpartable$free[this.cov.idx] > 0L &&
                    is.na(lavpartable$ustart[this.cov.idx])) {
+                    warning(txt)
                     start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
                 } else if( lavpartable$free[var.min.idx] > 0L &&
                            is.na(lavpartable$ustart[var.min.idx])) {
+                    warning(txt)
                     start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
                 } else if(        lavpartable$free[var.max.idx] > 0L &&
                           is.na(lavpartable$ustart[var.max.idx])) {
+                    warning(txt)
                     start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
                 # not found? try just a free parameter
                 } else if      (lavpartable$free[this.cov.idx] > 0L) {
+                    warning(txt)
                     start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
                 } else if(     lavpartable$free[var.min.idx] > 0L) {
+                    warning(txt)
                     start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
                 } else if(     lavpartable$free[var.max.idx] > 0L) {
+                    warning(txt)
                     start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
-                # nothing? abort
+                # nothing? abort or warn (and fail later...): warn
                 } else {
-                    stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
+                    warning(txt)
+                    #stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
+#"                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
                 }
             } # COR > 1
         } # cov.idx
