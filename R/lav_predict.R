@@ -20,8 +20,8 @@ function(object, newdata = NULL) {
 
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
-                       se = "none", label = TRUE, fsm = FALSE, level = 1L,
-                       optim.method = "bfgs", ETA = NULL) {
+                       se = "none", acov = "none", label = TRUE, fsm = FALSE,
+                       level = 1L, optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model
@@ -38,9 +38,11 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         type <- "yhat"
 
     # se?
+    if (acov != "none") se <- acov # ACOV implies SE
     if(se != "none") {
         if(is.logical(se) && se) {
             se <- "standard"
+            if (acov != "none") acov <- se # reverse-imply upstream
         }
         if(type != "lv") {
             stop("lavaan ERROR: standard errors only available if type = \"lv\"")
@@ -87,7 +89,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
         out <- lav_predict_eta(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
-                   lavimplied = lavimplied, se = se, level = level,
+                   lavimplied = lavimplied, se = se, acov = acov, level = level,
                    data.obs = data.obs, eXo = eXo, method = method,
                    fsm = fsm, optim.method = optim.method)
 
@@ -99,6 +101,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         # extract se here
         if(se != "none") {
             SE <- attr(out, "se")
+            if (acov != "none") ACOV <- attr(out, "acov")
         }
 
         # remove dummy lv? (removes attr!)
@@ -155,6 +158,25 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        }
                        ret
                    })
+            if (acov != "none") {
+              ACOV <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       # determine block
+                       if (lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                           bb <- (g - 1)*lavdata@nlevels + level
+                       }
+                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
+                                   lavmodel@ov.x.dummy.lv.idx[[bb]])
+                       ret <- ACOV[[g]]
+                       if (length(lv.idx) > 0L) {
+                           #FIXME: did I extrapolate this correctly?
+                           ret <- ACOV[[g]][-lv.idx, -lv.idx, drop=FALSE]
+                       }
+                       ret
+                   })
+
+            }
         }
 
         # label?
@@ -174,6 +196,11 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                     gg <- g
                 }
                 colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
+
+                if (acov != "none") {
+                  dimnames(ACOV[[g]]) <- list(lavpta$vnames$lv[[g]],
+                                              lavpta$vnames$lv[[g]])
+                }
             }
         }
 
@@ -227,6 +254,10 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
 
     if(se != "none") {
         attr(out, "se") <- SE
+        # return full sampling covariance matrix?
+        if (acov == "standard") {
+          attr(out, "acov") <- ACOV
+        }
     }
 
     out
@@ -243,7 +274,7 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
                             # options
                             method = "EBM",
                             fsm = FALSE,
-                            se = "none",
+                            se = "none", acov = "none",
                             level = 1L,
                             optim.method = "bfgs") {
 
@@ -269,14 +300,14 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
         if(method == "ebm") {
             out <- lav_predict_eta_normal(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavimplied = lavimplied, se = se, level = level,
-                       lavsamplestats = lavsamplestats,
+                       lavimplied = lavimplied, se = se, acov = acov,
+                       level = level, lavsamplestats = lavsamplestats,
                        data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else if(method == "ml") {
             out <- lav_predict_eta_bartlett(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavimplied = lavimplied, se = se, level = level,
-                       lavsamplestats = lavsamplestats,
+                       lavimplied = lavimplied, se = se, acov = acov,
+                       level = level, lavsamplestats = lavsamplestats,
                        data.obs = data.obs, eXo = eXo, fsm = fsm)
         } else {
             stop("lavaan ERROR: unkown method: ", method)
@@ -285,13 +316,13 @@ lav_predict_eta <- function(lavobject = NULL,  # for convenience
         if(method == "ebm") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se,
+                       lavsamplestats = lavsamplestats, se = se, acov = acov,
                        level = level, data.obs = data.obs, eXo = eXo,
                        ML = FALSE, optim.method = optim.method)
         } else if(method == "ml") {
             out <- lav_predict_eta_ebm_ml(lavobject = lavobject,
                        lavmodel = lavmodel, lavdata = lavdata,
-                       lavsamplestats = lavsamplestats, se = se,
+                       lavsamplestats = lavsamplestats, se = se, acov = acov,
                        level = level, data.obs = data.obs, eXo = eXo,
                        ML = TRUE, optim.method = optim.method)
         } else {
@@ -313,7 +344,7 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                                    lavimplied = NULL,
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
-                                   se = "none", level = 1L,
+                                   se = "none", acov = "none", level = 1L,
                                    fsm = FALSE) {
 
     # full object?
@@ -365,8 +396,14 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     if(fsm) {
         FSM <- vector("list", length = lavdata@ngroups)
     }
+
+    if (acov != "none") se <- acov # ACOV implies SE
     if(se != "none") {
         SE <- vector("list", length = lavdata@ngroups)
+        # return full sampling covariance matrix?
+        if (acov != "none") {
+          ACOV <- vector("list", length = lavdata@ngroups)
+        }
     }
 
     for(g in 1:lavdata@ngroups) {
@@ -441,6 +478,11 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
             tmp.d <- diag(tmp)
             tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
             SE[[g]] <- matrix(sqrt(tmp.d), nrow = 1L)
+
+            # return full sampling covariance matrix?
+            if (acov == "standard") {
+              ACOV[[g]] <- tmp
+            }
         }
 
         RES  <- sweep(data.obs.g,  MARGIN = 2L, STATS = EY.g,   FUN = "-")
@@ -464,6 +506,10 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
     }
     if(se != "none") {
         attr(FS, "se") <- SE
+        # return full sampling covariance matrix?
+        if (acov == "standard") {
+          attr(FS, "acov") <- ACOV
+        }
     }
 
     FS
@@ -490,7 +536,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                                      lavimplied = NULL,
                                      # optional new data
                                      data.obs = NULL, eXo = NULL,
-                                     se = "none", level = 1L,
+                                     se = "none", acov = "none", level = 1L,
                                      fsm = FALSE) {
 
     # full object?
@@ -545,8 +591,14 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     if(fsm) {
         FSM <- vector("list", length = lavdata@ngroups)
     }
+
+    if (acov != "none") se <- acov # ACOV implies SE
     if(se != "none") {
         SE <- vector("list", length = lavdata@ngroups)
+        # return full sampling covariance matrix?
+        if (acov != "none") {
+          ACOV <- vector("list", length = lavdata@ngroups)
+        }
     }
 
     for(g in 1:lavdata@ngroups) {
@@ -629,6 +681,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
             tmp.d <- diag(tmp)
             tmp.d[ tmp.d < 1e-05 ] <- as.numeric(NA)
             SE[[g]] <- matrix(sqrt(tmp.d), nrow = 1L)
+
+            # return full sampling covariance matrix?
+            if (acov == "standard") {
+              ACOV[[g]] <- tmp
+            }
         }
 
         RES  <- sweep(data.obs.g,  MARGIN = 2L, STATS = EY.g,   FUN = "-")
@@ -659,6 +716,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     }
     if(se != "none") {
         attr(FS, "se") <- SE
+        # return full sampling covariance matrix?
+        if (acov == "standard") {
+          attr(FS, "acov") <- ACOV
+        }
     }
 
     FS
@@ -671,7 +732,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
                                    lavsamplestats = NULL,
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
-                                   se = "none", level = 1L,
+                                   se = "none", acov = "none", level = 1L,
                                    ML = FALSE,
                                    optim.method = "bfgs") {
 
@@ -702,6 +763,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
     }
 
     # se?
+    if (acov != "none") se <- acov # ACOV implies SE
     if(se != "none") {
         warning("lavaan WARNING: standard errors are not available (yet) for the non-normal case")
     }

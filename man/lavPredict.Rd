@@ -10,7 +10,7 @@ function is NOT to predict future values of dependent variables as in the
 regression framework!}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
-           se = "none", label = TRUE, fsm = FALSE, level = 1L,
+           se = "none", acov = "none", label = TRUE, fsm = FALSE, level = 1L,
            optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
@@ -34,6 +34,8 @@ likelihood approach.}
 If \code{"standard"}, naive standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
 returned as an attribute.}
+\item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
+sampling covariance matrix of factor scores as an attribute.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
@@ -75,7 +77,10 @@ head(lavPredict(fit))
 head(lavPredict(fit, type = "ov"))
 
 
+## ------------------------------------------
 ## merge factor scores to original data.frame
+## ------------------------------------------
+
 idx <- lavInspect(fit, "case.idx")
 fscores <- lavPredict(fit)
 ## loop over factors
@@ -100,3 +105,10 @@ for (g in seq_along(fscores)) {
 head(HolzingerSwineford1939)
 
 }
+
+
+## -------------------------------------
+## Use factor scores in susequent models
+## -------------------------------------
+
+## see Examples in semTools package: ?plausibleValues
