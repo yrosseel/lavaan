@@ -1095,7 +1095,7 @@ lav_object_inspect_case_idx <- function(object, level = 1L,
 
     if (level == 2L) {
         # level-2 (cluster) IDs
-        OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.idx[[2]])
+        OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.id[[2]][ gg$cluster.idx[[2]] ])
         #FIXME: update if lavaan ever accepts 3-level or cross-classified models
 
     } else OUT <- object@Data@case.idx # level-1 (casewise) IDs
