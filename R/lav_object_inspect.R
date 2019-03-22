@@ -180,8 +180,17 @@ lavInspect.lavaan <- function(object,
         object@Data@group
     } else if(what == "cluster") {
       object@Data@cluster
+    } else if(what == "cluster.idx") {
+        lav_object_inspect_case_idx(object, level = 2L,
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "nlevels") {
       object@Data@nlevels
+    } else if(what == "nclusters") {
+        lav_object_inspect_ncluster(object, sizes = FALSE,
+              drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.size") {
+        lav_object_inspect_ncluster(object, sizes = TRUE,
+              drop.list.single.group = drop.list.single.group)
     } else if(what == "ordered") {
         object@Data@ordered
     } else if(what == "group.label") {
@@ -1075,11 +1084,21 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
     OUT
 }
 
-lav_object_inspect_case_idx <- function(object,
+lav_object_inspect_case_idx <- function(object, level = 1L,
                                         drop.list.single.group = FALSE) {
+    #FIXME: if lavaan every allows 3-level or cross-classifed models,
+    #      "level=" should be a character indicating the clustering variable
 
     G <- object@Data@ngroups
-    OUT <- object@Data@case.idx
+    nlevels <- object@Data@nlevels
+    if (nlevels == 1L) level <- 1L # if what="cluster.idx" for single-level model
+
+    if (level == 2L) {
+        # level-2 (cluster) IDs
+        OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.id[[2]][ gg$cluster.idx[[2]] ])
+        #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+
+    } else OUT <- object@Data@case.idx # level-1 (casewise) IDs
 
     if(G == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
@@ -1088,10 +1107,36 @@ lav_object_inspect_case_idx <- function(object,
             names(OUT) <- unlist(object@Data@group.label)
         }
     }
-
     OUT
 }
 
+# count the number of clusters, or obtain N within each cluster
+lav_object_inspect_ncluster <- function(object, sizes = FALSE, #level = 2L,
+                                        drop.list.single.group = FALSE) {
+    G <- object@Data@ngroups
+    nlevels <- object@Data@nlevels
+
+    if (nlevels == 1L) {
+      # single-level model, return sample size(s) or count 1 cluster per group
+      OUT <- if (sizes) unlist(object@Data@nobs) else rep(1L, G)
+
+    } else if (sizes) {
+      # for each group, a vector of cluster sizes
+      OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.size[[2]])
+      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+
+      if (G == 1L && drop.list.single.group) OUT <- OUT[[1]]
+
+    } else {
+      # number of clusters in each group
+      OUT <- sapply(object@Data@Lp, function(gg) gg$nclusters[[2]])
+      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+    }
+
+    # assign group names, if applicable
+    if (G > 1L) names(OUT) <- unlist(object@Data@group.label)
+    OUT
+}
 
 lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {

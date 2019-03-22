@@ -95,6 +95,8 @@ lavListInspect <- function(object,
         object@Data@ngroups
     } else if(what == "group") {
         object@Data@group
+    } else if(what == "nlevels") {
+        object@Data@nlevels
     } else if(what == "cluster") {
         object@Data@cluster
     } else if(what == "ordered") {
