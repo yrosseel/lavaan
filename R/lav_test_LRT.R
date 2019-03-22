@@ -82,7 +82,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     ndf <- sapply(mods, function(x) x@test[[1]]$df)
     mods <- mods[order(ndf)]
 
-    # here come the checks
+    # here come the checks -- eventually, an option may skip this
     if(TRUE) {
         # 1. same set of observed variables?
         ov.names <- lapply(mods, function(x) { sort(lavNames(x)) })

@@ -104,11 +104,9 @@ for (g in seq_along(fscores)) {
 }
 head(HolzingerSwineford1939)
 
-}
-
-
 ## -------------------------------------
 ## Use factor scores in susequent models
 ## -------------------------------------
 
 ## see Examples in semTools package: ?plausibleValues
+}
