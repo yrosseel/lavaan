@@ -1161,9 +1161,7 @@ lav_object_inspect_cluster_info <- function(object, what = "cluster.size",
             OUT <- as.list(rep(1L, G))
         } else if(what %in% c("cluster.size", "cluster.sizes")) {
             OUT <- object@Data@nobs
-        } else if(what == "cluster.label") {
-            OUT <- object@Data@case.idx
-        } else if(what == "cluster.idx") {
+        } else if(what %in% c("cluster.idx", "cluster.label")) {
             # everybody belongs to cluster 1
             OUT <- lapply(seq_len(G),
                           function(gg) rep(1L, object@Data@nobs[[gg]]))
