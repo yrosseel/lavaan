@@ -1,8 +1,8 @@
 # compute the jacobian: dtheta_2/dtheta_1:
 #
 # theta_2: - in the rows
-#          - the croon corrections, expressed as 
-#              1) scaled offsets (scoffset), and 
+#          - the croon corrections, expressed as
+#              1) scaled offsets (scoffset), and
 #              2) scaling factors
 # theta_1: - in the columns
 #          - the free parameters of the measurement model
@@ -31,7 +31,7 @@ lav_fsr_delta21 <- function(object, FSM = NULL) {
 
     # Delta per group (or block?)
     Delta <- vector("list", length = lavmodel@ngroups)
-   
+
     for(g in 1:lavmodel@ngroups) {
 
         fsm <- FSM[[g]]
@@ -65,10 +65,10 @@ lav_fsr_delta21 <- function(object, FSM = NULL) {
                 delta <- rbind(delta.scoffset, delta.scale)
 
                 Delta.group[, x.el.idx[[mm]]] <- delta[, m.el.idx[[mm]]]
-            
+
             } else if(mname == "theta") {
 
-                dT <- lav_matrix_vec( (t(AL.inv) %*% fsm) %x% 
+                dT <- lav_matrix_vec( (t(AL.inv) %*% fsm) %x%
                                       (t(fsm) %*% AL.inv) )
                 delta.scoffset <- dT
                 delta.scale    <- matrix(0, nrow = nrow.scale,
@@ -115,7 +115,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
         for(mm in seq_len(nMM)) {
             lvinfo <- LVINFO[[g]][[mm]]
             lv.names <- lvinfo$lv.names
- 
+
             nfac <- length(lv.names)
             if(nfac > 1L) {
                 stop("lavaan ERROR: more than 1 factor in measurement block")
@@ -125,7 +125,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
             ind <- paste(LV, ".si", sep = "")
             scoffset <- lvinfo$scoffset[1,1]
             scale    <- lvinfo$scale[1,1]
-               
+
             lhs <- c(lhs, LV, ind, ind, ind)
              op <- c( op, "=~", "~~", "~*~", "~1")
             rhs <- c(rhs, ind, ind, ind, "")
@@ -136,7 +136,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
           group <- c(group, rep(g, 4L))
           start <- c(start, 1, scoffset, scale, 0)
             est <- c(est,  1, scoffset, scale, 0)
-            
+
         }
     }
 

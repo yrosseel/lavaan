@@ -63,6 +63,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 auto.cov.y         = FALSE,
                 auto.th            = FALSE,
                 auto.delta         = FALSE,
+                auto.efa           = FALSE,
 
                 # seat belts
                 safe.ov.var.ub     = FALSE,

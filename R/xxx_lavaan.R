@@ -521,6 +521,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       auto.cov.y       = lavoptions$auto.cov.y,
                       auto.th          = lavoptions$auto.th,
                       auto.delta       = lavoptions$auto.delta,
+                      auto.efa         = lavoptions$auto.efa,
                       group.equal      = lavoptions$group.equal,
                       group.partial    = lavoptions$group.partial,
                       group.w.free     = lavoptions$group.w.free,
@@ -1398,6 +1399,7 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
     mc$auto.delta      = TRUE
+    mc$auto.efa        = TRUE
 
     # call mother function
     mc[[1L]] <- quote(lavaan::lavaan)
@@ -1464,6 +1466,7 @@ growth <- function(# user-specified model: can be syntax, parameter Table
     mc$auto.cov.y      = TRUE
     mc$auto.th         = TRUE
     mc$auto.delta      = TRUE
+    mc$auto.efa        = TRUE
 
     # call mother function
     mc[[1L]] <- quote(lavaan::lavaan)

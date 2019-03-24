@@ -375,8 +375,8 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
             }
         } else {
             MP   <- lavdata@Mp
-        }                            
-    } 
+        }
+    }
 
     LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
     Sigma.hat <- lavimplied$cov
@@ -704,7 +704,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
                 # invert Sigma (Sigma_22, observed part only) for this pattern
                 Sigma_22.inv <- try(lav_matrix_symmetric_inverse_update(S.inv =
-                                    Sigma.inv.g, rm.idx = na.idx, 
+                                    Sigma.inv.g, rm.idx = na.idx,
                                     logdet = FALSE), silent = TRUE)
                 if(inherits(Sigma_22.inv, "try-error")) {
                     stop("lavaan ERROR: Sigma_22.inv cannot be inverted")

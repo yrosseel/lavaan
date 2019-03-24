@@ -12,6 +12,7 @@
 # - 14 Jan 2014: merge 02lavaanUser.R with lav_partable.R
 #                move syntax-based code to lav_syntax.R
 # - 26 April 2016: handle multiple 'blocks' (levels, classes, groups, ...)
+# - 24 March 2019: handle efa sets
 
 lavaanify <- lavParTable <- function(
 
@@ -35,6 +36,7 @@ lavaanify <- lavParTable <- function(
                       auto.cov.y       = FALSE,
                       auto.th          = FALSE,
                       auto.delta       = FALSE,
+                      auto.efa         = FALSE,
 
                       varTable         = NULL,
                       ngroups          = 1L,
@@ -107,6 +109,7 @@ lavaanify <- lavParTable <- function(
             auto.cov.y      = TRUE
             auto.th         = TRUE
             auto.delta      = TRUE
+            auto.efa        = TRUE
         } else
 
         if(model.type == "growth") {
@@ -120,6 +123,7 @@ lavaanify <- lavParTable <- function(
             auto.cov.y      = TRUE
             auto.th         = TRUE
             auto.delta      = TRUE
+            auto.efa        = TRUE
         }
     }
 
@@ -201,7 +205,7 @@ lavaanify <- lavParTable <- function(
                 auto.fix.single = auto.fix.single,
                 auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
                 auto.cov.y = auto.cov.y, auto.th = auto.th,
-                auto.delta = auto.delta,
+                auto.delta = auto.delta, auto.efa = auto.efa,
                 varTable = varTable, group.equal = NULL,
                 group.w.free = group.w.free, ngroups = 1L)
             LIST.block <- as.data.frame(LIST.block, stringsAsFactors = FALSE)
@@ -243,7 +247,7 @@ lavaanify <- lavParTable <- function(
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
             auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
             auto.cov.y = auto.cov.y, auto.th = auto.th,
-            auto.delta = auto.delta,
+            auto.delta = auto.delta, auto.efa = auto.efa,
             varTable = varTable, group.equal = group.equal,
             group.w.free = group.w.free,
             ngroups = ngroups)
@@ -310,6 +314,7 @@ lavaanify <- lavParTable <- function(
             MOD.upper <- MOD[[el]]$upper
             MOD.label <- MOD[[el]]$label
             MOD.prior <- MOD[[el]]$prior
+            MOD.efa   <- MOD[[el]]$efa
 
             # check for single argument if multiple groups
             if(ngroups > 1L && length(idx) > 1L) {
@@ -320,6 +325,7 @@ lavaanify <- lavParTable <- function(
                 if(length(MOD.lower) == 1L) MOD.lower <- rep(MOD.lower, ngroups)
                 if(length(MOD.upper) == 1L) MOD.upper <- rep(MOD.upper, ngroups)
                 if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
+                if(length(MOD.efa)   == 1L) MOD.efa   <- rep(MOD.efa,   ngroups)
                 # B) here we do NOT! otherwise, it would imply an equality
                 #                    constraint...
                 #    except if group.equal="loadings"!
@@ -339,6 +345,7 @@ lavaanify <- lavParTable <- function(
                 (!is.null(MOD.lower) && nidx != length(MOD.lower)) ||
                 (!is.null(MOD.upper) && nidx != length(MOD.upper)) ||
                 (!is.null(MOD.prior) && nidx != length(MOD.prior)) ||
+                (!is.null(MOD.efa)   && nidx != length(MOD.efa))   ||
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
                 stop("lavaan ERROR: wrong number of arguments in modifier (",
@@ -369,6 +376,13 @@ lavaanify <- lavParTable <- function(
                     LIST$prior <- character( length(LIST$lhs) )
                 }
                 LIST$prior[idx] <- MOD.prior
+            }
+            if(!is.null(MOD.efa)) {
+                # do we already have a `efa' column? if not, create one
+                if(is.null(LIST$efa)) {
+                    LIST$efa <- character( length(LIST$lhs) )
+                }
+                LIST$efa[idx] <- MOD.efa
             }
             if(!is.null(MOD.lower)) {
                 # do we already have a `lower' column? if not, create one
@@ -549,6 +563,69 @@ lavaanify <- lavParTable <- function(
     # put lhs of := elements in label column
     def.idx <- which(LIST$op == ":=")
     LIST$label[def.idx] <- LIST$lhs[def.idx]
+
+
+    # handle EFA equality constraints
+    if(auto.efa && !is.null(LIST$efa)) {
+        # for each set, for each block
+        nblocks <- lav_partable_nblocks(LIST)
+        set.names <- unique(LIST$efa[ nchar(LIST$efa) > 0])
+        nsets <- length(set.names)
+
+        plabel <- character(0L)
+        for(b in seq_len(nblocks)) {
+            for(s in seq_len(nsets)) {
+                # lv's for this block/set
+                lv.nam.efa <- unique(LIST$lhs[LIST$op == "=~" &
+                                              LIST$block == b &
+                                              LIST$efa == set.names[s]])
+                if(length(lv.nam.efa) == 1L) {
+                    # nothing to do (warn?)
+                    next
+                }
+
+                # 1. echelon pattern
+                nfac <- length(lv.nam.efa)
+                for(f in seq_len(nfac)) {
+                    if(f == 1L) {
+                        next
+                    }
+                    nzero <- (f - 1L)
+                    ind.idx <- which(LIST$op == "=~" &
+                                     LIST$block == b &
+                                     LIST$lhs %in% lv.nam.efa[f])
+                    if(length(ind.idx) < nzero) {
+                        stop("lavaan ERROR: efa factor ", lv.nam.efa[f],
+                             " has not enough indicators for echelon pattern")
+                    }
+
+                    # add these plabels
+                    plabel <- c(plabel, LIST$plabel[ind.idx[seq_len(nzero)]])
+                }
+
+                # 2. covariances constrained to zero
+                cov.idx <- which(LIST$op == "~~" &
+                                 LIST$block == b &
+                                 LIST$lhs %in% lv.nam.efa &
+                                 LIST$rhs %in% lv.nam.efa &
+                                 LIST$lhs != LIST$rhs)
+                plabel <- c(plabel, LIST$plabel[cov.idx])
+
+            } # sets
+        } # blocks
+
+        # add zero constraints
+        nel <- length(plabel)
+        TMP <- list()
+        TMP$lhs    <- plabel
+        TMP$op     <- rep("==", nel)
+        TMP$rhs    <- rep(0,    nel)
+        TMP$block  <- rep(0L,   nel)
+        TMP$user   <- rep(2L,   nel)
+        TMP$ustart <- rep(as.numeric(NA), nel)
+
+        LIST <- lav_partable_merge(LIST, TMP)
+    }
 
 
     if(debug) {

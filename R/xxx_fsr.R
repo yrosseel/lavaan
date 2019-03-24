@@ -247,7 +247,7 @@ fsr <- function(model      = NULL,
         LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
         THETA  <- computeTHETA(fit.block@Model)  # FIXME: remove not used ov?
         PSI <- computeVETA(fit.block@Model)
- 
+
         # if ngroups = 1, make list again
         if(ngroups == 1L) {
             # because lavPredict() drops the list
@@ -277,14 +277,14 @@ fsr <- function(model      = NULL,
 
         # Delta.21: list per group
         Delta.21 <- lav_fsr_delta21(fit.block, FSM)
-        
+
         # vcov
         Sigma1.block <- vcov(fit.block)
         tmp <- matrix(0, nrow(Delta.21[[1]]), nrow(Delta.21[[1]]))
         lavsamplestats <- fit.block@SampleStats
         for(g in 1:ngroups) {
             fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
-            tmp <- 
+            tmp <-
                tmp + fg * (Delta.21[[g]] %*% Sigma1.block %*% t(Delta.21[[g]]))
         }
         Sigma2.block[[b]] <- tmp
@@ -335,7 +335,7 @@ fsr <- function(model      = NULL,
 
         if(lavoptions$meanstructure) {
             FS.MEAN[[g]] <- colMeans(Y.g)
-        } 
+        }
 
         # STEP 1b: if using `Croon' method: correct COV matrix:
         if(fsr.method %in% c("croon")) {
@@ -343,13 +343,13 @@ fsr <- function(model      = NULL,
             scoffset  <- lav_matrix_bdiag(lapply(LVINFO[[g]],"[[","scoffset"))
             scale.inv <- lav_matrix_bdiag(lapply(LVINFO[[g]],"[[","scale.inv"))
 
-            SCOFFSET <- matrix(0, nrow = length(struc.names), 
+            SCOFFSET <- matrix(0, nrow = length(struc.names),
                                   ncol = length(struc.names))
             SCOFFSET[struc.lv.idx, struc.lv.idx] <- scoffset
 
             SCALE.INV <- diag(length(struc.names))
             SCALE.INV[struc.lv.idx, struc.lv.idx] <- scale.inv
-      
+
             FSR.COV[[g]] <- SCALE.INV %*% FS.COV[[g]] %*% SCALE.INV - SCOFFSET
 
         } else if(fsr.method == "simple") {
@@ -372,7 +372,7 @@ fsr <- function(model      = NULL,
         rownames(FSR.COV[[g]]) <- colnames(FSR.COV[[g]]) <- struc.names
         rownames(FSR.COV2[[g]]) <- colnames(FSR.COV2[[g]]) <- struc.names
         rownames(FSR.COV2[[g]])[struc.lv.idx] <-
-            colnames(FSR.COV2[[g]])[struc.lv.idx] <- 
+            colnames(FSR.COV2[[g]])[struc.lv.idx] <-
                 paste(lv.names, ".si", sep = "")
 
         # check if FSR.COV is positive definite for all groups
@@ -542,7 +542,7 @@ fsr <- function(model      = NULL,
     } else if(output == "lvinfo") {
         out <- LVINFO
     } else if(output %in% c("scores", "f.scores", "fs.scores")) {
-        out <- Y 
+        out <- Y
     } else if(output %in% c("FSR.COV", "fsr.cov", "croon", "cov.croon",
                             "croon.cov", "COV", "cov")) {
         out <- FSR.COV

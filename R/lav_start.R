@@ -673,7 +673,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
                 start[var.rhs.idx] <- 1
                 start[this.cov.idx] <- 0
             } else if(abs(COR) > 1) {
-                txt <- paste("lavaan WARNING: starting values imply a correlation larger than 1;\n", 
+                txt <- paste("lavaan WARNING: starting values imply a correlation larger than 1;\n",
 "                  variables involved are: ", var.lhs, " ", var.rhs, block.txt)
 
                 # three ways to fix it: rescale cov12, var1 or var2

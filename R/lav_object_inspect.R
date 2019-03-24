@@ -195,11 +195,11 @@ lavInspect.lavaan <- function(object,
             what = "cluster.size",
             drop.list.single.group = drop.list.single.group)
     } else if(what == "cluster.id") {
-        lav_object_inspect_cluster_info(object, level = 2L, 
+        lav_object_inspect_cluster_info(object, level = 2L,
             what = "cluster.id",
             drop.list.single.group = drop.list.single.group)
     } else if(what == "cluster.idx") {
-        lav_object_inspect_cluster_info(object, level = 2L, 
+        lav_object_inspect_cluster_info(object, level = 2L,
             what = "cluster.idx",
             drop.list.single.group = drop.list.single.group)
     } else if(what == "cluster.label") {
@@ -1106,7 +1106,7 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
 lav_object_inspect_case_idx <- function(object,
                                         drop.list.single.group = FALSE) {
     G <- object@Data@ngroups
-    
+
     OUT <- object@Data@case.idx
 
     if(G == 1L && drop.list.single.group) {
@@ -1117,7 +1117,7 @@ lav_object_inspect_case_idx <- function(object,
         }
     }
 
-    OUT    
+    OUT
 }
 
 #lav_object_inspect_case_idx <- function(object, level = 1L,
@@ -1202,7 +1202,7 @@ lav_object_inspect_cluster_info <- function(object, what = "cluster.size",
 
     OUT
 }
-                                    
+
 
 # count the number of clusters, or obtain N within each cluster
 #lav_object_inspect_ncluster <- function(object, sizes = FALSE, #level = 2L,

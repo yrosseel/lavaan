@@ -22,7 +22,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
 
     # bail out here, if m == 0 (but we should catch this earlier)
     if(m < 1L) {
-        stop("lavaan ERROR: can not compute (scaled) difference test when the degrees of freedom (df) are the same for both models. Df model 1 = ", r1, 
+        stop("lavaan ERROR: can not compute (scaled) difference test when the degrees of freedom (df) are the same for both models. Df model 1 = ", r1,
              ", Df model 2 = ", r0, "\n")
     }
 

@@ -78,6 +78,11 @@ Model features (only available for the \code{lavaan()} function):
       variables are included in the model and set free.}
     \item{\code{auto.delta}:}{If \code{TRUE}, response scaling parameters 
       for limited dependent variables are included in the model and set free.}
+    \item{\code{auto.efa}:}{If \code{TRUE}, the necessary constraints are
+      imposed to make the (unrotated) exploratory factor analysis blocks
+      identifiable: for each block, factor variances are set to 1, factor
+      covariances are constrained to be zero, and factor loadings are
+      constrained to follow an echelon pattern.}
 }
 
 Data options:

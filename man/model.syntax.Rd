@@ -18,7 +18,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
-    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
+    auto.delta = FALSE, auto.efa = FALSE, 
+    varTable = NULL, ngroups = 1L, group.equal = NULL, 
     group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
@@ -28,7 +29,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
-    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL,
+    auto.delta = FALSE, auto.efa = FALSE,
+    varTable = NULL, ngroups = 1L, group.equal = NULL,
     group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
@@ -88,6 +90,11 @@ the model both for both observed and latent variables.}
     are included in the model and set free.}
 \item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
+\item{auto.efa}{If \code{TRUE}, the necessary constraints are
+    imposed to make the (unrotated) exploratory factor analysis blocks
+    identifiable: for each block, factor variances are set to 1, factor
+    covariances are constrained to be zero, and factor loadings are
+    constrained to follow an echelon pattern.}
 \item{varTable}{The variable table containing information about the
     observed variables in the model.}
 \item{ngroups}{The number of (independent) groups.}
