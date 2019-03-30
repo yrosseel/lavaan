@@ -569,7 +569,7 @@ lavaanify <- lavParTable <- function(
     if(auto.efa && !is.null(LIST$efa)) {
         # for each set, for each block
         nblocks <- lav_partable_nblocks(LIST)
-        set.names <- unique(LIST$efa[ nchar(LIST$efa) > 0])
+        set.names <- lav_partable_efa_values(LIST)
         nsets <- length(set.names)
 
         plabel <- character(0L)

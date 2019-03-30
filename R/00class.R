@@ -151,6 +151,9 @@ setClass("lavModel",          # MATRIX representation of the sem model
         ov.y.dummy.ov.idx="list",
         ov.y.dummy.lv.idx="list",
 
+        ov.efa.idx="list",
+        lv.efa.idx="list",
+
         estimator="character"
     )
 )

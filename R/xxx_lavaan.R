@@ -287,6 +287,28 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # sanity check ordered argument (just in case, add lhs variables names)
+    if(!is.null(ordered)) { # new in 0.6-4
+        if(is.logical(ordered) && ordered) {  # ordered = TRUE
+            # assume the user means: ordered = names(Data)
+            ordered <- lavNames(FLAT, "ov")
+        } else if(is.logical(ordered) && !ordered) {
+            ordered <- character(0L)
+        } else if(!is.character(ordered)) {
+            stop("lavaan ERROR: ordered argument must be a character vector")
+        } else {
+            # check if all names in "ordered" occur in the dataset?
+            if(!is.null(data)) {
+                missing.idx <- which(!ordered %in% names(data))
+                if(length(missing.idx) > 0L) {
+                    warning("lavaan WARNING: ordered variable(s): ",
+                         paste(ordered[missing.idx], collapse = " "),
+                         "\n  could not be found in the data and will be ignored")
+                }
+            }
+        }
+    }
+    # add the variable names that were treated as ordinal
+    # in the model syntax
     ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
 
 
@@ -1071,12 +1093,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$optim <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-
-
-
-
-
-
+    #########################################
+    #### 10b. rotate efa blocks (if any) ####
+    #########################################
+    if(!is.null(lavpartable$efa)) {
+        #lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
+        #                                 lavoptions = lavoptions)
+    }
 
     ####################################
     #### 11. lavimplied + lavloglik ####
@@ -1097,16 +1120,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     timing$implied <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
-
-
-
-
-
-
-
-
-
-
 
 
     ###############################

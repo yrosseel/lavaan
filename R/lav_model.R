@@ -97,6 +97,8 @@ lav_model <- function(lavpartable      = NULL,
     ov.x.dummy.lv.idx <- vector(mode="list", length=nblocks)
     ov.y.dummy.ov.idx <- vector(mode="list", length=nblocks)
     ov.y.dummy.lv.idx <- vector(mode="list", length=nblocks)
+    ov.efa.idx        <- vector(mode="list", length=nblocks)
+    lv.efa.idx        <- vector(mode="list", length=nblocks)
 
     offset <- 0L
     for(g in 1:nblocks) {
@@ -268,6 +270,12 @@ lav_model <- function(lavpartable      = NULL,
                                         lavpartable$op == "~~" &
                                         lavpartable$lhs == lavpartable$rhs ]
 
+    # efa related stuf
+    #efa.sets <- lav_partable_efa_values(fit@ParTable)
+    #if(length(efa.sets) > 1L) {
+    #    # TODO
+    #}
+
     Model <- new("lavModel",
                  GLIST=GLIST,
                  dimNames=dimNames,
@@ -330,6 +338,9 @@ lav_model <- function(lavpartable      = NULL,
                  ov.x.dummy.lv.idx   = ov.x.dummy.lv.idx,
                  ov.y.dummy.ov.idx   = ov.y.dummy.ov.idx,
                  ov.y.dummy.lv.idx   = ov.y.dummy.lv.idx,
+
+                 ov.efa.idx          = ov.efa.idx,
+                 lv.efa.idx          = lv.efa.idx,
 
                  estimator           = lavoptions$estimator)
 
