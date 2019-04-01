@@ -53,6 +53,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 conditional.x      = "default", # or FALSE?
                 fixed.x            = "default", # or FALSE?
                 orthogonal         = FALSE,
+                orthogonal.x       = FALSE,
+                orthogonal.y       = FALSE,
                 std.lv             = FALSE,
                 parameterization   = "default",
 

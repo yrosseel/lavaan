@@ -13,7 +13,8 @@ function \code{lavaanify} turns it into a table that represents the full
 model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
+    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
+    orthogonal.x = FALSE, std.lv = FALSE, 
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
@@ -24,7 +25,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
+    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
+    orthogonal.x = FALSE, std.lv = FALSE,
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
@@ -51,8 +53,12 @@ the model both for both observed and latent variables.}
     are fixed to zero.}
 \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
-\item{orthogonal}{If \code{TRUE}, the exogenous latent variables
-    are assumed to be uncorrelated.}
+\item{orthogonal}{If \code{TRUE}, all covariances among
+   latent variables are set to zero.}
+\item{orthogonal.y}{If \code{TRUE}, all covariances among
+   endogenous latent variables only are set to zero.}
+\item{orthogonal.x}{If \code{TRUE}, all covariances among
+   exogenous latent variables only are set to zero.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the

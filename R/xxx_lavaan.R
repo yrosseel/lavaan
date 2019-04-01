@@ -532,6 +532,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       int.ov.free      = lavoptions$int.ov.free,
                       int.lv.free      = lavoptions$int.lv.free,
                       orthogonal       = lavoptions$orthogonal,
+                      orthogonal.x     = lavoptions$orthogonal.x,
+                      orthogonal.y     = lavoptions$orthogonal.y,
                       conditional.x    = lavoptions$conditional.x,
                       fixed.x          = lavoptions$fixed.x,
                       std.lv           = lavoptions$std.lv,

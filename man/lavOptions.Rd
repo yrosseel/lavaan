@@ -49,6 +49,10 @@ Model features (always available):
       option.}
     \item{\code{orthogonal}:}{If \code{TRUE}, all covariances among
       latent variables are set to zero.}
+    \item{\code{orthogonal.y}:}{If \code{TRUE}, all covariances among
+      endogenous latent variables only are set to zero.}
+    \item{\code{orthogonal.x}:}{If \code{TRUE}, all covariances among
+      exogenous latent variables only are set to zero.}
     \item{\code{std.lv}:}{If \code{TRUE}, the metric of each latent variable 
       is determined by fixing their (residual) variances to 1.0. If 
       \code{FALSE}, the metric of each latent variable is determined by fixing 

@@ -6,6 +6,8 @@ lav_partable_flat <- function(FLAT = NULL,
                               int.ov.free      = FALSE,
                               int.lv.free      = FALSE,
                               orthogonal       = FALSE,
+                              orthogonal.y     = FALSE,
+                              orthogonal.x     = FALSE,
                               std.lv           = FALSE,
                               conditional.x    = FALSE,
                               fixed.x          = TRUE,
@@ -354,16 +356,37 @@ lav_partable_flat <- function(FLAT = NULL,
         }
     }
 
-    # 3. orthogonal=TRUE?
+    # 3. orthogonal = TRUE?
     if(orthogonal) {
-        # FIXME: only lv.x.idx for now
         lv.cov.idx <- which(op == "~~" &
                             lhs %in% lv.names &
+                            rhs %in% lv.names &
                             lhs != rhs &
                             user == 0L)
         ustart[lv.cov.idx] <- 0.0
           free[lv.cov.idx] <- 0L
     }
+    # 3b. orthogonal.y = TRUE?
+    if(orthogonal.y) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.y &
+                            rhs %in% lv.names.y &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+    # 3c. orthogonal.x = TRUE?
+    if(orthogonal.x) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.x &
+                            rhs %in% lv.names.x &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+    
 
     # 4. intercepts
     if(meanstructure) {
