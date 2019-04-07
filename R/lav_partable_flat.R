@@ -386,7 +386,7 @@ lav_partable_flat <- function(FLAT = NULL,
         ustart[lv.cov.idx] <- 0.0
           free[lv.cov.idx] <- 0L
     }
-    
+
 
     # 4. intercepts
     if(meanstructure) {
