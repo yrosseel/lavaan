@@ -175,9 +175,15 @@ lav_partable_flat <- function(FLAT = NULL,
 
     # e) efa latent variables COVARIANCES:
     if(auto.efa && length(lv.names.efa) > 1L) {
-        tmp <- utils::combn(lv.names.efa, 2)
-        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
-        rhs <- c(rhs, tmp[2,])
+        efa.values <- lav_partable_efa_values(FLAT)
+        for(set in efa.values) {
+            # correlated factors within each set
+            this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
+                                            FLAT$efa == set ])
+            tmp <- utils::combn(this.set.lv, 2)
+            lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+            rhs <- c(rhs, tmp[2,])
+        }
     }
 
     # create 'op' (thresholds come first, then variances)

@@ -2,16 +2,26 @@
 # initial version YR 3 April 2019
 
 # generate random orthogonal rotation matrix
-lav_matrix_rotate_gen <- function(M = 10L) {
+lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
+
+    # catch M=1
+    if(M == 1L) {
+        return(matrix(1, 1, 1))
+    }
 
     # create random normal matrix
     tmp <- matrix(rnorm(M*M), nrow = M, ncol = M)
 
-    # use QR decomposition
-    qr.out <- qr(tmp)
+    if(orthogonal) {
+        # use QR decomposition
+        qr.out <- qr(tmp)
 
-    # extra 'Q' part
-    out <- qr.Q(qr.out)
+        # extra 'Q' part
+        out <- qr.Q(qr.out)
+    } else {
+        # just normalize *columns* of tmp -> crossprod(out) has 1 on diagonal
+        out <- t( t(tmp) / sqrt(diag(crossprod(tmp))) )
+    }
 
     out
 }
@@ -52,12 +62,15 @@ lav_matrix_rotate_check <- function(ROT = NULL, orthogonal = TRUE,
 
 # get weights vector needed to weight the rows using Kaiser normalization
 lav_matrix_rotate_kaiser_weights <- function(A = NULL) {
-    1/sqrt( rowSums(A * A) )
+    1 / sqrt( rowSums(A * A) )
 }
 
 # get weights vector needed to weight the rows using Cureton & Mulaik (1975)
 # standardization
 # see also Browne (2001) page 128-129
+#
+# Note: the 'final' weights are mutliplied by the Kaiser weights (see CEFA)
+#
 lav_matrix_rotate_cm_weights <- function(A = NULL) {
 
     P <- nrow(A); M <- ncol(A)
@@ -78,7 +91,7 @@ lav_matrix_rotate_cm_weights <- function(A = NULL) {
     tmp <- (acos.m.sqrt.inv - acos(a.star))/(acos.m.sqrt.inv - delta) * (pi/2)
 
     # add constant (see Cureton & Mulaik, 1975, page 187)
-    cm <- cos(tmp)*cos(tmp) + 0.001
+    cm <- cos(tmp) * cos(tmp) + 0.001
 
     # final weights = weighted by Kaiser weights
     cm * Kaiser.weights
@@ -87,11 +100,11 @@ lav_matrix_rotate_cm_weights <- function(A = NULL) {
 # high-level function to rotate a single matrix 'A'
 lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               orthogonal  = FALSE,     # default is oblique
-                              method      = "quartimin",
-                              method.args = list(),    # rotation method args
+                              method      = "geomin",  # default rot method
+                              method.args = list(epsilon = 0.01), # method args
                               ROT         = NULL,      # initial rotation matrix
                               ROT.check   = TRUE,      # check if init ROT is ok
-                              rstarts     = 0L,        # number of random starts
+                              rstarts     = 100L,      # number of random starts
                               row.weights = "default", # row weighting
                               std.ov      = FALSE,     # rescale ov
                               ov.var      = NULL,      # ov variances
@@ -208,7 +221,31 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # multiple random starts?
     if(rstarts > 0L) {
-        # TODO
+        REP <- sapply(seq_len(rstarts), function(rep) {
+            # random start
+            init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
+ 
+            # Gradient Projection Algorithm
+            if(algorithm == "gpa") {
+                ROT <- lav_matrix_rotate_gpa(A = A, orthogonal = orthogonal,
+                                             ROT = init.ROT,
+                                             method.fname = method.fname,
+                                             method.args  = method.args,
+                                             verbose = FALSE,
+                                             frob.tol = frob.tol,
+                                             max.iter = max.iter)
+                info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
+                res <- c(info$method.value, lav_matrix_vec(ROT))
+            }
+            if(verbose) {
+                cat("rstart = ", sprintf("%4d", rep), 
+                    " crit = ", sprintf("%17.15f", res[1]), "\n")
+            }
+            res
+        })
+        best.idx <- which.min(REP[1,])
+        ROT <- matrix(REP[-1, best.idx], nrow = M, ncol = M)
+        info <- list(method.value = REP[1, best.idx])
     } else {
         # initial rotation matrix
         ROT <- diag(M)
@@ -259,6 +296,8 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT,
                 orthogonal = orthogonal, method = method,
                 method.args = method.args, row.weights = row.weights)
+
+    # add method info
     res <- c(res, info)
 
     res
