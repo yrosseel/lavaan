@@ -1041,7 +1041,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                     lavoptions      = lavoptions,
                                     lavcache        = lavcache)
         }
-        lavmodel <- lav_model_set_parameters(lavmodel, x = x)
+
+        # store parameters in lavmodel
+        lavmodel <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
+
         # store parameters in @ParTable$est
         lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
                                                     type = "user", extra = TRUE)
@@ -1095,13 +1098,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$optim <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-    #########################################
-    #### 10b. rotate efa blocks (if any) ####
-    #########################################
-    if(!is.null(lavpartable$efa)) {
-        #lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
-        #                                 lavoptions = lavoptions)
-    }
 
     ####################################
     #### 11. lavimplied + lavloglik ####
@@ -1142,6 +1138,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavcache        = lavcache,
                                lavimplied      = lavimplied,
                                lavh1           = lavh1)
+
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
@@ -1254,8 +1251,54 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
 
+    ######################
+    #### 16. rotation ####
+    ######################
+    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+        (lavoptions$rotation != "none") ) {
+    
+        # unrotated parameters
+        x.unrotated <- lav_model_get_parameters(lavmodel)
+
+        # rotate, and create new lavmodel
+        lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
+                                         lavoptions = lavoptions)
+
+        # overwrite parameters in @ParTable$est
+        lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
+                                                    type = "user", extra = TRUE)
+
+        if(!lavoptions$se %in% c("none", "bootstrap")) {
+            # use delta rule to recompute vcov
+
+            # Jacobian
+            JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
+                                      x = x.unrotated,
+                                      lavmodel = lavmodel,
+                                      lavoptions = lavoptions,
+                                      ov.var = lapply(lavimplied$cov, diag),
+                                      extra = FALSE,
+                                      method = "simple", # to save time
+                                      type = "user")
+
+            # Delta method
+            VCOV.user <- JAC %*% lavvcov$vcov %*% t(JAC)
+            free.idx <- which(lavpartable$free > 0)
+            lavvcov$vcov <- VCOV.user[free.idx, free.idx, drop = FALSE]
+
+            # re-compute SE and store them in lavpartable
+            if(lavoptions$se != "external" && lavoptions$se != "twostep") {
+                lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
+                                                    lavpartable = lavpartable,
+                                                    VCOV = lavvcov$vcov,
+                                                    BOOT = lavboot$coef)
+            }
+        }
+    }
+   
+
     ####################
-    #### 16. lavaan ####
+    #### 17. lavaan ####
     ####################
     lavaan <- new("lavaan",
                   version      = as.character(packageVersion("lavaan")),

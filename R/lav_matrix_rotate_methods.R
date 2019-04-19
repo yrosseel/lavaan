@@ -31,10 +31,11 @@
 # gamma = 1/P -> equamax
 # gamma = 1   -> varimax
 #
-lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, gamma = 1, grad = FALSE) {
+lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, orthomax.gamma = 1, 
+                                       ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     # center L2 column-wise
-    cL2 <- t( t(L2) - gamma * colMeans(L2) )
+    cL2 <- t( t(L2) - orthomax.gamma * colMeans(L2) )
     out <- -1 * sum(L2 * cL2)/4
 
     if(grad) {
@@ -59,7 +60,8 @@ lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, gamma = 1, grad = FALSE) {
 # the Crawford-Ferguson family is also equivalent to the oblimin family
 # if the latter is restricted to orthogonal rotation
 #
-lav_matrix_rotate_cf <- function(LAMBDA = NULL, gamma = 0, grad = FALSE) {
+lav_matrix_rotate_cf <- function(LAMBDA = NULL, cf.gamma = 0, ..., 
+                                 grad = FALSE) {
     # check if gamma is between 0 and 1?
     nRow <- nrow(LAMBDA)
     nCol <- ncol(LAMBDA)
@@ -73,10 +75,11 @@ lav_matrix_rotate_cf <- function(LAMBDA = NULL, gamma = 0, grad = FALSE) {
     f1 <- sum(L2 * LR)/4
     f2 <- sum(L2 * LC)/4
 
-    out <- (1 - gamma)*f1 + gamma*f2
+    out <- (1 - cf.gamma)*f1 + cf.gamma*f2
 
     if(grad) {
-        attr(out, "grad") <- ((1 - gamma) * LAMBDA * LR) + (gamma * LAMBDA * LC)
+        attr(out, "grad") <- ((1 - cf.gamma) * LAMBDA * LR) + 
+                             (cf.gamma * LAMBDA * LC)
     }
 
     out
@@ -96,8 +99,8 @@ lav_matrix_rotate_cf <- function(LAMBDA = NULL, gamma = 0, grad = FALSE) {
 # gamma = 1   -> varimax
 # gamma = P/2 -> equamax
 #
-lav_matrix_rotate_oblimin <- function(LAMBDA = NULL, gamma = 0,
-                                           grad = FALSE) {
+lav_matrix_rotate_oblimin <- function(LAMBDA = NULL, oblimin.gamma = 0, ...,
+                                      grad = FALSE) {
     nRow <- nrow(LAMBDA)
     nCol <- ncol(LAMBDA)
     ROW1 <- matrix(1.0, nCol, nCol); diag(ROW1) <- 0.0
@@ -107,7 +110,7 @@ lav_matrix_rotate_oblimin <- function(LAMBDA = NULL, gamma = 0,
     Jp <- matrix(1, nRow, nRow)/nRow
 
     # see Jennrich (2002, p. 11)
-    tmp <- (diag(nRow) - gamma * Jp) %*% LR
+    tmp <- (diag(nRow) - oblimin.gamma * Jp) %*% LR
 
     # same as t( t(L2) - gamma * colMeans(L2) ) %*% ROW1
 
@@ -125,7 +128,7 @@ lav_matrix_rotate_oblimin <- function(LAMBDA = NULL, gamma = 0,
 # Carroll (1953); Saunders (1953) Neuhaus & Wrigley (1954); Ferguson (1954)
 # we use here the equivalent 'Ferguson, 1954' variant
 # (See Mulaik 2010, p. 303)
-lav_matrix_rotate_quartimax <- function(LAMBDA = NULL, grad = FALSE) {
+lav_matrix_rotate_quartimax <- function(LAMBDA = NULL, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     out <- -1 * sum(L2 * L2)/4
 
@@ -142,7 +145,7 @@ lav_matrix_rotate_quartimax <- function(LAMBDA = NULL, grad = FALSE) {
 #
 # special case of the Orthomax family (Harman, 1960), where gamma = 1
 # see Jennrich (2001, p. 296)
-lav_matrix_rotate_varimax <- function(LAMBDA = NULL, grad = FALSE) {
+lav_matrix_rotate_varimax <- function(LAMBDA = NULL, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     # center L2 column-wise
     cL2 <- t( t(L2) - colMeans(L2) )
@@ -156,7 +159,7 @@ lav_matrix_rotate_varimax <- function(LAMBDA = NULL, grad = FALSE) {
 }
 
 # quartimin criterion (part of Carroll's oblimin family
-lav_matrix_rotate_quartimin <- function(LAMBDA = NULL, grad = FALSE) {
+lav_matrix_rotate_quartimin <- function(LAMBDA = NULL, ..., grad = FALSE) {
     nCol <- ncol(LAMBDA)
     ROW1 <- matrix(1.0, nCol, nCol); diag(ROW1) <- 0.0
 
@@ -175,14 +178,14 @@ lav_matrix_rotate_quartimin <- function(LAMBDA = NULL, grad = FALSE) {
 # Browne's (2001) version of Yates (1984) geomin criterion
 #
 # we use the exp/log trick as in Bernaard & Jennrich (2005, p. 687)
-lav_matrix_rotate_geomin <- function(LAMBDA = NULL, epsilon = 0.01,
-                                          grad = FALSE) {
+lav_matrix_rotate_geomin <- function(LAMBDA = NULL, geomin.epsilon = 0.01,
+                                     ..., grad = FALSE) {
     nCol <- ncol(LAMBDA)
 
     L2 <- LAMBDA * LAMBDA
-    L2 <- L2 + epsilon
+    L2 <- L2 + geomin.epsilon
 
-    if(epsilon < sqrt(.Machine$double.eps)) {
+    if(geomin.epsilon < sqrt(.Machine$double.eps)) {
         # Yates's original formula
         tmp <- apply(L2, 1, prod)^(1/nCol)
     } else {

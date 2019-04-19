@@ -102,7 +102,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
 
         nblocks="integer",
         ngroups="integer",   # only for rsem!! (which uses rsem:::computeDelta)
-        nefa="integer",   
+        nefa="integer",
         nmat="integer",
         nvar="integer",
         num.idx="list",

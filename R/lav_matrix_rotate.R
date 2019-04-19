@@ -101,16 +101,20 @@ lav_matrix_rotate_cm_weights <- function(A = NULL) {
 lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               orthogonal  = FALSE,     # default is oblique
                               method      = "geomin",  # default rot method
-                              method.args = list(epsilon = 0.01), # method args
+                              method.args = list(geomin.epsilon = 0.01,
+                                                 orthomax.gamma = 1,
+                                                 cf.gamma       = 0,
+                                                 oblimin.gamma  = 0),
                               ROT         = NULL,      # initial rotation matrix
                               ROT.check   = TRUE,      # check if init ROT is ok
                               rstarts     = 100L,      # number of random starts
                               row.weights = "default", # row weighting
                               std.ov      = FALSE,     # rescale ov
                               ov.var      = NULL,      # ov variances
+                              warn        = TRUE,      # show warnings?
                               verbose     = FALSE,     # show iterations
                               algorithm   = "gpa",     # not used for now
-                              frob.tol    = 0.00001,   # stopping tol gpa 
+                              frob.tol    = 0.00001,   # stopping tol gpa
                               max.iter    = 1000L) {   # max gpa iterations
 
     # check A
@@ -160,7 +164,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
                             "cf-parsimax", "cf-facparsim")) {
         method.fname <- "lav_matrix_rotate_cf"
-        method.args$gamma <- switch(method,
+        method.args$cf.gamma <- switch(method,
             "cf-quartimax" = 0,
             "cf-varimax"   = 1 / P,
             "cf-equamax"   = M / (2 * P),
@@ -217,29 +221,34 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     A <- A * weights
 
 
-    # 2. rotate 
+    # 2. rotate
 
     # multiple random starts?
     if(rstarts > 0L) {
         REP <- sapply(seq_len(rstarts), function(rep) {
             # random start
             init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
- 
+
+            if(verbose) {
+                cat("\n")
+                cat("GPa rstart = ", sprintf("%4d", rep), " start:\n")
+            }
             # Gradient Projection Algorithm
             if(algorithm == "gpa") {
                 ROT <- lav_matrix_rotate_gpa(A = A, orthogonal = orthogonal,
                                              ROT = init.ROT,
                                              method.fname = method.fname,
                                              method.args  = method.args,
-                                             verbose = FALSE,
+                                             warn = warn,
+                                             verbose = verbose,
                                              frob.tol = frob.tol,
                                              max.iter = max.iter)
                 info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
                 res <- c(info$method.value, lav_matrix_vec(ROT))
             }
             if(verbose) {
-                cat("rstart = ", sprintf("%4d", rep), 
-                    " crit = ", sprintf("%17.15f", res[1]), "\n")
+                cat("rstart = ", sprintf("%4d", rep),
+                    " end; current crit = ", sprintf("%17.15f", res[1]), "\n")
             }
             res
         })
@@ -249,13 +258,14 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     } else {
         # initial rotation matrix
         ROT <- diag(M)
-  
+
         # Gradient Projection Algorithm
         if(algorithm == "gpa") {
             ROT <- lav_matrix_rotate_gpa(A = A, orthogonal = orthogonal,
                                          ROT = ROT,
                                          method.fname = method.fname,
                                          method.args  = method.args,
+                                         warn = warn,
                                          verbose = verbose,
                                          frob.tol = frob.tol,
                                          max.iter = max.iter)
@@ -280,20 +290,39 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     }
 
     # 4. reorder/reflect columns
-    # 4.a reorder using sums-squares of the columns
-    L2 <- LAMBDA * LAMBDA
-    order.idx <- order(colSums(L2), decreasing = TRUE)
-    LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
 
-    # 4.b reflect so that column sum is always positive
+    # 4.a reflect so that column sum is always positive
     SUM <- colSums(LAMBDA)
     neg.idx <- which(SUM < 0)
     if(length(neg.idx) > 0L) {
         LAMBDA[, neg.idx] <- -1 * LAMBDA[, neg.idx, drop = FALSE]
+           ROT[, neg.idx] <- -1 *    ROT[, neg.idx, drop = FALSE]
+        if(!orthogonal) {
+            # recompute PHI
+            PHI <- crossprod(ROT)
+        }
     }
 
-    # 5. return results as a list
-    res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT,
+    # 4.b reorder using sums-squares of the columns
+    #L2 <- LAMBDA * LAMBDA
+    #order.idx <- order(colSums(L2), decreasing = TRUE)
+    #LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
+
+    # 4.b reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
+    max.loading <- apply(abs(LAMBDA), 2, max)
+    # 1: per factor, number of the loadings that are at least 0.8 of the
+    #    highest loading of the factor
+    # 2: mean of the index numbers
+    average.index <- sapply(seq_len(ncol(LAMBDA)), function(i)
+                         mean(which(abs(LAMBDA[,i]) >= 0.8 * max.loading[i])))
+    # order of the factors
+    order.idx <- order(average.index)
+
+    # do the same in PHI
+    PHI <- PHI[order.idx, order.idx, drop = FALSE]
+
+    # 6. return results as a list
+    res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT, order.idx = order.idx,
                 orthogonal = orthogonal, method = method,
                 method.args = method.args, row.weights = row.weights)
 
@@ -305,7 +334,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
 
 # Gradient Projection Algorithm (Jennrich 2001, 2002)
-# 
+#
 # - this is a translation of the SAS PROC IML code presented in the Appendix
 #   of Bernaards & Jennrich (2005)
 # - as the orthogonal and oblique algorithm are so similar, they are
@@ -317,9 +346,10 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
                                   ROT          = NULL,   # initial rotation
                                   method.fname = NULL,   # criterion function
                                   method.args  = list(), # optional method args
+                                  warn         = TRUE,
                                   verbose      = FALSE,
                                   frob.tol     = 0.00001,
-                                  max.iter     = 1000L) {
+                                  max.iter     = 10000L) {
 
     # number of columns
     M <- ncol(A)
@@ -330,7 +360,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
     # check ROT
     if(is.null(ROT)) {
         ROT <- diag(M)
-    } 
+    }
 
     # set initial value of alpha to 1 (is 0.5 not more logical?)
     alpha <- 1
@@ -344,7 +374,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
 
     # using the current LAMBDA, evaluate the user-specified
     # rotation criteron; return Q (the criterion) and its gradient Gq
-    Q <- do.call(method.fname, 
+    Q <- do.call(method.fname,
                  c(list(LAMBDA = LAMBDA), method.args, list(grad = TRUE)))
     Gq <- attr(Q, "grad"); attr(Q, "grad") <- NULL
     Q.current <- Q
@@ -380,9 +410,9 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
         # if verbose, print
         if(verbose) {
             cat("iter = ", sprintf("%4d", iter-1),
-                " Q = ", sprintf("%12.7f", Q.current),
-                " frob.log10 = ", sprintf("%12.7f", log10(frob)),
-                " alpha = ", sprintf("%4.2f", alpha), "\n")
+                " Q = ", sprintf("%9.7f", Q.current),
+                " frob.log10 = ", sprintf("%10.7f", log10(frob)),
+                " alpha = ", sprintf("%9.7f", alpha), "\n")
         }
 
         if(frob < frob.tol) {
@@ -392,7 +422,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
 
         # update
         alpha <- 2*alpha
-        for(i in seq_len(100)) { # make option?
+        for(i in seq_len(1000)) { # make option?
 
             # step in the negative projected gradient direction
             # (note, the original algorithm in Jennrich 2001 used G, not Gp)
@@ -420,7 +450,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
             }
 
             # evaluate criterion
-            Q.new <- do.call(method.fname, c(list(LAMBDA = LAMBDA), 
+            Q.new <- do.call(method.fname, c(list(LAMBDA = LAMBDA),
                                              method.args, list(grad = TRUE)))
             Gq <- attr(Q.new, "grad"); attr(Q.new, "grad") <- NULL
 
@@ -431,7 +461,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
                 alpha <- alpha/2
             }
 
-            if(i == 100) {
+            if(warn && i == 1000) {
                 warning("lavaan WARNING: half-stepping failed in GPA\n")
             }
         }
@@ -445,18 +475,17 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
         } else {
             GRAD <- -1 * solve(t(ROT), crossprod(Gq, LAMBDA))
         }
+
     }
 
-    # final rotation
-    if(orthogonal) {
-        LAMBDA <- A %*% ROT
-        PHI    <- diag(ncol(LAMBDA)) # correlation matrix == I
-    } else {
-        LAMBDA <- t(solve(ROT, At))
-        PHI    <- crossprod(ROT)     # correction matrix
+    # warn if no convergence
+    if(!converged && warn) {
+        warning("lavaan WARNING: ",
+                "GP rotation algorithm did not converge after ",
+                max.iter, " iterations")
     }
 
-    # algorithm information 
+    # algorithm information
     info <- list(algorithm = "gpa",
                  iter = iter - 1L,
                  converged = converged,

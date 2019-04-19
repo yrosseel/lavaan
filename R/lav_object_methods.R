@@ -9,6 +9,11 @@ short.summary <- function(object) {
     # print optim info
     lav_object_print_optim(object)
 
+    # print rotation info
+    if(object@Model@nefa > 0L) {
+        lav_object_print_rotation(object)
+    }
+
     # print lavdata
     lav_data_print_short(object@Data)
 
@@ -474,6 +479,9 @@ parameterEstimates <- parameterestimates <- function(object,
         LIST$group <- PARTABLE$group
     } else {
         LIST$group <- rep(1L, length(LIST$lhs))
+    }
+    if(!is.null(PARTABLE$efa)) {
+        LIST$efa <- PARTABLE$efa
     }
     if(!is.null(PARTABLE$label)) {
         LIST$label <- PARTABLE$label

@@ -197,6 +197,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     # always remove /block/level/group/op/rhs/label/exo columns
     y$op <- y$group <- y$rhs <- y$label <- y$exo <- NULL
     y$block <- y$level <- NULL
+    y$efa <- NULL
 
     # if standardized, remove std.nox column (space reasons only)
     # unless, std.all is already removed
@@ -451,7 +452,12 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     colnames(M) <- colnames(m)
                     rownames(M) <- rep("", NROW(M))
                     #colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
-                    LHS <- paste(x$lhs[row.idx], x$op[row.idx])
+                    if(is.null(x$efa)) {
+                        LHS <- paste(x$lhs[row.idx], x$op[row.idx])
+                    } else {
+                        LHS <- paste(x$lhs[row.idx], x$op[row.idx], 
+                                     x$efa[row.idx])
+                    }
                     lhs.idx <- seq(1, nel*2L, 2L)
                     rhs.idx <- seq(1, nel*2L, 2L) + 1L
                     if(s == "Covariances") {

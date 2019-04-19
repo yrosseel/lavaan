@@ -42,7 +42,7 @@ lav_model <- function(lavpartable      = NULL,
     }
 
     nefa <- lav_partable_nefa(lavpartable)
-    if(nefa > 1L) {
+    if(nefa > 0L) {
         efa.values <- lav_partable_efa_values(lavpartable)
     }
 

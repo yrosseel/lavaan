@@ -71,6 +71,22 @@ lav_options_default <- function(mimic = "lavaan") {
                 safe.ov.var.ub     = FALSE,
                 save.ov.var.lb     = FALSE,
 
+                # rotation
+                rotation           = "geomin",
+                rotation.args      = list(orthogonal     = FALSE,
+                                          row.weights    = "none",
+                                          std.ov         = FALSE,
+                                          geomin.epsilon = 0.01,
+                                          orthomax.gamma = 1,
+                                          cf.gamma       = 0,
+                                          oblimin.gamma  = 0,
+                                          rstarts        = 100L,
+                                          algorithm      = "gpa",
+                                          tol            = 0.00001,
+                                          warn           = FALSE,
+                                          verbose        = FALSE,
+                                          max.iter       = 1000L),
+
                 # full data
                 std.ov             = FALSE,
                 missing            = "default",
