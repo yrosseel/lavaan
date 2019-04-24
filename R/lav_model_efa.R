@@ -163,7 +163,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                      warn        = ropts$warn,
                                      algorithm   = ropts$algorithm,
                                      reflect     = ropts$reflect,
-                                     order       = ropts$order,
+                                     order.lv.by = ropts$order.lv.by,
                                      gpa.tol     = ropts$gpa.tol,
                                      tol         = ropts$tol,
                                      max.iter    = ropts$max.iter)
