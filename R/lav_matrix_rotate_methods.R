@@ -31,7 +31,7 @@
 # gamma = 1/P -> equamax
 # gamma = 1   -> varimax
 #
-lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, orthomax.gamma = 1, 
+lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, orthomax.gamma = 1,
                                        ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     # center L2 column-wise
@@ -60,7 +60,7 @@ lav_matrix_rotate_orthomax <- function(LAMBDA = NULL, orthomax.gamma = 1,
 # the Crawford-Ferguson family is also equivalent to the oblimin family
 # if the latter is restricted to orthogonal rotation
 #
-lav_matrix_rotate_cf <- function(LAMBDA = NULL, cf.gamma = 0, ..., 
+lav_matrix_rotate_cf <- function(LAMBDA = NULL, cf.gamma = 0, ...,
                                  grad = FALSE) {
     # check if gamma is between 0 and 1?
     nRow <- nrow(LAMBDA)
@@ -78,7 +78,7 @@ lav_matrix_rotate_cf <- function(LAMBDA = NULL, cf.gamma = 0, ...,
     out <- (1 - cf.gamma)*f1 + cf.gamma*f2
 
     if(grad) {
-        attr(out, "grad") <- ((1 - cf.gamma) * LAMBDA * LR) + 
+        attr(out, "grad") <- ((1 - cf.gamma) * LAMBDA * LR) +
                              (cf.gamma * LAMBDA * LC)
     }
 

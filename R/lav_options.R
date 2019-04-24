@@ -82,10 +82,14 @@ lav_options_default <- function(mimic = "lavaan") {
                                           oblimin.gamma  = 0,
                                           rstarts        = 100L,
                                           algorithm      = "gpa",
-                                          tol            = 0.00001,
+                                          reflect        = TRUE,
+                                          order.lv.by    = "index",
+                                          gpa.tol        = 1e-05,
+                                          tol            = 1e-08,
                                           warn           = FALSE,
                                           verbose        = FALSE,
-                                          max.iter       = 1000L),
+                                          jac.init.rot   = TRUE,
+                                          max.iter       = 10000L),
 
                 # full data
                 std.ov             = FALSE,

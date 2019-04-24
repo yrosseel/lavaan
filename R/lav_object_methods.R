@@ -211,6 +211,9 @@ function(object, header       = TRUE,
                  modindices   = FALSE,
                  nd = 3L) {
 
+    # return object
+    res <- list()
+
     # this is to avoid partial matching of 'std' with std.nox
     standardized <- std || standardized
 
@@ -228,7 +231,9 @@ function(object, header       = TRUE,
         } else if(object@optim$npar > 0L && !object@optim$converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
-            print.fit.measures( fitMeasures(object, fit.measures="default") )
+            FIT <- fitMeasures(object, fit.measures="default")
+            res$FIT = FIT
+            print.fit.measures( FIT )
         }
     }
 
@@ -244,13 +249,21 @@ function(object, header       = TRUE,
             PE$std.all <- NULL
         }
         print(PE, nd = nd)
+        res$PE <- as.data.frame(PE)
     }
 
     # modification indices?
     if(modindices) {
         cat("Modification Indices:\n\n")
-        print( modificationIndices(object, standardized=TRUE, cov.std = cov.std) )
+        MI <- modificationIndices(object, standardized=TRUE, cov.std = cov.std)
+        print( MI )
+        res$MI <- MI
     }
+
+    # return something invisibly, just for those who want this...
+    # new in 0.6-4
+    invisible(res)
+    
 })
 
 

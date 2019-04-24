@@ -1,103 +1,9 @@
-# collection of functions that deal with rotation matrices
-# initial version YR 3 April 2019
-
-# generate random orthogonal rotation matrix
-lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
-
-    # catch M=1
-    if(M == 1L) {
-        return(matrix(1, 1, 1))
-    }
-
-    # create random normal matrix
-    tmp <- matrix(rnorm(M*M), nrow = M, ncol = M)
-
-    if(orthogonal) {
-        # use QR decomposition
-        qr.out <- qr(tmp)
-
-        # extra 'Q' part
-        out <- qr.Q(qr.out)
-    } else {
-        # just normalize *columns* of tmp -> crossprod(out) has 1 on diagonal
-        out <- t( t(tmp) / sqrt(diag(crossprod(tmp))) )
-    }
-
-    out
-}
-
-# check if ROT is an orthogonal matrix if orthogonal = TRUE, or normal if
-# orthogonal = FALSE
-lav_matrix_rotate_check <- function(ROT = NULL, orthogonal = TRUE,
-                                    tolerance = sqrt(.Machine$double.eps)) {
-
-    # we assume ROT is a matrix
-    M <- nrow(ROT)
-
-    # crossprod
-    RR <- crossprod(ROT)
-
-    # target
-    if(orthogonal) {
-        # ROT^T %*% ROT = I
-        target <- diag(M)
-    } else {
-        # diagonal should be 1
-        target <- RR
-        diag(target) <- 1
-    }
-
-    # compare for near-equality
-    res <- all.equal(target = target, current = RR, tolerance = tolerance)
-
-    # return TRUE or FALSE
-    if(is.logical(res) && res) {
-        out <- TRUE
-    } else {
-        out <- FALSE
-    }
-
-    out
-}
-
-# get weights vector needed to weight the rows using Kaiser normalization
-lav_matrix_rotate_kaiser_weights <- function(A = NULL) {
-    1 / sqrt( rowSums(A * A) )
-}
-
-# get weights vector needed to weight the rows using Cureton & Mulaik (1975)
-# standardization
-# see also Browne (2001) page 128-129
+# rotation algorithms
 #
-# Note: the 'final' weights are mutliplied by the Kaiser weights (see CEFA)
-#
-lav_matrix_rotate_cm_weights <- function(A = NULL) {
+# YR  3 April 2019 -- gradient projection algorithm
+# YR 21 April 2019 -- pairwise rotation algorithm
 
-    P <- nrow(A); M <- ncol(A)
-
-    # first principal component of AA'
-    A.eigen <- eigen(tcrossprod(A), symmetric = TRUE)
-    a <- A.eigen$vectors[,1] * sqrt(A.eigen$values[1])
-
-    Kaiser.weights <- 1/sqrt( rowSums(A * A) )
-    a.star <- abs(a * Kaiser.weights) # always between 0 and 1
-
-    m.sqrt.inv <- 1/sqrt(M)
-    acos.m.sqrt.inv <- acos(m.sqrt.inv)
-
-    delta <- numeric(P)
-    delta[a.star < m.sqrt.inv] <- pi/2
-
-    tmp <- (acos.m.sqrt.inv - acos(a.star))/(acos.m.sqrt.inv - delta) * (pi/2)
-
-    # add constant (see Cureton & Mulaik, 1975, page 187)
-    cm <- cos(tmp) * cos(tmp) + 0.001
-
-    # final weights = weighted by Kaiser weights
-    cm * Kaiser.weights
-}
-
-# high-level function to rotate a single matrix 'A'
+# main function to rotate a single matrix 'A'
 lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               orthogonal  = FALSE,     # default is oblique
                               method      = "geomin",  # default rot method
@@ -105,8 +11,8 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                                                  orthomax.gamma = 1,
                                                  cf.gamma       = 0,
                                                  oblimin.gamma  = 0),
-                              ROT         = NULL,      # initial rotation matrix
-                              ROT.check   = TRUE,      # check if init ROT is ok
+                              init.ROT    = NULL,      # initial rotation matrix
+                              init.ROT.check = TRUE,   # check if init ROT is ok
                               rstarts     = 100L,      # number of random starts
                               row.weights = "default", # row weighting
                               std.ov      = FALSE,     # rescale ov
@@ -114,8 +20,12 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               warn        = TRUE,      # show warnings?
                               verbose     = FALSE,     # show iterations
                               algorithm   = "gpa",     # not used for now
-                              frob.tol    = 0.00001,   # stopping tol gpa
-                              max.iter    = 1000L) {   # max gpa iterations
+                              reflect     = TRUE,      # refect sign
+                              order.lv.by = "index",   # how to order the lv's
+                              gpa.tol     = 0.00001,   # stopping tol gpa
+                              tol         = 1e-07,     # stopping tol others
+                              keep.rep    = FALSE,     # store replications
+                              max.iter    = 10000L) {  # max gpa iterations
 
     # check A
     if(!inherits(A, "matrix")) {
@@ -132,23 +42,23 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         return(res)
     }
 
-    # check ROT
-    if(!is.null(ROT) && ROT.check) {
-        if(!inherits(ROT, "matrix")) {
-            stop("lavaan ERROR: ROT does not seem to a matrix")
+    # check init.ROT
+    if(!is.null(init.ROT) && init.ROT.check) {
+        if(!inherits(init.ROT, "matrix")) {
+            stop("lavaan ERROR: init.ROT does not seem to a matrix")
         }
-        if(nrow(ROT) != M) {
-            stop("lavaan ERROR: nrow(ROT) = ", nrow(ROT),
+        if(nrow(init.ROT) != M) {
+            stop("lavaan ERROR: nrow(init.ROT) = ", nrow(init.ROT),
                  " does not equal ncol(A) = ", M)
         }
-        if(nrow(ROT) != ncol(ROT)) {
-            stop("lavaan ERROR: nrow(ROT) = ", nrow(ROT),
-                 " does not equal ncol(ROT) = ", ncol(ROT))
+        if(nrow(init.ROT) != ncol(init.ROT)) {
+            stop("lavaan ERROR: nrow(init.ROT) = ", nrow(init.ROT),
+                 " does not equal ncol(init.ROT) = ", ncol(init.ROT))
         }
-        # rotation matrix? ROT^T %*% ROT = I
-        RR <- crossprod(ROT)
-        if(!lav_matrix_rotate_check(ROT, orthogonal = orthogonal)) {
-            stop("lavaan ERROR: ROT does not look like a rotation matrix")
+        # rotation matrix? init.ROT^T %*% init.ROT = I
+        RR <- crossprod(init.ROT)
+        if(!lav_matrix_rotate_check(init.ROT, orthogonal = orthogonal)) {
+            stop("lavaan ERROR: init.ROT does not look like a rotation matrix")
         }
     }
 
@@ -199,8 +109,13 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         }
     }
 
-    # set algorithm
-    algorithm <- "gpa" # for now
+    # check algorithm
+    algorithm <- tolower(algorithm)
+    if(algorithm %in% c("gpa", "pairwise")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: algorithm must be gpa or pairwise")
+    }
 
 
 
@@ -217,6 +132,8 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         weights <- lav_matrix_rotate_kaiser_weights(A)
     } else if(row.weights == "cureton-mulaik") {
          weights <- lav_matrix_rotate_cm_weights(A)
+    } else {
+        stop("lavaan ERROR: row.weights can be none, kaiser or cureton-mulaik")
     }
     A <- A * weights
 
@@ -226,26 +143,43 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     # multiple random starts?
     if(rstarts > 0L) {
         REP <- sapply(seq_len(rstarts), function(rep) {
-            # random start
-            init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
+            # random start (always orthogonal)
+            init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = TRUE)
 
             if(verbose) {
                 cat("\n")
-                cat("GPa rstart = ", sprintf("%4d", rep), " start:\n")
+                cat("rstart = ", sprintf("%4d", rep), " start:\n")
             }
-            # Gradient Projection Algorithm
+
+
+            # choose rotation algorithm
             if(algorithm == "gpa") {
                 ROT <- lav_matrix_rotate_gpa(A = A, orthogonal = orthogonal,
-                                             ROT = init.ROT,
+                                             init.ROT = init.ROT,
                                              method.fname = method.fname,
                                              method.args  = method.args,
                                              warn = warn,
                                              verbose = verbose,
-                                             frob.tol = frob.tol,
+                                             gpa.tol = gpa.tol,
                                              max.iter = max.iter)
                 info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
                 res <- c(info$method.value, lav_matrix_vec(ROT))
-            }
+
+            } else if(algorithm == "pairwise") {
+                ROT <- lav_matrix_rotate_pairwise(A = A, 
+                                             orthogonal = orthogonal,
+                                             init.ROT = init.ROT,
+                                             method.fname = method.fname,
+                                             method.args  = method.args,
+                                             warn = warn,
+                                             verbose = verbose,
+                                             tol = tol,
+                                             max.iter = max.iter)
+                info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
+                res <- c(info$method.value, lav_matrix_vec(ROT))
+
+            } 
+
             if(verbose) {
                 cat("rstart = ", sprintf("%4d", rep),
                     " end; current crit = ", sprintf("%17.15f", res[1]), "\n")
@@ -254,21 +188,37 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         })
         best.idx <- which.min(REP[1,])
         ROT <- matrix(REP[-1, best.idx], nrow = M, ncol = M)
-        info <- list(method.value = REP[1, best.idx])
+        if(keep.rep) {
+            info <- list(method.value = REP[1, best.idx], REP = REP)
+        } else {
+            info <- list(method.value = REP[1, best.idx])
+        }
     } else {
         # initial rotation matrix
-        ROT <- diag(M)
+        if(is.null(init.ROT)) {
+            init.ROT <- diag(M)
+        }
 
         # Gradient Projection Algorithm
         if(algorithm == "gpa") {
             ROT <- lav_matrix_rotate_gpa(A = A, orthogonal = orthogonal,
-                                         ROT = ROT,
+                                         init.ROT = init.ROT,
                                          method.fname = method.fname,
                                          method.args  = method.args,
                                          warn = warn,
                                          verbose = verbose,
-                                         frob.tol = frob.tol,
+                                         gpa.tol = gpa.tol,
                                          max.iter = max.iter)
+        } else if(algorithm == "pairwise") {
+            ROT <- lav_matrix_rotate_pairwise(A = A,
+                                          orthogonal = orthogonal,
+                                          init.ROT = init.ROT,
+                                          method.fname = method.fname,
+                                          method.args  = method.args,
+                                          warn = warn,
+                                          verbose = verbose,
+                                          tol = tol,
+                                          max.iter = max.iter)
         }
         info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
     }
@@ -289,37 +239,43 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         LAMBDA <- LAMBDA * sqrt(ov.var)
     }
 
-    # 4. reorder/reflect columns
-
     # 4.a reflect so that column sum is always positive
-    SUM <- colSums(LAMBDA)
-    neg.idx <- which(SUM < 0)
-    if(length(neg.idx) > 0L) {
-        LAMBDA[, neg.idx] <- -1 * LAMBDA[, neg.idx, drop = FALSE]
-           ROT[, neg.idx] <- -1 *    ROT[, neg.idx, drop = FALSE]
-        if(!orthogonal) {
-            # recompute PHI
-            PHI <- crossprod(ROT)
+    if(reflect) {
+        SUM <- colSums(LAMBDA)
+        neg.idx <- which(SUM < 0)
+        if(length(neg.idx) > 0L) {
+            LAMBDA[, neg.idx] <- -1 * LAMBDA[, neg.idx, drop = FALSE]
+               ROT[, neg.idx] <- -1 *    ROT[, neg.idx, drop = FALSE]
+            if(!orthogonal) {
+                # recompute PHI
+                PHI <- crossprod(ROT)
+            }
         }
     }
 
-    # 4.b reorder using sums-squares of the columns
-    #L2 <- LAMBDA * LAMBDA
-    #order.idx <- order(colSums(L2), decreasing = TRUE)
-    #LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
-
-    # 4.b reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
-    max.loading <- apply(abs(LAMBDA), 2, max)
-    # 1: per factor, number of the loadings that are at least 0.8 of the
-    #    highest loading of the factor
-    # 2: mean of the index numbers
-    average.index <- sapply(seq_len(ncol(LAMBDA)), function(i)
-                         mean(which(abs(LAMBDA[,i]) >= 0.8 * max.loading[i])))
-    # order of the factors
-    order.idx <- order(average.index)
+    # 4.b reorder the columns
+    if(order.lv.by == "sumofsquares") {
+        L2 <- LAMBDA * LAMBDA
+        order.idx <- order(colSums(L2), decreasing = TRUE)
+     } else if(order.lv.by == "index") {
+        # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
+        max.loading <- apply(abs(LAMBDA), 2, max)
+        # 1: per factor, number of the loadings that are at least 0.8 of the
+        #    highest loading of the factor
+        # 2: mean of the index numbers
+        average.index <- sapply(seq_len(ncol(LAMBDA)), function(i)
+                             mean(which(abs(LAMBDA[,i]) >= 0.8 * max.loading[i])))
+        # order of the factors
+        order.idx <- base::order(average.index)
+    } else if(order.lv.by == "none") {
+        order.idx <- seq_len(ncol(LAMBDA))
+    } else {
+        stop("lavaan ERROR: order must be index, sumofsquares or none")
+    }
 
     # do the same in PHI
-    PHI <- PHI[order.idx, order.idx, drop = FALSE]
+    LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
+    PHI    <- PHI[order.idx, order.idx, drop = FALSE]
 
     # 6. return results as a list
     res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT, order.idx = order.idx,
@@ -343,12 +299,12 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 #
 lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
                                   orthogonal   = FALSE,  # default is oblique
-                                  ROT          = NULL,   # initial rotation
+                                  init.ROT     = NULL,   # initial rotation
                                   method.fname = NULL,   # criterion function
                                   method.args  = list(), # optional method args
                                   warn         = TRUE,
                                   verbose      = FALSE,
-                                  frob.tol     = 0.00001,
+                                  gpa.tol      = 0.00001,
                                   max.iter     = 10000L) {
 
     # number of columns
@@ -357,12 +313,14 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
     # transpose of A (not needed for orthogonal)
     At <- t(A)
 
-    # check ROT
-    if(is.null(ROT)) {
+    # check init.ROT
+    if(is.null(init.ROT)) {
         ROT <- diag(M)
+    } else {
+        ROT <- init.ROT
     }
 
-    # set initial value of alpha to 1 (is 0.5 not more logical?)
+    # set initial value of alpha to 1
     alpha <- 1
 
     # initial rotation
@@ -384,7 +342,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
     if(orthogonal) {
         GRAD <- crossprod(A, Gq)
     } else {
-        GRAD <- -1 * solve(t(ROT), crossprod(Gq, LAMBDA))
+        GRAD <- -1 * solve(t(init.ROT), crossprod(Gq, LAMBDA))
     }
 
     # start iterations
@@ -397,8 +355,8 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
         # this projection is zero if and only if ROT is a stationary point of
         # f() restricted to the orthogonal/normal matrices
         if(orthogonal) {
-            M <- crossprod(ROT, GRAD)
-            SYMM <- (M + t(M))/2
+            MM <- crossprod(ROT, GRAD)
+            SYMM <- (MM + t(MM))/2
             Gp <- GRAD - (ROT %*% SYMM)
         } else {
             Gp <- GRAD - t( t(ROT) * colSums(ROT * GRAD) )
@@ -415,7 +373,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
                 " alpha = ", sprintf("%9.7f", alpha), "\n")
         }
 
-        if(frob < frob.tol) {
+        if(frob < gpa.tol) {
             converged <- TRUE
             break
         }
@@ -476,7 +434,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
             GRAD <- -1 * solve(t(ROT), crossprod(Gq, LAMBDA))
         }
 
-    }
+    } # iter
 
     # warn if no convergence
     if(!converged && warn) {
@@ -488,6 +446,223 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
     # algorithm information
     info <- list(algorithm = "gpa",
                  iter = iter - 1L,
+                 converged = converged,
+                 method.value = Q.current)
+
+    attr(ROT, "info") <- info
+
+    ROT
+}
+
+
+# pairwise rotation algorithm with direct line search
+#
+# based on Kaiser's (1959) algorithm and Jennrich and Sampson (1966) algorithm
+# but to make it generic, a line search is used
+#
+# - orthogonal: rotate one pair of columns (=plane) at a time
+# - oblique: rotate 1 factor in one pair of columns (=plane) at a time
+#            note: in the oblique case, (1,2) is not the same as (2,1)
+# - BUT use optimize() to find the optimal angle (for each plane)
+#   (see Browne, 2001, page 130)
+# - repeat until the changes in the f() criterion are below tol
+#
+
+lav_matrix_rotate_pairwise <- function(A            = NULL,   # original matrix
+                                       orthogonal   = FALSE,
+                                       init.ROT     = NULL,
+                                       method.fname = NULL,   # crit function
+                                       method.args  = list(), # method args
+                                       warn         = TRUE,
+                                       verbose      = FALSE,
+                                       tol          = 1e-8,
+                                       max.iter     = 1000L) {
+
+    # number of columns
+    M <- ncol(A)
+
+    # initial LAMBDA + PHI
+    if(is.null(init.ROT)) {
+        LAMBDA <- A
+        if(!orthogonal) {
+            PHI <- diag(M)
+        }
+    } else {
+        if(orthogonal) {
+            LAMBDA <- A %*% init.ROT
+        } else {
+            LAMBDA <- t(solve(init.ROT, t(A)))
+            PHI <- crossprod(init.ROT)
+        }
+    }
+
+    # using the current LAMBDA, evaluate the user-specified
+    # rotation criteron; return Q (the criterion) only
+    Q.current <- do.call(method.fname, c(list(LAMBDA = LAMBDA),
+                                         method.args, list(grad = FALSE)))
+
+    # if verbose, print
+    if(verbose) {
+        cat("iter = ",    sprintf("%4d", 0),
+            " Q = ",      sprintf("%13.11f", Q.current), "\n")
+    }
+
+    # plane combinations
+    if(orthogonal) {
+        PLANE <- utils::combn(M, 2)
+    } else {
+        tmp <- utils::combn(M, 2)
+        PLANE <- cbind(tmp, tmp[c(2,1),,drop = FALSE])
+    }
+    
+
+    # define objective function -- orthogonal
+    objf_orth <- function(theta = 0, A = NULL, col1 = 0L, col2 = 0L) {
+
+        # construct ROT
+        ROT <- diag(M)
+        ROT[col1, col1] <- base::cos(theta)
+        ROT[col1, col2] <- base::sin(theta)
+        ROT[col2, col1] <- -1 * base::sin(theta)
+        ROT[col2, col2] <- base::cos(theta)
+
+        # rotate
+        LAMBDA <- A %*% ROT
+
+        # evaluate criterion
+        Q <- do.call(method.fname, c(list(LAMBDA = LAMBDA),
+                     method.args, list(grad = FALSE)))
+        Q
+    }
+
+    # define objective function -- oblique
+    objf_obliq <- function(delta = 0, A = NULL, col1 = 0L, col2 = 0L, 
+                           phi12 = 0) {
+
+        # construct ROT
+        ROT <- diag(M)
+
+        # gamma
+        gamma2 <- 1 + (2 * delta * phi12) + (delta * delta)
+
+        ROT[col1, col1] <- sqrt(abs(gamma2))
+        ROT[col1, col2] <- -1 * delta
+        ROT[col2, col1] <- 0
+        ROT[col2, col2] <- 1
+
+        # rotate
+        LAMBDA <- A %*% ROT
+
+        # evaluate criterion
+        Q <- do.call(method.fname, c(list(LAMBDA = LAMBDA),
+                     method.args, list(grad = FALSE)))
+        Q
+    }
+
+    # start iterations
+    converged <- FALSE
+    Q.old <- Q.current
+    for(iter in seq_len(max.iter)) {
+
+        # rotate - one cycle
+        for(pl in seq_len(ncol(PLANE))) {
+
+            # choose plane
+            col1 <- PLANE[1, pl]
+            col2 <- PLANE[2, pl]
+
+            # optimize
+            if(orthogonal) {
+                out <- optimize(f = objf_orth, interval = c(-pi/4, +pi/4),
+                                A = LAMBDA, col1 = col1, col2 = col2,
+                                maximum = FALSE, tol = .Machine$double.eps^0.25)
+                # best rotation - for this plane
+                theta <- out$minimum
+
+                # construct ROT
+                ROT <- diag(M)
+                ROT[col1, col1] <- base::cos(theta)
+                ROT[col1, col2] <- base::sin(theta)
+                ROT[col2, col1] <- -1 * base::sin(theta)
+                ROT[col2, col2] <- base::cos(theta)
+                
+            } else {
+                phi12 <- PHI[col1, col2]
+                out <- optimize(f = objf_obliq, interval = c(-1, +1),
+                                A = LAMBDA, col1 = col1, col2 = col2,
+                                phi12 = phi12,
+                                maximum = FALSE, tol = .Machine$double.eps^0.25)
+
+                # best rotation - for this plane
+                delta <- out$minimum
+
+                # construct ROT
+                ROT <- diag(M)
+
+                # gamma
+                gamma2 <- 1 + (2 * delta * phi12) + (delta * delta)
+                gamma <- sqrt(abs(gamma2))
+
+                ROT[col1, col1] <- gamma
+                ROT[col1, col2] <- -1 * delta
+                ROT[col2, col1] <- 0
+                ROT[col2, col2] <- 1
+            }
+
+            # rotate
+            LAMBDA <- LAMBDA %*% ROT
+
+            if(!orthogonal) {
+                # rotate PHI
+                PHI[col1, ] <- (1/gamma)*PHI[col1,] + (delta/gamma)*PHI[col2,]
+                PHI[, col1] <- PHI[col1, ]
+                PHI[col1, col1] <- 1
+            }
+
+        } # all planes
+
+        # check for convergence
+        Q.current <- do.call(method.fname, c(list(LAMBDA = LAMBDA),
+                             method.args, list(grad = FALSE)))
+
+        # absolute change in Q
+        diff <- abs(Q.old - Q.current)
+
+        # if verbose, print
+        if(verbose) {
+            cat("iter = ",    sprintf("%4d", iter),
+                " Q = ",      sprintf("%13.11f", Q.current),
+               " change = ", sprintf("%13.11f", diff), "\n")
+        }
+
+        if(diff < tol) {
+            converged <- TRUE
+            break
+        } else {
+            Q.old <- Q.current
+        }
+
+    } # iter
+
+    # warn if no convergence
+    if(!converged && warn) {
+        warning("lavaan WARNING: ",
+                "pairwise rotation algorithm did not converge after ",
+                max.iter, " iterations")
+    }
+
+    # compute final rotation matrix
+    if(orthogonal) {
+        ROT <- solve(crossprod(A), crossprod(A, LAMBDA))
+    } else {
+        # to be compatible with GPa
+        ROTt.inv <- solve(crossprod(A), crossprod(A, LAMBDA))
+        ROT <- solve(t(ROTt.inv))
+    }
+
+    # algorithm information
+    info <- list(algorithm = "pairwise",
+                 iter = iter,
                  converged = converged,
                  method.value = Q.current)
 

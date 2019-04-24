@@ -76,7 +76,7 @@ lav_object_print_rotation <- function(object) {
 
     t0.txt <- sprintf("  %-20s", "Rotation method")
     if(object@Options$rotation.args$orthogonal) {
-        MM <- paste(toupper(object@Options$rotation), " ", "ORTHOGONAL", 
+        MM <- paste(toupper(object@Options$rotation), " ", "ORTHOGONAL",
                     sep = "")
     } else {
         MM <- paste(toupper(object@Options$rotation), " ", "OBLIQUE",
@@ -89,12 +89,12 @@ lav_object_print_rotation <- function(object) {
 
     if(object@Options$rotation == "geomin") {
         t0.txt <- sprintf("  %-40s", "Geomin epsilon")
-        t1.txt <- sprintf("  %10.6g", 
+        t1.txt <- sprintf("  %10.6g",
             object@Options$rotation.args$geomin.epsilon)
         cat(t0.txt, t1.txt, "\n", sep="")
     } else if(object@Options$rotation == "orthomax") {
         t0.txt <- sprintf("  %-40s", "Orthomax gamma")
-        t1.txt <- sprintf("  %10.6g", 
+        t1.txt <- sprintf("  %10.6g",
             object@Options$rotation.args$orthomax.gamma)
         cat(t0.txt, t1.txt, "\n", sep="")
     } else if(object@Options$rotation == "cf") {
@@ -124,7 +124,7 @@ lav_object_print_rotation <- function(object) {
     t2.txt <- ""
     cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
-    t0.txt <- sprintf("  %-40s", "Row weights") 
+    t0.txt <- sprintf("  %-40s", "Row weights")
     tmp.txt <- object@Options$rotation.args$row.weights
     t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt, 1, 1)),
                                       substring(tmp.txt, 2), sep = ""))

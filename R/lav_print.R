@@ -455,7 +455,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     if(is.null(x$efa)) {
                         LHS <- paste(x$lhs[row.idx], x$op[row.idx])
                     } else {
-                        LHS <- paste(x$lhs[row.idx], x$op[row.idx], 
+                        LHS <- paste(x$lhs[row.idx], x$op[row.idx],
                                      x$efa[row.idx])
                     }
                     lhs.idx <- seq(1, nel*2L, 2L)

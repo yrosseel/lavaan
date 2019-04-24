@@ -1256,13 +1256,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ######################
     if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
         (lavoptions$rotation != "none") ) {
-    
+
         # unrotated parameters
         x.unrotated <- lav_model_get_parameters(lavmodel)
 
         # rotate, and create new lavmodel
+        if(lavoptions$verbose) {
+            cat("Rotatating solution using rotation =", 
+                lavoptions$rotation, "... ")
+        }
         lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
                                          lavoptions = lavoptions)
+        if(lavoptions$verbose) {
+            cat("done.\n")
+        }
 
         # overwrite parameters in @ParTable$est
         lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
@@ -1271,10 +1278,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(!lavoptions$se %in% c("none", "bootstrap")) {
             # use delta rule to recompute vcov
 
+            if(lavoptions$verbose) {
+                cat("Rotatating VCOV using Delta method ... ")
+            }
+
             # Jacobian
             JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
                                       x = x.unrotated,
                                       lavmodel = lavmodel,
+                                      init.rot = 
+                                         lavoptions$rotation.args$jac.init.rot,
                                       lavoptions = lavoptions,
                                       ov.var = lapply(lavimplied$cov, diag),
                                       extra = FALSE,
@@ -1293,9 +1306,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                     VCOV = lavvcov$vcov,
                                                     BOOT = lavboot$coef)
             }
+
+            if(lavoptions$verbose) {
+                cat("done.\n")
+            }
         }
     }
-   
+
 
     ####################
     #### 17. lavaan ####
