@@ -14,7 +14,7 @@ model as specified by the user. We refer to this table as the parameter table.}
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
-    orthogonal.x = FALSE, std.lv = FALSE, 
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE, 
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
@@ -26,7 +26,7 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
-    orthogonal.x = FALSE, std.lv = FALSE,
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
@@ -59,6 +59,8 @@ the model both for both observed and latent variables.}
    endogenous latent variables only are set to zero.}
 \item{orthogonal.x}{If \code{TRUE}, all covariances among
    exogenous latent variables only are set to zero.}
+\item{orthogonal.efa}{If \code{TRUE}, all covariances among
+   latent variables involved in rotation only are set to zero.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
