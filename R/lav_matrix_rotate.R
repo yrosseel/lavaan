@@ -166,7 +166,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                 res <- c(info$method.value, lav_matrix_vec(ROT))
 
             } else if(algorithm == "pairwise") {
-                ROT <- lav_matrix_rotate_pairwise(A = A, 
+                ROT <- lav_matrix_rotate_pairwise(A = A,
                                              orthogonal = orthogonal,
                                              init.ROT = init.ROT,
                                              method.fname = method.fname,
@@ -178,7 +178,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                 info <- attr(ROT, "info"); attr(ROT, "info") <- NULL
                 res <- c(info$method.value, lav_matrix_vec(ROT))
 
-            } 
+            }
 
             if(verbose) {
                 cat("rstart = ", sprintf("%4d", rep),
@@ -514,7 +514,7 @@ lav_matrix_rotate_pairwise <- function(A            = NULL,   # original matrix
         tmp <- utils::combn(M, 2)
         PLANE <- cbind(tmp, tmp[c(2,1),,drop = FALSE])
     }
-    
+
 
     # define objective function -- orthogonal
     objf_orth <- function(theta = 0, A = NULL, col1 = 0L, col2 = 0L) {
@@ -536,7 +536,7 @@ lav_matrix_rotate_pairwise <- function(A            = NULL,   # original matrix
     }
 
     # define objective function -- oblique
-    objf_obliq <- function(delta = 0, A = NULL, col1 = 0L, col2 = 0L, 
+    objf_obliq <- function(delta = 0, A = NULL, col1 = 0L, col2 = 0L,
                            phi12 = 0) {
 
         # construct ROT
@@ -585,7 +585,7 @@ lav_matrix_rotate_pairwise <- function(A            = NULL,   # original matrix
                 ROT[col1, col2] <- base::sin(theta)
                 ROT[col2, col1] <- -1 * base::sin(theta)
                 ROT[col2, col2] <- base::cos(theta)
-                
+
             } else {
                 phi12 <- PHI[col1, col2]
                 out <- optimize(f = objf_obliq, interval = c(-1, +1),

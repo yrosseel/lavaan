@@ -263,7 +263,7 @@ function(object, header       = TRUE,
     # return something invisibly, just for those who want this...
     # new in 0.6-4
     invisible(res)
-    
+
 })
 
 

@@ -18,7 +18,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
     x.rot <- lav_model_efa_rotate_x(x = x.orig, lavmodel = lavmodel,
                                     lavoptions = lavoptions, extra = TRUE)
     extra <- attr(x.rot, "extra"); attr(x.rot, "extra") <- NULL
-    
+
     # store full rotation matrix (per group)
     lavmodel@H <- extra$H
     lavmodel@lv.order <- extra$lv.order
@@ -31,7 +31,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
 }
 
 # lower-level function, rotate/reorder matrices in MLIST for a given H, order
-lav_model_efa_rotate_mlist <- function(MLIST = NULL, Hg = NULL, 
+lav_model_efa_rotate_mlist <- function(MLIST = NULL, Hg = NULL,
                                        lv.order = NULL) {
 
     # rotate lambda
@@ -179,7 +179,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         } # set
 
         # rotate all the SEM parameters
-        MLIST.rot <- 
+        MLIST.rot <-
             lav_model_efa_rotate_mlist(MLIST, Hg = Hg, lv.order = lv.order)
 
         # store rotated matrices in GLIST

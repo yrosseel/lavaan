@@ -534,6 +534,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       orthogonal       = lavoptions$orthogonal,
                       orthogonal.x     = lavoptions$orthogonal.x,
                       orthogonal.y     = lavoptions$orthogonal.y,
+                      orthogonal.efa   = lavoptions$rotation.args$orthogonal,
                       conditional.x    = lavoptions$conditional.x,
                       fixed.x          = lavoptions$fixed.x,
                       std.lv           = lavoptions$std.lv,
@@ -1262,7 +1263,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # rotate, and create new lavmodel
         if(lavoptions$verbose) {
-            cat("Rotatating solution using rotation =", 
+            cat("Rotatating solution using rotation =",
                 lavoptions$rotation, "... ")
         }
         lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
@@ -1286,7 +1287,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
                                       x = x.unrotated,
                                       lavmodel = lavmodel,
-                                      init.rot = 
+                                      init.rot =
                                          lavoptions$rotation.args$jac.init.rot,
                                       lavoptions = lavoptions,
                                       ov.var = lapply(lavimplied$cov, diag),

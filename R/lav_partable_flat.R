@@ -8,6 +8,7 @@ lav_partable_flat <- function(FLAT = NULL,
                               orthogonal       = FALSE,
                               orthogonal.y     = FALSE,
                               orthogonal.x     = FALSE,
+                              orthogonal.efa   = FALSE,
                               std.lv           = FALSE,
                               conditional.x    = FALSE,
                               fixed.x          = TRUE,
@@ -387,6 +388,16 @@ lav_partable_flat <- function(FLAT = NULL,
         lv.cov.idx <- which(op == "~~" &
                             lhs %in% lv.names.x &
                             rhs %in% lv.names.x &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+    # 3d. orthogonal.efa = TRUE?
+    if(orthogonal.efa) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.efa &
+                            rhs %in% lv.names.efa &
                             lhs != rhs &
                             user == 0L)
         ustart[lv.cov.idx] <- 0.0

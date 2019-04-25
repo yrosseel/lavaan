@@ -23,6 +23,7 @@ lavaanify <- lavParTable <- function(
                       orthogonal       = FALSE,
                       orthogonal.y     = FALSE,
                       orthogonal.x     = FALSE,
+                      orthogonal.efa   = FALSE,
                       std.lv           = FALSE,
                       conditional.x    = FALSE,
                       fixed.x          = TRUE,
@@ -201,7 +202,8 @@ lavaanify <- lavParTable <- function(
                 meanstructure = meanstructure,
                 int.ov.free = int.ov.free, int.lv.free = int.lv.free,
                 orthogonal = orthogonal, orthogonal.y = orthogonal.y,
-                orthogonal.x = orthogonal.x, std.lv = std.lv,
+                orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
+                std.lv = std.lv,
                 conditional.x = conditional.x, fixed.x = fixed.x,
                 parameterization = parameterization,
                 auto.fix.first = auto.fix.first,
@@ -245,7 +247,8 @@ lavaanify <- lavParTable <- function(
             meanstructure = meanstructure,
             int.ov.free = int.ov.free, int.lv.free = int.lv.free,
             orthogonal = orthogonal, orthogonal.y = orthogonal.y,
-            orthogonal.x = orthogonal.x, std.lv = std.lv,
+            orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
+            std.lv = std.lv,
             conditional.x = conditional.x, fixed.x = fixed.x,
             parameterization = parameterization,
             auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
@@ -607,13 +610,15 @@ lavaanify <- lavParTable <- function(
                     plabel <- c(plabel, LIST$plabel[ind.idx[seq_len(nzero)]])
                 }
 
-                # 2. covariances constrained to zero
-                cov.idx <- which(LIST$op == "~~" &
-                                 LIST$block == b &
-                                 LIST$lhs %in% lv.nam.efa &
-                                 LIST$rhs %in% lv.nam.efa &
-                                 LIST$lhs != LIST$rhs)
-                plabel <- c(plabel, LIST$plabel[cov.idx])
+                # 2. covariances constrained to zero (only if oblique rotation)
+                if(!orthogonal.efa) {
+                    cov.idx <- which(LIST$op == "~~" &
+                                     LIST$block == b &
+                                     LIST$lhs %in% lv.nam.efa &
+                                     LIST$rhs %in% lv.nam.efa &
+                                     LIST$lhs != LIST$rhs)
+                    plabel <- c(plabel, LIST$plabel[cov.idx])
+                }
 
             } # sets
         } # blocks
