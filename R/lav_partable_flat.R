@@ -102,20 +102,20 @@ lav_partable_flat <- function(FLAT = NULL,
         lv.names.efa <- unique(FLAT$lhs[FLAT$op == "=~" &
                                         nchar(FLAT$efa) > 0L])
         # remove them from lv.names.x
-        if(length(lv.names.x) > 0L) {
-            both.idx <- which(lv.names.x %in% lv.names.efa)
-            if(length(both.idx) > 0L) {
-                lv.names.x <- lv.names.x[ -both.idx ]
-            }
-        }
+        #if(length(lv.names.x) > 0L) {
+        #    both.idx <- which(lv.names.x %in% lv.names.efa)
+        #    if(length(both.idx) > 0L) {
+        #        lv.names.x <- lv.names.x[ -both.idx ]
+        #    }
+        #}
 
         # remove them from lvov.names.y
-        if(length(lvov.names.y) > 0L) {
-            both.idx <- which(lvov.names.y %in% lv.names.efa)
-            if(length(both.idx) > 0L) {
-                lvov.names.y <- lvov.names.y[ -both.idx ]
-            }
-        }
+        #if(length(lvov.names.y) > 0L) {
+        #    both.idx <- which(lvov.names.y %in% lv.names.efa)
+        #    if(length(both.idx) > 0L) {
+        #        lvov.names.y <- lvov.names.y[ -both.idx ]
+        #    }
+        #}
     } else {
         lv.names.efa <- character(0)
     }
@@ -175,17 +175,17 @@ lav_partable_flat <- function(FLAT = NULL,
     }
 
     # e) efa latent variables COVARIANCES:
-    if(auto.efa && length(lv.names.efa) > 1L) {
-        efa.values <- lav_partable_efa_values(FLAT)
-        for(set in efa.values) {
-            # correlated factors within each set
-            this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
-                                            FLAT$efa == set ])
-            tmp <- utils::combn(this.set.lv, 2)
-            lhs <- c(lhs, tmp[1,]) # to fill upper.tri
-            rhs <- c(rhs, tmp[2,])
-        }
-    }
+    #if(auto.efa && length(lv.names.efa) > 1L) {
+    #    efa.values <- lav_partable_efa_values(FLAT)
+    #    for(set in efa.values) {
+    #        # correlated factors within each set
+    #        this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
+    #                                        FLAT$efa == set ])
+    #        tmp <- utils::combn(this.set.lv, 2)
+    #        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+    #        rhs <- c(rhs, tmp[2,])
+    #    }
+    #}
 
     # create 'op' (thresholds come first, then variances)
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"

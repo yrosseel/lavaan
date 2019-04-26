@@ -612,8 +612,10 @@ lavaanify <- lavParTable <- function(
 
                 # 2. covariances constrained to zero (only if oblique rotation)
                 if(!orthogonal.efa) {
+                    # skip if user == 1 (user-override!)
                     cov.idx <- which(LIST$op == "~~" &
                                      LIST$block == b &
+                                     LIST$user == 0 &
                                      LIST$lhs %in% lv.nam.efa &
                                      LIST$rhs %in% lv.nam.efa &
                                      LIST$lhs != LIST$rhs)
@@ -630,7 +632,7 @@ lavaanify <- lavParTable <- function(
         TMP$op     <- rep("==", nel)
         TMP$rhs    <- rep(0,    nel)
         TMP$block  <- rep(0L,   nel)
-        TMP$user   <- rep(2L,   nel)
+        TMP$user   <- rep(7L,   nel) # special code for EFA == 7
         TMP$ustart <- rep(as.numeric(NA), nel)
 
         LIST <- lav_partable_merge(LIST, TMP)
