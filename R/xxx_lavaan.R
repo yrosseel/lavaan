@@ -1075,7 +1075,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 if(length(efa.idx) > 0L) {
                     con.jac <- con.jac[-efa.idx, , drop = FALSE]
                 }
-                lavmodel@con.jac <- rbind(con.jac, lavmodel@ceq.efa.JAC)
+                ceq.efa.JAC <- lavmodel@ceq.efa.JAC
+                # only take first efa.idx rows
+                ceq.efa.JAC <- ceq.efa.JAC[ seq_len(length(efa.idx)), , 
+                                            drop = FALSE ]
+                lavmodel@con.jac <- rbind(con.jac, ceq.efa.JAC)
                 attr(lavmodel@con.jac, "inactive.idx") <- inactive.idx
                 attr(lavmodel@con.jac, "ceq.idx") <- ceq.idx
                 attr(lavmodel@con.jac, "efa.idx") <- efa.idx

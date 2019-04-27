@@ -573,6 +573,10 @@ lavaanify <- lavParTable <- function(
 
 
     # handle EFA equality constraints
+    # Note: we should also check if they are really needed:
+    #       eg., if all the factor-loadings of the 'second' set (time/group)
+    #       are constrained to be equal to the factor-loadings of the first
+    #       set, no further constraints are needed
     if(auto.efa && !is.null(LIST$efa)) {
         # for each set, for each block
         nblocks <- lav_partable_nblocks(LIST)
@@ -589,6 +593,27 @@ lavaanify <- lavParTable <- function(
                 if(length(lv.nam.efa) == 1L) {
                     # nothing to do (warn?)
                     next
+                }
+
+                # equality constraints on ALL factor loadings in this set?
+                # --> no constraints are needed
+                if(b > 1L || s > 1L) {
+                    # collect plabels for this set, if any
+                    set.idx <- which(LIST$op == "=~" &
+                                     LIST$block == b &
+                                     LIST$lhs %in% lv.nam.efa)
+                    plabels.set <- LIST$plabel[ set.idx ]
+
+                    # check simple == equalities
+                    # TODO: what about more complex equality constraints?
+                    eq.idx <- which(LIST$op == "==")
+                    con.labels <- c(LIST$lhs[eq.idx],
+                                    LIST$rhs[eq.idx])
+
+                    # TODO: what about exceptions? 
+                    if(all(plabels.set %in% con.labels)) {
+                        next
+                    }
                 }
 
                 # 1. echelon pattern
