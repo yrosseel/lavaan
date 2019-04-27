@@ -4,7 +4,7 @@ lav_model_fit <- function(lavpartable = NULL,
                           VCOV        = NULL,
                           TEST        = NULL) {
 
-    stopifnot(is.list(lavpartable), class(lavmodel) == "lavModel")
+    stopifnot(is.list(lavpartable), inherits(lavmodel, "lavModel"))
 
     # extract information from 'x'
     iterations = attr(x, "iterations")

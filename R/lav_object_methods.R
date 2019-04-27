@@ -395,7 +395,7 @@ standardizedSolution <- standardizedsolution <- function(object,
     }
     # remove <> rows?
     if(remove.ineq) {
-        ineq.idx <- which(LIST$op == "<" || LIST$op == ">")
+        ineq.idx <- which(LIST$op %in% c("<",">"))
         if(length(ineq.idx) > 0L) {
             LIST <- LIST[-ineq.idx,]
         }
@@ -798,7 +798,7 @@ parameterEstimates <- parameterestimates <- function(object,
     }
     # remove <> rows?
     if(remove.ineq) {
-        ineq.idx <- which(LIST$op == "<" || LIST$op == ">")
+        ineq.idx <- which(LIST$op %in% c("<", ">"))
         if(length(ineq.idx) > 0L) {
             LIST <- LIST[-ineq.idx,]
         }

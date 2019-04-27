@@ -235,7 +235,7 @@ lav_options_set <- function(opt = NULL) {
     # group.equal and group.partial
     if(opt$group.equal[1] == "none") {
         opt$group.equal <- character(0)
-    } else if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
+    } else if(is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {
             if(opt$categorical) {
                 opt$group.equal <- c("loadings", "thresholds")
@@ -256,7 +256,7 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: unknown value for `group.equal' argument: ",
              opt$group.equal, "\n")
     }
-    if(is.null(opt$group.partial) || nchar(opt$group.partial) == 0L) {
+    if(is.null(opt$group.partial) || all(nchar(opt$group.partial) == 0L)) {
         opt$group.partial <- character(0)
     } else if(length(opt$group.partial) == 0) {
         # nothing to do

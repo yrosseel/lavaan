@@ -10,10 +10,10 @@ lavNames <- function(object, type = "ov", ...) {
 
     if(inherits(object, "lavaan") || inherits(object, "lavaanList")) {
          partable <- object@ParTable
-    } else if(class(object) == "list" ||
+    } else if(inherits(object, "list") ||
               inherits(object, "data.frame")) {
         partable <- object
-    } else if(class(object) == "character") {
+    } else if(inherits(object, "character")) {
         # just a model string?
         partable <- lavParseModelString(object)
     }

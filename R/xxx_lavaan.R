@@ -379,7 +379,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # constraints
-        if(nchar(constraints) > 0L && opt$estimator %in% c("ML")) {
+        if(any(nchar(constraints) > 0L) && opt$estimator %in% c("ML")) {
             opt$information <- "observed"
         }
 
@@ -1395,7 +1395,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # FIXME: not scale independent (should use solve(Hessian) %*% g)
     # but Hessian is not always available (or expensive to compute)
     hasExplicitConstraints <- FALSE
-    if(is.character(constraints) && nchar(constraints) > 0L) {
+    if(is.character(constraints) && any(nchar(constraints) > 0L)) {
         hasExplicitConstraints <- TRUE
     }
     hasNonLinearEqConstraints <- FALSE

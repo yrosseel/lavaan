@@ -71,7 +71,7 @@ lavaanify <- lavParTable <- function(
     CON  <- attr(FLAT, "constraints"); attr(FLAT, "constraints") <- NULL
 
     # extra constraints?
-    if(!is.null(constraints) && nchar(constraints) > 0L) {
+    if(!is.null(constraints) && any(nchar(constraints) > 0L)) {
         FLAT2 <- lavParseModelString(model.syntax=constraints, warn=warn)
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
@@ -485,7 +485,7 @@ lavaanify <- lavParTable <- function(
             } else {
             # 2. ref.idx is a free parameter
                 # user-label?
-                #if(nchar(LIST$label[ref.idx])  > 0) {
+                #if(any(nchar(LIST$label[ref.idx])  > 0)) {
                 #    lhs.lab <- LIST$label[ref.idx]
                 #} else {
                 #    lhs.lab <- PLABEL[ref.idx]
