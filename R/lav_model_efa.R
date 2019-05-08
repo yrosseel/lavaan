@@ -348,6 +348,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
             # compute constraints
             if(ropts$orthogonal) {
+                # the constraint: Z == diagonal
+                # or in other words, the non-diagonal elements of
+                # Z - t(Z) are all zero
                 tmp <- Z - t(Z)
                 this.res <- lav_matrix_vech(tmp, diagonal = FALSE)
             } else {

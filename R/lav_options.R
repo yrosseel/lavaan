@@ -73,6 +73,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # rotation
                 rotation           = "geomin",
+                rotation.se        = "bordered", # or "delta"
                 rotation.args      = list(orthogonal     = FALSE,
                                           row.weights    = "none",
                                           std.ov         = FALSE,

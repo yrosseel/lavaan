@@ -1054,6 +1054,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
             (lavoptions$rotation != "none") ) {
 
+            # store unrotated solution in partable
+            tmp <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
+            lavpartable$est.unrotated <- 
+                lav_model_get_parameters(lavmodel = tmp,
+                                         type = "user", extra = TRUE)
+
             # rotate, and create new lavmodel
             if(lavoptions$verbose) {
                 cat("Rotating solution using rotation method =",
@@ -1062,28 +1068,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
                                              x.orig = as.numeric(x),
                                              lavoptions = lavoptions)
-
-            # insert ceq.efa.JAC in con.jac (which should be final by now)
-            if(lavoptions$se == "none" || lavoptions$se == "bootstrap") {
-                # nothing to do
-            } else {
-                con.idx <- which(lavpartable$op %in% c("==", "<", ">"))
-                efa.idx <- which(lavpartable$user[con.idx] == 7L)
-                con.jac <- lavmodel@con.jac
-                inactive.idx <- attr(con.jac, "inactive.idx")
-                ceq.idx <- attr(con.jac, "ceq.idx")
-                if(length(efa.idx) > 0L) {
-                    con.jac <- con.jac[-efa.idx, , drop = FALSE]
-                }
-                ceq.efa.JAC <- lavmodel@ceq.efa.JAC
-                # only take first efa.idx rows
-                ceq.efa.JAC <- ceq.efa.JAC[ seq_len(length(efa.idx)), , 
-                                            drop = FALSE ]
-                lavmodel@con.jac <- rbind(con.jac, ceq.efa.JAC)
-                attr(lavmodel@con.jac, "inactive.idx") <- inactive.idx
-                attr(lavmodel@con.jac, "ceq.idx") <- ceq.idx
-                attr(lavmodel@con.jac, "efa.idx") <- efa.idx
-            }
 
             if(lavoptions$verbose) {
                 cat("done.\n")
@@ -1333,9 +1317,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 #                                      init.rot =
 #                                         lavoptions$rotation.args$jac.init.rot,
 #                                      lavoptions = lavoptions,
+#                                      type = "user",
 #                                      extra = FALSE,
-#                                      method = "simple", # to save time
-#                                      type = "user")
+#                                      method = "simple") # to save time
 #
 #            # Delta method
 #            VCOV.user <- JAC %*% lavvcov$vcov %*% t(JAC)
