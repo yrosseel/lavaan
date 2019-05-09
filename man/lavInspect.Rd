@@ -360,6 +360,8 @@ Miscellaneous:
     \item{\code{"mi"}:}{The modification indices. Alias: \code{"modindices"},
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
+    \item{\code{"loglik.casewise"}:}{Vector containing the casewise 
+        loglikelihood contributions. Only available if estimator = \code{"ML"}.}
     \item{\code{"options"}:}{List. The option list.}
     \item{\code{"call"}:}{List. The call as returned by match.call, coerced to
         a list.}

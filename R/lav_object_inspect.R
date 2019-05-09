@@ -487,6 +487,16 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
+    ### casewise loglikehoods ###
+    } else if(what == "loglik.casewise") {
+        lav_object_inspect_loglik_casewise(object, log. = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)  
+    } else if(what == "lik.casewise") {
+        lav_object_inspect_loglik_casewise(object, log. = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+
     # multilevel #
     } else if(what == "icc") {
         lav_object_inspect_icc(object,
@@ -2885,3 +2895,74 @@ lav_object_inspect_ranef <- function(object, add.labels = FALSE,
 
     OUT
 }
+
+# casewise loglikelihood contributions
+lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    lavdata <- object@Data
+    lavsamplestats <- object@SampleStats
+    lavimplied <- object@implied
+
+    G <- lavdata@ngroups
+    OUT <- vector("list", G)
+
+    # multilevel?
+    if(lavdata@nlevels > 1L) {
+        stop("lavaan ERROR: casewise (log)likeloods contributions not yet available for clustered data")
+    }
+
+    # estimator ML?
+    if(object@Options$estimator != "ML") {
+        stop("lavaan ERROR: casewise (log)likeloods contributions only available for estimator = ", dQuote("ML"))
+    }
+
+    for(g in 1:G) {
+
+        if(lavdata@missing == "listwise") {
+            if(object@Model@meanstructure) {
+                MEAN <- lavimplied$mean[[g]]
+            } else {
+                MEAN <- lavsamplestats@mean[[g]]
+            }
+            OUT[[g]] <- lav_mvnorm_loglik_data(Y  = lavdata@X[[g]],
+                                               wt = lavdata@weights[[g]],
+                                               Mu = MEAN,
+                                               Sigma = lavimplied$cov[[g]],
+                                               casewise = TRUE)
+        } else if(lavdata@missing == "ml") {
+            OUT[[g]] <- lav_mvnorm_missing_llik_casewise(Y = lavdata@X[[g]],
+                                               wt = lavdata@weights[[g]],
+                                               Mu = lavimplied$mean[[g]],
+                                               Sigma = lavimplied$cov[[g]])
+        } else {
+            stop("lavaan ERROR: casewise (log)likeloods contributions not available if missing = ", dQuote(lavdata@missing))
+        }
+
+        # log. = FALSE?
+        if(!log.) {
+            OUT[[g]] <- exp(OUT[[g]])
+        }
+
+        # label
+        # if(add.labels) {
+        # }
+
+        # class
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+
+        }
+    } # g
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+
