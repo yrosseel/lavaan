@@ -9,10 +9,12 @@
 #
 # initial version: YR 14 April 2012
 
-# YR 23 feb 2017: blocks/levels/groups, but everything is group-based!
+# YR 23 Feb 2017: blocks/levels/groups, but everything is group-based!
 
 # FIXME: if nlevels > 1L, and ngroups > 1L, we should check that
 # group is at the upper-level
+
+# YR 08 May  2019: sampling weights normalization -> different options
 
 # extract the data we need for this particular model
 lavData <- function(data              = NULL,          # data.frame
@@ -123,6 +125,8 @@ lavData <- function(data              = NULL,          # data.frame
                                  ov.names          = ov.names,
                                  ordered           = ordered,
                                  sampling.weights  = sampling.weights,
+                                 sampling.weights.normalization =
+                                     lavoptions$sampling.weights.normalization,
                                  ov.names.x        = ov.names.x,
                                  ov.names.l        = ov.names.l,
                                  std.ov            = std.ov,
@@ -403,6 +407,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                                          # in model
                           ordered       = NULL,          # ordered variables
                           sampling.weights = NULL,       # sampling weights
+                          sampling.weights.normalization = "none",
                           ov.names.x    = character(0L), # exo variables
                           ov.names.l    = list(),        # var per level
                           std.ov        = FALSE,         # standardize ov's?
@@ -754,6 +759,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop = FALSE] )
         dimnames(X[[g]]) <- NULL ### copy?
 
+        # sampling weights (but no normalization yet)
         if(!is.null(sampling.weights)) {
             WT <- data[[sampling.weights]][case.idx[[g]]]
             if(any(WT < 0)) {
@@ -767,9 +773,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                         " contains missing values\n", sep = "")
             }
 
-            # rescale, so sum equals sample size in this group
-            WT2 <- WT / sum(WT) * nobs[[g]]
-            weights[[g]] <- WT2
+            weights[[g]] <- WT
         }
 
         # construct integers for user-declared 'ordered' factors
@@ -902,9 +906,32 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
     } # groups, at first level
 
+    # sampling weigths, again
     if(is.null(sampling.weights)) {
         sampling.weights <- character(0L)
+    } else {
+        # check if we need normalization
+        if(sampling.weights.normalization == "none") {
+            # nothing to do
+        } else if(sampling.weights.normalization == "total") {
+            sum.weights <- sum(unlist(weights))
+            ntotal <- sum(unlist(nobs))
+            for(g in 1:ngroups) {
+                WT <- weights[[g]]
+                WT2 <- WT / sum.weights * ntotal
+                weights[[g]] <- WT2
+            }
+        } else if(sampling.weights.normalization == "group") {
+            for(g in 1:ngroups) {
+                WT <- weights[[g]]
+                WT2 <- WT / sum(WT) * nobs[[g]]
+                weights[[g]] <- WT2
+            }
+        } else {
+            stop("lavaan ERROR: sampling.weights.normalization should be total, group or none.")
+        }
     }
+
 
     lavData <- new("lavData",
                    data.type       = "full",
