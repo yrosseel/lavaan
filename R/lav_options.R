@@ -95,7 +95,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 # full data
                 std.ov             = FALSE,
                 missing            = "default",
-                sampling.weights.normalization = "none",
+                sampling.weights.normalization = "total",
 
                 # summary data
                 sample.cov.rescale = "default",
