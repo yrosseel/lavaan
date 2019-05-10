@@ -864,12 +864,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
             # check for 'level-1' variables with zero within variance
             l1.idx <- c(Lp[[g]]$within.idx[[2]], # within only
                         Lp[[g]]$both.idx[[2]])
-            l1.names <- c(Lp[[g]]$within.names[[2]],
-                          Lp[[g]]$both.names[[2]])
             for(v in l1.idx) {
                 within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
                                      FUN = var, na.rm = TRUE)
-                # ignore singeltons
+                # ignore singletons
                 singleton.idx <- which( Lp[[g]]$cluster.size[[2]] == 1L )
                 if(length(singleton.idx) > 0L) {
                     within.var[singleton.idx] <- 10 # non-zero variance
@@ -882,7 +880,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     gtxt <- if(ngroups > 1L) {
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
-                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                    txt <- c("Level-1 variable ", dQuote(ov.names[[g]][v]),
                              " has no variance at the within level", gtxt,
                              " The variable appears to be a between-level
                              variable. Please remove this variable from
@@ -893,13 +891,57 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     gtxt <- if(ngroups > 1L) {
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
-                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                    txt <- c("Level-1 variable ", dQuote(ov.names[[g]][v]),
                        " has no variance within some clusters", gtxt,
                        " The cluster ids with zero within variance are:\n",
                        paste( Lp[[g]]$cluster.id[[2]][zero.var],
                               collapse = " "))
                     warning(lav_txt2message(txt))
                 }
+            }
+
+            # new in 0.6-4
+            # check for 'level-2' only variables with non-zero within variance
+            l2.idx <- Lp[[g]]$between.idx[[2]] # between only
+            error.flag <- FALSE
+            for(v in l2.idx) {
+                within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
+                                     FUN = var, na.rm = TRUE)
+                non.zero.var <- which(unname(within.var) > .Machine$double.eps)
+                if(length(non.zero.var) == 0L) {
+                    # all is good
+                } else if(length(non.zero.var) == 1L) {
+                    # just one  
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-2 variable ", dQuote(ov.names[[g]][v]),
+                             " has non-zero variance at the within level", gtxt,
+                             " in one cluster with id: ", 
+                               Lp[[g]]$cluster.id[[2]][non.zero.var], ".\n",
+                             " Please double-check if this is a between only",
+                             " variable.")
+                    warning(lav_txt2message(txt))
+                } else {
+                    error.flag <- TRUE
+                    # several
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-2 variable ", dQuote(ov.names[[g]][v]),
+                       " has non-zero variance at the within level", gtxt,
+                       " The cluster ids with non-zero within variance are: ",
+                           paste( Lp[[g]]$cluster.id[[2]][non.zero.var],
+                              collapse = " "))
+                    warning(lav_txt2message(txt))
+                }
+             
+            }
+            if(error.flag) {
+                txt <- c("Some between-level (only) variables have non-zero ",
+                         " variance at the within-level. ",
+                         " Please double-check your data. ")
+                stop(lav_txt2message(txt, header = "lavaan ERROR"))
             }
 
         } # clustered data
