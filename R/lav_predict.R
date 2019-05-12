@@ -70,7 +70,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                            lavoptions  = list(std.ov = lavdata@std.ov,
                                               group.label = lavdata@group.label,
                                               missing = lavdata@missing,
-                                              warn = FALSE),
+                                              warn = TRUE), # was FALSE before?
                            allow.single.case = TRUE)
         data.obs <- newData@X
         eXo <- newData@eXo

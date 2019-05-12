@@ -148,6 +148,15 @@ lavData <- function(data              = NULL,          # data.frame
             stop("lavaan ERROR: please specify number of observations")
         }
 
+        # if a 'group' argument was provided, keep it -- new in 0.6-4
+        if(is.null(group)) {
+            group <- character(0L)
+        } else if(is.character(group)) {
+            # nothing to do, just store it
+        } else {
+            stop("lavaan ERROR: group argument should be a string")
+        }
+
         # list?
         if(is.list(sample.cov)) {
             # multiple groups, multiple cov matrices
@@ -161,10 +170,11 @@ lavData <- function(data              = NULL,          # data.frame
             ngroups     <- length(sample.cov)
             LABEL <- names(sample.cov)
             if(is.null(group.label) || length(group.label) == 0L) {
-                if(is.null(LABEL))
+                if(is.null(LABEL)) {
                     group.label <- paste("Group ", 1:ngroups, sep="")
-                else
+                } else {
                     group.label <- LABEL
+                }
             } else {
                 if(is.null(LABEL)) {
                     stopifnot(length(group.label) == ngroups)
@@ -235,7 +245,7 @@ lavData <- function(data              = NULL,          # data.frame
         lavData <- new("lavData",
                        data.type   = "moment",
                        ngroups     = ngroups,
-                       group       = character(0L),
+                       group       = group,
                        nlevels     = 1L, # for now
                        cluster     = character(0L),
                        group.label = group.label,

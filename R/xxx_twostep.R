@@ -83,7 +83,7 @@ twostep <- function(model      = NULL,
     PT$se[ PT$free == 0L & !is.na(PT$ustart) ] <- 0.0
 
 
-    # STEP 1: fit measurent model for each meaesurement block
+    # STEP 1: fit measurent model for each measurement block
     #         FIXME: measurement block == single lv for now!!
     MM <- vector("list", length = nfac)
     MM.INFO <- matrix(0, npar, npar)
