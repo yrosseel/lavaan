@@ -89,8 +89,12 @@ sam <- function(model      = NULL,
     PT <- parTable(FIT)
     PT.orig <- PT
     PT$est <- PT$se <- NULL
-    # est equals ustart by default
+    # est equals ustart by default (except exo values)
     PT$est <- PT$ustart
+    if(any(PT$exo > 0L)) {
+        PT$est[PT$exo > 0L] <- PT$start[PT$exo > 0L]
+    }
+
     # clear se values (needed here?)
     PT$se <- rep(as.numeric(NA), length(PT$lhs))
     PT$se[ PT$free == 0L & !is.na(PT$ustart) ] <- 0.0
