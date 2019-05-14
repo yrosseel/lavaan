@@ -1056,7 +1056,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
             # store unrotated solution in partable
             tmp <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
-            lavpartable$est.unrotated <- 
+            lavpartable$est.unrotated <-
                 lav_model_get_parameters(lavmodel = tmp,
                                          type = "user", extra = TRUE)
 

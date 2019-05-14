@@ -376,7 +376,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
 
     # bordered efa rotation?
     if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
-        (lavoptions$rotation != "none") && 
+        (lavoptions$rotation != "none") &&
         (lavoptions$rotation.se == "bordered") ) {
 
         con.idx <- which(lavpartable$op %in% c("==", "<", ">"))

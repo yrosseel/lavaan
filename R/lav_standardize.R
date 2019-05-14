@@ -10,8 +10,8 @@ lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    x.stand.user <- lav_standardize_lv(lavobject = lavobject, 
-                                       partable = partable, est = est, 
+    x.stand.user <- lav_standardize_lv(lavobject = lavobject,
+                                       partable = partable, est = est,
                                        GLIST = GLIST, cov.std = cov.std)
 
     if(rotation) {
@@ -40,16 +40,16 @@ lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    x.stand.user <- lav_standardize_all(lavobject = lavobject, 
-                                        partable = partable, est = est, 
-                                        est.std = NULL, GLIST = GLIST, 
+    x.stand.user <- lav_standardize_all(lavobject = lavobject,
+                                        partable = partable, est = est,
+                                        est.std = NULL, GLIST = GLIST,
                                         cov.std = cov.std)
 
     if(rotation) {
         x.stand.free <- x.stand.user[free.idx]
         x.rot <- lav_model_efa_rotate_x(x = x.stand.free,
                      lavmodel = lavobject@Model,
-                     lavoptions = lavobject@Options, 
+                     lavoptions = lavobject@Options,
                      init.rot = FALSE, # standardized!
                      extra = FALSE,
                      type = "free")
@@ -60,7 +60,7 @@ lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
     x.stand.user
 }
 
-lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL, 
+lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
                                       cov.std = TRUE, rotation = FALSE) {
     # embed x in est
     est <- lav_object_inspect_est(lavobject, unrotated = rotation)
@@ -72,9 +72,9 @@ lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
     GLIST <- lavmodel@GLIST
 
-    x.stand.user <- lav_standardize_all_nox(lavobject = lavobject, 
-                                            partable = partable, est = est, 
-                                            est.std = NULL, GLIST = GLIST, 
+    x.stand.user <- lav_standardize_all_nox(lavobject = lavobject,
+                                            partable = partable, est = est,
+                                            est.std = NULL, GLIST = GLIST,
                                             cov.std = cov.std)
 
     if(rotation) {

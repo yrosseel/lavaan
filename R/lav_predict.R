@@ -490,6 +490,12 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
 
                 FS.g[Mp$case.idx[[p]], ] <- t(FSC %*% t(Oc) + EETA.g)
             }
+
+            # what about FSM? There is no single one, but as many as patterns
+            if(fsm) {
+                # use 'global' version (just like in complete case)
+                FSM[[g]] <- VETA.g %*% t(LAMBDA.g) %*% Sigma.inv.g
+            }
         } else {
             # factor score coefficient matrix 'C'
             FSC <- VETA.g %*% t(LAMBDA.g) %*% Sigma.inv.g
@@ -715,6 +721,14 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                            %*% t(lambda) %*% Sigma_22.inv )
                 FS.g[Mp$case.idx[[p]], ] <- t(FSC %*% t(Oc) + EETA.g)
             }
+
+            # what about FSM? There is no single one, but as many as patterns
+            if(fsm) {
+                # use 'global' version (just like in complete case)
+                FSM[[g]] <- ( MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*%
+                                LAMBDA.g) %*% t(LAMBDA.g) %*% Sigma.inv.g )
+            }
+
         } else {
             # factor score coefficient matrix 'C'
             FSC <- ( MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*% LAMBDA.g)

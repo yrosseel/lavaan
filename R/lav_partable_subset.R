@@ -18,6 +18,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL,
                                                   add.lv.cov = TRUE,
+                                                  add.idx = FALSE,
                                                   idx.only = FALSE) {
 
     # PT
@@ -189,6 +190,10 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     # clean up
     PT <- lav_partable_complete(PT)
 
+    if(add.idx) {
+        attr(PT, "idx") <- keep.idx
+    }
+
     PT
 }
 
@@ -202,6 +207,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 #
 lav_partable_subset_structural_model <- function(PT = NULL,
                                                  lavpta = NULL,
+                                                 add.idx = FALSE,
                                                  idx.only = FALSE) {
 
     # PT
@@ -270,6 +276,10 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
     # clean up
     PT <- lav_partable_complete(PT)
+
+    if(add.idx) {
+        attr(PT, "idx") <- keep.idx
+    }
 
     PT
 }

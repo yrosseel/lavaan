@@ -921,13 +921,13 @@ lav_data_full <- function(data          = NULL,          # data.frame
                 if(length(non.zero.var) == 0L) {
                     # all is good
                 } else if(length(non.zero.var) == 1L) {
-                    # just one  
+                    # just one
                     gtxt <- if(ngroups > 1L) {
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
                     txt <- c("Level-2 variable ", dQuote(ov.names[[g]][v]),
                              " has non-zero variance at the within level", gtxt,
-                             " in one cluster with id: ", 
+                             " in one cluster with id: ",
                                Lp[[g]]$cluster.id[[2]][non.zero.var], ".\n",
                              " Please double-check if this is a between only",
                              " variable.")
@@ -945,7 +945,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                               collapse = " "))
                     warning(lav_txt2message(txt))
                 }
-             
+
             }
             if(error.flag) {
                 txt <- c("Some between-level (only) variables have non-zero ",

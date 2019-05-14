@@ -610,7 +610,7 @@ lavaanify <- lavParTable <- function(
                     con.labels <- c(LIST$lhs[eq.idx],
                                     LIST$rhs[eq.idx])
 
-                    # TODO: what about exceptions? 
+                    # TODO: what about exceptions?
                     if(all(plabels.set %in% con.labels)) {
                         next
                     }

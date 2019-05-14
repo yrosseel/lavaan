@@ -491,7 +491,7 @@ lavInspect.lavaan <- function(object,
     } else if(what == "loglik.casewise") {
         lav_object_inspect_loglik_casewise(object, log. = TRUE,
             add.labels = add.labels, add.class = add.class,
-            drop.list.single.group = drop.list.single.group)  
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "lik.casewise") {
         lav_object_inspect_loglik_casewise(object, log. = FALSE,
             add.labels = add.labels, add.class = add.class,
@@ -2309,14 +2309,14 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     } else {
         # check if we already have it
         tmp <- try(slot(object, "vcov"), silent = TRUE)
-        if(!inherits(tmp, "try-error") && !is.null(object@vcov$vcov) && 
+        if(!inherits(tmp, "try-error") && !is.null(object@vcov$vcov) &&
            !(rotation && standardized)) {
             OUT <- object@vcov$vcov
         } else {
         # compute it again
 
             if(rotation && standardized) {
-                lavmodel <- lav_model_set_parameters(lavmodel, 
+                lavmodel <- lav_model_set_parameters(lavmodel,
                                 x = object@optim$x)
                 lavoptions <- object@Options
                 lavoptions$rotation.se <- "delta"
@@ -2358,7 +2358,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
                        lavobject = object, rotation = rotation)
         } else {
             JAC <- try(lav_func_jacobian_complex(func = FUN,
-                x = object@optim$x, lavobject = object, rotation = rotation), 
+                x = object@optim$x, lavobject = object, rotation = rotation),
                        silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
                 JAC <- lav_func_jacobian_simple(func = FUN,
