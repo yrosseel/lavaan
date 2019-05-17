@@ -607,7 +607,7 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
 }
 
 # THETA: observed (residual) variances
-computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
+computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -625,11 +625,15 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            THETA.g <- computeTHETA.LISREL(MLIST = MLIST,
+            if(fix) {
+                THETA.g <- computeTHETA.LISREL(MLIST = MLIST,
                           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                           ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
                           ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+            } else {
+                THETA.g <- computeTHETA.LISREL(MLIST = MLIST)
+            }
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -639,6 +643,43 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL) {
 
     THETA
 }
+
+# NU: observed intercepts
+computeNU <- function(lavmodel = NULL, GLIST = NULL,
+                      lavsamplestats = NULL) {
+    # state or final?
+    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+    nblocks        <- lavmodel@nblocks
+    nmat           <- lavmodel@nmat
+    representation <- lavmodel@representation
+
+    # return a list
+    NU <- vector("list", length=nblocks)
+
+    # compute NU for each group
+    for(g in 1:nblocks) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[ mm.in.group ]
+
+        if(representation == "LISREL") {
+            NU.g <- computeNU.LISREL(MLIST = MLIST,
+                          sample.mean = lavsamplestats@mean[[g]],
+                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+        } else {
+            stop("only representation LISREL has been implemented for now")
+        }
+
+        NU[[g]] <- NU.g
+    }
+
+    NU
+}
+
 
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar

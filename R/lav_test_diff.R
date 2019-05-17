@@ -20,6 +20,12 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     # m = difference between the df's
     m <- r0 - r1
 
+    # bail out here, if m == 0 (but we should catch this earlier)
+    if(m < 1L) {
+        stop("lavaan ERROR: can not compute (scaled) difference test when the degrees of freedom (df) are the same for both models. Df model 1 = ", r1,
+             ", Df model 2 = ", r0, "\n")
+    }
+
     Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
     # check for NULL
     if(is.null(Gamma)) {

@@ -60,7 +60,24 @@ lav_partable_nlevels <- function(partable) {
     length( lav_partable_level_values(partable) )
 }
 
+# efa sets values
+lav_partable_efa_values <- function(partable) {
 
+    if(is.null(partable$efa)) {
+        efa.values <- character(0L)
+    } else { # should be character
+        EFA <- as.character(partable$efa)
+        tmp <- EFA[nchar(EFA) > 0L]
+        efa.values <- unique(na.omit(tmp))
+    }
+
+    efa.values
+}
+
+# number of efa sets from a partable
+lav_partable_nefa <- function(partable) {
+    length( lav_partable_efa_values(partable) )
+}
 
 
 

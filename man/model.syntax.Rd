@@ -13,22 +13,26 @@ function \code{lavaanify} turns it into a table that represents the full
 model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE, 
+    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE, 
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
-    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL, 
+    auto.delta = FALSE, auto.efa = FALSE, 
+    varTable = NULL, ngroups = 1L, group.equal = NULL, 
     group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
-    int.lv.free = FALSE, orthogonal = FALSE, std.lv = FALSE,
+    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
-    auto.delta = FALSE, varTable = NULL, ngroups = 1L, group.equal = NULL,
+    auto.delta = FALSE, auto.efa = FALSE,
+    varTable = NULL, ngroups = 1L, group.equal = NULL,
     group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
@@ -49,8 +53,14 @@ the model both for both observed and latent variables.}
     are fixed to zero.}
 \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
-\item{orthogonal}{If \code{TRUE}, the exogenous latent variables
-    are assumed to be uncorrelated.}
+\item{orthogonal}{If \code{TRUE}, all covariances among
+   latent variables are set to zero.}
+\item{orthogonal.y}{If \code{TRUE}, all covariances among
+   endogenous latent variables only are set to zero.}
+\item{orthogonal.x}{If \code{TRUE}, all covariances among
+   exogenous latent variables only are set to zero.}
+\item{orthogonal.efa}{If \code{TRUE}, all covariances among
+   latent variables involved in rotation only are set to zero.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
@@ -88,6 +98,11 @@ the model both for both observed and latent variables.}
     are included in the model and set free.}
 \item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
+\item{auto.efa}{If \code{TRUE}, the necessary constraints are
+    imposed to make the (unrotated) exploratory factor analysis blocks
+    identifiable: for each block, factor variances are set to 1, factor
+    covariances are constrained to be zero, and factor loadings are
+    constrained to follow an echelon pattern.}
 \item{varTable}{The variable table containing information about the
     observed variables in the model.}
 \item{ngroups}{The number of (independent) groups.}

@@ -75,15 +75,18 @@ twostep <- function(model      = NULL,
     # make a copy
     PT.orig <- PT
 
-    # est equals ustart by default
+    # est equals ustart by default (except exo values)
     PT$est <- PT$ustart
+    if(any(PT$exo > 0L)) {
+        PT$est[PT$exo > 0L] <- PT$start[PT$exo > 0L]
+    }
 
     # clear se values
     PT$se <- rep(as.numeric(NA), length(PT$lhs))
     PT$se[ PT$free == 0L & !is.na(PT$ustart) ] <- 0.0
 
 
-    # STEP 1: fit measurent model for each meaesurement block
+    # STEP 1: fit measurent model for each measurement block
     #         FIXME: measurement block == single lv for now!!
     MM <- vector("list", length = nfac)
     MM.INFO <- matrix(0, npar, npar)
@@ -139,7 +142,7 @@ twostep <- function(model      = NULL,
     }
 
     # the measurement model parameters now become fixed ustart values
-    PT$ustart <- PT$est
+    PT$ustart[PT$free > 0] <- PT$est[PT$free > 0]
 
 
 
@@ -149,7 +152,8 @@ twostep <- function(model      = NULL,
                       lavpta = lavpta, idx.only = TRUE)
 
     # remove 'exogenous' factor variances (if any) from reg.idx
-    lv.names.x <- lv.names[ lv.names %in% unlist(lavpta$vnames$eqs.x) ]
+    lv.names.x <- lv.names[ lv.names %in% unlist(lavpta$vnames$eqs.x)  &
+                           !lv.names %in% unlist(lavpta$vnames$eqs.y) ]
     if(lavoptions$fixed.x && length(lv.names.x) > 0L) {
         var.idx <- which(PT$lhs %in% lv.names.x &
                          PT$op == "~~" &
@@ -166,20 +170,28 @@ twostep <- function(model      = NULL,
                    PT$free > 0L ] <- 0L
     PTS$free[ PTS$free > 0L ] <- seq_len( sum(PTS$free > 0L) )
 
-    # set 'ustart' values for free STRUC parameter to NA
+    # set 'ustart' values for free FIT.PA parameter to NA
     PTS$ustart[ PTS$free > 0L ] <- as.numeric(NA)
 
     # estimate structural part
-    STRUC <- lavaan::lavaan(model = PTS, ...)  ### FIXME: reuse slots
+    FIT.PA <- lavaan::lavaan(model = PTS, ...)  ### FIXME: reuse slots
 
     # fill in point estimates structural part
     PT$est[ seq_len(length(PT$lhs)) %in% reg.idx &
-            PT$free > 0L ] <- STRUC@ParTable$est[ PTS$free > 0L ]
+            PT$free > 0L ] <- FIT.PA@ParTable$est[ PTS$free > 0L ]
 
     # construct JOINT model
-    JOINT <- lavaan::lavaan(PT, ..., optim.method = "none",
-                            check.gradient = FALSE, # often not ok
-                            se = "external")
+    #JOINT <- lavaan::lavaan(PT, ..., optim.method = "none",
+    #                        check.gradient = FALSE, # often not ok
+    #                        se = "external")
+    lavoptions.joint <- lavoptions
+    lavoptions.joint$optim.method = "none"
+    lavoptions.joint$check.gradient = FALSE
+    #lavoptions.joint$se = "none"
+    #lavoptions.joint$test = "none"
+    JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
+                            slotSampleStats = FIT@SampleStats,
+                            slotData = FIT@Data)
 
     # TOTAL information
     INFO <- lavInspect(JOINT, "information") * nobs(FIT)
@@ -222,15 +234,22 @@ twostep <- function(model      = NULL,
     V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
 
     # V for second step
-    V <- V2 + V1
+    VCOV <- V2 + V1
 
     # fill in standard errors step 2
     PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
-               PT$free > 0L ] <- sqrt( diag(V) )
+               PT$free > 0L ] <- sqrt( diag(VCOV) )
 
     if(output == "lavaan") {
-        FINAL <- lavaan::lavaan(PT, ..., optim.method = "none",
-                            se = "external", check.gradient = FALSE)
+        #FINAL <- lavaan::lavaan(PT, ..., optim.method = "none",
+        #                    se = "external", check.gradient = FALSE)
+        FINAL <- JOINT
+        FINAL@ParTable <- PT
+        if(FINAL@Options$se == "none") {
+        } else {
+            FINAL@Options$se <- "twostep"
+            FINAL@vcov$vcov[step2.idx, step2.idx] <- VCOV
+        }
         return(FINAL)
     } else if(output == "PT") {
         # for pretty printing only
@@ -239,8 +258,8 @@ twostep <- function(model      = NULL,
         }
         return(PT)
     } else {
-        return( list(MM = MM, STRUC = STRUC, JOINT = JOINT,
-                     V = V, V1 = V1, V2 = V2, Sigma.11 = Sigma.11,
+        return( list(MM = MM, FIT.PA = FIT.PA, JOINT = JOINT,
+                     VCOV = VCOV, V1 = V1, V2 = V2, Sigma.11 = Sigma.11,
                      MM.INFO = MM.INFO, PT = PT) )
     }
 }

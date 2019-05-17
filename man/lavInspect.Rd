@@ -97,7 +97,7 @@ Model matrices:
         set to unity; hence no-x.)}
 }
 
-Information about the data (including missing patterns):
+Information about the data:
 
 \describe{
     \item{\code{"data"}:}{A matrix containing the observed variables
@@ -105,18 +105,6 @@ Information about the data (including missing patterns):
         Column names correspond to the output of \code{lavNames(object)},
         while the rows correspond to the output of
         \code{lavInspect(object, "case.idx"}.}
-    \item{\code{"group"}:}{A character string. The group variable in
-        the data.frame (if any).}
-    \item{\code{"ngroups"}:}{Integer. The number of groups.}
-    \item{\code{"group.label"}:}{A character vector. The group labels.}
-    \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
-        in the data.frame (if any).}
-    \item{\code{"nlevels"}:}{Integer. The number of levels.}
-    \item{\code{"nclusters"}:}{Integer vector. The number of clusters
-        in each group that were used in the analysis.}
-    \item{\code{"cluster.size"}:}{Integer vector. The number of observations
-        within each cluster. For multigroup multilevel models, a list of
-        integer vectors, indicating cluster sizes within each group.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis.}
@@ -126,14 +114,9 @@ Information about the data (including missing patterns):
         were used in the analysis. If there is just a single group, this
         is the same as the \code{"nobs"} option; if there are multiple groups,
         this is the sum of the \code{"nobs"} numbers for each group.}
-    \item{\code{"case.idx"}:}{The case/observation numbers that were used
-        in the analysis.
-        In the case of multiple groups: a list of numbers.
-        In the case of multilevel models, these are Level-1 IDs.}
-    \item{\code{"cluster.idx"}:}{In multilevel models, the Level-2 IDs for each
-        Level-1 case/observation used in the analysis.
-        In the case of multiple groups: a list of numbers.
-        For single-level models, output will match \code{"case.idx"}.}
+    \item{\code{"case.idx"}:}{Integer vector. The case/observation numbers 
+        that were used in the analysis.
+        In the case of multiple groups: a list of numbers.}
     \item{\code{"empty.idx"}:}{The case/observation numbers of those
         cases/observations that contained missing values only
         (at least for the observed variables that were included in the model).
@@ -150,6 +133,35 @@ Information about the data (including missing patterns):
         the proportion of observed datapoints for the corresponding
         pair of observed variables.
         In the case of multiple groups: a list of coverage matrices.}
+    \item{\code{"group"}:}{A character string. The group variable in
+        the data.frame (if any).}
+    \item{\code{"ngroups"}:}{Integer. The number of groups.}
+    \item{\code{"group.label"}:}{A character vector. The group labels.}
+    \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
+        in the data.frame (if any).}
+    \item{\code{"nlevels"}:}{Integer. The number of levels.}
+    \item{\code{"nclusters"}:}{Integer. The number of clusters
+        that were used in the analysis.}
+    \item{\code{"ncluster.size"}:}{Integer. The number of different cluster
+        sizes.}
+    \item{\code{"cluster.size"}:}{Integer vector. The number of observations
+        within each cluster. For multigroup multilevel models, a list of
+        integer vectors, indicating cluster sizes within each group.}
+    \item{\code{"cluster.id"}:}{Integer vector. The cluster IDs identifying
+        the clusters. For multigroup multilevel models, a list of
+        integer vectors, indicating cluster IDs within each group.}
+    \item{\code{"cluster.idx"}:}{Integer vector. The cluster index for
+        each observation. The cluster index ranges from 1 to the
+        number of clusters. For multigroup multilevel models, a list of
+        integer vectors, indicating cluster indices within each group.}
+    \item{\code{"cluster.label"}:}{Integer vector. The cluster ID for
+        each observation. For multigroup multilevel models, a list of
+        integer vectors, indicating the cluster ID for each observation 
+        within each group.}
+    \item{\code{"cluster.sizes"}:}{Integer vector. The different cluster
+        sizes that were used in the analysis. For multigroup multilevel 
+        models, a list of integer vectors, indicating the different cluster 
+        sizes within each group.}
 }
 
 Observed sample statistics:
@@ -348,6 +360,8 @@ Miscellaneous:
     \item{\code{"mi"}:}{The modification indices. Alias: \code{"modindices"},
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
+    \item{\code{"loglik.casewise"}:}{Vector containing the casewise 
+        loglikelihood contributions. Only available if estimator = \code{"ML"}.}
     \item{\code{"options"}:}{List. The option list.}
     \item{\code{"call"}:}{List. The call as returned by match.call, coerced to
         a list.}

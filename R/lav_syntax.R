@@ -9,33 +9,51 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         stop("lavaan ERROR: empty model syntax")
     }
 
-    # remove comments prior to split.
-    # Match from comment character to newline, but don't eliminate newline
-    model.syntax <- gsub("[#!].*(?=\n)","", model.syntax, perl=TRUE)
+    # remove comments prior to split:
+    # match from comment character to newline, but don't eliminate newline
+    model.syntax <- gsub("[#!].*(?=\n)", "", model.syntax, perl = TRUE)
 
     # replace semicolons with newlines prior to split
-    model.syntax <- gsub(";", "\n", model.syntax, fixed=TRUE)
+    model.syntax <- gsub(";", "\n", model.syntax, fixed = TRUE)
 
-    #remove whitespace prior to split
-    model.syntax <- gsub("[ \t]+", "", model.syntax, perl=TRUE)
-    # remove any occurrence of >= 2 consecutive newlines to eliminate \
+    # remove all whitespace prior to split
+    model.syntax <- gsub("[ \t]+", "", model.syntax, perl = TRUE)
+    # remove any occurrence of >= 2 consecutive newlines to eliminate
     # blank statements; this retains a blank newline at the beginning,
     # if such exists, but parser will not choke because of start.idx
-    model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl=TRUE)
+    model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl = TRUE)
 
     # break up in lines
     model <- unlist( strsplit(model.syntax, "\n") )
 
-    # check for multi-line formulas: they contain no "~" or "=" character
-    # but before we do that, we remove all modifiers
+    # check for multi-line formulas: they contain no operator symbol
+    # but before we do that, we remove all strings between double quotes
     # to avoid confusion with for example equal("f1=~x1") statements
-    model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
+    # model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
+    model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
 
-    start.idx <- grep("[~=<>:|%]", model.simple)
+    #start.idx <- grep("[~=<>:|%]", model.simple)
+    operators <- c("=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=",
+                   ":", "\\|", "%")
+    lhs.modifiers <- c("efa")
+    operators.extra <- c(operators, lhs.modifiers)
+    start.idx <- grep(paste(operators.extra, collapse = "|"), model.simple)
 
     # check for empty start.idx: no operator found (new in 0.6-1)
     if(length(start.idx) == 0L) {
         stop("lavaan ERROR: model does not contain lavaan syntax (no operators found)")
+    }
+
+    # check for lonely lhs modifiers (only efa() for now):
+    # if found, remove the following start.idx
+    efa.idx <- grep("efa\\(", model.simple)
+    op.idx  <- grep(paste(operators, collapse = "|"), model.simple)
+    both.idx <- which(efa.idx %in% op.idx)
+    if(length(both.idx) > 0L) {
+        efa.idx <- efa.idx[ -which(efa.idx %in% op.idx)]
+    }
+    if(length(efa.idx) > 0L) {
+        start.idx <- start.idx[-(match(efa.idx, start.idx) + 1L)]
     }
 
     # check for non-empty string, without an operator in the first lines
@@ -59,10 +77,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         model[i] <- paste(model.orig[start.idx[i]:end.idx[i]], collapse="")
     }
 
-    # ok, in all remaining lines, we should have a '~' operator
-    # OR one of '=', '<', '>', '|' outside the ""
+    # ok, in all remaining lines, we should have an operator outside the ""
     model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
-    idx.wrong <- which(!grepl("[~=<>:|%]", model.simple))
+    idx.wrong <- which(!grepl(paste(operators, collapse = "|"),
+                       model.simple))
+    #idx.wrong <- which(!grepl("[~=<>:|%]", model.simple))
     if(length(idx.wrong) > 0) {
         cat("lavaan: missing operator in formula(s):\n")
         print(model[idx.wrong])
@@ -82,9 +101,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     # with a left-hand-side (lhs), an operator (eg "=~"), and a
     # right-hand-side (rhs)
     # both lhs and rhs can have a modifier
-    # (but we ignore the lhs modifier for now)
     FLAT.lhs         <- character(0)
-    #FLAT.lhs.mod    <- character(0)
     FLAT.op          <- character(0)
     FLAT.rhs         <- character(0)
     FLAT.rhs.mod.idx <- integer(0)
@@ -96,6 +113,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT.upper       <- character(0)  # only for display purposes!
     FLAT.label       <- character(0)  # only for display purposes!
     FLAT.prior       <- character(0)
+    FLAT.efa         <- character(0)
     FLAT.idx <- 0L
     MOD.idx  <- 0L
     CON.idx  <- 0L
@@ -216,6 +234,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             FLAT.upper[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
             FLAT.prior[FLAT.idx] <- ""
+            FLAT.efa[FLAT.idx]  <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
             if(BLOCK_OP) {
                 BLOCK <- BLOCK + 1L
@@ -240,7 +259,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         if( !all(make.names(LHS) == LHS) ) {
             stop("lavaan ERROR: left hand side (lhs) of this formula:\n    ",
                  lhs, " ", op, " ", rhs,
-                 "\n    contains either a reserved word (in R) or an illegal charachter: ",
+                 "\n    contains either a reserved word (in R) or an illegal character: ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
                  "\n    see ?reserved for a list of reserved words in R",
                  "\n    please use a variable name that is not a reserved word in R",
@@ -248,12 +267,15 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         }
 
         lhs.formula <- as.formula(paste("~",lhs))
-        out <- lav_syntax_parse_rhs(rhs=lhs.formula[[2L]])
-        lhs.names <- names(out)
-        # check if we have modifiers
-        if(sum(sapply(out, length)) > 0L) {
-            warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
-        }
+        lhs.out <- lav_syntax_parse_rhs(rhs=lhs.formula[[2L]], op = op)
+        lhs.names <- names(lhs.out)
+
+
+        # new in 0.6-4
+        # handle LHS modifiers (if any)
+        #if(sum(sapply(lhs.out, length)) > 0L) {
+            #warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
+        #}
 
         # 4. lav_syntax_parse_rhs (as rhs of a single-sided formula)
 
@@ -261,7 +283,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # requested by the simsem folks
         rhs <- gsub('\\(?([-]?[0-9]*\\.?[0-9]*)\\)?\\?',"start(\\1)\\*", rhs)
         rhs.formula <- as.formula(paste("~",rhs))
-        out <- lav_syntax_parse_rhs(rhs=rhs.formula[[2L]],op=op)
+        out <- lav_syntax_parse_rhs(rhs = rhs.formula[[2L]], op = op)
 
         if(debug) print(out)
 
@@ -334,9 +356,16 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 FLAT.lower[FLAT.idx] <- ""
                 FLAT.upper[FLAT.idx] <- ""
                 FLAT.prior[FLAT.idx] <- ""
+                FLAT.efa[FLAT.idx]   <- ""
+
 
                 mod <- list()
                 rhs.mod <- 0L
+                if(length(lhs.out[[l]]$efa) > 0L) {
+                    mod$efa <- lhs.out[[l]]$efa
+                    FLAT.efa[FLAT.idx] <- paste(mod$efa, collapse=";")
+                    rhs.mod <- 1L # despite being a LHS modifier
+                }
                 if(length(out[[j]]$fixed) > 0L) {
                     mod$fixed <- out[[j]]$fixed
                     FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse=";")
@@ -397,7 +426,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  mod.idx=FLAT.rhs.mod.idx, block=FLAT.block,
                  fixed=FLAT.fixed, start=FLAT.start,
                  lower=FLAT.lower, upper=FLAT.upper,
-                 label=FLAT.label, prior=FLAT.prior)
+                 label=FLAT.label, prior=FLAT.prior,
+                 efa=FLAT.efa)
 
     # change op for intercepts (for convenience only)
     int.idx <- which(FLAT$op == "~" & FLAT$rhs == "")
@@ -418,7 +448,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT
 }
 
-lav_syntax_parse_rhs <- function(rhs, op="") {
+lav_syntax_parse_rhs <- function(rhs, op = "") {
 
     # new version YR 15 dec 2011!
     # - no 'equal' field anymore (only labels!)
@@ -599,6 +629,10 @@ lav_syntax_get_modifier <- function(mod) {
         prior <- unlist(lapply(as.list(mod)[-1],
                         eval, envir=NULL, enclos=NULL))
         return( list(prior=prior) )
+    } else if(mod[[1L]] == "efa") {
+        efa <- unlist(lapply(as.list(mod)[-1],
+                        eval, envir=NULL, enclos=NULL))
+        return( list(efa=efa) )
     } else if(mod[[1L]] == "c") {
         # vector: we allow numeric and character only!
         cof <- unlist(lapply(as.list(mod)[-1],
@@ -618,12 +652,16 @@ lav_syntax_get_modifier <- function(mod) {
         # as a final attempt, we will evaluate it and coerce it
         # to either a numeric or character (vector)
         cof <- try( eval(mod, envir=NULL, enclos=NULL), silent=TRUE)
-        if(is.numeric(cof))
+        if(inherits(cof, "try-error")) {
+            stop("lavaan ERROR: evaluating modifier failed: ",
+                 paste(as.character(mod)[[1]], "()", sep = ""), "\n")
+        } else if(is.numeric(cof)) {
              return( list(fixed=cof) )
-        else if(is.character(cof))
+        } else if(is.character(cof)) {
              return( list(label=cof) )
-        else {
-            stop("lavaan ERROR: can not parse modifier:", mod, "\n")
+        } else {
+            stop("lavaan ERROR: can not parse modifier: ",
+                 paste(as.character(mod)[[1]], "()", sep = ""), "\n")
         }
     }
 }

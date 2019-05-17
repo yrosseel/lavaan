@@ -41,6 +41,11 @@ lav_model <- function(lavpartable      = NULL,
         }
     }
 
+    nefa <- lav_partable_nefa(lavpartable)
+    if(nefa > 0L) {
+        efa.values <- lav_partable_efa_values(lavpartable)
+    }
+
     # handle variable definitions and (in)equality constraints
     CON <- lav_constraints_parse(partable = lavpartable,
                                  constraints = NULL,
@@ -97,6 +102,8 @@ lav_model <- function(lavpartable      = NULL,
     ov.x.dummy.lv.idx <- vector(mode="list", length=nblocks)
     ov.y.dummy.ov.idx <- vector(mode="list", length=nblocks)
     ov.y.dummy.lv.idx <- vector(mode="list", length=nblocks)
+    ov.efa.idx        <- vector(mode="list", length=nblocks)
+    lv.efa.idx        <- vector(mode="list", length=nblocks)
 
     offset <- 0L
     for(g in 1:nblocks) {
@@ -113,6 +120,9 @@ lav_model <- function(lavpartable      = NULL,
         } else {
             nvar[g] <- length(ov.names)
             num.idx[[g]] <- which(ov.names %in% ov.num)
+        }
+        if(nefa > 0L) {
+            lv.names <- lav_partable_vnames(lavpartable, "lv",     block = g)
         }
 
         # model matrices for this block
@@ -237,6 +247,29 @@ lav_model <- function(lavpartable      = NULL,
             # assign matrix to GLIST
             GLIST[[offset]] <- tmp
         } # mm
+
+        # efa related info
+        if(nefa > 0L) {
+            ov.efa.idx[[g]] <- vector("list", length = nefa)
+            lv.efa.idx[[g]] <- vector("list", length = nefa)
+            for(set in seq_len(nefa)) {
+                # determine ov idx for this set
+                ov.efa <-
+                    unique(lavpartable$rhs[ lavpartable$op == "=~" &
+                                            lavpartable$block == g &
+                                            lavpartable$efa == efa.values[set]])
+                ov.efa.idx[[g]][[set]] <- match(ov.efa, ov.names)
+
+                lv.efa <-
+                    unique(lavpartable$lhs[ lavpartable$op == "=~" &
+                                            lavpartable$block == g &
+                                            lavpartable$efa == efa.values[set]])
+                lv.efa.idx[[g]][[set]] <- match(lv.efa, lv.names)
+            }
+            names(ov.efa.idx[[g]]) <- efa.values
+            names(lv.efa.idx[[g]]) <- efa.values
+        } # efa
+
     } # g
 
     # fixed.x parameters?
@@ -280,6 +313,7 @@ lav_model <- function(lavpartable      = NULL,
                  link=lavoptions$link,
                  nblocks=nblocks,
                  ngroups=ngroups, # breaks rsem????
+                 nefa=nefa,
                  group.w.free=group.w.free,
                  nmat=nmat,
                  nvar=nvar,
@@ -330,6 +364,9 @@ lav_model <- function(lavpartable      = NULL,
                  ov.x.dummy.lv.idx   = ov.x.dummy.lv.idx,
                  ov.y.dummy.ov.idx   = ov.y.dummy.ov.idx,
                  ov.y.dummy.lv.idx   = ov.y.dummy.lv.idx,
+
+                 ov.efa.idx          = ov.efa.idx,
+                 lv.efa.idx          = lv.efa.idx,
 
                  estimator           = lavoptions$estimator)
 

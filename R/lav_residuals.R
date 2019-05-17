@@ -218,9 +218,13 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                                    FUN = function(el) {
                                        A <- resList.orig[[b]][[el]]
                                        B <-  seList[[b]][[el]]
-                                       near.zero.idx <- which(abs(A) < 1e-05)
+                                       # NOTE: which threshold should we use?
+                                       # used to be 1e-05
+                                       # changed to 1e-04 in 0.6-4
+                                       near.zero.idx <- which(abs(A) < 1e-04)
                                        if(length(near.zero.idx) > 0L) {
-                                           B[near.zero.idx] <- 1
+                                           #B[near.zero.idx] <- as.numeric(NA)
+                                           B[near.zero.idx] <- 1.0
                                        }
                                        A/B })
             resList[[b]] <- c(resList[[b]], tmp)

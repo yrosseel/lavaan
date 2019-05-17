@@ -49,6 +49,10 @@ Model features (always available):
       option.}
     \item{\code{orthogonal}:}{If \code{TRUE}, all covariances among
       latent variables are set to zero.}
+    \item{\code{orthogonal.y}:}{If \code{TRUE}, all covariances among
+      endogenous latent variables only are set to zero.}
+    \item{\code{orthogonal.x}:}{If \code{TRUE}, all covariances among
+      exogenous latent variables only are set to zero.}
     \item{\code{std.lv}:}{If \code{TRUE}, the metric of each latent variable 
       is determined by fixing their (residual) variances to 1.0. If 
       \code{FALSE}, the metric of each latent variable is determined by fixing 
@@ -78,6 +82,11 @@ Model features (only available for the \code{lavaan()} function):
       variables are included in the model and set free.}
     \item{\code{auto.delta}:}{If \code{TRUE}, response scaling parameters 
       for limited dependent variables are included in the model and set free.}
+    \item{\code{auto.efa}:}{If \code{TRUE}, the necessary constraints are
+      imposed to make the (unrotated) exploratory factor analysis blocks
+      identifiable: for each block, factor variances are set to 1, factor
+      covariances are constrained to be zero, and factor loadings are
+      constrained to follow an echelon pattern.}
 }
 
 Data options:
@@ -136,6 +145,13 @@ Data options:
       \code{"pairwise"}, \code{"available.cases"} and
       \code{"doubly.robust"}. See the PML tutorial on the lavaan website for
       more information about these approaches.}
+    \item{\code{sampling.weights.normalization}:}{If \code{"none"}, the
+      sampling weights (if provided) will not be transformed. If \code{"total"},
+      the sampling weights are normalized by dividing by the total sum of
+      the weights, and multiplying again by the total sample size. 
+      If \code{"group"}, the sampling weights are normalized per group:
+      by dividing by the sum of the weights (in each group), and multiplying
+      again by the group size. The latter is the default.}
 }
 
 Data summary options:

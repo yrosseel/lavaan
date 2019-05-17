@@ -9,10 +9,12 @@
 #
 # initial version: YR 14 April 2012
 
-# YR 23 feb 2017: blocks/levels/groups, but everything is group-based!
+# YR 23 Feb 2017: blocks/levels/groups, but everything is group-based!
 
 # FIXME: if nlevels > 1L, and ngroups > 1L, we should check that
 # group is at the upper-level
+
+# YR 08 May  2019: sampling weights normalization -> different options
 
 # extract the data we need for this particular model
 lavData <- function(data              = NULL,          # data.frame
@@ -123,6 +125,8 @@ lavData <- function(data              = NULL,          # data.frame
                                  ov.names          = ov.names,
                                  ordered           = ordered,
                                  sampling.weights  = sampling.weights,
+                                 sampling.weights.normalization =
+                                     lavoptions$sampling.weights.normalization,
                                  ov.names.x        = ov.names.x,
                                  ov.names.l        = ov.names.l,
                                  std.ov            = std.ov,
@@ -144,6 +148,15 @@ lavData <- function(data              = NULL,          # data.frame
             stop("lavaan ERROR: please specify number of observations")
         }
 
+        # if a 'group' argument was provided, keep it -- new in 0.6-4
+        if(is.null(group)) {
+            group <- character(0L)
+        } else if(is.character(group)) {
+            # nothing to do, just store it
+        } else {
+            stop("lavaan ERROR: group argument should be a string")
+        }
+
         # list?
         if(is.list(sample.cov)) {
             # multiple groups, multiple cov matrices
@@ -157,10 +170,11 @@ lavData <- function(data              = NULL,          # data.frame
             ngroups     <- length(sample.cov)
             LABEL <- names(sample.cov)
             if(is.null(group.label) || length(group.label) == 0L) {
-                if(is.null(LABEL))
+                if(is.null(LABEL)) {
                     group.label <- paste("Group ", 1:ngroups, sep="")
-                else
+                } else {
                     group.label <- LABEL
+                }
             } else {
                 if(is.null(LABEL)) {
                     stopifnot(length(group.label) == ngroups)
@@ -231,7 +245,7 @@ lavData <- function(data              = NULL,          # data.frame
         lavData <- new("lavData",
                        data.type   = "moment",
                        ngroups     = ngroups,
-                       group       = character(0L),
+                       group       = group,
                        nlevels     = 1L, # for now
                        cluster     = character(0L),
                        group.label = group.label,
@@ -403,6 +417,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                                          # in model
                           ordered       = NULL,          # ordered variables
                           sampling.weights = NULL,       # sampling weights
+                          sampling.weights.normalization = "none",
                           ov.names.x    = character(0L), # exo variables
                           ov.names.l    = list(),        # var per level
                           std.ov        = FALSE,         # standardize ov's?
@@ -754,6 +769,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         X[[g]] <- data.matrix( data[case.idx[[g]], ov.idx, drop = FALSE] )
         dimnames(X[[g]]) <- NULL ### copy?
 
+        # sampling weights (but no normalization yet)
         if(!is.null(sampling.weights)) {
             WT <- data[[sampling.weights]][case.idx[[g]]]
             if(any(WT < 0)) {
@@ -767,9 +783,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                         " contains missing values\n", sep = "")
             }
 
-            # rescale, so sum equals sample size in this group
-            WT2 <- WT / sum(WT) * nobs[[g]]
-            weights[[g]] <- WT2
+            weights[[g]] <- WT
         }
 
         # construct integers for user-declared 'ordered' factors
@@ -860,12 +874,10 @@ lav_data_full <- function(data          = NULL,          # data.frame
             # check for 'level-1' variables with zero within variance
             l1.idx <- c(Lp[[g]]$within.idx[[2]], # within only
                         Lp[[g]]$both.idx[[2]])
-            l1.names <- c(Lp[[g]]$within.names[[2]],
-                          Lp[[g]]$both.names[[2]])
             for(v in l1.idx) {
                 within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
                                      FUN = var, na.rm = TRUE)
-                # ignore singeltons
+                # ignore singletons
                 singleton.idx <- which( Lp[[g]]$cluster.size[[2]] == 1L )
                 if(length(singleton.idx) > 0L) {
                     within.var[singleton.idx] <- 10 # non-zero variance
@@ -878,7 +890,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     gtxt <- if(ngroups > 1L) {
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
-                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                    txt <- c("Level-1 variable ", dQuote(ov.names[[g]][v]),
                              " has no variance at the within level", gtxt,
                              " The variable appears to be a between-level
                              variable. Please remove this variable from
@@ -889,7 +901,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     gtxt <- if(ngroups > 1L) {
                                 paste(" in group ", g, ".", sep = "")
                             } else { "." }
-                    txt <- c("Level-1 variable ", dQuote(l1.names[v]),
+                    txt <- c("Level-1 variable ", dQuote(ov.names[[g]][v]),
                        " has no variance within some clusters", gtxt,
                        " The cluster ids with zero within variance are:\n",
                        paste( Lp[[g]]$cluster.id[[2]][zero.var],
@@ -898,13 +910,80 @@ lav_data_full <- function(data          = NULL,          # data.frame
                 }
             }
 
+            # new in 0.6-4
+            # check for 'level-2' only variables with non-zero within variance
+            l2.idx <- Lp[[g]]$between.idx[[2]] # between only
+            error.flag <- FALSE
+            for(v in l2.idx) {
+                within.var <- tapply(X[[g]][,v], Lp[[g]]$cluster.idx[[2]],
+                                     FUN = var, na.rm = TRUE)
+                non.zero.var <- which(unname(within.var) > .Machine$double.eps)
+                if(length(non.zero.var) == 0L) {
+                    # all is good
+                } else if(length(non.zero.var) == 1L) {
+                    # just one
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-2 variable ", dQuote(ov.names[[g]][v]),
+                             " has non-zero variance at the within level", gtxt,
+                             " in one cluster with id: ",
+                               Lp[[g]]$cluster.id[[2]][non.zero.var], ".\n",
+                             " Please double-check if this is a between only",
+                             " variable.")
+                    warning(lav_txt2message(txt))
+                } else {
+                    error.flag <- TRUE
+                    # several
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ".", sep = "")
+                            } else { "." }
+                    txt <- c("Level-2 variable ", dQuote(ov.names[[g]][v]),
+                       " has non-zero variance at the within level", gtxt,
+                       " The cluster ids with non-zero within variance are: ",
+                           paste( Lp[[g]]$cluster.id[[2]][non.zero.var],
+                              collapse = " "))
+                    warning(lav_txt2message(txt))
+                }
+
+            }
+            if(error.flag) {
+                txt <- c("Some between-level (only) variables have non-zero ",
+                         " variance at the within-level. ",
+                         " Please double-check your data. ")
+                stop(lav_txt2message(txt, header = "lavaan ERROR"))
+            }
+
         } # clustered data
 
     } # groups, at first level
 
+    # sampling weigths, again
     if(is.null(sampling.weights)) {
         sampling.weights <- character(0L)
+    } else {
+        # check if we need normalization
+        if(sampling.weights.normalization == "none") {
+            # nothing to do
+        } else if(sampling.weights.normalization == "total") {
+            sum.weights <- sum(unlist(weights))
+            ntotal <- sum(unlist(nobs))
+            for(g in 1:ngroups) {
+                WT <- weights[[g]]
+                WT2 <- WT / sum.weights * ntotal
+                weights[[g]] <- WT2
+            }
+        } else if(sampling.weights.normalization == "group") {
+            for(g in 1:ngroups) {
+                WT <- weights[[g]]
+                WT2 <- WT / sum(WT) * nobs[[g]]
+                weights[[g]] <- WT2
+            }
+        } else {
+            stop("lavaan ERROR: sampling.weights.normalization should be total, group or none.")
+        }
     }
+
 
     lavData <- new("lavData",
                    data.type       = "full",

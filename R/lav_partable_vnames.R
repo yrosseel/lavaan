@@ -10,10 +10,10 @@ lavNames <- function(object, type = "ov", ...) {
 
     if(inherits(object, "lavaan") || inherits(object, "lavaanList")) {
          partable <- object@ParTable
-    } else if(class(object) == "list" ||
+    } else if(inherits(object, "list") ||
               inherits(object, "data.frame")) {
         partable <- object
-    } else if(class(object) == "character") {
+    } else if(inherits(object, "character")) {
         # just a model string?
         partable <- lavParseModelString(object)
     }
@@ -52,6 +52,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "ov.ind",      # observed indicators of latent variables
                    "ov.orphan",   # lonely observed intercepts/variances
                    "ov.interaction", # interaction terms (with colon)
+                   "ov.efa",      # indicators involved in efa
                    "th",          # thresholds ordinal only
                    "th.mean",     # thresholds ordinal + numeric variables
 
@@ -63,6 +64,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "lv.nox",      # non-exogenous latent variables
                    "lv.nonnormal",# latent variables with non-normal indicators
                    "lv.interaction", # interaction terms
+                   "lv.efa",      # latent variables involved in efa
 
                    "eqs.y",       # y's in regression
                    "eqs.x"        # x's in regression
@@ -145,6 +147,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$ov.ind         <- vector("list", length = nblocks)
     OUT$ov.orphan      <- vector("list", length = nblocks)
     OUT$ov.interaction <- vector("list", length = nblocks)
+    OUT$ov.efa         <- vector("list", length = nblocks)
+
     OUT$th             <- vector("list", length = nblocks)
     OUT$th.mean        <- vector("list", length = nblocks)
 
@@ -156,6 +160,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$lv.nox         <- vector("list", length = nblocks)
     OUT$lv.nonnormal   <- vector("list", length = nblocks)
     OUT$lv.interaction <- vector("list", length = nblocks)
+    OUT$lv.efa         <- vector("list", length = nblocks)
 
     OUT$eqs.y          <- vector("list", length = nblocks)
     OUT$eqs.x          <- vector("list", length = nblocks)
@@ -204,6 +209,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             OUT$lv.regular[[b]] <- out
         }
 
+
         # interaction terms involving latent variables (only)
         if("lv.interaction" %in% type) {
             OUT$lv.interaction[[b]] <- lv.interaction
@@ -214,6 +220,19 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             out <- unique( partable$lhs[ partable$block == b &
                                          partable$op == "<~"   ] )
             OUT$lv.formative[[b]] <- out
+        }
+
+        # lv's involved in efa
+        if(any(type %in% c("lv.efa", "ov.efa"))) {
+            if(is.null(partable$efa)) {
+                out <- character(0L)
+            } else {
+                set.names <- lav_partable_efa_values(partable)
+                out <- unique( partable$lhs[ partable$op == "=~" &
+                                             partable$block == b &
+                                             partable$efa %in% set.names ] )
+            }
+            OUT$lv.efa[[b]] <- out
         }
 
         # eqs.y
@@ -320,6 +339,14 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             }
 
             OUT$ov.interaction[[b]] <- ov.interaction
+        }
+
+        if("ov.efa" %in% type) {
+            ov.efa <- partable$rhs[ partable$op == "=~" &
+                                    partable$block == b &
+                                    partable$rhs %in% ov.ind &
+                                    partable$lhs %in% OUT$lv.efa[[b]] ]
+            OUT$ov.efa[[b]] <- unique(ov.efa)
         }
 
 

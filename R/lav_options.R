@@ -53,6 +53,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 conditional.x      = "default", # or FALSE?
                 fixed.x            = "default", # or FALSE?
                 orthogonal         = FALSE,
+                orthogonal.x       = FALSE,
+                orthogonal.y       = FALSE,
                 std.lv             = FALSE,
                 parameterization   = "default",
 
@@ -63,14 +65,37 @@ lav_options_default <- function(mimic = "lavaan") {
                 auto.cov.y         = FALSE,
                 auto.th            = FALSE,
                 auto.delta         = FALSE,
+                auto.efa           = FALSE,
 
                 # seat belts
                 safe.ov.var.ub     = FALSE,
                 save.ov.var.lb     = FALSE,
 
+                # rotation
+                rotation           = "geomin",
+                rotation.se        = "bordered", # or "delta"
+                rotation.args      = list(orthogonal     = FALSE,
+                                          row.weights    = "none",
+                                          std.ov         = FALSE,
+                                          geomin.epsilon = 0.01,
+                                          orthomax.gamma = 1,
+                                          cf.gamma       = 0,
+                                          oblimin.gamma  = 0,
+                                          rstarts        = 100L,
+                                          algorithm      = "gpa",
+                                          reflect        = TRUE,
+                                          order.lv.by    = "index",
+                                          gpa.tol        = 1e-05,
+                                          tol            = 1e-08,
+                                          warn           = FALSE,
+                                          verbose        = FALSE,
+                                          jac.init.rot   = TRUE,
+                                          max.iter       = 10000L),
+
                 # full data
                 std.ov             = FALSE,
                 missing            = "default",
+                sampling.weights.normalization = "total",
 
                 # summary data
                 sample.cov.rescale = "default",
@@ -212,7 +237,7 @@ lav_options_set <- function(opt = NULL) {
     # group.equal and group.partial
     if(opt$group.equal[1] == "none") {
         opt$group.equal <- character(0)
-    } else if(is.null(opt$group.equal) || nchar(opt$group.equal) == 0L) {
+    } else if(is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
         if(opt$mimic == "Mplus" && !is.null(opt$group)) {
             if(opt$categorical) {
                 opt$group.equal <- c("loadings", "thresholds")
@@ -233,7 +258,7 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: unknown value for `group.equal' argument: ",
              opt$group.equal, "\n")
     }
-    if(is.null(opt$group.partial) || nchar(opt$group.partial) == 0L) {
+    if(is.null(opt$group.partial) || all(nchar(opt$group.partial) == 0L)) {
         opt$group.partial <- character(0)
     } else if(length(opt$group.partial) == 0) {
         # nothing to do

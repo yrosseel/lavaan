@@ -236,8 +236,12 @@ bootstrap.internal <- function(object          = NULL,
                 EL <- t(chol(Sigmahat))
                 ESE <- forwardsolve(EL, t(forwardsolve(EL, S)))
                 d <- eigen(ESE, symmetric = TRUE, only.values = TRUE)$values
-                # Find a to minimize g.a
-                a <- search.a(tau.hat, d, nmv)
+                if ("a" %in% names(list(...))) {
+                    a <- list(...)$a
+                } else {
+                    # Find a to minimize g.a
+                    a <- search.a(tau.hat, d, nmv)
+                }
                 # Calculate S_a (p. 267)
                 S.a <- a*S + (1 - a)*Sigmahat
             } else {

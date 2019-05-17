@@ -102,6 +102,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
 
         nblocks="integer",
         ngroups="integer",   # only for rsem!! (which uses rsem:::computeDelta)
+        nefa="integer",
         nmat="integer",
         nvar="integer",
         num.idx="list",
@@ -139,6 +140,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
         cin.rhs="numeric",
         cin.linear.idx="integer",
         cin.nonlinear.idx="integer",
+        ceq.efa.JAC="matrix",
         con.jac="matrix",
         con.lambda="numeric",
 
@@ -150,6 +152,11 @@ setClass("lavModel",          # MATRIX representation of the sem model
         ov.x.dummy.lv.idx="list",
         ov.y.dummy.ov.idx="list",
         ov.y.dummy.lv.idx="list",
+
+        ov.efa.idx="list",
+        lv.efa.idx="list",
+        H="list",
+        lv.order="list",
 
         estimator="character"
     )

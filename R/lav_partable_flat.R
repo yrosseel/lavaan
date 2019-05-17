@@ -6,6 +6,9 @@ lav_partable_flat <- function(FLAT = NULL,
                               int.ov.free      = FALSE,
                               int.lv.free      = FALSE,
                               orthogonal       = FALSE,
+                              orthogonal.y     = FALSE,
+                              orthogonal.x     = FALSE,
+                              orthogonal.efa   = FALSE,
                               std.lv           = FALSE,
                               conditional.x    = FALSE,
                               fixed.x          = TRUE,
@@ -17,6 +20,7 @@ lav_partable_flat <- function(FLAT = NULL,
                               auto.cov.y       = FALSE,
                               auto.th          = FALSE,
                               auto.delta       = FALSE,
+                              auto.efa         = FALSE,
                               varTable         = NULL,
                               group.equal      = NULL,
                               group.w.free     = FALSE,
@@ -93,6 +97,29 @@ lav_partable_flat <- function(FLAT = NULL,
         warning("lavaan WARNING: std.lv = TRUE forces all variances to be unity in all groups, despite group.equal = \"loadings\"")
     }
 
+    # do we have any EFA lv's? they need special treatment if auto.efa = TRUE
+    if(!is.null(FLAT$efa) && auto.efa) {
+        lv.names.efa <- unique(FLAT$lhs[FLAT$op == "=~" &
+                                        nchar(FLAT$efa) > 0L])
+        # remove them from lv.names.x
+        #if(length(lv.names.x) > 0L) {
+        #    both.idx <- which(lv.names.x %in% lv.names.efa)
+        #    if(length(both.idx) > 0L) {
+        #        lv.names.x <- lv.names.x[ -both.idx ]
+        #    }
+        #}
+
+        # remove them from lvov.names.y
+        #if(length(lvov.names.y) > 0L) {
+        #    both.idx <- which(lvov.names.y %in% lv.names.efa)
+        #    if(length(both.idx) > 0L) {
+        #        lvov.names.y <- lvov.names.y[ -both.idx ]
+        #    }
+        #}
+    } else {
+        lv.names.efa <- character(0)
+    }
+
     lhs <- rhs <- character(0)
 
     # 1. THRESHOLDS (based on varTable)
@@ -146,6 +173,19 @@ lav_partable_flat <- function(FLAT = NULL,
         lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
     }
+
+    # e) efa latent variables COVARIANCES:
+    #if(auto.efa && length(lv.names.efa) > 1L) {
+    #    efa.values <- lav_partable_efa_values(FLAT)
+    #    for(set in efa.values) {
+    #        # correlated factors within each set
+    #        this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
+    #                                        FLAT$efa == set ])
+    #        tmp <- utils::combn(this.set.lv, 2)
+    #        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+    #        rhs <- c(rhs, tmp[2,])
+    #    }
+    #}
 
     # create 'op' (thresholds come first, then variances)
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
@@ -283,9 +323,17 @@ lav_partable_flat <- function(FLAT = NULL,
         ustart[lv.var.idx] <- 1.0
           free[lv.var.idx] <- 0L
     }
+    if(auto.efa) {
+        # fix lv variances of efa blocks to unity
+        lv.var.idx <- which(op == "~~" &
+                            lhs %in% lv.names.efa & lhs == rhs)
+        ustart[lv.var.idx] <- 1.0
+          free[lv.var.idx] <- 0L
+    }
     if(auto.fix.first) {
         # fix metric by fixing the loading of the first indicator
-        mm.idx <- which(op == "=~")
+        # (but not for efa factors)
+        mm.idx <- which(op == "=~" & !(lhs %in% lv.names.efa))
         first.idx <- mm.idx[which(!duplicated(lhs[mm.idx]))]
         ustart[first.idx] <- 1.0
           free[first.idx] <- 0L
@@ -315,16 +363,47 @@ lav_partable_flat <- function(FLAT = NULL,
         }
     }
 
-    # 3. orthogonal=TRUE?
+    # 3. orthogonal = TRUE?
     if(orthogonal) {
-        # FIXME: only lv.x.idx for now
         lv.cov.idx <- which(op == "~~" &
                             lhs %in% lv.names &
+                            rhs %in% lv.names &
                             lhs != rhs &
                             user == 0L)
         ustart[lv.cov.idx] <- 0.0
           free[lv.cov.idx] <- 0L
     }
+    # 3b. orthogonal.y = TRUE?
+    if(orthogonal.y) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.y &
+                            rhs %in% lv.names.y &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+    # 3c. orthogonal.x = TRUE?
+    if(orthogonal.x) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.x &
+                            rhs %in% lv.names.x &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+    # 3d. orthogonal.efa = TRUE?
+    if(orthogonal.efa) {
+        lv.cov.idx <- which(op == "~~" &
+                            lhs %in% lv.names.efa &
+                            rhs %in% lv.names.efa &
+                            lhs != rhs &
+                            user == 0L)
+        ustart[lv.cov.idx] <- 0.0
+          free[lv.cov.idx] <- 0L
+    }
+
 
     # 4. intercepts
     if(meanstructure) {

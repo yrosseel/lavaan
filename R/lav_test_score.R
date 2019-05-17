@@ -36,7 +36,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
 
     # Mode 1: ADDING new parameters
-    if(!is.null(add) && nchar(add) > 0L) {
+    if(!is.null(add) && all(nchar(add) > 0L)) {
         # check release argument
         if(!is.null(release)) {
             stop("lavaan ERROR: `add' and `release' arguments cannot be used together.")
@@ -241,7 +241,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
 
         # create epc table for the 'free' parameters
-        if (!is.null(add) && nchar(add) > 0L) {
+        if (!is.null(add) && all(nchar(add) > 0L)) {
           LIST <- parTable(FIT)
         } else {
           ## release mode

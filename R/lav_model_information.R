@@ -26,9 +26,9 @@ lav_model_information <- function(lavmodel       = NULL,
     information <- lavoptions$information
 
     if(is.null(lavh1)) {
-        lavh1 <- lav_h1_logl(lavdata = lavdata,
-                             lavsamplestats = lavsamplestats,
-                             lavoptions = lavoptions)
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
     }
 
     # compute information matrix

@@ -7,7 +7,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     if(object@optim$npar > 0L && !object@optim$converged)
         stop("lavaan ERROR: model did not converge")
 
-    if(is.null(constraints) || nchar(constraints) == 0L) {
+    if(is.null(constraints) || all(nchar(constraints) == 0L)) {
         stop("lavaan ERROR: constraints are empty")
     }
 

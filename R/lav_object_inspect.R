@@ -179,18 +179,37 @@ lavInspect.lavaan <- function(object,
     } else if(what == "group") {
         object@Data@group
     } else if(what == "cluster") {
-      object@Data@cluster
-    } else if(what == "cluster.idx") {
-        lav_object_inspect_case_idx(object, level = 2L,
-            drop.list.single.group = drop.list.single.group)
+        object@Data@cluster
     } else if(what == "nlevels") {
-      object@Data@nlevels
+        object@Data@nlevels
     } else if(what == "nclusters") {
-        lav_object_inspect_ncluster(object, sizes = FALSE,
-              drop.list.single.group = drop.list.single.group)
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "nclusters",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "ncluster.size") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "ncluster.size",
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "cluster.size") {
-        lav_object_inspect_ncluster(object, sizes = TRUE,
-              drop.list.single.group = drop.list.single.group)
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.size",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.id") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.id",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.idx") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.idx",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.label") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.label",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.sizes") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.sizes",
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "ordered") {
         object@Data@ordered
     } else if(what == "group.label") {
@@ -468,6 +487,16 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
+    ### casewise loglikehoods ###
+    } else if(what == "loglik.casewise") {
+        lav_object_inspect_loglik_casewise(object, log. = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "lik.casewise") {
+        lav_object_inspect_loglik_casewise(object, log. = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+
     # multilevel #
     } else if(what == "icc") {
         lav_object_inspect_icc(object,
@@ -522,12 +551,16 @@ lavInspect.lavaan <- function(object,
 
 # helper functions (mostly to deal with older 'object' that may have
 # been saved somewhere)
-lav_object_inspect_est <- function(object) {
+lav_object_inspect_est <- function(object, unrotated = FALSE) {
 
     if(inherits(object, "lavaan")) {
         # from 0.5-19, they are in the partable
         if(!is.null(object@ParTable$est)) {
-            OUT <- object@ParTable$est
+            if(unrotated) {
+                OUT <- object@ParTable$est.unrotated
+            } else {
+                OUT <- object@ParTable$est
+            }
         } else if(.hasSlot(object, "Fit")) {
             # in < 0.5-19, we should look in @Fit@est
             OUT <- object@Fit@est
@@ -1084,21 +1117,11 @@ lav_object_inspect_data <- function(object, add.labels = FALSE,
     OUT
 }
 
-lav_object_inspect_case_idx <- function(object, level = 1L,
+lav_object_inspect_case_idx <- function(object,
                                         drop.list.single.group = FALSE) {
-    #FIXME: if lavaan every allows 3-level or cross-classifed models,
-    #      "level=" should be a character indicating the clustering variable
-
     G <- object@Data@ngroups
-    nlevels <- object@Data@nlevels
-    if (nlevels == 1L) level <- 1L # if what="cluster.idx" for single-level model
 
-    if (level == 2L) {
-        # level-2 (cluster) IDs
-        OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.id[[2]][ gg$cluster.idx[[2]] ])
-        #FIXME: update if lavaan ever accepts 3-level or cross-classified models
-
-    } else OUT <- object@Data@case.idx # level-1 (casewise) IDs
+    OUT <- object@Data@case.idx
 
     if(G == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
@@ -1107,36 +1130,121 @@ lav_object_inspect_case_idx <- function(object, level = 1L,
             names(OUT) <- unlist(object@Data@group.label)
         }
     }
+
     OUT
 }
 
-# count the number of clusters, or obtain N within each cluster
-lav_object_inspect_ncluster <- function(object, sizes = FALSE, #level = 2L,
-                                        drop.list.single.group = FALSE) {
+#lav_object_inspect_case_idx <- function(object, level = 1L,
+#                                        drop.list.single.group = FALSE) {
+#    #FIXME: if lavaan ever allows 3-level or cross-classifed models,
+#    #      "level=" should be a character indicating the clustering variable
+#
+#    G <- object@Data@ngroups
+#    nlevels <- object@Data@nlevels
+#    if (nlevels == 1L) level <- 1L # if what="cluster.idx" for single-level model
+#
+#    if (level == 2L) {
+#        # level-2 (cluster) IDs
+#        OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.id[[2]][ gg$cluster.idx[[2]] ])
+#        #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+#
+#    } else OUT <- object@Data@case.idx # level-1 (casewise) IDs
+#
+#    if(G == 1L && drop.list.single.group) {
+#        OUT <- OUT[[1]]
+#    } else {
+#        if(length(object@Data@group.label) > 0L) {
+#            names(OUT) <- unlist(object@Data@group.label)
+#        }
+#    }
+#    OUT
+#}
+#
+
+# cluster info
+lav_object_inspect_cluster_info <- function(object, what = "cluster.size",
+                                            level = 2L,
+                                            drop.list.single.group = FALSE) {
+
     G <- object@Data@ngroups
     nlevels <- object@Data@nlevels
 
-    if (nlevels == 1L) {
-      # single-level model, return sample size(s) or count 1 cluster per group
-      OUT <- if (sizes) unlist(object@Data@nobs) else rep(1L, G)
-
-    } else if (sizes) {
-      # for each group, a vector of cluster sizes
-      OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.size[[2]])
-      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
-
-      if (G == 1L && drop.list.single.group) OUT <- OUT[[1]]
-
-    } else {
-      # number of clusters in each group
-      OUT <- sapply(object@Data@Lp, function(gg) gg$nclusters[[2]])
-      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+    # just in case we have no clusters
+    if(nlevels == 1L) {
+        if(what %in% c("nclusters", "ncluster.size", "cluster.id")) {
+            OUT <- as.list(rep(1L, G))
+        } else if(what %in% c("cluster.size", "cluster.sizes")) {
+            OUT <- object@Data@nobs
+        } else if(what %in% c("cluster.idx", "cluster.label")) {
+            # everybody belongs to cluster 1
+            OUT <- lapply(seq_len(G),
+                          function(gg) rep(1L, object@Data@nobs[[gg]]))
+        }
     }
 
-    # assign group names, if applicable
-    if (G > 1L) names(OUT) <- unlist(object@Data@group.label)
+    # if we do have clusters
+    if(nlevels > 1L) {
+        OUT <- vector("list", length = G)
+
+        for(g in seq_len(G)) {
+            Lp <- object@Data@Lp[[g]]
+            if(what == "nclusters") {
+                OUT[[g]] <- Lp$nclusters[[level]]
+            } else if(what == "ncluster.size") {
+                OUT[[g]] <- Lp$ncluster.size[[level]]
+            } else if(what == "cluster.size") {
+                OUT[[g]] <- Lp$cluster.size[[level]]
+            } else if(what == "cluster.id") {
+                OUT[[g]] <- Lp$cluster.id[[level]]
+            } else if(what == "cluster.idx") {
+                OUT[[g]] <- Lp$cluster.idx[[level]]
+            } else if(what == "cluster.label") {
+                OUT[[g]] <- Lp$cluster.id[[level]][ Lp$cluster.idx[[level]] ]
+            } else if(what == "cluster.sizes") {
+                OUT[[g]] <- Lp$cluster.sizes[[level]]
+            }
+        } # g
+    } # nlevels > 1L
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
     OUT
 }
+
+
+# count the number of clusters, or obtain N within each cluster
+#lav_object_inspect_ncluster <- function(object, sizes = FALSE, #level = 2L,
+#                                        drop.list.single.group = FALSE) {
+#    G <- object@Data@ngroups
+#    nlevels <- object@Data@nlevels
+#
+#    if (nlevels == 1L) {
+#      # single-level model, return sample size(s) or count 1 cluster per group
+#      OUT <- if (sizes) unlist(object@Data@nobs) else rep(1L, G)
+#
+#    } else if (sizes) {
+#      # for each group, a vector of cluster sizes
+#      OUT <- lapply(object@Data@Lp, function(gg) gg$cluster.size[[2]])
+#      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+#
+#      if (G == 1L && drop.list.single.group) OUT <- OUT[[1]]
+#
+#    } else {
+#      # number of clusters in each group
+#      OUT <- sapply(object@Data@Lp, function(gg) gg$nclusters[[2]])
+#      #FIXME: update if lavaan ever accepts 3-level or cross-classified models
+#    }
+#
+#    # assign group names, if applicable
+#    if (G > 1L) names(OUT) <- unlist(object@Data@group.label)
+#    OUT
+#}
 
 lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
@@ -2126,6 +2234,7 @@ lav_object_inspect_information <- function(object,
                   lavdata        = object@Data,
                   lavcache       = object@Cache,
                   lavimplied     = object@implied,
+                  lavh1          = object@h1,
                   lavoptions     = object@Options,
                   extra          = FALSE,
                   augmented      = augmented,
@@ -2184,19 +2293,38 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     type = "std.all", free.only = TRUE,
     add.labels = FALSE, add.class = FALSE, remove.duplicated = FALSE) {
 
+    # rotation?
+    lavmodel <- object@Model
+    lavoptions <- object@Options
+    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+            (lavoptions$rotation != "none") ) {
+        rotation <- TRUE
+    } else {
+        rotation <- FALSE
+    }
+
     npar <- max(object@ParTable$free)
     if(object@optim$npar == 0) {
         OUT <- matrix(0,0,0)
     } else {
         # check if we already have it
         tmp <- try(slot(object, "vcov"), silent = TRUE)
-        if(!inherits(tmp, "try-error") && !is.null(object@vcov$vcov)) {
+        if(!inherits(tmp, "try-error") && !is.null(object@vcov$vcov) &&
+           !(rotation && standardized)) {
             OUT <- object@vcov$vcov
         } else {
         # compute it again
-            OUT <- lav_model_vcov(lavmodel       = object@Model,
+
+            if(rotation && standardized) {
+                lavmodel <- lav_model_set_parameters(lavmodel,
+                                x = object@optim$x)
+                lavoptions <- object@Options
+                lavoptions$rotation.se <- "delta"
+            }
+
+            OUT <- lav_model_vcov(lavmodel       = lavmodel,
                                   lavsamplestats = object@SampleStats,
-                                  lavoptions     = object@Options,
+                                  lavoptions     = lavoptions,
                                   lavdata        = object@Data,
                                   lavcache       = object@Cache,
                                   lavimplied     = object@implied,
@@ -2217,27 +2345,24 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # standardized?
     if(standardized) {
         if(type == "std.lv") {
-            JAC <- try(lav_func_jacobian_complex(func = lav_standardize_lv_x,
-                x = object@optim$x, lavobject = object), silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = lav_standardize_lv_x,
-                    x = object@optim$x, lavobject = object)
-            }
+            FUN <- lav_standardize_lv_x
         } else if(type == "std.all") {
-            JAC <- try(lav_func_jacobian_complex(func = lav_standardize_all_x,
-                x = object@optim$x, object = object), silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = lav_standardize_all_x,
-                    x = object@optim$x, lavobject = object)
-            }
+            FUN <- lav_standardize_all_x
         } else if(type == "std.nox") {
-            JAC <-
-                try(lav_func_jacobian_complex(func = lav_standardize_all_nox_x,
-                    x = object@optim$x, lavobject = object), silent = TRUE)
+            FUN <- lav_standardize_all_nox_x
+        }
+
+        if(rotation) {
+            JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
+                       method.args = list(eps = 1e-03), # default is 1e-04
+                       lavobject = object, rotation = rotation)
+        } else {
+            JAC <- try(lav_func_jacobian_complex(func = FUN,
+                x = object@optim$x, lavobject = object, rotation = rotation),
+                       silent = TRUE)
             if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <-
-                    lav_func_jacobian_simple(func = lav_standardize_all_nox_x,
-                        x = object@optim$x, lavobject = object)
+                JAC <- lav_func_jacobian_simple(func = FUN,
+                    x = object@optim$x, lavobject = object, rotation = rotation)
             }
         }
 
@@ -2256,8 +2381,8 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     }
 
     # alias?
-    if(remove.duplicated && object@Model@eq.constraints) {
-        simple.flag <- lav_constraints_check_simple(object@Model)
+    if(remove.duplicated && lavmodel@eq.constraints) {
+        simple.flag <- lav_constraints_check_simple(lavmodel)
         if(simple.flag) {
             LAB <- lav_partable_labels(object@ParTable, type="free")
             dup.flag <- duplicated(LAB)
@@ -2770,3 +2895,74 @@ lav_object_inspect_ranef <- function(object, add.labels = FALSE,
 
     OUT
 }
+
+# casewise loglikelihood contributions
+lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    lavdata <- object@Data
+    lavsamplestats <- object@SampleStats
+    lavimplied <- object@implied
+
+    G <- lavdata@ngroups
+    OUT <- vector("list", G)
+
+    # multilevel?
+    if(lavdata@nlevels > 1L) {
+        stop("lavaan ERROR: casewise (log)likeloods contributions not yet available for clustered data")
+    }
+
+    # estimator ML?
+    if(object@Options$estimator != "ML") {
+        stop("lavaan ERROR: casewise (log)likeloods contributions only available for estimator = ", dQuote("ML"))
+    }
+
+    for(g in 1:G) {
+
+        if(lavdata@missing == "listwise") {
+            if(object@Model@meanstructure) {
+                MEAN <- lavimplied$mean[[g]]
+            } else {
+                MEAN <- lavsamplestats@mean[[g]]
+            }
+            OUT[[g]] <- lav_mvnorm_loglik_data(Y  = lavdata@X[[g]],
+                                               wt = lavdata@weights[[g]],
+                                               Mu = MEAN,
+                                               Sigma = lavimplied$cov[[g]],
+                                               casewise = TRUE)
+        } else if(lavdata@missing == "ml") {
+            OUT[[g]] <- lav_mvnorm_missing_llik_casewise(Y = lavdata@X[[g]],
+                                               wt = lavdata@weights[[g]],
+                                               Mu = lavimplied$mean[[g]],
+                                               Sigma = lavimplied$cov[[g]])
+        } else {
+            stop("lavaan ERROR: casewise (log)likeloods contributions not available if missing = ", dQuote(lavdata@missing))
+        }
+
+        # log. = FALSE?
+        if(!log.) {
+            OUT[[g]] <- exp(OUT[[g]])
+        }
+
+        # label
+        # if(add.labels) {
+        # }
+
+        # class
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+
+        }
+    } # g
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
+

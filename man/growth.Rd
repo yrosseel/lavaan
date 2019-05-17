@@ -76,7 +76,7 @@ in a multiple group analysis.}
     \code{int.ov.free = FALSE}, \code{int.lv.free = TRUE},
     \code{auto.fix.first = TRUE} (unless \code{std.lv = TRUE}),
     \code{auto.fix.single = TRUE}, \code{auto.var = TRUE},
-    \code{auto.cov.lv.x = TRUE}, 
+    \code{auto.cov.lv.x = TRUE}, \code{auto.efa = TRUE},
     \code{auto.th = TRUE}, \code{auto.delta = TRUE},
     and \code{auto.cov.y = TRUE}.
 }

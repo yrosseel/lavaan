@@ -87,6 +87,13 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
         pt2$plabel <- rep("", length(pt2$lhs))
     }
 
+    # efa
+    if(is.null(pt1$efa) && !is.null(pt2$efa)) {
+        pt1$efa <- rep("", length(pt1$lhs))
+    } else if(is.null(pt2$efa) && !is.null(pt1$efa)) {
+        pt2$efa <- rep("", length(pt2$lhs))
+    }
+
     # start
     if(is.null(pt1$start) && !is.null(pt2$start)) {
         pt1$start <- rep(as.numeric(NA), length(pt1$lhs))
