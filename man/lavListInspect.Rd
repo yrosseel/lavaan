@@ -8,11 +8,11 @@ inspect/extract information that is stored inside (or can be computed from) a
 lavaanList object.
 }
 \usage{
-lavListInspect(object, what = "free", add.labels = TRUE, 
+lavListInspect(object, what = "free", add.labels = TRUE,
                add.class = TRUE, list.by.group = TRUE,
                drop.list.single.group = TRUE)
 
-lavListTech(object, what = "free", add.labels = FALSE, 
+lavListTech(object, what = "free", add.labels = FALSE,
             add.class = FALSE, list.by.group = FALSE,
             drop.list.single.group = FALSE)
 }
@@ -55,11 +55,11 @@ Model matrices:
         of for example \code{coef()} and \code{vcov()}.}
     \item{\code{"partable"}:}{A list of model matrices. The non-zero integers
         represent both the fixed parameters (for example, factor loadings
-        fixed at 1.0), and the free parameters if we ignore any equality 
-        constraints. They correspond with all entries (fixed or free) 
+        fixed at 1.0), and the free parameters if we ignore any equality
+        constraints. They correspond with all entries (fixed or free)
         in the parameter table. See \code{\link{parTable}}.}
     \item{\code{"start"}:}{A list of model matrices. The values represent
-        the starting values for all model parameters. 
+        the starting values for all model parameters.
         Alias: \code{"starting.values"}.}
 }
 
@@ -70,8 +70,9 @@ Information about the data (including missing patterns):
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
     \item{\code{"group.label"}:}{A character vector. The group labels.}
-    \item{\code{"cluster"}:}{A character vector. The cluster variable(s) 
+    \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
        in the data.frame (if any).}
+    \item{\code{"nlevels"}:}{Integer. The number of levels.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis (in each dataset).}
@@ -101,7 +102,7 @@ Model features:
     \item{\code{"list"}:}{The parameter table. The same output as given
         by \code{parTable()}.}
     \item{\code{"options"}:}{List. The option list.}
-    \item{\code{"call"}:}{List. The call as returned by match.call, coerced to 
+    \item{\code{"call"}:}{List. The call as returned by match.call, coerced to
         a list.}
 }
 
@@ -114,10 +115,10 @@ Model features:
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
-     
+
 # a data generating function
 generateData <- function() simulateData(HS.model, sample.nobs = 100)
-     
+
 set.seed(1234)
 fit <- semList(HS.model, dataFunction = generateData, ndat = 5,
                store.slots = "partable")

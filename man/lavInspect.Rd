@@ -110,8 +110,13 @@ Information about the data (including missing patterns):
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
     \item{\code{"group.label"}:}{A character vector. The group labels.}
     \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
-       in the data.frame (if any).}
+        in the data.frame (if any).}
     \item{\code{"nlevels"}:}{Integer. The number of levels.}
+    \item{\code{"nclusters"}:}{Integer vector. The number of clusters
+        in each group that were used in the analysis.}
+    \item{\code{"cluster.size"}:}{Integer vector. The number of observations
+        within each cluster. For multigroup multilevel models, a list of
+        integer vectors, indicating cluster sizes within each group.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis.}
@@ -123,7 +128,12 @@ Information about the data (including missing patterns):
         this is the sum of the \code{"nobs"} numbers for each group.}
     \item{\code{"case.idx"}:}{The case/observation numbers that were used
         in the analysis.
-        In the case of multiple groups: a list of numbers.}
+        In the case of multiple groups: a list of numbers.
+        In the case of multilevel models, these are Level-1 IDs.}
+    \item{\code{"cluster.idx"}:}{In multilevel models, the Level-2 IDs for each
+        Level-1 case/observation used in the analysis.
+        In the case of multiple groups: a list of numbers.
+        For single-level models, output will match \code{"case.idx"}.}
     \item{\code{"empty.idx"}:}{The case/observation numbers of those
         cases/observations that contained missing values only
         (at least for the observed variables that were included in the model).
@@ -188,7 +198,7 @@ Model-implied sample statistics:
 \describe{
     \item{\code{"implied"}:}{The model-implied summary statistics.
         Alias: \code{"fitted"}, \code{"expected"}, \code{"exp"}.}
-    \item{\code{"resid"}:}{The difference between observed and model-implied 
+    \item{\code{"resid"}:}{The difference between observed and model-implied
         summary statistics.
         Alias: \code{"residuals"}, \code{"residual"}, \code{"res"}.}
     \item{\code{"cov.lv"}:}{The model-implied variance-covariance matrix
@@ -303,18 +313,18 @@ Variance covariance matrix of the model parameters:
         matrix of the standardized user-defined parameters. Standardization
         is done with respect to both observed and latent variables, but
         ignoring any exogenous observed covariates.}
-    \item{\code{"vcov.def.joint"}:}{Matrix containing the joint variance 
+    \item{\code{"vcov.def.joint"}:}{Matrix containing the joint variance
         covariance matrix of both the estimated model parameters and
         the defined (using the := operator) parameters.}
     \item{\code{"vcov.def.joint.std.all"}:}{Matrix containing the joint
         variance covariance matrix of both the standardized model parameters
         and the user-defined parameters. Standardization
         is done with respect to both observed and latent variables.}
-    \item{\code{"vcov.def.joint.std.lv"}:}{Matrix containing the joint 
+    \item{\code{"vcov.def.joint.std.lv"}:}{Matrix containing the joint
         variance covariance matrix of both the standardized model parameters
         and the user-defined parameters. Standardization
-        is done with respect to the latent variables only.}   
-    \item{\code{"vcov.def.joint.std.nox"}:}{Matrix containing the joint 
+        is done with respect to the latent variables only.}
+    \item{\code{"vcov.def.joint.std.nox"}:}{Matrix containing the joint
         variance covariance matrix of both the standardized model parameters
         and the user-defined parameters. Standardization
         is done with respect to both observed and latent variables, but
@@ -351,7 +361,7 @@ Miscellaneous:
         \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
     \item{\code{"zero.cell.tables"}:}{List. List of bivariate frequency tables
         where at least one cell is empty.}
-    \item{\code{"version"}:}{The lavaan version number that was used to 
+    \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }
 
@@ -365,7 +375,7 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
-     
+
 fit <- cfa(HS.model, data = HolzingerSwineford1939, group = "school")
 
 # extract information
