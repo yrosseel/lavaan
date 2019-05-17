@@ -162,6 +162,11 @@ Information about the data:
         sizes that were used in the analysis. For multigroup multilevel 
         models, a list of integer vectors, indicating the different cluster 
         sizes within each group.}
+    \item{\code{"average.cluster.size"}:}{Integer. The average cluster
+        size (using the formula 
+        \code{s = (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))}). 
+        For multigroup multilevel
+        models, a list containing the average cluster size per group.}
 }
 
 Observed sample statistics:

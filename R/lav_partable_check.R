@@ -89,7 +89,10 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     if(length(int.fixed) > 0L) {
         check <- FALSE
         if(warn) {
-            warning("lavaan WARNING: missing intercepts are set to zero: [", paste(partable$lhs[int.fixed],  collapse = " "), "]")
+            warning("lavaan WARNING: ",
+                    "automatically added intercepts are set to zero:\n",
+                    "    [", paste(partable$lhs[int.fixed],  collapse = " "),
+                    "]")
         }
     }
 

@@ -65,6 +65,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "lv.nonnormal",# latent variables with non-normal indicators
                    "lv.interaction", # interaction terms
                    "lv.efa",      # latent variables involved in efa
+                   "lv.ind",      # latent indicators (higher-order cfa)
 
                    "eqs.y",       # y's in regression
                    "eqs.x"        # x's in regression
@@ -161,6 +162,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$lv.nonnormal   <- vector("list", length = nblocks)
     OUT$lv.interaction <- vector("list", length = nblocks)
     OUT$lv.efa         <- vector("list", length = nblocks)
+    OUT$lv.ind         <- vector("list", length = nblocks)
 
     OUT$eqs.y          <- vector("list", length = nblocks)
     OUT$eqs.x          <- vector("list", length = nblocks)
@@ -233,6 +235,14 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                              partable$efa %in% set.names ] )
             }
             OUT$lv.efa[[b]] <- out
+        }
+
+        # lv's that are indicators of a higher-order factor
+        if("lv.ind" %in% type) {
+            out <- unique( partable$rhs[ partable$block == b &
+                                         partable$op == "=~" &
+                                         partable$rhs %in% lv.names  ] )
+            OUT$lv.ind[[b]] <- out
         }
 
         # eqs.y

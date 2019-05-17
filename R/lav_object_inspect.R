@@ -210,6 +210,10 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_cluster_info(object, level = 2L,
             what = "cluster.sizes",
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "average.cluster.size") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "average.cluster.size",
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "ordered") {
         object@Data@ordered
     } else if(what == "group.label") {
@@ -1202,6 +1206,11 @@ lav_object_inspect_cluster_info <- function(object, what = "cluster.size",
                 OUT[[g]] <- Lp$cluster.id[[level]][ Lp$cluster.idx[[level]] ]
             } else if(what == "cluster.sizes") {
                 OUT[[g]] <- Lp$cluster.sizes[[level]]
+            } else if(what == "average.cluster.size") {
+                Ng <- object@Data@nobs[[g]]
+                cluster.size <- Lp$cluster.size[[level]]
+                nclusters <- Lp$nclusters[[level]]
+                OUT[[g]] <- (Ng^2 - sum(cluster.size^2)) / (Ng*(nclusters - 1L))
             }
         } # g
     } # nlevels > 1L

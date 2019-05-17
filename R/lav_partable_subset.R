@@ -36,7 +36,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     if(is.null(lv.names)) {
         lv.names <- lavpta$vnames$lv.regular
     } else if(!is.list(lv.names)) {
-        lv.names <- list(lv.names)
+        lv.names <- rep(list(lv.names), ngroups)
     }
 
     # keep rows idx
@@ -116,7 +116,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                     LHS.freeid <- ID[match(LHS.labels, LABEL)]
 
                     # keep?
-                    if(all(LHS.freeid %in% keep.idx)) {
+                    if(all(LHS.freeid %in% PT$free[keep.idx])) {
                         lhs.keep <- TRUE
                     }
                 } else {
@@ -132,7 +132,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                     RHS.freeid <- ID[match(RHS.labels, LABEL)]
 
                     # keep?
-                    if(all(RHS.freeid %in% keep.idx)) {
+                    if(all(RHS.freeid %in% PT$free[keep.idx])) {
                         rhs.keep <- TRUE
                     }
                 } else {
@@ -161,30 +161,8 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 
     # add covariances among latent variables?
     if(add.lv.cov) {
-        for(g in 1:ngroups) {
-            if(length(lv.names[[g]]) > 1L) {
-                tmp <- utils::combn(lv.names[[g]], 2L)
-                for(i in ncol(tmp)) {
-
-                    # already present?
-                    cov1.idx <- which(PT$op == "~~" & PT$group == g &
-                                      PT$lhs == tmp[1,i] & PT$rhs == tmp[2,i])
-                    cov2.idx <- which(PT$op == "~~" & PT$group == g &
-                                      PT$lhs == tmp[2,i] & PT$rhs == tmp[1,i])
-
-                    # if not, add
-                    if(length(c(cov1.idx, cov2.idx)) == 0L) {
-                        ADD = list(lhs = tmp[1,i],
-                                    op = "~~",
-                                   rhs = tmp[2,i],
-                                   free = max(PT$free) + 1L,
-                                   block = g,
-                                   group = g)
-                        PT <- lav_partable_add(PT, add = ADD)
-                    }
-                }
-            }
-        }
+        PT <- lav_partable_add_lv_cov(PT = PT, lavpta = lavpta,
+                                      lv.names = lv.names)
     }
 
     # clean up
@@ -196,6 +174,57 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 
     PT
 }
+
+lav_partable_add_lv_cov <- function(PT, lavpta = NULL, lv.names = NULL) {
+
+    # PT
+    PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+
+    # lavpta
+    if(is.null(lavpta)) {
+        lavpta <- lav_partable_attributes(PT)
+    }
+
+    # ngroups
+    ngroups <- lavpta$ngroups
+
+    # lv.names: list with element per group
+    if(is.null(lv.names)) {
+        lv.names <- lavpta$vnames$lv.regular
+    } else if(!is.list(lv.names)) {
+        lv.names <- rep(list(lv.names), ngroups)
+    }
+
+    # add covariances among latent variables
+    for(g in 1:ngroups) {
+        if(length(lv.names[[g]]) > 1L) {
+            tmp <- utils::combn(lv.names[[g]], 2L)
+            for(i in ncol(tmp)) {
+
+                # already present?
+                cov1.idx <- which(PT$op == "~~" & PT$group == g &
+                                  PT$lhs == tmp[1,i] & PT$rhs == tmp[2,i])
+                cov2.idx <- which(PT$op == "~~" & PT$group == g &
+                                  PT$lhs == tmp[2,i] & PT$rhs == tmp[1,i])
+
+                # if not, add
+                if(length(c(cov1.idx, cov2.idx)) == 0L) {
+                    ADD = list(lhs = tmp[1,i],
+                                op = "~~",
+                               rhs = tmp[2,i],
+                               free = max(PT$free) + 1L,
+                               block = g,
+                               group = g)
+                    PT <- lav_partable_add(PT, add = ADD)
+                }
+            }
+
+        } # lv.names
+    } # g
+
+    PT
+}
+
 
 # this function takes a 'full' SEM (measurement models + structural part)
 # and returns only the structural part
