@@ -1349,10 +1349,10 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
 
         # NOTE: we divide here by 'N - nclusters'
-        # - this is just arbitrary, we could as well divide by 'N'
+        # - this is the standard definition of 'pooled-within' variance
         # - this matters when we compute the objective function,
         #   where we need to 'multiply' again with the same constant
-        # - a slight advantage of the 'N - nclusters' is that the same
+        # - an additiona  advantage of the 'N - nclusters' is that the same
         #   constant is needed for multiplying sigma.w.logdet, so we can
         #   can combine them
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
@@ -1361,7 +1361,10 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         # S.b
         # three parts: within/within, between/between, between/within
-        S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
+        #S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
+        # standard definition of the between variance matrix
+        # - divides by (nclusters - 1)
+        S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1)
 
         # what if (nj*S.b - (nj-s)*S.w)/s is not-pd?
         #NJ <- max(cluster.size)

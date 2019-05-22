@@ -2,15 +2,40 @@
 #
 # Yves Rosseel & Wen-Wei Loh, Feb-May 2019
 
-# alternative for FSR+Croon
-#  - but no need to compute factor scores or corrections
+# local vs global sam
+# local sam = alternative for FSR+Croon
+# - but no need to compute factor scores or corrections
+# gloal sam = (old) twostep
+# - but we can also take a 'local' perspective
 
 # restrictions
+# local:
 #  - only if LAMBDA is of full column rank (eg no SRM, no bi-factor, no MTMM)
 #  - if multiple groups: each group has the same set of latent variables!
+#  - global approach is used to compute corrected two-step standard errors
+# global:
+#  - (none)?
 
 # YR 12 May 2019 - first version
-#
+# YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
+
+
+# twostep = wrapper for global sam
+twostep <- function(model = NULL, data = NULL, cmd = "sem",
+                    mm.list = NULL, mm.args = list(), struc.args = list(),
+                    ...,         # global options
+                    output = "lavaan") {
+
+    sam(model = model, data = data, cmd = cmd, mm.list = mm.list,
+        mm.args = mm.args, struc.args = struc.args,
+        sam.method = "global", # or global
+                ...,         # global options
+        output = output)
+}
+
+# fsr = wrapper for local sam
+# TODO
+
 
 sam <- function(model      = NULL,
                 data       = NULL,
@@ -18,27 +43,29 @@ sam <- function(model      = NULL,
                 mm.list    = NULL,
                 mm.args    = list(),
                 struc.args = list(),
+                sam.method = "local", # or global
                 ...,         # global options
-                M.method   = "ML",
-                output     = "structural") {
+                local.M.method   = "ML",
+                local.twolevel.method = "h1", # h1, anova or mean
+                output     = "lavaan") {
 
     # check arguments
-    M.method <- toupper(M.method)
-    if(!M.method %in% c("GLS", "ML", "ULS")) {
-        stop("lavaan ERROR: M.method should be one of GLS, ML or ULS.")
+    local.M.method <- toupper(local.M.method)
+    if(!local.M.method %in% c("GLS", "ML", "ULS")) {
+        stop("lavaan ERROR: local.M.method should be one of GLS, ML or ULS.")
+    }
+   
+    local.twolevel.method <- tolower(local.twolevel.method)
+    if(!local.twolevel.method %in% c("h1", "anova", "mean")) {
+        stop("lavaan ERROR: local.twolevel.method should be one of h1, anova or mean.") 
     }
 
     # output
     output <- tolower(output)
-    if(output == "list") {
+    if(output == "list" || output == "lavaan") {
         # nothing to do
-    } else if(output %in% c("struc", "structural", "structural.part")) {
-        output <- "structural"
-    } else if(output %in% c("joint", "full", "global", "total")) {
-        output <- "global"
-        stop("lavaan ERROR: output=global not ready yet.")
     } else {
-        stop("lavaan ERROR: output should be one of list, structural or global.")
+        stop("lavaan ERROR: output should be one list or lavaan.")
     }
 
     # handle dot dot dot
@@ -72,22 +99,25 @@ sam <- function(model      = NULL,
 
 
     # what have we learned?
-    ngroups <- lavInspect(FIT, "ngroups")
     lavpta  <- FIT@pta
+    ngroups <- lavpta$ngroups
+    nlevels <- lavpta$nlevels
+    nblocks <- lavpta$nblocks
     PT      <- FIT@ParTable
 
 
-    # because we use a local approach:
-    #
-    # if missing = "listwise", make data complete, to avoid different
-    # datasets per measurement block
-    if(lavoptions$missing == "listwise") {
-        # FIXME: make this work for multiple groups!!
-        OV <- unique(unlist(lavpta$vnames$ov))
-        # add group/cluster/sample.weights variables (if any)
-        OV <- c(OV, FIT@Data@group, FIT@Data@cluster,
-                FIT@Data@sampling.weights)
-        data <- na.omit(data[,OV])
+    # local only
+    if(sam.method == "local") {
+        # if missing = "listwise", make data complete, to avoid different
+        # datasets per measurement block
+        if(lavoptions$missing == "listwise") {
+            # FIXME: make this work for multiple groups!!
+            OV <- unique(unlist(lavpta$vnames$ov))
+            # add group/cluster/sample.weights variables (if any)
+            OV <- c(OV, FIT@Data@group, FIT@Data@cluster,
+                    FIT@Data@sampling.weights)
+            data <- na.omit(data[,OV])
+        }
     }
 
     # any `regular' latent variables? (across groups!)
@@ -125,17 +155,26 @@ sam <- function(model      = NULL,
     PT$se <- rep(as.numeric(NA), length(PT$lhs))
     PT$se[ PT$free == 0L & !is.na(PT$ustart) ] <- 0.0
 
-
-    # STEP 1: fit each measurement model (block)
     # how many measurement models?
     if(!is.null(mm.list)) {
         nMMblocks <- length(mm.list)
         # check each measurement block
         for(b in seq_len(nMMblocks)) {
-            if(!all(mm.list[[b]] %in% LV.names)) {
+            # check if we can find all lv names in LV.names
+            if(!all(unlist(mm.list[[b]]) %in% LV.names)) {
+              tmp <- unlist(mm.list[[b]])
               stop("lavaan ERROR: mm.list contains unknown latent variable(s):",
-                paste( mm.list[[b]][ !mm.list[[b]] %in% LV.names ], sep = " "),
+                paste( tmp[ !tmp %in% LV.names ], sep = " "),
                 "\n")
+            }
+            # make list per block
+            if(!is.list(mm.list[[b]])) {
+                mm.list[[b]] <- rep(list(mm.list[[b]]), nblocks)
+            } else {
+                if(length(mm.list[[b]]) != nblocks) {
+                    stop("lavaan ERROR: mm.list block ", b, " has length ", 
+                         length(mm.list[[b]]), " but nblocks = ", nblocks)
+                }
             }
         }
     } else {
@@ -145,12 +184,23 @@ sam <- function(model      = NULL,
         # for now we take a single latent variable per measurement model block
         mm.list <- as.list(LV.names)
         nMMblocks <- length(mm.list)
+        for(b in seq_len(nMMblocks)) {
+            # make list per block
+            mm.list[[b]] <- rep(list(mm.list[[b]]), nblocks)
+        }
     }
+
+
+
+
+    # STEP 1: fit each measurement model (block)
 
     # adjust options for measurement models
     dotdotdot.mm <- dotdotdot
     #dotdotdot.mm$se <- "none"
-    #dotdotdot.mm$test <- "none" # local view
+    if(sam.method == "global") {
+        dotdotdot.mm$test <- "none"
+    }
     dotdotdot.mm$debug <- FALSE
     dotdotdot.mm$verbose <- FALSE
     dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
@@ -160,45 +210,106 @@ sam <- function(model      = NULL,
 
     # we assume the same number/names of lv's per group!!!
     MM.FIT <- vector("list", nMMblocks)         # fitted object
-    LAMBDA.list <- vector("list", nMMblocks)
-    THETA.list  <- vector("list", nMMblocks)
-    NU.list     <- vector("list", nMMblocks)
-    LV.idx.list <- vector("list", nMMblocks)
-    OV.idx.list <- vector("list", nMMblocks)
+
+    # local only
+    if(sam.method == "local") {
+        LAMBDA.list <- vector("list", nMMblocks)
+        THETA.list  <- vector("list", nMMblocks)
+        NU.list     <- vector("list", nMMblocks)
+        LV.idx.list <- vector("list", nMMblocks)
+        OV.idx.list <- vector("list", nMMblocks)
+    }
 
     # for joint model later
     #MM.INFO <- matrix(0, npar, npar)
     Sigma.11 <- matrix(0, npar, npar)
     step1.idx <- integer(0L)
 
-    for(mm in seq_len(nMMblocks)) {
 
+    # local only
+    if(sam.method == "local") {
         # NOTE: we should explicitly add zero-constrained LV covariances
-        # to PT, and keep them zero in PT.block
+        # to PT, and keep them zero in PTM
         if(cmd == "lavaan") {
             add.lv.cov <- FALSE
         } else {
             add.lv.cov <- TRUE
         }
+    }
 
-        # create parameter table for this measurement block only
-        PT.block <-
-            lav_partable_subset_measurement_model(PT = PT,
-                                                  lavpta = lavpta,
-                                                  add.lv.cov = add.lv.cov,
-                                                  add.idx = TRUE,
-                                                  lv.names = mm.list[[mm]])
-        mm.idx <- attr(PT.block, "idx"); attr(PT.block, "idx") <- NULL
-        PT.block$est <- NULL
-        PT.block$se <- NULL
 
-        ind.names <- lav_partable_vnames(PT.block, "ov.ind")
-        LV.idx.list[[mm]] <- match(mm.list[[mm]], FIT@Model@dimNames[[1]][[2]])
-        OV.idx.list[[mm]] <- match(ind.names, FIT@Model@dimNames[[1]][[1]])
+    for(mm in seq_len(nMMblocks)) {
+
+        if(sam.method == "local") {
+            # LV.idx.list/OV.idx.list: list per block
+            LV.idx.list[[mm]] <- vector("list", nblocks)
+            OV.idx.list[[mm]] <- vector("list", nblocks)
+
+            # create parameter table for this measurement block only
+            PTM <-
+                lav_partable_subset_measurement_model(PT = PT,
+                                                      lavpta = lavpta,
+                                                      add.lv.cov = add.lv.cov,
+                                                      add.idx = TRUE,
+                                                      lv.names = mm.list[[mm]])
+            mm.idx <- attr(PTM, "idx"); attr(PTM, "idx") <- NULL
+            PTM$est <- NULL
+            PTM$se <- NULL
+        } else {
+            # which parameters are related to this measurement block?
+            mm.idx <- lav_partable_subset_measurement_model(PT = PT,
+                          lavpta = lavpta, lv.names = mm.list[[mm]],
+                          idx.only = TRUE)
+
+            if(length(mm.idx) == 0L) {
+                # empty measurement block (single-indicator lv?)
+                next
+            }
+
+            # adapt parameter table:
+            # - only parameters related to this measurement block are 'free'
+            # - everything else is set to zero (except variances, which are
+            #   are set to 1)
+            # - if multiple latent variables in this measurement block, we
+            #   must ADD and free the covariances among these latent variables
+            # - remove non-needed constraints
+            PTM <- PT
+            if(any(sapply(mm.list[[mm]], length) > 1L)) {
+                PTM <- lav_partable_add_lv_cov(PT = PT,
+                              lavpta = lavpta, lv.names = mm.list[[mm]])
+            }
+            con.idx <- which(PTM$op %in% c("==","<",">"))
+            if(length(con.idx) > 0L) {
+                needed.idx <- which(con.idx %in% mm.idx)
+                if(length(needed.idx) > 0L) {
+                    con.idx <- con.idx[-needed.idx]
+                }
+                if(length(con.idx) > 0L) {
+                    PTM <- as.data.frame(PTM, stringsAsFactors = FALSE)
+                    PTM <- PTM[-con.idx, ]
+                }
+            }
+            PTM$est <- NULL
+            PTM$se <- NULL
+
+            PTM$free[ !seq_len(length(PTM$lhs)) %in% mm.idx &
+                       PTM$free > 0L ] <- 0L
+            PTM$free[ PTM$user == 3L ] <- 1L
+            PTM$free[ PTM$free > 0L ] <- seq_len( sum(PTM$free > 0L) )
+
+            # set all other non-fixed ustart values to 0
+            PTM$ustart[ PTM$free == 0L & is.na(PTM$ustart) ] <- 0
+    
+            # set all other non-fixed ustart variance values to 1
+            PTM$ustart[ PTM$free == 0L & PTM$op == "~~" & PTM$lhs == PTM$rhs &
+                        PTM$ustart == 0 ] <- 1
+        }
+
+
 
         # fit this measurement model only
         fit.mm.block <- do.call("lavaan",
-                                args =  c(list(model  = PT.block,
+                                args =  c(list(model  = PTM,
                                                data   = data), dotdotdot.mm) )
         # check convergence
         if(!lavInspect(fit.mm.block, "converged")) {
@@ -210,12 +321,24 @@ sam <- function(model      = NULL,
         # store fitted measurement model
         MM.FIT[[mm]] <- fit.mm.block
 
-        # store LAMBDA/THETA
-        LAMBDA.list[[mm]] <- computeLAMBDA(fit.mm.block@Model )
-         THETA.list[[mm]] <- computeTHETA( fit.mm.block@Model )
-        if(lavoptions$meanstructure) {
-            NU.list[[mm]] <- computeNU( fit.mm.block@Model,
-                                        lavsamplestats = FIT@SampleStats )
+        if(sam.method == "local") {
+            # store LAMBDA/THETA
+            LAMBDA.list[[mm]] <- computeLAMBDA(fit.mm.block@Model )
+             THETA.list[[mm]] <- computeTHETA( fit.mm.block@Model )
+            if(lavoptions$meanstructure) {
+                NU.list[[mm]] <- computeNU( fit.mm.block@Model,
+                                            lavsamplestats = FIT@SampleStats )
+            }
+
+            # store indices
+            for(bb in seq_len(nblocks)) {
+                lambda.idx <- which(names(FIT@Model@GLIST) == "lambda")[bb]
+                ind.names <- lav_partable_vnames(PTM, "ov.ind", block = bb)
+                LV.idx.list[[mm]][[bb]] <- match(mm.list[[mm]][[bb]], 
+                    FIT@Model@dimNames[[lambda.idx]][[2]])
+                OV.idx.list[[mm]][[bb]] <- match(ind.names, 
+                    FIT@Model@dimNames[[lambda.idx]][[1]])
+            }
         }
 
         # fill in point estimates measurement block
@@ -263,120 +386,252 @@ sam <- function(model      = NULL,
         }
     }
 
-    ## STEP 2: compute Var(eta) and E(eta) per group
-    VETA <- vector("list", ngroups)
-    if(lavoptions$meanstructure) {
-        EETA <- vector("list", ngroups)
-    } else {
-        EETA <- NULL
-    }
-
-    # global MM matrices
-    LAMBDA <- computeLAMBDA(FIT@Model)
-    THETA  <- computeTHETA(FIT@Model, fix = FALSE) # keep zeroes for dummy lv
-    if(lavoptions$meanstructure) {
-        NU <- computeNU(FIT@Model, lavsamplestats = FIT@SampleStats)
-    }
-    M <- vector("list", ngroups)
-
-
-    for(g in seq_len(ngroups)) {
-        # assemble global LAMBDA/THETA (per group)
-        for(mm in seq_len(nMMblocks)) {
-            ov.idx <- OV.idx.list[[mm]]
-            lv.idx <- LV.idx.list[[mm]]
-            LAMBDA[[g]][ov.idx, lv.idx] <- LAMBDA.list[[mm]][[g]]
-             THETA[[g]][ov.idx, ov.idx] <-  THETA.list[[mm]][[g]]
-            if(lavoptions$meanstructure) {
-                NU[[g]][ov.idx, 1] <- NU.list[[mm]][[g]]
-            }
-        }
-
-        # check if LAMBDA has full column rank
-        if(qr(LAMBDA[[g]])$rank < ncol(LAMBDA[[g]])) {
-            print(LAMBDA[[g]])
-            stop("lavaan ERROR: LAMBDA has no full column rank.")
-        }
-
-        # get sample statistics for this group
-        ybar <- FIT@SampleStats@mean[[g]]
-        cov  <- FIT@SampleStats@cov[[g]]
-
-        # compute 'M'
-        if(M.method == "GLS") {
-            icov <- FIT@SampleStats@icov[[g]]
-            Mg <- ( solve(t(LAMBDA[[g]]) %*% icov %*% LAMBDA[[g]]) %*%
-                        t(LAMBDA[[g]]) %*% icov )
-        } else if(M.method == "ML") {
-            zero.theta.idx <- which(diag(THETA[[g]]) == 0)
-            if(length(zero.theta.idx) > 0L) {
-                tmp <- THETA[[g]][-zero.theta.idx, -zero.theta.idx,
-                                  drop = FALSE]
-                tmp.inv <- solve(tmp)
-                THETA.inv <- THETA[[g]]
-                THETA.inv[-zero.theta.idx, -zero.theta.idx] <- tmp.inv
-                diag(THETA.inv)[zero.theta.idx] <- 1
-            } else {
-                THETA.inv <- solve(THETA[[g]])
-            }
-            Mg <- ( solve(t(LAMBDA[[g]]) %*% THETA.inv %*% LAMBDA[[g]]) %*%
-                        t(LAMBDA[[g]]) %*% THETA.inv )
-        } else if(M.method == "ULS") {
-            Mg <- solve(t(LAMBDA[[g]]) %*%  LAMBDA[[g]]) %*% t(LAMBDA[[g]])
-        }
-
-        # compute VETA
-        VETA[[g]] <- Mg %*% (cov - THETA[[g]]) %*% t(Mg)
-
-        # names
-        psi.idx <- which(names(FIT@Model@GLIST) == "psi")[g]
-        dimnames(VETA[[g]]) <- FIT@Model@dimNames[[psi.idx]]
-
-        # compute EETA
+    if(sam.method == "local") {
+        # assemble global LAMBDA/THETA (per block)
+        LAMBDA <- computeLAMBDA(FIT@Model)
+        THETA  <- computeTHETA(FIT@Model, fix = FALSE) # keep dummy lv
         if(lavoptions$meanstructure) {
-            EETA[[g]] <- Mg %*% (ybar - NU[[g]])
+            NU <- computeNU(FIT@Model, lavsamplestats = FIT@SampleStats)
         }
+        for(b in seq_len(nblocks)) {
+            for(mm in seq_len(nMMblocks)) {
+                ov.idx <- OV.idx.list[[mm]][[b]]
+                lv.idx <- LV.idx.list[[mm]][[b]]
+                LAMBDA[[b]][ov.idx, lv.idx] <- LAMBDA.list[[mm]][[b]]
+                 THETA[[b]][ov.idx, ov.idx] <-  THETA.list[[mm]][[b]]
+                if(lavoptions$meanstructure) {
+                    NU[[b]][ov.idx, 1] <- NU.list[[mm]][[b]]
+                }
+            }
+
+            # check if LAMBDA has full column rank
+            if(qr(LAMBDA[[b]])$rank < ncol(LAMBDA[[b]])) {
+                print(LAMBDA[[b]])
+                stop("lavaan ERROR: LAMBDA has no full column rank. Please use sam.method = global")
+            }
+        } # b
+
+        # store LAMBDA/THETA/NU per block
+        out$LAMBDA <- LAMBDA
+        out$THETA  <- THETA
+        if(lavoptions$meanstructure) {
+            out$NU     <- NU
+        }
+
+    }
+
+
+
+
+
+    ## STEP 1b: compute Var(eta) and E(eta) per block
+    ##          only needed for local approach!
+    if(sam.method == "local") {
+        VETA <- vector("list", nblocks)
+        if(lavoptions$meanstructure) {
+            EETA <- vector("list", nblocks)
+        } else {
+            EETA <- NULL
+        }
+        M <- vector("list", nblocks)
+
+        # compute VETA/EETA per block
+        if(nlevels > 1L && local.twolevel.method == "h1") {
+            out <- lav_h1_implied_logl(lavdata = FIT@Data,
+                                       lavsamplestats = FIT@SampleStats,
+                                       lavoptions     = FIT@Options)
+        }
+
+        for(b in seq_len(nblocks)) {
+    
+            # get sample statistics for this block
+            if(nlevels > 1L) {
+                if(ngroups > 1L) {
+                    this.level <- (b - 1L) %% ngroups + 1L
+                } else {
+                    this.level <- b
+                }
+                this.group <- floor(b/nlevels + 0.5)
+
+                if(this.level == 1L) {
+
+                    if(local.twolevel.method == "h1") {
+                        COV  <- out$implied$cov[[1]]
+                        YBAR <- out$implied$mean[[1]]
+                    } else if(local.twolevel.method == "anova" ||
+                              local.twolevel.method == "mean") {
+                        COV  <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
+                        YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W
+                    }
+ 
+                    # reduce
+                    ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
+                    COV <- COV[ov.idx, ov.idx, drop = FALSE]
+                    YBAR <- YBAR[ov.idx]
+                } else if(this.level == 2L) {
+
+                    if(local.twolevel.method == "h1") {
+                        COV  <- out$implied$cov[[2]]
+                        YBAR <- out$implied$mean[[2]]
+                    } else if(local.twolevel.method == "anova") {
+                        COV  <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.B
+                        YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
+                    } else if(local.twolevel.method == "mean") {
+                        S.PW <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
+                        NJ   <- FIT@SampleStats@YLp[[this.group]][[2]]$s
+                        Y2   <- FIT@SampleStats@YLp[[this.group]][[2]]$Y2
+                        MU.Y <- ( FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W +                                   FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B )
+                        Y2c <- t( t(Y2) - MU.Y )
+                        YB <- crossprod(Y2c)/nrow(Y2c)         
+                        COV  <- YB - 1/NJ * S.PW
+                        YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
+                    }
+                    
+                    # reduce
+                    ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
+                    COV <- COV[ov.idx, ov.idx, drop = FALSE]
+                    YBAR <- YBAR[ov.idx]
+                } else {
+                    stop("lavaan ERROR: level 3 not supported (yet).")
+                }
+            } else {
+                YBAR <- FIT@SampleStats@mean[[b]]
+                COV  <- FIT@SampleStats@cov[[b]]
+                if(local.M.method == "GLS") {
+                    ICOV <- FIT@SampleStats@icov[[b]]
+                }
+            }
+    
+            # compute 'M'
+            if(local.M.method == "GLS") {
+                Mg <- ( solve(t(LAMBDA[[b]]) %*% ICOV %*% LAMBDA[[b]]) %*%
+                            t(LAMBDA[[b]]) %*% ICOV )
+            } else if(local.M.method == "ML") {
+                zero.theta.idx <- which(diag(THETA[[b]]) == 0)
+                if(length(zero.theta.idx) > 0L) {
+                    tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
+                                      drop = FALSE]
+                    tmp.inv <- solve(tmp)
+                    THETA.inv <- THETA[[b]]
+                    THETA.inv[-zero.theta.idx, -zero.theta.idx] <- tmp.inv
+                    diag(THETA.inv)[zero.theta.idx] <- 1
+                } else {
+                    THETA.inv <- solve(THETA[[b]])
+                }
+                Mg <- ( solve(t(LAMBDA[[b]]) %*% THETA.inv %*% LAMBDA[[b]]) %*%
+                            t(LAMBDA[[b]]) %*% THETA.inv )
+            } else if(local.M.method == "ULS") {
+                Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
+            }
+    
+            # compute VETA
+            VETA[[b]] <- Mg %*% (COV - THETA[[b]]) %*% t(Mg)
+    
+            # names
+            psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
+            dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
+   
+            # compute EETA
+            if(lavoptions$meanstructure) {
+                EETA[[b]] <- Mg %*% (YBAR - NU[[b]])
+            }
+
+            # store M
+            M[[b]] <- Mg
+
+        } # blocks
+
+        # label groups (if not multilevel)
+        # FIXME: we need block.names after all...
+        if(ngroups > 1L && nblocks == ngroups)  {
+            names(VETA) <- FIT@Data@group.label
+        }
+
+        # store EETA/VETA
+        out$VETA <- VETA
+        out$EETA <- EETA
 
         # store M
-        M[[g]] <- Mg
-    }
+        out$M <- M
 
-    # label groups
-    if(ngroups > 1L) {
-        names(VETA) <- FIT@Data@group.label
-    }
-
-    # store LAMBDA/THETA/NU per group
-    out$LAMBDA <- LAMBDA
-    out$THETA  <- THETA
-    if(lavoptions$meanstructure) {
-        out$NU     <- NU
-    }
-
-    # store EETA/VETA
-    out$VETA <- VETA
-    out$EETA <- EETA
-
-    # store M
-    out$M <- M
+    } # local  
 
 
-    # STEP 3: compute sample.cov and sample.mean for structural part
 
-    # extract structural part
-    PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
-                                                  add.idx = TRUE)
-    # if meanstructure, 'free' user=0 intercepts?
-    #if(lavoptions$meanstructure) {
-    #    int.idx <- which(PTS$op == "~1" & PTS$user == 0L)
-    #    if(length(int.idx) > 0L) {
-    #        PTS$free[ int.idx ] <- 1L
-    #        PTS$free[ PTS$free > 0L ] <-
-    #            seq_len( length(PTS$free[ PTS$free > 0L ]) )
-    #    }
-    #}
 
-    reg.idx <- attr(PTS, "idx"); attr(PTS, "idx") <- NULL
+    ####################################
+    # STEP 2: estimate structural part #
+    ####################################
+    if(sam.method == "local") {
+        # extract structural part
+        PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
+                                                    add.idx = TRUE)
+        if(nlevels > 1L) {
+            PTS$level <- NULL
+            PTS$group <- NULL
+            PTS$group <- PTS$block
+            NOBS <- FIT@Data@Lp[[1]]$nclusters
+        } else {
+            NOBS <- FIT@Data@nobs
+        }
+        # if meanstructure, 'free' user=0 intercepts?
+        if(lavoptions$meanstructure) {
+            extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L)
+            if(length(extra.int.idx) > 0L) {
+                PTS$free[ extra.int.idx ] <- 1L
+                PTS$free[ PTS$free > 0L ] <-
+                    seq_len( length(PTS$free[ PTS$free > 0L ]) )
+            }
+        } else {
+            extra.int.idx <- integer(0L)
+        }
+        reg.idx <- attr(PTS, "idx"); attr(PTS, "idx") <- NULL
+    } else {
+        # the measurement model parameters now become fixed ustart values
+        PT$ustart[PT$free > 0] <- PT$est[PT$free > 0]
+
+        reg.idx <- lav_partable_subset_structural_model(PT = PT,
+                          lavpta = lavpta, idx.only = TRUE)
+
+        # remove 'exogenous' factor variances (if any) from reg.idx
+        lv.names.x <- LV.names[ LV.names %in% unlist(lavpta$vnames$eqs.x)  &
+                               !LV.names %in% unlist(lavpta$vnames$eqs.y) ]
+        if(lavoptions$fixed.x && length(lv.names.x) > 0L) {
+            var.idx <- which(PT$lhs %in% lv.names.x &
+                             PT$op == "~~" &
+                             PT$lhs == PT$rhs)
+            rm.idx <- which(reg.idx %in% var.idx)
+            if(length(rm.idx) > 0L) {
+                reg.idx <- reg.idx[ -rm.idx ]
+            }
+        }
+
+        # adapt parameter table for structural part
+        PTS <- PT
+
+        # remove constraints we don't need
+        con.idx <- which(PTS$op %in% c("==","<",">"))
+        if(length(con.idx) > 0L) {
+            needed.idx <- which(con.idx %in% reg.idx)
+            if(length(needed.idx) > 0L) {
+                con.idx <- con.idx[-needed.idx]
+            }
+            if(length(con.idx) > 0L) {
+                PTS <- as.data.frame(PTS, stringsAsFactors = FALSE)
+                PTS <- PTS[-con.idx, ]
+            }
+        }
+        PTS$est <- NULL
+        PTS$se <- NULL
+
+        PTS$free[ !seq_len(length(PTS$lhs)) %in% reg.idx & PTS$free > 0L ] <- 0L
+        PTS$free[ PTS$free > 0L ] <- seq_len( sum(PTS$free > 0L) )
+
+        # set 'ustart' values for free FIT.PA parameter to NA
+        PTS$ustart[ PTS$free > 0L ] <- as.numeric(NA)
+
+        extra.int.idx <- integer(0L)
+    } # global
 
     # adjust options
     lavoptions.PA <- lavoptions
@@ -384,32 +639,49 @@ sam <- function(model      = NULL,
 
     # override, not matter what
     lavoptions.PA$do.fit <- TRUE
-    lavoptions.PA$missing <- "listwise"
-    lavoptions.PA$se <- "none" # sample statistics input
-    lavoptions.PA$sample.cov.rescale <- FALSE
+
+    if(sam.method == "local") {
+        lavoptions.PA$missing <- "listwise"
+        lavoptions.PA$se <- "none" # sample statistics input
+        lavoptions.PA$sample.cov.rescale <- FALSE
+    }
 
     # fit structural model
     if(lavoptions.PA$verbose) {
         cat("Fitting Structural Part:\n")
     }
-    FIT.PA <- lavaan::lavaan(PTS,
-                             sample.cov = VETA,
-                             sample.mean = EETA, # NULL if no meanstructure
-                             sample.nobs = FIT@Data@nobs,
-                             slotOptions = lavoptions.PA)
+    if(sam.method == "local") {
+        FIT.PA <- lavaan::lavaan(PTS,
+                                 sample.cov = VETA,
+                                 sample.mean = EETA, # NULL if no meanstructure
+                                 sample.nobs = NOBS,
+                                 slotOptions = lavoptions.PA)
+
+    } else {
+        FIT.PA <- lavaan::lavaan(model = PTS,
+                                 slotData = FIT@Data,
+                                 slotSampleStats = FIT@SampleStats,
+                                 slotOptions = lavoptions.PA)
+    }
     if(lavoptions.PA$verbose) {
         cat("Done.\n")
     }
+    # store FIT.PA
+    out$FIT.PA <- FIT.PA
 
     # fill in point estimates structural part
     PTS <- FIT.PA@ParTable
     PT$est[ seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0L ] <-
-        PTS$est[ PTS$free > 0L ]
+        PTS$est[ PTS$free > 0L & !seq_len(length(PTS$lhs)) %in% extra.int.idx ]
     step2.idx <- PT$free[  seq_len(length(PT$lhs)) %in% reg.idx &
                            PT$free > 0L ]
 
 
-    # compute standard errors
+
+    ###########################
+    # compute standard errors #
+    ###########################
+
     # current approach:
     # - create 'global' model, only to get the 'joint' information matrix
     # - partition information matrix (step 1, step 2)
@@ -422,12 +694,14 @@ sam <- function(model      = NULL,
     lavoptions.joint$check.gradient = FALSE
     #lavoptions.joint$test <- FIT.PA@Options$test
     #lavoptions.joint$se   <- "none"
-    lavoptions.joint$test <- "none" # local view
+    if(sam.method == "local") {
+        lavoptions.joint$test <- "none" # local view
+    }
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,
                             slotData = FIT@Data)
     # TOTAL information
-    INFO <- lavInspect(JOINT, "information") * nobs(FIT)
+    INFO <- lavInspect(JOINT, "information")
     I.12 <- INFO[step1.idx, step2.idx]
     I.22 <- INFO[step2.idx, step2.idx]
     I.21 <- INFO[step2.idx, step1.idx]
@@ -454,49 +728,72 @@ sam <- function(model      = NULL,
     }
 
     # V2
-    I.22.inv <- solve(I.22)
+    if(nlevels > 1L) {
+        # FIXME: not ok for multigroup multilevel
+        N <- FIT@Data@Lp[[1]]$nclusters[[2]] # first group only
+    } else {
+        N <- nobs(FIT)
+    }
+    I.22.inv <- 1/N * solve(I.22)
 
     # method below has the advantage that we can use a 'robust' vcov
-    # but does not work if we have equality constraints in the MM
+    # for the joint model;
+    # but does not work if we have equality constraints in the MM!
     # -> D will be singular
     #A <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
     #B <- JOINT@vcov$vcov[ step2.idx, -step2.idx]
     #C <- JOINT@vcov$vcov[-step2.idx,  step2.idx]
     #D <- JOINT@vcov$vcov[-step2.idx, -step2.idx]
     #I.22.inv <- A - B %*% solve(D) %*% C
+
+    # FIXME:
     V2 <- I.22.inv
+    #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
 
     # V1
-    V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+    V1 <- (I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv) * N * N
 
     # V for second step
     VCOV <- V2 + V1
 
-    # fill in standard errors step 2
+    # store in out
+    out$V2 <- V2
+    out$V1 <- V1
+    out$VCOV <- VCOV
 
-    # global
-    PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
+
+
+    ##########
+    # Output #
+    ##########
+
+    # assemble final lavaan objects
+    if(sam.method == "local" && output == "lavaan") {
+        # overwrite slots in FIT.PA (better way?)
+        PTS$se[ PTS$free > 0L & 
+                !seq_len(length(PTS$lhs)) %in% extra.int.idx ] <-
+            sqrt( diag(VCOV) )
+        FIT.PA@Options$se <- "twostep"
+        FIT.PA@ParTable <- PTS
+        FIT.PA@vcov$vcov <- VCOV
+        FINAL <- FIT.PA
+    } else if(sam.method == "global" && output == "lavaan") {
+        PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
                PT$free > 0L ] <- sqrt( diag(VCOV) )
-    # local
-    PTS$se[ PTS$free > 0L ] <- sqrt( diag(VCOV) )
-
-    # overwrite slots in FIT.PA (better way?)
-    FIT.PA@Options$se <- "twostep"
-    FIT.PA@ParTable <- PTS
-    FIT.PA@vcov$vcov <- VCOV
-
-
-
-
-    # store FIT.PA
-    out$FIT.PA <- FIT.PA
+        FINAL <- JOINT
+        FINAL@ParTable <- PT
+        if(FINAL@Options$se == "none") {
+        } else {
+            FINAL@Options$se <- "twostep"
+            FINAL@vcov$vcov[step2.idx, step2.idx] <- VCOV
+        }
+        res <- FINAL
+    }
 
 
     # prepare output
-    if(output == "list") {
-        res <- out
-    } else if(output == "structural") {
-        res <- FIT.PA
+    if(output == "lavaan") {
+        res <- FINAL
     } else {
         res <- out
     }
