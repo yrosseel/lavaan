@@ -54,10 +54,10 @@ sam <- function(model      = NULL,
     if(!local.M.method %in% c("GLS", "ML", "ULS")) {
         stop("lavaan ERROR: local.M.method should be one of GLS, ML or ULS.")
     }
-   
+
     local.twolevel.method <- tolower(local.twolevel.method)
     if(!local.twolevel.method %in% c("h1", "anova", "mean")) {
-        stop("lavaan ERROR: local.twolevel.method should be one of h1, anova or mean.") 
+        stop("lavaan ERROR: local.twolevel.method should be one of h1, anova or mean.")
     }
 
     # output
@@ -172,7 +172,7 @@ sam <- function(model      = NULL,
                 mm.list[[b]] <- rep(list(mm.list[[b]]), nblocks)
             } else {
                 if(length(mm.list[[b]]) != nblocks) {
-                    stop("lavaan ERROR: mm.list block ", b, " has length ", 
+                    stop("lavaan ERROR: mm.list block ", b, " has length ",
                          length(mm.list[[b]]), " but nblocks = ", nblocks)
                 }
             }
@@ -299,7 +299,7 @@ sam <- function(model      = NULL,
 
             # set all other non-fixed ustart values to 0
             PTM$ustart[ PTM$free == 0L & is.na(PTM$ustart) ] <- 0
-    
+
             # set all other non-fixed ustart variance values to 1
             PTM$ustart[ PTM$free == 0L & PTM$op == "~~" & PTM$lhs == PTM$rhs &
                         PTM$ustart == 0 ] <- 1
@@ -334,9 +334,9 @@ sam <- function(model      = NULL,
             for(bb in seq_len(nblocks)) {
                 lambda.idx <- which(names(FIT@Model@GLIST) == "lambda")[bb]
                 ind.names <- lav_partable_vnames(PTM, "ov.ind", block = bb)
-                LV.idx.list[[mm]][[bb]] <- match(mm.list[[mm]][[bb]], 
+                LV.idx.list[[mm]][[bb]] <- match(mm.list[[mm]][[bb]],
                     FIT@Model@dimNames[[lambda.idx]][[2]])
-                OV.idx.list[[mm]][[bb]] <- match(ind.names, 
+                OV.idx.list[[mm]][[bb]] <- match(ind.names,
                     FIT@Model@dimNames[[lambda.idx]][[1]])
             }
         }
@@ -443,7 +443,7 @@ sam <- function(model      = NULL,
         }
 
         for(b in seq_len(nblocks)) {
-    
+
             # get sample statistics for this block
             if(nlevels > 1L) {
                 if(ngroups > 1L) {
@@ -463,13 +463,12 @@ sam <- function(model      = NULL,
                         COV  <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
                         YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W
                     }
- 
+
                     # reduce
                     ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
                     COV <- COV[ov.idx, ov.idx, drop = FALSE]
                     YBAR <- YBAR[ov.idx]
                 } else if(this.level == 2L) {
-
                     if(local.twolevel.method == "h1") {
                         COV  <- out$implied$cov[[2]]
                         YBAR <- out$implied$mean[[2]]
@@ -480,13 +479,14 @@ sam <- function(model      = NULL,
                         S.PW <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
                         NJ   <- FIT@SampleStats@YLp[[this.group]][[2]]$s
                         Y2   <- FIT@SampleStats@YLp[[this.group]][[2]]$Y2
+                        # grand mean
                         MU.Y <- ( FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W +                                   FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B )
-                        Y2c <- t( t(Y2) - MU.Y )
-                        YB <- crossprod(Y2c)/nrow(Y2c)         
+                        Y2c <- t( t(Y2) - MU.Y ) # MUST be centered
+                        YB <- crossprod(Y2c)/nrow(Y2c)
                         COV  <- YB - 1/NJ * S.PW
                         YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
                     }
-                    
+
                     # reduce
                     ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
                     COV <- COV[ov.idx, ov.idx, drop = FALSE]
@@ -501,7 +501,7 @@ sam <- function(model      = NULL,
                     ICOV <- FIT@SampleStats@icov[[b]]
                 }
             }
-    
+
             # compute 'M'
             if(local.M.method == "GLS") {
                 Mg <- ( solve(t(LAMBDA[[b]]) %*% ICOV %*% LAMBDA[[b]]) %*%
@@ -523,14 +523,14 @@ sam <- function(model      = NULL,
             } else if(local.M.method == "ULS") {
                 Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
             }
-    
+
             # compute VETA
             VETA[[b]] <- Mg %*% (COV - THETA[[b]]) %*% t(Mg)
-    
+
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
             dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
-   
+
             # compute EETA
             if(lavoptions$meanstructure) {
                 EETA[[b]] <- Mg %*% (YBAR - NU[[b]])
@@ -554,7 +554,7 @@ sam <- function(model      = NULL,
         # store M
         out$M <- M
 
-    } # local  
+    } # local
 
 
 
@@ -770,7 +770,7 @@ sam <- function(model      = NULL,
     # assemble final lavaan objects
     if(sam.method == "local" && output == "lavaan") {
         # overwrite slots in FIT.PA (better way?)
-        PTS$se[ PTS$free > 0L & 
+        PTS$se[ PTS$free > 0L &
                 !seq_len(length(PTS$lhs)) %in% extra.int.idx ] <-
             sqrt( diag(VCOV) )
         FIT.PA@Options$se <- "twostep"

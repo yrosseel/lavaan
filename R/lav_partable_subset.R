@@ -216,10 +216,10 @@ lav_partable_add_lv_cov <- function(PT, lavpta = NULL, lv.names = NULL) {
             for(i in ncol(tmp)) {
 
                 # already present?
-                cov1.idx <- which(PT$op == "~~" & 
+                cov1.idx <- which(PT$op == "~~" &
                                   PT$block == block.values[b] &
                                   PT$lhs == tmp[1,i] & PT$rhs == tmp[2,i])
-                cov2.idx <- which(PT$op == "~~" & 
+                cov2.idx <- which(PT$op == "~~" &
                                   PT$block == block.values[b] &
                                   PT$lhs == tmp[2,i] & PT$rhs == tmp[1,i])
 
