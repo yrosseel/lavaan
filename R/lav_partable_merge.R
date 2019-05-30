@@ -33,16 +33,16 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
 
     # group
     if(is.null(pt1$group) && !is.null(pt2$group)) {
-        pt1$group <- rep(0L, length(pt1$lhs))
+        pt1$group <- rep(1L, length(pt1$lhs))
     } else if(is.null(pt2$group) && !is.null(pt1$group)) {
-        pt2$group <- rep(0L, length(pt2$lhs))
+        pt2$group <- rep(1L, length(pt2$lhs))
     }
 
     # level
     if(is.null(pt1$level) && !is.null(pt2$level)) {
-        pt1$level <- rep(0L, length(pt1$lhs))
+        pt1$level <- rep(1L, length(pt1$lhs))
     } else if(is.null(pt2$level) && !is.null(pt1$level)) {
-        pt2$level <- rep(0L, length(pt2$lhs))
+        pt2$level <- rep(1L, length(pt2$lhs))
     }
 
     # user

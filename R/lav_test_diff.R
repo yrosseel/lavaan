@@ -199,11 +199,11 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
 
         # check if vcov is positive definite (new in 0.6)
         # if not, we may get negative values
-        eigvals <- eigen(lavTech(M10, "information"),
+        eigvals <- eigen(lavTech(M01, "information"),
                          symmetric=TRUE, only.values=TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
             warning(
-  "lavaan WARNING: information matrix of the M10 model is not positive definite.\n",
+  "lavaan WARNING: information matrix of the M01 model is not positive definite.\n",
 "                  As a result, the scale-factor can not be computed.")
             cd <- as.numeric(NA)
         } else {
@@ -246,6 +246,8 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     # switch of verbose/se/test
     Options <- m1@Options
     Options$verbose <- FALSE
+    # switch of optim.gradient check
+    Options$check.gradient <- FALSE
 
     # should we compute se/test statistics?
     if(!test) {
@@ -280,6 +282,9 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     Options$optim.method          = "none"
     Options$optim.force.converged = TRUE
     Options$start                 = PE.M0.extended # new in 0.6!
+    PT.M1.extended$start <- NULL # new in 0.6-4! (otherwise, they are used)
+    PT.M1.extended$est   <- NULL
+    PT.M1.extended$se    <- NULL
     m10 <- lavaan(model = PT.M1.extended,
                   #start = PE.M0.extended,
                   slotOptions     = Options,

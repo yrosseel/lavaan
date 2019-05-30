@@ -194,7 +194,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
             }
         } else if(method == "satorra.bentler.2010") {
             for(m in seq_len(length(mods) - 1L)) {
-                out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m+1]])
+                out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m+1]],
+                                                        H1 = FALSE) # must be F
+
                 STAT.delta[m+1] <- out$T.delta
                   Df.delta[m+1] <- out$df.delta
             }
