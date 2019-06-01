@@ -1746,7 +1746,7 @@ lav_object_inspect_th_idx <- function(object,
         if(add.labels && length(OUT[[b]]) > 0L) {
             names(OUT[[b]]) <- object@SampleStats@th.names[[b]]
         }
-        if(add.class) {
+        if(add.class && !is.null(OUT[[b]])) {
             class(OUT[[b]]) <- c("lavaan.vector", "numeric")
         }
     }

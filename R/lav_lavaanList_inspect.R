@@ -103,12 +103,18 @@ lavListInspect <- function(object,
         object@Data@ordered
     } else if(what == "group.label") {
         object@Data@group.label
-    } else if(what == "nobs") {
+    } else if(what == "nobs") {     # only for original!
         unlist( object@Data@nobs )
-    } else if(what == "norig") {
+    } else if(what == "norig") {    # only for original!
         unlist( object@Data@norig )
-    } else if(what == "ntotal") {
+    } else if(what == "ntotal") {   # only for original!
         sum(unlist( object@Data@nobs ))
+
+    #### from the model object (but stable) over datasets? ####
+    } else if(what == "th.idx") {
+        lav_lavaanList_inspect_th_idx(object,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
 
     #### meanstructure, categorical ####
@@ -285,5 +291,41 @@ lav_lavaanList_inspect_modelmatrices <- function(object, what = "free",
     }
 
     OUT
+}
+
+lav_lavaanList_inspect_th_idx <- function(object,
+    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # thresholds idx -- usually, we get it from SampleStats
+    # but fortunately, there is a copy in Model, but no names...
+    OUT <- object@Model@th.idx
+
+    # nblocks
+    nblocks <- length(OUT)
+
+    # labels + class
+    for(b in seq_len(nblocks)) {
+        #if(add.labels && length(OUT[[b]]) > 0L) {
+        #    names(OUT[[b]]) <- object@SampleStats@th.names[[b]]
+        #}
+        if(add.class && !is.null(OUT[[b]])) {
+            class(OUT[[b]]) <- c("lavaan.vector", "numeric")
+        }
+    }
+
+    if(nblocks == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(object@Data@nlevels == 1L &&
+           length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        } else if(object@Data@nlevels > 1L &&
+                  length(object@Data@group.label) == 0L) {
+            names(OUT) <- object@Data@level.label
+        }
+    }
+
+    OUT
+
 }
 
