@@ -828,7 +828,8 @@ lav_data_full <- function(data          = NULL,          # data.frame
                            sort.freq = TRUE, coverage = TRUE)
             # checking!
             if(length(Mp[[g]]$empty.idx) > 0L) {
-                empty.case.idx <- Mp[[g]]$empty.idx
+                # new in 0.6-4: we return 'original' index in full data.frame
+                empty.case.idx <- case.idx[[g]][ Mp[[g]]$empty.idx ]
                 if(warn) {
                     warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
                 }

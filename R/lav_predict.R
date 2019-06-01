@@ -21,7 +21,7 @@ function(object, newdata = NULL) {
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
-                       append.data = FALSE,
+                       append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
@@ -260,24 +260,43 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     out <- lapply(out, "class<-", c("lavaan.matrix", "matrix"))
 
     if(lavdata@ngroups == 1L) {
-        out <- out[[1L]]
+        res <- out[[1L]]
     } else {
-        out
+        res <- out
+    }
+
+    # assemble multiple groups into a single data.frame? (new in 0.6-4)
+    if(lavdata@ngroups > 1L && assemble) {
+        if(!is.null(newdata)) {
+            lavdata <- newData
+        }
+        DATA <- matrix(as.numeric(NA), nrow = sum(unlist(lavdata@norig)),
+                                       ncol = ncol(out[[1L]])) # assume == per g
+        colnames(DATA) <- colnames(out[[1L]])
+        for(g in seq_len(lavdata@ngroups)) {
+            DATA[ lavdata@case.idx[[g]], ] <- out[[g]]
+        }
+        DATA <- as.data.frame(DATA, stringsAsFactors = FALSE)
+        # add group
+        DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
+            rep( lavdata@group.label, unlist( lavdata@norig ) )
+
+        res <- DATA
     }
 
     if(fsm) {
-        attr(out, "fsm") <- FSM
+        attr(res, "fsm") <- FSM
     }
 
     if(se != "none") {
-        attr(out, "se") <- SE
+        attr(res, "se") <- SE
         # return full sampling covariance matrix?
         if (acov == "standard") {
-          attr(out, "acov") <- ACOV
+          attr(res, "acov") <- ACOV
         }
     }
 
-    out
+    res
 }
 
 # internal function

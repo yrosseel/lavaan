@@ -11,7 +11,8 @@ regression framework!}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
            se = "none", acov = "none", label = TRUE, fsm = FALSE, 
-           append.data = FALSE, level = 1L, optim.method = "bfgs", ETA = NULL)
+           append.data = FALSE, assemble = FALSE,
+           level = 1L, optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -41,6 +42,9 @@ sampling covariance matrix of factor scores as an attribute.}
            Only for numeric data.}
 \item{append.data}{Logical. If TRUE, the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
+\item{assemble}{Logical. If TRUE, 
+the separate multiple groups as reassembled again to form a single data.frame
+with a group column, having the same dimensions are the original dataset.}
 \item{level}{Integer. Only used in a multilevel SEM.
 If \code{level = 1}, only factor scores for latent variable
 defined at the first (within) level are computed; if \code{level = 2},
