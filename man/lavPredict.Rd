@@ -10,8 +10,8 @@ function is NOT to predict future values of dependent variables as in the
 regression framework!}
 \usage{
 lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
-           se = "none", acov = "none", label = TRUE, fsm = FALSE, level = 1L,
-           optim.method = "bfgs", ETA = NULL)
+           se = "none", acov = "none", label = TRUE, fsm = FALSE, 
+           append.data = FALSE, level = 1L, optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -39,6 +39,8 @@ sampling covariance matrix of factor scores as an attribute.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
+\item{append.data}{Logical. If TRUE, the original data (or the data provided
+in the newdata argument) is appended to the factor scores.}
 \item{level}{Integer. Only used in a multilevel SEM.
 If \code{level = 1}, only factor scores for latent variable
 defined at the first (within) level are computed; if \code{level = 2},

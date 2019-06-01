@@ -21,6 +21,7 @@ function(object, newdata = NULL) {
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
+                       append.data = FALSE,
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
@@ -58,6 +59,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
             stop("lavaan ERROR: no local copy of data; FIXME!")
         } else {
             data.obs <- lavdata@X
+            ov.names <- lavdata@ov.names
         }
         eXo <- lavdata@eXo
     } else {
@@ -74,6 +76,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                            allow.single.case = TRUE)
         data.obs <- newData@X
         eXo <- newData@eXo
+        ov.names <- newData@ov.names
     }
 
     if(type == "lv") {
@@ -120,6 +123,15 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    }
                    ret
                })
+
+        # append original/new data? (also remove attr)
+        if(append.data) {
+            out <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       ret <- cbind(out[[g]], data.obs[[g]])
+                       ret
+                   })
+        }
+
 
         if(fsm) {
             #FSM <- attr(out, "fsm")
@@ -187,7 +199,12 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                 } else {
                     gg <- g
                 }
-                colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
+                if(append.data) {
+                    colnames(out[[g]]) <- c(lavpta$vnames$lv[[gg]],
+                                            ov.names[[gg]])
+                } else {
+                    colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
+                }
             }
             if(se != "none") {
                 if(lavdata@nlevels > 1L && level == 2L) {
