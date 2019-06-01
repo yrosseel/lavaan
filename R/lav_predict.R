@@ -277,9 +277,21 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
             DATA[ lavdata@case.idx[[g]], ] <- out[[g]]
         }
         DATA <- as.data.frame(DATA, stringsAsFactors = FALSE)
-        # add group
-        DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
-            rep( lavdata@group.label, unlist( lavdata@norig ) )
+
+        if(!is.null(newdata)) {
+            DATA[, lavdata@group] <- newdata[, lavdata@group ]
+        } else {
+            # add group
+            DATA[, lavdata@group ] <- rep(as.character(NA), nrow(DATA))
+            if(lavdata@missing == "listwise") {
+                # we will loose the group label of omitted variables!
+                DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
+                    rep( lavdata@group.label, unlist( lavdata@nobs ) )
+            } else {
+                DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
+                    rep( lavdata@group.label, unlist( lavdata@norig ) )
+            }
+        }
 
         res <- DATA
     }

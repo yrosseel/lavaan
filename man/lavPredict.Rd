@@ -40,7 +40,8 @@ sampling covariance matrix of factor scores as an attribute.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
-\item{append.data}{Logical. If TRUE, the original data (or the data provided
+\item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
+the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
 \item{assemble}{Logical. If TRUE, 
 the separate multiple groups as reassembled again to form a single data.frame
