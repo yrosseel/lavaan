@@ -21,6 +21,7 @@ function(object, newdata = NULL) {
 # main function
 lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
+                       append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
 
     stopifnot(inherits(object, "lavaan"))
@@ -58,6 +59,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
             stop("lavaan ERROR: no local copy of data; FIXME!")
         } else {
             data.obs <- lavdata@X
+            ov.names <- lavdata@ov.names
         }
         eXo <- lavdata@eXo
     } else {
@@ -74,6 +76,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                            allow.single.case = TRUE)
         data.obs <- newData@X
         eXo <- newData@eXo
+        ov.names <- newData@ov.names
     }
 
     if(type == "lv") {
@@ -120,6 +123,15 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                    }
                    ret
                })
+
+        # append original/new data? (also remove attr)
+        if(append.data) {
+            out <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       ret <- cbind(out[[g]], data.obs[[g]])
+                       ret
+                   })
+        }
+
 
         if(fsm) {
             #FSM <- attr(out, "fsm")
@@ -187,7 +199,12 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                 } else {
                     gg <- g
                 }
-                colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
+                if(append.data) {
+                    colnames(out[[g]]) <- c(lavpta$vnames$lv[[gg]],
+                                            ov.names[[gg]])
+                } else {
+                    colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
+                }
             }
             if(se != "none") {
                 if(lavdata@nlevels > 1L && level == 2L) {
@@ -243,24 +260,55 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     out <- lapply(out, "class<-", c("lavaan.matrix", "matrix"))
 
     if(lavdata@ngroups == 1L) {
-        out <- out[[1L]]
+        res <- out[[1L]]
     } else {
-        out
+        res <- out
+    }
+
+    # assemble multiple groups into a single data.frame? (new in 0.6-4)
+    if(lavdata@ngroups > 1L && assemble) {
+        if(!is.null(newdata)) {
+            lavdata <- newData
+        }
+        DATA <- matrix(as.numeric(NA), nrow = sum(unlist(lavdata@norig)),
+                                       ncol = ncol(out[[1L]])) # assume == per g
+        colnames(DATA) <- colnames(out[[1L]])
+        for(g in seq_len(lavdata@ngroups)) {
+            DATA[ lavdata@case.idx[[g]], ] <- out[[g]]
+        }
+        DATA <- as.data.frame(DATA, stringsAsFactors = FALSE)
+
+        if(!is.null(newdata)) {
+            DATA[, lavdata@group] <- newdata[, lavdata@group ]
+        } else {
+            # add group
+            DATA[, lavdata@group ] <- rep(as.character(NA), nrow(DATA))
+            if(lavdata@missing == "listwise") {
+                # we will loose the group label of omitted variables!
+                DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
+                    rep( lavdata@group.label, unlist( lavdata@nobs ) )
+            } else {
+                DATA[unlist( lavdata@case.idx ), lavdata@group ] <-
+                    rep( lavdata@group.label, unlist( lavdata@norig ) )
+            }
+        }
+
+        res <- DATA
     }
 
     if(fsm) {
-        attr(out, "fsm") <- FSM
+        attr(res, "fsm") <- FSM
     }
 
     if(se != "none") {
-        attr(out, "se") <- SE
+        attr(res, "se") <- SE
         # return full sampling covariance matrix?
         if (acov == "standard") {
-          attr(out, "acov") <- ACOV
+          attr(res, "acov") <- ACOV
         }
     }
 
-    out
+    res
 }
 
 # internal function
