@@ -864,7 +864,7 @@ lav_residuals_rescale <- function(x, diag.cov = NULL, diag.cov2 = NULL) {
     scale.mean <- 1/sqrt(diag.cov2)
 
     # rescale cov
-    if(!is.null(x$cov)) {
+    if("cov" %in% names(x)) {
         # catch (near) zero elements in x$cov
         near.zero.idx <- which(abs(x$cov) < 1e-05)
         scale.cov[near.zero.idx] <- 1
@@ -885,7 +885,7 @@ lav_residuals_rescale <- function(x, diag.cov = NULL, diag.cov2 = NULL) {
         x$res.int <- x$res.int * scale.mean
     }
 
-    if(!is.null(x$mean)) {
+    if("mean" %in% names(x)) {
         # catch (near) zero elements in x$mean
         near.zero.idx <- which(abs(x$mean) < 1e-05)
         scale.mean[near.zero.idx] <- 1
