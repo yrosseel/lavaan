@@ -304,7 +304,23 @@ lav_standardize_all <- function(lavobject = NULL,
             est <- lav_object_inspect_est(lavobject)
         }
         if(lavmodel@conditional.x) {
-            if(is.null(cov.x)) cov.x <- lavobject@SampleStats@cov.x
+            if(is.null(cov.x)) {
+                # try SampleStats slot
+                if("SampleStats" %in% slotNames(lavobject)) {
+                    cov.x <- lavobject@SampleStats@cov.x
+                } else {
+                    # perhaps lavaanList object
+                    # extract it from GLIST per block
+                    cov.x <- vector("list", length = lavmodel@nblocks)
+                    for(b in seq_len(lavmodel@nblocks)) {
+                        # which mm belong to block b?
+                        mm.in.block <- ( seq_len(lavmodel@nmat[b]) +
+                                             cumsum(c(0, lavmodel@nmat))[b] )
+                        MLIST <- lavmodel@GLIST[mm.in.block]
+                        cov.x[[b]] <- MLIST[["cov.x"]]
+                    }
+                }
+            }
         }
     }
 
@@ -518,7 +534,23 @@ lav_standardize_all_nox <- function(lavobject = NULL,
             est <- lav_object_inspect_est(lavobject)
         }
         if(lavmodel@conditional.x) {
-            if(is.null(cov.x)) cov.x <- lavobject@SampleStats@cov.x
+            if(is.null(cov.x)) {
+                # try SampleStats slot
+                if("SampleStats" %in% slotNames(lavobject)) {
+                    cov.x <- lavobject@SampleStats@cov.x
+                } else {
+                    # perhaps lavaanList object
+                    # extract it from GLIST per block
+                    cov.x <- vector("list", length = lavmodel@nblocks)
+                    for(b in seq_len(lavmodel@nblocks)) {
+                        # which mm belong to block b?
+                        mm.in.block <- ( seq_len(lavmodel@nmat[b]) +
+                                             cumsum(c(0, lavmodel@nmat))[b] )
+                        MLIST <- lavmodel@GLIST[mm.in.block]
+                        cov.x[[b]] <- MLIST[["cov.x"]]
+                    }
+                }
+            }
         }
     }
 
