@@ -134,9 +134,15 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     if(type %in% c("cor.bentler", "cor.bollen")) {
         for(b in seq_len(nblocks)) {
             var.obs <- if(lavmodel@conditional.x) {
-                diag(obsList[[b]]$res.cov) } else { diag(obsList[[b]]$cov) }
+                           diag(obsList[[b]][["res.cov"]]) 
+                       } else { 
+                           diag(obsList[[b]][["cov"]]) 
+                       }
             var.est <- if(lavmodel@conditional.x) {
-                diag(estList[[b]]$res.cov) } else { diag(estList[[b]]$cov) }
+                           diag(estList[[b]][["res.cov"]]) 
+                       } else { 
+                           diag(estList[[b]][["cov"]]) 
+                       }
 
             # rescale obsList
             obsList[[b]] <-
@@ -359,7 +365,8 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                 # Ogasawara (2001), eq (13), or
                 # Maydeu-Olivares (2017), eq (16)
                 COV <- if(lavmodel@conditional.x) {
-                           sampstat[[g]]$res.cov } else { sampstat[[g]]$cov }
+                           sampstat[[g]][["res.cov"]] 
+                       } else { sampstat[[g]][["cov"]] }
                 SS <- 1/sqrt(diag(COV))
                 tmp <- lav_matrix_vech(tcrossprod(SS))
                 G.inv.sqrt <- diag( tmp, nrow = length(tmp) )
@@ -376,7 +383,8 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                 }
                 # here we use the Maydeu-Olivares (2017) approach, see eq 17
                 COV <- if(lavmodel@conditional.x) {
-                           sampstat[[g]]$res.cov } else { sampstat[[g]]$cov }
+                           sampstat[[g]][["res.cov"]] 
+                       } else { sampstat[[g]][["cov"]] }
                 F1 <- lav_deriv_cov2corB(COV)
                 if(lavmodel@meanstructure) {
                     SS <- 1/sqrt(diag(COV))
@@ -594,7 +602,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     }
 
                     # COV
-                    STATS <- lav_matrix_vech(rmsList.g$cov)
+                    STATS <- lav_matrix_vech(rmsList.g[["cov"]])
                     pstar <- ( length(STATS) - pstar.x )
                     if(type[typ] == "crmr") {
                         pstar <- pstar - ( nvar - nvar.x )
@@ -617,7 +625,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                     # MEAN
                     if(lavmodel@meanstructure) {
-                        STATS <- rmsList.g$mean
+                        STATS <- rmsList.g[["mean"]]
                         pstar <- ( length(STATS) - nvar.x )
                         ACOV  <- NULL
                         if(se || unbiased) {
@@ -636,8 +644,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                     # TOTAL
                     if(lavmodel@meanstructure) {
-                        STATS <- c(rmsList.g$mean,
-                                   lav_matrix_vech(rmsList.g$cov))
+                        STATS <- c(rmsList.g[["mean"]],
+                                   lav_matrix_vech(rmsList.g[["cov"]]))
                         pstar <- ( length(STATS) - ( pstar.x + nvar.x) )
                         if(type[typ] == "crmr") {
                             pstar <- pstar - ( nvar - nvar.x )
@@ -864,32 +872,32 @@ lav_residuals_rescale <- function(x, diag.cov = NULL, diag.cov2 = NULL) {
     scale.mean <- 1/sqrt(diag.cov2)
 
     # rescale cov
-    if("cov" %in% names(x)) {
+    if(!is.null(x[["cov"]])) {
         # catch (near) zero elements in x$cov
-        near.zero.idx <- which(abs(x$cov) < 1e-05)
+        near.zero.idx <- which(abs(x[["cov"]]) < 1e-05)
         scale.cov[near.zero.idx] <- 1
-        x$cov[] <- x$cov * scale.cov
+        x[["cov"]][] <- x[["cov"]] * scale.cov
     }
-    if(!is.null(x$res.cov)) {
+    if(!is.null(x[["res.cov"]])) {
         # catch (near) zero elements in x$res.cov
-        near.zero.idx <- which(abs(x$res.cov) < 1e-05)
+        near.zero.idx <- which(abs(x[["res.cov"]]) < 1e-05)
         scale.cov[near.zero.idx] <- 1
-        x$res.cov[] <- x$res.cov * scale.cov
+        x[["res.cov"]][] <- x[["res.cov"]] * scale.cov
     }
 
     # rescale int/mean
-    if(!is.null(x$res.int)) {
+    if(!is.null(x[["res.int"]])) {
         # catch (near) zero elements in x$res.int
-        near.zero.idx <- which(abs(x$res.int) < 1e-05)
+        near.zero.idx <- which(abs(x[["res.int"]]) < 1e-05)
         scale.mean[near.zero.idx] <- 1
-        x$res.int <- x$res.int * scale.mean
+        x[["res.int"]] <- x[["res.int"]] * scale.mean
     }
 
-    if("mean" %in% names(x)) {
+    if(!is.null(x[["mean"]])) {
         # catch (near) zero elements in x$mean
-        near.zero.idx <- which(abs(x$mean) < 1e-05)
+        near.zero.idx <- which(abs(x[["mean"]]) < 1e-05)
         scale.mean[near.zero.idx] <- 1
-        x$mean <- x$mean * scale.mean
+        x[["mean"]] <- x[["mean"]] * scale.mean
     }
 
     # FIXME: do something sensible for th, slopes, ...
