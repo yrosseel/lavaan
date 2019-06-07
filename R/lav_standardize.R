@@ -304,7 +304,7 @@ lav_standardize_all <- function(lavobject = NULL,
             est <- lav_object_inspect_est(lavobject)
         }
         if(lavmodel@conditional.x) {
-          cov.x <- lavobject@SampleStats@cov.x
+            if(is.null(cov.x)) cov.x <- lavobject@SampleStats@cov.x
         }
     }
 
@@ -518,7 +518,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
             est <- lav_object_inspect_est(lavobject)
         }
         if(lavmodel@conditional.x) {
-          cov.x <- lavobject@SampleStats@cov.x
+            if(is.null(cov.x)) cov.x <- lavobject@SampleStats@cov.x
         }
     }
 
