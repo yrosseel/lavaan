@@ -124,6 +124,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                         " column does not contain value `", block.val, "'")
                 }
                 block.select <- ( block.select &
+                                  !partable$op %in% c("==", "<", ">", ":=") &
                                   partable[[block.var]] %in% block.val )
             }
         } # dot
