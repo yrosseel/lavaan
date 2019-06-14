@@ -2302,35 +2302,35 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     type = "std.all", free.only = TRUE,
     add.labels = FALSE, add.class = FALSE, remove.duplicated = FALSE) {
 
-    # rotation?
     lavmodel <- object@Model
     lavoptions <- object@Options
-    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
-            (lavoptions$rotation != "none") ) {
-        rotation <- TRUE
-    } else {
-        rotation <- FALSE
-    }
+
+    # rotation?
+    #if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+    #    (lavoptions$rotation != "none") ) {
+    #    rotation <- TRUE
+    #} else {
+    #    rotation <- FALSE
+    #}
 
     npar <- max(object@ParTable$free)
     if(object@optim$npar == 0) {
         OUT <- matrix(0,0,0)
     } else {
         # check if we already have it
-        tmp <- try(slot(object, "vcov"), silent = TRUE)
-        if(!inherits(tmp, "try-error") && !is.null(object@vcov$vcov) &&
-           !(rotation && standardized)) {
+        #tmp <- try(slot(object, "vcov"), silent = TRUE)
+        #if( !inherits(tmp, "try-error") && !is.null(object@vcov$vcov)
+        #   && !(rotation && standardized)) {
+        if( .hasSlot(object, "vcov") && !is.null(object@vcov$vcov) ) {
             OUT <- object@vcov$vcov
         } else {
-        # compute it again
-
-            if(rotation && standardized) {
-                lavmodel <- lav_model_set_parameters(lavmodel,
-                                x = object@optim$x)
-                lavoptions <- object@Options
-                lavoptions$rotation.se <- "delta"
-            }
-
+            # compute it again
+            #if(rotation && standardized) {
+            #    lavmodel <- lav_model_set_parameters(lavmodel,
+            #                    x = object@optim$x)
+            #    lavoptions <- object@Options
+            #    lavoptions$rotation.se <- "delta"
+            #}
             OUT <- lav_model_vcov(lavmodel       = lavmodel,
                                   lavsamplestats = object@SampleStats,
                                   lavoptions     = lavoptions,
@@ -2361,19 +2361,24 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
             FUN <- lav_standardize_all_nox_x
         }
 
-        if(rotation) {
-            JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
-                       method.args = list(eps = 1e-03), # default is 1e-04
-                       lavobject = object, rotation = rotation)
-        } else {
-            JAC <- try(lav_func_jacobian_complex(func = FUN,
-                x = object@optim$x, lavobject = object, rotation = rotation),
-                       silent = TRUE)
-            if(inherits(JAC, "try-error")) { # eg. pnorm()
-                JAC <- lav_func_jacobian_simple(func = FUN,
-                    x = object@optim$x, lavobject = object, rotation = rotation)
-            }
+
+
+        #if(rotation) {
+        #    JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
+        #               method = "simple",
+        #               method.args = list(eps = 1e-03), # default is 1e-04
+        #               lavobject = object, rotation = rotation)
+        #} else {
+
+        x.vec <- lav_model_get_parameters(lavmodel)
+        JAC <- try(lav_func_jacobian_complex(func = FUN, x = x.vec,
+                       lavobject = object),
+                   silent = TRUE)
+        if(inherits(JAC, "try-error")) { # eg. pnorm()
+            JAC <- lav_func_jacobian_simple(func = FUN, x = x.vec,
+                       lavobject = object)
         }
+        #}
 
         # JAC contains *all* parameters in the parameter table
         if(free.only) {

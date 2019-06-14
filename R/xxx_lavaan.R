@@ -1054,6 +1054,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
             (lavoptions$rotation != "none") ) {
 
+            # keep track of unrotated parameters
+            x.unrotated <- as.numeric(x)
+
             # store unrotated solution in partable
             tmp <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
             lavpartable$est.unrotated <-
@@ -1155,10 +1158,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
        lavoptions$se != "twostep" &&
        lavmodel@nx.free > 0L && attr(x, "converged")) {
+
+        # handle rotation
+        if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+            (lavoptions$rotation != "none")  &&
+            lavoptions$rotation.se == "delta") {
+            # restore unrotated parameter, if using delta method
+            lavmodel2 <- lav_model_set_parameters(lavmodel, x = x.unrotated)
+        } else {
+            lavmodel2 <- lavmodel
+        }
+
+
         if(lavoptions$verbose) {
             cat("Computing VCOV for se =", lavoptions$se, "...")
         }
-        VCOV <- lav_model_vcov(lavmodel        = lavmodel,
+        VCOV <- lav_model_vcov(lavmodel        = lavmodel2,
                                lavsamplestats  = lavsamplestats,
                                lavoptions      = lavoptions,
                                lavdata         = lavdata,
@@ -1166,11 +1181,39 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavcache        = lavcache,
                                lavimplied      = lavimplied,
                                lavh1           = lavh1)
-
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
-    }
+
+        # handle rotation (bis)
+        if( (.hasSlot(lavmodel, "nefa"))     &&
+            (lavmodel@nefa > 0L)             &&
+            (lavoptions$rotation != "none")  &&
+            (lavoptions$se != "bootstrap")   &&
+            (lavoptions$rotation.se == "delta") ) {
+
+            if(lavoptions$verbose) {
+                cat("Using delta method to compute VCOV of rotated parameters:")
+            }
+            # Jacobian
+            JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
+                                      x = x.unrotated,
+                                      lavmodel = lavmodel,
+                                      init.rot =
+                                         lavoptions$rotation.args$jac.init.rot,
+                                      lavoptions = lavoptions,
+                                      #type = "user", # then must select
+                                      type = "free",
+                                      extra = FALSE,
+                                      method.args = list(eps = 1e-3),
+                                      method = "simple") # to save time
+            VCOV <- JAC %*% VCOV %*% t(JAC)
+            if(lavoptions$verbose) {
+                cat(" done.\n")
+            }
+        } # rotating VCOV
+
+    } # VCOV
 
     # extract bootstrap results (if any)
     if(!is.null(attr(VCOV, "BOOT.COEF"))) {

@@ -134,14 +134,14 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     if(type %in% c("cor.bentler", "cor.bollen")) {
         for(b in seq_len(nblocks)) {
             var.obs <- if(lavmodel@conditional.x) {
-                           diag(obsList[[b]][["res.cov"]]) 
-                       } else { 
-                           diag(obsList[[b]][["cov"]]) 
+                           diag(obsList[[b]][["res.cov"]])
+                       } else {
+                           diag(obsList[[b]][["cov"]])
                        }
             var.est <- if(lavmodel@conditional.x) {
-                           diag(estList[[b]][["res.cov"]]) 
-                       } else { 
-                           diag(estList[[b]][["cov"]]) 
+                           diag(estList[[b]][["res.cov"]])
+                       } else {
+                           diag(estList[[b]][["cov"]])
                        }
 
             # rescale obsList
@@ -365,7 +365,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                 # Ogasawara (2001), eq (13), or
                 # Maydeu-Olivares (2017), eq (16)
                 COV <- if(lavmodel@conditional.x) {
-                           sampstat[[g]][["res.cov"]] 
+                           sampstat[[g]][["res.cov"]]
                        } else { sampstat[[g]][["cov"]] }
                 SS <- 1/sqrt(diag(COV))
                 tmp <- lav_matrix_vech(tcrossprod(SS))
@@ -383,7 +383,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                 }
                 # here we use the Maydeu-Olivares (2017) approach, see eq 17
                 COV <- if(lavmodel@conditional.x) {
-                           sampstat[[g]][["res.cov"]] 
+                           sampstat[[g]][["res.cov"]]
                        } else { sampstat[[g]][["cov"]] }
                 F1 <- lav_deriv_cov2corB(COV)
                 if(lavmodel@meanstructure) {

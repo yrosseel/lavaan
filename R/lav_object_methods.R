@@ -273,20 +273,22 @@ function(object, type="free", labels=TRUE) {
                             add.labels = labels, add.class = TRUE)
 })
 
-standardizedSolution <- standardizedsolution <- function(object,
-                                                         type = "std.all",
-                                                         se = TRUE,
-                                                         zstat = TRUE,
-                                                         pvalue = TRUE,
-                                                         ci = TRUE,
-                                                         level = 0.95,
-                                                         cov.std = TRUE,
-                                                         remove.eq = TRUE,
-                                                         remove.ineq = TRUE,
-                                                         remove.def = FALSE,
-                                                         partable = NULL,
-                                                         GLIST = NULL,
-                                                         est   = NULL) {
+standardizedSolution <-
+    standardizedsolution <- function(object,
+                                     type = "std.all",
+                                     se = TRUE,
+                                     zstat = TRUE,
+                                     pvalue = TRUE,
+                                     ci = TRUE,
+                                     level = 0.95,
+                                     cov.std = TRUE,
+                                     remove.eq = TRUE,
+                                     remove.ineq = TRUE,
+                                     remove.def = FALSE,
+                                     partable = NULL,
+                                     GLIST = NULL,
+                                     est   = NULL,
+                                     add.attributes = FALSE) {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
@@ -309,7 +311,7 @@ standardizedSolution <- standardizedsolution <- function(object,
     } else {
         PARTABLE <- partable
     }
-    LIST <- PARTABLE[,c("lhs", "op", "rhs")]
+    LIST <- PARTABLE[,c("lhs", "op", "rhs", "exo")]
     if(!is.null(PARTABLE$group)) {
         LIST$group <- PARTABLE$group
     }
@@ -408,8 +410,16 @@ standardizedSolution <- standardizedsolution <- function(object,
         }
     }
 
-    # always add attributes (for now)
-    class(LIST) <- c("lavaan.data.frame", "data.frame")
+    if(add.attributes) {
+        class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
+                         "data.frame")
+        # LIST$exo is needed for printing
+        attr(LIST, "header") <- FALSE
+    } else {
+        LIST$exo <- NULL
+        class(LIST) <- c("lavaan.data.frame", "data.frame")
+    }
+
     LIST
 }
 

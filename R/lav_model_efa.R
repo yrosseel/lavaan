@@ -2,7 +2,7 @@
 # YR - April 2019
 #
 # the lav_model_efa_rotate_x() function was based on a script orginally
-# written by Florian Scharf (Muenster university, Germany)
+# written by Florian Scharf (Muenster University, Germany)
 
 # rotate solution
 lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
@@ -370,5 +370,4 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     # return constraint vector
     res
 }
-
 
