@@ -7,10 +7,12 @@
 lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               orthogonal  = FALSE,     # default is oblique
                               method      = "geomin",  # default rot method
-                              method.args = list(geomin.epsilon = 0.01,
-                                                 orthomax.gamma = 1,
-                                                 cf.gamma       = 0,
-                                                 oblimin.gamma  = 0),
+                              method.args = list( geomin.epsilon = 0.01,
+                                                  orthomax.gamma = 1,
+                                                  cf.gamma       = 0,
+                                                  oblimin.gamma  = 0,
+                                                  target      = matrix(0,0,0),
+                                                  target.mask = matrix(0,0,0) ),
                               init.ROT    = NULL,      # initial rotation matrix
                               init.ROT.check = TRUE,   # check if init ROT is ok
                               rstarts     = 100L,      # number of random starts
@@ -69,7 +71,9 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         method <- "cf"
     }
     if(method %in% c("varimax", "quartimax", "orthomax", "cf", "oblimin",
-                     "quartimin", "geomin")) {
+                     "quartimin", "geomin", "entropy", "mccammon", "infomax",
+                     "tandem1", "tandem2",
+                     "oblimax", "bentler", "simplimax", "target", "pst")) {
         method.fname <- paste("lav_matrix_rotate_", method, sep = "")
     } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
                             "cf-parsimax", "cf-facparsim")) {
@@ -80,6 +84,8 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
             "cf-equamax"   = M / (2 * P),
             "cf-parsimax"  = (M - 1) / (P + M - 2),
             "cf-facparsim" = 1)
+    } else {
+        method.fname <- method
     }
 
     # check if rotation method exists
@@ -88,13 +94,57 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         stop("lavaan ERROR: unknown rotation method: ", method.fname)
     }
 
+    # if target, check target matrix
+    if(method == "target" || method == "pst") {
+        target <- method.args$target
+        if(is.null(target) || !is.matrix(target)) {
+            stop("lavaan ERROR: target matrix is NULL, or not a matrix")
+        }
+        # check dimension of target/A
+        if(nrow(target) != nrow(A)) {
+            stop("lavaan ERROR: nrow(target) != nrow(A)")
+        }
+        if(ncol(target) != ncol(A)) {
+            stop("lavaan ERROR: ncol(target) != ncol(A)")
+        }
+    }
+    if(method == "pst") {
+        target.mask <- method.args$target.mask
+        if(is.null(target.mask) || !is.matrix(target.mask)) {
+            stop("lavaan ERROR: target.mask matrix is NULL, or not a matrix")
+        }
+        # check dimension of target.mask/A
+        if(nrow(target.mask) != nrow(A)) {
+            stop("lavaan ERROR: nrow(target.mask) != nrow(A)")
+        }
+        if(ncol(target.mask) != ncol(A)) {
+            stop("lavaan ERROR: ncol(target.mask) != ncol(A)")
+        }
+    }
+    # if NAs, force method to be 'pst' and create target.mask
+    if(method == "target" && anyNA(target)) {
+        method <- "pst"
+        method.fname <- "lav_matrix_rotate_pst"
+        target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
+        target.mask[ is.na(target) ] <- 0
+        method.args$target.mask <- target.mask
+    }
+
+
     # set orthogonal option
     if(missing(orthogonal)) {
-        # the default is oblique, except for varimax
-        if(method %in% c("varimax")) {
+        # the default is oblique, except for varimax, entropy and mccammon
+        if(method %in% c("varimax", "entropy", "mccammon",
+                         "tandem1", "tandem2") ) {
             orthogonal <- TRUE
         } else {
             orthogonal <- FALSE
+        }
+    } else {
+        if(!orthogonal && method %in% c("varimax", "entropy", "mccammon",
+                                        "tandem1", "tandem2")) {
+            warning("lavaan WARNING: rotation method ", dQuote(method), 
+                    " may not work with oblique rotation.")
         }
     }
 

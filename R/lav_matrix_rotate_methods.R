@@ -1,12 +1,13 @@
 # various rotation criteria and their gradients
-# initial version YR 5 April 2019
+# YR 05 April 2019: initial version
+# YR 14 June  2019: add more rotation criteria
 
 # references:
 #
 # Bernaards, C. A., & Jennrich, R. I. (2005). Gradient projection algorithms
 # and software for arbitrary rotation criteria in factor analysis. Educational
 # and Psychological Measurement, 65(5), 676-696.
-# website: http://www.stat.ucla.edu/research/gpa/splusfunctions.net
+# old website: http://web.archive.org/web/20180708170331/http://www.stat.ucla.edu/research/gpa/splusfunctions.net
 #
 # Browne, M. W. (2001). An overview of analytic rotation in exploratory factor
 # analysis. Multivariate behavioral research, 36(1), 111-150.
@@ -201,12 +202,321 @@ lav_matrix_rotate_geomin <- function(LAMBDA = NULL, geomin.epsilon = 0.01,
     out
 }
 
+# simple entropy
+# seems to only work for orthogonal rotation
+lav_matrix_rotate_entropy <- function(LAMBDA = NULL, ..., grad = FALSE) {
+
+    L2 <- LAMBDA * LAMBDA
+
+    # handle zero elements -> replace by '1', so log(1) == 0
+    L2[ L2 == 0 ] <- 1
+
+    out <- -1 * sum(L2 * log(L2))/2
+
+    if(grad) {
+        attr(out, "grad") <- -LAMBDA * log(L2) - LAMBDA
+    }
+
+    out
+}
+
+# McCammon's (1966) Minimum Entropy Criterion
+#
+# for p-vector x, where x > 0 and sum(x) = 1, we have
+# - entropy(x) == 0, if there is only one 1, and all zeroes
+# - entropy(x) == max == log(p) if all elements are 1/p
+# - entropy(x) is similar as complexity(x), but also measure of equality
+#   of elements of x
+#
+# works only ok with orthogonal rotation!
+
+lav_matrix_rotate_mccammon <- function(LAMBDA = NULL, ..., grad = FALSE) {
+
+    nCol <- ncol(LAMBDA)
+    nRow <- nrow(LAMBDA)
+    L2 <- LAMBDA * LAMBDA
+
+    # entropy function (Browne, 2001, eq 9)
+    f_entropy <- function(x) { -1 * sum(ifelse(x > 0, x * log(x), 0)) }
+
+    # sums of rows/columns/all
+    sumi. <- rowSums(L2)
+    sum.j <- colSums(L2)
+    sum.. <- sum(L2)
+
+
+    Q1 <- f_entropy( t(L2)/sum.j ) # encouraging columns with few large,
+                                   # and many small elements
+    Q2 <- f_entropy( sum.j/sum.. ) # encouraging equal column sums
+
+    # minimize
+    out <- log(Q1) - log(Q2)
+
+    if(grad) { # See Bernaards and Jennrich 2005 page 685+686
+        H <- -(log( t(t(L2)/sum.j) ) + 1)
+        G1 <- t( t(H)/sum.j -  rowSums( t(L2*H)/(sum.j * sum.j)) )
+
+        h <- -(log( sum.j/sum..  ) + 1)
+        alpha <- as.numeric(h %*% sum.j)/(sum.. * sum..) # paper divides by
+                                                         # sum.., not sum..^2??
+        G2 <- matrix(h/sum.. - alpha, nRow, nCol, byrow = TRUE)
+
+        attr(out, "grad") <- 2 * LAMBDA * (G1/Q1 - G2/Q2)
+    }
+
+    out
+}
+    
+
+# Infomax
+# McKeon (1968, unpublished) and Browne (2001) 
+# Treat LAMBDA^2 as a contingency table, and use simplicity function based
+# on tests for association; most effective was LRT for association
+# (see Agresti, 1990, eq 3.13) which is maximized for max simplicity
+#
+# McKeon: criterion may be regarded as a measure of information about row
+# categories conveyed by column categories (and vice versa); hence infomax
+
+# - favors perfect cluster
+# - discourages general factor
+# - both for orthogonal and oblique rotation
+
+#
+# Note: typo in Browne (2001), see last  paragraph of Bernaards and 
+# Jennrich (2005) page 684
+lav_matrix_rotate_infomax <- function(LAMBDA = NULL, ..., grad = FALSE) {
+
+    nCol <- ncol(LAMBDA)
+    nRow <- nrow(LAMBDA)
+    L2 <- LAMBDA * LAMBDA
+
+    # entropy function (Browne, 2001, eq 9)
+    f_entropy <- function(x) { -1 * sum(ifelse(x > 0, x * log(x), 0)) }
+
+    # sums of rows/columns/all
+    sumi. <- rowSums(L2)
+    sum.j <- colSums(L2)
+    sum.. <- sum(L2)
+
+    Q1 <- f_entropy(    L2/sum.. ) # Bernaards & Jennrich version!! (Browne
+                                   # divides by sum.j, like in McCammon)
+    Q2 <- f_entropy( sum.j/sum.. )
+    Q3 <- f_entropy( sumi./sum.. )
+
+    # minimize
+    out <- log(nCol) + Q1 - Q2 - Q3
+
+    if(grad) {
+        H <- -(log(L2/sum..) + 1)
+        alpha <- sum(L2 * H)/(sum.. * sum..)
+        G1 <- H/sum.. - alpha
+
+        hj <- -(log(sum.j/sum..) + 1)
+        alphaj <- as.numeric(hj %*% sum.j)/(sum.. * sum..)
+        G2 <- matrix(hj, nRow, nCol, byrow = TRUE)/sum.. - alphaj
+
+        hi <- -(log(sumi./sum..) + 1)
+        alphai <- as.numeric(sumi. %*% hi)/(sum.. * sum..)
+        G3 <- matrix(hi, nRow, nCol)/sum.. - alphai
+
+        attr(out, "grad") <- 2 * LAMBDA * (G1 - G2 - G3)
+    }
+
+    out
+}
+
+# oblimax
+# Harman, 1976; Saunders, 1961
+#
+# for orthogonal rotation, oblimax is equivalent to quartimax
+lav_matrix_rotate_oblimax <- function(LAMBDA = NULL, ..., grad = FALSE) {
+    L2 <- LAMBDA * LAMBDA
+
+    # minimize version
+    out <- - log(sum(L2 * L2)) + 2 * log(sum(L2)) 
+
+    if(grad) {
+        attr(out, "grad") <- ( - 4 * L2 * LAMBDA/(sum(L2 * L2)) 
+                               + 4 * LAMBDA/(sum(L2)) )
+    }
+
+    out
+}
+
+# Bentler's Invariant Pattern Simplicity
+# Bentler (1977)
+#
+# 
+lav_matrix_rotate_bentler <- function(LAMBDA = NULL, ..., grad = FALSE) {
+    L2 <- LAMBDA * LAMBDA
+    
+    L2tL2 <- crossprod(L2)
+    L2tL2.inv <- lav_matrix_symmetric_inverse(S = L2tL2, logdet = TRUE)
+    L2tL2.logdet <- attr(L2tL2.inv, "logdet")
+
+    DIag <- diag(L2tL2)
+    DIag.inv <- diag(1/DIag)
+    DIag.logdet <- sum(log(DIag)) # add small constant?
+
+    # minimize version
+    out <- - (L2tL2.logdet - DIag.logdet)/4 
+
+    if(grad) {
+        attr(out, "grad") <- -LAMBDA * (L2 %*% (L2tL2.inv - DIag.inv))
+    }
+
+    out
+}
+
+
+# The Tandem criteria
+# Comrey (1967)
+#
+# only for sequential use:
+# - tandem1 is used to determine the number of factors
+#   (it removes the minor factors)
+# - tandomII is used for final rotation
+#
+lav_matrix_rotate_tandem1 <- function(LAMBDA, ..., grad = FALSE) {
+    L2 <- LAMBDA * LAMBDA
+    LL <- tcrossprod(LAMBDA)
+    LL2 <- LL * LL
+ 
+    # minimize version
+    out <- -1 * sum(L2 * (LL2 %*% L2))
+
+    if(grad) {
+        tmp1 <- 4 * LAMBDA *(LL2 %*% L2)
+        tmp2 <- 4 * (LL * (L2 %*% t(L2))) %*% LAMBDA
+        attr(out, "grad") <- -tmp1 - tmp2
+    }
+
+    out
+}
+
+lav_matrix_rotate_tandem2 <- function(LAMBDA, ..., grad = FALSE) {
+    L2 <- LAMBDA * LAMBDA
+    LL <- tcrossprod(LAMBDA)
+    LL2 <- LL * LL
+ 
+    # minimize version
+    out <- sum( L2 * ((1 - LL2) %*% L2) )
+
+    if(grad) {
+        tmp1 <- 4 * LAMBDA *((1 - LL2) %*% L2)
+        tmp2 <- 4 * (LL * tcrossprod(L2, L2)) %*% LAMBDA
+        attr(out, "grad") <- tmp1 - tmp2
+    }   
+
+    out
+}
+
+
+
+
+
+# simplimax
+# Kiers (1994)
+#
+# oblique rotation method
+# designed to rotate so that a given number 'k' of small loadings are
+# as close to zero as possible
+#
+# may be viewed as partially specified target rotation with
+# dynamically chosen weights
+#
+lav_matrix_rotate_simplimax <- function(LAMBDA = NULL, k = nrow(LAMBDA),
+                                        ..., grad = FALSE) {
+    L2 <- LAMBDA * LAMBDA
+
+    # 'k' smallest element of L2
+    small.element <- sort(L2)[k]
+
+    # which elements are smaller than (or equal than) 'small.element'?
+    ID <- sign( L2 <= small.element )
+
+    # minimize version
+    out <- sum(L2 * ID)
+
+    if(grad) {
+        attr(out, "grad") <- 2 *ID * LAMBDA
+    }
+
+    out
+}
+
+
+# target rotation
+# Harman, 1976
+#
+# LAMBDA is rotated toward a specified target matrix 'target'
+#
+# Note: 'target' must be fully specified; if there are any NAs
+#        use lav_matrix_rotate_pst() instead
+lav_matrix_rotate_target <- function(LAMBDA = NULL, target = NULL,
+                                        ..., grad = FALSE) {
+    # squared difference
+    DIFF <- LAMBDA - target
+    DIFF2 <- DIFF * DIFF
+
+    out <- sum(DIFF2, na.rm = TRUE)
+
+    if(grad) {
+ 
+        tmp <- 2 * DIFF
+        # change NAs to zero
+        tmp[is.na(tmp)] <- 0
+        attr(out, "grad") <- tmp 
+    }
+
+    out
+}
+
+# partially specified target rotation
+#
+# Browne 1972a, 1972b
+#
+# a pre-specified weight matrix W with ones/zeroes determines
+# which elements of (LAMBDA - target) are used by the rotation criterion
+#
+# if 'target' contains NAs, they should correspond to '0' values in the
+# target.mask matrix
+#
+lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL, 
+                                  target.mask = NULL, ..., grad = FALSE) {
+    # mask target+LAMBDA
+    target <- target.mask * target
+    LAMBDA <- target.mask * LAMBDA
+
+    # squared difference
+    DIFF <- LAMBDA - target
+    DIFF2 <- DIFF * DIFF
+
+    # minimize 
+    out <- sum(DIFF2, na.rm = TRUE)
+
+    if(grad) {
+        tmp <- 2 * DIFF
+        # change NAs to zero
+        tmp[is.na(tmp)] <- 0
+        attr(out, "grad") <- tmp
+    }
+
+    out
+}
+ 
+
+
+
+
+
 
 
 # gradient check
 ilav_matrix_rotate_grad_test <- function(crit = NULL, ...,
                                          LAMBDA = NULL,
-                                         nRow = 20L, nCol = 5L) {
+                                         nRow = 20L, nCol = 5L,
+                                         verbose = FALSE) {
     # test matrix
     if(is.null(LAMBDA)) {
         LAMBDA <- matrix(rnorm(nRow*nCol), nRow, nCol)
@@ -221,7 +531,11 @@ ilav_matrix_rotate_grad_test <- function(crit = NULL, ...,
                   nRow, nCol)
     GQ2 <- attr(crit(LAMBDA, ..., grad = TRUE), "grad")
 
-    all.equal(GQ1, GQ2)
+    if(verbose) {
+        print( list(LAMBDA = LAMBDA, GQ1 = GQ1, GQ2 = GQ2) )
+    }
+
+    all.equal(GQ1, GQ2, tolerance = 1e-07)
 }
 
 ilav_matrix_rotate_grad_test_all <- function() {
@@ -296,5 +610,70 @@ ilav_matrix_rotate_grad_test_all <- function() {
     } else {
         cat("geomin: FAILED\n")
     }
+
+    # simple entropy 
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_entropy)
+    if(is.logical(check) && check) {
+        cat("entropy: OK\n")
+    } else {
+        cat("entropy: FAILED\n")
+    }
+
+    # McCammon entropy criterion
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_mccammon)
+    if(is.logical(check) && check) {
+        cat("McCammon: OK\n")
+    } else {
+        cat("McCammon: FAILED\n")
+    }
+
+    # infomax
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_infomax)
+    if(is.logical(check) && check) {
+        cat("infomax: OK\n")
+    } else {
+        cat("infomax: FAILED\n")
+    }
+
+    # oblimax
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_oblimax)
+    if(is.logical(check) && check) {
+        cat("oblimax: OK\n")
+    } else {
+        cat("oblimax: FAILED\n")
+    }
+
+    # bentler
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_bentler)
+    if(is.logical(check) && check) {
+        cat("bentler: OK\n")
+    } else {
+        cat("bentler: FAILED\n")
+    }
+
+    # simplimax
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_simplimax)
+    if(is.logical(check) && check) {
+        cat("simplimax: OK\n")
+    } else {
+        cat("simplimax: FAILED\n")
+    }
+
+    # tandem1
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_tandem1)
+    if(is.logical(check) && check) {
+        cat("tandem1: OK\n")
+    } else {
+        cat("tandem1: FAILED\n")
+    }
+
+    # tandem2
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_tandem2)
+    if(is.logical(check) && check) {
+        cat("tandem2: OK\n")
+    } else {
+        cat("tandem2: FAILED\n")
+    }
+
 }
 

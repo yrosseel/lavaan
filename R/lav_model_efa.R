@@ -28,7 +28,8 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
     lavmodel@lv.order <- extra$lv.order
 
     # store ceq.efa.JAC (to use for bordered information)
-    if(lavoptions$se == "none" || lavoptions$se == "bootstrap") {
+    if(lavoptions$se == "none" || lavoptions$se == "bootstrap" ||
+       lavoptions$rotation.se == "delta") {
         JAC <- matrix(0, 0, length(x.rot))
     } else {
         JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_border_x,
@@ -140,7 +141,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                          geomin.epsilon = ropts$geomin.epsilon,
                                          orthomax.gamma = ropts$orthomax.gamma,
                                          cf.gamma       = ropts$orthomax.gamma,
-                                         oblimin.gamma  = ropts$oblimin.gamma),
+                                         oblimin.gamma  = ropts$oblimin.gamma,
+                                         target         = ropts$target,
+                                         target.mask    = ropts$target.mask),
                                      init.ROT    = init.ROT,
                                      init.ROT.check = FALSE,
                                      rstarts     = rstarts,
@@ -232,7 +235,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     method.args <- list( geomin.epsilon = ropts$geomin.epsilon,
                          orthomax.gamma = ropts$orthomax.gamma,
                          cf.gamma       = ropts$orthomax.gamma,
-                         oblimin.gamma  = ropts$oblimin.gamma)
+                         oblimin.gamma  = ropts$oblimin.gamma,
+                         target         = ropts$target,
+                         target.mask    = ropts$target.mask )
 
     # place parameters into model matrices
     lavmodel <- lav_model_set_parameters(lavmodel, x = x)
@@ -301,7 +306,11 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
             # choose method
             method <- tolower(method)
             if(method %in% c("varimax", "quartimax", "orthomax", "cf",
-                             "oblimin", "quartimin", "geomin")) {
+                             "oblimin", "quartimin", "geomin", 
+                             "entropy", "mccammon", "infomax",
+                             "tandem1", "tandem2",
+                             "oblimax", "bentler", "simplimax", "target", 
+                             "pst")) {
                 method.fname <- paste("lav_matrix_rotate_", method, sep = "")
             } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
                                     "cf-parsimax", "cf-facparsim")) {
@@ -312,6 +321,8 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
                     "cf-equamax"   = M / (2 * P),
                     "cf-parsimax"  = (M - 1) / (P + M - 2),
                     "cf-facparsim" = 1)
+            } else {
+                method.fname <- method
             }
 
             # check if rotation method exists

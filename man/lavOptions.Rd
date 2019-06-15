@@ -151,7 +151,7 @@ Data options:
       the weights, and multiplying again by the total sample size. 
       If \code{"group"}, the sampling weights are normalized per group:
       by dividing by the sum of the weights (in each group), and multiplying
-      again by the group size. The latter is the default.}
+      again by the group size. The default is \code{"total"}.}
 }
 
 Data summary options:
