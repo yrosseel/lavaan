@@ -2,9 +2,9 @@
 
 # given a parameter table (PT), extract a part of the model:
 # eg.:
-# - only the measurement model (with saturated latent variables
+# - only the measurement model (with saturated latent variables)
 # - only the stuctural part
-# - a single measurement model (1 factor only)
+# - a single measurement block
 # ...
 
 
@@ -99,9 +99,9 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
         #                PT$lhs %in% IND.plabel &
         #                PT$rhs %in% IND.plabel)
 
-        con.idx <- which(PT$op %in% c("==","<",">"))
+        con.idx <- which(PT$op %in% c("==","<",">",":="))
         if(length(con.idx) > 0L) {
-            ID <- lav_partable_constraints_label_id(PT)
+            ID <- lav_partable_constraints_label_id(PT, def = TRUE)
             LABEL <- names(ID)
             con.keep <- logical( length(con.idx) )
             for(con in seq_len(length(con.idx))) {
@@ -109,20 +109,26 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
                 lhs.keep <- FALSE
                 rhs.keep <- FALSE
 
-                # lhs
-                LHS.labels <- all.vars(as.formula(paste("~",
-                                       PT[con.idx[con],"lhs"])))
-                if(length(LHS.labels) > 0L) {
-                    # par id
-                    LHS.freeid <- ID[match(LHS.labels, LABEL)]
 
-                    # keep?
-                    if(all(LHS.freeid %in% PT$free[keep.idx])) {
+                # lhs
+                if(PT[con.idx[con],"op"] == ":=") {
+                    lhs.keep <- TRUE
+                } else {
+                    LHS.labels <- all.vars(as.formula(paste("~",
+                                           PT[con.idx[con],"lhs"])))
+                    if(length(LHS.labels) > 0L) {
+                        # par id
+                        LHS.freeid <- ID[match(LHS.labels, LABEL)]
+
+                        # keep?
+                        if(all(LHS.freeid %in% PT$free[keep.idx])) {
+                            lhs.keep <- TRUE
+                        }
+                    } else {
                         lhs.keep <- TRUE
                     }
-                } else {
-                    lhs.keep <- TRUE
                 }
+
 
 
                 # rhs
@@ -320,6 +326,68 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
         keep.idx <- c(keep.idx, reg.idx, var.idx, cov.idx, int.idx,
                       fac.idx)
+
+        # FIXME: ==, :=, <, >, == involving IND...
+
+        # `simple' == constraints (simple lhs and rhs)
+        #EQ.idx <- which(PT$op == "==" &
+        #                PT$lhs %in% IND.plabel &
+        #                PT$rhs %in% IND.plabel)
+
+        con.idx <- which(PT$op %in% c("==","<",">",":="))
+        if(length(con.idx) > 0L) {
+            ID <- lav_partable_constraints_label_id(PT, def = TRUE)
+            LABEL <- names(ID)
+            con.keep <- logical( length(con.idx) )
+            for(con in seq_len(length(con.idx))) {
+
+                lhs.keep <- FALSE
+                rhs.keep <- FALSE
+
+                if(PT[con.idx[con],"op"] == ":=") {
+                    lhs.keep <- TRUE
+                } else {
+
+                    # lhs
+                    LHS.labels <- all.vars(as.formula(paste("~",
+                                           PT[con.idx[con],"lhs"])))
+                    if(length(LHS.labels) > 0L) {
+                        # par id
+                        LHS.freeid <- ID[match(LHS.labels, LABEL)]
+
+                        # keep?
+                        if(all(LHS.freeid %in% PT$free[keep.idx])) {
+                            lhs.keep <- TRUE
+                        }
+                    } else {
+                        lhs.keep <- TRUE
+                    }
+                }
+
+                # rhs
+                RHS.labels <- all.vars(as.formula(paste("~",
+                                       PT[con.idx[con],"rhs"])))
+                if(length(RHS.labels) > 0L) {
+                    # par id
+                    RHS.freeid <- ID[match(RHS.labels, LABEL)]
+
+                    # keep?
+                    if(all(RHS.freeid %in% PT$free[keep.idx])) {
+                        rhs.keep <- TRUE
+                    }
+                } else {
+                    rhs.keep <- TRUE
+                }
+
+                if(lhs.keep && rhs.keep) {
+                    con.keep[con] <- TRUE
+                }
+            }
+
+            EQ.idx <- con.idx[ con.keep ]
+            keep.idx <- c(keep.idx, EQ.idx)
+        } # con
+
     }
 
     if(idx.only) {

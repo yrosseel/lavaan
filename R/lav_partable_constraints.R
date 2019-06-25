@@ -362,6 +362,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
 }
 
 lav_partable_constraints_label_id <- function(partable, con = NULL,
+                                              def = TRUE,
                                               warn = TRUE) {
 
     # if 'con', merge partable + con
@@ -372,7 +373,11 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
     }
 
     # get constraints
-    con.idx <- which(partable$op %in% c("==", "<", ">"))
+    if(def) {
+        con.idx <- which(partable$op %in% c("==", "<", ">", ":="))
+    } else {
+        con.idx <- which(partable$op %in% c("==", "<", ">"))
+    }
 
     # catch empty con
     if(length(con.idx) == 0L) {
@@ -386,8 +391,8 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
     rhs.labels <- all.vars( parse(file="", text=partable$rhs[con.idx]) )
     con.labels <- unique(c(lhs.labels, rhs.labels))
 
-    # remove def.names from con.labels
-    if(length(def.idx) > 0L) {
+    # remove def.names from con.labels (unless def = TRUE)
+    if(!def && length(def.idx) > 0L) {
         def.names <- as.character(partable$lhs[def.idx])
         d.idx <- which(con.labels %in% def.names)
         if(length(d.idx) > 0) {

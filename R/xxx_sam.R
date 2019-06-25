@@ -273,12 +273,13 @@ sam <- function(model      = NULL,
             # - if multiple latent variables in this measurement block, we
             #   must ADD and free the covariances among these latent variables
             # - remove non-needed constraints
+            # - remove non-needed defs
             PTM <- PT
             if(any(sapply(mm.list[[mm]], length) > 1L)) {
                 PTM <- lav_partable_add_lv_cov(PT = PT,
                               lavpta = lavpta, lv.names = mm.list[[mm]])
             }
-            con.idx <- which(PTM$op %in% c("==","<",">"))
+            con.idx <- which(PTM$op %in% c("==","<",">",":="))
             if(length(con.idx) > 0L) {
                 needed.idx <- which(con.idx %in% mm.idx)
                 if(length(needed.idx) > 0L) {
@@ -610,7 +611,7 @@ sam <- function(model      = NULL,
         PTS <- PT
 
         # remove constraints we don't need
-        con.idx <- which(PTS$op %in% c("==","<",">"))
+        con.idx <- which(PTS$op %in% c("==","<",">",":="))
         if(length(con.idx) > 0L) {
             needed.idx <- which(con.idx %in% reg.idx)
             if(length(needed.idx) > 0L) {
@@ -671,10 +672,22 @@ sam <- function(model      = NULL,
 
     # fill in point estimates structural part
     PTS <- FIT.PA@ParTable
-    PT$est[ seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0L ] <-
-        PTS$est[ PTS$free > 0L & !seq_len(length(PTS$lhs)) %in% extra.int.idx ]
-    step2.idx <- PT$free[  seq_len(length(PT$lhs)) %in% reg.idx &
-                           PT$free > 0L ]
+    p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0
+    p2def.idx <- seq_len(length(PT$lhs)) %in% reg.idx &
+                 (PT$free > 0 | PT$op == ":=")
+    step2.idx <- PT$free[ p2.idx ] # no def!
+
+    PT$est[ p2def.idx ] <- PTS$est[ (PTS$free > 0L | PTS$op == ":=") &
+                                !seq_len(length(PTS$lhs)) %in% extra.int.idx ]
+    # fill in any def parameters
+    #def.idx <- which(PT$op == ":=")
+    #if(length(def.idx) > 0L) {
+    #    # call def.function
+    #    est.def <- FIT@Model@def.function( PT$est[ PT$free > 0L ] )
+    #    if(length(est.def) == length(def.idx)) {
+    #        PT$est[ def.idx ] <- est.def
+    #    } # else warning?
+    #}
 
 
 
@@ -770,22 +783,31 @@ sam <- function(model      = NULL,
     # assemble final lavaan objects
     if(sam.method == "local" && output == "lavaan") {
         # overwrite slots in FIT.PA (better way?)
-        PTS$se[ PTS$free > 0L &
-                !seq_len(length(PTS$lhs)) %in% extra.int.idx ] <-
-            sqrt( diag(VCOV) )
+        #PTS$se[ PTS$free > 0L &
+        #        !seq_len(length(PTS$lhs)) %in% extra.int.idx ] <-
+        #    sqrt( diag(VCOV) )
+        PTS$se <- lav_model_vcov_se(lavmodel = FIT.PA@Model,
+                                    lavpartable = PTS,
+                                    VCOV = VCOV)
         FIT.PA@Options$se <- "twostep"
         FIT.PA@ParTable <- PTS
+        FIT.PA@vcov$se <- "twostep"
         FIT.PA@vcov$vcov <- VCOV
         FINAL <- FIT.PA
     } else if(sam.method == "global" && output == "lavaan") {
-        PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
-               PT$free > 0L ] <- sqrt( diag(VCOV) )
+        #PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
+        #       PT$free > 0L ] <- sqrt( diag(VCOV) )
         FINAL <- JOINT
-        FINAL@ParTable <- PT
+
         if(FINAL@Options$se == "none") {
         } else {
             FINAL@Options$se <- "twostep"
+            FINAL@vcov$se <- "twostep"
             FINAL@vcov$vcov[step2.idx, step2.idx] <- VCOV
+            PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
+                                   lavpartable = PT,
+                                   VCOV = FINAL@vcov$vcov)
+            FINAL@ParTable <- PT
         }
         res <- FINAL
     }

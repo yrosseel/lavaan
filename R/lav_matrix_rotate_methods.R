@@ -266,10 +266,10 @@ lav_matrix_rotate_mccammon <- function(LAMBDA = NULL, ..., grad = FALSE) {
 
     out
 }
-    
+
 
 # Infomax
-# McKeon (1968, unpublished) and Browne (2001) 
+# McKeon (1968, unpublished) and Browne (2001)
 # Treat LAMBDA^2 as a contingency table, and use simplicity function based
 # on tests for association; most effective was LRT for association
 # (see Agresti, 1990, eq 3.13) which is maximized for max simplicity
@@ -282,7 +282,7 @@ lav_matrix_rotate_mccammon <- function(LAMBDA = NULL, ..., grad = FALSE) {
 # - both for orthogonal and oblique rotation
 
 #
-# Note: typo in Browne (2001), see last  paragraph of Bernaards and 
+# Note: typo in Browne (2001), see last  paragraph of Bernaards and
 # Jennrich (2005) page 684
 lav_matrix_rotate_infomax <- function(LAMBDA = NULL, ..., grad = FALSE) {
 
@@ -333,10 +333,10 @@ lav_matrix_rotate_oblimax <- function(LAMBDA = NULL, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
 
     # minimize version
-    out <- - log(sum(L2 * L2)) + 2 * log(sum(L2)) 
+    out <- - log(sum(L2 * L2)) + 2 * log(sum(L2))
 
     if(grad) {
-        attr(out, "grad") <- ( - 4 * L2 * LAMBDA/(sum(L2 * L2)) 
+        attr(out, "grad") <- ( - 4 * L2 * LAMBDA/(sum(L2 * L2))
                                + 4 * LAMBDA/(sum(L2)) )
     }
 
@@ -346,10 +346,10 @@ lav_matrix_rotate_oblimax <- function(LAMBDA = NULL, ..., grad = FALSE) {
 # Bentler's Invariant Pattern Simplicity
 # Bentler (1977)
 #
-# 
+#
 lav_matrix_rotate_bentler <- function(LAMBDA = NULL, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
-    
+
     L2tL2 <- crossprod(L2)
     L2tL2.inv <- lav_matrix_symmetric_inverse(S = L2tL2, logdet = TRUE)
     L2tL2.logdet <- attr(L2tL2.inv, "logdet")
@@ -359,7 +359,7 @@ lav_matrix_rotate_bentler <- function(LAMBDA = NULL, ..., grad = FALSE) {
     DIag.logdet <- sum(log(DIag)) # add small constant?
 
     # minimize version
-    out <- - (L2tL2.logdet - DIag.logdet)/4 
+    out <- - (L2tL2.logdet - DIag.logdet)/4
 
     if(grad) {
         attr(out, "grad") <- -LAMBDA * (L2 %*% (L2tL2.inv - DIag.inv))
@@ -381,7 +381,7 @@ lav_matrix_rotate_tandem1 <- function(LAMBDA, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     LL <- tcrossprod(LAMBDA)
     LL2 <- LL * LL
- 
+
     # minimize version
     out <- -1 * sum(L2 * (LL2 %*% L2))
 
@@ -398,7 +398,7 @@ lav_matrix_rotate_tandem2 <- function(LAMBDA, ..., grad = FALSE) {
     L2 <- LAMBDA * LAMBDA
     LL <- tcrossprod(LAMBDA)
     LL2 <- LL * LL
- 
+
     # minimize version
     out <- sum( L2 * ((1 - LL2) %*% L2) )
 
@@ -406,7 +406,7 @@ lav_matrix_rotate_tandem2 <- function(LAMBDA, ..., grad = FALSE) {
         tmp1 <- 4 * LAMBDA *((1 - LL2) %*% L2)
         tmp2 <- 4 * (LL * tcrossprod(L2, L2)) %*% LAMBDA
         attr(out, "grad") <- tmp1 - tmp2
-    }   
+    }
 
     out
 }
@@ -462,11 +462,11 @@ lav_matrix_rotate_target <- function(LAMBDA = NULL, target = NULL,
     out <- sum(DIFF2, na.rm = TRUE)
 
     if(grad) {
- 
+
         tmp <- 2 * DIFF
         # change NAs to zero
         tmp[is.na(tmp)] <- 0
-        attr(out, "grad") <- tmp 
+        attr(out, "grad") <- tmp
     }
 
     out
@@ -482,7 +482,7 @@ lav_matrix_rotate_target <- function(LAMBDA = NULL, target = NULL,
 # if 'target' contains NAs, they should correspond to '0' values in the
 # target.mask matrix
 #
-lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL, 
+lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL,
                                   target.mask = NULL, ..., grad = FALSE) {
     # mask target+LAMBDA
     target <- target.mask * target
@@ -492,7 +492,7 @@ lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL,
     DIFF <- LAMBDA - target
     DIFF2 <- DIFF * DIFF
 
-    # minimize 
+    # minimize
     out <- sum(DIFF2, na.rm = TRUE)
 
     if(grad) {
@@ -504,7 +504,7 @@ lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL,
 
     out
 }
- 
+
 
 
 
@@ -611,7 +611,7 @@ ilav_matrix_rotate_grad_test_all <- function() {
         cat("geomin: FAILED\n")
     }
 
-    # simple entropy 
+    # simple entropy
     check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_entropy)
     if(is.logical(check) && check) {
         cat("entropy: OK\n")

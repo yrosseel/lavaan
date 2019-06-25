@@ -306,10 +306,10 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
             # choose method
             method <- tolower(method)
             if(method %in% c("varimax", "quartimax", "orthomax", "cf",
-                             "oblimin", "quartimin", "geomin", 
+                             "oblimin", "quartimin", "geomin",
                              "entropy", "mccammon", "infomax",
                              "tandem1", "tandem2",
-                             "oblimax", "bentler", "simplimax", "target", 
+                             "oblimax", "bentler", "simplimax", "target",
                              "pst")) {
                 method.fname <- paste("lav_matrix_rotate_", method, sep = "")
             } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",

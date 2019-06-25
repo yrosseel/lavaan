@@ -143,7 +143,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     } else {
         if(!orthogonal && method %in% c("varimax", "entropy", "mccammon",
                                         "tandem1", "tandem2")) {
-            warning("lavaan WARNING: rotation method ", dQuote(method), 
+            warning("lavaan WARNING: rotation method ", dQuote(method),
                     " may not work with oblique rotation.")
         }
     }
