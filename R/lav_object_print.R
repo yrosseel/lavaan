@@ -65,6 +65,12 @@ lav_object_print_optim <- function(object) {
         t2.txt <- ""
         cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
     }
+    if(nrow(object@Model@con.jac) > 0L) {
+        t0.txt <- sprintf("  %-40s", "Row rank of the constraints matrix")
+        t1.txt <- sprintf("  %10i", qr(object@Model@con.jac)$rank)
+        t2.txt <- ""
+        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    }
 
     cat("\n")
 }

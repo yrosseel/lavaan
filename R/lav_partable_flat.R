@@ -91,11 +91,14 @@ lav_partable_flat <- function(FLAT = NULL,
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
 
-    # std.lv = TRUE, group.equal includes "loadings": give warning
-    if(ngroups > 1L && std.lv && "loadings" %in% group.equal) {
+    # std.lv = TRUE, group.equal includes "loadings"
+    #if(ngroups > 1L && std.lv && "loadings" %in% group.equal) {
         # suggested by Michael Hallquist
-        warning("lavaan WARNING: std.lv = TRUE forces all variances to be unity in all groups, despite group.equal = \"loadings\"")
-    }
+        # in 0.6.3, we gave a warning,
+        #warning("lavaan WARNING: std.lv = TRUE forces all variances to be unity in all groups, despite group.equal = \"loadings\"")
+        # in >0.6.4, we free the lv variances in all but the first group,
+    #}
+
 
     # do we have any EFA lv's? they need special treatment if auto.efa = TRUE
     if(!is.null(FLAT$efa) && auto.efa) {
@@ -531,6 +534,20 @@ lav_partable_flat <- function(FLAT = NULL,
                    !("means" %in% group.equal) ) {
                       free[ int.idx ] <- 1L
                     ustart[ int.idx ] <- as.numeric(NA)
+                }
+            }
+
+            # latent variances if std.lv = TRUE (new in 0.6-4)
+            if(std.lv && "loadings" %in% group.equal &&
+               !"lv.variances" %in% group.equal) {
+                lv.var.idx <- which(op == "~~" &
+                                    lhs %in% lv.names &
+                                    lhs == rhs &
+                                    user == 0L &
+                                    group == g)
+                if(length(lv.var.idx) > 0L) {
+                    free[ lv.var.idx ] <- 1L
+                  ustart[ lv.var.idx ] <- as.numeric(NA)
                 }
             }
 

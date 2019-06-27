@@ -538,6 +538,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       conditional.x    = lavoptions$conditional.x,
                       fixed.x          = lavoptions$fixed.x,
                       std.lv           = lavoptions$std.lv,
+                      effect.coding    = lavoptions$effect.coding,
                       parameterization = lavoptions$parameterization,
                       auto.fix.first   = lavoptions$auto.fix.first,
                       auto.fix.single  = lavoptions$auto.fix.single,

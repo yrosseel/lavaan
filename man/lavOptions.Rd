@@ -56,7 +56,24 @@ Model features (always available):
     \item{\code{std.lv}:}{If \code{TRUE}, the metric of each latent variable 
       is determined by fixing their (residual) variances to 1.0. If 
       \code{FALSE}, the metric of each latent variable is determined by fixing 
-      the factor loading of the first indicator to 1.0.}
+      the factor loading of the first indicator to 1.0. If there are multiple
+      groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
+      the \code{group.label} argument, then only the latent variances i
+      of the first group will be fixed to 1.0, while the latent
+      variances of other groups are set free.}
+    \item{\code{effect.coding}:}{Can be logical or character string. If
+     logical and \code{TRUE}, this implies 
+     \code{effect.coding = c("loadings", "intercepts")}. If logical and 
+     \code{FALSE}, it is set equal to the empty string. 
+     If \code{"loadings"} is included, equality
+     constraints are used so that the average of the factor loadings (per
+     latent variable) equals 1. Note that this should not be used 
+     together with \code{std.lv = TRUE}. If \code{"intercepts"} is
+     included, equality constraints are used so that the sum of the
+     intercepts (belonging to the indicators of a single latent variable) 
+     equals zero.
+     As a result, the latent mean will be freely estimated and usually 
+     equal the average of the means of the involved indicators.}
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}

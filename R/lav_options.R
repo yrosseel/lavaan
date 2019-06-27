@@ -56,6 +56,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 orthogonal.x       = FALSE,
                 orthogonal.y       = FALSE,
                 std.lv             = FALSE,
+                effect.coding      = FALSE,     # TRUE implies
+                                                # c("loadings", "intercepts")
                 parameterization   = "default",
 
                 auto.fix.first     = FALSE,
@@ -1156,6 +1158,38 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("lavaan ERROR: argument `parameterization' should be `delta' or `theta'")
     }
+
+
+    # std.lv vs effect.coding # new in 0.6-4
+    if(is.logical(opt$effect.coding)) {
+        if(opt$effect.coding) {
+            opt$effect.coding <- c("loadings", "intercepts")
+        } else {
+            opt$effect.coding <- ""
+        }
+    } else if(length(opt$effect.coding) == 0) {
+        # nothing to do
+    } else if(all(opt$effect.coding %in% c("loadings", "intercepts",
+                                           "mg.lv.variances",
+                                           "mg.lv.means",
+                                           "mg.lv.intercepts"))) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: unknown value for ", sQuote("effect.coding"),
+             " argument: ", opt$effect.coding, "\n")
+    }
+
+    # if we use effect coding for the factor loadings, we don't need/want
+    # std.lv = TRUE
+    if("loadings" %in% opt$effect.coding) {
+        if(opt$std.lv) {
+            stop("lavaan ERROR: std.lv is set to FALSE but effect.coding contains ", dQuote("loadings"))
+            opt$std.lv <- FALSE
+        }
+        # shut off auto.fix.first
+        opt$auto.fix.first <- FALSE
+    }
+
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 

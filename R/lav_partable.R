@@ -25,6 +25,7 @@ lavaanify <- lavParTable <- function(
                       orthogonal.x     = FALSE,
                       orthogonal.efa   = FALSE,
                       std.lv           = FALSE,
+                      effect.coding    = "",
                       conditional.x    = FALSE,
                       fixed.x          = TRUE,
                       parameterization = "delta",
@@ -663,6 +664,92 @@ lavaanify <- lavParTable <- function(
         LIST <- lav_partable_merge(LIST, TMP)
     }
 
+    # handle effect.coding related equality constraints
+    if(is.logical(effect.coding) && effect.coding) {
+        effect.coding <- c("loadings", "intercepts")
+    } else if(!is.character(effect.coding)) {
+        stop("lavaan ERROR: effect.coding argument must be a character string")
+    }
+    if(nchar(effect.coding[1]) > 0L) {
+
+        TMP <- list()
+
+        # for each block
+        nblocks <- lav_partable_nblocks(LIST)
+        for(b in seq_len(nblocks)) {
+            # lv's for this block/set
+            lv.names <- unique(LIST$lhs[ LIST$op == "=~" &
+                                         LIST$block == b ])
+
+            if(length(lv.names) == 0L) {
+                next
+            }
+
+            for(lv in lv.names) {
+
+                # ind.names
+                ind.names <- LIST$rhs[ LIST$op == "=~" &
+                                       LIST$block == b &
+                                       LIST$lhs == lv ]
+
+                if("loadings" %in% effect.coding) {
+                    # factor loadings indicators of this lv
+                    loadings.idx <- which( LIST$op == "=~" &
+                                           LIST$block == b &
+                                           LIST$rhs %in% ind.names &
+                                           LIST$lhs == lv )
+
+                    # all free?
+                    if(length(loadings.idx) > 0L &&
+                       all(LIST$free[ loadings.idx ] > 0L)) {
+                        # add eq constraint
+                        plabel <- LIST$plabel[ loadings.idx ]
+
+                        TMP$lhs    <- c(TMP$lhs,  length(loadings.idx))
+                        TMP$op     <- c(TMP$op,   "==")
+                        TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                        TMP$block  <- c(TMP$block,  b)
+                        TMP$user   <- c(TMP$user,   2L)
+                        TMP$ustart <- c(TMP$ustart, as.numeric(NA))
+                    }
+                } # loadings
+
+                if("intercepts" %in% effect.coding) {
+                    # intercepts for indicators of this lv
+                    intercepts.idx <- which( LIST$op == "~1" &
+                                             LIST$block == b &
+                                             LIST$lhs %in% ind.names)
+
+                    # all free?
+                    if(length(intercepts.idx) > 0L &&
+                       all(LIST$free[ intercepts.idx ] > 0L)) {
+                        # 1) add eq constraint
+                        plabel <- LIST$plabel[ intercepts.idx ]
+
+                        TMP$lhs    <- c(TMP$lhs,  0)
+                        TMP$op     <- c(TMP$op,   "==")
+                        TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                        TMP$block  <- c(TMP$block,  b)
+                        TMP$user   <- c(TMP$user,   2L)
+                        TMP$ustart <- c(TMP$ustart, as.numeric(NA))
+
+                        # 2) release latent mean
+                        lv.int.idx <- which(  LIST$op == "~1" &
+                                              LIST$block == b &
+                                              LIST$lhs == lv )
+                        # free only if automatically added
+                        if(length(lv.int.idx) > 0L &&
+                           LIST$user[ lv.int.idx ] == 0L) {
+                            LIST$free[ lv.int.idx ] <- max(LIST$free) + 1L
+                        }
+                    }
+                } # intercepts
+
+            } # lv
+        } # blocks
+
+        LIST <- lav_partable_merge(LIST, TMP)
+    }
 
     if(debug) {
         cat("[lavaan DEBUG] lavParTable\n")

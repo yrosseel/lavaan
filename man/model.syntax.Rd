@@ -15,6 +15,7 @@ model as specified by the user. We refer to this table as the parameter table.}
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE, 
+    effect.coding = "",
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
@@ -27,6 +28,7 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
+    effect.coding = "",
     conditional.x = FALSE, fixed.x = TRUE, parameterization = "delta", 
     constraints = NULL, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
@@ -64,7 +66,24 @@ the model both for both observed and latent variables.}
 \item{std.lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
-    first indicator to 1.0.}
+    first indicator to 1.0. If there are multiple
+      groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
+      the \code{group.label} argument, then only the latent variances i
+      of the first group will be fixed to 1.0, while the latent
+      variances of other groups are set free.}
+\item{effect.coding}{Can be logical or character string. If
+     logical and \code{TRUE}, this implies     
+     \code{effect.coding = c("loadings", "intercepts")}. If logical and 
+     \code{FALSE}, it is set equal to the empty string. 
+     If \code{"loadings"} is included, equality
+     constraints are used so that the average of the factor loadings (per
+     latent variable) equals 1. Note that this should not be used 
+     together with \code{std.lv = TRUE}. If \code{"intercepts"} is
+     included, equality constraints are used so that the sum of the
+     intercepts (belonging to the indicators of a single latent variable)
+     equals zero.
+     As a result, the latent mean will be freely estimated and usually
+     equal the average of the means of the involved indicators.}
 \item{conditional.x}{If \code{TRUE}, we set up the model conditional on
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'

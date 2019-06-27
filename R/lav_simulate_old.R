@@ -123,21 +123,21 @@ simulateData <- function(
         # for ordered observed variables, we will get '0.0', but that is ok
         # so there is no need to make a distinction between numeric/ordered
         # here??
-        lav2 <- lav
         ngroups <- lav_partable_ngroups(lav)
         ov.names <- vnames(lav, "ov")
         ov.nox   <- vnames(lav, "ov.nox")
         lv.names <- vnames(lav, "lv")
         lv.y     <- vnames(lav, "lv.y")
+        lv.nox   <- vnames(lav, "lv.nox")
         ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
                             lav$rhs == lav$lhs)
-        lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.y &
+        lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
                             lav$rhs == lav$lhs)
-        if(any(lav2$user[c(ov.var.idx, lv.var.idx)] > 0L)) {
+        if(any(lav$user[c(ov.var.idx, lv.var.idx)] > 0L)) {
             warning("lavaan WARNING: if residual variances are specified, please use standardized=FALSE")
         }
-        lav2$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
-        fit <- lavaan(model=lav2, sample.nobs=sample.nobs, ...)
+        lav$ustart[c(ov.var.idx,lv.var.idx)] <- 0.0
+        fit <- lavaan(model=lav, sample.nobs=sample.nobs, ...)
         Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
         ETA <- computeVETA(lavmodel = fit@Model)
 
@@ -146,24 +146,31 @@ simulateData <- function(
             cat("Eta:\n"); print(ETA)
         }
 
-        # standardized OV
+        # stage 1: standardize LV
+        if(length(lv.nox) > 0L) {
+            for(g in 1:ngroups) {
+                var.group <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
+                                   lav$rhs == lav$lhs & lav$group == g)
+                eta.idx <- match(lv.nox, lv.names)
+                lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
+            }
+        }
+        # refit
+        fit <- lavaan(model=lav, sample.nobs=sample.nobs, ...)
+        Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+
+        if(debug) {
+            cat("after stage 1:\n")
+            cat("Sigma.hat:\n"); print(Sigma.hat)
+        }
+
+        # stage 2: standardize OV
         for(g in 1:ngroups) {
             var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
                                lav$rhs == lav$lhs & lav$group == g)
             ov.idx <- match(ov.nox, ov.names)
             lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
         }
-
-        # standardize LV
-        if(length(lv.y) > 0L) {
-            for(g in 1:ngroups) {
-                var.group <- which(lav$op == "~~" & lav$lhs %in% lv.y &
-                                   lav$rhs == lav$lhs & lav$group == g)
-                eta.idx <- match(lv.y, lv.names)
-                lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
-            }
-        }
-
 
         if(debug) {
             cat("after standardisation lav\n")

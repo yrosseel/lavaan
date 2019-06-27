@@ -5,6 +5,11 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                                fromLast=FALSE,
                                warn = TRUE) {
 
+    # check for empty pt2
+    if(is.null(pt2) || length(pt2) == 0L) {
+        return(pt1)
+    }
+
     pt1 <- as.data.frame(pt1, stringsAsFactors = FALSE)
     pt2 <- as.data.frame(pt2, stringsAsFactors = FALSE)
 
