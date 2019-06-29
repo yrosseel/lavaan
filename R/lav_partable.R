@@ -670,10 +670,8 @@ lavaanify <- lavParTable <- function(
     } else if(!is.character(effect.coding)) {
         stop("lavaan ERROR: effect.coding argument must be a character string")
     }
-    if(nchar(effect.coding[1]) > 0L) {
-
+    if(any(c("loadings", "intercepts") %in% effect.coding)) {
         TMP <- list()
-
         # for each block
         nblocks <- lav_partable_nblocks(LIST)
         for(b in seq_len(nblocks)) {
@@ -685,6 +683,7 @@ lavaanify <- lavParTable <- function(
                 next
             }
 
+            int.plabel <- character(0L)
             for(lv in lv.names) {
 
                 # ind.names
@@ -708,7 +707,7 @@ lavaanify <- lavParTable <- function(
                         TMP$lhs    <- c(TMP$lhs,  length(loadings.idx))
                         TMP$op     <- c(TMP$op,   "==")
                         TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
-                        TMP$block  <- c(TMP$block,  b)
+                        TMP$block  <- c(TMP$block,  0L)
                         TMP$user   <- c(TMP$user,   2L)
                         TMP$ustart <- c(TMP$ustart, as.numeric(NA))
                     }
@@ -729,7 +728,7 @@ lavaanify <- lavParTable <- function(
                         TMP$lhs    <- c(TMP$lhs,  0)
                         TMP$op     <- c(TMP$op,   "==")
                         TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
-                        TMP$block  <- c(TMP$block,  b)
+                        TMP$block  <- c(TMP$block,  0L)
                         TMP$user   <- c(TMP$user,   2L)
                         TMP$ustart <- c(TMP$ustart, as.numeric(NA))
 
@@ -750,6 +749,52 @@ lavaanify <- lavParTable <- function(
 
         LIST <- lav_partable_merge(LIST, TMP)
     }
+
+    # mg.lv.variances
+    if(ngroups > 1L && "mg.lv.variances" %in% effect.coding) {
+
+        TMP <- list()
+
+        lv.names <- unique(LIST$lhs[ LIST$op == "=~" ])
+        group.values <- lav_partable_group_values(LIST)
+
+        for(lv in lv.names) {
+            # factor variances
+            lv.var.idx <- which( LIST$op  == "~~" &
+                                 LIST$lhs == lv &
+                                 LIST$rhs == LIST$lhs &
+                                 LIST$lhs == lv )
+
+            # all free (but the first?)
+            if(length(lv.var.idx) > 0L &&
+               all(LIST$free[ lv.var.idx ][-1] > 0L)) {
+                # 1) add eq constraint
+                plabel <- LIST$plabel[ lv.var.idx ]
+
+                TMP$lhs    <- c(TMP$lhs,  length(lv.var.idx))
+                TMP$op     <- c(TMP$op,   "==")
+                TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                TMP$block  <- c(TMP$block,  0L)
+                TMP$user   <- c(TMP$user,   2L)
+                TMP$ustart <- c(TMP$ustart, as.numeric(NA))
+
+                # 2) free lv variances first group
+                lv.var.g1.idx <- which( LIST$op  == "~~" &
+                                        LIST$group == group.values[1] &
+                                        LIST$lhs == lv &
+                                        LIST$rhs == LIST$lhs &
+                                        LIST$lhs == lv )
+                # free only if automatically added
+                if(length(lv.var.g1.idx) > 0L &&
+                   LIST$user[ lv.var.g1.idx ] == 0L) {
+                    LIST$free[ lv.var.g1.idx ] <- max(LIST$free) + 1L
+                }
+            }
+        } # lv
+
+        LIST <- lav_partable_merge(LIST, TMP)
+    }
+
 
     if(debug) {
         cat("[lavaan DEBUG] lavParTable\n")
