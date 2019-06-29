@@ -679,6 +679,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     PE <- parameterEstimates(y$STRUC.FIT, ci = FALSE,
                              remove.eq = FALSE, remove.system.eq = TRUE,
                              remove.ineq = FALSE, remove.def = FALSE,
+                             remove.nonfree = FALSE,
                              add.attributes = TRUE)
     print.lavaan.parameterEstimates(PE, ..., nd = nd)
 

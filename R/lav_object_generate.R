@@ -201,7 +201,8 @@ lav_object_extended <- function(object, add = NULL,
     partable$start <- parameterEstimates(object, remove.system.eq = FALSE,
                                          remove.def = FALSE,
                                          remove.eq = FALSE,
-                                         remove.ineq = FALSE)$est
+                                         remove.ineq = FALSE,
+                                         remove.nonfree = FALSE)$est
 
     # add new parameters, extend model
     if(is.list(add)) {

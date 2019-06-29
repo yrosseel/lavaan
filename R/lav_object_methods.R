@@ -243,6 +243,7 @@ function(object, header       = TRUE,
                                  cov.std = cov.std,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
+                                 remove.nonfree = FALSE,
                                  add.attributes = TRUE)
         if(standardized && std.nox) {
             #PE$std.all <- PE$std.nox
@@ -437,6 +438,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.eq = TRUE,
                                                      remove.ineq = TRUE,
                                                      remove.def = FALSE,
+                                                     remove.nonfree = FALSE,
                                                      rsquare = FALSE,
                                                      add.attributes = FALSE,
                                                      header = TRUE) {
@@ -484,7 +486,7 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     PARTABLE <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    LIST <- PARTABLE[,c("lhs", "op", "rhs")]
+    LIST <- PARTABLE[,c("lhs", "op", "rhs", "free")]
     if(!is.null(PARTABLE$user)) {
         LIST$user <- PARTABLE$user
     }
@@ -792,6 +794,17 @@ parameterEstimates <- parameterestimates <- function(object,
 
     # if no user-defined labels, remove label column
     if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
+
+    # remove non-free paramters? (but keep ==, >, < and :=)
+    if(remove.nonfree) {
+        nonfree.idx <- which( LIST$free == 0L &
+                              !LIST$op %in% c("==", ">", "<", ":=") )
+        if(length(nonfree.idx) > 0L) {
+            LIST <- LIST[-nonfree.idx,]
+        }
+    }
+    # remove 'free' column
+    LIST$free <- NULL
 
     # remove == rows?
     if(remove.eq) {

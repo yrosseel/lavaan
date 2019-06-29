@@ -10,6 +10,7 @@ parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE,
                    standardized = FALSE, cov.std = TRUE, fmi = FALSE,
                    remove.system.eq = TRUE, remove.eq = TRUE,
                    remove.ineq = TRUE, remove.def = FALSE,
+                   remove.nonfree = FALSE,
                    rsquare = FALSE, add.attributes = FALSE, header = TRUE)
 }
 \arguments{
@@ -55,8 +56,10 @@ rows containing user-specified equality constraints, if any.}
 removing all rows containing system-generated equality constraints, if any.}
 \item{remove.ineq}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing inequality constraints, if any.}
-\item{remove.def}{Logical. If \code{TRUE}, filter the ouitput by removing all
+\item{remove.def}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing parameter definitions, if any.}
+\item{remove.nonfree}{Logical. If \code{TRUE}, filter the output by removing 
+all rows containing fixed (non-free) parameters.}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
