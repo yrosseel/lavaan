@@ -2264,12 +2264,21 @@ lav_object_inspect_information <- function(object,
         object@Options$information <- information
     }
 
+    # backward compatibility
+    if(.hasSlot(object, "h1")) {
+        lavh1 <- object@h1
+    } else {
+        lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
+                                     lavsamplestats = object@SampleStats,
+                                     lavoptions = object@Options)
+    }
+
     OUT <- lav_model_information(lavmodel =  object@Model,
                   lavsamplestats = object@SampleStats,
                   lavdata        = object@Data,
                   lavcache       = object@Cache,
                   lavimplied     = object@implied,
-                  lavh1          = object@h1,
+                  lavh1          = lavh1,
                   lavoptions     = object@Options,
                   extra          = FALSE,
                   augmented      = augmented,

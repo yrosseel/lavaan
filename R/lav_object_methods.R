@@ -10,7 +10,7 @@ short.summary <- function(object) {
     lav_object_print_optim(object)
 
     # print rotation info
-    if(object@Model@nefa > 0L) {
+    if(.hasSlot(object@Model, "nefa") && object@Model@nefa > 0L) {
         lav_object_print_rotation(object)
     }
 
