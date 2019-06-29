@@ -109,6 +109,6 @@ model <- '
     y6 ~~ y8
 '
 
-fit <- sem(model, data=PoliticalDemocracy)
-summary(fit, fit.measures=TRUE)
+fit <- sem(model, data = PoliticalDemocracy)
+summary(fit, fit.measures = TRUE)
 }

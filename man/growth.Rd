@@ -109,6 +109,6 @@ model.syntax <- '
     t4 ~ c4
 '
 
-fit <- growth(model.syntax, data=Demo.growth)
+fit <- growth(model.syntax, data = Demo.growth)
 summary(fit)
 }

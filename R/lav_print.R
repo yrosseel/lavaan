@@ -388,7 +388,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     if(length(row.idx) == 0L) next
                     # make distinction between residual and plain
                     y.names <- unique( c(lavNames(x, "eqs.y"),
-                                         lavNames(x, "ov.ind")) )
+                                         lavNames(x, "ov.ind"),
+                                         lavNames(x, "lv.ind")) )
                     PREFIX <- rep("", length(row.idx))
                     PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
                     m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
@@ -399,7 +400,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     if(length(row.idx) == 0L) next
                     # make distinction between intercepts and means
                     y.names <- unique( c(lavNames(x, "eqs.y"),
-                                         lavNames(x, "ov.ind")) )
+                                         lavNames(x, "ov.ind"),
+                                         lavNames(x, "lv.ind")) )
                     PREFIX <- rep("", length(row.idx))
                     PREFIX[ x$lhs[row.idx] %in% y.names ] <- "  ."
                         m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx],
@@ -416,7 +418,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     if(length(row.idx) == 0L) next
                     # make distinction between residual and plain
                     y.names <- unique( c(lavNames(x, "eqs.y"),
-                                         lavNames(x, "ov.ind")) )
+                                         lavNames(x, "ov.ind"),
+                                         lavNames(x, "lv.ind")) )
                     PREFIX <- rep("", length(row.idx))
                     PREFIX[ x$rhs[row.idx] %in% y.names ] <- "  ."
                     m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
@@ -463,7 +466,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     if(s == "Covariances") {
                         # make distinction between residual and plain
                         y.names <- unique( c(lavNames(x, "eqs.y"),
-                                             lavNames(x, "ov.ind")) )
+                                             lavNames(x, "ov.ind"),
+                                             lavNames(x, "lv.ind")) )
                             PREFIX <- rep("", length(row.idx))
                         PREFIX[ x$lhs[row.idx] %in% y.names ] <- "."
                     } else {
