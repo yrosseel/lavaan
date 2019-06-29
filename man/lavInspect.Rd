@@ -301,6 +301,17 @@ Gradient, Hessian, observed, expected and first.order information matrices:
         inverted observed information matrix for the free model parameters.}
     \item{\code{"inverted.information.first.order"}:}{Matrix containing the
         inverted first.order information matrix for the free model parameters.}
+   \item{\code{"h1.information"}:}{Matrix containing either the observed,
+        expected or first.order information matrix (depending on the 
+        information option of the fitted model) of the unrestricted h1
+        model. This is unit-information, not total-information.}
+    \item{\code{"h1.information.expected"}:}{Matrix containing the expected
+        information matrix for the unrestricted h1 model.}
+    \item{\code{"h1.information.observed"}:}{Matrix containing the observed
+        information matrix for the unrestricted h1 model.}
+    \item{\code{"h1.information.first.order"}:}{Matrix containing the 
+        first.order information matrix for the the unrestricted h1 model.
+        Alias: \code{"h1.first.order"}.}
 }
 
 Variance covariance matrix of the model parameters:
