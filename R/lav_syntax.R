@@ -214,10 +214,10 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 stop(lav_txt2message(txt, header = "lavaan ERROR:"))
             }
 
-            # check lhs (new in 0.6-4)
+            # check lhs (new in 0.6-4) - note: class is for nlsem
             lhs.orig <- lhs
             lhs <- tolower(lhs)
-            if(!lhs %in% c("group", "level", "block")) {
+            if(!lhs %in% c("group", "level", "block", "class")) {
                 txt <- c("unknown block identifier: ", dQuote(lhs.orig), ".",
                          " Block identifier should be
                            group, level or block.")

@@ -263,31 +263,33 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
 
+    # remove most columns
+    PT.M1.extended$start  <- NULL # new in 0.6-4! (otherwise, they are used)
+    PT.M1.extended$est    <- NULL
+    PT.M1.extended$se     <- NULL
+
+    # in addition, use 'NA' for free parameters in ustart column 
+    free.par.idx <- which(PT.M1.extended$free > 0L)
+    PT.M1.extended$ustart[ free.par.idx ] <- as.numeric(NA)
+
     # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
     PT.M0.FULL <- lav_partable_full(partable = PT.M0, lavpta = m0@pta,
                                     free = TRUE, start = TRUE)
     PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
                                          remove.duplicated = TRUE, warn = FALSE)
+    # remove most columns, but not 'est'
+    PT.M0.extended$ustart <- NULL
+    PT.M0.extended$start  <- NULL
+    PT.M0.extended$se     <- NULL
 
-    # `extend' PE of M0 to include all `fixed-to-zero parameters'
-    PE.M0 <- parameterEstimates(m0, remove.eq = FALSE, remove.ineq = FALSE,
-                                remove.system.eq =  FALSE, remove.def = FALSE,
-                                remove.nonfree = FALSE)
-    PE.M0.FULL <- lav_partable_full(PE.M0)
-    PE.M0.extended <- lav_partable_merge(PE.M0, PE.M0.FULL,
-                                         remove.duplicated = TRUE, warn = FALSE)
 
     # FIXME:
     # - check if H0 does not contain additional parameters...
 
     Options$optim.method          = "none"
     Options$optim.force.converged = TRUE
-    Options$start                 = PE.M0.extended # new in 0.6!
-    PT.M1.extended$start <- NULL # new in 0.6-4! (otherwise, they are used)
-    PT.M1.extended$est   <- NULL
-    PT.M1.extended$se    <- NULL
+    Options$start                 = PT.M0.extended # new in 0.6!
     m10 <- lavaan(model = PT.M1.extended,
-                  #start = PE.M0.extended,
                   slotOptions     = Options,
                   slotSampleStats = m1@SampleStats,
                   slotData        = m1@Data,
