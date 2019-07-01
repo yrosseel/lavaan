@@ -442,6 +442,22 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
     }
 
+    # new in 0.6-4: check for 'group' within 'level'
+    if(any(FLAT$op == ":")) {
+        op.idx <- which(FLAT$op == ":")
+        if(length(op.idx) < 2L) {
+            # only 1 block identifier? this is weird -> give warning
+            warning("lavaan WARNING: syntax contains only a single block identifier: ", FLAT$lhs[op.idx])
+        } else {
+            first.block  <- FLAT$lhs[op.idx[1L]]
+            second.block <- FLAT$lhs[op.idx[2L]]
+            if(first.block == "level" &&
+               second.block == "group") {
+                stop("lavaan ERROR: groups can not be nested within levels")
+            }
+        }
+    }
+
     attr(FLAT, "modifiers") <- MOD
     attr(FLAT, "constraints") <- CON
 

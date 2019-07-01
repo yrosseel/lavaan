@@ -361,7 +361,7 @@ lav_start <- function(start.method    = "default",
         if(length(lv.x) > 0L) {
             for(ll in lv.x) {
                 ind.idx <- which(lavpartable$op == "=~" &
-                                 lavpartable$lhs == ll,
+                                 lavpartable$lhs == ll  &
                                  lavpartable$group == group.values[g])
                 if(length(ind.idx) == 1L) {
                     single.ind <- lavpartable$rhs[ind.idx]

@@ -179,7 +179,11 @@ lavTestScore <- function(object, add = NULL, release = NULL,
             Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
             TS[r] <- as.numeric(N * t(score) %*%  Z1.plus1 %*% score)
             if (epc && !is.null(add)) {
-              EPC.uni[r] <- -1 * utils::tail(as.numeric(score %*%  Z1.plus1),
+              #EPC.uni[r] <- -1 * utils::tail(as.numeric(score %*%  Z1.plus1),
+              #                               n = nrow(R))[r]
+              # to keep the 'sign' consistent with modindices(), which
+              # uses epc = 'new - old'
+              EPC.uni[r] <- +1 * utils::tail(as.numeric(score %*%  Z1.plus1),
                                              n = nrow(R))[r]
             }
         }
@@ -238,7 +242,10 @@ lavTestScore <- function(object, add = NULL, release = NULL,
                      rbind(t(R1), matrix(0,nrow(R1),nrow(R1))) )
         Z1.plus <- MASS::ginv(Z1)
         Z1.plus1 <- Z1.plus[ 1:nrow(Information), 1:nrow(Information) ]
-        EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
+        #EPC.all <- -1 * as.numeric(score %*%  Z1.plus1)
+        # to keep the 'sign' consistent with modindices(), which
+        # uses epc = 'new - old'
+        EPC.all <- +1 * as.numeric(score %*%  Z1.plus1)
 
         # create epc table for the 'free' parameters
         if (!is.null(add) && all(nchar(add) > 0L)) {
