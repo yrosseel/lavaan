@@ -64,6 +64,9 @@ lav_partable_labels <- function(partable,
         # LOADINGS
         if("loadings" %in% group.equal)
             g1.flag[ partable$op == "=~" & partable$group == 1L  ] <- TRUE
+        # COMPOSITE LOADINGS (new in 0.6-4)
+        if("composite.loadings" %in% group.equal)
+            g1.flag[ partable$op == "<~" & partable$group == 1L  ] <- TRUE
         # INTERCEPTS (OV)
         if("intercepts" %in% group.equal)
             g1.flag[ partable$op == "~1"  & partable$group == 1L  &

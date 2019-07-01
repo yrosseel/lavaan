@@ -254,13 +254,19 @@ lav_options_set <- function(opt = NULL) {
     } else if(length(opt$group.equal) == 0) {
         # nothing to do
     } else if(all(opt$group.equal %in% c("loadings", "intercepts", "means",
+                                         "composite.loadings",
                                          "regressions", "residuals",
                                          "residual.covariances", "thresholds",
                                          "lv.variances", "lv.covariances"))) {
         # nothing to do
     } else {
+        wrong.idx <- which(!opt$group.equal %in% 
+            c("loadings", "intercepts", "means",
+              "composite.loadings", "regressions", "residuals",
+              "residual.covariances", "thresholds",
+              "lv.variances", "lv.covariances"))
         stop("lavaan ERROR: unknown value for `group.equal' argument: ",
-             opt$group.equal, "\n")
+             sQuote(opt$group.equal[wrong.idx[1L]]), "\n")
     }
     if(is.null(opt$group.partial) || all(nchar(opt$group.partial) == 0L)) {
         opt$group.partial <- character(0)

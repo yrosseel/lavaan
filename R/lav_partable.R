@@ -338,7 +338,8 @@ lavaanify <- lavParTable <- function(
                 #                    constraint...
                 #    except if group.equal="loadings"!
                 if(length(MOD.label) == 1L) {
-                    if("loadings" %in% group.equal) {
+                    if("loadings" %in% group.equal ||
+                       "composite.loadings" %in% group.equal) {
                         MOD.label <- rep(MOD.label, ngroups)
                     } else {
                         MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
