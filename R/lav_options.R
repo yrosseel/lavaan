@@ -244,7 +244,11 @@ lav_options_set <- function(opt = NULL) {
             if(opt$categorical) {
                 opt$group.equal <- c("loadings", "thresholds")
             } else {
-                opt$group.equal <- c("loadings", "intercepts")
+                if(is.logical(opt$meanstructure) && !opt$meanstructure) {
+                    opt$group.equal <- "loadings"
+                } else {
+                    opt$group.equal <- c("loadings", "intercepts")
+                }
             }
         } else {
             opt$group.equal <- character(0)
