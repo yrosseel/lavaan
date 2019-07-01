@@ -208,10 +208,8 @@ lav_options_set <- function(opt = NULL) {
     opt.old <- opt
     opt <- lapply(opt, function(x) { if(is.character(x)) tolower(x) else x})
     # except group,group.partial, which may contain capital letters
-    opt$group <- opt.old$group
     opt$group.label <- opt.old$group.label
     opt$group.partial <- opt.old$group.partial
-    opt$cluster <- opt.old$cluster
 
 
     # do.fit implies se="none and test="none" (unless not default)
@@ -242,7 +240,7 @@ lav_options_set <- function(opt = NULL) {
     if(opt$group.equal[1] == "none") {
         opt$group.equal <- character(0)
     } else if(is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
-        if(opt$mimic == "Mplus" && !is.null(opt$group)) {
+        if(opt$mimic == "Mplus") {
             if(opt$categorical) {
                 opt$group.equal <- c("loadings", "thresholds")
             } else {
@@ -619,8 +617,6 @@ lav_options_set <- function(opt = NULL) {
         } else {
             opt$meanstructure <- FALSE
         }
-        # unless there is a group argument? (added since 0.4-10)
-        # if(!is.null(opt$group)) opt$meanstructure <- TRUE
     } else {
         stop("lavaan ERROR: meanstructure must be TRUE, FALSE or \"default\"\n")
     }
