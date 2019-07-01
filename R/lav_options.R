@@ -260,7 +260,7 @@ lav_options_set <- function(opt = NULL) {
                                          "lv.variances", "lv.covariances"))) {
         # nothing to do
     } else {
-        wrong.idx <- which(!opt$group.equal %in% 
+        wrong.idx <- which(!opt$group.equal %in%
             c("loadings", "intercepts", "means",
               "composite.loadings", "regressions", "residuals",
               "residual.covariances", "thresholds",

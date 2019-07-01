@@ -20,11 +20,22 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     # m = difference between the df's
     m <- r0 - r1
 
-    # bail out here, if m == 0 (but we should catch this earlier)
-    if(m < 1L) {
-        stop("lavaan ERROR: can not compute (scaled) difference test when the degrees of freedom (df) are the same for both models. Df model 1 = ", r1,
-             ", Df model 2 = ", r0, "\n")
+    # check for identical df setting
+    if(m == 0L) {
+        return(list(T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
+                    df.delta = m, a = as.numeric(NA), b = as.numeric(NA)))
     }
+
+
+    # bail out here, if m == 0 (but we should catch this earlier)
+    #if(m < 1L) {
+    #    txt <- paste("Can not compute (scaled) difference test when ",
+    #                 "the degrees of freedom (df) are the same for both ",
+    #                 "models:\n",
+    #                 "Df model 1 = ", r1, ", and Df model 2 = ", r0, "\n", 
+    #                 sep = "")
+    #            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+    #}
 
     Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
     # check for NULL
@@ -154,6 +165,12 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
     # m = difference between the df's
     m = r0 - r1
 
+    # check for identical df setting
+    if(m == 0L) {
+        return(list(T.delta = (T0 - T1), scaling.factor = as.numeric(NA),      
+                    df.delta = m))
+    }
+
     # compute c_d
     cd <- (r0 * c0 - r1 * c1) / m
 
@@ -190,6 +207,12 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
 
     # m = difference between the df's
     m = r0 - r1
+
+    # check for identical df setting
+    if(m == 0L) {
+        return(list(T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
+                    df.delta = m))
+    }
 
     # generate `M10' model
     if(H1) {
@@ -268,7 +291,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     PT.M1.extended$est    <- NULL
     PT.M1.extended$se     <- NULL
 
-    # in addition, use 'NA' for free parameters in ustart column 
+    # in addition, use 'NA' for free parameters in ustart column
     free.par.idx <- which(PT.M1.extended$free > 0L)
     PT.M1.extended$ustart[ free.par.idx ] <- as.numeric(NA)
 
