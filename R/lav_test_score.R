@@ -266,8 +266,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         LIST$est[ LIST$user == 10L ] <- 0
         LIST$epc <- rep(as.numeric(NA), length(LIST$lhs))
         LIST$epc[ LIST$free > 0 ] <- EPC.all
-        #LIST$epv <- LIST$est + LIST$epc
-        LIST$epv <- LIST$est - LIST$epc # we changed the sign
+        LIST$epv <- LIST$est + LIST$epc
 
         if (standardized) {
 
