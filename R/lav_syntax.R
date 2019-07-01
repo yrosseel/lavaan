@@ -442,7 +442,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         FLAT <- as.data.frame(FLAT, stringsAsFactors=FALSE)
     }
 
-    # new in 0.6-4: check for 'group' within 'level' 
+    # new in 0.6-4: check for 'group' within 'level'
     if(any(FLAT$op == ":")) {
         op.idx <- which(FLAT$op == ":")
         if(length(op.idx) < 2L) {

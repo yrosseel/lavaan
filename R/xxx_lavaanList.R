@@ -182,7 +182,7 @@ lavaanList <- function(model         = NULL,             # model
             # observed nlev
             NLEV.obs <- sapply(DATA[,unique(unlist(FIT@pta$vnames$ov.ord)),
                                     drop=FALSE],
-                               function(x) length(unique(x)))
+                               function(x) length(unique(na.omit(x))))
             wrong.idx <- which(NLEV.exp - NLEV.obs != 0)
             if(length(wrong.idx) > 0L) {
                 data.ok.flag <- FALSE

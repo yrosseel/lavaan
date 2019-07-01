@@ -32,7 +32,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     #    txt <- paste("Can not compute (scaled) difference test when ",
     #                 "the degrees of freedom (df) are the same for both ",
     #                 "models:\n",
-    #                 "Df model 1 = ", r1, ", and Df model 2 = ", r0, "\n", 
+    #                 "Df model 1 = ", r1, ", and Df model 2 = ", r0, "\n",
     #                 sep = "")
     #            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     #}
@@ -167,7 +167,7 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
 
     # check for identical df setting
     if(m == 0L) {
-        return(list(T.delta = (T0 - T1), scaling.factor = as.numeric(NA),      
+        return(list(T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
                     df.delta = m))
     }
 
