@@ -1081,12 +1081,12 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
         EV <- eigen(S, symmetric = TRUE)
         # V %*% diag(1/d) %*% V^{-1}, where V^{-1} = V^T
         S.inv <-
-            tcrossprod(EV$vector / rep(EV$values, each = length(EV$values)),
-                       EV$vector)
+            tcrossprod(EV$vectors / rep(EV$values, each = length(EV$values)),
+                       EV$vectors)
 
         # 0.5 version
-        #S.inv <- tcrossprod(sweep(EV$vector, 2L,
-        #                          STATS = (1/EV$values), FUN="*"), EV$vector)
+        #S.inv <- tcrossprod(sweep(EV$vectors, 2L,
+        #                          STATS = (1/EV$values), FUN="*"), EV$vectors)
 
         if(logdet) {
             if(all(EV$values >= 0)) {

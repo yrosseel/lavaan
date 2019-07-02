@@ -313,15 +313,17 @@ fsr <- function(model      = NULL,
         struc.names <- lavNames(PT.PA, "ov", group = group.values[g])
         struc.ov.idx <- which(! struc.names %in% lv.names )
         struc.lv.idx <- which(  struc.names %in% lv.names )
+        lv.order     <- match(lv.names, struc.names)
         if(length(struc.ov.idx) > 0L) {
             ov.idx <- which(FIT@Data@ov.names[[g]] %in%
                             struc.names[struc.ov.idx])
             Y.g <- matrix(0, nrow = nrow(FS.SCORES[[g]][[1]]),
                              ncol = length(struc.names))
-            Y.g[,struc.lv.idx] <- do.call("cbind", FS.SCORES[[g]])
+            Y.g[,struc.lv.idx] <- do.call("cbind", 
+                                      FS.SCORES[[g]])[,lv.order,drop = FALSE]
             Y.g[,struc.ov.idx] <- FIT@Data@X[[g]][,ov.idx,drop = FALSE]
         } else {
-            Y.g <- do.call("cbind", FS.SCORES[[g]])
+            Y.g <- do.call("cbind", FS.SCORES[[g]])[,lv.order,drop = FALSE]
         }
         Y[[g]] <- Y.g
 

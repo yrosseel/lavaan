@@ -895,6 +895,13 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
     TH    <- computeTH(   lavmodel = lavmodel)
     THETA <- computeTHETA(lavmodel = lavmodel)
 
+    # check for zero entries in THETA (new in 0.6-4)
+    for(g in seq_len(lavdata@ngroups)) {
+        if(any(diag(THETA[[g]]) == 0)) {
+            stop("lavaan ERROR: (residual) variance matrix THETA contains zero elements on the diagonal.")
+        }
+    }
+
     # local objective function: x = lv values
     f.eta.i <- function(x, y.i, x.i, mu.i) {
 

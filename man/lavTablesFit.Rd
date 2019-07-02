@@ -106,7 +106,4 @@ lavTablesFitCp(fit)
 lavTablesFitCf(fit)
 }
 
-\keyword{
-pairwise maximum likelihood, discrete data, goodness of fit
-}
 

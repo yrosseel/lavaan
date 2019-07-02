@@ -37,25 +37,36 @@ twostep <- function(model = NULL, data = NULL, cmd = "sem",
 # TODO
 
 
-sam <- function(model      = NULL,
-                data       = NULL,
-                cmd        = "sem",
-                mm.list    = NULL,
-                mm.args    = list(),
-                struc.args = list(),
-                sam.method = "local", # or global
-                ...,         # global options
-                local.M.method   = "ML",
-                local.twolevel.method = "h1", # h1, anova or mean
-                output     = "lavaan") {
+sam <- function(model          = NULL,
+                data           = NULL,
+                cmd            = "sem",
+                mm.list        = NULL,
+                mm.args        = list(),
+                struc.args     = list(),
+                sam.method     = "local", # or global
+                ...,           # global options
+                local.options  = list(M.method = "ML",
+                                      veta.force.pd = FALSE,
+                                      veta.force.pd.tol = 1e-03,
+                                      twolevel.method = "h1"), # h1, anova, mean
+                global.options = list(), # not used for now
+                output         = "lavaan") {
+
+    # default local.options
+    local.opt <- list(M.method = "ML",
+                      veta.force.pd = FALSE,
+                      veta.force.pd.tol = 1e-03,
+                      twolevel.method = "h1")
+    local.options <- modifyList(local.opt, local.options, keep.null = FALSE)
 
     # check arguments
-    local.M.method <- toupper(local.M.method)
+    if(!is.null(local.opt[["M.method"]])) {
+        local.M.method <- toupper(local.options[["M.method"]])
+    }
     if(!local.M.method %in% c("GLS", "ML", "ULS")) {
         stop("lavaan ERROR: local.M.method should be one of GLS, ML or ULS.")
     }
-
-    local.twolevel.method <- tolower(local.twolevel.method)
+    local.twolevel.method <- tolower(local.options[["twolevel.method"]])
     if(!local.twolevel.method %in% c("h1", "anova", "mean")) {
         stop("lavaan ERROR: local.twolevel.method should be one of h1, anova or mean.")
     }
@@ -527,6 +538,12 @@ sam <- function(model      = NULL,
 
             # compute VETA
             VETA[[b]] <- Mg %*% (COV - THETA[[b]]) %*% t(Mg)
+
+            # force pd?
+            if(local.options[["veta.force.pd"]]) {
+                VETA[[b]] <- lav_matrix_symmetric_force_pd( VETA[[b]], 
+                                 tol = local.options[["veta.force.pd.tol"]] )
+            }
 
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
