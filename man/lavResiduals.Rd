@@ -10,9 +10,10 @@ The \sQuote{residuals()} (and \sQuote{resid()}) methods are just shortcuts to
 this function with a limited set of arguments.
 }
 \usage{
-lavResiduals(object, type = "cor.bentler", se = FALSE, zstat = TRUE, 
-    summary = TRUE, h1.acov = "unstructured", add.type = TRUE,
-    add.labels = TRUE, add.class = TRUE, drop.list.single.group = TRUE)
+lavResiduals(object, type = "cor.bentler", custom.rmr = NULL,
+    se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
+    add.type = TRUE, add.labels = TRUE, add.class = TRUE,
+    drop.list.single.group = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -26,6 +27,7 @@ implied covariance matrices are first transformed to a correlation matrix
 If \code{type = "cor.bentler"}, both the observed and model implied covariance
 matrices are rescaled by dividing the elements by the square roots of the
 corresponding variances of the observed covariance matrix.}
+\item{custom.rmr}{\code{list}. Not used yet.}
 \item{se}{Logical. If \code{TRUE}, show the estimated standard errors
 for the residuals.}
 \item{zstat}{Logical. If \code{TRUE}, show the standardized residuals, which
@@ -35,7 +37,7 @@ errors.}
 (possibly scaled) residuals. When \code{type = "raw"}, we compute the
 RMR. When \code{type = "cor.bentler"},
 we compute the SRMR. When \code{type = "cor.bollen"}, we compute the CRMR.
-An unbiased version of these summaries is also computed, as well as a 
+An unbiased version of these summaries is also computed, as well as a
 standard error, a z-statistic and a p-value for the test of exact fit
 based on these summaries.}
 \item{h1.acov}{Character. If \code{"unstructured"}, the observed summary
@@ -48,9 +50,9 @@ of the summary statistics is computed.}
 in the output.}
 \item{add.labels}{If \code{TRUE}, variable names are added to the vectors
 and/or matrices.}
-\item{add.class}{If \code{TRUE}, vectors are given the \sQuote{lavaan.vector} 
-class; matrices are given the \sQuote{lavaan.matrix} class, and symmetric 
-matrices are given the \sQuote{lavaan.matrix.symmetric} class. 
+\item{add.class}{If \code{TRUE}, vectors are given the \sQuote{lavaan.vector}
+class; matrices are given the \sQuote{lavaan.matrix} class, and symmetric
+matrices are given the \sQuote{lavaan.matrix.symmetric} class.
 This only affects the way they are printed on the screen.}
 \item{drop.list.single.group}{If \code{FALSE}, the results are returned as
 a list, where each element corresponds to a group (even if there is only
@@ -65,16 +67,18 @@ within a list for each group.
 }
 \references{
 Bentler, P.M. and Dijkstra, T. (1985). Efficient estimation via linearization
-in structural models. In Krishnaiah, P.R. (Ed.), Multivariate analysis - VI,
-(pp. 9-42). New York, NY: Elsevier.
+in structural models. In Krishnaiah, P.R. (Ed.),
+\emph{Multivariate analysis - VI}, (pp. 9--42). New York, NY: Elsevier.
 
 Ogasawara, H. (2001). Standard errors of fit indices using residuals in
-structural equation modeling. Psychometrika, 66(3), 421-436.
+structural equation modeling. \emph{Psychometrika, 66}(3), 421--436.
+doi:10.1007/BF02294443
 
 Maydeu-Olivares, A. (2017). Assessing the size of model misfit in structural
-equation models. Psychometrika, 82(3), 533-558.
+equation models. \emph{Psychometrika, 82}(3), 533--558.
+doi:10.1007/s11336-016-9552-7
 
-Standardized Residuals in Mplus. Document retrieved from URL
+Standardized Residuals in M\emph{plus}. Document retrieved from URL
 http://www.statmodel.com/download/StandardizedResiduals.pdf
 }
 \examples{
@@ -83,5 +87,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data = HolzingerSwineford1939)
-lavResiduals(fit) 
+lavResiduals(fit)
 }

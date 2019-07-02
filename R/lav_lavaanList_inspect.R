@@ -95,10 +95,42 @@ lavListInspect <- function(object,
         object@Data@ngroups
     } else if(what == "group") {
         object@Data@group
-    } else if(what == "nlevels") {
-        object@Data@nlevels
     } else if(what == "cluster") {
         object@Data@cluster
+    } else if(what == "nlevels") {
+        object@Data@nlevels
+    } else if(what == "nclusters") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "nclusters",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "ncluster.size") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "ncluster.size",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.size") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.size",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.id") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.id",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.idx") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.idx",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.label") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.label",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "cluster.sizes") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "cluster.sizes",
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "average.cluster.size") {
+        lav_object_inspect_cluster_info(object, level = 2L,
+            what = "average.cluster.size",
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "ordered") {
         object@Data@ordered
     } else if(what == "group.label") {
