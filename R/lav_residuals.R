@@ -46,14 +46,14 @@ function(object, type = "raw") {
 
 
 # user-visible function
-lavResiduals <- function(object, type = "cor.bentler",
+lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                          se = FALSE, zstat = TRUE, summary = TRUE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE) {
 
     out <- lav_residuals(object = object, type = type, h1 = TRUE,
-               se = se, zstat = zstat, summary = summary,
+               custom.rmr = custom.rmr, se = se, zstat = zstat, summary = summary,
                summary.options = list(se = TRUE, zstat = TRUE, pvalue = TRUE,
                    unbiased = TRUE, unbiased.se = TRUE, unbiased.zstat = FALSE,
                    unbiased.test.val = 0.05, unbiased.pvalue = FALSE),
@@ -66,7 +66,7 @@ lavResiduals <- function(object, type = "cor.bentler",
 }
 
 # main function
-lav_residuals <- function(object, type = "raw", h1 = TRUE,
+lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
                           se = FALSE, zstat = FALSE, summary = FALSE,
                           summary.options = list(se = TRUE, zstat = TRUE,
                             pvalue = TRUE, unbiased = TRUE, unbiased.se = TRUE,
@@ -78,7 +78,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           drop.list.single.group = FALSE) {
 
     # type
-    type <- tolower(type)
+    type <- tolower(type)[1]
 
     # check type
     if(!type %in% c("raw", "cor", "cor.bollen", "cor.bentler", "cor.eqs",
@@ -241,7 +241,8 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     # add summary statistics (rms, mabs)
     if(summary) {
         args <- c(list(object = object, type = type, h1.acov = h1.acov,
-                       add.class = add.class), summary.options)
+                       add.class = add.class, custom.rmr = custom.rmr),
+                  summary.options)
         sumStat <- do.call("lav_residuals_summary", args)
         for(b in seq_len(nblocks)) {
             NAMES <- names(resList[[b]])
@@ -481,7 +482,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
 
 # return summary statistics as list per group
 lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
-                                  h1.acov = "unstructured",
+                                  h1.acov = "unstructured", custom.rmr = NULL,
                                   se = FALSE, zstat = FALSE, pvalue = FALSE,
                                   unbiased = FALSE, unbiased.se = FALSE,
                                   unbiased.zstat = FALSE,
@@ -490,6 +491,31 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                   add.class = FALSE) {
 
     # arguments
+    if (length(custom.rmr)) {
+        if (!is.list(custom.rmr)) stop('custom.rmr must be a list')
+        ## Each custom (S/C)RMR must have a unique name
+        customNAMES <- names(custom.rmr)
+        if (is.null(customNAMES)) stop('custom.rmr list must have names')
+        if (length(unique(customNAMES)) < length(custom.rmr)) {
+            stop('custom.rmr must have a unique name for each summary')
+        }
+        ## Each list must contain a list consisting of $cov and/or $mean (no $th yet)
+        for (i in seq_along(custom.rmr)) {
+            if (!is.list(custom.rmr[[i]])) {
+                stop('Each element in custom.rmr must be a list')
+            }
+            if (is.null(names(custom.rmr[[i]]))) {
+                stop('The list in custom.rmr must have names')
+            }
+            if (!all(names(custom.rmr[[i]]) %in% c("cov","mean"))) {
+                stop('Elements in custom.rmr must be names "cov" and/or "mean"')
+            }
+            ## below, verify dimensions match rmsList.g
+        }
+        #FIXME: blocks can have unique models, need another layer of lists
+        #       between custom summaries and moments
+    } else customNAMES <- NULL
+
     if(pvalue) {
         zstat <- TRUE
     }
@@ -664,14 +690,149 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             pstar = pstar, type = type[typ])
                     }
 
+                    # CUSTOM
+                    if (length(custom.rmr)) {
+                      if (lavmodel@fixed.x && !lavmodel@conditional.x) {
+                        ## save exogenous-variable indices, use to remove or set
+                        ## FALSE any moments that cannot have nonzero residuals
+                        x.idx <- which(rownames(rmsList.g$cov) %in% object@Data@ov.names.x[[g]])
+                      }
+
+                      RMS.CUSTOM.LIST <- vector("list", length(customNAMES))
+
+                      for (cus in customNAMES) {
+                        ## in case there is no meanstructure
+                        STATS <- NULL
+                        ACOV.idx  <- NULL
+
+                        # MEANS?
+                        if (lavmodel@meanstructure) {
+                          if ("mean" %in% names(custom.rmr[[cus]])) {
+
+                            ## if logical, save numeric indices
+                            if (is.logical(custom.rmr[[cus]]$mean)) {
+                              ## check length
+                              if (length(custom.rmr[[cus]]$mean) != length(rmsList.g[["mean"]])) {
+                                stop('length(custom.rmr$', cus, '$mean) must ',
+                                     'match length(lavResiduals(fit)$mean)')
+                              }
+                              ACOV.idx <- which(custom.rmr[[cus]]$mean)
+                              if (lavmodel@fixed.x && !lavmodel@conditional.x) {
+                                ACOV.idx[x.idx] <- FALSE
+                              }
+
+                            } else if (!is.numeric(custom.rmr[[cus]]$mean)) {
+                              stop('custom.rmr$', cus, '$mean must contain ',
+                                   'logical or numeric indices.')
+
+                            } else {
+                              ACOV.idx <- custom.rmr[[cus]]$mean
+                              if (lavmodel@fixed.x && !lavmodel@conditional.x) {
+                                  ACOV.idx <- setdiff(ACOV.idx, x.idx)
+                              }
+                              ACOV.idx <- ACOV.idx[!is.na(ACOV.idx)] # necessary?
+                              if (max(ACOV.idx) > length(rmsList.g[["mean"]])) {
+                                stop('custom.rmr$', cus, '$mean[',
+                                     which.max(ACOV.idx),
+                                     '] is an out-of-bounds index')
+                              }
+                            }
+
+                            STATS <- rmsList.g[["mean"]][ACOV.idx]
+                          }
+                        }
+
+
+                        # (CO)VARIANCES?
+                        if ("cov" %in% names(custom.rmr[[cus]])) {
+
+                          ## if numeric, create a logical matrix to obtain
+                          ## ACOV.idx and check for x.idx
+                          if (is.numeric(custom.rmr[[cus]]$cov)) {
+                            cusCOV <- rmsList.g[["cov"]] == "start with all FALSE"
+                            ## matrix of row/column indices?
+                            if (length(dim(custom.rmr[[cus]]$cov))) {
+                              if (max(custom.rmr[[cus]]$cov[,1:2] > nrow(rmsList.g[["cov"]]))) {
+                                stop('numeric indices in custom.rmr$', cus, '$cov',
+                                     ' cannot exceed ', nrow(rmsList.g[["cov"]]))
+                              }
+                              for (RR in 1:nrow(custom.rmr[[cus]]$cov)) {
+                                cusCOV[ custom.rmr[[cus]]$cov[RR, 1] ,
+                                        custom.rmr[[cus]]$cov[RR, 2] ] <- TRUE
+                              }
+
+                            } else {
+                              ## numeric-vector indices
+                              if (max(custom.rmr[[cus]]$cov > length(rmsList.g[["cov"]]))) {
+                                stop('numeric indices in custom.rmr$', cus, '$cov',
+                                     ' cannot exceed ', length(rmsList.g[["cov"]]))
+                              }
+                              cusCOV[custom.rmr[[cus]]$cov] <- TRUE
+
+                            }
+
+                            ## numeric indices no longer needed, use logical
+                            custom.rmr[[cus]]$cov <- cusCOV
+
+                          } else if (!is.logical(custom.rmr[[cus]]$cov)) {
+                              stop('custom.rmr$', cus, '$cov must be a logical ',
+                                   'square matrix or a numeric matrix of ',
+                                   '(row/column) indices.')
+                          }
+
+                          ## check dimensions
+                          if (!all(dim(custom.rmr[[cus]]$cov) == dim(rmsList.g[["cov"]]))) {
+                            stop('dim(custom.rmr$', cus, '$cov) must ',
+                                 'match dim(lavResiduals(fit)$cov)')
+                          }
+                          ## users can specify upper.tri or lower.tri indices
+                          custom.rmr[[cus]]$cov <- custom.rmr[[cus]]$cov | t(custom.rmr[[cus]]$cov)
+                          ## but ACOV refers to lower.tri indices
+                          custom.rmr[[cus]]$cov[upper.tri(custom.rmr[[cus]]$cov)] <- FALSE
+                          ## diagonal relevant?
+                          if (type[typ] == "crmr") diag(custom.rmr[[cus]]$cov) <- FALSE
+                          ## extract lower.tri indices
+                          vech.idx <- which(lav_matrix_vech(custom.rmr[[cus]]$cov))
+
+                          ## add residuals to STATS, indices to ACOV.idx
+                          STATS <- c(STATS, lav_matrix_vech(rmsList.g[["cov"]])[vech.idx])
+                          ACOV.idx <- c(ACOV.idx, vech.idx)
+
+                        }
+
+
+                        ## count residuals in summary (x.idx already removed)
+                        pstar <- length(STATS)
+
+                        ACOV  <- NULL
+                        if (se || unbiased) {
+                          ACOV <- rmsList.se.g[ACOV.idx, ACOV.idx, drop = FALSE]
+                        }
+                        RMS.CUSTOM.LIST[[cus]] <- lav_residuals_summary_rms(STATS = STATS,
+                            ACOV = ACOV,
+                            se = se, zstat = zstat, pvalue = pvalue,
+                            unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.zstat = unbiased.zstat,
+                            unbiased.test.val = unbiased.test.val,
+                            unbiased.pvalue = unbiased.pvalue,
+                            pstar = pstar, type = type[typ])
+
+                      #FIXME: update for categorical
+                      } # cus
+                        RMS.CUSTOM <- do.call(rbind, RMS.CUSTOM.LIST)
+                    } else RMS.CUSTOM <- RMS.COV[0, ]
+
+
                     if(lavmodel@meanstructure) {
                         TABLE <- as.data.frame(rbind(RMS.COV,
                                                      RMS.MEAN,
-                                                     RMS.TOTAL))
-                        rownames(TABLE) <- c("cov", "mean", "total")
+                                                     RMS.TOTAL,
+                                                     RMS.CUSTOM))
+                        rownames(TABLE) <- c("cov", "mean", "total",
+                                             customNAMES)
                     } else {
-                        TABLE <- as.data.frame(rbind(RMS.COV))
-                        rownames(TABLE) <- "cov"
+                        TABLE <- as.data.frame(rbind(RMS.COV, RMS.CUSTOM))
+                        rownames(TABLE) <- c("cov", customNAMES)
                     }
                     if(add.class) {
                         class(TABLE) <- c("lavaan.data.frame", "data.frame")
