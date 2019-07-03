@@ -705,9 +705,25 @@ lavaanify <- lavParTable <- function(
                         # add eq constraint
                         plabel <- LIST$plabel[ loadings.idx ]
 
-                        TMP$lhs    <- c(TMP$lhs,  length(loadings.idx))
-                        TMP$op     <- c(TMP$op,   "==")
-                        TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                        # Note:  we write them as
+                        # .p1. == 3 - .p2. - .p3.
+                        # instead of
+                        # 3 ==  .p1.+.p2.+.p3.
+                        # as this makes it easier to translate things to 
+                        # JAGS/stan
+
+                        LHS <- plabel[1]
+                        if(length(loadings.idx) > 1L) {
+                            RHS <- paste(length(loadings.idx), "-",
+                                         paste(plabel, collapse = "-"), 
+                                         sep = "")
+                        } else {
+                            RHS <- length(loadings.idx)
+                        }
+
+                        TMP$lhs    <- c(TMP$lhs,    LHS)
+                        TMP$op     <- c(TMP$op,     "==")
+                        TMP$rhs    <- c(TMP$rhs,    RHS)
                         TMP$block  <- c(TMP$block,  0L)
                         TMP$user   <- c(TMP$user,   2L)
                         TMP$ustart <- c(TMP$ustart, as.numeric(NA))
@@ -726,9 +742,18 @@ lavaanify <- lavParTable <- function(
                         # 1) add eq constraint
                         plabel <- LIST$plabel[ intercepts.idx ]
 
-                        TMP$lhs    <- c(TMP$lhs,  0)
-                        TMP$op     <- c(TMP$op,   "==")
-                        TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                        LHS <- plabel[1]
+                        if(length(intercepts.idx) > 1L) {
+                            RHS <- paste("0-",
+                                         paste(plabel, collapse = "-"), 
+                                         sep = "")
+                        } else {
+                            RHS <- 0L
+                        }
+
+                        TMP$lhs    <- c(TMP$lhs,    LHS)
+                        TMP$op     <- c(TMP$op,     "==")
+                        TMP$rhs    <- c(TMP$rhs,    RHS)
                         TMP$block  <- c(TMP$block,  0L)
                         TMP$user   <- c(TMP$user,   2L)
                         TMP$ustart <- c(TMP$ustart, as.numeric(NA))

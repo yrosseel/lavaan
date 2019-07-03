@@ -820,7 +820,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                       #FIXME: update for categorical
                       } # cus
                         RMS.CUSTOM <- do.call(rbind, RMS.CUSTOM.LIST)
-                    } else RMS.CUSTOM <- NULL
+                    } else {
+                        RMS.CUSTOM <- NULL
+                    }
 
 
                     if(lavmodel@meanstructure) {
