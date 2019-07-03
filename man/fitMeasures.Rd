@@ -9,8 +9,10 @@
 This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
-fitMeasures(object, fit.measures = "all", baseline.model = NULL, ...)
-fitmeasures(object, fit.measures = "all", baseline.model = NULL, ...)
+fitMeasures(object, fit.measures = "all", baseline.model = NULL,
+            add.attributes = FALSE, ...)
+fitmeasures(object, fit.measures = "all", baseline.model = NULL,
+            add.attributes = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -22,6 +24,10 @@ only those are computed and returned.}
 If a baseline model is provided, all fit indices relying on a
 baseline model (eg. CFI or TLI) will use the test statistics from
 this user-specified baseline model, instead of the default baseline model.}
+\item{add.attributes}{Logical. If \code{TRUE}, add a class attribute
+(class \code{fit.measures}) to be used by the print function for this class
+(\code{print.fit.measures}). This is used by the \code{summary()} function,
+to prettify the output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
 used for \code{lavaan} objects.}
 }

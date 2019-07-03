@@ -8,7 +8,7 @@ importFrom("graphics",
 
 importFrom("methods",
            "is", "new", "slot", "slotNames", ".hasSlot",
-           "setClass", "representation", "setGeneric",  
+           "setClass", "representation", "setGeneric",
            "setRefClass", "setMethod",
            # generics,
            "show", "signature")
@@ -181,6 +181,7 @@ exportMethods(
               "summary"
              )
 
+S3method(print, fit.measures)
 S3method(print, lavaan.data.frame)
 S3method(print, lavaan.list)
 S3method(print, lavaan.matrix)
