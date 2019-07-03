@@ -85,8 +85,8 @@ start = function() {
             fit.lm <- lm.fit(y=y, x=X)
         }
         #fit.lm <- lm.wfit(y=y, x=X, w=weights)
-        beta.start <- fit.lm$coef
-         var.start <- crossprod(fit.lm$residual)/nobs
+        beta.start <- fit.lm$coefficients
+         var.start <- crossprod(fit.lm$residuals)/nobs
     } else {
         beta.start <- mean(y, na.rm=TRUE)
          var.start <-  var(y, na.rm=TRUE)*(nobs-1)/nobs # ML

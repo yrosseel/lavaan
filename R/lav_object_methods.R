@@ -377,9 +377,9 @@ standardizedSolution <-
         a <- (1 - level)/2; a <- c(a, 1 - a)
         fac <- qnorm(a)
         #if(object@Options$se != "bootstrap") {
-            ci <- LIST$est + LIST$se %o% fac
+            ci <- LIST$est.std + LIST$se %o% fac
         #} else {
-        #    ci <- rep(as.numeric(NA), length(LIST$est)) + LIST$se %o% fac
+        #    ci <- rep(as.numeric(NA), length(LIST$est.std)) + LIST$se %o% fac
         #}
 
         LIST$ci.lower <- ci[,1]; LIST$ci.upper <- ci[,2]
