@@ -3,23 +3,37 @@
 #      NOT sure this is necessary for the lavaan-method, perhaps only the
 #      generic needs "..."?
 setMethod("fitMeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL, ...) {
+function(object, fit.measures = "all", baseline.model = NULL,
+         output = "vector", ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model)
+                     baseline.model = baseline.model, output = output)
 })
 
 setMethod("fitmeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL, ...) {
+function(object, fit.measures = "all", baseline.model = NULL,
+         output = "vector",  ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model)
+                     baseline.model = baseline.model, output = output)
 })
 
-lav_fit_measures <- function(object, fit.measures="all",
-                             baseline.model = NULL) {
+lav_fit_measures <- function(object, fit.measures = "all",
+                             baseline.model = NULL, output = "vector") {
 
     # has the model converged?
     if(object@optim$npar > 0L && !object@optim$converged) {
         stop("lavaan ERROR: fit measures not available if model did not converge")
+    }
+
+    # check output argument
+    if(output %in% c("vector", "horizontal")) {
+        output <- "vector"
+    } else if(output %in% c("matrix", "vertical")) {
+        output <- "matrix"
+    } else if(output %in% c("text", "pretty")) {
+        output <- "text"
+    } else {
+        stop("lavaan ERROR: output should be ", sQuote("vector"),
+             ", ", sQuote("matrix"), " or ", sQuote("text"))
     }
 
     TEST <- lavInspect(object, "test")
@@ -1379,7 +1393,15 @@ lav_fit_measures <- function(object, fit.measures="all",
     out <- unlist(indices[fit.measures])
 
     if(length(out) > 0L) {
-        class(out) <- c("lavaan.vector", "numeric")
+        if(output == "vector") {
+            class(out) <- c("lavaan.vector", "numeric")
+        } else if(output == "matrix") {
+            out <- as.matrix(out)
+            colnames(out) <- ""
+            class(out) <- c("lavaan.matrix", "matrix")
+        } else if(output == "text") {
+            class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
+        }
     } else {
         return( invisible(numeric(0)) )
     }
@@ -1388,7 +1410,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 }
 
 # print a nice summary of the fit measures
-print.fit.measures <- function(x, ..., add.h0 = FALSE) {
+print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
 
    names.x <- names(x)
 

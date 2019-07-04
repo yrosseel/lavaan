@@ -183,7 +183,7 @@ short.summary <- function(object) {
 
     if(object@Options$estimator == "MML") {
         fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"))
-        print.fit.measures(fm)
+        print.lavaan.fitMeasures(fm)
     }
 
     #cat("\n")
@@ -233,7 +233,7 @@ function(object, header       = TRUE,
         } else {
             FIT <- fitMeasures(object, fit.measures="default")
             res$FIT = FIT
-            print.fit.measures( FIT )
+            print.lavaan.fitMeasures( FIT )
         }
     }
 

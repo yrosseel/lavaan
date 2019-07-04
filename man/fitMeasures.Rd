@@ -9,8 +9,10 @@
 This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
-fitMeasures(object, fit.measures = "all", baseline.model = NULL, ...)
-fitmeasures(object, fit.measures = "all", baseline.model = NULL, ...)
+fitMeasures(object, fit.measures = "all", baseline.model = NULL, 
+            output = "vector", ...)
+fitmeasures(object, fit.measures = "all", baseline.model = NULL, 
+            output = "vector", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -22,6 +24,11 @@ only those are computed and returned.}
 If a baseline model is provided, all fit indices relying on a
 baseline model (eg. CFI or TLI) will use the test statistics from
 this user-specified baseline model, instead of the default baseline model.}
+\item{output}{Character. If \code{"vector"} (the default), display the
+output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
+the output as a 1-column matrix. If \code{"text"}, display the
+output using subsections and verbose descriptions. The latter is used
+in the summary output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
 used for \code{lavaan} objects.}
 }

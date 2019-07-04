@@ -1,10 +1,12 @@
 # for blavaan
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 setGeneric("fitMeasures",
-    function(object, fit.measures = "all", baseline.model = NULL, ...)
+    function(object, fit.measures = "all", baseline.model = NULL,
+             output = "vector", ...)
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
-    function(object, fit.measures = "all", baseline.model = NULL, ...)
+    function(object, fit.measures = "all", baseline.model = NULL,
+             output = "vector", ...)
     standardGeneric("fitmeasures"))
 
 

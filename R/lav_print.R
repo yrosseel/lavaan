@@ -680,7 +680,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
         short.summary(y$STRUC.FIT)
         FIT <- fitMeasures(y$STRUC.FIT, fit.measures="default")
         if(FIT["df"] > 0) {
-            print.fit.measures( FIT )
+            print.lavaan.fitMeasures( FIT )
         }
     }
     PE <- parameterEstimates(y$STRUC.FIT, ci = FALSE,
