@@ -181,7 +181,6 @@ exportMethods(
               "summary"
              )
 
-S3method(print, fit.measures)
 S3method(print, lavaan.data.frame)
 S3method(print, lavaan.list)
 S3method(print, lavaan.matrix)

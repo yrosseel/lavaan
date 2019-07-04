@@ -2,25 +2,20 @@
 #      pass to lavTestLRT() and lavTestLRT.mi() about how to pool chi-squared.
 #      NOT sure this is necessary for the lavaan-method, perhaps only the
 #      generic needs "..."?
-# TDJ: add "add.attributes" for S3 print method
 setMethod("fitMeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL,
-         add.attributes = FALSE, ...) {
+function(object, fit.measures = "all", baseline.model = NULL, ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model,
-                     add.attributes = add.attributes)
+                     baseline.model = baseline.model)
 })
 
 setMethod("fitmeasures", signature(object = "lavaan"),
-function(object, fit.measures = "all", baseline.model = NULL,
-         add.attributes = FALSE, ...) {
+function(object, fit.measures = "all", baseline.model = NULL, ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model,
-                     add.attributes = add.attributes)
+                     baseline.model = baseline.model)
 })
 
 lav_fit_measures <- function(object, fit.measures="all",
-                             baseline.model = NULL, add.attributes = FALSE) {
+                             baseline.model = NULL) {
 
     # has the model converged?
     if(object@optim$npar > 0L && !object@optim$converged) {
@@ -1385,7 +1380,6 @@ lav_fit_measures <- function(object, fit.measures="all",
 
     if(length(out) > 0L) {
         class(out) <- c("lavaan.vector", "numeric")
-        if (add.attributes) class(out) <- c("fit.measures", class(out))
     } else {
         return( invisible(numeric(0)) )
     }
@@ -1394,7 +1388,7 @@ lav_fit_measures <- function(object, fit.measures="all",
 }
 
 # print a nice summary of the fit measures
-print.fit.measures <- function(x, add.h0 = FALSE) {
+print.fit.measures <- function(x, ..., add.h0 = FALSE) {
 
    names.x <- names(x)
 
