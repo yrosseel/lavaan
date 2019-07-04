@@ -1388,12 +1388,45 @@ lav_fit_measures <- function(object, fit.measures="all",
 }
 
 # print a nice summary of the fit measures
-print.fit.measures <- function(x) {
+print.fit.measures <- function(x, ..., add.h0 = FALSE) {
 
    names.x <- names(x)
 
    # scaled?
    scaled <- "chisq.scaled" %in% names.x
+
+   ## TDJ: optionally add h0 model's fit statistic, for lavaan.mi
+   if (add.h0 && "chisq" %in% names.x) {
+       cat("\nModel test hypothesized model:\n\n")
+       t0.txt <- sprintf("  %-40s", "Model Fit Test Statistic")
+       t1.txt <- sprintf("  %10.3f", x["chisq"])
+       t2.txt <- ifelse(scaled,
+                        sprintf("  %10.3f", x["chisq.scaled"]), "")
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
+       t1.txt <- sprintf("  %10i", x["df"])
+       t2.txt <- ifelse(scaled,
+                        ifelse(round(x["df.scaled"]) ==
+                                   x["df.scaled"],
+                               sprintf("  %10i",   x["df.scaled"]),
+                               sprintf("  %10.3f", x["df.scaled"])),
+                        "")
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+       t0.txt <- sprintf("  %-40s", "P-value")
+       t1.txt <- sprintf("  %10.3f", x["pvalue"])
+       t2.txt <- ifelse(scaled,
+                        sprintf("  %10.3f", x["pvalue.scaled"]), "")
+       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+       if(scaled && "chisq.scaling.factor" %in% names.x) {
+           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
+           t1.txt <- sprintf("  %10s", "")
+           t2.txt <- sprintf("  %10.3f", x["chisq.scaling.factor"])
+           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       }
+   }
 
    # table fit measures
    if("C_F" %in% names.x) {
@@ -1480,6 +1513,13 @@ print.fit.measures <- function(x) {
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["baseline.pvalue.scaled"]), "")
        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+
+       if(scaled && "baseline.chisq.scaling.factor" %in% names.x) {
+           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
+           t1.txt <- sprintf("  %10s", "")
+           t2.txt <- sprintf("  %10.3f", x["baseline.chisq.scaling.factor"])
+           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+       }
     }
 
     # cfi/tli
@@ -1799,6 +1839,7 @@ print.fit.measures <- function(x) {
     }
 
     #cat("\n")
+   invisible(x)
 }
 
 
