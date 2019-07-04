@@ -156,17 +156,27 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
 
     NEW <- base::merge(pt1, pt2, all = TRUE, sort = FALSE)
 
-    # make sure group/block/level are zero if op %in% c("==", "<", ">", ":=")
+    # make sure group/block/level are zero (or "") if
+    # op %in% c("==", "<", ">", ":=")
     op.idx <- which(NEW$op %in% c("==", "<", ">", ":="))
     if(length(op.idx) > 0L) {
         if(!is.null(NEW$block)) {
+            # ALWAYS integer
             NEW$block[op.idx] <- 0L
         }
         if(!is.null(NEW$group)) {
-            NEW$group[op.idx] <- 0L
+            if(is.character(NEW$level)) {
+                NEW$group[op.idx] <- ""
+            } else {
+                NEW$group[op.idx] <- 0L
+            }
         }
         if(!is.null(NEW$level)) {
-            NEW$level[op.idx] <- 0L
+            if(is.character(NEW$level)) {
+                NEW$level[op.idx] <- ""
+            } else {
+                NEW$level[op.idx] <- 0L
+            }
         }
     }
 

@@ -6,7 +6,8 @@ lav_partable_block_values <- function(partable) {
         block.values <- 1L
     } else {
         # always integers
-        tmp <- partable$block[ partable$block > 0L ] # non-zero only
+        tmp <- partable$block[  partable$block > 0L &       # non-zero only
+                               !partable$op %in% c("==", "<", ">", ":=") ]
         block.values <- unique(na.omit(tmp)) # could be, eg, '2' only
     }
 
@@ -24,10 +25,12 @@ lav_partable_group_values <- function(partable) {
     if(is.null(partable$group)) {
         group.values <- 1L
     } else if(is.numeric(partable$group)) {
-        tmp <- partable$group[ partable$group > 0L ]
+        tmp <- partable$group[ partable$group > 0L &
+                              !partable$op %in% c("==", "<", ">", ":=") ]
         group.values <- unique(na.omit(tmp))
     } else { # character
-        tmp <- partable$group[nchar(partable$group) > 0L]
+        tmp <- partable$group[ nchar(partable$group) > 0L &
+                              !partable$op %in% c("==", "<", ">", ":=") ]
         group.values <- unique(na.omit(tmp))
     }
 
@@ -45,10 +48,12 @@ lav_partable_level_values <- function(partable) {
     if(is.null(partable$level)) {
         level.values <- 1L
     } else if(is.numeric(partable$level)) {
-        tmp <- partable$level[ partable$level > 0L ]
+        tmp <- partable$level[  partable$level > 0L &
+                               !partable$op %in% c("==", "<", ">", ":=") ]
         level.values <- unique(na.omit(tmp))
     } else { # character
-        tmp <- partable$level[nchar(partable$level) > 0L]
+        tmp <- partable$level[ nchar(partable$level) > 0L &
+                              !partable$op %in% c("==", "<", ">", ":=") ]
         level.values <- unique(na.omit(tmp))
     }
 
@@ -67,7 +72,8 @@ lav_partable_efa_values <- function(partable) {
         efa.values <- character(0L)
     } else { # should be character
         EFA <- as.character(partable$efa)
-        tmp <- EFA[nchar(EFA) > 0L]
+        tmp <- EFA[ nchar(EFA) > 0L &
+                   !partable$op %in% c("==", "<", ">", ":=") ]
         efa.values <- unique(na.omit(tmp))
     }
 
