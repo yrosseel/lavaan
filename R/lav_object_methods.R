@@ -591,7 +591,12 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     # extract bootstrap data (if any)
-    BOOT <- lav_object_inspect_boot(object)
+    if(object@Options$se   != "bootstrap" &&
+       object@Options$test != "bootstrap") {
+        BOOT <- NULL
+    } else {
+        BOOT <- lav_object_inspect_boot(object)
+    }
     bootstrap.successful <- NROW(BOOT) # should be zero if NULL
 
     # confidence interval

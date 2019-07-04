@@ -362,6 +362,7 @@ Variance covariance matrix of the model parameters:
 Miscellaneous:
 
 \describe{
+    \item{\code{"coef.boot"}:}{Matrix containing estimated model parameters for         for each bootstrap sample. Only relevant when bootstrapping was used.}
     \item{\code{"UGamma"}:}{Matrix containing the product of 'U' and 'Gamma'
         matrices as used by the Satorra-Bentler correction. The trace of
         this matrix, divided by the degrees of freedom, gives the scaling
