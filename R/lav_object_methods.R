@@ -243,8 +243,8 @@ function(object, header       = TRUE,
                                  cov.std = cov.std,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE,
-                                 add.attributes = TRUE)
+                                 remove.nonfree = FALSE, output = "text",
+                                 header = TRUE)
         if(standardized && std.nox) {
             #PE$std.all <- PE$std.nox
             PE$std.all <- NULL
@@ -289,9 +289,20 @@ standardizedSolution <-
                                      partable = NULL,
                                      GLIST = NULL,
                                      est   = NULL,
-                                     add.attributes = FALSE) {
+                                     output = "data.frame") {
 
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
+
+    # check output= argument
+    output <- tolower(output)
+    if(output %in% c("data.frame", "table")) {
+        output <- "data.frame"
+    } else if(output %in% c("text", "pretty")) {
+        output <- "text"
+    } else {
+        stop("lavaan ERROR: output must be ", sQuote("data.frame"),
+             " or ", sQuote("text"))
+    }
 
     # no zstat + pvalue if estimator is Bayes
     if(object@Options$estimator == "Bayes") {
@@ -411,11 +422,11 @@ standardizedSolution <-
         }
     }
 
-    if(add.attributes) {
+    if(output == "text") {
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                          "data.frame")
         # LIST$exo is needed for printing
-        attr(LIST, "header") <- FALSE
+        #attr(LIST, "header") <- FALSE
     } else {
         LIST$exo <- NULL
         class(LIST) <- c("lavaan.data.frame", "data.frame")
@@ -440,8 +451,9 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.def = FALSE,
                                                      remove.nonfree = FALSE,
                                                      rsquare = FALSE,
-                                                     add.attributes = FALSE,
-                                                     header = TRUE) {
+                                                     output = "data.frame",
+                                                     header = FALSE,
+                                                     add.attributes = FALSE) {
 
     if("lavaan.fsr" %in% class(object)) {
         return(object$PE)
@@ -454,6 +466,24 @@ parameterEstimates <- parameterestimates <- function(object,
             zstat <- FALSE
             pvalue <- FALSE
         }
+    }
+
+    # backwards compatibility (for < 0.6-5)
+    if(!missing(add.attributes) && add.attributes) {
+        output <- "text"
+        header <- TRUE
+    }
+
+    # check output= argument
+    output <- tolower(output)
+    if(output %in% c("data.frame", "table")) {
+        output <- "data.frame"
+        header <- FALSE
+    } else if(output %in% c("text", "pretty")) {
+        output <- "text"
+    } else {
+        stop("lavaan ERROR: output must be ", sQuote("data.frame"),
+             " or ", sQuote("text"))
     }
 
     # check fmi
@@ -837,21 +867,23 @@ parameterEstimates <- parameterestimates <- function(object,
     # remove LIST$user
     LIST$user <- NULL
 
-    if(add.attributes) {
+    if(output == "text") {
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                          "data.frame")
-        attr(LIST, "information") <- object@Options$information
-        attr(LIST, "se") <- object@Options$se
-        attr(LIST, "group.label") <- object@Data@group.label
-        attr(LIST, "level.label") <- object@Data@level.label
-        attr(LIST, "bootstrap") <- object@Options$bootstrap
-        attr(LIST, "bootstrap.successful") <- bootstrap.successful
-        attr(LIST, "missing") <- object@Options$missing
-        attr(LIST, "observed.information") <-
-            object@Options$observed.information
-        attr(LIST, "h1.information") <- object@Options$h1.information
-        attr(LIST, "header") <- header
-        # FIXME: add more!!
+        if(header) {
+            attr(LIST, "information") <- object@Options$information
+            attr(LIST, "se") <- object@Options$se
+            attr(LIST, "group.label") <- object@Data@group.label
+            attr(LIST, "level.label") <- object@Data@level.label
+            attr(LIST, "bootstrap") <- object@Options$bootstrap
+            attr(LIST, "bootstrap.successful") <- bootstrap.successful
+            attr(LIST, "missing") <- object@Options$missing
+            attr(LIST, "observed.information") <-
+                object@Options$observed.information
+            attr(LIST, "h1.information") <- object@Options$h1.information
+            attr(LIST, "header") <- header
+            # FIXME: add more!!
+        }
     } else {
         LIST$exo <- NULL
         class(LIST) <- c("lavaan.data.frame", "data.frame")

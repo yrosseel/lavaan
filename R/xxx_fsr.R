@@ -319,7 +319,7 @@ fsr <- function(model      = NULL,
                             struc.names[struc.ov.idx])
             Y.g <- matrix(0, nrow = nrow(FS.SCORES[[g]][[1]]),
                              ncol = length(struc.names))
-            Y.g[,struc.lv.idx] <- do.call("cbind", 
+            Y.g[,struc.lv.idx] <- do.call("cbind",
                                       FS.SCORES[[g]])[,lv.order,drop = FALSE]
             Y.g[,struc.ov.idx] <- FIT@Data@X[[g]][,ov.idx,drop = FALSE]
         } else {
@@ -527,7 +527,6 @@ fsr <- function(model      = NULL,
     #}
 
     if(output == "fsr") {
-        #PE <- parameterEstimates(fit, add.attributes = TRUE, ci = FALSE)
         HEADER <- paste("This is fsr (0.2) -- factor score regression using ",
                         "fsr.method = ", fsr.method, sep = "")
         out <- list(header = HEADER, MM.FIT = MM.FIT, STRUC.FIT = fit)

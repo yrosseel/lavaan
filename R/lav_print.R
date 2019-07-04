@@ -100,6 +100,9 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
     # header?
     header <- attr(x, "header")
+    if(is.null(header)) {
+        header <- FALSE
+    }
 
     if(header) {
         cat("\nParameter Estimates:\n\n")
@@ -661,8 +664,8 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
             }
 
             # parameter estimates
-            PE <- parameterEstimates(y$MM.FIT[[b]], add.attributes = TRUE,
-                                     ci = FALSE)
+            PE <- parameterEstimates(y$MM.FIT[[b]], ci = FALSE,
+                                     output = "text", header = TRUE)
             print.lavaan.parameterEstimates(PE, ..., nd = nd)
             cat("\n")
         }
@@ -684,7 +687,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
                              remove.eq = FALSE, remove.system.eq = TRUE,
                              remove.ineq = FALSE, remove.def = FALSE,
                              remove.nonfree = FALSE,
-                             add.attributes = TRUE)
+                             output = "text", header = TRUE)
     print.lavaan.parameterEstimates(PE, ..., nd = nd)
 
     invisible(y)

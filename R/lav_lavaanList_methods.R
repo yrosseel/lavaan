@@ -48,6 +48,11 @@ lav_lavaanList_summary <- function(object,
         #    lav_lavaanList_short_summary(object)
         #}
     }
+    if(print) {
+        output <- "text"
+    } else {
+        output <- "data.frame"
+    }
 
     if(estimates && "partable" %in% object@meta$store.slots) {
         pe <- parameterEstimates(object, se = FALSE,
@@ -56,7 +61,7 @@ lav_lavaanList_summary <- function(object,
                                  remove.nonfree = FALSE,
                                  # zstat = FALSE, pvalue = FALSE, ci = FALSE,
                                  standardized = FALSE,
-                                 add.attributes = print)
+                                 output = output)
 
         # scenario 1: simulation
         if(!is.null(object@meta$lavSimulate)) {

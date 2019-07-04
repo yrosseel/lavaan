@@ -10,8 +10,9 @@ parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE,
                    standardized = FALSE, cov.std = TRUE, fmi = FALSE,
                    remove.system.eq = TRUE, remove.eq = TRUE,
                    remove.ineq = TRUE, remove.def = FALSE,
-                   remove.nonfree = FALSE,
-                   rsquare = FALSE, add.attributes = FALSE, header = TRUE)
+                   remove.nonfree = FALSE, rsquare = FALSE, 
+                   output = "data.frame", header = FALSE,
+                   add.attributes = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -65,15 +66,16 @@ the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
 name of the endogenous variable, while the code{op} column contains \code{r2},
 to indicate that the values in the \code{est} column are rsquare values.}
-\item{add.attributes}{Logical. If \code{TRUE}, add a class attribute
-(class \code{lavaan.parameterEstimates}) and other attributes to be used by
-the print function for this class (\code{print.lavaan.parameterEstimates}).
-This is used by the \code{summary()} function, to prettify the output.}
-\item{header}{Logical. Only used if \code{add.attributes = TRUE}. If
+\item{output}{Character. If \code{"data.frame"}, the parameter table is
+displayed as a standard (albeit lavaan-formatted) data.frame. 
+If \code{"text"} (or alias \code{"pretty"}), the parameter table is
+prettyfied, and displayed with subsections (as used by the summary function).}
+\item{header}{Logical. Only used if \code{output = "text"}. If
 \code{TRUE}, print a header at the top of the parameter list. This header
 contains information about the information matrix, if saturated (h1) model
 is structured or unstructured, and which type of standard errors are shown
 in the output.}
+\item{add.attributes}{Deprecated. Use \code{output} instead.}
 }
 \value{
   A data.frame containing the estimated parameters,
@@ -94,4 +96,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
 parameterEstimates(fit)
+parameterEstimates(fit, output = "text")
 }

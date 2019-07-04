@@ -541,7 +541,7 @@ sam <- function(model          = NULL,
 
             # force pd?
             if(local.options[["veta.force.pd"]]) {
-                VETA[[b]] <- lav_matrix_symmetric_force_pd( VETA[[b]], 
+                VETA[[b]] <- lav_matrix_symmetric_force_pd( VETA[[b]],
                                  tol = local.options[["veta.force.pd.tol"]] )
             }
 

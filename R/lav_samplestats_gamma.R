@@ -229,8 +229,7 @@ lav_samplestats_Gamma <- function(Y,
                                   meanstructure      = FALSE,
                                   slopestructure     = FALSE,
                                   gamma.n.minus.one  = FALSE,
-                                  Mplus.WLS          = FALSE,
-                                  add.attributes     = FALSE) {
+                                  Mplus.WLS          = FALSE) {
     # coerce to matrix
     Y <- unname(as.matrix(Y)); N <- nrow(Y); p <- ncol(Y)
 

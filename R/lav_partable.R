@@ -709,13 +709,13 @@ lavaanify <- lavParTable <- function(
                         # .p1. == 3 - .p2. - .p3.
                         # instead of
                         # 3 ==  .p1.+.p2.+.p3.
-                        # as this makes it easier to translate things to 
+                        # as this makes it easier to translate things to
                         # JAGS/stan
 
                         LHS <- plabel[1]
                         if(length(loadings.idx) > 1L) {
                             RHS <- paste(length(loadings.idx), "-",
-                                         paste(plabel[-1], collapse = "-"), 
+                                         paste(plabel[-1], collapse = "-"),
                                          sep = "")
                         } else {
                             RHS <- length(loadings.idx)
@@ -745,7 +745,7 @@ lavaanify <- lavParTable <- function(
                         LHS <- plabel[1]
                         if(length(intercepts.idx) > 1L) {
                             RHS <- paste("0-",
-                                         paste(plabel[-1], collapse = "-"), 
+                                         paste(plabel[-1], collapse = "-"),
                                          sep = "")
                         } else {
                             RHS <- 0L

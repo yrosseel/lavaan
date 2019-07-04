@@ -9,7 +9,7 @@ standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
                      pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE, 
                      remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE, 
                      partable = NULL, GLIST = NULL, est = NULL,
-                     add.attributes = FALSE)
+                     output = "data.frame")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -53,10 +53,10 @@ the parameters that can be extract from object.}
 \item{partable}{A custom \code{list} or \code{data.frame} in which to store
 the standardized parameter values. If provided, it will be used instead of 
 the parameter table inside the object@ParTable slot.}
-\item{add.attributes}{Logical. If \code{TRUE}, add a class attribute
-(class \code{lavaan.parameterEstimates}) and other attributes to be used by
-the print function for this class (\code{print.lavaan.parameterEstimates}).
-This is used by the \code{summary()} function, to prettify the output.}
+\item{output}{Character. If \code{"data.frame"}, the parameter table is
+displayed as a standard (albeit lavaan-formatted) data.frame.
+If \code{"text"} (or alias \code{"pretty"}), the parameter table is
+prettyfied, and displayed with subsections (as used by the summary function).}
 }
 \note{
 The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for
