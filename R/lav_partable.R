@@ -715,7 +715,7 @@ lavaanify <- lavParTable <- function(
                         LHS <- plabel[1]
                         if(length(loadings.idx) > 1L) {
                             RHS <- paste(length(loadings.idx), "-",
-                                         paste(plabel, collapse = "-"), 
+                                         paste(plabel[-1], collapse = "-"), 
                                          sep = "")
                         } else {
                             RHS <- length(loadings.idx)
@@ -745,7 +745,7 @@ lavaanify <- lavParTable <- function(
                         LHS <- plabel[1]
                         if(length(intercepts.idx) > 1L) {
                             RHS <- paste("0-",
-                                         paste(plabel, collapse = "-"), 
+                                         paste(plabel[-1], collapse = "-"), 
                                          sep = "")
                         } else {
                             RHS <- 0L
