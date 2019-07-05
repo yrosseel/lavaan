@@ -288,54 +288,48 @@ lav_fit_measures <- function(object, fit.measures = "all",
              "baseline.chisq", "baseline.chisq.scaled",
              "baseline.pvalue", "baseline.pvalue.scaled") %in% fit.measures)) {
 
-        # call explicitly independence model
-        # this is not strictly needed for ML, but it is for
-        # GLS and WLS
-        # and MLM and MLR to get the scaling factor(s)!
-        if (!is.null(baseline.model) && inherits(baseline.model, "lavaan")) {
-            fit.indep <- baseline.model
-        } else if (!is.null(object@external$baseline.model) &&
-                   inherits(object@external$baseline.model, "lavaan")) {
+        baseline.test <- NULL
+
+        # we use the following priority:
+        # 1. user-provided baseline model
+        # 2. baseline model in @external slot
+        # 3. baseline model in @baseline slot
+        # 4. nothing -> compute independence model
+
+        # 1. user-provided baseline model
+        if( !is.null(baseline.model) ) {
+            baseline.test <-
+                lav_fit_measures_check_baseline(fit.indep = baseline.model,
+                                                object    = object)
+        # 2. baseline model in @external slot
+        } else if( !is.null(object@external$baseline.model) ) {
             fit.indep <- object@external$baseline.model
-            ## check baseline converged
-            if (!fit.indep@optim$converged) {
-                fit.indep <- NULL
-            } else {
-                ## check test matches and baseline converged
-                sameTest <- ( object@Options$test == fit.indep@Options$test )
-                sameSE <- ( object@Options$se == fit.indep@Options$se )
-                sameEstimator <- ( object@Options$estimator == fit.indep@Options$estimator )
-                if (!all(sameTest, sameSE, sameEstimator)) {
-                    fit.indep <- try(update(fit.indep,
-                                            test = object@Options$test,
-                                            se   = object@Options$se,
-                                            estimator = object@Options$estimator),
-                                     silent = TRUE)
-                }
-            }
+            baseline.test <-
+                lav_fit_measures_check_baseline(fit.indep = fit.indep,
+                                                object    = object)
+        # 3. internal @baseline slot
+        } else if( .hasSlot(object, "baseline") &&
+                   length(object@baseline) > 0L &&
+                   !is.null(object@baseline$test) ) {
+            baseline.test <- object@baseline$test
+        # 4. (re)compute independence model
         } else {
             fit.indep <- try(lav_object_independence(object), silent = TRUE)
+            baseline.test <-
+                lav_fit_measures_check_baseline(fit.indep = fit.indep,
+                                                object    = object)
         }
 
-        if(inherits(fit.indep, "try-error")) {
-            X2.null <- df.null <- as.numeric(NA)
+        if(!is.null(baseline.test)) {
+            X2.null <- baseline.test[[1]]$stat
+            df.null <- baseline.test[[1]]$df
             if(scaled) {
-                X2.null.scaled <- df.null.scaled <- as.numeric(NA)
+                X2.null.scaled <- baseline.test[[2]]$stat
+                df.null.scaled <- baseline.test[[2]]$df
             }
         } else {
-            if(fit.indep@Data@nlevels > 1L) {
-                fit.indep@test[[1]]$stat <- ( -2 * (fit.indep@loglik$loglik -
-                                                    object@loglik$loglik) )
-                fit.indep@test[[1]]$pvalue <-
-                   1 - pchisq(fit.indep@test[[1]]$stat, fit.indep@test[[1]]$df)
-            }
-
-            X2.null <- fit.indep@test[[1]]$stat
-            df.null <- fit.indep@test[[1]]$df
-            if(scaled) {
-                X2.null.scaled <- fit.indep@test[[2]]$stat
-                df.null.scaled <- fit.indep@test[[2]]$df
-            }
+            X2.null <- df.null <- as.numeric(NA)
+            X2.null.scaled <- df.null.scaled <- as.numeric(NA)
         }
 
         # check for NAs
@@ -356,15 +350,15 @@ lav_fit_measures <- function(object, fit.measures = "all",
                 }
             }
             if("baseline.pvalue" %in% fit.measures) {
-                indices["baseline.pvalue"] <- fit.indep@test[[1]]$pvalue
+                indices["baseline.pvalue"] <- baseline.test[[1]]$pvalue
                 if(scaled) {
                     indices["baseline.pvalue.scaled"] <-
-                        fit.indep@test[[2]]$pvalue
+                        baseline.test[[2]]$pvalue
                 }
             }
             if("baseline.chisq.scaling.factor" %in% fit.measures) {
                 indices["baseline.chisq.scaling.factor"] <-
-                    fit.indep@test[[2]]$scaling.factor
+                    baseline.test[[2]]$scaling.factor
             }
 
             # CFI - comparative fit index (Bentler, 1990)
@@ -406,7 +400,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                     } else {
                         ch <- TEST[[2]]$scaling.factor
                     }
-                    cb <- fit.indep@test[[2]]$scaling.factor
+                    cb <- baseline.test[[2]]$scaling.factor
 
                     t1 <- max( c(X2 - (ch*df), 0) )
                     t2 <- max( c(X2 - (ch*df), X2.null - (cb*df.null), 0) )
@@ -461,7 +455,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                     } else {
                         ch <- TEST[[2]]$scaling.factor
                     }
-                    cb <- fit.indep@test[[2]]$scaling.factor
+                    cb <- baseline.test[[2]]$scaling.factor
 
                     t1 <- X2 - ch*df
                     t2 <- X2.null - cb*df.null
@@ -538,7 +532,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                     } else {
                         ch <- TEST[[2]]$scaling.factor
                     }
-                    cb <- fit.indep@test[[2]]$scaling.factor
+                    cb <- baseline.test[[2]]$scaling.factor
 
                     t1 <- (X2 - ch*df)*df.null
                     t2 <- (X2.null - cb*df.null)*df
@@ -1862,6 +1856,81 @@ print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
 
     #cat("\n")
    invisible(x)
+}
+
+# new in 0.6-5
+# internal function to check the (external) baseline model, and
+# return baseline 'test' list if everything checks out (and NULL otherwise)
+lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
+
+    TEST <- NULL
+
+    # check if everything is in order
+    if( inherits(fit.indep, "try-error") ) {
+        warning("lavaan WARNING: baseline model estimation failed")
+        return(TEST)
+
+    } else if( !inherits(fit.indep, "lavaan") ) {
+        warning("lavaan WARNING: (user-provided) baseline model ",
+                "is not a fitted lavaan object")
+        return(TEST)
+
+    } else if( !fit.indep@optim$converged ) {
+        warning("lavaan WARNING: baseline model did not converge")
+        return(TEST)
+
+    } else {
+
+        # evaluate if estimator/test matches original object
+        # note: we do not need to check for 'se', as it may be 'none'
+        sameTest      <- ( object@Options$test == fit.indep@Options$test )
+        if(!sameTest) {
+            warning("lavaan WARNING:\n",
+                    "\t Baseline model was using test = ",
+                    dQuote(fit.indep@Options$test),
+                    "\n\t But original model was using test = ",
+                    dQuote(object@Options$test),
+                    "\n\t Refitting baseline model!")
+        }
+        sameEstimator <- ( object@Options$estimator ==
+                           fit.indep@Options$estimator )
+        if(!sameEstimator) {
+            warning("lavaan WARNING:\n",
+                    "\t Baseline model was using estimator = ",
+                    dQuote(fit.indep@Options$estimator),
+                    "\n\t But original model was using estimator = ",
+                    dQuote(object@Options$estimator),
+                    "\n\t Refitting baseline model!")
+        }
+        if( !sameTest || !sameEstimator ) {
+            lavoptions <- object@Options
+            lavoptions$estimator   <- object@Options$estimator
+            lavoptions$se          <- "none"
+            lavoptions$verbose     <- FALSE
+            lavoptions$baseline    <- FALSE
+            lavoptions$check.start <- FALSE
+            lavoptions$check.post  <- FALSE
+            lavoptions$check.vcov  <- FALSE
+            lavoptions$test        <- object@Options$test
+            fit.indep <- try(lavaan(fit.indep,
+                                    slotOptions     = lavoptions,
+                                    slotData        = object@Data,
+                                    slotSampleStats = object@SampleStats,
+                                    sloth1          = object@h1,
+                                    slotCache       = object@Cache),
+                             silent = TRUE)
+            # try again
+            TEST <- lav_fit_measures_check_baseline(fit.indep = fit.indep,
+                                                    object    = object)
+
+        } else {
+            # extract what we need
+            TEST <- fit.indep@test
+        }
+
+    } # converged lavaan object
+
+    TEST
 }
 
 

@@ -119,6 +119,15 @@ lavInspect.lavaan <- function(object,
               what == "fit.indices") {
         fitMeasures(object)
 
+    #### baseline model ####
+    } else if(what == "baseline.partable") {
+        out <- as.data.frame(object@baseline$partable, stringsAsFactors = FALSE)
+        if(add.class) {
+            class(out) <- c("lavaan.data.frame", "data.frame")
+        }
+        return(out)
+    } else if(what == "baseline.test") {
+        object@baseline$test
 
     #### modification indices ####
     } else if(what == "mi" ||

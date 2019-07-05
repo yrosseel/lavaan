@@ -557,13 +557,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       as.data.frame.   = FALSE)
 
     } else if(inherits(model, "lavaan")) {
-        lavpartable <- parTable(model)
+        lavpartable <- as.list(parTable(model))
     } else if(is.list(model)) {
         # we already checked this when creating FLAT
         # but we may need to complete it
         lavpartable <- as.list(FLAT) # in case model is a data.frame
         # complete table
-        lavpartable <- lav_partable_complete(lavpartable)
+        lavpartable <- as.list(lav_partable_complete(lavpartable))
     } else {
         stop("lavaan ERROR: model [type = ", class(model),
              "] is not of type character or list")
@@ -770,8 +770,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                               th.idx           = lavsamplestats@th.idx,
                               cov.x            = lavsamplestats@cov.x,
                               mean.x           = lavsamplestats@mean.x)
-        timing$Model <- (proc.time()[3] - start.time)
-        start.time <- proc.time()[3]
 
         # if no data, call lav_model_set_parameters once (for categorical case)
         if(lavdata@data.type == "none" && lavmodel@categorical) {
@@ -807,6 +805,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 }
             }
         }
+        timing$Model <- (proc.time()[3] - start.time)
+        start.time <- proc.time()[3]
 
     } # slotModel
 
@@ -1138,6 +1138,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$implied) {
          lavimplied <- lav_model_implied(lavmodel)
     }
+    timing$implied <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     lavloglik <- list()
     if(lavoptions$loglik) {
@@ -1147,8 +1149,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavmodel       = lavmodel,
                                        lavoptions     = lavoptions)
     }
-
-    timing$implied <- (proc.time()[3] - start.time)
+    timing$loglik <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
@@ -1309,18 +1310,47 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                             x           = x,
                             VCOV        = VCOV,
                             TEST        = TEST)
-    timing$total <- (proc.time()[3] - start.time0)
+    timing$Fit <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
 
 
     ######################
-    #### 15. baseline ####
+    #### 15. baseline #### (since 0.6-5)
     ######################
     lavbaseline <- list()
-    if(is.logical(lavoptions$baseline) && lavoptions$baseline) {
-
+    if( lavoptions$do.fit &&
+       !lavoptions$test == "none" &&
+        is.logical(lavoptions$baseline) && lavoptions$baseline ) {
+        if(lavoptions$verbose) {
+            cat("Fitting baseline model ... ")
+        }
+        fit.indep <- try(lav_object_independence(object = NULL,
+                         lavsamplestats = lavsamplestats,
+                         lavdata        = lavdata,
+                         lavcache       = lavcache,
+                         lavoptions     = lavoptions,
+                         lavpta         = lavpta,
+                         lavh1          = lavh1), silent = TRUE)
+        if(inherits(fit.indep, "try-error") ||
+           !fit.indep@optim$converged) {
+            warning("lavaan WARNING: estimation of the baseline model failed.")
+            lavbaseline <- list()
+            if(lavoptions$verbose) {
+                cat(" FAILED.\n")
+            }
+        } else {
+            # store relevant information
+            lavbaseline <- list(partable = fit.indep@ParTable,
+                                test     = fit.indep@test)
+            if(lavoptions$verbose) {
+                cat(" done.\n")
+            }
+        }
     }
+    timing$baseline <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
     ######################
@@ -1388,6 +1418,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ####################
     #### 17. lavaan ####
     ####################
+
+    # stop timer
+    timing$total <- (proc.time()[3] - start.time0)
+
     lavaan <- new("lavaan",
                   version      = as.character(packageVersion("lavaan")),
                   call         = mc,                  # match.call
@@ -1407,7 +1441,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   vcov         = lavvcov,             # list
                   test         = lavtest,             # list
                   h1           = lavh1,               # list
-                  baseline     = list(),              # list
+                  baseline     = lavbaseline,         # list
                   external     = list()               # empty list
                  )
 
@@ -1449,36 +1483,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 "                  use lavInspect(fit, \"optim.gradient\") to investigate")
         }
     }
-
-    ########################
-    #### post: baseline ####
-    ########################
-    #lavbaseline <- list()
-    #if(is.logical(lavoptions$baseline) && lavoptions$baseline) {
-    #    fit.indep <- try(lav_object_independence(lavaan), silent = TRUE)
-    #    X2.null <- df.null <- as.numeric(NA)
-    #    X2.null.scaled <- df.null.scaled <- as.numeric(NA)
-    #    if(inherits(fit.indep, "try-error")) {
-    #        warning("lavaan WARNING: estimation of the baseline model failed.")
-    #    } else {
-    #        X2.null <- fit.indep@test[[1]]$stat
-    #        df.null <- fit.indep@test[[1]]$df
-    #        if(length(fit.indep@test) > 1L) {
-    #            X2.null.scaled <- fit.indep@test[[2]]$stat
-    #            df.null.scaled <- fit.indep@test[[2]]$df
-    #        }
-    #    }
-    #
-    #    # store in list
-    #    lavbaseline <- list(X2.null = X2.null,
-    #                        df.null = df.null,
-    #                        X2.null.scaled = X2.null.scaled,
-    #                        df.null.scaled = df.null.scaled)
-    #
-    #    # add to lavaan object
-    #    lavaan@baseline <- lavbaseline
-    #}
-
 
 
     lavaan

@@ -1380,6 +1380,8 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
 
         # fit two-group model
         local.partable <- lavpartable
+        # if a group column exists, delete it (it will be overriden anyway)
+        local.partable$group <- NULL
         level.idx <- which(names(local.partable) == "level")
         names(local.partable)[level.idx] <- "group"
         local.partable$est <- NULL

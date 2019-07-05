@@ -8,14 +8,42 @@
 #    note that for ML (and ULS and DWLS), the 'estimates' of the
 #    independence model are simply the observed variances
 #    but for GLS and WLS, this is not the case!!
-lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
-                                    warn = FALSE) {
+lav_object_independence <- function(object         = NULL,
+                                    # or
+                                    lavsamplestats = NULL,
+                                    lavdata        = NULL,
+                                    lavcache       = NULL,
+                                    lavoptions     = NULL,
+                                    lavpta         = NULL,
+                                    lavh1          = NULL,
+                                    # local options
+                                    se             = FALSE,
+                                    verbose        = FALSE,
+                                    warn           = FALSE) {
+
+     # object or slots?
+     if(!is.null(object)) {
+        stopifnot(inherits(object, "lavaan"))
+
+        # extract needed slots
+        lavsamplestats <- object@SampleStats
+        lavdata <- object@Data
+        lavcache <- object@Cache
+        lavoptions <- object@Options
+        lavpta     <- object@pta
+        if(.hasSlot(object, "h1"))  {
+            lavh1 <- object@h1
+        } else {
+            lavh1 <- lav_h1_logl(lavdata = object@Data,
+                                 lavsamplestats = object@SampleStats,
+                                 lavoptions = object@Options)
+        }
+    }
 
     # construct parameter table for independence model
-    lavpartable <- lav_partable_independence(object)
-
-    # adapt options
-    lavoptions <- object@Options
+    lavpartable <- lav_partable_indep_or_unrestricted(lavobject = NULL,
+        lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
+        lavsamplestats = lavsamplestats, independent = TRUE)
 
     # se
     if(se) {
@@ -27,11 +55,11 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
         lavoptions$se <- "none"
     }
 
-    # set baseline/h1 to FALSE
-    lavoptions$h1 <- FALSE
-    lavoptions$baseline <- FALSE
-    lavoptions$loglik <- TRUE # eg for multilevel
-    lavoptions$implied <- TRUE #, needed for loglik
+    # change options
+    lavoptions$h1 <- FALSE          # already provided by lavh1
+    lavoptions$baseline <- FALSE    # of course
+    lavoptions$loglik <- TRUE       # eg for multilevel
+    lavoptions$implied <- TRUE      # needed for loglik (multilevel)
     lavoptions$check.start <- FALSE
     lavoptions$check.gradient <- FALSE
     lavoptions$check.post <- FALSE
@@ -58,19 +86,11 @@ lav_object_independence <- function(object, se = FALSE, verbose = FALSE,
     # lavpartable, and they should be in the right order (unlike the
     # intercepts)
 
-    if(.hasSlot(object, "h1"))  {
-        lavh1 <- object@h1
-    } else {
-        lavh1 <- lav_h1_logl(lavdata = object@Data,
-                             lavsamplestats = object@SampleStats,
-                             lavoptions = object@Options)
-    }
-
     FIT <- lavaan(lavpartable,
                   slotOptions     = lavoptions,
-                  slotSampleStats = object@SampleStats,
-                  slotData        = object@Data,
-                  slotCache       = object@Cache,
+                  slotSampleStats = lavsamplestats,
+                  slotData        = lavdata,
+                  slotCache       = lavcache,
                   sloth1          = lavh1)
 
     FIT
