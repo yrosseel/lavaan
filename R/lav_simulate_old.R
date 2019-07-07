@@ -72,6 +72,7 @@ simulateData <- function(
                          ngroups=length(sample.nobs))
     }
 
+    group.values <- lav_partable_group_values(lav)
     if(debug) {
         cat("initial lav\n")
         print(as.data.frame(lav))
@@ -150,7 +151,8 @@ simulateData <- function(
         if(length(lv.nox) > 0L) {
             for(g in 1:ngroups) {
                 var.group <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
-                                   lav$rhs == lav$lhs & lav$group == g)
+                                   lav$rhs == lav$lhs &
+                                   lav$group == group.values[g])
                 eta.idx <- match(lv.nox, lv.names)
                 lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
             }
@@ -167,7 +169,8 @@ simulateData <- function(
         # stage 2: standardize OV
         for(g in 1:ngroups) {
             var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
-                               lav$rhs == lav$lhs & lav$group == g)
+                               lav$rhs == lav$lhs & 
+                               lav$group == group.values[g])
             ov.idx <- match(ov.nox, ov.names)
             lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
         }
@@ -256,13 +259,14 @@ simulateData <- function(
         }
 
         # any categorical variables?
-        ov.ord <- vnames(lav, type="ov.ord", group = g)
+        ov.ord <- vnames(lav, type="ov.ord", group = group.values[g])
         if(length(ov.ord) > 0L) {
-            ov.names <- vnames(lav, type="ov", group = g)
+            ov.names <- vnames(lav, type="ov", group = group.values[g])
             # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(lav$op == "|" & lav$lhs == o & lav$group == g)
+                th.idx <- which(lav$op == "|" & lav$lhs == o & 
+                                lav$group == group.values[g])
                 th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
                 X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
             }

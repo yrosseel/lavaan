@@ -232,6 +232,7 @@ setClass("lavaanList",
         impliedList     = "list",
         h1List          = "list",
         loglikList      = "list",
+        baselineList    = "list",
         funList         = "list",
         external        = "list"       # optional slot, for add-on packages
     )

@@ -2206,11 +2206,13 @@ lav_object_inspect_gradient <- function(object,
                     nclusters <- lavdata@Lp[[1]]$nclusters[[2]]
                     dx <- dx * (2 * N) / nclusters
                 } else {
+                    group.values <- lav_partable_group_values(lavpartable)
                     for(g in seq_len(lavdata@ngroups)) {
                         N <- lavdata@Lp[[g]]$nclusters[[1]]
                         nclusters <- lavdata@Lp[[g]]$nclusters[[2]]
                         g.idx <-
-                          which((lavpartable$group == g)[lavpartable$free > 0L])
+                          which((lavpartable$group == 
+                                 group.values[g])[lavpartable$free > 0L])
                         dx[g.idx] <- dx[g.idx] * (2 * N) / nclusters
                     }
                 }

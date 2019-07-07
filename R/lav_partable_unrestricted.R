@@ -415,13 +415,13 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     # fix variances/covariances
                     exo.idx <- which(rhs %in% ov.names.x &
                                      lhs %in% ov.names.x &
-                                     op == "~~" & group == g)
+                                     op == "~~" & group == g) # ok
                     exo[exo.idx] <- 1L
                     free[exo.idx] <- 0L
 
                     # fix means
                     exo.idx <- which(lhs %in% ov.names.x &
-                                     op == "~1" & group == g)
+                                     op == "~1" & group == g) # ok
                     exo[exo.idx] <- 1L
                     free[exo.idx] <- 0L
                 }

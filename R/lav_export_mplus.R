@@ -96,8 +96,9 @@ lav2mplus <- function(lav, group.label=NULL) {
     if(ngroups == 1L) {
         body <- lav_one_group(lav)
     } else {
+        group.values <- lav_partable_group_values(lav)
         # group 1
-        body <- lav_one_group(lav[lav$group == 1,])
+        body <- lav_one_group(lav[lav$group == group.values[1],])
 
         if(is.null(group.label) || length(group.label) == 0L) {
             group.label <- paste(1:ngroups)
@@ -106,7 +107,7 @@ lav2mplus <- function(lav, group.label=NULL) {
         for(g in 2:ngroups) {
             body <- paste(body,
                           paste("\nMODEL ", group.label[g], ":\n", sep=""),
-                          lav_one_group(lav[lav$group == g,]),
+                          lav_one_group(lav[lav$group == group.values[g],]),
                           sep="")
         }
     }

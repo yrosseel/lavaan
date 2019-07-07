@@ -194,12 +194,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.names <- ov.names.y <- ov.names.x <- vector("list",
                                                        length = ngroups)
             for(g in seq_len(ngroups)) {
-                ov.names[[g]]   <- lav_partable_vnames(FLAT, type = "ov",
-                                                       group = group.values[g])
-                ov.names.y[[g]] <- lav_partable_vnames(FLAT, type = "ov.nox",
-                                                       group = group.values[g])
-                ov.names.x[[g]] <- lav_partable_vnames(FLAT, type = "ov.x",
-                                                       group = group.values[g])
+                # collapsed over levels (if any)
+                ov.names[[g]]   <- unique(unlist(lav_partable_vnames(FLAT, 
+                                    type = "ov", group = group.values[g])))
+                ov.names.y[[g]] <- unique(unlist(lav_partable_vnames(FLAT, 
+                                    type = "ov.nox", group = group.values[g])))
+                ov.names.x[[g]] <- unique(unlist(lav_partable_vnames(FLAT, 
+                                    type = "ov.x", group = group.values[g])))
             }
         } else {
             ov.names   <- lav_partable_vnames(FLAT, type = "ov")
@@ -207,9 +208,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
         }
     } else {
-        ov.names   <- lav_partable_vnames(FLAT, type = "ov")
-        ov.names.y <- lav_partable_vnames(FLAT, type = "ov.nox")
-        ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
+        # collapse over levels (if any)
+        ov.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "ov")))
+        ov.names.y <- unique(unlist(lav_partable_vnames(FLAT, type = "ov.nox")))
+        ov.names.x <- unique(unlist(lav_partable_vnames(FLAT, type = "ov.x")))
     }
 
     # handle ov.names.l
@@ -278,7 +280,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             ov.names.l <- vector("list", length = ngroups)
             for(g in 1:ngroups) {
                 # note: lavNames() will return a list if any level:
-                ov.names.l[[g]] <- lavNames(FLAT, "ov", group = g)
+                ov.names.l[[g]] <- lavNames(FLAT, "ov", group = group.values[g])
             }
         } else {
             # no level: in model syntax

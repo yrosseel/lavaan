@@ -56,8 +56,8 @@ lav_lavaanList_summary <- function(object,
 
     if(estimates && "partable" %in% object@meta$store.slots) {
         pe <- parameterEstimates(object, se = FALSE,
-                                 remove.system.eq = TRUE, remove.eq = TRUE,
-                                 remove.ineq = TRUE, remove.def = FALSE,
+                                 remove.system.eq = FALSE, remove.eq = FALSE,
+                                 remove.ineq = FALSE, remove.def = FALSE,
                                  remove.nonfree = FALSE,
                                  # zstat = FALSE, pvalue = FALSE, ci = FALSE,
                                  standardized = FALSE,
@@ -155,6 +155,12 @@ lav_lavaanList_summary <- function(object,
             pe$est.ave  <- rowMeans(EST, na.rm = TRUE)
 
             # more?
+        }
+
+        # remove ==,<,>
+        rm.idx <- which(pe$op %in% c("==", "<", ">"))
+        if(length(rm.idx) > 0L) {
+            pe <- pe[-rm.idx,]
         }
 
         output$pe <- pe

@@ -182,6 +182,7 @@ lavSimulateData <- function(model  = NULL,
     }
 
     # assemble data per group
+    group.values <- lav_partable_group_values(lavpartable)
     for(g in 1:ngroups) {
 
         # multilevel?
@@ -242,7 +243,7 @@ lavSimulateData <- function(model  = NULL,
         }
 
         # any categorical variables?
-        ov.ord <- lavNames(fit.pop, "ov.ord", group = g)
+        ov.ord <- lavNames(fit.pop, "ov.ord", group = group.values[g])
         if(is.list(ov.ord)) {
             # multilvel -> use within level only
             ov.ord <- ov.ord[[1L]]

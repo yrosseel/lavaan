@@ -38,6 +38,7 @@ about the data.}
     \item{\code{impliedList}:}{List. implied slot per dataset.}
     \item{\code{h1List}:}{List. h1 slot per dataset.}
     \item{\code{loglikList}:}{List. loglik slot per dataset.}
+    \item{\code{baselineList}:}{List. baseline slot per dataset.}
     \item{\code{funList}:}{List. fun slot per dataset.}
     \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }

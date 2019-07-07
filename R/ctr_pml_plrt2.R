@@ -152,6 +152,7 @@ var_tzz <- 2* sum(diag(H1tmp_prod2))
 ##### Section 3: Compute the asymptotic covariance of the two quadratic quantities
 
 drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
+group.values <- lav_partable_group_values(fittedSat2@ParTable)
 for(g in 1:lavsamplestats@ngroups) {
     delta.g <- computeDelta(lavmodel)[[g]]
     # order of the rows: first the thresholds, then the correlations
@@ -160,7 +161,7 @@ for(g in 1:lavsamplestats@ngroups) {
 
     PT <- fittedSat2@ParTable
     PT$label <- lav_partable_labels(PT)
-    free.idx <- which(PT$free > 0 & PT$group == g)
+    free.idx <- which(PT$free > 0 & PT$group == group.values[g])
     PARLABEL <- PT$label[free.idx]
 
     # for now, we can assume that computeDelta will always return
