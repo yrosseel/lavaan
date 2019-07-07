@@ -2211,7 +2211,7 @@ lav_object_inspect_gradient <- function(object,
                         N <- lavdata@Lp[[g]]$nclusters[[1]]
                         nclusters <- lavdata@Lp[[g]]$nclusters[[2]]
                         g.idx <-
-                          which((lavpartable$group == 
+                          which((lavpartable$group ==
                                  group.values[g])[lavpartable$free > 0L])
                         dx[g.idx] <- dx[g.idx] * (2 * N) / nclusters
                     }

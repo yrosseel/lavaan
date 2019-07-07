@@ -169,7 +169,7 @@ simulateData <- function(
         # stage 2: standardize OV
         for(g in 1:ngroups) {
             var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
-                               lav$rhs == lav$lhs & 
+                               lav$rhs == lav$lhs &
                                lav$group == group.values[g])
             ov.idx <- match(ov.nox, ov.names)
             lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
@@ -265,7 +265,7 @@ simulateData <- function(
             # use thresholds to cut
             for(o in ov.ord) {
                 o.idx <- which(o == ov.names)
-                th.idx <- which(lav$op == "|" & lav$lhs == o & 
+                th.idx <- which(lav$op == "|" & lav$lhs == o &
                                 lav$group == group.values[g])
                 th.val <- c(-Inf,sort(lav$ustart[th.idx]),+Inf)
                 X[[g]][,o.idx] <- as.integer(cut(X[[g]][,o.idx], th.val))
