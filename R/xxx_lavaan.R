@@ -277,6 +277,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
 
             ngroups <- lav_partable_ngroups(FLAT)
+            group.values <- lav_partable_group_values(FLAT)
             ov.names.l <- vector("list", length = ngroups)
             for(g in 1:ngroups) {
                 # note: lavNames() will return a list if any level:

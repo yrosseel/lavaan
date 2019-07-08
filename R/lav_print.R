@@ -5,7 +5,7 @@
 ##
 ## perhaps we should add 0.0005 or something to avoid this?
 
-print.lavaan.data.frame <- function(x, ..., nd=3) {
+print.lavaan.data.frame <- function(x, ..., nd = 3L) {
 
     ROW.NAMES <- rownames(x)
     y <- as.data.frame(lapply(x, function(x) {
@@ -40,7 +40,7 @@ print.lavaan.list <- function(x, ...) {
 
 
 # prints only lower triangle of a symmetric matrix
-print.lavaan.matrix.symmetric <- function(x, ..., nd=3) {
+print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L) {
     # print only lower triangle of a symmetric matrix
     # this function was inspired by the `print.correlation' function
     # in package nlme
@@ -48,23 +48,23 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd=3) {
     ll <- lower.tri(x, diag=TRUE)
     y[ll] <- format(round(x[ll], digits=nd)); y[!ll] <- ""
     if (!is.null(colnames(x))) {
-      colnames(y) <- abbreviate(colnames(x), minlength = nd + 3)
+      colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
     print(y, ..., quote = FALSE)
     invisible(x)
 }
 
 
-print.lavaan.matrix <- function(x, ..., nd=3) {
+print.lavaan.matrix <- function(x, ..., nd = 3L) {
     y <- unclass(x)
     if (!is.null(colnames(x))) {
-      colnames(y) <- abbreviate(colnames(x), minlength = nd + 3)
+      colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
     print( round(y, nd), ... )
     invisible(x)
 }
 
-print.lavaan.vector <- function(x, ..., nd=3) {
+print.lavaan.vector <- function(x, ..., nd = 3L) {
     y <- unclass(x)
     #if(!is.null(names(x))) {
     #    names(y) <- abbreviate(names(x), minlength = nd + 3)
@@ -81,8 +81,8 @@ print.lavaan.character <- function(x) {
 print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
     # format for numeric values
-    num.format  <- paste("%", max(8, nd + 5), ".", nd, "f", sep = "")
-    char.format <- paste("%", max(8, nd + 5), "s", sep="")
+    num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+    char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
 
     # output sections
     GSECTIONS <- c("Latent Variables",
@@ -118,9 +118,9 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 t0.txt <- sprintf("  %-35s", "Information")
                 tmp.txt <- attr(x, "information")
                 t1.txt <- sprintf("  %15s",
-                                  paste(toupper(substring(tmp.txt,1,1)),
-                                  substring(tmp.txt,2), sep=""))
-                cat(t0.txt, t1.txt, "\n", sep="")
+                                  paste(toupper(substring(tmp.txt, 1, 1)),
+                                  substring(tmp.txt, 2), sep = ""))
+                cat(t0.txt, t1.txt, "\n", sep = "")
 
                 # 2.
                 if(attr(x, "information") %in% c("expected", "first.order") ||
@@ -130,25 +130,25 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                     tmp.txt <- attr(x, "h1.information")
                     t1.txt <- sprintf("  %15s",
                                       paste(toupper(substring(tmp.txt,1,1)),
-                                            substring(tmp.txt,2), sep=""))
-                    cat(t0.txt, t1.txt, "\n", sep="")
+                                            substring(tmp.txt, 2), sep = ""))
+                    cat(t0.txt, t1.txt, "\n", sep = "")
                 }
                 if(attr(x, "information") == "observed") {
                     t0.txt <- sprintf("  %-35s",
                                       "Observed information based on")
                     tmp.txt <- attr(x, "observed.information")
                     t1.txt <- sprintf("  %15s",
-                                      paste(toupper(substring(tmp.txt,1,1)),
-                                      substring(tmp.txt,2), sep=""))
-                    cat(t0.txt, t1.txt, "\n", sep="")
+                                      paste(toupper(substring(tmp.txt, 1, 1)),
+                                      substring(tmp.txt, 2), sep = ""))
+                    cat(t0.txt, t1.txt, "\n", sep = "")
                 }
             } # no bootstrap
 
             # 3.
             t0.txt <- sprintf("  %-31s", "Standard Errors")
             tmp.txt <- attr(x, "se")
-            t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt,1,1)),
-                                              substring(tmp.txt,2), sep=""))
+            t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt, 1, 1)),
+                                              substring(tmp.txt, 2), sep = ""))
             cat(t0.txt, t1.txt, "\n", sep="")
 
             # 4.
@@ -156,11 +156,11 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 t0.txt <-
                     sprintf("  %-40s", "Number of requested bootstrap draws")
                 t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
-                cat(t0.txt, t1.txt, "\n", sep="")
+                cat(t0.txt, t1.txt, "\n", sep = "")
                 t0.txt <-
                     sprintf("  %-40s", "Number of successful bootstrap draws")
                 t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
-                cat(t0.txt, t1.txt, "\n", sep="")
+                cat(t0.txt, t1.txt, "\n", sep = "")
             }
         }
     }
@@ -677,7 +677,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
         cat("\n")
         #print.lavaan.parameterEstimates(y$PE, ..., nd = nd)
 
-        short.summary(y$STRUC.FIT)
+        lav_object_print_short_summary(y$STRUC.FIT)
         FIT <- fitMeasures(y$STRUC.FIT, fit.measures="default")
         if(FIT["df"] > 0) {
             print.lavaan.fitMeasures( FIT )
