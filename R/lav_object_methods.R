@@ -12,7 +12,7 @@
 # - anova()
 
 # lavaan-specific methods:
-# 
+#
 # - parameterEstimates()
 # - standardizedSolution()
 # - parameterTable()
@@ -282,8 +282,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.nonfree = FALSE,
                                                      rsquare = FALSE,
                                                      output = "data.frame",
-                                                     header = FALSE,
-                                                     add.attributes = FALSE) {
+                                                     header = FALSE) {
 
     if("lavaan.fsr" %in% class(object)) {
         return(object$PE)
@@ -296,12 +295,6 @@ parameterEstimates <- parameterestimates <- function(object,
             zstat <- FALSE
             pvalue <- FALSE
         }
-    }
-
-    # backwards compatibility (for < 0.6-5)
-    if(!missing(add.attributes) && add.attributes) {
-        output <- "text"
-        header <- TRUE
     }
 
     # check output= argument

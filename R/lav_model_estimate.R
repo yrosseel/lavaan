@@ -683,6 +683,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     fx <- objective_function(x) # to get "fx.group" attribute
+    if(!is.null(GRADIENT) && OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B")) {
+        dx <- GRADIENT(x)
+    } else {
+        dx <- numeric(0L)
+    }
 
     # transform back
     # 3.
@@ -707,6 +712,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     attr(x, "iterations") <- iterations
     attr(x, "control")    <- control
     attr(x, "fx")         <- fx
+    attr(x, "dx")         <- dx
     attr(x, "parscale")   <- parscale
     if(!is.null(optim.out$con.jac)) attr(x, "con.jac")    <- optim.out$con.jac
     if(!is.null(optim.out$lambda))  attr(x, "con.lambda") <- optim.out$lambda

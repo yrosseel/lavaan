@@ -542,6 +542,21 @@ lav_partable_flat <- function(FLAT = NULL,
                !"lv.variances" %in% group.equal) {
                 lv.var.idx <- which(op == "~~" &
                                     lhs %in% lv.names &
+                                   !lhs %in% lv.names.efa &
+                                    lhs == rhs &
+                                    user == 0L &
+                                    group == g)
+                if(length(lv.var.idx) > 0L) {
+                    free[ lv.var.idx ] <- 1L
+                  ustart[ lv.var.idx ] <- as.numeric(NA)
+                }
+            }
+
+            # latent variances if efa = TRUE (new in 0.6-5)
+            if(auto.efa && "loadings" %in% group.equal &&
+               !"lv.variances" %in% group.equal) {
+                lv.var.idx <- which(op == "~~" &
+                                    lhs %in% lv.names.efa &
                                     lhs == rhs &
                                     user == 0L &
                                     group == g)

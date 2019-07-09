@@ -599,24 +599,24 @@ lavaanify <- lavParTable <- function(
 
                 # equality constraints on ALL factor loadings in this set?
                 # --> no constraints are needed
-                if(b > 1L || s > 1L) {
-                    # collect plabels for this set, if any
-                    set.idx <- which(LIST$op == "=~" &
-                                     LIST$block == b &
-                                     LIST$lhs %in% lv.nam.efa)
-                    plabels.set <- LIST$plabel[ set.idx ]
-
-                    # check simple == equalities
-                    # TODO: what about more complex equality constraints?
-                    eq.idx <- which(LIST$op == "==")
-                    con.labels <- c(LIST$lhs[eq.idx],
-                                    LIST$rhs[eq.idx])
-
-                    # TODO: what about exceptions?
-                    if(all(plabels.set %in% con.labels)) {
-                        next
-                    }
-                }
+                #if(b > 1L || s > 1L) {
+                #    # collect plabels for this set, if any
+                #    set.idx <- which(LIST$op == "=~" &
+                #                     LIST$block == b &
+                #                     LIST$lhs %in% lv.nam.efa)
+                #    plabels.set <- LIST$plabel[ set.idx ]
+                #
+                #    # check simple == equalities
+                #    # TODO: what about more complex equality constraints?
+                #    eq.idx <- which(LIST$op == "==")
+                #    con.labels <- c(LIST$lhs[eq.idx],
+                #                    LIST$rhs[eq.idx])
+                #
+                #    # TODO: what about exceptions?
+                #    if(all(plabels.set %in% con.labels)) {
+                #        next
+                #    }
+                #}
 
                 # 1. echelon pattern
                 nfac <- length(lv.nam.efa)
@@ -642,7 +642,7 @@ lavaanify <- lavParTable <- function(
                     # skip if user == 1 (user-override!)
                     cov.idx <- which(LIST$op == "~~" &
                                      LIST$block == b &
-                                     LIST$user == 0 &
+                                     LIST$user == 0L &
                                      LIST$lhs %in% lv.nam.efa &
                                      LIST$rhs %in% lv.nam.efa &
                                      LIST$lhs != LIST$rhs)
@@ -781,7 +781,13 @@ lavaanify <- lavParTable <- function(
 
         TMP <- list()
 
-        lv.names <- unique(LIST$lhs[ LIST$op == "=~" ])
+        # do not include 'EFA' lv's
+        if(!is.null(LIST$efa)) {
+            lv.names <- unique(LIST$lhs[ LIST$op == "=~" &
+                                         !nchar(LIST$efa) > 0L ])
+        } else {
+            lv.names <- unique(LIST$lhs[ LIST$op == "=~" ])
+        }
         group.values <- lav_partable_group_values(LIST)
 
         for(lv in lv.names) {
@@ -797,9 +803,78 @@ lavaanify <- lavParTable <- function(
                 # 1) add eq constraint
                 plabel <- LIST$plabel[ lv.var.idx ]
 
-                TMP$lhs    <- c(TMP$lhs,  length(lv.var.idx))
-                TMP$op     <- c(TMP$op,   "==")
-                TMP$rhs    <- c(TMP$rhs,  paste(plabel, collapse = "+"))
+                LHS <- plabel[1]
+                if(length(lv.var.idx) > 1L) {
+                    RHS <- paste(length(lv.var.idx), "-",
+                                 paste(plabel[-1], collapse = "-"),
+                                 sep = "")
+                } else {
+                    RHS <- length(lv.var.idx)
+                }
+
+                TMP$lhs    <- c(TMP$lhs,    LHS)
+                TMP$op     <- c(TMP$op,     "==")
+                TMP$rhs    <- c(TMP$rhs,    RHS)
+                TMP$block  <- c(TMP$block,  0L)
+                TMP$user   <- c(TMP$user,   2L)
+                TMP$ustart <- c(TMP$ustart, as.numeric(NA))
+
+                # 2) free lv variances first group
+                lv.var.g1.idx <- which( LIST$op  == "~~" &
+                                        LIST$group == group.values[1] &
+                                        LIST$lhs == lv &
+                                        LIST$rhs == LIST$lhs &
+                                        LIST$lhs == lv )
+                # free only if automatically added
+                if(length(lv.var.g1.idx) > 0L &&
+                   LIST$user[ lv.var.g1.idx ] == 0L) {
+                    LIST$free[ lv.var.g1.idx ] <- max(LIST$free) + 1L
+                }
+            }
+        } # lv
+
+        LIST <- lav_partable_merge(LIST, TMP)
+    }
+
+    # mg.lv.efa.variances
+    if(ngroups > 1L && "mg.lv.efa.variances" %in% effect.coding) {
+
+        TMP <- list()
+
+        # only 'EFA' lv's
+        if(!is.null(LIST$efa)) {
+            lv.names <- unique(LIST$lhs[ LIST$op == "=~" &
+                                         nchar(LIST$efa) > 0L ])
+        } else {
+            lv.names <- character(0L)
+        }
+        group.values <- lav_partable_group_values(LIST)
+
+        for(lv in lv.names) {
+            # factor variances
+            lv.var.idx <- which( LIST$op  == "~~" &
+                                 LIST$lhs == lv &
+                                 LIST$rhs == LIST$lhs &
+                                 LIST$lhs == lv )
+
+            # all free (but the first?)
+            if(length(lv.var.idx) > 0L &&
+               all(LIST$free[ lv.var.idx ][-1] > 0L)) {
+                # 1) add eq constraint
+                plabel <- LIST$plabel[ lv.var.idx ]
+
+                LHS <- plabel[1]
+                if(length(lv.var.idx) > 1L) {
+                    RHS <- paste(length(lv.var.idx), "-",
+                                 paste(plabel[-1], collapse = "-"),
+                                 sep = "")
+                } else {
+                    RHS <- length(lv.var.idx)
+                }
+
+                TMP$lhs    <- c(TMP$lhs,    LHS)
+                TMP$op     <- c(TMP$op,     "==")
+                TMP$rhs    <- c(TMP$rhs,    RHS)
                 TMP$block  <- c(TMP$block,  0L)
                 TMP$user   <- c(TMP$user,   2L)
                 TMP$ustart <- c(TMP$ustart, as.numeric(NA))

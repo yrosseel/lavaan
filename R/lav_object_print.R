@@ -39,7 +39,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
 
     # first column
     c1 <- c("Estimator", "Optimization method", "Number of free parameters")
-    
+
     # second column
     c2 <- c(toupper(object@Options$estimator),
             toupper(object@Options$optim.method), object@optim$npar)
@@ -52,7 +52,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
     if(nrow(object@Model@cin.JAC) > 0L) {
         c1 <- c(c1, "Number of inequality constraints")
         c2 <- c(c2, nrow(object@Model@cin.JAC))
-    } 
+    }
     if(nrow(object@Model@con.jac) > 0L) {
         c1 <- c(c1, "Row rank of the constraints matrix")
         c2 <- c(c2, qr(object@Model@con.jac)$rank)
@@ -147,7 +147,7 @@ lav_object_print_rotation <- function(object) {
 
 # short summary
 lav_object_print_test_statistics <- function(object) {
-    
+
     # robust/scaled statistics?
     if(object@Options$test %in% c("satorra.bentler",
                                   "yuan.bentler",

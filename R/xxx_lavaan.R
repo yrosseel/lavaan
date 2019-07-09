@@ -1096,6 +1096,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
         attr(x, "control") <- lavoptions$control
+        attr(x, "dx") <- numeric(0L)
         attr(x, "fx") <-
             lav_model_objective(lavmodel = lavmodel,
                 lavsamplestats = lavsamplestats, lavdata = lavdata,
@@ -1114,9 +1115,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim <- list()
     x2 <- x; attributes(x2) <- NULL
     lavoptim$x <- x2
+    lavoptim$dx <- attr(x, "dx")
     lavoptim$npar <- length(x)
     lavoptim$iterations <- attr(x, "iterations")
     lavoptim$converged  <- attr(x, "converged")
+    # new in 0.6-5: if grad elements are not zero, set convergence = FALSE!
+    if(lavoptim$converged && 
+       !is.null(lavoptions$check.gradient) && lavoptions$check.gradient) {
+        if(length(lavoptim$dx) > 0L) {
+            grad <- lavoptim$dx
+        } else {
+            grad <- 0
+        }
+        large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
+        if(length(large.idx) > 0L) {
+            lavoptim$converged <- FALSE
+            warning(
+  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
+"                  the optimizer may not have found a local solution")
+        }
+    }
     lavoptim$parscale   <- attr(x, "parscale")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx
@@ -1456,36 +1474,35 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavInspect(lavaan, "post.check")
     }
 
-    # new in 0.6-2
     # FIXME: not scale independent (should use solve(Hessian) %*% g)
     # but Hessian is not always available (or expensive to compute)
-    hasExplicitConstraints <- FALSE
-    if(is.character(constraints) && any(nchar(constraints) > 0L)) {
-        hasExplicitConstraints <- TRUE
-    }
-    hasNonLinearEqConstraints <- FALSE
-    if(length(lavmodel@ceq.nonlinear.idx) > 0L) {
-        hasNonLinearEqConstraints <- TRUE
-    }
-    hasIneqConstraints <- FALSE
-    if(length(lavmodel@cin.linear.idx) > 0L ||
-       length(lavmodel@cin.nonlinear.idx) > 0L) {
-        hasIneqConstraints <- TRUE
-    }
-    if(!is.null(lavoptions$check.gradient) && lavoptions$check.gradient &&
-       lavTech(lavaan, "converged") &&
-       !hasExplicitConstraints      &&
-       !hasNonLinearEqConstraints   &&
-       !hasIneqConstraints) {
-        grad <- lavInspect(lavaan, "optim.gradient")
-        large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
-        if(length(large.idx) > 0L) {
-            warning(
-  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
-"                  the optimizer may not have found a local solution;\n",
-"                  use lavInspect(fit, \"optim.gradient\") to investigate")
-        }
-    }
+    #hasExplicitConstraints <- FALSE
+    #if(is.character(constraints) && any(nchar(constraints) > 0L)) {
+    #    hasExplicitConstraints <- TRUE
+    #}
+    #hasNonLinearEqConstraints <- FALSE
+    #if(length(lavmodel@ceq.nonlinear.idx) > 0L) {
+    #    hasNonLinearEqConstraints <- TRUE
+    #}
+    #hasIneqConstraints <- FALSE
+    #if(length(lavmodel@cin.linear.idx) > 0L ||
+    #   length(lavmodel@cin.nonlinear.idx) > 0L) {
+    #    hasIneqConstraints <- TRUE
+    #}
+    #if(!is.null(lavoptions$check.gradient) && lavoptions$check.gradient &&
+    #   lavTech(lavaan, "converged") &&
+    #   !hasExplicitConstraints      &&
+    #   !hasNonLinearEqConstraints   &&
+    #   !hasIneqConstraints) {
+    #    grad <- lavInspect(lavaan, "optim.gradient")
+    #    large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
+    #    if(length(large.idx) > 0L) {
+    #        warning(
+#  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
+#"                  the optimizer may not have found a local solution;\n",
+#"                  use lavInspect(fit, \"optim.gradient\") to investigate")
+#        }
+#    }
 
 
     lavaan

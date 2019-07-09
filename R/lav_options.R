@@ -1176,6 +1176,7 @@ lav_options_set <- function(opt = NULL) {
     } else if(length(opt$effect.coding) == 0) {
         # nothing to do
     } else if(all(opt$effect.coding %in% c("loadings", "intercepts",
+                                           "mg.lv.efa.variances",
                                            "mg.lv.variances",
                                            "mg.lv.means",
                                            "mg.lv.intercepts"))) {
