@@ -11,8 +11,7 @@ parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE,
                    remove.system.eq = TRUE, remove.eq = TRUE,
                    remove.ineq = TRUE, remove.def = FALSE,
                    remove.nonfree = FALSE, rsquare = FALSE, 
-                   output = "data.frame", header = FALSE,
-                   add.attributes = FALSE)
+                   output = "data.frame", header = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -75,7 +74,6 @@ prettyfied, and displayed with subsections (as used by the summary function).}
 contains information about the information matrix, if saturated (h1) model
 is structured or unstructured, and which type of standard errors are shown
 in the output.}
-\item{add.attributes}{Deprecated. Use \code{output} instead.}
 }
 \value{
   A data.frame containing the estimated parameters,

@@ -477,16 +477,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
         iterations <- optim.out$iterations
         x          <- optim.out$par
-        if(optim.out$convergence == 0) {
-            # optimizer is happy, but do we have a zero gradient
-            # check 'unscaled' gradient (for now)
-            grad <- gradient_function_numerical(x)
-            if( all(abs(grad) < lavoptions$optim.dx.tol) ) {
-                converged <- TRUE
-            } else {
-                # warning here?
-                converged <- FALSE
-            }
+        if(optim.out$convergence == 0L) {
+            converged <- TRUE
         } else {
             converged <- FALSE
         }
@@ -528,23 +520,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
         iterations <- optim.out$iterations
         x          <- optim.out$par
-        if(optim.out$convergence == 0) {
-            # optimizer is happy, but do we have a zero gradient
-            # check 'unscaled' gradient (for now)
-
-            # should we treat bounds differently?
-
-
-            grad <- gradient_function(x)
-            if( all(abs(grad) < lavoptions$optim.dx.tol) ) {
-                converged <- TRUE
-            } else {
-                # warning here?
-                converged <- FALSE
-            }
+        if(optim.out$convergence == 0L) {
+            converged <- TRUE
         } else {
             converged <- FALSE
         }
+
     } else if(OPTIMIZER == "BFGS") {
 
         # warning: Bollen example with estimator=GLS does NOT converge!
@@ -683,8 +664,26 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     fx <- objective_function(x) # to get "fx.group" attribute
+
+    # check.gradient
     if(!is.null(GRADIENT) && OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B")) {
+
+        # compute unscaled gradient
         dx <- GRADIENT(x)
+
+        # NOTE: unscaled gradient!!!
+        if(converged && lavoptions$check.gradient &&
+           any(abs(dx) > lavoptions$optim.dx.tol)) { 
+
+            converged <- FALSE
+            warning(
+  "lavaan WARNING: the optimizer (", OPTIMIZER, ") ", 
+                   "claimed the model converged,\n",
+"                  but not all elements of the gradient are (near) zero;\n",
+"                  the optimizer may not have found a local solution\n",
+"                  use check.gradient = FALSE to skip this check.")
+        }
+
     } else {
         dx <- numeric(0L)
     }

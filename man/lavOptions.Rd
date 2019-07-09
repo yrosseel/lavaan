@@ -325,6 +325,11 @@ Optimization options:
       the available options are \code{"nlminb"} (the default), \code{"BFGS"} and
       \code{"L-BFGS-B"}. For constrained
       optimization, the only available option is \code{"nlminb.constr"}.}
+    \item{\code{optim.force.converged}:}{Logical. If \code{TRUE}, pretend
+      the model has converged, no matter what.}
+    \item{\code{optim.dx.tol}}{Numeric. Tolerance used for checking if
+      the elements of the (unscaled) gradient are all zero (in absolute 
+      value). The default value is 0.001.}
 }
 
 Categorical estimation options:

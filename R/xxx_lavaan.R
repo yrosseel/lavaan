@@ -1119,22 +1119,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim$npar <- length(x)
     lavoptim$iterations <- attr(x, "iterations")
     lavoptim$converged  <- attr(x, "converged")
-    # new in 0.6-5: if grad elements are not zero, set convergence = FALSE!
-    if(lavoptim$converged && 
-       !is.null(lavoptions$check.gradient) && lavoptions$check.gradient) {
-        if(length(lavoptim$dx) > 0L) {
-            grad <- lavoptim$dx
-        } else {
-            grad <- 0
-        }
-        large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
-        if(length(large.idx) > 0L) {
-            lavoptim$converged <- FALSE
-            warning(
-  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
-"                  the optimizer may not have found a local solution")
-        }
-    }
     lavoptim$parscale   <- attr(x, "parscale")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx
