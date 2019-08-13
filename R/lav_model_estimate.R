@@ -76,12 +76,30 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             cov.x = lavsamplestats@cov.x)
         } else {
             # needs good estimates for lv variances!
+            # if there is a single 'marker' indicator, we could use
+            # its observed variance as an upper bound
+
+            # for the moment, set them to 1.0 (instead of 0.05)
+
+            # TODO: USE Bentler's 1982 approach to get an estimate of
+            # VETA; use those diagonal elements...
+            # but only if we have 'marker' indicators for each LV
+            LV.VAR <- vector("list", lavmodel@ngroups)
+            for(g in seq_len(lavmodel@ngroups)) {
+                mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0,lavmodel@nmat))[g]
+                MLIST     <- lavmodel@GLIST[ mm.in.group ]
+                LAMBDA <- MLIST$lambda
+                n.lv <- ncol(LAMBDA)
+                LV.VAR[[g]] <- rep(1.0, n.lv)
+            }
+
             parscale <- lav_standardize_all(lavobject = NULL,
                             est = rep(1, length(lavpartable$lhs)),
                             #est.std = rep(1, length(lavpartable$lhs)),
                             # here, we use whatever the starting values are
                             # for the latent variances...
                             cov.std = FALSE, ov.var = OV.VAR,
+                            lv.var = LV.VAR,
                             lavmodel = lavmodel, lavpartable = lavpartable,
                             cov.x = lavsamplestats@cov.x)
         }
@@ -232,7 +250,9 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # for L-BFGS-B
         #if(infToMax && is.infinite(fx)) fx <- 1e20
         if(!is.finite(fx)) {
+            fx.group <- attr(fx, "fx.group")
             fx <- 1e20
+            attr(fx, "fx.group") <- fx.group # only for lav_model_fit()
         }
 
         fx

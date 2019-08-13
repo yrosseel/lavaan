@@ -1,4 +1,5 @@
 lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
+                                 lv.var = TRUE,
                                  rotation = FALSE) {
     # embed x in est
     est <- lav_object_inspect_est(lavobject, unrotated = rotation)
@@ -12,7 +13,8 @@ lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
 
     x.stand.user <- lav_standardize_lv(lavobject = lavobject,
                                        partable = partable, est = est,
-                                       GLIST = GLIST, cov.std = cov.std)
+                                       GLIST = GLIST, cov.std = cov.std,
+                                       lv.var = lv.var)
 
     if(rotation) {
         x.stand.free <- x.stand.user[free.idx]
@@ -102,7 +104,7 @@ lav_unstandardize_ov_x <- function(x, lavobject) {
 
 lav_standardize_lv <- function(lavobject = NULL,
                                partable = NULL, est = NULL, GLIST = NULL,
-                               cov.std = TRUE,
+                               cov.std = TRUE, lv.var = NULL,
                                lavmodel = NULL, lavpartable = NULL) {
 
     if(is.null(lavobject)) {
@@ -136,8 +138,10 @@ lav_standardize_lv <- function(lavobject = NULL,
     nmat <- lavmodel@nmat
 
     # compute ETA
-    LV.ETA <- computeVETA(lavmodel       = lavmodel,
-                          GLIST          = GLIST)
+    if(is.null(lv.var)) {
+        LV.ETA <- computeVETA(lavmodel       = lavmodel,
+                              GLIST          = GLIST)
+    }
 
     for(g in 1:lavmodel@nblocks) {
 
@@ -153,7 +157,11 @@ lav_standardize_lv <- function(lavobject = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
-        ETA2 <- diag(LV.ETA[[g]])
+        if(is.null(lv.var)) {
+            ETA2 <- diag(LV.ETA[[g]])
+        } else {
+            ETA2 <- lv.var[[g]]
+        }
         ETA  <- sqrt(ETA2)
 
         # 1a. "=~" regular indicators
@@ -284,6 +292,7 @@ lav_standardize_lv <- function(lavobject = NULL,
 lav_standardize_all <- function(lavobject = NULL,
                                 partable = NULL, est = NULL, est.std = NULL,
                                 GLIST = NULL, cov.std = TRUE, ov.var = NULL,
+                                lv.var = NULL,
                                 lavmodel = NULL, lavpartable = NULL,
                                 cov.x = NULL) {
 
@@ -333,7 +342,7 @@ lav_standardize_all <- function(lavobject = NULL,
     if(is.null(est.std)) {
         est.std <- lav_standardize_lv(lavobject = lavobject,
                        partable = partable, est = est, GLIST = GLIST,
-                       cov.std = cov.std, lavmodel = lavmodel,
+                       cov.std = cov.std, lv.var = lv.var, lavmodel = lavmodel,
                        lavpartable = lavpartable)
     }
 
@@ -514,6 +523,7 @@ lav_standardize_all <- function(lavobject = NULL,
 lav_standardize_all_nox <- function(lavobject = NULL,
                                     partable = NULL, est = NULL, est.std = NULL,
                                     GLIST = NULL, cov.std = TRUE, ov.var = NULL,
+                                    lv.var = NULL,
                                     lavmodel = NULL, lavpartable = NULL,
                                     cov.x = NULL) {
 
@@ -563,7 +573,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     if(is.null(est.std)) {
         est.std <- lav_standardize_lv(lavobject = lavobject,
                        partable = partable, est = est, GLIST = GLIST,
-                       cov.std = cov.std, lavmodel = lavmodel,
+                       cov.std = cov.std, lv.var = lv.var, lavmodel = lavmodel,
                        lavpartable = lavpartable)
     }
 
