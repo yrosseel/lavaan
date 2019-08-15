@@ -693,11 +693,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
         # NOTE: unscaled gradient!!!
         if(converged && lavoptions$check.gradient &&
-           any(abs(dx) > lavoptions$optim.dx.tol)) { 
+           any(abs(dx) > lavoptions$optim.dx.tol)) {
 
             converged <- FALSE
             warning(
-  "lavaan WARNING: the optimizer (", OPTIMIZER, ") ", 
+  "lavaan WARNING: the optimizer (", OPTIMIZER, ") ",
                    "claimed the model converged,\n",
 "                  but not all elements of the gradient are (near) zero;\n",
 "                  the optimizer may not have found a local solution\n",

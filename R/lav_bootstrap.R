@@ -45,8 +45,9 @@ bootstrapLavaan <- function(object,
         stop("lavaan ERROR: se == \"bootstrap\"; please refit model with another option for \"se\"")
 
     # check if options$test is not bollen.stine
-    if(object@Options$test == "bollen.stine")
-        stop("lavaan ERROR: test == \"bollen.stine\"; please refit model with another option for \"test\"")
+    if("bollen.stine" %in% object@Options$test) {
+        stop("lavaan ERROR: test= argument contains \"bollen.stine\"; please refit model with another option for \"test\"")
+    }
 
     # check for conditional.x = TRUE
     if(object@Model@conditional.x) {

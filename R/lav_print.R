@@ -145,7 +145,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             } # no bootstrap
 
             # 3.
-            t0.txt <- sprintf("  %-31s", "Standard Errors")
+            t0.txt <- sprintf("  %-31s", "Standard errors")
             tmp.txt <- attr(x, "se")
             t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt, 1, 1)),
                                               substring(tmp.txt, 2), sep = ""))
@@ -658,7 +658,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
 
             # fit measures?
             b.options <- lavInspect(y$MM.FIT[[b]], "options")
-            if(b.options$test != "none") {
+            if(!(length(b.options$test) == 1L && b.options$test == "none")) {
                 cat("\n")
                 print(fitMeasures(y$MM.FIT[[b]], c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")))
             }

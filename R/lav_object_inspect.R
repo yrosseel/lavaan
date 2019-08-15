@@ -657,7 +657,7 @@ lav_object_inspect_boot <- function(object, add.labels = FALSE,
                                     add.class = FALSE) {
 
     if(object@Options$se   != "bootstrap" &&
-       object@Options$test != "bootstrap") {
+       !any(c("bootstrap", "bollen.stine") %in% object@Options$test)) {
         stop("lavaan ERROR: bootstrap was not used.")
     }
 

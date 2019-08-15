@@ -12,17 +12,11 @@ lav_model_test <- function(lavmodel       = NULL,
                            test.UGamma.eigvals = FALSE) {
 
 
-    mimic         <- lavoptions$mimic
-    test          <- lavoptions$test
-    information   <- lavoptions$information
-
-    estimator     <- lavmodel@estimator
-    meanstructure <- lavmodel@meanstructure
-
+    test <- lavoptions$test
 
     TEST <- list()
 
-    # degrees of freedom
+    # degrees of freedom (ignoring constraints)
     df <- lav_partable_df(lavpartable)
 
     # handle equality constraints (note: we ignore inequality constraints,
@@ -37,37 +31,57 @@ lav_model_test <- function(lavmodel       = NULL,
     }
 
 
-    if(test == "none" || df < 0L || estimator == "MML") {
-        TEST[[1]] <- list(test=test,
-                          stat=as.numeric(NA),
-                          stat.group=as.numeric(NA),
-                          df=df,
-                          refdistr="unknown",
-                          pvalue=as.numeric(NA))
+    # shortcut: return empty list if one of the conditions below is true:
+    # - test == "none"
+    # - df < 0
+    # - estimator == "MML"
+    if(test[1] == "none" || df < 0L || lavoptions$estimator == "MML") {
 
-        # just in case
-        TEST[[2]] <- list(test=test,
-                          stat=as.numeric(NA),
-                          stat.group=as.numeric(NA),
-                          df=df,
-                          refdistr="unknown",
-                          pvalue=as.numeric(NA))
+        TEST[[1]] <- list(test       = test[1],
+                          stat       = as.numeric(NA),
+                          stat.group = as.numeric(NA),
+                          df         = df,
+                          refdistr   = "unknown",
+                          pvalue     = as.numeric(NA))
+
+        if(length(test) > 1L) {
+            TEST[[2]] <- list(test       = test[2],
+                              stat       = as.numeric(NA),
+                              stat.group = as.numeric(NA),
+                              df         = df,
+                              refdistr   = "unknown",
+                              pvalue     = as.numeric(NA))
+        }
+
         return(TEST)
     }
 
-    if(lavoptions$estimator == "PML" && test != "none") {
-        PML <- ctr_pml_plrt(lavobject = NULL,
-                            lavmodel = lavmodel,
-                            lavdata = lavdata,
-                            lavoptions = lavoptions,
-                            x = x, VCOV = VCOV,
-                            lavcache = lavcache,
+
+    ######################
+    ## TEST == STANDARD ##
+    ######################
+
+    # get chisq value, per group
+
+    # PML
+    if(lavoptions$estimator == "PML" && test[1] != "none") {
+
+        PML <- ctr_pml_plrt(lavobject      = NULL,
+                            lavmodel       = lavmodel,
+                            lavdata        = lavdata,
+                            lavoptions     = lavoptions,
+                            x              = x,
+                            VCOV           = VCOV,
+                            lavcache       = lavcache,
                             lavsamplestats = lavsamplestats,
-                            lavpartable = lavpartable)
+                            lavpartable    = lavpartable)
         # get chi.group from PML, since we compare to `unrestricted' model,
         # NOT observed data
         chisq.group <- PML$PLRTH0Sat.group
+
+    # twolevel
     } else if(lavdata@nlevels > 1L) {
+
         if(length(lavh1) > 0L) {
             # LRT
             chisq.group <- -2 * (lavloglik$loglik.group - lavh1$loglik.group)
@@ -93,14 +107,14 @@ lav_model_test <- function(lavmodel       = NULL,
     }
 
     # check for negative values
-    chisq.group[which(chisq.group < 0)] <- 0.0
+    chisq.group[ chisq.group < 0 ] <- 0.0
 
     # global test statistic
     chisq <- sum(chisq.group)
 
     # reference distribution: always chi-square, except for the
     # non-robust version of ULS and PML
-    if(estimator == "ULS" || estimator == "PML") {
+    if(lavoptions$estimator == "ULS" || lavoptions$estimator == "PML") {
         refdistr <- "unknown"
         pvalue <- as.numeric(NA)
     } else {
@@ -125,144 +139,141 @@ lav_model_test <- function(lavmodel       = NULL,
         }
     }
 
-    TEST[[1]] <- list(test="standard",
-                      stat=chisq,
-                      stat.group=chisq.group,
-                      df=df,
-                      refdistr=refdistr,
-                      pvalue=pvalue)
+    TEST[["standard"]] <- list(test       = "standard",
+                               stat       = chisq,
+                               stat.group = chisq.group,
+                               df         = df,
+                               refdistr   = refdistr,
+                               pvalue     = pvalue)
 
-    if(df == 0 && test %in% c("satorra.bentler", "yuan.bentler",
-                              "yuan.bentler.mplus",
-                              "mean.var.adjusted", "scaled.shifted")) {
-        TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
-                          df=df, refdistr=refdistr, pvalue=pvalue,
-                          scaling.factor=as.numeric(NA))
+    if(length(test) == 1L && test == "standard") {
+        # we are done
         return(TEST)
-    }
-
-    # do we already know E.inv is singular?
-    E.inv <- attr(VCOV, "E.inv")
-    if(!is.null(E.inv) && inherits(E.inv, "try-error")) {
-        TEST[[2]] <- list(test=test, stat=chisq, stat.group=chisq.group,
-                          df=df, refdistr=refdistr, pvalue=pvalue,
-                          scaling.factor=as.numeric(NA))
-        return(TEST)
-    }
-
-    # some require meanstructure (for now)
-    #if(test %in% c("satorra.bentler", "yuan.bentler") &&
-    #   !lavoptions$meanstructure) {
-    #    stop("test (", test, ") requires meanstructure (for now)")
-    #}
-
-    # fixed.x idx
-    if(lavmodel@fixed.x && estimator == "ML" && !lavmodel@conditional.x) {
-        x.idx <- lavsamplestats@x.idx
     } else {
-        x.idx <- vector("list", length=lavsamplestats@ngroups)
-        for(g in 1:lavsamplestats@ngroups) {
-            x.idx[[g]] <- integer(0L)
-        }
-    }
-
-    if(lavoptions$estimator == "PML") {
-        if(test == "standard") {
-            # nothing to do
-        } else if(test == "mean.var.adjusted") {
-            TEST[[2]] <- list(test               = test,
-                              stat               = PML$stat,
-                              stat.group         = TEST[[1]]$stat.group*PML$scaling.factor,
-                              df                 = PML$df,
-                              pvalue             = PML$p.value,
-                              scaling.factor     = 1/PML$scaling.factor,
-                              shift.parameter    = as.numeric(NA),
-                              trace.UGamma       = as.numeric(NA),
-                              trace.UGamma4      = as.numeric(NA),
-                              trace.UGamma2      = as.numeric(NA),
-                              UGamma.eigenvalues = as.numeric(NA))
-        } else {
-            warning("test option ", test, " not available for estimator PML")
-        }
-    } else if(test %in%
-          c("satorra.bentler", "mean.var.adjusted", "scaled.shifted") &&
-          df > 0 && lavoptions$estimator != "PML") {
-
-        out <- lav_test_satorra_bentler(lavobject = NULL,
-                         lavsamplestats = lavsamplestats,
-                         lavmodel       = lavmodel,
-                         lavimplied     = lavimplied,
-                         lavdata        = lavdata,
-                         lavoptions     = lavoptions,
-                         TEST.unscaled  = TEST[[1]],
-                         E.inv          = attr(VCOV, "E.inv"),
-                         Delta          = attr(VCOV, "Delta"),
-                         WLS.V          = attr(VCOV, "WLS.V"),
-                         Gamma          = attr(VCOV, "Gamma"),
-                         test           = test,
-                         mimic          = lavoptions$mimic,
-                         method         = "ABA",
-                         return.ugamma  = FALSE)
-        TEST[[2]] <- out[[test]]
-
-    } else if(test %in% c("yuan.bentler", "yuan.bentler.mplus") && df > 0 &&
-              lavoptions$estimator != "PML") {
-
-        out <- lav_test_yuan_bentler(lavobject = NULL,
-                         lavsamplestats = lavsamplestats,
-                         lavmodel       = lavmodel,
-                         lavdata        = lavdata,
-                         lavimplied     = lavimplied,
-                         lavh1          = lavh1,
-                         lavoptions     = lavoptions,
-                         TEST.unscaled  = TEST[[1]],
-                         E.inv          = attr(VCOV, "E.inv"),
-                         B0.group       = attr(VCOV, "B0.group"),
-                         test           = test,
-                         mimic          = lavoptions$mimic,
-                         #method         = "default",
-                         return.ugamma  = FALSE)
-        TEST[[2]] <- out[[test]]
-
-    } else if(test == "bootstrap" || test == "bollen.stine") {
-        # check if we have bootstrap lavdata
-        BOOT.TEST <- attr(VCOV, "BOOT.TEST")
-        if(is.null(BOOT.TEST)) {
-            if(!is.null(lavoptions$bootstrap)) {
-                R <- lavoptions$bootstrap
-            } else {
-                R <- 1000L
+        # strip 'standard' from test list
+        if(length(test) > 1L) {
+            standard.idx <- which(test == "standard")
+            if(length(standard.idx) > 0L) {
+                test <- test[-standard.idx]
             }
-            boot.type <- "bollen.stine"
-            BOOT.TEST <-
-                bootstrap.internal(object          = NULL,
-                                   lavmodel.       = lavmodel,
-                                   lavsamplestats. = lavsamplestats,
-                                   lavpartable.    = lavpartable,
-                                   lavoptions.     = lavoptions,
-                                   lavdata.        = lavdata,
-                                   R               = R,
-                                   verbose         = lavoptions$verbose,
-                                   type            = boot.type,
-                                   FUN             = "test",
-                                   warn            = -1L)
-            BOOT.TEST <- drop(BOOT.TEST)
+        }
+    }
+
+
+
+
+    ######################
+    ## additional tests ## # new in 0.6-5
+    ######################
+
+    for(this.test in test) {
+
+        if(lavoptions$estimator == "PML") {
+            if(this.test == "mean.var.adjusted") {
+                LABEL <- "mean and variance adjusted correction (PML)"
+                TEST[[this.test]] <-
+                    list(test                 = this.test,
+                         stat                 = PML$stat,
+                         stat.group           = TEST[[1]]$stat.group*PML$scaling.factor,
+                         df                   = PML$df,
+                         pvalue               = PML$p.value,
+                         scaling.factor       = 1/PML$scaling.factor,
+                         label                = LABEL,
+                         shift.parameter      = as.numeric(NA),
+                         trace.UGamma         = as.numeric(NA),
+                         trace.UGamma4        = as.numeric(NA),
+                         trace.UGamma2        = as.numeric(NA),
+                         UGamma.eigenvalues   = as.numeric(NA))
+            } else {
+                warning("test option ", this.test,
+                        " not available for estimator PML")
+            }
+
+
+
+        } else if(this.test %in% c("satorra.bentler",
+                                   "mean.var.adjusted",
+                                   "scaled.shifted")) {
+
+            out <- lav_test_satorra_bentler(lavobject = NULL,
+                             lavsamplestats = lavsamplestats,
+                             lavmodel       = lavmodel,
+                             lavimplied     = lavimplied,
+                             lavdata        = lavdata,
+                             lavoptions     = lavoptions,
+                             TEST.unscaled  = TEST[[1]],
+                             E.inv          = attr(VCOV, "E.inv"),
+                             Delta          = attr(VCOV, "Delta"),
+                             WLS.V          = attr(VCOV, "WLS.V"),
+                             Gamma          = attr(VCOV, "Gamma"),
+                             test           = this.test,
+                             mimic          = lavoptions$mimic,
+                             method         = "ABA",
+                             return.ugamma  = FALSE)
+            TEST[[this.test]] <- out[[this.test]]
+
+        } else if(this.test %in% c("yuan.bentler",
+                                   "yuan.bentler.mplus")) {
+
+            out <- lav_test_yuan_bentler(lavobject = NULL,
+                             lavsamplestats = lavsamplestats,
+                             lavmodel       = lavmodel,
+                             lavdata        = lavdata,
+                             lavimplied     = lavimplied,
+                             lavh1          = lavh1,
+                             lavoptions     = lavoptions,
+                             TEST.unscaled  = TEST[[1]],
+                             E.inv          = attr(VCOV, "E.inv"),
+                             B0.group       = attr(VCOV, "B0.group"),
+                             test           = this.test,
+                             mimic          = lavoptions$mimic,
+                             #method         = "default",
+                             return.ugamma  = FALSE)
+            TEST[[this.test]] <- out[[this.test]]
+
+        } else if(this.test == "bollen.stine") {
+
+            # check if we have bootstrap lavdata
+            BOOT.TEST <- attr(VCOV, "BOOT.TEST")
+            if(is.null(BOOT.TEST)) {
+                if(!is.null(lavoptions$bootstrap)) {
+                    R <- lavoptions$bootstrap
+                } else {
+                    R <- 1000L
+                }
+                boot.type <- "bollen.stine"
+                BOOT.TEST <-
+                    bootstrap.internal(object          = NULL,
+                                       lavmodel.       = lavmodel,
+                                       lavsamplestats. = lavsamplestats,
+                                       lavpartable.    = lavpartable,
+                                       lavoptions.     = lavoptions,
+                                       lavdata.        = lavdata,
+                                       R               = R,
+                                       verbose         = lavoptions$verbose,
+                                       type            = boot.type,
+                                       FUN             = "test",
+                                       warn            = -1L)
+                BOOT.TEST <- drop(BOOT.TEST)
+            }
+
+            # bootstrap p-value
+            boot.larger <- sum(BOOT.TEST > chisq)
+            boot.length <- length(BOOT.TEST)
+            pvalue.boot <- boot.larger/boot.length
+
+            TEST[[this.test]] <- list(test        = this.test,
+                                      stat        = chisq,
+                                      stat.group  = chisq.group,
+                                      df          = df,
+                                      pvalue      = pvalue.boot,
+                                      refdistr    = "bootstrap",
+                                      boot.T      = BOOT.TEST,
+                                      boot.larger = boot.larger,
+                                      boot.length = boot.length)
         }
 
-        # bootstrap p-value
-        boot.larger <- sum(BOOT.TEST > chisq)
-        boot.length <- length(BOOT.TEST)
-        pvalue.boot <- boot.larger/boot.length
-
-        TEST[[2]] <- list(test="bootstrap",
-                          stat=chisq,
-                          stat.group=chisq.group,
-                          df=df,
-                          pvalue=pvalue.boot,
-                          boot.T=BOOT.TEST,
-                          boot.larger=boot.larger,
-                          boot.length=boot.length)
-    }
+    } # additional tests
 
     TEST
 }

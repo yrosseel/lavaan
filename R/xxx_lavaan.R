@@ -1268,9 +1268,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #### 13. lavtest ####
     #####################
     TEST <- NULL
-    if(lavoptions$test != "none" && attr(x, "converged")) {
+    if( !(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
+        attr(x, "converged") ) {
         if(lavoptions$verbose) {
-            cat("Computing TEST for test =", lavoptions$test, "...")
+            cat("Computing TEST for test(s) =", lavoptions$test, "...")
         }
         TEST <- lav_model_test(lavmodel            = lavmodel,
                                lavpartable         = lavpartable,
@@ -1326,7 +1327,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ######################
     lavbaseline <- list()
     if( lavoptions$do.fit &&
-       !lavoptions$test == "none" &&
+       !("none" %in% lavoptions$test) &&
         is.logical(lavoptions$baseline) && lavoptions$baseline ) {
         if(lavoptions$verbose) {
             cat("Fitting baseline model ... ")

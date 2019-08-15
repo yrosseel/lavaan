@@ -156,6 +156,18 @@ lav_mplus_estimator <- function(object) {
         estimator <- "WLS"
     }
 
+    # only 1 argument for 'test' is allowed
+    if(length(object@Options$test) > 1L) {
+        standard.idx <- which(object@Options$test == "standard")
+        if(length(standard.idx) > 1L) {
+            object@Options$test <- object@Options$test[-standard.idx]
+        }
+        if(length(object@Options$test) > 1L) {
+            warning("lavaan WARNING: only first (non-standard) test will be used")
+            object@Options$test <- object@Options$test[1]
+        }
+    }
+
     if(estimator == "ML") {
         if(object@Options$test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
             estimator <- "MLR"

@@ -304,7 +304,8 @@ Estimation options:
      If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"}, the 
      Bollen-Stine bootstrap is used to compute the bootstrap probability value 
      of the test statistic. If \code{"default"}, the value depends on the
-     values of other arguments.}
+     values of other arguments. From version 0.6-5 onwards, the test argument
+     accepts a vector, and therefore multiple tests can be requested.}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 

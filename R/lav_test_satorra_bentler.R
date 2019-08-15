@@ -46,7 +46,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         method <- "ABA"
     } else if(!all(method %in% c("original", "orthogonal.complement",
                                  "ABA"))) {
-        warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `original'")
+        warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `ABA'")
         method <- "ABA"
     }
 
@@ -65,15 +65,31 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         E.inv <- try(lav_model_information_augment_invert(lavmodel,
                          information = E, inverted = TRUE), silent=TRUE)
         if(inherits(E.inv, "try-error")) {
-            TEST <- list(test = test, stat = as.numeric(NA),
-                stat.group = rep(as.numeric(NA), lavsamplestats@ngroups),
-                df = TEST.unscaled$df, refdistr = TEST.unscaled$refdistr,
-                pvalue = as.numeric(NA), scaling.factor = as.numeric(NA))
-            warning("lavaan WARNING: could not invert information matrix\n")
-            return(TEST)
+
+            if(return.ugamma) {
+                warning("lavaan WARNING: could not invert information matrix needed for UGamma\n")
+                return(NULL)
+            } else if(return.u) {
+                warning("lavaan WARNING: could not invert information matrix needed for UfromUGamma\n")
+                return(NULL)
+            } else {
+                TEST[[test[1]]] <- c(TEST$standard, 
+                                     scaling.factor = as.numeric(NA),
+                                     label = character(0))
+                warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
+                return(TEST)
+            }
         }
         Delta <- attr(E, "Delta")
         WLS.V <- attr(E, "WLS.V")
+    }
+
+    # catch df == 0
+    if((TEST$standard$df == 0L || TEST$standard$df < 0) &&
+       !return.u && !return.ugamma) {
+        TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
+                             label = character(0))
+        return(TEST)
     }
 
     # Gamma
@@ -124,7 +140,6 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     trace.UGamma  <- out$trace.UGamma
     trace.UGamma2 <- out$trace.UGamma2
 
-
     if("satorra.bentler" %in% test) {
         # same df
         df.scaled <- TEST$standard$df
@@ -139,14 +154,31 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         # scaled test statistic global
         stat <- sum(stat.group)
 
+        # label
+        if(mimic == "Mplus") {
+            if(lavoptions$estimator == "ML") {
+                label <-
+                    "Satorra-Bentler correction (Mplus variant)"
+            } else if(lavoptions$estimator == "DWLS") {
+                label <-
+                    "Satorra-Bentler correction (WLSM)"
+            } else if(lavoptions$estimator == "ULS") {
+                label <-
+                    "Satorra-Bentler correction (ULSM)"
+            }
+        } else {
+            label <- "Satorra-Bentler correction"
+        }
+
         TEST$satorra.bentler <-
-            list(test            = "satorra.bentler",
-                 stat            = stat,
-                 stat.group      = stat.group,
-                 df              = df.scaled,
-                 pvalue          = 1 - pchisq(stat, df.scaled),
-                 trace.UGamma    = trace.UGamma,
-                 scaling.factor  = scaling.factor)
+            list(test                 = "satorra.bentler",
+                 stat                 = stat,
+                 stat.group           = stat.group,
+                 df                   = df.scaled,
+                 pvalue               = 1 - pchisq(stat, df.scaled),
+                 trace.UGamma         = trace.UGamma,
+                 scaling.factor       = scaling.factor,
+                 label = label)
     }
 
     if("mean.var.adjusted" %in% test) {
@@ -167,15 +199,32 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         # scaled test statistic global
         stat <- sum(stat.group)
 
+        # label
+        if(mimic == "Mplus") {
+            if(lavoptions$estimator == "ML") {
+                label <-
+                    "mean and variance adjusted correction (MLMV)"
+            } else if(lavoptions$estimator == "DWLS") {
+                label <-
+                    "mean and variance adjusted correction (WLSMV)"
+            } else if(lavoptions$estimator == "ULS") {
+                label <-
+                    "mean and variance adjusted correction (ULSMV)"
+            }
+        } else {
+            label <- "mean and variance adjusted correction"
+        }
+
         TEST$mean.var.adjusted <-
-            list(test            = "mean.var.adjusted",
-                 stat            = stat,
-                 stat.group      = stat.group,
-                 df              = df.scaled,
-                 pvalue          = 1 - pchisq(stat, df.scaled),
-                 trace.UGamma    = trace.UGamma,
-                 trace.UGamma2   = trace.UGamma2,
-                 scaling.factor  = scaling.factor)
+            list(test                 = "mean.var.adjusted",
+                 stat                 = stat,
+                 stat.group           = stat.group,
+                 df                   = df.scaled,
+                 pvalue               = 1 - pchisq(stat, df.scaled),
+                 trace.UGamma         = trace.UGamma,
+                 trace.UGamma2        = trace.UGamma2,
+                 scaling.factor       = scaling.factor,
+                 label = label)
     }
 
     if("scaled.shifted" %in% test) {
@@ -205,16 +254,33 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         # scaled test statistic global
         stat <- sum(stat.group)
 
+        # label
+        if(mimic == "Mplus") {
+            if(lavoptions$estimator == "ML") {
+                label <-
+                    "simple second-order correction (MLMV)"
+            } else if(lavoptions$estimator == "DWLS") {
+                label <-
+                    "simple second-order correction (WLSMV)"
+            } else if(lavoptions$estimator == "ULS") {
+                label <-
+                    "simple second-order correction (ULSMV)"
+            }
+        } else {
+            label <- "simple second-order correction"
+        }
+
         TEST$scaled.shifted <-
-            list(test            = "scaled.shifted",
-                 stat            = stat,
-                 stat.group      = stat.group,
-                 df              = df.scaled,
-                 pvalue          = 1 - pchisq(stat, df.scaled),
-                 trace.UGamma    = trace.UGamma,
-                 trace.UGamma2   = trace.UGamma2,
-                 scaling.factor  = scaling.factor,
-                 shift.parameter = shift.parameter)
+            list(test                 = "scaled.shifted",
+                 stat                 = stat,
+                 stat.group           = stat.group,
+                 df                   = df.scaled,
+                 pvalue               = 1 - pchisq(stat, df.scaled),
+                 trace.UGamma         = trace.UGamma,
+                 trace.UGamma2        = trace.UGamma2,
+                 scaling.factor       = scaling.factor,
+                 label                = label,
+                 shift.parameter      = shift.parameter)
     }
 
     if(return.ugamma) {

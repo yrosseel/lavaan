@@ -86,6 +86,18 @@ lav_fit_measures <- function(object, fit.measures = "all",
     multigroup    <- object@Data@ngroups > 1L
     estimator     <- object@Options$estimator
     test          <- object@Options$test
+    # 0.6.5: for now, we make sure that 'test' is a single element
+    if(length(test) > 1L) {
+        standard.idx <- which(test == "standard")
+        if(length(standard.idx) > 0L) {
+            test <- test[-standard.idx]
+        }
+        if(length(test) > 1L) {
+            # only retain the first one
+            test <- test[1]
+        }
+    }
+
     G <- object@Data@ngroups  # number of groups
     X2 <- TEST[[1]]$stat
     df <- TEST[[1]]$df
@@ -157,8 +169,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
         fit.logl <- c("logl", "unrestricted.logl", "aic", "bic",
                       "ntotal", "bic2")
     }
-    if(scaled && object@Options$test %in%
-                 c("yuan.bentler", "yuan.bentler.mplus")) {
+    if(scaled && test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
         fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
     }
 
@@ -724,8 +735,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
             }
 
             # scaling factor for MLR
-            if(object@Options$test %in%
-               c("yuan.bentler", "yuan.bentler.mplus")) {
+            if(test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
                 indices["scaling.factor.h1"] <-
                     TEST[[2]]$scaling.factor.h1
                 indices["scaling.factor.h0"] <-
@@ -1413,8 +1423,8 @@ print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
 
    ## TDJ: optionally add h0 model's fit statistic, for lavaan.mi
    if (add.h0 && "chisq" %in% names.x) {
-       cat("\nModel test hypothesized model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Model Fit Test Statistic")
+       cat("\nModel Test User Model:\n\n")
+       t0.txt <- sprintf("  %-40s", "Test statistic")
        t1.txt <- sprintf("  %10.3f", x["chisq"])
        t2.txt <- ifelse(scaled,
                         sprintf("  %10.3f", x["chisq.scaled"]), "")
@@ -1507,8 +1517,8 @@ print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
 
    # independence model
    if("baseline.chisq" %in% names.x) {
-       cat("\nModel test baseline model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Minimum Function Test Statistic")
+       cat("\nModel Test Baseline Model:\n\n")
+       t0.txt <- sprintf("  %-40s", "Test statistic")
        t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
        t2.txt <- ifelse(scaled,
                  sprintf("  %10.3f", x["baseline.chisq.scaled"]), "")
@@ -1540,7 +1550,7 @@ print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
 
     # cfi/tli
     if(any(c("cfi","tli","nnfi","rfi","nfi","ifi","rni","pnfi") %in% names.x)) {
-        cat("\nUser model versus baseline model:\n\n")
+        cat("\nUser Model versus Baseline Model:\n\n")
 
         if("cfi" %in% names.x) {
             t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
@@ -1868,27 +1878,27 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
     # check if everything is in order
     if( inherits(fit.indep, "try-error") ) {
         warning("lavaan WARNING: baseline model estimation failed")
-        return(TEST)
+        return(NULL)
 
     } else if( !inherits(fit.indep, "lavaan") ) {
         warning("lavaan WARNING: (user-provided) baseline model ",
                 "is not a fitted lavaan object")
-        return(TEST)
+        return(NULL)
 
     } else if( !fit.indep@optim$converged ) {
         warning("lavaan WARNING: baseline model did not converge")
-        return(TEST)
+        return(NULL)
 
     } else {
 
         # evaluate if estimator/test matches original object
         # note: we do not need to check for 'se', as it may be 'none'
-        sameTest      <- ( object@Options$test == fit.indep@Options$test )
+        sameTest <- all(object@Options$test == fit.indep@Options$test)
         if(!sameTest) {
             warning("lavaan WARNING:\n",
-                    "\t Baseline model was using test = ",
+                    "\t Baseline model was using test(s) = ",
                     dQuote(fit.indep@Options$test),
-                    "\n\t But original model was using test = ",
+                    "\n\t But original model was using test(s) = ",
                     dQuote(object@Options$test),
                     "\n\t Refitting baseline model!")
         }

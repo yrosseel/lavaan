@@ -56,7 +56,7 @@ function(object, header       = TRUE,
 
     # only if requested, the fit measures
     if(fit.measures) {
-        if(object@Options$test == "none") {
+        if(length(object@Options$test) == 1L && object@Options$test == "none") {
             warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
         } else if(object@optim$npar > 0L && !object@optim$converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
@@ -414,12 +414,14 @@ parameterEstimates <- parameterestimates <- function(object,
     }
 
     # extract bootstrap data (if any)
-    if(object@Options$se   != "bootstrap" &&
-       object@Options$test != "bootstrap") {
-        BOOT <- NULL
-    } else {
+    if(object@Options$se == "bootstrap" ||
+       "bootstrap" %in%  object@Options$test ||
+       "bollen.stine" %in% object@Options$test) {
         BOOT <- lav_object_inspect_boot(object)
+    } else {
+        BOOT <- NULL
     }
+
     bootstrap.successful <- NROW(BOOT) # should be zero if NULL
 
     # confidence interval

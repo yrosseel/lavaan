@@ -81,7 +81,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
 }
 
 # rotation
-lav_object_print_rotation <- function(object) {
+lav_object_print_rotation <- function(object, nd = 3L) {
 
     #cat("Rotation information:\n\n")
 
@@ -145,170 +145,187 @@ lav_object_print_rotation <- function(object) {
     cat("\n")
 }
 
-# short summary
-lav_object_print_test_statistics <- function(object) {
+# test statistics
+#
+# print 'blocks' of test statistics
+# blocks with 'scaling.factors' come first
+#
+lav_object_print_test_statistics <- function(object, nd = 3L) {
 
-    # robust/scaled statistics?
-    if(object@Options$test %in% c("satorra.bentler",
-                                  "yuan.bentler",
-                                  "yuan.bentler.mplus",
-                                  "mean.var.adjusted",
-                                  "scaled.shifted") &&
-       length(object@test) > 1L) {
-        scaled <- TRUE
-        if(object@Options$test == "scaled.shifted")
-            shifted <- TRUE
-        else
-            shifted <- FALSE
-    } else {
-        scaled <- FALSE
-        shifted <- FALSE
+    num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+
+    # check if test == "none", @test is empty, or estimator = "MML"
+    if(object@Options$test[1] == "none" || length(object@test) == 0L ||
+       object@Options$estimator == "MML") {
+        return( character(0L) )
     }
 
-    # 0. heading
-    #h.txt <- sprintf("\nChi-square test user model (h0)",
-    #                 object@Options$estimator)
-    #t0.txt <- sprintf("  %-40s", "Estimator")
-    #t1.txt <- sprintf("  %10s", object@Options$estimator)
-    #t2.txt <- ifelse(scaled,
-    #          sprintf("  %10s", "Robust"), "")
-    #cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    # header
+    cat("Model Test User Model:\n")
 
-    # check if test == "none"
-    if(object@Options$test != "none" && object@Options$estimator != "MML") {
+    # extract tests
+    TEST <- object@test
 
-        # 1. chi-square values
-        t0.txt <- sprintf("  %-40s", "Model Fit Test Statistic")
-        t1.txt <- sprintf("  %10.3f", object@test[[1]]$stat)
-        t2.txt <- ifelse(scaled,
-                  sprintf("  %10.3f", object@test[[2]]$stat), "")
-        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    # locate 'robust' tests (here: having a scaling factor)
+    has.no.scaling <- unname(sapply((lapply(TEST, "[[", "scaling.factor")),
+                             is.null))
+    robust.idx     <- which(!has.no.scaling)
+    non.robust.idx <- which(has.no.scaling)
+    if(length(robust.idx) > 0L) {
+        non.robust.idx <- non.robust.idx[-1] # remove 'standard', because it
+                                             # is shown together with robust
+    }
+    BLOCKS <- c(robust.idx, non.robust.idx)
+    nBlocks <- length(BLOCKS)
 
-        # 2. degrees of freedom
-        t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-        t1.txt <- sprintf("  %10i",   object@test[[1]]$df)
-        t2.txt <- ifelse(scaled,
-                         ifelse(round(object@test[[2]]$df) ==
-                                object@test[[2]]$df,
-                                sprintf("  %10i",   object@test[[2]]$df),
-                                sprintf("  %10.3f", object@test[[2]]$df)),
-                         "")
-        cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    # print out blocks
+    for(block in BLOCKS) {
 
-        # 3. P-value
-        if(is.na(object@test[[1]]$df)) {
-            t0.txt <- sprintf("  %-40s", "P-value")
-            t1.txt <- sprintf("  %10.3f", object@test[[1]]$pvalue)
-            t2.txt <- ifelse(scaled,
-                      sprintf("  %10.3f", object@test[[2]]$pvalue), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-        } else if(object@test[[1]]$df > 0) {
-            if(object@test[[1]]$refdistr == "chisq") {
-                t0.txt <- sprintf("  %-40s", "P-value (Chi-square)")
-            } else if(length(object@test) == 1L &&
-                      object@test[[1]]$refdistr == "unknown") {
-                t0.txt <- sprintf("  %-40s", "P-value (Unknown)")
-            } else {
-                t0.txt <- sprintf("  %-40s", "P-value")
-            }
-            t1.txt <- sprintf("  %10.3f", object@test[[1]]$pvalue)
-            t2.txt <- ifelse(scaled,
-                      sprintf("  %10.3f", object@test[[2]]$pvalue), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        # one or two-columns for this block?
+        if(length(robust.idx) > 0L && block %in% robust.idx) {
+            twocolumn <- TRUE
         } else {
-            # FIXME: should we do this? To warn that exact 0.0 was not obtained?
-            if(object@optim$fx > 0) {
-                t0.txt <- sprintf("  %-35s", "Minimum Function Value")
-                t1.txt <- sprintf("  %15.13f", object@optim$fx)
-                t2.txt <- ""
-                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-            }
+            twocolumn <- FALSE
         }
 
-        # 3b. Do we have a Bollen-Stine p-value?
-        if(object@Options$test == "bollen.stine") {
-            t0.txt <- sprintf("  %-40s", "P-value (Bollen-Stine Bootstrap)")
-            t1.txt <- sprintf("  %10.3f", object@test[[2]]$pvalue)
-            cat(t0.txt, t1.txt, "\n", sep="")
-        }
-
-        # 4. Scaling correction factor
-        if(scaled) {
-            t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-            t1.txt <- sprintf("  %10s", "")
-            t2.txt <- sprintf("  %10.3f", object@test[[2]]$scaling.factor)
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-            if(object@Options$test == "yuan.bentler") {
-                cat("    for the Yuan-Bentler correction\n")
-            } else if(object@Options$test == "yuan.bentler.mplus") {
-                cat("    for the Yuan-Bentler correction (Mplus variant)\n")
-            } else if(object@Options$test == "satorra.bentler") {
-                if(object@Options$mimic == "Mplus" &&
-                   object@Options$estimator == "ML") {
-                    cat("    for the Satorra-Bentler correction (Mplus variant)\n")
-                } else if(object@Options$mimic == "Mplus" &&
-                          object@Options$estimator == "DWLS") {
-                    cat("    for the Satorra-Bentler correction (WLSM)\n")
-                } else if(object@Options$mimic == "Mplus" &&
-                          object@Options$estimator == "ULS") {
-                    cat("    for the Satorra-Bentler correction (ULSM)\n")
-                } else {
-                    cat("    for the Satorra-Bentler correction\n")
-                }
-            } else if(object@Options$test == "mean.var.adjusted") {
-                if(object@Options$mimic == "Mplus" &&
-                   object@Options$estimator == "ML") {
-                    cat("    for the mean and variance adjusted correction (MLMV)\n")
-                } else if(object@Options$mimic == "Mplus" &&
-                          object@Options$estimator == "DWLS") {
-                    cat("    for the mean and variance adjusted correction (WLSMV)\n")
-                } else if(object@Options$mimic == "Mplus" &&
-                          object@Options$estimator == "ULS") {
-                    cat("    for the mean and variance adjusted correction (ULSMV)\n")
-                } else {
-                    cat("    for the mean and variance adjusted correction\n")
-                }
-            }
-        }
-
-        # 4b. Shift parameter?
-        if(shifted) {
-            if(object@Data@ngroups == 1L) {
-                t0.txt <- sprintf("  %-40s", "Shift parameter")
-                t1.txt <- sprintf("  %10s", "")
-                t2.txt <- sprintf("  %10.3f",
-                                  object@test[[2]]$shift.parameter)
-                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-            } else { # multiple groups, multiple shift values!
-                cat("  Shift parameter for each group:\n")
-                for(g in 1:object@Data@ngroups) {
-                    t0.txt <- sprintf("    %-38s", object@Data@group.label[[g]])
-                    t1.txt <- sprintf("  %10s", "")
-                    t2.txt <- sprintf("  %10.3f",
-                                     object@test[[2]]$shift.parameter[g])
-                    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-                }
-            }
-            if(object@Options$mimic == "Mplus" &&
-               object@Options$estimator == "DWLS") {
-                cat("    for simple second-order correction (WLSMV)\n")
+        if(!twocolumn) {
+            if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
+                c1 <- c("Test statistic", "Degrees of freedom")
+                c2 <- c(sprintf(num.format, TEST[[block]]$stat),
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer
+                               TEST[[block]]$df,
+                               sprintf(num.format, TEST[[block]]$df)))
+                c3 <- c("", "")
             } else {
-                cat("    for simple second-order correction (Mplus variant)\n")
+                PLABEL <- "P-value"
+                if(!is.null(TEST[[block]]$refdistr)) {
+                    if(TEST[[block]]$refdistr == "chisq") {
+                        PLABEL <- "P-value (Chi-square)"
+                    } else if(TEST[[block]]$refdistr == "unknown") {
+                        PLABEL <- "P-value (Unknown)"
+                    } else if(TEST[[block]]$refdistr == "bootstrap") {
+                        PLABEL <- "P-value (Bollen-Stine bootstrap)"
+                    }
+                }
+                c1 <- c("Test statistic", "Degrees of freedom", PLABEL)
+                c2 <- c(sprintf(num.format, TEST[[block]]$stat),
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
+                               TEST[[block]]$df,                    
+                               sprintf(num.format, TEST[[block]]$df)),
+                        sprintf(num.format, TEST[[block]]$pvalue))
+                c3 <- c("", "", "")
+            }
+        } else {
+            if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
+                c1 <- c("Test Statistic", "Degrees of freedom")
+                c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
+                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer          
+                               TEST[[1L]]$df,                    
+                               sprintf(num.format, TEST[[1L]]$df)))
+                c3 <- c(sprintf(num.format, TEST[[block]]$stat),
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
+                               TEST[[block]]$df,                    
+                               sprintf(num.format, TEST[[block]]$df)))
+            } else {
+                if(!is.null(TEST[[1L]]$refdistr)) {
+                    if(TEST[[1L]]$refdistr == "chisq") {
+                        PLABEL <- "P-value (Chi-square)"
+                    } else if(TEST[[1L]]$refdistr == "unknown") {
+                        PLABEL <- "P-value (Unknown)"
+                    } else {
+                        PLABEL <- "P-value"
+                    }
+                }
+                c1 <- c("Test Statistic", "Degrees of freedom", PLABEL,
+                        "Scaling correction factor")
+                c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
+                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer          
+                               TEST[[1L]]$df,                    
+                               sprintf(num.format, TEST[[1L]]$df)),
+                        sprintf(num.format, TEST[[1L]]$pvalue), "")
+                c3 <- c(sprintf(num.format, TEST[[block]]$stat),
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
+                               TEST[[block]]$df,                    
+                               sprintf(num.format, TEST[[block]]$df)),
+                        sprintf(num.format, TEST[[block]]$pvalue),
+                        sprintf(num.format, TEST[[block]]$scaling.factor))
+                if(!is.null(TEST[[block]]$shift.parameter)) {
+                    if(object@Data@ngroups == 1L) {
+                        c1 <- c(c1, "Shift parameter")
+                        c2 <- c(c2, "")
+                        c3 <- c(c3, 
+                            sprintf(num.format, TEST[[block]]$shift.parameter))
+                    } else {
+                        c1 <- c(c1, "Shift parameter for each group:")
+                        c2 <- c(c2, "")
+                        c3 <- c(c3, "")
+                        for(g in 1:object@Data@ngroups) {
+                            c1 <- c(c1, sprintf("    %-38s", 
+                                            object@Data@group.label[[g]]))
+                            c2 <- c(c2, "")
+                            c3 <- c(c3, sprintf(num.format, 
+                                          TEST[[block]]$shift.parameter[g]))
+                        } 
+                    } 
+                } # shift
             }
         }
-        if(object@Data@ngroups > 1L) {
-            cat("\n")
-            cat("Chi-square for each group:\n\n")
-            for(g in 1:object@Data@ngroups) {
-                t0.txt <- sprintf("  %-40s", object@Data@group.label[[g]])
-                t1.txt <- sprintf("  %10.3f", object@test[[1]]$stat.group[g])
-                t2.txt <- ifelse(scaled, sprintf("  %10.3f",
-                                 object@test[[2]]$stat.group[g]), "")
-                cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-            }
-        }
-    } # test != none
 
+        # if twocolumn, label first row
+        if(twocolumn && block == BLOCKS[1]) {
+            c1 <- c("", c1); c2 <- c("Standard", c2); c3 <- c("Robust", c3)
+        } else {
+            # empty row
+            c1 <- c("", c1); c2 <- c("", c2); c3 <- c("", c3)
+        }
+
+        # format c1/c2
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        M <- cbind(c1, c2, c3, deparse.level = 0)
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+
+        # additional comment if twocolumn
+        if(twocolumn && TEST[[1]]$df > 0L) {
+            cat("    for the", TEST[[block]]$label, "\n")
+        }
+
+        # multiple groups?
+        ngroups <- object@Data@ngroups
+        if(ngroups > 1L) {
+            c1 <- c2 <- c3 <- character(ngroups)
+            for(g in 1:object@Data@ngroups) {
+                tmp <- sprintf("  %-40s", object@Data@group.label[[g]])
+                c1[g] <- format(tmp, width = 43L)
+                if(!twocolumn) {
+                    tmp <- sprintf(num.format, TEST[[block]]$stat.group[g])
+                    c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L, 
+                                    justify = "right")
+                } else {
+                    tmp <- sprintf(num.format, TEST[[1]]$stat.group[g])
+                    c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L,
+                                    justify = "right")
+                    tmp <- sprintf(num.format, TEST[[block]]$stat.group[g])
+                    c3[g] <- format(tmp, width = 8L + nd, justify = "right")
+                }
+            }
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+            colnames(M) <- rep("",  ncol(M))
+            rownames(M) <- rep(" ", nrow(M))
+            cat("  Test statistic for each group:\n")
+            write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+        }
+    
+    } # blocks
+
+    #invisible(M)
 }
 
 lav_object_print_short_summary <- function(object, nd = 3L) {
@@ -321,19 +338,20 @@ lav_object_print_short_summary <- function(object, nd = 3L) {
 
     # 3. if EFA/ESEM, print rotation info
     if(.hasSlot(object@Model, "nefa") && object@Model@nefa > 0L) {
-        lav_object_print_rotation(object)
+        lav_object_print_rotation(object, nd = nd)
     }
 
     # 4. print lavdata
     lav_data_print_short(object@Data)
 
     # 5. print test statistics
-    lav_object_print_test_statistics(object)
+    lav_object_print_test_statistics(object, nd = nd)
 
     # 5b. only if MML was used?
     if(object@Options$estimator == "MML") {
         fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"))
         print.lavaan.fitMeasures(fm)
     }
+
 }
 

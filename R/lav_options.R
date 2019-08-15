@@ -217,7 +217,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "default") {
             opt$se <- "none"
         }
-        if(opt$test == "default") {
+        if(length(opt$test) == 1L && opt$test == "default") {
             opt$test <- "none"
         }
     }
@@ -318,11 +318,11 @@ lav_options_set <- function(opt = NULL) {
         }
 
         # test
-        if(opt$test == "default") {
+        if(length(opt$test) == 1L && opt$test == "default") {
             opt$test <- "yuan.bentler.mplus"
-        } else if(opt$test %in% c("none", "standard",
+        } else if(all(opt$test %in% c("none", "standard",
                                   "satorra.bentler",
-                                  "yuan.bentler","yuan.bentler.mplus")) {
+                                  "yuan.bentler","yuan.bentler.mplus"))) {
             # nothing to do
         } else if(opt$se == "robust") {
             opt$test <- "yuan.bentler.mplus"
@@ -367,9 +367,9 @@ lav_options_set <- function(opt = NULL) {
         opt$missing <- "listwise"
 
         # test
-        if(opt$test == "default") {
+        if(length(opt$test) == 1L && opt$test == "default") {
             opt$test <- "standard"
-        } else if(opt$test %in% c("none", "standard","yuan.bentler")) {
+        } else if(all(opt$test %in% c("none", "standard","yuan.bentler"))) {
             # nothing to do
         } else if(opt$se == "robust") {
             opt$test <- "yuan.bentler"
@@ -481,58 +481,43 @@ lav_options_set <- function(opt = NULL) {
     }
 
     # default test statistic
-    if(opt$test == "default") {
+    if(length(opt$test) == 1L && opt$test == "default") {
         if(opt$missing == "two.stage" ||
            opt$missing == "robust.two.stage") {
             opt$test <- "satorra.bentler"
         } else {
             opt$test <- "standard"
         }
-    } else if(opt$test %in% c("none", "standard")) {
-        # nothing to do
-    } else if(opt$test == "satorra" ||
-              opt$test == "sb" ||
-              opt$test == "SB" ||
-              opt$test == "satorra.bentler" ||
-              opt$test == "satorra-bentler") {
-        opt$test <- "satorra.bentler"
-    } else if(opt$test == "yuan" ||
-              opt$test == "yb" ||
-              opt$test == "YB" ||
-              opt$test == "yuan.bentler" ||
-              opt$test == "yuan-bentler") {
-        opt$test <- "yuan.bentler"
-    } else if(opt$test == "yuan.bentler.mplus" ||
-              opt$test == "yuan-bentler.mplus" ||
-              opt$test == "yuan-bentler-mplus") {
-        opt$test <- "yuan.bentler.mplus"
-    } else if(opt$test == "m.adjusted" ||
-              opt$test == "m" ||
-              opt$test == "mean.adjusted" ||
-              opt$test == "mean-adjusted") {
-        opt$test <- "satorra.bentler"
-    } else if(opt$test == "mean.var.adjusted" ||
-              opt$test == "mean-var-adjusted" ||
-              opt$test == "mv" ||
-              opt$test == "second.order" ||
-              opt$test == "satterthwaite" ||
-              opt$test == "Satterthwaite" ||
-              opt$test == "mv.adjusted") {
-        opt$test <- "mean.var.adjusted"
-    } else if(opt$test == "mplus6" ||
-              opt$test == "scale.shift" ||
-              opt$test == "scaled.shifted") {
-        opt$test <- "scaled.shifted"
-    } else if(opt$test == "bootstrap" ||
-              opt$test == "boot" ||
-              opt$test == "bollen.stine" ||
-              opt$test == "bollen-stine") {
-        opt$test <- "bollen.stine"
-    } else {
-        stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\",
-            \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
-            \"mean.var.adjusted\", \"scaled.shifted\",
-            \"bollen.stine\", or \"bootstrap\"")
+    }
+
+    # rename if needed
+    if(length(target.idx <- which(opt$test %in%
+        c("satorra", "sb", "satorra.bentler", "satorra-bentler",
+          "m.adjusted", "m", "mean.adjusted", "mean-adjusted"))) > 0L) {
+        opt$test[target.idx] <- "satorra.bentler"
+    }
+    if(length(target.idx <- which(opt$test %in%
+        c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
+        opt$test[target.idx] <- "yuan.bentler"
+    }
+    if(length(target.idx <- which(opt$test %in%
+        c("yuan.bentler.mplus", "yuan-bentler.mplus",
+          "yuan-bentler-mplus"))) > 0L) {
+        opt$test[target.idx] <- "yuan.bentler.mplus"
+    }
+    if(length(target.idx <- which(opt$test %in%
+        c("mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
+          "satterthwaite", "mv.adjusted"))) > 0L) {
+        opt$test[target.idx] <- "mean.var.adjusted"
+    }
+    if(length(target.idx <- which(opt$test %in%
+        c("mplus6", "scale.shift", "scaled.shifted",
+          "scaled-shifted"))) > 0L) {
+        opt$test[target.idx] <- "scaled.shifted"
+    }
+    if(length(target.idx <- which(opt$test %in%
+        c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
+        opt$test[target.idx] <- "bollen.stine"
     }
 
     # check missing
@@ -543,11 +528,10 @@ lav_options_set <- function(opt = NULL) {
         opt$missing <- "listwise"
     }
     if(opt$missing %in% c("ml", "ml.x") &&
-       opt$test %in% c("satorra.bentler",
-                       "mean.var.adjusted", "scaled.shifted")) {
+       any(opt$test %in% c("satorra.bentler",
+                       "mean.var.adjusted", "scaled.shifted"))) {
         warning("lavaan WARNING: missing will be set to ",
-                    dQuote("listwise"), " for test = ",
-                    dQuote(opt$test) )
+                    dQuote("listwise"), " for satorra.bentler style test")
         opt$missing <- "listwise"
     }
 
@@ -586,9 +570,18 @@ lav_options_set <- function(opt = NULL) {
         }
         # observed.information (ALWAYS "h1" for now)
         opt$observed.information <- "h1"
+
+
         # test
-        if(opt$test == "default" ||
-           opt$test == "satorra.bentler") {
+        if(length(opt$test) > 1L) {
+            warning("lavaan WARNING: test= argument can only contain a single element if missing = ", dQuote(opt$missing), " (taking the first)" )
+            opt$test <- opt$test[1]
+        }
+
+        if(length(opt$test) == 1L && opt$test == "default") {
+            opt$test <- "satorra.bentler"
+        } else if(length(opt$test) == 1L && opt$test %in%
+            c("satorra", "sb", "satorra.bentler", "satorra-bentler")) {
             opt$test <- "satorra.bentler"
         } else {
             warning("lavaan WARNING: test will be set to ",
@@ -682,7 +675,7 @@ lav_options_set <- function(opt = NULL) {
               opt$estimator == "mlmv"  ||
               opt$estimator == "mlmvs") {
         est.orig <- opt$estimator
-        if(opt$test != "none") {
+        if(! (length(opt$test) == 1L && opt$test == "none") ) {
             if(opt$estimator == "mlm") {
                 opt$test <- "satorra.bentler"
             } else if(opt$estimator == "mlmv") {
@@ -721,8 +714,9 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.huber.white"
-        if(opt$test != "none" && opt$se != "external") {
-            if(opt$mimic == "Mplus" || opt$test == "yuan.bentler.mplus") {
+        if( !(length(opt$test) == 1L && opt$test == "none") &&
+            opt$se != "external" ) {
+            if(opt$mimic == "Mplus") {
                 opt$test <- "yuan.bentler.mplus"
             } else if(opt$mimic == "EQS") {
                 opt$test <- "yuan.bentler"
@@ -743,7 +737,7 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is GLS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none")) {
+        if(!all(opt$test %in% c("standard","none"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is GLS: ",
                  opt$test, "\n")
         }
@@ -760,7 +754,7 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is NTRLS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none")) {
+        if(!all(opt$test %in% c("standard","none"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is NTRLS: ",
                  opt$test, "\n")
         }
@@ -781,7 +775,7 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is WLS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none")) {
+        if(!all(opt$test %in% c("standard","none"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is WLS: ",
                  opt$test, "\n")
         }
@@ -802,9 +796,9 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is DWLS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none","satorra.bentler",
+        if(!all(opt$test %in% c("standard","none","satorra.bentler",
                             "mean.adjusted",
-                            "mean.var.adjusted","scaled.shifted")) {
+                            "mean.var.adjusted","scaled.shifted"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
         }
@@ -815,10 +809,10 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "satorra.bentler"
         }
         #opt$missing <- "listwise"
@@ -828,10 +822,10 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "scaled.shifted"
         }
         #opt$missing <- "listwise"
@@ -841,10 +835,10 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "mean.var.adjusted"
         }
         #opt$missing <- "listwise"
@@ -864,9 +858,9 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is ULS: ",
                  opt$se, "\n")
         }
-        if(!opt$test %in% c("standard","none", "satorra.bentler",
+        if(!all(opt$test %in% c("standard","none", "satorra.bentler",
                             "mean.adjusted",
-                            "mean.var.adjusted","scaled.shifted")) {
+                            "mean.var.adjusted","scaled.shifted"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is ULS: ",
                  opt$test, "\n")
         }
@@ -877,10 +871,10 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "satorra.bentler"
         }
         #opt$missing <- "listwise"
@@ -890,10 +884,10 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "scaled.shifted"
         }
         #opt$missing <- "listwise"
@@ -903,41 +897,52 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
         if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
-        if(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
-                           "scaled.shifted")) {
+        if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
+                           "scaled.shifted"))) {
             # nothing to do
-        } else if(opt$test != "none") {
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "mean.var.adjusted"
         }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "pml") {
         opt$estimator <- "PML"
         opt$information <- "observed"
-        if(opt$se == "default")
+        if(opt$se == "default") {
             opt$se <- "robust.huber.white"
-        if(opt$test != "none") opt$test <- "mean.var.adjusted"
+        }
+        if(! (length(opt$test) == 1L && opt$test == "none") ) {
+            opt$test <- "mean.var.adjusted"
+        }
         #opt$missing <- "listwise"
     } else if(opt$estimator %in% c("fml","umn")) {
         opt$estimator <- "FML"
         opt$information <- "observed"
-        if(opt$se == "default")
+        if(opt$se == "default") {
             opt$se <- "standard"
-        if(opt$test != "none") opt$test <- "standard"
+        }
+        if(! (length(opt$test) == 1L && opt$test == "none") ) {
+            opt$test <- "standard"
+        }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "reml") {
         opt$estimator <- "REML"
         opt$information <- "observed"
-        if(opt$se == "default")
+        if(opt$se == "default") {
             opt$se <- "standard"
-        if(opt$test != "none") opt$test <- "standard"
+        }
+        if(! (length(opt$test) == 1L && opt$test == "none") ) {
+            opt$test <- "standard"
+        }
         opt$missing <- "listwise"
     } else if(opt$estimator %in% c("mml")) {
         opt$estimator <- "MML"
         opt$information <- "observed"
-        if(opt$se == "default")
+        if(opt$se == "default") {
             opt$se <- "standard"
-        if(opt$test == "default")
+        }
+        if(length(opt$test) == 1L && opt$test == "default") {
             opt$test <- "none"
+        }
         #opt$missing <- "listwise"
         if(opt$link == "default") {
             #opt$link <- "logit"
@@ -957,7 +962,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "default") {
             opt$se <- "none"
         }
-        if(opt$test == "default") {
+        if(length(opt$test) == 1L && opt$test == "default") {
             opt$test <- "none"
         }
     } else {
@@ -1173,7 +1178,7 @@ lav_options_set <- function(opt = NULL) {
         } else {
             opt$effect.coding <- ""
         }
-    } else if(length(opt$effect.coding) == 0) {
+    } else if(length(opt$effect.coding) == 0L) {
         # nothing to do
     } else if(all(opt$effect.coding %in% c("loadings", "intercepts",
                                            "mg.lv.efa.variances",
@@ -1195,6 +1200,29 @@ lav_options_set <- function(opt = NULL) {
         }
         # shut off auto.fix.first
         opt$auto.fix.first <- FALSE
+    }
+
+    # test again
+
+    # unless test = "none", always add test = "standard" as the
+    # first entry
+    if(! (length(opt$test) == 1L && opt$test == "none") ) {
+        opt$test <- c("standard", opt$test)
+        opt$test <- unique(opt$test)
+    }
+
+    # final check
+    wrong.idx <- which(! opt$test %in% c("none", "standard", "satorra.bentler",
+                            "yuan.bentler", "yuan.bentler.mplus",
+                            "mean.var.adjusted", "scaled.shifted",
+                            "bollen.stine"))
+    if(length(wrong.idx) > 0L) {
+        stop("lavaan ERROR: invalid option(s) for test argument: ",
+             paste(dQuote(opt$test[wrong.idx]), collapse = " "),
+             "\n\t\t",
+             "Possible options are: \"none\", \"standard\",
+             \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
+             \"mean.var.adjusted\", \"scaled.shifted\", or \"bollen.stine\"")
     }
 
 

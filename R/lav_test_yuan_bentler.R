@@ -37,16 +37,19 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
 
     # information
     information <- lavoptions$information
+
     # x.idx
     if(lavoptions$conditional.x) {
         x.idx <- NULL
     } else {
         x.idx <- lavsamplestats@x.idx
     }
+
     # ndat
     ndat <- numeric(lavsamplestats@ngroups)
 
 
+    # do we have E.inv?
     if(is.null(E.inv)) {
         E.inv <- try(lav_model_information(lavmodel       = lavmodel,
                                            lavsamplestats = lavsamplestats,
@@ -58,13 +61,18 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                            inverted       = TRUE),
                       silent = TRUE)
         if(inherits(E.inv, "try-error")) {
-            TEST <- list(test = test, stat = as.numeric(NA),
-                stat.group = rep(as.numeric(NA), lavsamplestats@ngroups),
-                df = TEST$standard$df, refdistr = TEST$standard$refdistr,
-                pvalue = as.numeric(NA), scaling.factor = as.numeric(NA))
-            warning("lavaan WARNING: could not invert information matrix\n")
+            TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
+                                 label = character(0))
+            warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
             return(TEST)
         }
+    }
+
+    # catch df == 0
+    if(TEST$standard$df == 0L || TEST$standard$df < 0) {
+        TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
+                             label = character(0))
+        return(TEST)
     }
 
     # mean and variance adjusted?
@@ -152,29 +160,32 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
 
     if("yuan.bentler" %in% test) {
         TEST$yuan.bentler <-
-            list(test              = test,
-                 stat              = chisq.scaled,
-                 stat.group        = (chisq.group / scaling.factor),
-                 df                = df,
-                 pvalue            = pvalue.scaled,
-                 scaling.factor    = scaling.factor,
-                 scaling.factor.h1 = scaling.factor.h1,
-                 scaling.factor.h0 = scaling.factor.h0,
-                 trace.UGamma      = trace.UGamma,
-                 trace.UGamma2     = trace.UGamma2)
+            list(test                 = test,
+                 stat                 = chisq.scaled,
+                 stat.group           = (chisq.group / scaling.factor),
+                 df                   = df,
+                 pvalue               = pvalue.scaled,
+                 scaling.factor       = scaling.factor,
+                 scaling.factor.h1    = scaling.factor.h1,
+                 scaling.factor.h0    = scaling.factor.h0,
+                 label = "Yuan-Bentler correction",
+                 trace.UGamma         = trace.UGamma,
+                 trace.UGamma2        = trace.UGamma2)
 
     } else if("yuan.bentler.mplus" %in% test) {
         TEST$yuan.bentler.mplus <-
-            list(test              = test,
-                 stat              = chisq.scaled,
-                 stat.group        = (chisq.group / scaling.factor),
-                 df                = df,
-                 pvalue            = pvalue.scaled,
-                 scaling.factor    = scaling.factor,
-                 scaling.factor.h1 = scaling.factor.h1,
-                 scaling.factor.h0 = scaling.factor.h0,
-                 trace.UGamma      = trace.UGamma,
-                 trace.UGamma2     = as.numeric(NA))
+            list(test                 = test,
+                 stat                 = chisq.scaled,
+                 stat.group           = (chisq.group / scaling.factor),
+                 df                   = df,
+                 pvalue               = pvalue.scaled,
+                 scaling.factor       = scaling.factor,
+                 scaling.factor.h1    = scaling.factor.h1,
+                 scaling.factor.h0    = scaling.factor.h0,
+                 label                =
+                     "Yuan-Bentler correction (Mplus variant)",
+                 trace.UGamma         = trace.UGamma,
+                 trace.UGamma2        = as.numeric(NA))
     }
 
     TEST

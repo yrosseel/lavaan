@@ -16,7 +16,9 @@ lav_model_nvcov_bootstrap <- function(lavmodel       = NULL,
     }
 
     boot.type <- "ordinary"
-    if(lavoptions$test == "bollen.stine") boot.type <- "bollen.stine"
+    if("bollen.stine" %in% lavoptions$test) {
+        boot.type <- "bollen.stine"
+    }
 
     TEST <- NULL
     COEF <- bootstrap.internal(object          = NULL,
