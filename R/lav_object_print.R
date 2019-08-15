@@ -80,12 +80,19 @@ lav_object_print_optim <- function(object, nd = 3L) {
     invisible(M)
 }
 
-# rotation
-lav_object_print_rotation <- function(object, nd = 3L) {
+# print rotation information
+lav_object_print_rotation <- function(object, header = FALSE, nd = 3L) {
 
-    #cat("Rotation information:\n\n")
+    # header
+    if(header) {
+        cat("Rotation information:\n\n")
+    }
 
-    t0.txt <- sprintf("  %-20s", "Rotation method")
+    # container
+    c1 <- c2 <- character(0L)
+
+    # rotation method
+    c1 <- c(c1, "Rotation method")
     if(object@Options$rotation.args$orthogonal) {
         MM <- paste(toupper(object@Options$rotation), " ", "ORTHOGONAL",
                     sep = "")
@@ -93,56 +100,59 @@ lav_object_print_rotation <- function(object, nd = 3L) {
         MM <- paste(toupper(object@Options$rotation), " ", "OBLIQUE",
                     sep = "")
     }
-    t1.txt <- sprintf("  %30s", MM)
-    t2.txt <- ""
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    c2 <- c(c2, MM)
 
-
+    # method options
     if(object@Options$rotation == "geomin") {
-        t0.txt <- sprintf("  %-40s", "Geomin epsilon")
-        t1.txt <- sprintf("  %10.6g",
-            object@Options$rotation.args$geomin.epsilon)
-        cat(t0.txt, t1.txt, "\n", sep="")
+        c1 <- c(c1, "Geomin epsilon")
+        c2 <- c(c2, object@Options$rotation.args$geomin.epsilon)
     } else if(object@Options$rotation == "orthomax") {
-        t0.txt <- sprintf("  %-40s", "Orthomax gamma")
-        t1.txt <- sprintf("  %10.6g",
-            object@Options$rotation.args$orthomax.gamma)
-        cat(t0.txt, t1.txt, "\n", sep="")
+        c1 <- c(c1, "Orthomax gamma")
+        c2 <- c(c2, object@Options$rotation.args$orthomax.gamma)
     } else if(object@Options$rotation == "cf") {
-        t0.txt <- sprintf("  %-40s", "Crawford-Ferguson gamma")
-        t1.txt <- sprintf("  %10.6g",
-            object@Options$rotation.args$cf.gamma)
-        cat(t0.txt, t1.txt, "\n", sep="")
+        c1 <- c(c1, "Crawford-Ferguson gamma")
+        c2 <- c(c2, object@Options$rotation.args$cf.gamma)
     } else if(object@Options$rotation == "oblimin") {
-        t0.txt <- sprintf("  %-40s", "Oblimin gamma")
-        t1.txt <- sprintf("  %10.6g",
-            object@Options$rotation.args$oblimin.gamma)
-        cat(t0.txt, t1.txt, "\n", sep="")
+        c1 <- c(c1, "Oblimin gamma")
+        c2 <- c(c2, object@Options$rotation.args$oblimin.gamma)
     }
 
-    t0.txt <- sprintf("  %-30s", "Rotation algorithm (rstarts)")
+    # rotation algorithm
+    c1 <- c(c1, "Rotation algorithm (rstarts)")
     tmp <- paste(toupper(object@Options$rotation.args$algorithm),
                  " (", object@Options$rotation.args$rstarts, ")", sep = "")
-    t1.txt <- sprintf("  %20s", tmp)
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    c2 <- c(c2, tmp)
 
-    t0.txt <- sprintf("  %-40s", "Standardized metric")
+    # Standardized metric (or not)
+    c1 <- c(c1, "Standardized metric")
     if(object@Options$rotation.args$std.ov) {
-        t1.txt <- sprintf("  %10s", "TRUE")
+        c2 <- c(c2, "TRUE")
     } else {
-        t1.txt <- sprintf("  %10s", "FALSE")
+        c2 <- c(c2, "FALSE")
     }
-    t2.txt <- ""
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
 
-    t0.txt <- sprintf("  %-40s", "Row weights")
+    # Row weights
+    c1 <- c(c1, "Row weights")
     tmp.txt <- object@Options$rotation.args$row.weights
-    t1.txt <- sprintf("  %10s", paste(toupper(substring(tmp.txt, 1, 1)),
-                                      substring(tmp.txt, 2), sep = ""))
-    t2.txt <- ""
-    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                      substring(tmp.txt, 2), sep = ""))
 
-    cat("\n")
+    # empty row
+    c1 <- c(c1, ""); c2 <- c(c2, "")
+
+    # format c1/c2
+    c1 <- format(c1, width = 33L)
+    c2 <- format(c2, width = 18L + max(0, (nd - 3L)) * 4L, justify = "right")
+
+    # create character matrix
+    M <- cbind(c1, c2, deparse.level = 0)
+    colnames(M) <- rep("",  ncol(M))
+    rownames(M) <- rep(" ", nrow(M))
+
+    # print
+    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+
+    invisible(M)
 }
 
 # test statistics

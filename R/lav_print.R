@@ -113,55 +113,58 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         # 3. bootstrap requested/successful draws
         if(!is.null(x$se)) {
 
+            # container
+            c1 <- c2 <- character(0L)
+
             if(attr(x, "se") != "bootstrap") {
                 # 1.
-                t0.txt <- sprintf("  %-35s", "Information")
+                c1 <- c(c1, "Information")
                 tmp.txt <- attr(x, "information")
-                t1.txt <- sprintf("  %15s",
-                                  paste(toupper(substring(tmp.txt, 1, 1)),
+                c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
                                   substring(tmp.txt, 2), sep = ""))
-                cat(t0.txt, t1.txt, "\n", sep = "")
 
                 # 2.
                 if(attr(x, "information") %in% c("expected", "first.order") ||
                    attr(x, "observed.information") == "h1") {
-                    t0.txt <- sprintf("  %-35s",
-                                      "Information saturated (h1) model")
+                    c1 <- c(c1, "Information saturated (h1) model")
                     tmp.txt <- attr(x, "h1.information")
-                    t1.txt <- sprintf("  %15s",
-                                      paste(toupper(substring(tmp.txt,1,1)),
-                                            substring(tmp.txt, 2), sep = ""))
-                    cat(t0.txt, t1.txt, "\n", sep = "")
+                    c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
                 }
                 if(attr(x, "information") == "observed") {
-                    t0.txt <- sprintf("  %-35s",
-                                      "Observed information based on")
+                    c1 <- c(c1, "Observed information based on")
                     tmp.txt <- attr(x, "observed.information")
-                    t1.txt <- sprintf("  %15s",
-                                      paste(toupper(substring(tmp.txt, 1, 1)),
+                    c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
                                       substring(tmp.txt, 2), sep = ""))
-                    cat(t0.txt, t1.txt, "\n", sep = "")
                 }
             } # no bootstrap
 
             # 3.
-            t0.txt <- sprintf("  %-31s", "Standard errors")
+            c1 <- c(c1, "Standard errors")
             tmp.txt <- attr(x, "se")
-            t1.txt <- sprintf("  %19s", paste(toupper(substring(tmp.txt, 1, 1)),
-                                              substring(tmp.txt, 2), sep = ""))
-            cat(t0.txt, t1.txt, "\n", sep="")
+            c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                                      substring(tmp.txt, 2), sep = ""))
 
             # 4.
             if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
-                t0.txt <-
-                    sprintf("  %-40s", "Number of requested bootstrap draws")
-                t1.txt <- sprintf("  %10i", attr(x, "bootstrap"))
-                cat(t0.txt, t1.txt, "\n", sep = "")
-                t0.txt <-
-                    sprintf("  %-40s", "Number of successful bootstrap draws")
-                t1.txt <- sprintf("  %10i", attr(x, "bootstrap.successful"))
-                cat(t0.txt, t1.txt, "\n", sep = "")
+                c1 <- c(c1, "Number of requested bootstrap draws")
+                c2 <- c(c2, attr(x, "bootstrap"))
+                c1 <- c(c1, "Number of successful bootstrap draws")
+                c2 <- c(c2, attr(x, "bootstrap.successful"))
             }
+
+            # format c1/c2
+            c1 <- format(c1, width = 38L)
+            c2 <- format(c2, 
+                   width = 13L + max(0, (nd - 3L)) * 4L, justify = "right")
+
+            # create character matrix
+            M <- cbind(c1, c2, deparse.level = 0)
+            colnames(M) <- rep("",  ncol(M))
+            rownames(M) <- rep(" ", nrow(M))
+
+            # print
+            write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
         }
     }
 
