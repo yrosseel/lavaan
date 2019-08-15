@@ -342,7 +342,7 @@ lav_object_print_short_summary <- function(object, nd = 3L) {
     }
 
     # 4. print lavdata
-    lav_data_print_short(object@Data)
+    lav_data_print_short(object@Data, nd = nd)
 
     # 5. print test statistics
     lav_object_print_test_statistics(object, nd = nd)
