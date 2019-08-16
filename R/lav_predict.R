@@ -125,6 +125,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                })
 
         # append original/new data? (also remove attr)
+        #FIXME: add condition level=1L (or add cluster.label to assist merging)
         if(append.data) {
             out <- lapply(seq_len(lavdata@ngroups), function(g) {
                        ret <- cbind(out[[g]], data.obs[[g]])
@@ -200,6 +201,8 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                     gg <- g
                 }
                 if(append.data) {
+                    #FIXME: add condition level=1L (or name the cluster.label
+                    #       column after the cluster variable)
                     colnames(out[[g]]) <- c(lavpta$vnames$lv[[gg]],
                                             ov.names[[gg]])
                 } else {
