@@ -1414,458 +1414,513 @@ lav_fit_measures <- function(object, fit.measures = "all",
 }
 
 # print a nice summary of the fit measures
-print.lavaan.fitMeasures <- function(x, ..., add.h0 = FALSE) {
+print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
 
-   names.x <- names(x)
+    names.x <- names(x)
 
-   # scaled?
-   scaled <- "chisq.scaled" %in% names.x
+    # scaled?
+    scaled <- "chisq.scaled" %in% names.x
+  
+    # num format
+    num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
-   ## TDJ: optionally add h0 model's fit statistic, for lavaan.mi
-   if (add.h0 && "chisq" %in% names.x) {
-       cat("\nModel Test User Model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Test statistic")
-       t1.txt <- sprintf("  %10.3f", x["chisq"])
-       t2.txt <- ifelse(scaled,
-                        sprintf("  %10.3f", x["chisq.scaled"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    ## TDJ: optionally add h0 model's fit statistic, for lavaan.mi
+    if (add.h0 && "chisq" %in% names.x) {
 
-       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-       t1.txt <- sprintf("  %10i", x["df"])
-       t2.txt <- ifelse(scaled,
-                        ifelse(round(x["df.scaled"]) ==
-                                   x["df.scaled"],
-                               sprintf("  %10i",   x["df.scaled"]),
-                               sprintf("  %10.3f", x["df.scaled"])),
-                        "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        cat("\nModel Test User Model:\n\n")
 
-       t0.txt <- sprintf("  %-40s", "P-value")
-       t1.txt <- sprintf("  %10.3f", x["pvalue"])
-       t2.txt <- ifelse(scaled,
-                        sprintf("  %10.3f", x["pvalue.scaled"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        # container three columns
+        c1 <- c2 <- c3 <- character(0L)
 
-       if(scaled && "chisq.scaling.factor" %in% names.x) {
-           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-           t1.txt <- sprintf("  %10s", "")
-           t2.txt <- sprintf("  %10.3f", x["chisq.scaling.factor"])
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       }
-   }
+        c1 <- c(c1, "Test statistic")
+        c2 <- c(c2, sprintf(num.format, x["chisq"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["chisq.scaled"]), ""))
 
-   # table fit measures
-   if("C_F" %in% names.x) {
-       cat("\nFull response patterns fit statistics:\n\n")
+        c1 <- c(c1, "Degrees of freedom")
+        c2 <- c(c2, x["df"])
+        c3 <- c(c3, ifelse(scaled, 
+                       ifelse(x["df.scaled"]%%1 == 0, x["df.scaled"],
+                           sprintf(num.format, x["df.scaled"])), ""))
 
-       t0.txt <- sprintf("  %-40s", "Observed response patterns (1st group):")
-       t1.txt <- sprintf("  %10i", x["rpat.observed"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Total response patterns (1st group):")
-       t1.txt <- sprintf("  %10i", x["rpat.total"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Empty response patterns (1st group):")
-       t1.txt <- sprintf("  %10i", x["rpat.empty"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       cat("\n")
+        c1 <- c(c1, "P-value")
+        c2 <- c(c2, sprintf(num.format, x["pvalue"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["pvalue.scaled"]), ""))
 
-       t0.txt <- sprintf("  %-40s", "C_F Test Statistic")
-       t1.txt <- sprintf("  %10.3f", x["C_F"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-       t1.txt <- sprintf("  %10i", x["C_F.df"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "P-value")
-       t1.txt <- sprintf("  %10.3f", x["C_F.p.value"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       cat("\n")
-       t0.txt <- sprintf("  %-40s", "C_M Test Statistic")
-       t1.txt <- sprintf("  %10.3f", x["C_M"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-       t1.txt <- sprintf("  %10i", x["C_M.df"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "P-value")
-       t1.txt <- sprintf("  %10.3f", x["C_M.p.value"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-   }
+        if(scaled && "chisq.scaling.factor" %in% names.x) {
+            c1 <- c(c1, "Scaling correction factor")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["chisq.scaling.factor"]))
+        }
 
-   if("C_p" %in% names.x) {
-       cat("\nPairwise tables summary statistic:\n\n")
-       t0.txt <- sprintf("  %-40s", "C_P Test Statistic")
-       t1.txt <- sprintf("  %10.3f", x["C_p"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-       t1.txt <- sprintf("  %10i", x["C_p.df"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Bonferroni corrected P-value")
-       t1.txt <- sprintf("  %10.3f", x["C_p.p.value"])
-       t2.txt <- ""
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-   }
+        # format c1/c2/c3
+        c1 <- format(c1, width = 35L)
+        c2 <- format(c2, width = 16L + max(0,(nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
 
-   # independence model
-   if("baseline.chisq" %in% names.x) {
-       cat("\nModel Test Baseline Model:\n\n")
-       t0.txt <- sprintf("  %-40s", "Test statistic")
-       t1.txt <- sprintf("  %10.3f", x["baseline.chisq"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["baseline.chisq.scaled"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
 
-       t0.txt <- sprintf("  %-40s", "Degrees of freedom")
-       t1.txt <- sprintf("  %10i", x["baseline.df"])
-       t2.txt <- ifelse(scaled,
-                        ifelse(round(x["baseline.df.scaled"]) ==
-                               x["baseline.df.scaled"],
-                        sprintf("  %10i",   x["baseline.df.scaled"]),
-                        sprintf("  %10.3f", x["baseline.df.scaled"])),
-                        "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
 
-       t0.txt <- sprintf("  %-40s", "P-value")
-       t1.txt <- sprintf("  %10.3f", x["baseline.pvalue"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["baseline.pvalue.scaled"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+    # independence model
+    if("baseline.chisq" %in% names.x) {
+        cat("\nModel Test Baseline Model:\n\n")
 
-       if(scaled && "baseline.chisq.scaling.factor" %in% names.x) {
-           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-           t1.txt <- sprintf("  %10s", "")
-           t2.txt <- sprintf("  %10.3f", x["baseline.chisq.scaling.factor"])
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       }
+        c1 <- c2 <- c3 <- character(0L)
+
+        c1 <- c(c1, "Test statistic")
+        c2 <- c(c2, sprintf(num.format, x["baseline.chisq"]))
+        c3 <- c(c3, ifelse(scaled,
+                    sprintf(num.format, x["baseline.chisq.scaled"]), ""))
+
+        c1 <- c(c1, "Degrees of freedom")
+        c2 <- c(c2, x["baseline.df"])
+        c3 <- c(c3,ifelse(scaled, ifelse(x["baseline.df.scaled"]%%1 == 0,
+                                  x["baseline.df.scaled"],
+                                  sprintf(num.format, x["baseline.df.scaled"])),
+                          ""))
+
+        c1 <- c(c1, "P-value")
+        c2 <- c(c2, sprintf(num.format, x["baseline.pvalue"]))
+        c3 <- c(c3, ifelse(scaled,
+                       sprintf(num.format, x["baseline.pvalue.scaled"]), ""))
+
+        if(scaled && "baseline.chisq.scaling.factor" %in% names.x) {
+            c1 <- c(c1, "Scaling correction factor")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["baseline.chisq.scaling.factor"]))
+        }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 35L)
+        c2 <- format(c2, width = 16L + max(0,(nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
     # cfi/tli
     if(any(c("cfi","tli","nnfi","rfi","nfi","ifi","rni","pnfi") %in% names.x)) {
         cat("\nUser Model versus Baseline Model:\n\n")
 
+        c1 <- c2 <- c3 <- character(0L)
+
         if("cfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Comparative Fit Index (CFI)")
-            t1.txt <- sprintf("  %10.3f", x["cfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.scaled"]), "")
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Comparative Fit Index (CFI)")
+            c2 <- c(c2, sprintf(num.format, x["cfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["cfi.scaled"]), 
+                               ""))
         }
 
         if("tli" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Tucker-Lewis Index (TLI)")
-            t1.txt <- sprintf("  %10.3f", x["tli"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.scaled"]), "")
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Tucker-Lewis Index (TLI)")
+            c2 <- c(c2, sprintf(num.format, x["tli"]))
+            c3 <- c(c3, ifelse(scaled, 
+                               sprintf(num.format, x["tli.scaled"]), ""))
         }
 
         if("cfi.robust" %in% names.x) {
-            t0.txt <- sprintf("\n  %-40s", "Robust Comparative Fit Index (CFI)")
-            t1.txt <- sprintf("  %10s", "")
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cfi.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
+            c1 <- c(c1, "Robust Comparative Fit Index (CFI)")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["cfi.robust"]))
         }
 
         if("tli.robust" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Robust Tucker-Lewis Index (TLI)")
-            t1.txt <- sprintf("  %10s", "")
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["tli.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Robust Tucker-Lewis Index (TLI)")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["tli.robust"]))
         }
 
         if("nnfi" %in% names.x) {
-            t0.txt <- sprintf("  %-42s", "Bentler-Bonett Non-normed Fit Index (NNFI)")
-            t1.txt <- sprintf("  %8.3f", x["nnfi"])
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.scaled"]), "")
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nnfi.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Bentler-Bonett Non-normed Fit Index (NNFI)")
+            c2 <- c(c2, sprintf(num.format, x["nnfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nnfi.robust"]), 
+                               ""))
         }
 
         if("nfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Bentler-Bonett Normed Fit Index (NFI)")
-            t1.txt <- sprintf("  %10.3f", x["nfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["nfi.scaled"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Bentler-Bonett Normed Fit Index (NFI)")
+            c2 <- c(c2, sprintf(num.format, x["nfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nfi.scaled"]), 
+                               ""))
         }
 
-        if("nfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Parsimony Normed Fit Index (PNFI)")
-            t1.txt <- sprintf("  %10.3f", x["pnfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["pnfi.scaled"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        if("pnfi" %in% names.x) {
+            c1 <- c(c1, "Parsimony Normed Fit Index (PNFI)")
+            c2 <- c(c2, sprintf(num.format, x["pnfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["pnfi.scaled"]), 
+                               ""))
         }
 
         if("rfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Bollen's Relative Fit Index (RFI)")
-            t1.txt <- sprintf("  %10.3f", x["rfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rfi.scaled"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Bollen's Relative Fit Index (RFI)")
+            c2 <- c(c2, sprintf(num.format, x["rfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rfi.scaled"]), 
+                               ""))
         }
 
         if("ifi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Bollen's Incremental Fit Index (IFI)")
-            t1.txt <- sprintf("  %10.3f", x["ifi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["ifi.scaled"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Bollen's Incremental Fit Index (IFI)")
+            c2 <- c(c2, sprintf(num.format, x["ifi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["ifi.scaled"]), 
+                               ""))
         }
 
         if("rni" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Relative Noncentrality Index (RNI)")
-            t1.txt <- sprintf("  %10.3f", x["rni"])
-            #t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.scaled"]), "")
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rni.robust"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Relative Noncentrality Index (RNI)")
+            c2 <- c(c2, sprintf(num.format, x["rni"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rni.robust"]), 
+                               ""))
         }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
-   # likelihood
-   if("logl" %in% names.x) {
-       cat("\nLoglikelihood and Information Criteria:\n\n")
-       t0.txt <- sprintf("  %-40s", "Loglikelihood user model (H0)")
-       t1.txt <- sprintf("  %10.3f", x["logl"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["logl"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       #cat(t0.txt, t1.txt, "\n", sep="")
-       if(!is.na(x["scaling.factor.h0"])) {
-           t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-           t1.txt <- sprintf("  %10s", "")
-           t2.txt <- sprintf("  %10.3f", x["scaling.factor.h0"])
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-           cat("    for the MLR correction\n")
-       }
+    # likelihood
+    if("logl" %in% names.x) {
+        cat("\nLoglikelihood and Information Criteria:\n\n")
 
-       if("unrestricted.logl" %in% names.x) {
-           t0.txt <- sprintf("  %-40s", "Loglikelihood unrestricted model (H1)")
-           t1.txt <- sprintf("  %10.3f", x["unrestricted.logl"])
-           t2.txt <- ifelse(scaled,
-                     sprintf("  %10.3f", x["unrestricted.logl"]), "")
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-           #cat(t0.txt, t1.txt, "\n", sep="")
-           if(!is.na(x["scaling.factor.h1"])) {
-               t0.txt <- sprintf("  %-40s", "Scaling correction factor")
-               t1.txt <- sprintf("  %10s", "")
-               t2.txt <- sprintf("  %10.3f", x["scaling.factor.h1"])
-               cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-              cat("    for the MLR correction\n")
-           }
-       }
+        c1 <- c2 <- c3 <- character(0L)
 
-       cat("\n")
-       t0.txt <- sprintf("  %-40s", "Number of free parameters")
-       t1.txt <- sprintf("  %10i", x["npar"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10i", x["npar"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-
-       t0.txt <- sprintf("  %-40s", "Akaike (AIC)")
-       t1.txt <- sprintf("  %10.3f", x["aic"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["aic"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       #cat(t0.txt, t1.txt, "\n", sep="")
-       t0.txt <- sprintf("  %-40s", "Bayesian (BIC)")
-       t1.txt <- sprintf("  %10.3f", x["bic"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["bic"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       #cat(t0.txt, t1.txt, "\n", sep="")
-       if(!is.na(x["bic2"])) {
-           t0.txt <- sprintf("  %-40s", "Sample-size adjusted Bayesian (BIC)")
-           t1.txt <- sprintf("  %10.3f", x["bic2"])
-           t2.txt <- ifelse(scaled,
-                     sprintf("  %10.3f", x["bic2"]), "")
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+        c1 <- c(c1, "Loglikelihood user model (H0)")
+        c2 <- c(c2, sprintf(num.format, x["logl"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["logl"]), ""))
+        if(!is.na(x["scaling.factor.h0"])) {
+            c1 <- c(c1, "Scaling correction factor")
+            c2 <- c(c2, sprintf("  %10s", ""))
+            c3 <- c(c3, sprintf(num.format, x["scaling.factor.h0"]))
+            c1 <- c(c1, "    for the MLR correction")
+            c2 <- c(c2, ""); c3 <- c(c3, "")
         }
-   }
 
-   # RMSEA
-   if("rmsea" %in% names.x) {
-       cat("\nRoot Mean Square Error of Approximation:\n\n")
-       t0.txt <- sprintf("  %-40s", "RMSEA")
-       t1.txt <- sprintf("  %10.3f", x["rmsea"])
-       t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["rmsea.scaled"]), "")
-                 #sprintf("  %10.3f", x["rmsea.robust"]), "")
-       cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       if("rmsea.ci.lower" %in% names.x) {
-           t0.txt <- sprintf("  %-38s", "90 Percent Confidence Interval")
-           t1.txt <- sprintf("  %5.3f", x["rmsea.ci.lower"])
-           t2.txt <- sprintf("  %5.3f", x["rmsea.ci.upper"])
-           t3.txt <- ifelse(scaled,
-                     sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.scaled"],
-                                               x["rmsea.ci.upper.scaled"]), "")
-                     #sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.robust"],
-                     #                          x["rmsea.ci.upper.robust"]), "")
-           cat(t0.txt, t1.txt, t2.txt, t3.txt, "\n", sep="")
-       }
-       if("rmsea.pvalue" %in% names.x) {
-           t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
-           t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
-           t2.txt <- ifelse(scaled,
-                 sprintf("  %10.3f", x["rmsea.pvalue.scaled"]), "")
-                 #sprintf("  %10.3f", x["rmsea.pvalue.robust"]), "")
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       }
+        if("unrestricted.logl" %in% names.x) {
+            c1 <- c(c1, "Loglikelihood unrestricted model (H1)")
+            c2 <- c(c2, sprintf(num.format, x["unrestricted.logl"]))
+            c3 <- c(c3, ifelse(scaled,
+                           sprintf(num.format, x["unrestricted.logl"]), ""))
+            if(!is.na(x["scaling.factor.h1"])) {
+                c1 <- c(c1, "Scaling correction factor")
+                c2 <- c(c2, sprintf("  %10s", ""))
+                c3 <- c(c3, sprintf(num.format, x["scaling.factor.h1"]))
+                c1 <- c(c1, "    for the MLR correction")
+                c2 <- c(c2, ""); c3 <- c(c3, "")
+            }
+        }
 
-       # robust
-       if("rmsea.robust" %in% names.x) {
-           t0.txt <- sprintf("\n  %-40s", "Robust RMSEA")
-           t1.txt <- sprintf("  %10s", "")
-           t2.txt <- ifelse(scaled,
-                     #sprintf("  %10.3f", x["rmsea.scaled"]), "")
-                     sprintf("  %10.3f", x["rmsea.robust"]), "")
-           cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       }
-       if("rmsea.ci.lower.robust" %in% names.x) {
-           t0.txt <- sprintf("  %-38s", "90 Percent Confidence Interval")
-           t1.txt <- sprintf("  %5.3s", "")
-           t2.txt <- sprintf("  %5.3s", "")
-           t3.txt <- ifelse(scaled,
-                     #sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.scaled"],
-                     #                          x["rmsea.ci.upper.scaled"]), "")
-                     sprintf("       %5.3f  %5.3f", x["rmsea.ci.lower.robust"],
-                                               x["rmsea.ci.upper.robust"]), "")
-           cat(t0.txt, t1.txt, t2.txt, t3.txt, "\n", sep="")
-       }
-       #if("rmsea.pvalue.robust" %in% names.x) {
-       #    t0.txt <- sprintf("  %-40s", "P-value RMSEA <= 0.05")
-       #    t1.txt <- sprintf("  %10.3f", x["rmsea.pvalue"])
-       #    t2.txt <- ifelse(scaled,
-       #          #sprintf("  %10.3f", x["rmsea.pvalue.scaled"]), "")
-       #          sprintf("  %10.3f", x["rmsea.pvalue.robust"]), "")
-       #    cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
-       #}
-   }
+        c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
+        #c1 <- c(c1, "Number of free parameters")
+        #c2 <- c(c2, sprintf("  %10i", x["npar"]))
+        #c3 <- c(c3, ifelse(scaled, sprintf("  %10i", x["npar"]), ""))
+
+        c1 <- c(c1, "Akaike (AIC)")
+        c2 <- c(c2, sprintf(num.format, x["aic"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["aic"]), ""))
+        c1 <- c(c1, "Bayesian (BIC)")
+        c2 <- c(c2, sprintf(num.format, x["bic"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["bic"]), ""))
+        if(!is.na(x["bic2"])) {
+            c1 <- c(c1, "Sample-size adjusted Bayesian (BIC)")
+            c2 <- c(c2, sprintf(num.format, x["bic2"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["bic2"]), ""))
+        }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 39L)
+        c2 <- format(c2, width = 12L + max(0,(nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
+
+    # RMSEA
+    if("rmsea" %in% names.x) {
+        cat("\nRoot Mean Square Error of Approximation:\n\n")
+
+        c1 <- c2 <- c3 <- character(0L)
+
+        c1 <- c(c1, "RMSEA")
+        c2 <- c(c2, sprintf(num.format, x["rmsea"]))
+        c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rmsea.scaled"]), ""))
+        if("rmsea.ci.lower" %in% names.x) {
+            c1 <- c(c1, "90 Percent confidence interval - lower")
+            c2 <- c(c2, sprintf(num.format, x["rmsea.ci.lower"]))
+            c3 <- c(c3, ifelse(scaled, 
+                        sprintf(num.format, x["rmsea.ci.lower.scaled"]), ""))
+            c1 <- c(c1, "90 Percent confidence interval - upper")
+            c2 <- c(c2, sprintf(num.format, x["rmsea.ci.upper"]))
+            c3 <- c(c3, ifelse(scaled, 
+                        sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""))
+        }
+        if("rmsea.pvalue" %in% names.x) {
+            c1 <- c(c1, "P-value RMSEA <= 0.05")
+            c2 <- c(c2, sprintf(num.format, x["rmsea.pvalue"]))
+            c3 <- c(c3, ifelse(scaled,
+                  sprintf(num.format, x["rmsea.pvalue.scaled"]), ""))
+        }
+
+        # robust
+        if("rmsea.robust" %in% names.x) {
+            c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
+            c1 <- c(c1, "Robust RMSEA")
+            c2 <- c(c2, "")
+            c3 <- c(c3, ifelse(scaled,
+                        sprintf(num.format, x["rmsea.robust"]), ""))
+        }
+        if("rmsea.ci.lower.robust" %in% names.x) {
+            c1 <- c(c1, "90 Percent confidence interval - lower")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["rmsea.ci.lower.robust"]))
+            c1 <- c(c1, "90 Percent confidence interval - upper")
+            c2 <- c(c2, "")
+            c3 <- c(c3, sprintf(num.format, x["rmsea.ci.upper.robust"]))
+        }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
 
     # SRMR
     if(any(c("rmr","srmr") %in% names.x) && ! "srmr_within" %in% names.x) {
         cat("\nStandardized Root Mean Square Residual:\n\n")
 
+        c1 <- c2 <- c3 <- character(0L)
+
         if("rmr" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "RMR")
-            t1.txt <- sprintf("  %10.3f", x["rmr"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rmr"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "RMR")
+            c2 <- c(c2, sprintf(num.format, x["rmr"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rmr"]), ""))
         }
         if("rmr_nomean" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "RMR (No Mean)")
-            t1.txt <- sprintf("  %10.3f", x["rmr_nomean"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["rmr_nomean"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "RMR (No Mean)")
+            c2 <- c(c2, sprintf(num.format, x["rmr_nomean"]))
+            c3 <- c(c3, ifelse(scaled, 
+                               sprintf(num.format, x["rmr_nomean"]), ""))
         }
         if("srmr" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "SRMR")
-            t1.txt <- sprintf("  %10.3f", x["srmr"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "SRMR")
+            c2 <- c(c2, sprintf(num.format, x["srmr"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["srmr"]), ""))
         }
         if("srmr_nomean" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "SRMR (No Mean)")
-            t1.txt <- sprintf("  %10.3f", x["srmr_nomean"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_nomean"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "SRMR (No Mean)")
+            c2 <- c(c2, sprintf(num.format, x["srmr_nomean"]))
+            c3 <- c(c3, ifelse(scaled, 
+                               sprintf(num.format, x["srmr_nomean"]), ""))
         }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
     # SRMR -- multilevel
     if(any(c("srmr_within","srmr_between") %in% names.x)) {
         cat("\nStandardized Root Mean Square Residual (corr metric):\n\n")
+
+        c1 <- c2 <- c3 <- character(0L)
+
         if("srmr_within" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "SRMR (within covariance matrix)")
-            t1.txt <- sprintf("  %10.3f", x["srmr_within"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_within"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "SRMR (within covariance matrix)")
+            c2 <- c(c2, sprintf(num.format, x["srmr_within"]))
+            c3 <- c(c3, ifelse(scaled, 
+                               sprintf(num.format, x["srmr_within"]), ""))
         }
         if("srmr_between" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "SRMR (between covariance matrix)")
-            t1.txt <- sprintf("  %10.3f", x["srmr_between"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["srmr_between"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "SRMR (between covariance matrix)")
+            c2 <- c(c2, sprintf(num.format, x["srmr_between"]))
+            c3 <- c(c3, ifelse(scaled, 
+                               sprintf(num.format, x["srmr_between"]), ""))
         }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
     # WRMR
     if("wrmr" %in% names.x) {
         cat("\nWeighted Root Mean Square Residual:\n\n")
 
+        c1 <- c2 <- c3 <- character(0L)
+
         if("wrmr" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "WRMR")
-            t1.txt <- sprintf("  %10.3f", x["wrmr"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["wrmr"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "WRMR")
+            c2 <- c(c2, sprintf(num.format, x["wrmr"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["wrmr"]), ""))
         }
+
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
     # Other
     if(any(c("cn_05","cn_01","gfi","agfi","pgfi","mfi") %in% names.x)) {
         cat("\nOther Fit Indices:\n\n")
 
+        c1 <- c2 <- c3 <- character(0L)
+
         if("cn_05" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Hoelter Critical N (CN) alpha=0.05")
-            t1.txt <- sprintf("  %10.3f", x["cn_05"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cn_05"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Hoelter Critical N (CN) alpha = 0.05")
+            c2 <- c(c2, sprintf(num.format, x["cn_05"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["cn_05"]), ""))
         }
         if("cn_01" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Hoelter Critical N (CN) alpha=0.01")
-            t1.txt <- sprintf("  %10.3f", x["cn_01"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["cn_01"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Hoelter Critical N (CN) alpha = 0.01")
+            c2 <- c(c2, sprintf(num.format, x["cn_01"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["cn_01"]), ""))
         }
         if(any(c("cn_05", "cn_01") %in% names.x)) {
-            cat("\n")
+            c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
         }
         if("gfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Goodness of Fit Index (GFI)")
-            t1.txt <- sprintf("  %10.3f", x["gfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["gfi"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Goodness of Fit Index (GFI)")
+            c2 <- c(c2, sprintf(num.format, x["gfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["gfi"]), ""))
         }
         if("agfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Adjusted Goodness of Fit Index (AGFI)")
-            t1.txt <- sprintf("  %10.3f", x["agfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["agfi"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Adjusted Goodness of Fit Index (AGFI)")
+            c2 <- c(c2, sprintf(num.format, x["agfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["agfi"]), ""))
         }
         if("pgfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Parsimony Goodness of Fit Index (PGFI)")
-            t1.txt <- sprintf("  %10.3f", x["pgfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["pgfi"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Parsimony Goodness of Fit Index (PGFI)")
+            c2 <- c(c2, sprintf(num.format, x["pgfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["pgfi"]), ""))
         }
         if(any(c("gfi","agfi","pgfi") %in% names.x)) {
-            cat("\n")
+            c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
         }
         if("mfi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "McDonald Fit Index (MFI)")
-            t1.txt <- sprintf("  %10.3f", x["mfi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["mfi"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "McDonald Fit Index (MFI)")
+            c2 <- c(c2, sprintf(num.format, x["mfi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["mfi"]), ""))
         }
         if("mfi" %in% names.x) {
-            cat("\n")
+            c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
         }
         if("ecvi" %in% names.x) {
-            t0.txt <- sprintf("  %-40s", "Expected Cross-Validation Index (ECVI)")
-            t1.txt <- sprintf("  %10.3f", x["ecvi"])
-            t2.txt <- ifelse(scaled, sprintf("  %10.3f", x["ecvi"]), "")
-            cat(t0.txt, t1.txt, t2.txt, "\n", sep="")
+            c1 <- c(c1, "Expected Cross-Validation Index (ECVI)")
+            c2 <- c(c2, sprintf(num.format, x["ecvi"]))
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["ecvi"]), ""))
         }
 
+        # format c1/c2/c3
+        c1 <- format(c1, width = 43L)
+        c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+
+        # create character matrix
+        if(scaled) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
-    #cat("\n")
-   invisible(x)
+    invisible(x)
 }
 
 # new in 0.6-5

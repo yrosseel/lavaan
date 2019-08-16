@@ -1240,10 +1240,10 @@ lav_data_print_short <- function(object, nd = 3L) {
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
     # listwise deletion?
-    listwise <- FALSE
+    listwise <- twocolumn <- FALSE
     for(g in 1:lavdata@ngroups) {
        if(lavdata@nobs[[1L]] != lavdata@norig[[1L]]) {
-           listwise <- TRUE
+           listwise <- twocolumn <- TRUE
            break
        }
     }
@@ -1252,7 +1252,6 @@ lav_data_print_short <- function(object, nd = 3L) {
     #cat("Data information:\n\n")
 
     c1 <- c2 <- c3 <- character(0L)
-
 
     # number of observations
     if(lavdata@ngroups == 1L) {
@@ -1354,7 +1353,11 @@ lav_data_print_short <- function(object, nd = 3L) {
     c3 <- format(c3, width = 8L + nd, justify = "right")
 
     # create character matrix
-    M <- cbind(c1, c2, c3, deparse.level = 0)
+    if(twocolumn) {
+        M <- cbind(c1, c2, c3, deparse.level = 0)
+    } else {
+        M <- cbind(c1, c2, deparse.level = 0)
+    }
     colnames(M) <- rep("",  ncol(M))
     rownames(M) <- rep(" ", nrow(M))
 

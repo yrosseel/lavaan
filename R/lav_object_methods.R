@@ -63,7 +63,7 @@ function(object, header       = TRUE,
         } else {
             FIT <- fitMeasures(object, fit.measures="default")
             res$FIT = FIT
-            print.lavaan.fitMeasures( FIT )
+            print.lavaan.fitMeasures( FIT, nd = nd )
         }
     }
 

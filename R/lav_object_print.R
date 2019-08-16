@@ -58,19 +58,15 @@ lav_object_print_optim <- function(object, nd = 3L) {
         c2 <- c(c2, qr(object@Model@con.jac)$rank)
     }
 
-    # empty third column
-    c3 <- rep("", length(c1))
-
     # empty last row
-    c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
+    c1 <- c(c1, ""); c2 <- c(c2, "")
 
     # format
     c1 <- format(c1, width = 40L)
     c2 <- format(c2, width = 11L + max(0, (nd - 3L)) * 4L, justify = "right")
-    c3 <- format(c3, width = 11L + nd, justify = "right")
 
     # character matrix
-    M <- cbind(c1, c2, c3, deparse.level = 0)
+    M <- cbind(c1, c2, deparse.level = 0)
     colnames(M) <- rep("",  ncol(M))
     rownames(M) <- rep(" ", nrow(M))
 
@@ -295,7 +291,11 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
         c3 <- format(c3, width = 8L + nd, justify = "right")
 
         # create character matrix
-        M <- cbind(c1, c2, c3, deparse.level = 0)
+        if(twocolumn) {
+            M <- cbind(c1, c2, c3, deparse.level = 0)
+        } else {
+            M <- cbind(c1, c2, deparse.level = 0)
+        }
         colnames(M) <- rep("",  ncol(M))
         rownames(M) <- rep(" ", nrow(M))
 
@@ -326,7 +326,11 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                     c3[g] <- format(tmp, width = 8L + nd, justify = "right")
                 }
             }
-            M <- cbind(c1, c2, c3, deparse.level = 0)
+            if(twocolumn) {
+                M <- cbind(c1, c2, c3, deparse.level = 0)
+            } else {
+                M <- cbind(c1, c2, deparse.level = 0)
+            }
             colnames(M) <- rep("",  ncol(M))
             rownames(M) <- rep(" ", nrow(M))
             cat("  Test statistic for each group:\n")
@@ -359,8 +363,9 @@ lav_object_print_short_summary <- function(object, nd = 3L) {
 
     # 5b. only if MML was used?
     if(object@Options$estimator == "MML") {
-        fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"))
-        print.lavaan.fitMeasures(fm)
+        fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"),
+                          output = "text")
+        print.lavaan.fitMeasures(fm, nd = nd)
     }
 
 }
