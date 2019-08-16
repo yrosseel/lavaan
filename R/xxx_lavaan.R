@@ -301,8 +301,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         } else {
             # check if all names in "ordered" occur in the dataset?
             if(!is.null(data)) {
-                missing.idx <- which(!ordered %in% names(data))
-                if(length(missing.idx) > 0L) {
+                if(inherits(data, "data.frame")) {
+                    NAMES <- names(data)
+                } else if(inherits(data, "matrix")) {
+                    NAMES <- colnames(data)
+                }
+                missing.idx <- which(!ordered %in% NAMES)
+                if(length(missing.idx) > 0L && lavoptions$warn) {
                     warning("lavaan WARNING: ordered variable(s): ",
                          paste(ordered[missing.idx], collapse = " "),
                          "\n  could not be found in the data and will be ignored")

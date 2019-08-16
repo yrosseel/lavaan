@@ -363,7 +363,7 @@ lav_object_print_short_summary <- function(object, nd = 3L) {
 
     # 5b. only if MML was used?
     if(object@Options$estimator == "MML") {
-        fm <- fitMeasures(object, c("logl", "npar", "aic", "bic", "bic2"),
+        fm <- fitMeasures(object, c("logl", "aic", "bic", "bic2"),
                           output = "text")
         print.lavaan.fitMeasures(fm, nd = nd)
     }
