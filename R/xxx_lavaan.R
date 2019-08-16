@@ -307,7 +307,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     NAMES <- colnames(data)
                 }
                 missing.idx <- which(!ordered %in% NAMES)
-                if(length(missing.idx) > 0L && lavoptions$warn) {
+                if(length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
                     warning("lavaan WARNING: ordered variable(s): ",
                          paste(ordered[missing.idx], collapse = " "),
                          "\n  could not be found in the data and will be ignored")
