@@ -273,13 +273,16 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if(type == "chisq") {
 
         if(scaled) {
-            attr(val, "heading") <-
-                paste("Scaled Chi-Squared Difference Test (method = \"",
-                      method, "\")\n\nThe \"Chisq\" column contains standard ",
+            txt <- paste("The ", dQuote("Chisq"), " column contains standard ",
                       "test statistics, not the robust test that should be ",
                       "reported per model. A robust difference test is a ",
-                      "function of two standard (not robust) statistics.\n",
-                      sep="")
+                      "function of two standard (not robust) statistics.",
+                      sep = "")
+            attr(val, "heading") <-
+                paste("Scaled Chi-Squared Difference Test (method = ",
+                      dQuote(method), ")\n\n",
+                      lav_txt2message(txt, header = "lavaan NOTE:",
+                                           footer = " "), sep = "")
         } else {
             attr(val, "heading") <- "Chi-Squared Difference Test\n"
         }

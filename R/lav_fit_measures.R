@@ -1420,7 +1420,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
 
     # scaled?
     scaled <- "chisq.scaled" %in% names.x
-  
+
     # num format
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
@@ -1438,7 +1438,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
 
         c1 <- c(c1, "Degrees of freedom")
         c2 <- c(c2, x["df"])
-        c3 <- c(c3, ifelse(scaled, 
+        c3 <- c(c3, ifelse(scaled,
                        ifelse(x["df.scaled"]%%1 == 0, x["df.scaled"],
                            sprintf(num.format, x["df.scaled"])), ""))
 
@@ -1526,14 +1526,14 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("cfi" %in% names.x) {
             c1 <- c(c1, "Comparative Fit Index (CFI)")
             c2 <- c(c2, sprintf(num.format, x["cfi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["cfi.scaled"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["cfi.scaled"]),
                                ""))
         }
 
         if("tli" %in% names.x) {
             c1 <- c(c1, "Tucker-Lewis Index (TLI)")
             c2 <- c(c2, sprintf(num.format, x["tli"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                                sprintf(num.format, x["tli.scaled"]), ""))
         }
 
@@ -1553,42 +1553,42 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("nnfi" %in% names.x) {
             c1 <- c(c1, "Bentler-Bonett Non-normed Fit Index (NNFI)")
             c2 <- c(c2, sprintf(num.format, x["nnfi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nnfi.robust"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nnfi.robust"]),
                                ""))
         }
 
         if("nfi" %in% names.x) {
             c1 <- c(c1, "Bentler-Bonett Normed Fit Index (NFI)")
             c2 <- c(c2, sprintf(num.format, x["nfi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nfi.scaled"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["nfi.scaled"]),
                                ""))
         }
 
         if("pnfi" %in% names.x) {
             c1 <- c(c1, "Parsimony Normed Fit Index (PNFI)")
             c2 <- c(c2, sprintf(num.format, x["pnfi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["pnfi.scaled"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["pnfi.scaled"]),
                                ""))
         }
 
         if("rfi" %in% names.x) {
             c1 <- c(c1, "Bollen's Relative Fit Index (RFI)")
             c2 <- c(c2, sprintf(num.format, x["rfi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rfi.scaled"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rfi.scaled"]),
                                ""))
         }
 
         if("ifi" %in% names.x) {
             c1 <- c(c1, "Bollen's Incremental Fit Index (IFI)")
             c2 <- c(c2, sprintf(num.format, x["ifi"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["ifi.scaled"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["ifi.scaled"]),
                                ""))
         }
 
         if("rni" %in% names.x) {
             c1 <- c(c1, "Relative Noncentrality Index (RNI)")
             c2 <- c(c2, sprintf(num.format, x["rni"]))
-            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rni.robust"]), 
+            c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rni.robust"]),
                                ""))
         }
 
@@ -1688,11 +1688,11 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("rmsea.ci.lower" %in% names.x) {
             c1 <- c(c1, "90 Percent confidence interval - lower")
             c2 <- c(c2, sprintf(num.format, x["rmsea.ci.lower"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                         sprintf(num.format, x["rmsea.ci.lower.scaled"]), ""))
             c1 <- c(c1, "90 Percent confidence interval - upper")
             c2 <- c(c2, sprintf(num.format, x["rmsea.ci.upper"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                         sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""))
         }
         if("rmsea.pvalue" %in% names.x) {
@@ -1751,7 +1751,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("rmr_nomean" %in% names.x) {
             c1 <- c(c1, "RMR (No Mean)")
             c2 <- c(c2, sprintf(num.format, x["rmr_nomean"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                                sprintf(num.format, x["rmr_nomean"]), ""))
         }
         if("srmr" %in% names.x) {
@@ -1762,7 +1762,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("srmr_nomean" %in% names.x) {
             c1 <- c(c1, "SRMR (No Mean)")
             c2 <- c(c2, sprintf(num.format, x["srmr_nomean"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                                sprintf(num.format, x["srmr_nomean"]), ""))
         }
 
@@ -1793,13 +1793,13 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
         if("srmr_within" %in% names.x) {
             c1 <- c(c1, "SRMR (within covariance matrix)")
             c2 <- c(c2, sprintf(num.format, x["srmr_within"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                                sprintf(num.format, x["srmr_within"]), ""))
         }
         if("srmr_between" %in% names.x) {
             c1 <- c(c1, "SRMR (between covariance matrix)")
             c2 <- c(c2, sprintf(num.format, x["srmr_between"]))
-            c3 <- c(c3, ifelse(scaled, 
+            c3 <- c(c3, ifelse(scaled,
                                sprintf(num.format, x["srmr_between"]), ""))
         }
 

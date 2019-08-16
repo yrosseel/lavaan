@@ -1271,7 +1271,7 @@ lav_data_print_short <- function(object, nd = 3L) {
         for(g in 1:lavdata@ngroups) {
             c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
             c2 <- c(c2, lavdata@nobs[[g]])
-            c3 <- c(c3, ifelse(listwise, lavdata@norig[[g]], "")) 
+            c3 <- c(c3, ifelse(listwise, lavdata@norig[[g]], ""))
         } # g
     }
 
@@ -1280,7 +1280,7 @@ lav_data_print_short <- function(object, nd = 3L) {
         if( (.hasSlot(lavdata, "nlevels")) && # in case we have an old obj
             (lavdata@nlevels > 1L) ) {
             for(l in 2:lavdata@nlevels) {
-                c1 <- c(c1, 
+                c1 <- c(c1,
                         paste("Number of clusters [", lavdata@cluster[l-1], "]",
                         sep = ""))
                 c2 <- c(c2, lavdata@Lp[[1]]$nclusters[[l]])
@@ -1288,7 +1288,7 @@ lav_data_print_short <- function(object, nd = 3L) {
             }
         } else if( (.hasSlot(lavdata, "cluster")) &&
                    (length(lavdata@cluster) > 0L) ) {
-            c1 <- c(c1, paste("Number of clusters [", lavdata@cluster, "]", 
+            c1 <- c(c1, paste("Number of clusters [", lavdata@cluster, "]",
                               sep = ""))
             c2 <- c(c2, lavdata@Lp[[1]]$nclusters[[2]])
             c3 <- c(c3, "")
@@ -1296,21 +1296,21 @@ lav_data_print_short <- function(object, nd = 3L) {
     } else {
         if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
             for(l in 2:lavdata@nlevels) {
-                c1 <- c(c1, 
+                c1 <- c(c1,
                   paste("Number of clusters [", lavdata@cluster[l-1], "]:",
                         sep = ""))
                 c2 <- c(c2, ""); c3 <- c(c3, "")
                 for(g in 1:lavdata@ngroups) {
-                    c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]])) 
+                    c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
                     c2 <- c(c2, lavdata@Lp[[g]]$nclusters[[l]])
                     c3 <- c(c3, "")
                 }
             }
         } else if( (.hasSlot(lavdata, "cluster")) &&
                (length(lavdata@cluster) > 0L) ) {
-            c1 <- c(c1, 
+            c1 <- c(c1,
              paste("Number of clusters [", lavdata@cluster, "]:", sep = ""))
-            c2 <- c(c2, ""); c3 <- c(c3, "") 
+            c2 <- c(c2, ""); c3 <- c(c3, "")
             for(g in 1:lavdata@ngroups) {
                 c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
                 c2 <- c(c2, lavdata@Lp[[g]]$nclusters[[2]])

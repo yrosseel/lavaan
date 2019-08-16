@@ -73,7 +73,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                 warning("lavaan WARNING: could not invert information matrix needed for UfromUGamma\n")
                 return(NULL)
             } else {
-                TEST[[test[1]]] <- c(TEST$standard, 
+                TEST[[test[1]]] <- c(TEST$standard,
                                      scaling.factor = as.numeric(NA),
                                      label = character(0))
                 warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")

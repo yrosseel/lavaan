@@ -215,8 +215,8 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                 }
                 c1 <- c("Test statistic", "Degrees of freedom", PLABEL)
                 c2 <- c(sprintf(num.format, TEST[[block]]$stat),
-                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
-                               TEST[[block]]$df,                    
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer
+                               TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df)),
                         sprintf(num.format, TEST[[block]]$pvalue))
                 c3 <- c("", "", "")
@@ -225,12 +225,12 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
             if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
                 c1 <- c("Test Statistic", "Degrees of freedom")
                 c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
-                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer          
-                               TEST[[1L]]$df,                    
+                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer
+                               TEST[[1L]]$df,
                                sprintf(num.format, TEST[[1L]]$df)))
                 c3 <- c(sprintf(num.format, TEST[[block]]$stat),
-                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
-                               TEST[[block]]$df,                    
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer
+                               TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df)))
             } else {
                 if(!is.null(TEST[[1L]]$refdistr)) {
@@ -245,13 +245,13 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                 c1 <- c("Test Statistic", "Degrees of freedom", PLABEL,
                         "Scaling correction factor")
                 c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
-                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer          
-                               TEST[[1L]]$df,                    
+                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer
+                               TEST[[1L]]$df,
                                sprintf(num.format, TEST[[1L]]$df)),
                         sprintf(num.format, TEST[[1L]]$pvalue), "")
                 c3 <- c(sprintf(num.format, TEST[[block]]$stat),
-                        ifelse(TEST[[block]]$df %% 1 == 0, # integer          
-                               TEST[[block]]$df,                    
+                        ifelse(TEST[[block]]$df %% 1 == 0, # integer
+                               TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df)),
                         sprintf(num.format, TEST[[block]]$pvalue),
                         sprintf(num.format, TEST[[block]]$scaling.factor))
@@ -259,20 +259,20 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                     if(object@Data@ngroups == 1L) {
                         c1 <- c(c1, "Shift parameter")
                         c2 <- c(c2, "")
-                        c3 <- c(c3, 
+                        c3 <- c(c3,
                             sprintf(num.format, TEST[[block]]$shift.parameter))
                     } else {
                         c1 <- c(c1, "Shift parameter for each group:")
                         c2 <- c(c2, "")
                         c3 <- c(c3, "")
                         for(g in 1:object@Data@ngroups) {
-                            c1 <- c(c1, sprintf("    %-38s", 
+                            c1 <- c(c1, sprintf("    %-38s",
                                             object@Data@group.label[[g]]))
                             c2 <- c(c2, "")
-                            c3 <- c(c3, sprintf(num.format, 
+                            c3 <- c(c3, sprintf(num.format,
                                           TEST[[block]]$shift.parameter[g]))
-                        } 
-                    } 
+                        }
+                    }
                 } # shift
             }
         }
@@ -316,7 +316,7 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                 c1[g] <- format(tmp, width = 43L)
                 if(!twocolumn) {
                     tmp <- sprintf(num.format, TEST[[block]]$stat.group[g])
-                    c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L, 
+                    c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L,
                                     justify = "right")
                 } else {
                     tmp <- sprintf(num.format, TEST[[1]]$stat.group[g])
@@ -336,7 +336,7 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
             cat("  Test statistic for each group:\n")
             write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
         }
-    
+
     } # blocks
 
     #invisible(M)

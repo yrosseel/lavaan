@@ -17,6 +17,11 @@ print.lavaan.data.frame <- function(x, ..., nd = 3L) {
     }
 
     print(y, ...)
+
+    if(!is.null(attr(x, "footer"))) {
+        cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+
     invisible(x)
 }
 
@@ -155,7 +160,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
             # format c1/c2
             c1 <- format(c1, width = 38L)
-            c2 <- format(c2, 
+            c2 <- format(c2,
                    width = 13L + max(0, (nd - 3L)) * 4L, justify = "right")
 
             # create character matrix
