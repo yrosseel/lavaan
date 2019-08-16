@@ -137,6 +137,7 @@ Information about the data:
         the data.frame (if any).}
     \item{\code{"ngroups"}:}{Integer. The number of groups.}
     \item{\code{"group.label"}:}{A character vector. The group labels.}
+    \item{\code{"level.label"}:}{A character vector. The level labels.}
     \item{\code{"cluster"}:}{A character vector. The cluster variable(s)
         in the data.frame (if any).}
     \item{\code{"nlevels"}:}{Integer. The number of levels.}

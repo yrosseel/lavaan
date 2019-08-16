@@ -232,6 +232,8 @@ lavInspect.lavaan <- function(object,
         object@Data@ordered
     } else if(what == "group.label") {
         object@Data@group.label
+    } else if(what == "level.label") {
+        object@Data@level.label
     } else if(what == "nobs") {
         unlist( object@Data@nobs )
     } else if(what == "norig") {

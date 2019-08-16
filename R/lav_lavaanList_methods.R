@@ -38,10 +38,10 @@ lav_lavaanList_summary <- function(object,
                                    print     = TRUE,
                                    nd = 3L) {
 
-    output <- list()
+    out <- list()
 
     if(header) {
-        output$header <- lav_lavaanList_short_summary(object, print = print)
+        out$header <- lav_lavaanList_short_summary(object, print = print)
 
         #if(print) {
         #    # show only basic information
@@ -148,7 +148,7 @@ lav_lavaanList_summary <- function(object,
             names(pe) <- NAMES
         }
 
-        # scenarior 5: just a bunch of fits, using different datasets
+        # scenario 5: just a bunch of fits, using different datasets
         else {
             # print the average value for est
             EST <- lav_lavaanList_partable(object, what = "est", type = "all")
@@ -163,7 +163,7 @@ lav_lavaanList_summary <- function(object,
             pe <- pe[-rm.idx,]
         }
 
-        output$pe <- pe
+        out$pe <- pe
 
         if(print) {
             # print pe?
@@ -174,7 +174,7 @@ lav_lavaanList_summary <- function(object,
         print(object@meta$store.slots)
     }
 
-    invisible(output)
+    invisible(out)
 }
 
 setMethod("coef", "lavaanList",
