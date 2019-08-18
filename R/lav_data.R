@@ -89,7 +89,7 @@ lavData <- function(data              = NULL,          # data.frame
             if(is.matrix(data)) {
                 if(nrow(data) == ncol(data)) {
                     # perhaps it is a covariance matrix?
-                    if(data[2,1] == data[1,2] && warn) { # not perfect...
+                    if(isSymmetric(data)) {
                         warning("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
                     }
                 }
@@ -98,7 +98,8 @@ lavData <- function(data              = NULL,          # data.frame
                 ### data matrices directly
                 data <- as.data.frame(data, stringsAsFactors = FALSE)
             } else {
-                stop("lavaan ERROR: data object of class ", class(data))
+                stop("lavaan ERROR: data= argument",
+                     " is not a data.fame, but of class ", sQuote(class(data)))
             }
         }
 

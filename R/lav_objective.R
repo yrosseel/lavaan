@@ -747,9 +747,6 @@ estimator.2L <- function(lavmodel       = NULL,
     # divide by (N*2)
     objective <- objective / (lavsamplestats@ntotal * 2)
 
-    # debug only
-    objective <- objective #- 21.10232
-
     objective
 }
 

@@ -60,7 +60,15 @@ lav_model_hessian <- function(lavmodel       = NULL,
         Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
     }
 
-    # make symmetric (NEEDED? probably not)
+    # check if Hessian is (almost) symmetric, as it should be
+    max.diff <- max(abs(Hessian - t(Hessian)))
+    if(max.diff > 100 * sqrt(.Machine$double.eps)) {
+        # hm, Hessian is not symmetric -> WARNING!
+        warning("lavaan WARNING: Hessian is not fully symmetric. Max diff = ", 
+                max.diff)
+        # FIXME: use numDeriv::hessian instead?
+        # this can only happen is the gradient is not quite right...
+    }
     Hessian <- ( Hessian + t(Hessian) )/2.0
 
     Hessian
