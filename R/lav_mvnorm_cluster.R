@@ -116,11 +116,15 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
         mu.b <- mu.y
         mu.w.tilde <- numeric( p.tilde )
         mu.w.tilde[ ov.idx[[1]] ] <- mu.y
-        if(length(within.idx) > 0L) {
-            mu.w.tilde[  -within.idx ] <- 0
-        } else {
-            mu.w.tilde[] <- 0
-        }
+
+        # NO NEED TO SET THIS TO ZERO!
+        # otherwise, we get non-symmetric Hessian!! 0.6-5
+
+        #if(length(within.idx) > 0L) { 
+        #    mu.w.tilde[  -within.idx ] <- 0
+        #} else {
+        #    mu.w.tilde[] <- 0
+        #}
         mu.w <- mu.w.tilde[ ov.idx[[1]] ]
     }
 
@@ -765,7 +769,19 @@ lav_mvnorm_cluster_scores_2l <- function(Y1           = NULL,
                                              drop = FALSE ] )
         Sigma.B <- Sigma.B.tilde[ , col.idx, drop = FALSE ]
     } else {
-        Sigma.B <- G.Sigma.b
+        p.tilde.star <- p.tilde*(p.tilde+1)/2
+        B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
+
+        Sigma.B.tilde <- matrix(0, nclusters, p.tilde.star)
+
+        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[1]], ov.idx[[1]],
+                                             drop = FALSE ] )
+        Sigma.B.tilde[ , col.idx ] <- G.Sigma.b
+
+        col.idx <- lav_matrix_vech( B.tilde[ ov.idx[[2]], ov.idx[[2]],
+                                             drop = FALSE ] )
+        Sigma.B <- Sigma.B.tilde[ , col.idx, drop = FALSE ]
+        #Sigma.B <- G.Sigma.b
     }
 
     SCORES <- cbind(Mu.W, Sigma.W, Mu.B, Sigma.B)
