@@ -77,6 +77,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      scaling.factor = as.numeric(NA),
                                      label = character(0))
                 warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
+                TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
                 return(TEST)
             }
         }
@@ -89,6 +90,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
        !return.u && !return.ugamma) {
         TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
                              label = character(0))
+        TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
         return(TEST)
     }
 
