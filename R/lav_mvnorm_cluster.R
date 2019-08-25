@@ -1013,6 +1013,14 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp     = NULL,
     Delta.W.tilde.Mu[ov.idx[[1]],] <- Delta.W[1:nw,]
     Delta.B.tilde.Mu[ov.idx[[2]],] <- Delta.B[1:nb,]
 
+    # correct Delta to reflect Mu.W[ both.idx ] is added to Mu.B[ both.idx ]
+    # changed in 0.6-5
+    Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] <- 
+        ( Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] + 
+          Delta.W.tilde.Mu[ Lp$both.idx[[2]], ] )
+    Delta.W.tilde.Mu[Lp$both.idx[[2]], ] <- 0
+
+
     B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
     w.idx <- lav_matrix_vech( B.tilde[ ov.idx[[1]], ov.idx[[1]], drop = FALSE] )
     b.idx <- lav_matrix_vech( B.tilde[ ov.idx[[2]], ov.idx[[2]], drop = FALSE] )
@@ -1063,15 +1071,23 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp     = NULL,
         information.j <- information.j + n.s[clz]*info.j
     }
 
-    Sigma.W.inv <- lav_matrix_symmetric_inverse(S = Sigma.W, logdet = FALSE,
+
+    Sigma.W.inv <- lav_matrix_symmetric_inverse(S = sigma.w, logdet = FALSE,
                                                 Sinv.method = Sinv.method)
     I11.w <- Sigma.W.inv
     I22.w <- 0.5 * lav_matrix_duplication_pre_post(Sigma.W.inv %x% Sigma.W.inv)
     I.w <- lav_matrix_bdiag(I11.w, I22.w)
+
+    # force zero for means both.idx in within part
+    # changed in 0.6-5
+    I.w[Lp$both.idx[[2]],] <- 0
+    I.w[,Lp$both.idx[[2]]] <- 0
+
     information.w <- (nobs - nclusters) * ( t(Delta.W) %*% I.w %*% Delta.W )
 
     # unit information
     information <- 1/Lp$nclusters[[2]] * (information.w + information.j)
+
 
     information
 }
