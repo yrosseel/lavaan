@@ -209,11 +209,12 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         # label?
         if(label) {
             for(g in seq_len(lavdata@ngroups)) {
-                if(lavdata@nlevels > 1L && level == 2L) {
-                    gg <- (g - 1)*lavdata@nlevels + 2L
+                if(lavdata@nlevels > 1L) {
+                    gg <- (g - 1)*lavdata@nlevels + level
                 } else {
                     gg <- g
                 }
+
                 if(append.data) {
                     #FIXME: add condition level=1L (or name the cluster.label
                     #       column after the cluster variable)
@@ -222,21 +223,30 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                 } else {
                     colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
                 }
-            }
-            if(se != "none") {
-                if(lavdata@nlevels > 1L && level == 2L) {
-                    gg <- (g - 1)*lavdata@nlevels + 2L
-                } else {
-                    gg <- g
-                }
-                colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
 
-                if (acov != "none") {
-                  dimnames(ACOV[[g]]) <- list(lavpta$vnames$lv[[g]],
-                                              lavpta$vnames$lv[[g]])
+                if(se != "none") {
+                    colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
+                }
+
+                if(acov != "none") {
+                    dimnames(ACOV[[g]]) <- list(lavpta$vnames$lv[[gg]],
+                                                lavpta$vnames$lv[[gg]])
+                }
+
+            } # g
+
+            # group.labels
+            if(lavdata@ngroups > 1L) {
+                names(out) <- lavdata@group.label
+                if(se != "none") {
+                    names(SE) <- lavdata@group.label
+                }
+                if(acov != "none") {
+                    names(ACOV) <- lavdata@group.label
                 }
             }
-        }
+
+        } # label
 
     # estimated value for the observed indicators, given (estimated)
     # factor scores
