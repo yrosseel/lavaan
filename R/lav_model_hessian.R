@@ -64,7 +64,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
     max.diff <- max(abs(Hessian - t(Hessian)))
     if(max.diff > 100 * sqrt(.Machine$double.eps)) {
         # hm, Hessian is not symmetric -> WARNING!
-        warning("lavaan WARNING: Hessian is not fully symmetric. Max diff = ", 
+        warning("lavaan WARNING: Hessian is not fully symmetric. Max diff = ",
                 max.diff)
         # FIXME: use numDeriv::hessian instead?
         # this can only happen is the gradient is not quite right...

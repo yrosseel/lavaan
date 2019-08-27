@@ -1346,7 +1346,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                          lavh1          = lavh1), silent = TRUE)
         if(inherits(fit.indep, "try-error") ||
            !fit.indep@optim$converged) {
-            warning("lavaan WARNING: estimation of the baseline model failed.")
+            if(lavoptions$warn) {
+                warning("lavaan WARNING: estimation of the baseline model failed.")
+            }
             lavbaseline <- list()
             if(lavoptions$verbose) {
                 cat(" FAILED.\n")

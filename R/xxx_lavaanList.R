@@ -249,7 +249,7 @@ lavaanList <- function(model         = NULL,             # model
         RES <- list(ok = FALSE, timing = NULL, ParTable = NULL,
                     Data = NULL, SampleStats = NULL, vcov = NULL,
                     test = NULL, optim = NULL, implied = NULL,
-                    baseline = NULL, fun = NULL)
+                    baseline = NULL, baseline.ok = FALSE, fun = NULL)
 
         if(data.ok.flag && inherits(lavobject, "lavaan") &&
            lavInspect(lavobject, "converged")) {
@@ -297,6 +297,9 @@ lavaanList <- function(model         = NULL,             # model
             }
             if("baseline" %in% store.slots) {
                 RES$baseline <- lavobject@baseline
+                if(length(lavobject@baseline) > 0L) {
+                    RES$baseline.ok <- TRUE
+                }
             }
 
             # custom FUN
@@ -363,8 +366,14 @@ lavaanList <- function(model         = NULL,             # model
 
 
     # restructure
-    meta <- list(ndat = ndat, ok = sapply(RES, "[[", "ok"),
-                 store.slots = store.slots)
+    if("baseline" %in% store.slots) {
+        meta <- list(ndat = ndat, ok = sapply(RES, "[[", "ok"),
+                     baseline.ok = sapply(RES, "[[", "baseline.ok"),
+                     store.slots = store.slots)
+    } else {
+        meta <- list(ndat = ndat, ok = sapply(RES, "[[", "ok"),
+                     store.slots = store.slots)
+    }
 
     # extract store.slots slots
     if("timing" %in% store.slots) {

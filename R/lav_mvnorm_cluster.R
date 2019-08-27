@@ -120,7 +120,7 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
         # NO NEED TO SET THIS TO ZERO!
         # otherwise, we get non-symmetric Hessian!! 0.6-5
 
-        #if(length(within.idx) > 0L) { 
+        #if(length(within.idx) > 0L) {
         #    mu.w.tilde[  -within.idx ] <- 0
         #} else {
         #    mu.w.tilde[] <- 0
@@ -1015,8 +1015,8 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp     = NULL,
 
     # correct Delta to reflect Mu.W[ both.idx ] is added to Mu.B[ both.idx ]
     # changed in 0.6-5
-    Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] <- 
-        ( Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] + 
+    Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] <-
+        ( Delta.B.tilde.Mu[ Lp$both.idx[[2]], ] +
           Delta.W.tilde.Mu[ Lp$both.idx[[2]], ] )
     Delta.W.tilde.Mu[Lp$both.idx[[2]], ] <- 0
 
