@@ -39,14 +39,26 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         type <- "yhat"
 
     # se?
-    if (acov != "none") se <- acov # ACOV implies SE
+    if (acov != "none") {
+        se <- acov # ACOV implies SE
+    }
     if(se != "none") {
         if(is.logical(se) && se) {
             se <- "standard"
-            if (acov != "none") acov <- se # reverse-imply upstream
+            if (acov != "none") {
+                acov <- se # reverse-imply upstream
+            }
         }
         if(type != "lv") {
             stop("lavaan ERROR: standard errors only available if type = \"lv\"")
+        }
+        if(lavInspect(object, "categorical")) {
+            se <- acov <- "none"
+            warning("lavaan WARNING: standard errors not available (yet) for non-normal data")
+        }
+        if(lavdata@missing %in% c("ml", "ml.x")) {
+            se <- acov <- "none"
+            warning("lavaan WARNING: standard errors not available (yet) for missing data + fiml")
         }
     }
 
@@ -104,7 +116,9 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
         # extract se here
         if(se != "none") {
             SE <- attr(out, "se")
-            if (acov != "none") ACOV <- attr(out, "acov")
+            if (acov != "none") {
+                ACOV <- attr(out, "acov")
+            }
         }
 
         # remove dummy lv? (removes attr!)
@@ -880,10 +894,12 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
     }
 
     # se?
-    if (acov != "none") se <- acov # ACOV implies SE
-    if(se != "none") {
-        warning("lavaan WARNING: standard errors are not available (yet) for the non-normal case")
+    if (acov != "none") {
+        se <- acov # ACOV implies SE
     }
+    #if(se != "none") {
+    #    warning("lavaan WARNING: standard errors are not available (yet) for the non-normal case")
+    #}
 
     VETAx <- computeVETAx(lavmodel = lavmodel)
     VETAx.inv <- VETAx

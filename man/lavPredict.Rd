@@ -34,9 +34,11 @@ likelihood approach.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, naive standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
-returned as an attribute.}
+returned as an attribute. Currently only available for complete continuous
+data.}
 \item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
-sampling covariance matrix of factor scores as an attribute.}
+sampling covariance matrix of factor scores as an attribute. Currently 
+only available for complete continuous data.}
 \item{label}{Logical. If TRUE, the columns are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
