@@ -1554,7 +1554,8 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
     # default options for sem/cfa call
     mc$int.ov.free     = TRUE
     mc$int.lv.free     = FALSE
-    mc$auto.fix.first  = !std.lv
+    #mc$auto.fix.first  = !std.lv
+    mc$auto.fix.first  = TRUE # (re)set in lav_options_set
     mc$auto.fix.single = TRUE
     mc$auto.var        = TRUE
     mc$auto.cov.lv.x   = TRUE
@@ -1621,7 +1622,8 @@ growth <- function(# user-specified model: can be syntax, parameter Table
     mc$model.type      = "growth"
     mc$int.ov.free     = FALSE
     mc$int.lv.free     = TRUE
-    mc$auto.fix.first  = !std.lv
+    #mc$auto.fix.first  = !std.lv
+    mc$auto.fix.first  = TRUE # (re)set in lav_options_set
     mc$auto.fix.single = TRUE
     mc$auto.var        = TRUE
     mc$auto.cov.lv.x   = TRUE

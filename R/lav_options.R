@@ -1171,6 +1171,12 @@ lav_options_set <- function(opt = NULL) {
     }
 
 
+
+    # std.lv vs auto.fix.first # new in 0.6-5 (used to be in sem/cfa/growth)
+    if(opt$std.lv) {
+        opt$auto.fix.first <- FALSE
+    }
+
     # std.lv vs effect.coding # new in 0.6-4
     if(is.logical(opt$effect.coding)) {
         if(opt$effect.coding) {
