@@ -732,6 +732,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
             dx <- numeric(0L)
         }
     } else {
+       dx <- numeric(0L)
        # give warning here (new in 0.6-5)
        if(lavoptions$warn) {
            warning("lavaan WARNING: the optimizer warns that a solution has NOT been found!")
