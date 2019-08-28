@@ -685,27 +685,57 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     fx <- objective_function(x) # to get "fx.group" attribute
 
-    # check.gradient
-    if(!is.null(GRADIENT) && OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B")) {
+    # check convergence
+    if(converged) {
+        # check.gradient
+        if(!is.null(GRADIENT) &&
+           OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B")) {
 
-        # compute unscaled gradient
-        dx <- GRADIENT(x)
+            # compute unscaled gradient
+            dx <- GRADIENT(x)
 
-        # NOTE: unscaled gradient!!!
-        if(converged && lavoptions$check.gradient &&
-           any(abs(dx) > lavoptions$optim.dx.tol)) {
+            # NOTE: unscaled gradient!!!
+            if(converged && lavoptions$check.gradient &&
+               any(abs(dx) > lavoptions$optim.dx.tol)) {
 
-            converged <- FALSE
-            warning(
+                # ok, identify the non-zero elements
+                non.zero <- which(abs(dx) > lavoptions$optim.dx.tol)
+
+                # which ones are 'boundary' points, defined by lower/upper?
+                bound.idx <- integer(0L)
+                if(!is.null(lavpartable$lower)) {
+                    bound.idx <- c(bound.idx, which(lower == x))
+                }
+                if(!is.null(lavpartable$upper)) {
+                    bound.idx <- c(bound.idx, which(upper == x))
+                }
+                if(length(bound.idx) > 0L) {
+                    non.zero <- non.zero[- which(non.zero %in% bound.idx) ]
+                }
+
+                # this has many implications ... so should be careful to
+                # avoid false alarm
+                if(length(non.zero) > 0L) {
+                    converged <- FALSE
+
+                    if(lavoptions$warn) {
+                        warning(
   "lavaan WARNING: the optimizer (", OPTIMIZER, ") ",
                    "claimed the model converged,\n",
 "                  but not all elements of the gradient are (near) zero;\n",
 "                  the optimizer may not have found a local solution\n",
 "                  use check.gradient = FALSE to skip this check.")
+                    }
+                }
+            }
+        } else {
+            dx <- numeric(0L)
         }
-
     } else {
-        dx <- numeric(0L)
+       # give warning here (new in 0.6-5)
+       if(lavoptions$warn) {
+           warning("lavaan WARNING: the optimizer warns that a solution has NOT been found!")
+       }
     }
 
     # transform back

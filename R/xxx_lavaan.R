@@ -1094,9 +1094,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                     type = "user", extra = TRUE)
 
         # check if model has converged or not
-        if(!attr(x, "converged") && lavoptions$warn) {
-           warning("lavaan WARNING: the optimizer warns that a solution has NOT been found!")
-        }
+        #if(!attr(x, "converged") && lavoptions$warn) {
+        #   warning("lavaan WARNING: the optimizer warns that a solution has NOT been found!")
+        #}
     } else {
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE

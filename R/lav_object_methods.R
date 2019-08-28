@@ -281,12 +281,19 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      remove.def = FALSE,
                                                      remove.nonfree = FALSE,
                                                      rsquare = FALSE,
+                                                     add.attributes = FALSE,
                                                      output = "data.frame",
                                                      header = FALSE) {
 
     if("lavaan.fsr" %in% class(object)) {
         return(object$PE)
     }
+
+    # deprecated add.attributes (for psycho/blavaan)
+    if(add.attributes) {
+        output <- "text"
+    }
+
 
     # no se if class is not lavaan
     if(class(object) != "lavaan") {

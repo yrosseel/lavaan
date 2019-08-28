@@ -11,6 +11,7 @@ parameterEstimates(object, se = TRUE, zstat = TRUE, pvalue = TRUE,
                    remove.system.eq = TRUE, remove.eq = TRUE,
                    remove.ineq = TRUE, remove.def = FALSE,
                    remove.nonfree = FALSE, rsquare = FALSE, 
+                   add.attributes = FALSE,
                    output = "data.frame", header = FALSE)
 }
 \arguments{
@@ -65,6 +66,7 @@ the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
 name of the endogenous variable, while the code{op} column contains \code{r2},
 to indicate that the values in the \code{est} column are rsquare values.}
+\item{add.attributes}{Deprecated argument. Please use output= instead.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame. 
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
