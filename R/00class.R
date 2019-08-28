@@ -7,11 +7,11 @@
 setClass("lavData",
     representation(
         data.type="character",     # "full", "moment" or "none"
-        ngroups="integer",         # number of groups
         group="character",         # group variable
-        nlevels="integer",         # number of levels
-        cluster="character",       # cluster variable(s)
+        ngroups="integer",         # number of groups
         group.label="character",   # group labels
+        cluster="character",       # cluster variable(s)
+        nlevels="integer",         # number of levels
         level.label="character",   # level labels
         std.ov="logical",          # standardize observed variables?
         nobs="list",               # effective number of observations

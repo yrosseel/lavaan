@@ -467,15 +467,8 @@ lav_start <- function(start.method    = "default",
       #      } # free.var.idx
       #  } # lv var
 
-    } # groups
-
-
-    # nlevels > 1L
-    if(nlevels > 1L) {
-        for(g in 1:ngroups) {
-            group.values <- lav_partable_group_values(lavpartable)
-            ov.names.x  <- vnames(lavpartable, "ov.x", group = group.values[g])
-            ov.names.x <- unique(unlist(ov.names.x))
+        # nlevels > 1L
+        if(nlevels > 1L) {
             level.values <- lav_partable_level_values(lavpartable)
 
             if(!conditional.x && length(ov.names.x) > 0) {
@@ -512,8 +505,12 @@ lav_start <- function(start.method    = "default",
                     start[ov.int.idx] <- INT[idx]
                 } # levels
             } # fixed.x
-        } # groups
-    } # nlevels > 1L
+        } # nlevels > 1L
+
+
+    } # groups
+
+
 
 
     # group weights

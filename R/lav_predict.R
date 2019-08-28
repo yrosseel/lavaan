@@ -38,6 +38,13 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
     if(type %in% c("ov","yhat"))
         type <- "yhat"
 
+
+    # append.data? check level
+    if(append.data && level > 1L) {
+        warning("lavaan WARNING: append.data not available if level > 1L")
+        append.data <- FALSE
+    }
+
     # se?
     if (acov != "none") {
         se <- acov # ACOV implies SE
@@ -139,8 +146,7 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                })
 
         # append original/new data? (also remove attr)
-        #FIXME: add condition level=1L (or add cluster.label to assist merging)
-        if(append.data) {
+        if(append.data && level == 1L) {
             out <- lapply(seq_len(lavdata@ngroups), function(g) {
                        ret <- cbind(out[[g]], data.obs[[g]])
                        ret
@@ -216,10 +222,8 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                 }
 
                 if(append.data) {
-                    #FIXME: add condition level=1L (or name the cluster.label
-                    #       column after the cluster variable)
                     colnames(out[[g]]) <- c(lavpta$vnames$lv[[gg]],
-                                            ov.names[[gg]])
+                                            ov.names[[g]]) # !not gg
                 } else {
                     colnames(out[[g]]) <- lavpta$vnames$lv[[gg]]
                 }

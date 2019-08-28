@@ -1213,7 +1213,7 @@ lav_options_set <- function(opt = NULL) {
     # unless test = "none", always add test = "standard" as the
     # first entry
     # NO: this breaks lavaan.survey pval.pFsum, which has the following check:
-    # if (!lavInspect(lavaan.fit, "options")$test %in% c("satorra.bentler", 
+    # if (!lavInspect(lavaan.fit, "options")$test %in% c("satorra.bentler",
     #    "mean.var.adjusted", "Satterthwaite")) {
     #    stop("Please refit the model with Satorra-Bentler (MLM) or Satterthwaite (MLMVS) adjustment.")
     #}
