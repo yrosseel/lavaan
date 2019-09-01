@@ -36,7 +36,14 @@ muthen1984 <- function(Data              = NULL,
     if(missing == "listwise") {
         lav_crossprod2 <- base::crossprod
     } else { # pairwise, we can have missing values
-        lav_crossprod2 <- function(x, y) sum(x * y, na.rm = TRUE)
+        # revised in 0.6-6: x is always a vector; Y could be a matrix if nth>1
+        lav_crossprod2 <- function(x, Y) {
+            if(is.matrix(Y)) {
+                colSums(Y * x, na.rm = TRUE)
+            } else {
+                sum(Y * x, na.rm = TRUE)
+            }
+        }
     }
 
     # pairwise version
