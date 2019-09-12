@@ -310,9 +310,11 @@ lav_partable_add <- function(PT, add = list()) {
 }
 
 
-# look for row idx of p1 elements in p2
+# look for p2-row-idx of p1 elements
+# p1 is usually a subset of p2
 # return NA if not found
-lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE) {
+lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
+                                         exclude.nonpar = TRUE) {
 
     # check if we have a 'block' column (in both p1 and p2)
     if(is.null(p1$block)) {
@@ -330,9 +332,16 @@ lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE) {
         }
     }
 
-    # get all parameters that have a '.p*' plabel
-    # (they exclude "==", "<", ">", ":=")
-    p1.idx <- which(grepl("\\.p", p1$plabel))
+    # ALL rows from p1, or only 'parameters'?
+    if(exclude.nonpar) {
+        # get all parameters that have a '.p*' plabel
+        # (they exclude "==", "<", ">", ":=")
+        p1.idx <- which(grepl("\\.p", p1$plabel))
+    } else {
+        # all of it 
+        # note: block should be '0' in both p1 and p2
+        p1.idx <- seq_len( length(p1$lhs) )
+    }
     np1 <- length(p1.idx)
 
     # return p2.id

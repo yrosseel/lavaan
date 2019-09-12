@@ -689,13 +689,24 @@ sam <- function(model          = NULL,
 
     # fill in point estimates structural part
     PTS <- FIT.PA@ParTable
-    p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0
     p2def.idx <- seq_len(length(PT$lhs)) %in% reg.idx &
                  (PT$free > 0 | PT$op == ":=")
-    step2.idx <- PT$free[ p2.idx ] # no def!
 
-    PT$est[ p2def.idx ] <- PTS$est[ (PTS$free > 0L | PTS$op == ":=") &
-                                !seq_len(length(PTS$lhs)) %in% extra.int.idx ]
+    # which parameters from PTS do we wish to fill in:
+    # - all 'free' parameters
+    # - := (if any)
+    # - but NOT elements in extra.int.idx
+    pts.idx <- which( (PTS$free > 0L | PTS$op == ":=") &
+                      !seq_len(length(PTS$lhs)) %in% extra.int.idx )
+
+    # find corresponding rows in PT
+    PTS2 <- as.data.frame(PTS, stringsAsFactors = FALSE)
+    pt.idx <- lav_partable_map_id_p1_in_p2(PTS2[pts.idx,], PT,
+                                           exclude.nonpar = FALSE)
+    # fill in
+    PT$est[ pt.idx ] <- PTS$est[ pts.idx ]
+
+
     # fill in any def parameters
     #def.idx <- which(PT$op == ":=")
     #if(length(def.idx) > 0L) {
@@ -705,6 +716,10 @@ sam <- function(model          = NULL,
     #        PT$est[ def.idx ] <- est.def
     #    } # else warning?
     #}
+
+    # create step2.idx
+    p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
+    step2.idx <- PT$free[ p2.idx ]
 
 
 
@@ -722,6 +737,8 @@ sam <- function(model          = NULL,
     lavoptions.joint$optim.method = "none"
     PT$ustart <- PT$est # as this is used if optim.method == "none"
     lavoptions.joint$check.gradient = FALSE
+    lavoptions.joint$check.start = FALSE
+    lavoptions.joint$check.post = FALSE
     #lavoptions.joint$test <- FIT.PA@Options$test
     #lavoptions.joint$se   <- "none"
     if(sam.method == "local") {
