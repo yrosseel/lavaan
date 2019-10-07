@@ -66,6 +66,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "lv.interaction", # interaction terms
                    "lv.efa",      # latent variables involved in efa
                    "lv.ind",      # latent indicators (higher-order cfa)
+                   "lv.marker",   # marker indicator per lv
 
                    "eqs.y",       # y's in regression
                    "eqs.x"        # x's in regression
@@ -164,6 +165,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$lv.interaction <- vector("list", length = nblocks)
     OUT$lv.efa         <- vector("list", length = nblocks)
     OUT$lv.ind         <- vector("list", length = nblocks)
+    OUT$lv.marker      <- vector("list", length = nblocks)
 
     OUT$eqs.y          <- vector("list", length = nblocks)
     OUT$eqs.x          <- vector("list", length = nblocks)
@@ -573,14 +575,42 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             OUT$lv.nox[[b]] <- lv.names[! lv.names %in% lv.names.x ]
         }
 
-    }
+        # marker indicator (if any) for each lv
+        if("lv.marker" %in% type) {
+            # default: "" per lv
+            out <- character( length(lv.names) )
+            names(out) <- lv.names
+            for(l in seq_len( length(lv.names) )) {
+                this.lv.name <- lv.names[l]
+                # try to see if we can find a 'marker' indicator for this factor
+                marker.idx <- which(partable$block == b &
+                                    partable$lhs == this.lv.name &
+                                    partable$rhs %in% v.ind &
+                                    partable$free == 0L)
+                                    # no check for '1' (eg growth factor 0,1,2,)
+                if(length(marker.idx) == 1L) { # unique only!!
+                    out[l] <- partable$rhs[marker.idx]
+                }
+            }
+            OUT$lv.marker[[b]] <- out
+        }
+
+    } # b
 
     # to mimic old behaviour, if length(type) == 1L
     if(length(type) == 1L) {
         OUT <- OUT[[type]]
         # to mimic old behaviour, if specific block is requested
         if(ndotdotdot == 0L) {
-            OUT <- unique(unlist(OUT))
+            if(type == "lv.marker") {
+                OUT <- unlist(OUT)
+                # no unique, as unique drops attributes, and reduces
+                # c("", "", "") to a single ""
+                # (but, say for 2 groups, you get 2 copies)
+                # as this is only for 'display', we leave like that
+            } else {
+                OUT <- unique(unlist(OUT))
+            }
         } else if(length(block.select) == 1L) {
             OUT <- OUT[[block.select]]
         } else {

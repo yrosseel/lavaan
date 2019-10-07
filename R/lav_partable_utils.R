@@ -338,7 +338,7 @@ lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
         # (they exclude "==", "<", ">", ":=")
         p1.idx <- which(grepl("\\.p", p1$plabel))
     } else {
-        # all of it 
+        # all of it
         # note: block should be '0' in both p1 and p2
         p1.idx <- seq_len( length(p1$lhs) )
     }

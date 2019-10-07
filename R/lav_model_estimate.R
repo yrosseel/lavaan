@@ -152,8 +152,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         cat("start.x = ", start.x, "\n")
     }
 
-
-    # bounds? (new in 0.6-2)
+    # user-specified bounds? (new in 0.6-2)
     if(is.null(lavpartable$lower)) {
         lower <- -Inf
     } else {

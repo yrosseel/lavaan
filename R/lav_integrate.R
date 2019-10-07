@@ -61,7 +61,7 @@ lav_integration_gauss_hermite_xw <- function(n = 21L, revert = FALSE) {
         # FIXME: use specialized function for tridiagonal symmetrix matrix
         ev <- eigen(Jn, symmetric = TRUE)
         x <- ev$values
-        tmp <- ev$vector[1L,]
+        tmp <- ev$vectors[1L,]
         w <- sqrt(pi)*tmp*tmp
     }
 

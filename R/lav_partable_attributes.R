@@ -13,26 +13,26 @@ lav_partable_attributes <- function(partable, pta = NULL) {
     }
 
     # vnames
-    pta$vnames <- lav_partable_vnames(partable, type="all")
+    pta$vnames <- lav_partable_vnames(partable, type = "all")
 
     # vidx
     OV <- pta$vnames$ov
     LV <- pta$vnames$lv
     nblocks <- length(pta$vnames$ov)
     pta$vidx <- lapply(names(pta$vnames), function(v) {
-                    lapply(seq_len(nblocks), function(g) {
+                    lapply(seq_len(nblocks), function(b) {
                         if(grepl("lv", v)) {
-                            match(pta$vnames[[v]][[g]], LV[[g]])
+                            match(pta$vnames[[v]][[b]], LV[[b]])
                         } else if(grepl("th", v)) {
                             # thresholds have '|t' pattern
-                            TH <-  sapply(strsplit(pta$vnames[[v]][[g]],
+                            TH <-  sapply(strsplit(pta$vnames[[v]][[b]],
                                           "|t", fixed = TRUE), "[[", 1L)
-                            match(TH, OV[[g]])
+                            match(TH, OV[[b]])
                         } else if(grepl("eqs", v)){
                             # mixture of OV/LV
                             integer(0L)
                         } else {
-                            match(pta$vnames[[v]][[g]], OV[[g]])
+                            match(pta$vnames[[v]][[b]], OV[[b]])
                         }
                     })
                 })
@@ -60,11 +60,11 @@ lav_partable_attributes <- function(partable, pta = NULL) {
     pta$nfac.nonnormal <- lapply(pta$vnames$lv.nonnormal, length)
 
     # th.idx (new in 0.6-1)
-    pta$th.idx <- lapply(seq_len(pta$nblocks), function(g) {
-                            out <- numeric( length(pta$vnames$th.mean[[g]]) )
-                            idx <- ( pta$vnames$th.mean[[g]] %in%
-                                     pta$vnames$th[[g]] )
-                            out[idx] <- pta$vidx$th[[g]]
+    pta$th.idx <- lapply(seq_len(pta$nblocks), function(b) {
+                            out <- numeric( length(pta$vnames$th.mean[[b]]) )
+                            idx <- ( pta$vnames$th.mean[[b]] %in%
+                                     pta$vnames$th[[b]] )
+                            out[idx] <- pta$vidx$th[[b]]
                             out
                         })
 

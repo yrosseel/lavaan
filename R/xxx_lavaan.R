@@ -818,18 +818,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     } # slotModel
 
+
+
     #######################
-    #### 7. seat belts #### # TODO: bounds,...
+    #### 7. seat belts ####
     #######################
-    #if(lavoptions$safe.ov.var.ub) {
-    #
-    #}
-    #if(lavoptions$safe.ov.var.lb) {
-    #}
 
-
-
-
+    # automatic bounds (new in 0.6-6)
+    if(!is.null(lavoptions$optim.bounds)) {
+        lavpartable <- lav_partable_add_bounds(partable = lavpartable,
+            lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
+            lavoptions = lavoptions)
+    }
 
 
 
@@ -1026,6 +1026,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ############################
     #### 10. est + lavoptim ####
     ############################
+
     x <- NULL
     if(lavoptions$do.fit && lavoptions$estimator != "none" &&
        lavmodel@nx.free > 0L) {

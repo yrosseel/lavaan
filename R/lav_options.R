@@ -145,7 +145,11 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.init_nelder_mead = FALSE,
                 optim.var.transform    = "none",
                 optim.parscale         = "none",
-                optim.dx.tol           = 1e-03, # not too scrict
+                optim.dx.tol           = 1e-03, # not too strict
+                optim.bounds           = list(upper = character(0L),
+                                              lower = character(0L),
+                                              min.reliability.marker = 0.0,
+                                              factor = 1.0),
                 em.iter.max            = 10000L,
                 em.fx.tol              = 1e-08,
                 em.dx.tol              = 1e-04,
