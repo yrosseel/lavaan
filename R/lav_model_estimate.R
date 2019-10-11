@@ -439,7 +439,15 @@ lav_model_estimate <- function(lavmodel       = NULL,
             }
         }
     } else {
-        OPTIMIZER <- "NLMINB.CONSTR"
+        if(is.null(lavoptions$optim.method)) {
+            OPTIMIZER <- "NLMINB.CONSTR"
+        } else {
+            OPTIMIZER <- toupper(lavoptions$optim.method)
+            stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "NLMINB", "NONE"))
+        }
+        if(OPTIMIZER == "NLMINB") {
+            OPTIMIZER <- "NLMINB.CONSTR"
+        }
     }
 
     if(INIT_NELDER_MEAD) {
@@ -679,7 +687,55 @@ lav_model_estimate <- function(lavmodel       = NULL,
         iterations <- 0L
         converged <- TRUE
         control <- list()
-        optim.out <- list()
+
+        # if inequality constraints, add con.jac/lambda
+        # needed for df!
+        if(length(lavmodel@ceq.nonlinear.idx) == 0L &&
+           length(lavmodel@cin.linear.idx)    == 0L &&
+           length(lavmodel@cin.nonlinear.idx) == 0L) {       
+            optim.out <- list()
+        } else {
+            # if inequality constraints, add con.jac/lambda
+            # needed for df!
+
+            optim.out <- list()
+            if(is.null(body(lavmodel@ceq.function))) {
+                 ceq <- function(x, ...) { return( numeric(0) ) }    
+            } else {
+                 ceq <- lavmodel@ceq.function
+            }
+            if(is.null(body(lavmodel@cin.function))) {            
+                 cin <- function(x, ...) { return( numeric(0) ) }
+            } else {
+                 cin <- lavmodel@cin.function
+            }
+            ceq0 <- ceq(start.x)
+            cin0 <- cin(start.x)
+            con0 <- c(ceq0, cin0)
+            JAC <- rbind(numDeriv::jacobian(ceq, x = start.x),
+                         numDeriv::jacobian(cin, x = start.x))
+            nceq <- length( ceq(start.x) )
+            ncin <- length( cin(start.x) )
+            ncon <- nceq + ncin
+            ceq.idx <- cin.idx <- integer(0)
+            if(nceq > 0L) ceq.idx <- 1:nceq
+            if(ncin > 0L) cin.idx <- nceq + 1:ncin
+            cin.flag <- rep(FALSE, length(ncon))
+            if(ncin > 0L) cin.flag[cin.idx] <- TRUE
+
+            inactive.idx <- integer(0L)
+            cin.idx <- which(cin.flag)
+            if(ncin > 0L) {
+                slack <- 1e-05
+                inactive.idx <- which(cin.flag & con0 > slack)
+            }
+            attr(JAC, "inactive.idx") <- inactive.idx
+            attr(JAC, "cin.idx") <- cin.idx
+            attr(JAC, "ceq.idx") <- ceq.idx
+
+            optim.out$con.jac <- JAC
+            optim.out$lambda <- rep(0, ncon)
+        }
     }
 
     fx <- objective_function(x) # to get "fx.group" attribute
