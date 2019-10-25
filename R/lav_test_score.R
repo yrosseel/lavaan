@@ -75,7 +75,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
         lhs <- lav_partable_labels(FIT@ParTable)[ FIT@ParTable$user == 10L ]
          op <- rep("==", nadd)
         rhs <- rep("0", nadd)
-        Table <- data.frame(lhs = lhs, op = op, rhs = rhs)
+        Table <- data.frame(lhs = lhs, op = op, rhs = rhs,
+                            stringsAsFactors = FALSE)
         class(Table) <- c("lavaan.data.frame", "data.frame")
     } else {
     # MODE 2: releasing constraints
@@ -119,7 +120,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
              op <- rep("==", length(r.idx))
             rhs <- object@ParTable$rhs[eq.idx][r.idx]
         }
-        Table <- data.frame(lhs = lhs, op = op, rhs = rhs)
+        Table <- data.frame(lhs = lhs, op = op, rhs = rhs,
+                            stringsAsFactors = FALSE)
         class(Table) <- c("lavaan.data.frame", "data.frame")
     }
 
@@ -162,7 +164,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     pvalue <- 1 - pchisq(stat, df=df)
 
     # total score test
-    TEST <- data.frame(test = "score", X2 = stat, df = df, p.value = pvalue)
+    TEST <- data.frame(test = "score", X2 = stat, df = df, p.value = pvalue,
+                       stringsAsFactors = FALSE)
     class(TEST) <- c("lavaan.data.frame", "data.frame")
     attr(TEST, "header") <- "total score test:"
 
