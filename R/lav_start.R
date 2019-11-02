@@ -224,7 +224,9 @@ lav_start <- function(start.method    = "default",
                                                 method = "fabin3")
 
                     # factor loadings
-                    start[lambda.idx] <- fabin$lambda
+                    tmp <- fabin$lambda
+                    tmp[ !is.finite(tmp) ] <- 1.0 # just in case (eg 0/0)
+                    start[lambda.idx] <- tmp
 
                     # factor variance
                     #if(!std.lv) {
@@ -574,6 +576,15 @@ lav_start <- function(start.method    = "default",
     # override if the model syntax contains explicit starting values
     user.idx <- which(!is.na(lavpartable$ustart))
     start[user.idx] <- lavpartable$ustart[user.idx]
+
+    # final check: no NaN or other non-finite values
+    bad.idx <- which(!is.finite(start))
+    if(length(bad.idx) > 0L) {
+        cat("starting values:\n")
+        print( start )
+        warning("lavaan WARNING: some starting values are non-finite; replacing them with 0.5; please provide better starting values.\n")
+        start[ bad.idx ] <- 0.5
+    }
 
     if(debug) {
         cat("lavaan DEBUG: lavaanStart\n")
