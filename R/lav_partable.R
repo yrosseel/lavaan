@@ -640,9 +640,10 @@ lavaanify <- lavParTable <- function(
                 # 2. covariances constrained to zero (only if oblique rotation)
                 if(!orthogonal.efa) {
                     # skip if user == 1 (user-override!)
+                    # or not... in 0.6-6
                     cov.idx <- which(LIST$op == "~~" &
                                      LIST$block == b &
-                                     LIST$user == 0L &
+                                     #LIST$user == 0L &
                                      LIST$lhs %in% lv.nam.efa &
                                      LIST$rhs %in% lv.nam.efa &
                                      LIST$lhs != LIST$rhs)
