@@ -429,7 +429,9 @@ Miscellaneous:
     \item{\code{h1}:}{Logical. If \code{TRUE}, compute the unrestricted model
       and store the unrestricted summary statistics (and perhaps a 
       loglikelihood) in the h1 slot.}
-    \item{\code{baseline:}}{Not used yet.}
+    \item{\code{baseline:}}{Logical. If \code{TRUE}, compute a baseline model
+      (currently always the independence model, assuming all variables
+      are uncorrelated) and store the results in the baseline slot.}
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
       allow the slopestructure to be unrestricted.}

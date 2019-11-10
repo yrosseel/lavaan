@@ -14,9 +14,14 @@ lavCor <- function(object,
                    ov.names.x = NULL,
                    # lavaan options
                    se         = "none",
+                   test       = "none",
                    estimator  = "two.step",
+                   baseline   = FALSE,
+                   h1         = FALSE,
                    # other options (for lavaan)
                    ...,
+                   cor.smooth = FALSE,
+                   cor.smooth.tol = 1e-06,
                    output = "cor") {
 
     # shortcut if object = lavaan object
@@ -89,6 +94,7 @@ lavCor <- function(object,
         conditional.x <- dots$conditional.x
     }
 
+
     # override, only for backwards compatibility (eg moments() in JWileymisc)
     if(missing %in% c("ml", "fiml")) {
         meanstructure = TRUE
@@ -110,9 +116,18 @@ lavCor <- function(object,
     FIT <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
                   missing = missing,
-                  se = se, estimator = estimator, ...)
+                  baseline = baseline, h1 = h1,
+                  se = se, test = test, estimator = estimator, ...)
 
     out <- lav_cor_output(FIT, output = output)
+
+    # smooth correlation matrix? (only if output = "cor")
+    if(output == "cor" && cor.smooth) {
+        tmp.attr <- attributes(out)
+        out <- cov2cor(lav_matrix_symmetric_force_pd(out, tol = cor.smooth.tol))
+        # we lost most of the attributes
+        attributes(out) <- tmp.attr
+    }
 
     out
 }

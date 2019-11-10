@@ -6,8 +6,9 @@ Fit an unrestricted model to compute polychoric, polyserial and/or Pearson
 correlations.}
 \usage{
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
-       ov.names.x = NULL, se = "none", estimator = "two.step", ..., 
-       output = "cor")
+       ov.names.x = NULL, se = "none", test = "none", 
+       estimator = "two.step", baseline = FALSE, h1 = FALSE, ..., 
+       cor.smooth = FALSE, cor.smooth.tol = 1e-06, output = "cor")
 }
 \arguments{
 \item{object}{Either a \code{data.frame}, or an object of class
@@ -31,7 +32,9 @@ lavCor(object, ordered = NULL, group = NULL, missing = "listwise",
     variables that need to be treated as exogenous. Only used if at least
     one variable is declared as ordered.}
 \item{se}{Only used if \code{output} (see below) contains standard errors.
-    See the \code{\link{lavaan}} function for possible options.}
+    See \code{\link{lavOptions}} for possible options.}
+\item{test}{Only used if output is \code{"fit"} or \code{"lavaan"}. See
+    \code{\link{lavOptions}} for possible options.}
 \item{estimator}{If \code{"none"} or \code{"two.step"} or \code{"two.stage"},
    only starting values are computed for the correlations (and thresholds),
    without any further estimation. If all variables are continuous, the 
@@ -45,12 +48,27 @@ lavCor(object, ordered = NULL, group = NULL, missing = "listwise",
    further updated by fitting the unrestricted model using the chosen
    estimator. See the \code{\link{lavaan}} function for alternative 
    estimators.}
+\item{baseline}{Only used if output is \code{"fit"} or \code{"lavaan"}. If
+   \code{TRUE}, a baseline model is also estimated. Note that the \code{test}
+   argument should also be set to a value other than \code{"none"}.}
+\item{h1}{Only used if output is \code{"fit"} or \code{"lavaan"}. If
+   \code{TRUE}, the unrestricted model is stored in the h1 slot.}
 \item{...}{Optional parameters that are passed to the \code{\link{lavaan}} 
     function.}
+\item{cor.smooth}{Logical. Only used if \code{output = "cor"}. 
+   If \code{TRUE}, ensure the resulting correlation matrix is positive
+   definite. The following simple method is used: an eigenvalue decomposition
+   is computed; then, eigenvalues smaller than \code{cor.smooth.tol}
+   are set to be equal to \code{cor.smooth.tol}, before the  matrix 
+   is again reconstructed. Finally, the matrix (which may no longer have unit
+   diagonal elements) is converted to a correlation matrix using 
+   \code{cov2cor}.}
+\item{cor.smooth.tol}{Numeric. Smallest eigenvalue used when reconstructing
+   the correlation matrix after an eigenvalue decomposition.}
 \item{output}{If \code{"cor"}, the function returns the correlation matrix only.   If \code{"cov"}, the function returns the covariance matrix (this only makes
    a difference if at least one variable is numeric). If \code{"th"} or
    \code{"thresholds"}, only the thresholds are returned. If \code{"sampstat"},
-   the output equals the result of \code{inspect(fit, "sampstat")} where
+   the output equals the result of \code{lavInspect(fit, "sampstat")} where
    fit is the unrestricted model. If \code{"est"} or \code{"pe"} or 
    \code{"parameterEstimates"}, the output equals the result of
    \code{parameterEstimates(fit)}. Finally, if output is \code{"fit"} or
@@ -91,7 +109,7 @@ HS9 <- HolzingerSwineford1939[,c("x1","x2","x3","x4","x5",
 lavCor(HS9)
 
 # ordinal version, with three categories
-HS9ord <- as.data.frame( lapply(HS9, cut, 3, labels=FALSE) )
+HS9ord <- as.data.frame( lapply(HS9, cut, 3, labels = FALSE) )
 
 # polychoric correlations, two-stage estimation
 lavCor(HS9ord, ordered=names(HS9ord))
@@ -100,9 +118,10 @@ lavCor(HS9ord, ordered=names(HS9ord))
 lavCor(HS9ord, ordered=names(HS9ord), output = "th")
 
 # polychoric correlations, with standard errors
-lavCor(HS9ord, ordered=names(HS9ord), se = "standard", output="est")
+lavCor(HS9ord, ordered=names(HS9ord), se = "standard", output = "est")
 
 # polychoric correlations, full output
-fit.un <- lavCor(HS9ord, ordered=names(HS9ord), se = "standard", output="fit")
+fit.un <- lavCor(HS9ord, ordered=names(HS9ord), se = "standard", 
+                 output = "fit")
 summary(fit.un)
 }

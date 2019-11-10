@@ -44,6 +44,14 @@ lav_partable_add_bounds <- function(partable       = NULL,
         if(is.null(optim.bounds$factor)) {
             optim.bounds$factor <- 1.0
         }
+
+        if(is.null(optim.bounds$min.lv.var.x)) {
+            optim.bounds$min.lv.var.x <- -Inf
+        }
+
+        if(is.null(optim.bounds$min.lv.var.y)) {
+            optim.bounds$min.lv.var.y <- -Inf
+        }
     }
 
     # shortcut
