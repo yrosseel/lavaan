@@ -119,10 +119,13 @@ bootstrap.internal <- function(object          = NULL,
         if(FUN == "coef") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free)
             lavoptions$test <- "none"
+            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
+            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
         } else if(FUN == "coeftest") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
+            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
         }
     }
 

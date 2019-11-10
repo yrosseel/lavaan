@@ -1,50 +1,10 @@
-# data.frame utilities, or how to avoid copying (parts) of the data
+# data.frame utilities
 # Y.R. 11 April 2013
 
-# this is to replace sapply(frame, function(x) class(x)[1])
-# try (in R3.0.0):
-# N <- 100000
-# frame <- data.frame(a=factor(sample(1:5, size=N, replace=TRUE)),
-#                     b=factor(sample(1:5, size=N, replace=TRUE)),
-#                     c=rnorm(N))
-# system.time(replicate(1000, sapply(frame, function(x) class(x)[1])))
-# #   user  system elapsed
-# #  1.223   0.000   1.222
-# system.time(replicate(1000, lav_dataframe_check_vartype(frame)))
-# #   user  system elapsed
-# #  0.093   0.000   0.093
-lav_dataframe_check_vartype <- function(frame = NULL, ov.names = character(0)) {
-    if(missing(ov.names)) {
-        var.idx <- seq_len(ncol(frame))
-    } else {
-        var.idx <- match(unlist(ov.names, use.names = FALSE), names(frame))
-    }
-    nvar <- length(var.idx)
-    out <- character(nvar)
-    for(i in seq_len(nvar)) {
-        out[i] <- class(frame[[var.idx[i]]])[1L]
-        # watch out for matrix type with 1 column
-        if(out[i] == "matrix" && ncol(frame[[var.idx[i]]]) == 1L) {
-            out[i] <- "numeric"
-        }
-    }
-    out
-}
-
-# check if any of the variables in frame are ordered or not
-lav_dataframe_check_ordered <- function(frame = NULL, ov.names = character(0)) {
-    if(missing(ov.names)) {
-        var.idx <- seq_len(ncol(frame))
-    } else {
-        var.idx <- match(unlist(ov.names, use.names = FALSE), names(frame))
-    }
-    nvar <- length(var.idx)
-    for(i in seq_len(nvar)) {
-        if(class(frame[[var.idx[i]]])[1L] == "ordered")
-            return(TRUE)
-    }
-    FALSE
-}
+# - 10 nov 2019: * removed lav_dataframe_check_vartype(), as we can simply use
+#                  sapply(lapply(frame, class), "[", 1L) (unused anyway)
+#                * removed lav_dataframe_check_ordered() as we can simply use
+#                  any(sapply(frame[, ov.names], inherits, "ordered"))
 
 # construct vartable, but allow 'ordered/factor' argument to intervene
 # we do NOT change the data.frame
@@ -57,9 +17,9 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
     if(missing(ov.names)) {
         var.names <- names(frame)
     } else {
-        ov.names <- unlist(ov.names, use.names=FALSE)
-        ov.names.x <- unlist(ov.names.x, use.names=FALSE)
-        var.names <- unique(c(ov.names, ov.names.x))
+        ov.names   <- unlist(ov.names, use.names = FALSE)
+        ov.names.x <- unlist(ov.names.x, use.names = FALSE)
+        var.names  <- unique(c(ov.names, ov.names.x))
     }
     nvar <- length(var.names)
     var.idx <- match(var.names, names(frame))
@@ -77,19 +37,19 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
         type.x <- class(x)[1L]
 
         # correct for matrix with 1 column
-        if(type.x == "matrix" && ncol(x) == 1L) {
+        if(inherits(x, "matrix") && ncol(x) == 1L) {
             type.x <- "numeric"
         }
 
         # correct for integers
-        if(type.x == "integer") {
+        if(inherits(x, "integer")) {
             type.x <- "numeric"
         }
 
         # handle the 'labelled' type from the haven package
         # - if the variable name is not in 'ordered', we assume
         #   it is numeric (for now) 11 March 2018
-        if(type.x == "labelled" && !(var.names[i] %in% ordered)) {
+        if(inherits(x, "labelled") && !(var.names[i] %in% ordered)) {
             type.x <- "numeric"
         }
 
@@ -123,8 +83,8 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
                 user=user, mean=mean, var=var, nlev=nlev, lnam=lnam)
 
     if(as.data.frame.) {
-        VAR <- as.data.frame(VAR, stringsAsFactors=FALSE,
-                             row.names=1:length(VAR$name))
+        VAR <- as.data.frame(VAR, stringsAsFactors = FALSE,
+                             row.names = 1:length(VAR$name))
         class(VAR) <- c("lavaan.data.frame", "data.frame")
     }
 

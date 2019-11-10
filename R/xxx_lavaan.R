@@ -361,7 +361,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         } else if(!is.null(sample.th)) {
             opt$categorical <- TRUE
         } else if(is.data.frame(data) &&
-            lav_dataframe_check_ordered(frame = data, ov.names = ov.names.y)) {
+                  any(sapply(data[, unique(unlist(ov.names.y))], 
+                             inherits, "ordered")) ) {
             opt$categorical <- TRUE
         } else {
             opt$categorical <- FALSE

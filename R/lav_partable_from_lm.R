@@ -3,7 +3,7 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
                                  as.data.frame. = FALSE) {
 
     # sanity check
-    if(class(object) != "lm") {
+    if(!inherits(object, "lm")) {
         stop("object must be of class lm")
     }
 

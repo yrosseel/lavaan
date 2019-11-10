@@ -241,6 +241,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h0@Options$verbose <- FALSE
         h0@Options$se <- "none"
         h0@Options$test <- "standard"
+        h0@Options$baseline <- FALSE
+        h0@Options$h1 <- FALSE
 
         #Fit h0 model
         fit.h0 <- lavaan(slotOptions     = h0@Options,
@@ -260,6 +262,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h1@Options$verbose <- FALSE
         h1@Options$se <- "none"
         h1@Options$test <- "standard"
+        h1@Options$baseline <- FALSE
+        h1@Options$h1 <- FALSE
 
         #Fit h1 model
         fit.h1 <- lavaan(slotOptions     = h1@Options,

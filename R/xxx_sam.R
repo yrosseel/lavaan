@@ -662,6 +662,11 @@ sam <- function(model          = NULL,
         lavoptions.PA$missing <- "listwise"
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
+    } else {
+        # global (so PA will not be used for for final model)  
+        lavoptions.PA$baseline <- FALSE
+        lavoptions.PA$h1 <- FALSE
+        lavoptions.PA$implied <- FALSE
     }
 
     # fit structural model
@@ -739,6 +744,8 @@ sam <- function(model          = NULL,
     lavoptions.joint$check.gradient = FALSE
     lavoptions.joint$check.start = FALSE
     lavoptions.joint$check.post = FALSE
+    #lavoptions.joint$baseline = FALSE
+    #lavoptions.joint$h1 = FALSE
     #lavoptions.joint$test <- FIT.PA@Options$test
     #lavoptions.joint$se   <- "none"
     if(sam.method == "local") {

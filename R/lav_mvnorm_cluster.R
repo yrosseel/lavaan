@@ -1439,6 +1439,8 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
                             check.post = FALSE,
                             check.gradient = FALSE,
                             check.vcov = FALSE,
+                            baseline = FALSE,
+                            h1 = FALSE,
                             se = "none",
                             test = "none")
 

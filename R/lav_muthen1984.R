@@ -37,6 +37,7 @@ muthen1984 <- function(Data              = NULL,
         lav_crossprod2 <- base::crossprod
     } else { # pairwise, we can have missing values
         # revised in 0.6-6: x is always a vector; Y could be a matrix if nth>1
+        # or nexo > 2 (then SC.COR.UNI$dx.sl.y1 is also a matrix)
         lav_crossprod2 <- function(x, Y) {
             if(is.matrix(Y)) {
                 colSums(Y * x, na.rm = TRUE)

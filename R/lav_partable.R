@@ -238,7 +238,7 @@ lavaanify <- lavParTable <- function(
             block.rhs <- BLOCK.rhs[b]
             tmp <- try(scan(text = LIST[[block.lhs]], what = integer(),
                        quiet = TRUE), silent = TRUE)
-            if(class(tmp) == "integer") {
+            if(inherits(tmp, "integer")) {
                  LIST[[block.lhs]] <- tmp
             }
         }

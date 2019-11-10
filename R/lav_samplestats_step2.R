@@ -27,7 +27,8 @@ lav_samplestats_step2 <- function(UNI               = NULL,
             #                  "(",ov.types[i], "-", ov.types[j], ")\n") }
             #pstar.idx <- PSTAR[i,j]
             #COR.NAMES[pstar.idx] <- paste(ov.names[i],"~~",ov.names[j],sep="")
-            if(class(UNI[[i]]) == "lavOLS" && class(UNI[[j]]) == "lavOLS") {
+            if( inherits(UNI[[i]], "lavOLS") && 
+                inherits(UNI[[j]], "lavOLS") ) {
                 if(UNI[[i]]$nexo > 0L) {
                     Y1 <- UNI[[i]]$y - UNI[[i]]$yhat
                     Y2 <- UNI[[j]]$y - UNI[[j]]$yhat
@@ -35,18 +36,18 @@ lav_samplestats_step2 <- function(UNI               = NULL,
                     Y1 <- UNI[[i]]$y; Y2 <- UNI[[j]]$y
                 }
                 COR[i,j] <- COR[j,i] <- cor(Y1, Y2, use="pairwise.complete.obs")
-            } else if(class(UNI[[i]]) == "lavOLS" &&
-                      class(UNI[[j]]) == "lavProbit") {
+            } else if( inherits(UNI[[i]], "lavOLS") &&
+                       inherits(UNI[[j]], "lavProbit") ) {
                 # polyserial
                 out <- ps_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]])
                 COR[i,j] <- COR[j,i] <- out
-            } else if(class(UNI[[j]]) == "lavOLS" &&
-                      class(UNI[[i]]) == "lavProbit") {
+            } else if( inherits(UNI[[j]], "lavOLS") &&
+                       inherits(UNI[[i]], "lavProbit") ) {
                 # polyserial
                 out <- ps_cor_TS(fit.y1=UNI[[j]], fit.y2=UNI[[i]])
                 COR[i,j] <- COR[j,i] <- out
-            } else if(class(UNI[[i]]) == "lavProbit" &&
-                      class(UNI[[j]]) == "lavProbit") {
+            } else if( inherits(UNI[[i]], "lavProbit") &&
+                       inherits(UNI[[j]], "lavProbit") ) {
                 # polychoric correlation
                 out <- pc_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]],
                                  method = optim.method,

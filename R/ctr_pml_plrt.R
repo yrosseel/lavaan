@@ -44,6 +44,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     Options$verbose <- FALSE
     Options$se <- "none"
     Options$test <- "none"
+    Options$baseline <- FALSE
+    Options$h1 <- FALSE
     fittedSat <- lavaan(ModelSat, slotOptions = Options,
                         slotSampleStats = lavsamplestats,
                         slotData = lavdata, slotCache = lavcache)

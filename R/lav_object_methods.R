@@ -139,8 +139,9 @@ standardizedSolution <-
         zstat <- pvalue <- FALSE
     }
 
-    # no se if class is not lavaan
-    if(class(object) != "lavaan") {
+    # no se if class is not lavaan 
+    # using class() -- can't use inherits(), as this includes blavaan
+    if(class(object)[1L] != "lavaan") {
         if(missing(se) || !se) {
             se <- FALSE
             zstat <- FALSE
@@ -296,7 +297,8 @@ parameterEstimates <- parameterestimates <- function(object,
 
 
     # no se if class is not lavaan
-    if(class(object) != "lavaan") {
+    # can't use inherits(), as this would return TRUE if object is from blavaan
+    if(class(object)[1L] != "lavaan") {
         if(missing(se) || !se) {
             se <- FALSE
             zstat <- FALSE
@@ -630,6 +632,7 @@ parameterEstimates <- parameterestimates <- function(object,
         }
 
         # fit another model, using the model-implied moments as input data
+        # FIXME: baseline=FALSE, h1=FALSE, ...?
         step2 <- lavaan(slotOptions  = object@Options,
                         slotParTable = object@ParTable,
                         sample.cov   = COV,
