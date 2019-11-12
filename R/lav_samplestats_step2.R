@@ -27,7 +27,7 @@ lav_samplestats_step2 <- function(UNI               = NULL,
             #                  "(",ov.types[i], "-", ov.types[j], ")\n") }
             #pstar.idx <- PSTAR[i,j]
             #COR.NAMES[pstar.idx] <- paste(ov.names[i],"~~",ov.names[j],sep="")
-            if( inherits(UNI[[i]], "lavOLS") && 
+            if( inherits(UNI[[i]], "lavOLS") &&
                 inherits(UNI[[j]], "lavOLS") ) {
                 if(UNI[[i]]$nexo > 0L) {
                     Y1 <- UNI[[i]]$y - UNI[[i]]$yhat

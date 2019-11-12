@@ -692,7 +692,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         # needed for df!
         if(length(lavmodel@ceq.nonlinear.idx) == 0L &&
            length(lavmodel@cin.linear.idx)    == 0L &&
-           length(lavmodel@cin.nonlinear.idx) == 0L) {       
+           length(lavmodel@cin.nonlinear.idx) == 0L) {
             optim.out <- list()
         } else {
             # if inequality constraints, add con.jac/lambda
@@ -700,11 +700,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
             optim.out <- list()
             if(is.null(body(lavmodel@ceq.function))) {
-                 ceq <- function(x, ...) { return( numeric(0) ) }    
+                 ceq <- function(x, ...) { return( numeric(0) ) }
             } else {
                  ceq <- lavmodel@ceq.function
             }
-            if(is.null(body(lavmodel@cin.function))) {            
+            if(is.null(body(lavmodel@cin.function))) {
                  cin <- function(x, ...) { return( numeric(0) ) }
             } else {
                  cin <- lavmodel@cin.function

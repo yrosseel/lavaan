@@ -361,7 +361,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         } else if(!is.null(sample.th)) {
             opt$categorical <- TRUE
         } else if(is.data.frame(data) &&
-                  any(sapply(data[, unique(unlist(ov.names.y))], 
+                  any(sapply(data[, unique(unlist(ov.names.y))],
                              inherits, "ordered")) ) {
             opt$categorical <- TRUE
         } else {
@@ -502,11 +502,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-
-
-
-
-
     ########################
     #### 4. lavpartable ####
     ########################
@@ -600,17 +595,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
-    # 4b. get partable attributes
+    #################################
+    #### 4b. parameter attributes ###
+    #################################
     lavpta <- lav_partable_attributes(lavpartable)
+
     timing$ParTable <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
 
-
     ###########################
     #### 5. lavsamplestats ####
-    ##########################
+    ###########################
     if(!is.null(slotSampleStats)) {
         lavsamplestats <- slotSampleStats
     } else if(lavdata@data.type == "full") {
@@ -671,10 +668,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
 
+    #############################
+    #### 6. parameter bounds ####
+    #############################
 
-    ###################
-    #### 5b. lavh1 ####
-    ###################
+    # automatic bounds (new in 0.6-6)
+    if(!is.null(lavoptions$optim.bounds)) {
+        lavpartable <- lav_partable_add_bounds(partable = lavpartable,
+            lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
+            lavoptions = lavoptions)
+    }
+
+
+    ##################
+    #### 7. lavh1 ####
+    ##################
     if(!is.null(sloth1)) {
         lavh1 <- sloth1
     } else {
@@ -709,12 +717,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time <- proc.time()[3]
 
 
-
-
-
-
     #####################
-    #### 6. lavstart ####
+    #### 8. lavstart ####
     #####################
     if(!is.null(slotModel)) {
         lavmodel <- slotModel
@@ -772,7 +776,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     #####################
-    #### 7. lavmodel ####
+    #### 9. lavmodel ####
     #####################
         lavmodel <- lav_model(lavpartable      = lavpartable,
                               lavoptions       = lavoptions,
@@ -821,22 +825,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    #######################
-    #### 7. seat belts ####
-    #######################
-
-    # automatic bounds (new in 0.6-6)
-    if(!is.null(lavoptions$optim.bounds)) {
-        lavpartable <- lav_partable_add_bounds(partable = lavpartable,
-            lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
-            lavoptions = lavoptions)
-    }
 
 
-
-    #####################
-    #### 8. lavcache ####
-    #####################
+    ######################
+    #### 10. lavcache ####
+    ######################
     if(!is.null(slotCache)) {
         lavcache <- slotCache
     } else {
@@ -1025,7 +1018,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     ############################
-    #### 10. est + lavoptim ####
+    #### 11. est + lavoptim ####
     ############################
 
     x <- NULL
@@ -1144,7 +1137,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     ####################################
-    #### 11. lavimplied + lavloglik ####
+    #### 12. lavimplied + lavloglik ####
     ####################################
     lavimplied <- list()
     if(lavoptions$implied) {
@@ -1166,7 +1159,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     ###############################
-    #### 12. lavvcov + lavboot ####
+    #### 13. lavvcov + lavboot ####
     ###############################
     VCOV <- NULL
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
@@ -1272,7 +1265,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     #####################
-    #### 13. lavtest ####
+    #### 14. lavtest ####
     #####################
     TEST <- NULL
     if( !(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
@@ -1315,9 +1308,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
 
-    ####################
-    #### 14. lavfit #### ## -> should be removed if the rsem packages are fixed
-    ####################
+    #######################
+    #### 14bis. lavfit #### ## -> remove if the rsem packages are fixed!!
+    #######################
     lavfit <- lav_model_fit(lavpartable = lavpartable,
                             lavmodel    = lavmodel,
                             x           = x,

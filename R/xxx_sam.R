@@ -663,7 +663,7 @@ sam <- function(model          = NULL,
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
     } else {
-        # global (so PA will not be used for for final model)  
+        # global (so PA will not be used for for final model)
         lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
         lavoptions.PA$implied <- FALSE

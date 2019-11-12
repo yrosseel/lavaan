@@ -543,6 +543,22 @@ lav_start <- function(start.method    = "default",
         #                    lavpartable$lhs %in% lv.names)
     }
 
+
+    # adjust if outside bounds -- new in 0.6-6
+    if(!is.null(lavpartable$lower)) {
+        bad.idx <- which(start < lavpartable$lower)
+        if(length(bad.idx)) {
+            start[bad.idx] <- lavpartable$lower[bad.idx]
+        }
+    }
+    if(!is.null(lavpartable$upper)) {
+        bad.idx <- which(start > lavpartable$upper)
+        if(length(bad.idx)) {
+            start[bad.idx] <- lavpartable$upper[bad.idx]
+        }
+    }
+
+
     # override if a user list with starting values is provided
     # we only look at the 'est' column for now
     if(!is.null(start.user)) {

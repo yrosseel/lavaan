@@ -139,7 +139,7 @@ standardizedSolution <-
         zstat <- pvalue <- FALSE
     }
 
-    # no se if class is not lavaan 
+    # no se if class is not lavaan
     # using class() -- can't use inherits(), as this includes blavaan
     if(class(object)[1L] != "lavaan") {
         if(missing(se) || !se) {
@@ -286,7 +286,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      output = "data.frame",
                                                      header = FALSE) {
 
-    if("lavaan.fsr" %in% class(object)) {
+    if(inherits(object, "lavaan.fsr")) {
         return(object$PE)
     }
 

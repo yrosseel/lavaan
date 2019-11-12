@@ -41,16 +41,36 @@ lav_partable_add_bounds <- function(partable       = NULL,
             }
         }
 
+        if(is.null(optim.bounds$min.var.lv.exo)) {
+            optim.bounds$min.var.lv.exo <- 0.0
+        }
+
+        if(is.null(optim.bounds$min.var.lv.endo)) {
+            optim.bounds$min.var.lv.endo <- 0.0
+        }
+
         if(is.null(optim.bounds$factor)) {
             optim.bounds$factor <- 1.0
         }
 
-        if(is.null(optim.bounds$min.lv.var.x)) {
-            optim.bounds$min.lv.var.x <- -Inf
+        if(is.null(optim.bounds$factor.ov.var) ||
+           optim.bounds$factor != 1.0) {
+            optim.bounds$factor.ov.var <- optim.bounds$factor
         }
 
-        if(is.null(optim.bounds$min.lv.var.y)) {
-            optim.bounds$min.lv.var.y <- -Inf
+        if(is.null(optim.bounds$factor.lv.var) ||
+           optim.bounds$factor != 1.0) {
+            optim.bounds$factor.lv.var <- optim.bounds$factor
+        }
+
+        if(is.null(optim.bounds$factor.loadings ||
+           optim.bounds$factor != 1.0)) {
+            optim.bounds$factor.loadings <- optim.bounds$factor
+        }
+
+        if(is.null(optim.bounds$factor.covariances ||
+           optim.bounds$factor != 1.0)) {
+            optim.bounds$factor.covariances <- optim.bounds$factor
         }
     }
 
@@ -107,8 +127,14 @@ lav_partable_add_bounds <- function(partable       = NULL,
         b <- b + 1L
 
         # for this block
-        ov.names  <- lavpta$vnames$ov[[b]]
-        lv.names  <- lavpta$vnames$lv[[b]]
+        ov.names   <- lavpta$vnames$ov[[b]]
+        lv.names   <- lavpta$vnames$lv[[b]]
+        lv.names.x <- lavpta$vnames$lv.x[[b]]
+        if(length(lv.names.x) > 0L) {
+            lv.names.endo <- lv.names[! lv.names %in% lv.names.x ]
+        } else {
+            lv.names.endo <- lv.names
+        }
         lv.marker <- lavpta$vnames$lv.marker[[b]]
 
         # OV.VAR for this group
@@ -144,8 +170,8 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
             # enlarge?
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor) ) {
-                new.range <- bound.range * optim.bounds$factor
+            if( is.finite(optim.bounds$factor.ov.var) ) {
+                new.range <- bound.range * optim.bounds$factor.ov.var
                 diff <- abs(new.range - bound.range)
                 lower.auto[par.idx] <- lower.auto[par.idx] - diff
                 upper.auto[par.idx] <- upper.auto[par.idx] + diff
@@ -163,6 +189,34 @@ lav_partable_add_bounds <- function(partable       = NULL,
         ################################
         ## 2. (residual) lv variances ##
         ################################
+
+        # first collect lower/upper bounds for TOTAL variances in lv.names
+        LV.VAR.LB <- numeric( length(lv.names) )
+        LV.VAR.UB <- numeric( length(lv.names) )
+
+        if(lavoptions$std.lv) {
+            LV.VAR.LB <- rep(1.0, length(lv.names))
+            LV.VAR.UP <- rep(1.0, length(lv.names))
+        } else {
+            for(i in seq_len(length(lv.names))) {
+
+                this.lv.name <- lv.names[i]
+                this.lv.marker <- lv.marker[i]
+
+                if(nchar(this.lv.marker) > 0L && this.lv.marker %in% ov.names) {
+
+                    marker.var <- OV.VAR[ match(this.lv.marker, ov.names) ]
+                    LOWER <- marker.var - (1 - REL)*marker.var
+                    LV.VAR.LB[i] <- max(LOWER, optim.bounds$min.var.lv.exo)
+                    LV.VAR.UB[i] <- marker.var
+                } else {
+                    LV.VAR.LB <- optim.bounds$min.var.lv.exo
+                    LV.VAR.UB[i] <- max(OV.VAR)
+                }
+            }
+        }
+
+        # use these bounds for the free parameters
         par.idx <- which(partable$group == group.values[g] &
                          partable$op == "~~" &
                          partable$lhs %in% lv.names &
@@ -170,48 +224,22 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
         if(length(par.idx) > 0L) {
 
-            if(lavoptions$std.lv) {
+            # adjust for endogenenous lv
+            LV.VAR.LB2 <- LV.VAR.LB
+            endo.idx <- which(lv.names %in% lv.names.endo)
+            if(length(endo.idx) > 0L) {
+                LV.VAR.LB2[endo.idx] <- optim.bounds$min.var.lv.endo
+            }
 
-                # lower == 0
-                lower.auto[par.idx] <- 0.0
-
-                # upper == 1.0
-                upper.auto[par.idx] <- 1.0
-
-            } else {
-
-                for(lv in 1:length(par.idx)) {
-
-                    this.idx <- par.idx[lv]
-                    this.lv.name <- partable$lhs[ this.idx ]
-                    this.lv.marker <- lv.marker[ match(this.lv.name, lv.names) ]
-
-                    if(nchar(this.lv.marker) > 0L &&
-                       this.lv.marker %in% ov.names) {
-                        marker.var <- OV.VAR[ match(this.lv.marker, ov.names) ]
-
-                        if(this.lv.name %in% lavpta$vnames$eqs.y[[b]]) {
-                            # endogenous LV
-                            lower.auto[this.idx] <- 0
-                            upper.auto[this.idx] <- marker.var
-                        } else {
-                            # exogenous LV
-                            LOWER <- marker.var - (1 - REL)*marker.var
-                            lower.auto[this.idx] <- LOWER
-                            upper.auto[this.idx] <- marker.var
-                        }
-                    } else {
-                        # just in case
-                        lower.auto[this.idx] <- 0.0
-                        upper.auto[this.idx] <- max(OV.VAR) # check!!
-                    }
-                } # lv
-            } # ULI
+            lower.auto[par.idx] <- LV.VAR.LB2[ match(partable$lhs[par.idx],
+                                                     lv.names) ]
+            upper.auto[par.idx] <- LV.VAR.UB[  match(partable$lhs[par.idx],
+                                                     lv.names) ]
 
             # enlarge?
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor) ) {
-                new.range <- bound.range * optim.bounds$factor
+            if( is.finite(optim.bounds$factor.lv.var) ) {
+                new.range <- bound.range * optim.bounds$factor.lv.var
                 diff <- abs(new.range - bound.range)
                 lower.auto[par.idx] <- lower.auto[par.idx] - diff
                 upper.auto[par.idx] <- upper.auto[par.idx] + diff
@@ -230,6 +258,10 @@ lav_partable_add_bounds <- function(partable       = NULL,
         #############################################
         ## 3. factor loadings (ov indicators only) ##
         #############################################
+
+        # lambda_p^(u) = sqrt( upper(res.var.indicators_p) /
+        #                      lower(var.factor) )
+
         ov.ind.names <- lavpta$vnames$ov.ind[[b]]
         par.idx <- which(partable$group == group.values[g] &
                          partable$op == "=~" &
@@ -237,32 +269,22 @@ lav_partable_add_bounds <- function(partable       = NULL,
                          partable$rhs %in% ov.ind.names)
 
         if(length(par.idx) > 0L) {
-            if(lavoptions$std.lv) {
 
-                var.idx <- match(partable$rhs[par.idx], ov.names)
-                # lower == -1 * sqrt(var(ov))
-                lower.auto[par.idx] <- -1 * sqrt(OV.VAR[var.idx])
+            # if negative LV variances are allowed (due to factor > 1)
+            # make them equal to zero
+            LV.VAR.LB[ LV.VAR.LB < 0 ] <- 0.0
 
-                # upper == 1.0
-                upper.auto[par.idx] <- +1 * sqrt(OV.VAR[var.idx])
+            var.all <- OV.VAR[ match(partable$rhs[par.idx], ov.names) ]
+            tmp <- LV.VAR.LB[  match(partable$lhs[par.idx], lv.names) ]
+            tmp[is.na(tmp)] <- 0 # just in case...
+            lower.auto[par.idx] <- -1 * sqrt(var.all/tmp) # -Inf if tmp==0
+            upper.auto[par.idx] <- +1 * sqrt(var.all/tmp) # +Inf if tmp==0
 
-            } else {
-
-                lv.Markers <- lv.marker[partable$lhs[par.idx]]
-                var.s1 <- OV.VAR[match(lv.marker[partable$lhs[par.idx]],
-                                       ov.names)]
-                tmp <- var.s1 - (1 - REL)*var.s1
-                tmp[is.na(tmp)] <- 0 # just in case...
-
-                var.all <- OV.VAR[ match(partable$rhs[par.idx], ov.names) ]
-                lower.auto[par.idx] <- -1 * sqrt(var.all/tmp) # -Inf if REL==0
-                upper.auto[par.idx] <- +1 * sqrt(var.all/tmp) # +Inf if REL==0
-            }
 
             # enlarge?
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor) ) {
-                new.range <- bound.range * optim.bounds$factor
+            if( is.finite(optim.bounds$factor.loadings) ) {
+                new.range <- bound.range * optim.bounds$factor.loadings
                 ok.idx <- is.finite(new.range)
                 if(length(ok.idx) > 0L) {
                     diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
@@ -283,6 +305,71 @@ lav_partable_add_bounds <- function(partable       = NULL,
         } # lambda
 
 
+        ####################
+        ## 4. covariances ##
+        ####################
+
+        # | sqrt(var(x)) sqrt(var(y)) | <= cov(x,y)
+
+        par.idx <- which(partable$group == group.values[g] &
+                         partable$op == "~~" &
+                         partable$lhs != partable$rhs)
+
+
+        if(length(par.idx) > 0L) {
+
+            for(i in seq_len(length(par.idx))) {
+
+                # this lhs/rhs
+                this.lhs <- partable$lhs[ par.idx[i] ]
+                this.rhs <- partable$rhs[ par.idx[i] ]
+
+                # var idx
+                lhs.var.idx <- which(partable$group == group.values[g] &
+                                     partable$op == "~~" &
+                                     partable$lhs == this.lhs &
+                                     partable$lhs == partable$rhs)
+                rhs.var.idx <- which(partable$group == group.values[g] &
+                                     partable$op == "~~" &
+                                     partable$lhs == this.rhs &
+                                     partable$lhs == partable$rhs)
+                # upper bounds
+                lhs.upper <- upper.auto[lhs.var.idx]
+                rhs.upper <- upper.auto[rhs.var.idx]
+
+                # compute upper bounds for this cov (assuming >0 vars)
+                if(is.finite(lhs.upper) && is.finite(rhs.upper)) {
+                    upper.cov <- sqrt(lhs.upper) * sqrt(rhs.upper)
+                    upper.auto[par.idx[i]] <- +1 * upper.cov
+                    lower.auto[par.idx[i]] <- -1 * upper.cov
+                }
+
+                # enlarge?
+                bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
+                if( is.finite(optim.bounds$factor.covariances) ) {
+                    new.range <- bound.range * optim.bounds$factor.covariances
+                    ok.idx <- is.finite(new.range)
+                    if(length(ok.idx) > 0L) {
+                        diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
+                        lower.auto[par.idx][ok.idx] <-
+                        lower.auto[par.idx][ok.idx] - diff
+                        upper.auto[par.idx][ok.idx] <-
+                        upper.auto[par.idx][ok.idx] + diff
+                    }
+                }
+
+                # requested?
+                if("covariances" %in% optim.bounds$lower) {
+                    partable$lower[par.idx[i]] <- lower.auto[par.idx[i]]
+                }
+                if("covariances" %in% optim.bounds$upper) {
+                    partable$upper[par.idx[i]] <- upper.auto[par.idx[i]]
+                }
+
+            } # i
+        } # covariances
+
+
     } # g
 
     # overwrite with lower.user (except -Inf)
@@ -299,9 +386,9 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
     # non-free
     non.free.idx <- which(partable$free == 0L)
-    if(length(non.free.idx) > 0L && !is.null(partable$start)) {
-        partable$lower[non.free.idx] <- partable$start[non.free.idx]
-        partable$upper[non.free.idx] <- partable$start[non.free.idx]
+    if(length(non.free.idx) > 0L && !is.null(partable$ustart)) {
+        partable$lower[non.free.idx] <- partable$ustart[non.free.idx]
+        partable$upper[non.free.idx] <- partable$ustart[non.free.idx]
     }
 
     partable
