@@ -262,6 +262,39 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
     }
 
+    # handle lower/upper boundary points
+    if(!is.null(x$lower)) {
+        b.idx <- which( abs(x$lower - x$est) < sqrt(.Machine$double.eps) &
+                        is.finite(x$se) & x$se != 0.0)
+        if(length(b.idx) > 0L && !is.null(x$pvalue)) {
+            m[b.idx, "pvalue"] <- ""
+            if(is.null(x$label)) {
+                x$label <- rep("", length(x$lhs))
+            }
+            x$label[b.idx] <- ifelse(nchar(x$label[b.idx]) > 0L,
+                                     paste(x$label[b.idx], "+lb", sep = ""),
+                                     "lb")
+        }
+        # remove lower column
+        m <- m[, colnames(m) != "lower"]
+    }
+    if(!is.null(x$upper)) {
+        b.idx <- which( abs(x$upper - x$est) < sqrt(.Machine$double.eps) &
+                        is.finite(x$se) & x$se != 0.0)
+        if(length(b.idx) > 0L && !is.null(x$pvalue)) {
+            m[b.idx, "pvalue"] <- ""
+            if(is.null(x$label)) {
+                x$label <- rep("", length(x$lhs))
+            }
+            x$label[b.idx] <- ifelse(nchar(x$label[b.idx]) > 0L,
+                                     paste(x$label[b.idx], "+ub", sep = ""),
+                                     "ub")
+        }
+        # remove upper column
+        m <- m[, colnames(m) != "upper"]
+    }
+
+
     # handle fmi
     if(!is.null(x$fmi)) {
         se.idx <- which(x$se == 0)

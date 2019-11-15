@@ -415,6 +415,21 @@ lavaanify <- lavParTable <- function(
     # remove mod.idx column
     LIST$mod.idx <- NULL
 
+    # if lower/upper values were added, fix non-free values to ustart values
+    # new in 0.6-6
+    if(!is.null(LIST$lower)) {
+        fixed.idx <- which(LIST$free == 0L)
+        if(length(fixed.idx) > 0L) {
+            LIST$lower[fixed.idx] <- LIST$ustart[fixed.idx]
+        }
+    }
+    if(!is.null(LIST$upper)) {
+        fixed.idx <- which(LIST$free == 0L)
+        if(length(fixed.idx) > 0L) {
+            LIST$upper[fixed.idx] <- LIST$ustart[fixed.idx]
+        }
+    }
+
     if(debug) {
         cat("[lavaan DEBUG]: parameter LIST with MODIFIERS:\n")
         print( as.data.frame(LIST, stringsAsFactors=FALSE) )
@@ -452,6 +467,24 @@ lavaanify <- lavParTable <- function(
             eq.label <- LABEL[idx]
             all.idx <- which(LABEL == eq.label) # all same-label parameters
             ref.idx <- all.idx[1L]              # the first one only
+
+            # new in 0.6-6: make sure lower/upper constraints are equal too
+            if(!is.null(LIST$lower) && 
+               length(unique(LIST$lower[all.idx])) > 0L) {
+                non.inf <- which(is.finite(LIST$lower[all.idx]))
+                if(length(non.inf) > 0L) {
+                    smallest.val <- min(LIST$lower[all.idx][non.inf])
+                    LIST$lower[all.idx] <- smallest.val
+                }
+            }
+            if(!is.null(LIST$upper) &&
+                length(unique(LIST$upper[all.idx])) > 0L) {
+                non.inf <- which(is.finite(LIST$upper[all.idx]))   
+                if(length(non.inf) > 0L) {
+                    largest.val <- max(LIST$upper[all.idx][non.inf])
+                    LIST$upper[all.idx] <- largest.val
+                }
+            }
 
             # two possibilities:
             # 1. all.idx contains a fixed parameter: in this case,

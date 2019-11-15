@@ -393,6 +393,12 @@ parameterEstimates <- parameterestimates <- function(object,
         LIST$est <- lav_model_get_parameters(object@Model, type = "user",
                                              extra = TRUE)
     }
+    if(!is.null(PARTABLE$lower)) {
+        LIST$lower <- PARTABLE$lower
+    }
+    if(!is.null(PARTABLE$upper)) {
+        LIST$upper <- PARTABLE$upper
+    }
 
 
     # add se, zstat, pvalue
@@ -407,13 +413,17 @@ parameterEstimates <- parameterestimates <- function(object,
                 LIST$pvalue <- 2 * (1 - pnorm( abs(LIST$z) ))
                 # remove p-value if bounds have been used
                 if(!is.null(PARTABLE$lower)) {
-                   b.idx <- which(PARTABLE$lower > -Inf)
+                   b.idx <- which(abs(PARTABLE$lower - PARTABLE$est) <
+                                      sqrt(.Machine$double.eps) &
+                                  PARTABLE$free > 0L)
                    if(length(b.idx) > 0L) {
                        LIST$pvalue[b.idx] <- as.numeric(NA)
                    }
                 }
                 if(!is.null(PARTABLE$upper)) {
-                   b.idx <- which(PARTABLE$upper < Inf)
+                   b.idx <- which(abs(PARTABLE$upper - PARTABLE$est) < 
+                                      sqrt(.Machine$double.eps) &
+                                  PARTABLE$free > 0L)
                    if(length(b.idx) > 0L) {
                        LIST$pvalue[b.idx] <- as.numeric(NA)
                    }
@@ -726,6 +736,7 @@ parameterEstimates <- parameterestimates <- function(object,
         }
     } else {
         LIST$exo <- NULL
+        LIST$lower <- LIST$upper <- NULL
         class(LIST) <- c("lavaan.data.frame", "data.frame")
     }
 

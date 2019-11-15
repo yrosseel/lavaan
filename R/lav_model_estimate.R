@@ -158,17 +158,16 @@ lav_model_estimate <- function(lavmodel       = NULL,
     } else {
         lower <- lavpartable$lower[ lavpartable$free > 0 ]
         if(lavmodel@eq.constraints) {
-            # collect non -Inf elements
-            not.inf.val <- lower[is.finite(lower)]
+            inf.idx <- which(!is.finite(lower))
 
             lowerb <- lower
-            lowerb[lower == -Inf] <- -999999
+            lowerb[inf.idx] <- -99999
 
             # pack
             l.pack <- as.numeric( (lowerb - lavmodel@eq.constraints.k0) %*%
                                   lavmodel@eq.constraints.K )
             lower <- l.pack
-            lower[!(lower %in% not.inf.val)] <- -Inf
+            lower[lower == -99999] <- -Inf
         }
     }
     if(is.null(lavpartable$upper)) {
@@ -176,17 +175,16 @@ lav_model_estimate <- function(lavmodel       = NULL,
     } else {
         upper <- lavpartable$upper[ lavpartable$free > 0 ]
         if(lavmodel@eq.constraints) {
-            # collect non -Inf elements
-            not.inf.val <- upper[is.finite(upper)]
+            inf.idx <- which(!is.finite(upper))
 
             upperb <- upper
-            upperb[upper == Inf] <- 999999
+            upperb[inf.idx] <- 99999
 
             # pack
             l.pack <- as.numeric( (upperb - lavmodel@eq.constraints.k0) %*%
                                   lavmodel@eq.constraints.K )
             upper <- l.pack
-            upper[!(upper %in% not.inf.val)] <- Inf
+            upper[upper == 99999] <- Inf
         }
     }
 
