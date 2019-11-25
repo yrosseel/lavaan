@@ -1594,7 +1594,7 @@ lav_object_inspect_mean_lv <- function(object,
     # labels + class
     for(b in seq_len(nblocks)) {
         if(add.labels && length(OUT[[b]]) > 0L) {
-            names(OUT[[b]]) <- object@pta$vnames$lv.regular[[b]]
+            names(OUT[[b]]) <- object@pta$vnames$lv[[b]]
         }
         if(add.class) {
             class(OUT[[b]]) <- c("lavaan.vector", "numeric")
@@ -1636,7 +1636,7 @@ lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
 
         if(add.labels) {
             NAMES <- c(object@pta$vnames$ov.model[[b]],
-                       object@pta$vnames$lv.regular[[b]])
+                       object@pta$vnames$lv[[b]])
             colnames(OUT[[b]]) <- rownames(OUT[[b]]) <- NAMES
         }
         if(add.class) {
