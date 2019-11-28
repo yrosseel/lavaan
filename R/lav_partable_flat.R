@@ -464,7 +464,7 @@ lav_partable_flat <- function(FLAT = NULL,
         #}
 
         # 3. regressions ov + lv
-        exo.reg.idx <- which(op == "~" &
+        exo.reg.idx <- which(op %in% c("~", "<~") &
                              lhs %in% c(lv.names, ov.names.nox) &
                              rhs %in% ov.names.x)
         if(conditional.x) {

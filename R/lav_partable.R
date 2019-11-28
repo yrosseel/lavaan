@@ -469,7 +469,7 @@ lavaanify <- lavParTable <- function(
             ref.idx <- all.idx[1L]              # the first one only
 
             # new in 0.6-6: make sure lower/upper constraints are equal too
-            if(!is.null(LIST$lower) && 
+            if(!is.null(LIST$lower) &&
                length(unique(LIST$lower[all.idx])) > 0L) {
                 non.inf <- which(is.finite(LIST$lower[all.idx]))
                 if(length(non.inf) > 0L) {
@@ -479,7 +479,7 @@ lavaanify <- lavParTable <- function(
             }
             if(!is.null(LIST$upper) &&
                 length(unique(LIST$upper[all.idx])) > 0L) {
-                non.inf <- which(is.finite(LIST$upper[all.idx]))   
+                non.inf <- which(is.finite(LIST$upper[all.idx]))
                 if(length(non.inf) > 0L) {
                     largest.val <- max(LIST$upper[all.idx][non.inf])
                     LIST$upper[all.idx] <- largest.val

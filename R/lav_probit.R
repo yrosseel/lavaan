@@ -64,7 +64,7 @@ fields = list(y = "integer", X = "matrix",
               th.idx = "integer", slope.idx = "integer",
               # cache:
               # this doesn't result in better speed; but makes the code cleaner
-              z1 = "numeric", z2 = "numeric", probits = "numeric",
+              z1 = "numeric", z2 = "numeric", pi.i = "numeric",
               p1 = "numeric", p2 = "numeric"),
 
 # methods
@@ -135,22 +135,22 @@ lik = function(x) {
     }
     .self$z1 <- pmin( 100, TH[y+1L   ] - eta)
     .self$z2 <- pmax(-100, TH[y+1L-1L] - eta)
-    .self$probits <- pnorm(z1) - pnorm(z2)
-    probits
+    .self$pi.i <- pnorm(z1) - pnorm(z2)
+    pi.i
 },
 
 scores = function(x) {
     if(!missing(x)) lik(x)
-    if(length(probits) == 0L) lik()
+    if(length(pi.i) == 0L) lik()
     .self$p1 <- dnorm(z1); .self$p2 <- dnorm(z2)
 
     # th
-    scores.th   <- -1 * (Y2*p2 - Y1*p1) * (weights/probits)
+    scores.th   <- -1 * (Y2*p2 - Y1*p1) * (weights/pi.i)
 
     # beta
     scores.beta <- matrix(0, length(p1), 0L)
     if(nexo > 0L)
-        scores.beta <- -1 * weights*(p1 - p2)/probits * X
+        scores.beta <- -1 * weights*(p1 - p2)/pi.i * X
 
     cbind(scores.th, scores.beta)
 },
@@ -162,9 +162,9 @@ scores = function(x) {
 #    # beta
 #    dx.beta <- numeric(0L)
 #    if(nexo > 0L)
-#        dx.beta <- crossprod(X, weights*(p1 - p2)/probits)
+#        dx.beta <- crossprod(X, weights*(p1 - p2)/pi.i)
 #    # th
-#    dx.th   <- crossprod(Y2*p2 - Y1*p1, weights/probits)
+#    dx.th   <- crossprod(Y2*p2 - Y1*p1, weights/pi.i)
 #
 #    c(dx.th, dx.beta)
 #},
@@ -172,15 +172,15 @@ scores = function(x) {
 hessian = function(x) {
     if(!missing(x)) { lik(x); gradient() }
     #cat("hessian num = \n"); print(round(numDeriv::hessian(func=.self$objective, x=x),3))
-    if(length(probits) == 0L) lik(); scores() # not initialized
+    if(length(pi.i) == 0L) lik(); scores() # not initialized
     gnorm <- function(x) { -x * dnorm(x) }
-    wtpr <- weights/probits
+    wtpr <- weights/pi.i
     dxa <- Y1*p1 - Y2*p2
 
     # handle missing values -- FIXME!!! better approach?
     # we could also adapt crossprod, to work pairwise...
     if(missing.values) {
-        .probits <- probits[-missing.idx]
+        .pi.i <- pi.i[-missing.idx]
         .wtpr <- wtpr[-missing.idx]
         .dxa <- dxa[-missing.idx,,drop=FALSE]
         .Y1 <- Y1[-missing.idx,,drop=FALSE]
@@ -191,7 +191,7 @@ hessian = function(x) {
         .p1 <- p1[-missing.idx]
         .p2 <- p2[-missing.idx]
     } else {
-        .probits <- probits
+        .pi.i <- pi.i
         .wtpr <- wtpr
         .dxa <- dxa
         .Y1 <- Y1
@@ -203,7 +203,7 @@ hessian = function(x) {
         .p2 <- p2
     }
 
-    dx2.alpha <- -1 * (crossprod(.dxa, (.dxa * .wtpr / .probits)) -
+    dx2.alpha <- -1 * (crossprod(.dxa, (.dxa * .wtpr / .pi.i)) -
                         ( crossprod(.Y1 * gnorm(.z1) * .wtpr, .Y1) -
                           crossprod(.Y2 * gnorm(.z2) * .wtpr, .Y2) ) )
 
@@ -211,11 +211,11 @@ hessian = function(x) {
     if(nexo == 0L) return(dx2.alpha)
 
     dxb <-  .X*.p1 - .X*.p2
-    dx2.beta <- -1 * (crossprod(dxb, (dxb * .wtpr / .probits)) -
+    dx2.beta <- -1 * (crossprod(dxb, (dxb * .wtpr / .pi.i)) -
                        ( crossprod(.X * gnorm(.z1) * .wtpr, .X) -
                          crossprod(.X * gnorm(.z2) * .wtpr, .X) ) )
 
-    dx.ab <- crossprod(.dxa, (dxb * .wtpr / .probits)) -
+    dx.ab <- crossprod(.dxa, (dxb * .wtpr / .pi.i)) -
                ( crossprod(.Y1 * gnorm(.z1) * .wtpr, .X) -
                  crossprod(.Y2 * gnorm(.z2) * .wtpr, .X) )
 

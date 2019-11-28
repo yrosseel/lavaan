@@ -27,7 +27,7 @@ representation.LISREL <- function(partable = NULL,
     group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
 
     # gamma?only if conditional.x
-    if(any(partable$op == "~" & partable$exo == 1L)) {
+    if(any(partable$op %in% c("~", "<~") & partable$exo == 1L)) {
         gamma <- TRUE
     } else {
         gamma <- FALSE

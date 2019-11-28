@@ -421,7 +421,7 @@ parameterEstimates <- parameterestimates <- function(object,
                    }
                 }
                 if(!is.null(PARTABLE$upper)) {
-                   b.idx <- which(abs(PARTABLE$upper - PARTABLE$est) < 
+                   b.idx <- which(abs(PARTABLE$upper - PARTABLE$est) <
                                       sqrt(.Machine$double.eps) &
                                   PARTABLE$free > 0L)
                    if(length(b.idx) > 0L) {

@@ -20,7 +20,7 @@ logl = function(x) {
     if(!missing(x)) .self$theta <- x
     likelihoods <- lik()
     # FIXME: handle zero/negative/small likelihood values
-    sum(log(likelihoods), na.rm=TRUE)
+    sum(weights * log(likelihoods), na.rm=TRUE)
 },
 
 lik = function(x) {

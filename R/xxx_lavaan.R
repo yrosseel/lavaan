@@ -382,8 +382,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             opt$multilevel <- FALSE
         }
 
-        # sampling weights? force MLR 
-        if(!is.null(sampling.weights) && !opt$categorical && 
+        # sampling weights? force MLR
+        if(!is.null(sampling.weights) && !opt$categorical &&
            opt$estimator %in% c("default", "ML")) {
             opt$estimator <- "MLR"
         }
