@@ -53,7 +53,8 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                          drop.list.single.group = TRUE) {
 
     out <- lav_residuals(object = object, type = type, h1 = TRUE,
-               custom.rmr = custom.rmr, se = se, zstat = zstat, summary = summary,
+               custom.rmr = custom.rmr, se = se, zstat = zstat, 
+               summary = summary,
                summary.options = list(se = TRUE, zstat = TRUE, pvalue = TRUE,
                    unbiased = TRUE, unbiased.se = TRUE, unbiased.zstat = FALSE,
                    unbiased.test.val = 0.05, unbiased.pvalue = FALSE),
@@ -113,10 +114,14 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     lavmodel <- object@Model
 
     # change options if categorical or conditional.x, for now
-    if(lavmodel@categorical ||
-       lavmodel@conditional.x) {
-        zstat <- se <- FALSE
-        summary <- FALSE
+    if(lavmodel@categorical || lavmodel@conditional.x) {
+         zstat <- se <- FALSE
+         summary <- FALSE
+         summary.options <- list(se = FALSE, zstat = FALSE,
+                            pvalue = FALSE, unbiased = FALSE, 
+                            unbiased.se = FALSE,
+                            unbiased.zstat = FALSE, unbiased.test.val = 0.05,
+                            unbiased.pvalue = FALSE)
     }
 
     # observed and fitted sample statistics

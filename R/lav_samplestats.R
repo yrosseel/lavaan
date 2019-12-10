@@ -120,7 +120,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # FIXME: check dimension of WLS.V!!
     }
 
-    NACOV.compute <- TRUE
+    NACOV.compute <- FALSE # since 0.6-6
     if(is.null(NACOV)) {
         NACOV      <- vector("list", length = ngroups)
         NACOV.user <- FALSE
@@ -133,7 +133,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         NACOV.user <- FALSE
         NACOV      <- vector("list", length = ngroups)
     } else {
-        NACOV.compute <- FALSE
         if(!is.list(NACOV)) {
             if(ngroups == 1L) {
                 NACOV <- list(NACOV)

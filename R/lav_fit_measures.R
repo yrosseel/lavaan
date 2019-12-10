@@ -1162,19 +1162,25 @@ lav_fit_measures <- function(object, fit.measures = "all",
         }
 
         # the default!
-        if(object@Options$mimic == "lavaan") {
+        if(object@Options$mimic %in% c("lavaan", "EQS")) {
             if(categorical) {
                 indices["srmr"] <- SRMR_BENTLER_NOMEAN
             } else {
                 indices["srmr"] <- SRMR_BENTLER
             }
-        } else if(object@Options$mimic == "EQS") {
-            indices["srmr"] <- SRMR_BENTLER
         } else if(object@Options$mimic == "Mplus") {
             if(object@Options$information == "expected") {
-                indices["srmr"] <- SRMR_BENTLER
+                if(categorical) {
+                    indices["srmr"] <- SRMR_BENTLER_NOMEAN
+                } else {
+                    indices["srmr"] <- SRMR_BENTLER
+                }
             } else {
-                indices["srmr"] <- SRMR_MPLUS
+                if(categorical) {
+                    indices["srmr"] <- SRMR_MPLUS_NOMEAN
+                } else {
+                    indices["srmr"] <- SRMR_MPLUS
+                }
             }
         }
 
