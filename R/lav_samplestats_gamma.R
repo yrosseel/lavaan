@@ -15,6 +15,7 @@
 lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
                      meanstructure = FALSE, slopestructure = FALSE,
+                     gamma.n.minus.one = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
 
     if(inherits(object, "lavaan")) {
@@ -25,8 +26,18 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                 ### FIXME!!!!!
                 return(NULL) # for now!
             }
-        } else {
-            missing <- "listwise"
+        }
+        if(missing(fixed.x)) {
+            fixed.x <- object@Options$fixed.x
+        }
+        if(missing(conditional.x)) {
+            conditional.x <- object@Options$conditional.x
+        }
+        if(missing(meanstructure)) {
+            meanstructure <- object@Options$meanstructure
+        }
+        if(missing(gamma.n.minus.one)) {
+            gamma.n.minus.one <- object@Options$gamma.n.minus.one
         }
     } else if(inherits(object, "lavData")) {
         lavdata <- object
@@ -54,14 +65,22 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                     function(g) match(lavdata@ov.names.x[[g]],
                                       lavdata@ov.names[[g]]) )
 
-    OUT <- lapply(seq_len(lavdata@ngroups),
-              function(g) lav_samplestats_Gamma(Y              = Y[[g]],
-                                                x.idx          = x.idx[[g]],
-                                                fixed.x        = fixed.x,
-                                                conditional.x  = conditional.x,
-                                                meanstructure  = meanstructure,
-                                                slopestructure = slopestructure,
-                                                Mplus.WLS      = Mplus.WLS))
+    OUT <- lapply(seq_len(lavdata@ngroups), function(g) {
+        if(length(lavdata@cluster) > 0L) {
+            cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+        } else {
+            cluster.idx <- NULL
+        }
+        out <- lav_samplestats_Gamma(Y              = Y[[g]],
+                                     x.idx          = x.idx[[g]],
+                                     cluster.idx    = cluster.idx,
+                                     fixed.x        = fixed.x,
+                                     conditional.x  = conditional.x,
+                                     meanstructure  = meanstructure,
+                                     slopestructure = conditional.x,
+                                     gamma.n.minus.one = gamma.n.minus.one,
+                                     Mplus.WLS      = Mplus.WLS)
+        out})
 
     OUT
 }

@@ -18,6 +18,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       NACOV             = NULL,
                                       gamma.n.minus.one = FALSE,
                                       se                = "standard",
+                                      test              = "standard",
                                       information       = "expected",
                                       ridge             = 1e-5,
                                       optim.method      = "nlminb",
@@ -124,6 +125,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     if(is.null(NACOV)) {
         NACOV      <- vector("list", length = ngroups)
         NACOV.user <- FALSE
+        if(se == "robust.sem" || test %in% c("satorra.bentler",
+                                             "mean.var.adjusted",
+                                             "scaled.shifted")) {
+            NACOV.compute <- TRUE
+        }
     } else if(is.logical(NACOV)) {
         if(!NACOV) {
             NACOV.compute <- FALSE

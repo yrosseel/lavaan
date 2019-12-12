@@ -629,6 +629,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        NACOV             = NACOV,
                        gamma.n.minus.one = lavoptions$gamma.n.minus.one,
                        se                = lavoptions$se,
+                       test              = lavoptions$test,
                        information       = lavoptions$information,
                        ridge             = lavoptions$ridge,
                        optim.method      = lavoptions$optim.method.cor,

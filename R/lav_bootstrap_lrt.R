@@ -228,6 +228,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                mimic         = h0@Options$mimic,
                                meanstructure = h0@Options$meanstructure,
                                conditional.x = h0@Options$conditional.x,
+                               se            = h0@Options$se,
+                               test          = h0@Options$test,
                                group.w.free  = h0@Options$group.w.free,
                                missing.h1    = TRUE,
                                verbose  = FALSE), silent=TRUE)
