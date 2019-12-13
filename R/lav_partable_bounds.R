@@ -49,29 +49,36 @@ lav_partable_add_bounds <- function(partable       = NULL,
             optim.bounds$min.var.lv.endo <- 0.0
         }
 
-        if(is.null(optim.bounds$factor)) {
-            optim.bounds$factor <- 1.0
+        if(is.null(optim.bounds$lower.factor)) {
+            optim.bounds$lower.factor <- rep(1.0, length(optim.bounds$lower))
+        } else {
+            if(length(optim.bounds$lower.factor) == 1L &&
+               is.numeric(optim.bounds$lower.factor)) {
+                optim.bounds$lower.factor <- rep(optim.bounds$lower.factor, 
+                                                 length(optim.bounds$lower))
+            } else if(length(optim.bounds$lower.factor) !=
+               length(optim.bounds$lower)) {
+                stop("lavaan ERROR: length(optim.bounds$lower.factor) is not ",
+                     "equal to length(optim.bounds$lower)")
+            }
         }
+        lower.factor <- optim.bounds$lower.factor
 
-        if(is.null(optim.bounds$factor.ov.var) ||
-           optim.bounds$factor != 1.0) {
-            optim.bounds$factor.ov.var <- optim.bounds$factor
+        if(is.null(optim.bounds$upper.factor)) {
+            optim.bounds$upper.factor <- rep(1.0, length(optim.bounds$upper))
+        } else {
+            if(length(optim.bounds$upper.factor) == 1L &&
+               is.numeric(optim.bounds$upper.factor)) {
+                optim.bounds$upper.factor <- rep(optim.bounds$upper.factor, 
+                                                 length(optim.bounds$upper))
+            } else if(length(optim.bounds$upper.factor) !=
+               length(optim.bounds$upper)) {
+                stop("lavaan ERROR: length(optim.bounds$upper.factor) is not ",
+                     "equal to length(optim.bounds$upper)")
+            }
         }
+        upper.factor <- optim.bounds$upper.factor
 
-        if(is.null(optim.bounds$factor.lv.var) ||
-           optim.bounds$factor != 1.0) {
-            optim.bounds$factor.lv.var <- optim.bounds$factor
-        }
-
-        if(is.null(optim.bounds$factor.loadings ||
-           optim.bounds$factor != 1.0)) {
-            optim.bounds$factor.loadings <- optim.bounds$factor
-        }
-
-        if(is.null(optim.bounds$factor.covariances ||
-           optim.bounds$factor != 1.0)) {
-            optim.bounds$factor.covariances <- optim.bounds$factor
-        }
     }
 
     # shortcut
@@ -168,13 +175,27 @@ lav_partable_add_bounds <- function(partable       = NULL,
             var.idx <- match(partable$lhs[par.idx], ov.names)
             upper.auto[par.idx] <- OV.VAR[var.idx]
 
-            # enlarge?
+            # range
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor.ov.var) ) {
-                new.range <- bound.range * optim.bounds$factor.ov.var
-                diff <- abs(new.range - bound.range)
-                lower.auto[par.idx] <- lower.auto[par.idx] - diff
-                upper.auto[par.idx] <- upper.auto[par.idx] + diff
+
+            # enlarge lower?
+            if("ov.var" %in% optim.bounds$lower) {
+                factor <- lower.factor[ which(optim.bounds$lower == "ov.var") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    diff <- abs(new.range - bound.range)
+                    lower.auto[par.idx] <- lower.auto[par.idx] - diff
+                }
+            }
+
+            # enlarge upper?
+            if("ov.var" %in% optim.bounds$upper) {
+                factor <- upper.factor[ which(optim.bounds$upper == "ov.var") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    diff <- abs(new.range - bound.range)
+                    upper.auto[par.idx] <- upper.auto[par.idx] + diff
+                }
             }
 
             # requested?
@@ -236,13 +257,27 @@ lav_partable_add_bounds <- function(partable       = NULL,
             upper.auto[par.idx] <- LV.VAR.UB[  match(partable$lhs[par.idx],
                                                      lv.names) ]
 
-            # enlarge?
+            # range
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor.lv.var) ) {
-                new.range <- bound.range * optim.bounds$factor.lv.var
-                diff <- abs(new.range - bound.range)
-                lower.auto[par.idx] <- lower.auto[par.idx] - diff
-                upper.auto[par.idx] <- upper.auto[par.idx] + diff
+
+            # enlarge lower?
+            if("lv.var" %in% optim.bounds$lower) {
+                factor <- lower.factor[ which(optim.bounds$lower == "lv.var") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    diff <- abs(new.range - bound.range)
+                    lower.auto[par.idx] <- lower.auto[par.idx] - diff
+                }
+            }
+
+            # enlarge upper?
+            if("lv.var" %in% optim.bounds$upper) {
+                factor <- upper.factor[ which(optim.bounds$upper == "lv.var") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    diff <- abs(new.range - bound.range)
+                    upper.auto[par.idx] <- upper.auto[par.idx] + diff
+                }
             }
 
             # requested?
@@ -281,17 +316,34 @@ lav_partable_add_bounds <- function(partable       = NULL,
             upper.auto[par.idx] <- +1 * sqrt(var.all/tmp) # +Inf if tmp==0
 
 
-            # enlarge?
+            # range
             bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            if( is.finite(optim.bounds$factor.loadings) ) {
-                new.range <- bound.range * optim.bounds$factor.loadings
-                ok.idx <- is.finite(new.range)
-                if(length(ok.idx) > 0L) {
-                    diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
-                    lower.auto[par.idx][ok.idx] <-
-                    lower.auto[par.idx][ok.idx] - diff
-                    upper.auto[par.idx][ok.idx] <-
-                    upper.auto[par.idx][ok.idx] + diff
+
+            # enlarge lower?
+            if("loadings" %in% optim.bounds$lower) {
+                factor <- lower.factor[ which(optim.bounds$lower=="loadings") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    ok.idx <- is.finite(new.range)
+                    if(length(ok.idx) > 0L) {
+                        diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
+                        lower.auto[par.idx][ok.idx] <-
+                        lower.auto[par.idx][ok.idx] - diff
+                    }
+                }
+            }
+
+            # enlarge upper?
+            if("loadings" %in% optim.bounds$upper) {
+                factor <- upper.factor[ which(optim.bounds$upper=="loadings") ]
+                if( is.finite(factor) && factor != 1.0 ) {
+                    new.range <- bound.range * factor
+                    ok.idx <- is.finite(new.range)
+                    if(length(ok.idx) > 0L) {
+                        diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
+                        upper.auto[par.idx][ok.idx] <-
+                        upper.auto[par.idx][ok.idx] + diff     
+                    }
                 }
             }
 
@@ -344,17 +396,33 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     lower.auto[par.idx[i]] <- -1 * upper.cov
                 }
 
-                # enlarge?
-                bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-                if( is.finite(optim.bounds$factor.covariances) ) {
-                    new.range <- bound.range * optim.bounds$factor.covariances
-                    ok.idx <- is.finite(new.range)
-                    if(length(ok.idx) > 0L) {
-                        diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
-                        lower.auto[par.idx][ok.idx] <-
-                        lower.auto[par.idx][ok.idx] - diff
-                        upper.auto[par.idx][ok.idx] <-
-                        upper.auto[par.idx][ok.idx] + diff
+                # enlarge lower?
+                if("covariances" %in% optim.bounds$lower) {
+                    factor <- 
+                        lower.factor[ which(optim.bounds$lower=="covariances") ]
+                    if( is.finite(factor) && factor != 1.0 ) {
+                        new.range <- bound.range * factor
+                        ok.idx <- is.finite(new.range)
+                        if(length(ok.idx) > 0L) {
+                            diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
+                            lower.auto[par.idx][ok.idx] <-
+                            lower.auto[par.idx][ok.idx] - diff
+                        }
+                    }
+                }
+
+                # enlarge upper?
+                if("covariances" %in% optim.bounds$upper) {
+                    factor <- 
+                        upper.factor[ which(optim.bounds$upper=="covariances") ]
+                    if( is.finite(factor) && factor != 1.0 ) {
+                        new.range <- bound.range * factor
+                        ok.idx <- is.finite(new.range)
+                        if(length(ok.idx) > 0L) {
+                            diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
+                            upper.auto[par.idx][ok.idx] <-
+                            upper.auto[par.idx][ok.idx] + diff
+                        }
                     }
                 }
 

@@ -353,6 +353,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # modifyList
         opt <- modifyList(opt, dotdotdot)
 
+        # no data?
+        if(is.null(data) && is.null(sample.cov)) {
+            opt$bounds <- FALSE
+        }
+
         # categorical mode?
         if(any(FLAT$op == "|")) {
             opt$categorical <- TRUE

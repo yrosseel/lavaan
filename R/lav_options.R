@@ -123,6 +123,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 link                   = "default",
                 representation         = "default",
                 do.fit                 = TRUE,
+                bounds                 = "none", # new in 0.6-6
 
                 # inference
                 information            = "default",
@@ -146,16 +147,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.var.transform    = "none",
                 optim.parscale         = "none",
                 optim.dx.tol           = 1e-03, # not too strict
-                optim.bounds           = list(upper = character(0L),
-                                              lower = character(0L),
-                                              min.reliability.marker = 0.0,
-                                              min.var.lv.exo = 0.0,
-                                              min.var.lv.edno = 0.0,
-                                              factor = 1.0,
-                                              factor.ov.var = 1.0,
-                                              factor.lv.var = 1.0,
-                                              factor.loadings = 1.0,
-                                              factor.covariances = 1.0),
+                optim.bounds           = list(),
                 em.iter.max            = 10000L,
                 em.fx.tol              = 1e-08,
                 em.dx.tol              = 1e-04,
@@ -1246,6 +1238,60 @@ lav_options_set <- function(opt = NULL) {
              \"mean.var.adjusted\", \"scaled.shifted\", or \"bollen.stine\"")
     }
 
+
+    # optim.bounds
+    if(!is.null(opt$optim.bounds) && length(opt$optim.bounds) > 0L) {
+        # opt$bounds should be "default"
+        if(is.null(opt$bounds) || opt$bounds == "default") {
+            opt$bounds <- "user"
+        } else {
+            stop("lavaan ERROR: bounds and optim.bounds arguments can not be used together")
+        }
+    }
+
+    # bounds
+    if(is.null(opt$bounds)) {
+        opt$bounds <- "none" # for now
+    } else if(is.logical(opt$bounds)) {
+        if(opt$bounds) {
+            opt$bounds <- "default"
+        } else {
+            opt$bounds <- "none"
+        }
+    }
+
+    # handle different 'profiles'
+    if(opt$bounds == "none") {
+        opt$optim.bounds <- list(lower = character(0L),
+                                 upper = character(0L))
+    } else if(opt$bounds == "user") {
+        # nothing to do
+    } else if(opt$bounds == "default") {
+        opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
+                                 upper = c("ov.var", "lv.var", "loadings"),
+                                 lower.factor = c(1.2, 1, 1.1),
+                                 upper.factor = c(1.2, 1, 1.1),
+                                 min.reliability.marker = 0.1,
+                                 min.var.lv.exo = 0.0,
+                                 min.var.lv.endo = 0.0)
+    } else if(opt$bounds == "pos.var") {
+        opt$optim.bounds <- list(lower = c("ov.var", "lv.var"),
+                                 lower.factor = c(1, 1),
+                                 min.reliability.marker = 0.0,
+                                 min.var.lv.exo = 0.0,
+                                 min.var.lv.endo = 0.0)
+    } else if(opt$bounds == "pos.ov.var") {
+        opt$optim.bounds <- list(lower = c("ov.var"),
+                                 lower.factor = 1)
+    } else if(opt$bounds == "pos.lv.var") {
+        opt$optim.bounds <- list(lower = c("lv.var"),
+                                 lower.factor = 1,
+                                 min.reliability.marker = 0.0,
+                                 min.var.lv.exo = 0.0,
+                                 min.var.lv.endo = 0.0)
+    } else {
+        stop("lavaan ERROR: unknown `bounds' option: ", opt$bounds)
+    }
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 
