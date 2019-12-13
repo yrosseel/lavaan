@@ -188,6 +188,17 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
     }
 
+    # check for inconsistent lower/upper bounds
+    # this may happen if we have equality constraints; qr() may switch
+    # the sign...
+    bad.idx <- which(lower > upper)
+    if(length(bad.idx) > 0L) {
+        # switch
+        tmp <- lower[bad.idx]
+        lower[bad.idx] <- upper[bad.idx]
+        upper[bad.idx] <- tmp
+    }
+
 
 
 

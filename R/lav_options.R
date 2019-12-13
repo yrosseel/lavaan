@@ -1242,7 +1242,7 @@ lav_options_set <- function(opt = NULL) {
     # optim.bounds
     if(!is.null(opt$optim.bounds) && length(opt$optim.bounds) > 0L) {
         # opt$bounds should be "default"
-        if(is.null(opt$bounds) || opt$bounds == "default") {
+        if(is.null(opt$bounds) || opt$bounds == "none") {
             opt$bounds <- "user"
         } else {
             stop("lavaan ERROR: bounds and optim.bounds arguments can not be used together")
