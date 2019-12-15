@@ -1269,8 +1269,8 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$bounds == "default") {
         opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
                                  upper = c("ov.var", "lv.var", "loadings"),
-                                 lower.factor = c(1.2, 1, 1.1),
-                                 upper.factor = c(1.2, 1, 1.1),
+                                 lower.factor = c(1.2, 1.0, 1.1),
+                                 upper.factor = c(1.2, 1.3, 1.1),
                                  min.reliability.marker = 0.1,
                                  min.var.lv.exo = 0.0,
                                  min.var.lv.endo = 0.0)

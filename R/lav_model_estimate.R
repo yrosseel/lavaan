@@ -671,6 +671,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                    control=control,
                                    scale=SCALE,
                                    verbose=verbose,
+                                   lower=lower,
+                                   upper=upper,
                                    cin = cin, cin.jac = cin.jac,
                                    ceq = ceq, ceq.jac = ceq.jac,
                                    control.outer = ocontrol

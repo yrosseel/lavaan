@@ -176,7 +176,8 @@ lav_partable_add_bounds <- function(partable       = NULL,
             upper.auto[par.idx] <- OV.VAR[var.idx]
 
             # range
-            bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
+            #bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
+            bound.range <- upper.auto[par.idx] # always assume 0 as lower bound
 
             # enlarge lower?
             if("ov.var" %in% optim.bounds$lower) {
@@ -258,7 +259,8 @@ lav_partable_add_bounds <- function(partable       = NULL,
                                                      lv.names) ]
 
             # range
-            bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
+            #bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
+            bound.range <- upper.auto[par.idx] # always assume 0 as lower bound
 
             # enlarge lower?
             if("lv.var" %in% optim.bounds$lower) {
