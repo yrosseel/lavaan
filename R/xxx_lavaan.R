@@ -293,11 +293,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(ordered)) { # new in 0.6-4
         if(is.logical(ordered) && ordered) {  # ordered = TRUE
             # assume the user means: ordered = names(Data)
-            ordered <- lavNames(FLAT, "ov")
+            ordered <- lavNames(FLAT, "ov.nox") # new in 0.6-6: changed from ov
         } else if(is.logical(ordered) && !ordered) {
             ordered <- character(0L)
         } else if(!is.character(ordered)) {
             stop("lavaan ERROR: ordered argument must be a character vector")
+        } else if(length(ordered) == 1L && nchar(ordered) == 0L) {
+            ordered <- character(0L)
         } else {
             # check if all names in "ordered" occur in the dataset?
             if(!is.null(data)) {

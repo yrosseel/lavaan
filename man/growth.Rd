@@ -21,10 +21,14 @@ growth(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
     treat them as ordinal variables.}
-\item{ordered}{Character vector. Only used if the data is in a data.frame. 
-    Treat these variables as ordered (ordinal) variables, if they are 
-    endogenous in the model. Importantly, all other variables will be treated 
-    as numeric (unless they are declared as ordered in the original data.frame.)}
+\item{ordered}{Character vector. Only used if the data is in a data.frame.
+    Treat these variables as ordered (ordinal) variables, if they are
+    endogenous in the model. Importantly, all other variables will be treated
+    as numeric (unless they are declared as ordered in the data.frame.) 
+    Since 0.6-4, ordered can also be logical. If TRUE, all
+    observed endogenous variables are treated as ordered (ordinal).
+    If FALSE, all observed endogenous variables are considered to be numeric
+    (again, unless they are declared as ordered in the data.frame.)}
 \item{sampling.weights}{A variable name in the data frame containing
    sampling weight information. Currently only available for non-clustered 
    data. Sampling weights must be nonnegative, and sum to the total number
