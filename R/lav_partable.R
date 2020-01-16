@@ -452,6 +452,93 @@ lavaanify <- lavParTable <- function(
         print( as.data.frame(tmp, stringsAsFactors=FALSE) )
     }
 
+    # handle EFA equality constraints
+    # YR 14 Jan 2020: 0.6-6 does no longer impose 'explicit' constraints
+    #                 if we only need to fix a parameter to 0/1
+    # Note: we should also check if they are really needed:
+    #       eg., if all the factor-loadings of the 'second' set (time/group)
+    #       are constrained to be equal to the factor-loadings of the first
+    #       set, no further constraints are needed
+    if(auto.efa && !is.null(LIST$efa)) {
+        # for each set, for each block
+        nblocks <- lav_partable_nblocks(LIST)
+        set.names <- lav_partable_efa_values(LIST)
+        nsets <- length(set.names)
+
+        for(b in seq_len(nblocks)) {
+            for(s in seq_len(nsets)) {
+                # lv's for this block/set
+                lv.nam.efa <- unique(LIST$lhs[LIST$op == "=~" &
+                                              LIST$block == b &
+                                              LIST$efa == set.names[s]])
+                if(length(lv.nam.efa) == 1L) {
+                    # nothing to do (warn?)
+                    next
+                }
+
+                # equality constraints on ALL factor loadings in this set?
+                # --> no constraints are needed
+                #if(b > 1L || s > 1L) {
+                #    # collect plabels for this set, if any
+                #    set.idx <- which(LIST$op == "=~" &
+                #                     LIST$block == b &
+                #                     LIST$lhs %in% lv.nam.efa)
+                #    plabels.set <- LIST$plabel[ set.idx ]
+                #
+                #    # check simple == equalities
+                #    # TODO: what about more complex equality constraints?
+                #    eq.idx <- which(LIST$op == "==")
+                #    con.labels <- c(LIST$lhs[eq.idx],
+                #                    LIST$rhs[eq.idx])
+                #
+                #    # TODO: what about exceptions?
+                #    if(all(plabels.set %in% con.labels)) {
+                #        next
+                #    }
+                #}
+
+                # 1. echelon pattern
+                nfac <- length(lv.nam.efa)
+                for(f in seq_len(nfac)) {
+                    if(f == 1L) {
+                        next
+                    }
+                    nzero <- (f - 1L)
+                    ind.idx <- which(LIST$op == "=~" &
+                                     LIST$block == b &
+                                     LIST$lhs %in% lv.nam.efa[f])
+                    if(length(ind.idx) < nzero) {
+                        stop("lavaan ERROR: efa factor ", lv.nam.efa[f],
+                             " has not enough indicators for echelon pattern")
+                    }
+
+                    # fix to zero
+                    LIST$free[  ind.idx[seq_len(nzero)]] <- 0L
+                    LIST$ustart[ind.idx[seq_len(nzero)]] <- 0
+                    LIST$user[  ind.idx[seq_len(nzero)]] <- 7L
+
+                }
+
+                # 2. covariances constrained to zero (only if oblique rotation)
+                if(!orthogonal.efa) {
+                    # skip if user == 1 (user-override!)
+                    cov.idx <- which(LIST$op == "~~" &
+                                     LIST$block == b &
+                                     LIST$user == 0L &
+                                     LIST$lhs %in% lv.nam.efa &
+                                     LIST$rhs %in% lv.nam.efa &
+                                     LIST$lhs != LIST$rhs)
+
+                    # fix to zero
+                    LIST$free[  cov.idx] <- 0L
+                    LIST$ustart[cov.idx] <- 0
+                    LIST$user[  cov.idx] <- 7L
+                }
+
+            } # sets
+        } # blocks
+    } # auto.efa
+
     # handle user-specified equality constraints
     # lavaan 0.5-18
     # - rewrite 'LABEL-based' equality constraints as == constraints
@@ -546,14 +633,6 @@ lavaanify <- lavParTable <- function(
     }
 
 
-    # count free parameters
-    idx.free <- which(LIST$free > 0)
-    LIST$free[idx.free] <- seq_along(idx.free)
-    # backwards compatibility...
-    if(!is.null(LIST$unco)) {
-         LIST$unco[idx.free] <- seq_along(idx.free)
-    }
-
 
     # handle constraints (if any) (NOT per group, but overall - 0.4-11)
     if(length(CON) > 0L) {
@@ -606,98 +685,6 @@ lavaanify <- lavParTable <- function(
     def.idx <- which(LIST$op == ":=")
     LIST$label[def.idx] <- LIST$lhs[def.idx]
 
-
-    # handle EFA equality constraints
-    # Note: we should also check if they are really needed:
-    #       eg., if all the factor-loadings of the 'second' set (time/group)
-    #       are constrained to be equal to the factor-loadings of the first
-    #       set, no further constraints are needed
-    if(auto.efa && !is.null(LIST$efa)) {
-        # for each set, for each block
-        nblocks <- lav_partable_nblocks(LIST)
-        set.names <- lav_partable_efa_values(LIST)
-        nsets <- length(set.names)
-
-        plabel <- character(0L)
-        for(b in seq_len(nblocks)) {
-            for(s in seq_len(nsets)) {
-                # lv's for this block/set
-                lv.nam.efa <- unique(LIST$lhs[LIST$op == "=~" &
-                                              LIST$block == b &
-                                              LIST$efa == set.names[s]])
-                if(length(lv.nam.efa) == 1L) {
-                    # nothing to do (warn?)
-                    next
-                }
-
-                # equality constraints on ALL factor loadings in this set?
-                # --> no constraints are needed
-                #if(b > 1L || s > 1L) {
-                #    # collect plabels for this set, if any
-                #    set.idx <- which(LIST$op == "=~" &
-                #                     LIST$block == b &
-                #                     LIST$lhs %in% lv.nam.efa)
-                #    plabels.set <- LIST$plabel[ set.idx ]
-                #
-                #    # check simple == equalities
-                #    # TODO: what about more complex equality constraints?
-                #    eq.idx <- which(LIST$op == "==")
-                #    con.labels <- c(LIST$lhs[eq.idx],
-                #                    LIST$rhs[eq.idx])
-                #
-                #    # TODO: what about exceptions?
-                #    if(all(plabels.set %in% con.labels)) {
-                #        next
-                #    }
-                #}
-
-                # 1. echelon pattern
-                nfac <- length(lv.nam.efa)
-                for(f in seq_len(nfac)) {
-                    if(f == 1L) {
-                        next
-                    }
-                    nzero <- (f - 1L)
-                    ind.idx <- which(LIST$op == "=~" &
-                                     LIST$block == b &
-                                     LIST$lhs %in% lv.nam.efa[f])
-                    if(length(ind.idx) < nzero) {
-                        stop("lavaan ERROR: efa factor ", lv.nam.efa[f],
-                             " has not enough indicators for echelon pattern")
-                    }
-
-                    # add these plabels
-                    plabel <- c(plabel, LIST$plabel[ind.idx[seq_len(nzero)]])
-                }
-
-                # 2. covariances constrained to zero (only if oblique rotation)
-                if(!orthogonal.efa) {
-                    # skip if user == 1 (user-override!)
-                    # or not... in 0.6-6
-                    cov.idx <- which(LIST$op == "~~" &
-                                     LIST$block == b &
-                                     #LIST$user == 0L &
-                                     LIST$lhs %in% lv.nam.efa &
-                                     LIST$rhs %in% lv.nam.efa &
-                                     LIST$lhs != LIST$rhs)
-                    plabel <- c(plabel, LIST$plabel[cov.idx])
-                }
-
-            } # sets
-        } # blocks
-
-        # add zero constraints
-        nel <- length(plabel)
-        TMP <- list()
-        TMP$lhs    <- plabel
-        TMP$op     <- rep("==", nel)
-        TMP$rhs    <- rep(0,    nel)
-        TMP$block  <- rep(0L,   nel)
-        TMP$user   <- rep(7L,   nel) # special code for EFA == 7
-        TMP$ustart <- rep(as.numeric(NA), nel)
-
-        LIST <- lav_partable_merge(LIST, TMP)
-    }
 
     # handle effect.coding related equality constraints
     if(is.logical(effect.coding) && effect.coding) {
@@ -799,7 +786,7 @@ lavaanify <- lavParTable <- function(
                         # free only if automatically added
                         if(length(lv.int.idx) > 0L &&
                            LIST$user[ lv.int.idx ] == 0L) {
-                            LIST$free[ lv.int.idx ] <- max(LIST$free) + 1L
+                            LIST$free[ lv.int.idx ] <- 1L
                         }
                     }
                 } # intercepts
@@ -862,7 +849,7 @@ lavaanify <- lavParTable <- function(
                 # free only if automatically added
                 if(length(lv.var.g1.idx) > 0L &&
                    LIST$user[ lv.var.g1.idx ] == 0L) {
-                    LIST$free[ lv.var.g1.idx ] <- max(LIST$free) + 1L
+                    LIST$free[ lv.var.g1.idx ] <- 1L
                 }
             }
         } # lv
@@ -922,7 +909,7 @@ lavaanify <- lavParTable <- function(
                 # free only if automatically added
                 if(length(lv.var.g1.idx) > 0L &&
                    LIST$user[ lv.var.g1.idx ] == 0L) {
-                    LIST$free[ lv.var.g1.idx ] <- max(LIST$free) + 1L
+                    LIST$free[ lv.var.g1.idx ] <- 1L
                 }
             }
         } # lv
@@ -930,6 +917,14 @@ lavaanify <- lavParTable <- function(
         LIST <- lav_partable_merge(LIST, TMP)
     }
 
+
+    # count free parameters
+    idx.free <- which(LIST$free > 0)
+    LIST$free[idx.free] <- seq_along(idx.free)
+    # backwards compatibility...
+    if(!is.null(LIST$unco)) {
+         LIST$unco[idx.free] <- seq_along(idx.free)
+    }
 
     if(debug) {
         cat("[lavaan DEBUG] lavParTable\n")

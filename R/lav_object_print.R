@@ -89,7 +89,9 @@ lav_object_print_rotation <- function(object, header = FALSE, nd = 3L) {
 
     # rotation method
     c1 <- c(c1, "Rotation method")
-    if(object@Options$rotation.args$orthogonal) {
+    if(object@Options$rotation == "none") {
+        MM <- toupper(object@Options$rotation)
+    } else if(object@Options$rotation.args$orthogonal) {
         MM <- paste(toupper(object@Options$rotation), " ", "ORTHOGONAL",
                     sep = "")
     } else {
@@ -98,40 +100,45 @@ lav_object_print_rotation <- function(object, header = FALSE, nd = 3L) {
     }
     c2 <- c(c2, MM)
 
-    # method options
-    if(object@Options$rotation == "geomin") {
-        c1 <- c(c1, "Geomin epsilon")
-        c2 <- c(c2, object@Options$rotation.args$geomin.epsilon)
-    } else if(object@Options$rotation == "orthomax") {
-        c1 <- c(c1, "Orthomax gamma")
-        c2 <- c(c2, object@Options$rotation.args$orthomax.gamma)
-    } else if(object@Options$rotation == "cf") {
-        c1 <- c(c1, "Crawford-Ferguson gamma")
-        c2 <- c(c2, object@Options$rotation.args$cf.gamma)
-    } else if(object@Options$rotation == "oblimin") {
-        c1 <- c(c1, "Oblimin gamma")
-        c2 <- c(c2, object@Options$rotation.args$oblimin.gamma)
+
+    if(object@Options$rotation != "none") {
+
+        # method options
+        if(object@Options$rotation == "geomin") {
+            c1 <- c(c1, "Geomin epsilon")
+            c2 <- c(c2, object@Options$rotation.args$geomin.epsilon)
+        } else if(object@Options$rotation == "orthomax") {
+            c1 <- c(c1, "Orthomax gamma")
+            c2 <- c(c2, object@Options$rotation.args$orthomax.gamma)
+        } else if(object@Options$rotation == "cf") {
+            c1 <- c(c1, "Crawford-Ferguson gamma")
+            c2 <- c(c2, object@Options$rotation.args$cf.gamma)
+        } else if(object@Options$rotation == "oblimin") {
+            c1 <- c(c1, "Oblimin gamma")
+            c2 <- c(c2, object@Options$rotation.args$oblimin.gamma)
+        }
+
+        # rotation algorithm
+        c1 <- c(c1, "Rotation algorithm (rstarts)")
+        tmp <- paste(toupper(object@Options$rotation.args$algorithm),
+                     " (", object@Options$rotation.args$rstarts, ")", sep = "")
+        c2 <- c(c2, tmp)
+
+        # Standardized metric (or not)
+        c1 <- c(c1, "Standardized metric")
+        if(object@Options$rotation.args$std.ov) {
+            c2 <- c(c2, "TRUE")
+        } else {
+            c2 <- c(c2, "FALSE")
+        }
+
+        # Row weights
+        c1 <- c(c1, "Row weights")
+        tmp.txt <- object@Options$rotation.args$row.weights
+        c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                          substring(tmp.txt, 2), sep = ""))
+
     }
-
-    # rotation algorithm
-    c1 <- c(c1, "Rotation algorithm (rstarts)")
-    tmp <- paste(toupper(object@Options$rotation.args$algorithm),
-                 " (", object@Options$rotation.args$rstarts, ")", sep = "")
-    c2 <- c(c2, tmp)
-
-    # Standardized metric (or not)
-    c1 <- c(c1, "Standardized metric")
-    if(object@Options$rotation.args$std.ov) {
-        c2 <- c(c2, "TRUE")
-    } else {
-        c2 <- c(c2, "FALSE")
-    }
-
-    # Row weights
-    c1 <- c(c1, "Row weights")
-    tmp.txt <- object@Options$rotation.args$row.weights
-    c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-                      substring(tmp.txt, 2), sep = ""))
 
     # empty row
     c1 <- c(c1, ""); c2 <- c(c2, "")

@@ -5,18 +5,24 @@ lav_partable_add_bounds <- function(partable       = NULL,
                                     lavsamplestats = NULL,
                                     lavoptions     = NULL) {
 
-    # no support from effect.coding (for now)
-    if(!is.null(lavoptions$effect.coding) &&
-       nchar(lavoptions$effect.coding[1L]) > 0L) {
-        warning("lavaan WARNING: automatic bounds not available (yet) if effect.coding is used")
-       return(partable)
-    }
-
     # check optim.bounds
     if(is.null(lavoptions$optim.bounds)) {
         # <0.6-6 version
         return(partable)
     } else {
+
+        if(!is.null(lavoptions$bounds) && lavoptions$bounds == "none") {
+           # no bounds needed
+           return(partable)
+        }
+
+        # no support from effect.coding (for now)
+        if(!is.null(lavoptions$effect.coding) &&
+            nchar(lavoptions$effect.coding[1L]) > 0L) {
+            warning("lavaan WARNING: automatic bounds not available (yet) if effect.coding is used")
+           return(partable)
+        }
+
         optim.bounds <- lavoptions$optim.bounds
 
         # check the elements

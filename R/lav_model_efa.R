@@ -20,12 +20,14 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
 
     # rotate
     x.rot <- lav_model_efa_rotate_x(x = x.orig, lavmodel = lavmodel,
-                                    lavoptions = lavoptions, extra = TRUE)
+                                    lavoptions = lavoptions, extra = TRUE,
+                                    type = "user")
     extra <- attr(x.rot, "extra"); attr(x.rot, "extra") <- NULL
 
     # store full rotation matrix (per group)
     lavmodel@H <- extra$H
     lavmodel@lv.order <- extra$lv.order
+    lavmodel@GLIST <- extra$GLIST
 
     # store ceq.efa.JAC (to use for bordered information)
     if(lavoptions$se == "none" || lavoptions$se == "bootstrap" ||
@@ -34,12 +36,12 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
     } else {
         JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_border_x,
                                   x = x.rot, lavmodel = lavmodel,
-                                  lavoptions = lavoptions)
+                                  lavoptions = lavoptions, type = "user")
     }
     lavmodel@ceq.efa.JAC <- JAC
 
     # place rotated parameters back in lavmodel
-    lavmodel <- lav_model_set_parameters(lavmodel = lavmodel, x = x.rot)
+    # lavmodel <- lav_model_set_parameters(lavmodel = lavmodel, x = x.rot)
 
     # return updated lavmodel
     lavmodel
@@ -48,7 +50,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
 
 # lower-level function, needed for numDeriv
 lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
-                                   init.rot = FALSE, extra = FALSE,
+                                   init.rot = NULL, extra = FALSE,
                                    type = "free") {
 
     # cat("in = \n"); print(x); cat("\n")
@@ -125,8 +127,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
             }
 
             # init.rot?
-            if(init.rot) {
-                init.ROT <- lavmodel@H[[g]][lv.idx, lv.idx, drop = FALSE]
+            if(!is.null(init.rot) && lavoptions$rotation.args$jac.init.rot) {
+                init.ROT <- init.rot[[g]][lv.idx, lv.idx, drop = FALSE]
                 rstarts <- 0
             } else {
                 init.ROT = NULL
@@ -215,7 +217,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
     # extra?
     if(extra) {
-        attr(x.rot, "extra") <- list(H = H, lv.order = ORDER)
+        attr(x.rot, "extra") <- list(GLIST = GLIST, H = H, lv.order = ORDER)
     }
 
     # cat("out = \n"); print(x.rot); cat("\n")
