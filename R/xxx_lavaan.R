@@ -176,7 +176,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         tmp.group.values <- unique(FLAT$rhs[group.idx])
         tmp.ngroups <- length(tmp.group.values)
         tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE)
-        ov.names <- ov.names.y <- ov.names.x <- vector("list",
+        ov.names <- ov.names.y <- ov.names.x <- lv.names <- vector("list",
                                                        length = tmp.ngroups)
         for(g in seq_len(tmp.ngroups)) {
             ov.names[[g]]   <- unique(unlist(lav_partable_vnames(tmp.lav,
@@ -185,13 +185,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                 type = "ov.nox", group = tmp.group.values[g])))
             ov.names.x[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav,
                                 type = "ov.x", group = tmp.group.values[g])))
+            lv.names[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav,
+                                type = "lv", group = tmp.group.values[g])))
         }
     } else if(!is.null(FLAT$group)) {
         # user-provided full partable with group column!
         ngroups <- lav_partable_ngroups(FLAT)
         if(ngroups > 1L) {
             group.values <- lav_partable_group_values(FLAT)
-            ov.names <- ov.names.y <- ov.names.x <- vector("list",
+            ov.names <- ov.names.y <- ov.names.x <- lv.names <- vector("list",
                                                        length = ngroups)
             for(g in seq_len(ngroups)) {
                 # collapsed over levels (if any)
@@ -201,17 +203,50 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                     type = "ov.nox", group = group.values[g])))
                 ov.names.x[[g]] <- unique(unlist(lav_partable_vnames(FLAT,
                                     type = "ov.x", group = group.values[g])))
+                lv.names[[g]]   <- unique(unlist(lav_partable_vnames(FLAT,
+                                    type = "lv", group = group.values[g])))
             }
         } else {
             ov.names   <- lav_partable_vnames(FLAT, type = "ov")
             ov.names.y <- lav_partable_vnames(FLAT, type = "ov.nox")
             ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
+            lv.names   <- lav_partable_vnames(FLAT, type = "lv")
         }
     } else {
         # collapse over levels (if any)
         ov.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "ov")))
         ov.names.y <- unique(unlist(lav_partable_vnames(FLAT, type = "ov.nox")))
         ov.names.x <- unique(unlist(lav_partable_vnames(FLAT, type = "ov.x")))
+        lv.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "lv")))
+    }
+
+    # handle for lv.names that are also observed variables (new in 0.6-6)
+    if(length(lv.names) > 0L) {
+
+        # check for lv.names in data/cov
+        if(!is.null(data)) {
+            bad.idx <- which(lv.names %in% names(data))
+        } else if(!is.null(sample.cov)) { 
+            bad.idx <- which(lv.names %in% rownames(data))
+        } else {
+            bad.idx <- integer(0L)
+        }
+ 
+        # if found, hard stop
+        if(length(bad.idx) > 0L) {
+            stop("lavaan ERROR: some latent variable names collapse ",
+                 "with observed\n\t\tvariable names: ", 
+                 paste(lv.names[bad.idx], collapse = " "))
+
+            # rename latent variables (by adding 'lat')
+            #flat.idx <- which(FLAT$op == "=~" & 
+            #                  FLAT$lhs %in% lv.names[bad.idx])
+            #FLAT$lhs[flat.idx] <- paste(FLAT$lhs[flat.idx], "lat", sep = "")
+ 
+            # add names to ov.names
+            #ov.names <- c(ov.names, lv.names[bad.idx])
+            # what about ov.names.y and ov.names.x?
+        }
     }
 
     # handle ov.names.l
