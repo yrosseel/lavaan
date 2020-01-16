@@ -54,7 +54,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
         } else {
             if(length(optim.bounds$lower.factor) == 1L &&
                is.numeric(optim.bounds$lower.factor)) {
-                optim.bounds$lower.factor <- rep(optim.bounds$lower.factor, 
+                optim.bounds$lower.factor <- rep(optim.bounds$lower.factor,
                                                  length(optim.bounds$lower))
             } else if(length(optim.bounds$lower.factor) !=
                length(optim.bounds$lower)) {
@@ -69,7 +69,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
         } else {
             if(length(optim.bounds$upper.factor) == 1L &&
                is.numeric(optim.bounds$upper.factor)) {
-                optim.bounds$upper.factor <- rep(optim.bounds$upper.factor, 
+                optim.bounds$upper.factor <- rep(optim.bounds$upper.factor,
                                                  length(optim.bounds$upper))
             } else if(length(optim.bounds$upper.factor) !=
                length(optim.bounds$upper)) {
@@ -344,7 +344,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     if(length(ok.idx) > 0L) {
                         diff <- abs(new.range[ok.idx] - bound.range[ok.idx])
                         upper.auto[par.idx][ok.idx] <-
-                        upper.auto[par.idx][ok.idx] + diff     
+                        upper.auto[par.idx][ok.idx] + diff
                     }
                 }
             }
@@ -400,7 +400,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
                 # enlarge lower?
                 if("covariances" %in% optim.bounds$lower) {
-                    factor <- 
+                    factor <-
                         lower.factor[ which(optim.bounds$lower=="covariances") ]
                     if( is.finite(factor) && factor != 1.0 ) {
                         new.range <- bound.range * factor
@@ -415,7 +415,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
                 # enlarge upper?
                 if("covariances" %in% optim.bounds$upper) {
-                    factor <- 
+                    factor <-
                         upper.factor[ which(optim.bounds$upper=="covariances") ]
                     if( is.finite(factor) && factor != 1.0 ) {
                         new.range <- bound.range * factor

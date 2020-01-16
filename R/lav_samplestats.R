@@ -45,6 +45,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     eXo <- lavdata@eXo
     WT  <- lavdata@weights
 
+    # new in 0.6-6
+    # if sampling weights have been used, redefine nobs:
+    # per group, we define nobs == sum(wt)
+    for(g in seq_len(ngroups)) {
+        if(!is.null(WT[[g]])) {
+            nobs[[g]] <- sum(WT[[g]])
+        }
+    }
+
     # sample statistics per group
 
     # joint (y,x)

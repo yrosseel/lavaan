@@ -20,8 +20,9 @@
 
 # YR 25 Mar 2016: first version
 # YR 19 Jan 2017: added 6) + 7)
+# YR 04 Jan 2020: adjust for sum(wt) != N
 
-# 1. likelihood h1
+# 1. log-likelihood h1
 
 # 1a: input is raw data
 lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
@@ -29,23 +30,21 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
                                       casewise      = FALSE,
                                       wt            = NULL,
                                       Sinv.method   = "eigen") {
-    P <- NCOL(Y); N <- NROW(Y)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    P <- NCOL(Y)
 
     # sample statistics
-    if(is.null(wt)) {
+    if(!is.null(wt)) {
+        out <- stats::cov.wt(Y, wt = wt, method = "ML")
+        sample.mean <- out$center
+        sample.cov  <- out$cov
+    } else {
         sample.mean <- colMeans(Y)
         sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
-    } else {
-        out <- stats::cov.wt(Y, wt = wt, method = "ML")
-        if(casewise) {
-            loglik <- lav_mvnorm_loglik_data(Y, Mu = out$center,
-                          Sigma = out$cov, casewise = TRUE,
-                          Sinv.method = Sinv.method)
-            return(loglik * wt)
-        } else {
-            sample.mean <- out$center
-            sample.cov  <- out$cov
-        }
     }
 
     if(casewise) {
@@ -67,6 +66,11 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
         }
 
         loglik <- -(P * LOG.2PI + logdet + DIST)/2
+
+        # weights
+        if(!is.null(wt)) {
+            loglik <- loglik * wt
+        }
 
     } else {
         # invert sample.cov
@@ -161,7 +165,11 @@ lav_mvnorm_h1_logl_hessian_data <- function(Y              = NULL,
                                             Sinv.method    = "eigen",
                                             sample.cov.inv = NULL,
                                             meanstructure  = TRUE) {
-    N <- NROW(Y)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
 
     # observed information
     observed <- lav_mvnorm_h1_information_observed_data(Y = Y, wt = wt,
@@ -317,6 +325,9 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
         return( res )
     }
 
+    # question: is there any benefit computing Gamma/A1 instead of just
+    # calling lav_mvnorm_information_firstorder()?
+
     # Gamma
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
@@ -357,16 +368,22 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
 
 lav_mvnorm_h1_inverted_information_expected <-
 lav_mvnorm_h1_inverted_information_observed <- function(Y              = NULL,
+                                                        wt             = NULL,
                                                         sample.cov     = NULL,
                                                         x.idx          = NULL) {
     # sample.cov
     if(is.null(sample.cov)) {
-        sample.mean <- colMeans(Y); N <- NROW(Y)
-        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+        if(is.null(wt)) {
+            sample.mean <- colMeans(Y); N <- NROW(Y)
+            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+        } else {
+            out <- stats::cov.wt(Y, wt = wt, method = "ML")
+            sample.cov <- out$cov
+        }
     }
 
     if(!is.null(x.idx) && length(x.idx) > 0L) {
-        Gamma.NT <- lav_samplestats_Gamma_NT(Y = Y, x.idx = x.idx,
+        Gamma.NT <- lav_samplestats_Gamma_NT(Y = Y, wt = wt, x.idx = x.idx,
                                              COV = sample.cov,
                                              meanstructure = TRUE,
                                              fixed.x = TRUE)
@@ -384,11 +401,17 @@ lav_mvnorm_h1_inverted_information_observed <- function(Y              = NULL,
 #        J1.inv = Gamma.NT %*% solve(Gamma) %*%  Gamma.NT
 #
 lav_mvnorm_h1_inverted_information_firstorder <- function(Y          = NULL,
+                                                      wt             = NULL,
                                                       sample.cov     = NULL,
                                                       x.idx          = NULL,
                                                       Sinv.method    = "eigen",
                                                       sample.cov.inv = NULL,
                                                       Gamma          = NULL) {
+    # lav_samplestats_Gamma() has no wt argument (yet)
+    if(!is.null(wt)) {
+        stop("lavaan ERROR: function not supported if wt is not NULL")
+    }
+
     # Gamma
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
@@ -421,12 +444,18 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(Y          = NULL,
 #    7b: 1/N * Gamma.NT
 lav_mvnorm_h1_acov_expected <-
 lav_mvnorm_h1_acov_observed <- function(Y              = NULL,
+                                        wt             = NULL,
                                         sample.cov     = NULL,
                                         x.idx          = NULL) {
-    N <- NROW(Y)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+       N <- NROW(Y)
+    }
 
     Gamma.NT <-
         lav_mvnorm_h1_inverted_information_expected(Y          = Y,
+                                                    wt         = wt,
                                                     sample.cov = sample.cov,
                                                     x.idx      = x.idx)
 
@@ -435,14 +464,20 @@ lav_mvnorm_h1_acov_observed <- function(Y              = NULL,
 
 #    7c: 1/N * (Gamma.NT * Gamma^{-1} * Gamma.NT)
 lav_mvnorm_h1_acov_firstorder <- function(Y              = NULL,
+                                          wt             = NULL,
                                           sample.cov     = NULL,
                                           Sinv.method    = "eigen",
                                           x.idx          = NULL,
                                           sample.cov.inv = NULL,
                                           Gamma          = NULL) {
-    N <- NROW(Y)
 
-    J1.inv <- lav_mvnorm_h1_inverted_information_firstorder(Y = Y,
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+
+    J1.inv <- lav_mvnorm_h1_inverted_information_firstorder(Y = Y, wt = wt,
                   sample.cov = sample.cov,
                   x.idx = x.idx, Sinv.method = Sinv.method,
                   sample.cov.inv = sample.cov.inv, Gamma = Gamma)
@@ -452,10 +487,21 @@ lav_mvnorm_h1_acov_firstorder <- function(Y              = NULL,
 
 #    7d: 1/N * Gamma (sandwich)
 lav_mvnorm_h1_acov_sandwich <- function(Y              = NULL,
+                                        wt             = NULL,
                                         sample.cov     = NULL,
                                         x.idx          = NULL,
                                         Gamma          = NULL) {
-    N <- NROW(Y)
+
+    # lav_samplestats_Gamma() has no wt argument (yet)
+    if(!is.null(wt)) {
+        stop("lavaan ERROR: function not supported if wt is not NULL")
+    }
+
+    #if(!is.null(wt)) {
+    #    N <- sum(wt)
+    #} else {
+        N <- NROW(Y)
+    #}
 
     # Gamma
     if(is.null(Gamma)) {

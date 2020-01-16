@@ -440,6 +440,59 @@ lav_mvnorm_dlogl_dvechSigma <- function(Y           = NULL,
     dvechSigma
 }
 
+# 2d: : derivative logl with respect to Mu and vech(Sigma)
+lav_mvnorm_dlogl_dmu_dvechSigma <- function(Y           = NULL,
+                                            wt          = NULL,
+                                            Mu          = NULL,
+                                            Sigma       = NULL,
+                                            x.idx       = NULL,
+                                            Sinv.method = "eigen",
+                                            Sigma.inv   = NULL) {
+
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+
+    Mu <- as.numeric(Mu)
+
+    if(is.null(Sigma.inv)) {
+        # invert Sigma
+        Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+                                                  Sinv.method = Sinv.method)
+    }
+
+    # substract 'Mu' from Y
+    Yc <- t( t(Y) - Mu )
+
+    # W.tilde
+    if(!is.null(wt)) {
+        out <- stats::cov.wt(Y, wt = wt, method = "ML")
+        SY <- out$cov
+        MY <- out$center
+        W.tilde <- SY + tcrossprod(MY - Mu)
+        dmu <- as.numeric(Sigma.inv %*% colSums(Yc * wt))
+    } else {
+        W.tilde <- crossprod(Yc) / N
+        dmu <- as.numeric(Sigma.inv %*% colSums(Yc))
+    }
+
+    # derivative (avoiding kronecker product)
+    dSigma <- -(N/2)* (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
+
+    # fixed.x?
+    if(length(x.idx) > 0L) {
+        dSigma[x.idx, x.idx] <- 0
+        dmu[x.idx] <- 0
+    }
+
+    dvechSigma <- as.numeric( lav_matrix_duplication_pre(
+                                  as.matrix(lav_matrix_vec(dSigma)) ) )
+
+    c(dmu, dvechSigma)
+}
+
 # 3. Casewise scores
 
 # 3a: casewise scores with respect to mu
@@ -777,7 +830,7 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
         # take the sum within each cluster
         SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
 
-        # lower bias is number of clusters is not very high
+        # lower bias if number of clusters is not very high
         nC <- nrow(SC)
         correction.factor <- nC / (nC - 1)
         SC <- SC * sqrt(correction.factor)

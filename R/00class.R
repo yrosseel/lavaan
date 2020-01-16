@@ -59,7 +59,7 @@ setClass("lavSampleStats",         # sample moments
         group.w="list",            # group weight
 
         nobs="list",               # effective number of obs (per group)
-        ntotal="integer",          # total number of obs (all groups)
+        ntotal="numeric",          # total number of obs (all groups)
         ngroups="integer",         # number of groups
         x.idx="list",              # x.idx if fixed.x = TRUE
 

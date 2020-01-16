@@ -666,8 +666,8 @@ sam <- function(model          = NULL,
         # global (so PA will not be used for for final model)
         lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
-        lavoptions.PA$implied <- FALSE 
-        lavoptions.PA$loglik <- FALSE                              
+        lavoptions.PA$implied <- FALSE
+        lavoptions.PA$loglik <- FALSE
     }
 
     # fit structural model

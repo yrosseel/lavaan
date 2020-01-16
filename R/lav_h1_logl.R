@@ -44,10 +44,12 @@ lav_h1_logl <- function(lavdata        = NULL,
             } else if(lavsamplestats@missing.flag) {
                 logl.group[g] <-
                     lav_mvnorm_missing_loglik_samplestats(
-                        Yp    = lavsamplestats@missing[[g]],
-                        Mu    = lavsamplestats@missing.h1[[g]]$mu,
-                        Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-                        x.idx = lavsamplestats@x.idx[[g]])
+                        Yp     = lavsamplestats@missing[[g]],
+                        Mu     = lavsamplestats@missing.h1[[g]]$mu,
+                        Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
+                        x.idx  = lavsamplestats@x.idx[[g]],
+                        x.mean = lavsamplestats@mean.x[[g]],
+                        x.cov  = lavsamplestats@cov.x[[g]])
             } else { # single-level, complete data
                 # all we need is: logdet of covariance matrix, nobs and nvar
                 if(lavoptions$conditional.x) {

@@ -3074,6 +3074,7 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
     lavdata <- object@Data
     lavsamplestats <- object@SampleStats
     lavimplied <- object@implied
+    lavoptions <- object@Options
 
     G <- lavdata@ngroups
     OUT <- vector("list", G)
@@ -3090,25 +3091,42 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
 
     for(g in 1:G) {
 
-        if(lavdata@missing == "listwise") {
-            if(object@Model@meanstructure) {
-                MEAN <- lavimplied$mean[[g]]
+        if(lavsamplestats@missing.flag) {
+            OUT[[g]] <-
+                lav_mvnorm_missing_llik_casewise(Y = lavdata@X[[g]],
+                                        wt = lavdata@weights[[g]],
+                                        Mu = lavimplied$mean[[g]],
+                                        Sigma = lavimplied$cov[[g]],
+                                        x.idx  = lavsamplestats@x.idx[[g]])
+        } else { # single-level, complete data
+            if(lavoptions$conditional.x) {
+                if(!is.null(lavdata@weights[[g]])) {
+                    stop("lavaan ERROR: no support (yet) if weights are used.")
+                }
+                OUT[[g]] <- lav_mvreg_loglik_data(
+                                      Y          = lavdata@X[[g]],
+                                      eXo        = lavdata@eXo[[g]],
+                                      res.int    = lavimplied$res.int[[g]],
+                                      res.slopes = lavimplied$res.slopes[[g]],
+                                      res.cov    = lavimplied$res.cov[[g]],
+                                      casewise   = TRUE)
+
             } else {
-                MEAN <- lavsamplestats@mean[[g]]
+
+                if(object@Model@meanstructure) {
+                    MEAN <- lavimplied$mean[[g]]
+                } else {
+                    MEAN <- lavsamplestats@mean[[g]]
+                }
+                OUT[[g]] <-
+                    lav_mvnorm_loglik_data(Y  = lavdata@X[[g]],
+                                           wt = lavdata@weights[[g]],
+                                           Mu = MEAN,
+                                           Sigma = lavimplied$cov[[g]],
+                                           x.idx = lavsamplestats@x.idx[[g]],
+                                           casewise = TRUE)
             }
-            OUT[[g]] <- lav_mvnorm_loglik_data(Y  = lavdata@X[[g]],
-                                               wt = lavdata@weights[[g]],
-                                               Mu = MEAN,
-                                               Sigma = lavimplied$cov[[g]],
-                                               casewise = TRUE)
-        } else if(lavdata@missing == "ml") {
-            OUT[[g]] <- lav_mvnorm_missing_llik_casewise(Y = lavdata@X[[g]],
-                                               wt = lavdata@weights[[g]],
-                                               Mu = lavimplied$mean[[g]],
-                                               Sigma = lavimplied$cov[[g]])
-        } else {
-            stop("lavaan ERROR: casewise (log)likeloods contributions not available if missing = ", dQuote(lavdata@missing))
-        }
+        } # single-level, complete data
 
         # log. = FALSE?
         if(!log.) {
@@ -3124,6 +3142,7 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
             class(OUT[[g]]) <- c("lavaan.vector", "numeric")
 
         }
+
     } # g
 
     if(G == 1L && drop.list.single.group) {

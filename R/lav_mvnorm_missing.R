@@ -50,17 +50,13 @@ lav_mvnorm_missing_loglik_data <- function(Y           = NULL,
                                            log2pi      = TRUE,
                                            minus.two   = FALSE) {
 
-    if(length(x.idx) > 0L) {
-        warning("lavaan WARNING: x.idx not supported yet (ignored)")
-    }
-
     if(pattern) {
         llik <- lav_mvnorm_missing_llik_pattern(Y = Y, wt = wt, Mu = Mu,
-                    Sigma = Sigma, Sinv.method = Sinv.method,
+                    Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
                     log2pi = log2pi, minus.two = minus.two)
     } else {
         llik <- lav_mvnorm_missing_llik_casewise(Y = Y, wt = wt, Mu = Mu,
-                    Sigma = Sigma, Sinv.method = Sinv.method,
+                    Sigma = Sigma, x.idx = x.idx, Sinv.method = Sinv.method,
                     log2pi = log2pi, minus.two = minus.two)
     }
 
@@ -84,10 +80,9 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
                                                   log2pi      = TRUE,
                                                   minus.two   = FALSE) {
 
-    if(!is.null(x.idx) && length(x.idx) > 0L) {
-        #warning("lavaan WARNING: x.idx not supported yet (ignored)")
-
-    }
+    #if(!is.null(x.idx) && length(x.idx) > 0L) {
+    #    #warning("lavaan WARNING: x.idx not supported yet (ignored)")
+    #}
 
     LOG.2PI <- log(2*pi); pat.N <- length(Yp);  P <- length(Yp[[1]]$var.idx)
 
@@ -139,16 +134,25 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
 
     # x.idx
     if(length(x.idx) > 0L) {
+        stopifnot(!is.null(x.cov), !is.null(x.mean))
         P.x <- length(x.idx); N <- sum(sapply(Yp, "[[", "freq"))
         Sigma.x <- Sigma[x.idx, x.idx, drop = FALSE]
         Sigma.inv.x <- lav_matrix_symmetric_inverse(S = Sigma.x, logdet = TRUE,
                                               Sinv.method = Sinv.method)
         logdet.x <- attr(Sigma.inv.x, "logdet")
 
+        # tr(Sigma^{-1} %*% S)
+        DIST1 <- sum(Sigma.inv.x * x.cov)
+
+        # (ybar - mu)^T %*% Sigma.inv %*% (ybar - mu)
+        Diff <- as.numeric(x.mean - Mu[x.idx])
+
+        DIST2 <- sum(as.numeric(crossprod(Diff, Sigma.inv.x)) * Diff)
+
         if(log2pi) {
-            loglik.x <- -N/2 * (P.x * LOG.2PI + logdet.x + P.x)
+            loglik.x <- -N/2 * (P.x * LOG.2PI + logdet.x + DIST1 + DIST2)
         } else {
-            loglik.x <- -N/2 * (logdet.x + P.x)
+            loglik.x <- -N/2 * (logdet.x + DIST1 + DIST2)
         }
 
         if(minus.two) {
@@ -164,16 +168,22 @@ lav_mvnorm_missing_loglik_samplestats <- function(Yp          = NULL,
 ## casewise loglikelihoods
 
 # casewise Sinv.method
-# FIXME: use x.idx=
 lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
                                              wt          = NULL,
                                              Mu          = NULL,
                                              Sigma       = NULL,
+                                             x.idx       = NULL,
                                              Sinv.method = "eigen",
                                              log2pi      = TRUE,
                                              minus.two   = FALSE) {
 
-    P <- NCOL(Y); N <- NROW(Y); LOG.2PI <- log(2*pi); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); LOG.2PI <- log(2*pi); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     # global inverse + logdet
     Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
@@ -184,7 +194,7 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
     Yc <- t( t(Y) - Mu )
 
     # DIST/logdet per case
-    DIST <- logdet <- P.LOG.2PI <- rep(as.numeric(NA), N)
+    DIST <- logdet <- P.LOG.2PI <- rep(as.numeric(NA), NY)
 
     # missing pattern per case
     OBS <- !is.na(Y); P.i <- rowSums(OBS)
@@ -194,7 +204,7 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
 
     # complete cases first (only an advantage if we have mostly complete
     # observations)
-    other.idx <- seq_len(N)
+    other.idx <- seq_len(NY)
     complete.idx <- which(P.i == P)
     if(length(complete.idx) > 0L) {
         other.idx <- other.idx[-complete.idx]
@@ -237,21 +247,38 @@ lav_mvnorm_missing_llik_casewise <- function(Y           = NULL,
         llik <- llik * wt
     }
 
+    # x.idx
+    if(length(x.idx) > 0L) {
+        llik.x <- lav_mvnorm_missing_llik_casewise(
+                      Y = Y[, x.idx, drop = FALSE],
+                      wt = wt, Mu = Mu[x.idx],
+                      Sigma = Sigma[x.idx, x.idx, drop = FALSE],
+                      x.idx = NULL, Sinv.method = Sinv.method,
+                      log2pi = log2pi, minus.two = minus.two)
+        llik <- llik - llik.x
+    }
+
     llik
 }
 
 # pattern-based, but casewise loglikelihoods
-# FIXME: use x.idx
 lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
                                             Mp          = NULL,
                                             wt          = NULL,
                                             Mu          = NULL,
                                             Sigma       = NULL,
+                                            x.idx       = NULL,
                                             Sinv.method = "eigen",
                                             log2pi      = TRUE,
                                             minus.two   = FALSE) {
 
-    P <- NCOL(Y); N <- NROW(Y); LOG.2PI <- log(2*pi); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); LOG.2PI <- log(2*pi); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     # global inverse + logdet
     Sigma.inv <- lav_matrix_symmetric_inverse(S = Sigma, logdet = TRUE,
@@ -262,7 +289,7 @@ lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
     Yc <- t( t(Y) - Mu )
 
     # DIST/logdet per case
-    DIST <- logdet <- P.LOG.2PI <- rep(as.numeric(NA), N)
+    DIST <- logdet <- P.LOG.2PI <- rep(as.numeric(NA), NY)
 
     # missing patterns
     if(is.null(Mp)) {
@@ -320,6 +347,18 @@ lav_mvnorm_missing_llik_pattern <- function(Y           = NULL,
     # weights?
     if(!is.null(wt)) {
         llik <- llik * wt
+    }
+
+    # x.idx -- using casewise (as patterns for Y may not be the same as
+    #                          patterns for Y[,-x.idx])
+    if(length(x.idx) > 0L) {
+        llik.x <- lav_mvnorm_missing_llik_casewise(
+                      Y = Y[, x.idx, drop = FALSE],
+                      wt = wt, Mu = Mu[x.idx],
+                      Sigma = Sigma[x.idx, x.idx, drop = FALSE],
+                      x.idx = NULL, Sinv.method = Sinv.method,
+                      log2pi = log2pi, minus.two = minus.two)
+        llik <- llik - llik.x
     }
 
     llik
@@ -405,7 +444,13 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y           = NULL,
                                             x.idx       = NULL,
                                             Sigma.inv   = NULL,
                                             Sinv.method = "eigen") {
-    P <- NCOL(Y); N <- NROW(Y); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -629,7 +674,13 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
                                          Sigma.inv   = NULL,
                                          Sinv.method = "eigen") {
 
-    P <- NCOL(Y); N <- NROW(Y); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -646,7 +697,7 @@ lav_mvnorm_missing_scores_mu <- function(Y           = NULL,
     Yc <- t( t(Y) - Mu )
 
     # dmu per case
-    dmu <- matrix(as.numeric(NA), N, P)
+    dmu <- matrix(as.numeric(NA), NY, P)
 
     # for each pattern, compute sigma.inv
     for(p in seq_len(Mp$npatterns)) {
@@ -695,7 +746,13 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
                                                  Sigma.inv   = NULL,
                                                  Sinv.method = "eigen") {
 
-    P <- NCOL(Y); N <- NROW(Y); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -718,7 +775,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y           = NULL,
     Yc <- t( t(Y) - Mu )
 
     # SC
-    SC <- matrix(as.numeric(NA), nrow = N, ncol = length(iSigma))
+    SC <- matrix(as.numeric(NA), nrow = NY, ncol = length(iSigma))
 
     # for each pattern
     for(p in seq_len(Mp$npatterns)) {
@@ -781,7 +838,13 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
                                                     Sigma.inv   = NULL,
                                                     Sinv.method = "eigen") {
 
-    P <- NCOL(Y); N <- NROW(Y); Mu <- as.numeric(Mu)
+    P <- NCOL(Y); Mu <- as.numeric(Mu)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -804,10 +867,10 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y           = NULL,
     Yc <- t( t(Y) - Mu )
 
     # dmu per case
-    dmu <- matrix(as.numeric(NA), N, P)
+    dmu <- matrix(as.numeric(NA), NY, P)
 
     # SC
-    SC <- matrix(as.numeric(NA), nrow = N, ncol = length(iSigma))
+    SC <- matrix(as.numeric(NA), nrow = NY, ncol = length(iSigma))
 
     # for each pattern, compute Yc %*% sigma.inv
     for(p in seq_len(Mp$npatterns)) {
@@ -991,7 +1054,11 @@ lav_mvnorm_missing_information_expected <- function(Y           = NULL,
 
     # N
     if(!is.null(wt)) {
-        N <- sum(wt)
+        if(length(Mp$empty.idx) > 0L) {
+            N <- sum(wt) - sum(wt[Mp$empty.idx])
+        } else {
+            N <- sum(wt)
+        }
     } else {
         N <- sum(Mp$freq) # removed empty cases!
     }
@@ -1061,9 +1128,13 @@ lav_mvnorm_missing_information_observed_data <- function(Y           = NULL,
 
     # N
     if(!is.null(wt)) {
-        N <- sum(wt)
+        if(length(Mp$empty.idx) > 0L) {
+            N <- sum(wt) - sum(wt[Mp$empty.idx])
+        } else {
+            N <- sum(wt)
+        }
     } else {
-        N <- sum(Mp$freq)
+        N <- sum(Mp$freq) # removed empty cases!
     }
 
     # observed information
@@ -1112,9 +1183,13 @@ lav_mvnorm_missing_information_firstorder <- function(Y           = NULL,
 
     # N
     if(!is.null(wt)) {
-        N <- sum(wt)
+        if(length(Mp$empty.idx) > 0L) {
+            N <- sum(wt) - sum(wt[Mp$empty.idx])
+        } else {
+            N <- sum(wt)
+        }
     } else {
-        N <- sum(Mp$freq)
+        N <- sum(Mp$freq) # removed empty cases!
     }
 
     SC <- lav_mvnorm_missing_scores_mu_vech_sigma(Y = Y, Mp = Mp, wt = wt,
@@ -1172,9 +1247,13 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
 
     # N
     if(!is.null(wt)) {
-        N <- sum(wt)
+        if(length(Mp$empty.idx) > 0L) {
+            N <- sum(wt) - sum(wt[Mp$empty.idx])
+        } else {
+            N <- sum(wt)
+        }
     } else {
-        N <- sum(Mp$freq)
+        N <- sum(Mp$freq) # removed empty cases!
     }
 
     # subtract Mu
@@ -1378,6 +1457,7 @@ lav_mvnorm_missing_information_both <- function(Y           = NULL,
 # 10) other stuff
 
 # single imputation missing cells, under the normal model, pattern-based
+# FIXME: add wt
 lav_mvnorm_missing_impute_pattern <- function(Y           = NULL,
                                               Mp          = NULL,
                                               Mu          = NULL,

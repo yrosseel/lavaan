@@ -33,8 +33,12 @@ lavSimulateData <- function(model  = NULL,
     dotdotdot$data <- NULL
     dotdotdot$sample.cov <- NULL
 
+
     # add sample.nobs/group.label to lavaan call
     dotdotdot$sample.nobs <- sample.nobs
+
+    # always use meanstructure = TRUE
+    dotdotdot$meanstructure <- TRUE
 
 
     # remove 'ordered' argument: we will first pretend we generate

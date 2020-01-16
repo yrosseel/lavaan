@@ -361,18 +361,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # categorical mode?
+        opt$categorical <- FALSE
         if(any(FLAT$op == "|")) {
             opt$categorical <- TRUE
         } else if(!is.null(data) && length(ordered) > 0L) {
             opt$categorical <- TRUE
         } else if(!is.null(sample.th)) {
             opt$categorical <- TRUE
-        } else if(is.data.frame(data) &&
-                  any(sapply(data[, unique(unlist(ov.names.y))],
+        } else if(is.data.frame(data)) {
+            # first check if we can find ov.names.y in Data
+            idx.missing <- which(!(ov.names.y %in% names(data)))
+            if(length(idx.missing)) {
+                stop("lavaan ERROR: missing observed variables in dataset: ",
+                    paste(ov.names.y[idx.missing], collapse=" "))
+            }
+            if(any(sapply(data[, unique(unlist(ov.names.y))],
                              inherits, "ordered")) ) {
-            opt$categorical <- TRUE
-        } else {
-            opt$categorical <- FALSE
+                opt$categorical <- TRUE
+            }
         }
 
         # clustered?

@@ -162,6 +162,7 @@ estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
         N <- sum(sapply(Yp, "[[", "freq"))
     }
 
+    # Note: we ignore x.idx (if any)
     fx <- lav_mvnorm_missing_loglik_samplestats(Yp = Yp,
                                                 Mu = Mu.hat, Sigma = Sigma.hat,
                                                 log2pi = FALSE,

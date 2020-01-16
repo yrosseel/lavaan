@@ -18,7 +18,12 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
                                                    tol         = 1e-05) {
 
     # check input
-    Y <- as.matrix(Y); P <- NCOL(Y); N <- NROW(Y)
+    Y <- as.matrix(Y); P <- NCOL(Y)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
 
     # missing patterns
     if(is.null(Mp)) {
@@ -30,7 +35,11 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
     # remove empty cases
     if(length(Mp$empty.idx) > 0L) {
-        N <- N - length(Mp$empty.idx)
+        if(!is.null(wt)) {
+            N <- N - sum(wt[Mp$empty.idx])
+        } else {
+            N <- N - length(Mp$empty.idx)
+        }
     }
 
     # verbose?
@@ -40,8 +49,15 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
     }
 
     # starting values; zero covariances to guarantee a pd matrix
-    Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
-    var0 <- base::.colMeans(Y*Y, m = N, n = P, na.rm = TRUE) - Mu0*Mu0
+    if(!is.null(wt)) {
+        out <- stats::cov.wt(Y, wt = wt, method = "ML")
+        Mu0 <- out$center
+        var0 <- diag(out$cov)
+    } else {
+        Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+        Yc <- t( t(Y) - Mu0 )
+        var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+    }
     Sigma0 <- diag(x = var0, nrow = P)
     Mu <- Mu0; Sigma <- Sigma0
 
