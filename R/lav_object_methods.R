@@ -276,6 +276,7 @@ parameterEstimates <- parameterestimates <- function(object,
                                                      standardized = FALSE,
                                                      cov.std = TRUE,
                                                      fmi = FALSE,
+                                                     fmi.options = list(),
                                                      remove.system.eq = TRUE,
                                                      remove.eq = TRUE,
                                                      remove.ineq = TRUE,
@@ -624,40 +625,44 @@ parameterEstimates <- parameterestimates <- function(object,
     # fractional missing information (if estimator="fiml")
     if(fmi) {
         SE.orig <- LIST$se
-        lavmodel <- object@Model; implied <- object@implied
-        COV <- if(lavmodel@conditional.x) implied$res.cov else implied$cov
-        MEAN <- if(lavmodel@conditional.x) implied$res.int else implied$mean
 
-        # provide rownames
-        for(g in 1:object@Data@ngroups)
-            rownames(COV[[g]]) <- object@Data@ov.names[[g]]
+        # new in 0.6-6, use 'EM' based (unstructured) sample statistics
+        # otherwise, it would be as if we use expected info, while the
+        # original use observed, producing crazy results
+        EM.cov  <- lavInspect(object, "sampstat.h1")$cov
+        EM.mean <- lavInspect(object, "sampstat.h1")$mean
 
-        # if estimator="ML" and likelihood="normal" --> rescale
-        if(object@Options$estimator == "ML" &&
-           object@Options$likelihood == "normal") {
-            for(g in 1:object@Data@ngroups) {
-                N <- object@Data@nobs[[g]]
-                COV[[g]] <- (N+1)/N * COV[[g]]
-            }
+        PT <- parTable(object)
+        PT$ustart <- PT$est
+        PT$start <- PT$est <- NULL
+
+        this.options <- object@Options
+        if(!is.null(fmi.options) && is.list(fmi.options)) {
+            # modify original options
+            this.options <- modifyList(this.options, fmi.options)
         }
+        # override
+        this.options$optim.method <- "none"
+        this.options$sample.cov.rescale <- FALSE
+        this.options$check.gradient <- FALSE
+        this.options$baseline <- FALSE
+        this.options$h1 <- FALSE
+        this.options$test <- FALSE
 
-        # fit another model, using the model-implied moments as input data
-        # FIXME: baseline=FALSE, h1=FALSE, ...?
-        step2 <- lavaan(slotOptions  = object@Options,
-                        slotParTable = object@ParTable,
-                        sample.cov   = COV,
-                        sample.mean  = MEAN,
-                        sample.nobs  = object@Data@nobs)
-        SE2 <- lav_object_inspect_se(step2)
-        SE.step2 <- ifelse(SE2 == 0.0, as.numeric(NA), SE2)
-        if(rsquare) {
-            # add additional elements, since LIST$se is now longer
-            r2.idx <- which(LIST$op == "r2")
-            if(length(r2.idx) > 0L) {
-                SE.step2 <- c(SE.step2, rep(as.numeric(NA), length(r2.idx)))
-            }
-        }
-        LIST$fmi <- 1-(SE.step2*SE.step2/(SE.orig*SE.orig))
+        fit.complete <- lavaan(model = PT,
+                               sample.cov   = EM.cov,
+                               sample.mean  = EM.mean,
+                               sample.nobs  = lavInspect(object, "nobs"),
+                               slotOptions  = this.options)
+
+        SE.comp <- parameterEstimates(fit.complete, ci = FALSE, fmi = FALSE,
+            zstat = FALSE, pvalue = FALSE, remove.system.eq = remove.system.eq,
+            remove.eq = remove.eq, remove.ineq = remove.ineq,
+            remove.def = remove.def, remove.nonfree = remove.nonfree,
+            rsquare = rsquare, add.attributes = FALSE)$se
+
+        SE.comp <- ifelse(SE.comp == 0.0, as.numeric(NA), SE.comp)
+        LIST$fmi <- 1 - (SE.comp * SE.comp) / (SE.orig * SE.orig)
     }
 
     # if single level, remove level column
