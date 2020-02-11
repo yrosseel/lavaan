@@ -143,14 +143,16 @@ lav_start <- function(start.method    = "default",
         } else {
             ov.names.num <- ov.names
         }
-        lv.names    <- vnames(lavpartable, "lv",   group = group.values[g])
-        ov.names.x  <- vnames(lavpartable, "ov.x", group = group.values[g])
+        lv.names     <- vnames(lavpartable, "lv",     group = group.values[g])
+        lv.names.efa <- vnames(lavpartable, "lv.efa", group = group.values[g])
+        ov.names.x   <- vnames(lavpartable, "ov.x",   group = group.values[g])
 
         # just for the nlevels >1 case
-        ov.names <- unique(unlist(ov.names))
+        ov.names     <- unique(unlist(ov.names))
         ov.names.num <- unique(unlist(ov.names.num))
-        lv.names <- unique(unlist(lv.names))
-        ov.names.x <- unique(unlist(ov.names.x))
+        lv.names     <- unique(unlist(lv.names))
+        lv.names.efa <- unique(unlist(lv.names.efa))
+        ov.names.x   <- unique(unlist(ov.names.x))
 
 
         # residual ov variances (including exo/ind, to be overriden)
@@ -186,6 +188,10 @@ lav_start <- function(start.method    = "default",
            model.type %in% c("sem", "cfa") ) {
             # fabin3 estimator (2sls) of Hagglund (1982) per factor
             for(f in lv.names) {
+                # not for efa factors
+                if(f %in% lv.names.efa) {
+                    next
+                }
                 lambda.idx <- which( lavpartable$lhs == f &
                                      lavpartable$op == "=~" &
                                      lavpartable$group == group.values[g] )
@@ -265,8 +271,67 @@ lav_start <- function(start.method    = "default",
                     #    start[res.idx][neg.idx] <- 0.05
                     #}
                 }
-            }
-        } # fabin
+            } # fabin3
+
+            # efa?
+            nefa <- lav_partable_nefa(lavpartable)
+            if(nefa > 0L) {
+                efa.values <- lav_partable_efa_values(lavpartable)
+
+                for(set in seq_len(nefa)) {
+                    # determine ov idx for this set
+                    ov.efa <-
+                        unique(lavpartable$rhs[ lavpartable$op == "=~" &
+                                                lavpartable$block == g &
+                                                lavpartable$efa == efa.values[set]])
+                    lv.efa <-
+                        unique(lavpartable$lhs[ lavpartable$op == "=~" &
+                                                lavpartable$block == g &
+                                                lavpartable$efa == efa.values[set]])
+                    lambda.idx <- which( lavpartable$lhs %in% lv.efa &
+                                         lavpartable$op == "=~" &
+                                         lavpartable$group == group.values[g] )
+
+                    theta.idx <- which( lavpartable$lhs %in% ov.efa &
+                                        lavpartable$op == "~~" &
+                                        lavpartable$lhs == lavpartable$rhs &
+                                        lavpartable$group == group.values[g] )
+
+                    # get observed indicators for these EFA lv variables
+                    ov.idx <- match(unique(lavpartable$rhs[lambda.idx]), 
+                                    ov.names)
+ 
+                    if(length(ov.idx) > 0L && !any(is.na(ov.idx))) {
+                        if(lavsamplestats@missing.flag && nlevels == 1L) {
+                            COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
+                                                      ov.idx, drop = FALSE]
+                        } else {
+                            if(conditional.x) {
+                                COV <- lavsamplestats@res.cov[[g]][ov.idx,
+                                                          ov.idx, drop = FALSE]
+                            } else {
+                                COV <- lavsamplestats@cov[[g]][ov.idx,
+                                                          ov.idx, drop = FALSE]
+                            }
+                         }
+
+                        # EFA solution with zero upper-right corner
+                        EFA <- lav_efa_extraction_uls_corner(S = COV,
+                                              nfactors = length(lv.efa))
+
+                        # factor loadings
+                        tmp <- as.numeric(EFA$LAMBDA)
+                        tmp[ !is.finite(tmp) ] <- 1.0 # just in case (eg 0/0)
+                        start[lambda.idx] <- tmp
+
+                        # residual variances
+                        tmp <- diag(EFA$THETA)
+                        tmp[ !is.finite(tmp) ] <- 1.0 # just in case
+                        start[theta.idx] <- tmp
+                    }
+                } # set
+            } # efa
+        } # factor loadings
 
         if(model.type == "unrestricted") {
            # fill in 'covariances' from lavsamplestats
