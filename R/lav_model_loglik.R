@@ -62,7 +62,9 @@ lav_model_loglik <- function(lavdata        = NULL,
                         Yp     = lavsamplestats@missing[[g]],
                         Mu     = lavimplied$mean[[g]],
                         Sigma  = lavimplied$cov[[g]],
-                        x.idx  = lavsamplestats@x.idx[[g]])
+                        x.idx  = lavsamplestats@x.idx[[g]],
+                        x.mean = lavsamplestats@mean.x[[g]],
+                        x.cov  = lavsamplestats@cov.x[[g]])
 
             } else { # single-level, complete data
                 if(lavoptions$conditional.x) {
