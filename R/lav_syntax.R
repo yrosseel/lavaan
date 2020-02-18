@@ -24,7 +24,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl = TRUE)
 
     # replace 'strange' tildes (in some locales) (new in 0.6-6)
-    model.syntax <- gsub(pattern = "˜", replacement = "~", x = model.syntax)
+    model.syntax <- gsub(pattern = "\u02dc", replacement = "~", model.syntax)
 
     # break up in lines
     model <- unlist( strsplit(model.syntax, "\n") )
