@@ -162,6 +162,8 @@ lav_standardize_lv <- function(lavobject = NULL,
         } else {
             ETA2 <- lv.var[[g]]
         }
+        # change negative values to NA
+        ETA2[ETA2 < 0] <- as.numeric(NA)
         ETA  <- sqrt(ETA2)
 
         # 1a. "=~" regular indicators

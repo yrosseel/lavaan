@@ -183,6 +183,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 implied                = TRUE,
                 loglik                 = TRUE,
 
+                # storage of information
+                store.vcov             = "default",
+
                 # verbosity
                 verbose                = FALSE,
                 warn                   = TRUE,

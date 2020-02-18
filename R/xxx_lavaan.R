@@ -226,23 +226,23 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # check for lv.names in data/cov
         if(!is.null(data)) {
             bad.idx <- which(lv.names %in% names(data))
-        } else if(!is.null(sample.cov)) { 
+        } else if(!is.null(sample.cov)) {
             bad.idx <- which(lv.names %in% rownames(data))
         } else {
             bad.idx <- integer(0L)
         }
- 
+
         # if found, hard stop
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: some latent variable names collapse ",
-                 "with observed\n\t\tvariable names: ", 
+                 "with observed\n\t\tvariable names: ",
                  paste(lv.names[bad.idx], collapse = " "))
 
             # rename latent variables (by adding 'lat')
-            #flat.idx <- which(FLAT$op == "=~" & 
+            #flat.idx <- which(FLAT$op == "=~" &
             #                  FLAT$lhs %in% lv.names[bad.idx])
             #FLAT$lhs[flat.idx] <- paste(FLAT$lhs[flat.idx], "lat", sep = "")
- 
+
             # add names to ov.names
             #ov.names <- c(ov.names, lv.names[bad.idx])
             # what about ov.names.y and ov.names.x?
@@ -1215,6 +1215,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     tmp.attr <- attributes(VCOV)
     VCOV1 <- VCOV
     attributes(VCOV1) <- tmp.attr["dim"]
+    # store vcov? new in 0.6-6
+    if(!is.null(lavoptions$store.vcov) && !is.null(VCOV1)) {
+        if(is.logical(lavoptions$store.vcov) && !lavoptions$store.vcov) {
+            VCOV1 <- NULL
+        }
+        if(is.character(lavoptions$store.vcov) &&
+           lavoptions$store.vcov == "default" &&
+           ncol(VCOV1) > 200L) {
+            VCOV1 <- NULL
+        }
+    }
     lavvcov <- list(se = lavoptions$se, information = lavoptions$information,
                     vcov = VCOV1)
 

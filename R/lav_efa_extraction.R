@@ -2,7 +2,7 @@
 # YR Feb 2020
 #
 # - ULS_corner only (for now)
-# - just to get better starting values for ESEM 
+# - just to get better starting values for ESEM
 
 
 # ULS estimation
@@ -68,5 +68,5 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L) {
     list(LAMBDA = LAMBDA, THETA = THETA)
 }
 
-                                                                        
+
 

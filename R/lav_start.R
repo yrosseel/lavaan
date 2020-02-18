@@ -298,9 +298,9 @@ lav_start <- function(start.method    = "default",
                                         lavpartable$group == group.values[g] )
 
                     # get observed indicators for these EFA lv variables
-                    ov.idx <- match(unique(lavpartable$rhs[lambda.idx]), 
+                    ov.idx <- match(unique(lavpartable$rhs[lambda.idx]),
                                     ov.names)
- 
+
                     if(length(ov.idx) > 0L && !any(is.na(ov.idx))) {
                         if(lavsamplestats@missing.flag && nlevels == 1L) {
                             COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,

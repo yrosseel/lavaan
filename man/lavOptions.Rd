@@ -435,6 +435,9 @@ Miscellaneous:
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
       allow the slopestructure to be unrestricted.}
+    \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
+      set to \code{"none"}, store the full variance-covariance matrix of
+      the model parameters in the vcov slot of the fitted lavaan object.}
 }
 
 }
