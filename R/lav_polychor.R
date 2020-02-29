@@ -1,4 +1,4 @@
-# polychoric Y1 and Y2 are both ORDINAL variables
+#  polychoric Y1 and Y2 are both ORDINAL variables
 
 # two-way frequency table
 pc_freq <- function(Y1, Y2) {

@@ -28,7 +28,8 @@ this user-specified baseline model, instead of the default baseline model.}
 output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
 the output as a 1-column matrix. If \code{"text"}, display the
 output using subsections and verbose descriptions. The latter is used
-in the summary output.}
+in the summary output, and does not print the chi-square test by default.
+See the examples how to add the chi-square test in the output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
 used for \code{lavaan} objects.}
 }
@@ -48,4 +49,8 @@ fit <- cfa(HS.model, data=HolzingerSwineford1939)
 fitMeasures(fit)
 fitMeasures(fit, "cfi")
 fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"))
+fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"), 
+            output = "matrix")
+print(fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
+                  output = "text"), add.h0 = TRUE)
 }
