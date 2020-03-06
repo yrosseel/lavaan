@@ -511,7 +511,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # what have we learned from the data?
     if(lavdata@data.type == "none") {
         lavoptions$do.fit <- FALSE
-        lavoptions$start  <- "simple"
+        # check if 'model' was a fitted parameter table
+        if(!is.null(FLAT$est)) {
+            lavoptions$start <- "est"
+        } else {
+            lavoptions$start  <- "simple"
+        }
         lavoptions$se     <- "none"
         lavoptions$test   <- "none"
     } else if(lavdata@data.type == "moment") {

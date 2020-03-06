@@ -30,7 +30,7 @@ lav_start <- function(start.method    = "default",
 
     # shortcut for 'simple'
     # be we should also take care of the 'fixed.x' issue
-    if(identical(start.method, "simple")) {
+    if(start.method == "simple") {
         start <- numeric( length(lavpartable$ustart) )
         start[ which(lavpartable$op == "=~") ] <- 1.0
         start[ which(lavpartable$op == "~*~") ] <- 1.0
@@ -42,6 +42,8 @@ lav_start <- function(start.method    = "default",
         user.idx <- which(!is.na(lavpartable$ustart))
         start[user.idx] <- lavpartable$ustart[user.idx]
         return(start)
+    } else if(start.method == "est") {
+        return(lavpartable$est)
     }
 
     # check start.method

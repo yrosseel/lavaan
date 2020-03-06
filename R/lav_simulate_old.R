@@ -52,6 +52,15 @@ simulateData <- function(
         if(!is.null(model$lhs) && !is.null(model$op)  &&
            !is.null(model$rhs) && !is.null(model$free)) {
             lav <- model
+
+            # until 0.6-5, we only used the 'ustart' column
+            # but what if 'lav' is a fitted lavaan object -> use 'est'
+            if(!is.null(lav$est)) {
+                lav$ustart <- lav$est
+                lav$se <- NULL
+                lav$est <- NULL
+                lav$start <- NULL
+            }
         } else if(is.character(model[[1]])) {
             stop("lavaan ERROR: model is a list, but not a parameterTable?")
         }
