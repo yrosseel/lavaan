@@ -121,34 +121,72 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
             # container
             c1 <- c2 <- character(0L)
 
+            # which type of standard errors?
+            c1 <- c(c1, "Standard errors")
+            if(attr(x, "se") == "robust.huber.white") {
+                tmp.txt <- "sandwich" # since 0.6-6
+            } else {
+                tmp.txt <- attr(x, "se")
+            }
+            c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                                      substring(tmp.txt, 2), sep = ""))
+            # information
             if(attr(x, "se") != "bootstrap") {
-                # 1.
-                c1 <- c(c1, "Information")
+
+                # type for information
+                if(attr(x, "se") == "robust.huber.white") {
+                    c1 <- c(c1, "Information bread")
+                } else {
+                    c1 <- c(c1, "Information")
+                }
                 tmp.txt <- attr(x, "information")
                 c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
                                   substring(tmp.txt, 2), sep = ""))
 
-                # 2.
-                if(attr(x, "information") %in% c("expected", "first.order") ||
-                   attr(x, "observed.information") == "h1") {
-                    c1 <- c(c1, "Information saturated (h1) model")
-                    tmp.txt <- attr(x, "h1.information")
-                    c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
-                                      substring(tmp.txt, 2), sep = ""))
-                }
+                # if observed, which type? (hessian of h1)
                 if(attr(x, "information") == "observed") {
                     c1 <- c(c1, "Observed information based on")
                     tmp.txt <- attr(x, "observed.information")
                     c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
                                       substring(tmp.txt, 2), sep = ""))
                 }
-            } # no bootstrap
 
-            # 3.
-            c1 <- c(c1, "Standard errors")
-            tmp.txt <- attr(x, "se")
-            c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                # if h1 is involved, structured or unstructured?
+                if(attr(x, "information") %in% c("expected", "first.order") ||
+                   attr(x, "observed.information") == "h1") {
+                    if(attr(x, "se") == "robust.huber.white" &&
+                       attr(x, "h1.information") != 
+                       attr(x, "h1.information.meat")) {
+                        c1 <- c(c1, "Information bread saturated (h1) model")
+                    } else {
+                        c1 <- c(c1, "Information saturated (h1) model")
+                    }
+                    tmp.txt <- attr(x, "h1.information")
+                    c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
                                       substring(tmp.txt, 2), sep = ""))
+                }
+
+                # if sandwich, which information for the meat? (first.order)
+                # only print if it is NOT first.order
+                if(attr(x, "se") == "robust.huber.white" &&
+                   attr(x, "information.meat") != "first.order") {
+                    c1 <- c(c1, "Information meat")
+                    tmp.txt <- attr(x, "information.meat")
+                    c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
+                }
+
+                # if sandwich, structured or unstructured for the meat?
+                # only print if it is not the same as h1.information
+                if(attr(x, "se") == "robust.huber.white" &&
+                   attr(x, "h1.information.meat") !=
+                   attr(x, "h1.information")) {
+                    c1 <- c(c1, "Information meat saturated (h1) model")
+                    tmp.txt <- attr(x, "h1.information.meat")
+                    c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
+                }
+            } # no bootstrap
 
             # 4.
             if(attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {

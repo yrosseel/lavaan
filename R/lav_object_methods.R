@@ -727,6 +727,7 @@ parameterEstimates <- parameterestimates <- function(object,
                          "data.frame")
         if(header) {
             attr(LIST, "information") <- object@Options$information
+            attr(LIST, "information.meat") <- object@Options$information.meat
             attr(LIST, "se") <- object@Options$se
             attr(LIST, "group.label") <- object@Data@group.label
             attr(LIST, "level.label") <- object@Data@level.label
@@ -736,6 +737,7 @@ parameterEstimates <- parameterestimates <- function(object,
             attr(LIST, "observed.information") <-
                 object@Options$observed.information
             attr(LIST, "h1.information") <- object@Options$h1.information
+            attr(LIST, "h1.information.meat") <- object@Options$h1.information.meat
             attr(LIST, "header") <- header
             # FIXME: add more!!
         }

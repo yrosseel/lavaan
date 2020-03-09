@@ -126,14 +126,18 @@ lav_options_default <- function(mimic = "lavaan") {
                 bounds                 = "none", # new in 0.6-6
 
                 # inference
-                information            = "default",
-                h1.information         = "structured",
-                #h1.information.se      = "structured",
-                #h1.information.test    = "structured",
                 se                     = "default",
                 test                   = "default",
-                bootstrap              = 1000L,
+
+                information            = "default",
+                information.meat       = "default",
+                h1.information         = "structured",
+                h1.information.meat    = "default",
                 observed.information   = "hessian",
+
+                #h1.information.se      = "structured",
+                #h1.information.test    = "structured",
+                bootstrap              = 1000L,
                 gamma.n.minus.one      = FALSE,
                 #gamma.unbiased         = FALSE,
 
@@ -293,6 +297,11 @@ lav_options_set <- function(opt = NULL) {
         opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
     }
 
+    # convenience (since 0.6-6)
+    if(opt$se == "sandwich") {
+        opt$se <- "robust.huber.white"
+    }
+
 
     # representation
     if(opt$representation == "default") {
@@ -385,7 +394,7 @@ lav_options_set <- function(opt = NULL) {
         # se
         if(opt$se == "default") {
             opt$se <- "standard"
-        } else if(opt$se %in% c("none", "standard", "robust.huber.white")) {
+        } else if(opt$se %in% c("none", "standard", "robust.huber.white", "sandwich")) {
             # nothing to do
         } else if(opt$se == "robust.sem") {
             opt$se <- "robust.huber.white"
@@ -1047,11 +1056,35 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: information must be either \"expected\", \"observed\", or \"first.order\"\n")
     }
 
+    # information meat
+    if(opt$information.meat == "default") {
+        opt$information.meat <- "first.order"
+    } else if(opt$information %in% c("first.order")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: information.meat must be \"first.order\" (for now) \n")
+    }
+
+    if(opt$observed.information == "hessian" ||
+       opt$observed.information == "h1") {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: observed.information must be either \"hessian\", or \"h1\"\n")
+    }
+
     if(opt$h1.information == "structured" ||
        opt$h1.information == "unstructured") {
         # nothing to do
     } else {
         stop("lavaan ERROR: h1.information must be either \"structured\" or \"unstructured\"\n")
+    }
+    if(opt$h1.information.meat == "default") {
+        opt$h1.information.meat <- opt$h1.information
+    } else if(opt$h1.information.meat == "structured" ||
+              opt$h1.information.meat == "unstructured") {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: h1.information.meat must be either \"structured\" or \"unstructured\"\n")
     }
     #if(opt$h1.information.test == "structured" ||
     #   opt$h1.information.test == "unstructured") {

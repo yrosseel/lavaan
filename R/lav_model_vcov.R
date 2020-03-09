@@ -178,6 +178,15 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel       = NULL,
         return(E.inv)
     }
 
+    # new in 0.6-6, check for h1.information.meat
+    lavoptions2 <- lavoptions
+    if(!is.null(lavoptions$h1.information.meat)) {
+        lavoptions2$information <- lavoptions$information.meat
+    }
+    if(!is.null(lavoptions$h1.information.meat)) {
+        lavoptions2$h1.information <- lavoptions$h1.information.meat
+    }
+
     # outer product of case-wise scores
     B0 <-
         lav_model_information_firstorder(lavmodel       = lavmodel,
@@ -186,7 +195,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel       = NULL,
                                          lavcache       = lavcache,
                                          lavimplied     = lavimplied,
                                          lavh1          = lavh1,
-                                         lavoptions     = lavoptions,
+                                         lavoptions     = lavoptions2,
                                          extra          = TRUE,
                                          check.pd       = FALSE,
                                          augmented      = FALSE,
