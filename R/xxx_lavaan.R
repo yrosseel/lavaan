@@ -221,13 +221,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
 
     # handle for lv.names that are also observed variables (new in 0.6-6)
-    if(length(lv.names) > 0L) {
+    LV.names <- unique(unlist(lv.names))
+    if(length(LV.names) > 0L) {
 
         # check for lv.names in data/cov
         if(!is.null(data)) {
-            bad.idx <- which(lv.names %in% names(data))
+            bad.idx <- which(LV.names %in% names(data))
         } else if(!is.null(sample.cov)) {
-            bad.idx <- which(lv.names %in% rownames(data))
+            bad.idx <- which(LV.names %in% rownames(data))
         } else {
             bad.idx <- integer(0L)
         }
@@ -236,7 +237,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: some latent variable names collapse ",
                  "with observed\n\t\tvariable names: ",
-                 paste(lv.names[bad.idx], collapse = " "))
+                 paste(LV.names[bad.idx], collapse = " "))
 
             # rename latent variables (by adding 'lat')
             #flat.idx <- which(FLAT$op == "=~" &
@@ -405,13 +406,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             opt$categorical <- TRUE
         } else if(is.data.frame(data)) {
             # first check if we can find ov.names.y in Data
-            idx.missing <- which(!(ov.names.y %in% names(data)))
+            OV.names.y <- unique(unlist(ov.names.y))
+            idx.missing <- which(!(OV.names.y %in% names(data)))
             if(length(idx.missing)) {
                 stop("lavaan ERROR: missing observed variables in dataset: ",
-                    paste(ov.names.y[idx.missing], collapse=" "))
+                    paste(OV.names.y[idx.missing], collapse=" "))
             }
-            if(any(sapply(data[, unique(unlist(ov.names.y))],
-                             inherits, "ordered")) ) {
+            if(any(sapply(data[, OV.names.y], inherits, "ordered")) ) {
                 opt$categorical <- TRUE
             }
         }

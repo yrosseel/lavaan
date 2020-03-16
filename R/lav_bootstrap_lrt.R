@@ -28,7 +28,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
     # prepare
     LRT <- rep(as.numeric(NA), R)
-    if((h1@optim$fx - h0@optim$fx) > (.Machine$double.eps * 10)) {
+    if((h1@optim$fx - h0@optim$fx) > sqrt(.Machine$double.eps)) {
         # restricted fit should not be better!
         cat(" ... h0@optim$fx = ", h0@optim$fx, "h1@optim$fx = ", h1@optim$fx,
             "h0 should not be better!\n")
@@ -285,7 +285,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                 " fx = ", fit.h1@optim$fx, "\n")
 
         # store LRT
-        if((fit.h1@optim$fx - fit.h0@optim$fx) > (.Machine$double.eps * 10)) {
+        if((fit.h1@optim$fx - fit.h0@optim$fx) > sqrt(.Machine$double.eps)) {
             #if((fit.h1@optim$fx - fit.h0@optim$fx) > 0.0) {
             if (verbose)
                 cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@optim$fx - fit.h0@optim$fx, "\n")

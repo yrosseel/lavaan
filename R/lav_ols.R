@@ -81,15 +81,22 @@ start = function() {
     if(nexo > 0L) {
         if(length(missing.idx) > 0L) {
             fit.lm <- lm.fit(y=y[-missing.idx], x=X[-missing.idx,,drop=FALSE])
+            N <- nobs - length(missing.idx)
         } else {
             fit.lm <- lm.fit(y=y, x=X)
+            N <- nobs
         }
         #fit.lm <- lm.wfit(y=y, x=X, w=weights)
         beta.start <- fit.lm$coefficients
-         var.start <- crossprod(fit.lm$residuals)/nobs
+         var.start <- crossprod(fit.lm$residuals)/N
     } else {
+        if(length(missing.idx) > 0L) {
+            N <- nobs - length(missing.idx)
+        } else {
+            N <- nobs
+        }
         beta.start <- mean(y, na.rm=TRUE)
-         var.start <-  var(y, na.rm=TRUE)*(nobs-1)/nobs # ML
+         var.start <-  var(y, na.rm=TRUE)*(N-1)/N # ML
     }
     .self$theta.start <- c( beta.start, var.start )
 },

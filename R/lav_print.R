@@ -155,7 +155,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
                 if(attr(x, "information") %in% c("expected", "first.order") ||
                    attr(x, "observed.information") == "h1") {
                     if(attr(x, "se") == "robust.huber.white" &&
-                       attr(x, "h1.information") != 
+                       attr(x, "h1.information") !=
                        attr(x, "h1.information.meat")) {
                         c1 <- c(c1, "Information bread saturated (h1) model")
                     } else {

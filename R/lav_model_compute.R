@@ -36,11 +36,17 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
                 attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
                 attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
             } else {
-                ## FIXME
                 ## since we already do an 'eigen' decomposition, we should
-                ## 'reuse' that information, instead of doing a new cholesky
-                Sigma.hat.inv <-  inv.chol(Sigma.hat[[g]], logdet=TRUE)
+                ## 'reuse' that information, instead of doing a new cholesky?
+                # EV <- eigen(Sigma.hat[[g]], symmetric = TRUE)
+                # Sigma.hat.inv <- tcrossprod(EV$vectors / rep(EV$values,
+                #        each = length(EV$values)), EV$vectors)
+                # Sigma.hat.log.det <- sum(log(EV$values))
+
+                ## --> No, chol() is much (x2) times faster
+                Sigma.hat.inv <-  inv.chol(Sigma.hat[[g]], logdet = TRUE)
                 Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+
                 attr(Sigma.hat[[g]], "po") <- TRUE
                 attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
                 attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det

@@ -13,6 +13,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
     Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
     x <- lav_model_get_parameters(lavmodel = lavmodel)
     for(j in 1:lavmodel@nx.free) {
+        # FIXME: the number below should vary as a function of 'x[j]'
         h.j <- 1e-06
         x.left <- x.left2 <- x.right <- x.right2 <- x
         x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
@@ -62,7 +63,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
 
     # check if Hessian is (almost) symmetric, as it should be
     max.diff <- max(abs(Hessian - t(Hessian)))
-    if(max.diff > 100 * sqrt(.Machine$double.eps)) {
+    if(max.diff > sqrt(.Machine$double.eps) * max(diag(Hessian))) {
         # hm, Hessian is not symmetric -> WARNING!
         warning("lavaan WARNING: Hessian is not fully symmetric. Max diff = ",
                 max.diff)
