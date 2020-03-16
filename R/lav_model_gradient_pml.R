@@ -25,6 +25,7 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                        num.idx    = NULL,       # which variables are numeric
                        X          = NULL,       # data
                        eXo        = NULL,       # external covariates
+                       wt         = NULL,       # case weights (not used yet)
                        lavcache   = NULL,       # housekeeping stuff
                        PI         = NULL,       # slopes
                        missing    = "listwise", # how to deal with missings
@@ -200,10 +201,12 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                     stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
                 }
 
-                SC.COR.UNI <- ps_cor_scores_no_exo(Y1 = X[,i], Y2 = X[,j],
-                                                   var.y1 = Sigma.hat[i,i],
-                                                   eta.y1 = rep(Mu.hat[i], N),
+                SC.COR.UNI <- lav_bvmix_cor_scores(Y1 = X[,i], Y2 = X[,j],
+                                                   eXo = NULL, wt = wt,
+                                                   evar.y1 = Sigma.hat[i,i],
+                                                   beta.y1 = Mu.hat[i],
                                                    th.y2 = TH[ th.idx == j ],
+                                                   sl.y2 = NULL,
                                                    rho = Cor.hat[i,j],
                                                    sigma.correction = TRUE)
 
@@ -245,9 +248,10 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                     stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
                 }
 
-                SC.COR.UNI <- ps_cor_scores_no_exo(Y1 = X[,j], Y2 = X[,i],
-                                                   var.y1 = Sigma.hat[j,j],
-                                                   eta.y1 = rep(Mu.hat[j], N),
+                SC.COR.UNI <- lav_bvmix_cor_scores(Y1 = X[,j], Y2 = X[,i],
+                                                   eXo = NULL, wt = wt,
+                                                   evar.y1 = Sigma.hat[j,j],
+                                                   beta.y1 = Mu.hat[j],
                                                    th.y2 = TH[ th.idx == i ],
                                                    rho = Cor.hat[i,j],
                                                    sigma.correction = TRUE)
@@ -287,17 +291,17 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
                 if(nexo == 0L) {
-                    SC.COR.UNI <- pc_cor_scores(Y1  = X[,i],
-                                                Y2  = X[,j],
-                                                eXo = NULL,
-                                                rho = Sigma.hat[i,j],
-                                                fit.y1 = NULL, # fixme
-                                                fit.y2 = NULL, # fixme
-                                                th.y1 = TH[ th.idx == i ],
-                                                th.y2 = TH[ th.idx == j ],
-                                                sl.y1 = NULL,
-                                                sl.y2 = NULL,
-                                                na.zero = TRUE)
+                    SC.COR.UNI <-
+                        lav_bvord_cor_scores(Y1  = X[,i], Y2  = X[,j],
+                                             eXo = NULL, wt = wt,
+                                             rho = Sigma.hat[i,j],
+                                             fit.y1 = NULL, # fixme
+                                             fit.y2 = NULL, # fixme
+                                             th.y1 = TH[ th.idx == i ],
+                                             th.y2 = TH[ th.idx == j ],
+                                             sl.y1 = NULL,
+                                             sl.y2 = NULL,
+                                             na.zero = TRUE)
                 } else {
                     SC.COR.UNI <-
                         pc_cor_scores_PL_with_cov(Y1 = X[,i],

@@ -765,7 +765,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                 Y1 <- X[[g]][,idx1]
                 Y2 <- X[[g]][,idx2]
                 # FREQ <- table(Y1, Y2) # we loose missings; useNA is ugly
-                FREQ <- pc_freq(Y1, Y2)
+                FREQ <- lav_bvord_freq(Y1, Y2)
 
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(x[1], ncell),
@@ -846,7 +846,7 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
             for(i in seq_len(nvar-1L)) {
                 for(j in (i+1L):nvar) {
                     if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
-                        PI.table <- pc_PI(rho   = Sigmahat[i,j],
+                        PI.table <- lav_bvord_noexo_pi(rho   = Sigmahat[i,j],
                                           th.y1 = TH[[g]][ th.idx[[g]] == i ],
                                           th.y2 = TH[[g]][ th.idx[[g]] == j ])
                         PI.group <- c(PI.group, lav_matrix_vec(PI.table))
@@ -926,7 +926,7 @@ lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL,
         for(i in seq_len(nvar-1L)) {
             for(j in (i+1L):nvar) {
                 if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
-                    PI.table <- pc_PI(rho   = Sigmahat[i,j],
+                    PI.table <- lav_bvord_noexo_pi(rho   = Sigmahat[i,j],
                                       th.y1 = TH[[g]][ th.idx == i ],
                                       th.y2 = TH[[g]][ th.idx == j ])
                     PI.group <- c(PI.group, lav_matrix_vec(PI.table))

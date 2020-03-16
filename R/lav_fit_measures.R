@@ -1267,7 +1267,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     if(any(c("cn_05", "cn_01") %in% fit.measures)) {
         # catch df=0, X2=0
-        if(df == 0 && X2 == 0) {
+        if(df == 0 && X2 < .Machine$double.eps) {
             CN_05 <- as.numeric(NA)
             CN_01 <- as.numeric(NA)
         } else {

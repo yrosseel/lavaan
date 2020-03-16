@@ -18,6 +18,7 @@ muthen1984 <- function(Data              = NULL,
                        ov.levels         = NULL,
                        ov.names.x        = character(0L),
                        eXo               = NULL,
+                       wt                = NULL,
                        verbose           = FALSE,
                        missing           = "listwise",
                        WLS.W             = TRUE,
@@ -77,7 +78,7 @@ muthen1984 <- function(Data              = NULL,
         cat("Exogenous variable names:\n"); print(ov.names.x); cat("\n")
     }
 
-    step1 <- lav_samplestats_step1(Y = Data, ov.names = ov.names,
+    step1 <- lav_samplestats_step1(Y = Data, wt = wt, ov.names = ov.names,
         ov.types = ov.types, ov.levels = ov.levels, ov.names.x = ov.names.x,
         eXo = eXo, scores.flag = WLS.W, group = group)
 
@@ -112,7 +113,7 @@ muthen1984 <- function(Data              = NULL,
     # stage two -- correlations
 
     if(verbose) cat("\n\nSTEP 2: covariances/correlations:\n")
-    COR <- lav_samplestats_step2(UNI = FIT, ov.names = ov.names,
+    COR <- lav_samplestats_step2(UNI = FIT, wt = wt, ov.names = ov.names,
                                  zero.add = zero.add,
                                  zero.keep.margins = zero.keep.margins,
                                  zero.cell.warn = zero.cell.warn,
@@ -169,9 +170,10 @@ muthen1984 <- function(Data              = NULL,
                 var.idx_j <- NCOL(SC.TH) + match(j, num.idx)
             }
             if(ov.types[i] == "numeric" && ov.types[j] == "numeric") {
-                SC.COR.UNI <- pp_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[i]],
-                                            fit.y2=FIT[[j]])
+                SC.COR.UNI <- lav_bvreg_cor_scores(rho    = COR[i,j],
+                                                   fit.y1 = FIT[[i]],
+                                                   fit.y2 = FIT[[j]],
+                                                   wt     = wt)
 
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
@@ -199,10 +201,15 @@ muthen1984 <- function(Data              = NULL,
                 H21[pstar.idx, var.idx_j] <-
                     (sqrt(VAR[i]) * COR[i,j]) / (2*sqrt(VAR[j]))
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[i]) * sqrt(VAR[j])
+
+
+
+
             } else if(ov.types[i] == "numeric" && ov.types[j] == "ordered") {
-                SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[i]],
-                                            fit.y2=FIT[[j]])
+                SC.COR.UNI <- lav_bvmix_cor_scores(rho    = COR[i,j],
+                                                   fit.y1 = FIT[[i]],
+                                                   fit.y2 = FIT[[j]],
+                                                   wt     = wt)
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
 
@@ -224,10 +231,14 @@ muthen1984 <- function(Data              = NULL,
                 # H21 only need for VAR
                 H21[pstar.idx,  var.idx_i] <- COR[i,j] / (2*sqrt(VAR[i]))
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[i])
+
+
+
             } else if(ov.types[j] == "numeric" && ov.types[i] == "ordered") {
-                SC.COR.UNI <- ps_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[j]],
-                                            fit.y2=FIT[[i]])
+                SC.COR.UNI <- lav_bvmix_cor_scores(rho    = COR[i,j],
+                                                   fit.y1 = FIT[[j]],
+                                                   fit.y2 = FIT[[i]],
+                                                   wt     = wt)
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
 
@@ -249,11 +260,15 @@ muthen1984 <- function(Data              = NULL,
                 # H21 only for VAR
                 H21[pstar.idx, var.idx_j] <- COR[i,j] / (2*sqrt(VAR[j]))
                 H22[pstar.idx, pstar.idx] <- sqrt(VAR[j])
+
+
+
             } else if(ov.types[i] == "ordered" && ov.types[j] == "ordered") {
                 # polychoric correlation
-                SC.COR.UNI <- pc_cor_scores(rho=COR[i,j],
-                                            fit.y1=FIT[[i]],
-                                            fit.y2=FIT[[j]])
+                SC.COR.UNI <- lav_bvord_cor_scores(rho    = COR[i,j],
+                                                   fit.y1 = FIT[[i]],
+                                                   fit.y2 = FIT[[j]],
+                                                   wt     = wt)
                 # RHO
                 SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
 

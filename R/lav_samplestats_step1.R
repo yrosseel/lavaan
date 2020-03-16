@@ -1,4 +1,5 @@
 lav_samplestats_step1 <- function(Y,
+                                  wt          = NULL, # new in 0.6-6
                                   ov.names    = NULL,
                                   ov.types    = NULL,
                                   ov.levels   = NULL,
@@ -41,55 +42,57 @@ lav_samplestats_step1 <- function(Y,
         th.idx <- th.start.idx[i]:th.end.idx[i]
         sl.idx <- seq(i, by=nvar, length.out=nexo)
         if(ov.types[i] == "numeric") {
-            fit <- lavOLS(y=Y[,i], X=eXo)
+            fit <- lav_uvreg_fit(y = Y[,i], X = eXo, wt = wt)
             if( any(is.na(fit$theta)) ) {
-                stop("lavaan ERROR: linear regression failed for ",ov.names[i],
+                stop("lavaan ERROR: linear regression failed for ", ov.names[i],
                      "; X may not be of full rank in group ", group)
             }
             FIT[[i]] <- fit
             # compute mean and variance
-            TH[[i]] <- TH.NOX[[i]] <- unname(fit$theta[1L])
-            VAR[i] <- unname(fit$theta[fit$npar])
+            TH[[i]] <- TH.NOX[[i]] <- fit$theta[1L]
+            VAR[i] <- fit$theta[fit$var.idx]
             TH.NAMES[[i]] <- ov.names[i]; TH.IDX[[i]] <- 0L
             if(scores.flag) {
-                scores <- fit$scores()
+                scores <- lav_uvreg_scores(y = Y[,i], X = eXo, wt = wt)
                 SC.TH[,th.idx] <- scores[,1L]
-                SC.VAR[,i] <- scores[,fit$npar]
+                SC.VAR[,i] <- scores[,fit$var.idx]
             }
             if(nexo > 0L) {
-                SLOPES[i,] <- fit$theta[-c(1L, fit$npar)]
+                SLOPES[i,] <- fit$theta[-c(1L, fit$var.idx)]
                 if(scores.flag) {
-                    SC.SL[,sl.idx] <- scores[,-c(1L, fit$npar),drop=FALSE]
+                    SC.SL[,sl.idx] <- scores[,-c(1L, fit$var.idx),drop = FALSE]
                 }
-                TH.NOX[[i]] <- mean(Y[,i], na.rm=TRUE)
+                TH.NOX[[i]] <- mean(Y[,i], na.rm = TRUE)
             }
         } else if(ov.types[i] == "ordered") {
             # check if we have enough categories in this group
             # FIXME: should we more tolerant here???
-            y.freq <- tabulate(Y[,i], nbins=ov.levels[i])
-            if(length(y.freq) != ov.levels[i])
+            y.freq <- tabulate(Y[,i], nbins = ov.levels[i])
+            if(length(y.freq) != ov.levels[i]) {
                 stop("lavaan ERROR: variable ", ov.names[i], " has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") in group ", group)
-            if(any(y.freq == 0L))
+            }
+            if(any(y.freq == 0L)) {
                 stop("lavaan ERROR: some categories of variable `", ov.names[i], "' are empty in group ", group, "; frequencies are [", paste(y.freq, collapse=" "), "]")
-            fit <- lavProbit(y=Y[,i], X=eXo)
+            }
+            fit <- lav_uvord_fit(y = Y[,i], X = eXo, wt = wt)
             if( any(is.na(fit$theta)) ) {
-                stop("lavaan ERROR: probit regression failed for ",ov.names[i],
+                stop("lavaan ERROR: probit regression failed for ", ov.names[i],
                      "; X may not be of full rank in group ", group)
             }
             FIT[[i]] <- fit
-            TH[[i]] <- unname(fit$theta[fit$th.idx])
-            TH.NOX[[i]] <- pc_th(Y=Y[,i])
+            TH[[i]] <- fit$theta[fit$th.idx]
+            TH.NOX[[i]] <- lav_uvord_th(y = Y[,i], wt = wt)
             if(scores.flag) {
-                scores <- fit$scores()
-                SC.TH[,th.idx] <- scores[,fit$th.idx,drop=FALSE]
+                scores <- lav_uvord_scores(y = Y[,i], X = eXo, wt = wt)
+                SC.TH[,th.idx] <- scores[, fit$th.idx, drop = FALSE]
             }
             SLOPES[i,] <- fit$theta[fit$slope.idx]
             if(scores.flag) {
-                SC.SL[,sl.idx] <- scores[,fit$slope.idx,drop=FALSE]
+                SC.SL[,sl.idx] <- scores[, fit$slope.idx, drop = FALSE]
             }
             VAR[i] <- 1.0
             TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]),
-                                   sep="")
+                                   sep = "")
             TH.IDX[[i]] <- rep(i, length(TH[[i]]))
         } else {
             stop("lavaan ERROR: unknown ov.types:", ov.types[i])

@@ -1,4 +1,5 @@
 lav_samplestats_step2 <- function(UNI               = NULL,
+                                  wt                = NULL,
                                   ov.names          = NULL, # error message only
 
                                   # polychoric and empty cells
@@ -22,49 +23,47 @@ lav_samplestats_step2 <- function(UNI               = NULL,
     # one-by-one (for now)
     for(j in seq_len(nvar-1L)) {
         for(i in (j+1L):nvar) {
-            #if(verbose) { cat(" i = ", i, " j = ", j,
-            #                  "[",ov.names[i], "-", ov.names[j], "] ",
-            #                  "(",ov.types[i], "-", ov.types[j], ")\n") }
-            #pstar.idx <- PSTAR[i,j]
-            #COR.NAMES[pstar.idx] <- paste(ov.names[i],"~~",ov.names[j],sep="")
-            if( inherits(UNI[[i]], "lavOLS") &&
-                inherits(UNI[[j]], "lavOLS") ) {
-                if(UNI[[i]]$nexo > 0L) {
-                    Y1 <- UNI[[i]]$y - UNI[[i]]$yhat
-                    Y2 <- UNI[[j]]$y - UNI[[j]]$yhat
-                } else {
-                    Y1 <- UNI[[i]]$y; Y2 <- UNI[[j]]$y
-                }
-                COR[i,j] <- COR[j,i] <- cor(Y1, Y2, use="pairwise.complete.obs")
-            } else if( inherits(UNI[[i]], "lavOLS") &&
-                       inherits(UNI[[j]], "lavProbit") ) {
+            if( is.null(UNI[[i]]$th.idx) &&
+                is.null(UNI[[j]]$th.idx) ) {
+                rho <- lav_bvreg_cor_twostep(fit.y1 = UNI[[i]], # linear
+                                             fit.y2 = UNI[[j]], # linear
+                                             wt     = wt)
+                COR[i,j] <- COR[j,i] <- rho
+            } else if( is.null(UNI[[i]]$th.idx) &&
+                      !is.null(UNI[[j]]$th.idx) ) {
                 # polyserial
-                out <- ps_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]])
-                COR[i,j] <- COR[j,i] <- out
-            } else if( inherits(UNI[[j]], "lavOLS") &&
-                       inherits(UNI[[i]], "lavProbit") ) {
+                rho <- lav_bvmix_cor_twostep(fit.y1 = UNI[[i]], # linear
+                                             fit.y2 = UNI[[j]], # ordinal
+                                             wt     = wt)
+                COR[i,j] <- COR[j,i] <- rho
+            } else if( is.null(UNI[[j]]$th.idx) &&
+                      !is.null(UNI[[i]]$th.idx) ) {
                 # polyserial
-                out <- ps_cor_TS(fit.y1=UNI[[j]], fit.y2=UNI[[i]])
-                COR[i,j] <- COR[j,i] <- out
-            } else if( inherits(UNI[[i]], "lavProbit") &&
-                       inherits(UNI[[j]], "lavProbit") ) {
+                rho <- lav_bvmix_cor_twostep(fit.y1 = UNI[[j]], # linear
+                                             fit.y2 = UNI[[i]], # ordinal
+                                             wt     = wt)
+                COR[i,j] <- COR[j,i] <- rho
+            } else if( !is.null(UNI[[i]]$th.idx) &&
+                       !is.null(UNI[[j]]$th.idx) ) {
                 # polychoric correlation
-                out <- pc_cor_TS(fit.y1=UNI[[i]], fit.y2=UNI[[j]],
-                                 method = optim.method,
-                                 zero.add = zero.add,
-                                 zero.keep.margins = zero.keep.margins,
-                                 zero.cell.warn = zero.cell.warn,
-                                 zero.cell.flag = zero.cell.tables,
-                                 Y1.name = ov.names[i],
-                                 Y2.name = ov.names[j])
+                rho <- lav_bvord_cor_twostep(fit.y1 = UNI[[j]], # ordinal
+                                             fit.y2 = UNI[[i]], # ordinal
+                                             wt     = wt,
+                                 method             = optim.method,
+                                 zero.add           = zero.add,
+                                 zero.keep.margins  = zero.keep.margins,
+                                 zero.cell.warn     = zero.cell.warn,
+                                 zero.cell.flag     = zero.cell.tables,
+                                 Y1.name            = ov.names[i],
+                                 Y2.name            = ov.names[j])
                 if(zero.cell.tables) {
-                    if(attr(out, "zero.cell.flag")) {
+                    if(attr(rho, "zero.cell.flag")) {
                         zero.var1 <- c(zero.var1, ov.names[j])
                         zero.var2 <- c(zero.var2, ov.names[i])
                     }
-                    attr(out, "zero.cell.flag") <- NULL
+                    attr(rho, "zero.cell.flag") <- NULL
                 }
-                COR[i,j] <- COR[j,i] <- out
+                COR[i,j] <- COR[j,i] <- rho
             }
             # check for near 1.0 correlations
             if(abs(COR[i,j]) > 0.99) {

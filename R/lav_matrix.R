@@ -948,8 +948,13 @@ lav_matrix_crossprod <- function(A, B) {
 
     out <- apply(B, 2L, function(x) colSums(A * x, na.rm = TRUE))
 
-    # always return a matrix
-    as.matrix(out)
+    # only when A is a vector, and B is a matrix, we get back a vector
+    # while the result should be a matrix with 1-row
+    if(!is.matrix(out)) {
+        out <- t(matrix(out))
+    }
+
+    out
 }
 
 
@@ -1371,10 +1376,10 @@ lav_matrix_transform_mean_cov <- function(Y,
 }
 
 # weighted column means
-# 
+#
 # for each column in Y: mean = sum(wt * Y)/sum(wt)
 #
-# if we have missing values, we use only the observations and weights 
+# if we have missing values, we use only the observations and weights
 # that are NOT missing
 #
 lav_matrix_mean_wt <- function(Y, wt = NULL) {
@@ -1398,7 +1403,7 @@ lav_matrix_mean_wt <- function(Y, wt = NULL) {
 }
 
 # weighted column variances
-# 
+#
 # for each column in Y: var = sum(wt * (Y - w.mean(Y))^2) / N
 #
 # where N = sum(wt) - 1 (method = "unbiased") assuming wt are frequency weights
@@ -1407,7 +1412,7 @@ lav_matrix_mean_wt <- function(Y, wt = NULL) {
 # Note: another approach (when the weights are 'reliability weights' is to
 #       use N = sum(wt) - sum(wt^2)/sum(wt) (not implemented here)
 #
-# if we have missing values, we use only the observations and weights 
+# if we have missing values, we use only the observations and weights
 # that are NOT missing
 #
 lav_matrix_var_wt <- function(Y, wt = NULL, method = c("unbiased", "ML")) {
@@ -1441,8 +1446,8 @@ lav_matrix_var_wt <- function(Y, wt = NULL, method = c("unbiased", "ML")) {
 # weighted variance-covariance matrix
 #
 # always dividing by sum(wt) (for now) (=ML version)
-# 
-# if we have missing values, we use only the observations and weights 
+#
+# if we have missing values, we use only the observations and weights
 # that are NOT missing
 #
 # same as cov.wt(Y, wt, method = "ML")

@@ -18,7 +18,7 @@ importFrom("stats",
            "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq",
            "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif",
            "sd", "terms", "uniroot", "var", "weighted.mean", "aggregate",
-           "dlogis", "qlogis",          
+           "dlogis", "qlogis", "optimize",
            # generics
            "coef", "residuals", "resid", "fitted.values", "fitted",
            "predict", "update", "anova", "vcov")
