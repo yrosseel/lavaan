@@ -8,9 +8,7 @@ lav_samplestats_step2 <- function(UNI               = NULL,
                                   zero.cell.warn    = FALSE,
 
                                   # keep track of tables with zero cells?
-                                  zero.cell.tables  = TRUE,
-
-                                  optim.method      = "nlminb") {
+                                  zero.cell.tables  = TRUE) {
 
     nvar <- length(UNI)
     COR <- diag(nvar)
@@ -49,7 +47,6 @@ lav_samplestats_step2 <- function(UNI               = NULL,
                 rho <- lav_bvord_cor_twostep(fit.y1 = UNI[[j]], # ordinal
                                              fit.y2 = UNI[[i]], # ordinal
                                              wt     = wt,
-                                 method             = optim.method,
                                  zero.add           = zero.add,
                                  zero.keep.margins  = zero.keep.margins,
                                  zero.cell.warn     = zero.cell.warn,

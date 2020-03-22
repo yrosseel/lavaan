@@ -1,9 +1,119 @@
 # the weighted bivariate linear regression model
-# YR 14 March 2020 ((replacing the old lav_pearson.R routines)
+# YR 14 March 2020 ((replacing the old lav_pearson.R + lav_binorm.R routines)
 #
+# - bivariate standard normal
 # - pearson correlation
 # - bivariate linear regression
 # - using sampling weights wt
+
+
+# density of a bivariate __standard__ normal
+lav_dbinorm <- dbinorm <- function(u, v, rho, force.zero = FALSE) {
+    # dirty hack to handle extreme large values for rho
+    # note that u, v, and rho are vectorized!
+    RHO.limit <- 0.9999
+    abs.rho <- abs(rho); idx <- which(abs.rho > RHO.limit)
+    if(length(idx) > 0L) { 
+        rho[idx] <- sign(rho[idx]) * RHO.limit
+    }
+
+    R <- 1 - rho*rho
+    out <- 1/(2*pi*sqrt(R)) * exp( - 0.5*(u*u - 2*rho*u*v + v*v)/R )
+
+    # if abs(u) or abs(v) are very large (say, >10), set result equal 
+    # to exactly zero
+    idx <- which( abs(u) > 10 | abs(v) > 10)
+    if(length(idx) > 0L && force.zero) {
+        out[idx] <- 0    
+    }
+
+    out
+}
+
+# partial derivative - rho
+lav_dbinorm_drho <- function(u, v, rho) {
+    R <- 1 - rho*rho
+    dbinorm(u,v,rho) * (u*v*R -rho*(u*u - 2*rho*u*v + v*v) + rho*R )/(R*R)
+}
+
+# partial derivative - u
+lav_dbinorm_du <- function(u, v, rho) {
+    R <- 1 - rho*rho
+    -dbinorm(u,v,rho) * (u - rho*v)/R
+}
+
+# partial derivative - v
+lav_dbinorm_dv <- function(u, v, rho) {
+    R <- 1 - rho*rho
+    -dbinorm(u,v,rho) * (v - rho*u)/R
+}
+
+
+# CDF of bivariate standard normal
+# function pbinorm(upper.x, upper.y, rho)
+
+# partial derivative pbinorm - upper.x
+lav_pbinorm_dupperx <- function(upper.x, upper.y, rho=0.0) {
+    R <- 1 - rho*rho
+    dnorm(upper.x) * pnorm( (upper.y - rho*upper.x)/sqrt(R) )
+}
+
+lav_pbinorm_duppery <- function(upper.x, upper.y, rho=0.0) {
+    R <- 1 - rho*rho
+    dnorm(upper.y) * pnorm( (upper.x - rho*upper.y)/sqrt(R) )
+}
+
+lav_pbinorm_drho <- function(upper.x, upper.y, rho=0.0) {
+    dbinorm(upper.x, upper.y, rho)
+}
+
+
+# switch between pbivnorm, mnormt, ...
+pbinorm <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                    lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
+    pbinorm2(upper.x=upper.x, upper.y=upper.y, rho=rho,
+             lower.x=lower.x, lower.y=lower.y, check=check)
+
+}
+
+# using vectorized version (a la pbivnorm)
+pbinorm2 <- function(upper.x=NULL, upper.y=NULL, rho=0.0,
+                     lower.x=-Inf, lower.y=-Inf, check=FALSE) {
+
+    N <- length(upper.x)
+    stopifnot(length(upper.y) == N)
+    if(N > 1L) {
+        if(length(rho) == 1L)
+            rho <- rep(rho, N)
+        if(length(lower.x) == 1L)
+            lower.x <- rep(lower.x, N)
+        if(length(lower.y) == 1L)
+            lower.y <- rep(lower.y, N)
+    }
+
+   upper.only <- all(lower.x == -Inf & lower.y == -Inf)
+   if(upper.only) {
+        upper.x[upper.x == +Inf] <-  exp(10) # better pnorm?
+        upper.y[upper.y == +Inf] <-  exp(10)
+        upper.x[upper.x == -Inf] <- -exp(10)
+        upper.y[upper.y == -Inf] <- -exp(10)
+        res <- pbivnorm(upper.x, upper.y, rho=rho)
+    } else {
+        # pbivnorm does not handle -Inf well...
+        lower.x[lower.x == -Inf] <- -exp(10)
+        lower.y[lower.y == -Inf] <- -exp(10)
+        res <- pbivnorm(upper.x, upper.y, rho=rho) -
+               pbivnorm(lower.x, upper.y, rho=rho) -
+               pbivnorm(upper.x, lower.y, rho=rho) +
+               pbivnorm(lower.x, lower.y, rho=rho)
+    }
+
+    res
+}
+
+
+
 
 # (summed) loglikelihood
 lav_bvreg_logl <- function(Y1 = NULL, Y2 = NULL, eXo = NULL, wt = NULL,

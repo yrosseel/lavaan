@@ -21,7 +21,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       test              = "standard",
                                       information       = "expected",
                                       ridge             = 1e-5,
-                                      optim.method      = "nlminb",
                                       zero.add          = c(0.5, 0.0),
                                       zero.keep.margins = TRUE,
                                       zero.cell.warn    = TRUE,
@@ -234,15 +233,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             if(conditional.x) {
                 CAT <- muthen1984(Data=X[[g]],
+                                  wt = WT[[g]],
                                   ov.names=ov.names[[g]],
                                   ov.types=ov.types,
                                   ov.levels=ov.levels,
                                   ov.names.x=ov.names.x[[g]],
                                   eXo=eXo[[g]],
                                   group = g, # for error messages only
-                                  missing = missing, # listwise or pairwise?
                                   WLS.W = WLS.W,
-                                  optim.method = optim.method,
                                   zero.add = zero.add,
                                   zero.keep.margins = zero.keep.margins,
                                   zero.cell.warn = FALSE,
@@ -250,15 +248,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                   verbose=debug)
             } else {
                 CAT <- muthen1984(Data=X[[g]],
+                                  wt = WT[[g]],
                                   ov.names=ov.names[[g]],
                                   ov.types=ov.types,
                                   ov.levels=ov.levels,
                                   ov.names.x=NULL,
                                   eXo=NULL,
                                   group = g, # for error messages only
-                                  missing = missing, # listwise or pairwise?
                                   WLS.W = WLS.W,
-                                  optim.method = optim.method,
                                   zero.add = zero.add,
                                   zero.keep.margins = zero.keep.margins,
                                   zero.cell.warn = FALSE,
@@ -630,7 +627,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             # ginv does the trick, but perhaps this is overkill
                             # just removing the zero rows/cols, invert, and
                             # fill back in the zero rows/cols would do it
-                            WLS.V[[g]] <- MASS::ginv(NACOV[[g]])
+                            #WLS.V[[g]] <- MASS::ginv(NACOV[[g]])
+                            WLS.V[[g]] <- lav_matrix_symmetric_inverse(NACOV[[g]])
                         }
                     } else if(estimator == "DWLS") {
                         dacov <- diag(NACOV[[g]])

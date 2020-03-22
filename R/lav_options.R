@@ -144,7 +144,6 @@ lav_options_default <- function(mimic = "lavaan") {
                 # optimization
                 control                = list(),
                 optim.method           = "nlminb",
-                optim.method.cor       = "nlminb",
                 optim.force.converged  = FALSE,
                 optim.gradient         = "analytic",
                 optim.init_nelder_mead = FALSE,

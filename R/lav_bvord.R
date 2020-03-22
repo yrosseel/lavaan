@@ -65,7 +65,7 @@ lav_bvord_noexo_pi <- function(rho, th.y1, th.y2) {
     PI <- BI[-1L,-1L] - BI[-1L,-nc] - BI[-nr,-1L] + BI[-nr,-nc]
 
     # all elements should be strictly positive
-    PI[PI < .Machine$double.eps] <- .Machine$double.eps
+    PI[PI < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
 
     PI
 }
@@ -134,6 +134,8 @@ lav_bvord_noexo_gnorm <- function(rho, th.y1, th.y2) {
 lav_bvord_logl <- function(Y1, Y2, wt = NULL, eXo = NULL,
                            rho = NULL,
                            fit.y1 = NULL, fit.y2 = NULL,
+                           th.y1 = NULL, th.y2 = NULL,
+                           sl.y1 = NULL, sl.y2 = NULL,
                            freq = NULL) {
     stopifnot(!is.null(rho))
 
@@ -142,6 +144,15 @@ lav_bvord_logl <- function(Y1, Y2, wt = NULL, eXo = NULL,
     }
     if(is.null(fit.y2)) {
         fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
+    }
+
+    # update fit.y1/fit.y2 if parameters are provided manually
+    if(!is.null(th.y1) || !is.null(th.y2) || 
+       !is.null(sl.y1) || is.null(sl.y2)) {
+        fit.y1 <- lav_uvord_update_fit(fit.y = fit.y1,
+                                       th.new = th.y1, sl.new = sl.y1)
+        fit.y2 <- lav_uvord_update_fit(fit.y = fit.y2,
+                                       th.new = th.y2, sl.new = sl.y2)
     }
 
     # if no eXo, use shortcut (grouped)
@@ -153,8 +164,7 @@ lav_bvord_logl <- function(Y1, Y2, wt = NULL, eXo = NULL,
         # grouped lik
         PI <- lav_bvord_noexo_pi(rho, th.y1 = fit.y1$theta[fit.y1$th.idx],
                                       th.y2 = fit.y2$theta[fit.y2$th.idx])
-        # PIs are always strictly positive, no check needed
-        logl <- sum( freq * log(PI) )
+        logl <- sum( freq * log(PI), na.rm = TRUE )
 
     } else {
         loglik <- lav_bvord_lik(Y1 = Y1, Y2 = Y2, rho = rho, wt = wt,
@@ -169,6 +179,8 @@ lav_bvord_logl <- function(Y1, Y2, wt = NULL, eXo = NULL,
 # casewise likelihoods
 # (loglikelihoods if .log = TRUE)
 lav_bvord_lik <- function(Y1, Y2, wt = NULL, eXo = NULL, rho = NULL,
+                          th.y1 = NULL, th.y2 = NULL,
+                          sl.y1 = NULL, sl.y2 = NULL,
                           fit.y1 = NULL, fit.y2 = NULL, .log = FALSE) {
 
     stopifnot(!is.null(rho))
@@ -180,13 +192,21 @@ lav_bvord_lik <- function(Y1, Y2, wt = NULL, eXo = NULL, rho = NULL,
         fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
     }
 
+    # update fit.y1/fit.y2 if parameters are provided manually
+    if(!is.null(th.y1) || !is.null(th.y2) ||
+       !is.null(sl.y1) || is.null(sl.y2)) {
+        fit.y1 <- lav_uvord_update_fit(fit.y = fit.y1,
+                                       th.new = th.y1, sl.new = sl.y1)
+        fit.y2 <- lav_uvord_update_fit(fit.y = fit.y2,
+                                       th.new = th.y2, sl.new = sl.y2)
+    }
+
     # if no eXo, use shortcut (grouped)
     if(length(fit.y1$slope.idx) == 0L) {
         # probability per cell
         PI <- lav_bvord_noexo_pi(rho, th.y1 = fit.y1$theta[fit.y1$th.idx],
                                       th.y2 = fit.y2$theta[fit.y2$th.idx])
         if(.log) {
-            # PI elements are always strictly positive
             logPI <- log(PI)
             lik <- logPI[ cbind(fit.y1$y, fit.y2$y) ]
         } else {
@@ -211,9 +231,10 @@ lav_bvord_lik <- function(Y1, Y2, wt = NULL, eXo = NULL, rho = NULL,
                            lower.x = fit.y1$z2, lower.y = fit.y2$z2, rho = rho)
         }
 
+        # catch very small values
+        lik[lik < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
+
         if(.log) {
-            # lik[lik < .Machine$double.eps] <- .Machine$double.eps
-            lik[lik < .Machine$double.eps] <- -Inf
             lik <- log(lik)
         }
     }
@@ -239,7 +260,6 @@ lav_bvord_lik <- function(Y1, Y2, wt = NULL, eXo = NULL, rho = NULL,
 # zero.keep.margins is only used for 2x2 tables
 lav_bvord_cor_twostep <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                   fit.y1 = NULL, fit.y2 = NULL, freq = NULL,
-                                  method = "nlminb",  control = list(),
                                   zero.add = c(0.5, 0.0),
                                   zero.keep.margins = TRUE,
                                   zero.cell.warn = FALSE,
@@ -259,8 +279,6 @@ lav_bvord_cor_twostep <- function(Y1, Y2, eXo = NULL, wt = NULL,
         Y2 <- fit.y2$y
     }
 
-    stopifnot(method %in% c("nlminb", "BFGS", "optimize"))
-
     # empty cells or not
     empty.cells <- FALSE
 
@@ -271,6 +289,13 @@ lav_bvord_cor_twostep <- function(Y1, Y2, eXo = NULL, wt = NULL,
     th.y1 <- fit.y1$theta[fit.y1$th.idx]
     th.y2 <- fit.y2$theta[fit.y2$th.idx]
 
+    # nobs
+    if(is.null(wt)) {
+        N <- length(Y1)
+    } else {
+        N <- sum(wt)
+    }
+   
     # check for zero cells (if not exo), and catch some special cases
     if(!exo) {
         if(is.null(freq)) {
@@ -361,18 +386,25 @@ lav_bvord_cor_twostep <- function(Y1, Y2, eXo = NULL, wt = NULL,
     } # !exo
 
     objectiveFunction <- function(x) {
-        logl <- lav_bvord_logl(rho = tanh(x[1L]),
+        logl <- lav_bvord_logl(rho = x[1L],
                                fit.y1 = fit.y1, fit.y2 = fit.y2, wt = wt,
                                freq = freq)
-        -logl # to minimize!
+        out <- -logl / N
+        out
     }
 
+    # note, if some 'lik' values are very small, we get round-off errors
+    # as a result, numerical derivatives may work better!
     gradientFunction <- function(x) {
-        rho <- tanh(x[1L])
+        rho <- x[1L]
         if(!exo) {
             PI  <- lav_bvord_noexo_pi( rho, th.y1, th.y2)
             phi <- lav_bvord_noexo_phi(rho, th.y1, th.y2)
-            dx.rho <- sum(freq/PI * phi)
+            bad.idx <- which(PI <= sqrt(.Machine$double.eps))
+            if(length(bad.idx) > 0L) {
+                PI[bad.idx] <- as.numeric(NA)
+            }
+            dx.rho <- sum((freq*phi)/PI, na.rm = TRUE)
         } else {
             lik <- lav_bvord_lik(rho = rho,
                                  fit.y1 = fit.y1, fit.y2 = fit.y2, wt = NULL,
@@ -380,77 +412,54 @@ lav_bvord_cor_twostep <- function(Y1, Y2, eXo = NULL, wt = NULL,
             dx <- ( dbinorm(fit.y1$z1, fit.y2$z1, rho) -
                     dbinorm(fit.y1$z2, fit.y2$z1, rho) -
                     dbinorm(fit.y1$z1, fit.y2$z2, rho) +
-                    dbinorm(fit.y1$z2, fit.y2$z2, rho) ) / lik
+                    dbinorm(fit.y1$z2, fit.y2$z2, rho) )
+
+            # avoid dividing by very tine numbers (new in 0.6-6)
+            bad.idx <- which(lik <= sqrt(.Machine$double.eps))
+            if(length(bad.idx) > 0L) {
+                lik[bad.idx] <- as.numeric(NA)
+            }
+
+            dx2 <- dx / lik
+  
             if(is.null(wt)) {
-                dx.rho <- sum(dx, na.rm = TRUE)
+                dx.rho <- sum(dx2, na.rm = TRUE)
             } else {
-                dx.rho <- sum(wt * dx, na.rm = TRUE)
+                dx.rho <- sum(wt * dx2, na.rm = TRUE)
             }
         }
-        # dF/drho * drho/dx, dtanh = 1/cosh(x)^2
-        -dx.rho * 1/(cosh(x)*cosh(x))
+        out <- -dx.rho / N
+        out
     }
 
     # starting value
     rho.init <- cor(Y1, Y2, use = "pairwise.complete.obs")
-
-    # if rho.init is missing, set starting value to zero
-    if(is.na(rho.init)) {
-      rho.init <- 0.0
-    }
-    # check range of rho.init is within [-1,+1]
-    if(abs(rho.init) >= 1.0) {
+    if( is.na(rho.init) || abs(rho.init) >= 1.0 ) {
         rho.init <- 0.0
     }
 
-    # default values
-    control.nlminb <- list(eval.max = 20000L,
-                           iter.max = 10000L,
-                           trace = ifelse(verbose, 1L, 0L),
-                           #abs.tol = 1e-20, ### important!! fx never negative
-                           abs.tol = (.Machine$double.eps * 10),
-                           rel.tol = ifelse(method == "nlminb", 1e-10, 1e-7),
-                           x.tol = 1.5e-8,
-                           xf.tol = 2.2e-14)
-    control.nlminb <- modifyList(control.nlminb, control)
-    control <- control.nlminb[c("eval.max", "iter.max", "trace",
-                                "abs.tol", "rel.tol", "x.tol", "xf.tol")]
+    # optimize
+    out <- nlminb(start = rho.init, objective = objectiveFunction,
+                  gradient = gradientFunction,
+                  control = list(trace = ifelse(verbose, 1, 0)),
+                  scale = 1.2, lower = -1.0, upper = +1.0)
 
-    if(method == "nlminb") {
-        out <- nlminb(start = atanh(rho.init), objective = objectiveFunction,
-                      gradient = gradientFunction,
-                      scale = 10,
-                      control = control)
-        if(out$convergence != 0L) {
-            warning("no convergence")
-        }
-        rho <- tanh(out$par)
-    } else if(method == "BFGS") {
-        # NOTE: known to fail if rho.init is too far from final value
-        # seems to be better with parscale = 0.1??
-        out <- optim(par = atanh(rho.init), fn = objectiveFunction,
-                     gr = gradientFunction,
-                     control = list(parscale = 0.1, reltol = 1e-10,
-                                    trace = ifelse(verbose, 1L, 0L),
-                                    REPORT = 1L,
-                                    abstol=(.Machine$double.eps * 10)),
-                     method = "BFGS")
-        if(out$convergence != 0L) {
-            warning("no convergence")
-        }
-        rho <- tanh(out$par)
-    } else if(method == "optimize") {
-        # not atanh/tanh transform
-        objectiveFunction2 <- function(x) {
-            logl <- lav_bvord_logl(rho = x[1L],
-                                   fit.y1 = fit.y1, fit.y2 = fit.y2,
-                                   wt = wt, freq=freq)
-            -logl # to minimize!
-        }
-        out <- optimize(f = objectiveFunction2, interval = c(-0.9999,0.9999))
-        rho <- out$minimum
+    # check convergence
+    if(out$convergence != 0L) {
+        if(!is.null(Y1.name) && !is.null(Y2.name)) {
+            warning("lavaan WARNING: ",
+                    "estimation polychoric correlation did not converge for
+                    variables ", Y1.name, " and ", Y2.name)
+         } else {
+             warning("lavaan WARNING: estimation polychoric correlation(s)",
+                     " did not always converge")
+         }
     }
 
+    # store result
+    rho <- out$par
+
+    # zero.cell.flag
     if(zero.cell.flag) {
         attr(rho, "zero.cell.flag") <- empty.cells
     }
@@ -481,6 +490,12 @@ lav_bvord_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
 
     # lik
     lik <- lav_bvord_lik(rho = rho, fit.y1 = fit.y1, fit.y2 = fit.y2, wt = NULL)
+
+    # avoid dividing by very tine numbers (new in 0.6-6)
+    bad.idx <- which(lik <= sqrt(.Machine$double.eps))
+    if(length(bad.idx) > 0L) {
+        lik[bad.idx] <- as.numeric(NA)
+    }
 
     # th.y1
     if(identical(R, 0.0)) {

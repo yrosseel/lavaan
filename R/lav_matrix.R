@@ -932,10 +932,19 @@ lav_matrix_trace <- function(..., check = TRUE) {
     out
 }
 
-# crossproduct, but handling NAs pairwise
+# crossproduct, but handling NAs pairwise, if needed
+# otherwise, just call base::crossprod
 lav_matrix_crossprod <- function(A, B) {
+
+    # single argument?
     if(missing(B)) {
+        if(!anyNA(A)) {
+            return(base::crossprod(A))
+        }
         B <- A
+    # no missings?
+    } else if(!anyNA(A) && !anyNA(B)) {
+        return(base::crossprod(A, B))
     }
 
     # A and B must be matrices

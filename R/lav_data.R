@@ -637,6 +637,15 @@ lav_data_full <- function(data          = NULL,          # data.frame
         if(warn && any(f.names %in% unlist(ov.names.x)))
             warning(paste("lavaan WARNING: exogenous variable(s) declared as ordered in data:", paste(f.names, collapse=" ")))
     }
+    # check for ordered endogenous variables with more than 10 levels
+    if("ordered" %in% ov$type[!ov$name %in% unlist(ov.names.x)]) {
+        f.names <- ov$name[ov$type == "ordered" &
+                           !ov$name %in% unlist(ov.names.x) &
+                           ov$nlev > 10L]
+        if(warn && length(f.names) > 0L) {
+            warning(paste("lavaan WARNING: some ordered categorical variable(s) have more than 10 levels:", paste(f.names, collapse=" ")))
+        }
+    }
     # check for zero-cases
     idx <- which(ov$nobs == 0L | ov$var == 0)
     if(length(idx) > 0L) {

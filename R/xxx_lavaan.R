@@ -67,7 +67,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         # cor.optim.method
         if(!is.null(dotdotdot$control$cor.optim.method)) {
-            dotdotdot$optim.method.cor <- dotdotdot$control$cor.optim.method
+            # ignore it silently
         }
         # control$optim.force.converged
         if(!is.null(dotdotdot$control$optim.force.converged)) {
@@ -686,7 +686,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        test              = lavoptions$test,
                        information       = lavoptions$information,
                        ridge             = lavoptions$ridge,
-                       optim.method      = lavoptions$optim.method.cor,
                        zero.add          = lavoptions$zero.add,
                        zero.keep.margins = lavoptions$zero.keep.margins,
                        zero.cell.warn    = lavoptions$zero.cell.warn,

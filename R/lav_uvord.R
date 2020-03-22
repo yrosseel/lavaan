@@ -161,8 +161,8 @@ lav_uvord_init_cache <- function(y  = NULL,
     }
 
     # offsets -Inf/+Inf
-    o1 <- ifelse(y == nth + 1, 1e5, 0)
-    o2 <- ifelse(y == 1, -1e5, 0)
+    o1 <- ifelse(y == nth + 1, 100, 0)
+    o2 <- ifelse(y == 1, -100, 0)
 
     # TH matrices (Matrix logical?)
     Y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
@@ -406,8 +406,8 @@ lav_uvord_update_fit <- function(fit.y = NULL, th.new = NULL, sl.new = NULL) {
     }
 
     nth <- length(fit.y$th.idx)
-    o1 <- ifelse(fit.y$y == nth + 1, 1e5, 0)
-    o2 <- ifelse(fit.y$y == 1, -1e5, 0)
+    o1 <- ifelse(fit.y$y == nth + 1, 100, 0)
+    o2 <- ifelse(fit.y$y == 1, -100, 0)
 
     theta <- fit.y$theta
     th <- theta[1:nth]; TH <- c(0, th, 0); beta <- theta[-c(1:nth)]
