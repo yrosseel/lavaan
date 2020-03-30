@@ -61,7 +61,7 @@ lav_uvreg_fit <- function(y  = NULL,
                 var.idx   = cache$var.idx,
                 y     = cache$y,
                 wt    = cache$wt,
-                X     = cache$X1[,-1L],
+                X     = cache$X1[,-1L, drop = FALSE],
                 yhat  = cache$yhat)
 }
 

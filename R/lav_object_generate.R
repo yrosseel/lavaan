@@ -45,6 +45,15 @@ lav_object_independence <- function(object         = NULL,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
         lavsamplestats = lavsamplestats, independent = TRUE)
 
+    # new in 0.6-6: add lower bounds for ov.var
+    if(!is.null(lavoptions$optim.bounds)) {
+        lavoptions$bounds <- "doe.maar"
+        lavoptions$optim.bounds <- list(lower = "ov.var")
+        lavpartable <- lav_partable_add_bounds(partable = lavpartable,
+            lavpta = lavpta, lavh1 = lavh1, lavdata = lavdata,
+            lavsamplestats = lavsamplestats, lavoptions = lavoptions) 
+    }
+
     # se
     if(se) {
         if(lavoptions$se == "none") {

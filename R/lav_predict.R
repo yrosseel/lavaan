@@ -1250,11 +1250,6 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
 
     # first, NUMERIC variables
     if(length(num.idx) > 0L) {
-        # multivariate
-        # FY.group[,num.idx] <-
-        #    dmnorm(X[,num.idx],
-        #           mean = yhat[n,num.idx],
-            #           varcov = THETA[[g]][num.idx, num.idx], log = log.)
         for(v in num.idx) {
             FY.group[,v] <- dnorm(X[,v],
                                   # YHAT may change or not per case

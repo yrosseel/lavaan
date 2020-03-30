@@ -31,7 +31,6 @@ importFrom("utils",
 #           "solve.QP")
 
 importFrom("mnormt",
-           "dmnorm",
            "sadmvn")
 
 importFrom("pbivnorm",

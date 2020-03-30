@@ -155,26 +155,26 @@ muthen1984 <- function(Data              = NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.mu.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.var.y1)
                 A21[pstar.idx, var.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.var.y2)
                 # H21 only needed for VAR
                 H21[pstar.idx, var.idx_i] <-
@@ -196,23 +196,23 @@ muthen1984 <- function(Data              = NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.var.y1)
                 # H21 only need for VAR
                 H21[pstar.idx,  var.idx_i] <- COR[i,j] / (2*sqrt(VAR[i]))
@@ -230,23 +230,23 @@ muthen1984 <- function(Data              = NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.mu.y1)
                 A21[pstar.idx, th.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_j] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_i] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y2)
                 }
                 # VAR
                 A21[pstar.idx, var.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.var.y1)
                 # H21 only for VAR
                 H21[pstar.idx, var.idx_j] <- COR[i,j] / (2*sqrt(VAR[j]))
@@ -265,18 +265,18 @@ muthen1984 <- function(Data              = NULL,
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.th.y1)
                 A21[pstar.idx, th.idx_j] <-
-                    lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                    lav_matrix_crossprod(SC.COR[,pstar.idx],
                                          SC.COR.UNI$dx.th.y2)
                 # SL
                 if(nexo > 0L) {
                     A21[pstar.idx, sl.idx_i] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y1)
                     A21[pstar.idx, sl.idx_j] <-
-                        lav_matrix_crossprod(SC.COR[,pstar.idx], 
+                        lav_matrix_crossprod(SC.COR[,pstar.idx],
                                              SC.COR.UNI$dx.sl.y2)
                 }
                 # NO VAR
