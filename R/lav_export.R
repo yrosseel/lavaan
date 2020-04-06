@@ -8,9 +8,9 @@ lavExport <- function(object, target="lavaan", prefix="sem",
     target <- tolower(target)
 
     # check for conditional.x = TRUE
-    if(object@Model@conditional.x) {
-        stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
-    }
+    #if(object@Model@conditional.x) {
+    #    stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    #}
 
     ngroups <- object@Data@ngroups
     if(ngroups > 1L) {
@@ -29,8 +29,10 @@ lavExport <- function(object, target="lavaan", prefix="sem",
     } else if(target == "mplus") {
         header <- lav_mplus_header(data.file=data.file,
             group.label=object@Data@group.label,
-            ov.names=vnames(object@ParTable, "ov"),
+            ov.names=c(vnames(object@ParTable, "ov"), 
+                       object@Data@sampling.weights),
             ov.ord.names=vnames(object@ParTable, "ov.ord"),
+            weight.name = object@Data@sampling.weights,
             listwise = lavInspect(object, "options")$missing == "listwise",
             estimator=lav_mplus_estimator(object),
             information = lavInspect(object, "options")$information,
@@ -66,6 +68,9 @@ lavExport <- function(object, target="lavaan", prefix="sem",
                     DATA <- object@Data@X[[g]]
                 } else {
                     DATA <- cbind(object@Data@X[[g]], object@Data@eXo[[g]])
+                }
+                if(!is.null(object@Data@weights[[g]])) {
+                    DATA <- cbind(DATA, object@Data@weights[[g]])
                 }
                 write.table(DATA,
                             file=paste(dir.name, "/", data.file[g], sep=""),

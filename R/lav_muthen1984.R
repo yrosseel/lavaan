@@ -117,10 +117,10 @@ muthen1984 <- function(Data              = NULL,
     A11.size <- NCOL(SC.TH) + NCOL(SC.SL) + NCOL(SC.VAR)
 
 
-    # normalize weights?
-    #if(!is.null(wt)) {
-    #    wt <- wt / sum(wt) * length(wt)
-    #}
+
+
+
+
 
 
     # A21
@@ -151,7 +151,11 @@ muthen1984 <- function(Data              = NULL,
                                                    wt     = wt)
 
                 # RHO
-                SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                if(is.null(wt)) {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                } else {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho / wt # unweight
+                }
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
@@ -192,7 +196,11 @@ muthen1984 <- function(Data              = NULL,
                                                    fit.y2 = FIT[[j]],
                                                    wt     = wt)
                 # RHO
-                SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                if(is.null(wt)) {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                } else {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho / wt # unweight
+                }
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
@@ -226,7 +234,11 @@ muthen1984 <- function(Data              = NULL,
                                                    fit.y2 = FIT[[i]],
                                                    wt     = wt)
                 # RHO
-                SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                if(is.null(wt)) {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                } else {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho / wt # unweight
+                }
 
                 # TH
                 A21[pstar.idx, th.idx_j] <-
@@ -261,7 +273,11 @@ muthen1984 <- function(Data              = NULL,
                                                    fit.y2 = FIT[[j]],
                                                    wt     = wt)
                 # RHO
-                SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                if(is.null(wt)) {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho
+                } else {
+                    SC.COR[,pstar.idx] <- SC.COR.UNI$dx.rho / wt # unweight
+                }
 
                 # TH
                 A21[pstar.idx, th.idx_i] <-
@@ -283,9 +299,16 @@ muthen1984 <- function(Data              = NULL,
             }
         }
     }
+    if(!is.null(wt)) {
+        SC.COR <- SC.COR * wt # reweight
+    }
+
+
+
 
 
     # stage three
+    
     SC <- cbind(SC.TH, SC.SL, SC.VAR, SC.COR)
     INNER <- lav_matrix_crossprod(SC)
 
@@ -293,6 +316,11 @@ muthen1984 <- function(Data              = NULL,
     # new approach (2 June 2012): A11 is just a 'sparse' version of
     # (the left upper block of) INNER
     A11 <- matrix(0, A11.size, A11.size)
+    if(!is.null(wt)) {
+        INNER2 <- lav_matrix_crossprod(SC / wt, SC)
+    } else {
+        INNER2 <- INNER
+    }
     for(i in 1:nvar) {
         th.idx <- th.start.idx[i]:th.end.idx[i]
         sl.idx <- integer(0L)
@@ -306,7 +334,7 @@ muthen1984 <- function(Data              = NULL,
             var.idx <- NCOL(SC.TH) + NCOL(SC.SL) + match(i, num.idx)
         }
         a11.idx <- c(th.idx, sl.idx, var.idx)
-        A11[a11.idx, a11.idx] <- INNER[a11.idx, a11.idx]
+        A11[a11.idx, a11.idx] <- INNER2[a11.idx, a11.idx]
     }
 
     ##### DEBUG ######
@@ -330,11 +358,16 @@ muthen1984 <- function(Data              = NULL,
     # A22 (diagonal)
     A22 <- matrix(0, pstar, pstar)
     for(i in seq_len(pstar)) {
-        A22[i,i] <- sum( SC.COR[,i]*SC.COR[,i], na.rm=TRUE )
+        if(is.null(wt)) {
+            A22[i,i] <- sum( SC.COR[,i] * SC.COR[,i], na.rm=TRUE )
+        } else {
+            A22[i,i] <- sum( SC.COR[,i] * SC.COR[,i]/wt, na.rm=TRUE )
+        }
     }
 
     # A12 (zero)
     A12 <- matrix(0, NROW(A11), NCOL(A22))
+
 
     #B <- rbind( cbind(A11,A12),
     #            cbind(A21,A22) )

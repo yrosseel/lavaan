@@ -9,7 +9,6 @@ lav2mplus <- function(lav, group.label=NULL) {
     ngroups <- lav_partable_ngroups(lav)
 
     lav_one_group <- function(lav) {
-
         # mplus does not like variable names with a 'dot'
         # replace them by an underscore '_'
         lav$lhs <- gsub("\\.", "_", lav$lhs)
@@ -22,7 +21,7 @@ lav2mplus <- function(lav, group.label=NULL) {
         }
 
         # remove exogenous variances/covariances/intercepts...
-        exo.idx <- which(lav$exo == 1L)
+        exo.idx <- which(lav$exo == 1L & lav$op %in% c("~~", "~1"))
         if(length(exo.idx)) {
             lav <- lav[-exo.idx,]
         }
@@ -195,6 +194,7 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
                              listwise = FALSE,
                              ov.ord.names="", estimator="ML",
                              meanstructure = FALSE,
+                             weight.name = character(0L),
                              information = "observed",
                              data.type="full", nobs=NULL) {
 
@@ -262,13 +262,20 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
         }
         c.VARIABLE <- paste(c.VARIABLE,";\n",sep="")
     }
+    # weight variable?
+    if(length(weight.name) > 0L) {
+        c.VARIABLE <- paste(c.VARIABLE,
+                            "  weight = ", weight.name, ";\n",sep="")
+    }
 
     # ANALYSIS command
     c.ANALYSIS <- paste("ANALYSIS:\n  type = general;\n", sep="")
     c.ANALYSIS <- paste(c.ANALYSIS, "  estimator = ", toupper(estimator),
                         ";\n", sep="")
-    c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information,
-                        ";\n", sep="")
+    if(toupper(estimator) %in% c("ML", "MLR")) {
+        c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information,
+                            ";\n", sep="")
+    }
     if(!meanstructure) {
         c.ANALYSIS <- paste(c.ANALYSIS, "  model = nomeanstructure;\n",
                             sep = "")

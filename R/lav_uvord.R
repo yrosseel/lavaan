@@ -123,6 +123,13 @@ lav_uvord_init_cache <- function(y  = NULL,
         X <- unname(X); nexo <- ncol(X)
     }
 
+    # nobs
+    if(is.null(wt)) {
+        N <- nobs
+    } else {
+        N <- sum(wt)
+    }
+
     # frequencies (possibly weighted by wt)
     y.freq <- numeric(y.ncat) # numeric! weights...
     for(cat in seq_len(y.ncat)) {
@@ -199,7 +206,7 @@ lav_uvord_init_cache <- function(y  = NULL,
     #theta.labels <- c(th.lab, sl.lab)
 
     out <- list2env(list(y = y, X = X, wt = wt, o1 = o1, o2 = o2,
-                         missing.idx = missing.idx,
+                         missing.idx = missing.idx, N = N,
                          pfun = pfun, dfun = dfun, gfun = gfun,
                          lav_crossprod = lav_crossprod,
                          nth = nth, nobs = nobs, y.ncat = y.ncat, nexo = nexo,
@@ -259,6 +266,7 @@ lav_uvord_loglik_cache <- function(cache = NULL) {
 lav_uvord_scores <- function(y = NULL,
                              X = NULL,
                              wt = rep(1, length(y)),
+                             use.weights = TRUE,
                              logistic = FALSE,
                              cache = NULL) {
 
@@ -266,14 +274,20 @@ lav_uvord_scores <- function(y = NULL,
         cache <- lav_uvord_fit(y = y, X = X, wt = wt,
                                logistic = logistic, output = "cache")
     }
-    lav_uvord_scores_cache(cache = cache)
+    SC <- lav_uvord_scores_cache(cache = cache)
+
+    if(!is.null(wt) && use.weights) {
+        SC <- SC * wt
+    }
+
+    SC
 }
 
 lav_uvord_scores_cache <- function(cache = NULL) {
     with(cache, {
 
         # d logl / d pi
-        dldpi <- wt / pi.i
+        dldpi <- 1 / pi.i # unweighted!
 
         # we assume z1/z2 are available
         p1 <- dfun(z1); p2 <- dfun(z2)
@@ -365,7 +379,7 @@ lav_uvord_hessian_cache <- function(cache = NULL) {
 # compute total (log)likelihood, for specific 'x' (nlminb)
 lav_uvord_min_objective <- function(x, cache = NULL) {
     cache$theta <- x
-    -1 * lav_uvord_loglik_cache(cache = cache)
+    -1 * lav_uvord_loglik_cache(cache = cache)/cache$N
 }
 
 # compute gradient, for specific 'x' (nlminb)
@@ -375,7 +389,7 @@ lav_uvord_min_gradient <- function(x, cache = NULL) {
         cache$theta <- x
         tmp <- lav_uvord_loglik_cache(cache = cache)
     }
-    -1 * lav_uvord_gradient_cache(cache = cache)
+    -1 * lav_uvord_gradient_cache(cache = cache)/cache$N
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -386,7 +400,7 @@ lav_uvord_min_hessian <- function(x, cache = NULL) {
         tmp <- lav_uvord_loglik_cache(cache = cache)
         tmp <- lav_uvord_gradient_cache(cache = cache)
     }
-    -1 * lav_uvord_hessian_cache(cache = cache)
+    -1 * lav_uvord_hessian_cache(cache = cache)/cache$N
 }
 
 # get 'z1' and 'z2' values, given (new) values for the parameters

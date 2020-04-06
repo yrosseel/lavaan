@@ -551,7 +551,8 @@ lav_bvord_min_hessian <- function(x, cache = NULL) {
 
 
 # casewise scores
-lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE) {
+lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE,
+                                       use.weights = TRUE) {
     with(cache, {
         rho <- theta[1L]
         R <- sqrt(1 - rho*rho)
@@ -578,9 +579,6 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE) {
                        d.y1.z2 * pnorm( (fit.y2.z2-rho*fit.y1.z2) / R) )
         }
         dx.th.y1 <- (y1.Y1*y1.Z1 - y1.Y2*y1.Z2) / lik
-        if(!is.null(wt)) {
-            dx.th.y1 <- dx.th.y1 * wt
-        }
         if(na.zero) {
             dx.th.y1[is.na(dx.th.y1)] <- 0
         }
@@ -595,9 +593,6 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE) {
                         d.y2.z2 * pnorm( (fit.y1.z2-rho*fit.y2.z2) / R) )
         }
         dx.th.y2 <- (y2.Y1*y2.Z1 - y2.Y2*y2.Z2) / lik
-        if(!is.null(wt)) {
-            dx.th.y2 <- dx.th.y2 * wt
-        }
         if(na.zero) {
             dx.th.y2[is.na(dx.th.y2)] <- 0
         }
@@ -608,18 +603,12 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE) {
 
             # sl.y1
             dx.sl.y1 <- (y1.Z2 - y1.Z1) * eXo / lik
-            if(!is.null(wt)) {
-                dx.sl.y1 <- dx.sl.y1 * wt
-            }
             if(na.zero) {
                 dx.sl.y1[is.na(dx.sl.y1)] <- 0
             }
 
             # sl.y2
             dx.sl.y2 <- (y2.Z2 - y2.Z1) * eXo / lik
-            if(!is.null(wt)) {
-                dx.sl.y2 <- dx.sl.y2 * wt
-            }
             if(na.zero) {
                 dx.sl.y2[is.na(dx.sl.y2)] <- 0
             }
@@ -636,11 +625,18 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE) {
                     dbinorm(fit.y1.z2, fit.y2.z2, rho) )
         }
         dx.rho <- dx / lik
-        if(!is.null(wt)) {
-            dx.rho <- dx.rho * wt
-        }
         if(na.zero) {
             dx.rho[is.na(dx.rho)] <- 0
+        }
+
+        if(!is.null(wt) && use.weights) {
+            dx.th.y1 <- dx.th.y1 * wt
+            dx.th.y2 <- dx.th.y2 * wt
+            if(nexo > 0L) {
+                dx.sl.y1 <- dx.sl.y1 * wt
+                dx.sl.y2 <- dx.sl.y2 * wt
+            }
+            dx.rho <- dx.rho * wt
         }
 
         out <- list(dx.th.y1 = dx.th.y1, dx.th.y2 = dx.th.y2,
@@ -656,7 +652,7 @@ lav_bvord_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                  fit.y1 = NULL, fit.y2 = NULL,
                                  th.y1 = NULL, th.y2 = NULL,
                                  sl.y1 = NULL, sl.y2 = NULL,
-                                 na.zero = FALSE) {
+                                 na.zero = FALSE, use.weights = TRUE) {
 
     if(is.null(fit.y1)) {
         fit.y1 <- lav_uvord_fit(y = Y1, X = eXo, wt = wt)
@@ -676,7 +672,8 @@ lav_bvord_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                   scores = TRUE)
     cache$theta <- rho
 
-    SC <- lav_bvord_cor_scores_cache(cache = cache, na.zero = na.zero)
+    SC <- lav_bvord_cor_scores_cache(cache = cache, na.zero = na.zero,
+                                     use.weights = use.weights)
 
     SC
 }

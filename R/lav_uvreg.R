@@ -81,6 +81,14 @@ lav_uvreg_init_cache <- function(y  = NULL,
         X <- unname(X); nexo <- ncol(X); X1 <- cbind(1, X, deparse.level = 0)
     }
 
+    # nobs
+    if(is.null(wt)) {
+        N <- length(y)
+    } else {
+        N <- sum(wt)
+    }
+
+
     # indices of free parameters
     int.idx   <- 1L
     slope.idx <- seq_len(nexo) + 1L
@@ -106,7 +114,7 @@ lav_uvreg_init_cache <- function(y  = NULL,
     theta.beta <- unname(fit.lm$coefficients)
     theta <- c(theta.beta, theta.evar)
 
-    out <- list2env(list(y = y, X1 = X1, wt = wt,
+    out <- list2env(list(y = y, X1 = X1, wt = wt, N = N,
                          int.idx = int.idx, beta.idx = beta.idx,
                          var.idx = var.idx, slope.idx = slope.idx, nexo = nexo,
                          lav_crossprod = lav_crossprod,
@@ -223,7 +231,7 @@ lav_uvreg_hessian_cache <- function(cache = NULL) {
 # compute total (log)likelihood, for specific 'x' (nlminb)
 lav_uvreg_min_objective <- function(x, cache = NULL) {
     cache$theta <- x
-    -1 * lav_uvreg_loglik_cache(cache = cache)
+    -1 * lav_uvreg_loglik_cache(cache = cache)/cache$N
 }
 
 # compute gradient, for specific 'x' (nlminb)
@@ -233,7 +241,7 @@ lav_uvreg_min_gradient <- function(x, cache = NULL) {
         cache$theta <- x
         tmp <- lav_uvreg_loglik_cache(cache = cache)
     }
-    -1 * lav_uvreg_gradient_cache(cache = cache)
+    -1 * lav_uvreg_gradient_cache(cache = cache)/cache$N
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -244,7 +252,7 @@ lav_uvreg_min_hessian <- function(x, cache = NULL) {
         tmp <- lav_uvreg_loglik_cache(cache = cache)
         tmp <- lav_uvreg_gradient_cache(cache = cache)
     }
-    -1 * lav_uvreg_hessian_cache(cache = cache)
+    -1 * lav_uvreg_hessian_cache(cache = cache)/cache$N
 }
 
 # update fit object with new parameters

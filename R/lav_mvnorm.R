@@ -831,6 +831,7 @@ lav_mvnorm_information_firstorder <- function(Y             = NULL,
         SC <- rowsum(SC, group = cluster.idx, reorder = FALSE, na.rm = TRUE)
 
         # lower bias if number of clusters is not very high
+        # FIXME: reference?
         nC <- nrow(SC)
         correction.factor <- nC / (nC - 1)
         SC <- SC * sqrt(correction.factor)
