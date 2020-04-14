@@ -140,9 +140,16 @@ lav_model_nvcov_robust_sem <- function(lavmodel       = NULL,
     NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
 
     # to be reused by lav_test()
-    attr(NVarCov, "E.inv") <- E.inv
     attr(NVarCov, "Delta") <- Delta
-    attr(NVarCov, "WLS.V") <- WLS.V
+
+    if( (lavoptions$information[1] == lavoptions$information[2]) &&
+        (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
+        (lavoptions$observed.information[1] ==
+         lavoptions$observed.information[2]) ) {
+        # only when same type of information is used # new in 0.6-6
+        attr(NVarCov, "E.inv") <- E.inv
+        attr(NVarCov, "WLS.V") <- WLS.V
+    }
 
     NVarCov
 }
@@ -206,7 +213,14 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel       = NULL,
     NVarCov <- E.inv %*% B0 %*% E.inv
 
     attr(NVarCov, "B0.group") <- attr(B0, "B0.group")
-    attr(NVarCov, "E.inv") <- E.inv
+
+    if( (lavoptions$information[1] == lavoptions$information[2]) &&
+        (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
+        (lavoptions$observed.information[1] ==
+         lavoptions$observed.information[2]) ) {
+        # only when same type of information is used # new in 0.6-6
+        attr(NVarCov, "E.inv") <- E.inv
+    }
 
     NVarCov
 }
@@ -231,7 +245,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
                                       use.ginv       = FALSE) {
 
     # expected OR observed, depending on lavoptions$information
-    if(is.null(lavoptions) && is.null(lavoptions$information)) {
+    if(is.null(lavoptions) && is.null(lavoptions$information[1])) {
         lavoptions <- list(information = "observed",
                            observed.information = "h1",
                            h1.information = "structured")
@@ -241,8 +255,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     # only works if:
     # - information is expected,
     # - or information is observed but with observed.information == "h1"
-    if(lavoptions$information == "observed" &&
-       lavoptions$observed.information != "h1") {
+    if(lavoptions$information[1] == "observed" &&
+       lavoptions$observed.information[1] != "h1") {
             stop("lavaan ERROR: two.stage + observed information currently only works with observed.information = ", dQuote("h1"))
     }
     # no weights (yet)
@@ -301,7 +315,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
         #
         # we use the same setting as to compute 'H' (the h1 information matrix)
         # so that at Omega = H if data is complete
-        if(lavoptions$h1.information == "unstructured") {
+        if(lavoptions$h1.information[1] == "unstructured") {
             MU    <- lavsamplestats@missing.h1[[g]]$mu
             SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
         } else {
@@ -312,7 +326,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
         # compute 'Gamma' (or Omega.beta)
         if(lavoptions$se == "two.stage") {
             # this is Savalei & Bentler (2009)
-            if(lavoptions$information == "expected") {
+            if(lavoptions$information[1] == "expected") {
                 Info <- lav_mvnorm_missing_information_expected(
                             Y = lavdata@X[[g]], Mp = lavdata@Mp[[g]],
                             wt = lavdata@weights[[g]],
@@ -342,7 +356,7 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
                              cluster.idx = cluster.idx,
                              Mu = MU, Sigma = SIGMA,
                              x.idx = lavsamplestats@x.idx[[g]],
-                             information = lavoptions$information)
+                             information = lavoptions$information[1])
         }
 
         # compute
@@ -354,10 +368,14 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     # to be reused by lavaanTest
     attr(NVarCov, "Delta") <- Delta
     attr(NVarCov, "Gamma") <- Gamma
-    #if(lavoptions$h1.information.se == lavoptions$h1.information.test) {
+    if( (lavoptions$information[1] == lavoptions$information[2]) &&
+        (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
+        (lavoptions$observed.information[1] ==
+         lavoptions$observed.information[2]) ) {
+        # only when same type of information is used # new in 0.6-6
         attr(NVarCov, "E.inv") <- E.inv
         attr(NVarCov, "WLS.V") <- WLS.V
-    #}
+    }
 
     NVarCov
 }
@@ -375,7 +393,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                            use.ginv       = FALSE) {
 
     likelihood  <- lavoptions$likelihood
-    information <- lavoptions$information
+    information <- lavoptions$information[1]
     se          <- lavoptions$se
     verbose     <- lavoptions$verbose
     mimic       <- lavoptions$mimic

@@ -123,7 +123,7 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
             COR <- cor(Y1, Y2, use = "pairwise.complete.obs")
             SD <- sd(Y2, na.rm = TRUE)
         } else {
-            tmp <- na.omit(cbind(Y1, Y2, wt)) 
+            tmp <- na.omit(cbind(Y1, Y2, wt))
             COR <- cov.wt(x = tmp[,1:2], wt = tmp[,3], cor = TRUE)$cor[2,1]
             SD <- sqrt(lav_matrix_var_wt(tmp[,2], wt = tmp[,3]))
         }
@@ -142,7 +142,7 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
     if(scores) {
         out <- list2env(list(nexo = nexo, theta = theta, N = N,
                              y1.VAR = y1.VAR, eXo = eXo,
-                             y2.Y1 = fit.y2$Y1, y2.Y2 = fit.y2$Y2, 
+                             y2.Y1 = fit.y2$Y1, y2.Y2 = fit.y2$Y2,
                              Y1 = Y1, y1.SD = y1.SD, y1.ETA = y1.ETA, Z = Z,
                              fit.y2.z1 = fit.y2$z1, fit.y2.z2 = fit.y2$z2),
                         parent = parent)
@@ -152,7 +152,7 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
                              fit.y2.z1 = fit.y2$z1, fit.y2.z2 = fit.y2$z2),
                         parent = parent)
     }
-                        
+
     out
 }
 
@@ -276,7 +276,7 @@ lav_bvmix_min_hessian <- function(x, cache = NULL) {
 }
 
 
-lav_bvmix_cor_scores_cache <- function(cache = NULL, 
+lav_bvmix_cor_scores_cache <- function(cache = NULL,
                                        sigma.correction = FALSE,
                                        na.zero = FALSE) {
     with(cache, {
@@ -300,7 +300,7 @@ lav_bvmix_cor_scores_cache <- function(cache = NULL,
         }
 
         # var.y1
-        dx.var.y1 <- 1/(2*y1.VAR) * ( ((Z*Z)-1) + 
+        dx.var.y1 <- 1/(2*y1.VAR) * ( ((Z*Z)-1) +
                                       (pyx.inv*rho*Z/R) * y.Z1.y.Z2 )
         if(!is.null(wt)) {
             dx.var.y1 <- wt * dx.var.y1
@@ -353,9 +353,9 @@ lav_bvmix_cor_scores_cache <- function(cache = NULL,
                            1/2 * COV/y1.VAR * 1/y1.SD * dx.rho.orig )
         }
 
-        out <- list(dx.mu.y1 = dx.mu.y1, dx.var.y1 = dx.var.y1, 
+        out <- list(dx.mu.y1 = dx.mu.y1, dx.var.y1 = dx.var.y1,
                     dx.th.y2 = dx.th.y2,
-                    dx.sl.y1 = dx.sl.y1, dx.sl.y2 = dx.sl.y2, 
+                    dx.sl.y1 = dx.sl.y1, dx.sl.y2 = dx.sl.y2,
                     dx.rho = dx.rho)
 
         return(out)
@@ -376,7 +376,7 @@ lav_bvmix_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                  na.zero = FALSE) {
     if(is.null(fit.y1)) {
         fit.y1 <- lav_uvreg_fit(y = Y1, X = eXo, wt = wt)
-    } 
+    }
     if(is.null(fit.y2)) {
         fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
     }
@@ -392,8 +392,8 @@ lav_bvmix_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                   scores = TRUE)
     cache$theta <- rho
 
-    SC <- lav_bvmix_cor_scores_cache(cache = cache, 
-                                     sigma.correction = sigma.correction, 
+    SC <- lav_bvmix_cor_scores_cache(cache = cache,
+                                     sigma.correction = sigma.correction,
                                      na.zero = na.zero)
 
     SC
@@ -429,7 +429,7 @@ lav_bvmix_logl <- function(Y1, Y2, eXo = NULL, wt = NULL,
 
 # lik - no cache
 lav_bvmix_lik <- function(Y1, Y2, eXo = NULL, wt = NULL,
-                          rho = NULL, 
+                          rho = NULL,
                           fit.y1 = NULL, fit.y2 = NULL,
                           evar.y1 = NULL, beta.y1 = NULL,
                           th.y2 = NULL, sl.y2 = NULL,
@@ -444,11 +444,11 @@ lav_bvmix_lik <- function(Y1, Y2, eXo = NULL, wt = NULL,
 
     # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
     fit.y1 <- lav_uvreg_update_fit(fit.y = fit.y1, evar.new = evar.y1,
-                                   beta.new = beta.y1)    
+                                   beta.new = beta.y1)
     fit.y2 <- lav_uvord_update_fit(fit.y = fit.y2, th.new = th.y2,
                                    sl.new = sl.y2)
 
-    # create cache environment    
+    # create cache environment
     cache <- lav_bvmix_init_cache(fit.y1 = fit.y1, fit.y2 = fit.y2, wt = wt,
                                   scores = TRUE)
     cache$theta <- rho

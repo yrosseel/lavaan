@@ -257,7 +257,7 @@ lav_bvreg_init_cache <- function(fit.y1 = NULL,
                              evar.y2 = evar.y2, sd.y2 = sd.y2, eta.y2 = eta.y2),
                          parent = parent)
     }
-    
+
     out
 }
 
@@ -269,7 +269,7 @@ lav_bvreg_lik_cache <- function(cache = NULL) {
 
         cov.y12 <- rho * sqrt(evar.y1) * sqrt(evar.y2)
         sigma <- matrix(c(evar.y1, cov.y12, cov.y12, evar.y2), 2L, 2L)
-        lik <- exp(lav_mvnorm_loglik_data(Y = cbind(Y1c, Y2c), wt = NULL, 
+        lik <- exp(lav_mvnorm_loglik_data(Y = cbind(Y1c, Y2c), wt = NULL,
                                           Mu = c(0,0), Sigma = sigma,
                                           casewise = TRUE))
         # catch very small values
@@ -420,7 +420,7 @@ lav_bvreg_cor_scores_cache <- function(cache = NULL) {
 }
 
 # casewise scores
-# 
+#
 # Y1 = linear
 # Y2 = linear
 lav_bvreg_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,

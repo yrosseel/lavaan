@@ -29,7 +29,7 @@ lavExport <- function(object, target="lavaan", prefix="sem",
     } else if(target == "mplus") {
         header <- lav_mplus_header(data.file=data.file,
             group.label=object@Data@group.label,
-            ov.names=c(vnames(object@ParTable, "ov"), 
+            ov.names=c(vnames(object@ParTable, "ov"),
                        object@Data@sampling.weights),
             ov.ord.names=vnames(object@ParTable, "ov.ord"),
             weight.name = object@Data@sampling.weights,

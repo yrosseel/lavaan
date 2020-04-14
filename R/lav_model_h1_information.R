@@ -40,7 +40,9 @@ lav_model_h1_information <- function(lavobject      = NULL,
     }
 
     # information
-    information <- lavoptions$information
+    information <- lavoptions$information[1] # ALWAYS take the first one
+                                             # the caller must control it
+
 
     # compute information matrix
     if(information == "observed") {
@@ -94,8 +96,8 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
 
     # structured of unstructured? (since 0.5-23)
     if(!is.null(lavoptions) &&
-       !is.null(lavoptions$h1.information) &&
-       lavoptions$h1.information == "unstructured") {
+       !is.null(lavoptions$h1.information[1]) &&
+       lavoptions$h1.information[1] == "unstructured") {
         structured <- FALSE
     } else {
         structured <- TRUE
@@ -296,8 +298,8 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
 
     # structured?
     if(!is.null(lavoptions) &&
-       !is.null(lavoptions$h1.information) &&
-       lavoptions$h1.information == "unstructured") {
+       !is.null(lavoptions$h1.information[1]) &&
+       lavoptions$h1.information[1] == "unstructured") {
         structured <- FALSE
     } else {
         structured <- TRUE
@@ -503,8 +505,8 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
     # structured?
     if(!is.null(lavoptions) &&
-       !is.null(lavoptions$h1.information) &&
-       lavoptions$h1.information == "unstructured") {
+       !is.null(lavoptions$h1.information[1]) &&
+       lavoptions$h1.information[1] == "unstructured") {
         structured <- FALSE
     } else {
         structured <- TRUE
@@ -740,7 +742,7 @@ lav_model_h1_acov <- function(lavobject      = NULL,
         lavoptions$meanstructure <- meanstructure
     }
     if(!is.null(h1.information)) {
-        lavoptions$h1.information <- h1.information
+        lavoptions$h1.information[1] <- h1.information
     }
     if(!is.null(se)) {
         lavoptions$se <- se
@@ -749,7 +751,7 @@ lav_model_h1_acov <- function(lavobject      = NULL,
 
 
     # information
-    information <- lavoptions$information
+    information <- lavoptions$information[1] # ALWAYS used the first
 
     # compute information matrix
     if(information == "observed") {

@@ -23,7 +23,8 @@ lav_model_information <- function(lavmodel       = NULL,
     } else {
         estmator    <- lavoptions$estimator
     }
-    information <- lavoptions$information
+    information <- lavoptions$information[1] # ALWAYS used the first one
+                                             # called can control it
 
     if(is.null(lavh1)) {
         lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
@@ -111,7 +112,7 @@ lav_model_information_expected <- function(lavmodel       = NULL,
         # multilevel
         if(lavdata@nlevels > 1L) {
             # here, we assume only 2 levels, at [[1]] and [[2]]
-            if(lavoptions$h1.information == "structured") {
+            if(lavoptions$h1.information[1] == "structured") {
                 Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
                 Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
                 Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
@@ -267,8 +268,8 @@ lav_model_information_observed <- function(lavmodel       = NULL,
     #             sample statistics (but this depends on the h1.information
     #             option)
     if(!is.null(lavoptions) &&
-       !is.null(lavoptions$observed.information) &&
-       lavoptions$observed.information == "h1") {
+       !is.null(lavoptions$observed.information[1]) &&
+       lavoptions$observed.information[1] == "h1") {
         observed.information <- "h1"
     } else {
         observed.information <- "hessian"

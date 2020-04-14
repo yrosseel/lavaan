@@ -247,7 +247,7 @@ lav_bvord_init_cache <- function(fit.y1 = NULL,
     # starting value (for both exo and not-exo)
     #if(is.null(wt)) {
     rho.init <- cor(Y1, Y2, use = "pairwise.complete.obs")
-    #} 
+    #}
     # cov.wt does not handle missing values...
     # rho.init <- cov.wt(cbind(Y1, Y2), wt = wt, cor = TRUE)$cor[2,1]
     if( is.na(rho.init) || abs(rho.init) >= 1.0 ) {
@@ -283,7 +283,7 @@ lav_bvord_init_cache <- function(fit.y1 = NULL,
     } else {
         if(scores) {
             out <- list2env(list(nexo = nexo, theta = theta, wt = wt, N = N,
-                                 eXo = eXo, 
+                                 eXo = eXo,
                                  y1.Y1 = fit.y1$Y1, y1.Y2 = fit.y1$Y2,
                                  y2.Y1 = fit.y2$Y1, y2.Y2 = fit.y2$Y2,
                                  fit.y1.z1 = fit.y1.z1, fit.y1.z2 = fit.y1.z2,
@@ -509,7 +509,7 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
                 H <- sum( gnorm/lik - (phi*phi)/(lik*lik), na.rm = TRUE )
             } else {
                 H <- sum( wt * (gnorm/lik - (phi*phi)/(lik*lik)), na.rm = TRUE )
-            }           
+            }
 
             dim(H) <- c(1L,1L)
         }
@@ -716,7 +716,7 @@ lav_bvord_lik <- function(Y1, Y2, eXo = NULL, wt = NULL,
     }
     if(is.null(fit.y2)) {
         fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
-    }    
+    }
 
     # update fit.y1/fit.y2
     fit.y1 <- lav_uvord_update_fit(fit.y = fit.y1,

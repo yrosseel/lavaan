@@ -1169,7 +1169,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                 indices["srmr"] <- SRMR_BENTLER
             }
         } else if(object@Options$mimic == "Mplus") {
-            if(object@Options$information == "expected") {
+            if(object@Options$information[1] == "expected") {
                 if(categorical) {
                     indices["srmr"] <- SRMR_BENTLER_NOMEAN
                 } else {

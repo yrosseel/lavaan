@@ -308,7 +308,7 @@ muthen1984 <- function(Data              = NULL,
 
 
     # stage three
-    
+
     SC <- cbind(SC.TH, SC.SL, SC.VAR, SC.COR)
     INNER <- lav_matrix_crossprod(SC)
 

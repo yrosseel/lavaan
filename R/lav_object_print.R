@@ -166,10 +166,11 @@ lav_object_print_rotation <- function(object, header = FALSE, nd = 3L) {
 lav_object_print_test_statistics <- function(object, nd = 3L) {
 
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+    lavoptions <- object@Options
 
     # check if test == "none", @test is empty, or estimator = "MML"
-    if(object@Options$test[1] == "none" || length(object@test) == 0L ||
-       object@Options$estimator == "MML") {
+    if(lavoptions$test[1] == "none" || length(object@test) == 0L ||
+       lavoptions$estimator == "MML") {
         return( character(0L) )
     }
 
@@ -281,6 +282,9 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                         }
                     }
                 } # shift
+                c1 <- c(c1, paste("    for the", TEST[[block]]$label))
+                c2 <- c(c2, "")
+                c3 <- c(c3, "")
             }
         }
 
@@ -291,6 +295,36 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
             # empty row
             c1 <- c("", c1); c2 <- c("", c2); c3 <- c("", c3)
         }
+
+        # if information type is different from 'se', print it
+        if(length(lavoptions$information) > 1L &&
+           lavoptions$information[1] != lavoptions$information[2]) {
+            c1 <- c(c1, "Information")
+            tmp.txt <- lavoptions$information[2]
+            c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
+            c3 <- c(c3, "")
+        }
+        # if h1.information type is different from 'se', print it
+        if(length(lavoptions$h1.information) > 1L &&
+           lavoptions$h1.information[1] != lavoptions$h1.information[2]) {
+            c1 <- c(c1, "Information saturated (h1) model")
+            tmp.txt <- lavoptions$h1.information[2]
+            c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
+            c3 <- c(c3, "")
+        }
+        # if observed.information type is different from 'se', print it
+        if(length(lavoptions$observed.information) > 1L &&
+           (lavoptions$observed.information[1] !=
+            lavoptions$observed.information[2]) ) {
+            c1 <- c(c1, "Observed information based on")
+            tmp.txt <- lavoptions$observed.information[2]
+            c2 <- c(c2, paste(toupper(substring(tmp.txt,1,1)),
+                                      substring(tmp.txt, 2), sep = ""))
+            c3 <- c(c3, "")
+        }
+
 
         # format c1/c2
         c1 <- format(c1, width = 43L)
@@ -308,11 +342,6 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
 
         # print
         write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
-
-        # additional comment if twocolumn
-        if(twocolumn && TEST[[1]]$df > 0L) {
-            cat("    for the", TEST[[block]]$label, "\n")
-        }
 
         # multiple groups?
         ngroups <- object@Data@ngroups

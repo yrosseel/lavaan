@@ -439,7 +439,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # constraints
         if(any(nchar(constraints) > 0L) && opt$estimator %in% c("ML")) {
-            opt$information <- "observed"
+            opt$information <- c("observed", "observed")
         }
 
         # meanstructure
@@ -684,7 +684,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        gamma.n.minus.one = lavoptions$gamma.n.minus.one,
                        se                = lavoptions$se,
                        test              = lavoptions$test,
-                       information       = lavoptions$information,
                        ridge             = lavoptions$ridge,
                        zero.add          = lavoptions$zero.add,
                        zero.keep.margins = lavoptions$zero.keep.margins,

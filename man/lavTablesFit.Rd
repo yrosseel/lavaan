@@ -99,7 +99,7 @@ HSbinary <- as.data.frame( lapply(HS9, cut, 2, labels=FALSE) )
 
 # Single group example with one latent factor
 HS.model <- ' trait =~ x1 + x2 + x3 + x4 '
-fit <- cfa(HS.model, data=HSbinary[,1:4], ordered=names(HSbinary),
+fit <- cfa(HS.model, data=HSbinary[,1:4], ordered=names(HSbinary[,1:4]),
            estimator="PML")
 lavTablesFitCm(fit)
 lavTablesFitCp(fit)

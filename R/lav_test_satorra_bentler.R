@@ -29,6 +29,27 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         TEST$standard  <- TEST.unscaled
     }
 
+    # E.inv ok?
+    if( length(lavoptions$information) == 1L &&
+        length(lavoptions$h1.information) == 1L &&
+        length(lavoptions$observed.information) == 1L) {
+        E.inv.recompute <- FALSE
+    } else if( (lavoptions$information[1] == lavoptions$information[2]) &&
+        (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
+        (lavoptions$observed.information[1] ==
+         lavoptions$observed.information[2]) ) {
+        E.inv.recompute <- FALSE
+    } else {
+        E.inv.recompute <- TRUE
+        # change information options
+        lavoptions$information[1] <- lavoptions$information[2]
+        lavoptions$h1.information[1] <- lavoptions$h1.information[2]
+        lavoptions$observed.information[1] <- lavoptions$observed.information[2]
+    }
+    if(!is.null(E.inv) && !is.null(WLS.V) && !is.null(Delta)) {
+        E.inv.recompute <- FALSE # user-provided
+    }
+
     # check test
     if(!all(test %in% c("satorra.bentler",
                         "scaled.shifted",
@@ -51,7 +72,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     }
 
     # do we have E.inv, Delta, WLS.V?
-    if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V)) {
+    if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute) {
         if(mimic == "Mplus" && lavoptions$estimator == "ML") {
             E <- lav_model_information_expected_MLM(lavmodel = lavmodel,
                      augmented = FALSE, inverted = FALSE,

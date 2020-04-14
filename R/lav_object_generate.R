@@ -51,7 +51,7 @@ lav_object_independence <- function(object         = NULL,
         lavoptions$optim.bounds <- list(lower = "ov.var")
         lavpartable <- lav_partable_add_bounds(partable = lavpartable,
             lavpta = lavpta, lavh1 = lavh1, lavdata = lavdata,
-            lavsamplestats = lavsamplestats, lavoptions = lavoptions) 
+            lavsamplestats = lavsamplestats, lavoptions = lavoptions)
     }
 
     # se

@@ -264,7 +264,10 @@ Estimation options:
       outer product of the casewise scores. See also the options
       \code{"h1.information"} and \code{"observed.information"} for
       further control. If \code{"default"}, the value is set depending 
-      on the estimator, the missing argument, and the mimic option.}
+      on the estimator, the missing argument, and the mimic option. If
+      the argument is a vector with two elements, the first element
+      is used for the computation of the standard errors, while the
+      second element is used for the (robust) test statistic.}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
@@ -272,11 +275,17 @@ Estimation options:
       model-implied mean vector, etc.). 
       If \code{"unstructured"}, the unrestricted (h1) information part is
       based on sample-based statistics (observed covariance matrix, observed
-      mean vector, etc.)}
+      mean vector, etc.) If
+      the argument is a vector with two elements, the first element
+      is used for the computation of the standard errors, while the
+      second element is used for the (robust) test statistic.}
    \item{\code{observed.information}:}{If \code{"hessian"}, the observed
       information matrix is based on the hessian of the objective function.
       If \code{"h1"}, an approximation is used that is based on 
-      the observed information matrix of the unrestricted (h1) model.}
+      the observed information matrix of the unrestricted (h1) model. If
+      the argument is a vector with two elements, the first element
+      is used for the computation of the standard errors, while the
+      second element is used for the (robust) test statistic.}
    \item{\code{se}:}{If \code{"standard"}, conventional standard errors
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust
