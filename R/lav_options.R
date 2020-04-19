@@ -1136,6 +1136,8 @@ lav_options_set <- function(opt = NULL) {
     if(opt$observed.information[2] == "hessian" ||
        opt$observed.information[2] == "h1") {
         if(opt$test %in% c("satorra.bentler",
+                           "yuan.bentler",
+                           # "yuan.bentler.mplus", not need, is already h1
                            "mean.var.adjusted",
                            "scaled.shifted")) {
             if(opt$estimator == "PML") {

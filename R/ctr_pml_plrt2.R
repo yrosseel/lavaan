@@ -171,8 +171,8 @@ for(g in 1:lavsamplestats@ngroups) {
     #
     # later, we should add a (working) add.labels = TRUE option to
     # computeDelta
-    th.names <- lavobject@pta$vnames$th[[g]]
-    ov.names <- lavobject@pta$vnames$ov[[g]]
+    th.names <- lavpta$vnames$th[[g]]
+    ov.names <- lavpta$vnames$ov[[g]]
     tmp <- utils::combn(ov.names, 2)
     cor.names <- paste(tmp[1,], "~~", tmp[2,], sep = "")
     NAMES <- c(th.names, cor.names)

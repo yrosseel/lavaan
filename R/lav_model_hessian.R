@@ -5,7 +5,8 @@ lav_model_hessian <- function(lavmodel       = NULL,
                               lavdata        = NULL,
                               lavoptions     = NULL,
                               lavcache       = NULL,
-                              group.weight   = TRUE) {
+                              group.weight   = TRUE,
+                              h              = 1e-06) {
 
     estimator <- lavmodel@estimator
 
@@ -14,7 +15,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
     x <- lav_model_get_parameters(lavmodel = lavmodel)
     for(j in 1:lavmodel@nx.free) {
         # FIXME: the number below should vary as a function of 'x[j]'
-        h.j <- 1e-06
+        h.j <- h
         x.left <- x.left2 <- x.right <- x.right2 <- x
         x.left[j]  <- x[j] - h.j; x.left2[j]  <- x[j] - 2*h.j
         x.right[j] <- x[j] + h.j; x.right2[j] <- x[j] + 2*h.j
@@ -63,12 +64,12 @@ lav_model_hessian <- function(lavmodel       = NULL,
 
     # check if Hessian is (almost) symmetric, as it should be
     max.diff <- max(abs(Hessian - t(Hessian)))
-    if(max.diff > sqrt(.Machine$double.eps) * max(diag(Hessian))) {
+    if(max.diff > 1e-05 * max(diag(Hessian))) {
         # hm, Hessian is not symmetric -> WARNING!
-        warning("lavaan WARNING: Hessian is not fully symmetric. Max diff = ",
-                max.diff)
+        warning("lavaan WARNING: Hessian is not fully symmetric.",
+                "\n\tMax diff = ", max.diff,
+                "\n\t(Max diag Hessian = ", max(diag(Hessian)), ")")
         # FIXME: use numDeriv::hessian instead?
-        # this can only happen is the gradient is not quite right...
     }
     Hessian <- ( Hessian + t(Hessian) )/2.0
 

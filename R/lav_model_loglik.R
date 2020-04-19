@@ -141,5 +141,6 @@ lav_model_loglik <- function(lavdata        = NULL,
                 estimator     = lavoptions$estimator,
                 conditional.x = lavoptions$conditional.x,
                 fixed.x       = lavoptions$fixed.x)
+
     out
 }

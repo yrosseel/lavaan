@@ -1,5 +1,6 @@
 lav_model_test <- function(lavmodel       = NULL,
                            lavpartable    = NULL,
+                           lavpta         = NULL,
                            lavsamplestats = NULL,
                            lavimplied     = NULL,
                            lavh1          = list(),
@@ -66,15 +67,51 @@ lav_model_test <- function(lavmodel       = NULL,
     # PML
     if(lavoptions$estimator == "PML" && test[1] != "none") {
 
-        PML <- ctr_pml_plrt(lavobject      = NULL,
-                            lavmodel       = lavmodel,
-                            lavdata        = lavdata,
-                            lavoptions     = lavoptions,
-                            x              = x,
-                            VCOV           = VCOV,
-                            lavcache       = lavcache,
-                            lavsamplestats = lavsamplestats,
-                            lavpartable    = lavpartable)
+        # attention!
+        # if the thresholds are saturated (ie, nuisance parameters)
+        # we should use the ctr_pml_plrt() function.
+        #
+        # BUT, if the thresholds are structured (eg equality constraints)
+        # then we MUST use the ctr_pml_plrt2() function.
+        #
+        # This was not done automatically < 0.6-6
+        #
+
+
+        thresholds.structured <- FALSE
+        # check
+        th.idx <- which(lavpartable$op == "|")
+        if(any(lavpartable$free[th.idx] == 0L)) {
+            thresholds.structured <- TRUE
+        }
+
+        eq.idx <- which(lavpartable$op == "==")
+        if(length(eq.idx) > 0L) {
+            th.labels <- lavpartable$plabel[th.idx]
+            eq.labels <- unique(c(lavpartable$lhs[eq.idx],
+                                  lavpartable$rhs[eq.idx]))
+            if(any(th.labels %in% eq.labels)) {
+                thresholds.structured <- TRUE
+            }
+        }
+
+        # switch between ctr_pml_plrt() and ctr_pml_plrt2()
+        if(thresholds.structured) {
+            pml_plrt <- ctr_pml_plrt2
+        } else {
+            pml_plrt <- ctr_pml_plrt
+        }
+
+        PML <- pml_plrt(lavobject      = NULL,
+                        lavmodel       = lavmodel,
+                        lavdata        = lavdata,
+                        lavoptions     = lavoptions,
+                        lavpta         = lavpta,
+                        x              = x,
+                        VCOV           = VCOV,
+                        lavcache       = lavcache,
+                        lavsamplestats = lavsamplestats,
+                        lavpartable    = lavpartable)
         # get chi.group from PML, since we compare to `unrestricted' model,
         # NOT observed data
         chisq.group <- PML$PLRTH0Sat.group
@@ -170,7 +207,7 @@ lav_model_test <- function(lavmodel       = NULL,
 
         if(lavoptions$estimator == "PML") {
             if(this.test == "mean.var.adjusted") {
-                LABEL <- "mean and variance adjusted correction (PML)"
+                LABEL <- "mean+var adjusted correction (PML)"
                 TEST[[this.test]] <-
                     list(test                 = this.test,
                          stat                 = PML$stat,

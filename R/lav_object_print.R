@@ -263,7 +263,7 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                                sprintf(num.format, TEST[[block]]$df)),
                         sprintf(num.format, TEST[[block]]$pvalue),
                         sprintf(num.format, TEST[[block]]$scaling.factor))
-                if(!is.null(TEST[[block]]$shift.parameter)) {
+                if(TEST[[block]]$test == "scaled.shifted") {
                     if(object@Data@ngroups == 1L) {
                         c1 <- c(c1, "Shift parameter")
                         c2 <- c(c2, "")
@@ -282,7 +282,8 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
                         }
                     }
                 } # shift
-                c1 <- c(c1, paste("    for the", TEST[[block]]$label))
+                #c1 <- c(c1, paste("    for the", TEST[[block]]$label))
+                c1 <- c(c1, paste("    ", TEST[[block]]$label))
                 c2 <- c(c2, "")
                 c3 <- c(c3, "")
             }
@@ -316,6 +317,7 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
         }
         # if observed.information type is different from 'se', print it
         if(length(lavoptions$observed.information) > 1L &&
+           lavoptions$information[2] == "observed" &&
            (lavoptions$observed.information[1] !=
             lavoptions$observed.information[2]) ) {
             c1 <- c(c1, "Observed information based on")

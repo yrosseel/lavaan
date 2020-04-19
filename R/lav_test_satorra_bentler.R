@@ -401,6 +401,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
         }
 
         # handle equality constraints
+        # FIXME: inequality constraints are ignored!
         if(lavmodel@eq.constraints) {
             Delta.g <- Delta.g %*% lavmodel@eq.constraints.K
         }

@@ -28,23 +28,6 @@ lav_start <- function(start.method    = "default",
     # nlevels?
     nlevels <- lav_partable_nlevels(lavpartable)
 
-    # shortcut for 'simple'
-    # be we should also take care of the 'fixed.x' issue
-    if(start.method == "simple") {
-        start <- numeric( length(lavpartable$ustart) )
-        start[ which(lavpartable$op == "=~") ] <- 1.0
-        start[ which(lavpartable$op == "~*~") ] <- 1.0
-        ov.names.ord <- vnames(lavpartable, "ov.ord")
-        var.idx <- which(lavpartable$op == "~~" &
-                         lavpartable$lhs == lavpartable$rhs &
-                         !(lavpartable$lhs %in% ov.names.ord))
-        start[var.idx] <- 1.0
-        user.idx <- which(!is.na(lavpartable$ustart))
-        start[user.idx] <- lavpartable$ustart[user.idx]
-        return(start)
-    } else if(start.method == "est") {
-        return(lavpartable$est)
-    }
 
     # check start.method
     if(mimic == "lavaan") {
@@ -55,11 +38,27 @@ lav_start <- function(start.method    = "default",
         # FIXME: use LISREL/EQS/AMOS/.... schems
         start.initial <- "lavaan"
     }
-    start.user    <- NULL
+
+    # start.method
+    start.user <- NULL
     if(is.character(start.method)) {
         start.method. <- tolower(start.method)
         if(start.method. == "default") {
             # nothing to do
+        } else if(start.method == "simple") {
+            start <- numeric( length(lavpartable$ustart) )
+            start[ which(lavpartable$op == "=~") ] <- 1.0
+            start[ which(lavpartable$op == "~*~") ] <- 1.0
+            ov.names.ord <- vnames(lavpartable, "ov.ord")
+            var.idx <- which(lavpartable$op == "~~" &
+                             lavpartable$lhs == lavpartable$rhs &
+                             !(lavpartable$lhs %in% ov.names.ord))
+            start[var.idx] <- 1.0
+            user.idx <- which(!is.na(lavpartable$ustart))
+            start[user.idx] <- lavpartable$ustart[user.idx]
+            return(start)
+        } else if(start.method == "est") {
+            return(lavpartable$est)
         } else if(start.method. %in% c("simple", "lavaan", "mplus")) {
             start.initial <- start.method.
         } else {
@@ -70,6 +69,7 @@ lav_start <- function(start.method    = "default",
     } else if(inherits(start.method, "lavaan")) {
         start.user <- parTable(start.method)
     }
+
     # check model list elements, if provided
     if(!is.null(start.user)) {
         if(is.null(start.user$lhs) ||
@@ -97,8 +97,7 @@ lav_start <- function(start.method    = "default",
 
     # 1. =~ factor loadings:
     if(categorical) {
-        # if std.lv=TRUE, more likely initial Sigma.hat is positive definite
-        # 0.8 is too large
+        # if std.lv=TRUE, 0.8 is too large
         start[ which(lavpartable$op == "=~") ] <- 0.7
     } else {
         start[ which(lavpartable$op == "=~") ] <- 1.0

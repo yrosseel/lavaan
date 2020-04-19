@@ -784,8 +784,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         timing$Model <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
     } else {
-        # check if we have provide a full parameter table as model= input
-        if(!is.null(lavpartable$est) && lavoptions$start == "default") {
+        # check if we have provided a full parameter table as model= input
+        if(!is.null(lavpartable$est) && is.character(lavoptions$start) &&
+                                        lavoptions$start == "default") {
             # check if all 'est' values look ok
             # this is not the case, eg, if partables have been merged eg, as
             # in semTools' auxiliary() function
@@ -1270,6 +1271,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         TEST <- lav_model_test(lavmodel            = lavmodel,
                                lavpartable         = lavpartable,
+                               lavpta              = lavpta,
                                lavsamplestats      = lavsamplestats,
                                lavimplied          = lavimplied,
                                lavh1               = lavh1,
