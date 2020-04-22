@@ -59,6 +59,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # handle dotdotdot
     dotdotdot <- list(...)
 
+    # check data
+    if(!is.null(data)) {
+        if(inherits(data, "tbl_df")) {
+            # a tibble df: convert to data.frame and hope for the best
+            data <- as.data.frame(data)
+        }
+    }
+
     # backwards compatibility, control= argument (<0.5-23)
     if(!is.null(dotdotdot$control)) {
         # optim.method

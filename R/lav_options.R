@@ -980,6 +980,7 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$estimator %in% c("mml")) {
         opt$estimator <- "MML"
         opt$information[1] <- "observed"
+        opt$meanstructure <- TRUE
         if(length(opt$information) > 1L &&
                opt$information[2] == "default") {
             opt$information[2] <- "observed"

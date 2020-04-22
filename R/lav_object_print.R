@@ -55,7 +55,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
     }
     if(nrow(object@Model@con.jac) > 0L) {
         con.jac.rank <- qr(object@Model@con.jac)$rank
-        if(con.jac.rank == (nrow(object@Model@ceq.JAC) + 
+        if(con.jac.rank == (nrow(object@Model@ceq.JAC) +
                             nrow(object@Model@cin.JAC)) ) {
             # nothing to do (don't print, as this is redundant information)
         } else {
