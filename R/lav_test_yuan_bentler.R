@@ -93,6 +93,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     if(TEST$standard$df == 0L || TEST$standard$df < 0) {
         TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
                              label = character(0))
+        TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
         return(TEST)
     }
 
