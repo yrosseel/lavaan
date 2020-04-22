@@ -133,7 +133,7 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
        (meanstructure || slopestructure)) {
        stopifnot(!is.null(Y))
        if(is.null(wt)) {
-           MEAN <- colMeans(Y)
+           MEAN <- colMeans(Y, na.rm = TRUE)
        } else {
            MEAN <- out$center
        }
@@ -285,7 +285,7 @@ lav_samplestats_Gamma <- function(Y,
         if(model.based) {
             Yc <- t( t(Y) - as.numeric(Mu) )
         } else {
-            Yc <- t( t(Y) - colMeans(Y) )
+            Yc <- t( t(Y) - colMeans(Y, na.rm = TRUE) )
         }
 
         # create Z where the rows_i contain the following elements:
@@ -310,7 +310,7 @@ lav_samplestats_Gamma <- function(Y,
             }
             Zc <- t( t(Z) - sigma )
         } else {
-            Zc <- t( t(Z) - colMeans(Z) )
+            Zc <- t( t(Z) - colMeans(Z, na.rm = TRUE) )
         }
 
         # clustered?
@@ -326,7 +326,7 @@ lav_samplestats_Gamma <- function(Y,
     } else if(!conditional.x && fixed.x) {
 
         if(model.based) {
-            Y.bar <- colMeans(Y)
+            Y.bar <- colMeans(Y, na.rm = TRUE)
             res.cov <- ( Sigma[-x.idx, -x.idx, drop = FALSE] -
                          Sigma[-x.idx, x.idx, drop = FALSE] %*%
                           solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
@@ -334,7 +334,8 @@ lav_samplestats_Gamma <- function(Y,
             res.slopes <- ( solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
                             Sigma[x.idx, -x.idx, drop = FALSE] )
             res.int <- ( Y.bar[-x.idx] -
-                 as.numeric(colMeans(Y[,x.idx,drop = FALSE]) %*% res.slopes) )
+                         as.numeric(colMeans(Y[,x.idx,drop = FALSE],
+                                    na.rm = TRUE) %*% res.slopes) )
             x.bar <- Y.bar[x.idx]
             yhat.bar <- as.numeric(res.int + as.numeric(x.bar) %*% res.slopes)
             YHAT.bar <- numeric(p)
@@ -367,8 +368,8 @@ lav_samplestats_Gamma <- function(Y,
             yhat <- qr.fitted(QR, Y[, -x.idx, drop = FALSE])
             YHAT <- cbind(yhat, Y[,x.idx])
 
-            Yc <- t( t(Y) - colMeans(Y) )
-            YHATc <- t( t(YHAT) - colMeans(YHAT) )
+            Yc <- t( t(Y) - colMeans(Y, na.rm = TRUE) )
+            YHATc <- t( t(YHAT) - colMeans(YHAT, na.rm = TRUE) )
             idx1 <- lav_matrix_vech_col_idx(p)
             idx2 <- lav_matrix_vech_row_idx(p)
             if(meanstructure) {
@@ -382,7 +383,7 @@ lav_samplestats_Gamma <- function(Y,
                        YHATc[,idx1, drop = FALSE] *
                        YHATc[,idx2, drop = FALSE] )
             }
-            Zc <- t( t(Z) - colMeans(Z) )
+            Zc <- t( t(Z) - colMeans(Z, na.rm = TRUE) )
         }
 
         # clustered?
@@ -457,7 +458,7 @@ lav_samplestats_Gamma <- function(Y,
         if(model.based) {
             Zc <- t( t(Z) - sigma )
         } else {
-            Zc <- t( t(Z) - colMeans(Z) )
+            Zc <- t( t(Z) - colMeans(Z, na.rm = TRUE) )
         }
 
         # clustered?
