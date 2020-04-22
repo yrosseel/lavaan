@@ -63,7 +63,7 @@ function(object, header       = TRUE,
         } else {
             FIT <- fitMeasures(object, fit.measures="default")
             res$FIT = FIT
-            print.lavaan.fitMeasures( FIT, nd = nd )
+            print.lavaan.fitMeasures( FIT, nd = nd, add.h0 = FALSE )
         }
     }
 
@@ -629,8 +629,13 @@ parameterEstimates <- parameterestimates <- function(object,
         # new in 0.6-6, use 'EM' based (unstructured) sample statistics
         # otherwise, it would be as if we use expected info, while the
         # original use observed, producing crazy results
-        EM.cov  <- lavInspect(object, "sampstat.h1")$cov
-        EM.mean <- lavInspect(object, "sampstat.h1")$mean
+        if(object@Data@ngroups > 1L) {
+            EM.cov  <- lapply(lavInspect(object, "sampstat.h1"), "[[", "cov")
+            EM.mean <- lapply(lavInspect(object, "sampstat.h1"), "[[", "mean")
+        } else {
+            EM.cov  <- lavInspect(object, "sampstat.h1")$cov
+            EM.mean <- lavInspect(object, "sampstat.h1")$mean
+        }
 
         PT <- parTable(object)
         PT$ustart <- PT$est

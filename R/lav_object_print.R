@@ -54,8 +54,14 @@ lav_object_print_optim <- function(object, nd = 3L) {
         c2 <- c(c2, nrow(object@Model@cin.JAC))
     }
     if(nrow(object@Model@con.jac) > 0L) {
-        c1 <- c(c1, "Row rank of the constraints matrix")
-        c2 <- c(c2, qr(object@Model@con.jac)$rank)
+        con.jac.rank <- qr(object@Model@con.jac)$rank
+        if(con.jac.rank == (nrow(object@Model@ceq.JAC) + 
+                            nrow(object@Model@cin.JAC)) ) {
+            # nothing to do (don't print, as this is redundant information)
+        } else {
+            c1 <- c(c1, "Row rank of the constraints matrix")
+            c2 <- c(c2, qr(object@Model@con.jac)$rank)
+        }
     }
 
     # empty last row
@@ -328,7 +334,7 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
         }
 
 
-        # format c1/c2
+        # format c1/c2/c3 (note: fitMeasures uses 35/16/8)
         c1 <- format(c1, width = 43L)
         c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
         c3 <- format(c3, width = 8L + nd, justify = "right")
@@ -403,7 +409,7 @@ lav_object_print_short_summary <- function(object, nd = 3L) {
     if(object@Options$estimator == "MML") {
         fm <- fitMeasures(object, c("logl", "aic", "bic", "bic2"),
                           output = "text")
-        print.lavaan.fitMeasures(fm, nd = nd)
+        print.lavaan.fitMeasures(fm, nd = nd, add.h0 = FALSE)
     }
 
 }

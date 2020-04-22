@@ -264,8 +264,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  lhs, " ", op, " ", rhs,
                  "\n    contains either a reserved word (in R) or an illegal character: ",
                  dQuote(LHS[!make.names(LHS) == LHS]),
-                 "\n    see ?reserved for a list of reserved words in R",
-                 "\n    please use a variable name that is not a reserved word in R",
+                 "\n    See ?reserved for a list of reserved words in R",
+                 "\n    Please use a variable name that is not a reserved word in R",
                  "\n    and use only characters, digits, or the dot symbol.")
         }
 
@@ -285,6 +285,38 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         # new 0.5-12: before we do this, replace '0.2?' by 'start(0.2)*'
         # requested by the simsem folks
         rhs <- gsub('\\(?([-]?[0-9]*\\.?[0-9]*)\\)?\\?',"start(\\1)\\*", rhs)
+
+
+
+
+        # new in 0.6-6, check for rhs NAMES that are reserved names
+        # like in foo =~ in + out
+        RHS <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
+        RHS.names <- gsub("^\\S*\\*", "", RHS)
+        BAD <- c("if", "else", "repeat", "while", "function", "for", "in")
+        if(any(RHS.names %in% BAD)) {
+            stop("lavaan ERROR: right hand side (rhs) of this formula:\n    ",
+                 lhs, " ", op, " ", rhs,
+                 "\n    contains either a reserved word (in R) or an illegal character: ",
+                 dQuote(RHS.names[which(RHS.names %in% BAD)[1]]),
+                 "\n    See ?reserved for a list of reserved words in R",
+                 "\n    Please use a variable name that is not a reserved word in R",
+                 "\n    and use only characters, digits, or the dot symbol.")
+        }
+        # new in 0.6-6, check for rhs LABELS that are reserved names
+        # like in foo =~ in*bar
+        RHS <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
+        RHS.labels <- gsub("\\*\\S*$", "", RHS)
+        if(any(RHS.labels %in% BAD)) {
+            stop("lavaan ERROR: right hand side (rhs) of this formula:\n    ",
+                 lhs, " ", op, " ", rhs,
+                 "\n    contains either a reserved word (in R) or an illegal character: ",
+                 dQuote(RHS.names[which(RHS.labels %in% BAD)[1]]),
+                 "\n    See ?reserved for a list of reserved words in R",
+                 "\n    Please use a variable name that is not a reserved word in R",
+                 "\n    and use only characters, digits, or the dot symbol.")
+        }
+
         rhs.formula <- as.formula(paste("~",rhs))
         out <- lav_syntax_parse_rhs(rhs = rhs.formula[[2L]], op = op)
 

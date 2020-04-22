@@ -1420,7 +1420,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
 }
 
 # print a nice summary of the fit measures
-print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = FALSE) {
+print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
 
     names.x <- names(x)
 
