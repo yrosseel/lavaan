@@ -514,8 +514,11 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
 }
 
 mplus2lavaan.modelSyntax <- function(syntax) {
-  if (length(syntax) > 1L) { stop("mplus2lavaan.modelSyntax syntax argument should be a single string, not a vector") }
-  if (!is.character(syntax)) { stop("mplus2lavaan.modelSyntax accepts a single character string containing all model syntax") }
+  if (is.character(syntax)) {
+    if (length(syntax) > 1L) { syntax <- paste(syntax, collapse="\n") } #concatenate into a long string separated by newlines
+  } else {
+    stop("mplus2lavaan.modelSyntax accepts a single character string or character vector containing all model syntax")
+  }
   
   #because this is now exposed as a function in the package, handle the case of the user passing in full .inp file as text
   #we should only be interested in the MODEL and MODEL CONSTRAINT sections
