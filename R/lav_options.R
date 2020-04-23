@@ -132,7 +132,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 # information (se + test)
                 information            = c("default",    "default"),
                 h1.information         = c("structured", "structured"),
-                observed.information   = c("hessian",    "hessian"),
+                observed.information   = c("hessian",    "default"),
 
                 # information se only
                 information.meat       = "default",
@@ -1136,15 +1136,17 @@ lav_options_set <- function(opt = NULL) {
     }
     if(opt$observed.information[2] == "hessian" ||
        opt$observed.information[2] == "h1") {
+        # do nothing
+    } else if(opt$observed.information[2] == "default") {
         if(opt$test %in% c("satorra.bentler",
                            "yuan.bentler",
-                           # "yuan.bentler.mplus", not need, is already h1
+                           "yuan.bentler.mplus",
                            "mean.var.adjusted",
                            "scaled.shifted")) {
-            if(opt$estimator == "PML") {
-                # do nothing for now
+            if(opt$estimator == "PML" || opt$test == "yuan.bentler.mplus") {
+                opt$observed.information[2] <- "hessian"
             } else {
-                opt$observed.information[2] <- "h1" # ALWAYS!
+                opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
             }
         }
     } else {
