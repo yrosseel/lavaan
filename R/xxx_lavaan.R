@@ -61,8 +61,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # check data
     if(!is.null(data)) {
-        if(inherits(data, "tbl_df")) {
-            # a tibble df: convert to data.frame and hope for the best
+        if(inherits(data, "data.frame")) {
+            # in case it is not a traditional data.frame
             data <- as.data.frame(data)
         }
     }
@@ -1314,7 +1314,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     #######################
-    #### 14bis. lavfit #### ## -> remove if the rsem packages are fixed!!
+    #### 14bis. lavfit #### ## -> remove if the offending packages are fixed!!
     #######################
     lavfit <- lav_model_fit(lavpartable = lavpartable,
                             lavmodel    = lavmodel,
