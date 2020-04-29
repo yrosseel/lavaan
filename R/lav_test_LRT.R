@@ -114,6 +114,45 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         stop("lavaan ERROR: some models (but not all) have scaled test statistics")
     }
 
+    # select method
+    if(method == "default") {
+        if(estimator == "PML") {
+            method <- "mean.var.adjusted.PLRT"
+        } else if(TEST %in% c("satorra.bentler", "yuan.bentler",
+                              "yuan.bentler.mplus")) {
+            method <- "satorra.bentler.2001"
+        } else {
+            method <- "satorra.2000"
+        }
+    } else if(method == "meanvaradjustedplrt" ||
+              method == "mean.var.adjusted.PLRT") {
+        method <- "mean.var.adjusted.PLRT"
+        stopifnot(estimator == "PML")
+    } else if(method == "satorra2000") {
+        method <- "satorra.2000"
+    } else if(method == "satorrabentler2001") {
+        method <- "satorra.bentler.2001"
+    } else if(method == "satorrabentler2010") {
+        method <- "satorra.bentler.2010"
+    } else {
+        stop("lavaan ERROR: unknown method for scaled difference test: ", method)
+    }
+
+    # check method if scaled = FALSE
+    if(type == "chisq" && !scaled &&
+        method %in% c("mean.var.adjusted.PLRT",
+                      "satorra.bentler.2001",
+                      "satorra.2000",
+                      "satorra.bentler.2010")) {
+
+            warning("lavaan WARNING: method = ", dQuote(method),
+                    "\n\t but no robust test statistics were used;",
+                    "\n\t switching to the standard chi-square difference test")
+
+        method = "default"
+    }
+
+
     # which models have used a MEANSTRUCTURE?
     mods.meanstructure <- sapply(mods, function(x) {
                                  unlist(slot(slot(x, "Model"),
@@ -143,32 +182,15 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     STAT.delta  <- c(NA, diff(STAT))
     Df.delta     <- c(NA, diff(Df))
 
+    # check for negative values in STAT.delta
+    if(any(STAT.delta[-1] < 0)) {
+        warning("lavaan WARNING: some restricted models fit better than less ",
+                "\n\t restrictred models; either these models are not nested, ",
+                "\n\t or the less restricted model was stuck in a local optimum.")
+    }
+
     # correction for scaled test statistics
     if(type == "chisq" && scaled) {
-
-        # select method
-        if(method == "default") {
-            if(estimator == "PML") {
-                method <- "mean.var.adjusted.PLRT"
-            } else if(TEST %in% c("satorra.bentler", "yuan.bentler",
-                                  "yuan.bentler.mplus")) {
-                method <- "satorra.bentler.2001"
-            } else {
-                method <- "satorra.2000"
-            }
-        } else if(method == "meanvaradjustedplrt" ||
-                  method == "mean.var.adjusted.PLRT") {
-            method <- "mean.var.adjusted.PLRT"
-            stopifnot(estimator == "PML")
-        } else if(method == "satorra2000") {
-            method <- "satorra.2000"
-        } else if(method == "satorrabentler2001") {
-            method <- "satorra.bentler.2001"
-        } else if(method == "satorrabentler2010") {
-            method <- "satorra.bentler.2010"
-        } else {
-            stop("lavaan ERROR: unknown method for scaled difference test: ", method)
-        }
 
         if(method == "satorra.bentler.2001") {
             # use formula from Satorra & Bentler 2001
