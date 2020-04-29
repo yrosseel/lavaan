@@ -118,11 +118,15 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if(method == "default") {
         if(estimator == "PML") {
             method <- "mean.var.adjusted.PLRT"
-        } else if(TEST %in% c("satorra.bentler", "yuan.bentler",
-                              "yuan.bentler.mplus")) {
-            method <- "satorra.bentler.2001"
+        } else if(scaled) {
+            if(TEST %in% c("satorra.bentler", "yuan.bentler",
+                           "yuan.bentler.mplus")) {
+                method <- "satorra.bentler.2001"
+            } else {
+                method <- "satorra.2000"
+            }
         } else {
-            method <- "satorra.2000"
+            # nothing to do
         }
     } else if(method == "meanvaradjustedplrt" ||
               method == "mean.var.adjusted.PLRT") {
@@ -185,7 +189,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # check for negative values in STAT.delta
     if(any(STAT.delta[-1] < 0)) {
         warning("lavaan WARNING: some restricted models fit better than less ",
-                "\n\t restrictred models; either these models are not nested, ",
+                "\n\t restricted models; either these models are not nested, ",
                 "\n\t or the less restricted model was stuck in a local optimum.")
     }
 
