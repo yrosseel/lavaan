@@ -189,8 +189,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # check for negative values in STAT.delta
     if(any(STAT.delta[-1] < 0)) {
         warning("lavaan WARNING: some restricted models fit better than less ",
-                "\n\t restricted models; either these models are not nested, ",
-                "\n\t or the less restricted model was stuck in a local optimum.")
+                "\n\t restricted models; either these models are not nested, or",
+                "\n\t the less restricted model failed to reach a global optimum.")
     }
 
     # correction for scaled test statistics
