@@ -508,7 +508,7 @@ lav_matrix_rotate_gpa <- function(A            = NULL,   # original matrix
 # pairwise rotation algorithm with direct line search
 #
 # based on Kaiser's (1959) algorithm and Jennrich and Sampson (1966) algorithm
-# but to make it generic, a line search is used
+# but to make it generic, a line search is used; inspired by Browne 2001
 #
 # - orthogonal: rotate one pair of columns (=plane) at a time
 # - oblique: rotate 1 factor in one pair of columns (=plane) at a time
