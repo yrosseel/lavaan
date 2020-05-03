@@ -103,7 +103,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
               "mean.var.adjusted", "scaled.shifted") %in%
             unlist(sapply(slot(x, "test"), "[", "test")) ) }))
 
-    if(all(mods.scaled | ndf == 0)) {
+    if(all(mods.scaled | ndf == 0) && any(mods.scaled)) {
+        # Note: if df=0, test is not really robust, hence the above condition
         scaled <- TRUE
         # which type?
         TEST <- object@test[[2]]$test

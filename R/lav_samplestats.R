@@ -807,6 +807,13 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         if(!is.list(sample.mean.x)) {
             sample.mean.x <- list(sample.mean.x)
         }
+    } else if(is.null(sample.cov.x) && length(unlist(ov.names.x)) > 0L) {
+        # fixed.x = TRUE, but only joint sample.cov is provided
+        conditional.x <- FALSE
+        fixed.x <- TRUE
+
+        # create sample.cov.x and sample.mean.x later...
+
     } else {
         conditional.x <- FALSE
         fixed.x <- FALSE
@@ -1149,8 +1156,16 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 
                 # fixed.x?
                 if(fixed.x) {
-                    cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
-                    mean.x[[g]] <- unclass(unname(sample.mean.x[[g]]))
+                    if(is.null(sample.cov.x)) {
+                        cov.x[[g]] <- cov[[g]][x.idx[[g]], x.idx[[g]]]
+                    } else {
+                        cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
+                    }
+                    if(is.null(sample.mean.x)) {
+                        mean.x[[g]] <- mean[[g]][x.idx[[g]]]
+                    } else {
+                        mean.x[[g]] <- unclass(unname(sample.mean.x[[g]]))
+                    }
                 }
             }
         }
