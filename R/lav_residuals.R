@@ -56,8 +56,9 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                custom.rmr = custom.rmr, se = se, zstat = zstat,
                summary = summary,
                summary.options = list(se = TRUE, zstat = TRUE, pvalue = TRUE,
-                   unbiased = TRUE, unbiased.se = TRUE, unbiased.zstat = FALSE,
-                   unbiased.test.val = 0.05, unbiased.pvalue = FALSE),
+                   unbiased = TRUE, unbiased.se = TRUE, unbiased.ci = TRUE,
+                   unbiased.ci.level = 0.90, unbiased.zstat = TRUE,
+                   unbiased.test.val = 0.05, unbiased.pvalue = TRUE),
                h1.acov = h1.acov, add.type = add.type,
                add.labels = add.labels, add.class = add.class,
                drop.list.single.group = drop.list.single.group)
@@ -71,6 +72,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
                           se = FALSE, zstat = FALSE, summary = FALSE,
                           summary.options = list(se = TRUE, zstat = TRUE,
                             pvalue = TRUE, unbiased = TRUE, unbiased.se = TRUE,
+                            unbiased.ci = TRUE, unbiased.ci.level = 0.90,
                             unbiased.zstat = FALSE, unbiased.test.val = 0.05,
                             unbiased.pvalue = FALSE),
                           h1.acov = "unstructured", add.type = FALSE,
@@ -120,6 +122,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
          summary.options <- list(se = FALSE, zstat = FALSE,
                             pvalue = FALSE, unbiased = FALSE,
                             unbiased.se = FALSE,
+                            unbiased.ci = FALSE, unbiased.ci.level = 0.90,
                             unbiased.zstat = FALSE, unbiased.test.val = 0.05,
                             unbiased.pvalue = FALSE)
     }
@@ -490,6 +493,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                   h1.acov = "unstructured", custom.rmr = NULL,
                                   se = FALSE, zstat = FALSE, pvalue = FALSE,
                                   unbiased = FALSE, unbiased.se = FALSE,
+                                  unbiased.ci = FALSE, unbiased.ci.level = 0.90,
                                   unbiased.zstat = FALSE,
                                   unbiased.test.val = 0.05,
                                   unbiased.pvalue = FALSE,
@@ -519,7 +523,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         }
         #FIXME: blocks can have unique models, need another layer of lists
         #       between custom summaries and moments
-    } else customNAMES <- NULL
+    } else {
+        customNAMES <- NULL
+    }
 
     if(pvalue) {
         zstat <- TRUE
@@ -649,6 +655,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     RMS.COV <- lav_residuals_summary_rms(STATS = STATS,
                         ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
                         unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
                         unbiased.zstat = unbiased.zstat,
                         unbiased.test.val = unbiased.test.val,
                         unbiased.pvalue = unbiased.pvalue,
@@ -667,6 +675,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             ACOV = ACOV,
                             se = se, zstat = zstat, pvalue = pvalue,
                             unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.ci = unbiased.ci,
+                            unbiased.ci.level = unbiased.ci.level,
                             unbiased.zstat = unbiased.zstat,
                             unbiased.test.val = unbiased.test.val,
                             unbiased.pvalue = unbiased.pvalue,
@@ -689,6 +699,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             ACOV = ACOV,
                             se = se, zstat = zstat, pvalue = pvalue,
                             unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.ci = unbiased.ci,
+                            unbiased.ci.level = unbiased.ci.level,
                             unbiased.zstat = unbiased.zstat,
                             unbiased.test.val = unbiased.test.val,
                             unbiased.pvalue = unbiased.pvalue,
@@ -817,6 +829,8 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                             ACOV = ACOV,
                             se = se, zstat = zstat, pvalue = pvalue,
                             unbiased = unbiased, unbiased.se = unbiased.se,
+                            unbiased.ci = unbiased.ci,
+                            unbiased.ci.level = unbiased.ci.level,
                             unbiased.zstat = unbiased.zstat,
                             unbiased.test.val = unbiased.test.val,
                             unbiased.pvalue = unbiased.pvalue,
@@ -831,15 +845,15 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
 
                     if(lavmodel@meanstructure) {
-                        TABLE <- as.data.frame(rbind(RMS.COV,
+                        TABLE <- as.data.frame(cbind(RMS.COV,
                                                      RMS.MEAN,
                                                      RMS.TOTAL,
                                                      RMS.CUSTOM))
-                        rownames(TABLE) <- c("cov", "mean", "total",
+                        colnames(TABLE) <- c("cov", "mean", "total",
                                              customNAMES)
                     } else {
-                        TABLE <- as.data.frame(rbind(RMS.COV, RMS.CUSTOM))
-                        rownames(TABLE) <- c("cov", customNAMES)
+                        TABLE <- as.data.frame(cbind(RMS.COV, RMS.CUSTOM))
+                        colnames(TABLE) <- c("cov", customNAMES)
                     }
                     if(add.class) {
                         class(TABLE) <- c("lavaan.data.frame", "data.frame")
@@ -862,8 +876,13 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
 
 lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
-                                      se = FALSE, zstat = FALSE, pvalue = FALSE,
-                                      unbiased = FALSE, unbiased.se = FALSE,
+                                      se = FALSE,
+                                      level = 0.90,
+                                      zstat = FALSE, pvalue = FALSE,
+                                      unbiased = FALSE,
+                                      unbiased.se = FALSE,
+                                      unbiased.ci = FALSE,
+                                      unbiased.ci.level = 0.90,
                                       unbiased.zstat = FALSE,
                                       unbiased.test.val = 0.05,
                                       unbiased.pvalue = FALSE,
@@ -877,6 +896,10 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
     # default is NULL
     rms.se <- rms.z <- rms.pvalue <- NULL
     urms <- urms.se <- urms.z <- urms.pvalue <- NULL
+    urms.ci.lower <- urms.ci.upper <- NULL
+    if(!unbiased.zstat) {
+        unbiased.test.val <- NULL
+    }
 
     if(se || unbiased) {
         TR2 <- sum(diag( ACOV %*% ACOV ))
@@ -911,6 +934,13 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
             } else {
                 urms.se <- sqrt(urms.avar)
             }
+            if(unbiased.ci) {
+                a <- (1 - unbiased.ci.level)/2
+                a <- c(a, 1-a)
+                fac <- stats::qnorm(a)
+                urms.ci.lower <- urms + urms.se * fac[1]
+                urms.ci.upper <- urms + urms.se * fac[2]
+            }
             if(unbiased.zstat) {
                 urms.z <- (urms - unbiased.test.val) / urms.se
                 if(unbiased.pvalue) {
@@ -923,19 +953,31 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
     # labels
     if(type == "rmr") {
         OUT <- list(rmr = rms, rmr.se = rms.se,
-                    rmr.z = rms.z, rmr.pvalue = rms.pvalue,
+                    rmr.exactfit.z = rms.z, rmr.exactfit.pvalue = rms.pvalue,
                     urmr = urms, urmr.se = urms.se,
-                    urmr.z = urms.z, urmr.pvalue = urms.pvalue)
+                    urmr.ci.lower = urms.ci.lower,
+                    urmr.ci.upper = urms.ci.upper,
+                    urmr.closefit.h0.value = unbiased.test.val,
+                    urmr.closefit.z = urms.z,
+                    urmr.closefit.pvalue = urms.pvalue)
     } else if(type == "srmr") {
         OUT <- list(srmr = rms, srmr.se = rms.se,
-                    srmr.z = rms.z, srmr.pvalue = rms.pvalue,
+                    srmr.exactfit.z = rms.z, srmr.exactfit.pvalue = rms.pvalue,
                     usrmr = urms, usrmr.se = urms.se,
-                    usrmr.z = urms.z, usrmr.pvalue = urms.pvalue)
+                    usrmr.ci.lower = urms.ci.lower,
+                    usrmr.ci.upper = urms.ci.upper,
+                    usrmr.closefit.h0.value = unbiased.test.val,
+                    usrmr.closefit.z = urms.z,
+                    usrmr.closefit.pvalue = urms.pvalue)
     } else if(type == "crmr") {
         OUT <- list(crmr = rms, crmr.se = rms.se,
-                    crmr.z = rms.z, crmr.pvalue = rms.pvalue,
+                    crmr.exactfit.z = rms.z, crmr.exactfit.pvalue = rms.pvalue,
                     ucrmr = urms, ucrmr.se = urms.se,
-                    ucrmr.z = urms.z, ucrmr.pvalue = urms.pvalue)
+                    ucrmr.ci.lower = urms.ci.lower,
+                    ucrmr.cilupper = urms.ci.upper,
+                    ucrmr.closefit.h0.value = unbiased.test.val,
+                    ucrmr.closefit.z = urms.z,
+                    ucrmr.closefit.pvalue = urms.pvalue)
     }
 
     unlist(OUT)
