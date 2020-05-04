@@ -8,6 +8,7 @@
 # - based on obsList (inspect_sampstat) and estList (inspect_implied)
 # - pre-scaling for type = "cor.bollen" and type = "cor.bentler"
 # - summary statistics: rmr, srmr, crmr, urmr, usrmr, ucrmr; standard errors,
+#       confidence intervals (for u(cs)rmr),
 #       z-statistics (exact test, close test), p-values
 # - type = "normalized" is based on lav_model_h1_acov(), and should now work
 #   for all estimators
@@ -16,6 +17,9 @@
 # - type = "standardized.mplus" uses the simplified Mplus/LISREL version,
 #   often resulting in NAs due to negative var(resid) estimates
 #   (this was "standardized" in lavaan < 0.6.3
+
+# - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
+#                 projection matrix (see lav_residuals_acov)
 
 setMethod("residuals", "lavaan",
 function(object, type = "raw", labels = TRUE) {
@@ -115,8 +119,20 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     lavdata  <- object@Data
     lavmodel <- object@Model
 
-    # change options if categorical or conditional.x, for now
-    if(lavmodel@categorical || lavmodel@conditional.x) {
+    # change options if categorical (for now)
+    if(lavmodel@categorical) {
+         zstat <- se <- FALSE
+         #summary <- FALSE
+         summary.options <- list(se = FALSE, zstat = FALSE,
+                            pvalue = FALSE, unbiased = FALSE,
+                            unbiased.se = FALSE,
+                            unbiased.ci = FALSE, unbiased.ci.level = 0.90,
+                            unbiased.zstat = FALSE, unbiased.test.val = 0.05,
+                            unbiased.pvalue = FALSE)
+    }
+
+    # change options if conditional.x (for now)
+    if(lavmodel@conditional.x) {
          zstat <- se <- FALSE
          summary <- FALSE
          summary.options <- list(se = FALSE, zstat = FALSE,
@@ -350,13 +366,19 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
             # see Ogasawara (2001) using Bentler & Dijkstra (1985) eq 1.7.4
 
             # NVarCov, but always 'not' robust
+            #
+            # new in 0.6-6: to ensure Q is a projection matrix, we
+            #               force observed.information = "h1"
+            #               (only needed if information is observed)
+            this.options <- object@Options
+            this.options$observed.information[1] <- "h1"
             A0.g.inv <- lav_model_information(lavmodel  = lavmodel,
                                          lavsamplestats = object@SampleStats,
                                          lavdata        = lavdata,
                                          lavcache       = object@Cache,
                                          lavimplied     = object@implied,
                                          lavh1          = object@h1,
-                                         lavoptions     = object@Options,
+                                         lavoptions     = this.options,
                                          extra          = FALSE,
                                          augmented      = TRUE,
                                          inverted       = TRUE,
@@ -446,8 +468,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
 
         # categorical
         if(lavmodel@categorical) {
-            stop("not ready yet")
-
+                stop("not ready yet")
         # continuous -- single level
         } else if(lavdata@nlevels == 1L) {
             if(lavmodel@conditional.x) {
@@ -566,6 +587,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
     rmrFlag <- srmrFlag <- crmrFlag <- FALSE
     if("rmr" %in% type || "raw" %in% type) {
+        # FIXME: recursive call to lav_residuals() is summary = TRUE!!
         rmrList <- lav_residuals(object = object, type = "raw")
         if(se || unbiased) {
             rmrList.se <- lav_residuals_acov(object = object, type = "raw",
@@ -600,9 +622,150 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
         nvar <- object@pta$nvar[[g]] # block or group-based?
 
-        # categorical
-        if(lavmodel@categorical) {
-            stop("not ready yet")
+        # categorical single level
+        if(lavdata@nlevels == 1L && lavmodel@categorical) {
+
+            if(lavmodel@conditional.x) {
+                stop("not ready yet")
+            } else {
+
+                nvar.x <- pstar.x <- 0L
+                if(lavmodel@fixed.x) {
+                    nvar.x <- lavmodel@nexo[g]
+                    pstar.x <- nvar.x * (nvar.x - 1) / 2 # note '-'
+                }
+
+                OUT <- vector("list", length(type))
+                names(OUT) <- type
+
+                for(typ in seq_len(length(type))) {
+
+                    if(type[typ] == "rmr") {
+                        rmsList.g <- rmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- rmrList.se[[g]]
+                        }
+                    } else if(type[typ] == "srmr") {
+                        rmsList.g <- srmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- srmrList.se[[g]]
+                        }
+                    } else if(type[typ] == "crmr") {
+                        rmsList.g <- crmrList[[g]]
+                        if(se || unbiased) {
+                            rmsList.se.g <- crmrList.se[[g]]
+                        }
+                    }
+
+                    # COR
+                    STATS <- lav_matrix_vech(rmsList.g[["cov"]],
+                                             diagonal = FALSE)
+                    pstar <- ( length(STATS) - pstar.x )
+                    ACOV <- NULL
+                    if(se || unbiased) {
+                        # TODO: extract from rmsList.se.g
+                    }
+                    RMS.COR <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+
+                    # THRESHOLDS
+                    STATS <- rmsList.g[["th"]]
+                    pstar <- length(STATS)
+                    ACOV <- NULL
+                    if(se || unbiased) {
+                        # TODO: extract from rmsList.se.g
+                    }
+                    RMS.TH <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+                    # MEAN
+                    STATS <- rmsList.g[["mean"]][lavmodel@num.idx[[g]]]
+                    pstar <- length(STATS)
+                    ACOV <- NULL
+                    if(se || unbiased) {
+                        # TODO: extract from rmsList.se.g
+                    }
+                    RMS.MEAN <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+                    # VAR
+                    STATS <- diag(rmsList.g[["cov"]])[lavmodel@num.idx[[g]]]
+                    pstar <- length(STATS)
+                    ACOV <- NULL
+                    if(se || unbiased) {
+                        # TODO: extract from rmsList.se.g
+                    }
+                    RMS.VAR <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+                    # TOTAL
+                    STATS <- c(lav_matrix_vech(rmsList.g[["cov"]],
+                                             diagonal = FALSE),
+                               rmsList.g[["th"]],
+                               rmsList.g[["mean"]],
+                               diag(rmsList.g[["cov"]])[lavmodel@num.idx[[g]]])
+                    pstar <- length(STATS)
+                    if(lavmodel@fixed.x) {
+                        pstar <- pstar - pstar.x
+                    }
+                    ACOV <- NULL
+                    if(se || unbiased) {
+                        # TODO: extract from rmsList.se.g
+                    }
+                    RMS.TOTAL <- lav_residuals_summary_rms(STATS = STATS,
+                        ACOV = ACOV, se = se, zstat = zstat, pvalue = pvalue,
+                        unbiased = unbiased, unbiased.se = unbiased.se,
+                        unbiased.ci = unbiased.ci,
+                        unbiased.ci.level = unbiased.ci.level,
+                        unbiased.zstat = unbiased.zstat,
+                        unbiased.test.val = unbiased.test.val,
+                        unbiased.pvalue = unbiased.pvalue,
+                        pstar = pstar, type = type[typ])
+
+                    TABLE <- as.data.frame(cbind(RMS.COR,
+                                                 RMS.TH,
+                                                 RMS.MEAN,
+                                                 RMS.VAR,
+                                                 RMS.TOTAL))
+                    colnames(TABLE) <- c("cor", "thresholds", "mean",
+                                         "var", "total")
+                    if(add.class) {
+                        class(TABLE) <- c("lavaan.data.frame", "data.frame")
+                    }
+                    OUT[[typ]] <- TABLE
+
+                } # type
+
+            } # not conditional.x
 
         # continuous -- single level
         } else if(lavdata@nlevels == 1L) {
@@ -862,13 +1025,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                 } # type
 
-                sumStat[[g]] <- OUT
             } # continuous, single-level, unconditional
 
         # continuous -- multilevel
         } else if(lavdata@nlevels > 1L) {
             stop("not ready yet")
         }
+
+        sumStat[[g]] <- OUT
     } # g
 
     sumStat
@@ -890,8 +1054,13 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
 
     OUT <- vector("list", length = 0L)
 
+
     # covariance matrix
-    rms <- sqrt(sum(STATS * STATS)/pstar)
+    if(length(STATS) > 0L) {
+        rms <- sqrt(sum(STATS * STATS)/pstar)
+    } else {
+        rms <- 0
+    }
 
     # default is NULL
     rms.se <- rms.z <- rms.pvalue <- NULL

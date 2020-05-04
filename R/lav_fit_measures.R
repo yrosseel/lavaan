@@ -1189,8 +1189,18 @@ lav_fit_measures <- function(object, fit.measures = "all",
         indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
         indices["crmr"]                <- CRMR
         indices["crmr_nomean"]         <- CRMR_NOMEAN
-        indices["srmr_mplus"]          <- SRMR_MPLUS
-        indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
+
+        # only correct for non-categorical:
+        if(object@Model@categorical) {
+            # FIXME! Compute Mplus 8.1 way to compute SRMR in the
+            #        categorical setting
+            #        See 'SRMR in Mplus (2018)' document on Mplus website
+            indices["srmr_mplus"]          <- as.numeric(NA)
+            indices["srmr_mplus_nomean"]   <- as.numeric(NA)
+        } else {
+            indices["srmr_mplus"]          <- SRMR_MPLUS
+            indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
+        }
         #if(categorical) {
             indices["rmr"]             <- RMR
         #} else {
