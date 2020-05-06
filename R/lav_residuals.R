@@ -730,7 +730,15 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     STATS <- lav_matrix_vech(rmsList.g[["cov"]],
                                              diagonal = FALSE)
                     # pstar <- ( length(STATS) - pstar.x )
-                    pstar <- length(STATS)
+
+
+                    # should pstar be p*(p+1)/2 or p*(p-1)/2
+                    # we use the first for SRMR and the latter for CRMR
+                    if(type == "crmr") {
+                        pstar <- length(STATS)
+                    } else {
+                        pstar <- length(STATS) + nvar
+                    }
                     ACOV <- NULL
                     if(se || unbiased) {
                         ACOV <- rmsList.se.g[-seq_len(nth),
