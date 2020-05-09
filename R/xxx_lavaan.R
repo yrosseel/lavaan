@@ -62,8 +62,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # check data
     if(!is.null(data)) {
         if(inherits(data, "data.frame")) {
-            # in case it is not a traditional data.frame
+            # just in case it is not a traditional data.frame
             data <- as.data.frame(data)
+        }
+        if(is.function(data)) {
+            stop("lavaan ERROR: data is a function; it should be a data.frame")
         }
     }
 
@@ -352,6 +355,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 } else if(inherits(data, "matrix")) {
                     NAMES <- colnames(data)
                 }
+
                 missing.idx <- which(!ordered %in% NAMES)
                 if(length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
                     warning("lavaan WARNING: ordered variable(s): ",

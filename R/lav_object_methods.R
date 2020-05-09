@@ -661,9 +661,9 @@ parameterEstimates <- parameterestimates <- function(object,
                                slotOptions  = this.options)
 
         SE.comp <- parameterEstimates(fit.complete, ci = FALSE, fmi = FALSE,
-            zstat = FALSE, pvalue = FALSE, remove.system.eq = remove.system.eq,
-            remove.eq = remove.eq, remove.ineq = remove.ineq,
-            remove.def = remove.def, remove.nonfree = remove.nonfree,
+            zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
+            remove.eq = FALSE, remove.ineq = FALSE,
+            remove.def = FALSE, remove.nonfree = FALSE,
             rsquare = rsquare, add.attributes = FALSE)$se
 
         SE.comp <- ifelse(SE.comp == 0.0, as.numeric(NA), SE.comp)
