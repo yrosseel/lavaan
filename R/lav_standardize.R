@@ -1,95 +1,90 @@
 lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
                                  lv.var = TRUE,
                                  rotation = FALSE) {
-    # embed x in est
-    est <- lav_object_inspect_est(lavobject, unrotated = rotation)
-    free.idx <- which(lavobject@ParTable$free > 0L)
-    stopifnot(length(x) == length(free.idx))
-    est[free.idx] <- x
 
-    # take care of setResidualElements...
+    # set new values for x
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
-    GLIST <- lavmodel@GLIST
+
+    if(rotation) {
+        x.unrotated <- x
+        lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
+        est.rot <- lav_model_efa_rotate_x(x = x.unrotated,
+                                          lavmodel = lavmodel, # unrotated!
+                                          lavoptions = lavobject@Options,
+                                          init.rot = lavmodel@H,
+                                          type = "user",
+                                          extra = TRUE)
+        GLIST <- attr(est.rot, "extra")$GLIST
+        attributes(est.rot) <- NULL
+        est <- est.rot
+    } else {
+        GLIST <- lavmodel@GLIST
+        est <- lav_model_get_parameters(lavmodel, type = "user")
+    }
 
     x.stand.user <- lav_standardize_lv(lavobject = lavobject,
                                        partable = partable, est = est,
                                        GLIST = GLIST, cov.std = cov.std,
                                        lv.var = lv.var)
 
-    if(rotation) {
-        x.stand.free <- x.stand.user[free.idx]
-        x.rot <- lav_model_efa_rotate_x(x = x.stand.free,
-                     lavmodel = lavobject@Model,
-                     lavoptions = lavobject@Options,
-                     init.rot = FALSE, # standardized!
-                     extra = FALSE,
-                     type = "free")
-        x.stand.user[free.idx] <- x.rot
-    }
-
     x.stand.user
 }
 
 lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
                                   rotation = FALSE) {
-    # embed x in est
-    est <- lav_object_inspect_est(lavobject, unrotated = rotation)
-    free.idx <- which(lavobject@ParTable$free > 0L)
-    stopifnot(length(x) == length(free.idx))
-    est[free.idx] <- x
 
-    # take care of setResidualElements...
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
-    GLIST <- lavmodel@GLIST
+
+    if(rotation) {
+        x.unrotated <- x
+        lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
+        est.rot <- lav_model_efa_rotate_x(x = x.unrotated,
+                                          lavmodel = lavmodel, # unrotated!
+                                          lavoptions = lavobject@Options,
+                                          init.rot = lavmodel@H,
+                                          type = "user",
+                                          extra = TRUE)
+        GLIST <- attr(est.rot, "extra")$GLIST
+        attributes(est.rot) <- NULL
+        est <- est.rot
+    } else {
+        GLIST <- lavmodel@GLIST
+        est <- lav_model_get_parameters(lavmodel, type = "user")
+    }
 
     x.stand.user <- lav_standardize_all(lavobject = lavobject,
                                         partable = partable, est = est,
                                         est.std = NULL, GLIST = GLIST,
                                         cov.std = cov.std)
-
-    if(rotation) {
-        x.stand.free <- x.stand.user[free.idx]
-        x.rot <- lav_model_efa_rotate_x(x = x.stand.free,
-                     lavmodel = lavobject@Model,
-                     lavoptions = lavobject@Options,
-                     init.rot = FALSE, # standardized!
-                     extra = FALSE,
-                     type = "free")
-        x.stand.user[free.idx] <- x.rot
-    }
-
-
     x.stand.user
 }
 
 lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
                                       cov.std = TRUE, rotation = FALSE) {
-    # embed x in est
-    est <- lav_object_inspect_est(lavobject, unrotated = rotation)
-    free.idx <- which(lavobject@ParTable$free > 0L)
-    stopifnot(length(x) == length(free.idx))
-    est[free.idx] <- x
 
-    # take care of setResidualElements...
     lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
-    GLIST <- lavmodel@GLIST
+
+    if(rotation) {
+        x.unrotated <- x
+        lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
+        est.rot <- lav_model_efa_rotate_x(x = x.unrotated,
+                                          lavmodel = lavmodel, # unrotated!
+                                          lavoptions = lavobject@Options,
+                                          init.rot = lavmodel@H,
+                                          type = "user",
+                                          extra = TRUE)
+        GLIST <- attr(est.rot, "extra")$GLIST
+        attributes(est.rot) <- NULL
+        est <- est.rot
+    } else {
+        GLIST <- lavmodel@GLIST
+        est <- lav_model_get_parameters(lavmodel, type = "user")
+    }
 
     x.stand.user <- lav_standardize_all_nox(lavobject = lavobject,
                                             partable = partable, est = est,
                                             est.std = NULL, GLIST = GLIST,
                                             cov.std = cov.std)
-
-    if(rotation) {
-        x.stand.free <- x.stand.user[free.idx]
-        x.rot <- lav_model_efa_rotate_x(x = x.stand.free,
-                     lavmodel = lavobject@Model,
-                     lavoptions = lavobject@Options,
-                     init.rot = FALSE, # standardized!
-                     extra = FALSE,
-                     type = "free")
-        x.stand.user[free.idx] <- x.rot
-    }
-
     x.stand.user
 }
 

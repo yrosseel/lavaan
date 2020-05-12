@@ -9,11 +9,7 @@
 # construct MATRIX lavoptions$representation of the model
 lav_model <- function(lavpartable      = NULL,
                       lavoptions       = NULL,
-                      th.idx           = list(),
-                      cov.x            = list(),
-                      mean.x           = list()) { # for conditional.x only
-                                                   # (not really needed,
-                                                   #  but as a failsafe)
+                      th.idx           = list()) {
 
     # handle bare-minimum partables
     lavpartable <- lav_partable_complete(lavpartable)
@@ -39,6 +35,12 @@ lav_model <- function(lavpartable      = NULL,
         if(nlevels > 1L) {
             multilevel <- TRUE
         }
+    }
+
+    # check mean.x/cov.x
+    if(lavoptions$conditional.x && any(lavpartable$exo > 0L)) {
+        # we should have non-empty mean.x/cov.x
+        # but they will be empty if
     }
 
     nefa <- lav_partable_nefa(lavpartable)
@@ -205,15 +207,15 @@ lav_model <- function(lavpartable      = NULL,
             # 4b. override with cov.x (if conditional.x = TRUE)
             # new in 0.6-1
             # shouldn't be needed, if lavpartable$start contains cov.x values
-            if(mmNames[mm] == "cov.x") {
-                tmp <- cov.x[[g]]
-            }
+            #if(mmNames[mm] == "cov.x") {
+            #    tmp <- cov.x[[g]]
+            #}
             # 4c. override with mean.x (if conditional.x = TRUE)
             # new in 0.6-1
             # shouldn't be needed, if lavpartable$start contains mean.x values
-            if(mmNames[mm] == "mean.x") {
-                tmp <- as.matrix(mean.x[[g]])
-            }
+            #if(mmNames[mm] == "mean.x") {
+            #    tmp <- as.matrix(mean.x[[g]])
+            #}
 
             # representation specific stuff
             if(lavoptions$representation == "LISREL" && mmNames[mm] == "lambda") {

@@ -39,25 +39,24 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L) {
         lambda.idx <- seq_len(nvar)
     }
 
-    # x are here the elements of LAMBDA (except the upper-right corner)
-    obj.f.uls <- function(x) {
-        LAMBDA[lambda.idx] <- x
-        res <- lav_matrix_vech(R - tcrossprod(LAMBDA), diagonal = FALSE)^2
-        sum(res)
-    }
+    # optim.method
+    minObjective <- efa_extraction_uls_corner_min_objective
+    minGradient  <- efa_extraction_uls_corner_min_gradient
+    minHessian   <- NULL
 
-    # x are here the elements of LAMBDA (except the upper-right corner)
-    grad.f.uls <- function(x) {
-        LAMBDA[lambda.idx] <- x
-        Sigma <- tcrossprod(LAMBDA)
-        diag(Sigma) <- 1 # diagonal is ignored
-        tmp <- -2 * (R - Sigma) %*% LAMBDA
-        tmp[lambda.idx]
-    }
+    # create cache environment
+    cache <- efa_extraction_uls_corner_init_cache(LAMBDA = LAMBDA,
+                                         lambda.idx = lambda.idx, R = R)
+
+    control.nlminb <- list(eval.max = 20000L, iter.max = 10000L,
+                           trace = 0L, abs.tol=(.Machine$double.eps * 10))
 
     # optimize
-    out <- nlminb(start = LAMBDA[lambda.idx], objective = obj.f.uls,
-                  gradient = grad.f.uls, lower = -1, upper = +1)
+    out <- nlminb(start = cache$theta, objective = minObjective,
+                  gradient = minGradient, hessian = minHessian,
+                  control = control.nlminb, lower = -1, upper = +1,
+                  cache = cache)
+
     LAMBDA[lambda.idx] <- out$par
     diag(THETA) <- 1 - diag(tcrossprod(LAMBDA))
 
@@ -69,4 +68,41 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L) {
 }
 
 
+efa_extraction_uls_corner_init_cache <- function(LAMBDA = NULL,
+                                                 lambda.idx = NULL,
+                                                 R = NULL,
+                                                 parent = parent.frame()) {
+    theta <- LAMBDA[lambda.idx]
+    out <- list2env(list(LAMBDA = LAMBDA,
+                         lambda.idx = lambda.idx,
+                         R = R,
+                         theta = theta),
+                    parent = parent)
+    out
+}
+
+efa_extraction_uls_corner_min_objective <- function(x, cache = NULL) {
+    cache$theta <- x
+    with(cache, {
+        LAMBDA[lambda.idx] <- theta
+        res1 <- lav_matrix_vech(R - tcrossprod(LAMBDA), diagonal = FALSE)
+        res2 <- res1 * res1
+        return(sum(res2))
+    })
+}
+
+efa_extraction_uls_corner_min_gradient<- function(x, cache = NULL) {
+    # check if x has changed
+    if(!all(x == cache$theta)) {
+        cache$theta <- x
+        # nothing to do
+    }
+    with(cache, {
+        LAMBDA[lambda.idx] <- theta
+        Sigma <- tcrossprod(LAMBDA)
+        diag(Sigma) <- 1 # diagonal is ignored
+        tmp <- -2 * (R - Sigma) %*% LAMBDA
+        return(tmp[lambda.idx])
+    })
+}
 

@@ -2,6 +2,8 @@
 #
 # YR  3 April 2019 -- gradient projection algorithm
 # YR 21 April 2019 -- pairwise rotation algorithm
+# YR 11 May   2020 -- order.idx is done in rotation matrix
+#                     (suggested by Florian Scharf)
 
 # main function to rotate a single matrix 'A'
 lav_matrix_rotate <- function(A           = NULL,      # original matrix
@@ -306,7 +308,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     # 4.b reorder the columns
     if(order.lv.by == "sumofsquares") {
         L2 <- LAMBDA * LAMBDA
-        order.idx <- order(colSums(L2), decreasing = TRUE)
+        order.idx <- base::order(colSums(L2), decreasing = TRUE)
      } else if(order.lv.by == "index") {
         # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
         max.loading <- apply(abs(LAMBDA), 2, max)
@@ -314,7 +316,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         #    highest loading of the factor
         # 2: mean of the index numbers
         average.index <- sapply(seq_len(ncol(LAMBDA)), function(i)
-                             mean(which(abs(LAMBDA[,i]) >= 0.8 * max.loading[i])))
+                        mean(which(abs(LAMBDA[,i]) >= 0.8 * max.loading[i])))
         # order of the factors
         order.idx <- base::order(average.index)
     } else if(order.lv.by == "none") {
@@ -326,6 +328,10 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     # do the same in PHI
     LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
     PHI    <- PHI[order.idx, order.idx, drop = FALSE]
+
+    # new in 0.6-6, also do this in ROT, so we won't have to do this
+    # again upstream
+    # ROT <- ROT[, order.idx, drop = FALSE]
 
     # 6. return results as a list
     res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT, order.idx = order.idx,

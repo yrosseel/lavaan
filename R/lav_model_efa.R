@@ -131,7 +131,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                 init.ROT <- init.rot[[g]][lv.idx, lv.idx, drop = FALSE]
                 rstarts <- 0
             } else {
-                init.ROT = NULL
+                init.ROT <- NULL
                 rstarts <- ropts$rstarts
             }
 
@@ -162,6 +162,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                      max.iter    = ropts$max.iter)
 
             # extract rotation matrix (note, in Asp & Muthen, 2009; this is H')
+            # note: as of 0.6-6, order.idx has already been applied to ROT,
+            #       so no need to reorder rows/columns after rotation
             H.efa <- res$ROT
 
             # fill in optimal rotation for this set

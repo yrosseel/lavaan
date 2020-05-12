@@ -74,7 +74,11 @@ lavInspect.lavaan <- function(object,
         lav_object_inspect_modelmatrices(object, what = "est",
             add.labels = add.labels, add.class = add.class,
             list.by.group = list.by.group,
-            #list.by.group = FALSE, for semTools only
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "est.unrotated") {
+        lav_object_inspect_modelmatrices(object, what = "est.unrotated",
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
     } else if(what == "dx.free") {
         lav_object_inspect_modelmatrices(object, what = "dx.free",
@@ -728,6 +732,13 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
         START <- lav_object_inspect_start(object)
     } else if (what == "est") {
         EST <- lav_object_inspect_est(object)
+    } else if(what == "est.unrotated") {
+        if(!is.null(object@Options$rotation) &&
+           object@Options$rotation == "none") {
+            EST <- lav_object_inspect_est(object, unrotated = FALSE)
+        } else {
+            EST <- lav_object_inspect_est(object, unrotated = TRUE)
+        }
     }
 
     for(mm in 1:length(GLIST)) {
@@ -765,7 +776,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
             m.user.idx <- object@Model@m.user.idx[[mm]]
             x.user.idx <- object@Model@x.user.idx[[mm]]
             GLIST[[mm]][m.user.idx] <- START[x.user.idx]
-        } else if(what == "est") {
+        } else if(what %in% c("est", "est.unrotated")) {
             # fill in estimated parameter values
             m.user.idx <- object@Model@m.user.idx[[mm]]
             x.user.idx <- object@Model@x.user.idx[[mm]]
@@ -2436,12 +2447,12 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     lavoptions <- object@Options
 
     # rotation?
-    #if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
-    #    (lavoptions$rotation != "none") ) {
-    #    rotation <- TRUE
-    #} else {
-    #    rotation <- FALSE
-    #}
+    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+        (lavoptions$rotation != "none") ) {
+        rotation <- TRUE
+    } else {
+        rotation <- FALSE
+    }
 
     npar <- max(object@ParTable$free)
     if(object@optim$npar == 0) {
@@ -2493,22 +2504,22 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
 
 
-        #if(rotation) {
-        #    JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
-        #               method = "simple",
-        #               method.args = list(eps = 1e-03), # default is 1e-04
-        #               lavobject = object, rotation = rotation)
-        #} else {
+        if(rotation) {
+            JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
+                       method = "simple",
+                       method.args = list(eps = 1e-03), # default is 1e-04
+                       lavobject = object, rotation = rotation)
+        } else {
 
-        x.vec <- lav_model_get_parameters(lavmodel)
-        JAC <- try(lav_func_jacobian_complex(func = FUN, x = x.vec,
-                       lavobject = object),
-                   silent = TRUE)
-        if(inherits(JAC, "try-error")) { # eg. pnorm()
-            JAC <- lav_func_jacobian_simple(func = FUN, x = x.vec,
-                       lavobject = object)
+            x.vec <- lav_model_get_parameters(lavmodel)
+            JAC <- try(lav_func_jacobian_complex(func = FUN, x = x.vec,
+                           lavobject = object),
+                       silent = TRUE)
+            if(inherits(JAC, "try-error")) { # eg. pnorm()
+                JAC <- lav_func_jacobian_simple(func = FUN, x = x.vec,
+                           lavobject = object)
+            }
         }
-        #}
 
         # JAC contains *all* parameters in the parameter table
         if(free.only) {

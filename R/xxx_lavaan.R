@@ -722,8 +722,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # no data
         lavsamplestats <- new("lavSampleStats", ngroups=lavdata@ngroups,
                                  nobs=as.list(rep(0L, lavdata@ngroups)),
-                                 #cov.x=vector("list",length=lavdata@ngroups),
-                                 #mean.x=vector("list",length=lavdata@ngroups),
+                                 cov.x=vector("list",length=lavdata@ngroups),
+                                 mean.x=vector("list",length=lavdata@ngroups),
                                  th.idx=lavpta$th.idx,
                                  missing.flag=FALSE)
     }
@@ -847,9 +847,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #####################
         lavmodel <- lav_model(lavpartable      = lavpartable,
                               lavoptions       = lavoptions,
-                              th.idx           = lavsamplestats@th.idx,
-                              cov.x            = lavsamplestats@cov.x,
-                              mean.x           = lavsamplestats@mean.x)
+                              th.idx           = lavsamplestats@th.idx)
+                              # no longer needed: x values are in start
+                              #cov.x            = lavsamplestats@cov.x,
+                              #mean.x           = lavsamplestats@mean.x)
 
         # if no data, call lav_model_set_parameters once (for categorical case)
         if(lavdata@data.type == "none" && lavmodel@categorical) {
