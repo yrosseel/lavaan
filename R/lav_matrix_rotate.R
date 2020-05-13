@@ -331,7 +331,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # new in 0.6-6, also do this in ROT, so we won't have to do this
     # again upstream
-    # ROT <- ROT[, order.idx, drop = FALSE]
+    ROT <- ROT[, order.idx, drop = FALSE]
 
     # 6. return results as a list
     res <- list(LAMBDA = LAMBDA, PHI = PHI, ROT = ROT, order.idx = order.idx,

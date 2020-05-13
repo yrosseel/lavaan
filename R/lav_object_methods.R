@@ -73,7 +73,9 @@ function(object, header       = TRUE,
                                  cov.std = cov.std,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE, output = "text",
+                                 remove.nonfree = FALSE, 
+                                 #remove.nonfree.scales = TRUE,
+                                 output = "text",
                                  header = TRUE)
         if(standardized && std.nox) {
             #PE$std.all <- PE$std.nox
@@ -157,6 +159,9 @@ standardizedSolution <-
     LIST <- PARTABLE[,c("lhs", "op", "rhs", "exo")]
     if(!is.null(PARTABLE$group)) {
         LIST$group <- PARTABLE$group
+    }
+    if(!is.null(PARTABLE$block)) {
+        LIST$block <- PARTABLE$block
     }
 
     # add std and std.all columns
@@ -256,36 +261,51 @@ standardizedSolution <-
     if(output == "text") {
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                          "data.frame")
-        # LIST$exo is needed for printing
+        # LIST$exo is needed for printing, don't remove it
+        attr(LIST, "group.label") <- object@Data@group.label
+        attr(LIST, "level.label") <- object@Data@level.label
         #attr(LIST, "header") <- FALSE
     } else {
         LIST$exo <- NULL
+        LIST$block <- NULL
         class(LIST) <- c("lavaan.data.frame", "data.frame")
     }
 
     LIST
 }
 
-parameterEstimates <- parameterestimates <- function(object,
-                                                     se    = TRUE,
-                                                     zstat = TRUE,
-                                                     pvalue = TRUE,
-                                                     ci = TRUE,
-                                                     level = 0.95,
-                                                     boot.ci.type = "perc",
-                                                     standardized = FALSE,
-                                                     cov.std = TRUE,
-                                                     fmi = FALSE,
-                                                     fmi.options = list(),
-                                                     remove.system.eq = TRUE,
-                                                     remove.eq = TRUE,
-                                                     remove.ineq = TRUE,
-                                                     remove.def = FALSE,
-                                                     remove.nonfree = FALSE,
-                                                     rsquare = FALSE,
-                                                     add.attributes = FALSE,
-                                                     output = "data.frame",
-                                                     header = FALSE) {
+parameterEstimates <- 
+parameterestimates <- function(object,
+
+                               # select columns
+                               se           = TRUE,
+                               zstat        = TRUE,
+                               pvalue       = TRUE,
+                               ci           = TRUE,
+                               standardized = FALSE,
+                               fmi          = FALSE,
+
+                               # control
+                               level        = 0.95,
+                               boot.ci.type = "perc",
+                               cov.std      = TRUE,
+                               fmi.options  = list(),
+
+                               # add rows
+                               rsquare = FALSE,
+ 
+                               # remove rows
+                               remove.system.eq      = TRUE,
+                               remove.eq             = TRUE,
+                               remove.ineq           = TRUE,
+                               remove.def            = FALSE,
+                               remove.nonfree        = FALSE,
+                               remove.nonfree.scales = FALSE,
+
+                               # output
+                               add.attributes = FALSE,
+                               output = "data.frame",
+                               header = FALSE) {
 
     if(inherits(object, "lavaan.fsr")) {
         return(object$PE)
@@ -685,7 +705,7 @@ parameterEstimates <- parameterestimates <- function(object,
     # if no user-defined labels, remove label column
     if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
 
-    # remove non-free paramters? (but keep ==, >, < and :=)
+    # remove non-free parameters? (but keep ==, >, < and :=)
     if(remove.nonfree) {
         nonfree.idx <- which( LIST$free == 0L &
                               !LIST$op %in% c("==", ">", "<", ":=") )
@@ -693,6 +713,16 @@ parameterEstimates <- parameterestimates <- function(object,
             LIST <- LIST[-nonfree.idx,]
         }
     }
+
+    # remove non-free scales (categorical only), except 'user-specified'
+    if(remove.nonfree.scales) {
+        nonfree.scales.idx <- which( LIST$free == 0L & LIST$op == "~*~" &
+                                     LIST$user == 0L)
+        if(length(nonfree.scales.idx) > 0L) {
+            LIST <- LIST[-nonfree.scales.idx,]
+        }
+    }
+
     # remove 'free' column
     LIST$free <- NULL
 

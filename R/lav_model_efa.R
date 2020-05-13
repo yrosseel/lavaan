@@ -178,29 +178,29 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         # 1. lambda
         MLIST$lambda <- t(solve(Hg, t(MLIST$lambda)))
         # reorder
-        MLIST$lambda <- MLIST$lambda[, lv.order, drop = FALSE]
+        #MLIST$lambda <- MLIST$lambda[, lv.order, drop = FALSE]
 
         # 2. psi (note: eq 22 Asp & Muthen, 2009: transpose reversed)
         MLIST$psi <- t(Hg) %*% MLIST$psi %*% Hg
         # reorder rows
-        MLIST$psi <- MLIST$psi[lv.order, , drop = FALSE]
+        #MLIST$psi <- MLIST$psi[lv.order, , drop = FALSE]
         # reorder cols
-        MLIST$psi <- MLIST$psi[, lv.order, drop = FALSE]
+        #MLIST$psi <- MLIST$psi[, lv.order, drop = FALSE]
 
         # 3. beta
         if(!is.null(MLIST$beta)) {
             MLIST$beta <- t(Hg) %*% t(solve(Hg, t(MLIST$beta)))
             # reorder rows
-            MLIST$beta <- MLIST$beta[lv.order, , drop = FALSE]
+            #MLIST$beta <- MLIST$beta[lv.order, , drop = FALSE]
             # reorder cols
-            MLIST$beta <- MLIST$beta[, lv.order, drop = FALSE]
+            #MLIST$beta <- MLIST$beta[, lv.order, drop = FALSE]
         }
 
         # 4. alpha
         if(!is.null(MLIST$alpha)) {
             MLIST$alpha <- t(Hg) %*% MLIST$alpha
             # reorder rows
-            MLIST$alpha <- MLIST$alpha[lv.order, , drop = FALSE]
+            #MLIST$alpha <- MLIST$alpha[lv.order, , drop = FALSE]
         }
 
         # no need for rotation: nu, theta
