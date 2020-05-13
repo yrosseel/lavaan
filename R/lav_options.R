@@ -1148,6 +1148,9 @@ lav_options_set <- function(opt = NULL) {
             } else {
                 opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
             }
+        } else {
+            # default is "hessian"
+            opt$observed.information[2] <- "hessian"
         }
     } else {
         stop("lavaan ERROR: observed.information[2] must be either \"hessian\", or \"h1\"\n")

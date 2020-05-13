@@ -300,7 +300,7 @@ parameterestimates <- function(object,
                                remove.ineq           = TRUE,
                                remove.def            = FALSE,
                                remove.nonfree        = FALSE,
-                               remove.nonfree.scales = FALSE,
+                               #remove.nonfree.scales = FALSE,
 
                                # output
                                add.attributes = FALSE,
@@ -715,13 +715,16 @@ parameterestimates <- function(object,
     }
 
     # remove non-free scales (categorical only), except 'user-specified'
-    if(remove.nonfree.scales) {
-        nonfree.scales.idx <- which( LIST$free == 0L & LIST$op == "~*~" &
-                                     LIST$user == 0L)
-        if(length(nonfree.scales.idx) > 0L) {
-            LIST <- LIST[-nonfree.scales.idx,]
-        }
-    }
+    #
+    # (not yet public)
+    #  
+    #if(remove.nonfree.scales) {
+    #    nonfree.scales.idx <- which( LIST$free == 0L & LIST$op == "~*~" &
+    #                                 LIST$user == 0L)
+    #    if(length(nonfree.scales.idx) > 0L) {
+    #        LIST <- LIST[-nonfree.scales.idx,]
+    #    }
+    #}
 
     # remove 'free' column
     LIST$free <- NULL

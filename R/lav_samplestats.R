@@ -1157,7 +1157,8 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 # fixed.x?
                 if(fixed.x) {
                     if(is.null(sample.cov.x)) {
-                        cov.x[[g]] <- cov[[g]][x.idx[[g]], x.idx[[g]]]
+                        cov.x[[g]] <- cov[[g]][x.idx[[g]], x.idx[[g]], 
+                                               drop = FALSE]
                     } else {
                         cov.x[[g]]  <- unclass(unname(sample.cov.x[[g]]))
                     }
