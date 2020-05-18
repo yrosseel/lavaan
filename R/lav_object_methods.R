@@ -73,7 +73,7 @@ function(object, header       = TRUE,
                                  cov.std = cov.std,
                                  remove.eq = FALSE, remove.system.eq = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE, 
+                                 remove.nonfree = FALSE,
                                  #remove.nonfree.scales = TRUE,
                                  output = "text",
                                  header = TRUE)
@@ -274,7 +274,7 @@ standardizedSolution <-
     LIST
 }
 
-parameterEstimates <- 
+parameterEstimates <-
 parameterestimates <- function(object,
 
                                # select columns
@@ -293,7 +293,7 @@ parameterestimates <- function(object,
 
                                # add rows
                                rsquare = FALSE,
- 
+
                                # remove rows
                                remove.system.eq      = TRUE,
                                remove.eq             = TRUE,
@@ -717,7 +717,7 @@ parameterestimates <- function(object,
     # remove non-free scales (categorical only), except 'user-specified'
     #
     # (not yet public)
-    #  
+    #
     #if(remove.nonfree.scales) {
     #    nonfree.scales.idx <- which( LIST$free == 0L & LIST$op == "~*~" &
     #                                 LIST$user == 0L)

@@ -929,9 +929,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
             # factor score coefficient matrix 'C'
             FSC <- ( MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*% LAMBDA.g)
                      %*% t(LAMBDA.g) %*% Sigma.inv.g )
+
             # store fsm?
             if(fsm) {
-                FSM[[g]] <- FSC
+                # store fsm?
+                FSM.g <- FSC
             }
 
             # compute factor scores

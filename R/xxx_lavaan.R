@@ -370,7 +370,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
 
 
-
     #######################
     #### 2. lavoptions ####
     #######################
@@ -491,12 +490,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     timing$Options <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
-
     # fixed.x = FALSE? set ov.names.x = character(0L)
     # new in 0.6-1
     if(!lavoptions$fixed.x) {
         ov.names.x <- character(0L)
     }
+
+
+    # re-order ov.names.* if requested (new in 0.6-7)
+
+
 
 
     #####################
@@ -505,8 +508,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotData)) {
         lavdata <- slotData
     } else {
+
         # FIXME: ov.names should always contain both y and x!
-        OV.NAMES <- if(lavoptions$conditional.x) { ov.names.y } else {ov.names}
+        OV.NAMES <- if(lavoptions$conditional.x) {
+                        ov.names.y
+                    } else {
+                        ov.names
+                    }
         lavdata <- lavData(data             = data,
                            group            = group,
                            cluster          = cluster,
@@ -1321,11 +1329,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #######################
     #### 14bis. lavfit #### ## -> remove if the offending packages are fixed!!
     #######################
-    lavfit <- lav_model_fit(lavpartable = lavpartable,
-                            lavmodel    = lavmodel,
-                            x           = x,
-                            VCOV        = VCOV,
-                            TEST        = TEST)
+    #lavfit <- lav_model_fit(lavpartable = lavpartable,
+    #                        lavmodel    = lavmodel,
+    #                        x           = x,
+    #                        VCOV        = VCOV,
+    #                        TEST        = TEST)
+    lavfit <- new("Fit")
     timing$Fit <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 

@@ -192,9 +192,9 @@ lavData <- function(data              = NULL,          # data.frame
         }
 
         # get ov.names
-        if (is.null(ov.names)) {
+        if(is.null(ov.names)) {
             ov.names <- lapply(sample.cov, row.names)
-        } else if (!is.list(ov.names)) {
+        } else if(!is.list(ov.names)) {
             # duplicate ov.names for each group
             tmp <- ov.names; ov.names <- vector("list", length = ngroups)
             ov.names[1:ngroups] <- list(tmp)

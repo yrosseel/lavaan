@@ -59,6 +59,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
                 parameterization   = "default",
+                #ov.order           = "model",   # how to 'order' ov's in the
+                #                                # partable
 
                 auto.fix.first     = FALSE,
                 auto.fix.single    = FALSE,
