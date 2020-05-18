@@ -14,8 +14,7 @@
 setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
     lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
-               fsm = FALSE,
-               optim.method = "bfgs")
+               fsm = FALSE, optim.method = "bfgs")
 })
 
 # main function
@@ -93,6 +92,19 @@ lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
                                               missing = lavdata@missing,
                                               warn = TRUE), # was FALSE before?
                            allow.single.case = TRUE)
+        # if ordered, check if number of levels is till the same (new in 0.6-7)
+        if(lavmodel@categorical) {
+            orig.ordered.idx <- which(lavdata@ov$type == "ordered")
+            orig.ordered.lev <- lavdata@ov$nlev[orig.ordered.idx]
+            match.new.idx <- match(newData@ov$name,
+                                   lavdata@ov$name[orig.ordered.idx])
+            new.ordered.lev <- newData@ov$nlev[match.new.idx]
+            if(any(orig.ordered.lev - new.ordered.lev != 0)) {
+                stop("lavaan ERROR: ",
+                     "mismatch number of categories for some ordered variables",
+                     "\n\t\tin newdata compared to original data.")
+            }
+        }
         data.obs <- newData@X
         eXo <- newData@eXo
         ov.names <- newData@ov.names
@@ -1054,7 +1066,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
         }
     }
     EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-                          eXo = eXo, nobs = lavdata@norig,
+                          eXo = eXo, nobs = lapply(data.obs, NROW),
                           remove.dummy.lv = TRUE) ## FIXME?
     TH    <- computeTH(   lavmodel = lavmodel)
     THETA <- computeTHETA(lavmodel = lavmodel)
@@ -1155,6 +1167,9 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
             }
             mu.i <- EETAx[[g]][i,,drop=FALSE]
             y.i <- data.obs[[g]][i,,drop=FALSE]
+
+            ### DEBUG ONLY:
+            #cat("i = ", i, "mu.i = ", mu.i, "\n")
 
             START <- numeric(nfac) # initial values for eta
 
@@ -1269,7 +1284,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
 
     YHAT <- computeYHAT(lavmodel = lavmodel, GLIST = NULL,
                         lavsamplestats = lavsamplestats, eXo = eXo,
-                        nobs = lavdata@norig,
+                        nobs = lapply(data.obs, NROW),
                         ETA = ETA, duplicate = duplicate)
 
     # if conditional.x, paste eXo
