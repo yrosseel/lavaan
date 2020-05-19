@@ -93,8 +93,22 @@ representation.LISREL <- function(partable = NULL,
 
         dummy.names2 <- unique( c(partable$lhs[dummy.cov.idx],
                                   partable$rhs[dummy.cov.idx]) )
+
+
+        # new in 0.6-7: ~~ between latent and observed
+        dummy.cov.ov.lv.idx1 <- which(partable$op == "~~" &
+                                      partable$block == g &
+                                      partable$lhs %in% ov.names &
+                                      partable$rhs %in% lv.names)
+        dummy.cov.ov.lv.idx2 <- which(partable$op == "~~" &
+                                      partable$block == g &
+                                      partable$lhs %in% lv.names &
+                                      partable$rhs %in% ov.names)
+        dummy.names3 <- unique( c(partable$lhs[dummy.cov.ov.lv.idx1],
+                                  partable$rhs[dummy.cov.ov.lv.idx2]) )
+
         # collect all dummy variables
-        dummy.names <- unique(c(dummy.names1, dummy.names2))
+        dummy.names <- unique(c(dummy.names1, dummy.names2, dummy.names3))
 
 
         if(length(dummy.names)) {
