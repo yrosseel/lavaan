@@ -460,6 +460,9 @@ lav_mvnorm_dlogl_dmu_dvechSigma <- function(Y           = NULL,
                                                   Sinv.method = Sinv.method)
     }
 
+    # substract Mu
+    Yc <- t( t(Y) - Mu )
+
     # W.tilde
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")

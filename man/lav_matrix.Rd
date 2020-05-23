@@ -80,7 +80,7 @@ lav_matrix_commutation_pre(A = matrix(0,0,0))
 lav_matrix_commutation_mn_pre(A, m = 1L, n = 1L)
 
 # sample statistics
-lav_matrix_cov(Y, ybar = NULL)
+lav_matrix_cov(Y, Mu = NULL)
 
 # other matrix operations
 lav_matrix_symmetric_sqrt(S = matrix(0,0,0))
@@ -97,7 +97,8 @@ lav_matrix_trace(..., check = TRUE)
 matrix. If m is also provided, the number of column of the matrix.}
 \item{m}{Integer. The number of rows of a matrix.}
 \item{x}{Numeric. A vector.}
-\item{ybar}{Numeric. The mean vector of the matrix.}
+\item{Mu}{Numeric. If given, use Mu (instead of sample mean) to center, before 
+ taking the crossproduct.}
 \item{...}{One or more matrices, or a list of matrices.}
 \item{check}{Logical. If \code{check = TRUE}, we check if the (final) matrix 
 is square.}
