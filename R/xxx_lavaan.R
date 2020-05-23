@@ -180,13 +180,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # here, we only need to figure out:
         # - ngroups
         # - ov's per group
+        #
         # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
+        #
         group.idx <- which(FLAT$op == ":" & tolower(FLAT$lhs) == "group")
         # replace by 'group' (in case we got 'Group'):
         FLAT$lhs[group.idx] <- "group"
         tmp.group.values <- unique(FLAT$rhs[group.idx])
         tmp.ngroups <- length(tmp.group.values)
-        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE)
+
+        FLAT2 <- FLAT
+        attr(FLAT2, "modifiers") <- NULL
+        attr(FLAT2, "constraints") <- NULL
+        tmp.lav <- lavaanify(FLAT2, ngroups = tmp.ngroups, warn = FALSE)
         ov.names <- ov.names.y <- ov.names.x <- lv.names <- vector("list",
                                                        length = tmp.ngroups)
         for(g in seq_len(tmp.ngroups)) {
@@ -289,7 +295,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             stop("lavaan ERROR: when data is clustered, you must specify a model\n", "  for each level in the model syntax (for now); see example(Demo.twolevel)")
         }
 
-        tmp.lav <- lavaanify(FLAT, ngroups = tmp.ngroups, warn = FALSE)
+        FLAT2 <- FLAT
+        attr(FLAT2, "modifiers") <- NULL
+        attr(FLAT2, "constraints") <- NULL
+        tmp.lav <- lavaanify(FLAT2, ngroups = tmp.ngroups, warn = FALSE)
         # check for empty levels
         if(max(tmp.lav$level) < 2L) {
             stop("lavaan ERROR: at least one level has no model syntax; you must specify a model for each level in the model syntax (for now); see example(Demo.twolevel)")

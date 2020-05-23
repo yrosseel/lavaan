@@ -171,8 +171,8 @@ lav_mvnorm_loglik_data <- function(Y             = NULL,
             sample.mean <- out$center
             sample.cov  <- out$cov
         } else {
-            sample.mean <- colMeans(Y)
-            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            sample.mean <- base::.colMeans(Y, m = N, m = P)
+            sample.cov <- lav_matrix_cov(Y)
         }
         loglik <- lav_mvnorm_loglik_samplestats(sample.mean = sample.mean,
                                                 sample.cov  = sample.cov,
@@ -289,8 +289,8 @@ lav_mvnorm_loglik_data_z <- function(Y             = NULL,
             sample.mean <- out$center
             sample.cov  <- out$cov
         } else {
-            sample.mean <- colMeans(Y)
-            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            sample.mean <- base::.colMeans(Y, m = N, n = P)
+            sample.cov <- lav_matrix_cov(Y)
         }
 
         DIST1 <- sum(diag(sample.cov))
@@ -366,9 +366,6 @@ lav_mvnorm_dlogl_dSigma <- function(Y           = NULL,
                                                   Sinv.method = Sinv.method)
     }
 
-    # substract 'Mu' from Y
-    Yc <- t( t(Y) - Mu )
-
     # W.tilde
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
@@ -376,7 +373,10 @@ lav_mvnorm_dlogl_dSigma <- function(Y           = NULL,
         MY <- out$center
         W.tilde <- SY + tcrossprod(MY - Mu)
     } else {
-        W.tilde <- crossprod(Yc) / N
+        # substract 'Mu' from Y
+        #Yc <- t( t(Y) - Mu )
+        #W.tilde <- crossprod(Yc) / N
+        W.tilde <- lav_matrix_cov(Y, Mu = Mu)
     }
 
     # derivative
@@ -413,9 +413,6 @@ lav_mvnorm_dlogl_dvechSigma <- function(Y           = NULL,
                                                   Sinv.method = Sinv.method)
     }
 
-    # substract 'Mu' from Y
-    Yc <- t( t(Y) - Mu )
-
     # W.tilde
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
@@ -423,7 +420,7 @@ lav_mvnorm_dlogl_dvechSigma <- function(Y           = NULL,
         MY <- out$center
         W.tilde <- SY + tcrossprod(MY - Mu)
     } else {
-        W.tilde <- crossprod(Yc) / N
+        W.tilde <- lav_matrix_cov(Y, Mu = Mu)
     }
 
     # derivative (avoiding kronecker product)
@@ -463,9 +460,6 @@ lav_mvnorm_dlogl_dmu_dvechSigma <- function(Y           = NULL,
                                                   Sinv.method = Sinv.method)
     }
 
-    # substract 'Mu' from Y
-    Yc <- t( t(Y) - Mu )
-
     # W.tilde
     if(!is.null(wt)) {
         out <- stats::cov.wt(Y, wt = wt, method = "ML")
@@ -474,7 +468,7 @@ lav_mvnorm_dlogl_dmu_dvechSigma <- function(Y           = NULL,
         W.tilde <- SY + tcrossprod(MY - Mu)
         dmu <- as.numeric(Sigma.inv %*% colSums(Yc * wt))
     } else {
-        W.tilde <- crossprod(Yc) / N
+        W.tilde <- lav_matrix_cov(Y, Mu = Mu)
         dmu <- as.numeric(Sigma.inv %*% colSums(Yc))
     }
 
@@ -737,7 +731,7 @@ lav_mvnorm_information_observed_data <- function(Y           = NULL,
         N <- NROW(Y)
         # sample statistics
         sample.mean <- colMeans(Y)
-        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+        sample.cov <- lav_matrix_cov(Y)
     }
 
     lav_mvnorm_information_observed_samplestats(sample.mean = sample.mean,

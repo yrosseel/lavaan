@@ -307,7 +307,7 @@ lav_partable_flat <- function(FLAT = NULL,
                          user == 0L)
         ustart[var.idx] <- 0.0
           free[var.idx] <- 0L
-    } else {
+    } else if(length(lv.names.f) > 0L) {
         # 'formative' (residual) variances are set to zero by default
         var.idx <- which(op == "~~" &
                          lhs == rhs &
@@ -326,7 +326,7 @@ lav_partable_flat <- function(FLAT = NULL,
         ustart[lv.var.idx] <- 1.0
           free[lv.var.idx] <- 0L
     }
-    if(auto.efa) {
+    if(auto.efa && length(lv.names.efa) > 0L) {
         # fix lv variances of efa blocks to unity
         lv.var.idx <- which(op == "~~" &
                             lhs %in% lv.names.efa & lhs == rhs)
@@ -352,10 +352,11 @@ lav_partable_flat <- function(FLAT = NULL,
             # get corresponding indicator if unique
             lhs.mm <- lhs[mm.idx]; rhs.mm <- rhs[mm.idx]
             single.ind <- rhs.mm[which(lhs.mm %in% lv.names.single &
+                                       lhs.mm != rhs.mm & # exclude phantom
                                        !(duplicated(rhs.mm) |
                                          duplicated(rhs.mm, fromLast=TRUE)))]
             # is the indicator unique?
-            if(length(single.ind)) {
+            if(length(single.ind) > 0L) {
                 var.idx <- which(op == "~~" & lhs %in% single.ind
                                             & rhs %in% single.ind
                                             & lhs == rhs

@@ -65,6 +65,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "lv.nonnormal",# latent variables with non-normal indicators
                    "lv.interaction", # interaction terms
                    "lv.efa",      # latent variables involved in efa
+                   "lv.rs",       # random slopes
                    "lv.ind",      # latent indicators (higher-order cfa)
                    "lv.marker",   # marker indicator per lv
 
@@ -136,6 +137,13 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         }
     }
 
+    # random slope names, if any (new in 0.6-7)
+    if(!is.null(partable$rs) && any(nchar(partable$rs) > 0L)) {
+        RS.names <- unique(partable$rs[nchar(partable$rs) > 0L])
+    } else {
+        RS.names <- character(0L)
+    }
+
 
 
     # output: list per block
@@ -164,6 +172,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$lv.nonnormal   <- vector("list", length = nblocks)
     OUT$lv.interaction <- vector("list", length = nblocks)
     OUT$lv.efa         <- vector("list", length = nblocks)
+    OUT$lv.rs          <- vector("list", length = nblocks)
     OUT$lv.ind         <- vector("list", length = nblocks)
     OUT$lv.marker      <- vector("list", length = nblocks)
 
@@ -176,6 +185,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         lv.names <- unique( partable$lhs[ partable$block == b  &
                                           (partable$op == "=~" |
                                            partable$op == "<~")  ] )
+        # including random slope names
+        lv.names2 <- unique(c(lv.names, RS.names))
 
         # determine lv interactions
         int.names <- unique(partable$rhs[ partable$block == b  &
@@ -210,7 +221,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         # regular latent variables ONLY (ie defined by =~ only)
         if("lv.regular" %in% type) {
             out <- unique( partable$lhs[ partable$block == b &
-                                         partable$op == "=~"   ] )
+                                         partable$op == "=~" &
+                                         !partable$lhs %in% RS.names ] )
             OUT$lv.regular[[b]] <- out
         }
 
@@ -238,6 +250,18 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                              partable$efa %in% set.names ] )
             }
             OUT$lv.efa[[b]] <- out
+        }
+
+        # lv's that are random slopes
+        if("lv.rs" %in% type) {
+            if(is.null(partable$rs)) {
+                out <- character(0L)
+            } else {
+                out <- unique( partable$lhs[ partable$op == "=~" &
+                                             partable$block == b &
+                                             partable$lhs %in% RS.names ] )
+            }
+            OUT$lv.rs[[b]] <- out
         }
 
         # lv's that are indicators of a higher-order factor
@@ -284,11 +308,11 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         if(!(length(type) == 1L &&
              type %in% c("lv", "lv.regular", "lv.nonnormal", "lv.x","lv.y"))) {
             # 1. indicators, which are not latent variables themselves
-            ov.ind <- v.ind[ !v.ind %in% lv.names ]
+            ov.ind <- v.ind[ !v.ind %in% lv.names2 ]
             # 2. dependent ov's
-            ov.y <- eqs.y[ !eqs.y %in% c(lv.names, ov.ind) ]
+            ov.y <- eqs.y[ !eqs.y %in% c(lv.names2, ov.ind) ]
             # 3. independent ov's
-            ov.x <- eqs.x[ !eqs.x %in% c(lv.names, ov.ind, ov.y) ]
+            ov.x <- eqs.x[ !eqs.x %in% c(lv.names2, ov.ind, ov.y) ]
         }
 
         # observed variables
@@ -301,15 +325,15 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             # 4. orphaned covariances
             ov.cov <- c(partable$lhs[ partable$block == b &
                                       partable$op == "~~" &
-                                     !partable$lhs %in% lv.names ],
+                                     !partable$lhs %in% lv.names2 ],
                         partable$rhs[ partable$block == b &
                                       partable$op == "~~" &
-                                     !partable$rhs %in% lv.names ])
+                                     !partable$rhs %in% lv.names2 ])
             # 5. orphaned intercepts/thresholds
             ov.int <- partable$lhs[ partable$block == b &
                                     (partable$op == "~1" |
                                      partable$op == "|") &
-                                    !partable$lhs %in% lv.names ]
+                                    !partable$lhs %in% lv.names2 ]
 
             ov.tmp <- c(ov.ind, ov.y, ov.x)
             ov.extra <- unique(c(ov.cov, ov.int)) # must be in this order!

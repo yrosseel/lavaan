@@ -117,6 +117,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
     FLAT.label       <- character(0)  # only for display purposes!
     FLAT.prior       <- character(0)
     FLAT.efa         <- character(0)
+    FLAT.rs          <- character(0)
     FLAT.idx <- 0L
     MOD.idx  <- 0L
     CON.idx  <- 0L
@@ -237,7 +238,8 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             FLAT.upper[FLAT.idx] <- ""
             FLAT.label[FLAT.idx] <- ""
             FLAT.prior[FLAT.idx] <- ""
-            FLAT.efa[FLAT.idx]  <- ""
+            FLAT.efa[FLAT.idx]   <- ""
+            FLAT.rs[FLAT.idx]    <- ""
             FLAT.rhs.mod.idx[FLAT.idx] <- 0L
             if(BLOCK_OP) {
                 BLOCK <- BLOCK + 1L
@@ -392,6 +394,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 FLAT.upper[FLAT.idx] <- ""
                 FLAT.prior[FLAT.idx] <- ""
                 FLAT.efa[FLAT.idx]   <- ""
+                FLAT.rs[FLAT.idx]    <- ""
 
 
                 mod <- list()
@@ -424,6 +427,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 if(length(out[[j]]$label) > 0L) {
                     mod$label <- out[[j]]$label
                     FLAT.label[FLAT.idx] <- paste(mod$label, collapse=";")
+                    rhs.mod <- 1L
+                }
+                if(length(out[[j]]$rs) > 0L) {
+                    mod$rs <- out[[j]]$rs
+                    FLAT.rs[FLAT.idx] <- paste(mod$rs, collapse=";")
                     rhs.mod <- 1L
                 }
                 if(length(out[[j]]$prior) > 0L) {
@@ -462,7 +470,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  fixed=FLAT.fixed, start=FLAT.start,
                  lower=FLAT.lower, upper=FLAT.upper,
                  label=FLAT.label, prior=FLAT.prior,
-                 efa=FLAT.efa)
+                 efa=FLAT.efa, rs=FLAT.rs)
 
     # change op for intercepts (for convenience only)
     int.idx <- which(FLAT$op == "~" & FLAT$rhs == "")
@@ -493,7 +501,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         }
     }
 
-    attr(FLAT, "modifiers") <- MOD
+    attr(FLAT, "modifiers")   <- MOD
     attr(FLAT, "constraints") <- CON
 
     FLAT
@@ -676,6 +684,13 @@ lav_syntax_get_modifier <- function(mod) {
                         eval, envir=NULL, enclos=NULL))
         label[is.na(label)] <- "" # catch 'NA' elements in a label
         return( list(label=label) )
+    } else if(mod[[1L]] == "rs") {
+        rs <- unlist(lapply(as.list(mod)[-1],
+                        eval, envir=NULL, enclos=NULL))
+        if(anyNA(rs)) {
+            stop("lavaan ERROR: some rs() labels are NA")
+        }
+        return( list(rs=rs) )
     } else if(mod[[1L]] == "prior") {
         prior <- unlist(lapply(as.list(mod)[-1],
                         eval, envir=NULL, enclos=NULL))

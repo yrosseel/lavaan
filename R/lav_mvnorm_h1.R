@@ -43,8 +43,8 @@ lav_mvnorm_h1_loglik_data <- function(Y             = NULL,
         sample.mean <- out$center
         sample.cov  <- out$cov
     } else {
-        sample.mean <- colMeans(Y)
-        sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+        sample.mean <- base::.colMeans(Y, m = N, n = P)
+        sample.cov <- lav_matrix_cov(Y)
     }
 
     if(casewise) {
@@ -217,8 +217,8 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
 
         if(is.null(sample.cov)) {
             if(is.null(wt)) {
-                sample.mean <- colMeans(Y); N <- NROW(Y)
-                sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+                sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(P))
+                sample.cov <- lav_matrix_cov(Y)
             } else {
                 out <- stats::cov.wt(Y, wt = wt, method = "ML")
                 sample.cov <- out$cov
@@ -344,9 +344,8 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     if(is.null(sample.cov.inv)) {
         # invert sample.cov
         if(is.null(sample.cov)) {
-            N <- NROW(Y)
-            sample.mean <- colMeans(Y)
-            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(P))
+            sample.cov <- lav_matrix_cov(Y)
         }
         sample.cov.inv <- lav_matrix_symmetric_inverse(S = sample.cov,
                               logdet = FALSE, Sinv.method = Sinv.method)
@@ -374,8 +373,8 @@ lav_mvnorm_h1_inverted_information_observed <- function(Y              = NULL,
     # sample.cov
     if(is.null(sample.cov)) {
         if(is.null(wt)) {
-            sample.mean <- colMeans(Y); N <- NROW(Y)
-            sample.cov <- 1/N*crossprod(Y) - tcrossprod(sample.mean)
+            sample.mean <-  base::.colMeans(Y, m = NROW(Y), n = NCOL(P))
+            sample.cov <- lav_matrix_cov(Y)
         } else {
             out <- stats::cov.wt(Y, wt = wt, method = "ML")
             sample.cov <- out$cov

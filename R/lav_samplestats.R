@@ -1300,8 +1300,10 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL) {
                 SY <- out$cov
                 MY <- out$center
             } else {
-                MY <- colMeans(RAW)
-                SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
+                MY <- base::.colMeans(RAW, m = NROW(RAW), n = NCOL(RAW))
+                #SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
+                # bad practice, better like this:
+                SY <- lav_matrix_cov(RAW)
             }
         }
         # only a single observation (no need to weight!)

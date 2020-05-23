@@ -466,10 +466,10 @@ lav_mvreg_information_expected <- function(Y             = NULL, # not used
 
     # sample.mean.x + sample.cov.x
     if(is.null(sample.mean.x)) {
-        sample.mean.x <- colMeans(eXo)
+        sample.mean.x <- base::.colMeans(eXo, m = NROW(eXo), n = NCOL(eXo))
     }
     if(is.null(sample.cov.x)) {
-        1/N * crossprod(eXo) - tcrossprod(sample.mean.x)
+        sample.cov.x <- lav_matrix_cov(eXo)
     }
 
     # construct sample.xx = 1/N*crossprod(X1) (including intercept)
@@ -504,8 +504,8 @@ lav_mvreg_information_observed_data <- function(Y           = NULL,
     sample.res.int    <- as.numeric(sample.B[1,])
     sample.res.slopes <- t(sample.B[-1,,drop = FALSE]) # transpose!
     sample.res.cov    <- cov(qr.resid(QR, Y)) * (N-1)/N
-    sample.mean.x     <- colMeans(eXo)
-    sample.cov.x      <- 1/N * crossprod(eXo) - tcrossprod(sample.mean.x)
+    sample.mean.x     <- base::.colMeans(eXo, m = NROW(eXo), n = NCOL(eXo))
+    sample.cov.x      <- lav_matrix_cov(eXo)
 
     lav_mvreg_information_observed_samplestats(sample.res.int = sample.res.int,
         sample.res.slopes = sample.res.slopes, sample.res.cov = sample.res.cov,

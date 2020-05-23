@@ -1347,15 +1347,22 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
 }
 
 # compute sample covariance matrix, divided by 'N' (not N-1, as in cov)
-lav_matrix_cov <- function(Y, ybar = NULL) {
-    # coerce to matrix
-    Y <- as.matrix(Y)
+#
+# Mu is not supposed to be ybar, but close
+# if provided, we compute S as 1/N*crossprod(Y - Mu) instead of
+#                              1/N*crossprod(Y - ybar)
+lav_matrix_cov <- function(Y, Mu = NULL) {
+    N <- NROW(Y)
+    S1 <- stats::cov(Y) # uses a corrected two-pass algorithm
+    S <- S1 * (N-1) / N
 
-    NY <- NROW(Y)
-    if(is.null(ybar)) {
-        ybar <- colMeans(Y)
+    # Mu?
+    if(!is.null(Mu)) {
+        P <- NCOL(Y)
+        ybar <- base::.colMeans(Y, m = N, n = P)
+        S <- S + tcrossprod(ybar - Mu)
     }
-    S <- 1/NY * crossprod(Y) - tcrossprod(ybar)
+
     S
 }
 
