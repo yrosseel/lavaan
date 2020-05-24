@@ -252,9 +252,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # if found, hard stop
         if(length(bad.idx) > 0L) {
-            stop("lavaan ERROR: some latent variable names collapse ",
-                 "with observed\n\t\tvariable names: ",
-                 paste(LV.names[bad.idx], collapse = " "))
+            if(!is.null(dotdotdot$check.lv.names) &&
+               !dotdotdot$check.lv.names) {
+                # ignore it, user switched this check off -- new in 0.6-7
+            } else {
+                stop("lavaan ERROR: some latent variable names collapse ",
+                     "with observed\n\t\tvariable names: ",
+                     paste(LV.names[bad.idx], collapse = " "))
+            }
 
             # rename latent variables (by adding 'lat')
             #flat.idx <- which(FLAT$op == "=~" &

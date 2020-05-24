@@ -405,6 +405,10 @@ Check options:
       we check if the variance-covariance matrix of the free parameters
       is positive definite. We take into account possible equality and
       acitive inequality constraints. If needed, a warning is given.}
+    \item{\code{check.lv.names}:}{Logical. If \code{TRUE}, and latent variables
+      are defined in the model, lavaan will stop with an error message if
+      a latent variable name also occurs in the data (implying it is also
+      an observed variable).}
 }
 
 Verbosity options:
