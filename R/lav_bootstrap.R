@@ -38,7 +38,13 @@ bootstrapLavaan <- function(object,
     stopifnot(inherits(object, "lavaan"),
               type. %in% c("nonparametric", "ordinary",
                           "bollen.stine", "parametric", "yuan"))
-    if(type. == "nonparametric") type. <- "ordinary"
+    if(type. == "nonparametric") {
+        type. <- "ordinary"
+    }
+    if(missing(parallel)) {
+        parallel <- "no"
+    }
+    parallel <- match.arg(parallel)
 
     # check if options$se is not bootstrap, otherwise, we get an infinite loop
     if(object@Options$se == "bootstrap")
@@ -135,10 +141,10 @@ bootstrap.internal <- function(object          = NULL,
         }
     }
 
-    parallel <- lavoptions$parallel
+    parallel <- lavoptions$parallel[1]
     ncpus    <- lavoptions$ncpus
-    cl       <- lavoptions$cl
-    iseed    <- lavoptions$iseed
+    cl       <- lavoptions[["cl"]]    # often NULL
+    iseed    <- lavoptions[["iseed"]] # often NULL
 
     # prepare
     old_options <- options(); options(warn = warn)
