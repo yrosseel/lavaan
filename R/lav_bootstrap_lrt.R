@@ -57,6 +57,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             have_snow <- TRUE
         if(!have_mc && !have_snow)
             ncpus <- 1L
+        loadNamespace("parallel")
     }
 
     #data
