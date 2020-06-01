@@ -1,5 +1,5 @@
 lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
-                                 lv.var = TRUE,
+                                 lv.var = NULL,
                                  rotation = FALSE) {
 
     # set new values for x

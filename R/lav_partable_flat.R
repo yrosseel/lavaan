@@ -408,7 +408,6 @@ lav_partable_flat <- function(FLAT = NULL,
           free[lv.cov.idx] <- 0L
     }
 
-
     # 4. intercepts
     if(meanstructure) {
         if(categorical) {
@@ -435,7 +434,20 @@ lav_partable_flat <- function(FLAT = NULL,
             ustart[lv.int.idx] <- 0.0
               free[lv.int.idx] <- 0L
         }
+        # 4b. fixed effect (only if we have random slopes)
+        if(!is.null(FLAT$rs) && any(nchar(FLAT$rs) > 0L)) {
+            lv.names.rs <- lav_partable_vnames(FLAT, "lv.rs")
+            lv.rs.idx <- which(op == "~1" &  
+                               lhs %in% lv.names.rs &
+                               user == 0L)
+            ustart[lv.rs.idx] <- as.numeric(NA)
+              free[lv.rs.idx] <- 1L
+        }
     }
+
+    # 4b. fixed effect (only if we have random slopes)
+    if(!is.null(FLAT$rs)) {
+        }
 
     # 5. handle exogenous `x' covariates
     if(length(ov.names.x) > 0) {

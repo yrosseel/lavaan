@@ -13,6 +13,7 @@
 #                move syntax-based code to lav_syntax.R
 # - 26 April 2016: handle multiple 'blocks' (levels, classes, groups, ...)
 # - 24 March 2019: handle efa sets
+# - 23 May   2020: support for random slopes
 
 lavaanify <- lavParTable <- function(
 
@@ -203,7 +204,7 @@ lavaanify <- lavParTable <- function(
 
             # new in 0.6-7: check for random slopes, add them here
             if(block.lhs == "level" &&
-               block > 1L && # FIXME: multigroup,multileve
+               block > 1L && # FIXME: multigroup,multilevel
                !is.null(FLAT$rs) &&
                any(nchar(FLAT$rs) > 0L)) {
                 lv.names.rs <- unique(FLAT$rs[nchar(FLAT$rs) > 0L])
@@ -425,6 +426,9 @@ lavaanify <- lavParTable <- function(
                     LIST$rs <- character( length(LIST$lhs) )
                 }
                 LIST$rs[idx] <- MOD.rs
+
+                LIST$free[  idx] <- 0L
+                LIST$ustart[idx] <- as.numeric(NA) # 
             }
             if(!is.null(MOD.lower)) {
                 # do we already have a `lower' column? if not, create one
