@@ -428,7 +428,7 @@ lavaanify <- lavParTable <- function(
                 LIST$rs[idx] <- MOD.rs
 
                 LIST$free[  idx] <- 0L
-                LIST$ustart[idx] <- as.numeric(NA) # 
+                LIST$ustart[idx] <- as.numeric(NA) #
             }
             if(!is.null(MOD.lower)) {
                 # do we already have a `lower' column? if not, create one

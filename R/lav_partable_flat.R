@@ -437,7 +437,7 @@ lav_partable_flat <- function(FLAT = NULL,
         # 4b. fixed effect (only if we have random slopes)
         if(!is.null(FLAT$rs) && any(nchar(FLAT$rs) > 0L)) {
             lv.names.rs <- lav_partable_vnames(FLAT, "lv.rs")
-            lv.rs.idx <- which(op == "~1" &  
+            lv.rs.idx <- which(op == "~1" &
                                lhs %in% lv.names.rs &
                                user == 0L)
             ustart[lv.rs.idx] <- as.numeric(NA)

@@ -25,10 +25,19 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L) {
 
     # convert to correlation matrix (ULS is not scale invariant!)
     R <- cov2cor(S)
-    R.inv <- solve(R)
+    #R.inv <- solve(R)
 
-    LAMBDA <- matrix(0.1, nvar, nfactors) # cannot be zero
-    LAMBDA[,1] <- R[,1] * 0.7
+    # eigenvalue decomposition (to get starting values for LAMBDA)
+    EV <- eigen(R, symmetric = TRUE)
+
+    # extract first nfac components (assuming no measurement error)
+    PC <- ( EV$vectors[, seq_len(nfactors), drop = FALSE] %*%
+                diag(sqrt(EV$values[seq_len(nfactors)])) )
+
+    # rotate to echelon pattern (see echelon() in GPArotation package)
+    HEAD <- PC[seq_len(nfactors), , drop = FALSE]
+    LAMBDA <- PC %*% solve(HEAD, t(chol(tcrossprod(HEAD))))
+
     THETA <- diag(nvar)
     if(nfactors > 1L) {
         corner.idx <- which(row(LAMBDA) < nfactors & col(LAMBDA) > row(LAMBDA))
@@ -91,7 +100,7 @@ efa_extraction_uls_corner_min_objective <- function(x, cache = NULL) {
     })
 }
 
-efa_extraction_uls_corner_min_gradient<- function(x, cache = NULL) {
+efa_extraction_uls_corner_min_gradient <- function(x, cache = NULL) {
     # check if x has changed
     if(!all(x == cache$theta)) {
         cache$theta <- x

@@ -2526,6 +2526,9 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
             free.idx <- which(object@ParTable$free > 0L)
             JAC <- JAC[free.idx,, drop = FALSE]
         }
+
+        # force OUT to be pd, before we transform
+        OUT <- lav_matrix_symmetric_force_pd(OUT)
         OUT <- JAC %*% OUT %*% t(JAC)
     }
 

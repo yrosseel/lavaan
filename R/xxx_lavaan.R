@@ -1441,8 +1441,10 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                       method.args = list(eps = 1e-3),
                                       method = "simple") # to save time
 
-            # Delta method
-            VCOV.user <- JAC %*% lavvcov$vcov %*% t(JAC)
+            # force VCOV to be pd, before we transform
+            VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov)
+
+            VCOV.user <- JAC %*% VCOV.in %*% t(JAC)
 
             # re-compute SE and store them in lavpartable
             if(lavoptions$se != "external" && lavoptions$se != "twostep") {
