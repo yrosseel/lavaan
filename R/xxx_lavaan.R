@@ -256,7 +256,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                !dotdotdot$check.lv.names) {
                 # ignore it, user switched this check off -- new in 0.6-7
             } else {
-                stop("lavaan ERROR: some latent variable names collapse ",
+                stop("lavaan ERROR: some latent variable names collide ",
                      "with observed\n\t\tvariable names: ",
                      paste(LV.names[bad.idx], collapse = " "))
             }
