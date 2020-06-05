@@ -37,7 +37,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                        lavimplied$res.cov[[g]]
                    } else { lavimplied$cov[[g]] }
             dCOV <- diag(COV)
-            if(any(dCOV < 0)) {
+            if(anyNA(COV) || any(dCOV < 0)) {
                 # return NA
                 fx <- as.numeric(NA)
                 attr(fx, "fx.group") <- rep(as.numeric(NA), lavsamplestats@ngroups)
