@@ -435,19 +435,19 @@ lav_partable_flat <- function(FLAT = NULL,
               free[lv.int.idx] <- 0L
         }
         # 4b. fixed effect (only if we have random slopes)
-        if(!is.null(FLAT$rs) && any(nchar(FLAT$rs) > 0L)) {
-            lv.names.rs <- lav_partable_vnames(FLAT, "lv.rs")
-            lv.rs.idx <- which(op == "~1" &
-                               lhs %in% lv.names.rs &
+        if(!is.null(FLAT$rv) && any(nchar(FLAT$rv) > 0L)) {
+            lv.names.rv <- lav_partable_vnames(FLAT, "lv.rv")
+            lv.rv.idx <- which(op == "~1" &
+                               lhs %in% lv.names.rv &
                                user == 0L)
-            ustart[lv.rs.idx] <- as.numeric(NA)
-              free[lv.rs.idx] <- 1L
+            ustart[lv.rv.idx] <- as.numeric(NA)
+              free[lv.rv.idx] <- 1L
         }
     }
 
     # 4b. fixed effect (only if we have random slopes)
-    if(!is.null(FLAT$rs)) {
-        }
+    #if(!is.null(FLAT$rv)) {
+    #    }
 
     # 5. handle exogenous `x' covariates
     if(length(ov.names.x) > 0) {

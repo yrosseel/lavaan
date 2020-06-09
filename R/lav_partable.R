@@ -205,19 +205,19 @@ lavaanify <- lavParTable <- function(
             # new in 0.6-7: check for random slopes, add them here
             if(block.lhs == "level" &&
                block > 1L && # FIXME: multigroup,multilevel
-               !is.null(FLAT$rs) &&
-               any(nchar(FLAT$rs) > 0L)) {
-                lv.names.rs <- unique(FLAT$rs[nchar(FLAT$rs) > 0L])
-                for(i in 1:length(lv.names.rs)) {
+               !is.null(FLAT$rv) &&
+               any(nchar(FLAT$rv) > 0L)) {
+                lv.names.rv <- unique(FLAT$rv[nchar(FLAT$rv) > 0L])
+                for(i in 1:length(lv.names.rv)) {
                     # add phantom latent variable
                     TMP <- FLAT.block[1,]
-                    TMP$lhs <- lv.names.rs[i]; TMP$op <- "=~"
-                    TMP$rhs     <- lv.names.rs[i]
+                    TMP$lhs <- lv.names.rv[i]; TMP$op <- "=~"
+                    TMP$rhs     <- lv.names.rv[i]
                     TMP$mod.idx <- max(FLAT$mod.idx) + i
                     TMP$fixed   <- "0"
                     TMP$start   <- ""; TMP$lower   <- ""; TMP$upper   <- ""
                     TMP$label   <- ""; TMP$prior   <- ""; TMP$efa     <- ""
-                    TMP$rs      <- lv.names.rs[i]
+                    TMP$rv      <- lv.names.rv[i]
                     FLAT.block <- rbind(FLAT.block, TMP, deparse.level = 0L)
                     MOD <- c(MOD, list(list(fixed = 0)))
                 }
@@ -347,7 +347,7 @@ lavaanify <- lavParTable <- function(
             MOD.label <- MOD[[el]]$label
             MOD.prior <- MOD[[el]]$prior
             MOD.efa   <- MOD[[el]]$efa
-            MOD.rs    <- MOD[[el]]$rs
+            MOD.rv    <- MOD[[el]]$rv
 
             # check for single argument if multiple groups
             if(ngroups > 1L && length(idx) > 1L) {
@@ -359,7 +359,7 @@ lavaanify <- lavParTable <- function(
                 if(length(MOD.upper) == 1L) MOD.upper <- rep(MOD.upper, ngroups)
                 if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
                 if(length(MOD.efa)   == 1L) MOD.efa   <- rep(MOD.efa,   ngroups)
-                if(length(MOD.rs)    == 1L) MOD.rs    <- rep(MOD.rs,    ngroups)
+                if(length(MOD.rv)    == 1L) MOD.rv    <- rep(MOD.rv,    ngroups)
                 # B) here we do NOT! otherwise, it would imply an equality
                 #                    constraint...
                 #    except if group.equal="loadings"!
@@ -381,7 +381,7 @@ lavaanify <- lavParTable <- function(
                 (!is.null(MOD.upper) && nidx != length(MOD.upper)) ||
                 (!is.null(MOD.prior) && nidx != length(MOD.prior)) ||
                 (!is.null(MOD.efa)   && nidx != length(MOD.efa))   ||
-                (!is.null(MOD.rs)    && nidx != length(MOD.rs))    ||
+                (!is.null(MOD.rv)    && nidx != length(MOD.rv))    ||
                 (!is.null(MOD.label) && nidx != length(MOD.label)) ) {
                 el.idx <- which(LIST$mod.idx == el)[1L]
                 stop("lavaan ERROR: wrong number of arguments in modifier (",
@@ -420,12 +420,12 @@ lavaanify <- lavParTable <- function(
                 }
                 LIST$efa[idx] <- MOD.efa
             }
-            if(!is.null(MOD.rs)) {
-                # do we already have a `rs' column? if not, create one
-                if(is.null(LIST$rs)) {
-                    LIST$rs <- character( length(LIST$lhs) )
+            if(!is.null(MOD.rv)) {
+                # do we already have a `rv' column? if not, create one
+                if(is.null(LIST$rv)) {
+                    LIST$rv <- character( length(LIST$lhs) )
                 }
-                LIST$rs[idx] <- MOD.rs
+                LIST$rv[idx] <- MOD.rv
 
                 LIST$free[  idx] <- 0L
                 LIST$ustart[idx] <- as.numeric(NA) #
@@ -467,13 +467,13 @@ lavaanify <- lavParTable <- function(
         }
     }
 
-    # if rs column is present, add RS.names to ALL rows where they are used
-    if(!is.null(LIST$rs)) {
-        RS.names <- unique(LIST$rs[ nchar(LIST$rs) > 0L ])
-        for(i in seq_len(length(RS.names))) {
-            lhs.idx <- which(LIST$lhs == RS.names[i] &
+    # if rv column is present, add RV.names to ALL rows where they are used
+    if(!is.null(LIST$rv)) {
+        RV.names <- unique(LIST$rv[ nchar(LIST$rv) > 0L ])
+        for(i in seq_len(length(RV.names))) {
+            lhs.idx <- which(LIST$lhs == RV.names[i] &
                              LIST$op == "=~")
-            LIST$rs[lhs.idx] <- RS.names[i]
+            LIST$rv[lhs.idx] <- RV.names[i]
         }
     }
 

@@ -65,7 +65,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "lv.nonnormal",# latent variables with non-normal indicators
                    "lv.interaction", # interaction terms
                    "lv.efa",      # latent variables involved in efa
-                   "lv.rs",       # random slopes
+                   "lv.rv",       # random slopes, random variables
                    "lv.ind",      # latent indicators (higher-order cfa)
                    "lv.marker",   # marker indicator per lv
 
@@ -74,9 +74,11 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                   )
 
     # sanity check
-    stopifnot(is.list(partable),
-              !missing(type),
-              type %in% c(type.list, "all"))
+    stopifnot(is.list(partable), !missing(type))
+
+    if(!type %in% c(type.list, "all")) {
+        stop("lavaan ERROR: type =", dQuote(type), " is not a valid option")
+    }
 
     if(length(type) == 1L && type == "all") {
         type <- type.list
@@ -138,10 +140,10 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     }
 
     # random slope names, if any (new in 0.6-7)
-    if(!is.null(partable$rs) && any(nchar(partable$rs) > 0L)) {
-        RS.names <- unique(partable$rs[nchar(partable$rs) > 0L])
+    if(!is.null(partable$rv) && any(nchar(partable$rv) > 0L)) {
+        RV.names <- unique(partable$rv[nchar(partable$rv) > 0L])
     } else {
-        RS.names <- character(0L)
+        RV.names <- character(0L)
     }
 
 
@@ -172,7 +174,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     OUT$lv.nonnormal   <- vector("list", length = nblocks)
     OUT$lv.interaction <- vector("list", length = nblocks)
     OUT$lv.efa         <- vector("list", length = nblocks)
-    OUT$lv.rs          <- vector("list", length = nblocks)
+    OUT$lv.rv          <- vector("list", length = nblocks)
     OUT$lv.ind         <- vector("list", length = nblocks)
     OUT$lv.marker      <- vector("list", length = nblocks)
 
@@ -186,7 +188,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                           (partable$op == "=~" |
                                            partable$op == "<~")  ] )
         # including random slope names
-        lv.names2 <- unique(c(lv.names, RS.names))
+        lv.names2 <- unique(c(lv.names, RV.names))
 
         # determine lv interactions
         int.names <- unique(partable$rhs[ partable$block == b  &
@@ -222,7 +224,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         if("lv.regular" %in% type) {
             out <- unique( partable$lhs[ partable$block == b &
                                          partable$op == "=~" &
-                                         !partable$lhs %in% RS.names ] )
+                                         !partable$lhs %in% RV.names ] )
             OUT$lv.regular[[b]] <- out
         }
 
@@ -253,15 +255,15 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         }
 
         # lv's that are random slopes
-        if("lv.rs" %in% type) {
-            if(is.null(partable$rs)) {
+        if("lv.rv" %in% type) {
+            if(is.null(partable$rv)) {
                 out <- character(0L)
             } else {
                 out <- unique( partable$lhs[ partable$op == "=~" &
                                              partable$block == b &
-                                             partable$lhs %in% RS.names ] )
+                                             partable$lhs %in% RV.names ] )
             }
-            OUT$lv.rs[[b]] <- out
+            OUT$lv.rv[[b]] <- out
         }
 
         # lv's that are indicators of a higher-order factor
