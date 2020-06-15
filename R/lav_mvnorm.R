@@ -171,7 +171,7 @@ lav_mvnorm_loglik_data <- function(Y             = NULL,
             sample.mean <- out$center
             sample.cov  <- out$cov
         } else {
-            sample.mean <- base::.colMeans(Y, m = N, m = P)
+            sample.mean <- base::.colMeans(Y, m = N, n = P)
             sample.cov <- lav_matrix_cov(Y)
         }
         loglik <- lav_mvnorm_loglik_samplestats(sample.mean = sample.mean,
