@@ -130,7 +130,8 @@ the model both for both observed and latent variables.}
     \code{"loadings"}, \code{"intercepts"},
     \code{"means"}, \code{"regressions"}, \code{"residuals"} or
     \code{"covariances"}, specifying the pattern of equality
-    constraints across multiple groups.}
+    constraints across multiple groups.
+    Recycles labels of all parameters across groups.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
@@ -360,7 +361,8 @@ must be replaced by a vector, having the same length as the number
 of groups. The only exception are numerical constants (for fixing values): if
 you provide only a single number, the same number will be used for all groups.
 However, it is safer (and cleaner) to specify the same number of elements as
-the number of groups. For example, if there are two groups:
+the number of groups, because it prevents unintended equality constrains.
+For example, if there are two groups:
 \preformatted{
 HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
               textual =~ x4 + start(c(1.2, 0.6))*x5 + x6
