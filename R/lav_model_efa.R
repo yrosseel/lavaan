@@ -4,6 +4,119 @@
 # the lav_model_efa_rotate_x() function was based on a script orginally
 # written by Florian Scharf (Muenster University, Germany)
 
+# pre-rotate: reflect and/or re-order so the 'unrotated' solution is
+# in sync with the rotated solution
+lav_model_efa_rotate_pre <- function(lavmodel = NULL, lavoptions = NULL) {
+
+    if(lavmodel@nefa == 0L || lavoptions$rotation == "none") {
+        return(lavmodel)
+    }
+
+    # rotation options
+    ropts <- lavoptions$rotation.args
+
+    # GLIST
+    GLIST <- lavmodel@GLIST
+
+    # for now, rotate per group (not per block)
+    for(g in seq_len(lavmodel@ngroups)) {
+
+        # select model matrices for this group
+        mm.in.group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0,lavmodel@nmat))[g]
+        MLIST <- GLIST[ mm.in.group]
+        Hg <- diag( ncol(MLIST$lambda) )
+
+        # reconstruct full LAMBDA (in case of dummy ov's)
+        LAMBDA.g <- computeLAMBDA.LISREL(MLIST = MLIST,
+                        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+                        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+                        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                        remove.dummy.lv = TRUE)
+
+        # fill in optimal rotation for each set
+        for(set in seq_len(lavmodel@nefa)) {
+
+            # which ov/lv's are involved in this set?
+            ov.idx <- lavmodel@ov.efa.idx[[g]][[set]]
+            lv.idx <- lavmodel@lv.efa.idx[[g]][[set]]
+
+            # empty set?
+            if(length(ov.idx) == 0L) {
+                next
+            }
+
+            # just 1 factor?
+            if(length(lv.idx) < 2L) {
+                next
+            }
+
+            # unrotated 'A' for this set
+            A <- LAMBDA.g[ov.idx, lv.idx, drop = FALSE]
+
+            # dummy rotation matrix
+            ROT <- diag(length(lv.idx))
+
+            # reflect so that column sum is always positive
+            if(ropts$reflect) {
+                SUM <- colSums(A)
+                neg.idx <- which(SUM < 0)
+                if(length(neg.idx) > 0L) {
+                     diag(ROT)[neg.idx] <- -1
+                }
+            }
+
+            # reorder the columns
+            if(ropts$order.lv.by == "sumofsquares") {
+                L2 <- A * A
+                order.idx <- base::order(colSums(L2), decreasing = TRUE)
+            } else if(ropts$order.lv.by == "index") {
+                # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
+                max.loading <- apply(abs(A), 2, max)
+                # 1: per factor, number of the loadings that are at least 0.8 of the
+                #    highest loading of the factor
+                # 2: mean of the index numbers
+                average.index <- sapply(seq_len(ncol(A)), function(i)
+                               mean(which(abs(A[,i]) >= 0.8 * max.loading[i])))
+                # order of the factors
+                order.idx <- base::order(average.index)
+            } else if(ropts$order.lv.by == "none") {
+                order.idx <- seq_len(ncol(A))
+            } else {
+                stop("lavaan ERROR: order must be index, sumofsquares or none")
+            }
+            ROT <- ROT[, order.idx, drop = FALSE]
+
+            # fill in optimal rotation for this set
+            Hg[lv.idx, lv.idx] <- ROT
+
+        } # set
+
+        # 1. lambda
+        MLIST$lambda <- t(solve(Hg, t(MLIST$lambda)))
+
+        # 3. beta
+        if(!is.null(MLIST$beta)) {
+            MLIST$beta <- t(Hg) %*% t(solve(Hg, t(MLIST$beta)))
+        }
+
+        # 4. alpha
+        if(!is.null(MLIST$alpha)) {
+            MLIST$alpha <- t(Hg) %*% MLIST$alpha
+        }
+
+        # store rotated matrices in GLIST
+        GLIST[ mm.in.group ] <- MLIST
+
+    } # group
+
+    # store 'pre-rotated' GLIST
+    lavmodel@GLIST <- GLIST
+
+    # return updated lavmodel
+    lavmodel
+}
+
 # rotate solution
 lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
                                  lavoptions = NULL) {
@@ -12,7 +125,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
         return(lavmodel)
     }
 
-    # extract unrorated parameters from lavmodel
+    # extract unrotated parameters from lavmodel
     if(is.null(x.orig)) {
         x.orig <- lav_model_get_parameters(lavmodel, type = "free",
                                            extra = FALSE)

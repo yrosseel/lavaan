@@ -12,6 +12,8 @@ lav_start <- function(start.method    = "default",
                       lavsamplestats  = NULL,
                       model.type      = "sem",
                       mimic           = "lavaan",
+                      reflect         = TRUE,    # rotation only
+                      order.lv.by     = "index", # rotation only
                       debug           = FALSE) {
 
     # check arguments
@@ -27,6 +29,14 @@ lav_start <- function(start.method    = "default",
 
     # nlevels?
     nlevels <- lav_partable_nlevels(lavpartable)
+
+    # reflect/order.lv.by
+    if(is.null(reflect)) {
+        reflect <- TRUE
+    }
+    if(is.null(order.lv.by)) {
+        order.lv.by <- "index"
+    }
 
 
     # check start.method
@@ -317,8 +327,12 @@ lav_start <- function(start.method    = "default",
                          }
 
                         # EFA solution with zero upper-right corner
-                        EFA <- lav_efa_extraction_uls_corner(S = COV,
-                                              nfactors = length(lv.efa))
+                        EFA <- lav_efa_extraction(S = COV,
+                                              nfactors = length(lv.efa),
+                                              method = "ML",
+                                              corner = TRUE,
+                                              reflect = reflect,
+                                              order.lv.by = order.lv.by)
 
                         # factor loadings
                         tmp <- as.numeric(EFA$LAMBDA)
@@ -658,7 +672,9 @@ lav_start <- function(start.method    = "default",
     }
 
     # override if the model syntax contains explicit starting values
-    user.idx <- which(!is.na(lavpartable$ustart))
+    user.idx <- which(!is.na(lavpartable$ustart) &
+                      lavpartable$user != 7L) # new in 0.6-7, if rotation and
+                                              # and we change the order of lv's
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # final check: no NaN or other non-finite values

@@ -836,6 +836,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavpartable     = lavpartable,
                                        lavsamplestats  = lavsamplestats,
                                        model.type   = lavoptions$model.type,
+                                       reflect      = FALSE,
+                                       order.lv.by  = "none",
                                        mimic        = lavoptions$mimic,
                                        debug        = lavoptions$debug)
             } else {
@@ -846,6 +848,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavpartable    = lavpartable,
                                lavsamplestats = lavsamplestats,
                                model.type     = lavoptions$model.type,
+                               reflect      = FALSE,
+                               order.lv.by  = "none",
                                mimic          = lavoptions$mimic,
                                debug          = lavoptions$debug)
 
@@ -1400,9 +1404,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
         (lavoptions$rotation != "none") ) {
 
-        # unrotated parameters
-        x.unrotated <- as.numeric(x)
-
         # store unrotated solution in partable
         lavpartable$est.unrotated <- lavpartable$est
 
@@ -1411,6 +1412,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat("Rotating EFA factors using rotation method =",
                 toupper(lavoptions$rotation), "... ")
         }
+
+        # pre-rotate: fix 'sign' and 'order', according to the options
+        # in lavoptions; this is important for the 'order' of the parameters
+        # in vcov, once we use the delta rule
+        #lavmodel <- lav_model_efa_rotate_pre(lavmodel = lavmodel,
+        #                                     lavoptions = lavoptions)
+        #x.unrotated <- as.numeric(lav_model_get_parameters(lavmodel))
+        x.unrotated <- as.numeric(x)
+
+
         lavmodel.unrot <- lavmodel
         lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
                                          lavoptions = lavoptions)
@@ -1441,9 +1452,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                       method.args = list(eps = 1e-3),
                                       method = "simple") # to save time
 
-            # force VCOV to be pd, before we transform
-            VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov)
+            # compute unrotated VCOV (possibly after re-ordering the factors!)
+            #VCOV <- lav_model_vcov(lavmodel        = lavmodel.unrot,
+            #                       lavsamplestats  = lavsamplestats,
+            #                       lavoptions      = lavoptions,
+            #                       lavdata         = lavdata,
+            #                       lavpartable     = lavpartable,
+            #                       lavcache        = lavcache,
+            #                       lavimplied      = lavimplied,
+            #                       lavh1           = lavh1)
 
+            # force VCOV to be pd, before we transform
+            #VCOV.in <- lav_matrix_symmetric_force_pd(VCOV)
+            #lavvcov <- list(se = lavoptions$se,
+            #                information = lavoptions$information,
+            #                vcov = VCOV.in)
+
+            VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov, tol = 1e-06)
+            #VCOV.in <- lavvcov$vcov
+
+            # apply Delta rule
             VCOV.user <- JAC %*% VCOV.in %*% t(JAC)
 
             # re-compute SE and store them in lavpartable
