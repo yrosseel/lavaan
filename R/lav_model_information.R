@@ -26,6 +26,11 @@ lav_model_information <- function(lavmodel       = NULL,
     information <- lavoptions$information[1] # ALWAYS used the first one
                                              # called can control it
 
+    # rotation?
+    #if(!is.null(lavoptions$rotation) && lavoptions$rotation != "none") {
+    #    use.ginv <- TRUE
+    #}
+
     if(is.null(lavh1)) {
         lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
                                      lavsamplestats = lavsamplestats,

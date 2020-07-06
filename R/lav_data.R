@@ -368,10 +368,12 @@ lavData <- function(data              = NULL,          # data.frame
         Lp <- vector("list", length = ngroups)
         for(g in 1:ngroups) {
             if(nlevels > 1L) {
+                # ALWAYS add ov.names.x at the end, even if conditional.x
+                OV.NAMES <- unique(c(ov.names[[g]], ov.names.x[[g]]))
                 Lp[[g]] <- lav_data_cluster_patterns(Y = NULL, clus = NULL,
                                                  cluster = cluster,
                                                  multilevel = TRUE,
-                                                 ov.names = ov.names[[g]],
+                                                 ov.names = OV.NAMES,
                                                  ov.names.l = ov.names.l[[g]])
             }
         } # g
@@ -720,7 +722,13 @@ lav_data_full <- function(data          = NULL,          # data.frame
     for(g in 1:ngroups) {
 
         # extract variables in correct order
-        ov.idx  <- ov$idx[match(ov.names[[g]],   ov$name)]
+        if(!is.null(cluster) && length(cluster) > 0L) {
+            # keep 'joint' (Y,X) matrix in @X if multilevel (or always?)
+            OV.NAMES <- unique(c(ov.names[[g]], ov.names.x[[g]]))
+            ov.idx  <- ov$idx[match(OV.NAMES,   ov$name)]
+        } else {
+            ov.idx  <- ov$idx[match(ov.names[[g]],   ov$name)]
+        }
         exo.idx <- ov$idx[match(ov.names.x[[g]], ov$name)]
         all.idx <- unique(c(ov.idx, exo.idx))
 
@@ -875,10 +883,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
             } else {
                 multilevel <- FALSE
             }
+            # ALWAYS add ov.names.x at the end, even if conditional.x (0.6-7)
+            OV.NAMES <- unique(c(ov.names[[g]], ov.names.x[[g]]))
             Lp[[g]] <- lav_data_cluster_patterns(Y = X[[g]], clus = clus,
                                                  cluster = cluster,
                                                  multilevel = multilevel,
-                                                 ov.names = ov.names[[g]],
+                                                 ov.names = OV.NAMES,
                                                  ov.names.l = ov.names.l[[g]])
 
             # new in 0.6-4

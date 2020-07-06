@@ -1,4 +1,5 @@
-# compute the loglikelihood of the data, given the model
+# compute the loglikelihood of the data, given the current values of the
+# model parameters
 lav_model_loglik <- function(lavdata        = NULL,
                              lavsamplestats = NULL,
                              lavimplied     = NULL,

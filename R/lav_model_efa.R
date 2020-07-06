@@ -164,6 +164,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
 # lower-level function, needed for numDeriv
 lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                    init.rot = NULL, extra = FALSE,
+                                   jacobian = FALSE,
                                    type = "free") {
 
     # cat("in = \n"); print(x); cat("\n")
@@ -244,11 +245,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                 init.ROT <- init.rot[[g]][lv.idx, lv.idx, drop = FALSE]
                 rstarts <- 0
             } else {
+                jacobian <- FALSE
                 init.ROT <- NULL
                 rstarts <- ropts$rstarts
             }
 
             # rotate
+            #if(!jacobian) {
             res <- lav_matrix_rotate(A           = A,
                                      orthogonal  = ropts$orthogonal,
                                      method      = method,
@@ -284,6 +287,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
             # keep track of possible re-orderings
             lv.order[ lv.idx ] <- lv.idx[res$order.idx]
+            #} else {
+            #    Hg[lv.idx, lv.idx] <- init.ROT
+            #}
         } # set
 
         # rotate all the SEM parametersa

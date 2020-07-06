@@ -94,6 +94,19 @@ lav_efa_extraction <- function(S, nfactors = 1L,
         LAMBDA <- LAMBDA %*% solve(HEAD, t(chol(tcrossprod(HEAD))))
     }
 
+    # ALWAYS change the sign so that largest element in the column is positive
+    #neg.max <- apply(LAMBDA, 2, function(x) { sign(x[which.max(abs(x))]) })
+    #neg.idx <- which(neg.max < 0)
+    #if(length(neg.idx) > 0L) {
+    #    LAMBDA[, neg.idx] <- -1 * LAMBDA[, neg.idx, drop = FALSE]
+    #}
+
+    # ALWAYS change the sign so that diag(LAMBDA) is positive
+    neg.idx <- which(diag(LAMBDA) < 0)
+    if(length(neg.idx) > 0L) {
+        LAMBDA[, neg.idx] <- -1 * LAMBDA[, neg.idx, drop = FALSE]
+    }
+
     # reflect so that column sum is always positive
     if(reflect) {
         SUM <- colSums(LAMBDA)

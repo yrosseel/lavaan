@@ -12,8 +12,8 @@ lav_start <- function(start.method    = "default",
                       lavsamplestats  = NULL,
                       model.type      = "sem",
                       mimic           = "lavaan",
-                      reflect         = TRUE,    # rotation only
-                      order.lv.by     = "index", # rotation only
+                      reflect         = FALSE,    # rotation only
+                      order.lv.by     = "none",   # rotation only
                       debug           = FALSE) {
 
     # check arguments
@@ -32,7 +32,7 @@ lav_start <- function(start.method    = "default",
 
     # reflect/order.lv.by
     if(is.null(reflect)) {
-        reflect <- TRUE
+        reflect <- FALSE
     }
     if(is.null(order.lv.by)) {
         order.lv.by <- "index"
@@ -330,9 +330,11 @@ lav_start <- function(start.method    = "default",
                         EFA <- lav_efa_extraction(S = COV,
                                               nfactors = length(lv.efa),
                                               method = "ML",
-                                              corner = TRUE,
-                                              reflect = reflect,
-                                              order.lv.by = order.lv.by)
+                                              order.lv.by = order.lv.by,
+                                              #order.lv.by = "none",
+                                              #reflect = reflect,
+                                              reflect = FALSE,
+                                              corner = TRUE)
 
                         # factor loadings
                         tmp <- as.numeric(EFA$LAMBDA)
