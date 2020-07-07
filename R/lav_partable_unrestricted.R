@@ -181,7 +181,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
         sample.mean.x <- SAMPLE.mean.x[[g]]
 
         # force local sample.cov to be pd -- just for starting values anyway
-        if(!is.null(sample.cov)) {
+        if(!is.null(sample.cov) && !anyNA(sample.cov)) {
             sample.cov <- lav_matrix_symmetric_force_pd(sample.cov)
         }
 
