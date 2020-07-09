@@ -143,7 +143,7 @@ lav_start <- function(start.method    = "default",
         group.values <- lav_partable_group_values(lavpartable)
 
         # info from user model for this group
-        if(conditional.x) {
+        if(conditional.x && nlevels == 1L) {
             ov.names     <- vnames(lavpartable, "ov.nox", group = group.values[g])
         } else {
             ov.names     <- vnames(lavpartable, "ov", group = group.values[g])
@@ -176,7 +176,7 @@ lav_start <- function(start.method    = "default",
             start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
         } else {
             if(start.initial == "mplus") {
-                if(conditional.x) {
+                if(conditional.x && nlevels == 1L) {
                     start[ov.var.idx] <-
                        (1.0 - 0.50)*lavsamplestats@res.var[[1L]][sample.var.idx]
                 } else {
@@ -184,7 +184,7 @@ lav_start <- function(start.method    = "default",
                        (1.0 - 0.50)*lavsamplestats@var[[1L]][sample.var.idx]
                 }
             } else {
-                if(conditional.x) {
+                if(conditional.x && nlevels == 1L) {
                     start[ov.var.idx] <-
                   (1.0 - 0.50)*diag(lavsamplestats@res.cov[[g]])[sample.var.idx]
                 } else {
@@ -228,7 +228,7 @@ lav_start <- function(start.method    = "default",
                         COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
                                                       ov.idx, drop = FALSE]
                     } else {
-                        if(conditional.x) {
+                        if(conditional.x && nlevels == 1L) {
                             COV <- lavsamplestats@res.cov[[g]][ov.idx,
                                                       ov.idx, drop = FALSE]
                         } else {
@@ -317,7 +317,7 @@ lav_start <- function(start.method    = "default",
                             COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
                                                       ov.idx, drop = FALSE]
                         } else {
-                            if(conditional.x) {
+                            if(conditional.x && nlevels == 1L) {
                                 COV <- lavsamplestats@res.cov[[g]][ov.idx,
                                                           ov.idx, drop = FALSE]
                             } else {
@@ -377,7 +377,7 @@ lav_start <- function(start.method    = "default",
         if(lavsamplestats@missing.flag && nlevels == 1L) {
             start[ov.int.idx] <- lavsamplestats@missing.h1[[g]]$mu[sample.int.idx]
         } else {
-            if(conditional.x) {
+            if(conditional.x && nlevels == 1L) {
                 start[ov.int.idx] <- lavsamplestats@res.int[[g]][sample.int.idx]
             } else {
                 start[ov.int.idx] <- lavsamplestats@mean[[g]][sample.int.idx]
@@ -393,7 +393,7 @@ lav_start <- function(start.method    = "default",
                 lavsamplestats@th.names[[g]][ lavsamplestats@th.idx[[g]] > 0L ]
             # th.names.sample should identical to
             # vnames(lavpartable, "th", group = group.values[g])
-            if(conditional.x) {
+            if(conditional.x && nlevels == 1L) {
                 th.values <-
                  lavsamplestats@res.th[[g]][lavsamplestats@th.idx[[g]] > 0L]
             } else {
@@ -467,7 +467,7 @@ lav_start <- function(start.method    = "default",
                          single.var <- 1
                     }
                     ov.idx <- match(single.ind, ov.names)
-                    if(conditional.x) {
+                    if(conditional.x && nlevels == 1L) {
                         ov.var <- diag(lavsamplestats@res.cov[[g]])[ov.idx]
                     } else {
                         ov.var <- diag(lavsamplestats@cov[[g]])[ov.idx]

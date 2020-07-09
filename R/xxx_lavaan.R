@@ -1331,6 +1331,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             VCOV1 <- NULL
         }
         if(is.character(lavoptions$store.vcov) &&
+           lavoptions$rotation == "none" &&
            lavoptions$store.vcov == "default" &&
            ncol(VCOV1) > 200L) {
             VCOV1 <- NULL
@@ -1516,7 +1517,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                       lavoptions = lavoptions,
                                       type = "user",
                                       extra = FALSE,
-                                      method.args = list(eps = 1e-03), 
+                                      method.args = list(eps = 1e-03),
                                       method = "simple") # to save time
 
             # compute unrotated VCOV (possibly after re-ordering the factors!)

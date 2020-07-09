@@ -736,6 +736,12 @@ estimator.2L <- function(lavmodel       = NULL,
                          lavsamplestats = NULL,
                          group          = 1L) {
 
+    # DEBUG ONLY
+    if(lavmodel@conditional.x) {
+        return(-1000)
+    }
+
+
     YLp <- lavsamplestats@YLp[[group]]
 
     # compute model-implied statistics for all blocks
