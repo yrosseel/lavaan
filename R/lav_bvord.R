@@ -51,7 +51,8 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                       verbose = FALSE,
                                       optim.method = "nlminb2",
                                       optim.scale = 1.0,
-                                      control = list(),
+                                      init.theta = NULL,
+                                      control = list(step.min = 0.1), # 0.6-7
                                       Y1.name = NULL, Y2.name = NULL) {
 
     if(is.null(fit.y1)) {
@@ -172,11 +173,30 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
     if(is.null(control$trace)) {
         control$trace <- ifelse(verbose, 1, 0)
     }
-    optim <- nlminb(start = cache$theta, objective = minObjective,
+
+    # init theta?
+    if(!is.null(init.theta)) {
+        start.x <- init.theta
+    } else {
+        start.x <- cache$theta
+    }
+
+    # try 1
+    optim <- nlminb(start = start.x, objective = minObjective,
                     gradient = minGradient, hessian = minHessian,
                     control = control,
-                    scale = optim.scale, lower = -1.0, upper = +1.0,
+                    scale = optim.scale, lower = -0.999, upper = +0.999,
                     cache = cache)
+
+    # try 2
+    if(optim$convergence != 0L) {
+        # try again, with different starting value
+        optim <- nlminb(start = 0, objective = minObjective,
+                    gradient = NULL, hessian = NULL,
+                    control = control,
+                    scale = optim.scale, lower = -0.995, upper = +0.995,
+                    cache = cache)
+    }
 
     # check convergence
     if(optim$convergence != 0L) {
@@ -410,7 +430,8 @@ lav_bvord_lik_cache <- function(cache = NULL) {
                 lik[missing.idx] <- NA
             }
             # catch very small values
-            lik[lik < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
+            lik.toosmall.idx <- which(lik < sqrt(.Machine$double.eps))
+            lik[lik.toosmall.idx] <- as.numeric(NA)
         }
 
         return( lik )
@@ -462,10 +483,11 @@ lav_bvord_gradient_cache <- function(cache = NULL) {
             phi <- ( d1 - d2 - d3 + d4 )
 
             # avoid dividing by very tine numbers (new in 0.6-6)
-            bad.idx <- which(lik <= sqrt(.Machine$double.eps))
-            if(length(bad.idx) > 0L) {
-                lik[bad.idx] <- as.numeric(NA)
-            }
+            # -> done automatically: lik == NA in this case
+            #bad.idx <- which(lik <= sqrt(.Machine$double.eps))
+            #if(length(bad.idx) > 0L) {
+            #    lik[bad.idx] <- as.numeric(NA)
+            #}
 
             dx2 <- phi / lik
 
@@ -486,6 +508,10 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
 
         # no exo
         if(nexo == 0L) {
+            bad.idx <- which(PI <= sqrt(.Machine$double.eps))
+            if(length(bad.idx) > 0L) {
+                PI[bad.idx] <- as.numeric(NA)
+            }
             gnorm <- lav_bvord_noexo_gnorm_cache(cache)
             #H <- sum( freq * (gnorm/PI - (phi*phi)/(PI*PI)), na.rm = TRUE)
             H <- ( sum( (freq * gnorm)/PI, na.rm = TRUE) -

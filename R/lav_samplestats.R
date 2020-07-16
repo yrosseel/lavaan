@@ -1361,7 +1361,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # size even in the balanced case
 
         Y1.means <- colMeans(Y1, na.rm = TRUE)
-        Y1Y1 <- crossprod(Y1)
+        Y1Y1 <- lav_matrix_crossprod(Y1)
         both.idx <- all.idx <- seq_len(P)
         if(length(within.idx) > 0L ||
            length(between.idx) > 0L) {
@@ -1371,7 +1371,13 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # cluster-means
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
         Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx),
-                               FUN = mean, na.rm = TRUE)[,-1]))
+                               FUN = function(x) {
+                                   if( all(is.na(x)) ) { # all elements are NA
+                                       as.numeric(NA)    # in this cluster
+                                   } else {
+                                       mean(x, na.rm = TRUE)
+                                   }
+                               })[,-1]))
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w
@@ -1381,11 +1387,10 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # - this is the standard definition of 'pooled-within' variance
         # - this matters when we compute the objective function,
         #   where we need to 'multiply' again with the same constant
-        # - an additiona  advantage of the 'N - nclusters' is that the same
+        # - an additional advantage of the 'N - nclusters' is that the same
         #   constant is needed for multiplying sigma.w.logdet, so we can
         #   can combine them
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
-        #S.w <- lav_matrix_crossprod(Y1a) / N
 
 
         # S.b

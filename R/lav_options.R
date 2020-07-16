@@ -323,6 +323,9 @@ lav_options_set <- function(opt = NULL) {
     if(opt$clustered && !opt$multilevel) {
         opt$meanstructure <- TRUE
         #opt$missing <- "listwise"
+        if(opt$missing == "ml") {
+            optim.gradient = "numerical"
+        }
 
         if(opt$estimator == "mlr") {
             opt$estimator <- "ml"
@@ -380,7 +383,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        opt$missing <- "listwise"
+        #opt$missing <- "listwise"
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {

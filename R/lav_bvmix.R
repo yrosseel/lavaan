@@ -13,8 +13,9 @@
 lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                       fit.y1 = NULL, fit.y2 = NULL,
                                       Y1.name = NULL, Y2.name = NULL,
-                                      optim.method = "nlminb2",
+                                      optim.method = "nlminb1", # 0.6-7
                                       optim.scale = 1.0,
+                                      init.theta = NULL,
                                       control = list(),
                                       verbose = FALSE) {
 
@@ -45,11 +46,38 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
         control$trace <- ifelse(verbose, 1, 0)
     }
 
-    optim <- nlminb(start = cache$theta, objective = minObjective,
+    # init theta?
+    if(!is.null(init.theta)) {
+        start.x <- init.theta
+    } else {
+        start.x <- cache$theta
+    }
+
+    # try 1
+    optim <- nlminb(start = start.x, objective = minObjective,
                     gradient = minGradient, hessian = minHessian,
                     control = control,
-                    scale = optim.scale, lower = -1.0, upper = +1.0,
+                    scale = optim.scale, lower = -0.995, upper = +0.995,
                     cache = cache)
+
+    # try 2
+    if(optim$convergence != 0L) {
+        optim <- nlminb(start = start.x, objective = minObjective,
+                    gradient = NULL, hessian = NULL,
+                    control = control,
+                    scale = optim.scale, lower = -0.995, upper = +0.995,
+                    cache = cache)
+    }
+
+    # try 3
+    if(optim$convergence != 0L) {
+        optim <- nlminb(start = 0, objective = minObjective,
+                    gradient = NULL, hessian = NULL,
+                    control = control,
+                    scale = 10, lower = -0.995, upper = +0.995,
+                    cache = cache)
+    }
+
 
     # check convergence
     if(optim$convergence != 0L) {
@@ -131,8 +159,10 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
     }
 
     # sanity check
-    if(is.na(rho.init) || abs(rho.init) >= 1.0 ) {
+    if(is.na(rho.init)) {
       rho.init <- 0.0
+    } else if(abs(rho.init) > 0.9) {
+        rho.init <- rho.init/2
     }
 
     # parameter vector
@@ -177,7 +207,8 @@ lav_bvmix_lik_cache <- function(cache = NULL) {
         lik <- py1 * py2y1
 
         # catch very small values
-        lik[lik < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
+        lik.toosmall.idx <- which(lik < sqrt(.Machine$double.eps))
+        lik[lik.toosmall.idx] <- as.numeric(NA)
 
         return( lik )
     })
@@ -209,6 +240,12 @@ lav_bvmix_gradient_cache <- function(cache = NULL) {
         d1 <- fit.y2.z1*rho - Z
         d2 <- fit.y2.z2*rho - Z
         dx <- pyx.inv.R3 * (y.Z1 * d1 - y.Z2 * d2)
+
+        # to be consistent with (log)lik_cache
+        if(length(lik.toosmall.idx) > 0L) {
+            dx[lik.toosmall.idx] <- as.numeric(NA)
+        }
+
         if(is.null(wt)) {
             dx.rho <- sum(dx, na.rm = TRUE)
         } else {
@@ -237,6 +274,11 @@ lav_bvmix_hessian_cache <- function(cache = NULL) {
                  - y.Z2 * ( d2*( (3*rho/R2) + tauj1.star * t2/R )
                             + fit.y2.z2 + dx*R2 * t2 )
                )
+
+        # to be consistent with (log)lik_cache
+        if(length(lik.toosmall.idx) > 0L) {
+            tmp[lik.toosmall.idx] <- as.numeric(NA)
+        }
 
         if(is.null(wt)) {
             H <- sum(tmp * pyx.inv.R3, na.rm = TRUE)
