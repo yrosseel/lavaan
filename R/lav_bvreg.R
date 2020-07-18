@@ -121,6 +121,7 @@ lav_bvreg_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                       fit.y1 = NULL, fit.y2 = NULL,
                                       Y1.name = NULL, Y2.name = NULL,
                                       optim.method = "nlminb1",
+                                      #optim.method = "none",
                                       optim.scale = 1,
                                       init.theta = NULL,
                                       control = list(),
@@ -141,7 +142,7 @@ lav_bvreg_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
         return(cache$theta[1L])
     }
 
-       # optim.method
+    # optim.method
     minObjective <- lav_bvreg_min_objective
     minGradient  <- lav_bvreg_min_gradient
     minHessian   <- lav_bvreg_min_hessian
@@ -151,6 +152,8 @@ lav_bvreg_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
         minGradient <- minHessian <- NULL
     } else if(optim.method == "nlminb1") {
         minHessian <- NULL
+    } else if(optim.method == "none") {
+        return(cache$theta[1L])
     }
 
     # optimize
@@ -172,7 +175,16 @@ lav_bvreg_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                     scale = optim.scale, lower = -0.999, upper = +0.999,
                     cache = cache)
 
-    # try 2
+    # try 2 (scale = 10)
+    if(optim$convergence != 0L) {
+        optim <- nlminb(start = start.x, objective = minObjective,
+                    gradient = minGradient, hessian = minHessian,
+                    control = control,
+                    scale = 10, lower = -0.999, upper = +0.999,
+                    cache = cache)
+    }
+
+    # try 3 (start = 0, step.min = 0.1)
     if(optim$convergence != 0L) {
         control$step.min <- 0.1
         minGradient  <- lav_bvreg_min_gradient
@@ -195,10 +207,13 @@ lav_bvreg_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
              warning("lavaan WARNING: estimation pearson correlation(s)",
                      " did not always converge")
          }
-    }
 
-    # store result
-    rho <- optim$par
+       # use init (as we always did in < 0.6-6; this is also what Mplus does)
+       rho <- start.x
+    } else {
+        # store result
+        rho <- optim$par
+    }
 
     rho
 }

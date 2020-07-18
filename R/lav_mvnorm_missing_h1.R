@@ -50,9 +50,18 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
     # starting values; zero covariances to guarantee a pd matrix
     if(!is.null(wt)) {
-        out <- stats::cov.wt(Y, wt = wt, method = "ML")
-        Mu0 <- out$center
-        var0 <- diag(out$cov)
+        tmp <- na.omit(cbind(wt, Y))
+        if(nrow(tmp) > 2L) {
+           Y.tmp  <- tmp[,-1, drop = FALSE]
+            wt.tmp <- tmp[,1]
+            out <- stats::cov.wt(Y.tmp, wt = wt.tmp, method = "ML")
+            Mu0 <- out$center
+            var0 <- diag(out$cov)
+        } else {
+            Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+            Yc <- t( t(Y) - Mu0 )
+            var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+        }
     } else {
         Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
         Yc <- t( t(Y) - Mu0 )

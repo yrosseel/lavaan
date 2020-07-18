@@ -872,7 +872,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 8b. bounds for EFA -- change user==7 element if columns
         #     have been reordered
-        if( !is.null(lavpartable$efa) & any(lavpartable$user == 7L) &
+        if( !is.null(lavpartable$efa) && any(lavpartable$user == 7L) &&
             lavoptions$rotation != "none" ) {
 
             # 7 to free
@@ -1199,12 +1199,51 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                dx.tol         = lavoptions$em.dx.tol,
                                max.iter       = lavoptions$em.iter.max)
         } else {
+            # try 1
             x <- lav_model_estimate(lavmodel        = lavmodel,
                                     lavpartable     = lavpartable,
                                     lavsamplestats  = lavsamplestats,
                                     lavdata         = lavdata,
                                     lavoptions      = lavoptions,
                                     lavcache        = lavcache)
+
+            # try 2: optim.parscale = "standardize" (new in 0.6-7)
+            if(!attr(x, "converged")) {
+                lavoptions2 <- lavoptions
+                lavoptions2$optim.parscale = "standardized"
+                x <- lav_model_estimate(lavmodel        = lavmodel,
+                                        lavpartable     = lavpartable,
+                                        lavsamplestats  = lavsamplestats,
+                                        lavdata         = lavdata,
+                                        lavoptions      = lavoptions2,
+                                        lavcache        = lavcache)
+            }
+
+            # try 3: start = "simple"
+            if(!attr(x, "converged")) {
+                x <- lav_model_estimate(lavmodel        = lavmodel,
+                                        lavpartable     = lavpartable,
+                                        lavsamplestats  = lavsamplestats,
+                                        lavdata         = lavdata,
+                                        lavoptions      = lavoptions,
+                                        start           = "simple",
+                                        lavcache        = lavcache)
+            }
+
+            # try 4: start = "simple" + optim.parscale = "standardize"
+            if(!attr(x, "converged")) {
+                lavoptions2 <- lavoptions
+                lavoptions2$optim.parscale = "standardized"
+                x <- lav_model_estimate(lavmodel        = lavmodel,
+                                        lavpartable     = lavpartable,
+                                        lavsamplestats  = lavsamplestats,
+                                        lavdata         = lavdata,
+                                        lavoptions      = lavoptions2,
+                                        start           = "simple",
+                                        lavcache        = lavcache)
+            }
+
+
         }
 
         # in case of non-linear constraints: store final con.jac and con.lambda
