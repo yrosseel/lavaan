@@ -1097,6 +1097,12 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: information must be either \"expected\", \"observed\", or \"first.order\"\n")
     }
 
+    # first.order information can not be used with robust
+    if(opt$information[1] == "first.order" &&
+       opt$se %in% c("robust.huber.white", "robust.sem")) {
+        stop("lavaan ERROR: information must be either \"expected\" or \"observed\" if robust standard errors are requested.")
+    }
+
     # test information
     if(length(opt$information) == 1L) {
         opt$information <- rep(opt$information, 2L)
@@ -1115,6 +1121,16 @@ lav_options_set <- function(opt = NULL) {
         # nothing to do
     } else {
         stop("lavaan ERROR: information[2] must be either \"expected\", \"observed\", or \"first.order\"\n")
+    }
+
+    # first.order information can not be used with robust
+    if(opt$information[2] == "first.order" &&
+       opt$test %in% c("satorra.bentler",
+                       "yuan.bentler",
+                       "yuan.bentler.mplus",
+                       "mean.var.adjusted",
+                       "scaled.shifted")) {
+        stop("lavaan ERROR: information must be either \"expected\" or \"observed\" if robust test statistics are requested.")
     }
 
     # information meat
