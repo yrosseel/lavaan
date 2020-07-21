@@ -66,6 +66,9 @@ lavData <- function(data              = NULL,          # data.frame
     if(is.null(warn)) {
         warn <- TRUE
     }
+    if(allow.single.case) { # eg, in lavPredict
+        warn <- FALSE
+    }
 
     # four scenarios:
     #    0) data is already a lavData object: do nothing
@@ -650,7 +653,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
     }
     # check for zero-cases
     idx <- which(ov$nobs == 0L | ov$var == 0)
-    if(length(idx) > 0L) {
+    if(!allow.single.case && length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
         rn[idx] <- paste(rn[idx], "***", sep="")
@@ -670,7 +673,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
     }
     # check for ordered variables with only 1 level
     idx <- which(ov$type == "ordered" & ov$nlev == 1L)
-    if(length(idx) > 0L) {
+    if(!allow.single.case && length(idx) > 0L) {
         OV <- as.data.frame(ov)
         rn <- rownames(OV)
         rn[idx] <- paste(rn[idx], "***", sep="")

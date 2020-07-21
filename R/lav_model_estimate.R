@@ -33,15 +33,18 @@ lav_model_estimate <- function(lavmodel       = NULL,
     # override? use simple instead? (new in 0.6-7)
     if(start == "simple") {
         START <- numeric(length(lavpartable$lhs))
-        # set (only) variances and factor loadings to 1
+        # set loadings to 0.7
         loadings.idx <- which(lavpartable$free > 0L &
                               lavpartable$op == "=~")
+        if(length(loadings.idx) > 0L) {
+            START[loadings.idx] <- 0.7
+        }
+        # set (only) variances to 1
         var.idx <- which(lavpartable$free > 0L &
                          lavpartable$op == "~~" &
                          lavpartable$lhs == lavpartable$rhs)
-        unit.idx <- c(loadings.idx, var.idx)
-        if(length(unit.idx) > 0L) {
-            START[unit.idx] <- 1
+        if(length(var.idx) > 0L) {
+            START[var.idx] <- 1
         }
         x.unpack <- START[ lavpartable$free > 0L ]
     }
@@ -423,6 +426,15 @@ lav_model_estimate <- function(lavmodel       = NULL,
     if(debug) {
         cat("SCALE = ", SCALE, "\n")
     }
+
+
+    # first try: check if starting values return a finite value
+    fx <- objective_function(start.x)
+    if(!is.finite(fx)) {
+        # emergency change of start.x
+        start.x <- start.x / 10
+    }
+
 
 
     # first some nelder mead steps? (default = FALSE)
