@@ -244,6 +244,18 @@ fsr <- function(model      = NULL,
         # compute factor scores
         SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
         FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
+
+        # warning, FSM may be a list per pattern!       
+        #if(fit.block@Options$missing == "ml") {
+        #    # do something...
+        #    ngroups <- fit.block@Data@ngroups
+        #    FSM.missing <- FSM
+        #    FSM <- vector("list", length = "ngroups")
+        #    for(g in seq_len(ngroups)) {
+        #
+        #    }
+        #}
+
         LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
         THETA  <- computeTHETA(fit.block@Model)  # FIXME: remove not used ov?
         PSI <- computeVETA(fit.block@Model)
