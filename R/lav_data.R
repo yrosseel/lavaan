@@ -245,6 +245,24 @@ lavData <- function(data              = NULL,          # data.frame
             warning("lavaan WARNING: std.ov argument is ignored if only sample statistics are provided.")
         }
 
+        # check variances (new in 0.6-7)
+        for(g in seq_len(ngroups)) {
+            VAR <- diag(sample.cov[[g]])
+            # 1. finite?
+            if(!all(is.finite(VAR))) {
+                stop("lavaan ERROR: at least one variance in the sample covariance matrix is not finite.")
+            }
+            # 2. near zero (or negative)?
+            if(any(VAR < .Machine$double.eps)) {
+                stop("lavaan ERROR: at least one variance in the sample covariance matrix is (near) zero or negative.")
+            }
+            # 3. very large?
+            max.var <- max(VAR)
+            if(max.var > 1000000) {
+                warning("lavaan WARNING: some observed variances in the sample covariance matrix are larger than 1000000.")
+            }
+        }
+
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "moment",
