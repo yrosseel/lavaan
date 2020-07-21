@@ -130,7 +130,11 @@ the model both for both observed and latent variables.}
     \code{"loadings"}, \code{"intercepts"},
     \code{"means"}, \code{"regressions"}, \code{"residuals"} or
     \code{"covariances"}, specifying the pattern of equality
-    constraints across multiple groups.}
+    constraints across multiple groups. When (in the model syntax) a vector 
+    of labels is used as a modifier for a certain parameter, this will 
+    override the group.equal setting if it applies to this parameter. 
+    See also the Multiple groups section below for using modifiers in multiple
+    groups.}
 \item{group.partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
     overriding the group.equal argument for some specific parameters).}
@@ -355,19 +359,22 @@ names. For the last three, we have provided a custom label for the
 }
 
 \section{Multiple groups}{
-In a multiple group analysis, modifiers that contain a single constant
-must be replaced by a vector, having the same length as the number
-of groups. The only exception are numerical constants (for fixing values): if
-you provide only a single number, the same number will be used for all groups.
-However, it is safer (and cleaner) to specify the same number of elements as
-the number of groups. For example, if there are two groups:
+In a multiple group analysis, modifiers that contain a single element
+should be replaced by a vector, having the same length as the number
+of groups. If you provide a single element, it will be recycled
+for all the groups. This may be dangerous, in particular when the modifier
+is a label. In that case, the (same) label is copied across all groups,
+and this would imply an equality constraint across groups.
+Therefore, when using modifiers in a multiple group setting, it is always  
+safer (and cleaner) to specify the same number of 
+elements as the number of groups. Consider this example with two groups:
 \preformatted{
 HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
               textual =~ x4 + start(c(1.2, 0.6))*x5 + x6
               speed   =~ x7 + x8 + c(x9.group1, x9.group2)*x9 '
 }
 In this example, the factor loading of the `x2' indicator is fixed to the
-value 0.5 for all groups. However, the factor loadings of the `x3' indicator 
+value 0.5 for both groups. However, the factor loadings of the `x3' indicator 
 are fixed to 0.6 and 0.8 for group 1 and group 2 respectively. The same
 logic is used for all modifiers. Note that character vectors can contain
 unquoted strings.

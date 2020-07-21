@@ -330,6 +330,7 @@ lavaanify <- lavParTable <- function(
     }
 
     # apply user-specified modifiers
+    warn.about.single.label <- FALSE
     if(length(MOD)) {
         for(el in 1:length(MOD)) {
             idx <- which(LIST$mod.idx == el) # for each group
@@ -360,17 +361,30 @@ lavaanify <- lavParTable <- function(
                 if(length(MOD.prior) == 1L) MOD.prior <- rep(MOD.prior, ngroups)
                 if(length(MOD.efa)   == 1L) MOD.efa   <- rep(MOD.efa,   ngroups)
                 if(length(MOD.rv)    == 1L) MOD.rv    <- rep(MOD.rv,    ngroups)
+
+                # new in 0.6-7 (proposal):
+                # - always recycle modifiers, including labels
+                # - if ngroups > 1 AND group.label= is empty, produce a warning
+                #   (as this is a break from < 0.6-6)
+                if(length(MOD.label) == 1L) {
+                    MOD.label <- rep(MOD.label, ngroups)
+                    if(is.null(group.equal) || length(group.equal) == 0L) {
+                        warn.about.single.label <- TRUE
+                    }
+                }
+
+                # < 0.6-7 code:
                 # B) here we do NOT! otherwise, it would imply an equality
                 #                    constraint...
                 #    except if group.equal="loadings"!
-                if(length(MOD.label) == 1L) {
-                    if("loadings" %in% group.equal ||
-                       "composite.loadings" %in% group.equal) {
-                        MOD.label <- rep(MOD.label, ngroups)
-                    } else {
-                        MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
-                    }
-                }
+                #if(length(MOD.label) == 1L) {
+                #    if("loadings" %in% group.equal ||
+                #       "composite.loadings" %in% group.equal) {
+                #        MOD.label <- rep(MOD.label, ngroups)
+                #    } else {
+                #        MOD.label <- c(MOD.label, rep("", (ngroups-1L)) )
+                #    }
+                #}
             }
 
             # check for wrong number of arguments if multiple groups
@@ -451,6 +465,12 @@ lavaanify <- lavParTable <- function(
     }
     # remove mod.idx column
     LIST$mod.idx <- NULL
+
+    # warning about single label in multiple group setting?
+    if(warn.about.single.label) {
+        warning("lavaan WARNING: using a single label per parameter in a multiple group\n",  "\t setting implies imposing equality constraints across all the groups;\n",    "\t If this is not intended, either remove the label(s), or use a vector\n",    "\t of labels (one for each group);\n",
+             "\t See the Multiple groups section in the man page of model.syntax.")
+    }
 
     # if lower/upper values were added, fix non-free values to ustart values
     # new in 0.6-6
