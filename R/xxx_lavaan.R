@@ -1453,12 +1453,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #######################
     #### 14bis. lavfit #### ## -> remove if the offending packages are fixed!!
     #######################
-    #lavfit <- lav_model_fit(lavpartable = lavpartable,
-    #                        lavmodel    = lavmodel,
-    #                        x           = x,
-    #                        VCOV        = VCOV,
-    #                        TEST        = TEST)
-    lavfit <- new("Fit")
+    lavfit <- lav_model_fit(lavpartable = lavpartable,
+                            lavmodel    = lavmodel,
+                            x           = x,
+                            VCOV        = VCOV,
+                            TEST        = TEST)
+    #lavfit <- new("Fit")
     timing$Fit <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 

@@ -211,6 +211,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             }
             lv.interaction <- int.names[ok.idx]
             lv.names <- c(lv.names, lv.interaction)
+            lv.names2 <- c(lv.names2, lv.interaction)
         } else {
             lv.interaction <- character(0L)
         }

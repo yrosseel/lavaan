@@ -245,7 +245,7 @@ fsr <- function(model      = NULL,
         SC <- lavPredict(fit.block, method = fs.method, fsm = TRUE)
         FSM <- attr(SC, "fsm"); attr(SC, "fsm") <- NULL
 
-        # warning, FSM may be a list per pattern!       
+        # warning, FSM may be a list per pattern!
         #if(fit.block@Options$missing == "ml") {
         #    # do something...
         #    ngroups <- fit.block@Data@ngroups
