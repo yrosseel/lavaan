@@ -383,7 +383,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise"
+        opt$missing <- "listwise"
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {
