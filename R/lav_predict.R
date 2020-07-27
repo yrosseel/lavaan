@@ -13,12 +13,13 @@
 # overload standard R function `predict'
 setMethod("predict", "lavaan",
 function(object, newdata = NULL) {
-    lavPredict(object = object, newdata = newdata, type="lv", method="EBM",
+    lavPredict(object = object, newdata = newdata, type = "lv", method = "EBM",
                fsm = FALSE, optim.method = "bfgs")
 })
 
 # main function
-lavPredict <- function(object, type = "lv", newdata = NULL, method = "EBM",
+lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
+                       type = "lv", method = "EBM",
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {

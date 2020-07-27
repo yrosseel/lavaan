@@ -9,13 +9,15 @@ The main purpose of the \code{lavPredict()} function is to compute (or
 function is NOT to predict future values of dependent variables as in the
 regression framework!}
 \usage{
-lavPredict(object, type = "lv", newdata = NULL, method = "EBM",
+lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            se = "none", acov = "none", label = TRUE, fsm = FALSE, 
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
+\item{newdata}{An optional data.frame, containing the same variables as
+the data.frame used when fitting the model in object.}
 \item{type}{A character string. If \code{"lv"}, estimated values for the latent
 variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
@@ -24,8 +26,6 @@ user-specified values for the latent variables provided by de \code{ETA}
 argument.  If \code{"fy"}, densities (or probabilities) for each observed
 indicator, given user-specified values for the latent variables provided by de
 \code{ETA} argument.}
-\item{newdata}{An optional data.frame, containing the same variables as
-the data.frame used when fitting the model in object.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
