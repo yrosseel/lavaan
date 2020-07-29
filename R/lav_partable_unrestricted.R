@@ -172,7 +172,6 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
 
         # only for multilevel
         if(nlevels > 1L) {
-            OV.NAMES <- lavdata@ov.names[[g]]
             YLp <-  lavsamplestats@YLp[[g]]
             Lp <- lavdata@Lp[[g]]
         }
@@ -228,11 +227,8 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     ov.names.nox <- ov.names
                 }
 
-                block.idx <- match(ov.names, OV.NAMES)
-
-                sample.cov  <- lavh1$implied$cov[[b]][ block.idx, block.idx,
-                                                       drop = FALSE]
-                sample.mean <- lavh1$implied$mean[[b]][block.idx]
+                sample.cov  <- lavh1$implied$cov[[b]]
+                sample.mean <- lavh1$implied$mean[[b]]
 
                 #if(l == 1L) {
                 #    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
