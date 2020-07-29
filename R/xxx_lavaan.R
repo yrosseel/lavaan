@@ -1212,50 +1212,66 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                max.iter       = lavoptions$em.iter.max)
         } else {
             # try 1
-            x <- lav_model_estimate(lavmodel        = lavmodel,
-                                    lavpartable     = lavpartable,
-                                    lavsamplestats  = lavsamplestats,
-                                    lavdata         = lavdata,
-                                    lavoptions      = lavoptions,
-                                    lavcache        = lavcache)
-
-            # try 2: optim.parscale = "standardize" (new in 0.6-7)
-            if(!attr(x, "converged")) {
-                lavoptions2 <- lavoptions
-                lavoptions2$optim.parscale = "standardized"
-                x <- lav_model_estimate(lavmodel        = lavmodel,
-                                        lavpartable     = lavpartable,
-                                        lavsamplestats  = lavsamplestats,
-                                        lavdata         = lavdata,
-                                        lavoptions      = lavoptions2,
-                                        lavcache        = lavcache)
-            }
-
-            # try 3: start = "simple"
-            if(!attr(x, "converged")) {
-                x <- lav_model_estimate(lavmodel        = lavmodel,
+            x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                         lavpartable     = lavpartable,
                                         lavsamplestats  = lavsamplestats,
                                         lavdata         = lavdata,
                                         lavoptions      = lavoptions,
-                                        start           = "simple",
-                                        lavcache        = lavcache)
+                                        lavcache        = lavcache), 
+                     silent = TRUE)
+
+            # try 2: optim.parscale = "standardize" (new in 0.6-7)
+            if(inherits(x, "try-error") || !attr(x, "converged")) {
+                lavoptions2 <- lavoptions
+                lavoptions2$optim.parscale = "standardized"
+                x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                            lavpartable     = lavpartable,
+                                            lavsamplestats  = lavsamplestats,
+                                            lavdata         = lavdata,
+                                            lavoptions      = lavoptions2,
+                                            lavcache        = lavcache),
+                         silent = TRUE)
+            }
+
+            # try 3: start = "simple"
+            if(inherits(x, "try-error") || !attr(x, "converged")) {
+                x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                            lavpartable     = lavpartable,
+                                            lavsamplestats  = lavsamplestats,
+                                            lavdata         = lavdata,
+                                            lavoptions      = lavoptions,
+                                            start           = "simple",
+                                            lavcache        = lavcache),
+                         silent = TRUE)
             }
 
             # try 4: start = "simple" + optim.parscale = "standardize"
-            if(!attr(x, "converged")) {
+            if(inherits(x, "try-error") || !attr(x, "converged")) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale = "standardized"
-                x <- lav_model_estimate(lavmodel        = lavmodel,
-                                        lavpartable     = lavpartable,
-                                        lavsamplestats  = lavsamplestats,
-                                        lavdata         = lavdata,
-                                        lavoptions      = lavoptions2,
-                                        start           = "simple",
-                                        lavcache        = lavcache)
+                x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                            lavpartable     = lavpartable,
+                                            lavsamplestats  = lavsamplestats,
+                                            lavdata         = lavdata,
+                                            lavoptions      = lavoptions2,
+                                            start           = "simple",
+                                           lavcache        = lavcache),
+                         silent = TRUE)
             }
 
-
+            # what to do if all attempts failed?
+            if(inherits(x, "try-error")) {
+                warning("lavaan WARNING: model estimation failed. Returning starting values.")
+                x <- lav_model_get_parameters(lavmodel = lavmodel, 
+                                              type = "free") # starting values
+                attr(x, "iterations") <- 0L
+                attr(x, "converged") <- FALSE
+                attr(x, "control") <- lavoptions$control
+                attr(x, "dx") <- numeric(0L)
+                fx <- as.numeric(NA)
+                attr(fx, "fx.group") <-  as.numeric(NA)
+                attr(x, "fx") <- fx
+            }
         }
 
         # in case of non-linear constraints: store final con.jac and con.lambda
