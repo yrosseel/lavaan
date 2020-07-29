@@ -237,6 +237,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lv.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "lv")))
     }
 
+    # sanity check: ov.names.x should NOT appear in ov.names.y
+    # this may happen if 'x' is exogenous in one block, but not in another...
+    #endo.idx <- which(ov.names.x %in% ov.names.y)
+    #if(length(endo.idx) > 0L) {
+    #    # remove from x! (new in 0.6-8)
+    #    ov.names.x <- ov.names.x[-endo.idx]
+    #}
+
     # handle for lv.names that are also observed variables (new in 0.6-6)
     LV.names <- unique(unlist(lv.names))
     if(length(LV.names) > 0L) {
@@ -603,17 +611,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             print(as.data.frame(FLAT))
         }
         # catch ~~ of fixed.x covariates if fixed.x = TRUE
-        if(lavoptions$fixed.x) {
-            tmp <- try(vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE),
-                       silent = TRUE)
-            if(inherits(tmp, "try-error")) {
-                warning("lavaan WARNING: syntax contains parameters involving exogenous covariates; switching to fixed.x = FALSE")
-                lavoptions$fixed.x <- FALSE
-            }
-        }
-        if(lavoptions$conditional.x) {
-            tmp <- vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE)
-        }
+        # --> done inside lavaanify!
+
+        #if(lavoptions$fixed.x) {
+        #    tmp <- lav_partable_vnames(FLAT, type = "ov.x",
+        #                               ov.x.fatal = FALSE, warn = TRUE)
+            #tmp <- try(vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE),
+            #           silent = TRUE)
+            #if(inherits(tmp, "try-error")) {
+            #    warning("lavaan WARNING: syntax contains parameters involving exogenous covariates; switching to fixed.x = FALSE")
+            #    lavoptions$fixed.x <- FALSE
+            #}
+        #}
+        #if(lavoptions$conditional.x) {
+        #    tmp <- vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE)
+        #}
 
         lavpartable <-
             lavaanify(model            = FLAT,

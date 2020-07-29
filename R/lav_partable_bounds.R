@@ -5,6 +5,11 @@ lav_partable_add_bounds <- function(partable       = NULL,
                                     lavsamplestats = NULL,
                                     lavoptions     = NULL) {
 
+    # no support (yet) for multilevel
+    if(lav_partable_nlevels(partable) > 1L) {
+        return(partable)
+    }
+
     # check optim.bounds
     if(is.null(lavoptions$optim.bounds)) {
         # <0.6-6 version

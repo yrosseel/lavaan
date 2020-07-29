@@ -1411,6 +1411,31 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
 
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
+
+
+        # loglik.x
+        # extract 'fixed' level-1 loglik from here
+        wx.idx <- Lp$ov.x.idx[[1]]
+        if(length(wx.idx) > 0L) {
+            loglik.x.w <- lav_mvnorm_h1_loglik_samplestats(
+                              sample.nobs = Lp$nclusters[[1]],
+                              sample.cov  = S[wx.idx, wx.idx, drop = FALSE])
+        } else {
+            loglik.x.w <- 0
+        }
+        # extract 'fixed' level-2 loglik
+        bx.idx <-  Lp$ov.x.idx[[2]]
+        if(length(bx.idx) > 0L) {
+            COVB <- cov(Y2[,bx.idx, drop = FALSE]) * (nclusters - 1)/nclusters
+            loglik.x.b <- lav_mvnorm_h1_loglik_samplestats(
+                              sample.nobs = Lp$nclusters[[2]],
+                              sample.cov  = COVB)
+        } else {
+            loglik.x.b <- 0
+        }
+        loglik.x <- loglik.x.w + loglik.x.b
+
+
         S.PW.start <- S.w
         if(length(within.idx) > 0L) {
              S.PW.start[within.idx, within.idx] <-
@@ -1490,7 +1515,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                          Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
                          Sigma.W = S.w, Mu.W = Mu.W,
                          Sigma.B = Sigma.B, Mu.B = Mu.B,
-                         Mu.B.start = Mu.B.start,
+                         Mu.B.start = Mu.B.start, loglik.x = loglik.x,
                          mean.d = mean.d, cov.d = cov.d)
     } # l
 

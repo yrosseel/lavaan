@@ -1,4 +1,4 @@
-# constructor for the ltavParTable model description
+# lavaan parameter table
 #
 # initial version: YR 22/05/2009
 #  major revision: YR 02/11/2010: - FLATTEN the model syntax and turn it into a
@@ -28,7 +28,7 @@ lavaanify <- lavParTable <- function(
                       std.lv           = FALSE,
                       effect.coding    = "",
                       conditional.x    = FALSE,
-                      fixed.x          = TRUE,
+                      fixed.x          = FALSE,
                       parameterization = "delta",
                       constraints      = NULL,
 
@@ -204,7 +204,7 @@ lavaanify <- lavParTable <- function(
 
             # new in 0.6-7: check for random slopes, add them here
             if(block.lhs == "level" &&
-               block > 1L && # FIXME: multigroup,multilevel
+               block > 1L && # FIXME: multigroup, multilevel
                !is.null(FLAT$rv) &&
                any(nchar(FLAT$rv) > 0L)) {
                 lv.names.rv <- unique(FLAT$rv[nchar(FLAT$rv) > 0L])
@@ -223,6 +223,29 @@ lavaanify <- lavParTable <- function(
                 }
             }
 
+            # new in 0.6-8: if multilevel, use 'global' ov.names.x
+            if(fixed.x && block.lhs == "level") {
+                OV.NAMES.X <- lav_partable_vnames(FLAT, "ov.x") # global
+                ov.names.x.block <- lav_partable_vnames(FLAT.block, "ov.x")
+                if(length(ov.names.x.block) > 0L) {
+                    idx <- which(!ov.names.x.block %in% OV.NAMES.X)
+                    if(length(idx) > 0L) {
+                        # warn!
+                        txt <- c("the variable(s) [",
+                         paste0(ov.names.x.block[idx], collapse = " "), "] ",
+						 "are exogenous at one level, but endogenous at ",
+                         "another level. These variables will be treated as ",
+                         "endogenous, and their variances/intercepts will be ",
+                         "freely estimated. To remove this warning, use ",
+                         "fixed.x = FALSE.")
+                        warning(lav_txt2message(txt))
+                        ov.names.x.block <- ov.names.x.block[-idx]
+                    }
+                }
+            } else {
+                ov.names.x.block <- NULL
+            }
+
             LIST.block <- lav_partable_flat(FLAT.block, blocks = BLOCK.lhs,
                 block.id = block.id,
                 meanstructure = meanstructure,
@@ -238,7 +261,8 @@ lavaanify <- lavParTable <- function(
                 auto.cov.y = auto.cov.y, auto.th = auto.th,
                 auto.delta = auto.delta, auto.efa = auto.efa,
                 varTable = varTable, group.equal = NULL,
-                group.w.free = group.w.free, ngroups = 1L)
+                group.w.free = group.w.free, ngroups = 1L,
+                ov.names.x.block = ov.names.x.block)
             LIST.block <- as.data.frame(LIST.block, stringsAsFactors = FALSE)
 
             # add block columns with current values in BLOCK.rhs

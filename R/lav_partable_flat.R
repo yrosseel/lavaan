@@ -24,7 +24,8 @@ lav_partable_flat <- function(FLAT = NULL,
                               varTable         = NULL,
                               group.equal      = NULL,
                               group.w.free     = FALSE,
-                              ngroups          = 1L) {
+                              ngroups          = 1L,
+                              ov.names.x.block = NULL) {
 
     categorical <- FALSE
 
@@ -38,6 +39,9 @@ lav_partable_flat <- function(FLAT = NULL,
     lv.names.f   <- lav_partable_vnames(FLAT, type="lv.formative") # formative latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
     ov.names.x   <- lav_partable_vnames(FLAT, type="ov.x")   # exogenous x covariates
+    if(is.null(ov.names.x.block)) {
+        ov.names.x.block <- ov.names.x
+    }
     ov.names.nox <- lav_partable_vnames(FLAT, type="ov.nox")
     lv.names.x   <- lav_partable_vnames(FLAT, type="lv.x")   # exogenous lv
     ov.names.y   <- lav_partable_vnames(FLAT, type="ov.y")   # dependent ov
@@ -450,11 +454,14 @@ lav_partable_flat <- function(FLAT = NULL,
     #    }
 
     # 5. handle exogenous `x' covariates
-    if(length(ov.names.x) > 0) {
+    # usually, ov.names.x.block == ov.names.x
+    # except if multilevel, where 'splitted' ov.x are treated as endogenous
+    if(length(ov.names.x.block) > 0) {
 
         # 1. variances/covariances
         exo.var.idx  <- which(op == "~~" &
-                          rhs %in% ov.names.x &
+                          rhs %in% ov.names.x.block &
+                          lhs %in% ov.names.x.block &
                           user == 0L)
         if(fixed.x) {
             ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
@@ -466,7 +473,7 @@ lav_partable_flat <- function(FLAT = NULL,
 
         # 2. intercepts
         exo.int.idx  <- which(op == "~1" &
-                              lhs %in% ov.names.x &
+                              lhs %in% ov.names.x.block &
                               user == 0L)
         if(fixed.x) {
             ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
@@ -479,7 +486,7 @@ lav_partable_flat <- function(FLAT = NULL,
         # 3. regressions ov + lv
         exo.reg.idx <- which(op %in% c("~", "<~") &
                              lhs %in% c(lv.names, ov.names.nox) &
-                             rhs %in% ov.names.x)
+                             rhs %in% ov.names.x.block)
         if(conditional.x) {
             exo[exo.reg.idx] <- 1L
         }

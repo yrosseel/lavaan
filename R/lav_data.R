@@ -395,6 +395,7 @@ lavData <- function(data              = NULL,          # data.frame
                                                  cluster = cluster,
                                                  multilevel = TRUE,
                                                  ov.names = OV.NAMES,
+                                                 ov.names.x = ov.names.x[[g]],
                                                  ov.names.l = ov.names.l[[g]])
             }
         } # g
@@ -910,6 +911,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                                                  cluster = cluster,
                                                  multilevel = multilevel,
                                                  ov.names = OV.NAMES,
+                                                 ov.names.x = ov.names.x[[g]],
                                                  ov.names.l = ov.names.l[[g]])
 
             # new in 0.6-4
@@ -1166,11 +1168,13 @@ lav_data_resp_patterns <- function(Y) {
 # get cluster information
 # - cluster can be a vector!
 # - clus can contain multiple columns!
-lav_data_cluster_patterns <- function(Y = NULL,
-                                      clus = NULL,    # the cluster ids
-                                      cluster = NULL, # the cluster 'names'
+lav_data_cluster_patterns <- function(Y =         NULL,
+                                      clus       = NULL, # the cluster ids
+                                      cluster    = NULL, # the cluster 'names'
                                       multilevel = FALSE,
-                                      ov.names, ov.names.l) {
+                                      ov.names   = NULL,
+                                      ov.names.x = NULL,
+                                      ov.names.l = NULL) {
 
     # how many levels?
     nlevels <- length(cluster) + 1L
@@ -1195,6 +1199,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
     ncluster.sizes  <- vector("list", length = nlevels)
     cluster.size.ns <- vector("list", length = nlevels)
     ov.idx          <- vector("list", length = nlevels)
+    ov.x.idx        <- vector("list", length = nlevels)
     both.idx        <- vector("list", length = nlevels)
     within.idx      <- vector("list", length = nlevels)
     between.idx     <- vector("list", length = nlevels)
@@ -1208,7 +1213,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
     }
 
     if(multilevel) {
-        ov.idx[[1]] <- match(ov.names.l[[1]], ov.names)
+        ov.idx[[1]]   <- match(ov.names.l[[1]], ov.names)
     }
 
     # for the remaining levels...
@@ -1254,6 +1259,15 @@ lav_data_cluster_patterns <- function(Y = NULL,
         }
     }
 
+    # fixed.x wrt variable index
+    if(multilevel && length(ov.names.x) > 0L) {
+        for(l in 1:nlevels) {
+            ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
+                                    ov.names %in% ov.names.l[[l]] &
+                                   !ov.names %in% unlist(both.names) )
+        }
+    }
+
     out <- list(cluster = cluster, # clus = clus,
                 # per level
                 nclusters = nclusters,
@@ -1261,7 +1275,8 @@ lav_data_cluster_patterns <- function(Y = NULL,
                 cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
                 ncluster.sizes = ncluster.sizes,
                 cluster.size.ns = cluster.size.ns,
-                ov.idx = ov.idx, both.idx = both.idx, within.idx = within.idx,
+                ov.idx = ov.idx, ov.x.idx = ov.x.idx,
+                both.idx = both.idx, within.idx = within.idx,
                 between.idx = between.idx,
                 both.names = both.names, within.names = within.names,
                 between.names = between.names)

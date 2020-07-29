@@ -1,5 +1,5 @@
 
-# what are the block values (not necessarly 1..nb)
+# what are the block values (not necessarily integers)
 lav_partable_block_values <- function(partable) {
 
     if(is.null(partable$block)) {
@@ -22,7 +22,15 @@ lav_partable_nblocks <- function(partable) {
 # what are the group values (not necessarily integers)
 lav_partable_group_values <- function(partable) {
 
-    if(is.null(partable$group)) {
+    # FLAT?
+    if(any(partable$op == ":")) {
+        colon.idx <- which(partable$op == ":" &
+                           tolower(partable$lhs) == "group")
+        if(length(colon.idx) > 0L) {
+            group.values <- unique(partable$rhs[colon.idx])
+        }
+    # regular partable
+    } else if(is.null(partable$group)) {
         group.values <- 1L
     } else if(is.numeric(partable$group)) {
         tmp <- partable$group[ partable$group > 0L &
@@ -45,7 +53,16 @@ lav_partable_ngroups <- function(partable) {
 # what are the level values (not necessarily integers)
 lav_partable_level_values <- function(partable) {
 
-    if(is.null(partable$level)) {
+
+    # FLAT?
+    if(any(partable$op == ":")) {
+        colon.idx <- which(partable$op == ":" &
+                           tolower(partable$lhs) == "level")
+        if(length(colon.idx) > 0L) {
+            level.values <- unique(partable$rhs[colon.idx])
+        }
+    # regular partable
+    } else if(is.null(partable$level)) {
         level.values <- 1L
     } else if(is.numeric(partable$level)) {
         tmp <- partable$level[  partable$level > 0L &
