@@ -43,7 +43,7 @@ lav_object_independence <- function(object         = NULL,
     # construct parameter table for independence model
     lavpartable <- lav_partable_indep_or_unrestricted(lavobject = NULL,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
-        lavsamplestats = lavsamplestats, independent = TRUE)
+        lavsamplestats = lavsamplestats, lavh1 = lavh1, independent = TRUE)
 
     # new in 0.6-6: add lower bounds for ov.var
     if(!is.null(lavoptions$optim.bounds)) {

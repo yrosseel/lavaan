@@ -7,6 +7,7 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
                                       lavpta         = NULL,
                                       lavoptions     = NULL,
                                       lavsamplestats = NULL,
+                                      lavh1          = NULL,
                                       # optional user-provided sample stats
                                       sample.cov     = NULL,
                                       sample.mean    = NULL,
@@ -18,8 +19,9 @@ lav_partable_unrestricted <- function(lavobject      = NULL,
 
     lav_partable_indep_or_unrestricted(lavobject = lavobject,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
-        lavsamplestats = lavsamplestats, sample.cov = sample.cov,
-        sample.mean = sample.mean , sample.slopes = sample.slopes,
+        lavsamplestats = lavsamplestats, lavh1 = lavh1,
+        sample.cov = sample.cov, sample.mean = sample.mean ,
+        sample.slopes = sample.slopes,
         sample.th = sample.th, sample.th.idx = sample.th.idx,
         independent = FALSE)
 
@@ -33,6 +35,7 @@ lav_partable_independence <- function(lavobject      = NULL,
                                       lavpta         = NULL,
                                       lavoptions     = NULL,
                                       lavsamplestats = NULL,
+                                      lavh1          = NULL,
                                       # optional user-provided sample stats
                                       sample.cov     = NULL,
                                       sample.mean    = NULL,
@@ -44,8 +47,9 @@ lav_partable_independence <- function(lavobject      = NULL,
 
     lav_partable_indep_or_unrestricted(lavobject = lavobject,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
-        lavsamplestats = lavsamplestats, sample.cov = sample.cov,
-        sample.mean = sample.mean , sample.slopes = sample.slopes,
+        lavsamplestats = lavsamplestats, lavh1 = lavh1,
+        sample.cov = sample.cov, sample.mean = sample.mean ,
+        sample.slopes = sample.slopes,
         sample.th = sample.th, sample.th.idx = sample.th.idx,
         independent = TRUE)
 }
@@ -56,6 +60,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                                       lavpta         = NULL,
                                       lavoptions     = NULL,
                                       lavsamplestats = NULL,
+                                      lavh1          = NULL,
                                       # optional user-provided sample stats
                                       sample.cov     = NULL,
                                       sample.mean    = NULL,
@@ -74,6 +79,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
         lavoptions <- lavobject@Options
         lavsamplestats <- lavobject@SampleStats
         lavpta <- lavobject@pta
+        lavh1 <- lavojbect@h1
     }
 
     # conditional.x ? check res.cov[[1]] slot
@@ -209,10 +215,14 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
             if(nlevels > 1L) {
 
                 if(independent) {
-                    ov.names.x <- lavpta$vnames$ov.x[[b]]
+                    # beter use lavdata@Lp[[g]]$ov.x.idx??
+                    # in case we have x/y mismatch across levels?
+                    ov.x.idx <- lavpta$vidx$ov.x[[b]]
+                    ov.names.x <-   lavpta$vnames$ov.x[[b]]
                     ov.names.nox <- lavpta$vnames$ov.nox[[b]]
-                    sample.cov.x <- NULL # we will estimate them
-                    sample.mean.x <- NULL
+                    sample.cov.x <- lavh1$implied$cov[[b]][ov.x.idx,
+                                                      ov.x.idx, drop = FALSE]
+                    sample.mean.x <- lavh1$implied$mean[[b]][ov.x.idx]
                 } else {
                     ov.names.x <- character(0L)
                     ov.names.nox <- ov.names
@@ -220,15 +230,19 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
 
                 block.idx <- match(ov.names, OV.NAMES)
 
-                if(l == 1L) {
-                    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
-                                                    drop = FALSE]
-                    sample.mean <- YLp[[2]]$Mu.W[block.idx]
-                } else {
-                    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx,
-                                                    drop = FALSE]
-                    sample.mean <- YLp[[2]]$Mu.B[block.idx]
-                }
+                sample.cov  <- lavh1$implied$cov[[b]][ block.idx, block.idx,
+                                                       drop = FALSE]
+                sample.mean <- lavh1$implied$mean[[b]][block.idx]
+
+                #if(l == 1L) {
+                #    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
+                #                                    drop = FALSE]
+                #    sample.mean <- YLp[[2]]$Mu.W[block.idx]
+                #} else {
+                #    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx,
+                #                                    drop = FALSE]
+                #    sample.mean <- YLp[[2]]$Mu.B[block.idx]
+                #}
 
                 # force local sample.cov to be strictly pd (and exaggerate)
                 # just for starting values anyway, but at least the first
