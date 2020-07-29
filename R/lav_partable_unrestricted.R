@@ -79,7 +79,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
         lavoptions <- lavobject@Options
         lavsamplestats <- lavobject@SampleStats
         lavpta <- lavobject@pta
-        lavh1 <- lavojbect@h1
+        lavh1 <- lavobject@h1
     }
 
     # conditional.x ? check res.cov[[1]] slot
