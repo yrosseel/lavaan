@@ -318,10 +318,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             if(lav_partable_nlevels(partable) > 1L && b > 1L) {
                 # NEW in 0.6-8: if an 'x' was an 'y' in a previous level,
                 #               treat it as 'y'
-                eqs.y <-
-                    unique( partable$lhs[ partable$block %in% seq_len(b-1L)  &
-                                          partable$op == "~"     ] )
-                ov.x <- eqs.x[ !eqs.x %in% c(lv.names2, ov.ind, eqs.y) ]
+                EQS.Y <- unique(partable$lhs[partable$op == "~"]) # all blocks
+                ov.x <- eqs.x[ !eqs.x %in% c(lv.names2, ov.ind, EQS.Y) ]
             } else {
                 ov.x <- eqs.x[ !eqs.x %in% c(lv.names2, ov.ind, ov.y) ]
             }
