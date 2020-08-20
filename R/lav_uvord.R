@@ -378,6 +378,17 @@ lav_uvord_hessian_cache <- function(cache = NULL) {
 
 # compute total (log)likelihood, for specific 'x' (nlminb)
 lav_uvord_min_objective <- function(x, cache = NULL) {
+    # check order of first 2 thresholds; if x[1] > x[2], return Inf
+    # new in 0.6-8
+    if(cache$nth > 1L && x[1] > x[2]) {
+        return(+Inf)
+    }
+    if(cache$nth > 2L && x[2] > x[3]) {
+        return(+Inf)
+    }
+    if(cache$nth > 3L && x[3] > x[4]) {
+        return(+Inf)
+    }
     cache$theta <- x
     -1 * lav_uvord_loglik_cache(cache = cache)/cache$N
 }
