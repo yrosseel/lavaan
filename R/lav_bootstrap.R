@@ -279,6 +279,12 @@ bootstrap.internal <- function(object          = NULL,
 
     # run bootstraps
     fn <- function(b) {
+
+        #### DEBUGGG ONLY ######
+        #if(b == 202) {
+        #    browser()
+        #}
+
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
             for(g in 1:lavsamplestats@ngroups) {
