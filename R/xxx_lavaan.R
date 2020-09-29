@@ -1217,7 +1217,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                         lavsamplestats  = lavsamplestats,
                                         lavdata         = lavdata,
                                         lavoptions      = lavoptions,
-                                        lavcache        = lavcache), 
+                                        lavcache        = lavcache),
                      silent = TRUE)
 
             # try 2: optim.parscale = "standardize" (new in 0.6-7)
@@ -1262,7 +1262,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # what to do if all attempts failed?
             if(inherits(x, "try-error")) {
                 warning("lavaan WARNING: model estimation failed. Returning starting values.")
-                x <- lav_model_get_parameters(lavmodel = lavmodel, 
+                x <- lav_model_get_parameters(lavmodel = lavmodel,
                                               type = "free") # starting values
                 attr(x, "iterations") <- 0L
                 attr(x, "converged") <- FALSE

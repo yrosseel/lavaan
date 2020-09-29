@@ -1536,9 +1536,6 @@ lav_mvnorm_missing_estep <- function(Y           = NULL,
         # observed values for this pattern
         var.idx <- Mp$pat[p,]
 
-        # missing values for this pattern
-        na.idx <- which(!var.idx)
-
         # extract observed data
         O <- Y[Mp$case.idx[[p]], Mp$pat[p, ], drop = FALSE]
 
@@ -1561,9 +1558,9 @@ lav_mvnorm_missing_estep <- function(Y           = NULL,
         na.idx <- which(!var.idx)
 
         # partition Sigma (1=missing, 2=complete)
-        Sigma_11 <- Sigma[!var.idx, !var.idx, drop=FALSE]
-        Sigma_12 <- Sigma[!var.idx,  var.idx, drop=FALSE]
-        Sigma_21 <- Sigma[ var.idx, !var.idx, drop=FALSE]
+        Sigma_11 <- Sigma[!var.idx, !var.idx, drop = FALSE]
+        Sigma_12 <- Sigma[!var.idx,  var.idx, drop = FALSE]
+        Sigma_21 <- Sigma[ var.idx, !var.idx, drop = FALSE]
 
         # invert Sigma (Sigma_22, observed part only) for this pattern
         Sigma_22.inv <- try(lav_matrix_symmetric_inverse_update(S.inv =
