@@ -368,16 +368,19 @@ Starting values options:
 \describe{
     \item{\code{start}:}{If it is a character string, the two options are 
       currently \code{"simple"} and \code{"Mplus"}. In the first case, all 
-      parameter values are set to zero, except the factor loadings (set to 
-      one), the variances of latent variables (set to 0.05), and the residual 
-      variances of observed variables (set to half the observed variance).
-      If \code{"Mplus"}, we use a similar scheme, but the factor loadings are
-      estimated using the fabin3 estimator (tsls) per factor. 
-      If \code{start} is a fitted object of class \code{\linkS4class{lavaan}}, 
-      the estimated values of the corresponding parameters will be extracted. 
-      If it is a parameter table, for example the output of the 
-      \code{paramaterEstimates()} function, the values of the \code{est} or 
-      \code{start} or \code{ustart} column (whichever is found first) will be 
+      parameter values are set to zero, except the factor loadings and
+      (residual) variances, which are set to one.
+      When \code{start} is \code{"Mplus"}, the factor loadings are
+      estimated using the fabin3 estimator (tsls) per factor. The
+      residual variances of observed variables are set tot half the 
+      observed variance, and all other (residual) variances are set to 0.05.
+      The remaining parameters (regression coefficients, covariances) are
+      set to zero.
+      If \code{start} is a fitted object of class \code{\linkS4class{lavaan}},
+      the estimated values of the corresponding parameters will be extracted.
+      If it is a parameter table, for example the output of the
+      \code{paramaterEstimates()} function, the values of the \code{est} or
+      \code{start} or \code{ustart} column (whichever is found first) will be
       extracted.}
 }
 
