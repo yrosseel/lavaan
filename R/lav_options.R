@@ -1443,6 +1443,12 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: unknown `bounds' option: ", opt$bounds)
     }
 
+
+    # group.w.free
+    if(opt$group.w.free && opt$categorical) {
+        stop("lavaan ERROR: group.w.free = TRUE is not supported (yet) in the categorical setting.")
+    }
+
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 
     opt
