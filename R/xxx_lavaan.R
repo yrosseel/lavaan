@@ -237,6 +237,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lv.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "lv")))
     }
 
+    # sanity check (new in 0.6-8): do we have any ov.names?
+    # detect early
+    if(length(ov.names) == 0L) {
+        stop("lavaan ERROR: ov.names is empty: model does not refer to any observed variables; check your syntax.")
+    }
+
     # sanity check: ov.names.x should NOT appear in ov.names.y
     # this may happen if 'x' is exogenous in one block, but not in another...
     #endo.idx <- which(ov.names.x %in% ov.names.y)
