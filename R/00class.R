@@ -159,8 +159,8 @@ setClass("lavModel",          # MATRIX representation of the sem model
         rv.ov="list",
         rv.lv="list",
 
-        #H="list",
-        #lv.order="list",
+        H="list",
+        lv.order="list",
 
         estimator="character"
     )

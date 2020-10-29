@@ -140,6 +140,12 @@ lav_options_default <- function(mimic = "lavaan") {
                 information.meat       = "default",
                 h1.information.meat    = "default",
 
+                # information for 'Omega' (yuan-benter test only)
+                omega.information         = "default",
+                omega.h1.information      = "default",
+                omega.information.meat    = "default",
+                omega.h1.information.meat = "default",
+
                 bootstrap              = 1000L,
                 gamma.n.minus.one      = FALSE,
                 #gamma.unbiased         = FALSE,
@@ -1140,7 +1146,7 @@ lav_options_set <- function(opt = NULL) {
     }
     if(opt$information.meat == "default") {
         opt$information.meat <- "first.order"
-    } else if(opt$information %in% c("first.order")) {
+    } else if(opt$information.meat %in% c("first.order")) {
         # nothing to do
     } else {
         stop("lavaan ERROR: information.meat must be \"first.order\" (for now) \n")
@@ -1219,6 +1225,47 @@ lav_options_set <- function(opt = NULL) {
         opt$h1.information[1] <- "unstructured" # FIXME: allow option?
         opt$h1.information[2] <- "unstructured" # FIXME: allow option?
     }
+
+
+    # omega information
+    if(opt$omega.information == "default") {
+        opt$omega.information <- opt$information[2] # test version!
+    } else if(opt$omega.information %in% c("expected", "observed")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: omega.information must be either \"expected\" or \"observed\"")
+    }
+
+    if(opt$omega.h1.information == "default") {
+        opt$omega.h1.information <- opt$h1.information[2] # test version!
+    } else if(opt$omega.h1.information %in% c("structured", "unstructured")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: omega.h1.information must be either \"structured\" or \"unstructured\"")
+    }
+
+    # omega information.meat
+    if(opt$omega.information.meat == "default") {
+        opt$omega.information.meat <- opt$information.meat[1] # only one!
+    } else if(opt$omega.information %in% c("first.order")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: omega.information.meat must be \"first.order\"")
+    }
+
+    if(opt$omega.h1.information.meat == "default") {
+        opt$omega.h1.information.meat <- opt$h1.information.meat[1] # only one!
+    } else if(opt$omega.h1.information.meat %in%
+              c("structured", "unstructured")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: omega.h1.information.meat must be either \"structured\" or \"unstructured\"")
+    }
+
+
+
+
+
 
     # conditional.x
     if(is.logical(opt$conditional.x)) {
