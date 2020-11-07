@@ -5,14 +5,15 @@
 
 # take model-implied mean+variance matrices, and reorder/augment them
 # to facilitate computing of (log)likelihood in the two-level case
-#
+
+# when conditional.x = FALSE:
 # - sigma.w and sigma.b: same dimensions, level-1 variables only
 # - sigma.zz: level-2 variables only
 # - sigma.yz: cov(level-1, level-2)
 # - mu.y: level-1 variables only (mu.w + mu.b)
 # - mu.w: y within  part
 # - mu.b: y between part
-# - my.z: level-2 variables only
+# - mu.z: level-2 variables only
 lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
                                           implied      = NULL,
                                           Mu.W         = NULL,

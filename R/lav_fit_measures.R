@@ -218,6 +218,11 @@ lav_fit_measures <- function(object, fit.measures = "all",
     # various
     if(object@Data@nlevels > 1L) {
         fit.other <- ""
+    } else if(estimator == "PML") {
+        fit.other <- c("cn_05","cn_01","mfi")
+        if(!categorical && G == 1) {
+            fit.other <- c(fit.other, "ecvi")
+        }
     } else {
         fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")
         if(!categorical && G == 1) {

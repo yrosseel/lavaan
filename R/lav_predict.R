@@ -97,8 +97,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         if(lavmodel@categorical) {
             orig.ordered.idx <- which(lavdata@ov$type == "ordered")
             orig.ordered.lev <- lavdata@ov$nlev[orig.ordered.idx]
-            match.new.idx <- match(newData@ov$name,
-                                   lavdata@ov$name[orig.ordered.idx])
+            match.new.idx <- match(lavdata@ov$name[orig.ordered.idx],
+                                    newData@ov$name)
             new.ordered.lev <- newData@ov$nlev[match.new.idx]
             if(any(orig.ordered.lev - new.ordered.lev != 0)) {
                 stop("lavaan ERROR: ",

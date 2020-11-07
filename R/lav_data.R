@@ -1200,12 +1200,21 @@ lav_data_cluster_patterns <- function(Y =         NULL,
     cluster.size.ns <- vector("list", length = nlevels)
     ov.idx          <- vector("list", length = nlevels)
     ov.x.idx        <- vector("list", length = nlevels)
+    ov.y.idx        <- vector("list", length = nlevels)
     both.idx        <- vector("list", length = nlevels)
     within.idx      <- vector("list", length = nlevels)
+    within.x.idx    <- vector("list", length = nlevels)
+    within.y.idx    <- vector("list", length = nlevels)
     between.idx     <- vector("list", length = nlevels)
+    between.x.idx   <- vector("list", length = nlevels)
+    between.y.idx   <- vector("list", length = nlevels)
     both.names      <- vector("list", length = nlevels)
     within.names    <- vector("list", length = nlevels)
+    within.x.names  <- vector("list", length = nlevels)
+    within.y.names  <- vector("list", length = nlevels)
     between.names   <- vector("list", length = nlevels)
+    between.x.names <- vector("list", length = nlevels)
+    between.y.names <- vector("list", length = nlevels)
 
     # level-1 is special
     if(haveData) {
@@ -1224,6 +1233,14 @@ lav_data_cluster_patterns <- function(Y =         NULL,
             cluster.idx[[l]]     <- match(CLUS, cluster.id[[l]])
             cluster.size[[l]]    <- tabulate(cluster.idx[[l]])
             nclusters[[l]]       <- length(cluster.size[[l]])
+            # check if we have more observations than clusters
+            if(nclusters[[1]] == nclusters[[l]]) {
+                stop("lavaan ERROR: everything cluster contains only one observation.")
+            }
+            mean.cluster.size <-  mean(cluster.size[[l]])
+            if(mean.cluster.size < 1.5) {
+                warning("lavaan WARNING: mean cluster size is ", mean.cluster.size, "\n\t\t This means that many clusters only contain a single observation.")
+            }
             cluster.sizes[[l]]   <- unique(cluster.size[[l]])
             ncluster.sizes[[l]]  <- length(cluster.sizes[[l]])
             cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]],
@@ -1262,24 +1279,72 @@ lav_data_cluster_patterns <- function(Y =         NULL,
     # fixed.x wrt variable index
     if(multilevel && length(ov.names.x) > 0L) {
         for(l in 1:nlevels) {
+            # some ov.names.x could be 'splitted', and end up in both.names
+            # they should NOT be part ov.x.idx (as they become latent variables)
             ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
                                     ov.names %in% ov.names.l[[l]] &
                                    !ov.names %in% unlist(both.names) )
+
+            # if some ov.names.x have been 'splitted', and end up in both.names,
+            # they should become part of ov.y.idx (despite being exogenous)
+            # as they are now latent variables
+            ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
+                                   !ov.names %in% ov.names.x[!ov.names.x %in% unlist(both.names)] )
+            if(l == 1L) {
+                next
+            }
+            # below, we only fill in the [[2]] element (and higher)
+
+            within.x.idx[[l]]  <- which( ov.names %in% ov.names.l[[1]] &
+                                        !ov.names %in% ov.names.l[[2]] &
+                                         ov.names %in% ov.names.x)
+            within.y.idx[[l]]  <- which( ov.names %in% ov.names.l[[1]] &
+                                        !ov.names %in% ov.names.l[[2]] &
+                                        !ov.names %in% ov.names.x)
+            between.x.idx[[l]] <- which(!ov.names %in% ov.names.l[[1]] &
+                                         ov.names %in% ov.names.l[[2]] &
+                                         ov.names %in% ov.names.x)
+            between.y.idx[[l]] <- which(!ov.names %in% ov.names.l[[1]] &
+                                         ov.names %in% ov.names.l[[2]] &
+                                        !ov.names %in% ov.names.x)
+
+            within.x.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+                                               ov.names %in% ov.names.x &
+                                              !ov.names %in% ov.names.l[[2]] ]
+            within.y.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+                                              !ov.names %in% ov.names.x &
+                                              !ov.names %in% ov.names.l[[2]] ]
+            between.x.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+                                               ov.names %in% ov.names.x &
+                                               ov.names %in% ov.names.l[[2]] ]
+            between.y.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+                                              !ov.names %in% ov.names.x &
+                                               ov.names %in% ov.names.l[[2]] ]
+
         }
+    } else {
+        ov.y.idx <- ov.idx
     }
 
-    out <- list(cluster = cluster, # clus = clus,
+    out <- list(ov.names = ov.names, ov.names.x = ov.names.x, # for this group
+                cluster = cluster, # clus = clus,
                 # per level
                 nclusters = nclusters,
                 cluster.size = cluster.size, cluster.id = cluster.id,
                 cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
                 ncluster.sizes = ncluster.sizes,
                 cluster.size.ns = cluster.size.ns,
-                ov.idx = ov.idx, ov.x.idx = ov.x.idx,
+                ov.idx = ov.idx, ov.x.idx = ov.x.idx, ov.y.idx = ov.y.idx,
                 both.idx = both.idx, within.idx = within.idx,
+                within.x.idx = within.x.idx, within.y.idx = within.y.idx,
                 between.idx = between.idx,
+                between.x.idx = between.x.idx, between.y.idx = between.y.idx,
                 both.names = both.names, within.names = within.names,
-                between.names = between.names)
+                within.x.names = within.x.names,
+                within.y.names = within.y.names,
+                between.names = between.names,
+                between.x.names = between.x.names,
+                between.y.names = between.y.names)
 
     out
 }

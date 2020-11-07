@@ -266,6 +266,11 @@ lav_partable_covariance_reorder <- function(partable,
     }
     if(is.null(lv.names)) {
         lv.names <- lav_partable_vnames(partable, "lv")
+        # add random slopes (if any)
+        if( !is.null(partable$rv) && any(nchar(partable$rv) > 0L) ) {
+            RV.names <- unique(partable$rv[nchar(partable$rv) > 0L])
+            lv.names <- c(lv.names, RV.names)
+        }
     } else {
         lv.names <- unlist(lv.names)
     }

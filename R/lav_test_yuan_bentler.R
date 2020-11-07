@@ -59,13 +59,6 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     # information
     information <- lavoptions$information[1]
 
-    # x.idx
-    if(lavoptions$conditional.x) {
-        x.idx <- NULL
-    } else {
-        x.idx <- lavsamplestats@x.idx
-    }
-
     # ndat
     ndat <- numeric(lavsamplestats@ngroups)
 
@@ -147,19 +140,29 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                               B1.group       = B1.group,
                                               B0.group       = B0.group,
                                               E.inv          = E.inv,
-                                              x.idx          = x.idx,
                                               meanstructure  = lavmodel@meanstructure)
     } else if(test == "yuan.bentler") {
 
+        # compute Delta
         Delta <- computeDelta(lavmodel = lavmodel)
+
+        # compute Omega/Gamma
+        Omega <- lav_model_h1_omega(lavmodel       = lavmodel,
+                                    lavsamplestats = lavsamplestats,
+                                    lavdata        = lavdata,
+                                    lavimplied     = lavimplied,
+                                    lavh1          = lavh1,
+                                    lavoptions     = lavoptions)
+
+        # compute trace 'U %*% Gamma' (or 'U %*% Omega')
         trace.UGamma <- lav_test_yuan_bentler_trace(
             lavsamplestats = lavsamplestats,
             meanstructure  = lavmodel@meanstructure,
             A1.group       = A1.group,
             B1.group       = B1.group,
             Delta          = Delta,
+            Omega          = Omega,
             E.inv          = E.inv,
-            x.idx          = x.idx,
             Satterthwaite  = TRUE) # for now
     }
 
@@ -219,8 +222,8 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
                                         A1.group       = NULL,
                                         B1.group       = NULL,
                                         Delta          = NULL,
+                                        Omega          = NULL,
                                         E.inv          = NULL,
-                                        x.idx          = list(integer(0)),
                                         Satterthwaite  = FALSE) {
 
     # we always assume a meanstructure (nope, not any longer, since 0.6)
@@ -228,41 +231,32 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
 
     trace.UGamma  <- numeric( lavsamplestats@ngroups )
     trace.UGamma2 <- numeric( lavsamplestats@ngroups )
-    trace.h1      <- numeric( lavsamplestats@ngroups )
     trace.h0      <- numeric( lavsamplestats@ngroups )
-    h1.ndat       <- numeric( lavsamplestats@ngroups )
+
+    trace.h1      <- attr(Omega, "trace.h1")
+    h1.ndat       <- attr(Omega, "h1.ndat")
 
     for(g in 1:lavsamplestats@ngroups) {
 
         # group weight
         fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
 
-        A1 <- A1.group[[g]]
-        B1 <- B1.group[[g]]
+        A1 <- A1.group[[g]] * fg
+        B1 <- B1.group[[g]] * fg
         DELTA <- Delta[[g]]
-
-        # mask independent 'fixed-x' variables
-        zero.idx <- which(diag(A1) == 0)
-        if(length(zero.idx) > 0L) {
-            A1.inv <- matrix(0, nrow(A1), ncol(A1))
-            a1 <- A1[-zero.idx, -zero.idx]
-            a1.inv <- solve(a1)
-            A1.inv[-zero.idx, -zero.idx] <- a1.inv
-        } else {
-            A1.inv <- solve(A1)
-        }
-        h1.ndat[g] <- ncol(A1) - length(zero.idx)
+        Gamma.g <- Omega[[g]] / fg
 
         D.Einv.tD <- DELTA %*% tcrossprod(E.inv, DELTA)
 
-        trace.h1[g] <- sum( B1 * t( A1.inv ) )
+        #trace.h1[g] <- sum( B1 * t( A1.inv ) )
         # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
-        trace.h0[g] <- fg * sum( B1 * D.Einv.tD )
-        trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
+        trace.h0[g] <- sum( B1 * D.Einv.tD )
+        #trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
+        U <- A1 - A1 %*% D.Einv.tD %*% A1
+        trace.UGamma[g] <- sum(U * Gamma.g)
 
         if(Satterthwaite) {
-            A1invB1 <- A1.inv %*% B1
-            UG <- A1invB1 - fg * (A1invB1 %*% D.Einv.tD %*% A1)
+            UG <- U %*% Gamma.g
             trace.UGamma2[g] <- sum(UG * t(UG))
         }
     }
@@ -285,7 +279,6 @@ lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats=NULL,
                                               B1.group = NULL,
                                               B0.group=NULL,
                                               E.inv=NULL,
-                                              x.idx=list(integer(0)),
                                               meanstructure = TRUE) {
     # typical for Mplus:
     # - do NOT use the YB formula, but use an approximation

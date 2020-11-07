@@ -218,7 +218,14 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
         # store lv
         if("lv" %in% type) {
-            OUT$lv[[b]] <- lv.names
+            # check if FLAT for random slopes
+            #if( !is.null(partable$rv) && any(nchar(partable$rv) > 0L) &&
+            #    !is.null(partable$block) ) {
+            #    OUT$lv[[b]] <- lv.names2
+            #} else {
+                # here, they will be 'defined' at level 2 as regular =~ lvs
+                OUT$lv[[b]] <- lv.names
+            #}
         }
 
         # regular latent variables ONLY (ie defined by =~ only)

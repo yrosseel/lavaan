@@ -108,6 +108,7 @@ lav_model <- function(lavpartable      = NULL,
     lv.efa.idx        <- vector(mode="list", length=nblocks)
 
     offset <- 0L
+    # keep track of ov.names across blocks
     for(g in 1:nblocks) {
 
         # observed and latent variables for this block
@@ -272,6 +273,7 @@ lav_model <- function(lavpartable      = NULL,
             names(lv.efa.idx[[g]]) <- efa.values
         } # efa
 
+
     } # g
 
     # fixed.x parameters?
@@ -302,6 +304,39 @@ lav_model <- function(lavpartable      = NULL,
                                         lavpartable$lhs %in% ov.names &
                                         lavpartable$op == "~~" &
                                         lavpartable$lhs == lavpartable$rhs ]
+
+    rv.lv <- rv.ov <- list()
+    if(multilevel) {
+        # store information about random slopes (if any)
+        lv.names <- lav_partable_vnames(lavpartable, "lv")
+        # we should also add splitted-y names (x) to lv.names
+        # FIXME: make this work for multiple work multilevel
+        level.values <- lav_partable_level_values(lavpartable)
+        ovx1 <- lavNames(lavpartable, "ov.x", level = level.values[1])
+        ovx2 <- lavNames(lavpartable, "ov.x", level = level.values[2])
+        ovx12 <- ovx2[ovx2 %in% ovx1]
+        lv.names <- c(lv.names, ovx12)
+
+        # RV LV
+        rv.idx <- which(nchar(lavpartable$rv) > 0L &
+                        lavpartable$level == level.values[1] &
+                        lavpartable$rhs %in% lv.names)
+        if(length(rv.idx)) {
+            rv.lv <- lapply(rv.idx, function(x) {
+                       c(lavpartable$lhs[x], lavpartable$rhs[x]) })
+            names(rv.lv) <- lavpartable$rv[rv.idx]
+        }
+
+        # RV OV
+        rv.idx <- which(nchar(lavpartable$rv) > 0L &
+                    lavpartable$level == level.values[1] &
+                    !lavpartable$rhs %in% lv.names)
+        if(length(rv.idx)) {
+            rv.ov <- lapply(rv.idx, function(x) {
+                           c(lavpartable$lhs[x], lavpartable$rhs[x]) })
+            names(rv.ov) <- lavpartable$rv[rv.idx]
+        }
+    } # multilevel
 
     Model <- new("lavModel",
                  GLIST=GLIST,
@@ -369,6 +404,8 @@ lav_model <- function(lavpartable      = NULL,
 
                  ov.efa.idx          = ov.efa.idx,
                  lv.efa.idx          = lv.efa.idx,
+                 rv.lv               = rv.lv,
+                 rv.ov               = rv.ov,
 
                  estimator           = lavoptions$estimator)
 

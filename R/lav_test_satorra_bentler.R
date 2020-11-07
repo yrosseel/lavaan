@@ -118,6 +118,8 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     # Gamma
     if(is.null(Gamma)) {
         Gamma <- lavsamplestats@NACOV
+        # still NULL? (perhaps estimator = ML)
+        # --> TODO: compute Gamma according to lavoptions
     }
 
     if(mimic == "Mplus" && lavmodel@categorical) {

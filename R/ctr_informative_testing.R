@@ -19,10 +19,31 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
                           test        = "standard",
                           constraints = constraints)
 
-  con.idx  <- (max(fit.B1@ParTable$id) + 1L):max(fit.A1@ParTable$id)
+  #con.idx  <- (max(fit.B1@ParTable$id) + 1L):max(fit.A1@ParTable$id)
+  #
+  #user.equal  <- fit.A1@ParTable
+  #user.equal$op[con.idx] <- "=="
 
-  user.equal  <- fit.A1@ParTable
-  user.equal$op[con.idx] <- "=="
+  user.equal <- fit.A1@ParTable
+  CON <- attr(lavParseModelString(constraints), "constraints")
+  for(con in 1:length(CON)) {
+    if(CON[[con]]$op %in% c("<", ">")) {
+      this.lhs <- CON[[con]]$lhs
+      this.op  <- CON[[con]]$op
+      this.rhs <- CON[[con]]$rhs
+
+      # find this line in user.equal@ParTable
+      idx <- which(user.equal$lhs == this.lhs,
+                   user.equal$op  == this.op,
+                   user.equal$rhs == this.rhs)
+      if(length(idx) == 0L) { # not found, give warning?
+        stop("lavaan ERROR: no inequality constraints (<, >) found.")
+      }
+
+      # change op to ==
+      user.equal$op[idx] <- "=="
+    }
+  }
 
   fit.A0 <- sem(user.equal, ...,
                 data = data,

@@ -237,6 +237,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lv.names   <- unique(unlist(lav_partable_vnames(FLAT, type = "lv")))
     }
 
+    # sanity check (new in 0.6-8): do we have any ov.names?
+    # detect early
+    if(length(ov.names) == 0L) {
+        stop("lavaan ERROR: ov.names is empty: model does not refer to any observed variables; check your syntax.")
+    }
+
     # sanity check: ov.names.x should NOT appear in ov.names.y
     # this may happen if 'x' is exogenous in one block, but not in another...
     #endo.idx <- which(ov.names.x %in% ov.names.y)
@@ -1217,7 +1223,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                         lavsamplestats  = lavsamplestats,
                                         lavdata         = lavdata,
                                         lavoptions      = lavoptions,
-                                        lavcache        = lavcache), 
+                                        lavcache        = lavcache),
                      silent = TRUE)
 
             # try 2: optim.parscale = "standardize" (new in 0.6-7)
@@ -1262,7 +1268,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # what to do if all attempts failed?
             if(inherits(x, "try-error")) {
                 warning("lavaan WARNING: model estimation failed. Returning starting values.")
-                x <- lav_model_get_parameters(lavmodel = lavmodel, 
+                x <- lav_model_get_parameters(lavmodel = lavmodel,
                                               type = "free") # starting values
                 attr(x, "iterations") <- 0L
                 attr(x, "converged") <- FALSE
