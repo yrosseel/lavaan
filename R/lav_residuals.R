@@ -54,7 +54,9 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                          se = FALSE, zstat = TRUE, summary = TRUE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
-                         drop.list.single.group = TRUE) {
+                         drop.list.single.group = TRUE,
+                         maximum.number = length(res.vech),
+                         output = "list") {
 
     out <- lav_residuals(object = object, type = type, h1 = TRUE,
                custom.rmr = custom.rmr, se = se, zstat = zstat,
@@ -68,6 +70,37 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                drop.list.single.group = drop.list.single.group)
 
     # no pretty printing yet...
+    if(output == "table") {
+        res <- out$cov
+        # extract only below-diagonal elements
+        res.vech <- lav_matrix_vech(res, diagonal = FALSE)
+
+        # get names
+        P <- nrow(res)
+        NAMES <- colnames(res)
+
+        nam <- expand.grid(NAMES, 
+                           NAMES)[lav_matrix_vech_idx(P, diagonal = FALSE),]
+        NAMES.vech <- paste(nam[,1], "~~", nam[,2], sep = "")
+
+        # create table
+        TAB <- data.frame(name = NAMES.vech, res = round(res.vech, 3),
+                          stringsAsFactors = FALSE)
+
+        # sort table
+        idx <- sort.int(abs(TAB$res), decreasing = TRUE, 
+                        index.return = TRUE)$ix
+        out.sorted <- TAB[idx,]
+
+        # show first rows only
+        if(maximum.number == 0L || maximum.number > length(res.vech)) {
+            maximum.number <- length(res.vech)
+        }
+        out <- out.sorted[seq_len(maximum.number), ]
+    } else {
+       # list -> nothing to do
+    }
+
     out
 }
 
