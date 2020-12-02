@@ -90,6 +90,11 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
         conditional.x <- TRUE
     }
 
+    # group.w.free?
+    group.w.free <- FALSE
+    if(!is.null(lavoptions) && lavoptions$group.w.free) {
+        group.w.free <- TRUE
+    }
     # we use CAPS below for the list version, so we can use 'small caps'
     # within the for() loop
 
@@ -565,7 +570,18 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
 
             } # conditional.x
 
-
+            # group.w.free (new in 0.6-8)
+            if(group.w.free) {
+                lhs    <- c(lhs, "group")
+                 op    <- c(op,  "%")
+                rhs    <- c(rhs, "w")
+                block  <- c(block, b)
+                group  <- c(group, g)
+                level  <- c(level, l)
+                free   <- c(free,  1L)
+                exo    <- c(exo,   0L)
+                ustart <- c(ustart, lavsamplestats@WLS.obs[[g]][1])
+            }
 
         } # levels
     } # ngroups
