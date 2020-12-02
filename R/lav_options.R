@@ -1237,7 +1237,8 @@ lav_options_set <- function(opt = NULL) {
     }
 
     if(opt$omega.h1.information == "default") {
-        opt$omega.h1.information <- opt$h1.information[2] # test version!
+        #opt$omega.h1.information <- opt$h1.information[2] # test version!
+        opt$omega.h1.information <- "unstructured"
     } else if(opt$omega.h1.information %in% c("structured", "unstructured")) {
         # nothing to do
     } else {
@@ -1246,7 +1247,7 @@ lav_options_set <- function(opt = NULL) {
 
     # omega information.meat
     if(opt$omega.information.meat == "default") {
-        opt$omega.information.meat <- opt$information.meat[1] # only one!
+        # opt$omega.information.meat <- opt$information.meat[1] # only one!
     } else if(opt$omega.information %in% c("first.order")) {
         # nothing to do
     } else {
@@ -1254,15 +1255,14 @@ lav_options_set <- function(opt = NULL) {
     }
 
     if(opt$omega.h1.information.meat == "default") {
-        opt$omega.h1.information.meat <- opt$h1.information.meat[1] # only one!
+        #opt$omega.h1.information.meat <- opt$h1.information.meat[1] # only one!
+        opt$omega.h1.information.meat <- "unstructured"
     } else if(opt$omega.h1.information.meat %in%
               c("structured", "unstructured")) {
         # nothing to do
     } else {
         stop("lavaan ERROR: omega.h1.information.meat must be either \"structured\" or \"unstructured\"")
     }
-
-
 
 
 
