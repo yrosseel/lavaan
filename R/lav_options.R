@@ -1247,7 +1247,7 @@ lav_options_set <- function(opt = NULL) {
 
     # omega information.meat
     if(opt$omega.information.meat == "default") {
-        # opt$omega.information.meat <- opt$information.meat[1] # only one!
+        opt$omega.information.meat <- "first.order"
     } else if(opt$omega.information %in% c("first.order")) {
         # nothing to do
     } else {
@@ -1255,8 +1255,7 @@ lav_options_set <- function(opt = NULL) {
     }
 
     if(opt$omega.h1.information.meat == "default") {
-        #opt$omega.h1.information.meat <- opt$h1.information.meat[1] # only one!
-        opt$omega.h1.information.meat <- "unstructured"
+        opt$omega.h1.information.meat <- opt$omega.h1.information
     } else if(opt$omega.h1.information.meat %in%
               c("structured", "unstructured")) {
         # nothing to do
