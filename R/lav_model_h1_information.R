@@ -223,7 +223,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
 
             # stochastic group weight
             if(lavmodel@group.w.free) {
-                # unweight!!
+                # unweight!! (as otherwise, we would 'weight' again)
                 a <- exp(lavimplied$group.w[[g]]) / lavsamplestats@nobs[[g]]
                 A1[[g]] <- lav_matrix_bdiag( matrix(a, 1L, 1L), A1[[g]])
             }

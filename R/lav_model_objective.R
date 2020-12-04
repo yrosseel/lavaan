@@ -325,7 +325,7 @@ lav_model_objective <- function(lavmodel       = NULL,
 
         # saturated - poisson
         #fx.w <- sum(obs.freq * log(obs.freq/est.freq))
-        # does not work without constraints?
+        # does not work without constraints? --> need lagrange multiplier
 
         fx <- fx + (fx.w + fx.sat)
     }

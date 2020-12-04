@@ -13,7 +13,8 @@ this function with a limited set of arguments.
 lavResiduals(object, type = "cor.bentler", custom.rmr = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
-    drop.list.single.group = TRUE)
+    drop.list.single.group = TRUE,
+    maximum.number = length(res.vech), output = "list")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -58,6 +59,12 @@ This only affects the way they are printed on the screen.}
 a list, where each element corresponds to a group (even if there is only
 a single group). If \code{TRUE}, the list will be unlisted if there is
 only a single group.}
+\item{maximum.number}{Integer. Only used if \code{output ="table"}. Show only
+the first maximum.number rows of the data.frame.}
+\item{output}{Character. By default, \code{output = "list"}, and the output
+is a list of elements. If \code{output = "table"}, only the residuals of
+the variance-covariance matrix are shown in a data.frame, sorted from high 
+(in absolute value) to low.}
 }
 \value{
 If \code{drop.list.single.group = TRUE}, a list of (residualized) summary

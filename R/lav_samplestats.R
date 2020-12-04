@@ -469,7 +469,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 th.idx.g = th.idx[[g]], res.int.g = res.int[[g]],
                 res.cov.g = res.cov[[g]], res.var.g = res.var[[g]],
                 res.th.g = res.th[[g]],  res.slopes.g = res.slopes[[g]],
-                group.w.g = group.w[[g]],
+                group.w.g = log(nobs[[g]]),
                 categorical = categorical, conditional.x = conditional.x,
                 meanstructure = meanstructure, slopestructure = conditional.x,
                 group.w.free = group.w.free)
@@ -578,6 +578,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             } else if(estimator == "PML") {
                 # no NACOV ... for now
             }
+
+            # group.w.free
+            if(!is.null(NACOV[[g]]) && group.w.free) {
+                # unweight!!
+                a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                # always 1!!!
+                NACOV[[g]] <- lav_matrix_bdiag( matrix(a, 1, 1), NACOV[[g]] )
+            }
         }
 
         # WLS.V
@@ -669,15 +677,19 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             # group.w.free
             if(!is.null(WLS.V[[g]]) && group.w.free) {
                 # unweight!!
-                #a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
                 # always 1!!!
-                ### FIXME: this is consistent with expected information
-                ###        but why not group.w[[g]] * (1 - group.w[[g]])?
-                #a <- 1
-                a <- group.w[[g]] * (1 - group.w[[g]]) * sum(unlist(nobs)) / nobs[[g]]
                 # invert
                 a <- 1/a
                 WLS.V[[g]] <- lav_matrix_bdiag( matrix(a, 1, 1), WLS.V[[g]] )
+            }
+            if(!is.null(WLS.VD[[g]]) && group.w.free) {
+                # unweight!!
+                a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                # always 1!!!
+                # invert
+                a <- 1/a
+                WLS.VD[[g]] <- c(a, WLS.VD[[g]])
             }
 
         }
@@ -1177,7 +1189,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             th.idx.g = th.idx[[g]], res.int.g = res.int[[g]],
             res.cov.g = res.cov[[g]], res.var.g = res.var[[g]],
             res.th.g = res.th[[g]], res.slopes.g = res.slopes[[g]],
-            group.w.g = group.w[[g]],
+            group.w.g = log(nobs[[g]]),
             categorical = categorical, conditional.x = conditional.x,
             meanstructure = meanstructure, slopestructure = conditional.x,
             group.w.free = group.w.free)

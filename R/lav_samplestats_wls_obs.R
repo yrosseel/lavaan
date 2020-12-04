@@ -83,8 +83,6 @@ lav_samplestats_wls_obs <- function(mean.g, cov.g, var.g,
 
     # group.w.free?
     if(group.w.free) {
-        #group.w.last <- nobs[[ngroups]] / sum(unlist(nobs))
-        #WLS.obs[[g]] <- c(log(group.w[[g]]/group.w.last), WLS.obs[[g]])
         WLS.obs <- c(group.w.g, WLS.obs)
     }
 
