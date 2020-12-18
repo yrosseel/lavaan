@@ -104,7 +104,8 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
     }
 
     # 1. WLS.V (=A1) for GLS/WLS
-    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
+    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS" ||
+       lavmodel@estimator == "DLS") { # for now
         A1 <- lavsamplestats@WLS.V
     }
 
@@ -306,7 +307,8 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
     }
 
     # 1. WLS.V (=A1) for GLS/WLS
-    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
+    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS" ||
+       lavmodel@estimator == "DLS") {
         A1 <- lavsamplestats@WLS.V
     }
 

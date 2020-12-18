@@ -43,7 +43,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     }
 
     # do we need WLS.est?
-    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
+    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS", "DLS")) {
 
         # always compute WLS.est
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST) #,
@@ -176,7 +176,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     } else # ML
 
     # 2. using Delta - *LS family
-    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS")) {
+    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS", "DLS")) {
 
         if(type != "free") {
             if(is.null(Delta))
@@ -192,12 +192,14 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
             if(estimator == "WLS" ||
                estimator == "GLS" ||
+               estimator == "DLS" ||
                estimator == "NTRLS") {
                 # full weight matrix
                 diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
 
                 # full weight matrix
-                if(estimator == "GLS" || estimator == "WLS") {
+                if(estimator == "GLS" || estimator == "WLS" || 
+                   estimator == "DLS") {
                     WLS.V <- lavsamplestats@WLS.V[[g]]
                     group.dx <- -1 * crossprod(Delta[[g]],
                                                crossprod(WLS.V, diff))

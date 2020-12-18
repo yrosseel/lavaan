@@ -526,7 +526,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                           slopestructure = conditional.x,
                                           gamma.n.minus.one = gamma.n.minus.one,
                                           Mplus.WLS      = FALSE)
-            } else if(estimator %in% c("WLS","DWLS","ULS")) {
+            } else if(estimator %in% c("WLS","DWLS","ULS","DLS")) {
                 if(!categorical) {
                     # sample size large enough?
                     nvar <- ncol(X[[g]])
@@ -615,9 +615,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # no WLS.V here, since function of model-implied moments
 
 
-            } else if(estimator %in% c("WLS","DWLS","ULS")) {
+            } else if(estimator %in% c("WLS","DWLS","ULS","DLS")) {
                 if(!categorical) {
-                    if(estimator == "WLS") {
+                    if(estimator == "WLS" || estimator == "DLS") {
                         if(!fixed.x) {
                             # Gamma should be po before we invert
                             ev <- eigen(NACOV[[g]], # symmetric=FALSE,

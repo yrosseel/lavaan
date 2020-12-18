@@ -121,6 +121,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # estimation
                 estimator              = "default",
+                estimator.args         = list(),
                 likelihood             = "default",
                 link                   = "default",
                 representation         = "default",
@@ -465,7 +466,7 @@ lav_options_set <- function(opt = NULL) {
         }
         if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
                                 "uls", "ulsm", "ulsmv", "pml", "mml")) {
-            stop("lavaan ERROR: missing=\"two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML, MML")
+            stop("lavaan ERROR: missing=\"two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, DLS, PML, MML")
         }
     } else if(opt$missing %in% c("robust.two.stage", "robust.twostage",
                                  "robust.two-stage", "robust-two-stage",
@@ -477,7 +478,7 @@ lav_options_set <- function(opt = NULL) {
         }
         if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
                                 "uls", "ulsm", "ulsmv", "pml", "mml")) {
-            stop("lavaan ERROR: missing=\"robust.two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, PML, MML")
+            stop("lavaan ERROR: missing=\"robust.two.stage\" is not allowed for estimator MLM, MLMV, GLS, ULS, ULSM, ULSMV, DWLS, WLS, WLSM, WLSMV, DLS, PML, MML")
         }
     } else if(opt$missing == "listwise") {
         # nothing to do
@@ -823,6 +824,59 @@ lav_options_set <- function(opt = NULL) {
                  opt$test, "\n")
         }
         #opt$missing <- "listwise"
+    } else if(opt$estimator == "dls") {
+        opt$estimator <- "DLS"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        } else if(opt$se == "none" ||
+                  opt$se == "bootstrap" ||
+                  opt$se == "external") {
+            # nothing to do
+        } else if(opt$se == "robust.sem") {
+            # nothing to do
+        } else if(opt$se == "robust") {
+            opt$se <- "robust.sem"
+        } else {
+            stop("lavaan ERROR: invalid value for `se' argument when estimator is DLS: ",
+                 opt$se, "\n")
+        }
+        if(opt$test == "default" || opt$test == "standard") {
+            opt$test <- "satorra.bentler"
+        } else if(!all(opt$test %in% c("standard","none","satorra.bentler",
+                            "mean.adjusted",
+                            "mean.var.adjusted","scaled.shifted"))) {
+            stop("lavaan ERROR: invalid value for `test' argument when estimator is DLS: ",
+                 opt$test, "\n")
+        }
+        if(opt$missing %in% c("fiml", "ml", "direct")) {
+            stop("lavaan ERROR: missing data is not supported if estimator is DLS; use missing = \"listwise\"")
+        }
+        opt$missing <- "listwise"
+
+        # check estimator.args
+        if(is.null(opt$estimator.args)) {
+            opt$estimator.args <- list(dls.a = 1.0, dls.GammaNT = "sample")
+        } else {
+            if(is.null(opt$estimator.args$dls.a)) {
+                opt$estimator.args$dls.a <- 1.0
+            } else {
+                stopifnot(is.numeric(opt$estimator.args$dls.a))
+                if(opt$estimator.args$dls.a < 0.0 ||
+                   opt$estimator.args$dls.a > 1.0) {
+                    stop("lavaan ERROR: dls.a value in estimator.args must be between 0 and 1.")
+                }
+            }
+            if(is.null(opt$estimator.args$dls.GammaNT)) {
+                opt$estimator.args$dls.GammaNT <- "sample"   
+            } else {
+                stopifnot(is.character(opt$estimator.args$dls.GammaNT))
+                opt$estimator.args$dls.GammaNT <- 
+                    tolower(opt$estimator.args$dls.GammaNT)
+                if(!opt$estimator.args$dls.GammaNT %in% c("sample", "model")) {
+                    stop("lavaan ERROR: dls.GammaNT value in estimator.args must be either \"sample\" or \"model\".")
+                }
+            }
+        }
     } else if(opt$estimator == "dwls") {
         opt$estimator <- "DWLS"
         if(opt$se == "default" || opt$se == "standard") {
@@ -844,7 +898,10 @@ lav_options_set <- function(opt = NULL) {
                             "mean.var.adjusted","scaled.shifted"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
+        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
+            opt$test <- "satorra.bentler"
         }
+
         #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
@@ -1054,9 +1111,9 @@ lav_options_set <- function(opt = NULL) {
         }
         if(opt$sample.cov.rescale == "default") {
             opt$sample.cov.rescale <- FALSE
-        } else {
-            warning("sample.cov.rescale argument is only relevant if estimator = ML")
-        }
+        }# else {
+        #    warning("sample.cov.rescale argument is only relevant if estimator = ML")
+        #}
     } else { # ml and friends
         if(opt$estimator %in% c("PML", "FML")) {
             opt$likelihood <- "normal"

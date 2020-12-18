@@ -28,7 +28,7 @@ lav_model_objective <- function(lavmodel       = NULL,
     th.idx        <- lavmodel@th.idx
 
     # do we need WLS.est?
-    if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS")) {
+    if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS", "DLS")) {
 
         lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
         # check for COV with negative diagonal elements?
@@ -161,10 +161,13 @@ lav_model_objective <- function(lavmodel       = NULL,
             }
         } else if(estimator == "GLS" ||
                   estimator == "WLS" ||
+                  estimator == "DLS" ||
                   estimator == "NTRLS") {
             # full weight matrix
             if(estimator == "GLS" || estimator == "WLS") {
                 WLS.V <- lavsamplestats@WLS.V[[g]]
+            } else if(estimator == "DLS") {
+                WLS.V <- lavsamplestats@WLS.V[[g]] # for now
             } else if(estimator == "NTRLS") {
                 #WLS.V <- lav_samplestats_Gamma_inverse_NT(
                 #             ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],

@@ -721,9 +721,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavsamplestats <- lav_samplestats_from_data(
                        lavdata       = lavdata,
                        missing       = lavoptions$missing,
-                       rescale       =
-                           (lavoptions$estimator %in% c("ML","REML","NTRLS") &&
-                            lavoptions$likelihood == "normal"),
+                       rescale       = lavoptions$sample.cov.rescale,
                        estimator     = lavoptions$estimator,
                        mimic         = lavoptions$mimic,
                        meanstructure = lavoptions$meanstructure,

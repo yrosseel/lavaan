@@ -407,7 +407,8 @@ lav_model <- function(lavpartable      = NULL,
                  rv.lv               = rv.lv,
                  rv.ov               = rv.ov,
 
-                 estimator           = lavoptions$estimator)
+                 estimator           = lavoptions$estimator,
+                 estimator.args      = lavoptions$estimator.args)
 
     if(lavoptions$debug) {
          cat("lavaan lavoptions$debug: lavaanModel\n")
