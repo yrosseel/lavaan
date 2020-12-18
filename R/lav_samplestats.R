@@ -23,6 +23,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                       zero.add          = c(0.5, 0.0),
                                       zero.keep.margins = TRUE,
                                       zero.cell.warn    = TRUE,
+                                      dls.a             = 1.0,
+                                      dls.GammaNT       = "sample",
                                       debug             = FALSE,
                                       verbose           = FALSE) {
 
@@ -590,6 +592,20 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # WLS.V
         if(!WLS.V.user && nlevels == 1L) {
+
+            if(estimator == "DLS" && dls.GammaNT == "sample") {
+                # compute GammaNT here
+                GammaNT <- lav_samplestats_Gamma_NT(
+                    COV            = cov[[g]],
+                    MEAN           = mean[[g]],
+                    rescale        = FALSE,
+                    x.idx          = x.idx[[g]],
+                    fixed.x        = fixed.x,
+                    conditional.x  = conditional.x,
+                    meanstructure  = meanstructure,
+                    slopestructure = conditional.x)
+            }
+
             if(estimator == "GLS") {
                 # Note: we need the 'original' COV/MEAN/ICOV
                 #        sample statistics; not the 'residual' version
@@ -628,14 +644,28 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             if(any(Re(ev) < 0)) {
                                 stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
                             }
-                            WLS.V[[g]] <- lav_matrix_symmetric_inverse(NACOV[[g]])
+                            if(estimator == "DLS" && dls.GammaNT == "sample") {
+                                W.DLS <- (1 - dls.a)*NACOV[[g]] + dls.a*GammaNT
+                                WLS.V[[g]] <- 
+                                    lav_matrix_symmetric_inverse(W.DLS)
+                            } else { # WLS
+                                WLS.V[[g]] <- 
+                                    lav_matrix_symmetric_inverse(NACOV[[g]])
+                            }
                         } else {
                             # fixed.x: we have zero cols/rows
                             # ginv does the trick, but perhaps this is overkill
                             # just removing the zero rows/cols, invert, and
                             # fill back in the zero rows/cols would do it
                             #WLS.V[[g]] <- MASS::ginv(NACOV[[g]])
-                            WLS.V[[g]] <- lav_matrix_symmetric_inverse(NACOV[[g]])
+                            if(estimator == "DLS" && dls.GammaNT == "sample") {
+                                W.DLS <- (1 - dls.a)*NACOV[[g]] + dls.a*GammaNT
+                                WLS.V[[g]] <-
+                                    lav_matrix_symmetric_inverse(W.DLS)
+                            } else { # WLS
+                                WLS.V[[g]] <- 
+                                    lav_matrix_symmetric_inverse(NACOV[[g]])
+                            }
                         }
                     } else if(estimator == "DWLS") {
                         dacov <- diag(NACOV[[g]])

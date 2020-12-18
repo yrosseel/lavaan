@@ -353,6 +353,8 @@ bootstrap.internal <- function(object          = NULL,
                                group.w.free  = lavoptions$group.w.free,
                                #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
                                missing.h1    = TRUE,
+                               dls.a         = lavoptions$estimator.args$dls.a,
+                               dls.GammaNT   = lavoptions$estimator.args$dls.GammaNT,
                                verbose       = FALSE), silent=TRUE)
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) {

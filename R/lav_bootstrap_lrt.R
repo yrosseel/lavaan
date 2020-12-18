@@ -233,6 +233,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                test          = h0@Options$test,
                                group.w.free  = h0@Options$group.w.free,
                                missing.h1    = TRUE,
+                               dls.a         = lavoptions$estimator.args$dls.a,
+                               dls.GammaNT   = lavoptions$estimator.args$dls.GammaNT,
                                verbose  = FALSE), silent=TRUE)
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")

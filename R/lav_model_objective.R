@@ -18,14 +18,15 @@ lav_model_objective <- function(lavmodel       = NULL,
         return(fx)
     }
 
-    meanstructure <- lavmodel@meanstructure
-    estimator     <- lavmodel@estimator
-    categorical   <- lavmodel@categorical
-    group.w.free  <- lavmodel@group.w.free
-    fixed.x       <- lavmodel@fixed.x
-    conditional.x <- lavmodel@conditional.x
-    num.idx       <- lavmodel@num.idx
-    th.idx        <- lavmodel@th.idx
+    meanstructure  <- lavmodel@meanstructure
+    estimator      <- lavmodel@estimator
+    categorical    <- lavmodel@categorical
+    group.w.free   <- lavmodel@group.w.free
+    fixed.x        <- lavmodel@fixed.x
+    conditional.x  <- lavmodel@conditional.x
+    num.idx        <- lavmodel@num.idx
+    th.idx         <- lavmodel@th.idx
+    estimator.args <- lavmodel@estimator.args
 
     # do we need WLS.est?
     if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS", "DLS")) {
@@ -50,6 +51,11 @@ lav_model_objective <- function(lavmodel       = NULL,
         if(estimator == "NTRLS") {
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
                                          extra = TRUE)
+            Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+        }
+        if(estimator == "DLS" && estimator.args$dls.GammaNT == "model") {
+            Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                                         extra = FALSE)
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(debug) print(WLS.est)
@@ -167,7 +173,22 @@ lav_model_objective <- function(lavmodel       = NULL,
             if(estimator == "GLS" || estimator == "WLS") {
                 WLS.V <- lavsamplestats@WLS.V[[g]]
             } else if(estimator == "DLS") {
-                WLS.V <- lavsamplestats@WLS.V[[g]] # for now
+                if(estimator.args$dls.GammaNT == "sample") {
+                    WLS.V <- lavsamplestats@WLS.V[[g]] # for now
+                } else {
+                    dls.a <- estimator.args$dls.a
+                    GammaNT <- lav_samplestats_Gamma_NT(
+                        COV            = Sigma.hat[[g]],
+                        MEAN           = Mu.hat[[g]],
+                        rescale        = FALSE,
+                        x.idx          = lavsamplestats@x.idx[[g]],
+                        fixed.x        = lavmodel@fixed.x,
+                        conditional.x  = lavmodel@conditional.x,
+                        meanstructure  = lavmodel@meanstructure,
+                        slopestructure = lavmodel@conditional.x)
+                    W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                    WLS.V <- lav_matrix_symmetric_inverse(W.DLS)
+                }
             } else if(estimator == "NTRLS") {
                 #WLS.V <- lav_samplestats_Gamma_inverse_NT(
                 #             ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],

@@ -738,6 +738,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                        zero.add          = lavoptions$zero.add,
                        zero.keep.margins = lavoptions$zero.keep.margins,
                        zero.cell.warn    = lavoptions$zero.cell.warn,
+                       dls.a             = lavoptions$estimator.args$dls.a,
+                       dls.GammaNT       = lavoptions$estimator.args$dls.GammaNT,
                        debug             = lavoptions$debug,
                        verbose           = lavoptions$verbose)
 
