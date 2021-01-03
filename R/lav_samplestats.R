@@ -646,10 +646,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                             }
                             if(estimator == "DLS" && dls.GammaNT == "sample") {
                                 W.DLS <- (1 - dls.a)*NACOV[[g]] + dls.a*GammaNT
-                                WLS.V[[g]] <- 
+                                WLS.V[[g]] <-
                                     lav_matrix_symmetric_inverse(W.DLS)
                             } else { # WLS
-                                WLS.V[[g]] <- 
+                                WLS.V[[g]] <-
                                     lav_matrix_symmetric_inverse(NACOV[[g]])
                             }
                         } else {
@@ -663,7 +663,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                 WLS.V[[g]] <-
                                     lav_matrix_symmetric_inverse(W.DLS)
                             } else { # WLS
-                                WLS.V[[g]] <- 
+                                WLS.V[[g]] <-
                                     lav_matrix_symmetric_inverse(NACOV[[g]])
                             }
                         }

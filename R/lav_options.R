@@ -867,10 +867,10 @@ lav_options_set <- function(opt = NULL) {
                 }
             }
             if(is.null(opt$estimator.args$dls.GammaNT)) {
-                opt$estimator.args$dls.GammaNT <- "sample"   
+                opt$estimator.args$dls.GammaNT <- "sample"
             } else {
                 stopifnot(is.character(opt$estimator.args$dls.GammaNT))
-                opt$estimator.args$dls.GammaNT <- 
+                opt$estimator.args$dls.GammaNT <-
                     tolower(opt$estimator.args$dls.GammaNT)
                 if(!opt$estimator.args$dls.GammaNT %in% c("sample", "model")) {
                     stop("lavaan ERROR: dls.GammaNT value in estimator.args must be either \"sample\" or \"model\".")

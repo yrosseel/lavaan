@@ -76,6 +76,12 @@ lav_start <- function(start.method    = "default",
         }
     } else if(is.list(start.method)) {
         start.user <- start.method
+    } else if(is.numeric(start.method)) {
+        nx.free <- sum(lavpartable$free > 0L)
+        if(length(start.method) != nx.free) {
+            stop("lavaan ERROR: start argument contains ", length(start.method), " elements; but parameter table expects ", nx.free, " free parameters.")
+        }
+        lavpartable$ustart[lavpartable$free > 0L] <- start.method
     } else if(inherits(start.method, "lavaan")) {
         start.user <- parTable(start.method)
     }

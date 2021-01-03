@@ -296,6 +296,8 @@ lav_model_objective <- function(lavmodel       = NULL,
         } else if(estimator == "PML" || estimator == "FML" ||
                   estimator == "MML") {
             # do nothing
+        } else if(estimator == "DLS") {
+            # do nothing
         } else {
             group.fx <- 0.5 * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] * group.fx
         }
