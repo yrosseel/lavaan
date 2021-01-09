@@ -36,6 +36,18 @@ lavCor <- function(object,
         estimator <- "none"
     }
 
+    # however, if we have missing = "fiml", we need to switch the
+    # estimator (new in 0.6-8)
+    if(tolower(missing) %in% c("ml", "fiml", "direct")) {
+         if(length(ordered) > 0L) {
+             stop("lavaan ERROR: missing = ", missing, 
+                  " is only available for continuous data")
+         }
+         estimator <- "ML"
+         meanstructure <- TRUE
+    }
+    
+
     # se?
     se <- tolower(se); output <- tolower(output)
     if(se != "none") {
@@ -81,7 +93,7 @@ lavCor <- function(object,
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
     }
-    if(categorical) {
+    if(categorical || tolower(missing) %in% c("ml", "fiml", "direct")) {
         meanstructure <- TRUE
     }
     if(!is.null(dots$fixed.x)) {
@@ -108,6 +120,7 @@ lavCor <- function(object,
                                                        fixed.x = fixed.x,
                                                        conditional.x = conditional.x,
                                                        group.w.free = FALSE,
+                                                       missing = missing,
                                                        mimic = mimic),
                                   sample.cov    = NULL,
                                   sample.mean   = NULL,
@@ -137,7 +150,7 @@ lav_cor_output <- function(object, output = "cor") {
 
     # check output
     if(output %in% c("cor","cov")) {
-        out <- inspect(object, "sampstat")
+        out <- inspect(object, "implied") # in case we have missing = "fiml"
         if(object@Data@ngroups == 1L) {
             if(object@Model@conditional.x) {
                 out <- out$res.cov
@@ -158,7 +171,7 @@ lav_cor_output <- function(object, output = "cor") {
             }
         }
     } else if(output %in% c("th","thresholds")) {
-        out <- inspect(object, "sampstat")
+        out <- inspect(object, "implied")
         if(object@Data@ngroups == 1L) {
             if(object@Model@conditional.x) {
                 out <- out$res.th
@@ -173,7 +186,7 @@ lav_cor_output <- function(object, output = "cor") {
             }
         }
     } else if(output %in% c("sampstat")) {
-        out <- inspect(object, "sampstat")
+        out <- inspect(object, "implied")
     } else if(output %in% c("parameterEstimates", "pe",
               "parameterestimates", "est")) {
         #out <- parameterEstimates(object)
