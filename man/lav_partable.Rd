@@ -9,6 +9,7 @@
 \alias{lav_partable_complete}
 \alias{lav_partable_attributes}
 \alias{lav_partable_merge}
+\alias{lav_partable_add}
 \title{lavaan partable functions}
 \description{Utility functions related to the parameter table (partable)}
 \usage{
@@ -46,6 +47,9 @@ lav_partable_complete(partable = NULL, start = TRUE)
 # merge two parameter tables
 lav_partable_merge(pt1 = NULL, pt2 = NULL, remove.duplicated = FALSE, 
     fromLast = FALSE, warn = TRUE)
+
+# add a single parameter to an existing parameter table
+lav_partable_add(partable = NULL, add = list())
 }
 \arguments{
 \item{partable}{A parameter table. see \code{\link{lavParTable}} 
@@ -113,6 +117,7 @@ when merging two parameter tables.}
 from the bottom of the merged parameter table.}
 \item{warn}{Logical. If code{TRUE}, a warning is produced when duplicated
 elements are found, when merging two parameter tables.}
+\item{add}{A named list.}{A single row of a parameter table as a named list.}
 }
 \examples{
 # generate syntax for an independence model

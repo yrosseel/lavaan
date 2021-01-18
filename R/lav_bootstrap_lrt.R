@@ -170,12 +170,12 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
             newData <- lav_data_update(lavdata = lavdata, newX = dataX,
-                                       BOOT.idx = BOOT.idx, 
+                                       BOOT.idx = BOOT.idx,
                                        lavoptions = lavoptions)
 
         } else { # parametric!
-            for(g in 1:lavsamplestats@ngroups) {
-                dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
+            for(g in 1:lavdata@ngroups) {
+                dataX[[g]] <- MASS::mvrnorm(n     = lavdata@nobs[[g]],
                                             Sigma = Sigma.hat[[g]],
                                             mu    = Mu.hat[[g]])
             }
@@ -188,21 +188,8 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
 
         #Get sample statistics
         bootSampleStats <- try(lav_samplestats_from_data(
-                               lavdata  = newData,
-                               missing       = h0@Options$missing,
-                               rescale  = (h0@Options$estimator == "ML" &&
-                                           h0@Options$likelihood =="normal"),
-                               estimator     = h0@Options$estimator,
-                               mimic         = h0@Options$mimic,
-                               meanstructure = h0@Options$meanstructure,
-                               conditional.x = h0@Options$conditional.x,
-                               se            = h0@Options$se,
-                               test          = h0@Options$test,
-                               group.w.free  = h0@Options$group.w.free,
-                               missing.h1    = TRUE,
-                               dls.a         = lavoptions$estimator.args$dls.a,
-                               dls.GammaNT   = lavoptions$estimator.args$dls.GammaNT,
-                               verbose  = FALSE), silent=TRUE)
+                               lavdata       = newData,
+                               lavoptions    = lavoptions), silent = TRUE)
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")
             options(old_options)

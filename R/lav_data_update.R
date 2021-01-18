@@ -8,6 +8,7 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, BOOT.idx = NULL,
                             lavoptions = NULL) {
 
     stopifnot(length(newX) == lavdata@ngroups)
+    stopifnot(!is.null(lavoptions))
     newdata <- lavdata
 
     # replace data 'X' slot for each group
@@ -20,17 +21,17 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, BOOT.idx = NULL,
         if(lavoptions$missing != "listwise") {
             newdata@Mp[[g]] <- lav_data_missing_patterns(newX[[g]],
                                   sort.freq = FALSE, coverage = FALSE)
-        }   
+        }
 
-        # Rp    
+        # Rp
         if(length(lavdata@ov.names.x[[g]]) == 0L &&
            all(lavdata@ov.names[[g]] %in%
                lavdata@ov$name[lavdata@ov$type == "ordered"])) {
             newdata@Rp[[g]] <- lav_data_resp_patterns(newX[[g]])
-        }   
+        }
 
-        # Lp    
-        if(lavdata@nlevels > 1L) { 
+        # Lp
+        if(lavdata@nlevels > 1L) {
             # extract cluster variable(s), for this group
             clus <- matrix(0, nrow(newX[[g]]), lavdata@nlevels - 1L)
             for(l in 2:lavdata@nlevels) {
@@ -46,14 +47,14 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, BOOT.idx = NULL,
 
     # if boot.idx if provided, also adapt eXo and WT
     if(!is.null(BOOT.idx)) {
-        
+
         boot.idx <- BOOT.idx[[g]]
 
         # eXo
         if(!is.null(lavdata@eXo[[g]])) {
             newdata@eXo[[g]] <- lavdata@eXo[[g]][boot.idx,,drop=FALSE]
         }
-      
+
         # sampling weights
         if(!is.null(lavdata@weights[[g]])) {
             newdata@weights[[g]] <- lavdata@weights[[g]][boot.idx]

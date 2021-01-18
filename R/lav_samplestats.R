@@ -4,32 +4,46 @@
 # major revision: YR 5/11/2011: separate data.obs and sample statistics
 # YR 5/01/2016: add rescov, resvar, ... if conditional.x = TRUE
 
+# YR 18 Jan 2021: use lavoptions
+
 lav_samplestats_from_data <- function(lavdata           = NULL,
-                                      missing           = "listwise",
-                                      rescale           = FALSE,
-                                      missing.h1        = TRUE,
-                                      estimator         = "ML",
-                                      mimic             = "lavaan",
-                                      meanstructure     = FALSE,
-                                      conditional.x     = FALSE,
-                                      fixed.x           = FALSE,
-                                      group.w.free      = FALSE,
+                                      lavoptions        = NULL,
                                       WLS.V             = NULL,
-                                      NACOV             = NULL,
-                                      gamma.n.minus.one = FALSE,
-                                      se                = "standard",
-                                      test              = "standard",
-                                      ridge             = 1e-5,
-                                      zero.add          = c(0.5, 0.0),
-                                      zero.keep.margins = TRUE,
-                                      zero.cell.warn    = TRUE,
-                                      dls.a             = 1.0,
-                                      dls.GammaNT       = "sample",
-                                      debug             = FALSE,
-                                      verbose           = FALSE) {
+                                      NACOV             = NULL) {
+
+    # extra info from lavoptions
+    stopifnot(!is.null(lavoptions))
+    missing           <- lavoptions$missing
+    rescale           <- lavoptions$sample.cov.rescale
+    estimator         <- lavoptions$estimator
+    mimic             <- lavoptions$mimic
+    meanstructure     <- lavoptions$meanstructure
+    conditional.x     <- lavoptions$conditional.x
+    fixed.x           <- lavoptions$fixed.x
+    group.w.free      <- lavoptions$group.w.free
+    gamma.n.minus.one <- lavoptions$gamma.n.minus.one
+    se                <- lavoptions$se
+    test              <- lavoptions$test
+    ridge             <- lavoptions$ridge
+    zero.add          <- lavoptions$zero.add
+    zero.keep.margins <- lavoptions$zero.keep.margins
+    zero.cell.warn    <- lavoptions$zero.cell.warn
+    dls.a             <- lavoptions$estimator.args$dls.a
+    dls.GammaNT       <- lavoptions$estimator.args$dls.GammaNT
+    debug             <- lavoptions$debug
+    verbose           <- lavoptions$verbose
+
 
     # ridge default
-    ridge.eps <- 0.0
+    if(ridge) {
+        if(is.numeric(lavoptions$ridge.constant)) {
+            ridge.eps <- lavoptions$ridge.constant
+        } else {
+            ridge.eps <- 1e-5
+        }
+    } else {
+        ridge.eps <- 0.0
+    }
 
     # check lavdata
     stopifnot(!is.null(lavdata))
@@ -395,7 +409,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                                      Mp = Mp[[g]],
                                                      wt = WT[[g]])
 
-                if(missing.h1 && nlevels == 1L) {
+                if(nlevels == 1L) {
                     # estimate moments unrestricted model
                     out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
                               wt = WT[[g]],
@@ -446,7 +460,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             # icov and cov.log.det (but not if missing)
             if(!missing %in% c("ml", "ml.x")) {
-                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
+                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge.eps,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
                 icov[[g]] <- out$icov
@@ -454,7 +468,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
                 # the same for res.cov if conditional.x = TRUE
                 if(conditional.x) {
-                    out <- lav_samplestats_icov(COV = res.cov[[g]], ridge=ridge,
+                    out <- lav_samplestats_icov(COV = res.cov[[g]],
+                               ridge = ridge.eps,
                                x.idx = x.idx[[g]],
                                ngroups = ngroups, g = g, warn = TRUE)
                     res.icov[[g]] <- out$icov

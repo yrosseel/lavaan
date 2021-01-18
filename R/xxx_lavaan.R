@@ -720,28 +720,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else if(lavdata@data.type == "full") {
         lavsamplestats <- lav_samplestats_from_data(
                        lavdata       = lavdata,
-                       missing       = lavoptions$missing,
-                       rescale       = lavoptions$sample.cov.rescale,
-                       estimator     = lavoptions$estimator,
-                       mimic         = lavoptions$mimic,
-                       meanstructure = lavoptions$meanstructure,
-                       conditional.x = lavoptions$conditional.x,
-                       fixed.x       = lavoptions$fixed.x,
-                       group.w.free  = lavoptions$group.w.free,
-                       missing.h1    = (lavoptions$missing != "listwise"),
-                       WLS.V             = WLS.V,
-                       NACOV             = NACOV,
-                       gamma.n.minus.one = lavoptions$gamma.n.minus.one,
-                       se                = lavoptions$se,
-                       test              = lavoptions$test,
-                       ridge             = lavoptions$ridge,
-                       zero.add          = lavoptions$zero.add,
-                       zero.keep.margins = lavoptions$zero.keep.margins,
-                       zero.cell.warn    = lavoptions$zero.cell.warn,
-                       dls.a             = lavoptions$estimator.args$dls.a,
-                       dls.GammaNT       = lavoptions$estimator.args$dls.GammaNT,
-                       debug             = lavoptions$debug,
-                       verbose           = lavoptions$verbose)
+                       lavoptions    = lavoptions,
+                       WLS.V         = WLS.V,
+                       NACOV         = NACOV)
 
     } else if(lavdata@data.type == "moment") {
         lavsamplestats <- lav_samplestats_from_moments(

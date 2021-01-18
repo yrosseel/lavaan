@@ -287,12 +287,12 @@ lav_bootstrap_internal <- function(object          = NULL,
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
             }
             newData <- lav_data_update(lavdata = lavdata, newX = dataX,
-                                       BOOT.idx = BOOT.idx, 
+                                       BOOT.idx = BOOT.idx,
                                        lavoptions = lavoptions)
 
         } else { # parametric!
-            for(g in 1:lavsamplestats@ngroups) {
-                dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
+            for(g in 1:lavdata@ngroups) {
+                dataX[[g]] <- MASS::mvrnorm(n     = lavdata@nobs[[g]],
                                             Sigma = Sigma.hat[[g]],
                                             mu    = Mu.hat[[g]])
             }
@@ -304,21 +304,7 @@ lav_bootstrap_internal <- function(object          = NULL,
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
         bootSampleStats <- try(lav_samplestats_from_data(
                                lavdata       = newData,
-                               missing       = lavoptions$missing,
-                               rescale       = (lavoptions$estimator == "ML" &&
-                                                lavoptions$likelihood == "normal"),
-                               estimator     = lavoptions$estimator,
-                               mimic         = lavoptions$mimic,
-                               meanstructure = lavoptions$meanstructure,
-                               se            = lavoptions$se,
-                               test          = lavoptions$test,
-                               conditional.x = lavoptions$conditional.x,
-                               group.w.free  = lavoptions$group.w.free,
-                               #missing.h1    = (FUN != "coef"), # not if fixed.x, otherwise starting values fails!
-                               missing.h1    = TRUE,
-                               dls.a         = lavoptions$estimator.args$dls.a,
-                               dls.GammaNT   = lavoptions$estimator.args$dls.GammaNT,
-                               verbose       = FALSE), silent=TRUE)
+                               lavoptions    = lavoptions), silent = TRUE)
         if(inherits(bootSampleStats, "try-error")) {
             if(verbose) {
                 cat("     FAILED: creating sample statistics\n")
