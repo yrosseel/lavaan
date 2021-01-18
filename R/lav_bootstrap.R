@@ -63,38 +63,38 @@ bootstrapLavaan <- function(object,
     lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl,
                         iseed = iseed)
 
-    bootstrap.internal(object          = object,
-                       lavdata.        = NULL,
-                       lavmodel.       = NULL,
-                       lavsamplestats. = NULL,
-                       lavoptions.     = lavoptions.,
-                       lavpartable.    = NULL,
-                       R               = R,
-                       type            = type.,
-                       verbose         = verbose,
-                       FUN             = FUN,
-                       warn            = warn,
-                       return.boot     = return.boot,
-                       h0.rmsea        = h0.rmsea,
-                       ...)
+    lav_bootstrap_internal(object          = object,
+                           lavdata.        = NULL,
+                           lavmodel.       = NULL,
+                           lavsamplestats. = NULL,
+                           lavoptions.     = lavoptions.,
+                           lavpartable.    = NULL,
+                           R               = R,
+                           type            = type.,
+                           verbose         = verbose,
+                           FUN             = FUN,
+                           warn            = warn,
+                           return.boot     = return.boot,
+                           h0.rmsea        = h0.rmsea,
+                           ...)
 }
 
 # we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!
-bootstrap.internal <- function(object          = NULL,
-                               lavdata.        = NULL,
-                               lavmodel.       = NULL,
-                               lavsamplestats. = NULL,
-                               lavoptions.     = NULL,
-                               lavpartable.    = NULL,
-                               R               = 1000L,
-                               type            = "ordinary",
-                               verbose         = FALSE,
-                               FUN             = "coef",
-                               warn            = 0L,
-                               return.boot     = FALSE,
-                               h0.rmsea        = NULL,
-                               ...) {
+lav_bootstrap_internal <- function(object          = NULL,
+                                   lavdata.        = NULL,
+                                   lavmodel.       = NULL,
+                                   lavsamplestats. = NULL,
+                                   lavoptions.     = NULL,
+                                   lavpartable.    = NULL,
+                                   R               = 1000L,
+                                   type            = "ordinary",
+                                   verbose         = FALSE,
+                                   FUN             = "coef",
+                                   warn            = 0L,
+                                   return.boot     = FALSE,
+                                   h0.rmsea        = NULL,
+                                   ...) {
 
     # warning: avoid use of 'options', 'sample' (both are used as functions
     # below...
@@ -176,11 +176,6 @@ bootstrap.internal <- function(object          = NULL,
     } else {
         dataX <- lavdata@X
     }
-    dataeXo <- lavdata@eXo
-    dataWT  <- lavdata@weights
-    dataMp  <- lavdata@Mp
-    dataRp  <- lavdata@Rp
-    dataLp  <- lavdata@Lp
 
     # if bollen.stine, transform data here
     if(type == "bollen.stine") {
@@ -280,62 +275,30 @@ bootstrap.internal <- function(object          = NULL,
     # run bootstraps
     fn <- function(b) {
 
-        #### DEBUGGG ONLY ######
-        #if(b == 202) {
-        #    browser()
-        #}
-
+        # create bootstrap sample, and generate new 'data' object
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
-            for(g in 1:lavsamplestats@ngroups) {
-                stopifnot(lavsamplestats@nobs[[g]] > 1L)
-                boot.idx <- sample(x=lavsamplestats@nobs[[g]],
-                                   size=lavsamplestats@nobs[[g]], replace=TRUE)
+            BOOT.idx <- vector("list", length = lavdata@ngroups)
+            for(g in 1:lavdata@ngroups) {
+                stopifnot(lavdata@nobs[[g]] > 1L)
+                boot.idx <- sample(x=lavdata@nobs[[g]],
+                                   size=lavdata@nobs[[g]], replace=TRUE)
+                BOOT.idx[[g]] <- boot.idx
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
-                if(!is.null(dataeXo[[g]])) {
-                    dataeXo[[g]] <- dataeXo[[g]][boot.idx,,drop=FALSE]
-                }
-                if(!is.null(dataWT[[g]])) {
-                    dataWT[[g]] <- dataWT[[g]][boot.idx]
-                }
-                if(lavoptions$missing != "listwise") {
-                    dataMp[[g]] <- lav_data_missing_patterns(dataX[[g]],
-                                       sort.freq = FALSE, coverage = FALSE)
-                }
-                if(length(lavdata@ov.names.x[[g]]) == 0L &&
-                   all(lavdata@ov.names[[g]] %in%
-                       lavdata@ov$name[lavdata@ov$type == "ordered"])) {
-                    dataRp[[g]] <- lav_data_resp_patterns(dataX[[g]])
-                }
-                if(lavdata@nlevels > 1L) {
-                    # extract cluster variable(s), for this group
-                    clus <- matrix(0, nrow(dataX[[g]]), lavdata@nlevels - 1L)
-                    for(l in 2:lavdata@nlevels) {
-                        clus[,(l-1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
-                    }
-                    dataLp[[g]] <- lav_data_cluster_patterns(Y = dataX[[g]],
-                                        clus = clus,
-                                        cluster = lavdata@cluster,
-                                        ov.names = lavdata@ov.names[[g]],
-                                        ov.names.l = lavdata@ov.names.l[[g]])
-                }
-            } # g
+            }
+            newData <- lav_data_update(lavdata = lavdata, newX = dataX,
+                                       BOOT.idx = BOOT.idx, 
+                                       lavoptions = lavoptions)
+
         } else { # parametric!
             for(g in 1:lavsamplestats@ngroups) {
                 dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
                                             Sigma = Sigma.hat[[g]],
                                             mu    = Mu.hat[[g]])
             }
+            newData <- lav_data_update(lavdata = lavdata, newX = dataX,
+                                       lavoptions = lavoptions)
         }
-
-        # create new lavdata@ object (new in 0.6-2)
-        newData         <- lavdata
-        newData@X       <- dataX
-        newData@eXo     <- dataeXo
-        newData@weights <- dataWT
-        newData@Mp      <- dataMp
-        newData@Rp      <- dataRp
-        newData@Lp      <- dataLp
 
         # verbose
         if(verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))

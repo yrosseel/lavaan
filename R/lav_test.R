@@ -280,17 +280,17 @@ lav_model_test <- function(lavmodel       = NULL,
                 }
                 boot.type <- "bollen.stine"
                 BOOT.TEST <-
-                    bootstrap.internal(object          = NULL,
-                                       lavmodel.       = lavmodel,
-                                       lavsamplestats. = lavsamplestats,
-                                       lavpartable.    = lavpartable,
-                                       lavoptions.     = lavoptions,
-                                       lavdata.        = lavdata,
-                                       R               = R,
-                                       verbose         = lavoptions$verbose,
-                                       type            = boot.type,
-                                       FUN             = "test",
-                                       warn            = -1L)
+                    lav_bootstrap_internal(object          = NULL,
+                                           lavmodel.       = lavmodel,
+                                           lavsamplestats. = lavsamplestats,
+                                           lavpartable.    = lavpartable,
+                                           lavoptions.     = lavoptions,
+                                           lavdata.        = lavdata,
+                                           R               = R,
+                                           verbose         = lavoptions$verbose,
+                                           type            = boot.type,
+                                           FUN             = "test",
+                                           warn            = -1L)
                 BOOT.TEST <- drop(BOOT.TEST)
             }
 

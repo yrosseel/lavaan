@@ -80,11 +80,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     }
     lavdata <- h0@Data
     lavoptions <- h0@Options
-    dataeXo <- lavdata@eXo
-    dataWT  <- lavdata@weights
-    dataMp  <- lavdata@Mp
-    dataRp  <- lavdata@Rp
-    dataLp  <- lavdata@Lp
 
     #Bollen-Stine data transformation
     if(type == "bollen.stine") {
@@ -166,55 +161,27 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
     fn <- function(b) {
         if (type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
-            for(g in 1:h0@Data@ngroups) {
-                stopifnot(h0@SampleStats@nobs[[g]] > 1L)
-                boot.idx <- sample(x = h0@SampleStats@nobs[[g]],
-                                   size = h0@SampleStats@nobs[[g]], replace = TRUE)
+            BOOT.idx <- vector("list", length = lavdata@ngroups)
+            for(g in 1:lavdata@ngroups) {
+                stopifnot(lavdata@nobs[[g]] > 1L)
+                boot.idx <- sample(x=lavdata@nobs[[g]],
+                                   size=lavdata@nobs[[g]], replace=TRUE)
+                BOOT.idx[[g]] <- boot.idx
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
-                if(!is.null(dataeXo[[g]])) {
-                    dataeXo[[g]] <- dataeXo[[g]][boot.idx,,drop=FALSE]
-                }
-                if(!is.null(dataWT[[g]])) {
-                    dataWT[[g]] <- dataWT[[g]][boot.idx]
-                }
-                if(lavoptions$missing != "listwise") {
-                    dataMp[[g]] <- lav_data_missing_patterns(dataX[[g]],
-                                       sort.freq = FALSE, coverage = FALSE)
-                }
-                if(length(lavdata@ov.names.x[[g]]) == 0L &&
-                   all(lavdata@ov.names[[g]] %in%
-                       lavdata@ov$name[lavdata@ov$type == "ordered"])) {
-                    dataRp[[g]] <- lav_data_resp_patterns(dataX[[g]])
-                }
-                if(lavdata@nlevels > 1L) {
-                    # extract cluster variable(s), for this group
-                    clus <- matrix(0, nrow(dataX[[g]]), lavdata@nlevels - 1L)
-                    for(l in 2:lavdata@nlevels) {
-                        clus[,(l-1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
-                    }
-                    dataLp[[g]] <- lav_data_cluster_patterns(Y = dataX[[g]],
-                                        clus = clus,
-                                        cluster = lavdata@cluster,
-                                        ov.names = lavdata@ov.names[[g]],
-                                        ov.names.l = lavdata@ov.names.l[[g]])
-                }
             }
-        } else { # parametric!
-            for(g in 1:h0@Data@ngroups) {
-                dataX[[g]] <- MASS::mvrnorm(n     = h0@SampleStats@nobs[[g]],
-                                            mu    = Mu.hat[[g]],
-                                            Sigma = Sigma.hat[[g]])
-            }
-        }
+            newData <- lav_data_update(lavdata = lavdata, newX = dataX,
+                                       BOOT.idx = BOOT.idx, 
+                                       lavoptions = lavoptions)
 
-        # create new lavdata@ object (new in 0.6-2)
-        newData         <- lavdata
-        newData@X       <- dataX
-        newData@eXo     <- dataeXo
-        newData@weights <- dataWT
-        newData@Mp      <- dataMp
-        newData@Rp      <- dataRp
-        newData@Lp      <- dataLp
+        } else { # parametric!
+            for(g in 1:lavsamplestats@ngroups) {
+                dataX[[g]] <- MASS::mvrnorm(n     = lavsamplestats@nobs[[g]],
+                                            Sigma = Sigma.hat[[g]],
+                                            mu    = Mu.hat[[g]])
+            }
+            newData <- lav_data_update(lavdata = lavdata, newX = dataX,
+                                       lavoptions = lavoptions)
+        }
 
         # verbose
         if (verbose) cat("  ... bootstrap draw number: ", b, "\n")

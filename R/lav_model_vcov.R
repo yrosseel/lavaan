@@ -21,18 +21,18 @@ lav_model_nvcov_bootstrap <- function(lavmodel       = NULL,
     }
 
     TEST <- NULL
-    COEF <- bootstrap.internal(object          = NULL,
-                               lavmodel.       = lavmodel,
-                               lavsamplestats. = lavsamplestats,
-                               lavpartable.    = lavpartable,
-                               lavoptions.     = lavoptions,
-                               lavdata.        = lavdata,
-                               R               = R,
-                               verbose         = lavoptions$verbose,
-                               type            = boot.type,
-                               FUN  = ifelse(boot.type == "bollen.stine",
-                                          "coeftest", "coef"),
-                               warn            = -1L)
+    COEF <- lav_bootstrap_internal(object          = NULL,
+                                   lavmodel.       = lavmodel,
+                                   lavsamplestats. = lavsamplestats,
+                                   lavpartable.    = lavpartable,
+                                   lavoptions.     = lavoptions,
+                                   lavdata.        = lavdata,
+                                   R               = R,
+                                   verbose         = lavoptions$verbose,
+                                   type            = boot.type,
+                                   FUN  = ifelse(boot.type == "bollen.stine",
+                                              "coeftest", "coef"),
+                                   warn            = -1L)
     if(boot.type == "bollen.stine") {
         nc <- ncol(COEF)
         TEST <- COEF[,nc]
