@@ -863,13 +863,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
             lavpartable$start <- START
         }
-
-
         timing$start <- (proc.time()[3] - start.time)
         start.time <- proc.time()[3]
 
 
-        # 8b. bounds for EFA -- change user==7 element if columns
+        # 8b. EFA -- change user==7 elements if columns
         #     have been reordered
         if( !is.null(lavpartable$efa) && any(lavpartable$user == 7L) &&
             lavoptions$rotation != "none" ) {
@@ -901,7 +899,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             if(length(idx) > 0L) {
                 lavpartable$free[idx] <- seq_len(length(idx))
             }
-        }
+        } # EFA
 
 
 
@@ -1197,6 +1195,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                fx.tol         = lavoptions$em.fx.tol,
                                dx.tol         = lavoptions$em.dx.tol,
                                max.iter       = lavoptions$em.iter.max)
+        } else if(lavoptions$optim.method == "gn") {
+            # only tested for DLS (for now)
+            #if(lavoptions$estimator != "DLS") {
+            #    stop("lavaan ERROR: optim.method = ", dQuote("gn"),
+            #         " is only available for estimator = ", dQuote("DLS"),
+            #         " (for now).")
+            #}
+            x <- lav_optim_gn(lavmodel       = lavmodel,
+                              lavsamplestats = lavsamplestats,
+                              lavdata        = lavdata,
+                              lavoptions     = lavoptions)
         } else {
             # try 1
             x <- try(lav_model_estimate(lavmodel        = lavmodel,

@@ -54,6 +54,30 @@ lav_object_independence <- function(object         = NULL,
             lavsamplestats = lavsamplestats, lavoptions = lavoptions)
     }
 
+    # new in 0.6-8: if DLS, change to sample-based
+    if(lavoptions$estimator == "DLS") {
+        if(lavoptions$estimator.args$dls.GammaNT == "sample") {
+            # nothing to do
+        } else {
+           lavoptions$estimator.args$dls.GammaNT <- "sample"
+           dls.a <- lavoptions$estimator.args$dls.a
+           for(g in 1:lavsamplestats@ngroups) {
+               GammaNT <- lav_samplestats_Gamma_NT(
+                        COV            = lavsamplestats@cov[[g]],
+                        MEAN           = lavsamplestats@mean[[g]],
+                        rescale        = FALSE,
+                        x.idx          = lavsamplestats@x.idx[[g]],
+                        fixed.x        = lavoptions$fixed.x,
+                        conditional.x  = lavoptions$conditional.x,
+                        meanstructure  = lavoptions$meanstructure,
+                        slopestructure = lavoptions$conditional.x)
+                W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                # overwrite
+                lavsamplestats@WLS.V[[g]] <- lav_matrix_symmetric_inverse(W.DLS)
+            }
+        }
+    }
+
     # se
     if(se) {
         if(lavoptions$se == "none") {

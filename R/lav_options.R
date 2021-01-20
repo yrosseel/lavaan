@@ -165,6 +165,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 em.fx.tol              = 1e-08,
                 em.dx.tol              = 1e-04,
                 em.zerovar.offset      = 0.0001,
+                optim.gn.iter.max      = 200L,
+                optim.gn.tol.x         = 1e-07,
 
                 # numerical integration
                 integration.ngh        = 21L,
@@ -825,6 +827,9 @@ lav_options_set <- function(opt = NULL) {
         }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "dls") {
+        opt$optim.method <- "gn"
+        opt$optim.gn.tol.x <- 1e-5
+        opt$sample.cov.rescale <- TRUE
         opt$estimator <- "DLS"
         if(opt$se == "default") {
             opt$se <- "robust.sem"
