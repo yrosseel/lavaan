@@ -895,6 +895,43 @@ lav_data_full <- function(data          = NULL,          # data.frame
             warning("lavaan WARNING: small number of observations (nobs < nvar)", txt,
                     "\n  nobs = ", nobs[[g]], " nvar = ", nvar)
         }
+        # check variances per group (if we have multiple groups)
+        # to catch zero-variance variables within a group (new in 0.6-8)
+        if(ngroups > 1L) {
+            # X
+            group.var <- apply(X[[g]], 2, var, na.rm = TRUE)
+            zero.var <- which(group.var < .Machine$double.eps)
+            if(length(zero.var) == 0L) {
+                # all is good
+            } else {
+                # some zero variances!
+                gtxt <- if(ngroups > 1L) {
+                            paste(" in group ", g, ":", sep = "")
+                        } else { ":" }
+                txt <- c("some variables have no variance ", gtxt,
+                   "\n",
+                   paste( ov.names[[g]][zero.var], collapse = " "))
+                stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+            }
+
+            # eXo (if conditional.x = TRUE)...
+            if(length(exo.idx) > 0L) {
+                group.var <- apply(eXo[[g]], 2, var, na.rm = TRUE)
+                zero.var <- which(group.var < .Machine$double.eps)
+                if(length(zero.var) == 0L) {
+                    # all is good
+                } else {
+                    # some zero variances!
+                    gtxt <- if(ngroups > 1L) {
+                                paste(" in group ", g, ":", sep = "")
+                            } else { ":" }
+                    txt <- c("some exogenous variables have no variance ", gtxt,
+                       "\n",
+                       paste( ov.names.x[[g]][zero.var], collapse = " "))
+                    stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+                }
+            }
+        }
 
         # cluster information
         if(length(cluster) > 0L) {
