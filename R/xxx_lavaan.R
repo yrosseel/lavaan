@@ -1182,10 +1182,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$do.fit && lavoptions$estimator != "none" &&
        lavmodel@nx.free > 0L) {
 
+        # EM for multilevel models
         if(lavoptions$optim.method == "em") {
             # multilevel only for now
             stopifnot(lavdata@nlevels > 1L)
-            x <- lav_mvnorm_cluster_em_h0(lavsamplestats = lavsamplestats,
+            x <- try(lav_mvnorm_cluster_em_h0(lavsamplestats = lavsamplestats,
                                lavdata        = lavdata,
                                lavimplied     = NULL,
                                lavpartable    = lavpartable,
@@ -1194,7 +1195,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                verbose        = lavoptions$verbose,
                                fx.tol         = lavoptions$em.fx.tol,
                                dx.tol         = lavoptions$em.dx.tol,
-                               max.iter       = lavoptions$em.iter.max)
+                               max.iter       = lavoptions$em.iter.max),
+                      silent = TRUE)
+        # Gauss-Newton
         } else if(lavoptions$optim.method == "gn") {
             # only tested for DLS (for now)
             #if(lavoptions$estimator != "DLS") {
@@ -1202,10 +1205,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             #         " is only available for estimator = ", dQuote("DLS"),
             #         " (for now).")
             #}
-            x <- lav_optim_gn(lavmodel       = lavmodel,
-                              lavsamplestats = lavsamplestats,
-                              lavdata        = lavdata,
-                              lavoptions     = lavoptions)
+            x <- try(lav_optim_gn(lavmodel       = lavmodel,
+                                  lavsamplestats = lavsamplestats,
+                                  lavdata        = lavdata,
+                                  lavpartable    = lavpartable,
+                                  lavoptions     = lavoptions),
+                     silent = TRUE)
+
+        # Quasi-Newton
         } else {
             # try 1
             x <- try(lav_model_estimate(lavmodel        = lavmodel,
@@ -1215,6 +1222,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                         lavoptions      = lavoptions,
                                         lavcache        = lavcache),
                      silent = TRUE)
+            # store first attempt
+            x.first <- x
 
             # try 2: optim.parscale = "standardize" (new in 0.6-7)
             if(inherits(x, "try-error") || !attr(x, "converged")) {
@@ -1254,20 +1263,27 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            lavcache        = lavcache),
                          silent = TRUE)
             }
+        }
 
-            # what to do if all attempts failed?
-            if(inherits(x, "try-error")) {
-                warning("lavaan WARNING: model estimation failed. Returning starting values.")
-                x <- lav_model_get_parameters(lavmodel = lavmodel,
-                                              type = "free") # starting values
-                attr(x, "iterations") <- 0L
-                attr(x, "converged") <- FALSE
-                attr(x, "control") <- lavoptions$control
-                attr(x, "dx") <- numeric(0L)
-                fx <- as.numeric(NA)
-                attr(fx, "fx.group") <-  as.numeric(NA)
-                attr(x, "fx") <- fx
-            }
+        # optimization failed with error
+        if(inherits(x, "try-error")) {
+            warn.txt <- "Model estimation FAILED! Returning starting values."
+            x <- lav_model_get_parameters(lavmodel = lavmodel,
+                                          type = "free") # starting values
+            attr(x, "iterations") <- 0L
+            attr(x, "converged") <- FALSE
+            attr(x, "warn.txt") <- warn.txt
+            attr(x, "control") <- lavoptions$control
+            attr(x, "dx") <- numeric(0L)
+            fx <- as.numeric(NA)
+            attr(fx, "fx.group") <-  as.numeric(NA)
+            attr(x, "fx") <- fx
+        } 
+
+        # if a warning was produced, say it here
+        warn.txt <- attr(x, "warn.txt")
+        if(lavoptions$warn && nchar(warn.txt) > 0L) {
+            warning(lav_txt2message(warn.txt))
         }
 
         # in case of non-linear constraints: store final con.jac and con.lambda
@@ -1287,6 +1303,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     } else {
         x <- numeric(0L)
         attr(x, "iterations") <- 0L; attr(x, "converged") <- FALSE
+        attr(x, "warn.txt") <- ""
         attr(x, "control") <- lavoptions$control
         attr(x, "dx") <- numeric(0L)
         attr(x, "fx") <-
@@ -1311,6 +1328,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim$npar <- length(x)
     lavoptim$iterations <- attr(x, "iterations")
     lavoptim$converged  <- attr(x, "converged")
+    lavoptim$warn.txt   <- attr(x, "warn.txt")
     lavoptim$parscale   <- attr(x, "parscale")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx

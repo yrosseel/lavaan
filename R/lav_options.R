@@ -904,7 +904,8 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
         } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
-            opt$test <- "satorra.bentler"
+            #opt$test <- "satorra.bentler"
+            opt$test <- "standard"
         }
 
         #opt$missing <- "listwise"

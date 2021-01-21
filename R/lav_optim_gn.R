@@ -3,7 +3,12 @@
 # Initial version needed for DLS - model based
 # YR - 19 Jan 2021
 #
-# TODo: make this more general, so other estimators can use it too
+# TODo: 
+# - what to do if the function value goes up?
+# - handle general (nonlinear) equality constraints
+# - handle general (nonlinear) inequality constraints
+# - better approach for simple bounds
+# ...
 
 
 # objective function, plus 'extra' information
@@ -49,7 +54,11 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
 
     # first group
     g <- 1L
-    PRE.g <- t(Delta[[g]]) %*% A1[[g]]
+    if(lavmodel@estimator == "DWLS") {
+        PRE.g <- t(Delta[[g]] * A1[[g]])
+    } else {
+        PRE.g <- t(Delta[[g]]) %*% A1[[g]]
+    }
     Q.g <- PRE.g %*% (wls.obs[[g]] - wls.est[[g]])
     U.g <- PRE.g %*% Delta[[g]]
 
@@ -61,7 +70,11 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
 
         for(g in 2:lavsamplestats@ngroups) {
             fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
-            PRE.g <- t(Delta[[g]]) %*% A1[[g]]
+            if(lavmodel@estimator == "DWLS") {
+                PRE.g <- t(Delta[[g]] * A1[[g]])
+            } else {
+                PRE.g <- t(Delta[[g]]) %*% A1[[g]]
+            }
             Q.g <- PRE.g %*% (wls.obs[[g]] - wls.est[[g]])
             U.g <- PRE.g %*% Delta[[g]]
 
@@ -73,7 +86,10 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
         U <- U.g
     }
 
-    # handle equality constraints -- see Jamshidian & Bentler 1993
+    # handle equality constraints 
+    # this can be made more efficient; see Jamshidian & Bentler 1993
+    # where instead of inverting a p+r matrix, they use a p-r matrix
+    # (if the eq constraints are linear)
     if(lavmodel@eq.constraints) {
         hx <- lavmodel@ceq.function(x)
         npar <- nrow(U)
@@ -98,12 +114,43 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
 }
 
 lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
+                         lavpartable = NULL,
                          lavdata = NULL, lavoptions = NULL) {
+
+    # no support (yet) for nonlinear constraints
+    nonlinear.idx <- c(lavmodel@ceq.nonlinear.idx,
+                       lavmodel@cin.nonlinear.idx)
+    if(length(nonlinear.idx) > 0L) {
+        stop("lavaan ERROR: nonlinear constraints not supported (yet) with optim.method = \"GN\".")
+    }
+
+    # no suport (yet) for inequality constraints
+    if(!is.null(body(lavmodel@cin.function))) {
+        stop("lavaan ERROR: inequality constraints not supported (yet) with optim.method = \"GN\".")
+    }
 
     # extract current set of free parameters
     x <- lav_model_get_parameters(lavmodel)
     npar <- length(x)
-    x.start <- x
+
+    # extract bounds (if any)
+    lb <- ub <- NULL
+    if(!is.null(lavpartable) && !is.null(lavpartable$lower)) {
+        lb <- lavpartable$lower[ lavpartable$free > 0 ]
+        stopifnot(length(x) == length(lb))
+        lb.idx <- which(x < lb)
+        if(length(lb.idx) > 0L) {
+            x[lb.idx] <- lb[lb.idx]
+        }
+    }
+    if(!is.null(lavpartable) && !is.null(lavpartable$upper)) {
+        ub <- lavpartable$upper[ lavpartable$free > 0 ]
+        stopifnot(length(x) == length(ub))
+        ub.idx <- which(x > ub)
+        if(length(ub.idx) > 0L) {
+            x[ub.idx] <- ub[ub.idx]
+        }
+    }
 
     # options
     verbose <- lavoptions$verbose
@@ -132,6 +179,21 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         step <- U.invQ[seq_len(npar)]
         for(h in 1:10) {
             new.x <- old.x + (alpha * step)
+
+            # apply simple bounds (if any)
+            if(!is.null(lb)) {
+                lb.idx <- which(new.x < lb)
+                if(length(lb.idx) > 0L) {
+                    new.x[lb.idx] <- lb[lb.idx]
+                }
+            }
+            if(!is.null(ub)) {
+                ub.idx <- which(new.x > ub)
+                if(length(ub.idx) > 0L) {
+                    new.x[ub.idx] <- ub[ub.idx]
+                }
+            }
+
             new.obj <- lav_objective_GN(x = new.x,
                                lavsamplestats = lavsamplestats,
                                lavdata = lavdata, lavoptions = lavoptions,
@@ -190,8 +252,13 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     # add attributes
     if(iter < iter.max) {
         attr(x, "converged") <- TRUE
+        attr(x, "warn.txt")  <- ""
     } else {
         attr(x, "converged") <- FALSE
+        attr(x, "warn.txt")  <- paste("maxmimum number of iterations (",
+                                      max.iter, ") ",
+                                      "was reached without convergence.\n",
+                                      sep = "")
     }
     attr(x, "iterations") <- iter
     attr(x, "control") <- list(iter.max = iter.max,

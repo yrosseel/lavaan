@@ -389,7 +389,6 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
-    #if(estimator %in% c("ML","PML","FML","MML")) {
     if(estimator %in% c("ML","FML","MML")) {
         Sigma.hat <- computeSigmaHat(lavmodel, extra=TRUE, debug=lavoptions$debug)
         for(g in 1:ngroups) {
@@ -795,6 +794,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     fx <- objective_function(x) # to get "fx.group" attribute
 
     # check convergence
+    warn.txt <- ""
     if(converged) {
         # check.gradient
         if(!is.null(GRADIENT) &&
@@ -826,15 +826,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
                 # avoid false alarm
                 if(length(non.zero) > 0L) {
                     converged <- FALSE
-
-                    if(lavoptions$warn) {
-                        warning(
-  "lavaan WARNING: the optimizer (", OPTIMIZER, ") ",
-                   "claimed the model converged,\n",
-"                  but not all elements of the gradient are (near) zero;\n",
-"                  the optimizer may not have found a local solution\n",
-"                  use check.gradient = FALSE to skip this check.")
-                    }
+                    warn.txt <- paste("the optimizer (", OPTIMIZER, ") ",
+                       "claimed the model converged,\n",
+"                      but not all elements of the gradient are (near) zero;\n",
+"                      the optimizer may not have found a local solution\n",
+"                      use check.gradient = FALSE to skip this check.", 
+                       sep = "")
                 }
             }
         } else {
@@ -842,10 +839,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
     } else {
        dx <- numeric(0L)
-       # give warning here (new in 0.6-5)
-       if(lavoptions$warn) {
-           warning("lavaan WARNING: the optimizer warns that a solution has NOT been found!")
-       }
+       warn.txt <- "the optimizer warns that a solution has NOT been found!"
     }
 
     # transform back
@@ -868,6 +862,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     x <- x / parscale
 
     attr(x, "converged")  <- converged
+    attr(x, "warn.txt")   <- warn.txt
     attr(x, "iterations") <- iterations
     attr(x, "control")    <- control
     attr(x, "fx")         <- fx
