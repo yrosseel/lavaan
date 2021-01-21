@@ -256,7 +256,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     } else {
         attr(x, "converged") <- FALSE
         attr(x, "warn.txt")  <- paste("maxmimum number of iterations (",
-                                      max.iter, ") ",
+                                      iter.max, ") ",
                                       "was reached without convergence.\n",
                                       sep = "")
     }
