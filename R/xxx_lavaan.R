@@ -877,7 +877,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                          lavpartable$op == "=~" &
                          abs(lavpartable$start) > sqrt(.Machine$double.eps))
             if(length(idx) > 0L) {
-                lavpartable$user[idx] <- 0L
+                lavpartable$user[idx] <- 1L
                 lavpartable$free[idx] <- 1L
                 lavpartable$ustart[idx] <- as.numeric(NA)
             }
@@ -954,33 +954,32 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
 
     # 9b. bounds for EFA -- to force diag(LAMBDA) to be positive (new in 0.6-7)
-    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
-        (lavoptions$rotation != "none") ) {
-
-        # add lower column
-        if(is.null(lavpartable$lower)) {
-            lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
-        }
-        efa.values <- lav_partable_efa_values(lavpartable)
-        group.values <- lav_partable_group_values(lavpartable)
-        for(g in seq_len(lavdata@ngroups)) {
-            for(set in seq_len(lavmodel@nefa)) {
-                lv.efa <-
-                    unique(lavpartable$lhs[ lavpartable$op == "=~" &
-                                            lavpartable$block == g &
-                                            lavpartable$efa == efa.values[set]])
-                for(f in seq_len(length(lv.efa))) {
-                    lambda.idx <- which( lavpartable$lhs == lv.efa[f] &
-                                         lavpartable$op == "=~" &
-                                         lavpartable$group == group.values[g] )
-                    # get largest factor loading
-                    #midx <- lambda.idx[which.max(lavpartable$start[lambda.idx])]
-                    midx <- lambda.idx[f] # diagonal element of LAMBDA
-                    lavpartable$lower[midx] <- 0
-                 } # factors
-            } # sets
-        } # groups
-    }
+    #if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+    #    (lavoptions$rotation != "none") ) {
+    # 
+    #    # add lower column
+    #    if(is.null(lavpartable$lower)) {
+    #        lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
+    #    }
+    #    efa.values <- lav_partable_efa_values(lavpartable)
+    #    group.values <- lav_partable_group_values(lavpartable)
+    #    for(g in seq_len(lavdata@ngroups)) {
+    #        for(set in seq_len(lavmodel@nefa)) {
+    #            lv.efa <-
+    #                unique(lavpartable$lhs[lavpartable$op == "=~" &
+    #                                       lavpartable$block == g &
+    #                                       lavpartable$efa == efa.values[set] ])
+    #            for(f in seq_len(length(lv.efa))) {
+    #                lambda.idx <- which( lavpartable$lhs == lv.efa[f] &
+    #                                     lavpartable$op == "=~" &
+    #                                     lavpartable$group == group.values[g] )
+    #                # get diagonal element of LAMBDA
+    #                midx <- lambda.idx[f] # diagonal element of LAMBDA
+    #                lavpartable$lower[midx] <- 0
+    #             } # factors
+    #        } # sets
+    #    } # groups
+    #}
 
 
 
@@ -1373,8 +1372,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ###############################
     VCOV <- NULL
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
-       lavoptions$se != "twostep" &&
-       lavmodel@nx.free > 0L && attr(x, "converged")) {
+       lavoptions$se != "twostep" && 
+       ( .hasSlot(lavmodel, "nefa") && 
+           (  lavmodel@nefa == 0L || 
+              (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
+              (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
+           )
+       ) && lavmodel@nx.free > 0L && attr(x, "converged")) {
 
         if(lavoptions$verbose) {
             cat("Computing VCOV for se =", lavoptions$se, "...")
@@ -1422,18 +1426,21 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     vcov = VCOV1)
 
     # store se in partable
-    if(lavoptions$se != "external" && lavoptions$se != "twostep") {
-        lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
-                                            lavpartable = lavpartable,
-                                            VCOV = VCOV,
-                                            BOOT = lavboot$coef)
-    } else {
+    if(lavoptions$se == "external") {
         if(is.null(lavpartable$se)) {
             lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
                                                 lavpartable = lavpartable,
                                                 VCOV = NULL, BOOT = NULL)
             warning("lavaan WARNING: se = \"external\" but parameter table does not contain a `se' column")
         }
+    } else if(lavoptions$se == "twostep" ||
+              lavoptions$rotation.se == "bordered") {
+       # do nothing
+    } else {
+        lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
+                                            lavpartable = lavpartable,
+                                            VCOV = VCOV,
+                                            BOOT = lavboot$coef)
     }
 
     timing$vcov <- (proc.time()[3] - start.time)
@@ -1560,94 +1567,160 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat("Rotating EFA factors using rotation method =",
                 toupper(lavoptions$rotation), "... ")
         }
-
-        # pre-rotate: fix 'sign' and 'order', according to the options
-        # in lavoptions; this is important for the 'order' of the parameters
-        # in vcov, once we use the delta rule
-        #lavmodel <- lav_model_efa_rotate_pre(lavmodel = lavmodel,
-        #                                     lavoptions = lavoptions)
-        #x.unrotated <- as.numeric(lav_model_get_parameters(lavmodel))
         x.unrotated <- as.numeric(x)
-
-
         lavmodel.unrot <- lavmodel
-        lavmodel <- lav_model_efa_rotate(lavmodel = lavmodel,
+        lavmodel <- lav_model_efa_rotate(lavmodel   = lavmodel,
                                          lavoptions = lavoptions)
+        # overwrite parameters in @ParTable$est
+        lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
+                                                    type = "user", extra = TRUE)
         if(lavoptions$verbose) {
             cat("done.\n")
         }
 
-        # overwrite parameters in @ParTable$est
-        lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
-                                                    type = "user", extra = TRUE)
-
-        if(!lavoptions$se %in% c("none", "bootstrap")) {
-            # use delta rule to recompute vcov
-
+        # VCOV rotated parameters
+        if(!lavoptions$se %in% c("none", "bootstrap", "external", "two.step")) {
             if(lavoptions$verbose) {
-                cat("Using delta method to compute VCOV of rotated parameters ...")
+                cat("Computing VCOV for se =", lavoptions$se,
+                    "and rotation.se =", lavoptions$rotation.se, "...")
             }
 
-            # Jacobian
-            JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
-                                      x = x.unrotated,
-                                      # Note: lavmodel MUST be UNROTATED
-                                      lavmodel = lavmodel.unrot,
-                                      init.rot = lavmodel@H,
-                                      #jacobian = TRUE,
-                                      lavoptions = lavoptions,
-                                      type = "user",
-                                      extra = FALSE,
-                                      method.args = list(eps = 1e-03),
-                                      method = "simple") # to save time
+            # use delta rule to recompute vcov
+            if(lavoptions$rotation.se == "delta") {
+                # Jacobian
+                JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_x,
+                  x = x.unrotated, lavmodel = lavmodel.unrot,
+                  init.rot = lavmodel@H, lavoptions = lavoptions,
+                  type = "user", extra = FALSE,
+                  method.args = list(eps = 0.0050),
+                  method = "simple") # important!
 
-            # compute unrotated VCOV (possibly after re-ordering the factors!)
-            #VCOV <- lav_model_vcov(lavmodel        = lavmodel.unrot,
-            #                       lavsamplestats  = lavsamplestats,
-            #                       lavoptions      = lavoptions,
-            #                       lavdata         = lavdata,
-            #                       lavpartable     = lavpartable,
-            #                       lavcache        = lavcache,
-            #                       lavimplied      = lavimplied,
-            #                       lavh1           = lavh1)
+                # force VCOV to be pd, before we transform (not very elegant)
+                VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov,
+                                                         tol = 1e-10)
+                #VCOV.in <- as.matrix(Matrix:::nearPD(x = lavvcov$vcov)$mat)
 
-            # force VCOV to be pd, before we transform
-            #VCOV.in <- lav_matrix_symmetric_force_pd(VCOV)
-            #lavvcov <- list(se = lavoptions$se,
-            #                information = lavoptions$information,
-            #                vcov = VCOV.in)
+                # apply Delta rule
+                VCOV.user <- JAC %*% VCOV.in %*% t(JAC)
 
-            VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov, tol = 1e-06)
-            #VCOV.in <- lavvcov$vcov
-
-            # apply Delta rule
-            VCOV.user <- JAC %*% VCOV.in %*% t(JAC)
-
-            # re-compute SE and store them in lavpartable
-            if(lavoptions$se != "external" && lavoptions$se != "twostep") {
+                # re-compute SE and store them in lavpartable
                 tmp <- diag(VCOV.user)
-                # catch negative values
                 min.idx <- which(tmp < 0)
                 if(length(min.idx) > 0L) {
                     tmp[min.idx] <- as.numeric(NA)
                 }
-                # now, we can safely take the square root
                 tmp <- sqrt(tmp)
-
-                # catch near-zero SEs
-                zero.idx <- which(tmp < .Machine$double.eps^(1/3)) # was 1/2 < 0.6
+                # catch near-zero SEs  ( was ^(1/2) < 0.6 )
+                zero.idx <- which(tmp < .Machine$double.eps^(1/3))
                 if(length(zero.idx) > 0L) {
                     tmp[zero.idx] <- 0.0
                 }
-
                 lavpartable$se <- tmp
             }
 
-            if(lavoptions$verbose) {
-                cat("done.\n")
+            else if(lavoptions$rotation.se == "bordered") {
+                # create 'new' partable where the user=7/77 parameters are free
+                PT.new <- lavpartable
+
+                user7.idx <- which(PT.new$user == 7L | 
+                                   PT.new$user == 77L)
+                PT.new$free[user7.idx] <- 1L
+                PT.new$free[ PT.new$free > 0L ] <-
+                                         seq_len(sum(PT.new$free > 0L))
+
+                # create 'new' lavmodel (where user7/77 parameters are free)
+                lavmodel.new <- lav_model(lavpartable = PT.new,
+                                          lavoptions = lavoptions)
+                lavmodel.new@GLIST    <- lavmodel@GLIST
+                lavmodel.new@H        <- lavmodel@H
+                lavmodel.new@lv.order <- lavmodel@lv.order
+ 
+                # create 'border' for augmented information matrix
+                x.rot <- lav_model_get_parameters(lavmodel.new)
+                JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_border_x,
+                                 x = x.rot, lavmodel = lavmodel.new,
+                                 lavoptions = lavoptions,
+                                 lavpartable = lavpartable,
+                                 #method.args = list(eps = 0.0005),
+                                 #method = "simple")
+                                 method = "Richardson")
+                # store JAC 
+                lavmodel.new@ceq.efa.JAC <- JAC
+
+                # no other constraints
+                if(length(lavmodel@ceq.linear.idx) == 0L &&
+                   length(lavmodel@ceq.nonlinear.idx) == 0L &&
+                   length(lavmodel@cin.linear.idx)    == 0L &&
+                   length(lavmodel@cin.nonlinear.idx) == 0L) {
+                    lavmodel.new@con.jac <- JAC
+                    attr(lavmodel.new@con.jac, "inactive.idx") <- integer(0L)
+                    attr(lavmodel.new@con.jac, "ceq.idx") <- seq_len(nrow(JAC))
+                    attr(lavmodel.new@con.jac, "cin.idx") <- integer(0L)
+                    lavmodel.new@con.lambda <- rep(0, nrow(JAC))
+
+                # other constraints
+                } else {
+                    inactive.idx <- attr(lavmodel@con.jac, "inactive.idx")
+                    ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
+                    cin.idx <- attr(lavmodel@con.jac, "cin.idx")
+                    lambda <- lavmodel@con.lambda
+                    nbord <- nrow(JAC)
+
+                    # recompute con.jac
+                    if(is.null(body(lavmodel.new@ceq.function))) {
+                        ceq <- function(x, ...) { return( numeric(0) ) }
+                    } else {
+                        ceq <- lavmodel.new@ceq.function
+                    }
+                    if(is.null(body(lavmodel.new@cin.function))) {
+                         cin <- function(x, ...) { return( numeric(0) ) }
+                    } else {
+                         cin <- lavmodel.new@cin.function
+                    }
+                    CON.JAC <-
+                        rbind(JAC,
+                              numDeriv::jacobian(ceq, x = x.rot),
+                              numDeriv::jacobian(cin, x = x.rot))
+                    attr(CON.JAC, "cin.idx") <- cin.idx + nbord
+                    attr(CON.JAC, "ceq.idx") <- c(1:nbord, ceq.idx + nbord)
+                    attr(CON.JAC, "inactive.idx") <- inactive.idx + nbord
+
+                    lavmodel.new@con.jac <- CON.JAC
+                    lavmodel.new@con.lambda <- c(rep(0, nbord), lambda)
+                }
+ 
+                # overwrite lavpartable/lavmodel with rotated version
+                lavmodel    <- lavmodel.new
+                lavpartable <- PT.new
+ 
+                # compute VCOV, taking 'rotation constraints' into account
+                VCOV <- lav_model_vcov(lavmodel        = lavmodel,
+                                       lavsamplestats  = lavsamplestats,
+                                       lavoptions      = lavoptions,
+                                       lavdata         = lavdata,
+                                       lavpartable     = lavpartable,
+                                       lavcache        = lavcache,
+                                       lavimplied      = lavimplied,
+                                       lavh1           = lavh1)
+
+                # compute SE and store them in lavpartable  
+                tmp <- lav_model_vcov_se(lavmodel = lavmodel.new,
+                               lavpartable = PT.new,, VCOV = VCOV)
+                lavpartable$se <- tmp
+
+                # store rotated VCOV
+                tmp.attr <- attributes(VCOV)
+                VCOV1 <- VCOV
+                attributes(VCOV1) <- tmp.attr["dim"]
+                lavvcov <- list(se = tmp,
+                                information = lavoptions$information,
+                                vcov = VCOV1)
             }
-        }
-    }
+            if(lavoptions$verbose) {
+                cat(" done.\n")
+            }
+        } # vcov
+    } # efa
 
 
     ####################
@@ -1687,37 +1760,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
        lavTech(lavaan, "converged")) {
         lavInspect(lavaan, "post.check")
     }
-
-    # FIXME: not scale independent (should use solve(Hessian) %*% g)
-    # but Hessian is not always available (or expensive to compute)
-    #hasExplicitConstraints <- FALSE
-    #if(is.character(constraints) && any(nchar(constraints) > 0L)) {
-    #    hasExplicitConstraints <- TRUE
-    #}
-    #hasNonLinearEqConstraints <- FALSE
-    #if(length(lavmodel@ceq.nonlinear.idx) > 0L) {
-    #    hasNonLinearEqConstraints <- TRUE
-    #}
-    #hasIneqConstraints <- FALSE
-    #if(length(lavmodel@cin.linear.idx) > 0L ||
-    #   length(lavmodel@cin.nonlinear.idx) > 0L) {
-    #    hasIneqConstraints <- TRUE
-    #}
-    #if(!is.null(lavoptions$check.gradient) && lavoptions$check.gradient &&
-    #   lavTech(lavaan, "converged") &&
-    #   !hasExplicitConstraints      &&
-    #   !hasNonLinearEqConstraints   &&
-    #   !hasIneqConstraints) {
-    #    grad <- lavInspect(lavaan, "optim.gradient")
-    #    large.idx <- which(abs(grad) > 0.001)  # better 0.0001?
-    #    if(length(large.idx) > 0L) {
-    #        warning(
-#  "lavaan WARNING: not all elements of the gradient are (near) zero;\n",
-#"                  the optimizer may not have found a local solution;\n",
-#"                  use lavInspect(fit, \"optim.gradient\") to investigate")
-#        }
-#    }
-
 
     lavaan
 }

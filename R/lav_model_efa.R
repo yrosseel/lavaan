@@ -4,157 +4,25 @@
 # the lav_model_efa_rotate_x() function was based on a script orginally
 # written by Florian Scharf (Muenster University, Germany)
 
-# pre-rotate: reflect and/or re-order so the 'unrotated' solution is
-# in sync with the rotated solution
-lav_model_efa_rotate_pre <- function(lavmodel = NULL, lavoptions = NULL) {
-
-    if(lavmodel@nefa == 0L || lavoptions$rotation == "none") {
-        return(lavmodel)
-    }
-
-    # rotation options
-    ropts <- lavoptions$rotation.args
-
-    # GLIST
-    GLIST <- lavmodel@GLIST
-
-    # for now, rotate per group (not per block)
-    for(g in seq_len(lavmodel@ngroups)) {
-
-        # select model matrices for this group
-        mm.in.group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0,lavmodel@nmat))[g]
-        MLIST <- GLIST[ mm.in.group]
-        Hg <- diag( ncol(MLIST$lambda) )
-
-        # reconstruct full LAMBDA (in case of dummy ov's)
-        LAMBDA.g <- computeLAMBDA.LISREL(MLIST = MLIST,
-                        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-                        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-                        remove.dummy.lv = TRUE)
-
-        # fill in optimal rotation for each set
-        for(set in seq_len(lavmodel@nefa)) {
-
-            # which ov/lv's are involved in this set?
-            ov.idx <- lavmodel@ov.efa.idx[[g]][[set]]
-            lv.idx <- lavmodel@lv.efa.idx[[g]][[set]]
-
-            # empty set?
-            if(length(ov.idx) == 0L) {
-                next
-            }
-
-            # just 1 factor?
-            if(length(lv.idx) < 2L) {
-                next
-            }
-
-            # unrotated 'A' for this set
-            A <- LAMBDA.g[ov.idx, lv.idx, drop = FALSE]
-
-            # dummy rotation matrix
-            ROT <- diag(length(lv.idx))
-
-            # reflect so that column sum is always positive
-            if(ropts$reflect) {
-                SUM <- colSums(A)
-                neg.idx <- which(SUM < 0)
-                if(length(neg.idx) > 0L) {
-                     diag(ROT)[neg.idx] <- -1
-                }
-            }
-
-            # reorder the columns
-            if(ropts$order.lv.by == "sumofsquares") {
-                L2 <- A * A
-                order.idx <- base::order(colSums(L2), decreasing = TRUE)
-            } else if(ropts$order.lv.by == "index") {
-                # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
-                max.loading <- apply(abs(A), 2, max)
-                # 1: per factor, number of the loadings that are at least 0.8 of the
-                #    highest loading of the factor
-                # 2: mean of the index numbers
-                average.index <- sapply(seq_len(ncol(A)), function(i)
-                               mean(which(abs(A[,i]) >= 0.8 * max.loading[i])))
-                # order of the factors
-                order.idx <- base::order(average.index)
-            } else if(ropts$order.lv.by == "none") {
-                order.idx <- seq_len(ncol(A))
-            } else {
-                stop("lavaan ERROR: order must be index, sumofsquares or none")
-            }
-            ROT <- ROT[, order.idx, drop = FALSE]
-
-            # fill in optimal rotation for this set
-            Hg[lv.idx, lv.idx] <- ROT
-
-        } # set
-
-        # 1. lambda
-        MLIST$lambda <- t(solve(Hg, t(MLIST$lambda)))
-
-        # 3. beta
-        if(!is.null(MLIST$beta)) {
-            MLIST$beta <- t(Hg) %*% t(solve(Hg, t(MLIST$beta)))
-        }
-
-        # 4. alpha
-        if(!is.null(MLIST$alpha)) {
-            MLIST$alpha <- t(Hg) %*% MLIST$alpha
-        }
-
-        # store rotated matrices in GLIST
-        GLIST[ mm.in.group ] <- MLIST
-
-    } # group
-
-    # store 'pre-rotated' GLIST
-    lavmodel@GLIST <- GLIST
-
-    # return updated lavmodel
-    lavmodel
-}
-
 # rotate solution
-lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
-                                 lavoptions = NULL) {
+lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
 
     if(lavmodel@nefa == 0L || lavoptions$rotation == "none") {
         return(lavmodel)
     }
 
     # extract unrotated parameters from lavmodel
-    if(is.null(x.orig)) {
-        x.orig <- lav_model_get_parameters(lavmodel, type = "free",
-                                           extra = FALSE)
-    }
+    x.orig <- lav_model_get_parameters(lavmodel, type = "free", extra = FALSE)
 
-    # rotate
-    x.rot <- lav_model_efa_rotate_x(x = x.orig, lavmodel = lavmodel,
-                                    lavoptions = lavoptions, extra = TRUE,
-                                    type = "user")
-    extra <- attr(x.rot, "extra"); attr(x.rot, "extra") <- NULL
+    # rotate, extract information from 'extra' attribute
+    tmp <- lav_model_efa_rotate_x(x = x.orig, lavmodel = lavmodel,
+                                    lavoptions = lavoptions, extra = TRUE)
+    extra <- attr(tmp, "extra"); attr(tmp, "extra") <- NULL
 
     # store full rotation matrix (per group)
     lavmodel@H <- extra$H
     lavmodel@lv.order <- extra$lv.order
     lavmodel@GLIST <- extra$GLIST
-
-    # store ceq.efa.JAC (to use for bordered information)
-    if(lavoptions$se == "none" || lavoptions$se == "bootstrap" ||
-       lavoptions$rotation.se == "delta") {
-        JAC <- matrix(0, 0, length(x.rot))
-    } else {
-        JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_border_x,
-                                  x = x.rot, lavmodel = lavmodel,
-                                  lavoptions = lavoptions, type = "user")
-    }
-    lavmodel@ceq.efa.JAC <- JAC
-
-    # place rotated parameters back in lavmodel
-    # lavmodel <- lav_model_set_parameters(lavmodel = lavmodel, x = x.rot)
 
     # return updated lavmodel
     lavmodel
@@ -164,10 +32,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, x.orig = NULL,
 # lower-level function, needed for numDeriv
 lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                                    init.rot = NULL, extra = FALSE,
-                                   jacobian = FALSE,
                                    type = "free") {
-
-    # cat("in = \n"); print(x); cat("\n")
 
     # extract rotation options from lavoptions
     method <- lavoptions$rotation
@@ -245,13 +110,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
                 init.ROT <- init.rot[[g]][lv.idx, lv.idx, drop = FALSE]
                 rstarts <- 0
             } else {
-                jacobian <- FALSE
                 init.ROT <- NULL
                 rstarts <- ropts$rstarts
             }
 
-            # rotate
-            #if(!jacobian) {
+            # rotate this set
             res <- lav_matrix_rotate(A           = A,
                                      orthogonal  = ropts$orthogonal,
                                      method      = method,
@@ -287,39 +150,24 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
             # keep track of possible re-orderings
             lv.order[ lv.idx ] <- lv.idx[res$order.idx]
-            #} else {
-            #    Hg[lv.idx, lv.idx] <- init.ROT
-            #}
         } # set
 
         # rotate all the SEM parametersa
 
         # 1. lambda
         MLIST$lambda <- t(solve(Hg, t(MLIST$lambda)))
-        # reorder
-        #MLIST$lambda <- MLIST$lambda[, lv.order, drop = FALSE]
 
         # 2. psi (note: eq 22 Asp & Muthen, 2009: transpose reversed)
         MLIST$psi <- t(Hg) %*% MLIST$psi %*% Hg
-        # reorder rows
-        #MLIST$psi <- MLIST$psi[lv.order, , drop = FALSE]
-        # reorder cols
-        #MLIST$psi <- MLIST$psi[, lv.order, drop = FALSE]
 
         # 3. beta
         if(!is.null(MLIST$beta)) {
             MLIST$beta <- t(Hg) %*% t(solve(Hg, t(MLIST$beta)))
-            # reorder rows
-            #MLIST$beta <- MLIST$beta[lv.order, , drop = FALSE]
-            # reorder cols
-            #MLIST$beta <- MLIST$beta[, lv.order, drop = FALSE]
         }
 
         # 4. alpha
         if(!is.null(MLIST$alpha)) {
             MLIST$alpha <- t(Hg) %*% MLIST$alpha
-            # reorder rows
-            #MLIST$alpha <- MLIST$alpha[lv.order, , drop = FALSE]
         }
 
         # no need for rotation: nu, theta
@@ -341,8 +189,6 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         attr(x.rot, "extra") <- list(GLIST = GLIST, H = H, lv.order = ORDER)
     }
 
-    # cat("out = \n"); print(x.rot); cat("\n")
-
     # return rotated parameter estimates as a vector
     x.rot
 }
@@ -350,7 +196,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
 # lower-level function, needed for numDeriv
 lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
-                                             lavoptions = NULL) {
+                                             lavoptions = NULL,
+                                             lavpartable = NULL) {
 
     # extract rotation options from lavoptions
     method <- lavoptions$rotation
@@ -391,9 +238,21 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
                         ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
                         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+  
+        # setnames
+        set.names <- lav_partable_efa_values(lavpartable)
 
         # for each set
         for(set in seq_len(lavmodel@nefa)) {
+
+            # check if we have any user=7 elements in this set
+            # if not, skip constraints
+            ind.idx <- which(lavpartable$op == "=~" &
+                             lavpartable$group == g &
+                             lavpartable$efa == set.names[set])
+            if(!any(lavpartable$user[ind.idx] == 7L)) {
+                next
+            }
 
             # which ov/lv's are involved in this set?
             ov.idx <- lavmodel@ov.efa.idx[[g]][[set]]
@@ -428,24 +287,17 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
             # choose method
             method <- tolower(method)
-            if(method %in% c("varimax", "quartimax", "orthomax", "cf",
-                             "oblimin", "quartimin", "geomin",
-                             "entropy", "mccammon", "infomax",
-                             "tandem1", "tandem2",
-                             "oblimax", "bentler", "simplimax", "target",
-                             "pst")) {
-                method.fname <- paste("lav_matrix_rotate_", method, sep = "")
-            } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
-                                    "cf-parsimax", "cf-facparsim")) {
-                method.fname <- "lav_matrix_rotate_cf"
-                method.args$cf.gamma <- switch(method,
-                    "cf-quartimax" = 0,
-                    "cf-varimax"   = 1 / P,
-                    "cf-equamax"   = M / (2 * P),
-                    "cf-parsimax"  = (M - 1) / (P + M - 2),
-                    "cf-facparsim" = 1)
+            if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
+                             "cf-parsimax", "cf-facparsim")) {
+            method.fname <- "lav_matrix_rotate_cf"
+            method.args$cf.gamma <- switch(method,
+                "cf-quartimax" = 0,
+                "cf-varimax"   = 1 / P,
+                "cf-equamax"   = M / (2 * P),
+                "cf-parsimax"  = (M - 1) / (P + M - 2),
+                "cf-facparsim" = 1)
             } else {
-                method.fname <- method
+                method.fname <- paste("lav_matrix_rotate_", method, sep = "")
             }
 
             # check if rotation method exists

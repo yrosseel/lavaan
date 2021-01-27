@@ -59,7 +59,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
     }
 
     # optimization method + npar
-    c1 <- c(c1, "Optimization method", "Number of free parameters")
+    c1 <- c(c1, "Optimization method", "Number of model parameters")
     c2 <- c(c2, toupper(object@Options$optim.method), object@optim$npar)
 
     # optional output

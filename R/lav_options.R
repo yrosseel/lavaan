@@ -77,10 +77,10 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # rotation
                 rotation           = "geomin",
-                rotation.se        = "delta", # "bordered" or "delta"
+                rotation.se        = "bordered", # "bordered" or "delta"
                 rotation.args      = list(orthogonal     = FALSE,
-                                          row.weights    = "none",
-                                          std.ov         = FALSE,
+                                          row.weights    = "default",
+                                          std.ov         = TRUE,
                                           geomin.epsilon = 0.01,
                                           orthomax.gamma = 1,
                                           cf.gamma       = 0,
@@ -1551,6 +1551,100 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("lavaan ERROR: unknown `bounds' option: ", opt$bounds)
     }
+
+   
+    # rotation
+    opt$rotation <- tolower(opt$rotation)
+    if(opt$rotation %in% c("crawfer", "crawford.ferguson", "crawford-ferguson",
+                           "crawfordferguson")) {
+        opt$rotation <- "cf"
+    }
+    if(opt$rotation %in% c("varimax", "quartimax", "orthomax", "cf", "oblimin",
+                     "quartimin", "geomin", "entropy", "mccammon", "infomax",
+                     "tandem1", "tandem2", "none",
+                     "oblimax", "bentler", "simplimax", "target", "pst")) {
+        # nothing to do
+    } else if(opt$rotation %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
+                            "cf-parsimax", "cf-facparsim")) {
+        # nothing to do here; we need M/P to set cf.gamma
+    } else {
+        txt <- c("Rotation method ", dQuote(opt$rotation), " not supported. ",
+        "Supported rotation methods are: varimax, quartimax, orthomax, cf, ",
+        "oblimin, quartimin, geomin, entropy, mccammon, infomax,",
+        "tandem1, tandem2, oblimax, bentler, simplimax, target, pst, ",
+        "crawford-ferguson,  cf-quartimax,  cf-varimax, cf-equamax, ",
+        "cf-parsimax, cf-facparsim")
+        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+    }
+
+    # rotation.se
+    if(!opt$rotation.se %in% c("delta", "bordered")) {
+        stop("lavaan ERROR: rotation.se option must be either \"delta\" or \"bordered\".")
+    }
+
+    # rotations.args
+    if(!is.list(opt$rotation.args)) {
+        stop("lavaan ERROR: rotation.args should be be list.")
+    }
+
+    # if target, check target matrix
+    if(opt$rotation == "target" || opt$rotation == "pst") {
+        target <- opt$rotation.args$target
+        if(is.null(target) || !is.matrix(target)) {
+            stop("lavaan ERROR: ",
+                 "rotation target matrix is NULL, or not a matrix")
+        }
+    }
+    if(opt$rotation == "pst") {
+        target.mask <- opt$rotation.args$target.mask
+        if(is.null(target.mask) || !is.matrix(target.mask)) {
+            stop("lavaan ERROR: ",
+                 "rotation target.mask matrix is NULL, or not a matrix")
+        }
+    }
+    # if NAs, force opt$rotation to be 'pst' and create target.mask
+    if(opt$rotation == "target" && anyNA(target)) {
+        opt$rotation <- "pst"
+        target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
+        target.mask[ is.na(target) ] <- 0
+        opt$rotation.args$target.mask <- target.mask
+    }
+
+    # set row.weights
+    opt$rotation.args$row.weights <- tolower(opt$rotation.args$row.weights)
+    if(opt$rotation.args$row.weights == "default") {
+        # the default is "none", except for varimax
+        if(opt$rotation == "varimax") {
+            opt$rotation.args$row.weights <- "kaiser"
+        } else {
+            opt$rotation.args$row.weights <- "none"
+        }
+    } else if(opt$rotation.args$row.weights %in% c("cureton-mulaik",
+              "cureton.mulaik", "cm")) {
+    } else if(opt$rotation.args$row.weights %in% c("kaiser", "none")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: rotation.args$row.weights should be \"none\",",
+             " \"kaiser\" or \"cureton-mulaik\".")
+    }
+  
+    # check opt$rotation.args$algorithm
+    opt$rotation.args$algorithm <- tolower(opt$rotation.args$algorithm)
+    if(opt$rotation.args$algorithm %in% c("gpa", "pairwise")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: opt$rotation.args$algorithm must be gpa or pairwise")
+    }
+
+    # order.lv.by
+    opt$rotation.args$order.lv.by <- tolower(opt$rotation.args$order.lv.by)
+    if(opt$rotation.args$order.lv.by %in% c("sumofsquares", "index", "none")) {
+        # nothing to do
+    } else {
+        stop("lavaan ERROR: rotation.args$order.lv.by should be \"none\",",
+             " \"index\" or \"sumofsquares\".")
+    }
+
 
 
     # group.w.free

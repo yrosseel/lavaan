@@ -166,11 +166,26 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
         # FIXME: what should we do here? we used to stop with an error
         # from 0.5.18, we give a warning, and replace the non-free label
         # with its fixed value in ustart
-        warning("lavaan WARNING: non-free parameter(s) in equality constraint(s): ",
-            paste(eq.labels[fixed.eq.idx], collapse=" "))
+        #warning("lavaan WARNING: non-free parameter(s) in equality constraint(s): ",
+        #    paste(eq.labels[fixed.eq.idx], collapse=" "))
 
         fixed.lab.lhs <- eq.labels[fixed.eq.idx]
-        fixed.lab.rhs <- partable$ustart[match(fixed.lab.lhs, partable$label)]
+        fixed.lab.rhs <- numeric( length(fixed.lab.lhs) )
+
+        for(i in 1:length(fixed.lab.lhs)) {
+            # first try label
+            idx <- match(fixed.lab.lhs[i], partable$label)
+            # then try plabel
+            if(is.na(idx)) {
+                idx <- match(fixed.lab.lhs[i], partable$plabel)
+            }
+            if(is.na(idx)) {
+                # hm, not found? fill in zero, or NA?
+            } else {
+                fixed.lab.rhs[i] <- partable$ustart[idx]
+            }
+        }
+
         BODY.txt <- paste(BODY.txt, "# non-free parameter labels\n",
             paste(fixed.lab.lhs, "<-", fixed.lab.rhs, collapse="\n"),
             "\n", sep="")

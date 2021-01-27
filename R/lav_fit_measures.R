@@ -70,7 +70,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # Change 0.5-13: take into account explicit equality constraints!!
     # reported by Mark L. Taper (affects AIC and BIC)
-    npar <- object@optim$npar
+    #npar <- object@optim$npar
+    npar <- lav_partable_npar(object@ParTable)
     if(nrow(object@Model@con.jac) > 0L) {
         ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
         if(length(ceq.idx) > 0L) {

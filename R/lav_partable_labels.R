@@ -59,7 +59,7 @@ lav_partable_labels <- function(partable,
         }
 
         # g1.flag: TRUE if included, FALSE if not
-        g1.flag <- logical(length(which(partable$group == 1L)))
+        g1.flag <- logical(length(partable$lhs))
 
         # LOADINGS
         if("loadings" %in% group.equal)
