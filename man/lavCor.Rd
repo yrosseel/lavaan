@@ -7,7 +7,7 @@ correlations.}
 \usage{
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
        ov.names.x = NULL, se = "none", test = "none", 
-       estimator = "two.step", baseline = FALSE, h1 = FALSE, ..., 
+       estimator = "two.step", baseline = FALSE, ..., 
        cor.smooth = FALSE, cor.smooth.tol = 1e-06, output = "cor")
 }
 \arguments{
@@ -51,8 +51,6 @@ lavCor(object, ordered = NULL, group = NULL, missing = "listwise",
 \item{baseline}{Only used if output is \code{"fit"} or \code{"lavaan"}. If
    \code{TRUE}, a baseline model is also estimated. Note that the \code{test}
    argument should also be set to a value other than \code{"none"}.}
-\item{h1}{Only used if output is \code{"fit"} or \code{"lavaan"}. If
-   \code{TRUE}, the unrestricted model is stored in the h1 slot.}
 \item{...}{Optional parameters that are passed to the \code{\link{lavaan}} 
     function.}
 \item{cor.smooth}{Logical. Only used if \code{output = "cor"}. 

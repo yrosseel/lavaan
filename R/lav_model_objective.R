@@ -26,7 +26,12 @@ lav_model_objective <- function(lavmodel       = NULL,
     conditional.x  <- lavmodel@conditional.x
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
-    estimator.args <- lavmodel@estimator.args
+    if(.hasSlot(lavmodel, "estimator.args")) {
+        estimator.args <- lavmodel@estimator.args
+    } else {
+        estimator.args <- list()
+    }
+
 
     # do we need WLS.est?
     if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS", "DLS")) {

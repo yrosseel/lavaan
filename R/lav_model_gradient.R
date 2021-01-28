@@ -23,7 +23,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
     nx.free        <- lavmodel@nx.free
-    estimator.args <- lavmodel@estimator.args
+    if(.hasSlot(lavmodel, "estimator.args")) {
+        estimator.args <- lavmodel@estimator.args
+    } else {
+        estimator.args <- list()
+    }
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST

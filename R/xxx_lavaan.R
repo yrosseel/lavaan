@@ -1433,8 +1433,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                 VCOV = NULL, BOOT = NULL)
             warning("lavaan WARNING: se = \"external\" but parameter table does not contain a `se' column")
         }
-    } else if(lavoptions$se == "twostep" ||
-              lavoptions$rotation.se == "bordered") {
+    } else if(lavoptions$se == "twostep") {
        # do nothing
     } else {
         lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,

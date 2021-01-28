@@ -38,6 +38,9 @@ lav_object_independence <- function(object         = NULL,
                                  lavsamplestats = object@SampleStats,
                                  lavoptions = object@Options)
         }
+        if(is.null(lavoptions$estimator.args)) {
+            lavoptions$estimator.args <- list()
+        }
     }
 
     # construct parameter table for independence model
@@ -336,10 +339,12 @@ lav_object_extended <- function(object, add = NULL,
         lavoptions$implied <- FALSE
         lavoptions$baseline <- FALSE
         lavoptions$loglik <- FALSE
+        lavoptions$estimator.args <- list()
 
         # add a few slots
         object@Data@weights <- vector("list", object@Data@ngroups)
         object@Model@estimator <- object@Options$estimator
+        object@Model@estimator.args <- list()
 
         lavh1 <- lav_h1_logl(lavdata = object@Data,
                              lavsamplestats = object@SampleStats,

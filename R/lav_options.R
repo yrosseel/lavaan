@@ -903,11 +903,7 @@ lav_options_set <- function(opt = NULL) {
                             "mean.var.adjusted","scaled.shifted"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
-        } else if(! (length(opt$test) == 1L && opt$test == "none") ) {
-            #opt$test <- "satorra.bentler"
-            opt$test <- "standard"
-        }
-
+        } 
         #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"

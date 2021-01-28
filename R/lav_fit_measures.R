@@ -860,7 +860,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
         if(is.na(XX2) || is.na(df2)) {
             indices["rmsea.ci.lower.scaled"] <-
             indices["rmsea.ci.lower.robust"] <- NA
-        } else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
+        #} else if(df < 1 || df2 < 1 || lower.lambda(0) < 0.0) {
+        } else if(df < 1 || lower.lambda(0) < 0.0) { # no longer df2<1 check
             indices["rmsea.ci.lower.scaled"] <-
             indices["rmsea.ci.lower.robust"] <- 0
         } else {
@@ -938,8 +939,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
         if(is.na(XX2) || is.na(df2)) {
             indices["rmsea.ci.upper.scaled"] <-
             indices["rmsea.ci.upper.robust"] <- NA
-        } else if(df < 1 || df2 < 1 || upper.lambda(N.RMSEA) > 0 ||
-                                       upper.lambda(0) < 0) {
+        } else if(df < 1 || upper.lambda(N.RMSEA) > 0 ||
+                            upper.lambda(0) < 0) {
             indices["rmsea.ci.upper.scaled"] <-
             indices["rmsea.ci.upper.robust"] <- 0
         } else {

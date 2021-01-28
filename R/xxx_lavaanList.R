@@ -272,7 +272,7 @@ lavaanList <- function(model         = NULL,             # model
                 RES$Data <- lavobject@Data
             }
             if("samplestats" %in% store.slots) {
-                RES$SampleStats <- lavobject@vcov
+                RES$SampleStats <- lavobject@SampleStats
             }
             if("cache" %in% store.slots) {
                 RES$Cache <- lavobject@Cache

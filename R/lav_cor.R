@@ -17,7 +17,6 @@ lavCor <- function(object,
                    test       = "none",
                    estimator  = "two.step",
                    baseline   = FALSE,
-                   h1         = FALSE,
                    # other options (for lavaan)
                    ...,
                    cor.smooth = FALSE,
@@ -130,7 +129,7 @@ lavCor <- function(object,
     FIT <- lavaan(slotParTable = PT.un, slotData = lav.data,
                   model.type = "unrestricted",
                   missing = missing,
-                  baseline = baseline, h1 = h1,
+                  baseline = baseline, h1 = TRUE, # must be TRUE!
                   se = se, test = test, estimator = estimator, ...)
 
     out <- lav_cor_output(FIT, output = output)
@@ -150,7 +149,7 @@ lav_cor_output <- function(object, output = "cor") {
 
     # check output
     if(output %in% c("cor","cov")) {
-        out <- inspect(object, "implied") # in case we have missing = "fiml"
+        out <- lavInspect(object, "sampstat")
         if(object@Data@ngroups == 1L) {
             if(object@Model@conditional.x) {
                 out <- out$res.cov
@@ -171,7 +170,7 @@ lav_cor_output <- function(object, output = "cor") {
             }
         }
     } else if(output %in% c("th","thresholds")) {
-        out <- inspect(object, "implied")
+        out <- inspect(object, "sampstat")
         if(object@Data@ngroups == 1L) {
             if(object@Model@conditional.x) {
                 out <- out$res.th
@@ -186,7 +185,7 @@ lav_cor_output <- function(object, output = "cor") {
             }
         }
     } else if(output %in% c("sampstat")) {
-        out <- inspect(object, "implied")
+        out <- inspect(object, "sampstat")
     } else if(output %in% c("parameterEstimates", "pe",
               "parameterestimates", "est")) {
         #out <- parameterEstimates(object)
