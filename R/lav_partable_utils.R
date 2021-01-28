@@ -58,6 +58,7 @@ lav_partable_level_values <- function(partable) {
     if(any(partable$op == ":")) {
         colon.idx <- which(partable$op == ":" &
                            tolower(partable$lhs) == "level")
+        level.values <- integer(0L)
         if(length(colon.idx) > 0L) {
             level.values <- unique(partable$rhs[colon.idx])
         }
