@@ -1629,7 +1629,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
                 # create 'new' lavmodel (where user7/77 parameters are free)
                 lavmodel.new <- lav_model(lavpartable = PT.new,
-                                          lavoptions = lavoptions)
+                                          lavoptions = lavoptions,
+                                          th.idx     = lavmodel@th.idx)
                 lavmodel.new@GLIST    <- lavmodel@GLIST
                 lavmodel.new@H        <- lavmodel@H
                 lavmodel.new@lv.order <- lavmodel@lv.order
