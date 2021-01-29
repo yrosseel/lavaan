@@ -912,12 +912,12 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                            %*% t(lambda) %*% Sigma_22.inv )
 
                 # if FSC contains rows that are all-zero, replace by NA
-                # 
+                #
                 # this happens eg if all the indicators of a single factor
                 # are missing; then this column in lambda only contains zeroes
                 # and therefore the corresponding row in FSC contains only
                 # zeroes, leading to factor score 0
-                # 
+                #
                 # showing 'NA' is better than getting 0
                 #
                 # (Note that this is not needed for the 'regression' method,

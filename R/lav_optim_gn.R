@@ -3,7 +3,7 @@
 # Initial version needed for DLS - model based
 # YR - 19 Jan 2021
 #
-# TODo: 
+# TODo:
 # - what to do if the function value goes up?
 # - handle general (nonlinear) equality constraints
 # - handle general (nonlinear) inequality constraints
@@ -86,7 +86,7 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
         U <- U.g
     }
 
-    # handle equality constraints 
+    # handle equality constraints
     # this can be made more efficient; see Jamshidian & Bentler 1993
     # where instead of inverting a p+r matrix, they use a p-r matrix
     # (if the eq constraints are linear)

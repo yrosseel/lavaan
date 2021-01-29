@@ -35,18 +35,6 @@ lavCor <- function(object,
         estimator <- "none"
     }
 
-    # however, if we have missing = "fiml", we need to switch the
-    # estimator (new in 0.6-8)
-    if(tolower(missing) %in% c("ml", "fiml", "direct")) {
-         if(length(ordered) > 0L) {
-             stop("lavaan ERROR: missing = ", missing,
-                  " is only available for continuous data")
-         }
-         estimator <- "ML"
-         meanstructure <- TRUE
-    }
-
-
     # se?
     se <- tolower(se); output <- tolower(output)
     if(se != "none") {

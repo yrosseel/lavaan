@@ -392,7 +392,9 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise"
+        opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
+                                  # we break tidySEM tests where they set
+                                  # missing = "fiml" + multilevel
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {
@@ -903,7 +905,7 @@ lav_options_set <- function(opt = NULL) {
                             "mean.var.adjusted","scaled.shifted"))) {
             stop("lavaan ERROR: invalid value for `test' argument when estimator is DWLS: ",
                  opt$test, "\n")
-        } 
+        }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "wlsm") {
         opt$estimator <- "DWLS"
@@ -1548,7 +1550,7 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: unknown `bounds' option: ", opt$bounds)
     }
 
-   
+
     # rotation
     opt$rotation <- tolower(opt$rotation)
     if(opt$rotation %in% c("crawfer", "crawford.ferguson", "crawford-ferguson",
@@ -1623,7 +1625,7 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: rotation.args$row.weights should be \"none\",",
              " \"kaiser\" or \"cureton-mulaik\".")
     }
-  
+
     # check opt$rotation.args$algorithm
     opt$rotation.args$algorithm <- tolower(opt$rotation.args$algorithm)
     if(opt$rotation.args$algorithm %in% c("gpa", "pairwise")) {

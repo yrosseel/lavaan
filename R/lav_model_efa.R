@@ -238,7 +238,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
                         ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
                         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
-  
+
         # setnames
         set.names <- lav_partable_efa_values(lavpartable)
 

@@ -179,7 +179,13 @@ lav_start <- function(start.method    = "default",
                             lavpartable$lhs == lavpartable$rhs)
         sample.var.idx <- match(lavpartable$lhs[ov.var.idx], ov.names)
         if(model.type == "unrestricted") {
-            start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
+            if(!is.null(lavsamplestats@missing.h1[[g]])) {
+                start[ov.var.idx] <-
+                    diag(lavsamplestats@missing.h1[[g]]$sigma)[sample.var.idx]
+            } else {
+                start[ov.var.idx] <-
+                    diag(lavsamplestats@cov[[g]])[sample.var.idx]
+            }
         } else {
             if(start.initial == "mplus") {
                 if(conditional.x && nlevels == 1L) {
@@ -358,12 +364,18 @@ lav_start <- function(start.method    = "default",
 
         if(model.type == "unrestricted") {
            # fill in 'covariances' from lavsamplestats
-            cov.idx <- which(lavpartable$group == group.values[g]             &
+            cov.idx <- which(lavpartable$group == group.values[g] &
                              lavpartable$op    == "~~"          &
                              lavpartable$lhs != lavpartable$rhs)
             lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
             rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
-            start[cov.idx] <- lavsamplestats@cov[[g]][ cbind(lhs.idx, rhs.idx) ]
+            if(!is.null(lavsamplestats@missing.h1[[g]])) {
+                start[cov.idx] <- lavsamplestats@missing.h1[[g]]$sigma[
+                                                 cbind(lhs.idx, rhs.idx) ]
+            } else {
+                start[cov.idx] <- lavsamplestats@cov[[g]][
+                                                 cbind(lhs.idx, rhs.idx) ]
+            }
         }
 
         # variances of ordinal variables - set to 1.0

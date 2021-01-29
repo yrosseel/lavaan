@@ -830,7 +830,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                        "claimed the model converged,\n",
 "                      but not all elements of the gradient are (near) zero;\n",
 "                      the optimizer may not have found a local solution\n",
-"                      use check.gradient = FALSE to skip this check.", 
+"                      use check.gradient = FALSE to skip this check.",
                        sep = "")
                 }
             }

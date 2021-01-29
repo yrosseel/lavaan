@@ -956,7 +956,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 9b. bounds for EFA -- to force diag(LAMBDA) to be positive (new in 0.6-7)
     #if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
     #    (lavoptions$rotation != "none") ) {
-    # 
+    #
     #    # add lower column
     #    if(is.null(lavpartable$lower)) {
     #        lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
@@ -1277,7 +1277,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             fx <- as.numeric(NA)
             attr(fx, "fx.group") <-  as.numeric(NA)
             attr(x, "fx") <- fx
-        } 
+        }
 
         # if a warning was produced, say it here
         warn.txt <- attr(x, "warn.txt")
@@ -1372,9 +1372,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     ###############################
     VCOV <- NULL
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
-       lavoptions$se != "twostep" && 
-       ( .hasSlot(lavmodel, "nefa") && 
-           (  lavmodel@nefa == 0L || 
+       lavoptions$se != "twostep" &&
+       ( .hasSlot(lavmodel, "nefa") &&
+           (  lavmodel@nefa == 0L ||
               (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
               (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
            )
@@ -1621,7 +1621,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 # create 'new' partable where the user=7/77 parameters are free
                 PT.new <- lavpartable
 
-                user7.idx <- which(PT.new$user == 7L | 
+                user7.idx <- which(PT.new$user == 7L |
                                    PT.new$user == 77L)
                 PT.new$free[user7.idx] <- 1L
                 PT.new$free[ PT.new$free > 0L ] <-
@@ -1633,7 +1633,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavmodel.new@GLIST    <- lavmodel@GLIST
                 lavmodel.new@H        <- lavmodel@H
                 lavmodel.new@lv.order <- lavmodel@lv.order
- 
+
                 # create 'border' for augmented information matrix
                 x.rot <- lav_model_get_parameters(lavmodel.new)
                 JAC <- numDeriv::jacobian(func = lav_model_efa_rotate_border_x,
@@ -1643,7 +1643,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                  #method.args = list(eps = 0.0005),
                                  #method = "simple")
                                  method = "Richardson")
-                # store JAC 
+                # store JAC
                 lavmodel.new@ceq.efa.JAC <- JAC
 
                 # no other constraints
@@ -1687,11 +1687,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     lavmodel.new@con.jac <- CON.JAC
                     lavmodel.new@con.lambda <- c(rep(0, nbord), lambda)
                 }
- 
+
                 # overwrite lavpartable/lavmodel with rotated version
                 lavmodel    <- lavmodel.new
                 lavpartable <- PT.new
- 
+
                 # compute VCOV, taking 'rotation constraints' into account
                 VCOV <- lav_model_vcov(lavmodel        = lavmodel,
                                        lavsamplestats  = lavsamplestats,
@@ -1702,7 +1702,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavimplied      = lavimplied,
                                        lavh1           = lavh1)
 
-                # compute SE and store them in lavpartable  
+                # compute SE and store them in lavpartable
                 tmp <- lav_model_vcov_se(lavmodel = lavmodel.new,
                                lavpartable = PT.new,, VCOV = VCOV)
                 lavpartable$se <- tmp

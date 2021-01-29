@@ -2448,7 +2448,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
     # rotation?
     if( .hasSlot(lavmodel, "nefa") && (lavmodel@nefa > 0L) &&
-        lavoptions$rotation != "none" && 
+        lavoptions$rotation != "none" &&
         lavoptions$rotation.se == "delta" ) {
         rotation <- TRUE
     } else {
