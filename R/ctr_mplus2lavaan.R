@@ -189,7 +189,7 @@ parseConstraints <- function(cmd) {
 
   #Create a version of the command with no modifiers (constraints, starting values, etc.) specifications.
   #This is useful for syntax that uses the params on the LHS and with a modified RHS. Example: v1 ~~ conB*v1
-  cmd.nomodifiers <- paste0(gsub("(start\\([^\\)]+\\)\\*|[\\d-\\.]+\\*)", "", cmd.split, perl=TRUE), collapse=" ") #peel off premultiplication
+  cmd.nomodifiers <- paste0(gsub("(start\\([^\\)]+\\)\\*|[\\d\\-\\.]+\\*)", "", cmd.split, perl=TRUE), collapse=" ") #peel off premultiplication
   cmd.nomodifiers <- gsub("\\([^\\)]+\\)", "", cmd.nomodifiers, perl=TRUE)
 
   cmd.tojoin <- c() #will store all chunks divided by newlines, which will be joined at the end.
