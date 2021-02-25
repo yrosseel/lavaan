@@ -100,6 +100,7 @@ lav_object_independence <- function(object         = NULL,
     lavoptions$check.gradient <- FALSE
     lavoptions$check.post <- FALSE
     lavoptions$check.vcov <- FALSE
+    lavoptions$optim.bounds <- list() # we already have the bounds
 
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE

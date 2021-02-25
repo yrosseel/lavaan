@@ -861,26 +861,6 @@ lav_data_full <- function(data          = NULL,          # data.frame
             }
         }
 
-        # missing data
-        if(missing != "listwise") {
-            # get missing patterns
-            Mp[[g]] <- lav_data_missing_patterns(X[[g]],
-                           sort.freq = TRUE, coverage = TRUE)
-            # checking!
-            if(length(Mp[[g]]$empty.idx) > 0L) {
-                # new in 0.6-4: we return 'original' index in full data.frame
-                empty.case.idx <- case.idx[[g]][ Mp[[g]]$empty.idx ]
-                if(warn) {
-                    warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
-                }
-            }
-            if(warn && any(Mp[[g]]$coverage < 0.1)) {
-                warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
-            }
-            # in case we had observations with only missings
-            nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)
-        }
-
         # response patterns (ordered variables only)
         ord.idx <- which(ov.names[[g]] %in% ov$name[ov$type == "ordered"])
         if(length(ord.idx) > 0L) {
@@ -1036,6 +1016,37 @@ lav_data_full <- function(data          = NULL,          # data.frame
             }
 
         } # clustered data
+
+        # missing data
+        if(missing != "listwise") {
+
+            if(length(cluster) > 0L) {
+                # get missing patterns
+                Mp[[g]] <- lav_data_missing_patterns(X[[g]],
+                               sort.freq = TRUE, coverage = TRUE,
+                               Lp = Lp[[g]])
+            } else {
+                # get missing patterns
+                Mp[[g]] <- lav_data_missing_patterns(X[[g]],
+                               sort.freq = TRUE, coverage = TRUE,
+                               Lp = NULL)
+            }
+
+            # checking!
+            if(length(Mp[[g]]$empty.idx) > 0L) {
+                # new in 0.6-4: return 'original' index in full data.frame
+                empty.case.idx <- case.idx[[g]][ Mp[[g]]$empty.idx ]
+                if(warn) {
+                    warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
+                }
+            }
+            if(warn && any(Mp[[g]]$coverage < 0.1)) {
+                warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
+            }
+            # in case we had observations with only missings
+            nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)
+    } # missing
+
 
     } # groups, at first level
 

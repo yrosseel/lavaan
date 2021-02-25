@@ -154,6 +154,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 # optimization
                 control                = list(),
                 optim.method           = "nlminb",
+                optim.attempts         = 4L,
                 optim.force.converged  = FALSE,
                 optim.gradient         = "analytic",
                 optim.init_nelder_mead = FALSE,
@@ -392,7 +393,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
+        #opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
                                   # we break tidySEM tests where they set
                                   # missing = "fiml" + multilevel
 

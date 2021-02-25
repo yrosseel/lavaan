@@ -1,17 +1,24 @@
 
 # get missing patterns
-lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE) {
+lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE,
+                                      Lp = NULL) {
+
+    # handle two-level data
+    if(!is.null(Lp)) {
+        Y.orig <- Y
+        Z <- NULL
+        if(length(Lp$between.idx[[2]]) > 0L) {
+            Y <- Y[, -Lp$between.idx[[2]], drop = FALSE]
+            z.idx <- which(!duplicated(Lp$cluster.idx[[2]]))
+            Z <- Y.orig[z.idx, Lp$between.idx[[2]], drop = FALSE]
+        }
+    }
 
     # construct TRUE/FALSE matrix: TRUE if value is observed
     OBS <- !is.na(Y)
 
     # empty cases
     empty.idx <- which(rowSums(OBS) == 0L)
-
-    # this is what we did in < 0.6
-    #if(length(empty.idx) > 0L) {
-    #    OBS <- OBS[-empty.idx,,drop = FALSE]
-    #}
 
     # pattern of observed values per observation
     case.id <- apply(1L * OBS, 1L, paste, collapse = "")
@@ -50,13 +57,30 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE) {
     pat.obs <- OBS[pat.first,,drop = FALSE] # observed per pattern
 
     Mp <- list(npatterns = pat.npatterns, id = pat.id, freq = pat.freq,
-               case.idx = pat.case.idx, pat = pat.obs, empty.idx = empty.idx)
+               case.idx = pat.case.idx, pat = pat.obs, empty.idx = empty.idx,
+               nel = sum(OBS))
 
     if(coverage) {
         # FIXME: if we have empty cases, include them in N?
         # no for now
         Mp$coverage <- crossprod(OBS) / sum(pat.freq)
         #Mp$coverage <- crossprod(OBS) / NROW(Y)
+    }
+
+    # additional info in we have two-level data
+    if(!is.null(Lp)) {
+        Mp$j.idx  <- lapply(seq_len(pat.npatterns),
+                       function(p) Lp$cluster.idx[[2]][Mp$case.idx[[p]]] )
+        Mp$j1.idx <- lapply(seq_len(pat.npatterns),
+                       function(p) unique.default(Mp$j.idx[[p]]) )
+        Mp$j.freq <- lapply(seq_len(pat.npatterns),
+                       function(p) as.integer(unname(table(Mp$j.idx[[p]]))) )
+
+        # between-level patterns
+        if(!is.null(Z)) {
+            Mp$Zp <- lav_data_missing_patterns(Z, sort.freq = FALSE,
+                     coverage = FALSE, Lp = NULL)
+        }
     }
 
     Mp

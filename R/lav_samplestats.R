@@ -340,6 +340,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             mean[[g]] <- unname( colMeans(X[[g]], na.rm=TRUE) )
             var[[g]] <- diag(cov[[g]])
 
+            # missing patterns
+            if(missing %in% c("ml", "ml.x")) {
+                missing.flag. <- TRUE
+                missing.[[g]] <-
+                    lav_samplestats_missing_patterns(Y  = X[[g]],
+                                                     Mp = Mp[[g]],
+                                                     wt = WT[[g]],
+                                                     Lp = lavdata@Lp[[g]])
+            }
+
         } else { # continuous, single-level case
 
             if(conditional.x) {
@@ -1332,13 +1342,26 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
 }
 
 # compute sample statistics, per missing pattern
-lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL) {
+lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL,
+                                             Lp = NULL) {
 
     # coerce Y to matrix
     Y <- as.matrix(Y)
 
+    # handle two-level data
+    if(!is.null(Lp)) {
+        Y.orig <- Y
+        Z <- NULL
+        if(length(Lp$between.idx[[2]]) > 0L) {
+            Y <- Y[, -Lp$between.idx[[2]], drop = FALSE]
+            z.idx <- which(!duplicated(Lp$cluster.idx[[2]]))
+            Z <- Y.orig[z.idx, Lp$between.idx[[2]], drop = FALSE]
+        }
+    }
+
     if(is.null(Mp)) {
-        Mp <- lav_data_missing_patterns(Y, sort.freq = FALSE, coverage = FALSE)
+        Mp <- lav_data_missing_patterns(Y, sort.freq = FALSE, coverage = FALSE,
+                                        Lp = Lp)
     }
 
     Yp <- vector("list", length = Mp$npatterns)
@@ -1378,7 +1401,24 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL) {
         # store sample statistics, var.idx and freq
         Yp[[p]] <- list(SY = SY, MY = MY, var.idx = Mp$pat[p,],
                         freq = FREQ)
+
+        # if clustered data, add rowsum over all cases per cluster
+        if(!is.null(Lp)) {
+            tmp <- rowsum.default(RAW, group = Mp$j.idx[[p]], reorder = FALSE)
+            Yp[[p]]$ROWSUM <- tmp
+        }
     }
+
+    # add Zp as an attribute
+    #if(!is.null(Lp)) {
+    #    Zp <- lav_samplestats_missing_patterns(Y = Z, Mp = Mp$Zp)
+    #    for(p in Mp$Zp$npatterns) {
+    #        this.z <- Z[Mp$Zp$case.idx[[p]], drop = FALSE]
+    #        Zp[[p]]$ROWSUM <- t(this.z)
+    #
+    #    }
+    #    attr(Yp, "Zp") <- Zp
+    #}
 
     Yp
 }
@@ -1427,14 +1467,16 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
 
         # cluster-means
         # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
-        Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx),
-                               FUN = function(x) {
-                                   if( all(is.na(x)) ) { # all elements are NA
-                                       as.numeric(NA)    # in this cluster
-                                   } else {
-                                       mean(x, na.rm = TRUE)
-                                   }
-                               })[,-1]))
+        #Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx),
+        #                       FUN = function(x) {
+        #                           if( all(is.na(x)) ) { # all elements are NA
+        #                               as.numeric(NA)    # in this cluster
+        #                           } else {
+        #                               mean(x, na.rm = TRUE)
+        #                           }
+        #                       })[,-1]))
+        Y2 <- rowsum(Y1, group = cluster.idx, reorder = FALSE,
+                     na.rm = FALSE) / cluster.size
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w

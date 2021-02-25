@@ -1225,7 +1225,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             x.first <- x
 
             # try 2: optim.parscale = "standardize" (new in 0.6-7)
-            if(inherits(x, "try-error") || !attr(x, "converged")) {
+            if(lavoptions$optim.attempts > 1L &&
+               (inherits(x, "try-error") || !attr(x, "converged"))) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale = "standardized"
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
@@ -1238,7 +1239,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
 
             # try 3: start = "simple"
-            if(inherits(x, "try-error") || !attr(x, "converged")) {
+            if(lavoptions$optim.attempts > 2L &&
+               (inherits(x, "try-error") || !attr(x, "converged"))) {
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                             lavpartable     = lavpartable,
                                             lavsamplestats  = lavsamplestats,
@@ -1250,7 +1252,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
 
             # try 4: start = "simple" + optim.parscale = "standardize"
-            if(inherits(x, "try-error") || !attr(x, "converged")) {
+            if(lavoptions$optim.attempts > 3L &&
+               (inherits(x, "try-error") || !attr(x, "converged"))) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale = "standardized"
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,

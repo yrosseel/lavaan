@@ -257,6 +257,11 @@ lav_start <- function(start.method    = "default",
                     # factor loadings
                     tmp <- fabin$lambda
                     tmp[ !is.finite(tmp) ] <- 1.0 # just in case (eg 0/0)
+
+                    # check for negative triad if nvar=3L (new in 0.6-8)
+                    if(!is.null(fabin$neg.triad) && fabin$neg.triad) {
+                        tmp <- rep(1.0, length(tmp))
+                    }
                     start[lambda.idx] <- tmp
 
                     # factor variance
