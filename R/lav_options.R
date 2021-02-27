@@ -153,7 +153,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # optimization
                 control                = list(),
-                optim.method           = "nlminb",
+                optim.method           = "default", # gn for DLS, nlminb rest
                 optim.attempts         = 4L,
                 optim.force.converged  = FALSE,
                 optim.gradient         = "analytic",
@@ -776,6 +776,16 @@ lav_options_set <- function(opt = NULL) {
         #opt$meanstructure <- TRUE
     } else if(opt$estimator == "gls") {
         opt$estimator <- "GLS"
+        # check estimator.args
+        #if(is.null(opt$estimator.args)) {
+        #    opt$estimator.args <- list(gls.FtimesNminus1 = TRUE)
+        #} else {
+        #    if(is.null(opt$estimator.args$gls.FtimesNminus1)) {
+        #        opt$estimator.args$gls.FtimesNminus1 <- TRUE
+        #    } else {
+        #        stopifnot(is.logical(opt$estimator.args$gls.FtimesNminus1))
+        #    }
+        #}
         if(opt$se == "default" || opt$se == "standard") {
             opt$se <- "standard"
         } else if(opt$se == "none" ||
@@ -830,9 +840,7 @@ lav_options_set <- function(opt = NULL) {
         }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "dls") {
-        opt$optim.method <- "gn"
-        opt$optim.gn.tol.x <- 1e-5
-        opt$sample.cov.rescale <- TRUE
+        opt$sample.cov.rescale <- TRUE # should we make this an option??
         opt$estimator <- "DLS"
         if(opt$se == "default") {
             opt$se <- "robust.sem"
@@ -863,7 +871,8 @@ lav_options_set <- function(opt = NULL) {
 
         # check estimator.args
         if(is.null(opt$estimator.args)) {
-            opt$estimator.args <- list(dls.a = 1.0, dls.GammaNT = "sample")
+            opt$estimator.args <- list(dls.a = 1.0, dls.GammaNT = "sample",
+                                       dls.FtimesNmin1 = FALSE)
         } else {
             if(is.null(opt$estimator.args$dls.a)) {
                 opt$estimator.args$dls.a <- 1.0
@@ -883,6 +892,30 @@ lav_options_set <- function(opt = NULL) {
                 if(!opt$estimator.args$dls.GammaNT %in% c("sample", "model")) {
                     stop("lavaan ERROR: dls.GammaNT value in estimator.args must be either \"sample\" or \"model\".")
                 }
+            }
+            if(is.null(opt$estimator.args$dls.FtimesNminus1)) {
+                opt$estimator.args$dls.FtimesNminus1 <- FALSE
+            } else {
+                stopifnot(is.logical(opt$estimator.args$dls.FtimesNminus1))
+            }
+        }
+        # is 'sample' version, we allow both nlminb and gn
+        # if 'model' version, we only allow for gn
+        if(opt$estimator.args$dls.GammaNT == "sample") {
+            if(opt$optim.method %in% c("nlminb", "gn")) {
+                # nothing to do
+            } else if(opt$optim.method == "default") {
+                opt$optim.method <- "gn"
+            } else {
+                stop("lavaan ERROR: optim.method must be either nlminb or gn if estimator is sample based DLS.")
+            }
+        } else {
+            if(opt$optim.method %in% c("gn")) {
+                # nothing to do
+            } else if(opt$optim.method == "default") {
+                opt$optim.method <- "gn"
+            } else {
+                stop("lavaan ERROR: optim.method must be gn if estimator is model based DLS.")
             }
         }
     } else if(opt$estimator == "dwls") {
@@ -1089,6 +1122,11 @@ lav_options_set <- function(opt = NULL) {
         }
     } else {
         stop("lavaan ERROR: unknown value for `estimator' argument: ", opt$estimator, "\n")
+    }
+
+    # optim.method - if still "default" at this point -> set to "nlminb"
+    if(opt$optim.method == "default") {
+        opt$optim.method <- "nlminb"
     }
 
 

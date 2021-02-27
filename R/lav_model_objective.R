@@ -131,6 +131,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                            Yp=lavsamplestats@missing[[g]],
                                            h1=lavsamplestats@missing.h1[[g]]$h1,                                           N=lavsamplestats@nobs[[g]])
             } else if(estimator == "ML" && lavdata@nlevels > 1L) {
+                # FIML twolevel
                 #group.fx <- estimator.2L(lavmodel       = lavmodel,
                 #                         GLIST          = GLIST,
                 #                         lavdata        = lavdata,
@@ -179,7 +180,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                 WLS.V <- lavsamplestats@WLS.V[[g]]
             } else if(estimator == "DLS") {
                 if(estimator.args$dls.GammaNT == "sample") {
-                    WLS.V <- lavsamplestats@WLS.V[[g]] # for now
+                    WLS.V <- lavsamplestats@WLS.V[[g]]
                 } else {
                     dls.a <- estimator.args$dls.a
                     GammaNT <- lav_samplestats_Gamma_NT(
@@ -302,7 +303,11 @@ lav_model_objective <- function(lavmodel       = NULL,
                   estimator == "MML") {
             # do nothing
         } else if(estimator == "DLS") {
-            group.fx <- 0.5 * group.fx
+            if(estimator.args$dls.FtimesNminus1) {
+                group.fx <- 0.5 * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] * group.fx
+            } else {
+                group.fx <- 0.5 * group.fx
+            }
         } else {
             group.fx <- 0.5 * (lavsamplestats@nobs[[g]]-1)/lavsamplestats@nobs[[g]] * group.fx
         }

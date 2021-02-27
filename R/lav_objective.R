@@ -733,6 +733,7 @@ estimator.MML <- function(lavmodel      = NULL,
 estimator.2L <- function(lavmodel       = NULL,
                          GLIST          = NULL,
                          Lp             = NULL,
+                         Mp             = NULL,
                          lavsamplestats = NULL,
                          group          = 1L) {
 
@@ -753,10 +754,19 @@ estimator.2L <- function(lavmodel       = NULL,
     Sigma.B <- implied$cov[[  (group-1)*2 + 2]]
     Mu.B    <- implied$mean[[ (group-1)*2 + 2]]
 
-    loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
+    if(lavsamplestats@missing.flag) {
+        stop("lavaan ERROR: not ready yet")
+        #loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
+        #          Mp = Mp,
+        #          Mu.W = Mu.W, Sigma.W = Sigma.W,
+        #          Mu.B = Mu.B, Sigma.B = Sigma.B,
+        #          log2pi = FALSE, minus.two = TRUE)
+    } else {
+        loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
                   Mu.W = Mu.W, Sigma.W = Sigma.W,
                   Mu.B = Mu.B, Sigma.B = Sigma.B,
                   log2pi = FALSE, minus.two = TRUE)
+    }
 
     # minimize
     objective <- 1 * loglik

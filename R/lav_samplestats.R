@@ -618,7 +618,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # WLS.V
         if(!WLS.V.user && nlevels == 1L) {
 
-            if(estimator == "DLS" && dls.GammaNT == "sample") {
+            if(estimator == "DLS" && dls.GammaNT == "sample" && dls.a < 1.0) {
                 # compute GammaNT here
                 GammaNT <- lav_samplestats_Gamma_NT(
                     COV            = cov[[g]],
@@ -631,7 +631,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     slopestructure = conditional.x)
             }
 
-            if(estimator == "GLS") {
+            if(estimator == "GLS" ||
+               (estimator == "DLS" && dls.GammaNT == "sample" &&
+                dls.a == 1.0)) {
                 # Note: we need the 'original' COV/MEAN/ICOV
                 #        sample statistics; not the 'residual' version
                 WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
@@ -670,9 +672,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                 stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
                             }
                             if(estimator == "DLS" && dls.GammaNT == "sample") {
-                                W.DLS <- (1 - dls.a)*NACOV[[g]] + dls.a*GammaNT
-                                WLS.V[[g]] <-
-                                    lav_matrix_symmetric_inverse(W.DLS)
+                                if(dls.a == 1.0) {
+                                    # nothing to do, use GLS version
+                                } else {
+                                    W.DLS <-
+                                       (1 - dls.a)*NACOV[[g]] + dls.a*GammaNT
+                                    WLS.V[[g]] <-
+                                        lav_matrix_symmetric_inverse(W.DLS)
+                                }
                             } else { # WLS
                                 WLS.V[[g]] <-
                                     lav_matrix_symmetric_inverse(NACOV[[g]])

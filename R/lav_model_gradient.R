@@ -39,6 +39,12 @@ lav_model_gradient <- function(lavmodel       = NULL,
     if(group.weight) {
         if(estimator %in% c("ML","PML","FML","MML","REML","NTRLS")) {
             group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
+        } else if(estimator == "DLS") {
+            if(estimator.args$dls.FtimesNminus1) {
+                group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
+            } else {
+                group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
+            }
         } else {
             # FIXME: double check!
             group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
@@ -66,7 +72,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                              extra = (estimator %in% c("ML", "REML", "NTRLS")))
         #}
 
-        # ridge here?
         if(meanstructure) {
             #if(conditional.x) {
             #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
