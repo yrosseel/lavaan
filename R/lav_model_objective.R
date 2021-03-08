@@ -132,12 +132,12 @@ lav_model_objective <- function(lavmodel       = NULL,
                                            h1=lavsamplestats@missing.h1[[g]]$h1,                                           N=lavsamplestats@nobs[[g]])
             } else if(estimator == "ML" && lavdata@nlevels > 1L) {
                 # FIML twolevel
-                #group.fx <- estimator.2L(lavmodel       = lavmodel,
-                #                         GLIST          = GLIST,
-                #                         lavdata        = lavdata,
-                #                         lavsamplestats = lavsamplestats,
-                #                         group          = g)
-                group.fx <- 0
+                group.fx <- estimator.2L(lavmodel       = lavmodel,
+                                         GLIST          = GLIST,
+                                         Lp             = lavdata@Lp[[g]],
+                                         Mp             = lavdata@Mp[[g]],
+                                         lavsamplestats = lavsamplestats,
+                                         group          = g)
             } else {
                 stop("this estimator: `", estimator,
                      "' can not be used with incomplete data and the missing=\"ml\" option")
@@ -149,6 +149,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                 group.fx <- estimator.2L(lavmodel       = lavmodel,
                                          GLIST          = GLIST,
                                          Lp             = lavdata@Lp[[g]],
+                                         Mp             = NULL, # complete data
                                          lavsamplestats = lavsamplestats,
                                          group          = g)
             } else if(conditional.x) {

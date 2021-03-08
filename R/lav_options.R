@@ -97,6 +97,7 @@ lav_options_default <- function(mimic = "lavaan") {
                                           verbose        = FALSE,
                                           jac.init.rot   = TRUE,
                                           max.iter       = 10000L),
+                                          
 
                 # full data
                 std.ov             = FALSE,
@@ -147,6 +148,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 omega.information.meat    = "default",
                 omega.h1.information.meat = "default",
 
+
                 bootstrap              = 1000L,
                 gamma.n.minus.one      = FALSE,
                 #gamma.unbiased         = FALSE,
@@ -167,7 +169,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 em.dx.tol              = 1e-04,
                 em.zerovar.offset      = 0.0001,
                 optim.gn.iter.max      = 200L,
-                optim.gn.tol.x         = 1e-07,
+                optim.gn.tol.x         = 1e-05,
 
                 # numerical integration
                 integration.ngh        = 21L,
@@ -511,6 +513,8 @@ lav_options_set <- function(opt = NULL) {
         if(opt$missing == "two.stage" ||
            opt$missing == "robust.two.stage") {
             opt$test <- "satorra.bentler"
+        } else if(opt$estimator == "dls") {
+            opt$test <- "satorra.bentler"
         } else {
             opt$test <- "standard"
         }
@@ -848,7 +852,7 @@ lav_options_set <- function(opt = NULL) {
                   opt$se == "bootstrap" ||
                   opt$se == "external") {
             # nothing to do
-        } else if(opt$se == "robust.sem") {
+        } else if(opt$se == "robust.sem" || opt$se == "standard") {
             # nothing to do
         } else if(opt$se == "robust") {
             opt$se <- "robust.sem"
@@ -856,7 +860,8 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: invalid value for `se' argument when estimator is DLS: ",
                  opt$se, "\n")
         }
-        if(opt$test == "default" || opt$test == "standard") {
+
+        if(opt$test == "default") {
             opt$test <- "satorra.bentler"
         } else if(!all(opt$test %in% c("standard","none","satorra.bentler",
                             "mean.adjusted",
@@ -1568,7 +1573,6 @@ lav_options_set <- function(opt = NULL) {
                                  lower.factor = c(1.2, 1.0, 1.1),
                                  upper.factor = c(1.2, 1.3, 1.1),
                                  min.reliability.marker = 0.1,
-                                 min.var.lv.exo = 0.0,
                                  min.var.lv.endo = 0.0)
     } else if(opt$bounds == "pos.var") {
         opt$optim.bounds <- list(lower = c("ov.var", "lv.var"),

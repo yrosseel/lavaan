@@ -64,6 +64,10 @@ lav_partable_add_bounds <- function(partable       = NULL,
             optim.bounds$min.var.lv.endo <- 0.0
         }
 
+        if(is.null(optim.bounds$max.r2.lv.endo)) {
+            optim.bounds$max.r2.lv.endo <- 1.0
+        }
+
         if(is.null(optim.bounds$lower.factor)) {
             optim.bounds$lower.factor <- rep(1.0, length(optim.bounds$lower))
         } else {
@@ -198,9 +202,6 @@ lav_partable_add_bounds <- function(partable       = NULL,
                          partable$lhs == partable$rhs)
                 marker.var.idx <- match(partable$lhs[marker.idx], ov.names)
 
-                # lower = REL*OVAR
-                lower.auto[marker.idx] <- REL * OV.VAR[marker.var.idx]
-
                 # upper = (1-REL)*OVAR
                 upper.auto[marker.idx] <- (1 - REL) * OV.VAR[marker.var.idx]
             }
@@ -265,7 +266,8 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     marker.var <- OV.VAR[ match(this.lv.marker, ov.names) ]
                     LOWER <- marker.var - (1 - REL)*marker.var
                     LV.VAR.LB[i] <- max(LOWER, optim.bounds$min.var.lv.exo)
-                    LV.VAR.UB[i] <- marker.var - REL*marker.var
+                    #LV.VAR.UB[i] <- marker.var - REL*marker.var 
+                    LV.VAR.UB[i] <- marker.var
                 } else {
                     LV.VAR.LB[i] <- optim.bounds$min.var.lv.exo
                     LV.VAR.UB[i] <- max(OV.VAR)
@@ -286,6 +288,9 @@ lav_partable_add_bounds <- function(partable       = NULL,
             endo.idx <- which(lv.names %in% lv.names.endo)
             if(length(endo.idx) > 0L) {
                 LV.VAR.LB2[endo.idx] <- optim.bounds$min.var.lv.endo
+                if(optim.bounds$max.r2.lv.endo != 1) {
+                    LV.VAR.LB2[endo.idx] <- (1 - optim.bounds$max.r2.lv.endo) * LV.VAR.UB[endo.idx]
+                }
             }
             exo.idx <- which(!lv.names %in% lv.names.endo)
             if(length(exo.idx) > 0L && optim.bounds$min.var.lv.exo != 0) {

@@ -742,9 +742,6 @@ estimator.2L <- function(lavmodel       = NULL,
         return(-1000)
     }
 
-
-    YLp <- lavsamplestats@YLp[[group]]
-
     # compute model-implied statistics for all blocks
     implied <- lav_model_implied(lavmodel, GLIST = GLIST)
 
@@ -755,13 +752,15 @@ estimator.2L <- function(lavmodel       = NULL,
     Mu.B    <- implied$mean[[ (group-1)*2 + 2]]
 
     if(lavsamplestats@missing.flag) {
-        stop("lavaan ERROR: not ready yet")
-        #loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
-        #          Mp = Mp,
-        #          Mu.W = Mu.W, Sigma.W = Sigma.W,
-        #          Mu.B = Mu.B, Sigma.B = Sigma.B,
-        #          log2pi = FALSE, minus.two = TRUE)
+        Y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
+        Yp <- lavsamplestats@missing[[group]]
+        loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(Yp = Yp,
+                  Y2 = Y2, Lp = Lp, Mp = Mp,
+                  Mu.W = Mu.W, Sigma.W = Sigma.W,
+                  Mu.B = Mu.B, Sigma.B = Sigma.B,
+                  log2pi = FALSE, minus.two = TRUE)
     } else {
+        YLp <- lavsamplestats@YLp[[group]]
         loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
                   Mu.W = Mu.W, Sigma.W = Sigma.W,
                   Mu.B = Mu.B, Sigma.B = Sigma.B,
