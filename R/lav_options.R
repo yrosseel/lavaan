@@ -97,7 +97,7 @@ lav_options_default <- function(mimic = "lavaan") {
                                           verbose        = FALSE,
                                           jac.init.rot   = TRUE,
                                           max.iter       = 10000L),
-                                          
+
 
                 # full data
                 std.ov             = FALSE,
@@ -395,7 +395,7 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
+        opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
                                   # we break tidySEM tests where they set
                                   # missing = "fiml" + multilevel
 

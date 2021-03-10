@@ -266,7 +266,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     marker.var <- OV.VAR[ match(this.lv.marker, ov.names) ]
                     LOWER <- marker.var - (1 - REL)*marker.var
                     LV.VAR.LB[i] <- max(LOWER, optim.bounds$min.var.lv.exo)
-                    #LV.VAR.UB[i] <- marker.var - REL*marker.var 
+                    #LV.VAR.UB[i] <- marker.var - REL*marker.var
                     LV.VAR.UB[i] <- marker.var
                 } else {
                     LV.VAR.LB[i] <- optim.bounds$min.var.lv.exo

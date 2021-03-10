@@ -235,8 +235,8 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
             old.x <- new.x
             old.obj <- new.obj
             if(verbose) {
-                cat("Gauss-Newton algorithm converged: rms.x = ", 
-                    sprintf("%12.12f", rms.x), " < ", 
+                cat("Gauss-Newton algorithm converged: rms.x = ",
+                    sprintf("%12.12f", rms.x), " < ",
                     sprintf("%12.12f", tol.x), "\n", sep = "")
             }
             break
