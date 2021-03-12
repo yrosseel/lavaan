@@ -1609,9 +1609,19 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                        c(between.idx, sort.int(c(both.idx, within.idx))),
                        drop = FALSE]
             mean.d[[clz]] <- colMeans(tmp2, na.rm = TRUE)
+            bad.idx <- which(!is.finite(mean.d[[clz]])) # if nrow = 1 + NA
+            if(length(bad.idx) > 0L) {
+                mean.d[[clz]][bad.idx] <- 0 # ugly, only for starting values
+            }
             if(length(d.idx) > 1L) {
-                cov.d[[clz]] <- ( cov(tmp2, use = "pairwise.complete.obs") *
+                if(any(is.na(tmp2))) {
+                    out <- lav_mvnorm_missing_h1_estimate_moments(Y = tmp2,
+                              max.iter = 10L)
+                    cov.d[[clz]] <- out$Sigma
+                } else {
+                    cov.d[[clz]] <- ( cov(tmp2, use = "complete.obs") *
                                       (ns-1) / ns )
+                }
             } else {
                 cov.d[[clz]] <- 0
             }

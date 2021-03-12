@@ -95,16 +95,42 @@ lav_data_print_short <- function(object, nd = 3L) {
     # missing patterns?
     if(!is.null(lavdata@Mp[[1L]])) {
         if(lavdata@ngroups == 1L) {
-            c1 <- c(c1, "Number of missing patterns")
-            c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
-            c3 <- c(c3, "")
-        } else {
-            c1 <- c(c1, "Number of missing patterns per group:")
-            c2 <- c(c2, ""); c3 <- c(c3, "")
-            for(g in 1:lavdata@ngroups) {
-                c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
-                c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
+            if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
+                c1 <- c(c1, "Number of missing patterns -- level 1")
+                c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
                 c3 <- c(c3, "")
+                c1 <- c(c1, "Number of missing patterns -- level 2")
+                c2 <- c(c2, lavdata@Mp[[1L]]$Zp$npatterns)
+                c3 <- c(c3, "")
+            } else {
+                c1 <- c(c1, "Number of missing patterns")
+                c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
+                c3 <- c(c3, "")
+            }
+        } else {
+            if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
+                c1 <- c(c1, "Number of missing patterns per group:")
+                c2 <- c(c2, ""); c3 <- c(c3, "")
+                for(g in 1:lavdata@ngroups) {
+                    c1 <- c(c1,
+                            paste(sprintf("  %-40s", lavdata@group.label[[g]]),
+                                  "-- level 1"))
+                    c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
+                    c3 <- c(c3, "")
+                    c1 <- c(c1,
+                            paste(sprintf("  %-40s", lavdata@group.label[[g]]),
+                                  "-- level 2"))
+                    c2 <- c(c2, lavdata@Mp[[g]]$Zp$npatterns)
+                    c3 <- c(c3, "")
+                }
+            } else {
+                c1 <- c(c1, "Number of missing patterns per group:")
+                c2 <- c(c2, ""); c3 <- c(c3, "")
+                for(g in 1:lavdata@ngroups) {
+                    c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
+                    c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
+                    c3 <- c(c3, "")
+                }
             }
         }
     }

@@ -67,6 +67,11 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         Yc <- t( t(Y) - Mu0 )
         var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
     }
+    # sanity check
+    bad.idx <- which(!is.finite(var0) | var0 == 0)
+    if(length(bad.idx) > 0L) {
+        var0[bad.idx] <- 1
+    }
     Sigma0 <- diag(x = var0, nrow = P)
     Mu <- Mu0; Sigma <- Sigma0
 

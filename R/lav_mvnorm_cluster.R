@@ -1228,8 +1228,8 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
     # mu.z and sigma.zz can be computed beforehand
     if(length(between.idx) > 0L) {
         Z <- Y2[, between.idx, drop = FALSE]
-        mu.z <- colMeans(Y2)[between.idx]
-        sigma.zz <- cov(Z) * (Lp$nclusters[[2]] - 1L)/Lp$nclusters[[2]]
+        mu.z <- colMeans(Z, na.rm = TRUE)
+        sigma.zz <- cov(Z, use = "pairwise.complete.obs") * (Lp$nclusters[[2]] - 1L)/Lp$nclusters[[2]]
         #sigma.zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu.z)
         #Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
     }

@@ -781,6 +781,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 # implied h1 statistics
                 out <- lav_h1_implied_logl(lavdata        = lavdata,
                                            lavsamplestats = lavsamplestats,
+                                           lavpta         = lavpta,
                                            lavoptions     = lavoptions)
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik

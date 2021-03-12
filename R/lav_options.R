@@ -335,9 +335,9 @@ lav_options_set <- function(opt = NULL) {
     if(opt$clustered && !opt$multilevel) {
         opt$meanstructure <- TRUE
         #opt$missing <- "listwise"
-        if(opt$missing == "ml") {
-            optim.gradient = "numerical"
-        }
+        #if(opt$missing == "ml") {
+        #    opt$optim.gradient = "numerical"
+        #}
 
         if(opt$estimator == "mlr") {
             opt$estimator <- "ml"
@@ -395,9 +395,12 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
-                                  # we break tidySEM tests where they set
-                                  # missing = "fiml" + multilevel
+        #opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
+        #                          # we break tidySEM tests where they set
+        #                          # missing = "fiml" + multilevel
+        if(opt$missing %in% c("ml", "fiml", "direct")) {
+            opt$optim.gradient = "numerical"
+        }
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {
