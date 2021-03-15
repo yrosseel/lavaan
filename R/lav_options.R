@@ -256,6 +256,8 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$mimic == "lisrel") {
         cat("Warning: mimic=\"LISREL\" is not ready yet. Using EQS instead.\n")
         opt$mimic <- "EQS"
+    } else if(opt$mimic %in% c("lm", "LM", "regression")) {
+        opt$mimic <- "lm"
     } else {
         stop("lavaan ERROR: mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
     }

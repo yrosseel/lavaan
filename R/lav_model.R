@@ -5,9 +5,11 @@
 # - YR 18 Nov 2014: more efficient handling of linear equality constraints
 # - YR 02 Dec 2014: allow for bare-minimum parameter tables
 # - YR 25 Jan 2017: collect options in lavoptions
+# - YR 12 Mar 2021: add lavpta as argument; create model attributes (ma)
 
 # construct MATRIX lavoptions$representation of the model
 lav_model <- function(lavpartable      = NULL,
+                      lavpta           = NULL,
                       lavoptions       = NULL,
                       th.idx           = list()) {
 
@@ -338,12 +340,18 @@ lav_model <- function(lavpartable      = NULL,
         }
     } # multilevel
 
+    # new in 0.6-9: model properties
+    modprop <- lav_model_properties(GLIST = GLIST,
+                                    lavpartable = lavpartable,
+                                    lavpta = lavpta)
+
     Model <- new("lavModel",
                  GLIST=GLIST,
                  dimNames=dimNames,
                  isSymmetric=isSymmetric,
                  mmSize=mmSize,
                  representation=lavoptions$representation,
+                 modprop=modprop,
                  meanstructure=meanstructure,
                  categorical=categorical,
                  multilevel=multilevel,

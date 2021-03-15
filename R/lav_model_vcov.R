@@ -484,6 +484,15 @@ lav_model_vcov <- function(lavmodel       = NULL,
            likelihood == "normal") {
             if(lavdata@nlevels == 1L) {
                 N <- lavsamplestats@ntotal
+                # new in 0.6-9 (to mimic method="lm" in effectLite)
+                # special case: univariate regression in each group
+                if(lavoptions$mimic == "lm" &&
+                   .hasSlot(lavmodel, "modprop") &&
+                   all(lavmodel@modprop$uvreg)) {
+                    N <- sum( unlist(lavsamplestats@nobs) -
+                              (unlist(lavmodel@modprop$nexo) + 1L) )
+                    # always adding the intercept (for now)
+                }
             } else {
                 # total number of clusters (over groups)
                 N <- 0

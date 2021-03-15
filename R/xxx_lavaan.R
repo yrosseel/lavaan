@@ -908,6 +908,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #### 9. lavmodel ####
     #####################
         lavmodel <- lav_model(lavpartable      = lavpartable,
+                              lavpta           = lavpta,
                               lavoptions       = lavoptions,
                               th.idx           = lavsamplestats@th.idx)
                               # no longer needed: x values are in start
