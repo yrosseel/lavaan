@@ -13,7 +13,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL) {
     ngroups <- lavpta$ngroups
 
 
-    # is the model a univariate/multivariate linear multiple regression 
+    # is the model a univariate/multivariate linear multiple regression
     # model (per group)?
     uvreg <- logical(ngroups)
     uvord <- logical(ngroups)
@@ -47,7 +47,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL) {
            }
        }
 
-       nexo[g] <- length(lavpta$vnames$eqs.x[[g]]) 
+       nexo[g] <- length(lavpta$vnames$eqs.x[[g]])
 
     } # g
 

@@ -606,6 +606,9 @@ lav_options_set <- function(opt = NULL) {
         # observed.information (ALWAYS "h1" for now)
         opt$observed.information[1] <- "h1"
 
+        # new in 0.6-9: ALWAS h1.information = "unstructured"
+        opt$h1.information <- c("unstructured", "unstructured")
+
         if(length(opt$information) > 1L && opt$information[2] == "default") {
             # for both two.stage and robust.two.stage
             opt$information[2] <- "observed"

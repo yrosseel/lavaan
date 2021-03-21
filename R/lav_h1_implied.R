@@ -60,7 +60,7 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
                                 })[,-1]))
                 YLp = lavsamplestats@YLp[[g]]
                 YLp[[2]]$Y2 <- Y2.complete
-                OUT <- lavaan:::lav_mvnorm_cluster_em_sat(
+                OUT <- lav_mvnorm_cluster_em_sat(
                     YLp      = YLp,
                     Lp       = lavdata@Lp[[g]],
                     verbose  = TRUE, # for now
