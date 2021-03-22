@@ -103,8 +103,8 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
         # check if Sigma is near-pd (+ poor fix)
         ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)
-        tol <- 1e-6 # FIXME!
-        if(any(ev$values < tol)) {
+        evtol <- 1e-6 # FIXME!
+        if(any(ev$values < evtol)) {
             #too.small <- which( ev$values < tol )
             #ev$values[too.small] <- tol
             #ev$values <- ev$values + tol
