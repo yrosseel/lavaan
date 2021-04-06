@@ -168,6 +168,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 em.fx.tol              = 1e-08,
                 em.dx.tol              = 1e-04,
                 em.zerovar.offset      = 0.0001,
+                em.h1.iter.max         = 500L,
+                em.h1.tol              = 1e-05,
+                em.h1.warn             = TRUE,
                 optim.gn.iter.max      = 200L,
                 optim.gn.tol.x         = 1e-05,
 

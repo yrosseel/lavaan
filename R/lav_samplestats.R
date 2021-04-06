@@ -403,7 +403,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                                      wt = WT[[g]])
                 out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
                           wt = WT[[g]],
-                          Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
+                          Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose,
+                          max.iter = lavoptions$em.h1.iter.max, 
+                          tol      = lavoptions$em.h1.tol,
+                          warn     = lavoptions$em.h1.warn)
                 missing.h1.[[g]]$sigma <- out$Sigma
                 missing.h1.[[g]]$mu    <- out$Mu
                 missing.h1.[[g]]$h1    <- out$fx
@@ -422,8 +425,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(nlevels == 1L) {
                     # estimate moments unrestricted model
                     out <- lav_mvnorm_missing_h1_estimate_moments(Y = X[[g]],
-                              wt = WT[[g]],
-                              Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose)
+                              wt = WT[[g]], verbose = verbose,
+                              Mp = Mp[[g]], Yp = missing.[[g]], 
+                              max.iter = lavoptions$em.h1.iter.max,
+                              tol      = lavoptions$em.h1.tol,
+                              warn     = lavoptions$em.h1.warn)
                     missing.h1.[[g]]$sigma <- out$Sigma
                     missing.h1.[[g]]$mu    <- out$Mu
                     missing.h1.[[g]]$h1    <- out$fx
