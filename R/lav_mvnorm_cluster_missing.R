@@ -30,7 +30,11 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Yp  = NULL,
 
     # global
     sigma.w.inv <- solve.default(sigma.w)
-    sigma.w.logdet <- log(det(sigma.w))
+    if(is.complex(sigma.w)) {
+        sigma.w.logdet <- sum(log(eigen(sigma.w, only.values = TRUE)$values))
+    } else {
+        sigma.w.logdet <- log(det(sigma.w))
+    }
 
     # y
     ny <- ncol(sigma.w)
@@ -43,7 +47,12 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Yp  = NULL,
 
         sigma.zy <- t(sigma.yz)
         sigma.zz.inv <- solve.default(sigma.zz)
-        sigma.zz.logdet <- log(det(sigma.zz))
+        if(is.complex(sigma.zz)) {
+            sigma.zz.logdet <-
+                sum(log(eigen(sigma.zz, only.values = TRUE)$values))
+        } else {
+            sigma.zz.logdet <- log(det(sigma.zz))
+        }
         sigma.zi.zy <- sigma.zz.inv %*% sigma.zy
     }
 
@@ -161,8 +170,13 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Yp  = NULL,
 
             IBZA.inv.g  <- solve.default(IBZA, g.j) # IBZA is NOT symmetric!
             IBZA.inv.BZ <- solve.default(IBZA, sigma.b.z)
-            tmp <- determinant.matrix(IBZA, logarithm = TRUE)
-            IBZA.logdet <- IBZA.logdet + tmp$modulus[1] * tmp$sign
+            if(is.complex(IBZA)) {
+                IBZA.logdet <-
+                  IBZA.logdet + sum(log(eigen(IBZA, only.values = TRUE)$values))
+            } else {
+                tmp <- determinant.matrix(IBZA, logarithm = TRUE)
+                IBZA.logdet <- IBZA.logdet + tmp$modulus[1] * tmp$sign
+            }
             A.IBZA.inv.g  <- .A.j[[cl]] %*% IBZA.inv.g
 
             q.zz.b <- q.zz.b + sum(g.j * A.IBZA.inv.g)
@@ -173,9 +187,13 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Yp  = NULL,
            IBZA <- sigma.b %*% .A.j[[cl]]
            IBZA[ny.diag.idx] <- IBZA[ny.diag.idx] + 1
            IBZA.inv.BZ <- solve.default(IBZA, sigma.b)
-           tmp <- determinant.matrix(IBZA, logarithm = TRUE)
-           IBZA.logdet <- IBZA.logdet + tmp$modulus[1] * tmp$sign
-
+           if(is.complex(IBZA)) {
+                IBZA.logdet <-
+                  IBZA.logdet + sum(log(eigen(IBZA, only.values = TRUE)$values))
+           } else {
+               tmp <- determinant.matrix(IBZA, logarithm = TRUE)
+               IBZA.logdet <- IBZA.logdet + tmp$modulus[1] * tmp$sign
+           }
            q.yy.b <- q.yy.b + sum(p.j * (IBZA.inv.BZ %*% p.j))
         }
     }

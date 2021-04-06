@@ -1221,8 +1221,12 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
         out <- ( S.inv[-rm.idx, -rm.idx, drop = FALSE] -
                  crossprod(A, solve.default(H, A)) )
         if(logdet) {
-            cH <- chol.default(H); diag.cH <- diag(cH)
-            H.logdet <- sum(log(diag.cH * diag.cH))
+            if(is.complex(H)) {
+                 H.logdet <- sum(log(eigen(H, only.values = TRUE)$values))
+            } else {
+                cH <- chol.default(Re(H)); diag.cH <- diag(cH)
+                H.logdet <- sum(log(diag.cH * diag.cH))
+            }
             attr(out, "logdet") <- S.logdet + H.logdet
         }
 

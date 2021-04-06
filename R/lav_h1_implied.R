@@ -41,7 +41,7 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
 
         for(g in 1:lavdata@ngroups) {
             if(lavoptions$verbose) {
-                cat("\nFitting unrestricted (H1) model in group ", g, "\n")
+                cat("\n\nfitting unrestricted (H1) model in group ", g, "\n")
             }
             if(lavsamplestats@missing.flag) {
                 # missing data
@@ -92,7 +92,7 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
                 lavoptions2$model.type <- "unrestricted"
                 lavoptions2$optim.attempts <- 4L
                 lavoptions2$warn <- FALSE
-                lavoptions2$optim.force.convergence <- TRUE
+                lavoptions2$optim.force.convergence <- TRUE # for now...
                 FIT <- lavaan(lavpartable, slotOptions = lavoptions2,
                           slotSampleStats = lavsamplestats,
                           slotData = lavdata, sloth1 = lavh1)

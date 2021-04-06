@@ -1618,6 +1618,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                     out <- lav_mvnorm_missing_h1_estimate_moments(Y = tmp2,
                               max.iter = 10L)
                     cov.d[[clz]] <- out$Sigma
+                    #cov.d[[clz]] <- 0
                 } else {
                     cov.d[[clz]] <- ( cov(tmp2, use = "complete.obs") *
                                       (ns-1) / ns )

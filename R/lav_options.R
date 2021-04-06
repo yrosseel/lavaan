@@ -402,6 +402,7 @@ lav_options_set <- function(opt = NULL) {
         #                          # missing = "fiml" + multilevel
         if(opt$missing %in% c("ml", "fiml", "direct")) {
             opt$optim.gradient = "numerical"
+            #opt$optim.gradient = "complex"
         }
 
         # test

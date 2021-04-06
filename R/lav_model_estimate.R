@@ -263,7 +263,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
 
         if(debug || verbose) {
-            cat("Objective function  = ", sprintf("%18.16f", fx), "\n", sep="")
+            cat("  objective function  = ",
+                sprintf("%18.16f", fx), "\n", sep="")
         }
         if(debug) {
             #cat("Current unconstrained parameter values =\n")
@@ -386,6 +387,19 @@ lav_model_estimate <- function(lavmodel       = NULL,
         dx
     }
 
+    gradient_function_numerical_complex <- function(x, verbose=FALSE) {
+
+        dx <- Re(lav_func_gradient_complex(func = objective_function, x = x,
+                                        h = sqrt(.Machine$double.eps)))
+        # does not work if pnorm is involved... (eg PML)
+
+        if(debug) {
+            cat("Gradient function (numerical complex) =\n"); print(dx); cat("\n")
+        }
+
+        dx
+    }
+
 
     # check if the initial values produce a positive definite Sigma
     # to begin with -- but only for estimator="ML"
@@ -445,6 +459,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
             GRADIENT <- gradient_function
         } else if(lavoptions$optim.gradient %in% c("numerical", "numeric")) {
             GRADIENT <- gradient_function_numerical
+        } else if(lavoptions$optim.gradient %in% c("numeric.complex", "complex")){
+            GRADIENT <- gradient_function_numerical_complex
         } else if(lavoptions$optim.gradient %in% c("NULL", "null")) {
             GRADIENT <- NULL
         } else {
@@ -490,7 +506,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     if(INIT_NELDER_MEAD) {
-        if(verbose) cat("Initial Nelder-Mead step:\n")
+        if(verbose) cat("  initial Nelder-Mead step:\n")
         trace <- 0L; if(verbose) trace <- 1L
         optim.out <- optim(par=start.x,
                            fn=objective_function,
@@ -507,7 +523,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
 
     if(OPTIMIZER == "NLMINB0") {
-        if(verbose) cat("Quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
+        if(verbose) cat("  quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
         #if(debug) control$trace <- 1L;
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
@@ -534,10 +550,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             scale=SCALE,
                             verbose=verbose)
         if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("nlminb message says: ", optim.out$message, "\n")
-            cat("number of iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective, gradient]: ",
+            cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("  nlminb message says: ", optim.out$message, "\n")
+            cat("  number of iterations: ", optim.out$iterations, "\n")
+            cat("  number of function evaluations [objective, gradient]: ",
                 optim.out$evaluations, "\n")
         }
 
@@ -562,7 +578,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         }
 
     } else if(OPTIMIZER == "NLMINB") {
-        if(verbose) cat("Quasi-Newton steps using NLMINB:\n")
+        if(verbose) cat("  quasi-Newton steps using NLMINB:\n")
         #if(debug) control$trace <- 1L;
         control.nlminb <- list(eval.max=20000L,
                                iter.max=10000L,
@@ -589,10 +605,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             scale=SCALE,
                             verbose=verbose)
         if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("nlminb message says: ", optim.out$message, "\n")
-            cat("number of iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective, gradient]: ",
+            cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("  nlminb message says: ", optim.out$message, "\n")
+            cat("  number of iterations: ", optim.out$iterations, "\n")
+            cat("  number of function evaluations [objective, gradient]: ",
                 optim.out$evaluations, "\n")
         }
 
@@ -629,10 +645,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            hessian=FALSE,
                            verbose=verbose)
         if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("optim BFGS message says: ", optim.out$message, "\n")
+            cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("  optim BFGS message says: ", optim.out$message, "\n")
             #cat("number of iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective, gradient]: ",
+            cat("  number of function evaluations [objective, gradient]: ",
                 optim.out$counts, "\n")
         }
 
@@ -671,10 +687,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            verbose=verbose,
                            infToMax=TRUE)
         if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("optim L-BFGS-B message says: ", optim.out$message, "\n")
+            cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("  optim L-BFGS-B message says: ", optim.out$message, "\n")
             #cat("number of iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective, gradient]: ",
+            cat("  number of function evaluations [objective, gradient]: ",
                 optim.out$counts, "\n")
         }
 
@@ -720,11 +736,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                    control.outer = ocontrol
                                   )
         if(verbose) {
-            cat("convergence status (0=ok): ", optim.out$convergence, "\n")
-            cat("nlminb.constr message says: ", optim.out$message, "\n")
-            cat("number of outer iterations: ", optim.out$outer.iterations, "\n")
-            cat("number of inner iterations: ", optim.out$iterations, "\n")
-            cat("number of function evaluations [objective, gradient]: ",
+            cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
+            cat("  nlminb.constr message says: ", optim.out$message, "\n")
+            cat("  number of outer iterations: ", optim.out$outer.iterations, "\n")
+            cat("  number of inner iterations: ", optim.out$iterations, "\n")
+            cat("  number of function evaluations [objective, gradient]: ",
                 optim.out$evaluations, "\n")
         }
 
