@@ -163,6 +163,9 @@ standardizedSolution <-
     if(!is.null(PARTABLE$block)) {
         LIST$block <- PARTABLE$block
     }
+    if (sum(nchar(PARTABLE$label)) != 0L) {
+      LIST$label <- PARTABLE$label
+    }
 
     # add std and std.all columns
     if(type == "std.lv") {
