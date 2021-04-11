@@ -697,9 +697,10 @@ lav_start <- function(start.method    = "default",
     }
 
     # override if the model syntax contains explicit starting values
-    user.idx <- which(!is.na(lavpartable$ustart) &
-                      lavpartable$user != 7L) # new in 0.6-7, if rotation and
-                                              # and we change the order of lv's
+    #user.idx <- which(!is.na(lavpartable$ustart) &
+    #                  lavpartable$user != 7L) # new in 0.6-7, if rotation and
+    #                                          # and we change the order of lv's
+    user.idx <- which(!is.na(lavpartable$ustart))
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # final check: no NaN or other non-finite values

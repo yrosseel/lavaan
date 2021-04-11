@@ -806,7 +806,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(is.logical(lavoptions$h1) && lavoptions$h1) {
             if(length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
                 if(lavoptions$verbose) {
-                    cat("lavh1              ... start:")
+                    cat("lavh1              ... start:\n")
                 }
 
                 # implied h1 statistics
@@ -895,8 +895,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                        lavsamplestats  = lavsamplestats,
                                        model.type   = lavoptions$model.type,
                                        reflect      = FALSE,
-                                       order.lv.by  = lavoptions$rotation.args$order.lv.by,
-                                       #order.lv.by  = "none",
+                                       #order.lv.by  = lavoptions$rotation.args$order.lv.by,
+                                       order.lv.by  = "none",
                                        mimic        = lavoptions$mimic,
                                        debug        = lavoptions$debug)
             } else {
@@ -914,8 +914,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                lavsamplestats = lavsamplestats,
                                model.type     = lavoptions$model.type,
                                reflect      = FALSE,
-                               order.lv.by  = lavoptions$rotation.args$order.lv.by,
-                               #order.lv.by  = "none",
+                               #order.lv.by  = lavoptions$rotation.args$order.lv.by,
+                               order.lv.by  = "none",
                                mimic          = lavoptions$mimic,
                                debug          = lavoptions$debug)
 
@@ -936,39 +936,39 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # 8b. EFA -- change user==7 elements if columns
         #     have been reordered
-        if( !is.null(lavpartable$efa) && any(lavpartable$user == 7L) &&
-            lavoptions$rotation != "none" ) {
-
-            # 7 to free
-            idx <- which(lavpartable$user == 7 &
-                         lavpartable$op == "=~" &
-                         abs(lavpartable$start) > sqrt(.Machine$double.eps))
-            if(length(idx) > 0L) {
-                lavpartable$user[idx] <- 1L
-                lavpartable$free[idx] <- 1L
-                lavpartable$ustart[idx] <- as.numeric(NA)
-            }
-
-            # free to 7
-            idx <- which(lavpartable$user != 7  &
-                         lavpartable$op == "=~" &
-                         lavpartable$free > 0L &
-                         nchar(lavpartable$efa) > 0L &
-                         abs(lavpartable$start) < sqrt(.Machine$double.eps))
-            if(length(idx) > 0L) {
-                lavpartable$user[idx] <- 7L
-                lavpartable$free[idx] <- 0L
-                lavpartable$ustart[idx] <- as.numeric(0)
-            }
-
-            # recount free parameters
-            idx <- which(lavpartable$free > 0L)
-            if(length(idx) > 0L) {
-                lavpartable$free[idx] <- seq_len(length(idx))
-            }
-        } # EFA
-
-
+#        if( !is.null(lavpartable$efa) && any(lavpartable$user == 7L) &&
+#            lavoptions$rotation != "none" ) {
+#
+#            # 7 to free
+#            idx <- which(lavpartable$user == 7 &
+#                         lavpartable$op == "=~" &
+#                         abs(lavpartable$start) > sqrt(.Machine$double.eps))
+#            if(length(idx) > 0L) {
+#                lavpartable$user[idx] <- 1L
+#                lavpartable$free[idx] <- 1L
+#                lavpartable$ustart[idx] <- as.numeric(NA)
+#            }
+#
+#            # free to 7
+#            idx <- which(lavpartable$user != 7  &
+#                         lavpartable$op == "=~" &
+#                         lavpartable$free > 0L &
+#                         nchar(lavpartable$efa) > 0L &
+#                         abs(lavpartable$start) < sqrt(.Machine$double.eps))
+#            if(length(idx) > 0L) {
+#                lavpartable$user[idx] <- 7L
+#                lavpartable$free[idx] <- 0L
+#                lavpartable$ustart[idx] <- as.numeric(0)
+#            }
+#
+#            # recount free parameters
+#            idx <- which(lavpartable$free > 0L)
+#            if(length(idx) > 0L) {
+#                lavpartable$free[idx] <- seq_len(length(idx))
+#            }
+#        } # EFA
+#
+#
 
     #####################
     #### 9. lavmodel ####
@@ -1479,12 +1479,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     VCOV <- NULL
     if(lavoptions$se != "none" && lavoptions$se != "external" &&
        lavoptions$se != "twostep" &&
-       ( .hasSlot(lavmodel, "nefa") &&
-           (  lavmodel@nefa == 0L ||
-              (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
-              (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
-           )
-       ) && lavmodel@nx.free > 0L && attr(x, "converged")) {
+       #( .hasSlot(lavmodel, "nefa") &&
+       #    (  lavmodel@nefa == 0L ||
+       #       (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
+       #       (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
+       #    )
+       #) &&
+       lavmodel@nx.free > 0L && attr(x, "converged")) {
 
         if(lavoptions$verbose) {
             cat("computing VCOV for      se =", lavoptions$se, "...")
@@ -1796,15 +1797,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 }
 
                 # overwrite lavpartable/lavmodel with rotated version
-                lavmodel    <- lavmodel.new
-                lavpartable <- PT.new
+                #lavmodel    <- lavmodel.new
+                #lavpartable <- PT.new
 
                 # compute VCOV, taking 'rotation constraints' into account
-                VCOV <- lav_model_vcov(lavmodel        = lavmodel,
+                VCOV <- lav_model_vcov(lavmodel        = lavmodel.new,
                                        lavsamplestats  = lavsamplestats,
                                        lavoptions      = lavoptions,
                                        lavdata         = lavdata,
-                                       lavpartable     = lavpartable,
+                                       lavpartable     = PT.new,
                                        lavcache        = lavcache,
                                        lavimplied      = lavimplied,
                                        lavh1           = lavh1)
@@ -1815,12 +1816,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavpartable$se <- tmp
 
                 # store rotated VCOV
-                tmp.attr <- attributes(VCOV)
-                VCOV1 <- VCOV
-                attributes(VCOV1) <- tmp.attr["dim"]
-                lavvcov <- list(se = tmp,
-                                information = lavoptions$information,
-                                vcov = VCOV1)
+                #tmp.attr <- attributes(VCOV)
+                #VCOV1 <- VCOV
+                #attributes(VCOV1) <- tmp.attr["dim"]
+                #lavvcov <- list(se = tmp,
+                #                information = lavoptions$information,
+                #                vcov = VCOV1)
             }
             if(lavoptions$verbose) {
                 cat(" done.\n")
