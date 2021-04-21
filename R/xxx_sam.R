@@ -85,6 +85,7 @@ sam <- function(model          = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
+    dotdotdot0$sample.icov <- FALSE # if N < nvar
     dotdotdot0$se     <- "none"
     dotdotdot0$test   <- "none"
 

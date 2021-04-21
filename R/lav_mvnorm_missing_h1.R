@@ -36,6 +36,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
     # remove empty cases
     if(length(Mp$empty.idx) > 0L) {
+        N.full <- N
         if(!is.null(wt)) {
             N <- N - sum(wt[Mp$empty.idx])
         } else {
@@ -59,19 +60,22 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
             Mu0 <- out$center
             var0 <- diag(out$cov)
         } else {
-            Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+            Mu0 <- base::.colMeans(Y, m = N.full, n = P, na.rm = TRUE)
             Yc <- t( t(Y) - Mu0 )
-            var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+            var0 <- base::.colMeans(Yc*Yc, m = N.full, n = P, na.rm = TRUE)
         }
     } else {
-        Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+        Mu0 <- base::.colMeans(Y, m = N.full, n = P, na.rm = TRUE)
         Yc <- t( t(Y) - Mu0 )
-        var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+        var0 <- base::.colMeans(Yc*Yc, m = N.full, n = P, na.rm = TRUE)
     }
     # sanity check
     bad.idx <- which(!is.finite(var0) | var0 == 0)
     if(length(bad.idx) > 0L) {
         var0[bad.idx] <- 1
+    }
+    bad.idx <- which(!is.finite(Mu0))
+    if(length(bad.idx) > 0L) {
     }
     Sigma0 <- diag(x = var0, nrow = P)
     Mu <- Mu0; Sigma <- Sigma0

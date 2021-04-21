@@ -1253,6 +1253,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     x <- NULL
     if(lavoptions$do.fit && lavoptions$estimator != "none" &&
+       lavoptions$optim.method != "none" &&
        lavmodel@nx.free > 0L) {
         if(lavoptions$verbose) {
             cat("lavoptim           ... start:\n")
@@ -1342,7 +1343,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                (inherits(x, "try-error") || !attr(x, "converged"))) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale = "standardized"
-                cat("attempt 4 -- optim.parscale = \"standardized\" + start = \"simple\"\n")
+                if(lavoptions$verbose) {
+                    cat("attempt 4 -- optim.parscale = \"standardized\" + start = \"simple\"\n")
+                }
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                             lavpartable     = lavpartable,
                                             lavsamplestats  = lavsamplestats,
@@ -1399,10 +1402,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "warn.txt") <- ""
         attr(x, "control") <- lavoptions$control
         attr(x, "dx") <- numeric(0L)
-        attr(x, "fx") <-
-            lav_model_objective(lavmodel = lavmodel,
-                lavsamplestats = lavsamplestats, lavdata = lavdata,
-                lavcache = lavcache)
+        #attr(x, "fx") <-
+        #    lav_model_objective(lavmodel = lavmodel,
+        #        lavsamplestats = lavsamplestats, lavdata = lavdata,
+        #        lavcache = lavcache)
+        fx <- as.numeric(NA)
+        attr(fx, "fx.group") <- as.numeric(NA)
+        attr(x, "fx") <- fx
 
         lavpartable$est <- lavpartable$start
     }

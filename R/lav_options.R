@@ -106,6 +106,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # summary data
                 sample.cov.rescale = "default",
+                sample.icov        = TRUE,
                 ridge              = FALSE,
                 ridge.x            = FALSE,
                 ridge.constant     = "default",

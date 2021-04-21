@@ -475,7 +475,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
 
             # icov and cov.log.det (but not if missing)
-            if(!missing %in% c("ml", "ml.x")) {
+            if(lavoptions$sample.icov && !missing %in% c("ml", "ml.x")) {
                 out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge.eps,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
@@ -1209,11 +1209,15 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 # no rescale!
 
                 # icov and cov.log.det
-                out <- lav_samplestats_icov(COV = res.cov[[g]], ridge = ridge,
-                       x.idx = x.idx[[g]],
-                       ngroups = ngroups, g = g, warn = TRUE)
-                res.icov[[g]] <- out$icov
-                res.cov.log.det[[g]] <- out$cov.log.det
+                #if(lavoptions$sample.icov) {
+                    out <- lav_samplestats_icov(COV = res.cov[[g]],
+                                                ridge = ridge,
+                                                x.idx = x.idx[[g]],
+                                                ngroups = ngroups, g = g,
+                                                warn = TRUE)
+                    res.icov[[g]] <- out$icov
+                    res.cov.log.det[[g]] <- out$cov.log.det
+                #}
 
             # continuous + conditional.x = FALSE
             } else {
@@ -1229,10 +1233,12 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 }
 
                 # icov and cov.log.det
-                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
-                           x.idx = x.idx[[g]], ngroups = ngroups, g = g,
-                           warn = TRUE)
-                icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
+                #if(lavoptions$sample.icov) {
+                    out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
+                               x.idx = x.idx[[g]], ngroups = ngroups, g = g,
+                               warn = TRUE)
+                    icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
+                #}
 
                 # fixed.x?
                 if(fixed.x) {

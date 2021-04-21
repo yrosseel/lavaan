@@ -10,7 +10,7 @@ lav_h1_logl <- function(lavdata        = NULL,
 
     # should compute logl, or return NA?
     logl.ok <- FALSE
-    if(lavoptions$estimator %in% c("ML", "MML")) {
+    if(lavoptions$sample.icov && lavoptions$estimator %in% c("ML", "MML")) {
         # check if everything is numeric, OR if we have exogenous
         # factor with 2 levels only
         if(all(lavdata@ov$type == "numeric")) {
