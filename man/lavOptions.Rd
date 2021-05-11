@@ -254,11 +254,8 @@ Estimation options:
       and test statistics are based on N. If \code{"default"}, it depends
       on the mimic option: if \code{mimic="lavaan"} or \code{mimic="Mplus"},
       normal likelihood is used; otherwise, wishart likelihood is used.}
-    \item{\code{link}:}{Currently only used if estimator is MML. 
-      If \code{"logit"}, a logit link is used for binary and ordered observed 
-      variables. If \code{"probit"}, a probit link is used. If 
-      \code{"default"}, it is currently set to \code{"probit"} (but this may 
-      change).}
+    \item{\code{link}:}{Not used yet. This is just a placeholder until
+      the MML estimator is back.}
     \item{\code{information}:}{If \code{"expected"}, the expected 
       information matrix is used (to compute the standard errors). If 
       \code{"observed"}, the observed information matrix is used. 

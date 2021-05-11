@@ -37,7 +37,8 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
         type.x <- class(x)[1L]
 
         # correct for matrix with 1 column
-        if(inherits(x, "matrix") && ncol(x) == 1L) {
+        if(inherits(x, "matrix") && (is.null(dim(x)) ||
+                                    (!is.null(dim) && ncol(x) == 1L))) {
             type.x <- "numeric"
         }
 
