@@ -214,12 +214,14 @@ Estimation options:
 \describe{
     \item{\code{estimator}:}{The estimator to be used. Can be one of the 
       following: \code{"ML"} for maximum likelihood, \code{"GLS"} for 
-      generalized least squares, \code{"WLS"} for weighted least squares 
+      (normal theory) generalized least squares, 
+      \code{"WLS"} for weighted least squares 
       (sometimes called ADF estimation), \code{"ULS"} for unweighted least 
-      squares and \code{"DWLS"} for diagonally weighted least squares. These 
-      are the main options that affect the estimation. For convenience, the 
-      \code{"ML"} option can be extended as \code{"MLM"}, \code{"MLMV"}, 
-      \code{"MLMVS"}, \code{"MLF"}, and \code{"MLR"}. 
+      squares, \code{"DWLS"} for diagonally weighted least squares,
+      and \code{"DLS"} for distributionally-weighted least squares. These
+      are the main options that affect the estimation. For convenience, the
+      \code{"ML"} option can be extended as \code{"MLM"}, \code{"MLMV"},
+      \code{"MLMVS"}, \code{"MLF"}, and \code{"MLR"}.
       The estimation will still be plain \code{"ML"}, but now
       with robust standard errors and a robust (scaled) test statistic. For
       \code{"MLM"}, \code{"MLMV"}, \code{"MLMVS"}, classic robust standard
@@ -252,11 +254,8 @@ Estimation options:
       and test statistics are based on N. If \code{"default"}, it depends
       on the mimic option: if \code{mimic="lavaan"} or \code{mimic="Mplus"},
       normal likelihood is used; otherwise, wishart likelihood is used.}
-    \item{\code{link}:}{Currently only used if estimator is MML. 
-      If \code{"logit"}, a logit link is used for binary and ordered observed 
-      variables. If \code{"probit"}, a probit link is used. If 
-      \code{"default"}, it is currently set to \code{"probit"} (but this may 
-      change).}
+    \item{\code{link}:}{Not used yet. This is just a placeholder until
+      the MML estimator is back.}
     \item{\code{information}:}{If \code{"expected"}, the expected 
       information matrix is used (to compute the standard errors). If 
       \code{"observed"}, the observed information matrix is used. 
@@ -330,16 +329,30 @@ Optimization options:
       parameters. If another (external) optimizer is selected, see the
       manpage for that optimizer to see the possible control parameters.}
     \item{\code{optim.method}:}{Character. The optimizer that should be
-      used. For unconstrained optimization (the model syntax
+      used. For unconstrained optimization or models with only linear
+      equality constraints (i.e., the model syntax
       does not include any "==", ">" or "<" operators),
-      the available options are \code{"nlminb"} (the default), \code{"BFGS"} and
-      \code{"L-BFGS-B"}. For constrained
-      optimization, the only available option is \code{"nlminb.constr"}.}
+      the available options are \code{"nlminb"} (the default), \code{"BFGS"},
+      \code{"L-BFGS-B"}. These are all quasi-newton methods. A basic 
+      implementation of Gauss-Newton is also available
+      (\code{optim.method = "GN"}). The latter is the default when 
+      \code{estimator = "DLS"}.
+      For constrained
+      optimization, the only available option is \code{"nlminb.constr"},
+      which uses an augmented Lagrangian minimization algorithm.}
     \item{\code{optim.force.converged}:}{Logical. If \code{TRUE}, pretend
       the model has converged, no matter what.}
     \item{\code{optim.dx.tol}}{Numeric. Tolerance used for checking if
       the elements of the (unscaled) gradient are all zero (in absolute 
       value). The default value is 0.001.}
+    \item{\code{optim.gn.tol.x}:}{Numeric. Only used when 
+      \code{optim.method = "GN"}. Optimization stops when
+      the root mean square of the difference between the old and new
+      parameter values are smaller than this tolerance value. Default is
+      \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
+    \item{\code{optim.gn.iter.max}:}{Integer. Only used when 
+      \code{optim.method = "GN"}. The maximum number of GN iterations. 
+      The default is 200.}
 }
 
 Categorical estimation options:

@@ -46,10 +46,12 @@ rows containing inequality constraints, if any.}
 \item{remove.def}{Logical. If TRUE, filter the ouitput by removing all
 rows containing parameter definitions, if any.}
 \item{GLIST}{List of model matrices. If provided, they will be used
-instead of the GLIST inside the object@Model slot.}
+instead of the GLIST inside the object@Model slot. Only works if the
+\code{est} argument is also provided. See Note.}
 \item{est}{Numeric. Parameter values (as in the `est' column of a
 parameter table). If provided, they will be used instead of 
-the parameters that can be extract from object.}
+the parameters that can be extract from object. Only works if the \code{GLIST} 
+argument is also provided. See Note.}
 \item{partable}{A custom \code{list} or \code{data.frame} in which to store
 the standardized parameter values. If provided, it will be used instead of 
 the parameter table inside the object@ParTable slot.}

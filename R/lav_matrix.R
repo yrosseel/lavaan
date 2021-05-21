@@ -546,7 +546,7 @@ lav_matrix_duplication_ginv <- .dup_ginv2
 # number of rows in A must be 'square' (n*n)
 lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
 
-    A <- as.matrix(A)
+    A <- as.matrix.default(A)
 
     # number of rows
     n2 <- NROW(A)
@@ -567,7 +567,7 @@ lav_matrix_duplication_ginv_pre <- function(A = matrix(0,0,0)) {
 # number of columns in A must be 'square' (n*n)
 lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
 
-    A <- as.matrix(A)
+    A <- as.matrix.default(A)
 
     # number of columns
     n2 <- NCOL(A)
@@ -587,7 +587,7 @@ lav_matrix_duplication_ginv_post <- function(A = matrix(0,0,0)) {
 # for square matrices only, with ncol = nrow = n^2
 lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0,0,0)) {
 
-    A <- as.matrix(A)
+    A <- as.matrix.default(A)
 
     # number of columns
     n2 <- NCOL(A)
@@ -1120,7 +1120,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
             }
         }
     } else if(Sinv.method == "solve") {
-        S.inv <- solve(S)
+        S.inv <- solve.default(S)
         if(logdet) {
             ev <- eigen(S, symmetric = TRUE, only.values = TRUE)
             if(all(ev$values >= 0)) {
@@ -1131,7 +1131,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
         }
     } else if(Sinv.method == "chol") {
         # this will break if S is not positive definite
-        cS <- chol(S)
+        cS <- chol.default(S)
         S.inv <- chol2inv(cS)
         if(logdet) {
             diag.cS <- diag(cS)
@@ -1176,7 +1176,7 @@ lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
         A <- A.inv[-rm.idx, rm.idx, drop = FALSE]
         B <- A.inv[ rm.idx,-rm.idx, drop = FALSE]
         H <- A.inv[ rm.idx, rm.idx, drop = FALSE]
-        out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% solve(H, B)
+        out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% solve.default(H, B)
 
     # erase all col/rows...
     } else if(ndel == NCOL(A.inv)) {
@@ -1218,10 +1218,15 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
     else if(ndel < NCOL(S.inv)) {
         A <- S.inv[ rm.idx, -rm.idx, drop = FALSE]
         H <- S.inv[ rm.idx,  rm.idx, drop = FALSE]
-        out <- S.inv[-rm.idx, -rm.idx, drop = FALSE] - crossprod(A, solve(H, A))
+        out <- ( S.inv[-rm.idx, -rm.idx, drop = FALSE] -
+                 crossprod(A, solve.default(H, A)) )
         if(logdet) {
-            cH <- chol(H); diag.cH <- diag(cH)
-            H.logdet <- sum(log(diag.cH * diag.cH))
+            if(is.complex(H)) {
+                 H.logdet <- sum(log(eigen(H, only.values = TRUE)$values))
+            } else {
+                cH <- chol.default(Re(H)); diag.cH <- diag(cH)
+                H.logdet <- sum(log(diag.cH * diag.cH))
+            }
             attr(out, "logdet") <- S.logdet + H.logdet
         }
 
@@ -1281,7 +1286,7 @@ lav_matrix_symmetric_det_update <- function(det.S, S.inv, rm.idx = integer(0L)){
     # rank-n update
     else if(ndel < NCOL(S.inv)) {
         H <- S.inv[ rm.idx, rm.idx, drop = FALSE]
-        cH <- chol(H); diag.cH <- diag(cH)
+        cH <- chol.default(H); diag.cH <- diag(cH)
         det.H <- prod(diag.cH * diag.cH)
         out <- det.S * det.H
 
@@ -1310,7 +1315,7 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
     # rank-n update
     else if(ndel < NCOL(S.inv)) {
         H <- S.inv[ rm.idx, rm.idx, drop = FALSE]
-        cH <- chol(H); diag.cH <- diag(cH)
+        cH <- chol.default(H); diag.cH <- diag(cH)
         H.logdet <- sum(log(diag.cH * diag.cH))
         out <- S.logdet + H.logdet
 
@@ -1371,13 +1376,13 @@ lav_matrix_transform_mean_cov <- function(Y,
                                           target.mean = numeric( NCOL(Y) ),
                                           target.cov = diag( NCOL(Y) )) {
     # coerce to matrix
-    Y <- as.matrix(Y)
+    Y <- as.matrix.default(Y)
 
     # convert to vector
     target.mean <- as.vector(target.mean)
 
     S <- lav_matrix_cov(Y)
-    S.inv <- solve(S)
+    S.inv <- solve.default(S)
     S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
     target.cov.sqrt <- lav_matrix_symmetric_sqrt(target.cov)
 
@@ -1400,7 +1405,7 @@ lav_matrix_transform_mean_cov <- function(Y,
 #
 lav_matrix_mean_wt <- function(Y, wt = NULL) {
 
-    Y <- unname(as.matrix(Y))
+    Y <- unname(as.matrix.default(Y))
     DIM <- dim(Y)
 
     if(is.null(wt)) {
@@ -1433,7 +1438,7 @@ lav_matrix_mean_wt <- function(Y, wt = NULL) {
 #
 lav_matrix_var_wt <- function(Y, wt = NULL, method = c("unbiased", "ML")) {
 
-    Y <- unname(as.matrix(Y))
+    Y <- unname(as.matrix.default(Y))
     DIM <- dim(Y)
 
     if(is.null(wt)) {
@@ -1470,7 +1475,7 @@ lav_matrix_var_wt <- function(Y, wt = NULL, method = c("unbiased", "ML")) {
 #
 lav_matrix_cov_wt <- function(Y, wt = NULL) {
 
-    Y <- unname(as.matrix(Y))
+    Y <- unname(as.matrix.default(Y))
     DIM <- dim(Y)
 
     if(is.null(wt)) {

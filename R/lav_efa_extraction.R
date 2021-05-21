@@ -23,6 +23,9 @@ lav_efa_extraction <- function(S, nfactors = 1L,
     # extract variances
     S.var <- diag(S)
 
+    # force S to be pd (eg if we have polychoric correlations)
+    S <- lav_matrix_symmetric_force_pd(S, tol = 1e-08)
+
     # convert to correlation matrix (ULS is not scale invariant!)
     R <- cov2cor(S)
 

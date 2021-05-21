@@ -163,6 +163,9 @@ standardizedSolution <-
     if(!is.null(PARTABLE$block)) {
         LIST$block <- PARTABLE$block
     }
+    if(sum(nchar(PARTABLE$label)) != 0L) {
+      LIST$label <- PARTABLE$label
+    }
 
     # add std and std.all columns
     if(type == "std.lv") {
@@ -703,7 +706,9 @@ parameterestimates <- function(object,
     }
 
     # if no user-defined labels, remove label column
-    if(sum(nchar(object@ParTable$label)) == 0L) LIST$label <- NULL
+    if(sum(nchar(object@ParTable$label)) == 0L) {
+        LIST$label <- NULL
+    }
 
     # remove non-free parameters? (but keep ==, >, < and :=)
     if(remove.nonfree) {

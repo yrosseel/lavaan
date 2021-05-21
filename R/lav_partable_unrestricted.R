@@ -232,8 +232,13 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                     ov.names.nox <- ov.names
                 }
 
-                sample.cov  <- lavh1$implied$cov[[b]]
-                sample.mean <- lavh1$implied$mean[[b]]
+                if(length(lavh1) > 0L) {
+                    sample.cov  <- lavh1$implied$cov[[b]]
+                    sample.mean <- lavh1$implied$mean[[b]]
+                } else {
+                    sample.cov <- diag(length(ov.names))
+                    sample.mean <- numeric(length(ov.names))
+                }
 
                 #if(l == 1L) {
                 #    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,

@@ -38,11 +38,29 @@ lav_object_print_optim <- function(object, nd = 3L) {
     #cat("Optimization information:\n\n")
 
     # first column
-    c1 <- c("Estimator", "Optimization method", "Number of free parameters")
+    c1 <- c("Estimator")
 
     # second column
-    c2 <- c(toupper(object@Options$estimator),
-            toupper(object@Options$optim.method), object@optim$npar)
+    tmp.est <- toupper(object@Options$estimator)
+    if(tmp.est == "DLS") {
+        dls.first.letter <- substr(object@Options$estimator.args$dls.GammaNT,
+                                   1L, 1L)
+        tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
+    }
+    c2 <- tmp.est
+
+    # additional estimator args
+    if(!is.null(object@Options$estimator.args) &&
+       length(object@Options$estimator.args) > 0L) {
+        if(object@Options$estimator == "DLS") {
+            c1 <- c(c1, "Estimator DLS value for a")
+            c2 <- c(c2, object@Options$estimator.args$dls.a)
+        }
+    }
+
+    # optimization method + npar
+    c1 <- c(c1, "Optimization method", "Number of model parameters")
+    c2 <- c(c2, toupper(object@Options$optim.method), object@optim$npar)
 
     # optional output
     if(object@Model@eq.constraints) {

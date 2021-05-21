@@ -58,6 +58,7 @@ lav_partable_level_values <- function(partable) {
     if(any(partable$op == ":")) {
         colon.idx <- which(partable$op == ":" &
                            tolower(partable$lhs) == "level")
+        level.values <- integer(0L)
         if(length(colon.idx) > 0L) {
             level.values <- unique(partable$rhs[colon.idx])
         }
@@ -295,40 +296,40 @@ lav_partable_covariance_reorder <- function(partable,
 }
 
 # add a single parameter to an existing parameter table
-lav_partable_add <- function(PT, add = list()) {
+lav_partable_add <- function(partable = NULL, add = list()) {
 
-    # treat PT as list, not as a data.frame
-    PT <- as.list(PT)
+    # treat partable as list, not as a data.frame
+    partable <- as.list(partable)
 
     # number of elements
-    nel <- length(PT$lhs)
+    nel <- length(partable$lhs)
 
     # add copy of last row
-    for(c in seq_len(length(PT))) {
-        if(is.integer(PT[[c]][[1]])) {
-            if(PT[[c]][nel] == 0L) {
-                PT[[c]][nel + 1] <- 0L
-            } else if(PT[[c]][nel] == 1L) {
-                PT[[c]][nel + 1] <- 1L
+    for(c in seq_len(length(partable))) {
+        if(is.integer(partable[[c]][[1]])) {
+            if(partable[[c]][nel] == 0L) {
+                partable[[c]][nel + 1] <- 0L
+            } else if(partable[[c]][nel] == 1L) {
+                partable[[c]][nel + 1] <- 1L
             } else {
-                PT[[c]][nel + 1] <- PT[[c]][nel] + 1L
+                partable[[c]][nel + 1] <- partable[[c]][nel] + 1L
             }
-        } else if(is.character(PT[[c]][[1]])) {
-            PT[[c]][nel + 1] <- ""
-        } else if(is.numeric(PT[[c]][[1]])) {
-            PT[[c]][nel + 1] <- 0
+        } else if(is.character(partable[[c]][[1]])) {
+            partable[[c]][nel + 1] <- ""
+        } else if(is.numeric(partable[[c]][[1]])) {
+            partable[[c]][nel + 1] <- 0
         } else {
-            PT[[c]][nel + 1] <- PT[[c]][nel]
+            partable[[c]][nel + 1] <- partable[[c]][nel]
         }
 
         # replace
-        if(names(PT)[c] %in% names(add)) {
-            PT[[c]][nel + 1] <- add[[ names(PT)[c] ]]
+        if(names(partable)[c] %in% names(add)) {
+            partable[[c]][nel + 1] <- add[[ names(partable)[c] ]]
         }
 
     }
 
-    PT
+    partable
 }
 
 

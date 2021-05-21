@@ -30,6 +30,11 @@ lav_h1_logl <- function(lavdata        = NULL,
         }
     }
 
+    # new in 0.6-9 (so SAM can handle N<P)
+    if(!is.null(lavoptions$sample.icov) && !lavoptions$sample.icov) {
+        logl.ok <- FALSE
+    }
+
     if(logl.ok) {
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {

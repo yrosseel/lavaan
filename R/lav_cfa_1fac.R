@@ -61,8 +61,12 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 
     s21 <- sample.cov[2,1]; s31 <- sample.cov[3,1]; s32 <- sample.cov[3,2]
     # note: s21*s31*s32 should be positive!
-    if(s21 * s31 * s32 < 0 && warn.neg.triad) {
+    neg.triad <- FALSE
+    if(s21 * s31 * s32 < 0) {
+        neg.triad <- TRUE
+        if(warn.neg.triad) {
         warning("lavaan WARNING: product of the three covariances is negative!")
+        }
     }
 
     # first, we assume l1 = 1
@@ -93,7 +97,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
         psi <- psi / 2 # smaller works better?
     }
 
-    list(lambda = lambda, theta = theta, psi = psi)
+    list(lambda = lambda, theta = theta, psi = psi, neg.triad = neg.triad)
 }
 
 # FABIN (Hagglund, 1982)

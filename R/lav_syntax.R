@@ -296,7 +296,7 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
         RHS <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
         RHS.names <- gsub("^\\S*\\*", "", RHS)
         BAD <- c("if", "else", "repeat", "while", "function", "for", "in")
-        if(any(RHS.names %in% BAD)) {
+        if(any(RHS.names %in% c(BAD, "NA"))) { # "NA" added in 0.6-8
             stop("lavaan ERROR: right hand side (rhs) of this formula:\n    ",
                  lhs, " ", op, " ", rhs,
                  "\n    contains either a reserved word (in R) or an illegal character: ",

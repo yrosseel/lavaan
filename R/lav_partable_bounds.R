@@ -52,12 +52,20 @@ lav_partable_add_bounds <- function(partable       = NULL,
             }
         }
 
+        if(is.null(optim.bounds$min.var.ov)) {
+            optim.bounds$min.var.ov <- -Inf
+        }
+
         if(is.null(optim.bounds$min.var.lv.exo)) {
             optim.bounds$min.var.lv.exo <- 0.0
         }
 
         if(is.null(optim.bounds$min.var.lv.endo)) {
             optim.bounds$min.var.lv.endo <- 0.0
+        }
+
+        if(is.null(optim.bounds$max.r2.lv.endo)) {
+            optim.bounds$max.r2.lv.endo <- 1.0
         }
 
         if(is.null(optim.bounds$lower.factor)) {
@@ -180,15 +188,26 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
         if(length(par.idx) > 0L) {
             # lower == 0
-            lower.auto[par.idx ] <- 0
+            lower.auto[par.idx] <- 0
 
             # upper == var(ov)
             var.idx <- match(partable$lhs[par.idx], ov.names)
             upper.auto[par.idx] <- OV.VAR[var.idx]
 
+            # if reliability > 0, adapt marker indicators only
+            if(REL > 0) {
+                marker.idx <- which(partable$group == group.values[g] &
+                         partable$op == "~~" &
+                         partable$lhs %in% lv.marker &
+                         partable$lhs == partable$rhs)
+                marker.var.idx <- match(partable$lhs[marker.idx], ov.names)
+
+                # upper = (1-REL)*OVAR
+                upper.auto[marker.idx] <- (1 - REL) * OV.VAR[marker.var.idx]
+            }
+
             # range
-            #bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            bound.range <- upper.auto[par.idx] # always assume 0 as lower bound
+            bound.range <- upper.auto[par.idx] - pmax(lower.auto[par.idx], 0)
 
             # enlarge lower?
             if("ov.var" %in% optim.bounds$lower) {
@@ -208,6 +227,12 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     diff <- abs(new.range - bound.range)
                     upper.auto[par.idx] <- upper.auto[par.idx] + diff
                 }
+            }
+
+            # min.var.ov?
+            min.idx <- which(lower.auto[par.idx] < optim.bounds$min.var.ov)
+            if(length(min.idx) > 0L) {
+                lower.auto[par.idx[min.idx]] <- optim.bounds$min.var.ov
             }
 
             # requested?
@@ -241,6 +266,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     marker.var <- OV.VAR[ match(this.lv.marker, ov.names) ]
                     LOWER <- marker.var - (1 - REL)*marker.var
                     LV.VAR.LB[i] <- max(LOWER, optim.bounds$min.var.lv.exo)
+                    #LV.VAR.UB[i] <- marker.var - REL*marker.var
                     LV.VAR.UB[i] <- marker.var
                 } else {
                     LV.VAR.LB[i] <- optim.bounds$min.var.lv.exo
@@ -262,6 +288,13 @@ lav_partable_add_bounds <- function(partable       = NULL,
             endo.idx <- which(lv.names %in% lv.names.endo)
             if(length(endo.idx) > 0L) {
                 LV.VAR.LB2[endo.idx] <- optim.bounds$min.var.lv.endo
+                if(optim.bounds$max.r2.lv.endo != 1) {
+                    LV.VAR.LB2[endo.idx] <- (1 - optim.bounds$max.r2.lv.endo) * LV.VAR.UB[endo.idx]
+                }
+            }
+            exo.idx <- which(!lv.names %in% lv.names.endo)
+            if(length(exo.idx) > 0L && optim.bounds$min.var.lv.exo != 0) {
+                LV.VAR.LB2[exo.idx] <- optim.bounds$min.var.lv.exo
             }
 
             lower.auto[par.idx] <- LV.VAR.LB2[ match(partable$lhs[par.idx],
@@ -270,8 +303,7 @@ lav_partable_add_bounds <- function(partable       = NULL,
                                                      lv.names) ]
 
             # range
-            #bound.range <- upper.auto[par.idx] - lower.auto[par.idx]
-            bound.range <- upper.auto[par.idx] # always assume 0 as lower bound
+            bound.range <- upper.auto[par.idx] - pmax(lower.auto[par.idx], 0)
 
             # enlarge lower?
             if("lv.var" %in% optim.bounds$lower) {
@@ -388,6 +420,10 @@ lav_partable_add_bounds <- function(partable       = NULL,
                 # this lhs/rhs
                 this.lhs <- partable$lhs[ par.idx[i] ]
                 this.rhs <- partable$rhs[ par.idx[i] ]
+
+                # 2 possibilities:
+                # - variances are free parameters
+                # - variances are fixed (eg std.lv = TRUE)
 
                 # var idx
                 lhs.var.idx <- which(partable$group == group.values[g] &

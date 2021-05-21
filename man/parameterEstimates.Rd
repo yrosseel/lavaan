@@ -36,7 +36,8 @@ normal distribution.}
   the \code{boot.ci} function in the boot package. The
   \code{"bca.simple"} option produces intervals using the adjusted bootstrap
   percentile (BCa) method, but with no correction for acceleration (only for
-  bias).}
+  bias). Note that the p-value is still computed assuming that the z-statistic
+  follows a standard normal distribution.}
 \item{standardized}{Logical. If \code{TRUE}, standardized estimates are
 added to the output. Note that \emph{SE}s and tests are still based on
 unstandardized estimates. Use \code{\link{standardizedSolution}} to obtain

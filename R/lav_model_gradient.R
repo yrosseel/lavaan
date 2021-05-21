@@ -23,6 +23,11 @@ lav_model_gradient <- function(lavmodel       = NULL,
     num.idx        <- lavmodel@num.idx
     th.idx         <- lavmodel@th.idx
     nx.free        <- lavmodel@nx.free
+    if(.hasSlot(lavmodel, "estimator.args")) {
+        estimator.args <- lavmodel@estimator.args
+    } else {
+        estimator.args <- list()
+    }
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -34,6 +39,12 @@ lav_model_gradient <- function(lavmodel       = NULL,
     if(group.weight) {
         if(estimator %in% c("ML","PML","FML","MML","REML","NTRLS")) {
             group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
+        } else if(estimator == "DLS") {
+            if(estimator.args$dls.FtimesNminus1) {
+                group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
+            } else {
+                group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
+            }
         } else {
             # FIXME: double check!
             group.w <- ((unlist(lavsamplestats@nobs)-1)/lavsamplestats@ntotal)
@@ -43,7 +54,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     }
 
     # do we need WLS.est?
-    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS")) {
+    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTRLS", "DLS")) {
 
         # always compute WLS.est
         WLS.est <- lav_model_wls_est(lavmodel = lavmodel, GLIST = GLIST) #,
@@ -61,7 +72,6 @@ lav_model_gradient <- function(lavmodel       = NULL,
                              extra = (estimator %in% c("ML", "REML", "NTRLS")))
         #}
 
-        # ridge here?
         if(meanstructure) {
             #if(conditional.x) {
             #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
@@ -83,6 +93,10 @@ lav_model_gradient <- function(lavmodel       = NULL,
         if(group.w.free) {
             GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
         }
+    } else if(estimator == "DLS" && estimator.args$dls.GammaNT == "model") {
+        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                                         extra = FALSE)
+        Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
     } else if(estimator == "MML") {
         TH    <- computeTH(   lavmodel = lavmodel, GLIST = GLIST)
         THETA <- computeTHETA(lavmodel = lavmodel, GLIST = GLIST)
@@ -176,7 +190,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     } else # ML
 
     # 2. using Delta - *LS family
-    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS")) {
+    if(estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS", "DLS")) {
 
         if(type != "free") {
             if(is.null(Delta))
@@ -192,6 +206,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
             # 0.5-17: use crossprod twice; treat DWLS/ULS special
             if(estimator == "WLS" ||
                estimator == "GLS" ||
+               estimator == "DLS" ||
                estimator == "NTRLS") {
                 # full weight matrix
                 diff <- lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]]
@@ -199,6 +214,25 @@ lav_model_gradient <- function(lavmodel       = NULL,
                 # full weight matrix
                 if(estimator == "GLS" || estimator == "WLS") {
                     WLS.V <- lavsamplestats@WLS.V[[g]]
+                    group.dx <- -1 * crossprod(Delta[[g]],
+                                               crossprod(WLS.V, diff))
+                } else if(estimator == "DLS") {
+                    if(estimator.args$dls.GammaNT == "sample") {
+                        WLS.V <- lavsamplestats@WLS.V[[g]] # for now
+                    } else {
+                        dls.a <- estimator.args$dls.a
+                        GammaNT <- lav_samplestats_Gamma_NT(
+                            COV            = Sigma.hat[[g]],
+                            MEAN           = Mu.hat[[g]],
+                            rescale        = FALSE,
+                            x.idx          = lavsamplestats@x.idx[[g]],
+                            fixed.x        = lavmodel@fixed.x,
+                            conditional.x  = lavmodel@conditional.x,
+                            meanstructure  = lavmodel@meanstructure,
+                            slopestructure = lavmodel@conditional.x)
+                        W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                        WLS.V <- lav_matrix_symmetric_inverse(W.DLS)
+                    }
                     group.dx <- -1 * crossprod(Delta[[g]],
                                                crossprod(WLS.V, diff))
                 } else if(estimator == "NTRLS") {

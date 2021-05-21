@@ -103,9 +103,33 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         structured <- TRUE
     }
 
+
     # 1. WLS.V (=A1) for GLS/WLS
     if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
         A1 <- lavsamplestats@WLS.V
+    }
+
+    # 1b.
+    else if(lavmodel@estimator == "DLS") {
+        if(lavmodel@estimator.args$dls.GammaNT == "sample") {
+            A1 <- lavsamplestats@WLS.V
+        } else {
+            A1 <- vector("list", length = lavsamplestats@ngroups)
+            for(g in seq_len(lavsamplestats@ngroups)) {
+                dls.a <- lavmodel@estimator.args$dls.a
+                GammaNT <- lav_samplestats_Gamma_NT(
+                               COV            = lavimplied$cov[[g]],
+                               MEAN           = lavimplied$mean[[g]],
+                               rescale        = FALSE,
+                               x.idx          = lavsamplestats@x.idx[[g]],
+                               fixed.x        = lavmodel@fixed.x,
+                               conditional.x  = lavmodel@conditional.x,
+                               meanstructure  = lavmodel@meanstructure,
+                               slopestructure = lavmodel@conditional.x)
+                W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                A1[[g]] <- lav_matrix_symmetric_inverse(W.DLS)
+            }
+        }
     }
 
     # 2. DWLS/ULS diagonal @WLS.VD slot
@@ -115,7 +139,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
     }
 
     # 3a. ML single level
-    else if( (lavmodel@estimator == "ML" || lavmodel@estimator == "NTRLS")
+    else if( lavmodel@estimator %in% c("ML", "NTRLS", "DLS")
              && lavdata@nlevels == 1L ) {
         A1 <- vector("list", length=lavsamplestats@ngroups)
 
@@ -266,6 +290,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         } # g
     } # ML + multilevel
 
+
     A1
 }
 
@@ -306,8 +331,32 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
     }
 
     # 1. WLS.V (=A1) for GLS/WLS
-    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS") {
+    if(lavmodel@estimator == "GLS"  || lavmodel@estimator == "WLS" ||
+       lavmodel@estimator == "DLS") {
         A1 <- lavsamplestats@WLS.V
+    }
+
+    # 1b.
+    else if(lavmodel@estimator == "DLS") {
+        if(lavmodel@estimator.args$dls.GammaNT == "sample") {
+            A1 <- lavsamplestats@WLS.V
+        } else {
+            A1 <- vector("list", length = lavsamplestats@ngroups)
+            for(g in seq_len(lavsamplestats@ngroups)) {
+                dls.a <- lavmodel@estimator.args$dls.a
+                GammaNT <- lav_samplestats_Gamma_NT(
+                               COV            = lavimplied$cov[[g]],
+                               MEAN           = lavimplied$mean[[g]],
+                               rescale        = FALSE,
+                               x.idx          = lavsamplestats@x.idx[[g]],
+                               fixed.x        = lavmodel@fixed.x,
+                               conditional.x  = lavmodel@conditional.x,
+                               meanstructure  = lavmodel@meanstructure,
+                               slopestructure = lavmodel@conditional.x)
+                W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                A1[[g]] <- lav_matrix_symmetric_inverse(W.DLS)
+            }
+        }
     }
 
     # 2. DWLS/ULS diagonal @WLS.VD slot

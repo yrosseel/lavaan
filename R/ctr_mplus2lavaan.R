@@ -67,8 +67,8 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
       v_pre <- argsplit[1]
       v_post <- argsplit[2]
 
-      v_post.suffix <- sub("^([^@]+)(@[\\d-.]+)?$", "\\2", v_post, perl=TRUE) #will be empty string if not present
-      v_post <- sub("@[\\d-.]+$", "", v_post, perl=TRUE) #trim @ suffix
+      v_post.suffix <- sub("^([^@]+)(@[\\d\\-.]+)?$", "\\2", v_post, perl=TRUE) #will be empty string if not present
+      v_post <- sub("@[\\d\\-.]+$", "", v_post, perl=TRUE) #trim @ suffix
 
       #If v_pre and v_post contain leading alpha characters, verify that these prefixes match.
       #Otherwise, there is nothing to expand, as in the case of MODEL CONSTRAINT: e1e2=e1-e2_n.
@@ -189,7 +189,7 @@ parseConstraints <- function(cmd) {
 
   #Create a version of the command with no modifiers (constraints, starting values, etc.) specifications.
   #This is useful for syntax that uses the params on the LHS and with a modified RHS. Example: v1 ~~ conB*v1
-  cmd.nomodifiers <- paste0(gsub("(start\\([^\\)]+\\)\\*|[\\d-\\.]+\\*)", "", cmd.split, perl=TRUE), collapse=" ") #peel off premultiplication
+  cmd.nomodifiers <- paste0(gsub("(start\\([^\\)]+\\)\\*|[\\d\\-\\.]+\\*)", "", cmd.split, perl=TRUE), collapse=" ") #peel off premultiplication
   cmd.nomodifiers <- gsub("\\([^\\)]+\\)", "", cmd.nomodifiers, perl=TRUE)
 
   cmd.tojoin <- c() #will store all chunks divided by newlines, which will be joined at the end.

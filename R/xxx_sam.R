@@ -85,6 +85,7 @@ sam <- function(model          = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
+    dotdotdot0$sample.icov <- FALSE # if N < nvar
     dotdotdot0$se     <- "none"
     dotdotdot0$test   <- "none"
 
@@ -215,6 +216,7 @@ sam <- function(model          = NULL,
     dotdotdot.mm$debug <- FALSE
     dotdotdot.mm$verbose <- FALSE
     dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
+    dotdotdot.mm$check.gradient <- FALSE # too sensitive in large model (global)
 
     # override with mm.args
     dotdotdot.mm <- modifyList(dotdotdot.mm, mm.args)
@@ -250,6 +252,11 @@ sam <- function(model          = NULL,
 
 
     for(mm in seq_len(nMMblocks)) {
+
+        if(lavoptions$verbose) {
+            cat("Estimating measurement block ", mm, "[",
+                paste(mm.list[[mm]], collapse = " "), "]\n")
+        }
 
         if(sam.method == "local") {
             # LV.idx.list/OV.idx.list: list per block
@@ -400,7 +407,7 @@ sam <- function(model          = NULL,
 
     if(sam.method == "local") {
         # assemble global LAMBDA/THETA (per block)
-        LAMBDA <- computeLAMBDA(FIT@Model)
+        LAMBDA <- computeLAMBDA(FIT@Model, handle.dummy.lv = FALSE)
         THETA  <- computeTHETA(FIT@Model, fix = FALSE) # keep dummy lv
         if(lavoptions$meanstructure) {
             NU <- computeNU(FIT@Model, lavsamplestats = FIT@SampleStats)

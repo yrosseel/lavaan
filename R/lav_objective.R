@@ -733,6 +733,7 @@ estimator.MML <- function(lavmodel      = NULL,
 estimator.2L <- function(lavmodel       = NULL,
                          GLIST          = NULL,
                          Lp             = NULL,
+                         Mp             = NULL,
                          lavsamplestats = NULL,
                          group          = 1L) {
 
@@ -740,9 +741,6 @@ estimator.2L <- function(lavmodel       = NULL,
     if(lavmodel@conditional.x) {
         return(-1000)
     }
-
-
-    YLp <- lavsamplestats@YLp[[group]]
 
     # compute model-implied statistics for all blocks
     implied <- lav_model_implied(lavmodel, GLIST = GLIST)
@@ -753,16 +751,42 @@ estimator.2L <- function(lavmodel       = NULL,
     Sigma.B <- implied$cov[[  (group-1)*2 + 2]]
     Mu.B    <- implied$mean[[ (group-1)*2 + 2]]
 
-    loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
+    if(lavsamplestats@missing.flag) {
+
+        #SIGMA.B <- Sigma.B[Lp$both.idx[[2]], Lp$both.idx[[2]], drop = FALSE]
+        #if(any(diag(SIGMA.B) < 0)) {
+        #    return(+Inf)
+        #}
+        #COR.B <- cov2cor(SIGMA.B)
+        #if(any(abs(lav_matrix_vech(COR.B, diagonal = FALSE)) > 1)) {
+        #   return(+Inf)
+        #}
+
+        Y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
+        Yp <- lavsamplestats@missing[[group]]
+        loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(Yp = Yp,
+                  Y2 = Y2, Lp = Lp, Mp = Mp,
                   Mu.W = Mu.W, Sigma.W = Sigma.W,
                   Mu.B = Mu.B, Sigma.B = Sigma.B,
                   log2pi = FALSE, minus.two = TRUE)
+    } else {
+        YLp <- lavsamplestats@YLp[[group]]
+        loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
+                  Mu.W = Mu.W, Sigma.W = Sigma.W,
+                  Mu.B = Mu.B, Sigma.B = Sigma.B,
+                  log2pi = FALSE, minus.two = TRUE)
+    }
 
     # minimize
     objective <- 1 * loglik
 
     # divide by (N*2)
     objective <- objective / (lavsamplestats@ntotal * 2)
+
+    # should be strictly positive
+    #if(objective < 0) {
+    #   objective <- +Inf
+    #}
 
     objective
 }

@@ -911,6 +911,23 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                 FSC <- ( MASS::ginv(t(lambda) %*% Sigma_22.inv %*% lambda)
                            %*% t(lambda) %*% Sigma_22.inv )
 
+                # if FSC contains rows that are all-zero, replace by NA
+                #
+                # this happens eg if all the indicators of a single factor
+                # are missing; then this column in lambda only contains zeroes
+                # and therefore the corresponding row in FSC contains only
+                # zeroes, leading to factor score 0
+                #
+                # showing 'NA' is better than getting 0
+                #
+                # (Note that this is not needed for the 'regression' method,
+                #  only for Bartlett)
+                #
+                zero.idx <- which(apply(FSC, 1L, function(x) all(x == 0)))
+                if(length(zero.idx) > 0L) {
+                    FSC[zero.idx, ] <- NA
+                }
+
                 # FSM?
                 #if(fsm) {
                 #    tmp <- matrix(as.numeric(NA), nrow = ncol(lambda),

@@ -2,6 +2,7 @@
 # and also the logl (if available)
 lav_h1_implied_logl <- function(lavdata        = NULL,
                                 lavsamplestats = NULL,
+                                lavpta         = NULL, # multilevel + missing
                                 lavoptions     = NULL) {
 
     if(lavdata@nlevels == 1L) {
@@ -40,14 +41,80 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
 
         for(g in 1:lavdata@ngroups) {
             if(lavoptions$verbose) {
-                cat("\nFitting unrestricted (H1) model in group ", g, "\n")
+                cat("\n\nfitting unrestricted (H1) model in group ", g, "\n")
             }
-            OUT <- lav_mvnorm_cluster_em_sat(YLp      = lavsamplestats@YLp[[g]],
-                                             Lp       = lavdata@Lp[[g]],
-                                             verbose  = lavoptions$verbose,
-                                             tol      = 1e-04,     # option?
-                                             min.variance = 1e-05, # option?
-                                             max.iter = 5000L)     # option?
+            if(lavsamplestats@missing.flag) {
+                # missing data
+
+                # 1. first a few EM iteration faking complete data
+                Y1 <- lavdata@X[[g]]
+                cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+                Y2.complete <- unname(as.matrix(aggregate(Y1,
+                                by = list(cluster.idx),
+                                FUN = function(x) {
+                                    if( all(is.na(x)) ) { # all elements are NA
+                                        as.numeric(0)     # in this cluster
+                                    } else {
+                                        mean(x, na.rm = TRUE)
+                                    }
+                                })[,-1]))
+                YLp = lavsamplestats@YLp[[g]]
+                YLp[[2]]$Y2 <- Y2.complete
+                OUT <- lav_mvnorm_cluster_em_sat(
+                    YLp      = YLp,
+                    Lp       = lavdata@Lp[[g]],
+                    verbose  = TRUE, # for now
+                    tol      = 1e-04,
+                    min.variance = 1e-05,
+                    max.iter = 5L)
+                # create tmp lav1, only for this group
+                implied$cov[[ (g-1)*nlevels + 1L]] <- OUT$Sigma.W
+                implied$cov[[ (g-1)*nlevels + 2L]] <- OUT$Sigma.B
+                implied$mean[[(g-1)*nlevels + 1L]] <- OUT$Mu.W
+                implied$mean[[(g-1)*nlevels + 2L]] <- OUT$Mu.B
+                loglik.group[g] <- OUT$logl
+                lavh1 <- list(implied = implied, logl = sum(loglik.group))
+                lavpartable <- lav_partable_unrestricted(lavdata = lavdata,
+                     lavsamplestats = lavsamplestats, lavoptions = lavoptions,
+                     lavpta = lavpta, lavh1 = lavh1)
+                lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
+                var.idx <- which(lavpartable$free > 0L &
+                                 lavpartable$op == "~~" &
+                                 lavpartable$lhs == lavpartable$rhs)
+                lavpartable$lower[var.idx] <- 1e-05
+                lavoptions2 <- lavoptions
+                lavoptions2$se <- "none"
+                lavoptions2$test <- "none"
+                #lavoptions2$verbose <- FALSE
+                lavoptions2$h1 <- FALSE
+                lavoptions2$baseline <- FALSE
+                lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
+                lavoptions2$model.type <- "unrestricted"
+                lavoptions2$optim.attempts <- 4L
+                lavoptions2$warn <- FALSE
+                lavoptions2$optim.force.convergence <- TRUE # for now...
+                FIT <- lavaan(lavpartable, slotOptions = lavoptions2,
+                          slotSampleStats = lavsamplestats,
+                          slotData = lavdata, sloth1 = lavh1)
+                OUT$Sigma.W <- FIT@implied$cov[[1]]
+                OUT$Sigma.B <- FIT@implied$cov[[2]]
+                OUT$Mu.W    <- FIT@implied$mean[[1]]
+                OUT$Mu.B    <- FIT@implied$mean[[2]]
+                OUT$logl    <- FIT@loglik$loglik
+                #if(lavoptions$fixed.x) {
+                #   OUT$logl <- OUT$logl - lavsamplestats@YLp[[g]][[2]]$loglik.x
+                #}
+
+            } else {
+                # complete data
+                OUT <- lav_mvnorm_cluster_em_sat(
+                    YLp      = lavsamplestats@YLp[[g]],
+                    Lp       = lavdata@Lp[[g]],
+                    verbose  = lavoptions$verbose,
+                    tol      = 1e-04,     # option?
+                    min.variance = 1e-05, # option?
+                    max.iter = 5000L)     # option?
+            }
             if(lavoptions$verbose) {
                 cat("\n")
             }

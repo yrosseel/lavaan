@@ -79,7 +79,7 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
         P <- nrow(res)
         NAMES <- colnames(res)
 
-        nam <- expand.grid(NAMES, 
+        nam <- expand.grid(NAMES,
                            NAMES)[lav_matrix_vech_idx(P, diagonal = FALSE),]
         NAMES.vech <- paste(nam[,1], "~~", nam[,2], sep = "")
 
@@ -88,7 +88,7 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
                           stringsAsFactors = FALSE)
 
         # sort table
-        idx <- sort.int(abs(TAB$res), decreasing = TRUE, 
+        idx <- sort.int(abs(TAB$res), decreasing = TRUE,
                         index.return = TRUE)$ix
         out.sorted <- TAB[idx,]
 

@@ -136,10 +136,11 @@ lav_model_test <- function(lavmodel       = NULL,
         NFAC <- 2 * unlist(lavsamplestats@nobs)
         if(lavoptions$estimator == "ML" && lavoptions$likelihood == "wishart") {
             # first divide by two
-            NFAC <- NFAC / 2
-            NFAC <- NFAC - 1
-            NFAC <- NFAC * 2
+            NFAC <- NFAC / 2; NFAC <- NFAC - 1; NFAC <- NFAC * 2
+        } else if(lavoptions$estimator == "DLS") {
+            NFAC <- NFAC / 2; NFAC <- NFAC - 1; NFAC <- NFAC * 2
         }
+
         chisq.group <- fx.group * NFAC
     }
 
@@ -280,17 +281,17 @@ lav_model_test <- function(lavmodel       = NULL,
                 }
                 boot.type <- "bollen.stine"
                 BOOT.TEST <-
-                    bootstrap.internal(object          = NULL,
-                                       lavmodel.       = lavmodel,
-                                       lavsamplestats. = lavsamplestats,
-                                       lavpartable.    = lavpartable,
-                                       lavoptions.     = lavoptions,
-                                       lavdata.        = lavdata,
-                                       R               = R,
-                                       verbose         = lavoptions$verbose,
-                                       type            = boot.type,
-                                       FUN             = "test",
-                                       warn            = -1L)
+                    lav_bootstrap_internal(object          = NULL,
+                                           lavmodel.       = lavmodel,
+                                           lavsamplestats. = lavsamplestats,
+                                           lavpartable.    = lavpartable,
+                                           lavoptions.     = lavoptions,
+                                           lavdata.        = lavdata,
+                                           R               = R,
+                                           verbose         = lavoptions$verbose,
+                                           type            = boot.type,
+                                           FUN             = "test",
+                                           warn            = -1L)
                 BOOT.TEST <- drop(BOOT.TEST)
             }
 

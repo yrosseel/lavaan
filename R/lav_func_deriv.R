@@ -9,24 +9,27 @@
 
 lav_func_gradient_complex <- function(func, x,
                                       h = .Machine$double.eps, ... ,
-                                      check.scalar = TRUE,
                                       fallback.simple = TRUE) {
 
-    # check current point, see if it is a scalar function
-    if(check.scalar) {
-        f0 <- try(func(x*(0+1i), ...), silent = TRUE)
-        if(inherits(f0, "try-error")) {
-            if(fallback.simple) {
-                dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h),
-                                               check.scalar = check.scalar, ...)
-                return(dx)
-            } else {
-                stop("function does not support non-numeric (complex) argument")
-            }
+    f0 <- try(func(x*(0+1i), ...), silent = TRUE)
+    if(!is.complex(f0)) {
+        if(fallback.simple) {
+            dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+            return(dx)
+        } else {
+            stop("function does not return a complex value") # eg abs()
         }
-        if(length(f0) != 1L) {
-            stop("function is not scalar and returns more than one element")
+    }
+    if(inherits(f0, "try-error")) {
+        if(fallback.simple) {
+            dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+            return(dx)
+        } else {
+            stop("function does not support non-numeric (complex) argument")
         }
+    }
+    if(length(f0) != 1L) {
+        stop("function is not scalar and returns more than one element")
     }
 
     nvar <- length(x)
@@ -49,15 +52,12 @@ lav_func_gradient_complex <- function(func, x,
 
 # as a backup, if func() is not happy about non-numeric arguments
 lav_func_gradient_simple <- function(func, x,
-                                     h = sqrt(.Machine$double.eps), ... ,
-                                     check.scalar = TRUE) {
+                                     h = sqrt(.Machine$double.eps), ...) {
 
     # check current point, see if it is a scalar function
-    if(check.scalar) {
-        f0 <- func(x, ...)
-        if(length(f0) != 1L) {
-            stop("function is not scalar and returns more than one element")
-        }
+    f0 <- func(x, ...)
+    if(length(f0) != 1L) {
+        stop("function is not scalar and returns more than one element")
     }
 
     nvar <- length(x)
@@ -83,6 +83,14 @@ lav_func_jacobian_complex <- function(func, x,
                                       fallback.simple = TRUE) {
 
     f0 <- try(func(x*(0+1i), ...), silent = TRUE)
+    if(!is.complex(f0)) {
+        if(fallback.simple) {
+            dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
+            return(dx)
+        } else {
+            stop("function does not return a complex value") # eg abs()
+        }
+    }
     if(inherits(f0, "try-error")) {
         if(fallback.simple) {
             dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
@@ -135,18 +143,17 @@ lav_func_jacobian_simple <- function(func, x,
 
 # this is based on the Ridout (2009) paper, and the code snippet for 'h4'
 lav_func_hessian_complex <- function(func, x,
-                                     h = .Machine$double.eps, ... ,
-                                     check.scalar = TRUE) {
+                                     h = .Machine$double.eps, ...) {
 
-    # check current point, see if it is a scalar function
-    if(check.scalar) {
-        f0 <- try(func(x*(0+1i), ...), silent = TRUE)
-        if(inherits(f0, "try-error")) {
-            stop("function does not support non-numeric (complex) argument")
-        }
-        if(length(f0) != 1L) {
-            stop("function is not scalar and returns more than one element")
-        }
+    f0 <- try(func(x*(0+1i), ...), silent = TRUE)
+    if(!is.complex(f0)) {
+        stop("function does not return a complex value") # eg abs()
+    }
+    if(inherits(f0, "try-error")) {
+        stop("function does not support non-numeric (complex) argument")
+    }
+    if(length(f0) != 1L) {
+        stop("function is not scalar and returns more than one element")
     }
 
     nvar <- length(x)

@@ -68,17 +68,8 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # determine method function name
     method <- tolower(method)
-    if(method %in% c("crawfer", "crawford.ferguson", "crawford-ferguson",
-                     "crawfordferguson")) {
-        method <- "cf"
-    }
-    if(method %in% c("varimax", "quartimax", "orthomax", "cf", "oblimin",
-                     "quartimin", "geomin", "entropy", "mccammon", "infomax",
-                     "tandem1", "tandem2",
-                     "oblimax", "bentler", "simplimax", "target", "pst")) {
-        method.fname <- paste("lav_matrix_rotate_", method, sep = "")
-    } else if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
-                            "cf-parsimax", "cf-facparsim")) {
+    if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
+                     "cf-parsimax", "cf-facparsim")) {
         method.fname <- "lav_matrix_rotate_cf"
         method.args$cf.gamma <- switch(method,
             "cf-quartimax" = 0,
@@ -87,7 +78,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
             "cf-parsimax"  = (M - 1) / (P + M - 2),
             "cf-facparsim" = 1)
     } else {
-        method.fname <- method
+        method.fname <- paste("lav_matrix_rotate_", method, sep = "")
     }
 
     # check if rotation method exists
@@ -99,9 +90,6 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     # if target, check target matrix
     if(method == "target" || method == "pst") {
         target <- method.args$target
-        if(is.null(target) || !is.matrix(target)) {
-            stop("lavaan ERROR: target matrix is NULL, or not a matrix")
-        }
         # check dimension of target/A
         if(nrow(target) != nrow(A)) {
             stop("lavaan ERROR: nrow(target) != nrow(A)")
@@ -112,9 +100,6 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     }
     if(method == "pst") {
         target.mask <- method.args$target.mask
-        if(is.null(target.mask) || !is.matrix(target.mask)) {
-            stop("lavaan ERROR: target.mask matrix is NULL, or not a matrix")
-        }
         # check dimension of target.mask/A
         if(nrow(target.mask) != nrow(A)) {
             stop("lavaan ERROR: nrow(target.mask) != nrow(A)")
@@ -123,7 +108,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
             stop("lavaan ERROR: ncol(target.mask) != ncol(A)")
         }
     }
-    # if NAs, force method to be 'pst' and create target.mask
+    # we keep this here, so lav_matrix_rotate() can be used independently
     if(method == "target" && anyNA(target)) {
         method <- "pst"
         method.fname <- "lav_matrix_rotate_pst"

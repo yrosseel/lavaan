@@ -78,6 +78,14 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                     cache = cache)
     }
 
+    # try 4 -- new in 0.6-8
+    if(optim$convergence != 0L) {
+        optim <- optimize(f = minObjective, interval = c(-0.995, +0.995),
+                     cache = cache, tol = .Machine$double.eps)
+        if(is.finite(optim$minimum)) {
+            optim$convergence <- 0L
+        }
+    }
 
     # check convergence
     if(optim$convergence != 0L) {
@@ -138,7 +146,7 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
         # exo
         if(is.null(wt)) {
             COR <- cor(Z, Y2, use = "pairwise.complete.obs")
-            SD <- sd(Y2, na.rm = TRUE)
+            SD <- sd(Y2, na.rm = TRUE) * sqrt((N-1)/N)
         } else {
             tmp <- na.omit(cbind(Z, Y2, wt))
             COR <- cov.wt(x = tmp[,1:2], wt = tmp[,3], cor = TRUE)$cor[2,1]
@@ -149,7 +157,7 @@ lav_bvmix_init_cache <- function(fit.y1 = NULL,
         # no exo
         if(is.null(wt)) {
             COR <- cor(Y1, Y2, use = "pairwise.complete.obs")
-            SD <- sd(Y2, na.rm = TRUE)
+            SD <- sd(Y2, na.rm = TRUE) * sqrt((N-1)/N)
         } else {
             tmp <- na.omit(cbind(Y1, Y2, wt))
             COR <- cov.wt(x = tmp[,1:2], wt = tmp[,3], cor = TRUE)$cor[2,1]

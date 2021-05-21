@@ -76,6 +76,12 @@ lav_start <- function(start.method    = "default",
         }
     } else if(is.list(start.method)) {
         start.user <- start.method
+    } else if(is.numeric(start.method)) {
+        nx.free <- sum(lavpartable$free > 0L)
+        if(length(start.method) != nx.free) {
+            stop("lavaan ERROR: start argument contains ", length(start.method), " elements; but parameter table expects ", nx.free, " free parameters.")
+        }
+        lavpartable$ustart[lavpartable$free > 0L] <- start.method
     } else if(inherits(start.method, "lavaan")) {
         start.user <- parTable(start.method)
     }
@@ -173,7 +179,13 @@ lav_start <- function(start.method    = "default",
                             lavpartable$lhs == lavpartable$rhs)
         sample.var.idx <- match(lavpartable$lhs[ov.var.idx], ov.names)
         if(model.type == "unrestricted") {
-            start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
+            if(!is.null(lavsamplestats@missing.h1[[g]])) {
+                start[ov.var.idx] <-
+                    diag(lavsamplestats@missing.h1[[g]]$sigma)[sample.var.idx]
+            } else {
+                start[ov.var.idx] <-
+                    diag(lavsamplestats@cov[[g]])[sample.var.idx]
+            }
         } else {
             if(start.initial == "mplus") {
                 if(conditional.x && nlevels == 1L) {
@@ -245,6 +257,11 @@ lav_start <- function(start.method    = "default",
                     # factor loadings
                     tmp <- fabin$lambda
                     tmp[ !is.finite(tmp) ] <- 1.0 # just in case (eg 0/0)
+
+                    # check for negative triad if nvar=3L (new in 0.6-8)
+                    if(!is.null(fabin$neg.triad) && fabin$neg.triad) {
+                        tmp <- rep(1.0, length(tmp))
+                    }
                     start[lambda.idx] <- tmp
 
                     # factor variance
@@ -352,12 +369,18 @@ lav_start <- function(start.method    = "default",
 
         if(model.type == "unrestricted") {
            # fill in 'covariances' from lavsamplestats
-            cov.idx <- which(lavpartable$group == group.values[g]             &
+            cov.idx <- which(lavpartable$group == group.values[g] &
                              lavpartable$op    == "~~"          &
                              lavpartable$lhs != lavpartable$rhs)
             lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
             rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
-            start[cov.idx] <- lavsamplestats@cov[[g]][ cbind(lhs.idx, rhs.idx) ]
+            if(!is.null(lavsamplestats@missing.h1[[g]])) {
+                start[cov.idx] <- lavsamplestats@missing.h1[[g]]$sigma[
+                                                 cbind(lhs.idx, rhs.idx) ]
+            } else {
+                start[cov.idx] <- lavsamplestats@cov[[g]][
+                                                 cbind(lhs.idx, rhs.idx) ]
+            }
         }
 
         # variances of ordinal variables - set to 1.0
@@ -674,9 +697,10 @@ lav_start <- function(start.method    = "default",
     }
 
     # override if the model syntax contains explicit starting values
-    user.idx <- which(!is.na(lavpartable$ustart) &
-                      lavpartable$user != 7L) # new in 0.6-7, if rotation and
-                                              # and we change the order of lv's
+    #user.idx <- which(!is.na(lavpartable$ustart) &
+    #                  lavpartable$user != 7L) # new in 0.6-7, if rotation and
+    #                                          # and we change the order of lv's
+    user.idx <- which(!is.na(lavpartable$ustart))
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # final check: no NaN or other non-finite values

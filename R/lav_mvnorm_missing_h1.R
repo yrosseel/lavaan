@@ -15,7 +15,8 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
                                                    Sinv.method = "eigen",
                                                    verbose     = FALSE,
                                                    max.iter    = 500L,
-                                                   tol         = 1e-05) {
+                                                   tol         = 1e-05,
+                                                   warn        = FALSE) {
 
     # check input
     Y <- as.matrix(Y); P <- NCOL(Y)
@@ -34,6 +35,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
     }
 
     # remove empty cases
+    N.full <- N
     if(length(Mp$empty.idx) > 0L) {
         if(!is.null(wt)) {
             N <- N - sum(wt[Mp$empty.idx])
@@ -58,14 +60,22 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
             Mu0 <- out$center
             var0 <- diag(out$cov)
         } else {
-            Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+            Mu0 <- base::.colMeans(Y, m = N.full, n = P, na.rm = TRUE)
             Yc <- t( t(Y) - Mu0 )
-            var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+            var0 <- base::.colMeans(Yc*Yc, m = N.full, n = P, na.rm = TRUE)
         }
     } else {
-        Mu0 <- base::.colMeans(Y, m = N, n = P, na.rm = TRUE)
+        Mu0 <- base::.colMeans(Y, m = N.full, n = P, na.rm = TRUE)
         Yc <- t( t(Y) - Mu0 )
-        var0 <- base::.colMeans(Yc*Yc, m = N, n = P, na.rm = TRUE)
+        var0 <- base::.colMeans(Yc*Yc, m = N.full, n = P, na.rm = TRUE)
+    }
+    # sanity check
+    bad.idx <- which(!is.finite(var0) | var0 == 0)
+    if(length(bad.idx) > 0L) {
+        var0[bad.idx] <- 1
+    }
+    bad.idx <- which(!is.finite(Mu0))
+    if(length(bad.idx) > 0L) {
     }
     Sigma0 <- diag(x = var0, nrow = P)
     Mu <- Mu0; Sigma <- Sigma0
@@ -98,8 +108,8 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
 
         # check if Sigma is near-pd (+ poor fix)
         ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)
-        tol <- 1e-6 # FIXME!
-        if(any(ev$values < tol)) {
+        evtol <- 1e-6 # FIXME!
+        if(any(ev$values < evtol)) {
             #too.small <- which( ev$values < tol )
             #ev$values[too.small] <- tol
             #ev$values <- ev$values + tol
@@ -148,6 +158,26 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
                                                     Mu = Mu, Sigma = Sigma,
                                                     log2pi = FALSE,
                                                     minus.two = TRUE)/N
+    }
+
+    # warning?
+    if(warn && i == max.iter) {
+        txt <- c("Maximum number of iterations reached when ",
+                 "computing the sample moments using EM; ",
+                 "use the em.h1.iter.max= argument to increase the number of ",
+                 "iterations")
+        warning(lav_txt2message(txt))
+    }
+
+    if(warn) {
+        ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
+        if(any(ev < 1e-05)) { # make an option?
+            txt <- c("The smallest eigenvalue of the EM estimated ",
+                     "variance-covariance matrix (Sigma) is smaller than ",
+                     "1e-05; this may cause numerical instabilities; ",
+                     "interpret the results with caution.")
+            warning(lav_txt2message(txt))
+        }
     }
 
     list(Sigma = Sigma, Mu = Mu, fx = fx)

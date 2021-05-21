@@ -1,3 +1,4 @@
+# deprecated: only kept in order to avoid some older packages
 lav_model_fit <- function(lavpartable = NULL,
                           lavmodel    = NULL,
                           x           = NULL,

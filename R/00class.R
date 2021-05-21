@@ -94,6 +94,7 @@ setClass("lavModel",          # MATRIX representation of the sem model
         mmSize="integer",          # model matrix size (unique only)
 
         representation="character",  # stub, until we define more classes
+        modprop="list",              # model properties
         meanstructure="logical",
         categorical="logical",
         multilevel="logical",
@@ -162,7 +163,8 @@ setClass("lavModel",          # MATRIX representation of the sem model
         H="list",
         lv.order="list",
 
-        estimator="character"
+        estimator="character",
+        estimator.args="list"
     )
 )
 

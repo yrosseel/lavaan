@@ -577,6 +577,7 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # return 'regular' LAMBDA
 computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
+                          handle.dummy.lv = TRUE,
                           remove.dummy.lv = FALSE) {
 
     # state or final?
@@ -596,11 +597,22 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
+            if(handle.dummy.lv) {
+                ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]]
+                ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]]
+                ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]]
+                ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+            } else {
+                ov.y.dummy.ov.idx = NULL
+                ov.x.dummy.ov.idx = NULL
+                ov.y.dummy.lv.idx = NULL
+                ov.x.dummy.lv.idx = NULL
+            }
             LAMBDA.g <- computeLAMBDA.LISREL(MLIST = MLIST,
-                          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-                          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                          ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+                          ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+                          ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+                          ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
                           remove.dummy.lv = remove.dummy.lv)
         } else {
             stop("only representation LISREL has been implemented for now")

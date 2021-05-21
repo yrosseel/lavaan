@@ -10,6 +10,18 @@ lav_model_hessian <- function(lavmodel       = NULL,
 
     estimator <- lavmodel@estimator
 
+    # catch numerical gradient
+    if(lavoptions$optim.gradient == "numerical") {
+        obj.f <- function(x) {
+           lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+           lav_model_objective(lavmodel = lavmodel2,
+               lavsamplestats = lavsamplestats, lavdata = lavdata)[1]
+        }
+        x <- lav_model_get_parameters(lavmodel = lavmodel)
+        Hessian <- numDeriv::hessian(func = obj.f, x = x)
+        return(Hessian)
+    }
+
     # computing the Richardson extrapolation
     Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
     x <- lav_model_get_parameters(lavmodel = lavmodel)

@@ -38,6 +38,9 @@ lav_object_independence <- function(object         = NULL,
                                  lavsamplestats = object@SampleStats,
                                  lavoptions = object@Options)
         }
+        if(is.null(lavoptions$estimator.args)) {
+            lavoptions$estimator.args <- list()
+        }
     }
 
     # construct parameter table for independence model
@@ -52,6 +55,30 @@ lav_object_independence <- function(object         = NULL,
         lavpartable <- lav_partable_add_bounds(partable = lavpartable,
             lavpta = lavpta, lavh1 = lavh1, lavdata = lavdata,
             lavsamplestats = lavsamplestats, lavoptions = lavoptions)
+    }
+
+    # new in 0.6-8: if DLS, change to sample-based
+    if(lavoptions$estimator == "DLS") {
+        if(lavoptions$estimator.args$dls.GammaNT == "sample") {
+            # nothing to do
+        } else {
+           lavoptions$estimator.args$dls.GammaNT <- "sample"
+           dls.a <- lavoptions$estimator.args$dls.a
+           for(g in 1:lavsamplestats@ngroups) {
+               GammaNT <- lav_samplestats_Gamma_NT(
+                        COV            = lavsamplestats@cov[[g]],
+                        MEAN           = lavsamplestats@mean[[g]],
+                        rescale        = FALSE,
+                        x.idx          = lavsamplestats@x.idx[[g]],
+                        fixed.x        = lavoptions$fixed.x,
+                        conditional.x  = lavoptions$conditional.x,
+                        meanstructure  = lavoptions$meanstructure,
+                        slopestructure = lavoptions$conditional.x)
+                W.DLS <- (1 - dls.a)*lavsamplestats@NACOV[[g]] + dls.a*GammaNT
+                # overwrite
+                lavsamplestats@WLS.V[[g]] <- lav_matrix_symmetric_inverse(W.DLS)
+            }
+        }
     }
 
     # se
@@ -73,6 +100,7 @@ lav_object_independence <- function(object         = NULL,
     lavoptions$check.gradient <- FALSE
     lavoptions$check.post <- FALSE
     lavoptions$check.vcov <- FALSE
+    lavoptions$optim.bounds <- list() # we already have the bounds
 
     # ALWAYS do.fit
     lavoptions$do.fit  <- TRUE
@@ -312,10 +340,12 @@ lav_object_extended <- function(object, add = NULL,
         lavoptions$implied <- FALSE
         lavoptions$baseline <- FALSE
         lavoptions$loglik <- FALSE
+        lavoptions$estimator.args <- list()
 
         # add a few slots
         object@Data@weights <- vector("list", object@Data@ngroups)
         object@Model@estimator <- object@Options$estimator
+        object@Model@estimator.args <- list()
 
         lavh1 <- lav_h1_logl(lavdata = object@Data,
                              lavsamplestats = object@SampleStats,

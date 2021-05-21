@@ -27,9 +27,9 @@ lav_model_loglik <- function(lavdata        = NULL,
             }
         }
         # nlevels + fiml
-        if(lavdata@nlevels > 1L && lavsamplestats@missing.flag) {
-            logl.ok <- FALSE
-        }
+        #if(lavdata@nlevels > 1L && lavsamplestats@missing.flag) {
+        #    logl.ok <- FALSE
+        #}
     }
 
     # lavsamplestats filled in? (not if no data...)
@@ -49,19 +49,30 @@ lav_model_loglik <- function(lavdata        = NULL,
                 # DEBUG ONLY
                 if(lavmodel@conditional.x) {
                     logl.group[g] <- -1000
+                }
+
+                if(lavsamplestats@missing.flag) {
+                    logl.group[g] <-
+                        lav_mvnorm_cluster_missing_loglik_samplestats_2l(
+                            Yp = lavsamplestats@missing[[g]],
+                            Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+                            Lp = lavdata@Lp[[g]],
+                            Mp = lavdata@Mp[[g]],
+                            Mu.W = Mu.W, Sigma.W = Sigma.W,
+                            Mu.B = Mu.B, Sigma.B = Sigma.B,
+                            loglik.x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
+                            log2pi = TRUE, minus.two = FALSE)
                 } else {
-
-                logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
-                    YLp          = lavsamplestats@YLp[[g]],
-                    Lp           = lavdata@Lp[[g]],
-                    Mu.W         = Mu.W,
-                    Sigma.W      = Sigma.W,
-                    Mu.B         = Mu.B,
-                    Sigma.B      = Sigma.B,
-                    Sinv.method  = "eigen",
-                    log2pi       = TRUE,
-                    minus.two    = FALSE)
-
+                    logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
+                        YLp          = lavsamplestats@YLp[[g]],
+                        Lp           = lavdata@Lp[[g]],
+                        Mu.W         = Mu.W,
+                        Sigma.W      = Sigma.W,
+                        Mu.B         = Mu.B,
+                        Sigma.B      = Sigma.B,
+                        Sinv.method  = "eigen",
+                        log2pi       = TRUE,
+                        minus.two    = FALSE)
                 }
 
             } else if(lavsamplestats@missing.flag) {

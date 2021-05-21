@@ -484,9 +484,12 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
             H10 <- matrix(0, ncol(information), nrow(H))
             DL <- 2*diag(lambda, nrow(H), nrow(H))
             # FIXME: better include inactive + slacks??
-            E3 <- rbind( cbind(     information,  H10, t(H)),
-                         cbind(          t(H10),   DL,  H0),
-                         cbind(               H,   H0,  H0)  )
+            #INFO <- information
+            # or
+            INFO <- information + crossprod(H)
+            E3 <- rbind( cbind(   INFO,  H10, t(H)),
+                         cbind( t(H10),   DL,  H0),
+                         cbind(      H,   H0,  H0)  )
             information <- E3
         }
     }
