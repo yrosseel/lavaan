@@ -1,5 +1,7 @@
 # YR - 26 Nov 2013: generate partable for the unrestricted model
 # YR - 19 Mar 2017: handle twolevel model
+# YR - 27 May 2021: added lav_partable_unrestricted_chol so we can use
+#                   a cholesky parameterization: S = LAMBDA %*% t(LAMBDA)
 
 lav_partable_unrestricted <- function(lavobject      = NULL,
                                       # if no object is available,
@@ -619,4 +621,203 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
 
     LIST
 
+}
+
+# - currently only used for continuous twolevel data
+# - conditional.x not supported (yet)
+lav_partable_unrestricted_chol <- function(lavobject = NULL,
+                                      # if no object is available,
+                                      lavdata        = NULL,
+                                      lavpta         = NULL,
+                                      lavoptions     = NULL) {
+
+    # grab everything from lavaan lavobject
+    if(!is.null(lavobject)) {
+        stopifnot(inherits(lavobject, "lavaan"))
+
+        lavdata <- lavobject@Data
+        lavoptions <- lavobject@Options
+        #lavsamplestats <- lavobject@SampleStats
+        lavpta <- lavobject@pta
+        #lavh1 <- lavobject@h1
+    }
+
+    ov            <- lavdata@ov
+    meanstructure <- lavoptions$meanstructure
+    categorical   <- any(ov$type == "ordered")
+    if(categorical) {
+        stop("lavaan ERROR: categorical data not supported in this function")
+    }
+    ngroups       <- lavdata@ngroups
+    nlevels       <- lavdata@nlevels
+
+    # what with fixed.x?
+    # - does not really matter; fit will be saturated anyway
+    # - fixed.x = TRUE may avoid convergence issues with non-numeric
+    #             x-covariates
+    fixed.x = lavoptions$fixed.x
+
+    # if multilevel
+    if(nlevels > 1L) {
+        #fixed.x       <- FALSE # for now
+        conditional.x <- FALSE # for now
+        categorical   <- FALSE # for now
+    }
+
+    lhs <- rhs <- op <- character(0)
+    group <- block <- level <- free <- exo <- integer(0)
+    ustart <- lower <- numeric(0)
+
+    # block number
+    b <- 0L
+    for(g in 1:ngroups) {
+
+        # only for multilevel
+        if(nlevels > 1L) {
+            Lp <- lavdata@Lp[[g]]
+        }
+
+        for(l in 1:nlevels) {
+
+            # block
+            b <- b + 1L
+
+            ov.names     <- lavpta$vnames$ov[[b]]
+            ov.names.x   <- lavpta$vnames$ov.x[[b]]
+            ov.names.nox <- lavpta$vnames$ov.nox[[b]]
+
+            # only for multilevel, overwrite sample.cov and sample.mean
+            if(nlevels > 1L) {
+                ov.names.x <- character(0L)
+                ov.names.nox <- ov.names
+            }
+
+            # create lv.names == ov.names
+            lv.names <- paste("f", ov.names, sep = "")
+
+            # a) OV VARIANCES -> fixed to zero
+            nvar  <- length(ov.names)
+            lhs   <- c(lhs, ov.names)
+             op   <- c(op, rep("~~", nvar))
+            rhs   <- c(rhs, ov.names)
+            block <- c(block, rep(b,   nvar))
+            group <- c(group, rep(g,   nvar))
+            level <- c(level, rep(l,   nvar))
+            ustart<- c(ustart,rep(0.0001, nvar)) ### Force PD!! (option?)
+            free  <- c(free,  rep(0L,  nvar))
+            exo   <- c(exo,   rep(0L,  nvar))
+            lower <- c(lower, rep(0.0, nvar))
+
+            # b) LV VARIANCES -> fixed to 1.0
+            nvar  <- length(lv.names)
+            lhs   <- c(lhs, lv.names)
+             op   <- c(op, rep("~~", nvar))
+            rhs   <- c(rhs, lv.names)
+            block <- c(block, rep(b,   nvar))
+            group <- c(group, rep(g,   nvar))
+            level <- c(level, rep(l,   nvar))
+            ustart<- c(ustart,rep(1.0, nvar))
+            free  <- c(free,  rep(0L,  nvar))
+            exo   <- c(exo,   rep(0L,  nvar))
+            lower <- c(lower, rep(1.0, nvar))
+
+            # c) LOADINGS self
+            nvar  <- length(ov.names)
+            lhs   <- c(lhs, lv.names)
+             op   <- c(op, rep("=~", nvar))
+            rhs   <- c(rhs, ov.names)
+            block <- c(block, rep(b,   nvar))
+            group <- c(group, rep(g,   nvar))
+            level <- c(level, rep(l,   nvar))
+            ustart<- c(ustart,rep(as.numeric(NA), nvar))
+            free  <- c(free,  rep(1L,  nvar))
+            exo   <- c(exo,   rep(0L,  nvar))
+            lower <- c(lower, rep(0.0, nvar)) # lower bound!
+
+            # d) LOADINGS other
+            tmp <- utils::combn(ov.names, 2)
+            pstar <- ncol(tmp)
+            lhs <- c(lhs, paste("f", tmp[1,], sep = ""))
+             op <- c(op,   rep("=~", pstar))
+            rhs <- c(rhs, tmp[2,])
+            block <- c(block, rep(b,   pstar))
+            group <- c(group, rep(g,   pstar))
+            level <- c(level, rep(l,   pstar))
+            free  <- c(free,  rep(1L,  pstar))
+            exo   <- c(exo,   rep(0L,  pstar))
+            lower <- c(lower, rep(-Inf, pstar))
+            ustart<- c(ustart,rep(as.numeric(NA), pstar))
+
+            # meanstructure?
+            if(meanstructure) {
+
+                # OV
+                ov.int <- ov.names
+
+                nel <- length(ov.int)
+                lhs   <- c(lhs, ov.int)
+                 op   <- c(op, rep("~1", nel))
+                rhs   <- c(rhs, rep("", nel))
+                block <- c(block, rep(b,  nel))
+                group <- c(group, rep(g,  nel))
+                level <- c(level, rep(l,  nel))
+                # if multilevel, level=1 has fixed zeroes
+                if(nlevels > 1L && l == 1L) {
+                    WITHIN <- rep(0L, nel)
+                    WITHIN[Lp$within.idx[[2]]] <- 1L
+                    free  <- c(free, WITHIN)
+                } else {
+                    free  <- c(free,  rep(1L, nel))
+                }
+                exo   <- c(exo,   rep(0L, nel))
+                lower <- c(lower, rep(-Inf, nel))
+                ustart <- c(ustart, rep(as.numeric(NA), nel))
+
+                # LV
+                ov.int <- lv.names
+
+                nel    <- length(ov.int)
+                lhs    <- c(lhs,    ov.int)
+                 op    <- c(op,     rep("~1", nel))
+                rhs    <- c(rhs,    rep("",   nel))
+                block  <- c(block,  rep(b,    nel))
+                group  <- c(group,  rep(g,    nel))
+                level  <- c(level,  rep(l,    nel))
+                free   <- c(free,   rep(0L,   nel))
+                exo    <- c(exo,    rep(0L,   nel))
+                ustart <- c(ustart, rep(0.0,  nel))
+                lower  <- c(lower,  rep(-Inf, nel))
+            }
+
+        } # levels
+    } # ngroups
+
+    # free counter
+    idx.free <- which(free > 0)
+    free[idx.free] <- 1:length(idx.free)
+
+    LIST   <- list(     id          = 1:length(lhs),
+                        lhs         = lhs,
+                        op          = op,
+                        rhs         = rhs,
+                        user        = rep(1L,  length(lhs)),
+                        block       = block,
+                        group       = group,
+                        level       = level,
+                        free        = free,
+                        ustart      = ustart,
+                        exo         = exo,
+                        lower       = lower #,
+                        #label       = rep("",  length(lhs))
+                        #eq.id       = rep(0L,  length(lhs)),
+                        #unco        = free
+                   )
+
+
+    # keep level column if no levels? (no for now)
+    if(nlevels < 2L) {
+        LIST$level <- NULL
+    }
+
+    LIST
 }

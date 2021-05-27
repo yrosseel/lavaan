@@ -39,9 +39,13 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1   = NULL,
     # check is both.idx part of sigma.b is 'too' negative; if so, return +Inf
     ev <- eigen(sigma.b[both.idx, both.idx, drop = FALSE], symmetric = TRUE,
                 only.values = TRUE)$values
-    if(any(ev < -0.1)) {
+    if(any(ev < -0.05)) {
         return(+Inf)
     }
+
+#cat("sigma.w = \n"); print(sigma.w)
+#cat("sigma.b = \n"); print(sigma.b)
+#cat("mu.y = \n"); print(mu.y)
 
     # global
     sigma.w.inv <- solve.default(sigma.w)
@@ -100,7 +104,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1   = NULL,
 
             if(length(z.na.idx) > 0L) {
                 zp <- sigma.zz[-z.na.idx, -z.na.idx, drop = FALSE]
-                zp.inv <- lavaan:::lav_matrix_symmetric_inverse_update(
+                zp.inv <- lav_matrix_symmetric_inverse_update(
                               S.inv = sigma.zz.inv, rm.idx = z.na.idx,
                               logdet = TRUE, S.logdet = sigma.zz.logdet)
                 zp.logdet <- attr(zp.inv, "logdet")
@@ -142,7 +146,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1   = NULL,
         if(length(na.idx) > 0L) {
             MPi[ Mp$case.idx[[p]] ] <- p
             wp <- sigma.w[-na.idx, -na.idx, drop = FALSE]
-            wp.inv <- lavaan:::lav_matrix_symmetric_inverse_update(
+            wp.inv <- lav_matrix_symmetric_inverse_update(
                           S.inv = sigma.w.inv, rm.idx = na.idx,
                           logdet = TRUE, S.logdet = sigma.w.logdet)
             wp.logdet <- attr(wp.inv, "logdet")
@@ -543,7 +547,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <-
     } # j
 
     # rearrange
-    dout <- lavaan:::lav_mvnorm_cluster_2l2implied(Lp = Lp,
+    dout <- lav_mvnorm_cluster_2l2implied(Lp = Lp,
                 sigma.w = dx.sigma.w, sigma.b = dx.sigma.b,
                 sigma.yz = dx.sigma.yz, sigma.zz = dx.sigma.zz,
                 mu.y = dx.mu.y, mu.z = dx.mu.z)
