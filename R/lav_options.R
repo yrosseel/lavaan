@@ -404,10 +404,10 @@ lav_options_set <- function(opt = NULL) {
         #opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
         #                          # we break tidySEM tests where they set
         #                          # missing = "fiml" + multilevel
-        if(opt$missing %in% c("ml", "fiml", "direct")) {
-            opt$optim.gradient = "numerical"
+        #if(opt$missing %in% c("ml", "fiml", "direct")) {
+            #opt$optim.gradient = "numerical"
             #opt$optim.gradient = "complex"
-        }
+        #}
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {

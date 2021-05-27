@@ -99,9 +99,11 @@ lav_data_print_short <- function(object, nd = 3L) {
                 c1 <- c(c1, "Number of missing patterns -- level 1")
                 c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
                 c3 <- c(c3, "")
-                c1 <- c(c1, "Number of missing patterns -- level 2")
-                c2 <- c(c2, lavdata@Mp[[1L]]$Zp$npatterns)
-                c3 <- c(c3, "")
+                if(!is.null(lavdata@Mp[[1L]]$Zp)) {
+                    c1 <- c(c1, "Number of missing patterns -- level 2")
+                    c2 <- c(c2, lavdata@Mp[[1L]]$Zp$npatterns)
+                    c3 <- c(c3, "")
+                }
             } else {
                 c1 <- c(c1, "Number of missing patterns")
                 c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
@@ -117,11 +119,13 @@ lav_data_print_short <- function(object, nd = 3L) {
                                   "-- level 1"))
                     c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
                     c3 <- c(c3, "")
-                    c1 <- c(c1,
+                    if(!is.null(lavdata@Mp[[1L]]$Zp)) {
+                        c1 <- c(c1,
                             paste(sprintf("  %-40s", lavdata@group.label[[g]]),
                                   "-- level 2"))
-                    c2 <- c(c2, lavdata@Mp[[g]]$Zp$npatterns)
-                    c3 <- c(c3, "")
+                        c2 <- c(c2, lavdata@Mp[[g]]$Zp$npatterns)
+                        c3 <- c(c3, "")
+                    }
                 }
             } else {
                 c1 <- c(c1, "Number of missing patterns per group:")

@@ -1156,7 +1156,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
 # update inverse of A, after removing 1 or more rows (and corresponding
 # colums) from A
 #
-# - this is one of the many applications of the Sherman-Morrison formula
+# - this is just an application of the inverse of partitioned matrices
 # - only removal for now
 #
 lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
@@ -1221,12 +1221,9 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
         out <- ( S.inv[-rm.idx, -rm.idx, drop = FALSE] -
                  crossprod(A, solve.default(H, A)) )
         if(logdet) {
-            if(is.complex(H)) {
-                 H.logdet <- sum(log(eigen(H, only.values = TRUE)$values))
-            } else {
-                cH <- chol.default(Re(H)); diag.cH <- diag(cH)
-                H.logdet <- sum(log(diag.cH * diag.cH))
-            }
+            #cH <- chol.default(Re(H)); diag.cH <- diag(cH)
+            #H.logdet <- sum(log(diag.cH * diag.cH))
+            H.logdet <- log(det(H))
             attr(out, "logdet") <- S.logdet + H.logdet
         }
 
