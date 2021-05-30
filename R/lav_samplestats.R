@@ -742,24 +742,25 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # no WLS.V here
             }
 
-            # group.w.free
-            if(!is.null(WLS.V[[g]]) && group.w.free) {
-                # unweight!!
-                a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
-                # always 1!!!
-                # invert
-                a <- 1/a
-                WLS.V[[g]] <- lav_matrix_bdiag( matrix(a, 1, 1), WLS.V[[g]] )
+            # group.w.free (only if NACOV is NULL)
+            if(group.w.free && is.null(NACOV[[g]])) {
+                if(!is.null(WLS.V[[g]])) {
+                    # unweight!!
+                    a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                    # always 1!!!
+                    # invert
+                    a <- 1/a
+                    WLS.V[[g]] <- lav_matrix_bdiag( matrix(a,1,1), WLS.V[[g]] )
+                }
+                if(!is.null(WLS.VD[[g]])) {
+                    # unweight!!
+                    a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
+                    # always 1!!!
+                    # invert
+                    a <- 1/a
+                    WLS.VD[[g]] <- c(a, WLS.VD[[g]])
+                }
             }
-            if(!is.null(WLS.VD[[g]]) && group.w.free) {
-                # unweight!!
-                a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
-                # always 1!!!
-                # invert
-                a <- 1/a
-                WLS.VD[[g]] <- c(a, WLS.VD[[g]])
-            }
-
         }
     } # ngroups
 

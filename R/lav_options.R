@@ -754,7 +754,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") {
+        if(opt$se == "default") {
             opt$se <- "robust.sem"
         }
         #opt$information[1] <- "expected"
@@ -766,20 +766,23 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") {
+        if(opt$se == "default") {
             opt$se <- "standard"
+        }
+        if(opt$information[1] == "default") {
             opt$information[1] <- "first.order"
-            if(length(opt$information) > 1L &&
-               opt$information[2] == "default") {
-                opt$information[2] <- "first.order"
-            }
+        }
+        if(length(opt$information) > 1L && opt$information[2] == "default") {
+            opt$information[2] <- "first.order"
         }
     } else if(opt$estimator == "mlr") {
         opt$estimator <- "ML"
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.huber.white"
+        if(opt$se == "default") {
+            opt$se <- "robust.huber.white"
+        }
         if( !(length(opt$test) == 1L && opt$test == "none") &&
             opt$se != "external" ) {
             if(opt$mimic == "Mplus") {
@@ -964,7 +967,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
@@ -977,7 +982,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
@@ -990,7 +997,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
@@ -1026,7 +1035,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
@@ -1039,7 +1050,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
@@ -1052,7 +1065,9 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ULS estimator for bootstrap")
         }
-        if(opt$se != "none" && opt$se != "external") opt$se <- "robust.sem"
+        if(opt$se == "default") {
+            opt$se <- "robust.sem"
+        }
         if(all(opt$test %in% c("mean.var.adjusted", "satorra.bentler",
                            "scaled.shifted"))) {
             # nothing to do
