@@ -78,15 +78,6 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                     cache = cache)
     }
 
-    # try 4 -- new in 0.6-8
-    if(optim$convergence != 0L) {
-        optim <- optimize(f = minObjective, interval = c(-0.995, +0.995),
-                     cache = cache, tol = .Machine$double.eps)
-        if(is.finite(optim$minimum)) {
-            optim$convergence <- 0L
-        }
-    }
-
     # check convergence
     if(optim$convergence != 0L) {
         if(!is.null(Y1.name) && !is.null(Y2.name)) {
