@@ -323,6 +323,10 @@ fsr <- function(model      = NULL,
 
         # full data for structural model
         struc.names <- lavNames(PT.PA, "ov", group = group.values[g])
+        # reorder struc.names, so that order is the same as in MM (new in 0.6-9)
+        lv.idx <- which( struc.names %in% lv.names )
+        struc.names[lv.idx] <- lv.names
+
         struc.ov.idx <- which(! struc.names %in% lv.names )
         struc.lv.idx <- which(  struc.names %in% lv.names )
         lv.order     <- match(lv.names, struc.names)

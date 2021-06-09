@@ -85,9 +85,12 @@ sam <- function(model          = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
-    dotdotdot0$sample.icov <- FALSE # if N < nvar
+    if(sam.method == "local") {
+        dotdotdot0$sample.icov <- FALSE # if N < nvar
+    }
     dotdotdot0$se     <- "none"
     dotdotdot0$test   <- "none"
+    dotdotdot0$verbose <- FALSE # no output for this 'dummy' FIT
 
     # initial processing of the model, no fitting
     FIT <- do.call(cmd,
@@ -98,6 +101,9 @@ sam <- function(model          = NULL,
 
     # restore options
     lavoptions$do.fit <- TRUE
+    if(sam.method == "local") {
+        lavoptions$sample.icov <- TRUE
+    }
     if(!is.null(dotdotdot$se)) {
         lavoptions$se   <- dotdotdot$se
     } else {
@@ -107,6 +113,9 @@ sam <- function(model          = NULL,
         lavoptions$test <- dotdotdot$test
     } else {
         lavoptions$test <- "standard"
+    }
+    if(!is.null(dotdotdot$verbose)) {
+        lavoptions$verbose <- dotdotdot$verbose
     }
 
 
@@ -587,6 +596,27 @@ sam <- function(model          = NULL,
     ####################################
     # STEP 2: estimate structural part #
     ####################################
+
+    # adjust options
+    lavoptions.PA <- lavoptions
+    lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
+
+    # override, not matter what
+    lavoptions.PA$do.fit <- TRUE
+
+    if(sam.method == "local") {
+        lavoptions.PA$missing <- "listwise"
+        lavoptions.PA$se <- "none" # sample statistics input
+        lavoptions.PA$sample.cov.rescale <- FALSE
+    } else {
+        # global (so PA will not be used for for final model)
+        lavoptions.PA$baseline <- FALSE
+        lavoptions.PA$h1 <- FALSE
+        lavoptions.PA$implied <- FALSE
+        lavoptions.PA$loglik <- FALSE
+    }
+
+    # construct PTS
     if(sam.method == "local") {
         # extract structural part
         PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
@@ -600,7 +630,7 @@ sam <- function(model          = NULL,
             NOBS <- FIT@Data@nobs
         }
         # if meanstructure, 'free' user=0 intercepts?
-        if(lavoptions$meanstructure) {
+        if(lavoptions.PA$meanstructure) {
             extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L)
             if(length(extra.int.idx) > 0L) {
                 PTS$free[ extra.int.idx ] <- 1L
@@ -621,7 +651,7 @@ sam <- function(model          = NULL,
         # remove 'exogenous' factor variances (if any) from reg.idx
         lv.names.x <- LV.names[ LV.names %in% unlist(lavpta$vnames$eqs.x)  &
                                !LV.names %in% unlist(lavpta$vnames$eqs.y) ]
-        if(lavoptions$fixed.x && length(lv.names.x) > 0L) {
+        if(lavoptions.PA$fixed.x && length(lv.names.x) > 0L) {
             var.idx <- which(PT$lhs %in% lv.names.x &
                              PT$op == "~~" &
                              PT$lhs == PT$rhs)
@@ -658,24 +688,6 @@ sam <- function(model          = NULL,
         extra.int.idx <- integer(0L)
     } # global
 
-    # adjust options
-    lavoptions.PA <- lavoptions
-    lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
-
-    # override, not matter what
-    lavoptions.PA$do.fit <- TRUE
-
-    if(sam.method == "local") {
-        lavoptions.PA$missing <- "listwise"
-        lavoptions.PA$se <- "none" # sample statistics input
-        lavoptions.PA$sample.cov.rescale <- FALSE
-    } else {
-        # global (so PA will not be used for for final model)
-        lavoptions.PA$baseline <- FALSE
-        lavoptions.PA$h1 <- FALSE
-        lavoptions.PA$implied <- FALSE
-        lavoptions.PA$loglik <- FALSE
-    }
 
     # fit structural model
     if(lavoptions.PA$verbose) {
@@ -734,8 +746,6 @@ sam <- function(model          = NULL,
     p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
     step2.idx <- PT$free[ p2.idx ]
 
-
-
     ###########################
     # compute standard errors #
     ###########################
@@ -747,17 +757,18 @@ sam <- function(model          = NULL,
     # - 'insert' these corrected SEs (and vcov) in FIT.PA
 
     lavoptions.joint <- lavoptions
-    lavoptions.joint$optim.method = "none"
+    lavoptions.joint$optim.method <- "none"
     PT$ustart <- PT$est # as this is used if optim.method == "none"
-    lavoptions.joint$check.gradient = FALSE
-    lavoptions.joint$check.start = FALSE
-    lavoptions.joint$check.post = FALSE
-    #lavoptions.joint$baseline = FALSE
-    #lavoptions.joint$h1 = FALSE
-    #lavoptions.joint$test <- FIT.PA@Options$test
-    #lavoptions.joint$se   <- "none"
+    lavoptions.joint$check.gradient <- FALSE
+    lavoptions.joint$check.start <- FALSE
+    lavoptions.joint$check.post <- FALSE
     if(sam.method == "local") {
-        lavoptions.joint$test <- "none" # local view
+        lavoptions.joint$baseline <- FALSE
+        lavoptions.joint$h1 <- FALSE
+        lavoptions.joint$test <- "none"
+        lavoptions.joint$se   <- "none"
+    } else {
+        lavoptions.joint$store.vcov <- TRUE
     }
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,

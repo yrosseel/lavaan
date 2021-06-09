@@ -1491,7 +1491,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
        #       (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
        #    )
        #) &&
-       lavmodel@nx.free > 0L && attr(x, "converged")) {
+       lavmodel@nx.free > 0L && (attr(x, "converged") ||
+                                 lavoptions$optim.method == "none")) {
 
         if(lavoptions$verbose) {
             cat("computing VCOV for      se =", lavoptions$se, "...")
