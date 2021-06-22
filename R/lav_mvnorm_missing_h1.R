@@ -34,6 +34,16 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
         Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
     }
 
+    if(is.null(max.iter)) {
+        max.iter <- 500L
+    }
+    if(is.null(tol)) {
+        tol <- 1e-05
+    }
+    if(is.null(warn)) {
+        warn <- FALSE
+    }
+
     # remove empty cases
     N.full <- N
     if(length(Mp$empty.idx) > 0L) {

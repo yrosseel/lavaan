@@ -219,9 +219,10 @@ sam <- function(model          = NULL,
     # adjust options for measurement models
     dotdotdot.mm <- dotdotdot
     #dotdotdot.mm$se <- "none"
-    if(sam.method == "global") {
-        dotdotdot.mm$test <- "none"
-    }
+    #if(sam.method == "global") {
+    #    dotdotdot.mm$test <- "none"
+    #}
+    # we need the tests to create summary info about MM
     dotdotdot.mm$debug <- FALSE
     dotdotdot.mm$verbose <- FALSE
     dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
@@ -243,7 +244,6 @@ sam <- function(model          = NULL,
     }
 
     # for joint model later
-    #MM.INFO <- matrix(0, npar, npar)
     Sigma.11 <- matrix(0, npar, npar)
     step1.idx <- integer(0L)
 
@@ -378,14 +378,12 @@ sam <- function(model          = NULL,
         PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
             PTM$se[ PTM$free > 0L & PTM$user != 3L]
 
-        # compute `total' information for this measurement block
-        #mm.info <- lavTech(MM.FIT[[mm]], "information") * lavTech(FIT, "nobs")
+        # compute variance matrix for this measurement block
         sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
-        # fill in `total' information matrix
+        # fill in variance matrix
         par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ]
         keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
-        #MM.INFO[par.idx, par.idx] <- mm.info[keep.idx, keep.idx, drop = FALSE]
         Sigma.11[par.idx, par.idx] <- sigma.11[keep.idx, keep.idx, drop = FALSE]
 
         # store indices in step1.idx
@@ -608,8 +606,11 @@ sam <- function(model          = NULL,
         lavoptions.PA$missing <- "listwise"
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
+        lavoptions.PA$baseline <- FALSE
+        lavoptions.PA$h1 <- FALSE
+        lavoptions.PA$implied <- FALSE
+        lavoptions.PA$loglik <- FALSE
     } else {
-        # global (so PA will not be used for for final model)
         lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
         lavoptions.PA$implied <- FALSE
@@ -732,19 +733,13 @@ sam <- function(model          = NULL,
     PT$est[ pt.idx ] <- PTS$est[ pts.idx ]
 
 
-    # fill in any def parameters
-    #def.idx <- which(PT$op == ":=")
-    #if(length(def.idx) > 0L) {
-    #    # call def.function
-    #    est.def <- FIT@Model@def.function( PT$est[ PT$free > 0L ] )
-    #    if(length(est.def) == length(def.idx)) {
-    #        PT$est[ def.idx ] <- est.def
-    #    } # else warning?
-    #}
-
     # create step2.idx
     p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
     step2.idx <- PT$free[ p2.idx ]
+
+    # add 'step' column in PT
+    PT$step <- rep(1L, length(PT$lhs))
+    PT$step[seq_len(length(PT$lhs)) %in% reg.idx] <- 2L
 
     ###########################
     # compute standard errors #
@@ -758,6 +753,7 @@ sam <- function(model          = NULL,
 
     lavoptions.joint <- lavoptions
     lavoptions.joint$optim.method <- "none"
+    lavoptions.joint$optim.force.converged <- TRUE
     PT$ustart <- PT$est # as this is used if optim.method == "none"
     lavoptions.joint$check.gradient <- FALSE
     lavoptions.joint$check.start <- FALSE
@@ -767,9 +763,9 @@ sam <- function(model          = NULL,
         lavoptions.joint$h1 <- FALSE
         lavoptions.joint$test <- "none"
         lavoptions.joint$se   <- "none"
-    } else {
+    } #else {
         lavoptions.joint$store.vcov <- TRUE
-    }
+    #}
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,
                             slotData = FIT@Data)
@@ -780,19 +776,6 @@ sam <- function(model          = NULL,
     I.21 <- INFO[step2.idx, step1.idx]
 
     # compute Sigma.11
-    # note: step1.idx and step2.idx have some overlap, but removing
-    #       the step2.idx parameters from step1.idx BEFORE we take
-    #       the inverse, results in std.errors that are lower than ML,
-    #       in addition, fixed.x = TRUE/FALSE give different results
-    #       for SE of beta
-    #
-    # the solution seems to be to keep ALL step1.idx elements in MM.INFO
-    # for the inversion, and then set rows/cols of Sigma.11 to zero if
-    # the overlap with reg.idx (YR, 28 nov 2018; lavaan 0.6-4)
-
-    #MM.INFO <- MM.INFO[step1.idx, step1.idx, drop = FALSE]
-    #Sigma.11 <- solve(MM.INFO)
-
     # overlap? set corresponding rows/cols of Sigma.11 to zero
     both.idx <- which(step1.idx %in% step2.idx)
     if(length(both.idx) > 0L) {
@@ -807,7 +790,7 @@ sam <- function(model          = NULL,
     } else {
         N <- nobs(FIT)
     }
-    I.22.inv <- 1/N * solve(I.22)
+    I.22.inv <- solve(I.22)
 
     # method below has the advantage that we can use a 'robust' vcov
     # for the joint model;
@@ -820,11 +803,11 @@ sam <- function(model          = NULL,
     #I.22.inv <- A - B %*% solve(D) %*% C
 
     # FIXME:
-    V2 <- I.22.inv
+    V2 <- 1/N * I.22.inv
     #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
 
     # V1
-    V1 <- (I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv) * N * N
+    V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
 
     # V for second step
     VCOV <- V2 + V1
@@ -841,41 +824,52 @@ sam <- function(model          = NULL,
     ##########
 
     # assemble final lavaan objects
-    if(sam.method == "local" && output == "lavaan") {
-        # overwrite slots in FIT.PA (better way?)
-        #PTS$se[ PTS$free > 0L &
-        #        !seq_len(length(PTS$lhs)) %in% extra.int.idx ] <-
-        #    sqrt( diag(VCOV) )
-        PTS$se <- lav_model_vcov_se(lavmodel = FIT.PA@Model,
-                                    lavpartable = PTS,
-                                    VCOV = VCOV)
-        FIT.PA@Options$se <- "twostep"
-        FIT.PA@ParTable <- PTS
-        FIT.PA@vcov$se <- "twostep"
-        FIT.PA@vcov$vcov <- VCOV
-        FINAL <- FIT.PA
-    } else if(sam.method == "global" && output == "lavaan") {
-        #PT$se[ seq_len(length(PT$lhs)) %in% reg.idx &
-        #       PT$free > 0L ] <- sqrt( diag(VCOV) )
-        FINAL <- JOINT
+    if(output == "lavaan") {
+        sam.mm.table <- data.frame(
+            block  = seq_len(length(mm.list)),
+            lv     = sapply(MM.FIT, function(x) {
+                           paste(unlist(x@pta$vnames$lv), collapse=",")}),
+            chisq  = sapply(MM.FIT, function(x) {x@test[[1]]$stat}),
+            df     = sapply(MM.FIT, function(x) {x@test[[1]]$df}),
+            pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
 
-        if(FINAL@Options$se == "none") {
-        } else {
-            FINAL@Options$se <- "twostep"
-            FINAL@vcov$se <- "twostep"
-            FINAL@vcov$vcov[step2.idx, step2.idx] <- VCOV
+        # extra info for @internal slot
+        SAM <- list(sam.method         = sam.method,
+                    sam.mm.list        = mm.list,
+                    sam.mm.args        = mm.args,
+                    sam.struc.args     = struc.args,
+                    sam.local.options  = local.options,
+                    sam.global.options = global.options,
+                    sam.mm.ov.names    = lapply(MM.FIT, function(x) {
+                                                x@pta$vnames$ov }),
+                    sam.mm.table       = sam.mm.table
+                   )
+        JOINT@internal <- SAM   
+          
+        # fill in twostep standard errors
+        if(JOINT@Options$se != "none") {
+            JOINT@Options$se <- "twostep"
+            JOINT@vcov$se    <- "twostep"
+            JOINT@vcov$vcov[step2.idx, step2.idx] <- VCOV
             PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
-                                   lavpartable = PT,
-                                   VCOV = FINAL@vcov$vcov)
-            FINAL@ParTable <- PT
+                                       lavpartable = PT,
+                                       VCOV = JOINT@vcov$vcov) 
+            JOINT@ParTable <- PT
         }
-        res <- FINAL
-    }
+
+        # fill information from FIT.PA
+        JOINT@Options$optim.method <- FIT.PA@Options$optim.method
+        if(sam.method == "local") {
+            JOINT@optim <- FIT.PA@optim
+            JOINT@test  <- FIT.PA@test
+        }
+
+    } # output = "lavaan"
 
 
     # prepare output
     if(output == "lavaan") {
-        res <- FINAL
+        res <- JOINT
     } else {
         res <- out
     }

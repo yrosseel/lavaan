@@ -754,7 +754,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se == "default") {
+        if(opt$se == "default" || opt$se == "robust") {
             opt$se <- "robust.sem"
         }
         #opt$information[1] <- "expected"
@@ -780,7 +780,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$se == "bootstrap") {
             stop("lavaan ERROR: use ML estimator for bootstrap")
         }
-        if(opt$se == "default") {
+        if(opt$se == "default" || opt$se == "robust") {
             opt$se <- "robust.huber.white"
         }
         if( !(length(opt$test) == 1L && opt$test == "none") &&

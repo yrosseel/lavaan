@@ -33,6 +33,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     debug             <- lavoptions$debug
     verbose           <- lavoptions$verbose
 
+    # sample.icov (new in 0.6-9; ensure it exists, for older objects)
+    sample.icov <- TRUE
+    if(!is.null(lavoptions$sample.icov)) {
+        sample.icov <- lavoptions$sample.icov
+    }
 
     # ridge default
     if(ridge) {
@@ -475,7 +480,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
 
             # icov and cov.log.det (but not if missing)
-            if(lavoptions$sample.icov && !missing %in% c("ml", "ml.x")) {
+            if(sample.icov && !missing %in% c("ml", "ml.x")) {
                 out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge.eps,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
@@ -1628,10 +1633,12 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             }
             if(length(d.idx) > 1L) {
                 if(any(is.na(tmp2))) {
-                    out <- lav_mvnorm_missing_h1_estimate_moments(Y = tmp2,
-                              max.iter = 10L)
-                    cov.d[[clz]] <- out$Sigma
-                    #cov.d[[clz]] <- 0
+                    # if full column has NA, this will fail...
+                    # not needed anyway
+                    #out <- lav_mvnorm_missing_h1_estimate_moments(Y = tmp2,
+                    #          max.iter = 10L)
+                    #cov.d[[clz]] <- out$Sigma
+                    cov.d[[clz]] <- 0
                 } else {
                     cov.d[[clz]] <- ( cov(tmp2, use = "complete.obs") *
                                       (ns-1) / ns )

@@ -1253,7 +1253,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     x <- NULL
     if(lavoptions$do.fit && lavoptions$estimator != "none" &&
-       lavoptions$optim.method != "none" &&
        lavmodel@nx.free > 0L) {
         if(lavoptions$verbose) {
             cat("lavoptim           ... start:\n")
@@ -1402,13 +1401,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         attr(x, "warn.txt") <- ""
         attr(x, "control") <- lavoptions$control
         attr(x, "dx") <- numeric(0L)
-        #attr(x, "fx") <-
-        #    lav_model_objective(lavmodel = lavmodel,
-        #        lavsamplestats = lavsamplestats, lavdata = lavdata,
-        #        lavcache = lavcache)
-        fx <- as.numeric(NA)
-        attr(fx, "fx.group") <- as.numeric(NA)
-        attr(x, "fx") <- fx
+        fx <- try(lav_model_objective(lavmodel = lavmodel,
+                  lavsamplestats = lavsamplestats, lavdata = lavdata,
+                  lavcache = lavcache), silent = TRUE)
+        if(!inherits(fx, "try-error")) {
+            attr(x, "fx") <- fx
+        } else {
+            fx <- as.numeric(NA)
+            attr(fx, "fx.group") <- as.numeric(NA)
+            attr(x, "fx") <- fx
+        }
 
         lavpartable$est <- lavpartable$start
     }
@@ -1864,6 +1866,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   test         = lavtest,             # list
                   h1           = lavh1,               # list
                   baseline     = lavbaseline,         # list
+                  internal     = list(),              # empty list
                   external     = list()               # empty list
                  )
 

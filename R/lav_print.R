@@ -87,6 +87,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
     # format for numeric values
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+    int.format  <- paste("%", max(8L, nd + 5L), "d", sep = "")
     char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
 
     # output sections
@@ -232,10 +233,29 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         x$block <- rep(1L, length(x$lhs))
     }
 
+    # step column (SAM)
+    #if(!is.null(x$step)) {
+    #    tmp.LABEL <- rep("", length(x$lhs))
+    #    p1.idx <- which(x$step == 1L)
+    #    p2.idx <- which(x$step == 2L)
+    #    tmp.LABEL[p1.idx] <- "1"
+    #    tmp.LABEL[p2.idx] <- "2"
+    #
+    #    if(is.null(x$label)) {
+    #        x$label <- tmp.LABEL
+    #    } else {
+    #        x$label <- paste(x$label, tmp.LABEL, sep = "")
+    #    }
+    #
+    #    x$step <- NULL
+    #}
+
     # round to 3 digits after the decimal point
     y <- as.data.frame(
            lapply(x, function(x) {
-               if(is.numeric(x)) {
+               if(is.integer(x)) {
+                   sprintf(int.format, x)
+               } else if(is.numeric(x)) {
                    sprintf(num.format, x)
                } else {
                    x
@@ -381,6 +401,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     colnames(m)[ colnames(m) ==    "lhs" ] <- ""
     colnames(m)[ colnames(m) ==     "op" ] <- ""
     colnames(m)[ colnames(m) ==    "rhs" ] <- ""
+    colnames(m)[ colnames(m) ==   "step" ] <- "Step"
     colnames(m)[ colnames(m) ==    "est" ] <- "Estimate"
     colnames(m)[ colnames(m) ==     "se" ] <- "Std.Err"
     colnames(m)[ colnames(m) ==      "z" ] <- "z-value"

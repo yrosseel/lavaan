@@ -503,7 +503,7 @@ fsr <- function(model      = NULL,
     I23 <- Info.all[idx1, idx2]
     I22 <- Info.all[idx1, idx1]
 
-    I33.inv <- solve(I33)
+    I33.inv <- lav_matrix_symmetric_inverse(I33)
 
     V1 <- I33.inv
     V2 <- I33.inv %*% I32 %*% Sigma.2  %*% t(I32) %*% I33.inv

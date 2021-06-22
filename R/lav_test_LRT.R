@@ -22,11 +22,10 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
-
     modp <- if(length(dots)) {
-        sapply(dots, is, "lavaan")
+        sapply(dots, inherits, "lavaan")
     } else {
-         logical(0)
+         logical(0L)
     }
 
     # some general properties (taken from the first model)
@@ -50,7 +49,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         names(mods) <- model.names
     } else {
         names(mods) <- sapply(as.list(mcall)[which(c(FALSE, TRUE, modp))],
-                              deparse)
+                              function(x) deparse(x))
     }
 
     ## put them in order (using number of free parameters)

@@ -3,33 +3,79 @@
 # header
 lav_object_print_header <- function(object) {
 
-    cat(sprintf("lavaan %s ",
-                packageDescription("lavaan", fields="Version")))
-
-    # catch FAKE run
-    FAKE <- FALSE
-    if(object@Options$optim.method == "none") {
-        FAKE <- TRUE
-    }
-
-    # Convergence or not?
-    if(FAKE) {
-        cat("-- DRY RUN with 0 iterations --\n")
-    } else if(object@optim$iterations > 0) {
-        if(object@optim$converged) {
-        cat(sprintf("ended normally after %i iterations\n",
-                    object@optim$iterations))
-        } else {
-            cat(sprintf("did NOT end normally after %i iterations\n",
-                object@optim$iterations))
-            cat("** WARNING ** Estimates below are most likely unreliable\n")
-        }
+    # sam or sem?
+    if(.hasSlot(object, "internal") && !is.null(object@internal$sam.method)) {
+        cat("This is ",
+            sprintf("lavaan %s",
+                        packageDescription("lavaan", fields="Version")),
+            " -- using the SAM approach to SEM", sep = "")
     } else {
-        cat("did not run (perhaps do.fit = FALSE)?\n")
-        cat("** WARNING ** Estimates below are simply the starting values\n")
+        cat(sprintf("lavaan %s ",
+            packageDescription("lavaan", fields="Version")))
+
+        # catch FAKE run
+        FAKE <- FALSE
+        if(object@Options$optim.method == "none") {
+            FAKE <- TRUE
+        }
+
+        # Convergence or not?
+        if(FAKE) {
+            cat("-- DRY RUN with 0 iterations --\n")
+        } else if(object@optim$iterations > 0) {
+            if(object@optim$converged) {
+            cat(sprintf("ended normally after %i iterations\n",
+                        object@optim$iterations))
+            } else {
+                cat(sprintf("did NOT end normally after %i iterations\n",
+                    object@optim$iterations))
+                cat("** WARNING ** Estimates below are most likely unreliable\n")
+            }
+        } else {
+            cat("did not run (perhaps do.fit = FALSE)?\n")
+            cat("** WARNING ** Estimates below are simply the starting values\n")
+        }
     }
     cat("\n")
+}
 
+# sam
+lav_object_print_sam_header <- function(object,  nd = 3L) {
+
+    # grab 'SAM' information from @internal slot
+    SAM <- object@internal
+  
+    # sam method
+    c1 <- c("SAM method")
+    c2 <- toupper(SAM$sam.method)
+
+    # options
+    if(SAM$sam.method == "local") {
+        c1 <- c(c1, "Mapping matrix M method")
+        c2 <- c(c2, SAM$sam.local.options$M.method)
+        # TODo: more!
+    }
+
+    # number of measurement blocks
+    c1 <- c(c1, "Number of measurement blocks")
+    c2 <- c(c2, length(SAM$sam.mm.list))
+
+    # empty last row
+    c1 <- c(c1, ""); c2 <- c(c2, "")
+
+    # format
+    c1 <- format(c1, width = 40L)
+    c2 <- format(c2, width = 11L + max(0, (nd - 3L)) * 4L, justify = "right")
+
+    # character matrix
+    M <- cbind(c1, c2, deparse.level = 0)
+    colnames(M) <- rep("",  ncol(M))
+    rownames(M) <- rep(" ", nrow(M))
+
+    # print
+    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+
+    invisible(M)
 }
 
 # optim
@@ -37,7 +83,6 @@ lav_object_print_optim <- function(object, nd = 3L) {
 
     #cat("Optimization information:\n\n")
 
-    # first column
     c1 <- c("Estimator")
 
     # second column
@@ -60,7 +105,8 @@ lav_object_print_optim <- function(object, nd = 3L) {
 
     # optimization method + npar
     c1 <- c(c1, "Optimization method", "Number of model parameters")
-    c2 <- c(c2, toupper(object@Options$optim.method), object@optim$npar)
+    c2 <- c(c2, toupper(object@Options$optim.method), 
+                lavInspect(object, "npar"))
 
     # optional output
     if(object@Model@eq.constraints) {
@@ -404,31 +450,78 @@ lav_object_print_test_statistics <- function(object, nd = 3L) {
     #invisible(M)
 }
 
+lav_object_print_sam_test_statistics <- function(object, nd = 3L) {
+
+    # format for numeric values
+    num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+    int.format  <- paste("%", max(8L, nd + 5L), "d", sep = "")
+    char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
+    
+    # measurement 
+    tmp <- object@internal$sam.mm.table
+    COLNAMES <- colnames(tmp); colnames(tmp) <- NULL
+    M <- lapply(tmp, function(x) {
+                if(is.integer(x)) {
+                    sprintf(int.format, x)
+                } else if(is.character(x)) {
+                    sprintf(char.format, x)
+                } else if(is.numeric(x)) {
+                    sprintf(num.format, x)
+                } else {
+                    sprintf(char.format, as.character(x))
+                }  })
+    # make matrix
+    M <- do.call("cbind", M)
+    # add column names as first row
+    M <- rbind(sprintf(char.format, COLNAMES), M, deparse.level = 0L)
+    # add margin
+    #M <- cbind(rep("aaa", nrow(M)), M, deparse.level = 0L)
+    rownames(M) <- rep(" ", nrow(M))
+    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+}
+
 lav_object_print_short_summary <- function(object, nd = 3L) {
 
     # 1. print header
     lav_object_print_header(object)
 
-    # 2. print optim info (including estimator)
-    lav_object_print_optim(object, nd = nd)
+    # 1.b sam or sem?
+    if(.hasSlot(object, "internal") && !is.null(object@internal$sam.method)) {
+        cat("\n")
+        lav_object_print_sam_header(object)
 
-    # 3. if EFA/ESEM, print rotation info
-    if(.hasSlot(object@Model, "nefa") && object@Model@nefa > 0L) {
-        lav_object_print_rotation(object, nd = nd)
-    }
+        # print lavdata
+        lav_data_print_short(object@Data, nd = nd)
 
-    # 4. print lavdata
-    lav_data_print_short(object@Data, nd = nd)
+        # local test statistics
+        lav_object_print_sam_test_statistics(object, nd = nd)
 
-    # 5. print test statistics
-    lav_object_print_test_statistics(object, nd = nd)
+        # global test statistics (for global only)
+        if(object@internal$sam.method == "global") {
+            lav_object_print_test_statistics(object, nd = nd)
+        }
 
-    # 5b. only if MML was used?
-    if(object@Options$estimator == "MML") {
-        fm <- fitMeasures(object, c("logl", "aic", "bic", "bic2"),
-                          output = "text")
-        print.lavaan.fitMeasures(fm, nd = nd, add.h0 = FALSE)
-    }
+    } else {
+        # 2. print optim info (including estimator)
+        lav_object_print_optim(object, nd = nd)
 
+        # 3. if EFA/ESEM, print rotation info
+        if(.hasSlot(object@Model, "nefa") && object@Model@nefa > 0L) {
+            lav_object_print_rotation(object, nd = nd)
+        }
+
+        # 4. print lavdata
+        lav_data_print_short(object@Data, nd = nd)
+
+        # 5. print test statistics
+        lav_object_print_test_statistics(object, nd = nd)
+
+        # 5b. only if MML was used?
+        if(object@Options$estimator == "MML") {
+            fm <- fitMeasures(object, c("logl", "aic", "bic", "bic2"),
+                              output = "text")
+            print.lavaan.fitMeasures(fm, nd = nd, add.h0 = FALSE)
+        }
+    } # regular sem
 }
 

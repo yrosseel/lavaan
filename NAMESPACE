@@ -50,6 +50,7 @@ if(getRversion() >= "2.13.0") {
 export("lavaan", "cfa", "sem", "growth",
        "lavaanList", "cfaList", "semList",
        #"fsr", "twostep",
+       "sam",
        # new name           # old name
        "lavParTable",       "lavaanify",
        "lavNames",          "lavaanNames",
