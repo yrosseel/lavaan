@@ -57,7 +57,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         if(is.null(A)) {
             A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H1")
             # take into account equality constraints m1
-            if(m1@Model@eq.constraints) {
+            if(A.method == "delta" && m1@Model@eq.constraints) {
                 A <- A %*% t(m1@Model@eq.constraints.K)
             }
             if(debug) print(A)

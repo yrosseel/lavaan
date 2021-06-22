@@ -2532,8 +2532,8 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
         # force OUT to be symmetric and pd
         OUT <- (OUT + t(OUT))/2
-        OUT <- lav_matrix_symmetric_force_pd(OUT,
-                                             tol = 1e-09) # was 1e-06 < 0.6-9
+        #OUT <- lav_matrix_symmetric_force_pd(OUT,
+        #                                     tol = 1e-09) # was 1e-06 < 0.6-9
     }
 
     # labels
