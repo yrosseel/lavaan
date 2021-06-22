@@ -84,9 +84,8 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                      cache = cache, tol = .Machine$double.eps)
         if(is.finite(optim$minimum)) {
             optim$convergence <- 0L
+            optim$par <- optim$minimum
         }
-        # create $par entry
-        optim$par <- optim$minimum
     }
 
     # check convergence

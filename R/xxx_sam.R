@@ -844,8 +844,8 @@ sam <- function(model          = NULL,
                                                 x@pta$vnames$ov }),
                     sam.mm.table       = sam.mm.table
                    )
-        JOINT@internal <- SAM   
-          
+        JOINT@internal <- SAM
+
         # fill in twostep standard errors
         if(JOINT@Options$se != "none") {
             JOINT@Options$se <- "twostep"
@@ -853,7 +853,7 @@ sam <- function(model          = NULL,
             JOINT@vcov$vcov[step2.idx, step2.idx] <- VCOV
             PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
                                        lavpartable = PT,
-                                       VCOV = JOINT@vcov$vcov) 
+                                       VCOV = JOINT@vcov$vcov)
             JOINT@ParTable <- PT
         }
 

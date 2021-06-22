@@ -44,7 +44,7 @@ lav_object_print_sam_header <- function(object,  nd = 3L) {
 
     # grab 'SAM' information from @internal slot
     SAM <- object@internal
-  
+
     # sam method
     c1 <- c("SAM method")
     c2 <- toupper(SAM$sam.method)
@@ -105,7 +105,7 @@ lav_object_print_optim <- function(object, nd = 3L) {
 
     # optimization method + npar
     c1 <- c(c1, "Optimization method", "Number of model parameters")
-    c2 <- c(c2, toupper(object@Options$optim.method), 
+    c2 <- c(c2, toupper(object@Options$optim.method),
                 lavInspect(object, "npar"))
 
     # optional output
@@ -456,8 +456,8 @@ lav_object_print_sam_test_statistics <- function(object, nd = 3L) {
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
     int.format  <- paste("%", max(8L, nd + 5L), "d", sep = "")
     char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
-    
-    # measurement 
+
+    # measurement
     tmp <- object@internal$sam.mm.table
     COLNAMES <- colnames(tmp); colnames(tmp) <- NULL
     M <- lapply(tmp, function(x) {

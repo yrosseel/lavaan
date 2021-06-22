@@ -1045,7 +1045,7 @@ function(object, ...) {
     #    dots <- dots[-arg.idx]
     #}
 
-    modp <- if(length(dots)) 
+    modp <- if(length(dots))
         sapply(dots, inherits, "lavaan") else logical(0)
     mods <- c(list(object), dots[modp])
     NAMES <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)

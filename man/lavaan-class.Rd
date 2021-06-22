@@ -54,6 +54,7 @@ about the data.}
     \item{\code{h1}:}{List. Information about the unrestricted h1 model (if available).}
     \item{\code{baseline}:}{List. Information about a baseline model (often
 the independence model) (if available).}
+    \item{\code{internal}:}{List. For internal use only.}
     \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
 }
