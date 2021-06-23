@@ -818,7 +818,6 @@ sam <- function(model          = NULL,
     out$VCOV <- VCOV
 
 
-
     ##########
     # Output #
     ##########
