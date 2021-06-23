@@ -499,7 +499,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             }
         }
 
-
         # WLS.obs
         if(nlevels == 1L) {
             WLS.obs[[g]] <- lav_samplestats_wls_obs(mean.g = mean[[g]],
@@ -747,8 +746,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # no WLS.V here
             }
 
-            # group.w.free (only if NACOV is NULL)
-            if(group.w.free && is.null(NACOV[[g]])) {
+            # group.w.free (only if categorical)
+            if(group.w.free && categorical) {
                 if(!is.null(WLS.V[[g]])) {
                     # unweight!!
                     a <- group.w[[g]] * sum(unlist(nobs)) / nobs[[g]]
