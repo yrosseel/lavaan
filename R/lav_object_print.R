@@ -60,6 +60,14 @@ lav_object_print_sam_header <- function(object,  nd = 3L) {
     c1 <- c(c1, "Number of measurement blocks")
     c2 <- c(c2, length(SAM$sam.mm.list))
 
+    # estimator measurement blocks
+    c1 <- c(c1, "Estimator measurement part")
+    c2 <- c(c2, SAM$sam.mm.estimator)
+
+    # estimator structural part
+    c1 <- c(c1, "Estimator  structural part")
+    c2 <- c(c2, SAM$sam.struc.estimator)
+
     # empty last row
     c1 <- c(c1, ""); c2 <- c(c2, "")
 
@@ -459,25 +467,41 @@ lav_object_print_sam_test_statistics <- function(object, nd = 3L) {
 
     # measurement
     tmp <- object@internal$sam.mm.table
-    COLNAMES <- colnames(tmp); colnames(tmp) <- NULL
-    M <- lapply(tmp, function(x) {
-                if(is.integer(x)) {
-                    sprintf(int.format, x)
-                } else if(is.character(x)) {
-                    sprintf(char.format, x)
-                } else if(is.numeric(x)) {
-                    sprintf(num.format, x)
-                } else {
-                    sprintf(char.format, as.character(x))
-                }  })
-    # make matrix
-    M <- do.call("cbind", M)
-    # add column names as first row
-    M <- rbind(sprintf(char.format, COLNAMES), M, deparse.level = 0L)
-    # add margin
-    #M <- cbind(rep("aaa", nrow(M)), M, deparse.level = 0L)
-    rownames(M) <- rep(" ", nrow(M))
-    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    if(object@internal$sam.method == "global") {
+        cat("Summary Information Measurement Part:\n\n")
+    } else {
+        cat("Summary Information Measurement + Structural:\n\n")
+    }
+    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+    if(object@internal$sam.method == "global") {
+        cat("\n")
+    } else {
+        # reliability information
+        c1 <- c2 <- character(0L)
+        if(object@Data@ngroups == 1L) {
+            cat("\n")
+            cat("  Model-based reliability latent variables:\n\n")
+            tmp <- data.frame(as.list(object@internal$sam.mm.rel[[1]]))
+            class(tmp) <- c("lavaan.data.frame", "data.frame")
+            print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+        } else {
+            cat("  Model-based reliability latent variables (per group):\n\n")
+            cat("\n")
+            for(g in 1:object@Data@ngroups) {
+                tmp <- data.frame(as.list(object@internal$sam.mm.rel[[g]]))
+                class(tmp) <- c("lavaan.data.frame", "data.frame")
+                print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                #print(c(NA,round(object@internal$sam.mm.rel[[g]], 3)),
+                #  na.print = "")
+            }
+        }
+    
+        cat("\n")
+        cat("  Summary Information Structural part:\n\n")
+        tmp <- data.frame(as.list(object@internal$sam.struc.fit))
+        class(tmp) <- c("lavaan.data.frame", "data.frame")
+        print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+    }
 }
 
 lav_object_print_short_summary <- function(object, nd = 3L) {

@@ -800,8 +800,8 @@ lavaanify <- lavParTable <- function(
         LIST$user[IDX]  <- unlist(lapply(CON, "[[", "user"))
 
         # zero is nicer?
-        LIST$free[IDX] <- rep(0L, nCon)
-        LIST$exo[IDX]  <- rep(0L, nCon)
+        LIST$free[ IDX] <- rep(0L, nCon)
+        LIST$exo[  IDX] <- rep(0L, nCon)
         LIST$block[IDX] <- rep(0L, nCon)
 
         if(!is.null(LIST$group)) {

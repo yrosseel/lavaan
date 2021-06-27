@@ -19,6 +19,12 @@
 # YR 12 May 2019 - first version
 # YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
 
+# YR 27 June 2021 - prepare for `public' release
+#                 - add Fuller (1987) correction if (MSM - MTM) is not
+#                   positive definite
+#                 - se = "none" now works
+#                 - store 'local' information in @internal slot (for printing)
+
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -41,21 +47,19 @@ sam <- function(model          = NULL,
                 data           = NULL,
                 cmd            = "sem",
                 mm.list        = NULL,
-                mm.args        = list(),
-                struc.args     = list(),
+                mm.args        = list(bounds = "standard"),
+                struc.args     = list(fixed.x = FALSE), # for now
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
-                                      veta.force.pd = FALSE,
-                                      veta.force.pd.tol = 1e-03,
+                                      veta.force.pd = TRUE,
                                       twolevel.method = "h1"), # h1, anova, mean
                 global.options = list(), # not used for now
                 output         = "lavaan") {
 
     # default local.options
     local.opt <- list(M.method = "ML",
-                      veta.force.pd = FALSE,
-                      veta.force.pd.tol = 1e-03,
+                      veta.force.pd = TRUE,
                       twolevel.method = "h1")
     local.options <- modifyList(local.opt, local.options, keep.null = FALSE)
 
@@ -244,19 +248,18 @@ sam <- function(model          = NULL,
     }
 
     # for joint model later
-    Sigma.11 <- matrix(0, npar, npar)
+    if(lavoptions$se != "none") {
+        Sigma.11 <- matrix(0, npar, npar)
+    }
     step1.idx <- integer(0L)
 
 
-    # local only
-    if(sam.method == "local") {
-        # NOTE: we should explicitly add zero-constrained LV covariances
-        # to PT, and keep them zero in PTM
-        if(cmd == "lavaan") {
-            add.lv.cov <- FALSE
-        } else {
-            add.lv.cov <- TRUE
-        }
+    # NOTE: we should explicitly add zero-constrained LV covariances
+    # to PT, and keep them zero in PTM
+    if(cmd == "lavaan") {
+        add.lv.cov <- FALSE
+    } else {
+        add.lv.cov <- TRUE
     }
 
 
@@ -271,69 +274,17 @@ sam <- function(model          = NULL,
             # LV.idx.list/OV.idx.list: list per block
             LV.idx.list[[mm]] <- vector("list", nblocks)
             OV.idx.list[[mm]] <- vector("list", nblocks)
-
-            # create parameter table for this measurement block only
-            PTM <-
-                lav_partable_subset_measurement_model(PT = PT,
-                                                      lavpta = lavpta,
-                                                      add.lv.cov = add.lv.cov,
-                                                      add.idx = TRUE,
-                                                      lv.names = mm.list[[mm]])
-            mm.idx <- attr(PTM, "idx"); attr(PTM, "idx") <- NULL
-            PTM$est <- NULL
-            PTM$se <- NULL
-        } else {
-            # which parameters are related to this measurement block?
-            mm.idx <- lav_partable_subset_measurement_model(PT = PT,
-                          lavpta = lavpta, lv.names = mm.list[[mm]],
-                          idx.only = TRUE)
-
-            if(length(mm.idx) == 0L) {
-                # empty measurement block (single-indicator lv?)
-                next
-            }
-
-            # adapt parameter table:
-            # - only parameters related to this measurement block are 'free'
-            # - everything else is set to zero (except variances, which are
-            #   are set to 1)
-            # - if multiple latent variables in this measurement block, we
-            #   must ADD and free the covariances among these latent variables
-            # - remove non-needed constraints
-            # - remove non-needed defs
-            PTM <- PT
-            if(any(sapply(mm.list[[mm]], length) > 1L)) {
-                PTM <- lav_partable_add_lv_cov(PT = PT,
-                              lavpta = lavpta, lv.names = mm.list[[mm]])
-            }
-            con.idx <- which(PTM$op %in% c("==","<",">",":="))
-            if(length(con.idx) > 0L) {
-                needed.idx <- which(con.idx %in% mm.idx)
-                if(length(needed.idx) > 0L) {
-                    con.idx <- con.idx[-needed.idx]
-                }
-                if(length(con.idx) > 0L) {
-                    PTM <- as.data.frame(PTM, stringsAsFactors = FALSE)
-                    PTM <- PTM[-con.idx, ]
-                }
-            }
-            PTM$est <- NULL
-            PTM$se <- NULL
-
-            PTM$free[ !seq_len(length(PTM$lhs)) %in% mm.idx &
-                       PTM$free > 0L ] <- 0L
-            PTM$free[ PTM$user == 3L ] <- 1L
-            PTM$free[ PTM$free > 0L ] <- seq_len( sum(PTM$free > 0L) )
-
-            # set all other non-fixed ustart values to 0
-            PTM$ustart[ PTM$free == 0L & is.na(PTM$ustart) ] <- 0
-
-            # set all other non-fixed ustart variance values to 1
-            PTM$ustart[ PTM$free == 0L & PTM$op == "~~" & PTM$lhs == PTM$rhs &
-                        PTM$ustart == 0 ] <- 1
         }
 
-
+        # create parameter table for this measurement block only
+        PTM <- lav_partable_subset_measurement_model(PT = PT,
+                                                     lavpta = lavpta,
+                                                     add.lv.cov = add.lv.cov,
+                                                     add.idx = TRUE,
+                                                     lv.names = mm.list[[mm]])
+        mm.idx <- attr(PTM, "idx"); attr(PTM, "idx") <- NULL
+        PTM$est <- NULL
+        PTM$se <- NULL
 
         # fit this measurement model only
         fit.mm.block <- do.call("lavaan",
@@ -375,22 +326,30 @@ sam <- function(model          = NULL,
             PTM$est[ PTM$free > 0L & PTM$user != 3L]
 
         # fill in standard errors measurement block
-        PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
-            PTM$se[ PTM$free > 0L & PTM$user != 3L]
+        if(lavoptions$se != "none") {
+            PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
+                PTM$se[ PTM$free > 0L & PTM$user != 3L]
 
-        # compute variance matrix for this measurement block
-        sigma.11 <- MM.FIT[[mm]]@vcov$vcov
+            # compute variance matrix for this measurement block
+            sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
-        # fill in variance matrix
-        par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ]
-        keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
-        Sigma.11[par.idx, par.idx] <- sigma.11[keep.idx, keep.idx, drop = FALSE]
+            # fill in variance matrix
+            par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx & 
+                                PT$free > 0L ]
+            keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
+            Sigma.11[par.idx, par.idx] <- 
+                sigma.11[keep.idx, keep.idx, drop = FALSE]
 
-        # store indices in step1.idx
-        step1.idx <- c(step1.idx, par.idx)
+            # store indices in step1.idx
+            step1.idx <- c(step1.idx, par.idx)
+        }
 
     } # measurement block
-    Sigma.11 <- Sigma.11[step1.idx, step1.idx, drop = FALSE]
+
+    # only keep 'measurement part' parameters in Sigma.11
+    if(lavoptions$se != "none") {
+        Sigma.11 <- Sigma.11[step1.idx, step1.idx, drop = FALSE]
+    }
 
     # store MM fits (for now) in output
     out <- list()
@@ -443,10 +402,7 @@ sam <- function(model          = NULL,
         if(lavoptions$meanstructure) {
             out$NU     <- NU
         }
-
     }
-
-
 
 
 
@@ -454,6 +410,7 @@ sam <- function(model          = NULL,
     ##          only needed for local approach!
     if(sam.method == "local") {
         VETA <- vector("list", nblocks)
+        REL  <- vector("list", nblocks)
         if(lavoptions$meanstructure) {
             EETA <- vector("list", nblocks)
         } else {
@@ -521,10 +478,10 @@ sam <- function(model          = NULL,
                     stop("lavaan ERROR: level 3 not supported (yet).")
                 }
             } else {
-                YBAR <- FIT@SampleStats@mean[[b]]
-                COV  <- FIT@SampleStats@cov[[b]]
+                YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
+                COV  <- FIT@h1$implied$cov[[b]]
                 if(local.M.method == "GLS") {
-                    ICOV <- FIT@SampleStats@icov[[b]]
+                    ICOV <- solve(COV)
                 }
             }
 
@@ -550,13 +507,28 @@ sam <- function(model          = NULL,
                 Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
             }
 
-            # compute VETA
-            VETA[[b]] <- Mg %*% (COV - THETA[[b]]) %*% t(Mg)
+            MSM <- Mg %*% COV %*% t(Mg)
+            MTM <- Mg %*% THETA[[b]] %*% t(Mg)
 
-            # force pd?
             if(local.options[["veta.force.pd"]]) {
-                VETA[[b]] <- lav_matrix_symmetric_force_pd( VETA[[b]],
-                                 tol = local.options[["veta.force.pd.tol"]] )
+                # use Fuller (1987) approach to ensure VETA is positive
+                lambda <- try(lav_matrix_symmetric_diff_smallest_root(MSM, MTM),
+                              silent = TRUE)
+                if(inherits(lambda, "try-error")) {
+                    warning("lavaan WARNING: failed to compute lambda")
+                    VETA[[b]] <- MSM - MTM # and hope for the best
+                } else {
+                    N <- nobs(FIT)
+                    cutoff <- 1 + 1/(N-1)
+                    if(lambda < cutoff) {
+                        lambda.star <- lambda - 1/(N - 1)
+                        VETA[[b]] <- MSM - lambda.star * MTM
+                    } else {
+                        VETA[[b]] <- MSM - MTM
+                    }
+                }
+            } else {
+                VETA[[b]] <- MSM - MTM
             }
 
             # names
@@ -568,6 +540,10 @@ sam <- function(model          = NULL,
                 EETA[[b]] <- Mg %*% (YBAR - NU[[b]])
             }
 
+            # compute model-based reliability
+            MSM <- Mg %*% COV %*% t(Mg)
+            REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
+
             # store M
             M[[b]] <- Mg
 
@@ -577,11 +553,13 @@ sam <- function(model          = NULL,
         # FIXME: we need block.names after all...
         if(ngroups > 1L && nblocks == ngroups)  {
             names(VETA) <- FIT@Data@group.label
+            names(REL)  <- FIT@Data@group.label
         }
 
         # store EETA/VETA
         out$VETA <- VETA
         out$EETA <- EETA
+        out$REL  <- REL
 
         # store M
         out$M <- M
@@ -603,17 +581,19 @@ sam <- function(model          = NULL,
     lavoptions.PA$do.fit <- TRUE
 
     if(sam.method == "local") {
+        #lavoptions.PA$fixed.x <- FALSE # FIXME! change exo column + provide
+        #                               # correct starting values
         lavoptions.PA$missing <- "listwise"
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
-        lavoptions.PA$baseline <- FALSE
+        #lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
-        lavoptions.PA$implied <- FALSE
+        #lavoptions.PA$implied <- FALSE
         lavoptions.PA$loglik <- FALSE
     } else {
-        lavoptions.PA$baseline <- FALSE
+        #lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
-        lavoptions.PA$implied <- FALSE
+        #lavoptions.PA$implied <- FALSE
         lavoptions.PA$loglik <- FALSE
     }
 
@@ -621,7 +601,10 @@ sam <- function(model          = NULL,
     if(sam.method == "local") {
         # extract structural part
         PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
-                                                    add.idx = TRUE)
+                   add.idx = TRUE, fixed.x = lavoptions.PA$fixed.x,
+                   add.exo.cov = FALSE) # should fix this at the global level!
+        PTS$start <- NULL
+
         if(nlevels > 1L) {
             PTS$level <- NULL
             PTS$group <- NULL
@@ -632,9 +615,11 @@ sam <- function(model          = NULL,
         }
         # if meanstructure, 'free' user=0 intercepts?
         if(lavoptions.PA$meanstructure) {
-            extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L)
+            extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
+                                   PTS$exo == 0L)
             if(length(extra.int.idx) > 0L) {
-                PTS$free[ extra.int.idx ] <- 1L
+                PTS$free[  extra.int.idx ] <- 1L
+                PTS$ustart[extra.int.idx ] <- as.numeric(NA)
                 PTS$free[ PTS$free > 0L ] <-
                     seq_len( length(PTS$free[ PTS$free > 0L ]) )
             }
@@ -741,15 +726,11 @@ sam <- function(model          = NULL,
     PT$step <- rep(1L, length(PT$lhs))
     PT$step[seq_len(length(PT$lhs)) %in% reg.idx] <- 2L
 
-    ###########################
-    # compute standard errors #
-    ###########################
 
-    # current approach:
-    # - create 'global' model, only to get the 'joint' information matrix
-    # - partition information matrix (step 1, step 2)
-    # - apply two-step correction for second step
-    # - 'insert' these corrected SEs (and vcov) in FIT.PA
+
+    ################################################################
+    # Step 3: assemble results in a 'dummy' JOINT model for output #
+    ################################################################
 
     lavoptions.joint <- lavoptions
     lavoptions.joint$optim.method <- "none"
@@ -760,88 +741,149 @@ sam <- function(model          = NULL,
     lavoptions.joint$check.post <- FALSE
     if(sam.method == "local") {
         lavoptions.joint$baseline <- FALSE
+        lavoptions.joint$sample.icov <- FALSE
         lavoptions.joint$h1 <- FALSE
         lavoptions.joint$test <- "none"
-        lavoptions.joint$se   <- "none"
-    } #else {
-        lavoptions.joint$store.vcov <- TRUE
-    #}
+        lavoptions.joint$estimator <- "none"
+    } else {
+        lavoptions.joint$test <- lavoptions$test
+        lavoptions.joint$estimator <- lavoptions$estimator
+    }
+    lavoptions.joint$se   <- "none" 
+    lavoptions.joint$store.vcov <- FALSE # we do this manually
+    lavoptions.joint$verbose <- FALSE
+
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,
                             slotData = FIT@Data)
-    # TOTAL information
-    INFO <- lavInspect(JOINT, "information")
-    I.12 <- INFO[step1.idx, step2.idx]
-    I.22 <- INFO[step2.idx, step2.idx]
-    I.21 <- INFO[step2.idx, step1.idx]
 
-    # compute Sigma.11
-    # overlap? set corresponding rows/cols of Sigma.11 to zero
-    both.idx <- which(step1.idx %in% step2.idx)
-    if(length(both.idx) > 0L) {
-        Sigma.11[both.idx,] <- 0
-        Sigma.11[,both.idx] <- 0
+
+    ###################################
+    # Step 4: compute standard errors #
+    ###################################
+
+    # current approach:
+    # - create 'global' model, only to get the 'joint' information matrix
+    # - partition information matrix (step 1, step 2)
+    # - apply two-step correction for second step
+    # - 'insert' these corrected SEs (and vcov) in FIT.PA
+    # compute information matrix
+
+    if(lavoptions$se != "none") {
+        JOINT@Model@estimator <- "ML"  # FIXME!
+        JOINT@Options$se <- lavoptions$se # always set to standard?
+        VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
+                               JOINT@Model@nx.free)
+        VCOV.ALL[step1.idx, step1.idx] <- Sigma.11
+        JOINT@vcov <- list(se = "twostep",
+                           information = lavoptions$information,
+                           vcov = VCOV.ALL)
+     
+        INFO <- lavInspect(JOINT, "information")
+        I.12 <- INFO[step1.idx, step2.idx]
+        I.22 <- INFO[step2.idx, step2.idx]
+        I.21 <- INFO[step2.idx, step1.idx]
+   
+        # compute Sigma.11
+        # overlap? set corresponding rows/cols of Sigma.11 to zero
+        both.idx <- which(step1.idx %in% step2.idx)
+        if(length(both.idx) > 0L) {
+            Sigma.11[both.idx,] <- 0
+            Sigma.11[,both.idx] <- 0
+        }
+
+        # V2
+        if(nlevels > 1L) {
+            # FIXME: not ok for multigroup multilevel
+            N <- FIT@Data@Lp[[1]]$nclusters[[2]] # first group only
+        } else {
+            N <- nobs(FIT)
+        }
+        I.22.inv <- solve(I.22)
+
+        # method below has the advantage that we can use a 'robust' vcov
+        # for the joint model;
+        # but does not work if we have equality constraints in the MM!
+        # -> D will be singular
+        #A <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
+        #B <- JOINT@vcov$vcov[ step2.idx, -step2.idx]
+        #C <- JOINT@vcov$vcov[-step2.idx,  step2.idx]
+        #D <- JOINT@vcov$vcov[-step2.idx, -step2.idx]
+        #I.22.inv <- A - B %*% solve(D) %*% C
+
+        # FIXME:
+        V2 <- 1/N * I.22.inv
+        #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
+
+        # V1
+        V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+
+        # V for second step
+        VCOV <- V2 + V1
+
+        # store in out
+        out$V2 <- V2
+        out$V1 <- V1
+        out$VCOV <- VCOV
     }
 
-    # V2
-    if(nlevels > 1L) {
-        # FIXME: not ok for multigroup multilevel
-        N <- FIT@Data@Lp[[1]]$nclusters[[2]] # first group only
-    } else {
-        N <- nobs(FIT)
-    }
-    I.22.inv <- solve(I.22)
-
-    # method below has the advantage that we can use a 'robust' vcov
-    # for the joint model;
-    # but does not work if we have equality constraints in the MM!
-    # -> D will be singular
-    #A <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
-    #B <- JOINT@vcov$vcov[ step2.idx, -step2.idx]
-    #C <- JOINT@vcov$vcov[-step2.idx,  step2.idx]
-    #D <- JOINT@vcov$vcov[-step2.idx, -step2.idx]
-    #I.22.inv <- A - B %*% solve(D) %*% C
-
-    # FIXME:
-    V2 <- 1/N * I.22.inv
-    #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
-
-    # V1
-    V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
-
-    # V for second step
-    VCOV <- V2 + V1
-
-    # store in out
-    out$V2 <- V2
-    out$V1 <- V1
-    out$VCOV <- VCOV
 
 
-    ##########
-    # Output #
-    ##########
+    ##################
+    # Step 5: Output #
+    ##################
 
     # assemble final lavaan objects
     if(output == "lavaan") {
         sam.mm.table <- data.frame(
-            block  = seq_len(length(mm.list)),
-            lv     = sapply(MM.FIT, function(x) {
-                           paste(unlist(x@pta$vnames$lv), collapse=",")}),
-            chisq  = sapply(MM.FIT, function(x) {x@test[[1]]$stat}),
-            df     = sapply(MM.FIT, function(x) {x@test[[1]]$df}),
-            pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
+            Block  = seq_len(length(mm.list)),
+            Latent = sapply(MM.FIT, function(x) {
+                      paste(unique(unlist(x@pta$vnames$lv)), collapse=",")}),
+            Nind = sapply(MM.FIT, function(x) {
+                       length(unique(unlist(x@pta$vnames$ov)))}),
+            #Estimator = sapply(MM.FIT, function(x) { x@Model@estimator} ),
+            Chisq  = sapply(MM.FIT, function(x) {x@test[[1]]$stat}),
+            Df     = sapply(MM.FIT, function(x) {x@test[[1]]$df}) )
+            #pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
+        class(sam.mm.table) <- c("lavaan.data.frame", "data.frame")
+
+        # only for the local method: fit measures of structural part
+        if(sam.method == "local") {
+            sam.struc.fit <- fitMeasures(FIT.PA, c("chisq", "df", "pvalue",
+                                                   "cfi", "rmsea", "srmr"))
+            sam.mm.rel <- REL
+        } else {
+            sam.struc.fit <- numeric(0L)
+            sam.mm.rel <- numeric(0L)
+        }
+       
 
         # extra info for @internal slot
-        SAM <- list(sam.method         = sam.method,
-                    sam.mm.list        = mm.list,
-                    sam.mm.args        = mm.args,
-                    sam.struc.args     = struc.args,
-                    sam.local.options  = local.options,
-                    sam.global.options = global.options,
-                    sam.mm.ov.names    = lapply(MM.FIT, function(x) {
-                                                x@pta$vnames$ov }),
-                    sam.mm.table       = sam.mm.table
+        if(sam.method == "local") {
+            sam.struc.fit <- try(fitMeasures(FIT.PA,
+                                               c("chisq", "df", "pvalue",
+                                                 "cfi", "rmsea", "srmr")),
+                                 silent = TRUE)
+            if(inherits(sam.struc.fit, "try-error")) {
+                sam.struc.fit <- "(unable to obtain fit measures)"
+            }
+        } else {
+            sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
+        }
+
+        SAM <- list(sam.method          = sam.method,
+                    sam.local.options   = local.options,
+                    sam.global.options  = global.options,
+                    sam.mm.list         = mm.list,
+                    sam.mm.estimator    = MM.FIT[[1]]@Model@estimator,
+                    sam.mm.args         = mm.args,
+                    sam.mm.ov.names     = lapply(MM.FIT, function(x) {
+                                                 x@pta$vnames$ov }),
+                    sam.mm.table        = sam.mm.table,
+                    sam.mm.rel          = sam.mm.rel,
+                    sam.struc.estimator = FIT.PA@Model@estimator,
+                    sam.struc.args      = struc.args,
+                    sam.struc.fit       = sam.struc.fit
                    )
         JOINT@internal <- SAM
 

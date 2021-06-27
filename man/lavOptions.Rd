@@ -353,6 +353,37 @@ Optimization options:
     \item{\code{optim.gn.iter.max}:}{Integer. Only used when 
       \code{optim.method = "GN"}. The maximum number of GN iterations. 
       The default is 200.}
+    \item{\code{bounds}:}{Only used if \code{optim.method = "nlminb"}.
+      If logical: \code{FALSE} implies no bounds are imposed on the parameters.
+      If \code{TRUE}, this implies \code{bounds = "wide"}. If character,
+      possible options are \code{"none"} (the default), \code{"standard"},
+      \code{"wide"}, \code{"pos.var"}, \code{"pos.ov.var"}, and 
+      \code{"pos.lv.var"}. 
+      If \code{bounds = "pos.ov.var"}, the observed variances are forced to be
+      nonnegative. If \code{bounds = "pos.lv.var"}, the latent variances are
+      forced to be nonnegative. If \code{bounds = "pos.var"}, both observed
+      and latent variances are forced to be nonnegative. If 
+      \code{bounds = "standard"}, lower and upper bounds are computed for
+      observed and latent variances, and factor loadings. If
+      \code{bounds = "wide"}, lower and upper bounds are computed for
+      observed and latent variances, and factor loadings; but the range of
+      the bounds is enlarged (allowing again for slightly negative variances).}
+    \item{\code{optim.bounds}:}{List. This can be used instead of the 
+      \code{bounds} argument to allow more control. Possible elements of the
+      list are \code{lower}, \code{upper}, \code{lower.factor} and 
+      \code{upper.factor}. All of these accept a vector. The \code{lower} and
+      \code{upper} elements indicate for which type of parameters bounds
+      should be computed. Possible choice are \code{"ov.var"}, \code{"lv.var"},
+      \code{"loadings"} and \code{"covariances"}. The \code{lower.factor} and 
+      \code{upper.factor} elements should have the same length as the 
+      \code{lower} and \code{upper} elements respectively. They indicate the
+      factor by which the range of the bounds should be enlarged (for 
+      example, 1.1 or 1.2; the default is 1.0). Other elements are
+      \code{min.reliability.marker} which sets the lower bound for the
+      reliability of the marker indicator (if any) of each factor 
+      (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
+      the lower bound of the variance of any endogenous latent variance
+      (default is 0.0).}
 }
 
 Categorical estimation options:

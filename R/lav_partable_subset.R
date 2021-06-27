@@ -7,6 +7,9 @@
 # - a single measurement block
 # ...
 
+# YR 25 June 2021: - add.exo.cov = TRUE for structural model
+#                  - fixed.x = FALSE/TRUE -> exo flags
+
 
 # FIXME:
 # - if we have more than 1 factor, we remove the structural
@@ -219,7 +222,7 @@ lav_partable_add_lv_cov <- function(PT, lavpta = NULL, lv.names = NULL) {
     for(b in seq_len(nblocks)) {
         if(length(lv.names[[b]]) > 1L) {
             tmp <- utils::combn(lv.names[[b]], 2L)
-            for(i in ncol(tmp)) {
+            for(i in seq_len(ncol(tmp))) {
 
                 # already present?
                 cov1.idx <- which(PT$op == "~~" &
@@ -267,7 +270,9 @@ lav_partable_add_lv_cov <- function(PT, lavpta = NULL, lv.names = NULL) {
 lav_partable_subset_structural_model <- function(PT = NULL,
                                                  lavpta = NULL,
                                                  add.idx = FALSE,
-                                                 idx.only = FALSE) {
+                                                 idx.only = FALSE,
+                                                 add.exo.cov = FALSE,
+                                                 fixed.x = FALSE) {
 
     # PT
     PT <- as.data.frame(PT, stringsAsFactors = FALSE)
@@ -396,12 +401,129 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
     PT <- PT[keep.idx, , drop = FALSE]
 
+    # add any missing covariances among exogenous variables
+    if(add.exo.cov) {
+        PT <- lav_partable_add_exo_cov(PT, lavpta = NULL)
+    }
+
+    # if fixed.x = FALSE, remove all remaining exo=1 elements
+    if(!fixed.x) {
+        exo.idx <- which(PT$exo != 0L)
+        if(length(exo.idx) > 0L) {
+            PT$exo[ exo.idx] <- 0L
+            PT$free[exo.idx] <- 1L
+        }
+    } else {
+        # redefine ov.x for the structural part only; set exo flag
+        for(g in 1:nblocks) {
+            ov.names.x <- lav_partable_vnames(PT, type = "ov.x", 
+                                              block = block.values[g])
+            if(length(ov.names.x) == 0L) {
+                next
+            }
+
+            # 1. variances/covariances
+            exo.var.idx  <- which(PT$op == "~~" & PT$block == block.values[g] &
+                                  PT$rhs %in% ov.names.x &
+                                  PT$lhs %in% ov.names.x &
+                                  PT$user == 0L)
+            if(length(exo.var.idx) > 0L) {
+                PT$ustart[exo.var.idx] <- as.numeric(NA) # to be overriden
+                  PT$free[exo.var.idx] <- 0L
+                   PT$exo[exo.var.idx] <- 1L
+            }
+
+            # 2. intercepts
+            exo.int.idx  <- which(PT$op == "~1" & PT$block == block.values[g] &
+                                  PT$lhs %in% ov.names.x &
+                                  PT$user == 0L)
+            if(length(exo.int.idx) > 0L) {
+                PT$ustart[exo.int.idx] <- as.numeric(NA) # to be overriden
+                  PT$free[exo.int.idx] <- 0L
+                   PT$exo[exo.int.idx] <- 1L
+            }
+        } # blocks
+    } # fixed.x
+
     # clean up
     PT <- lav_partable_complete(PT)
 
     if(add.idx) {
         attr(PT, "idx") <- keep.idx
     }
+
+    PT
+}
+
+# NOTE: only within same level
+lav_partable_add_exo_cov <- function(PT, lavpta = NULL, ov.names.x = NULL) {
+
+    # PT
+    PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+
+    # lavpta
+    if(is.null(lavpta)) {
+        lavpta <- lav_partable_attributes(PT)
+    }
+
+    # nblocks
+    nblocks <- lavpta$nblocks
+    block.values <- lav_partable_block_values(PT)
+
+
+    # ov.names.x: list with element per block
+    if(is.null(ov.names.x)) {
+        ov.names.x <- lavpta$vnames$ov.x
+    } else if(!is.list(ov.names.x)) {
+        ov.names.x <- rep(list(ov.names.x), nblocks)
+    }
+
+    # remove ov.names.x if not present at same level/block
+    if(nblocks > 1L) {
+        for(b in seq_len(nblocks)) {
+            rm.idx <- which(!ov.names.x[[b]] %in% lavpta$vnames$ov.x[[b]])
+            if(length(rm.idx) > 0L) {
+                ov.names.x[[b]] <- ov.names.x[[b]][-rm.idx]
+            }
+        } # b
+    }
+
+    # add covariances among latent variables
+    for(b in seq_len(nblocks)) {
+        if(length(ov.names.x[[b]]) > 1L) {
+            tmp <- utils::combn(ov.names.x[[b]], 2L)
+            for(i in seq_len(ncol(tmp))) {
+
+                # already present?
+                cov1.idx <- which(PT$op == "~~" &
+                                  PT$block == block.values[b] &
+                                  PT$lhs == tmp[1,i] & PT$rhs == tmp[2,i])
+                cov2.idx <- which(PT$op == "~~" &
+                                  PT$block == block.values[b] &
+                                  PT$lhs == tmp[2,i] & PT$rhs == tmp[1,i])
+
+                # if not, add
+                if(length(c(cov1.idx, cov2.idx)) == 0L) {
+                    ADD = list(lhs   = tmp[1,i],
+                               op    = "~~",
+                               rhs   = tmp[2,i],
+                               user  = 3L,
+                               free  = max(PT$free) + 1L,
+                               block = b)
+                    # add group column
+                    if(!is.null(PT$group)) {
+                        ADD$group <- unique(PT$block[PT$block == b])
+                    }
+                    # add level column
+                    if(!is.null(PT$level)) {
+                        ADD$level <- unique(PT$level[PT$block == b])
+                    }
+                    PT <- lav_partable_add(PT, add = ADD)
+                }
+            }
+
+        } # ov.names.x
+    } # blocks
 
     PT
 }

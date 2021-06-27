@@ -7,10 +7,10 @@ Fit a Structural Equation Model (SEM) using the Structural After Measurement
 (SAM) approach.}
 \usage{
 sam(model = NULL, data = NULL, cmd = "sem",
-    mm.list = NULL, mm.args = list(), struc.args = list(),
+    mm.list = NULL, mm.args = list(bounds = "standard"), 
+    struc.args = list(fixed.x = FALSE),
     sam.method = "local", ...,
-    local.options = list(M.method = "ML", veta.force.pd = FALSE,
-                         veta.force.pd.tol = 0.001,
+    local.options = list(M.method = "ML", veta.force.pd = TRUE,
                          twolevel.method = "h1"),
     global.options = list(),
     output = "lavaan")
@@ -32,9 +32,10 @@ sam(model = NULL, data = NULL, cmd = "sem",
      variable names.  If omitted, a separate measurement
      block is used for each latent variable.}
 \item{mm.args}{List. Optional arguments for the fitting
-    function(s) of the measurement block(s) only.}
+    function(s) of the measurement block(s) only. See \code{\link{lavOptions}} 
+    for a complete list.}
 \item{struc.args}{List. Optional arguments for the fitting function of the
-    structural part only.}
+    structural part only. See \code{\link{lavOptions}} for a complete list.}
 \item{sam.method}{Character. Can be set to \code{"local"} or \code{"global"}.}
 \item{...}{Many more additional options can be defined, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list. These options affect
