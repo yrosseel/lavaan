@@ -13,7 +13,7 @@ parameterEstimates(object,
                    rsquare = FALSE, 
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
-                   remove.nonfree = FALSE, 
+                   remove.nonfree = FALSE, remove.step1 = TRUE,
                    add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 }
@@ -68,6 +68,10 @@ rows containing inequality constraints, if any.}
 rows containing parameter definitions, if any.}
 \item{remove.nonfree}{Logical. If \code{TRUE}, filter the output by removing 
 all rows containing fixed (non-free) parameters.}
+\item{remove.step1}{Logical. Only used by \code{sam()}. 
+If \code{TRUE}, filter the 
+output by removing all rows corresponding to the measurement parameters
+that are part of the first step.}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the

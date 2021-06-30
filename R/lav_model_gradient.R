@@ -399,14 +399,28 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
         # for each upper-level group....
         for(g in 1:lavmodel@ngroups) {
-            DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
-                       YLp = lavsamplestats@YLp[[g]],
-                       Lp  = lavdata@Lp[[g]],
-                       Mu.W    = Mu.hat[[(g-1)*2 + 1]],
-                       Sigma.W = Sigma.hat[[(g-1)*2 + 1]],
-                       Mu.B    = Mu.hat[[(g-1)*2 + 2]],
-                       Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
-                       Sinv.method  = "eigen")
+            if(!lavsamplestats@missing.flag) { # complete data
+                DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
+                           YLp = lavsamplestats@YLp[[g]],
+                           Lp  = lavdata@Lp[[g]],
+                           Mu.W    = Mu.hat[[(g-1)*2 + 1]],
+                           Sigma.W = Sigma.hat[[(g-1)*2 + 1]],
+                           Mu.B    = Mu.hat[[(g-1)*2 + 2]],
+                           Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
+                           Sinv.method  = "eigen")
+            } else {
+                # missing data
+                DX <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
+                           Y1 = lavdata@X[[g]],
+                           Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+                           Lp  = lavdata@Lp[[g]],
+                           Mp = lavdata@Mp[[g]],
+                           Mu.W    = Mu.hat[[(g-1)*2 + 1]],
+                           Sigma.W = Sigma.hat[[(g-1)*2 + 1]],
+                           Mu.B    = Mu.hat[[(g-1)*2 + 2]],
+                           Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
+                           Sinv.method  = "eigen")
+            }
 
             group.dx <- as.numeric( DX %*% Delta[[g]] )
 

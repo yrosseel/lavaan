@@ -635,8 +635,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                 marker.idx <- which(partable$block == b &
                                     partable$lhs == this.lv.name &
                                     partable$rhs %in% v.ind &
+                                    partable$ustart == 1L &
                                     partable$free == 0L)
-                                    # no check for '1' (eg growth factor 0,1,2,)
                 if(length(marker.idx) == 1L) { # unique only!!
                     out[l] <- partable$rhs[marker.idx]
                 }

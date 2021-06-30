@@ -84,6 +84,7 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                      cache = cache, tol = .Machine$double.eps)
         if(is.finite(optim$minimum)) {
             optim$convergence <- 0L
+            optim$par <- optim$minimum
         }
     }
 
@@ -93,14 +94,14 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
             warning("lavaan WARNING: ",
                     "estimation polyserial correlation did not converge for
                     variables ", Y1.name, " and ", Y2.name)
-         } else {
-             warning("lavaan WARNING: estimation polyserial correlation(s)",
-                     " did not always converge")
-         }
+        } else {
+            warning("lavaan WARNING: estimation polyserial correlation(s)",
+                    " did not always converge")
+        }
+        rho <- cache$theta # starting value
+    } else {
+        rho <- optim$par
     }
-
-    # store result
-    rho <- optim$par
 
     rho
 }

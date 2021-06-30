@@ -54,6 +54,7 @@ about the data.}
     \item{\code{h1}:}{List. Information about the unrestricted h1 model (if available).}
     \item{\code{baseline}:}{List. Information about a baseline model (often
 the independence model) (if available).}
+    \item{\code{internal}:}{List. For internal use only.}
     \item{\code{external}:}{List. Empty slot to be used by add-on packages.}
   }
 }
@@ -130,7 +131,8 @@ the independence model) (if available).}
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
      fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
-     standardized = FALSE, cov.std = TRUE, rsquare = FALSE, std.nox = FALSE,
+     standardized = FALSE, remove.step1 = TRUE, 
+     cov.std = TRUE, rsquare = FALSE, std.nox = FALSE,
      modindices = FALSE, ci = FALSE, nd = 3L)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
@@ -147,6 +149,8 @@ the independence model) (if available).}
       tests are still based on unstandardized estimates. Use
       \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
       statistics for standardized estimates.
+      If \code{remove.step1}, the parameters of the measurement part are not
+      shown (only used when using \code{sam()}.)
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
       in the model are printed.
       If \code{std.nox = TRUE}, the \code{std.all} column contains the

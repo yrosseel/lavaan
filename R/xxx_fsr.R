@@ -323,6 +323,10 @@ fsr <- function(model      = NULL,
 
         # full data for structural model
         struc.names <- lavNames(PT.PA, "ov", group = group.values[g])
+        # reorder struc.names, so that order is the same as in MM (new in 0.6-9)
+        lv.idx <- which( struc.names %in% lv.names )
+        struc.names[lv.idx] <- lv.names
+
         struc.ov.idx <- which(! struc.names %in% lv.names )
         struc.lv.idx <- which(  struc.names %in% lv.names )
         lv.order     <- match(lv.names, struc.names)
@@ -499,7 +503,7 @@ fsr <- function(model      = NULL,
     I23 <- Info.all[idx1, idx2]
     I22 <- Info.all[idx1, idx1]
 
-    I33.inv <- solve(I33)
+    I33.inv <- lav_matrix_symmetric_inverse(I33)
 
     V1 <- I33.inv
     V2 <- I33.inv %*% I32 %*% Sigma.2  %*% t(I32) %*% I33.inv

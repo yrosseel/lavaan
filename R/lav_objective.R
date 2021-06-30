@@ -732,6 +732,7 @@ estimator.MML <- function(lavmodel      = NULL,
 
 estimator.2L <- function(lavmodel       = NULL,
                          GLIST          = NULL,
+                         Y1             = NULL, # only for missing
                          Lp             = NULL,
                          Mp             = NULL,
                          lavsamplestats = NULL,
@@ -764,7 +765,7 @@ estimator.2L <- function(lavmodel       = NULL,
 
         Y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
         Yp <- lavsamplestats@missing[[group]]
-        loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(Yp = Yp,
+        loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(Y1 = Y1,
                   Y2 = Y2, Lp = Lp, Mp = Mp,
                   Mu.W = Mu.W, Sigma.W = Sigma.W,
                   Mu.B = Mu.B, Sigma.B = Sigma.B,

@@ -134,6 +134,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                 # FIML twolevel
                 group.fx <- estimator.2L(lavmodel       = lavmodel,
                                          GLIST          = GLIST,
+                                         Y1             = lavdata@X[[g]],
                                          Lp             = lavdata@Lp[[g]],
                                          Mp             = lavdata@Mp[[g]],
                                          lavsamplestats = lavsamplestats,

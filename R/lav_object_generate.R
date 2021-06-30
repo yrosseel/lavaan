@@ -102,8 +102,9 @@ lav_object_independence <- function(object         = NULL,
     lavoptions$check.vcov <- FALSE
     lavoptions$optim.bounds <- list() # we already have the bounds
 
-    # ALWAYS do.fit
+    # ALWAYS do.fit and set optim.method = "nlminb"
     lavoptions$do.fit  <- TRUE
+    lavoptions$optim.method <- "nlminb"
 
     # verbose?
     lavoptions$verbose <- verbose

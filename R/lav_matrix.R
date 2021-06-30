@@ -1156,7 +1156,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
 # update inverse of A, after removing 1 or more rows (and corresponding
 # colums) from A
 #
-# - this is one of the many applications of the Sherman-Morrison formula
+# - this is just an application of the inverse of partitioned matrices
 # - only removal for now
 #
 lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
@@ -1221,12 +1221,9 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
         out <- ( S.inv[-rm.idx, -rm.idx, drop = FALSE] -
                  crossprod(A, solve.default(H, A)) )
         if(logdet) {
-            if(is.complex(H)) {
-                 H.logdet <- sum(log(eigen(H, only.values = TRUE)$values))
-            } else {
-                cH <- chol.default(Re(H)); diag.cH <- diag(cH)
-                H.logdet <- sum(log(diag.cH * diag.cH))
-            }
+            #cH <- chol.default(Re(H)); diag.cH <- diag(cH)
+            #H.logdet <- sum(log(diag.cH * diag.cH))
+            H.logdet <- log(det(H))
             attr(out, "logdet") <- S.logdet + H.logdet
         }
 
@@ -1325,6 +1322,94 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
     }
 
     out
+}
+
+# compute `lambda': the smallest root of the determinantal equation
+# |M - lambda*P| = 0 (see Fuller 1987, p.125 or p.172
+# allow for zero rows/columns in P
+lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
+                                                    warn = FALSE) {
+
+    # check input (we will 'assume' they are square and symmetric)
+    stopifnot(is.matrix(M), is.matrix(P))
+
+    # check if P is diagonal or not
+    PdiagFlag <- FALSE
+    tmp <- P
+    diag(tmp) <- 0
+    if( all(abs(tmp) < sqrt(.Machine$double.eps)) ) {
+        PdiagFlag <- TRUE
+    }
+
+    # diagonal elements of P
+    nP <- nrow(P)
+    diagP <- P[lav_matrix_diag_idx(nP)]
+
+    # force diagonal elements of P to be nonnegative (warn?)
+    neg.idx <- which(diagP < 0)
+    if(length(neg.idx) > 0L) {
+        if(warn) {
+            warning("some diagonal elements of P are negative (and set to zero)")
+        }
+        diag(P)[neg.idx] <- diagP[neg.idx] <- 0
+    }
+    
+    # check for (near)zero diagonal elements 
+    zero.idx <- which(abs(diagP) < sqrt(.Machine$double.eps))
+
+    # three cases: 
+    #    1. all elements are zero (P=0) -> lambda = 0
+    #    2. no elements are zero
+    #    3. some elements are zero -> regress out
+
+    # 1. all elements are zero
+    if(length(zero.idx) == nP) {
+        return(0.0)
+    }
+
+    # 2. no elements are zero
+    else if(length(zero.idx) == 0L) {
+        if(PdiagFlag) {
+            Ldiag <- 1/sqrt(diagP)
+            LML <- t(Ldiag * M) * Ldiag
+        } else {
+            L <- solve(lav_matrix_symmetric_sqrt(P))
+            LML <- L %*% M %*% t(L)
+        }
+
+        # compute lambda
+        lambda <- eigen(LML, symmetric = TRUE, only.values = TRUE)$values[nP]
+
+    # 3. some elements are zero
+    } else {
+        # regress out M-block corresponding to zero diagonal elements in P
+
+        # partition M accordingly: p = positive, n = negative
+        M.pp <- M[-zero.idx, -zero.idx, drop = FALSE]
+        M.pn <- M[-zero.idx,  zero.idx, drop = FALSE]
+        M.np <- M[ zero.idx, -zero.idx, drop = FALSE]
+        M.nn <- M[ zero.idx,  zero.idx, drop = FALSE]
+    
+        # create Mp.n
+        Mp.n <- M.pp - M.pn %*% solve(M.nn) %*% M.np
+
+        # extract positive part of P
+        P.p <- P[-zero.idx, -zero.idx, drop = FALSE]
+
+        # compute smallest root
+        if(PdiagFlag) {
+            diagPp <- diag(P.p)
+            Ldiag <- 1/sqrt(diagPp)
+            LML <- t(Ldiag * Mp.n) * Ldiag
+        } else {
+            L <- solve(lav_matrix_symmetric_sqrt(P.p))
+            LML <- L %*% Mp.n %*% t(L)
+        }
+        lambda <- eigen(LML, symmetric = TRUE, 
+                        only.values = TRUE)$values[nrow(P.p)]
+    }
+
+    lambda
 }
 
 # force a symmetric matrix to be positive definite

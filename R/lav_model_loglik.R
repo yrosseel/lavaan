@@ -54,7 +54,7 @@ lav_model_loglik <- function(lavdata        = NULL,
                 if(lavsamplestats@missing.flag) {
                     logl.group[g] <-
                         lav_mvnorm_cluster_missing_loglik_samplestats_2l(
-                            Yp = lavsamplestats@missing[[g]],
+                            Y1 = lavdata@X[[g]],
                             Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
                             Lp = lavdata@Lp[[g]],
                             Mp = lavdata@Mp[[g]],

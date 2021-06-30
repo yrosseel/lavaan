@@ -213,6 +213,7 @@ setClass("lavaan",
         test        = "list",            # test
         h1          = "list",            # unrestricted model results
         baseline    = "list",            # baseline model results
+        internal    = "list",            # optional slot, for internal use
         external    = "list"             # optional slot, for add-on packages
     )
 )
@@ -239,6 +240,7 @@ setClass("lavaanList",
         h1List          = "list",
         loglikList      = "list",
         baselineList    = "list",
+        internalList    = "list",
         funList         = "list",
         external        = "list"       # optional slot, for add-on packages
     )
