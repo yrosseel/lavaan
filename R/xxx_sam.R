@@ -334,10 +334,10 @@ sam <- function(model          = NULL,
             sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
             # fill in variance matrix
-            par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx & 
+            par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx &
                                 PT$free > 0L ]
             keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
-            Sigma.11[par.idx, par.idx] <- 
+            Sigma.11[par.idx, par.idx] <-
                 sigma.11[keep.idx, keep.idx, drop = FALSE]
 
             # store indices in step1.idx
@@ -495,7 +495,8 @@ sam <- function(model          = NULL,
                     tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
                                       drop = FALSE]
                     tmp.inv <- solve(tmp)
-                    THETA.inv <- THETA[[b]]
+                    THETA.inv <- matrix(0, nrow = nrow(THETA[[b]]),
+                                           ncol = ncol(THETA[[b]]))
                     THETA.inv[-zero.theta.idx, -zero.theta.idx] <- tmp.inv
                     diag(THETA.inv)[zero.theta.idx] <- 1
                 } else {
@@ -749,7 +750,7 @@ sam <- function(model          = NULL,
         lavoptions.joint$test <- lavoptions$test
         lavoptions.joint$estimator <- lavoptions$estimator
     }
-    lavoptions.joint$se   <- "none" 
+    lavoptions.joint$se   <- "none"
     lavoptions.joint$store.vcov <- FALSE # we do this manually
     lavoptions.joint$verbose <- FALSE
 
@@ -778,12 +779,12 @@ sam <- function(model          = NULL,
         JOINT@vcov <- list(se = "twostep",
                            information = lavoptions$information,
                            vcov = VCOV.ALL)
-     
+
         INFO <- lavInspect(JOINT, "information")
         I.12 <- INFO[step1.idx, step2.idx]
         I.22 <- INFO[step2.idx, step2.idx]
         I.21 <- INFO[step2.idx, step1.idx]
-   
+
         # compute Sigma.11
         # overlap? set corresponding rows/cols of Sigma.11 to zero
         both.idx <- which(step1.idx %in% step2.idx)
@@ -856,7 +857,7 @@ sam <- function(model          = NULL,
             sam.struc.fit <- numeric(0L)
             sam.mm.rel <- numeric(0L)
         }
-       
+
 
         # extra info for @internal slot
         if(sam.method == "local") {

@@ -1353,11 +1353,11 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
         }
         diag(P)[neg.idx] <- diagP[neg.idx] <- 0
     }
-    
-    # check for (near)zero diagonal elements 
+
+    # check for (near)zero diagonal elements
     zero.idx <- which(abs(diagP) < sqrt(.Machine$double.eps))
 
-    # three cases: 
+    # three cases:
     #    1. all elements are zero (P=0) -> lambda = 0
     #    2. no elements are zero
     #    3. some elements are zero -> regress out
@@ -1389,7 +1389,7 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
         M.pn <- M[-zero.idx,  zero.idx, drop = FALSE]
         M.np <- M[ zero.idx, -zero.idx, drop = FALSE]
         M.nn <- M[ zero.idx,  zero.idx, drop = FALSE]
-    
+
         # create Mp.n
         Mp.n <- M.pp - M.pn %*% solve(M.nn) %*% M.np
 
@@ -1405,7 +1405,7 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
             L <- solve(lav_matrix_symmetric_sqrt(P.p))
             LML <- L %*% Mp.n %*% t(L)
         }
-        lambda <- eigen(LML, symmetric = TRUE, 
+        lambda <- eigen(LML, symmetric = TRUE,
                         only.values = TRUE)$values[nrow(P.p)]
     }
 

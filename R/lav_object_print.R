@@ -495,7 +495,7 @@ lav_object_print_sam_test_statistics <- function(object, nd = 3L) {
                 #  na.print = "")
             }
         }
-    
+
         cat("\n")
         cat("  Summary Information Structural part:\n\n")
         tmp <- data.frame(as.list(object@internal$sam.struc.fit))

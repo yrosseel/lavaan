@@ -453,6 +453,7 @@ lav_matrix_rotate_simplimax <- function(LAMBDA = NULL, k = nrow(LAMBDA),
 #
 # Note: 'target' must be fully specified; if there are any NAs
 #        use lav_matrix_rotate_pst() instead
+#
 lav_matrix_rotate_target <- function(LAMBDA = NULL, target = NULL,
                                         ..., grad = FALSE) {
     # squared difference
@@ -506,9 +507,52 @@ lav_matrix_rotate_pst <- function(LAMBDA = NULL, target = NULL,
 }
 
 
+# bi-quartimin
+#
+# Jennrich & Bentler 2011
+#
+lav_matrix_rotate_biquartimin <- function(LAMBDA, ..., grad = FALSE) {
+    # see Matlab code page 549
+    stopifnot(ncol(LAMBDA) > 1L)
+
+    # remove first column
+    LAMBDA.group <- LAMBDA[, -1, drop = FALSE]
+
+    # apply quartimin on the 'group' part
+    out <- lav_matrix_rotate_quartimin(LAMBDA.group, ..., grad = grad)
+
+    if(grad) {
+        tmp <- attr(out, "grad")
+        attr(out, "grad") <- cbind(0, tmp)
+    }
+
+    out
+}
 
 
+# bi-geomin
+#
+# Jennrich & Bentler 2012
+#
+lav_matrix_rotate_bigeomin <- function(LAMBDA, geomin.epsilon = 0.01, ...,
+                                       grad = FALSE) {
+    stopifnot(ncol(LAMBDA) > 1L)
 
+    # remove first column
+    LAMBDA.group <- LAMBDA[, -1, drop = FALSE]
+
+    # apply geomin on the 'group' part
+    out <- lav_matrix_rotate_geomin(LAMBDA.group,
+                                    geomin.epsilon = geomin.epsilon, ...,
+                                    grad = grad)
+
+    if(grad) {
+        tmp <- attr(out, "grad")
+        attr(out, "grad") <- cbind(0, tmp)
+    }
+
+    out
+}
 
 
 
@@ -674,6 +718,23 @@ ilav_matrix_rotate_grad_test_all <- function() {
     } else {
         cat("tandem2: FAILED\n")
     }
+
+    # bi-quartimin
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_biquartimin)
+    if(is.logical(check) && check) {
+        cat("biquartimin: OK\n")
+    } else {
+        cat("biquartimin: FAILED\n")
+    }
+
+    # bi-quartimin
+    check <- ilav_matrix_rotate_grad_test(crit = lav_matrix_rotate_bigeomin)
+    if(is.logical(check) && check) {
+        cat("bigeomin: OK\n")
+    } else {
+        cat("bigeomin: FAILED\n")
+    }
+
 
 }
 
