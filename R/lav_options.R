@@ -81,7 +81,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 rotation.args      = list(orthogonal     = FALSE,
                                           row.weights    = "default",
                                           std.ov         = TRUE,
-                                          geomin.epsilon = 0.01,
+                                          geomin.epsilon = 0.001, # was 0.01 < 0.6-10
                                           orthomax.gamma = 1,
                                           cf.gamma       = 0,
                                           oblimin.gamma  = 0,
