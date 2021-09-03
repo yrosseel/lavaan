@@ -735,18 +735,20 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
             lower <- c(lower, rep(0.0, nvar)) # lower bound!
 
             # d) LOADINGS other
-            tmp <- utils::combn(ov.names, 2)
-            pstar <- ncol(tmp)
-            lhs <- c(lhs, paste("f", tmp[1,], sep = ""))
-             op <- c(op,   rep("=~", pstar))
-            rhs <- c(rhs, tmp[2,])
-            block <- c(block, rep(b,   pstar))
-            group <- c(group, rep(g,   pstar))
-            level <- c(level, rep(l,   pstar))
-            free  <- c(free,  rep(1L,  pstar))
-            exo   <- c(exo,   rep(0L,  pstar))
-            lower <- c(lower, rep(-Inf, pstar))
-            ustart<- c(ustart,rep(as.numeric(NA), pstar))
+            if(length(ov.names) > 1L) {
+                tmp <- utils::combn(ov.names, 2)
+                pstar <- ncol(tmp)
+                lhs <- c(lhs, paste("f", tmp[1,], sep = ""))
+                 op <- c(op,   rep("=~", pstar))
+                rhs <- c(rhs, tmp[2,])
+                block <- c(block, rep(b,   pstar))
+                group <- c(group, rep(g,   pstar))
+                level <- c(level, rep(l,   pstar))
+                free  <- c(free,  rep(1L,  pstar))
+                exo   <- c(exo,   rep(0L,  pstar))
+                lower <- c(lower, rep(-Inf, pstar))
+                ustart<- c(ustart,rep(as.numeric(NA), pstar))
+            }
 
             # meanstructure?
             if(meanstructure) {

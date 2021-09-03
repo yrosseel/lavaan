@@ -77,6 +77,10 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
             "cf-equamax"   = M / (2 * P),
             "cf-parsimax"  = (M - 1) / (P + M - 2),
             "cf-facparsim" = 1)
+    } else if(method %in% c("bi-quartimin", "biquartimin")) {
+        method.fname <- "lav_matrix_rotate_biquartimin"
+    } else if(method %in% c("bi-geomin", "bigeomin")) {
+        method.fname <- "lav_matrix_rotate_bigeomin"
     } else {
         method.fname <- paste("lav_matrix_rotate_", method, sep = "")
     }

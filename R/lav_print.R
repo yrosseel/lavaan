@@ -323,7 +323,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     # handle lower/upper boundary points
     if(!is.null(x$lower)) {
         b.idx <- which( abs(x$lower - x$est) < sqrt(.Machine$double.eps) &
-                        is.finite(x$se) & x$se != 0.0)
+                        (is.na(x$se) | (is.finite(x$se) & x$se != 0.0)) )
         if(length(b.idx) > 0L && !is.null(x$pvalue)) {
             m[b.idx, "pvalue"] <- ""
             if(is.null(x$label)) {

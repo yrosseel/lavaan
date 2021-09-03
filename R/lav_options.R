@@ -81,7 +81,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 rotation.args      = list(orthogonal     = FALSE,
                                           row.weights    = "default",
                                           std.ov         = TRUE,
-                                          geomin.epsilon = 0.01,
+                                          geomin.epsilon = 0.001, # was 0.01 < 0.6-10
                                           orthomax.gamma = 1,
                                           cf.gamma       = 0,
                                           oblimin.gamma  = 0,
@@ -1599,17 +1599,17 @@ lav_options_set <- function(opt = NULL) {
               opt$bounds == "wide") {
         opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
                                  upper = c("ov.var", "lv.var", "loadings"),
-                                 lower.factor = c(1.2, 1.0, 1.1),
-                                 upper.factor = c(1.2, 1.3, 1.1),
+                                 lower.factor = c(1.05, 1.0, 1.1),
+                                 upper.factor = c(1.20, 1.3, 1.1),
                                  min.reliability.marker = 0.1,
-                                 min.var.lv.endo = 0.0)
+                                 min.var.lv.endo = 0.005)
     } else if(opt$bounds == "standard") {
         opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
                                  upper = c("ov.var", "lv.var", "loadings"),
                                  lower.factor = c(1.0, 1.0, 1.0),
                                  upper.factor = c(1.0, 1.0, 1.0),
                                  min.reliability.marker = 0.1,
-                                 min.var.lv.endo = 0.0)
+                                 min.var.lv.endo = 0.005)
     } else if(opt$bounds == "pos.var") {
         opt$optim.bounds <- list(lower = c("ov.var", "lv.var"),
                                  lower.factor = c(1, 1),
@@ -1644,6 +1644,10 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$rotation %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
                             "cf-parsimax", "cf-facparsim")) {
         # nothing to do here; we need M/P to set cf.gamma
+    } else if(opt$rotation %in% c("bi-quartimin", "biquartimin")) {
+        opt$rotation <- "biquartimin"
+    } else if(opt$rotation %in% c("bi-geomin", "bigeomin")) {
+        opt$rotation <- "bigeomin"
     } else {
         txt <- c("Rotation method ", dQuote(opt$rotation), " not supported. ",
         "Supported rotation methods are: varimax, quartimax, orthomax, cf, ",

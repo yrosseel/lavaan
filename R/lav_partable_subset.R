@@ -416,7 +416,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     } else {
         # redefine ov.x for the structural part only; set exo flag
         for(g in 1:nblocks) {
-            ov.names.x <- lav_partable_vnames(PT, type = "ov.x", 
+            ov.names.x <- lav_partable_vnames(PT, type = "ov.x",
                                               block = block.values[g])
             if(length(ov.names.x) == 0L) {
                 next
