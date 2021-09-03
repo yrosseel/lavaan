@@ -8,7 +8,7 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
     # model-implied variance/covariance matrix ('sigma hat')
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, delta = (lavmodel@parameterization == "delta"))
 
     # model-implied mean structure ('mu hat')
     if(lavmodel@meanstructure) {
