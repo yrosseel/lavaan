@@ -1490,51 +1490,21 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         }
 
         # cluster-means
-        # WARNING: aggregate() converts to FACTOR (changing the ORDER!)
-        #Y2 <- unname(as.matrix(aggregate(Y1, by = list(cluster.idx),
-        #                       FUN = function(x) {
-        #                           if( all(is.na(x)) ) { # all elements are NA
-        #                               as.numeric(NA)    # in this cluster
-        #                           } else {
-        #                               mean(x, na.rm = TRUE)
-        #                           }
-        #                       })[,-1]))
-        Y2 <- rowsum(Y1, group = cluster.idx, reorder = FALSE,
+        Y2 <- rowsum.default(Y1, group = cluster.idx, reorder = FALSE,
                      na.rm = FALSE) / cluster.size
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w
         Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
-
-        # NOTE: we divide here by 'N - nclusters'
-        # - this is the standard definition of 'pooled-within' variance
-        # - this matters when we compute the objective function,
-        #   where we need to 'multiply' again with the same constant
-        # - an additional advantage of the 'N - nclusters' is that the same
-        #   constant is needed for multiplying sigma.w.logdet, so we can
-        #   can combine them
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
-
 
         # S.b
         # three parts: within/within, between/between, between/within
-        #S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / nclusters
         # standard definition of the between variance matrix
-        # - divides by (nclusters - 1)
+        # divides by (nclusters - 1)
         S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1)
 
-        # what if (nj*S.b - (nj-s)*S.w)/s is not-pd?
-        #NJ <- max(cluster.size)
-        #Sigma.j.max <- (NJ*S.b - (NJ-s)*S.w)/s
-        #EV <- eigen(Sigma.j.max, symmetric = TRUE, only.values = TRUE)$values
-        #if(any(EV < 0)) {
-        #    # 1. spit out warning
-        #    warning("lavaan WARNING: Sigma.j.max is not positive-definite.")
-        #}
-
-
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
-
 
         # loglik.x
         # extract 'fixed' level-1 loglik from here
