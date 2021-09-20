@@ -57,6 +57,7 @@ lav_mvnorm_cluster_implied22l <- function(Lp           = NULL,
     Mu.B.tilde <- numeric( p.tilde )
     Mu.B.tilde[ ov.idx[[2]] ] <- Mu.B
 
+
     # add Mu.W[within.idx] to Mu.B
     Mu.WB.tilde <- numeric( p.tilde )
     Mu.WB.tilde[ within.idx ] <- Mu.W.tilde[ within.idx ]
