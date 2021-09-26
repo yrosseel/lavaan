@@ -71,10 +71,6 @@ lav_options_default <- function(mimic = "lavaan") {
                 auto.delta         = FALSE,
                 auto.efa           = FALSE,
 
-                # seat belts
-                safe.ov.var.ub     = FALSE,
-                save.ov.var.lb     = FALSE,
-
                 # rotation
                 rotation           = "geomin",
                 rotation.se        = "bordered", # "bordered" or "delta"
@@ -173,6 +169,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 em.h1.tol              = 1e-05, # was 1e-06 < 0.6-9
                 em.h1.warn             = TRUE,
                 optim.gn.iter.max      = 200L,
+                optim.gn.stephalf.max  = 10L,
                 optim.gn.tol.x         = 1e-05,
 
                 # numerical integration
@@ -860,7 +857,13 @@ lav_options_set <- function(opt = NULL) {
         }
         #opt$missing <- "listwise"
     } else if(opt$estimator == "dls") {
-        opt$sample.cov.rescale <- TRUE # should we make this an option??
+        if(is.logical(opt$sample.cov.rescale)) {
+            # nothing to do
+        } else if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- TRUE
+        } else {
+            stop("lavaan ERROR: sample.cov.rescale value must be logical.")
+        }
         opt$estimator <- "DLS"
         if(opt$se == "default") {
             opt$se <- "robust.sem"
@@ -892,7 +895,7 @@ lav_options_set <- function(opt = NULL) {
 
         # check estimator.args
         if(is.null(opt$estimator.args)) {
-            opt$estimator.args <- list(dls.a = 1.0, dls.GammaNT = "sample",
+            opt$estimator.args <- list(dls.a = 1.0, dls.GammaNT = "model",
                                        dls.FtimesNmin1 = FALSE)
         } else {
             if(is.null(opt$estimator.args$dls.a)) {
@@ -905,7 +908,7 @@ lav_options_set <- function(opt = NULL) {
                 }
             }
             if(is.null(opt$estimator.args$dls.GammaNT)) {
-                opt$estimator.args$dls.GammaNT <- "sample"
+                opt$estimator.args$dls.GammaNT <- "model"
             } else {
                 stopifnot(is.character(opt$estimator.args$dls.GammaNT))
                 opt$estimator.args$dls.GammaNT <-
@@ -920,23 +923,23 @@ lav_options_set <- function(opt = NULL) {
                 stopifnot(is.logical(opt$estimator.args$dls.FtimesNminus1))
             }
         }
-        # is 'sample' version, we allow both nlminb and gn
-        # if 'model' version, we only allow for gn
         if(opt$estimator.args$dls.GammaNT == "sample") {
             if(opt$optim.method %in% c("nlminb", "gn")) {
                 # nothing to do
             } else if(opt$optim.method == "default") {
                 opt$optim.method <- "gn"
             } else {
-                stop("lavaan ERROR: optim.method must be either nlminb or gn if estimator is sample based DLS.")
+                stop("lavaan ERROR: optim.method must be either nlminb or gn if estimator is DLS.")
             }
         } else {
             if(opt$optim.method %in% c("gn")) {
                 # nothing to do
             } else if(opt$optim.method == "default") {
                 opt$optim.method <- "gn"
+            } else if(opt$optim.method == "nlminb") {
+                opt$optim.gradient = "numerical"
             } else {
-                stop("lavaan ERROR: optim.method must be gn if estimator is model based DLS.")
+                stop("lavaan ERROR: optim.method must be either nlminb or gn if estimator is DLS.")
             }
         }
     } else if(opt$estimator == "dwls") {

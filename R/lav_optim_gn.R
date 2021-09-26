@@ -153,9 +153,13 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
 
     # options
-    verbose <- lavoptions$verbose
-    iter.max <- lavoptions$optim.gn.iter.max
-    tol.x    <- lavoptions$optim.gn.tol.x
+    verbose      <- lavoptions$verbose
+    iter.max     <- lavoptions$optim.gn.iter.max
+    tol.x        <- lavoptions$optim.gn.tol.x
+    stephalf.max <- as.integer(lavoptions$optim.gn.stephalf.max)
+    if(stephalf.max < 0L) {
+        stephalf.max <- 0L
+    }
 
     # initialize
     iter <- 0; alpha <- 1.0; old.x <- x
@@ -176,8 +180,8 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
 
         # update
         alpha <- 1.0
-        step <- U.invQ[seq_len(npar)]
-        for(h in 1:10) {
+        step  <- U.invQ[seq_len(npar)]
+        for(h in 1:max(1L, stephalf.max)) {
             new.x <- old.x + (alpha * step)
 
             # apply simple bounds (if any)
@@ -199,10 +203,13 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
                                lavdata = lavdata, lavoptions = lavoptions,
                                lavmodel = lavmodel, extra = FALSE,
                                lambda = old.out$lambda)$obj
+
             if(is.finite(new.obj) && new.obj < old.obj) {
                 break
+            } else if(stephalf.max == 0L) { # no step-halving!
+                break
             } else {
-                # step-halfing
+                # step-halving
                 alpha <- alpha / 2.0
                 #if(verbose) {
                 #    cat(" -- step halving -- : alpha = ", alpha, "\n")
