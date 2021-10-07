@@ -2,9 +2,12 @@
 # (eg. is theta diagonal or not, is the structurual model recursive or not,
 #  is the model just a regression model, etc)
 #
-# YR 15 March 2021 -- initial version
+# initial version: YR 15 March 2021
+# - YR 05 Oct 2021: use det(I - B) to check if B is acyclic
+ 
 
-lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL) {
+lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
+                                 m.free.idx = NULL) {
 
     if(is.null(lavpta)) {
         lavpta <- lav_partable_attributes(lavpartable)
@@ -18,11 +21,31 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL) {
     uvreg <- logical(ngroups)
     uvord <- logical(ngroups)
     mvreg <- logical(ngroups)
+    acyclic <- logical(ngroups)
     nexo <- integer(ngroups)
 
     for(g in seq_len(ngroups)) {
+       
+       # at least 1 regression
+       if(length(lavpta$vnames$eqs.y[[g]]) == 0L) {
+           next
+       }
+
+       # acyclic?
+       B <- GLIST$beta
+       beta.idx <- which(names(GLIST) == "beta")
+       # keep fixed values (if any); fill in 1 in all 'free' positions
+       B[ m.free.idx[[beta.idx]] ] <- 1
+       IB <- diag(nrow(B)) - B
+       # if B is acyclic, we should be able to permute the rows/cols of B
+       # so that B is upper/lower triangular, and so det(IB) = 1
+       if(det(IB) == 1) {
+           acyclic[g] <- TRUE
+       }  
+
+
        # no latent variables, at least 1 dependent variable
-       if(lavpta$nfac[[g]] > 0L || length(lavpta$vnames$eqs.y[[g]]) == 0L) {
+       if(lavpta$nfac[[g]] > 0L) {
            next
        }
 
@@ -52,7 +75,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL) {
     } # g
 
     modprop <- list( uvreg = uvreg, uvord = uvord, mvreg = mvreg,
-                     nexo = nexo )
+                     nexo = nexo, acyclic = acyclic )
 
     modprop
 }

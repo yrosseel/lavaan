@@ -1586,5 +1586,71 @@ lav_matrix_cov_wt <- function(Y, wt = NULL) {
     out
 }
 
+# compute (I-A)^{-1} where A is square
+# using a (truncated) Neumann series:  (I-A)^{-1} = \sum_k=0^{\infty} A^k
+#
+# as A is typically sparse, we can stop if all elements in A^k are zero for,
+# say, k<=6
+lav_matrix_inverse_iminus <- function(A = NULL) {
 
+    nr <- nrow(A); nc <- ncol(A)
+    stopifnot(nr == nc)
+
+    # create I + A
+    IA <- A
+    diag.idx <- lav_matrix_diag_idx(nr)
+    IA[diag.idx] <- IA[diag.idx] + 1
+
+    # initial approximation
+    IA.inv <- IA
+
+    # first order
+    A2 <- A %*% A
+    if(all(A2 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A2
+    }
+
+    # second order
+    A3 <- A2 %*% A
+	if(all(A3 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A3
+    }
+
+    # third order
+    A4 <- A3 %*% A
+    if(all(A4 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A4
+    }
+
+    # fourth order
+    A5 <- A4 %*% A
+    if(all(A5 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A5
+    }
+
+    # fifth order
+    A6 <- A5 %*% A
+    if(all(A6 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        # naive version (for now)
+        tmp <- -A
+        tmp[diag.idx] <- tmp[diag.idx] + 1
+        IA.inv <- solve(tmp)
+        return(IA.inv)
+    }
+}
 

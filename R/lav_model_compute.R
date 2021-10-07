@@ -21,8 +21,10 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
         if(representation == "LISREL") {
             Sigma.hat[[g]] <- computeSigmaHat.LISREL(MLIST = MLIST,
                                                      delta = delta)
+        } else if(representation == "RAM") {
+            Sigma.hat[[g]] <- lav_ram_sigmahat(MLIST = MLIST, delta = delta)
         } else {
-            stop("only representation LISREL has been implemented for now")
+            stop("only LISREL and RAM representation has been implemented for now")
         }
         if(debug) print(Sigma.hat[[g]])
 
@@ -146,14 +148,17 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+        MLIST <- GLIST[mm.in.group]
 
         if(!meanstructure) {
             Mu.hat[[g]] <- numeric( lavmodel@nvar[g] )
         } else
         if(representation == "LISREL") {
-            Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = GLIST[ mm.in.group ])
+            Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = MLIST)
+        } else if(representation == "RAM") {
+            Mu.hat[[g]] <- lav_ram_muhat(MLIST = MLIST)
         } else {
-            stop("only representation LISREL has been implemented for now")
+            stop("only RAM and LISREL representation has been implemented for now")
         }
     } # nblocks
 
@@ -366,33 +371,35 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
     representation <- lavmodel@representation
 
     # return a list
-    ETA <- vector("list", length=nblocks)
+    VETA <- vector("list", length=nblocks)
 
-    # compute ETA for each group
+    # compute VETA for each group
     for(g in 1:nblocks) {
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            ETA.g <- computeVETA.LISREL(MLIST = MLIST)
+            VETA.g <- computeVETA.LISREL(MLIST = MLIST)
 
             if(remove.dummy.lv) {
                 # remove all dummy latent variables
                 lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[g]],
                             lavmodel@ov.x.dummy.lv.idx[[g]])
                 if(!is.null(lv.idx)) {
-                    ETA.g <- ETA.g[-lv.idx, -lv.idx, drop=FALSE]
+                    VETA.g <- VETA.g[-lv.idx, -lv.idx, drop=FALSE]
                 }
             }
+        } else if(representation == "RAM") {
+            VETA.g <- lav_ram_veta(MLIST = MLIST)
         } else {
-            stop("only representation LISREL has been implemented for now")
+            stop("only LISREL and RAM representation has been implemented for now")
         }
 
-        ETA[[g]] <- ETA.g
+        VETA[[g]] <- VETA.g
     }
 
-    ETA
+    VETA
 }
 
 # V(ETA|x_i): latent variances variances/covariances, conditional on x_
@@ -652,8 +659,11 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
             } else {
                 THETA.g <- computeTHETA.LISREL(MLIST = MLIST)
             }
+        } else if(representation == "RAM") {
+            ov.idx <- as.integer(MLIST$ov.idx[1,])
+            THETA.g <- MLIST$S[ov.idx, ov.idx, drop = FALSE]
         } else {
-            stop("only representation LISREL has been implemented for now")
+            stop("only LISREL and RAM representation has been implemented for now")
         }
 
         THETA[[g]] <- THETA.g

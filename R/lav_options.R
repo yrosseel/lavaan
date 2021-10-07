@@ -324,13 +324,14 @@ lav_options_set <- function(opt = NULL) {
     # representation
     if(opt$representation == "default") {
         opt$representation <- "LISREL"
-    } else if(opt$representation == "lisrel") {
+    } else if(opt$representation %in% c("lisrel", "LISREL")) {
         opt$representation <- "LISREL"
-    } else if(opt$representation == "eqs" ||
-              opt$representation == "bentler-weeks") {
-        opt$representation <- "EQS"
+    #} else if(opt$representation %in% c("eqs", "EQS", "bentler-weeks")) {
+    #    opt$representation <- "EQS"
+    } else if(opt$representation %in% c("ram", "RAM")) {
+        opt$representation <- "RAM"
     } else {
-        stop("lavaan ERROR: representation must be \"LISREL\" or \"EQS\" \n")
+        stop("lavaan ERROR: representation must be \"LISREL\" or \"RAM\" \n")
     }
 
     # clustered

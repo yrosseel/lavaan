@@ -68,9 +68,11 @@ lav_model <- function(lavpartable      = NULL,
 
     # select model matrices
     if(lavoptions$representation == "LISREL") {
-        REP <- representation.LISREL(lavpartable, target = NULL, extra = TRUE)
+        REP <- lav_lisrel(lavpartable, target = NULL, extra = TRUE)
+    } else if(lavoptions$representation == "RAM") {
+        REP <- lav_ram(lavpartable, target = NULL, extra = TRUE)
     } else {
-        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+        stop("lavaan ERROR: representation must be either \"LISREL\" or \"RAM\".")
     }
     if(lavoptions$debug) print(REP)
 
@@ -79,7 +81,6 @@ lav_model <- function(lavpartable      = NULL,
                      !lavpartable$op %in% c("==","<",">",":="))
 
     if(length(bad.idx) > 0L) {
-
         label <- paste(lavpartable$lhs[bad.idx[1]],
                        lavpartable$op[bad.idx[1]],
                        lavpartable$rhs[bad.idx[1]], sep = " ")
@@ -249,6 +250,11 @@ lav_model <- function(lavpartable      = NULL,
                 tmp[idx,1L] <- 1.0
             }
 
+            # representation specific
+            if(lavoptions$representation == "RAM" && mmNames[mm] == "ov.idx") {
+                tmp[1,] <- attr(REP, "ov.idx")[[g]]
+            }
+
             # assign matrix to GLIST
             GLIST[[offset]] <- tmp
         } # mm
@@ -343,7 +349,8 @@ lav_model <- function(lavpartable      = NULL,
     # new in 0.6-9: model properties
     modprop <- lav_model_properties(GLIST = GLIST,
                                     lavpartable = lavpartable,
-                                    lavpta = lavpta)
+                                    lavpta = lavpta,
+                                    m.free.idx = m.free.idx)
 
     Model <- new("lavModel",
                  GLIST=GLIST,

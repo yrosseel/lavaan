@@ -153,8 +153,14 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
                 # only save what we need
                 DX[mm.in.group] <- DX.group[ mm.names ]
+            } else if(representation == "RAM") {
+                DX.group <- lav_ram_df(GLIST[mm.in.group],
+                                       Omega[[g]],
+                                       Omega.mu[[g]])
+                # only save what we need
+                DX[mm.in.group] <- DX.group[ mm.names ]
             } else {
-                stop("only representation LISREL has been implemented for now")
+                stop("only LISREL and RAM representation has been implemented for now")
             }
 
             # weight by group
@@ -702,7 +708,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         #}
 
         # if theta, do some preparation
-        if(parameterization == "theta") {
+        if(representation == "LISREL" && parameterization == "theta") {
             sigma.hat <- computeSigmaHat.LISREL(MLIST=GLIST[mm.in.group],
                                                 delta=FALSE)
             dsigma <- diag(sigma.hat)
@@ -825,8 +831,19 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                                                      MLIST=GLIST[ mm.in.group ])
                     DELTA <- rbind(DELTA.gw, DELTA)
                 }
+            } else if(representation == "RAM") {
+                DELTA <- dxSigma <-
+                    lav_ram_dsigma(m     = mname,
+                                   idx   = m.el.idx[[mm]],
+                                   MLIST = GLIST[ mm.in.group ])
+                if(lavmodel@meanstructure) {
+                    DELTA.mu <- lav_ram_dmu(m    = mname,
+                                           idx   = m.el.idx[[mm]],
+                                           MLIST = GLIST[ mm.in.group ])
+                    DELTA <- rbind(DELTA.mu, DELTA)
+                }
             } else {
-                stop("representation", representation, "not implemented yet")
+                stop("representation ", representation, " not implemented yet")
             }
 
             Delta.group[ ,x.el.idx[[mm]]] <- DELTA

@@ -8,10 +8,11 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL",
 
     # get model matrices
     if(representation == "LISREL") {
-        REP <- representation.LISREL(partable, target = NULL,
-                                     extra = add.attributes)
+        REP <- lav_lisreL(partable, target = NULL, extra = add.attributes)
+    } else if(representation == "RAM") {
+        REP <- lav_ram(partable, target = NULL, extra = add.attributes)
     } else {
-        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+        stop("lavaan ERROR: representation must either \"LISREL\" or \"RAM\".")
     }
 
     partable$mat <- REP$mat
@@ -24,8 +25,12 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL",
     }
 
     if(add.attributes) {
-        attr(partable, "ov.dummy.names.nox") <- attr(REP, "ov.dummy.names.nox")
-        attr(partable, "ov.dummy.names.x")   <- attr(REP, "ov.dummy.names.x")
+        if(representation == "LISREL") {
+            attr(partable, "ov.dummy.names.nox") <- attr(REP, "ov.dummy.names.nox")
+            attr(partable, "ov.dummy.names.x")   <- attr(REP, "ov.dummy.names.x")
+        } else if(representation == "RAM") {
+            attr(partable, "ov.idx") <- attr(REP, "ov.idx")
+        }
         attr(partable, "mmNames")  <- attr(REP, "mmNames")
         attr(partable, "mmNumber") <- attr(REP, "mmNumber")
         attr(partable, "mmRows")   <- attr(REP, "mmRows")
