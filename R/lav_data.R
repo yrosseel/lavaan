@@ -833,9 +833,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
         user.ordered.names <- ov$name[ov$type == "ordered" & ov$user == 1L]
         user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
         if(length(user.ordered.idx) > 0L) {
-            for(i in user.ordered.idx) {
+          for(i in user.ordered.idx) {
+                X[[g]][,i][is.na(X[[g]][,i])] <- NA # change NaN to NA
                 X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
-            }
+                # possible alternative to the previous two lines:
+                # X[[g]][,i] <- as.numeric(factor(X[[g]][,i], exclude = c(NA, NaN)))
+          }
         }
 
         ## FIXME:
