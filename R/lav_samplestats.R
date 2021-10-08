@@ -672,14 +672,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(!categorical) {
                     if(estimator == "WLS" || estimator == "DLS") {
                         if(!fixed.x) {
-                            # Gamma should be po before we invert
-                            ev <- eigen(NACOV[[g]], # symmetric=FALSE,
-                                        only.values=TRUE)$values
-                            if(is.complex(ev)) {
-                               stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
-                            }
-                            if(any(Re(ev) < 0)) {
-                                stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
+                            if(estimator != "DLS") {
+                                # Gamma should be po before we invert
+                                ev <- eigen(NACOV[[g]], # symmetric=FALSE,
+                                            only.values=TRUE)$values
+                                if(is.complex(ev)) {
+                                   stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
+                                }
+                                if(any(Re(ev) < 0)) {
+                                    stop("lavaan ERROR: Gamma (NACOV) matrix is not positive-definite")
+                                }
                             }
                             if(estimator == "DLS" && dls.GammaNT == "sample") {
                                 if(dls.a == 1.0) {
