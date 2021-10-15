@@ -8,7 +8,7 @@ citEntry(entry = "Article",
   volume       = "48",
   number       = "2",
   pages        = "1--36",
-  doi          = "https://doi.org/10.18637/jss.v048.i02",
+  doi          = "10.18637/jss.v048.i02",
 
   textVersion  =
   paste("Yves Rosseel (2012).",

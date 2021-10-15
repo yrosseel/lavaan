@@ -6,34 +6,38 @@
 # - YR 05 Oct 2021: use det(I - B) to check if B is acyclic
 
 
+# note: there is no 'lavmodel' yet, because we call this in lav_model.R
 lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
-                                 m.free.idx = NULL) {
+                                 nmat = NULL, m.free.idx = NULL) {
 
     if(is.null(lavpta)) {
         lavpta <- lav_partable_attributes(lavpartable)
     }
 
-    ngroups <- lavpta$ngroups
-
+    nblocks <- lavpta$nblocks
 
     # is the model a univariate/multivariate linear multiple regression
-    # model (per group)?
-    uvreg <- logical(ngroups)
-    uvord <- logical(ngroups)
-    mvreg <- logical(ngroups)
-    acyclic <- logical(ngroups)
-    nexo <- integer(ngroups)
+    # model (per block)?
+    uvreg <- logical(nblocks)
+    uvord <- logical(nblocks)
+    mvreg <- logical(nblocks)
+    acyclic <- logical(nblocks)
+    nexo <- integer(nblocks)
 
-    for(g in seq_len(ngroups)) {
+    for(g in seq_len(nblocks)) {
 
        # at least 1 regression
        if(length(lavpta$vnames$eqs.y[[g]]) == 0L) {
            next
        }
 
+       # find beta index for this block
+       mm.in.block <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+       MLIST <- GLIST[mm.in.block]
+       beta.idx <- which(names(MLIST) == "beta") + cumsum(c(0L,nmat))[g]
+
        # acyclic?
-       B <- GLIST$beta
-       beta.idx <- which(names(GLIST) == "beta")
+       B <- GLIST[[beta.idx]]
        # keep fixed values (if any); fill in 1 in all 'free' positions
        B[ m.free.idx[[beta.idx]] ] <- 1
        IB <- diag(nrow(B)) - B

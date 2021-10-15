@@ -350,6 +350,7 @@ lav_model <- function(lavpartable      = NULL,
     modprop <- lav_model_properties(GLIST = GLIST,
                                     lavpartable = lavpartable,
                                     lavpta = lavpta,
+                                    nmat   = nmat,
                                     m.free.idx = m.free.idx)
 
     Model <- new("lavModel",

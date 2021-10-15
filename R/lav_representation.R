@@ -8,7 +8,7 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL",
 
     # get model matrices
     if(representation == "LISREL") {
-        REP <- lav_lisreL(partable, target = NULL, extra = add.attributes)
+        REP <- lav_lisrel(partable, target = NULL, extra = add.attributes)
     } else if(representation == "RAM") {
         REP <- lav_ram(partable, target = NULL, extra = add.attributes)
     } else {
