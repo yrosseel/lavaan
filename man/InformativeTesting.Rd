@@ -142,7 +142,6 @@ of Behavioral Development}, \bold{35}, 180-190.
 
 Silvapulle, M.J. and Sen, P.K. (2005). \emph{Constrained 
 Statistical Inference}. Wiley, New York.
-
 } 
 
 \author{

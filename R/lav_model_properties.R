@@ -4,7 +4,7 @@
 #
 # initial version: YR 15 March 2021
 # - YR 05 Oct 2021: use det(I - B) to check if B is acyclic
- 
+
 
 lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
                                  m.free.idx = NULL) {
@@ -25,7 +25,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
     nexo <- integer(ngroups)
 
     for(g in seq_len(ngroups)) {
-       
+
        # at least 1 regression
        if(length(lavpta$vnames$eqs.y[[g]]) == 0L) {
            next
@@ -41,7 +41,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
        # so that B is upper/lower triangular, and so det(IB) = 1
        if(det(IB) == 1) {
            acyclic[g] <- TRUE
-       }  
+       }
 
 
        # no latent variables, at least 1 dependent variable

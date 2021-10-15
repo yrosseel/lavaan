@@ -169,7 +169,7 @@ lav_ram <- function(partable = NULL,
 
 # the model-implied variance/covariance matrix of the observed variables
 lav_ram_sigmahat <- function(MLIST = NULL, delta = NULL) {
-    
+
     ov.idx <- as.integer(MLIST$ov.idx[1,])
     A      <- MLIST$A
     S      <- MLIST$S
@@ -195,7 +195,7 @@ lav_ram_sigmahat <- function(MLIST = NULL, delta = NULL) {
 
 # VETA: the variance/covariance matrix of the latent variables only
 lav_ram_veta <- function(MLIST = NULL) {
-    
+
     ov.idx <- as.integer(MLIST$ov.idx[1,])
     A      <- MLIST$A
     S      <- MLIST$S
@@ -276,7 +276,7 @@ lav_ram_dsigma <- function(m = "A",
     } else {
         stop("wrong model matrix names: ", m, "\n")
     }
-    
+
     # vech?
     if(vech) {
         v.idx <- lav_matrix_vech_idx(nvar)
@@ -340,13 +340,13 @@ lav_ram_df <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
 
     # 1. A
     if(meanstructure) {
-        A.deriv <- 
+        A.deriv <-
             -1.0*(( t(IA.inv)[,ov.idx,drop = FALSE] %*% (Omega.mu %*% t(MLIST$m)) %*% t(IA.inv)) +
                   (tIA.inv[,ov.idx,drop = FALSE] %*% Omega..IA.inv..S..tIA.inv))
     } else {
         A.deriv <- -1.0 * ( tIA.inv[,ov.idx,drop = FALSE] %*% Omega..IA.inv..S..tIA.inv )
     }
-   
+
     # 2. S
     S.deriv <- -1.0 * ( tIA.inv[,ov.idx,drop = FALSE] %*% Omega %*% IA.inv[ov.idx,,drop = FALSE] )
     diag(S.deriv) <- 0.5 * diag(S.deriv)
