@@ -8,13 +8,14 @@
 # gloal sam = (old) twostep
 # - but we can also take a 'local' perspective
 
-# restrictions
+# restrictions:
+#
+# local and global:
+#  - all (measured) latent variables must have indicators that are observed
 # local:
 #  - only if LAMBDA is of full column rank (eg no SRM, no bi-factor, no MTMM)
 #  - if multiple groups: each group has the same set of latent variables!
 #  - global approach is used to compute corrected two-step standard errors
-# global:
-#  - (none)?
 
 # YR 12 May 2019 - first version
 # YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
@@ -24,6 +25,11 @@
 #                   positive definite
 #                 - se = "none" now works
 #                 - store 'local' information in @internal slot (for printing)
+
+# YR 16 Oct 2021 - if an indicator is also a predictor/outcome in the
+#                  structural part, treat it as an observed predictor
+#                  without measurement error in the second step
+#                  (ie, set THETA element to zero)
 
 
 # twostep = wrapper for global sam
@@ -48,7 +54,7 @@ sam <- function(model          = NULL,
                 cmd            = "sem",
                 mm.list        = NULL,
                 mm.args        = list(bounds = "standard"),
-                struc.args     = list(fixed.x = FALSE), # for now
+                struc.args     = list(fixed.x = TRUE),
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
@@ -384,8 +390,23 @@ sam <- function(model          = NULL,
                 lv.idx <- LV.idx.list[[mm]][[b]]
                 LAMBDA[[b]][ov.idx, lv.idx] <- LAMBDA.list[[mm]][[b]]
                  THETA[[b]][ov.idx, ov.idx] <-  THETA.list[[mm]][[b]]
+                # new in 0.6-10: check if any indicators are also involved
+                # in the structural part; if so, set THETA row/col to zero
+                # and make sure LAMBDA element is correctly set
+                # (we also need to adjust M)
+                dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
+                dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+                if(length(dummy.ov.idx)) {
+                    THETA[[b]][dummy.ov.idx,] <- 0
+                    THETA[[b]][,dummy.ov.idx] <- 0
+                    LAMBDA[[b]][dummy.ov.idx,] <- 0
+                    LAMBDA[[b]][cbind(dummy.ov.idx, dummy.lv.idx)] <- 1
+                }
                 if(lavoptions$meanstructure) {
                     NU[[b]][ov.idx, 1] <- NU.list[[mm]][[b]]
+                    if(length(dummy.ov.idx)) {
+                        NU[[b]][dummy.ov.idx, 1] <- 0
+                    }
                 }
             }
 
@@ -508,6 +529,14 @@ sam <- function(model          = NULL,
                 Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
             }
 
+            # handle observed-only variables
+            dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
+            dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+            if(length(dummy.ov.idx)) {
+                Mg[dummy.lv.idx,] <- 0
+                Mg[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
+            }
+
             MSM <- Mg %*% COV %*% t(Mg)
             MTM <- Mg %*% THETA[[b]] %*% t(Mg)
 
@@ -576,14 +605,13 @@ sam <- function(model          = NULL,
 
     # adjust options
     lavoptions.PA <- lavoptions
+    lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
     # override, not matter what
     lavoptions.PA$do.fit <- TRUE
 
     if(sam.method == "local") {
-        #lavoptions.PA$fixed.x <- FALSE # FIXME! change exo column + provide
-        #                               # correct starting values
         lavoptions.PA$missing <- "listwise"
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
@@ -602,8 +630,9 @@ sam <- function(model          = NULL,
     if(sam.method == "local") {
         # extract structural part
         PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
-                   add.idx = TRUE, fixed.x = lavoptions.PA$fixed.x,
-                   add.exo.cov = FALSE) # should fix this at the global level!
+                   add.idx = TRUE,
+                   fixed.x = lavoptions.PA$fixed.x,
+                   add.exo.cov = TRUE)
         PTS$start <- NULL
 
         if(nlevels > 1L) {
@@ -708,7 +737,9 @@ sam <- function(model          = NULL,
     # - all 'free' parameters
     # - := (if any)
     # - but NOT elements in extra.int.idx
+    # - and NOT element with user=3 (add.exo.cov = TRUE)
     pts.idx <- which( (PTS$free > 0L | PTS$op == ":=") &
+                      !PTS$user == 3L &
                       !seq_len(length(PTS$lhs)) %in% extra.int.idx )
 
     # find corresponding rows in PT

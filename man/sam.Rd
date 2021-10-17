@@ -8,7 +8,7 @@ Fit a Structural Equation Model (SEM) using the Structural After Measurement
 \usage{
 sam(model = NULL, data = NULL, cmd = "sem",
     mm.list = NULL, mm.args = list(bounds = "standard"), 
-    struc.args = list(fixed.x = FALSE),
+    struc.args = list(fixed.x = TRUE),
     sam.method = "local", ...,
     local.options = list(M.method = "ML", veta.force.pd = TRUE,
                          twolevel.method = "h1"),
