@@ -9,9 +9,8 @@
 #   approach; ML and ULS
 # - 'corner' is an option
 
-
 lav_efa_extraction <- function(S, nfactors = 1L,
-                               method = "ULS", # or ULS
+                               method = "ULS", # or ML
                                corner = FALSE,
                                reflect = FALSE, order.lv.by = "none",
                                verbose = FALSE,

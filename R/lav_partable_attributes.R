@@ -21,7 +21,9 @@ lav_partable_attributes <- function(partable, pta = NULL) {
     nblocks <- length(pta$vnames$ov)
     pta$vidx <- lapply(names(pta$vnames), function(v) {
                     lapply(seq_len(nblocks), function(b) {
-                        if(grepl("lv", v)) {
+                        if(v == "lv.marker") {
+                            match(pta$vnames[[v]][[b]], OV[[b]])
+                        } else if(grepl("lv", v)) {
                             match(pta$vnames[[v]][[b]], LV[[b]])
                         } else if(grepl("th", v)) {
                             # thresholds have '|t' pattern
