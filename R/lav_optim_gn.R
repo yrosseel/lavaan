@@ -101,6 +101,8 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
     }
 
     # compute step
+    # note, we could use U + k*I for a given scalar 'k' (Levenberg, 1944)
+    #                 or U + k*(diag(U) (Marquardt, 1963)
     U.invQ <- drop(solve(U, Q))
     if(lavmodel@eq.constraints) {
         # merit function
@@ -181,6 +183,8 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         # update
         alpha <- 1.0
         step  <- U.invQ[seq_len(npar)]
+        # TODO: if step-halving fails, we could also
+        # alllow the steps to be negative
         for(h in 1:max(1L, stephalf.max)) {
             new.x <- old.x + (alpha * step)
 
@@ -218,7 +222,8 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         }
 
         # TODO - if this fails, we need to recover somehow
-        if(h == 10L) {
+        # negative steps:
+        if(stephalf.max != 0L && h == stephalf.max) {
             if(verbose) {
                 cat(" -- step halving failed; function value may increase.\n")
             }

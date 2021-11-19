@@ -146,10 +146,22 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
     }
 
     # 2. theta
+
+    # GLS version
+    #W <- solve(S)
+    #LAMBDA <- as.matrix(lambda)
+    #A1 <- solve(t(LAMBDA) %*% W %*% LAMBDA) %*% t(LAMBDA) %*% W
+    #A2 <- W %*% LAMBDA %*% A1
+
+    #tmp1 <- W*W - A2*A2
+    #tmp2 <- diag( W %*% S %*% W - A2 %*% S %*% A2 )
+    #theta.diag <- solve(tmp1, tmp2)
+
+    # 'least squares' version, assuming W = I
     D <- tcrossprod(lambda) / sum(lambda^2)
     theta <- solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
 
-    # 3. psi
+    # 3. psi (W=I)
     S1 <- S - diag(theta)
     l2 <- sum(lambda^2)
     psi <- sum(colSums(as.numeric(lambda) * S1) * lambda) / (l2 * l2)

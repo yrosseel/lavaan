@@ -1326,7 +1326,11 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
 
 # compute `lambda': the smallest root of the determinantal equation
 # |M - lambda*P| = 0 (see Fuller 1987, p.125 or p.172
-# allow for zero rows/columns in P
+#
+# the function allows for zero rows/columns in P, by regressing them out
+# this approach was suggested to me by Wayne A. Fuller, personal communication,
+# 12 Nov 2020
+#
 lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
                                                     warn = FALSE) {
 

@@ -4,6 +4,8 @@
 #
 # initial version: YR 15 March 2021
 # - YR 05 Oct 2021: use det(I - B) to check if B is acyclic
+# - YR 11 Nov 2021: if no latents, and conditional.x = TRUE, we may have no
+#                   beta matrix
 
 
 # note: there is no 'lavmodel' yet, because we call this in lav_model.R
@@ -26,55 +28,63 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
 
     for(g in seq_len(nblocks)) {
 
-       # at least 1 regression
-       if(length(lavpta$vnames$eqs.y[[g]]) == 0L) {
-           next
-       }
+        # at least 1 regression
+        if(length(lavpta$vnames$eqs.y[[g]]) == 0L) {
+            next
+        }
 
-       # find beta index for this block
-       mm.in.block <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
-       MLIST <- GLIST[mm.in.block]
-       beta.idx <- which(names(MLIST) == "beta") + cumsum(c(0L,nmat))[g]
+        # find beta index for this block
+        mm.in.block <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+        MLIST <- GLIST[mm.in.block]
+        beta.idx <- which(names(MLIST) == "beta") + cumsum(c(0L,nmat))[g]
 
-       # acyclic?
-       B <- GLIST[[beta.idx]]
-       # keep fixed values (if any); fill in 1 in all 'free' positions
-       B[ m.free.idx[[beta.idx]] ] <- 1
-       IB <- diag(nrow(B)) - B
-       # if B is acyclic, we should be able to permute the rows/cols of B
-       # so that B is upper/lower triangular, and so det(IB) = 1
-       if(det(IB) == 1) {
-           acyclic[g] <- TRUE
-       }
+        if(length(beta.idx) > 0L) {
+            # acyclic?
+            B <- GLIST[[beta.idx]]
+            # keep fixed values (if any); fill in 1 in all 'free' positions
+            B[ m.free.idx[[beta.idx]] ] <- 1
+            IB <- diag(nrow(B)) - B
+            # if B is acyclic, we should be able to permute the rows/cols of B
+            # so that B is upper/lower triangular, and so det(IB) = 1
+            if(det(IB) == 1) {
+                acyclic[g] <- TRUE
+            }
+        } else {
+            # perhaps conditional.x = TRUE?
+            # if there is no BETA, then we only have Gamma, and the
+            # system is acyclic
+            acyclic[g] <- TRUE
+        }
 
 
-       # no latent variables, at least 1 dependent variable
-       if(lavpta$nfac[[g]] > 0L) {
-           next
-       }
+        # no latent variables, at least 1 dependent variable
+        if(lavpta$nfac[[g]] > 0L) {
+            next
+        }
 
-       # no mediators
-       if(length(lavpta$vnames$eqs.y[[g]]) != length(lavpta$vnames$ov.y[[g]])) {
-           next
-       }
+        # no mediators
+        if(length(lavpta$vnames$eqs.y[[g]]) !=
+           length(lavpta$vnames$ov.y[[g]])) {
+            next
+        }
 
-       # categorical y?
-       if(length(lavpta$vnames$ov.ord[[g]]) > 0L) {
-           # we only flag the univariate version
-           if(length(lavpta$vnames$ov.ord[[g]]) == 1L &&
-              length(lavpta$vnames$ov.y[[g]])   == 1L &&
-              lavpta$vnames$ov.ord[[g]][1] == lavpta$vnames$ov.y[[g]][1]) {
-               uvord[g] <- TRUE
-           }
-       } else {
-           if(length(lavpta$vnames$ov.y[[g]]) > 1L) {
-               mvreg[g] <- TRUE
-           } else {
-               uvreg[g] <- TRUE
-           }
-       }
+        # categorical y?
+        if(length(lavpta$vnames$ov.ord[[g]]) > 0L) {
+            # we only flag the univariate version
+            if(length(lavpta$vnames$ov.ord[[g]]) == 1L &&
+               length(lavpta$vnames$ov.y[[g]])   == 1L &&
+               lavpta$vnames$ov.ord[[g]][1] == lavpta$vnames$ov.y[[g]][1]) {
+                uvord[g] <- TRUE
+            }
+        } else {
+            if(length(lavpta$vnames$ov.y[[g]]) > 1L) {
+                mvreg[g] <- TRUE
+            } else {
+                uvreg[g] <- TRUE
+            }
+        }
 
-       nexo[g] <- length(lavpta$vnames$eqs.x[[g]])
+        nexo[g] <- length(lavpta$vnames$eqs.x[[g]])
 
     } # g
 

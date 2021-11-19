@@ -9,8 +9,9 @@
 
 # YR -- 14 FEB 2020
 
-# 'fast' version; only (2*nfactors + 1) iterations are needed
-# scale-invariant (by default)
+# - 'fast' version; only (2*nfactors + 1) iterations are needed
+# - scale-invariant (by default)
+# - always assuming unit variances for the factors
 lav_efa_pace <- function(S, nfactors = 1L, p.idx = seq_len(ncol(S)),
                          reflect = TRUE, order.lv.by = "none",
                          use.R = TRUE, theta.only = TRUE) {

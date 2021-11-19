@@ -34,7 +34,7 @@ lav_model_objective <- function(lavmodel       = NULL,
 
 
     # do we need WLS.est?
-    if(estimator %in% c("ULS", "GLS", "WLS", "DWLS", "NTRLS", "DLS")) {
+    if(estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS")) {
 
         lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
         # check for COV with negative diagonal elements?
@@ -64,7 +64,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(debug) print(WLS.est)
-    } else if(estimator %in% c("ML", "PML", "FML", "REML") &&
+    } else if(estimator %in% c("ML", "GLS", "PML", "FML", "REML") &&
               lavdata@nlevels == 1L) {
         # compute moments for all groups
         #if(conditional.x) {
@@ -173,12 +173,23 @@ lav_model_objective <- function(lavmodel       = NULL,
                     data.cov.log.det = lavsamplestats@cov.log.det[[g]],
                     meanstructure    = meanstructure)
             }
-        } else if(estimator == "GLS" ||
-                  estimator == "WLS" ||
+
+
+        ### GLS #### (0.6-10: nog using WLS function any longer)
+        } else if(estimator == "GLS") {
+            group.fx <- estimator.GLS(
+                    Sigma.hat        = Sigma.hat[[g]],
+                    Mu.hat           = Mu.hat[[g]],
+                    data.cov         = lavsamplestats@cov[[g]],
+                    data.cov.inv     = lavsamplestats@icov[[g]],
+                    data.mean        = lavsamplestats@mean[[g]],
+                    meanstructure    = meanstructure)
+
+        } else if( estimator == "WLS" ||
                   estimator == "DLS" ||
                   estimator == "NTRLS") {
             # full weight matrix
-            if(estimator == "GLS" || estimator == "WLS") {
+            if(estimator == "WLS") {
                 WLS.V <- lavsamplestats@WLS.V[[g]]
             } else if(estimator == "DLS") {
                 if(estimator.args$dls.GammaNT == "sample") {
