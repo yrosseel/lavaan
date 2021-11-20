@@ -2,6 +2,7 @@
 
 # initial version: YR 25/03/2009: `methods' for the Model class
 # - YR 14 Jan 2014: rename object -> lavmodel, all functions as lav_model_*
+# - YR 20 Nov 2021: add lav_model_dmmdpar
 
 lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
                                      type = "free", extra = TRUE) {
@@ -157,6 +158,58 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
 
     GLIST
+}
+
+# derivative of model matrix (say, Psi, Theta) wrt the free elements
+# in that model matrix
+# returns a matrix with 0/1 entries
+# - rows are the nrow*ncol elements of the full matrix
+# - cols are the free parameters
+#
+# TOdo: use sparse matrices
+#
+lav_model_dmmdpar <- function(lavmodel, target = "theta", group = 1L) {
+
+    stopifnot(group <= lavmodel@ngroups)
+
+    # MLIST for this group
+    nmat <- lavmodel@nmat
+    # which mm belong to group g?
+    mm.in.group <- 1:nmat[group] + cumsum(c(0L,nmat))[group]
+    MLIST <- lavmodel@GLIST[ mm.in.group ]
+
+    # find target model matrix
+    mlist.idx <- which(names(MLIST) == target)
+    if(length(mlist.idx) == 0L) {
+        stop("lavaan ERROR: model matrix \"", target, "\" not found. Available model matrices are:\n  ", paste(names(MLIST), collapse = " "))
+    }
+
+    # target idx in GLIST
+    target.idx <- cumsum(c(0L, nmat))[group] + mlist.idx
+
+    # symmetric matrices (eg Psi, Theta)
+    if(lavmodel@isSymmetric[[target.idx]]) {
+        TARGET <- lavmodel@GLIST[[target.idx]]
+        P <- nrow(TARGET)
+
+        unique.idx <- unique(lavmodel@x.free.idx[[target.idx]])
+        row.idx <- match(lavmodel@x.free.idx[[target.idx]], unique.idx)
+        out <- matrix(0L, nrow = P*P, ncol = length(unique.idx))
+        IDX <- cbind(lavmodel@m.free.idx[[target.idx]], row.idx)
+        out[IDX] <- 1L
+
+    # non-symmetric matrices (eg Lambda, Beta)
+    } else {
+        TARGET <- lavmodel@GLIST[[target.idx]]
+        P <- nrow(TARGET); M <- ncol(TARGET)
+
+        row.idx <- seq_len(length(lavmodel@x.free.idx[[target.idx]]))
+        out <- matrix(0L, nrow = P*M, ncol = length(row.idx))
+        IDX <- cbind(lavmodel@m.free.idx[[target.idx]], row.idx)
+        out[IDX] <- 1L
+    }
+
+    out
 }
 
 # backwards compatibility
