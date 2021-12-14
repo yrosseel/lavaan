@@ -362,7 +362,7 @@ sam <- function(model          = NULL,
     out$MM.FIT <- MM.FIT
 
     # do we have any parameters left?
-    if(length(step1.idx) >= npar) {
+    if(length(unique(step1.idx)) >= npar) {
         warning("lavaan WARNING: ",
                 "no free parameters left for structural part.\n",
                 "        Returning measurement part only.")
@@ -502,7 +502,14 @@ sam <- function(model          = NULL,
                 YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
                 COV  <- FIT@h1$implied$cov[[b]]
                 if(local.M.method == "GLS") {
-                    ICOV <- solve(COV)
+                    if(FIT@Options$sample.cov.rescale) {
+                       # get unbiased S
+                       N <- FIT@SampleStats@nobs[[b]]
+                       COV.unbiased <- COV * N/(N-1)
+                       ICOV <- solve(COV.unbiased)
+                    } else {
+                        ICOV <- solve(COV)
+                    }
                 }
             }
 
@@ -561,6 +568,12 @@ sam <- function(model          = NULL,
                 VETA[[b]] <- MSM - MTM
             }
 
+            # standardize?
+            #if(FIT@Options$std.lv) {
+            #    VETA[[b]] <- stats::cov2cor(VETA[[b]])
+            #}
+ 
+
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
             dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
@@ -572,6 +585,7 @@ sam <- function(model          = NULL,
 
             # compute model-based reliability
             MSM <- Mg %*% COV %*% t(Mg)
+            #REL[[b]] <- diag(VETA[[b]] %*% solve(MSM)) # CHECKme!
             REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
 
             # store M

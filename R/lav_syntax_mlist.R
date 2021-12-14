@@ -56,7 +56,7 @@ lav_syntax_mlist <- function(MLIST, ov.prefix = "y", lv.prefix = "f",
     # THETA
     if(!is.null(THETA)) {
         IDX1 <- row(THETA)[(THETA != 0) & upper.tri(THETA, diag = TRUE)]
-        IDX2 <- row(THETA)[(THETA != 0) & upper.tri(THETA, diag = TRUE)]
+        IDX2 <- col(THETA)[(THETA != 0) & upper.tri(THETA, diag = TRUE)]
         nel <- length(IDX1)
         theta.txt <- character(nel)
         for(i in seq_len(nel)) {
@@ -96,7 +96,7 @@ lav_syntax_mlist <- function(MLIST, ov.prefix = "y", lv.prefix = "f",
     # BETA
     if(!is.null(BETA)) {
         IDX1 <- row(BETA)[(BETA != 0)]
-        IDX2 <- row(BETA)[(BETA != 0)]
+        IDX2 <- col(BETA)[(BETA != 0)]
         nel <- length(IDX1)
         beta.txt <- character(nel)
         for(i in seq_len(nel)) {
