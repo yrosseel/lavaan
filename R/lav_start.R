@@ -506,8 +506,39 @@ lav_start <- function(start.method    = "default",
             }
         }
 
-        # 7g) regressions "~"
-
+        # 7g) regressions "~" # new in 0.6-10
+        if(length(lv.names) == 0L && nlevels == 1L && !conditional.x) {
+            # observed only
+            reg.idx <- which(lavpartable$group == group.values[g] &
+                             lavpartable$op == "~")
+            if(length(reg.idx) > 0L) {
+                eqs.y <- unique(lavpartable$lhs[reg.idx])        
+                ny <- length(eqs.y)
+                for(i in seq_len(ny)) {
+                    y.name <- eqs.y[i]
+                    start.idx <- which(lavpartable$group == group.values[g] &
+                                       lavpartable$op == "~" &
+                                       lavpartable$lhs == y.name)
+                    x.names <- lavpartable$rhs[start.idx]
+                    COV <- lavsamplestats@cov[[g]] 
+                    y.idx <- match(y.name,  ov.names)
+                    x.idx <- match(x.names, ov.names)
+                    S.xx <- COV[x.idx, x.idx, drop = FALSE]
+                    S.xy <- COV[x.idx, y.idx, drop = FALSE]
+                    # regression coefficient(s)
+                    beta.i <- solve(S.xx, S.xy)
+                    start[start.idx] <- drop(beta.i)
+                    # residual variance
+                    res.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$op == "~~" &
+                                     lavpartable$lhs == y.name &
+                                     lavpartable$rhs == y.name)
+                    res.val <- COV[y.idx, y.idx] - drop(crossprod(beta.i, S.xy))
+                    start[res.idx] <- res.val
+                }
+            }
+        }
+     
       #  # 8 latent variances (new in 0.6-2)
       #  lv.names.y <- vnames(lavpartable, "lv.y", group = group.values[g])
       #  lv.names.x <- vnames(lavpartable, "lv.x", group = group.values[g])

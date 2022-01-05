@@ -52,9 +52,12 @@ twostep <- function(model = NULL, data = NULL, cmd = "sem",
 sam <- function(model          = NULL,
                 data           = NULL,
                 cmd            = "sem",
+                se             = "twostep",
                 mm.list        = NULL,
-                mm.args        = list(bounds = "standard"),
-                struc.args     = list(fixed.x = TRUE),
+                mm.args        = list(bounds = "standard", se = "standard"),
+                struc.args     = list(fixed.x = TRUE, 
+                                      se = "standard", 
+                                      estimator = "ML"),
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
@@ -114,16 +117,15 @@ sam <- function(model          = NULL,
     if(sam.method == "local") {
         lavoptions$sample.icov <- TRUE
     }
-    if(!is.null(dotdotdot$se)) {
-        lavoptions$se   <- dotdotdot$se
-    } else {
-        lavoptions$se   <- "standard"
-    }
+    # se
+    lavoptions$se   <- se
+    # test
     if(!is.null(dotdotdot$test)) {
         lavoptions$test <- dotdotdot$test
     } else {
         lavoptions$test <- "standard"
     }
+    # verbose
     if(!is.null(dotdotdot$verbose)) {
         lavoptions$verbose <- dotdotdot$verbose
     }
@@ -815,7 +817,9 @@ sam <- function(model          = NULL,
     # - 'insert' these corrected SEs (and vcov) in FIT.PA
     # compute information matrix
 
-    if(lavoptions$se != "none") {
+    if(lavoptions$se == "none") {
+        # nothing to do...
+    } else {
         JOINT@Model@estimator <- "ML"  # FIXME!
         JOINT@Options$se <- lavoptions$se # always set to standard?
         VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
@@ -857,20 +861,26 @@ sam <- function(model          = NULL,
         #D <- JOINT@vcov$vcov[-step2.idx, -step2.idx]
         #I.22.inv <- A - B %*% solve(D) %*% C
 
-        # FIXME:
-        V2 <- 1/N * I.22.inv
-        #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
+        if(lavoptions$se == "standard") {
+            VCOV <- 1/N * I.22.inv
+            out$VCOV <- VCOV
+        } else {
 
-        # V1
-        V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+            # FIXME:
+            V2 <- 1/N * I.22.inv
+            #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
 
-        # V for second step
-        VCOV <- V2 + V1
+            # V1
+            V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
 
-        # store in out
-        out$V2 <- V2
-        out$V1 <- V1
-        out$VCOV <- VCOV
+            # V for second step
+            VCOV <- V2 + V1
+
+            # store in out
+            out$V2 <- V2
+            out$V1 <- V1
+            out$VCOV <- VCOV
+        }
     }
 
 
@@ -935,8 +945,10 @@ sam <- function(model          = NULL,
 
         # fill in twostep standard errors
         if(JOINT@Options$se != "none") {
-            JOINT@Options$se <- "twostep"
-            JOINT@vcov$se    <- "twostep"
+            if(lavoptions$se == "twostep") {
+                JOINT@Options$se <- "twostep"
+                JOINT@vcov$se    <- "twostep"
+            }
             JOINT@vcov$vcov[step2.idx, step2.idx] <- VCOV
             PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
                                        lavpartable = PT,

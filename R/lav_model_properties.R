@@ -23,7 +23,8 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
     uvreg <- logical(nblocks)
     uvord <- logical(nblocks)
     mvreg <- logical(nblocks)
-    acyclic <- logical(nblocks)
+    acyclic <- rep(as.logical(NA), nblocks)
+    bowfree <- rep(as.logical(NA), nblocks)
     nexo <- integer(nblocks)
 
     for(g in seq_len(nblocks)) {
@@ -37,23 +38,41 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
         mm.in.block <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
         MLIST <- GLIST[mm.in.block]
         beta.idx <- which(names(MLIST) == "beta") + cumsum(c(0L,nmat))[g]
+         psi.idx <- which(names(MLIST) == "psi" ) + cumsum(c(0L,nmat))[g]
 
         if(length(beta.idx) > 0L) {
-            # acyclic?
+            # 1. acyclic?
             B <- GLIST[[beta.idx]]
             # keep fixed values (if any); fill in 1 in all 'free' positions
             B[ m.free.idx[[beta.idx]] ] <- 1
-            IB <- diag(nrow(B)) - B
+            IminB <- diag(nrow(B)) - B
             # if B is acyclic, we should be able to permute the rows/cols of B
-            # so that B is upper/lower triangular, and so det(IB) = 1
-            if(det(IB) == 1) {
+            # so that B is upper/lower triangular, and so det(I-B) = 1
+            if(det(IminB) == 1) {
                 acyclic[g] <- TRUE
+            } else {
+                acyclic[g] <- FALSE
+            }
+
+            # 2. bow-free?
+            B.one <- as.integer(B != 0)
+            Psi <- GLIST[[psi.idx]]
+            # keep fixed values (if any); fill in 1 in all 'free' positions
+            Psi[ m.free.idx[[psi.idx]] ] <- 1   
+            Psi.one <- as.integer(Psi != 0)
+            Both.one <- B.one + Psi.one
+            if(any(Both.one > 1)) {
+                bowfree[g] <- FALSE
+            } else {
+                bowfree[g] <- TRUE
             }
         } else {
             # perhaps conditional.x = TRUE?
             # if there is no BETA, then we only have Gamma, and the
-            # system is acyclic
+            # system must be acyclic
             acyclic[g] <- TRUE
+            # and also bowfree
+            bowfree[g] <- TRUE
         }
 
 
@@ -76,6 +95,8 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
                lavpta$vnames$ov.ord[[g]][1] == lavpta$vnames$ov.y[[g]][1]) {
                 uvord[g] <- TRUE
             }
+
+        # mvreg?
         } else {
             if(length(lavpta$vnames$ov.y[[g]]) > 1L) {
                 mvreg[g] <- TRUE
@@ -89,7 +110,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
     } # g
 
     modprop <- list( uvreg = uvreg, uvord = uvord, mvreg = mvreg,
-                     nexo = nexo, acyclic = acyclic )
+                     nexo = nexo, acyclic = acyclic, bowfree = bowfree )
 
     modprop
 }

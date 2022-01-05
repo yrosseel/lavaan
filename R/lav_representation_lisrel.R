@@ -108,6 +108,16 @@ lav_lisrel <- function(partable = NULL,
         dummy.names3 <- unique( c(partable$lhs[dummy.cov.ov.lv.idx1],
                                   partable$rhs[dummy.cov.ov.lv.idx2]) )
 
+        # new in 0.6-10: ~~ between observed and observed, but not in ~
+        dummy.orphan.idx <- which(partable$op == "~~" &
+                                  partable$block == g &
+                                  partable$lhs %in% ov.names &
+                                  partable$rhs %in% ov.names &
+                                  (!partable$lhs %in% c(dummy.names1,
+                                                        dummy.names2) |
+                                   !partable$rhs %in% c(dummy.names1,
+                                                        dummy.names2)))
+
         # collect all dummy variables
         dummy.names <- unique(c(dummy.names1, dummy.names2, dummy.names3))
 
