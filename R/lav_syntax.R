@@ -382,6 +382,14 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                         stop("lavaan ERROR: duplicate model element in: ", model[i])
                     }
                 }
+
+                # check if we have a self-loop (y ~ y)
+                if(op %in% c("~", "<~") && rhs.name == lhs.names[l]) {
+                    stop("lavaan ERROR: lhs and rhs are the same in: ", 
+                         model[i])
+                }
+                 
+
                 FLAT.idx <- FLAT.idx + 1L
                 FLAT.lhs[FLAT.idx] <- lhs.names[l]
                 FLAT.op[ FLAT.idx] <- op
@@ -395,7 +403,6 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                 FLAT.prior[FLAT.idx] <- ""
                 FLAT.efa[FLAT.idx]   <- ""
                 FLAT.rv[FLAT.idx]    <- ""
-
 
                 mod <- list()
                 rhs.mod <- 0L
