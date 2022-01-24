@@ -385,8 +385,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
 
                 # check if we have a self-loop (y ~ y)
                 if(op %in% c("~", "<~") && rhs.name == lhs.names[l]) {
-                    stop("lavaan ERROR: lhs and rhs are the same in: ", 
-                         model[i])
+                    #stop("lavaan ERROR: lhs and rhs are the same in: ", 
+                    #     model[i])
+                    # this breaks pompom package, example uSEM
+                    warning("lavaan WARNING: lhs and rhs are the same in: ", 
+                            model[i])
                 }
                  
 

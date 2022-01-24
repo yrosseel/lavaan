@@ -1043,8 +1043,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
                 }
             }
-            if(warn && any(Mp[[g]]$coverage < 0.1)) {
-                warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
+            if(warn && any(Mp[[g]]$coverage == 0)) {
+                txt <- c("due to missing values, some pairwise combinations have 0% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
+                warning(lav_txt2message(txt))
+            } else if(warn && any(Mp[[g]]$coverage < 0.1)) {
+                txt <- c("due to missing values, some pairwise combinations have less than 10% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
+                warning(lav_txt2message(txt))
             }
             # in case we had observations with only missings
             nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)

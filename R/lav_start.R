@@ -526,15 +526,24 @@ lav_start <- function(start.method    = "default",
                     S.xx <- COV[x.idx, x.idx, drop = FALSE]
                     S.xy <- COV[x.idx, y.idx, drop = FALSE]
                     # regression coefficient(s)
-                    beta.i <- solve(S.xx, S.xy)
-                    start[start.idx] <- drop(beta.i)
+                    beta.i <- try(solve(S.xx, S.xy), silent = TRUE)
+                    if(inherits(beta.i, "try-error")) {
+                        start[start.idx] <- rep(0, length(start.idx))
+                    } else {
+                        start[start.idx] <- drop(beta.i)
+                    }
                     # residual variance
                     res.idx <- which(lavpartable$group == group.values[g] &
                                      lavpartable$op == "~~" &
                                      lavpartable$lhs == y.name &
                                      lavpartable$rhs == y.name)
                     res.val <- COV[y.idx, y.idx] - drop(crossprod(beta.i, S.xy))
-                    start[res.idx] <- res.val
+                    if(res.val > 0.01*COV[y.idx, y.idx] && 
+                       res.val < 0.99*COV[y.idx, y.idx]) {
+                        start[res.idx] <- res.val
+                    } else {
+                        # do nothing (keep what we have)
+                    }
                 }
             }
         }

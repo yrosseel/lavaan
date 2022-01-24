@@ -55,7 +55,7 @@ sam <- function(model          = NULL,
                 se             = "twostep",
                 mm.list        = NULL,
                 mm.args        = list(bounds = "standard", se = "standard"),
-                struc.args     = list(fixed.x = TRUE, 
+                struc.args     = list(#fixed.x = TRUE, 
                                       se = "standard", 
                                       estimator = "ML"),
                 sam.method     = "local", # or global
@@ -621,7 +621,8 @@ sam <- function(model          = NULL,
 
     # adjust options
     lavoptions.PA <- lavoptions
-    lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
+    #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
+    lavoptions.PA$fixed.x <- FALSE # until we fix this...
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
     # override, not matter what
