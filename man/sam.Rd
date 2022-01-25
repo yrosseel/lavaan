@@ -6,14 +6,12 @@
 Fit a Structural Equation Model (SEM) using the Structural After Measurement
 (SAM) approach.}
 \usage{
-sam(model = NULL, data = NULL, cmd = "sem",
-    mm.list = NULL, mm.args = list(bounds = "standard"), 
-    struc.args = list(fixed.x = TRUE),
-    sam.method = "local", ...,
-    local.options = list(M.method = "ML", veta.force.pd = TRUE,
-                         twolevel.method = "h1"),
-    global.options = list(),
-    output = "lavaan")
+sam(model = NULL, data = NULL, cmd = "sem", se = "twostep", 
+    mm.list = NULL, mm.args = list(bounds = "standard", se = "standard"), 
+    struc.args = list(estimator = "ML", se = "standard"), 
+    sam.method = "local", ..., 
+    local.options = list(M.method = "ML", veta.force.pd = TRUE, 
+    twolevel.method = "h1"), global.options = list(), output = "lavaan")
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -26,6 +24,12 @@ sam(model = NULL, data = NULL, cmd = "sem",
 \item{cmd}{Character. Which command is used to run the sem models. The possible
     choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, determining how
     we deal with default options.}
+\item{se}{Character. The type of standard errors that are used in the
+    final (structural) model. If \code{"twostep"} (the default), the
+    standard errors take the estimation uncertainty of the first (measurement) 
+    stage into account. If \code{"standard"}, this uncertainty is ignored,
+    and we treat the measurement information as known. If \code{"none"},
+    no standard errors are computed.}
 \item{mm.list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent

@@ -55,9 +55,9 @@ sam <- function(model          = NULL,
                 se             = "twostep",
                 mm.list        = NULL,
                 mm.args        = list(bounds = "standard", se = "standard"),
-                struc.args     = list(#fixed.x = TRUE, 
-                                      se = "standard", 
-                                      estimator = "ML"),
+                struc.args     = list(estimator = "ML",
+                                      #fixed.x = TRUE, 
+                                      se = "standard"), 
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
