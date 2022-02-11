@@ -1,3 +1,5 @@
+# lavaan
+
 lavaan is a free, open source R package for latent variable analysis. You can
 use lavaan to estimate a large variety of multivariate statistical models,
 including path analysis, confirmatory factor analysis, structural equation
@@ -13,6 +15,7 @@ To get a first impression of how lavaan works in practice, consider the
 following example of a SEM model (the Political Democracy Example from 
 Bollen's 1989 book):
 
+```R
 library(lavaan)
 
 model <- '
@@ -32,5 +35,6 @@ model <- '
 '
 fit <- sem(model, data=PoliticalDemocracy)
 summary(fit)
+```
 
 More information can be found on the website: http://lavaan.org
