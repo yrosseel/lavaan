@@ -130,6 +130,10 @@ sam <- function(model          = NULL,
         lavoptions$verbose <- dotdotdot$verbose
     }
 
+    if(lavoptions$verbose) {
+        cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
+    }
+
 
     # what have we learned?
     lavpta  <- FIT@pta
@@ -228,6 +232,10 @@ sam <- function(model          = NULL,
 
     # STEP 1: fit each measurement model (block)
 
+    if(lavoptions$verbose) {
+        cat("Fitting the measurement part:\n")
+    }
+
     # adjust options for measurement models
     dotdotdot.mm <- dotdotdot
     #dotdotdot.mm$se <- "none"
@@ -274,7 +282,7 @@ sam <- function(model          = NULL,
     for(mm in seq_len(nMMblocks)) {
 
         if(lavoptions$verbose) {
-            cat("Estimating measurement block ", mm, "[",
+            cat("  block ", mm, "[",
                 paste(mm.list[[mm]], collapse = " "), "]\n")
         }
 
@@ -380,6 +388,11 @@ sam <- function(model          = NULL,
     }
 
     if(sam.method == "local") {
+        if(lavoptions$verbose) {
+            cat("Constructing the mapping matrix using the ",
+                local.M.method, " method ... ", sep = "")
+        }
+
         # assemble global LAMBDA/THETA (per block)
         LAMBDA <- computeLAMBDA(FIT@Model, handle.dummy.lv = FALSE)
         THETA  <- computeTHETA(FIT@Model, fix = FALSE) # keep dummy lv
@@ -610,6 +623,10 @@ sam <- function(model          = NULL,
         # store M
         out$M <- M
 
+        if(lavoptions$verbose) {
+            cat("done.\n")
+        }
+
     } # local
 
 
@@ -623,9 +640,10 @@ sam <- function(model          = NULL,
     lavoptions.PA <- lavoptions
     #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
     lavoptions.PA$fixed.x <- FALSE # until we fix this...
+    lavoptions.PA$verbose <- FALSE # must be in struc.args
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
-    # override, not matter what
+    # override, no matter what
     lavoptions.PA$do.fit <- TRUE
 
     if(sam.method == "local") {
@@ -650,6 +668,9 @@ sam <- function(model          = NULL,
                    add.idx = TRUE,
                    fixed.x = lavoptions.PA$fixed.x,
                    add.exo.cov = TRUE)
+        # remove est/se/start columns
+        PTS$est   <- NULL
+        PTS$se    <- NULL
         PTS$start <- NULL
 
         if(nlevels > 1L) {
@@ -721,10 +742,9 @@ sam <- function(model          = NULL,
         extra.int.idx <- integer(0L)
     } # global
 
-
     # fit structural model
-    if(lavoptions.PA$verbose) {
-        cat("Fitting Structural Part:\n")
+    if(lavoptions$verbose) {
+        cat("Fitting the structural part ... \n")
     }
     if(sam.method == "local") {
         FIT.PA <- lavaan::lavaan(PTS,
@@ -739,8 +759,8 @@ sam <- function(model          = NULL,
                                  slotSampleStats = FIT@SampleStats,
                                  slotOptions = lavoptions.PA)
     }
-    if(lavoptions.PA$verbose) {
-        cat("Done.\n")
+    if(lavoptions$verbose) {
+        cat("Fitting the structural part ... done.\n")
     }
     # store FIT.PA
     out$FIT.PA <- FIT.PA
@@ -780,7 +800,9 @@ sam <- function(model          = NULL,
     ################################################################
     # Step 3: assemble results in a 'dummy' JOINT model for output #
     ################################################################
-
+    if(lavoptions$verbose) {
+        cat("Assembling results for output ... ")
+    }
     lavoptions.joint <- lavoptions
     lavoptions.joint$optim.method <- "none"
     lavoptions.joint$optim.force.converged <- TRUE
@@ -805,6 +827,9 @@ sam <- function(model          = NULL,
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,
                             slotData = FIT@Data)
+    if(lavoptions$verbose) {
+        cat("done.\n")
+    }
 
 
     ###################################
@@ -821,6 +846,9 @@ sam <- function(model          = NULL,
     if(lavoptions$se == "none") {
         # nothing to do...
     } else {
+        if(lavoptions$verbose) {
+            cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
+        }
         JOINT@Model@estimator <- "ML"  # FIXME!
         JOINT@Options$se <- lavoptions$se # always set to standard?
         VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
@@ -882,7 +910,10 @@ sam <- function(model          = NULL,
             out$V1 <- V1
             out$VCOV <- VCOV
         }
-    }
+        if(lavoptions$verbose) {
+            cat("done.\n")
+        }
+    } # se != "none
 
 
 
@@ -972,6 +1003,10 @@ sam <- function(model          = NULL,
         res <- JOINT
     } else {
         res <- out
+    }
+
+    if(lavoptions$verbose) {
+        cat("End of sam.\n")
     }
 
     res
