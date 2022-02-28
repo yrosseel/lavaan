@@ -31,6 +31,7 @@ lavaanify <- lavParTable <- function(
                       fixed.x          = FALSE,
                       parameterization = "delta",
                       constraints      = NULL,
+                      ceq.simple       = FALSE,
 
                       auto             = FALSE,
                       model.type       = "sem",
@@ -77,6 +78,10 @@ lavaanify <- lavParTable <- function(
         FLAT2 <- lavParseModelString(model.syntax=constraints, warn=warn)
         CON2 <- attr(FLAT2, "constraints"); rm(FLAT2)
         CON <- c(CON, CON2)
+    }
+    if(length(CON) > 0L) {
+        # add 'user' column
+        CON <- lapply(CON, function(x) {x$user <- 1L; x} )
     }
 
     if(debug) {
@@ -674,106 +679,109 @@ lavaanify <- lavParTable <- function(
     } # auto.efa
 
     # handle user-specified equality constraints
-    # lavaan 0.5-18
-    # - rewrite 'LABEL-based' equality constraints as == constraints
-    # - create plabel: internal labels, based on id
-    # - create CON entries, using these internal labels
+    # lavaan 0.6-11:
+    #     two settings:
+    #       1) simple equality constraints ONLY -> back to basics: only
+    #          duplicate 'free' numbers; no longer explicit == rows with plabels
+    #       2) mixture of simple and other (explicit) constraints
+    #          treat them together as we did in <0.6-11
     LIST$plabel <- paste(".p", LIST$id, ".", sep="")
-    idx.eq.label <- which(duplicated(LABEL))
-    if(length(idx.eq.label) > 0L) {
+    eq.LABELS <- unique(LABEL[duplicated(LABEL)])
+    eq.id <- integer( length(LIST$lhs) )
+    for(eq.label in eq.LABELS) {
         CON.idx <- length(CON)
-        # add 'user' column
-        CON <- lapply(CON, function(x) {x$user <- 1L; x} )
-        for(idx in idx.eq.label) {
-            eq.label <- LABEL[idx]
-            all.idx <- which(LABEL == eq.label) # all same-label parameters
-            ref.idx <- all.idx[1L]              # the first one only
+        all.idx <- which(LABEL == eq.label) # all same-label parameters
+        ref.idx <- all.idx[1L]              # the first one only
+        other.idx <- all.idx[-1L]           # the others
+        eq.id[all.idx] <- ref.idx
 
-            # new in 0.6-6: make sure lower/upper constraints are equal too
-            if(!is.null(LIST$lower) &&
-               length(unique(LIST$lower[all.idx])) > 0L) {
-                non.inf <- which(is.finite(LIST$lower[all.idx]))
-                if(length(non.inf) > 0L) {
-                    smallest.val <- min(LIST$lower[all.idx][non.inf])
-                    LIST$lower[all.idx] <- smallest.val
-                }
+        # new in 0.6-6: make sure lower/upper constraints are equal too
+        if(!is.null(LIST$lower) && length(unique(LIST$lower[all.idx])) > 0L) {
+            non.inf <- which(is.finite(LIST$lower[all.idx]))
+            if(length(non.inf) > 0L) {
+                smallest.val <- min(LIST$lower[all.idx][non.inf])
+                LIST$lower[all.idx] <- smallest.val
             }
-            if(!is.null(LIST$upper) &&
-                length(unique(LIST$upper[all.idx])) > 0L) {
-                non.inf <- which(is.finite(LIST$upper[all.idx]))
-                if(length(non.inf) > 0L) {
-                    largest.val <- max(LIST$upper[all.idx][non.inf])
-                    LIST$upper[all.idx] <- largest.val
-                }
+        }
+        if(!is.null(LIST$upper) && length(unique(LIST$upper[all.idx])) > 0L) {
+            non.inf <- which(is.finite(LIST$upper[all.idx]))
+            if(length(non.inf) > 0L) {
+                largest.val <- max(LIST$upper[all.idx][non.inf])
+                LIST$upper[all.idx] <- largest.val
+            }
+        }
+
+        # two possibilities:
+        #   1. all.idx contains a fixed parameter: in this case,
+        #      we fix them all (hopefully to the same value)
+        #   2. all.idx contains only free parameters
+
+        # 1. all.idx contains a fixed parameter
+        if(any(LIST$free[all.idx] == 0L)) {
+
+            # which one is fixed?
+            fixed.all <- all.idx[ LIST$free[all.idx] == 0L ]
+            # only pick the first
+            fixed.idx <- fixed.all[1]
+
+            # sanity check: are all ustart values equal?
+            ustart1 <- LIST$ustart[ fixed.idx ]
+            if(! all(ustart1 == LIST$ustart[fixed.all]) ) {
+                warning("lavaan WARNING: equality constraints involve fixed parameters with different values; only the first one will be used")
             }
 
-            # two possibilities:
-            # 1. all.idx contains a fixed parameter: in this case,
-            #    we fix them all (hopefully to the same value)
-            # 2. all.idx contains only free parameters
+            # make them all fixed
+            LIST$ustart[all.idx] <- LIST$ustart[fixed.idx]
+            LIST$free[  all.idx] <- 0L  # not free anymore, since it must
+                                        # be equal to the 'fixed' parameter
+                                        # (Note: Mplus ignores this)
+            eq.id[all.idx]       <- 0L  # remove from eq.id list
 
-            # 1. fixed?
-            if(any(LIST$free[all.idx] == 0L)) {
-
-                # which one is fixed? (only pick the first!)
-                fixed.all <- all.idx[ LIST$free[all.idx] == 0L ]
-                fixed.idx <- fixed.all[1] # only pick the first!
-
-                # sanity check: are all ustart values equal?
-                ustart1 <- LIST$ustart[ fixed.idx ]
-                if(! all(ustart1 == LIST$ustart[fixed.all]) ) {
-                    warning("lavaan WARNING: equality constraints involve fixed parameters with different values; only the first one will be used")
-                }
-
-
-                fixed.idx <- fixed.all[1] # only pick the first!
-
-                # fix current 'idx'
-                LIST$ustart[idx] <- LIST$ustart[fixed.idx]
-                LIST$free[idx] <- 0L  # not free anymore, since it must
-                                      # be equal to the 'fixed' parameter
-                                      # (Note: Mplus ignores this)
-
-                # just in case: if ref.idx is not equal to fixed.idx,
-                # fix this one too
-                LIST$ustart[ref.idx] <- LIST$ustart[fixed.idx]
-                LIST$free[ref.idx] <- 0L
-
-                # new in 0.6-8 (for efa + user-specified eq constraints)
-                if(LIST$user[idx] %in% c(7L, 77L)) {
-                    # if involved in an efa block, store in CON anyway
-                    # we may need it for the rotated solution
+            # new in 0.6-8 (for efa + user-specified eq constraints)
+            if(any(LIST$user[all.idx] %in% c(7L, 77L))) {
+                # if involved in an efa block, store in CON anyway
+                # we may need it for the rotated solution
+                for(o in other.idx) {
                     CON.idx <- CON.idx + 1L
                     CON[[CON.idx]] <- list(op   = "==",
                                            lhs  = LIST$plabel[ref.idx],
-                                           rhs  = LIST$plabel[idx],
+                                           rhs  = LIST$plabel[o],
                                            user = 2L)
                 }
+            }
 
+        } else {
+        # 2. all.idx contains only free parameters
+            # old system:
+            # - add CON entry
+            # - in 0.6-11: only if CON is not empty
+            if(!ceq.simple || length(CON) > 0L) {
+                for(o in other.idx) {
+                    CON.idx <- CON.idx + 1L
+                    CON[[CON.idx]] <- list(op   = "==",
+                                           lhs  = LIST$plabel[ref.idx],
+                                           rhs  = LIST$plabel[o],
+                                           user = 2L)
+                }
             } else {
-            # 2. ref.idx is a free parameter
-                # user-label?
-                #if(any(nchar(LIST$label[ref.idx])  > 0)) {
-                #    lhs.lab <- LIST$label[ref.idx]
-                #} else {
-                #    lhs.lab <- PLABEL[ref.idx]
-                #}
-                CON.idx <- CON.idx + 1L
-                CON[[CON.idx]] <- list(op   = "==",
-                                       lhs  = LIST$plabel[ref.idx],
-                                       rhs  = LIST$plabel[idx],
-                                       user = 2L)
+            # new system:
+            # - set $free elements to zero, and later to ref id
+                LIST$free[other.idx] <- 0L # all but the first are non-free
+                                           # but will get a duplicated number
+            }
 
-                # just to trick semTools, also add something in the label
-                # colum, *if* it is empty
-                for(i in all.idx) {
-                    if(nchar(LIST$label[i]) == 0L) {
-                        LIST$label[i] <- LIST$plabel[ ref.idx ]
-                    }
+            # just to trick semTools, also add something in the label
+            # colum, *if* it is empty
+            # update: 0.6-11 we keep this, because it shows the plabels
+            #         when eg group.equal = "loadings"
+            for(i in all.idx) {
+                if(nchar(LIST$label[i]) == 0L) {
+                    LIST$label[i] <- LIST$plabel[ ref.idx ]
                 }
             }
-        }
-    }
+        } # all free
+
+    } # eq in eq.labels
     if(debug) {
         print(CON)
     }
@@ -1065,11 +1073,19 @@ lavaanify <- lavParTable <- function(
 
 
     # count free parameters
-    idx.free <- which(LIST$free > 0)
+    idx.free <- which(LIST$free > 0L)
     LIST$free[idx.free] <- seq_along(idx.free)
+
+    # new in 0.6-11 - add free counter to this element (as in < 0.5-18)
+    # unless we have other constraints
+    if(length(CON) == 0L) {
+        idx.equal <- which(eq.id > 0)
+        LIST$free[idx.equal] <- LIST$free[ eq.id[idx.equal] ]
+    }
+
     # backwards compatibility...
     if(!is.null(LIST$unco)) {
-         LIST$unco[idx.free] <- seq_along(idx.free)
+         LIST$unco[idx.free] <- seq_along(sum(LIST$free > 0L))
     }
 
     if(debug) {

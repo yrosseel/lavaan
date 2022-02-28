@@ -489,7 +489,7 @@ lav_object_print_sam_test_statistics <- function(object, nd = 3L) {
             cat("  Model-based reliability latent variables (per group):\n")
             for(g in 1:object@Data@ngroups) {
                 cat("\n")
-                cat("  Group ", g, " [", object@Data@group.label[g], "]:\n\n", 
+                cat("  Group ", g, " [", object@Data@group.label[g], "]:\n\n",
                     sep = "")
                 tmp <- data.frame(as.list(object@internal$sam.mm.rel[[g]]))
                 class(tmp) <- c("lavaan.data.frame", "data.frame")

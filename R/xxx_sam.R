@@ -56,8 +56,8 @@ sam <- function(model          = NULL,
                 mm.list        = NULL,
                 mm.args        = list(bounds = "standard", se = "standard"),
                 struc.args     = list(estimator = "ML",
-                                      #fixed.x = TRUE, 
-                                      se = "standard"), 
+                                      #fixed.x = TRUE,
+                                      se = "standard"),
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
@@ -587,7 +587,7 @@ sam <- function(model          = NULL,
             #if(FIT@Options$std.lv) {
             #    VETA[[b]] <- stats::cov2cor(VETA[[b]])
             #}
- 
+
 
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]

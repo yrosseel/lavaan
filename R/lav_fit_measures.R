@@ -78,6 +78,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
             neq <- qr(object@Model@con.jac[ceq.idx,,drop=FALSE])$rank
             npar <- npar - neq
         }
+    } else if(.hasSlot(object@Model, "ceq.simple.only") &&
+              object@Model@ceq.simple.only) {
+        npar <- max(object@ParTable$free)
     }
 
     fx <- object@optim$fx

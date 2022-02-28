@@ -64,6 +64,30 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
     # add free column
     if(is.null(partable$free)) {
         partable$free <- seq_len(N)
+    # 0.6-11: check for simple equality constraints
+    #         note: this is perhaps only a subset (eg SAM!) of a larger
+    #         table, and we have to renumber the 'free' column
+    } else if( is.integer(partable$free) &&
+               any(partable$free > 0L)   &&
+               !any(partable$op == "==") &&
+               !is.null(partable$label)  &&
+               !is.null(partable$plabel) &&
+               any(duplicated(partable$free[partable$free > 0L])) ) {
+        dup.idx <- which(partable$free > 0L & duplicated(partable$free))
+        all.idx <- which(partable$free %in% unique(partable$free[dup.idx]))
+        eq.LABELS <- unique(partable$free[all.idx])
+        eq.id <- integer(length(partable$lhs))
+        eq.id[all.idx] <- partable$free[all.idx]
+        partable$free[dup.idx] <- 0L
+        idx.free <- which(partable$free > 0L)
+        partable$free <- rep(0L, N)
+        partable$free[idx.free] <- seq_along(idx.free)
+        for(eq.label in eq.LABELS) {
+            all.idx <- which(eq.id == eq.label)
+            ref.idx <- all.idx[1L]
+            other.idx <- all.idx[-1L]
+            partable$free[other.idx] <- partable$free[ref.idx]
+        }
     } else {
         # treat non-zero as 'free'
         free.idx <- which(as.logical(partable$free))
@@ -105,25 +129,10 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
         partable$label <- as.character( partable$label )
     }
 
-    # add eq.id column
-    #if(is.null(partable$eq.id)) {
-    #    partable$eq.id <- rep(0, N)
-    #}
-
-    # add unco column
-    #if(is.null(partable$unco)) {
-    #    partable$unco <- partable$free
-    #}
-
     # order them nicely: id lhs op rhs group
     idx <- match(c("id", "lhs","op","rhs", "block","user",
                    "free","ustart","exo","label"),
                  names(partable))
-
-    # order them nicely: id lhs op rhs group
-    #idx <- match(c("id", "lhs","op","rhs", "group","user",
-    #               "free","ustart","exo","label","eq.id","unco"),
-    #             names(partable))
     tmp <- partable[idx]
     partable <- c(tmp, partable[-idx])
 

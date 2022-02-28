@@ -10,7 +10,7 @@
 
 lav_syntax_mlist <- function(MLIST, ov.prefix = "y", lv.prefix = "f",
                              include.values = TRUE) {
-    
+
     # model matrices
     LAMBDA <- MLIST$lambda
     THETA  <- MLIST$theta
@@ -33,9 +33,9 @@ lav_syntax_mlist <- function(MLIST, ov.prefix = "y", lv.prefix = "f",
         #      var.idx <- which(LAMBDA[,f] != 0.0)
         #      lambda.vals <- LAMBDA[var.idx, f]
         #      lambda.txt[f] <- paste( paste0(lv.prefix, f), "=~",
-        #                              paste(lambda.vals, "*", 
-        #                              paste0(ov.prefix, var.idx), 
-        #                              sep = "", collapse = " + ") ) 
+        #                              paste(lambda.vals, "*",
+        #                              paste0(ov.prefix, var.idx),
+        #                              sep = "", collapse = " + ") )
         # }
         nel <- length(IDXF)
         lambda.txt <- character(nel)
@@ -116,7 +116,7 @@ lav_syntax_mlist <- function(MLIST, ov.prefix = "y", lv.prefix = "f",
     # assemble
     syntax <- paste(c(header, lambda.txt, theta.txt, psi.txt, beta.txt, ""),
                         collapse = "\n")
-    
+
     syntax
 }
-  
+

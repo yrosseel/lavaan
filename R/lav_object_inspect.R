@@ -2934,7 +2934,8 @@ lav_object_inspect_coef <- function(object, type = "free",
         type <- "user"
         idx <- 1:length( object@ParTable$lhs )
     } else if(type == "free") {
-        idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
+        #idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
+        idx <- which(object@ParTable$free > 0L)
     } else {
         stop("lavaan ERROR: argument `type' must be one of free or user")
     }

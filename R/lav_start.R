@@ -512,7 +512,7 @@ lav_start <- function(start.method    = "default",
             reg.idx <- which(lavpartable$group == group.values[g] &
                              lavpartable$op == "~")
             if(length(reg.idx) > 0L) {
-                eqs.y <- unique(lavpartable$lhs[reg.idx])        
+                eqs.y <- unique(lavpartable$lhs[reg.idx])
                 ny <- length(eqs.y)
                 for(i in seq_len(ny)) {
                     y.name <- eqs.y[i]
@@ -520,7 +520,7 @@ lav_start <- function(start.method    = "default",
                                        lavpartable$op == "~" &
                                        lavpartable$lhs == y.name)
                     x.names <- lavpartable$rhs[start.idx]
-                    COV <- lavsamplestats@cov[[g]] 
+                    COV <- lavsamplestats@cov[[g]]
                     y.idx <- match(y.name,  ov.names)
                     x.idx <- match(x.names, ov.names)
                     S.xx <- COV[x.idx, x.idx, drop = FALSE]
@@ -538,7 +538,7 @@ lav_start <- function(start.method    = "default",
                                      lavpartable$lhs == y.name &
                                      lavpartable$rhs == y.name)
                     res.val <- COV[y.idx, y.idx] - drop(crossprod(beta.i, S.xy))
-                    if(res.val > 0.01*COV[y.idx, y.idx] && 
+                    if(res.val > 0.01*COV[y.idx, y.idx] &&
                        res.val < 0.99*COV[y.idx, y.idx]) {
                         start[res.idx] <- res.val
                     } else {
@@ -547,7 +547,7 @@ lav_start <- function(start.method    = "default",
                 }
             }
         }
-     
+
       #  # 8 latent variances (new in 0.6-2)
       #  lv.names.y <- vnames(lavpartable, "lv.y", group = group.values[g])
       #  lv.names.x <- vnames(lavpartable, "lv.x", group = group.values[g])

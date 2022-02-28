@@ -58,7 +58,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
             B.one <- as.integer(B != 0)
             Psi <- GLIST[[psi.idx]]
             # keep fixed values (if any); fill in 1 in all 'free' positions
-            Psi[ m.free.idx[[psi.idx]] ] <- 1   
+            Psi[ m.free.idx[[psi.idx]] ] <- 1
             Psi.one <- as.integer(Psi != 0)
             Both.one <- B.one + Psi.one
             if(any(Both.one > 1)) {

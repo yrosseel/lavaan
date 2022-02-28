@@ -15,9 +15,9 @@ model as specified by the user. We refer to this table as the parameter table.}
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE, 
-    effect.coding = "",
-    conditional.x = FALSE, fixed.x = FALSE, parameterization = "delta", 
-    constraints = NULL, auto = FALSE, model.type = "sem", 
+    effect.coding = "", conditional.x = FALSE, fixed.x = FALSE, 
+    parameterization = "delta", constraints = NULL, ceq.simple = FALSE,
+    auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, auto.efa = FALSE, 
@@ -28,9 +28,9 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
-    effect.coding = "",
-    conditional.x = FALSE, fixed.x = FALSE, parameterization = "delta", 
-    constraints = NULL, auto = FALSE, model.type = "sem",
+    effect.coding = "", conditional.x = FALSE, fixed.x = FALSE, 
+    parameterization = "delta", constraints = NULL, ceq.simple = FALSE,
+    auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, auto.efa = FALSE,
@@ -98,6 +98,10 @@ the model both for both observed and latent variables.}
     the theta parameterization is used.}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
+\item{ceq.simple}{If \code{TRUE}, and no other general constraints are
+    used in the model, simple equality constraints are represented in the
+    parameter table as duplicated free parameters (instead of extra rows
+    with \code{op = "=="}).}
 \item{auto}{If \code{TRUE}, the default values are used for the auto.*
     arguments, depending on the value of \code{model.type}.}
 \item{model.type}{Either \code{"sem"} or \code{"growth"}; only used if

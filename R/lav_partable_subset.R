@@ -411,7 +411,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
         exo.idx <- which(PT$exo != 0L)
         if(length(exo.idx) > 0L) {
             PT$exo[ exo.idx] <- 0L
-            PT$free[exo.idx] <- 1L
+            PT$free[exo.idx] <- max(PT$free) + seq_len(length(exo.idx))
         }
     } else {
         # redefine ov.x for the structural part only; set exo flag
