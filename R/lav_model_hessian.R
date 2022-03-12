@@ -6,6 +6,7 @@ lav_model_hessian <- function(lavmodel       = NULL,
                               lavoptions     = NULL,
                               lavcache       = NULL,
                               group.weight   = TRUE,
+                              ceq.simple     = FALSE,
                               h              = 1e-06) {
 
     estimator <- lavmodel@estimator
@@ -23,9 +24,22 @@ lav_model_hessian <- function(lavmodel       = NULL,
     }
 
     # computing the Richardson extrapolation
-    Hessian <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
+    if(!ceq.simple && .hasSlot(lavmodel, "ceq.simple.only") &&
+       lavmodel@ceq.simple.only) {
+        npar <- lavmodel@nx.unco
+        type.glist <- "unco"
+    } else {
+        npar <- lavmodel@nx.free
+        type.glist <- "free"
+    }
+    Hessian <- matrix(0, npar, npar)
     x <- lav_model_get_parameters(lavmodel = lavmodel)
-    for(j in 1:lavmodel@nx.free) {
+    if(!ceq.simple && .hasSlot(lavmodel, "ceq.simple.only") && 
+       lavmodel@ceq.simple.only) {
+        # unpack
+        x <- drop(x %*% t(lavmodel@ceq.simple.K))
+    }
+    for(j in seq_len(npar)) {
         # FIXME: the number below should vary as a function of 'x[j]'
         h.j <- h
         x.left <- x.left2 <- x.right <- x.right2 <- x
@@ -35,41 +49,49 @@ lav_model_hessian <- function(lavmodel       = NULL,
         g.left <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
-                                                            lavmodel, x.left),
+                                                    lavmodel, type = type.glist,
+                                                    x.left),
                                lavsamplestats = lavsamplestats,
                                lavdata        = lavdata,
                                lavcache       = lavcache,
                                type           = "free",
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               ceq.simple     = ceq.simple)
         g.left2 <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
-                                                            lavmodel, x.left2),
+                                                    lavmodel, type = type.glist,
+                                                    x.left2),
                                lavsamplestats = lavsamplestats,
                                lavdata        = lavdata,
                                lavcache       = lavcache,
                                type           = "free",
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               ceq.simple     = ceq.simple)
 
         g.right <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
-                                                            lavmodel, x.right),
+                                                    lavmodel, type = type.glist,
+                                                    x.right),
                                lavsamplestats = lavsamplestats,
                                lavdata        = lavdata,
                                lavcache       = lavcache,
                                type           = "free",
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               ceq.simple     = ceq.simple)
 
         g.right2 <-
             lav_model_gradient(lavmodel       = lavmodel,
                                GLIST          = lav_model_x2GLIST(lavmodel =
-                                                            lavmodel, x.right2),
+                                                    lavmodel, type = type.glist,
+                                                    x.right2),
                                lavsamplestats = lavsamplestats,
                                lavdata        = lavdata,
                                lavcache       = lavcache,
                                type           = "free",
-                               group.weight   = group.weight)
+                               group.weight   = group.weight,
+                               ceq.simple     = ceq.simple)
 
         Hessian[,j] <- (g.left2 - 8*g.left + 8*g.right - g.right2)/(12*h.j)
     }

@@ -162,10 +162,12 @@ sam <- function(model          = NULL,
     OV.names <- unique(unlist(FIT@pta$vnames$ov))
 
     # check for higher-order factors
+    # 0.6-11: hard stop for now, as we do not support them (yet)!
     LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
     if(length(LV.IND.names) > 0L) {
-        ind.idx <- match(LV.IND.names, LV.names)
-        LV.names <- LV.names[-ind.idx]
+        stop("lavaan ERROR: model contains indicators that are also latent variables:\n\t", paste(LV.IND.names, collapse = " "))
+        #ind.idx <- match(LV.IND.names, LV.names)
+        #LV.names <- LV.names[-ind.idx]
     }
 
     # do we have at least 1 'regular' (measured) latent variable?
@@ -200,8 +202,8 @@ sam <- function(model          = NULL,
             # check if we can find all lv names in LV.names
             if(!all(unlist(mm.list[[b]]) %in% LV.names)) {
               tmp <- unlist(mm.list[[b]])
-              stop("lavaan ERROR: mm.list contains unknown latent variable(s):",
-                paste( tmp[ !tmp %in% LV.names ], sep = " "),
+              stop("lavaan ERROR: mm.list contains unknown latent variable(s): ",
+                paste( tmp[ !tmp %in% LV.names ], collapse = " "),
                 "\n")
             }
             # make list per block

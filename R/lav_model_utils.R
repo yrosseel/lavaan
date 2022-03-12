@@ -119,6 +119,9 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
         if(type == "free") {
             M.EL.IDX <- lavmodel@m.free.idx[[mm]]
             X.EL.IDX <- lavmodel@x.free.idx[[mm]]
+        } else if(type == "unco") {
+            M.EL.IDX <- lavmodel@m.free.idx[[mm]]
+            X.EL.IDX <- lavmodel@x.unco.idx[[mm]]
         } else if(type == "full") {
             if(lavmodel@isSymmetric[mm]) {
                 N <- ncol(GLIST[[mm]])

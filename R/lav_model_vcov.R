@@ -508,7 +508,9 @@ lav_model_vcov <- function(lavmodel       = NULL,
 
         # check if VarCov is pd -- new in 0.6-2
         # mostly important if we have (in)equality constraints (MASS::ginv!)
-        if(!is.null(lavoptions$check.vcov) && lavoptions$check.vcov) {
+        if(.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            # do nothing
+        } else if(!is.null(lavoptions$check.vcov) && lavoptions$check.vcov) {
             eigvals <- eigen(VarCov, symmetric = TRUE,
                              only.values = TRUE)$values
             # correct for (in)equality constraints
@@ -599,7 +601,13 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
         # check for negative values (what to do: NA or 0.0?)
         x.var[x.var < 0] <- as.numeric(NA)
         x.se <- sqrt( x.var )
-        GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x.se, type = "free")
+        if(.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x.se, 
+                                       type = "unco")
+        } else {
+            GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x.se, 
+                                       type = "free")
+        }
 
         # se for full parameter table, but with 0.0 entries for def/ceq/cin
         # elements

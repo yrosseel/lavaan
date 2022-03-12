@@ -287,7 +287,8 @@ lav_model_information_observed <- function(lavmodel       = NULL,
                                      lavdata        = lavdata,
                                      lavoptions     = lavoptions,
                                      lavcache       = lavcache,
-                                     group.weight   = group.weight)
+                                     group.weight   = group.weight,
+                                     ceq.simple     = FALSE)
 
         # NOTE! What is the relationship between the Hessian of the objective
         # function, and the `information' matrix (unit or total)
@@ -491,6 +492,18 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
                          cbind( t(H10),   DL,  H0),
                          cbind(      H,   H0,  H0)  )
             information <- E3
+        }
+    } else if(.hasSlot(lavmodel, "ceq.simple.only") && 
+              lavmodel@ceq.simple.only) {
+        H <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+        if(nrow(H) > 0L) {
+            is.augmented <- TRUE
+            H0 <- matrix(0,nrow(H),nrow(H))
+            H10 <- matrix(0, ncol(information), nrow(H))
+            INFO <- information + crossprod(H)
+            E2 <- rbind( cbind(   INFO,  t(H)),
+                         cbind(      H,    H0)  )
+            information <- E2
         }
     }
 

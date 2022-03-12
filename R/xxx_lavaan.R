@@ -764,6 +764,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$verbose) {
             cat("lavsamplestats ...")
         }
+        # check if we have sample.mean and meanstructure = TRUE
+        if(lavoptions$meanstructure && is.null(sample.mean)) {
+            txt <- "sample.mean= argument is missing, but model contains mean/intercept parameters."
+            warning(lav_txt2message(txt))
+        }
         lavsamplestats <- lav_samplestats_from_moments(
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
@@ -773,6 +778,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            ov.names.x    = ov.names.x,
                            estimator     = lavoptions$estimator,
                            mimic         = lavoptions$mimic,
+                           meanstructure = lavoptions$meanstructure,
                            group.w.free  = lavoptions$group.w.free,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
@@ -1432,6 +1438,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim$converged  <- attr(x, "converged")
     lavoptim$warn.txt   <- attr(x, "warn.txt")
     lavoptim$parscale   <- attr(x, "parscale")
+    lavoptim$partrace   <- attr(x, "partrace")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx
     lavoptim$fx.group   <- attr(fx.copy, "fx.group")

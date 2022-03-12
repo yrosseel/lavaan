@@ -58,10 +58,10 @@ lav_options_default <- function(mimic = "lavaan") {
                 std.lv             = FALSE,
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
-                ceq.simple         = FALSE,     # treat simple eq cons special?
+                ceq.simple         = TRUE,      # treat simple eq cons special?
                 parameterization   = "default",
-                #ov.order           = "model",   # how to 'order' ov's in the
-                #                                # partable
+                #ov.order           = "model",  # how to 'order' ov's in the
+                #                               # partable
 
                 auto.fix.first     = FALSE,
                 auto.fix.single    = FALSE,
@@ -160,6 +160,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.init_nelder_mead = FALSE,
                 optim.var.transform    = "none",
                 optim.parscale         = "none",
+                optim.partrace         = FALSE,
                 optim.dx.tol           = 1e-03, # not too strict
                 optim.bounds           = list(),
                 em.iter.max            = 10000L,
@@ -225,9 +226,7 @@ lav_options_set <- function(opt = NULL) {
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
 
     if(opt$debug) {
-        opt$partrace <- TRUE
-    } else {
-        opt$partrace <- FALSE
+        opt$optim.partrace <- TRUE
     }
 
     # everything lowercase

@@ -708,6 +708,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                  type           = "free",
                                  verbose        = FALSE,
                                  group.weight   = TRUE,
+                                 ceq.simple     = TRUE,
                                  Delta          = NULL)
     } else if (what == "dx.all") {
         GLIST <- lav_model_gradient(lavmodel   = object@Model,
@@ -718,6 +719,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
                                 type           = "allofthem",
                                 verbose        = FALSE,
                                 group.weight   = TRUE,
+                                ceq.simple     = FALSE,
                                 Delta          = NULL)
         names(GLIST) <- names(object@Model@GLIST)
     } else if (what == "std.all") {
@@ -2506,13 +2508,24 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
 
         if(rotation) {
-            JAC <- numDeriv::jacobian(func = FUN, x = object@optim$x,
+            if(.hasSlot(object@Model, "ceq.simple.only") &&
+               object@Model@ceq.simple.only) {
+                x.vec <- drop(object@optim$x %*% t(object@Model@ceq.simple.K))
+            } else {
+                x.vec <- object@optim$x
+            }
+            JAC <- numDeriv::jacobian(func = FUN, x = xvec,
                        method = "simple",
                        method.args = list(eps = 1e-03), # default is 1e-04
                        lavobject = object, rotation = rotation)
         } else {
-
-            x.vec <- lav_model_get_parameters(lavmodel)
+            #if(.hasSlot(object@Model, "ceq.simple.only") &&
+            #   object@Model@ceq.simple.only) {
+            #    x <- lav_model_get_parameters(lavmodel)
+            #    x.vec <- drop(x %*% t(object@Model@ceq.simple.K))
+            #} else {
+                x.vec <- lav_model_get_parameters(lavmodel)
+            #}
             JAC <- try(lav_func_jacobian_complex(func = FUN, x = x.vec,
                            lavobject = object),
                        silent = TRUE)
@@ -2524,7 +2537,13 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
         # JAC contains *all* parameters in the parameter table
         if(free.only) {
-            free.idx <- which(object@ParTable$free > 0L)
+            if(.hasSlot(object@Model, "ceq.simple.only") &&
+               object@Model@ceq.simple.only) {
+                free.idx <- which(object@ParTable$free > 0L &&
+                                  !duplicated(object@ParTable$free))
+            } else {
+                free.idx <- which(object@ParTable$free > 0L)
+            }
             JAC <- JAC[free.idx,, drop = FALSE]
         }
 

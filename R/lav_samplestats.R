@@ -847,6 +847,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                          ov.names      = NULL, # including x
                                          ov.names.x    = NULL,
                                          estimator     = "ML",
+                                         meanstructure = FALSE,
                                          mimic         = "lavaan",
                                          WLS.V         = NULL,
                                          NACOV         = NULL,
@@ -933,9 +934,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         } else {
             sample.mean <- lapply(lapply(sample.mean, unname), unclass)
         }
-    } else {
-        meanstructure <- FALSE
-    }
+    } 
 
     if(!is.null(sample.th)) {
         th.idx <- attr(sample.th, "th.idx")
