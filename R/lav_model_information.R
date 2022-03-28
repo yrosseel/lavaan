@@ -493,7 +493,7 @@ lav_model_information_augment_invert <- function(lavmodel    = NULL,
                          cbind(      H,   H0,  H0)  )
             information <- E3
         }
-    } else if(.hasSlot(lavmodel, "ceq.simple.only") && 
+    } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
               lavmodel@ceq.simple.only) {
         H <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
         if(nrow(H) > 0L) {

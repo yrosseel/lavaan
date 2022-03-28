@@ -878,7 +878,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         } # mm
 
         # if type == "free" take care of equality constraints
-        if(type == "free" && ceq.simple && 
+        if(type == "free" && ceq.simple &&
            .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
             Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
         }
@@ -1004,7 +1004,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
             }
         } # mm
 
-        if(type == "free" && ceq.simple && 
+        if(type == "free" && ceq.simple &&
            .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
             Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
         }

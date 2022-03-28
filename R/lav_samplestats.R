@@ -934,7 +934,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         } else {
             sample.mean <- lapply(lapply(sample.mean, unname), unclass)
         }
-    } 
+    }
 
     if(!is.null(sample.th)) {
         th.idx <- attr(sample.th, "th.idx")

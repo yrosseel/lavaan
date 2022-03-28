@@ -178,7 +178,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         lower <- -Inf
     } else {
         if(lavmodel@ceq.simple.only) {
-            free.idx <- which(lavpartable$free > 0L && 
+            free.idx <- which(lavpartable$free > 0L &&
                               !duplicated(lavpartable$free))
             lower <- lavpartable$lower[free.idx]
         } else if(lavmodel@eq.constraints) {

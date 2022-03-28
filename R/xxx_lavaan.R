@@ -98,7 +98,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 dotdotdot$control$init_nelder_mead
         }
     }
-
+    timing$init <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     ######################
     #### 1. ov.names  ####
@@ -396,6 +397,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # add the variable names that were treated as ordinal
     # in the model syntax
     ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
+
+    timing$ov.names <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
     #######################
@@ -712,9 +716,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # at this point, we should check if the partable is complete
     # or not; this is especially relevant if the lavaan() function
     # was used, but the user has forgotten some variances/intercepts...
-    junk <- lav_partable_check(lavpartable,
-                               categorical = lavoptions$categorical,
-                               warn = TRUE)
+    if(is.null(slotParTable)) {
+        junk <- lav_partable_check(lavpartable,
+                                   categorical = lavoptions$categorical,
+                                   warn = TRUE)
+    }
 
     # for EM only (for now), force fixed-to-zero (residual) variances
     # to be slightly larger than zero
@@ -727,6 +733,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
         }
     }
+    timing$ParTable <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
+
 
     #################################
     #### 4b. parameter attributes ###
@@ -738,7 +747,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$verbose) {
         cat(" done.\n")
     }
-    timing$ParTable <- (proc.time()[3] - start.time)
+    timing$lavpta <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
@@ -853,7 +862,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #############################
 
     # automatic bounds (new in 0.6-6)
-    if(!is.null(lavoptions$optim.bounds)) {
+    if(!is.null(lavoptions$optim.bounds) ||
+       length(lavoptions$optim.bounds$lower) > 0L ||
+       length(lavoptions$optim.bounds$upper) > 0L) {
         if(lavoptions$verbose) {
             cat("lavpartable bounds ...")
         }
@@ -864,6 +875,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat(" done.\n")
         }
     }
+    timing$bounds <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
 
@@ -1845,6 +1858,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
         } # vcov
     } # efa
+    timing$rotation <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
     ####################
