@@ -39,7 +39,7 @@ lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
     LAMBDA <- matrix(0, nvar, nfac)
     LAMBDA[lambda.nonzero.idx] <- -1L
 
-    S33.inv <- try(solve(S[-marker.idx, -marker.idx, drop = FALSE]), 
+    S33.inv <- try(solve(S[-marker.idx, -marker.idx, drop = FALSE]),
                    silent = TRUE)
     if(inherits(S33.inv, "try-error")) {
         warning("lavaan WARNING: fabin3 failed; switching to fabin2")
@@ -86,7 +86,7 @@ lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
 # - THETA is diagonal
 # - PSI is unrestricted
 # - we assume W = S^{-1}
-lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL, 
+lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
                                     GLS = FALSE) {
     LAMBDA <- as.matrix(lambda)
     nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
@@ -95,7 +95,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
         # see Browne, 1974 section 4 case II
         if(is.null(S.inv)) {
             W <- solve(S)
-        } else {   
+        } else {
             W <- S.inv
         }
         tLW <- crossprod(LAMBDA, W)

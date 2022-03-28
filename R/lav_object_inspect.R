@@ -2514,7 +2514,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
             } else {
                 x.vec <- object@optim$x
             }
-            JAC <- numDeriv::jacobian(func = FUN, x = xvec,
+            JAC <- numDeriv::jacobian(func = FUN, x = x.vec,
                        method = "simple",
                        method.args = list(eps = 1e-03), # default is 1e-04
                        lavobject = object, rotation = rotation)
