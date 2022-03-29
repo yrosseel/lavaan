@@ -20,7 +20,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
         group.weight <- TRUE
     }
 
-    # temp test
+    # backwards compatibility < 0.6-11
+    if(is.null(lavoptions$optim.partrace)) {
+        lavoptions$optim.partrace <- FALSE
+    }
+
     if(lavoptions$optim.partrace) {
         # fx + parameter values
         PENV <- new.env()
@@ -183,6 +187,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
             lower <- lavpartable$lower[free.idx]
         } else if(lavmodel@eq.constraints) {
             # bounds have no effect any longer....
+            warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
             lower <- -Inf
         } else {
             lower <- lavpartable$lower[ lavpartable$free > 0L ]
@@ -197,6 +202,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
             upper <- lavpartable$upper[free.idx]
         } else if(lavmodel@eq.constraints) {
             # bounds have no effect any longer....
+            if(is.null(lavpartable$lower)) {
+                # bounds have no effect any longer....
+                warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
+            }
             upper <- +Inf
         } else {
             upper <- lavpartable$upper[ lavpartable$free > 0L ]

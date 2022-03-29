@@ -629,14 +629,18 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
                 } else {
                     BOOT.def <- t(BOOT.def)
                 }
-                def.cov <- cov(BOOT.def )
+                def.cov <- cov(BOOT.def)
             } else {
                 # regular delta method
                 x <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
-                 JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
+                JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
                            silent=TRUE)
                 if(inherits(JAC, "try-error")) { # eg. pnorm()
                     JAC <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
+                }
+                if(.hasSlot(lavmodel, "ceq.simple.only") &&
+                   lavmodel@ceq.simple.only) {
+                    JAC <- JAC %*% t(lavmodel@ceq.simple.K)
                 }
                 def.cov <- JAC %*% VCOV %*% t(JAC)
             }

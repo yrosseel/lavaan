@@ -58,7 +58,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 std.lv             = FALSE,
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
-                ceq.simple         = TRUE,      # treat simple eq cons special?
+                ceq.simple         = FALSE,      # treat simple eq cons special?
                 parameterization   = "default",
                 #ov.order           = "model",  # how to 'order' ov's in the
                 #                               # partable

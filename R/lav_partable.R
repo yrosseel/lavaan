@@ -82,6 +82,14 @@ lavaanify <- lavParTable <- function(
     if(length(CON) > 0L) {
         # add 'user' column
         CON <- lapply(CON, function(x) {x$user <- 1L; x} )
+        # any explicit (in)equality constraints? (ignoring := definitions)
+        CON.nondef.flag <- ( sum(sapply(CON, "[[", "op")
+                                 %in% c("==", "<", ">")) > 0L )
+        # any explicit equality constraints?
+        CON.eq.flag <- ( sum(sapply(CON, "[[", "op") == "==") > 0L )
+        if(CON.nondef.flag) {
+            ceq.simple <- FALSE
+        }
     }
 
     if(debug) {
@@ -755,7 +763,7 @@ lavaanify <- lavParTable <- function(
             # old system:
             # - add CON entry
             # - in 0.6-11: only if CON is not empty
-            if(!ceq.simple || length(CON) > 0L) {
+            if(!ceq.simple) {
                 for(o in other.idx) {
                     CON.idx <- CON.idx + 1L
                     CON[[CON.idx]] <- list(op   = "==",
@@ -1078,7 +1086,7 @@ lavaanify <- lavParTable <- function(
 
     # new in 0.6-11 - add free counter to this element (as in < 0.5-18)
     # unless we have other constraints
-    if(length(CON) == 0L) {
+    if(ceq.simple) {
         idx.equal <- which(eq.id > 0)
         LIST$free[idx.equal] <- LIST$free[ eq.id[idx.equal] ]
     }

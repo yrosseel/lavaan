@@ -104,6 +104,7 @@ sam <- function(model          = NULL,
     dotdotdot0$se     <- "none"
     dotdotdot0$test   <- "none"
     dotdotdot0$verbose <- FALSE # no output for this 'dummy' FIT
+    dotdotdot0$ceq.simple <- TRUE # if not the default yet
 
     # initial processing of the model, no fitting
     FIT <- do.call(cmd,
@@ -177,7 +178,11 @@ sam <- function(model          = NULL,
     nfac <- length(LV.names)
 
     # total number of free parameters
-    npar <- lav_partable_npar(PT)
+    if(FIT@Model@ceq.simple.only) {
+        npar <- FIT@Model@nx.unco
+    } else {
+        npar <- FIT@Model@nx.free
+    }
     if(npar < 1L) {
         stop("lavaan ERROR: model does not contain any free parameters")
     }
@@ -249,6 +254,7 @@ sam <- function(model          = NULL,
     dotdotdot.mm$verbose <- FALSE
     dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
     dotdotdot.mm$check.gradient <- FALSE # too sensitive in large model (global)
+    dotdotdot.mm$baseline <- FALSE
 
     # override with mm.args
     dotdotdot.mm <- modifyList(dotdotdot.mm, mm.args)
@@ -289,7 +295,7 @@ sam <- function(model          = NULL,
         }
 
         if(sam.method == "local") {
-            # LV.idx.list/OV.idx.list: list per block
+            #s LV.idx.list/OV.idx.list: list per block
             LV.idx.list[[mm]] <- vector("list", nblocks)
             OV.idx.list[[mm]] <- vector("list", nblocks)
         }
@@ -853,8 +859,13 @@ sam <- function(model          = NULL,
         }
         JOINT@Model@estimator <- "ML"  # FIXME!
         JOINT@Options$se <- lavoptions$se # always set to standard?
-        VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
-                               JOINT@Model@nx.free)
+        if(JOINT@Model@ceq.simple.only) {
+            VCOV.ALL <-  matrix(0, JOINT@Model@nx.unco,
+                                   JOINT@Model@nx.unco)
+        } else {
+            VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
+                                   JOINT@Model@nx.free)
+        }
         VCOV.ALL[step1.idx, step1.idx] <- Sigma.11
         JOINT@vcov <- list(se = "twostep",
                            information = lavoptions$information,

@@ -1,6 +1,7 @@
 # deprecated: only kept in order to avoid some older packages
 lav_model_fit <- function(lavpartable = NULL,
                           lavmodel    = NULL,
+                          lavimplied  = NULL,
                           x           = NULL,
                           VCOV        = NULL,
                           TEST        = NULL) {
@@ -27,8 +28,12 @@ lav_model_fit <- function(lavpartable = NULL,
     est <- lav_model_get_parameters(lavmodel = lavmodel, type = "user")
 
     # did we compute standard errors?
-    se <- lav_model_vcov_se(lavmodel = lavmodel, lavpartable = lavpartable,
-                            VCOV = VCOV, BOOT = attr(VCOV, "BOOT.COEF"))
+    if(is.null(lavpartable$se)) {
+        se <- lav_model_vcov_se(lavmodel = lavmodel, lavpartable = lavpartable,
+                                VCOV = VCOV, BOOT = attr(VCOV, "BOOT.COEF"))
+    } else {
+        se <- lavpartable$se
+    }
 
     # did we compute test statistics
     if(is.null(TEST)) {
@@ -38,7 +43,11 @@ lav_model_fit <- function(lavpartable = NULL,
     }
 
     # for convenience: compute lavmodel-implied Sigma and Mu
-    implied <- lav_model_implied(lavmodel)
+    if(is.null(lavimplied)) {
+        implied <- lav_model_implied(lavmodel)
+    } else {
+        implied <- lavimplied
+    }
 
     # if bootstrapped parameters, add attr to 'est'
     if(!is.null(attr(VCOV, "BOOT.COEF"))) {

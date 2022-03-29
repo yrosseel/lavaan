@@ -1310,6 +1310,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # Quasi-Newton
         } else {
+
+            # for backwards compatibility (<0.6)
+            if(is.null(lavoptions$optim.attempts)) {
+                lavoptions$optim.attempts <- 1L
+            }
+
             # try 1
             if(lavoptions$verbose) {
                 cat("attempt 1 -- default options\n")
@@ -1640,6 +1646,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #######################
     lavfit <- lav_model_fit(lavpartable = lavpartable,
                             lavmodel    = lavmodel,
+                            lavimplied  = lavimplied,
                             x           = x,
                             VCOV        = VCOV,
                             TEST        = TEST)
