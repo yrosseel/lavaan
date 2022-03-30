@@ -225,8 +225,8 @@ lav_start <- function(start.method    = "default",
                                    lavpartable$group == group.values[g] &
                                    lavpartable$rhs == f)
                 if(length(var.f.idx) > 0L &&
-                   lavpartable$free[var.f.idx] == 0 &&
-                   lavpartable$ustart[var.f.idx] == 1) {
+                   all(lavpartable$free[var.f.idx] == 0) &&
+                   all(lavpartable$ustart[var.f.idx] == 1)) {
                     std.lv <- TRUE
                 }
 

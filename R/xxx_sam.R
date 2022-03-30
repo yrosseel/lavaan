@@ -180,8 +180,11 @@ sam <- function(model          = NULL,
     # total number of free parameters
     if(FIT@Model@ceq.simple.only) {
         npar <- FIT@Model@nx.unco
+        PT.free <- PT$free
+        PT.free[ PT.free > 0 ] <- seq_len(npar)
     } else {
         npar <- FIT@Model@nx.free
+        PT.free <- PT$free
     }
     if(npar < 1L) {
         stop("lavaan ERROR: model does not contain any free parameters")
@@ -351,6 +354,15 @@ sam <- function(model          = NULL,
 
         # fill in standard errors measurement block
         if(lavoptions$se != "none") {
+
+            if(fit.mm.block@Model@ceq.simple.only) {
+                PTM.free <- PTM$free
+                PTM.free[ PTM.free > 0 ] <- seq_len(fit.mm.block@Model@nx.unco)
+            } else {
+                PTM.free <- PTM$free
+            }
+
+
             PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
                 PTM$se[ PTM$free > 0L & PTM$user != 3L]
 
@@ -358,9 +370,9 @@ sam <- function(model          = NULL,
             sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
             # fill in variance matrix
-            par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx &
+            par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
                                 PT$free > 0L ]
-            keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
+            keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
             Sigma.11[par.idx, par.idx] <-
                 sigma.11[keep.idx, keep.idx, drop = FALSE]
 
@@ -541,7 +553,7 @@ sam <- function(model          = NULL,
                 Mg <- ( solve(t(LAMBDA[[b]]) %*% ICOV %*% LAMBDA[[b]]) %*%
                             t(LAMBDA[[b]]) %*% ICOV )
             } else if(local.M.method == "ML") {
-                zero.theta.idx <- which(diag(THETA[[b]]) == 0)
+                zero.theta.idx <- which(abs(diag(THETA[[b]])) < 1e-6) # nearzero
                 if(length(zero.theta.idx) > 0L) {
                     tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
                                       drop = FALSE]
@@ -797,7 +809,7 @@ sam <- function(model          = NULL,
 
     # create step2.idx
     p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
-    step2.idx <- PT$free[ p2.idx ]
+    step2.idx <- PT.free[ p2.idx ]
 
     # add 'step' column in PT
     PT$step <- rep(1L, length(PT$lhs))

@@ -43,7 +43,7 @@ lav_model_fit <- function(lavpartable = NULL,
     }
 
     # for convenience: compute lavmodel-implied Sigma and Mu
-    if(is.null(lavimplied)) {
+    if(is.null(lavimplied) || length(lavimplied) == 0L) {
         implied <- lav_model_implied(lavmodel)
     } else {
         implied <- lavimplied

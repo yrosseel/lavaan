@@ -82,7 +82,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     if(bounds) {
         lower.psi <- s11 - (1 - 0.1)*s11 # we assume REL(y1) >= 0.1
         psi <- min(max(psi, lower.psi), s11)
- 
+
         l2.bound <- sqrt(s22/lower.psi)
         l2 <- min(max(-l2.bound, l2), l2.bound)
         l3.bound <- sqrt(s33/lower.psi)
@@ -92,7 +92,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
         theta2 <- min(max(theta2, 0), s22)
         theta3 <- min(max(theta3, 0), s33)
     }
-     
+
     lambda <- c(l1, l2, l3)
     theta <- c(theta1, theta2, theta3)
 
