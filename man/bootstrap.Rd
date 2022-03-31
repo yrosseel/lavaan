@@ -72,6 +72,11 @@ alpha based on the plugin p-values.}
 \author{Yves Rosseel and Leonard Vanbrabant. Ed Merkle contributed
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
 by Hao Wu and Chuchu Cheng.}
+\value{For \code{bootstrapLavaan()}, the bootstrap distribution of the value(s)
+returned by \code{FUN}, when the object can be simplified to a vector.
+For \code{bootstrapLRT()}, a bootstrap \emph{p} value, calculated as the
+proportion of bootstrap samples with a LRT statistic at least as large as
+the LRT statistic for the original data.}
 \details{The FUN function can return either a scalar or a numeric vector.
 This function can be an existing function (for example \code{coef}) or
 can be a custom defined function. For example:
