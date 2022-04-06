@@ -105,9 +105,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 sample.cov.rescale = "default",
                 sample.icov        = TRUE,
                 ridge              = FALSE,
-                ridge.x            = FALSE,
                 ridge.constant     = "default",
-                ridge.constant.x   = 1e-5,
 
                 # multiple groups
                 group.label        = NULL,
@@ -1428,9 +1426,14 @@ lav_options_set <- function(opt = NULL) {
         if(opt$conditional.x && opt$fixed.x == FALSE) {
             stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
         }
+        if(opt$fixed.x && opt$start == "simple") {
+            warning("lavaan WARNING: start = \"simple\" implies fixed.x = FALSE")
+            opt$fixed.x <- FALSE
+        }
     } else if(opt$fixed.x == "default") {
-        if(opt$estimator %in% c("MML", "ML") && (opt$mimic == "Mplus" ||
-                                     opt$mimic == "lavaan")) {
+        if(opt$estimator %in% c("MML", "ML") &&
+           (opt$mimic == "Mplus" || opt$mimic == "lavaan") &&
+           opt$start != "simple") { # new in 0.6-12
             opt$fixed.x <- TRUE
         } else if(opt$conditional.x) {
             opt$fixed.x <- TRUE
@@ -1440,7 +1443,6 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("lavaan ERROR: fixed.x must be TRUE, FALSE or \"default\"\n")
     }
-
 
     # meanstructure again
     if(opt$missing %in% c("ml", "ml.x") || opt$model.type == "growth") {

@@ -4,9 +4,10 @@ lav_samplestats_icov <- function(COV = NULL, ridge = 0.0, x.idx = integer(0L),
     tmp <- try(inv.chol(COV, logdet = TRUE), silent = TRUE)
 
     # what if this fails...
+    # ridge exogenous part only (if any); this may help for GLS (but not ML)
     if(inherits(tmp, "try-error")) {
 
-        if(length(x.idx) > 0L) {
+        if(length(x.idx) > 0L && ridge > 0) {
             # maybe, we can fix it by gently ridging the exo variances
             ridge.eps <- ridge
             diag(COV)[x.idx] <- diag(COV)[x.idx] + ridge.eps

@@ -66,7 +66,7 @@ lav_start <- function(start.method    = "default",
             start[var.idx] <- 1.0
             user.idx <- which(!is.na(lavpartable$ustart))
             start[user.idx] <- lavpartable$ustart[user.idx]
-            return(start)
+            return(start) # assuming fixed.x = FALSE!
         } else if(start.method == "est") {
             return(lavpartable$est)
         } else if(start.method. %in% c("simple", "lavaan", "mplus")) {
@@ -528,7 +528,7 @@ lav_start <- function(start.method    = "default",
                     # regression coefficient(s)
                     beta.i <- try(solve(S.xx, S.xy), silent = TRUE)
                     if(inherits(beta.i, "try-error")) {
-                        start[start.idx] <- rep(0, length(start.idx))
+                        start[start.idx] <- beta.i <- rep(0, length(start.idx))
                     } else {
                         start[start.idx] <- drop(beta.i)
                     }
@@ -637,7 +637,7 @@ lav_start <- function(start.method    = "default",
                         COV <- lavsamplestats@YLp[[g]][[l]]$Sigma.B
                     }
                     # make sure starting values for variances are positive
-                    neg.idx <- which(diag(COV) < 0.001) 
+                    neg.idx <- which(diag(COV) < 0.001)
                     if(length(neg.idx) > 0L) {
                         diag(COV)[neg.idx] <- 0.001
                     }

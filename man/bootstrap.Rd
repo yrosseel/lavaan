@@ -23,16 +23,16 @@ model.}
 \item{h1}{An object of class \code{\linkS4class{lavaan}}. The unrestricted
 model.}
 \item{R}{Integer. The number of bootstrap draws.}
-\item{type}{If \code{"ordinary"} or \code{"nonparametric"}, the usual
-(naive) bootstrap method is used. If \code{"bollen.stine"}, the
-data is first transformed such that the null hypothesis holds exactly
-in the resampling space. If \code{"yuan"}, the data is first transformed 
-by combining data and theory (model), such that the resampling space
-is closer to the population space.
-If \code{"parametric"}, the parametric bootstrap
-approach is used; currently, this is only valid for continuous data
-following a multivariate normal distribution. See references for more
-details.}
+\item{type}{If \code{"ordinary"} or \code{"nonparametric"}, the usual (naive)
+bootstrap method is used. If \code{"bollen.stine"}, the data is first
+transformed such that the null hypothesis holds exactly in the resampling
+space. If \code{"yuan"}, the data is first transformed by combining data and
+theory (model), such that the resampling space is closer to the population
+space. Note that both \code{"bollen.stine"} and \code{"yuan"} require the data
+to be continuous. They will not work with ordinal data.  If
+\code{"parametric"}, the parametric bootstrap approach is used; currently, this
+is only valid for continuous data following a multivariate normal distribution.
+See references for more details.}
 \item{FUN}{A function which when applied to the \code{\linkS4class{lavaan}} 
 object returns a vector containing the statistic(s) of interest.
 The default is \code{FUN="coef"}, returning the estimated values of the
