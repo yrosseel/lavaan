@@ -830,6 +830,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            lavsamplestats = lavsamplestats,
                                            lavpta         = lavpta,
                                            lavoptions     = lavoptions)
+                if(lavoptions$debug) {
+                    print(out)
+                }
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik
                 h1.loglik.group <- out$logl$loglik.group

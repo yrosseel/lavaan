@@ -1089,16 +1089,28 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
         tmp <- S[1,1]
         S.inv <- matrix(1/tmp, 1, 1)
         if(logdet) {
-            attr(S.inv, "logdet") <- log(tmp)
+            if(tmp > 0) {
+                 attr(S.inv, "logdet") <- log(tmp)
+            } else {
+                 attr(S.inv, "logdet") <- -Inf
+            }
         }
     } else if(P == 2L) {
         a11 <- S[1,1]; a12 <- S[1,2]; a21 <- S[2,1]; a22 <- S[2,2]
         tmp <- a11*a22 - a12*a21
         if(tmp == 0) {
+            S.inv <- matrix(c(Inf, Inf, Inf, Inf), 2, 2)
+            if(logdet) {
+                attr(S.inv, "logdet") <- -Inf
+            }
         } else {
             S.inv <- matrix(c(a22/tmp, -a21/tmp, -a12/tmp, a11/tmp), 2, 2)
             if(logdet) {
-                attr(S.inv, "logdet") <- log(tmp)
+                if(tmp > 0) {
+                    attr(S.inv, "logdet") <- log(tmp)
+                } else {
+                     attr(S.inv, "logdet") <- -Inf
+                }
             }
         }
     } else if(Sinv.method == "eigen") {

@@ -636,6 +636,11 @@ lav_start <- function(start.method    = "default",
                     } else {
                         COV <- lavsamplestats@YLp[[g]][[l]]$Sigma.B
                     }
+                    # make sure starting values for variances are positive
+                    neg.idx <- which(diag(COV) < 0.001) 
+                    if(length(neg.idx) > 0L) {
+                        diag(COV)[neg.idx] <- 0.001
+                    }
                     start[exo.idx] <- COV[ cbind(row.idx, col.idx) ]
 
                     # intercepts

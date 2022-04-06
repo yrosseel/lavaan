@@ -1505,6 +1505,14 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # divides by (nclusters - 1)
         S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1)
 
+        # check for zero variances
+        if(length(both.idx) > 0L) {
+            zero.idx <- which(diag(S.b)[both.idx] < 0.0001)
+            if(length(zero.idx) > 0L) {
+                warning("lavaan WARNING: (near) zero variance at between level for splitted variable:\n\t\t", Lp$both.names[[l]][zero.idx])
+            }
+        }
+
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
 
         # loglik.x
@@ -1557,6 +1565,14 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Sigma.B <- (S.b - S.w)/s
         Sigma.B[within.idx,] <- 0
         Sigma.B[,within.idx] <- 0
+
+        # what if we have negative variances in Sigma.B?
+        # this may happen if 'split' a variable that has no between variance
+        zero.idx <- which(diag(Sigma.B) < 1e-10)
+        if(length(zero.idx) > 0L) {
+            Sigma.B[zero.idx,] <- 0
+            Sigma.B[,zero.idx] <- 0
+        }
 
 
         Mu.W <- numeric( P )
