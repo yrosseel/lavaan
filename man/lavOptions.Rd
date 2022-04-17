@@ -74,6 +74,10 @@ Model features (always available):
      equals zero.
      As a result, the latent mean will be freely estimated and usually 
      equal the average of the means of the involved indicators.}
+    \item{code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
+     general constraints are used in the model, simple equality constraints
+     are represented in the parameter table as duplicated free parameters 
+     (instead of extra rows with \code{op = "=="}).}
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}

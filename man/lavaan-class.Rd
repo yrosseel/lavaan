@@ -167,8 +167,8 @@ the independence model) (if available).}
 }
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
-Modeling. Journal of Statistical Software, 48(2), 1-36. URL
-http://www.jstatsoft.org/v48/i02/.
+Modeling. Journal of Statistical Software, 48(2), 1-36. 
+\doi{https://doi.org/10.18637/jss.v048.i02}
 
 Standardized Residuals in Mplus. Document retrieved from URL
 http://www.statmodel.com/download/StandardizedResiduals.pdf

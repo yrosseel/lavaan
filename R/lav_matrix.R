@@ -1089,16 +1089,28 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
         tmp <- S[1,1]
         S.inv <- matrix(1/tmp, 1, 1)
         if(logdet) {
-            attr(S.inv, "logdet") <- log(tmp)
+            if(tmp > 0) {
+                 attr(S.inv, "logdet") <- log(tmp)
+            } else {
+                 attr(S.inv, "logdet") <- -Inf
+            }
         }
     } else if(P == 2L) {
         a11 <- S[1,1]; a12 <- S[1,2]; a21 <- S[2,1]; a22 <- S[2,2]
         tmp <- a11*a22 - a12*a21
         if(tmp == 0) {
+            S.inv <- matrix(c(Inf, Inf, Inf, Inf), 2, 2)
+            if(logdet) {
+                attr(S.inv, "logdet") <- -Inf
+            }
         } else {
             S.inv <- matrix(c(a22/tmp, -a21/tmp, -a12/tmp, a11/tmp), 2, 2)
             if(logdet) {
-                attr(S.inv, "logdet") <- log(tmp)
+                if(tmp > 0) {
+                    attr(S.inv, "logdet") <- log(tmp)
+                } else {
+                     attr(S.inv, "logdet") <- -Inf
+                }
             }
         }
     } else if(Sinv.method == "eigen") {
@@ -1326,7 +1338,11 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
 
 # compute `lambda': the smallest root of the determinantal equation
 # |M - lambda*P| = 0 (see Fuller 1987, p.125 or p.172
-# allow for zero rows/columns in P
+#
+# the function allows for zero rows/columns in P, by regressing them out
+# this approach was suggested to me by Wayne A. Fuller, personal communication,
+# 12 Nov 2020
+#
 lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
                                                     warn = FALSE) {
 
@@ -1586,5 +1602,71 @@ lav_matrix_cov_wt <- function(Y, wt = NULL) {
     out
 }
 
+# compute (I-A)^{-1} where A is square
+# using a (truncated) Neumann series:  (I-A)^{-1} = \sum_k=0^{\infty} A^k
+#
+# as A is typically sparse, we can stop if all elements in A^k are zero for,
+# say, k<=6
+lav_matrix_inverse_iminus <- function(A = NULL) {
 
+    nr <- nrow(A); nc <- ncol(A)
+    stopifnot(nr == nc)
+
+    # create I + A
+    IA <- A
+    diag.idx <- lav_matrix_diag_idx(nr)
+    IA[diag.idx] <- IA[diag.idx] + 1
+
+    # initial approximation
+    IA.inv <- IA
+
+    # first order
+    A2 <- A %*% A
+    if(all(A2 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A2
+    }
+
+    # second order
+    A3 <- A2 %*% A
+	if(all(A3 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A3
+    }
+
+    # third order
+    A4 <- A3 %*% A
+    if(all(A4 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A4
+    }
+
+    # fourth order
+    A5 <- A4 %*% A
+    if(all(A5 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        IA.inv <- IA.inv + A5
+    }
+
+    # fifth order
+    A6 <- A5 %*% A
+    if(all(A6 == 0)) {
+        # we are done
+        return(IA.inv)
+    } else {
+        # naive version (for now)
+        tmp <- -A
+        tmp[diag.idx] <- tmp[diag.idx] + 1
+        IA.inv <- solve(tmp)
+        return(IA.inv)
+    }
+}
 

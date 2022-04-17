@@ -297,6 +297,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # residual var/cov
                 res.var[[g]]  <- unlist(CAT$VAR)
                 res.cov[[g]]  <- unname(CAT$COV)
+                if(ridge) {
+                    diag(res.cov[[g]]) <- diag(res.cov[[g]]) + ridge.eps
+                    res.var[[g]] <- diag(res.cov[[g]])
+                }
 
                 # th also contains the means of numeric variables
                 res.th[[g]]     <- unlist(CAT$TH)
@@ -319,6 +323,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # var/cov
                 var[[g]]  <- unlist(CAT$VAR)
                 cov[[g]]  <- unname(CAT$COV)
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    var[[g]] <- diag(cov[[g]])
+                }
 
                 # th also contains the means of numeric variables
                 th[[g]] <- unlist(CAT$TH)
@@ -380,6 +388,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     COV <- (nobs[[g]]-1)/nobs[[g]] * COV
                 }
                 cov[[g]] <- COV
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    var[[g]] <- diag(cov[[g]])
+                }
                 mean[[g]] <- MEAN
 
                 A <- COV[-x.idx[[g]], -x.idx[[g]], drop=FALSE]
@@ -418,6 +430,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
                 # here, sample statistics == EM estimates
                 cov[[g]]  <- missing.h1.[[g]]$sigma
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                }
                 var[[g]]  <- diag(cov[[g]])
                 mean[[g]] <- missing.h1.[[g]]$mu
             } else if(missing %in% c("ml", "ml.x")) {
@@ -443,18 +458,24 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(!is.null(WT[[g]])) {
                     # here, sample statistics == EM estimates
                     cov[[g]]  <- missing.h1.[[g]]$sigma
+                    if(ridge) {
+                        diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    }
                     var[[g]]  <- diag(cov[[g]])
                     mean[[g]] <- missing.h1.[[g]]$mu
                 } else {
                     # NEEDED? why not just EM-based?
                     cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
-                    var[[g]]  <-   diag(cov[[g]])
                     # rescale cov by (N-1)/N? (only COV!)
                     if(rescale) {
                         # we 'transform' the sample cov (divided by n-1)
                         # to a sample cov divided by 'n'
                         cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
                     }
+                    if(ridge) {
+                        diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    }
+                    var[[g]]  <-   diag(cov[[g]])
                     mean[[g]] <- colMeans(X[[g]], na.rm=TRUE)
                 }
             } else {
@@ -463,17 +484,23 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     out <- stats::cov.wt(X[[g]], wt = WT[[g]],
                                         method = "ML")
                     cov[[g]]  <- out$cov
+                    if(ridge) {
+                        diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    }
                     var[[g]]  <- diag(cov[[g]])
                     mean[[g]] <- out$center
                 } else {
                     cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
-                    var[[g]]  <-   diag(cov[[g]])
                     # rescale cov by (N-1)/N? (only COV!)
                     if(rescale) {
                         # we 'transform' the sample cov (divided by n-1)
                         # to a sample cov divided by 'n'
                         cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
                     }
+                    if(ridge) {
+                        diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    }
+                    var[[g]]  <-   diag(cov[[g]])
                     mean[[g]] <- colMeans(X[[g]], na.rm=TRUE)
                 }
             }
@@ -481,7 +508,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             # icov and cov.log.det (but not if missing)
             if(sample.icov && !missing %in% c("ml", "ml.x")) {
-                out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge.eps,
+                out <- lav_samplestats_icov(COV = cov[[g]], ridge = 1e-05,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
                 icov[[g]] <- out$icov
@@ -490,7 +517,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 # the same for res.cov if conditional.x = TRUE
                 if(conditional.x) {
                     out <- lav_samplestats_icov(COV = res.cov[[g]],
-                               ridge = ridge.eps,
+                               ridge = 1e-05,
                                x.idx = x.idx[[g]],
                                ngroups = ngroups, g = g, warn = TRUE)
                     res.icov[[g]] <- out$icov
@@ -843,21 +870,33 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                                          sample.mean   = NULL,
                                          sample.th     = NULL,
                                          sample.nobs   = NULL,
-                                         rescale       = FALSE,
                                          ov.names      = NULL, # including x
                                          ov.names.x    = NULL,
-                                         estimator     = "ML",
-                                         mimic         = "lavaan",
                                          WLS.V         = NULL,
                                          NACOV         = NULL,
-                                         ridge         = 1e-5,
-                                         group.w.free  = FALSE) {
+                                         lavoptions    = NULL) {
+
+    # extract options
+    estimator     = lavoptions$estimator
+    mimic         = lavoptions$mimic
+    meanstructure = lavoptions$meanstructure
+    group.w.free  = lavoptions$group.w.free
+    ridge         = lavoptions$ridge
+    rescale       = lavoptions$sample.cov.rescale
 
     # no multilevel yet
     nlevels <- 1L
 
     # ridge default
-    ridge.eps <- 0.0
+    if(ridge) {
+        if(is.numeric(lavoptions$ridge.constant)) {
+            ridge.eps <- lavoptions$ridge.constant
+        } else {
+            ridge.eps <- 1e-5
+        }
+    } else {
+        ridge.eps <- 0.0
+    }
 
     # new in 0.6-3:
     # check if sample.cov has attributes if conditional.x = TRUE
@@ -933,8 +972,6 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
         } else {
             sample.mean <- lapply(lapply(sample.mean, unname), unclass)
         }
-    } else {
-        meanstructure <- FALSE
     }
 
     if(!is.null(sample.th)) {
@@ -1159,6 +1196,9 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 res.th.nox[[g]] <- sample.th[[g]]
 
                 res.cov[[g]] <- tmp.cov
+                if(ridge) {
+                    diag(res.cov[[g]]) <- diag(res.cov[[g]]) + ridge.eps
+                }
                 res.var[[g]] <- diag(tmp.cov)
                 res.int[[g]] <- tmp.mean
 
@@ -1184,6 +1224,9 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 th[[g]] <- th.g
 
                 cov[[g]]  <- tmp.cov
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                }
                 var[[g]]  <- diag(tmp.cov)
                 mean[[g]] <- tmp.mean
 
@@ -1207,6 +1250,9 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             # single-level + continuous + conditional.x = TRUE
             if(conditional.x) {
                 res.cov[[g]] <- tmp.cov
+                if(ridge) {
+                    diag(res.cov[[g]]) <- diag(res.cov[[g]]) + ridge.eps
+                }
                 res.var[[g]] <- diag(tmp.cov)
                 res.int[[g]] <- tmp.mean
                 res.slopes[[g]] <- unclass(unname(sample.res.slopes[[g]]))
@@ -1218,7 +1264,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 # icov and cov.log.det
                 #if(lavoptions$sample.icov) {
                     out <- lav_samplestats_icov(COV = res.cov[[g]],
-                                                ridge = ridge,
+                                                ridge = 1e-05,
                                                 x.idx = x.idx[[g]],
                                                 ngroups = ngroups, g = g,
                                                 warn = TRUE)
@@ -1229,7 +1275,6 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
             # continuous + conditional.x = FALSE
             } else {
                 cov[[g]]  <- tmp.cov
-                var[[g]]  <- diag(tmp.cov)
                 mean[[g]] <- tmp.mean
 
                 # rescale cov by (N-1)/N?
@@ -1238,12 +1283,19 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                     # to a sample cov divided by 'n'
                     cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
                 }
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                }
+                var[[g]] <- diag(cov[[g]])
 
                 # icov and cov.log.det
                 #if(lavoptions$sample.icov) {
-                    out <- lav_samplestats_icov(COV = cov[[g]], ridge = ridge,
-                               x.idx = x.idx[[g]], ngroups = ngroups, g = g,
-                               warn = TRUE)
+                    out <- lav_samplestats_icov(COV = cov[[g]],
+                                                ridge = 1e-05,
+                                                x.idx = x.idx[[g]],
+                                                ngroups = ngroups,
+                                                g = g,
+                                                warn = TRUE)
                     icov[[g]] <- out$icov; cov.log.det[[g]] <- out$cov.log.det
                 #}
 
@@ -1506,6 +1558,14 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         # divides by (nclusters - 1)
         S.b <- lav_matrix_crossprod(Y2c * cluster.size, Y2c) / (nclusters - 1)
 
+        # check for zero variances
+        if(length(both.idx) > 0L) {
+            zero.idx <- which(diag(S.b)[both.idx] < 0.0001)
+            if(length(zero.idx) > 0L) {
+                warning("lavaan WARNING: (near) zero variance at between level for splitted variable:\n\t\t", Lp$both.names[[l]][zero.idx])
+            }
+        }
+
         S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L)/N
 
         # loglik.x
@@ -1558,6 +1618,14 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Sigma.B <- (S.b - S.w)/s
         Sigma.B[within.idx,] <- 0
         Sigma.B[,within.idx] <- 0
+
+        # what if we have negative variances in Sigma.B?
+        # this may happen if 'split' a variable that has no between variance
+        zero.idx <- which(diag(Sigma.B) < 1e-10)
+        if(length(zero.idx) > 0L) {
+            Sigma.B[zero.idx,] <- 0
+            Sigma.B[,zero.idx] <- 0
+        }
 
 
         Mu.W <- numeric( P )

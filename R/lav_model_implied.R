@@ -1,6 +1,6 @@
 # compute model implied statistics
 # per block
-lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
     stopifnot(inherits(lavmodel, "lavModel"))
 
@@ -8,7 +8,8 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
     # model-implied variance/covariance matrix ('sigma hat')
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST, delta = (lavmodel@parameterization == "delta"))
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
+                                 delta = delta)
 
     # model-implied mean structure ('mu hat')
     if(lavmodel@meanstructure) {
@@ -39,10 +40,11 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL) {
         GW <- vector("list", length = lavmodel@nblocks)
     }
 
-    # FIXME: should we use 'res.cov', 'res.int', 'res.th' if conditionl.x??
+    # FIXME: should we use 'res.cov', 'res.int', 'res.th' if conditional.x??
     # Yes, since 0.5-22
     if(lavmodel@conditional.x) {
-        implied <- list(res.cov = Sigma.hat, res.int = Mu.hat, res.slopes = SLOPES, res.th = TH, group.w = GW)
+        implied <- list(res.cov = Sigma.hat, res.int = Mu.hat,
+                        res.slopes = SLOPES, res.th = TH, group.w = GW)
     } else {
         implied <- list(cov = Sigma.hat, mean = Mu.hat, th = TH, group.w = GW)
     }

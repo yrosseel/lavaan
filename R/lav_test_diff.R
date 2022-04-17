@@ -226,14 +226,14 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
                          symmetric=TRUE, only.values=TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
             warning(
-  "lavaan WARNING: information matrix of the M01 model is not positive definite.\n",
-"                  As a result, the scale-factor can not be computed.")
-            cd <- as.numeric(NA)
-        } else {
+  "lavaan WARNING: information matrix of the M01 model is not positive definite.\n")
+#"                  As a result, the scale-factor can not be computed.")
+            #cd <- as.numeric(NA)
+        } #else {
             # compute c_d
             # cd.01 <- (r0 * c01 - r1 * c0) / m ???
             cd <- (r0 * c0 - r1 * c01) / m
-        }
+        #}
 
     } else {
         # M1 with M0 parameters (as in Satorra & Bentler 2010)
@@ -246,13 +246,13 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
                          symmetric=TRUE, only.values=TRUE)$values
         if(any(eigvals < -1 * .Machine$double.eps^(3/4))) {
             warning(
-  "lavaan WARNING: information matrix of the M10 model is not positive definite.\n",
-"                  As a result, the scale-factor can not be computed.")
-            cd <- as.numeric(NA)
-        } else {
+  "lavaan WARNING: information matrix of the M10 model is not positive definite.\n")
+#"                  As a result, the scale-factor can not be computed.")
+            #cd <- as.numeric(NA)
+        } #else {
             # compute c_d
             cd <- (r0 * c0 - r1 * c10) / m
-        }
+        #}
     }
 
     # compute scaled difference test

@@ -10,7 +10,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                group.weight   = TRUE,
                                Delta          = NULL,
                                m.el.idx       = NULL,
-                               x.el.idx       = NULL) {
+                               x.el.idx       = NULL,
+                               ceq.simple     = FALSE) {
 
     nmat           <- lavmodel@nmat
     estimator      <- lavmodel@estimator
@@ -153,8 +154,14 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
                 # only save what we need
                 DX[mm.in.group] <- DX.group[ mm.names ]
+            } else if(representation == "RAM") {
+                DX.group <- lav_ram_df(GLIST[mm.in.group],
+                                       Omega[[g]],
+                                       Omega.mu[[g]])
+                # only save what we need
+                DX[mm.in.group] <- DX.group[ mm.names ]
             } else {
-                stop("only representation LISREL has been implemented for now")
+                stop("only LISREL and RAM representation has been implemented for now")
             }
 
             # weight by group
@@ -166,21 +173,34 @@ lav_model_gradient <- function(lavmodel       = NULL,
         }
 
         # extract free parameters
+
         if(type == "free") {
-            dx <- numeric( nx.free )
-            for(g in 1:lavmodel@nblocks) {
-                mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
-                for(mm in mm.in.group) {
-                      m.free.idx  <- lavmodel@m.free.idx[[mm]]
-                         x.free.idx  <- lavmodel@x.free.idx[[mm]]
-                      dx[x.free.idx] <- DX[[mm]][m.free.idx]
+            if(.hasSlot(lavmodel, "ceq.simple.only") &&
+               lavmodel@ceq.simple.only) { # new in 0.6-11
+                dx <- numeric( lavmodel@nx.unco )
+                for(g in 1:lavmodel@nblocks) {
+                    mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+                    for(mm in mm.in.group) {
+                        m.free.idx  <- lavmodel@m.free.idx[[mm]]
+                        x.unco.idx  <- lavmodel@x.unco.idx[[mm]]
+                        dx[x.unco.idx] <- DX[[mm]][m.free.idx]
+                    }
+                }
+                if(ceq.simple) {
+                    dx <- drop( crossprod(lavmodel@ceq.simple.K,  dx) )
+                }
+            } else {
+                dx <- numeric( nx.free )
+                for(g in 1:lavmodel@nblocks) {
+                    mm.in.group <- 1:nmat[g] + cumsum(c(0,nmat))[g]
+                    for(mm in mm.in.group) {
+                        m.free.idx  <- lavmodel@m.free.idx[[mm]]
+                        x.free.idx  <- lavmodel@x.free.idx[[mm]]
+                        dx[x.free.idx] <- DX[[mm]][m.free.idx]
+                    }
                 }
             }
 
-            # handle equality constraints
-            #if(lavmodel@eq.constraints && constraints) {
-            #    dx <- as.numeric( t(lavmodel@eq.constraints.K) %*% dx )
-            #}
         } else {
             dx <- DX
             # handle equality constraints
@@ -197,7 +217,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
                 stop("FIXME: Delta should be given if type != free")
             #stop("FIXME: WLS gradient with type != free needs fixing!")
         } else {
-            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST,
+                                  ceq.simple = ceq.simple)
         }
 
         for(g in 1:lavmodel@nblocks) {
@@ -305,7 +326,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
                 stop("FIXME: Delta should be given if type != free")
             #stop("FIXME: WLS gradient with type != free needs fixing!")
         } else {
-            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST,
+                                  ceq.simple = ceq.simple)
         }
 
         for(g in 1:lavmodel@nblocks) {
@@ -394,7 +416,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
         if(type != "free") {
             stop("FIXME: type != free in lav_model_gradient for estimator ML for nlevels > 1")
         } else {
-            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST,
+                                  ceq.simple = ceq.simple)
         }
 
         # for each upper-level group....
@@ -447,7 +470,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
         if(type != "free") {
             stop("FIXME: type != free in lav_model_gradient for estimator PML")
         } else {
-            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST)
+            Delta <- computeDelta(lavmodel = lavmodel, GLIST. = GLIST,
+                                  ceq.simple = ceq.simple)
         }
 
         for(g in 1:lavmodel@nblocks) {
@@ -595,7 +619,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
-                         m.el.idx. = NULL, x.el.idx. = NULL) {
+                         m.el.idx. = NULL, x.el.idx. = NULL,
+                         ceq.simple = FALSE) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
@@ -650,11 +675,20 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     # number of columns in DELTA + m.el.idx/x.el.idx
     if(type == "free") {
-        NCOL <- lavmodel@nx.free
+        if(.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            NCOL <- lavmodel@nx.unco
+        } else {
+            NCOL <- lavmodel@nx.free
+        }
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
             m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-            x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+            if(.hasSlot(lavmodel, "ceq.simple.only") &&
+               lavmodel@ceq.simple.only) {
+                x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
+            } else {
+                x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+            }
             # handle symmetric matrices
             if(lavmodel@isSymmetric[mm]) {
                 # since we use 'x.free.idx', only symmetric elements
@@ -702,7 +736,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         #}
 
         # if theta, do some preparation
-        if(parameterization == "theta") {
+        if(representation == "LISREL" && parameterization == "theta") {
             sigma.hat <- computeSigmaHat.LISREL(MLIST=GLIST[mm.in.group],
                                                 delta=FALSE)
             dsigma <- diag(sigma.hat)
@@ -825,22 +859,29 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                                                      MLIST=GLIST[ mm.in.group ])
                     DELTA <- rbind(DELTA.gw, DELTA)
                 }
+            } else if(representation == "RAM") {
+                DELTA <- dxSigma <-
+                    lav_ram_dsigma(m     = mname,
+                                   idx   = m.el.idx[[mm]],
+                                   MLIST = GLIST[ mm.in.group ])
+                if(lavmodel@meanstructure) {
+                    DELTA.mu <- lav_ram_dmu(m    = mname,
+                                           idx   = m.el.idx[[mm]],
+                                           MLIST = GLIST[ mm.in.group ])
+                    DELTA <- rbind(DELTA.mu, DELTA)
+                }
             } else {
-                stop("representation", representation, "not implemented yet")
+                stop("representation ", representation, " not implemented yet")
             }
 
             Delta.group[ ,x.el.idx[[mm]]] <- DELTA
         } # mm
 
-        # save(Delta.group, file=paste0("delta_NO_EQ",g,".Rdata"))
-
         # if type == "free" take care of equality constraints
-        #if(type == "free" && lavmodel@eq.constraints) {
-        #    Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
-        #}
-
-        #Delta.eq <- Delta.group
-        # save(Delta.eq, file=paste0("delta_NO_EQ",g,".Rdata"))
+        if(type == "free" && ceq.simple &&
+           .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
+        }
 
         Delta[[g]] <- Delta.group
 
@@ -859,7 +900,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     Delta
 }
 
-computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
+computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
+                           ceq.simple = FALSE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -873,11 +915,20 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
     # number of columns in DELTA + m.el.idx/x.el.idx
     type <- "free"
     #if(type == "free") {
-        NCOL <- lavmodel@nx.free
+        if(.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            NCOL <- lavmodel@nx.unco
+        } else {
+            NCOL <- lavmodel@nx.free
+        }
         m.el.idx <- x.el.idx <- vector("list", length=length(GLIST))
         for(mm in 1:length(GLIST)) {
             m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-            x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+            if(.hasSlot(lavmodel, "ceq.simple.only") &&
+               lavmodel@ceq.simple.only) {
+                x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
+            } else {
+                x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+            }
             # handle symmetric matrices
             if(lavmodel@isSymmetric[mm]) {
                 # since we use 'x.free.idx', only symmetric elements
@@ -953,9 +1004,10 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda") {
             }
         } # mm
 
-        #if(type == "free" && lavmodel@eq.constraints) {
-        #    Delta.group <- Delta.group %*% lavmodel@eq.constraints.K
-        #}
+        if(type == "free" && ceq.simple &&
+           .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+            Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
+        }
 
         Delta[[g]] <- Delta.group
     } # g

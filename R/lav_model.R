@@ -50,6 +50,16 @@ lav_model <- function(lavpartable      = NULL,
         efa.values <- lav_partable_efa_values(lavpartable)
     }
 
+    # check for simple equality constraints
+    eq.simple <- any(lavpartable$free > 0L & duplicated(lavpartable$free))
+    if(eq.simple) {
+        # just like in <0.5-18, add (temporary) 'unco' column
+        # so we can fill in x.unco.idx
+        lavpartable$unco <- integer( length(lavpartable$id) )
+        idx.free <- which(lavpartable$free > 0L)
+        lavpartable$unco[idx.free] <- seq_along(idx.free)
+    }
+
     # handle variable definitions and (in)equality constraints
     CON <- lav_constraints_parse(partable = lavpartable,
                                  constraints = NULL,
@@ -68,9 +78,11 @@ lav_model <- function(lavpartable      = NULL,
 
     # select model matrices
     if(lavoptions$representation == "LISREL") {
-        REP <- representation.LISREL(lavpartable, target = NULL, extra = TRUE)
+        REP <- lav_lisrel(lavpartable, target = NULL, extra = TRUE)
+    } else if(lavoptions$representation == "RAM") {
+        REP <- lav_ram(lavpartable, target = NULL, extra = TRUE)
     } else {
-        stop("lavaan ERROR: only representation \"LISREL\" has been implemented.")
+        stop("lavaan ERROR: representation must be either \"LISREL\" or \"RAM\".")
     }
     if(lavoptions$debug) print(REP)
 
@@ -79,7 +91,6 @@ lav_model <- function(lavpartable      = NULL,
                      !lavpartable$op %in% c("==","<",">",":="))
 
     if(length(bad.idx) > 0L) {
-
         label <- paste(lavpartable$lhs[bad.idx[1]],
                        lavpartable$op[bad.idx[1]],
                        lavpartable$rhs[bad.idx[1]], sep = " ")
@@ -95,7 +106,7 @@ lav_model <- function(lavpartable      = NULL,
     mmSize      <- integer(nG)
 
     m.free.idx <- m.user.idx <- vector(mode="list", length=nG)
-    x.free.idx <- x.user.idx <- vector(mode="list", length=nG)
+    x.free.idx <- x.unco.idx <- x.user.idx <- vector(mode="list", length=nG)
 
     # prepare nblocks-sized slots
     nvar <- integer(nblocks)
@@ -168,31 +179,31 @@ lav_model <- function(lavpartable      = NULL,
             tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$free[idx]
             if(mmSymmetric[mm]) {
                 # NOTE: we assume everything is in the UPPER tri!
-                T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
+                TT <- t(tmp); tmp[lower.tri(tmp)] <- TT[lower.tri(TT)]
             }
             m.free.idx[[offset]] <-     which(tmp > 0)
             x.free.idx[[offset]] <- tmp[which(tmp > 0)]
 
-            # 2. if equality constraints, unconstrained free parameters
+            # 2. if simple equality constraints, unconstrained free parameters
             #    -> to be used in lav_model_gradient
-            #if(CON$ceq.linear.only.flag) {
-            #    tmp[ cbind(REP$row[idx],
-            #               REP$col[idx]) ] <- lavpartable$unco[idx]
-            #    if(mmSymmetric[mm]) {
-            #        # NOTE: we assume everything is in the UPPER tri!
-            #        T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
-            #    }
-            #    m.unco.idx[[offset]] <-     which(tmp > 0)
-            #    x.unco.idx[[offset]] <- tmp[which(tmp > 0)]
-            #} else {
-            #    m.unco.idx[[offset]] <- m.free.idx[[offset]]
-            #    x.unco.idx[[offset]] <- x.free.idx[[offset]]
-            #}
+            if(eq.simple) {
+                tmp[ cbind(REP$row[idx],
+                           REP$col[idx]) ] <- lavpartable$unco[idx]
+                if(mmSymmetric[mm]) {
+                    # NOTE: we assume everything is in the UPPER tri!
+                    TT <- t(tmp); tmp[lower.tri(tmp)] <- TT[lower.tri(TT)]
+                }
+                #m.unco.idx[[offset]] <-     which(tmp > 0)
+                x.unco.idx[[offset]] <- tmp[which(tmp > 0)]
+            } else {
+                #m.unco.idx[[offset]] <- m.free.idx[[offset]]
+                x.unco.idx[[offset]] <- x.free.idx[[offset]]
+            }
 
             # 3. general mapping between user and GLIST
             tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$id[idx]
             if(mmSymmetric[mm]) {
-                T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
+                TT <- t(tmp); tmp[lower.tri(tmp)] <- TT[lower.tri(TT)]
             }
             m.user.idx[[offset]] <-     which(tmp > 0)
             x.user.idx[[offset]] <- tmp[which(tmp > 0)]
@@ -204,7 +215,7 @@ lav_model <- function(lavpartable      = NULL,
                                ncol=mmCols[mm])
             tmp[ cbind(REP$row[idx], REP$col[idx]) ] <- lavpartable$start[idx]
             if(mmSymmetric[mm]) {
-                T <- t(tmp); tmp[lower.tri(tmp)] <- T[lower.tri(T)]
+                TT <- t(tmp); tmp[lower.tri(tmp)] <- TT[lower.tri(TT)]
             }
 
             # 4b. override with cov.x (if conditional.x = TRUE)
@@ -221,7 +232,8 @@ lav_model <- function(lavpartable      = NULL,
             #}
 
             # representation specific stuff
-            if(lavoptions$representation == "LISREL" && mmNames[mm] == "lambda") {
+            if(lavoptions$representation == "LISREL" &&
+               mmNames[mm] == "lambda") {
                 ov.dummy.names.nox <- attr(REP, "ov.dummy.names.nox")[[g]]
                 ov.dummy.names.x   <- attr(REP, "ov.dummy.names.x")[[g]]
                 ov.dummy.names <- c(ov.dummy.names.nox, ov.dummy.names.x)
@@ -247,6 +259,11 @@ lav_model <- function(lavpartable      = NULL,
                 # but all remaining values should be 1.0
                 idx <- which(tmp[,1L] == 0.0)
                 tmp[idx,1L] <- 1.0
+            }
+
+            # representation specific
+            if(lavoptions$representation == "RAM" && mmNames[mm] == "ov.idx") {
+                tmp[1,] <- attr(REP, "ov.idx")[[g]]
             }
 
             # assign matrix to GLIST
@@ -343,7 +360,9 @@ lav_model <- function(lavpartable      = NULL,
     # new in 0.6-9: model properties
     modprop <- lav_model_properties(GLIST = GLIST,
                                     lavpartable = lavpartable,
-                                    lavpta = lavpta)
+                                    lavpta = lavpta,
+                                    nmat   = nmat,
+                                    m.free.idx = m.free.idx)
 
     Model <- new("lavModel",
                  GLIST=GLIST,
@@ -365,19 +384,22 @@ lav_model <- function(lavpartable      = NULL,
                  num.idx=num.idx,
                  th.idx=th.idx,
                  nx.free=max(lavpartable$free),
-                 #nx.unco=max(lavpartable$unco),
+                 nx.unco=if(is.null(lavpartable$unco)) { max(lavpartable$free) }
+                         else { max(lavpartable$unco) },
                  nx.user=max(lavpartable$id),
                  m.free.idx=m.free.idx,
                  x.free.idx=x.free.idx,
                  x.free.var.idx=x.free.var.idx,
                  #m.unco.idx=m.unco.idx,
-                 #x.unco.idx=x.unco.idx,
+                 x.unco.idx=x.unco.idx,
                  m.user.idx=m.user.idx,
                  x.user.idx=x.user.idx,
                  x.def.idx=which(lavpartable$op == ":="),
                  x.ceq.idx=which(lavpartable$op == "=="),
                  x.cin.idx=which(lavpartable$op == ">" | lavpartable$op == "<"),
 
+                 ceq.simple.only     = CON$ceq.simple.only,
+                 ceq.simple.K        = CON$ceq.simple.K,
                  eq.constraints      = CON$ceq.linear.only.flag,
                  eq.constraints.K    = CON$ceq.JAC.NULL,
                  eq.constraints.k0   = CON$ceq.rhs.NULL,

@@ -20,8 +20,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
         group.weight <- TRUE
     }
 
-    # temp test
-    if(lavoptions$partrace) {
+    # backwards compatibility < 0.6-11
+    if(is.null(lavoptions$optim.partrace)) {
+        lavoptions$optim.partrace <- FALSE
+    }
+
+    if(lavoptions$optim.partrace) {
         # fx + parameter values
         PENV <- new.env()
         PENV$PARTRACE <- matrix(NA, nrow=0, ncol=lavmodel@nx.free + 1L)
@@ -177,35 +181,34 @@ lav_model_estimate <- function(lavmodel       = NULL,
     if(is.null(lavpartable$lower)) {
         lower <- -Inf
     } else {
-        lower <- lavpartable$lower[ lavpartable$free > 0 ]
-        if(lavmodel@eq.constraints) {
-            inf.idx <- which(!is.finite(lower))
-
-            lowerb <- lower
-            lowerb[inf.idx] <- -99999
-
-            # pack
-            l.pack <- as.numeric( (lowerb - lavmodel@eq.constraints.k0) %*%
-                                  lavmodel@eq.constraints.K )
-            lower <- l.pack
-            lower[lower == -99999] <- -Inf
+        if(lavmodel@ceq.simple.only) {
+            free.idx <- which(lavpartable$free > 0L &
+                              !duplicated(lavpartable$free))
+            lower <- lavpartable$lower[free.idx]
+        } else if(lavmodel@eq.constraints) {
+            # bounds have no effect any longer....
+            warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
+            lower <- -Inf
+        } else {
+            lower <- lavpartable$lower[ lavpartable$free > 0L ]
         }
     }
     if(is.null(lavpartable$upper)) {
         upper <- +Inf
     } else {
-        upper <- lavpartable$upper[ lavpartable$free > 0 ]
-        if(lavmodel@eq.constraints) {
-            inf.idx <- which(!is.finite(upper))
-
-            upperb <- upper
-            upperb[inf.idx] <- 99999
-
-            # pack
-            l.pack <- as.numeric( (upperb - lavmodel@eq.constraints.k0) %*%
-                                  lavmodel@eq.constraints.K )
-            upper <- l.pack
-            upper[upper == 99999] <- Inf
+        if(lavmodel@ceq.simple.only) {
+            free.idx <- which(lavpartable$free > 0L &
+                              !duplicated(lavpartable$free))
+            upper <- lavpartable$upper[free.idx]
+        } else if(lavmodel@eq.constraints) {
+            # bounds have no effect any longer....
+            if(is.null(lavpartable$lower)) {
+                # bounds have no effect any longer....
+                warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
+            }
+            upper <- +Inf
+        } else {
+            upper <- lavpartable$upper[ lavpartable$free > 0L ]
         }
     }
 
@@ -215,13 +218,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
     bad.idx <- which(lower > upper)
     if(length(bad.idx) > 0L) {
         # switch
-        tmp <- lower[bad.idx]
-        lower[bad.idx] <- upper[bad.idx]
-        upper[bad.idx] <- tmp
+        #tmp <- lower[bad.idx]
+        #lower[bad.idx] <- upper[bad.idx]
+        #upper[bad.idx] <- tmp
+        lower[bad.idx] <- -Inf
+        upper[bad.idx] <- +Inf
     }
-
-
-
 
     # function to be minimized
     objective_function <- function(x, verbose = FALSE, infToMax = FALSE) {
@@ -273,7 +275,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
             cat("Current free parameter values =\n"); print(x); cat("\n")
         }
 
-        if(lavoptions$partrace) {
+        if(lavoptions$optim.partrace) {
             PENV$PARTRACE <- rbind(PENV$PARTRACE, c(fx, x))
         }
 
@@ -318,7 +320,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                  lavcache       = lavcache,
                                  type           = "free",
                                  group.weight   = group.weight, ### check me!!
-                                 verbose        = verbose)
+                                 verbose        = verbose,
+                                 ceq.simple     = lavmodel@ceq.simple.only)
 
         if(debug) {
             cat("Gradient function (analytical) =\n"); print(dx); cat("\n")
@@ -886,7 +889,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     attr(x, "parscale")   <- parscale
     if(!is.null(optim.out$con.jac)) attr(x, "con.jac")    <- optim.out$con.jac
     if(!is.null(optim.out$lambda))  attr(x, "con.lambda") <- optim.out$lambda
-    if(lavoptions$partrace) {
+    if(lavoptions$optim.partrace) {
         attr(x, "partrace") <- PENV$PARTRACE
     }
 

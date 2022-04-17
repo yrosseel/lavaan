@@ -833,9 +833,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
         user.ordered.names <- ov$name[ov$type == "ordered" & ov$user == 1L]
         user.ordered.idx <- which(ov.names[[g]] %in% user.ordered.names)
         if(length(user.ordered.idx) > 0L) {
-            for(i in user.ordered.idx) {
+          for(i in user.ordered.idx) {
+                X[[g]][,i][is.na(X[[g]][,i])] <- NA # change NaN to NA
                 X[[g]][,i] <- as.numeric(as.factor(X[[g]][,i]))
-            }
+                # possible alternative to the previous two lines:
+                # X[[g]][,i] <- as.numeric(factor(X[[g]][,i], exclude = c(NA, NaN)))
+          }
         }
 
         ## FIXME:
@@ -1040,8 +1043,12 @@ lav_data_full <- function(data          = NULL,          # data.frame
                     warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse=" "))
                 }
             }
-            if(warn && any(Mp[[g]]$coverage < 0.1)) {
-                warning("lavaan WARNING: due to missing values, some pairwise combinations have less than 10% coverage")
+            if(warn && any(Mp[[g]]$coverage == 0)) {
+                txt <- c("due to missing values, some pairwise combinations have 0% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
+                warning(lav_txt2message(txt))
+            } else if(warn && any(Mp[[g]]$coverage < 0.1)) {
+                txt <- c("due to missing values, some pairwise combinations have less than 10% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
+                warning(lav_txt2message(txt))
             }
             # in case we had observations with only missings
             nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)

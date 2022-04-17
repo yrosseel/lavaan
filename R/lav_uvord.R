@@ -13,6 +13,8 @@
 lav_uvord_fit <- function(y  = NULL,
                           X  = NULL,
                           wt = rep(1, length(y)),
+                          lower = -Inf,
+                          upper = +Inf,
                           optim.method = "nlminb",
                           logistic = FALSE, # probit is the default
                           control = list(),
@@ -39,6 +41,9 @@ lav_uvord_fit <- function(y  = NULL,
         }
     }
 
+    # check lower/upper
+    # TODO
+
     # optim.method
     minObjective <- lav_uvord_min_objective
     minGradient  <- lav_uvord_min_gradient
@@ -61,7 +66,8 @@ lav_uvord_fit <- function(y  = NULL,
 
     optim <- nlminb(start = cache$theta, objective = minObjective,
                     gradient = minGradient, hessian = minHessian,
-                    control = control.nlminb, cache = cache)
+                    control = control.nlminb, lower = lower, upper = upper,
+                    cache = cache)
 
     if(output == "cache") {
         return(cache)

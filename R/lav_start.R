@@ -66,7 +66,7 @@ lav_start <- function(start.method    = "default",
             start[var.idx] <- 1.0
             user.idx <- which(!is.na(lavpartable$ustart))
             start[user.idx] <- lavpartable$ustart[user.idx]
-            return(start)
+            return(start) # assuming fixed.x = FALSE!
         } else if(start.method == "est") {
             return(lavpartable$est)
         } else if(start.method. %in% c("simple", "lavaan", "mplus")) {
@@ -225,8 +225,8 @@ lav_start <- function(start.method    = "default",
                                    lavpartable$group == group.values[g] &
                                    lavpartable$rhs == f)
                 if(length(var.f.idx) > 0L &&
-                   lavpartable$free[var.f.idx] == 0 &&
-                   lavpartable$ustart[var.f.idx] == 1) {
+                   all(lavpartable$free[var.f.idx] == 0) &&
+                   all(lavpartable$ustart[var.f.idx] == 1)) {
                     std.lv <- TRUE
                 }
 
@@ -506,7 +506,47 @@ lav_start <- function(start.method    = "default",
             }
         }
 
-        # 7g) regressions "~"
+        # 7g) regressions "~" # new in 0.6-10
+        if(length(lv.names) == 0L && nlevels == 1L && !conditional.x) {
+            # observed only
+            reg.idx <- which(lavpartable$group == group.values[g] &
+                             lavpartable$op == "~")
+            if(length(reg.idx) > 0L) {
+                eqs.y <- unique(lavpartable$lhs[reg.idx])
+                ny <- length(eqs.y)
+                for(i in seq_len(ny)) {
+                    y.name <- eqs.y[i]
+                    start.idx <- which(lavpartable$group == group.values[g] &
+                                       lavpartable$op == "~" &
+                                       lavpartable$lhs == y.name)
+                    x.names <- lavpartable$rhs[start.idx]
+                    COV <- lavsamplestats@cov[[g]]
+                    y.idx <- match(y.name,  ov.names)
+                    x.idx <- match(x.names, ov.names)
+                    S.xx <- COV[x.idx, x.idx, drop = FALSE]
+                    S.xy <- COV[x.idx, y.idx, drop = FALSE]
+                    # regression coefficient(s)
+                    beta.i <- try(solve(S.xx, S.xy), silent = TRUE)
+                    if(inherits(beta.i, "try-error")) {
+                        start[start.idx] <- beta.i <- rep(0, length(start.idx))
+                    } else {
+                        start[start.idx] <- drop(beta.i)
+                    }
+                    # residual variance
+                    res.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$op == "~~" &
+                                     lavpartable$lhs == y.name &
+                                     lavpartable$rhs == y.name)
+                    res.val <- COV[y.idx, y.idx] - drop(crossprod(beta.i, S.xy))
+                    if(res.val > 0.01*COV[y.idx, y.idx] &&
+                       res.val < 0.99*COV[y.idx, y.idx]) {
+                        start[res.idx] <- res.val
+                    } else {
+                        # do nothing (keep what we have)
+                    }
+                }
+            }
+        }
 
       #  # 8 latent variances (new in 0.6-2)
       #  lv.names.y <- vnames(lavpartable, "lv.y", group = group.values[g])
@@ -595,6 +635,11 @@ lav_start <- function(start.method    = "default",
                         COV <- lavsamplestats@YLp[[g]][[2]]$S.PW.start
                     } else {
                         COV <- lavsamplestats@YLp[[g]][[l]]$Sigma.B
+                    }
+                    # make sure starting values for variances are positive
+                    neg.idx <- which(diag(COV) < 0.001)
+                    if(length(neg.idx) > 0L) {
+                        diag(COV)[neg.idx] <- 0.001
                     }
                     start[exo.idx] <- COV[ cbind(row.idx, col.idx) ]
 

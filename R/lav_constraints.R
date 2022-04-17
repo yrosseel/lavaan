@@ -18,7 +18,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         theta <- rep(0, length(partable$lhs))
     }
 
-    # number of free parameters
+    # number of free (but possibliy constrained) parameters
     npar <- length(theta)
 
     # parse the constraints
@@ -40,6 +40,12 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         } else {
             stop("lavaan ERROR: no constraints found in constraints argument")
         }
+    }
+
+    # simple equality constraints?
+    ceq.simple <- FALSE
+    if(!is.null(partable$unco)) {
+        ceq.simple <- TRUE
     }
 
     # variable definitions
@@ -120,6 +126,8 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
                               !ceq.nonlinear.flag &&
                               !cin.flag )
 
+    ceq.simple.only    <- ceq.simple && !ceq.flag && !cin.flag
+
     # additional info if ceq.linear.flag
     if(ceq.linear.flag) {
         ## NEW: 18 nov 2014: handle general *linear* constraints
@@ -166,6 +174,22 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         ceq.rhs.NULL <- numeric(0L)
     }
 
+    # if simple equalities only, create 'K' matrix
+    ceq.simple.K <- matrix(0,0,0)
+    if(ceq.simple.only) {
+        n.unco <- max(partable$unco)
+        n.free <- max(partable$free)
+        ceq.simple.K <- matrix(0, nrow = n.unco, ncol = n.free)
+        #####
+        #####     FIXME !
+        #####
+        idx.free <- partable$free[ partable$free > 0 ]
+        for(k in 1:n.unco) {
+            c <- idx.free[k]
+            ceq.simple.K[k, c] <- 1
+        }
+    }
+
     # dummy jacobian 'function'
     ceq.jacobian <- function() NULL
     cin.jacobian <- function() NULL
@@ -186,6 +210,8 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
                 ceq.linear.only.flag = ceq.linear.only.flag,
                 ceq.JAC.NULL         = ceq.JAC.NULL,
                 ceq.rhs.NULL         = ceq.rhs.NULL,
+                ceq.simple.only      = ceq.simple.only,
+                ceq.simple.K         = ceq.simple.K,
 
                 cin.function         = cin.function,
                 cin.JAC              = cin.JAC,

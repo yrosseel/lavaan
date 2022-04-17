@@ -12,7 +12,7 @@ lav_model_get_parameters(lavmodel, GLIST = NULL, type = "free",
                          extra = TRUE)
 
 # compute model-implied statistics
-lav_model_implied(lavmodel, GLIST = NULL)
+lav_model_implied(lavmodel, GLIST = NULL, delta = TRUE)
 
 # compute standard errors
 lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL)
@@ -28,6 +28,10 @@ they appear in the user-specified parameter table.}
 \item{extra}{Logical. If \code{TRUE}, also include values for rows in
 the parameter table where the operator is one of \code{":="}, \code{"=="},
 \code{"<"} or \code{">"}.}
+\item{delta}{Logical. If \code{TRUE}, and a Delta matrix is present in GLIST,
+use the (diagonal) values of the Delta matrix to rescale the covariance matrix.
+This is usually needed in the categorical setting to convert covariances to
+correlations.}
 \item{lavpartable}{A parameter table.}
 \item{VCOV}{Numeric matrix containing an estimate of the variance covariance matrix of the free model parameters.}
 \item{BOOT}{Numeric matrix containing the bootstrap based parameter estimates (in the columns) for each bootstrap sample (in the rows).}

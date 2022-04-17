@@ -98,7 +98,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 dotdotdot$control$init_nelder_mead
         }
     }
-
+    timing$init <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
     ######################
     #### 1. ov.names  ####
@@ -397,6 +398,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # in the model syntax
     ordered <- unique(c(ordered, lavNames(FLAT, "ov.ord")))
 
+    timing$ov.names <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
+
 
     #######################
     #### 2. lavoptions ####
@@ -672,6 +676,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       fixed.x          = lavoptions$fixed.x,
                       std.lv           = lavoptions$std.lv,
                       effect.coding    = lavoptions$effect.coding,
+                      ceq.simple       = lavoptions$ceq.simple,
                       parameterization = lavoptions$parameterization,
                       auto.fix.first   = lavoptions$auto.fix.first,
                       auto.fix.single  = lavoptions$auto.fix.single,
@@ -711,9 +716,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # at this point, we should check if the partable is complete
     # or not; this is especially relevant if the lavaan() function
     # was used, but the user has forgotten some variances/intercepts...
-    junk <- lav_partable_check(lavpartable,
-                               categorical = lavoptions$categorical,
-                               warn = TRUE)
+    if(is.null(slotParTable)) {
+        junk <- lav_partable_check(lavpartable,
+                                   categorical = lavoptions$categorical,
+                                   warn = TRUE)
+    }
 
     # for EM only (for now), force fixed-to-zero (residual) variances
     # to be slightly larger than zero
@@ -726,6 +733,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
         }
     }
+    timing$ParTable <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
+
 
     #################################
     #### 4b. parameter attributes ###
@@ -737,7 +747,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(lavoptions$verbose) {
         cat(" done.\n")
     }
-    timing$ParTable <- (proc.time()[3] - start.time)
+    timing$lavpta <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
 
 
@@ -763,6 +773,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$verbose) {
             cat("lavsamplestats ...")
         }
+        # check if we have sample.mean and meanstructure = TRUE
+        if(lavoptions$meanstructure && is.null(sample.mean)) {
+            txt <- "sample.mean= argument is missing, but model contains mean/intercept parameters."
+            warning(lav_txt2message(txt))
+        }
         lavsamplestats <- lav_samplestats_from_moments(
                            sample.cov    = sample.cov,
                            sample.mean   = sample.mean,
@@ -770,13 +785,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.nobs   = sample.nobs,
                            ov.names      = ov.names,
                            ov.names.x    = ov.names.x,
-                           estimator     = lavoptions$estimator,
-                           mimic         = lavoptions$mimic,
-                           group.w.free  = lavoptions$group.w.free,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
-                           ridge         = lavoptions$ridge,
-                           rescale       = lavoptions$sample.cov.rescale)
+                           lavoptions    = lavoptions)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
@@ -814,6 +825,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            lavsamplestats = lavsamplestats,
                                            lavpta         = lavpta,
                                            lavoptions     = lavoptions)
+                if(lavoptions$debug) {
+                    print(out)
+                }
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik
                 h1.loglik.group <- out$logl$loglik.group
@@ -846,7 +860,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #############################
 
     # automatic bounds (new in 0.6-6)
-    if(!is.null(lavoptions$optim.bounds)) {
+    if(!is.null(lavoptions$optim.bounds) ||
+       length(lavoptions$optim.bounds$lower) > 0L ||
+       length(lavoptions$optim.bounds$upper) > 0L) {
         if(lavoptions$verbose) {
             cat("lavpartable bounds ...")
         }
@@ -857,6 +873,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat(" done.\n")
         }
     }
+    timing$bounds <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
 
@@ -1290,6 +1308,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
         # Quasi-Newton
         } else {
+
+            # for backwards compatibility (<0.6)
+            if(is.null(lavoptions$optim.attempts)) {
+                lavoptions$optim.attempts <- 1L
+            }
+
             # try 1
             if(lavoptions$verbose) {
                 cat("attempt 1 -- default options\n")
@@ -1431,6 +1455,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     lavoptim$converged  <- attr(x, "converged")
     lavoptim$warn.txt   <- attr(x, "warn.txt")
     lavoptim$parscale   <- attr(x, "parscale")
+    lavoptim$partrace   <- attr(x, "partrace")
     fx.copy <- fx <- attr(x, "fx"); attributes(fx) <- NULL
     lavoptim$fx         <- fx
     lavoptim$fx.group   <- attr(fx.copy, "fx.group")
@@ -1619,6 +1644,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #######################
     lavfit <- lav_model_fit(lavpartable = lavpartable,
                             lavmodel    = lavmodel,
+                            lavimplied  = lavimplied,
                             x           = x,
                             VCOV        = VCOV,
                             TEST        = TEST)
@@ -1837,6 +1863,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
         } # vcov
     } # efa
+    timing$rotation <- (proc.time()[3] - start.time)
+    start.time <- proc.time()[3]
 
 
     ####################

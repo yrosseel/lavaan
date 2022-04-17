@@ -6,11 +6,12 @@
 # initital version: YR 2011-01-21: LISREL stuff
 # updates:          YR 2011-12-01: group specific extraction
 #                   YR 2012-05-17: thresholds
+#                   YR 2021-10-04: rename representation.LISREL -> lav_lisrel
 
-representation.LISREL <- function(partable = NULL,
-                                  target   = NULL,
-                                  extra    = FALSE,
-                                  remove.nonexisting = TRUE) {
+lav_lisrel <- function(partable = NULL,
+                       target   = NULL,
+                       extra    = FALSE,
+                       remove.nonexisting = TRUE) {
 
     # prepare target list
     if(is.null(target)) target <- partable
@@ -106,6 +107,16 @@ representation.LISREL <- function(partable = NULL,
                                       partable$rhs %in% ov.names)
         dummy.names3 <- unique( c(partable$lhs[dummy.cov.ov.lv.idx1],
                                   partable$rhs[dummy.cov.ov.lv.idx2]) )
+
+        # new in 0.6-10: ~~ between observed and observed, but not in ~
+        dummy.orphan.idx <- which(partable$op == "~~" &
+                                  partable$block == g &
+                                  partable$lhs %in% ov.names &
+                                  partable$rhs %in% ov.names &
+                                  (!partable$lhs %in% c(dummy.names1,
+                                                        dummy.names2) |
+                                   !partable$rhs %in% c(dummy.names1,
+                                                        dummy.names2)))
 
         # collect all dummy variables
         dummy.names <- unique(c(dummy.names1, dummy.names2, dummy.names3))

@@ -28,7 +28,7 @@
 # (note: all eigenvalues are positive)
 
 lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
-                              warn.neg.triad = TRUE) {
+                              warn.neg.triad = TRUE, bounds = TRUE) {
 
     # check sample cov
     stopifnot(is.matrix(sample.cov))
@@ -70,19 +70,36 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     }
 
     # first, we assume l1 = 1
-    psi <- (s21*s31)/s32
+    psi <- (s21*s31)/s32 # note that we assume |s32|>0
     l1 <- 1
     l2 <- s32/s31 # l2 <- s21/psi
     l3 <- s32/s21 # l3 <- s31/psi
     theta1 <- s11 - psi
     theta2 <- s22 - l2*l2*psi
     theta3 <- s33 - l3*l3*psi
+
+    # sanity check (new in 0.6-11): apply standard bounds
+    if(bounds) {
+        lower.psi <- s11 - (1 - 0.1)*s11 # we assume REL(y1) >= 0.1
+        psi <- min(max(psi, lower.psi), s11)
+
+        l2.bound <- sqrt(s22/lower.psi)
+        l2 <- min(max(-l2.bound, l2), l2.bound)
+        l3.bound <- sqrt(s33/lower.psi)
+        l3 <- min(max(-l3.bound, l3), l3.bound)
+
+        theta1 <- min(max(theta1, 0), s11)
+        theta2 <- min(max(theta2, 0), s22)
+        theta3 <- min(max(theta3, 0), s33)
+    }
+
     lambda <- c(l1, l2, l3)
     theta <- c(theta1, theta2, theta3)
 
+
     # std.lv?
     if(std.lv) {
-        # we allow for negative psi
+        # we allow for negative psi (if bounds = FALSE)
         lambda <- lambda * sign(psi) * sqrt(abs(psi))
         psi <- 1
     }
@@ -103,7 +120,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 # FABIN (Hagglund, 1982)
 # 1-factor only
 lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
-                               std.lv = FALSE, extra = NULL) {
+                               std.lv = FALSE, extra = NULL, bounds = TRUE) {
 
     # check arguments
     if(std.lv) {
@@ -139,6 +156,16 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
         }
     }
 
+    # bounds? (new in 0.6-11)
+    if(bounds) {
+        s11 <- S[1,1]
+        lower.psi <- s11 - (1 - 0.1)*s11 # we assume REL(y1) >= 0.1
+        for(i in 2:nvar) {
+            l.bound <- sqrt(S[i,i]/lower.psi)
+            lambda[i] <- min(max(-l.bound, lambda[i]), l.bound)
+        }
+    }
+
     if(lambda.only) {
         return(list(lambda = lambda, psi = as.numeric(NA),
                     theta = rep(as.numeric(NA), nvar))
@@ -146,10 +173,22 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
     }
 
     # 2. theta
+
+    # GLS version
+    #W <- solve(S)
+    #LAMBDA <- as.matrix(lambda)
+    #A1 <- solve(t(LAMBDA) %*% W %*% LAMBDA) %*% t(LAMBDA) %*% W
+    #A2 <- W %*% LAMBDA %*% A1
+
+    #tmp1 <- W*W - A2*A2
+    #tmp2 <- diag( W %*% S %*% W - A2 %*% S %*% A2 )
+    #theta.diag <- solve(tmp1, tmp2)
+
+    # 'least squares' version, assuming W = I
     D <- tcrossprod(lambda) / sum(lambda^2)
     theta <- solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
 
-    # 3. psi
+    # 3. psi (W=I)
     S1 <- S - diag(theta)
     l2 <- sum(lambda^2)
     psi <- sum(colSums(as.numeric(lambda) * S1) * lambda) / (l2 * l2)

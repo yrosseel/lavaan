@@ -8,13 +8,14 @@
 # gloal sam = (old) twostep
 # - but we can also take a 'local' perspective
 
-# restrictions
+# restrictions:
+#
+# local and global:
+#  - all (measured) latent variables must have indicators that are observed
 # local:
 #  - only if LAMBDA is of full column rank (eg no SRM, no bi-factor, no MTMM)
 #  - if multiple groups: each group has the same set of latent variables!
 #  - global approach is used to compute corrected two-step standard errors
-# global:
-#  - (none)?
 
 # YR 12 May 2019 - first version
 # YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
@@ -24,6 +25,11 @@
 #                   positive definite
 #                 - se = "none" now works
 #                 - store 'local' information in @internal slot (for printing)
+
+# YR 16 Oct 2021 - if an indicator is also a predictor/outcome in the
+#                  structural part, treat it as an observed predictor
+#                  without measurement error in the second step
+#                  (ie, set THETA element to zero)
 
 
 # twostep = wrapper for global sam
@@ -46,9 +52,12 @@ twostep <- function(model = NULL, data = NULL, cmd = "sem",
 sam <- function(model          = NULL,
                 data           = NULL,
                 cmd            = "sem",
+                se             = "twostep",
                 mm.list        = NULL,
-                mm.args        = list(bounds = "standard"),
-                struc.args     = list(fixed.x = FALSE), # for now
+                mm.args        = list(bounds = "standard", se = "standard"),
+                struc.args     = list(estimator = "ML",
+                                      #fixed.x = TRUE,
+                                      se = "standard"),
                 sam.method     = "local", # or global
                 ...,           # global options
                 local.options  = list(M.method = "ML",
@@ -95,6 +104,7 @@ sam <- function(model          = NULL,
     dotdotdot0$se     <- "none"
     dotdotdot0$test   <- "none"
     dotdotdot0$verbose <- FALSE # no output for this 'dummy' FIT
+    dotdotdot0$ceq.simple <- TRUE # if not the default yet
 
     # initial processing of the model, no fitting
     FIT <- do.call(cmd,
@@ -108,18 +118,21 @@ sam <- function(model          = NULL,
     if(sam.method == "local") {
         lavoptions$sample.icov <- TRUE
     }
-    if(!is.null(dotdotdot$se)) {
-        lavoptions$se   <- dotdotdot$se
-    } else {
-        lavoptions$se   <- "standard"
-    }
+    # se
+    lavoptions$se   <- se
+    # test
     if(!is.null(dotdotdot$test)) {
         lavoptions$test <- dotdotdot$test
     } else {
         lavoptions$test <- "standard"
     }
+    # verbose
     if(!is.null(dotdotdot$verbose)) {
         lavoptions$verbose <- dotdotdot$verbose
+    }
+
+    if(lavoptions$verbose) {
+        cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
     }
 
 
@@ -150,10 +163,12 @@ sam <- function(model          = NULL,
     OV.names <- unique(unlist(FIT@pta$vnames$ov))
 
     # check for higher-order factors
+    # 0.6-11: hard stop for now, as we do not support them (yet)!
     LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
     if(length(LV.IND.names) > 0L) {
-        ind.idx <- match(LV.IND.names, LV.names)
-        LV.names <- LV.names[-ind.idx]
+        stop("lavaan ERROR: model contains indicators that are also latent variables:\n\t", paste(LV.IND.names, collapse = " "))
+        #ind.idx <- match(LV.IND.names, LV.names)
+        #LV.names <- LV.names[-ind.idx]
     }
 
     # do we have at least 1 'regular' (measured) latent variable?
@@ -163,7 +178,14 @@ sam <- function(model          = NULL,
     nfac <- length(LV.names)
 
     # total number of free parameters
-    npar <- lav_partable_npar(PT)
+    if(FIT@Model@ceq.simple.only) {
+        npar <- FIT@Model@nx.unco
+        PT.free <- PT$free
+        PT.free[ PT.free > 0 ] <- seq_len(npar)
+    } else {
+        npar <- FIT@Model@nx.free
+        PT.free <- PT$free
+    }
     if(npar < 1L) {
         stop("lavaan ERROR: model does not contain any free parameters")
     }
@@ -188,8 +210,8 @@ sam <- function(model          = NULL,
             # check if we can find all lv names in LV.names
             if(!all(unlist(mm.list[[b]]) %in% LV.names)) {
               tmp <- unlist(mm.list[[b]])
-              stop("lavaan ERROR: mm.list contains unknown latent variable(s):",
-                paste( tmp[ !tmp %in% LV.names ], sep = " "),
+              stop("lavaan ERROR: mm.list contains unknown latent variable(s): ",
+                paste( tmp[ !tmp %in% LV.names ], collapse = " "),
                 "\n")
             }
             # make list per block
@@ -220,6 +242,10 @@ sam <- function(model          = NULL,
 
     # STEP 1: fit each measurement model (block)
 
+    if(lavoptions$verbose) {
+        cat("Fitting the measurement part:\n")
+    }
+
     # adjust options for measurement models
     dotdotdot.mm <- dotdotdot
     #dotdotdot.mm$se <- "none"
@@ -231,6 +257,7 @@ sam <- function(model          = NULL,
     dotdotdot.mm$verbose <- FALSE
     dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
     dotdotdot.mm$check.gradient <- FALSE # too sensitive in large model (global)
+    dotdotdot.mm$baseline <- FALSE
 
     # override with mm.args
     dotdotdot.mm <- modifyList(dotdotdot.mm, mm.args)
@@ -266,12 +293,12 @@ sam <- function(model          = NULL,
     for(mm in seq_len(nMMblocks)) {
 
         if(lavoptions$verbose) {
-            cat("Estimating measurement block ", mm, "[",
+            cat("  block ", mm, "[",
                 paste(mm.list[[mm]], collapse = " "), "]\n")
         }
 
         if(sam.method == "local") {
-            # LV.idx.list/OV.idx.list: list per block
+            #s LV.idx.list/OV.idx.list: list per block
             LV.idx.list[[mm]] <- vector("list", nblocks)
             OV.idx.list[[mm]] <- vector("list", nblocks)
         }
@@ -327,6 +354,15 @@ sam <- function(model          = NULL,
 
         # fill in standard errors measurement block
         if(lavoptions$se != "none") {
+
+            if(fit.mm.block@Model@ceq.simple.only) {
+                PTM.free <- PTM$free
+                PTM.free[ PTM.free > 0 ] <- seq_len(fit.mm.block@Model@nx.unco)
+            } else {
+                PTM.free <- PTM$free
+            }
+
+
             PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
                 PTM$se[ PTM$free > 0L & PTM$user != 3L]
 
@@ -334,9 +370,9 @@ sam <- function(model          = NULL,
             sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
             # fill in variance matrix
-            par.idx <- PT$free[ seq_len(length(PT$lhs)) %in% mm.idx &
+            par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
                                 PT$free > 0L ]
-            keep.idx <- PTM$free[ PTM$free > 0 & PTM$user != 3L ]
+            keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
             Sigma.11[par.idx, par.idx] <-
                 sigma.11[keep.idx, keep.idx, drop = FALSE]
 
@@ -356,7 +392,7 @@ sam <- function(model          = NULL,
     out$MM.FIT <- MM.FIT
 
     # do we have any parameters left?
-    if(length(step1.idx) >= npar) {
+    if(length(unique(step1.idx)) >= npar) {
         warning("lavaan WARNING: ",
                 "no free parameters left for structural part.\n",
                 "        Returning measurement part only.")
@@ -372,6 +408,11 @@ sam <- function(model          = NULL,
     }
 
     if(sam.method == "local") {
+        if(lavoptions$verbose) {
+            cat("Constructing the mapping matrix using the ",
+                local.M.method, " method ... ", sep = "")
+        }
+
         # assemble global LAMBDA/THETA (per block)
         LAMBDA <- computeLAMBDA(FIT@Model, handle.dummy.lv = FALSE)
         THETA  <- computeTHETA(FIT@Model, fix = FALSE) # keep dummy lv
@@ -384,8 +425,23 @@ sam <- function(model          = NULL,
                 lv.idx <- LV.idx.list[[mm]][[b]]
                 LAMBDA[[b]][ov.idx, lv.idx] <- LAMBDA.list[[mm]][[b]]
                  THETA[[b]][ov.idx, ov.idx] <-  THETA.list[[mm]][[b]]
+                # new in 0.6-10: check if any indicators are also involved
+                # in the structural part; if so, set THETA row/col to zero
+                # and make sure LAMBDA element is correctly set
+                # (we also need to adjust M)
+                dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
+                dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+                if(length(dummy.ov.idx)) {
+                    THETA[[b]][dummy.ov.idx,] <- 0
+                    THETA[[b]][,dummy.ov.idx] <- 0
+                    LAMBDA[[b]][dummy.ov.idx,] <- 0
+                    LAMBDA[[b]][cbind(dummy.ov.idx, dummy.lv.idx)] <- 1
+                }
                 if(lavoptions$meanstructure) {
                     NU[[b]][ov.idx, 1] <- NU.list[[mm]][[b]]
+                    if(length(dummy.ov.idx)) {
+                        NU[[b]][dummy.ov.idx, 1] <- 0
+                    }
                 }
             }
 
@@ -481,7 +537,14 @@ sam <- function(model          = NULL,
                 YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
                 COV  <- FIT@h1$implied$cov[[b]]
                 if(local.M.method == "GLS") {
-                    ICOV <- solve(COV)
+                    if(FIT@Options$sample.cov.rescale) {
+                       # get unbiased S
+                       N <- FIT@SampleStats@nobs[[b]]
+                       COV.unbiased <- COV * N/(N-1)
+                       ICOV <- solve(COV.unbiased)
+                    } else {
+                        ICOV <- solve(COV)
+                    }
                 }
             }
 
@@ -490,7 +553,7 @@ sam <- function(model          = NULL,
                 Mg <- ( solve(t(LAMBDA[[b]]) %*% ICOV %*% LAMBDA[[b]]) %*%
                             t(LAMBDA[[b]]) %*% ICOV )
             } else if(local.M.method == "ML") {
-                zero.theta.idx <- which(diag(THETA[[b]]) == 0)
+                zero.theta.idx <- which(abs(diag(THETA[[b]])) < 1e-6) # nearzero
                 if(length(zero.theta.idx) > 0L) {
                     tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
                                       drop = FALSE]
@@ -506,6 +569,14 @@ sam <- function(model          = NULL,
                             t(LAMBDA[[b]]) %*% THETA.inv )
             } else if(local.M.method == "ULS") {
                 Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
+            }
+
+            # handle observed-only variables
+            dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
+            dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+            if(length(dummy.ov.idx)) {
+                Mg[dummy.lv.idx,] <- 0
+                Mg[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
             }
 
             MSM <- Mg %*% COV %*% t(Mg)
@@ -532,6 +603,12 @@ sam <- function(model          = NULL,
                 VETA[[b]] <- MSM - MTM
             }
 
+            # standardize?
+            #if(FIT@Options$std.lv) {
+            #    VETA[[b]] <- stats::cov2cor(VETA[[b]])
+            #}
+
+
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
             dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
@@ -543,6 +620,7 @@ sam <- function(model          = NULL,
 
             # compute model-based reliability
             MSM <- Mg %*% COV %*% t(Mg)
+            #REL[[b]] <- diag(VETA[[b]] %*% solve(MSM)) # CHECKme!
             REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
 
             # store M
@@ -565,6 +643,10 @@ sam <- function(model          = NULL,
         # store M
         out$M <- M
 
+        if(lavoptions$verbose) {
+            cat("done.\n")
+        }
+
     } # local
 
 
@@ -576,14 +658,15 @@ sam <- function(model          = NULL,
 
     # adjust options
     lavoptions.PA <- lavoptions
+    #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
+    lavoptions.PA$fixed.x <- FALSE # until we fix this...
+    lavoptions.PA$verbose <- FALSE # must be in struc.args
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
-    # override, not matter what
+    # override, no matter what
     lavoptions.PA$do.fit <- TRUE
 
     if(sam.method == "local") {
-        #lavoptions.PA$fixed.x <- FALSE # FIXME! change exo column + provide
-        #                               # correct starting values
         lavoptions.PA$missing <- "listwise"
         lavoptions.PA$se <- "none" # sample statistics input
         lavoptions.PA$sample.cov.rescale <- FALSE
@@ -602,8 +685,12 @@ sam <- function(model          = NULL,
     if(sam.method == "local") {
         # extract structural part
         PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
-                   add.idx = TRUE, fixed.x = lavoptions.PA$fixed.x,
-                   add.exo.cov = FALSE) # should fix this at the global level!
+                   add.idx = TRUE,
+                   fixed.x = lavoptions.PA$fixed.x,
+                   add.exo.cov = TRUE)
+        # remove est/se/start columns
+        PTS$est   <- NULL
+        PTS$se    <- NULL
         PTS$start <- NULL
 
         if(nlevels > 1L) {
@@ -675,10 +762,9 @@ sam <- function(model          = NULL,
         extra.int.idx <- integer(0L)
     } # global
 
-
     # fit structural model
-    if(lavoptions.PA$verbose) {
-        cat("Fitting Structural Part:\n")
+    if(lavoptions$verbose) {
+        cat("Fitting the structural part ... \n")
     }
     if(sam.method == "local") {
         FIT.PA <- lavaan::lavaan(PTS,
@@ -693,8 +779,8 @@ sam <- function(model          = NULL,
                                  slotSampleStats = FIT@SampleStats,
                                  slotOptions = lavoptions.PA)
     }
-    if(lavoptions.PA$verbose) {
-        cat("Done.\n")
+    if(lavoptions$verbose) {
+        cat("Fitting the structural part ... done.\n")
     }
     # store FIT.PA
     out$FIT.PA <- FIT.PA
@@ -708,7 +794,9 @@ sam <- function(model          = NULL,
     # - all 'free' parameters
     # - := (if any)
     # - but NOT elements in extra.int.idx
+    # - and NOT element with user=3 (add.exo.cov = TRUE)
     pts.idx <- which( (PTS$free > 0L | PTS$op == ":=") &
+                      !PTS$user == 3L &
                       !seq_len(length(PTS$lhs)) %in% extra.int.idx )
 
     # find corresponding rows in PT
@@ -721,7 +809,7 @@ sam <- function(model          = NULL,
 
     # create step2.idx
     p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
-    step2.idx <- PT$free[ p2.idx ]
+    step2.idx <- PT.free[ p2.idx ]
 
     # add 'step' column in PT
     PT$step <- rep(1L, length(PT$lhs))
@@ -732,7 +820,9 @@ sam <- function(model          = NULL,
     ################################################################
     # Step 3: assemble results in a 'dummy' JOINT model for output #
     ################################################################
-
+    if(lavoptions$verbose) {
+        cat("Assembling results for output ... ")
+    }
     lavoptions.joint <- lavoptions
     lavoptions.joint$optim.method <- "none"
     lavoptions.joint$optim.force.converged <- TRUE
@@ -757,6 +847,9 @@ sam <- function(model          = NULL,
     JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
                             slotSampleStats = FIT@SampleStats,
                             slotData = FIT@Data)
+    if(lavoptions$verbose) {
+        cat("done.\n")
+    }
 
 
     ###################################
@@ -770,11 +863,21 @@ sam <- function(model          = NULL,
     # - 'insert' these corrected SEs (and vcov) in FIT.PA
     # compute information matrix
 
-    if(lavoptions$se != "none") {
+    if(lavoptions$se == "none") {
+        # nothing to do...
+    } else {
+        if(lavoptions$verbose) {
+            cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
+        }
         JOINT@Model@estimator <- "ML"  # FIXME!
         JOINT@Options$se <- lavoptions$se # always set to standard?
-        VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
-                               JOINT@Model@nx.free)
+        if(JOINT@Model@ceq.simple.only) {
+            VCOV.ALL <-  matrix(0, JOINT@Model@nx.unco,
+                                   JOINT@Model@nx.unco)
+        } else {
+            VCOV.ALL <-  matrix(0, JOINT@Model@nx.free,
+                                   JOINT@Model@nx.free)
+        }
         VCOV.ALL[step1.idx, step1.idx] <- Sigma.11
         JOINT@vcov <- list(se = "twostep",
                            information = lavoptions$information,
@@ -812,21 +915,30 @@ sam <- function(model          = NULL,
         #D <- JOINT@vcov$vcov[-step2.idx, -step2.idx]
         #I.22.inv <- A - B %*% solve(D) %*% C
 
-        # FIXME:
-        V2 <- 1/N * I.22.inv
-        #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
+        if(lavoptions$se == "standard") {
+            VCOV <- 1/N * I.22.inv
+            out$VCOV <- VCOV
+        } else {
 
-        # V1
-        V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+            # FIXME:
+            V2 <- 1/N * I.22.inv
+            #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
 
-        # V for second step
-        VCOV <- V2 + V1
+            # V1
+            V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
 
-        # store in out
-        out$V2 <- V2
-        out$V1 <- V1
-        out$VCOV <- VCOV
-    }
+            # V for second step
+            VCOV <- V2 + V1
+
+            # store in out
+            out$V2 <- V2
+            out$V1 <- V1
+            out$VCOV <- VCOV
+        }
+        if(lavoptions$verbose) {
+            cat("done.\n")
+        }
+    } # se != "none
 
 
 
@@ -890,8 +1002,10 @@ sam <- function(model          = NULL,
 
         # fill in twostep standard errors
         if(JOINT@Options$se != "none") {
-            JOINT@Options$se <- "twostep"
-            JOINT@vcov$se    <- "twostep"
+            if(lavoptions$se == "twostep") {
+                JOINT@Options$se <- "twostep"
+                JOINT@vcov$se    <- "twostep"
+            }
             JOINT@vcov$vcov[step2.idx, step2.idx] <- VCOV
             PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
                                        lavpartable = PT,
@@ -914,6 +1028,10 @@ sam <- function(model          = NULL,
         res <- JOINT
     } else {
         res <- out
+    }
+
+    if(lavoptions$verbose) {
+        cat("End of sam.\n")
     }
 
     res

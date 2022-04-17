@@ -30,7 +30,8 @@ A data frame of 75 observations of 11 variables.
 
 }
 \source{
-The dataset was retrieved from \verb{http://web.missouri.edu/~kolenikovs/Stat9370/democindus.txt} (link no longer valid; see discussion on SEMNET 18 Jun 2009)
+The dataset was originally retrieved from \verb{http://web.missouri.edu/~kolenikovs/Stat9370/democindus.txt} (link no longer valid; see discussion on SEMNET 18 Jun 2009). The dataset is part of a larger (public) dataset (ICPSR 2532), see
+\verb{https://www.icpsr.umich.edu/web/ICPSR/studies/2532}.
 }
 \references{
 Bollen, K. A. (1989). \emph{Structural Equations with Latent Variables.} 

@@ -58,9 +58,10 @@ lav_options_default <- function(mimic = "lavaan") {
                 std.lv             = FALSE,
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
+                ceq.simple         = FALSE,      # treat simple eq cons special?
                 parameterization   = "default",
-                #ov.order           = "model",   # how to 'order' ov's in the
-                #                                # partable
+                #ov.order           = "model",  # how to 'order' ov's in the
+                #                               # partable
 
                 auto.fix.first     = FALSE,
                 auto.fix.single    = FALSE,
@@ -104,9 +105,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 sample.cov.rescale = "default",
                 sample.icov        = TRUE,
                 ridge              = FALSE,
-                ridge.x            = FALSE,
                 ridge.constant     = "default",
-                ridge.constant.x   = 1e-5,
 
                 # multiple groups
                 group.label        = NULL,
@@ -159,6 +158,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 optim.init_nelder_mead = FALSE,
                 optim.var.transform    = "none",
                 optim.parscale         = "none",
+                optim.partrace         = FALSE,
                 optim.dx.tol           = 1e-03, # not too strict
                 optim.bounds           = list(),
                 em.iter.max            = 10000L,
@@ -224,9 +224,7 @@ lav_options_set <- function(opt = NULL) {
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions IN\n"); str(opt) }
 
     if(opt$debug) {
-        opt$partrace <- TRUE
-    } else {
-        opt$partrace <- FALSE
+        opt$optim.partrace <- TRUE
     }
 
     # everything lowercase
@@ -324,13 +322,14 @@ lav_options_set <- function(opt = NULL) {
     # representation
     if(opt$representation == "default") {
         opt$representation <- "LISREL"
-    } else if(opt$representation == "lisrel") {
+    } else if(opt$representation %in% c("lisrel", "LISREL")) {
         opt$representation <- "LISREL"
-    } else if(opt$representation == "eqs" ||
-              opt$representation == "bentler-weeks") {
-        opt$representation <- "EQS"
+    #} else if(opt$representation %in% c("eqs", "EQS", "bentler-weeks")) {
+    #    opt$representation <- "EQS"
+    } else if(opt$representation %in% c("ram", "RAM")) {
+        opt$representation <- "RAM"
     } else {
-        stop("lavaan ERROR: representation must be \"LISREL\" or \"EQS\" \n")
+        stop("lavaan ERROR: representation must be \"LISREL\" or \"RAM\" \n")
     }
 
     # clustered
@@ -1427,9 +1426,14 @@ lav_options_set <- function(opt = NULL) {
         if(opt$conditional.x && opt$fixed.x == FALSE) {
             stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
         }
+        if(opt$fixed.x && opt$start == "simple") {
+            warning("lavaan WARNING: start = \"simple\" implies fixed.x = FALSE")
+            opt$fixed.x <- FALSE
+        }
     } else if(opt$fixed.x == "default") {
-        if(opt$estimator %in% c("MML", "ML") && (opt$mimic == "Mplus" ||
-                                     opt$mimic == "lavaan")) {
+        if(opt$estimator %in% c("MML", "ML") &&
+           (opt$mimic == "Mplus" || opt$mimic == "lavaan") &&
+           opt$start != "simple") { # new in 0.6-12
             opt$fixed.x <- TRUE
         } else if(opt$conditional.x) {
             opt$fixed.x <- TRUE
@@ -1439,7 +1443,6 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("lavaan ERROR: fixed.x must be TRUE, FALSE or \"default\"\n")
     }
-
 
     # meanstructure again
     if(opt$missing %in% c("ml", "ml.x") || opt$model.type == "growth") {

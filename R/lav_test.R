@@ -29,8 +29,11 @@ lav_model_test <- function(lavmodel       = NULL,
             neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
             df <- df + neq
         }
+    } else if(lavmodel@ceq.simple.only) {
+        ndat <- lav_partable_ndat(lavpartable)
+        npar <- max(lavpartable$free)
+        df <- ndat - npar
     }
-
 
     # shortcut: return empty list if one of the conditions below is true:
     # - test == "none"

@@ -101,21 +101,20 @@ estimator.REML <- function(Sigma.hat=NULL, Mu.hat=NULL,
     fx
 }
 
-# 'classic' fitting function for GLS, not used for now
+# 'classic' fitting function for GLS
+# used again since 0.6-10 (we used the much slower estimator.WLS before)
 estimator.GLS <- function(Sigma.hat=NULL, Mu.hat=NULL,
-                          data.cov=NULL, data.mean=NULL, data.nobs=NULL,
+                          data.cov = NULL, data.cov.inv=NULL, data.mean=NULL,
                           meanstructure=FALSE) {
 
-    W <- data.cov
-    W.inv <- solve(data.cov)
-    if(!meanstructure) {
-        tmp <- ( W.inv %*% (W - Sigma.hat) )
-        fx <- 0.5 * (data.nobs-1)/data.nobs * sum( tmp * t(tmp))
-    } else {
-        tmp <- W.inv %*% (W - Sigma.hat)
-        tmp1 <- 0.5 * (data.nobs-1)/data.nobs * sum( tmp * t(tmp))
-        tmp2 <- sum(diag( W.inv %*% tcrossprod(data.mean - Mu.hat) ))
-        fx <- tmp1 + tmp2
+    tmp <- data.cov.inv %*% (data.cov - Sigma.hat)
+    # tmp is not perfectly symmetric, so we use t(tmp) on the next line
+    # to obtain the same value as estimator.WLS
+    fx <- 0.5 * sum( tmp * t(tmp))
+
+    if(meanstructure) {
+        tmp2 <- sum(data.cov.inv * tcrossprod(data.mean - Mu.hat))
+        fx <- fx + tmp2
     }
 
     # no negative values
@@ -134,7 +133,7 @@ estimator.WLS <- function(WLS.est=NULL, WLS.obs=NULL, WLS.V=NULL) {
     # since 0.5-17, we use crossprod twice
     diff <- WLS.obs - WLS.est
     fx <- as.numeric( crossprod(crossprod(WLS.V, diff), diff) )
-    # (faster?) alternative: sum(WLS.V * tcrossprod(diff))
+    # todo alternative: using chol(WLS.V)
 
     # no negative values
     if(is.finite(fx) && fx < 0.0) fx <- 0.0

@@ -152,7 +152,8 @@ lav_partable_labels <- function(partable,
     if(type == "user") {
         idx <- 1:length(label)
     } else if(type == "free") {
-        idx <- which(partable$free > 0L & !duplicated(partable$free))
+        #idx <- which(partable$free > 0L & !duplicated(partable$free))
+        idx <- which(partable$free > 0L)
     #} else if(type == "unco") {
     #    idx <- which(partable$unco > 0L & !duplicated(partable$unco))
     } else {

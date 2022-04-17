@@ -8,12 +8,12 @@ citEntry(entry = "Article",
   volume       = "48",
   number       = "2",
   pages        = "1--36",
-  url          = "https://www.jstatsoft.org/v48/i02/",
+  doi          = "10.18637/jss.v048.i02",
 
   textVersion  =
   paste("Yves Rosseel (2012).",
         "lavaan: An R Package for Structural Equation Modeling.",
         "Journal of Statistical Software, 48(2), 1-36.",
-        "URL https://www.jstatsoft.org/v48/i02/.")
+        "https://doi.org/10.18637/jss.v048.i02")
 )
 
