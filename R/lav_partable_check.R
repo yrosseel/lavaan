@@ -13,6 +13,8 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     all.names <- c(ov.names, lv.names)
     ov.names.ord <- vnames(partable, "ov.ord")
 
+    nlevels <- lav_partable_nlevels(partable)
+
     # if categorical, we should have some ov.names.ord
     if(categorical && length(ov.names.ord) == 0L) {
         check <- FALSE
@@ -78,7 +80,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
                        partable$free == 0L &
                        partable$ustart == 0L &
                        # ignore block/group 1 -- typically within level exo
-                       !partable$block == 1L &
+                       !(partable$block %% nlevels == 1L) &
                        # do not include factors
                        !partable$lhs %in% lv.names &
                        # do not include ordered variables
