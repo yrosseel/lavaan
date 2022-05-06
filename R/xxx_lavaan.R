@@ -785,14 +785,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                            sample.nobs   = sample.nobs,
                            ov.names      = ov.names,
                            ov.names.x    = ov.names.x,
-                           estimator     = lavoptions$estimator,
-                           mimic         = lavoptions$mimic,
-                           meanstructure = lavoptions$meanstructure,
-                           group.w.free  = lavoptions$group.w.free,
                            WLS.V         = WLS.V,
                            NACOV         = NACOV,
-                           ridge         = lavoptions$ridge,
-                           rescale       = lavoptions$sample.cov.rescale)
+                           lavoptions    = lavoptions)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }
@@ -830,6 +825,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            lavsamplestats = lavsamplestats,
                                            lavpta         = lavpta,
                                            lavoptions     = lavoptions)
+                if(lavoptions$debug) {
+                    print(out)
+                }
                 h1.implied      <- out$implied
                 h1.loglik       <- out$logl$loglik
                 h1.loglik.group <- out$logl$loglik.group

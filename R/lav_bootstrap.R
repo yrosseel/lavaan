@@ -169,9 +169,14 @@ lav_bootstrap_internal <- function(object          = NULL,
 
     # can we use the original data, or do we need to transform it first?
     if(type == "bollen.stine" || type == "yuan") {
+        # check if data is continuous
+        if(lavmodel@categorical) {
+            stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for categorical/ordinal data")
+        }
         # check if data is complete
-        if(lavoptions$missing != "listwise")
+        if(lavoptions$missing != "listwise") {
             stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
+        }
         dataX <- vector("list", length=lavdata@ngroups)
     } else {
         dataX <- lavdata@X
