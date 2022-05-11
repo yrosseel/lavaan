@@ -1485,7 +1485,7 @@ lav_object_inspect_implied <- function(object,
 
             # cov.x
             if(lavmodel@nexo[b] > 0L) {
-                OUT[[b]]$cov.x  <- object@SampleStats@cov.x[[b]]
+                OUT[[b]]$cov.x  <- lavimplied$cov.x[[b]]
                 if(add.labels) {
                     rownames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
                     colnames(OUT[[b]]$cov.x) <- ov.names.x[[b]]
@@ -1498,7 +1498,7 @@ lav_object_inspect_implied <- function(object,
 
             # mean.x
             if(lavmodel@nexo[b] > 0L) {
-                OUT[[b]]$mean.x  <- as.numeric(object@SampleStats@mean.x[[b]])
+                OUT[[b]]$mean.x  <- lavimplied$mean.x[[b]]
                 if(add.labels) {
                     names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
                 }

@@ -259,6 +259,30 @@ lavaanify <- lavParTable <- function(
                 ov.names.x.block <- NULL
             }
 
+            # new in 0.6-12: if multilevel and conditional.x, make sure
+            # that 'splitted' exogenous covariates become 'y' variables
+            if(conditional.x && block.lhs == "level") {
+                if(ngroups == 1L) {
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(FLAT, "ov",
+                                        block = seq_len(n.block.flat)[-block])
+                } else {
+                    # TEST ME
+                    this.group <- ceiling(block / nlevels)
+                    blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(FLAT, "ov",
+                                        block = blocks.within.group[-block])
+                }
+                ov.names.x.block <- lav_partable_vnames(FLAT.block, "ov.x")
+                if(length(ov.names.x.block) > 0L) {
+                    idx <- which(ov.names.x.block %in% OTHER.BLOCK.NAMES)
+                    if(length(idx) > 0L) {
+                        ov.names.x.block <- ov.names.x.block[-idx]
+                    }
+                }
+            } else {
+                ov.names.x.block <- NULL
+            }
+
             LIST.block <- lav_partable_flat(FLAT.block, blocks = BLOCK.lhs,
                 block.id = block.id,
                 meanstructure = meanstructure,

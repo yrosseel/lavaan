@@ -1423,17 +1423,18 @@ lav_options_set <- function(opt = NULL) {
 
     # fixed.x
     if(is.logical(opt$fixed.x)) {
+        #if(opt$conditional.x && opt$fixed.x == FALSE && !opt$multilevel) {
         if(opt$conditional.x && opt$fixed.x == FALSE) {
             stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
         }
-        if(opt$fixed.x && opt$start == "simple") {
+        if(opt$fixed.x && is.character(opt$start) && opt$start == "simple") {
             warning("lavaan WARNING: start = \"simple\" implies fixed.x = FALSE")
             opt$fixed.x <- FALSE
         }
     } else if(opt$fixed.x == "default") {
         if(opt$estimator %in% c("MML", "ML") &&
            (opt$mimic == "Mplus" || opt$mimic == "lavaan") &&
-           opt$start != "simple") { # new in 0.6-12
+           is.character(opt$start) && opt$start != "simple") { # new in 0.6-12
             opt$fixed.x <- TRUE
         } else if(opt$conditional.x) {
             opt$fixed.x <- TRUE

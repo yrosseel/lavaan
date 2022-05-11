@@ -10,6 +10,7 @@
 lav_start <- function(start.method    = "default",
                       lavpartable     = NULL,
                       lavsamplestats  = NULL,
+                      lavh1           = NULL, # fixme: only use lavh1?
                       model.type      = "sem",
                       mimic           = "lavaan",
                       reflect         = FALSE,    # rotation only
@@ -29,6 +30,7 @@ lav_start <- function(start.method    = "default",
 
     # nlevels?
     nlevels <- lav_partable_nlevels(lavpartable)
+    nblocks <- lav_partable_nblocks(lavpartable)
 
     # reflect/order.lv.by
     if(is.null(reflect)) {
@@ -619,22 +621,39 @@ lav_start <- function(start.method    = "default",
         # nlevels > 1L
         if(nlevels > 1L) {
             level.values <- lav_partable_level_values(lavpartable)
-
-            if(!conditional.x && length(ov.names.x) > 0) {
+            # Note: ov.names.x contains all levels within a group!
+            if(length(ov.names.x) > 0) {
                 for(l in 1:nlevels) {
+                    # block number
+                    block <- (g - 1L)*nlevels + l
+
+                    this.block.x <- lav_partable_vnames(lavpartable, "ov.x",
+                                                  block = block) 
+                    this.block.ov <- lav_partable_vnames(lavpartable, "ov",
+                                                         block = block)
+                    if(length(this.block.x) == 0L) {
+                        next
+                    }
+
                     # var/cov
                     exo.idx <- which(lavpartable$group == group.values[g] &
                                      lavpartable$level == level.values[l] &
                                      lavpartable$op == "~~"               &
-                                     lavpartable$lhs %in% ov.names.x      &
-                                     lavpartable$rhs %in% ov.names.x)
-                    row.idx <- match(lavpartable$lhs[exo.idx], ov.names)
-                    col.idx <- match(lavpartable$rhs[exo.idx], ov.names)
+                                     lavpartable$lhs %in% this.block.x    &
+                                     lavpartable$rhs %in% this.block.x)
 
-                    if(l == 1L) {
-                        COV <- lavsamplestats@YLp[[g]][[2]]$S.PW.start
+                    if(is.null(lavh1$implied$cov[[1]])) {
+                        row.idx <- match(lavpartable$lhs[exo.idx], ov.names)
+                        col.idx <- match(lavpartable$rhs[exo.idx], ov.names)
+                        if(l == 1L) {
+                            COV <- lavsamplestats@YLp[[g]][[2]]$S.PW.start
+                        } else {
+                            COV <- lavsamplestats@YLp[[g]][[l]]$Sigma.B
+                        }
                     } else {
-                        COV <- lavsamplestats@YLp[[g]][[l]]$Sigma.B
+                        row.idx <- match(lavpartable$lhs[exo.idx],this.block.ov)
+                        col.idx <- match(lavpartable$rhs[exo.idx],this.block.ov)
+                        COV <- lavh1$implied$cov[[block]]
                     }
                     # make sure starting values for variances are positive
                     neg.idx <- which(diag(COV) < 0.001)
@@ -647,16 +666,90 @@ lav_start <- function(start.method    = "default",
                     ov.int.idx <- which(lavpartable$group == group.values[g] &
                                         lavpartable$level == level.values[l] &
                                         lavpartable$op == "~1"               &
-                                        lavpartable$lhs %in% ov.names.x)
-                    idx <- match(lavpartable$lhs[ov.int.idx], ov.names)
+                                        lavpartable$lhs %in% this.block.x)
 
-                    if(l == 1L) {
-                        INT <- lavsamplestats@YLp[[g]][[2]]$Mu.W
+                    if(is.null(lavh1$implied$mean[[1]])) {
+                        idx <- match(lavpartable$lhs[ov.int.idx], ov.names)
+                        if(l == 1L) {
+                            INT <- lavsamplestats@YLp[[g]][[2]]$Mu.W
+                        } else {
+                            INT <- lavsamplestats@YLp[[g]][[l]]$Mu.B.start
+                        }
                     } else {
-                        INT <- lavsamplestats@YLp[[g]][[l]]$Mu.B.start
+                        idx <- match(lavpartable$lhs[ov.int.idx], this.block.ov)
+                        INT <- lavh1$implied$mean[[block]]
                     }
-
                     start[ov.int.idx] <- INT[idx]
+
+                    # new in 0.6-12
+                    # very special case: conditional.x with a combination of 
+                    # splitted-x and regular-x
+                    # here, we must:
+                    # 1) replace var/cov of splitted-x by *residual* varcov
+                    #    after regressing out regular-x
+                    # 2) replace means of splitted-x by intercepts
+                    # 3) fill splitted-x ~ regular-x regression coefficients
+                    if(conditional.x) {
+                        if(is.null(lavh1$implied$cov[[l]])) {
+                            stop("lavaan ERROR: lavh1 information is needed; please rerun with h1 = TRUE")
+                        }
+                        blocks.within.group <- (g - 1L) * nlevels + seq_len(nlevels)
+                        OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",  block = blocks.within.group[-block])
+                        ov.names.x.block <- this.block.x
+                        idx <- which(ov.names.x.block %in% OTHER.BLOCK.NAMES)
+                        if(length(idx) > 0L) {
+                            ov.names.x.block <- ov.names.x.block[-idx]
+                        }
+                        ov.names.x1 <- this.block.x[!this.block.x %in% ov.names.x.block]
+                        ov.names.x2 <- ov.names.x.block
+                        nx1 <- length(ov.names.x1) # splitted x
+                        nx2 <- length(ov.names.x2) # regular  x
+                        if(nx1 > 0L && nx2 > 0L) {
+                            # COV
+                            c1.idx <- match(ov.names.x1, this.block.ov)
+                            c2.idx <- match(ov.names.x2, this.block.ov)
+
+                            COV.Y  <- COV[c1.idx, c1.idx, drop = FALSE]
+                            COV.X  <- COV[c2.idx, c2.idx, drop = FALSE]
+                            COV.YX <- COV[c1.idx, c2.idx, drop = FALSE]
+                            COV.XY <- COV[c2.idx, c1.idx, drop = FALSE]
+                            COV.XinvYX <- solve(COV.X, COV.XY)
+                            RES.COV <- COV.Y - COV.YX %*% COV.XinvYX
+
+                            res.cov.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$level == level.values[l] &
+                                     lavpartable$op == "~~"               &
+                                     lavpartable$lhs %in% ov.names.x1     &
+                                     lavpartable$rhs %in% ov.names.x1)
+
+                            row.idx <- match(lavpartable$lhs[res.cov.idx],ov.names.x1)
+                            col.idx <- match(lavpartable$rhs[res.cov.idx],ov.names.x1)
+                            start[res.cov.idx] <- RES.COV[ cbind(row.idx, col.idx) ]
+
+                            # INT
+                            INT.Y <- INT[c1.idx]
+                            INT.X <- INT[c2.idx]
+                            RES.INT <- INT.Y - t(COV.XinvYX) %*% INT.X
+
+                            res.int.idx <- which(lavpartable$group == group.values[g] &
+                                        lavpartable$level == level.values[l] &
+                                        lavpartable$op == "~1"               &
+                                        lavpartable$lhs %in% ov.names.x1)
+                            idx <- match(lavpartable$lhs[res.int.idx], ov.names.x1)
+                            start[res.int.idx] <- RES.INT[idx]
+
+                            # REG
+                            reg.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$level == level.values[l] &
+                                     lavpartable$op == "~"                &
+                                     lavpartable$lhs %in% ov.names.x1     &
+                                     lavpartable$rhs %in% ov.names.x2)
+                            row.idx <- match(lavpartable$lhs[reg.idx],ov.names.x1)
+                            col.idx <- match(lavpartable$rhs[reg.idx],ov.names.x2)
+                            start[reg.idx] <- t(COV.XinvYX)[ cbind(row.idx, col.idx) ]
+                        } # special case 
+                        
+                    } # conditional.x
                 } # levels
             } # fixed.x
         } # nlevels > 1L
@@ -694,7 +787,6 @@ lav_start <- function(start.method    = "default",
         #lv.int.idx <- which(lavpartable$op == "~1"         &
         #                    lavpartable$lhs %in% lv.names)
     }
-
 
     # adjust if outside bounds -- new in 0.6-6
     if(!is.null(lavpartable$lower)) {
