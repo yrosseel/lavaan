@@ -930,6 +930,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             START <- lav_start(start.method   = lavoptions$start,
                                lavpartable    = lavpartable,
                                lavsamplestats = lavsamplestats,
+                               lavh1          = lavh1,
                                model.type     = lavoptions$model.type,
                                reflect      = FALSE,
                                #order.lv.by  = lavoptions$rotation.args$order.lv.by,

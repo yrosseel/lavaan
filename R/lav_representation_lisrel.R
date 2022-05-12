@@ -8,13 +8,13 @@
 #                   YR 2012-05-17: thresholds
 #                   YR 2021-10-04: rename representation.LISREL -> lav_lisrel
 
-lav_lisrel <- function(partable = NULL,
+lav_lisrel <- function(lavpartable = NULL,
                        target   = NULL,
                        extra    = FALSE,
                        remove.nonexisting = TRUE) {
 
     # prepare target list
-    if(is.null(target)) target <- partable
+    if(is.null(target)) target <- lavpartable
 
     stopifnot(!is.null(target$block))
 
@@ -23,19 +23,23 @@ lav_lisrel <- function(partable = NULL,
     tmp.mat <- character(N); tmp.row <- integer(N); tmp.col <- integer(N)
 
     # global settings
-    meanstructure <- any(partable$op == "~1")
-    categorical   <- any(partable$op == "|")
-    group.w.free  <- any(partable$lhs == "group" & partable$op == "%")
+    meanstructure <- any(lavpartable$op == "~1")
+    categorical   <- any(lavpartable$op == "|")
+    group.w.free  <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
 
     # gamma?only if conditional.x
-    if(any(partable$op %in% c("~", "<~") & partable$exo == 1L)) {
+    if(any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L)) {
         gamma <- TRUE
     } else {
         gamma <- FALSE
     }
 
     # number of blocks
-    nblocks <- lav_partable_nblocks(partable)
+    nblocks <- lav_partable_nblocks(lavpartable)
+
+    # multilevel?
+    nlevels <- lav_partable_nlevels(lavpartable)
+    ngroups <- lav_partable_ngroups(lavpartable)
 
     ov.dummy.names.nox <- vector("list", nblocks)
     ov.dummy.names.x   <- vector("list", nblocks)
@@ -52,15 +56,15 @@ lav_lisrel <- function(partable = NULL,
 
         # info from user model per block
         if(gamma) {
-            ov.names <- vnames(partable, "ov.nox",  block=g)
+            ov.names <- vnames(lavpartable, "ov.nox",  block=g)
         } else {
-            ov.names <- vnames(partable, "ov",  block=g)
+            ov.names <- vnames(lavpartable, "ov",  block=g)
         }
         nvar <- length(ov.names)
-        lv.names   <- vnames(partable, "lv",  block=g); nfac <- length(lv.names)
-        ov.th      <- vnames(partable, "th",  block=g); nth  <- length(ov.th)
-        ov.names.x <- vnames(partable, "ov.x",block=g); nexo <- length(ov.names.x)
-        ov.names.nox <- vnames(partable, "ov.nox",block=g)
+        lv.names   <- vnames(lavpartable, "lv",  block=g); nfac <- length(lv.names)
+        ov.th      <- vnames(lavpartable, "th",  block=g); nth  <- length(ov.th)
+        ov.names.x <- vnames(lavpartable, "ov.x",block=g); nexo <- length(ov.names.x)
+        ov.names.nox <- vnames(lavpartable, "ov.nox",block=g)
 
         # in this representation, we need to create 'phantom/dummy' latent
         # variables for all `x' and `y' variables not in lv.names
@@ -69,53 +73,78 @@ lav_lisrel <- function(partable = NULL,
         # regression dummys
         if(gamma) {
             tmp.names <-
-                unique( partable$lhs[(partable$op == "~" |
-                                        partable$op == "<~") &
-                                        partable$block == g] )
+                unique( lavpartable$lhs[(lavpartable$op == "~" |
+                                        lavpartable$op == "<~") &
+                                        lavpartable$block == g] )
+            # new in 0.6-12: fix for multilevel + conditional.x: splitted ov.x
+            # are removed from ov.x
+            if(nlevels > 1L) {
+                if(ngroups == 1L) {
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",
+                                                block = seq_len(nblocks)[-g])
+                } else {
+                    # TEST ME
+                    this.group <- ceiling(g / nlevels)
+                    blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)     
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable,
+                              "ov", block = blocks.within.group[-g])
+                }
+                if(length(ov.names.x) > 0L) {
+                    idx <- which(ov.names.x %in% OTHER.BLOCK.NAMES)
+                    if(length(idx) > 0L) {
+                        tmp.names <- unique(c(tmp.names, ov.names.x[idx]))
+                        ov.names.nox <- unique(c(ov.names.nox, ov.names.x[idx]))
+                        ov.names.x <- ov.names.x[-idx]
+                        nexo <- length(ov.names.x)
+                        ov.names <- ov.names.nox
+                        nvar <- length(ov.names)
+                    }
+                }
+            }
         } else {
             tmp.names <-
-                unique( c(partable$lhs[(partable$op == "~" |
-                                        partable$op == "<~") &
-                                        partable$block == g],
-                          partable$rhs[(partable$op == "~" |
-                                        partable$op == "<~") &
-                                        partable$block == g]) )
+                unique( c(lavpartable$lhs[(lavpartable$op == "~" |
+                                        lavpartable$op == "<~") &
+                                        lavpartable$block == g],
+                          lavpartable$rhs[(lavpartable$op == "~" |
+                                        lavpartable$op == "<~") &
+                                        lavpartable$block == g]) )
         }
         dummy.names1 <- tmp.names[ !tmp.names %in% lv.names ]
         # covariances involving dummys
-        dummy.cov.idx <- which(partable$op == "~~" & partable$block == g &
-                               (partable$lhs %in% dummy.names1 |
-                                partable$rhs %in% dummy.names1))
+        dummy.cov.idx <- which(lavpartable$op == "~~" & lavpartable$block == g &
+                               (lavpartable$lhs %in% dummy.names1 |
+                                lavpartable$rhs %in% dummy.names1))
         # new in 0.5-21: also include covariances involving these covariances...
-        dummy.cov.idx1 <- which(partable$op == "~~" & partable$block == g &
-                                (partable$lhs %in% partable$lhs[dummy.cov.idx] |
-                                 partable$rhs %in% partable$rhs[dummy.cov.idx]))
+        dummy.cov.idx1 <- which(lavpartable$op == "~~" & lavpartable$block == g &
+                                (lavpartable$lhs %in% lavpartable$lhs[dummy.cov.idx] |
+                                 lavpartable$rhs %in% lavpartable$rhs[dummy.cov.idx]))
         dummy.cov.idx <- unique(c(dummy.cov.idx, dummy.cov.idx1))
 
-        dummy.names2 <- unique( c(partable$lhs[dummy.cov.idx],
-                                  partable$rhs[dummy.cov.idx]) )
+        dummy.names2 <- unique( c(lavpartable$lhs[dummy.cov.idx],
+                                  lavpartable$rhs[dummy.cov.idx]) )
 
 
         # new in 0.6-7: ~~ between latent and observed
-        dummy.cov.ov.lv.idx1 <- which(partable$op == "~~" &
-                                      partable$block == g &
-                                      partable$lhs %in% ov.names &
-                                      partable$rhs %in% lv.names)
-        dummy.cov.ov.lv.idx2 <- which(partable$op == "~~" &
-                                      partable$block == g &
-                                      partable$lhs %in% lv.names &
-                                      partable$rhs %in% ov.names)
-        dummy.names3 <- unique( c(partable$lhs[dummy.cov.ov.lv.idx1],
-                                  partable$rhs[dummy.cov.ov.lv.idx2]) )
+        dummy.cov.ov.lv.idx1 <- which(lavpartable$op == "~~" &
+                                      lavpartable$block == g &
+                                      lavpartable$lhs %in% ov.names &
+                                      lavpartable$rhs %in% lv.names)
+        dummy.cov.ov.lv.idx2 <- which(lavpartable$op == "~~" &
+                                      lavpartable$block == g &
+                                      lavpartable$lhs %in% lv.names &
+                                      lavpartable$rhs %in% ov.names)
+        dummy.names3 <- unique( c(lavpartable$lhs[dummy.cov.ov.lv.idx1],
+                                  lavpartable$rhs[dummy.cov.ov.lv.idx2]) )
 
         # new in 0.6-10: ~~ between observed and observed, but not in ~
-        dummy.orphan.idx <- which(partable$op == "~~" &
-                                  partable$block == g &
-                                  partable$lhs %in% ov.names &
-                                  partable$rhs %in% ov.names &
-                                  (!partable$lhs %in% c(dummy.names1,
+        dummy.orphan.idx <- which(lavpartable$op == "~~" &
+                                  lavpartable$block == g &
+                                  lavpartable$lhs %in% ov.names &
+                                  lavpartable$rhs %in% ov.names &
+                                  (!lavpartable$lhs %in% c(dummy.names1,
                                                         dummy.names2) |
-                                   !partable$rhs %in% c(dummy.names1,
+                                   !lavpartable$rhs %in% c(dummy.names1,
                                                         dummy.names2)))
 
         # collect all dummy variables
@@ -131,6 +160,12 @@ lav_lisrel <- function(partable = NULL,
 
             # combine them, make sure order is identical to ov.names
             tmp <-  ov.names[ ov.names %in% dummy.names ]
+
+            # same for ov.names.x (if they are not in ov.names) (conditional.x)
+            if(length(ov.names.x) > 0L) {
+                tmp.x <- ov.names.x[ ov.names.x %in% dummy.names ]
+                tmp <- unique(c(tmp, tmp.x))
+            }
 
             # extend lv.names
             lv.names <- c(lv.names, tmp)
@@ -374,7 +409,7 @@ lav_lisrel <- function(partable = NULL,
     #                 !is.na(REP$row) & REP$row > 0L &
     #                 !is.na(REP$col) & REP$col > 0L )
     #   # but keep ==, :=, etc.
-    #   idx <- c(idx, which(partable$op %in% c("==", ":=", "<", ">")))
+    #   idx <- c(idx, which(lavpartable$op %in% c("==", ":=", "<", ">")))
     #   REP$mat <- REP$mat[idx]
     #   REP$row <- REP$row[idx]
     #   REP$col <- REP$col[idx]

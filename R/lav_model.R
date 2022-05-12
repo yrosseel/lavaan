@@ -39,12 +39,6 @@ lav_model <- function(lavpartable      = NULL,
         }
     }
 
-    # check mean.x/cov.x
-    if(lavoptions$conditional.x && any(lavpartable$exo > 0L)) {
-        # we should have non-empty mean.x/cov.x
-        # but they will be empty if
-    }
-
     nefa <- lav_partable_nefa(lavpartable)
     if(nefa > 0L) {
         efa.values <- lav_partable_efa_values(lavpartable)
@@ -131,6 +125,29 @@ lav_model <- function(lavpartable      = NULL,
         nexo[g] <- length(ov.names.x)
         ov.num <-       lav_partable_vnames(lavpartable, "ov.num", block = g)
         if(lavoptions$conditional.x) {
+            if(nlevels > 1L) {
+                if(ngroups == 1L) {
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",
+                                            block = seq_len(nblocks)[-g])
+                } else {
+                    # TEST ME!
+                    # which group is this?
+                    this.group <- ceiling(g / nlevels)
+                    blocks.within.group <- (this.groups - 1L) * nlevels + seq_len(nlevels)
+                    OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",
+                                                block = blocks.within.group[-g])
+                }
+
+
+                if(length(ov.names.x) > 0L) {
+                    idx <- which(ov.names.x %in% OTHER.BLOCK.NAMES)
+                    if(length(idx) > 0L) {
+                        ov.names.nox <- unique(c(ov.names.nox, ov.names.x[idx]))
+                        ov.names.x <- ov.names.x[-idx]
+                        ov.names <- ov.names.nox
+                    }
+                }
+            }
             nvar[g] <- length(ov.names.nox)
             num.idx[[g]] <- which(ov.names.nox %in% ov.num)
         } else {

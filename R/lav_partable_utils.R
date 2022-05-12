@@ -146,7 +146,7 @@ lav_partable_ndat <- function(partable) {
 
                 # except within-only 'y'
                 ov.names.y <- lav_partable_vnames(partable, "ov.nox", block = b)
-                ov.names.y2 <- unlist(lav_partable_vnames(partable, "ov.nox",
+                ov.names.y2 <- unlist(lav_partable_vnames(partable, "ov",
                                       block = seq_len(nblocks)[-b]))
                 ov.names.y <- ov.names.y[ !ov.names.y %in% ov.names.y2 ]
                 if(length(ov.names.y) > 0L) {
@@ -155,7 +155,7 @@ lav_partable_ndat <- function(partable) {
 
                 # except within-only 'x' (unless fixed.x)
                 ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
-                ov.names.x2 <- unlist(lav_partable_vnames(partable, "ov.x",
+                ov.names.x2 <- unlist(lav_partable_vnames(partable, "ov",
                                       block = seq_len(nblocks)[-b]))
                 ov.names.x <- ov.names.x[ !ov.names.x %in% ov.names.x2 ]
                 if(!fixed.x && length(ov.names.x) > 0L) {
@@ -172,7 +172,7 @@ lav_partable_ndat <- function(partable) {
             nvar.x <- length(ov.names.x)
             pstar.x <- nvar.x * (nvar.x + 1) / 2
             if(meanstructure) {
-                if(nlevels > 1L && b == 1L) {
+                if(nlevels > 1L && (b %% nlevels) == 1L) {
                     # do nothing, they are already removed
                 } else {
                     pstar.x <- pstar.x + nvar.x
@@ -225,7 +225,7 @@ lav_partable_ndat <- function(partable) {
     sum(ndat)
 }
 
-# total number of free parameters
+# total number of free parameters (ignoring equality constraints)
 lav_partable_npar <- function(partable) {
 
     # we only assume non-zero values
@@ -235,6 +235,9 @@ lav_partable_npar <- function(partable) {
 
 # global degrees of freedom: ndat - npar
 # ignoring constraints! (not very useful)
+#
+# we need to find the rank of con.jac to find the exact amount
+# of non-redundant equality constraints (this is done in lav_test.R)
 lav_partable_df <- function(partable) {
 
     npar <- lav_partable_npar(partable)

@@ -53,6 +53,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                    "ov.orphan",   # lonely observed intercepts/variances
                    "ov.interaction", # interaction terms (with colon)
                    "ov.efa",      # indicators involved in efa
+
                    "th",          # thresholds ordinal only
                    "th.mean",     # thresholds ordinal + numeric variables
 

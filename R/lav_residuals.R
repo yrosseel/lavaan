@@ -198,7 +198,6 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     # blocks
     nblocks <- length(obsList)
 
-
     # pre-scale?
     if(type %in% c("cor.bentler", "cor.bollen")) {
         for(b in seq_len(nblocks)) {

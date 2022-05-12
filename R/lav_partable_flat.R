@@ -49,7 +49,6 @@ lav_partable_flat <- function(FLAT = NULL,
     #lvov.names.y <- c(ov.names.y, lv.names.y)
     lvov.names.y <- c(lv.names.y, ov.names.y)
 
-
     # get 'ordered' variables, either from FLAT or varTable
     ov.names.ord1 <- lav_partable_vnames(FLAT, type="ov.ord")
     # check if we have "|" for exogenous variables
@@ -176,9 +175,30 @@ lav_partable_flat <- function(FLAT = NULL,
 
     # d) exogenous x covariates: VARIANCES + COVARIANCES
     if((nx <- length(ov.names.x)) > 0L) {
-        idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
-        lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
-        rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
+        if(conditional.x) {
+            # new in 0.6-12: we make a distinction between ov.names.x and
+            # ov.names.x.block: we treat them 'separately' (with no covariances
+            # among them)
+            # but we add 'regressions' instead (see below)
+            ov.names.x1 <- ov.names.x[!ov.names.x %in% ov.names.x.block]
+            ov.names.x2 <- ov.names.x.block
+            nx1 <- length(ov.names.x1) # splitted x
+            nx2 <- length(ov.names.x2) # regular  x
+            if(nx1 > 0L) {
+                idx <- lower.tri(matrix(0, nx1, nx1), diag=TRUE)
+                lhs <- c(lhs, rep(ov.names.x1,  each=nx1)[idx]) # fill upper.tri
+                rhs <- c(rhs, rep(ov.names.x1, times=nx1)[idx])
+            }
+            if(nx2 > 0L) {
+                idx <- lower.tri(matrix(0, nx2, nx2), diag=TRUE)
+                lhs <- c(lhs, rep(ov.names.x2,  each=nx2)[idx]) # fill upper.tri
+                rhs <- c(rhs, rep(ov.names.x2, times=nx2)[idx])
+            }
+        } else {
+            idx <- lower.tri(matrix(0, nx, nx), diag=TRUE)
+            lhs <- c(lhs, rep(ov.names.x,  each=nx)[idx]) # fill upper.tri
+            rhs <- c(rhs, rep(ov.names.x, times=nx)[idx])
+        }
     }
 
     # e) efa latent variables COVARIANCES:
@@ -225,6 +245,24 @@ lav_partable_flat <- function(FLAT = NULL,
         lhs <- c(lhs, int.lhs)
         rhs <- c(rhs, rep("",   length(int.lhs)))
         op  <- c(op,  rep("~1", length(int.lhs)))
+    }
+
+    # 4. REGRESSIONS
+    if(conditional.x) {
+        # new in 0.6-12: we make a distinction between ov.names.x and
+        # ov.names.x.block: we treat them 'separately' (with no covariances
+        # among them)
+        # but we add 'regressions' instead!
+        ov.names.x1 <- ov.names.x[!ov.names.x %in% ov.names.x.block]
+        ov.names.x2 <- ov.names.x.block
+        nx1 <- length(ov.names.x1) # splitted x
+        nx2 <- length(ov.names.x2) # regular  x
+        if(nx1 > 0L && nx2 > 0L) {
+            # add regressions for splitted-x ~ regular-x
+            lhs <- c(lhs, rep(ov.names.x1, times = nx2))
+             op <- c( op, rep("~", nx2 * nx1))
+            rhs <- c(rhs, rep(ov.names.x2, each = nx1))
+        }
     }
 
     # free group weights
@@ -456,40 +494,66 @@ lav_partable_flat <- function(FLAT = NULL,
     # 5. handle exogenous `x' covariates
     # usually, ov.names.x.block == ov.names.x
     # except if multilevel, where 'splitted' ov.x are treated as endogenous
-    if(length(ov.names.x.block) > 0) {
+
+    # 5a conditional.x = FALSE
+    if(!conditional.x && fixed.x && length(ov.names.x.block) > 0) {
 
         # 1. variances/covariances
         exo.var.idx  <- which(op == "~~" &
                           rhs %in% ov.names.x.block &
                           lhs %in% ov.names.x.block &
                           user == 0L)
-        if(fixed.x) {
-            ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
-              free[exo.var.idx] <- 0L
-               exo[exo.var.idx] <- 1L
-        } #else if(conditional.x) {
-          #     exo[exo.var.idx] <- 1L
-        #}
+        ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
+          free[exo.var.idx] <- 0L
+           exo[exo.var.idx] <- 1L
 
         # 2. intercepts
         exo.int.idx  <- which(op == "~1" &
                               lhs %in% ov.names.x.block &
                               user == 0L)
+        ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
+          free[exo.int.idx] <- 0L
+           exo[exo.int.idx] <- 1L
+    }
+
+    # 5a-bis. conditional.x = TRUE
+    if(conditional.x && length(ov.names.x) > 0L) {
+        # 1. variances/covariances
+        exo.var.idx  <- which(op == "~~" &
+                          rhs %in% ov.names.x &
+                          lhs %in% ov.names.x &
+                          user == 0L)
+        if(fixed.x) {
+            ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
+              free[exo.var.idx] <- 0L
+        }
+        exo[exo.var.idx] <- 1L
+
+        # 2. intercepts
+        exo.int.idx  <- which(op == "~1" &
+                              lhs %in% ov.names.x &
+                              user == 0L)
         if(fixed.x) {
             ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
               free[exo.int.idx] <- 0L
-               exo[exo.int.idx] <- 1L
-        } #else if(conditional.x) {
-          #     exo[exo.int.idx] <- 1L
-        #}
+        }
+        exo[exo.int.idx] <- 1L
 
         # 3. regressions ov + lv
         exo.reg.idx <- which(op %in% c("~", "<~") &
                              lhs %in% c(lv.names, ov.names.nox) &
-                             rhs %in% ov.names.x.block)
-        if(conditional.x) {
-            exo[exo.reg.idx] <- 1L
+                             rhs %in% ov.names.x)
+        exo[exo.reg.idx] <- 1L
+
+        # 3b regression splitted.x ~ regular.x
+        exo.reg2.idx <- which(op %in% c("~", "<~") &
+                              lhs %in% ov.names.x &
+                              rhs %in% ov.names.x)
+        if(fixed.x) {
+            ustart[exo.reg2.idx] <- as.numeric(NA) # should be overriden later!
+              free[exo.reg2.idx] <- 0L
         }
+        exo[exo.reg2.idx] <- 1L
     }
 
     # 5b. residual variances of ordinal variables?

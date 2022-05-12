@@ -248,11 +248,23 @@ lav_data_cluster_patterns <- function(Y =         NULL,
                                     ov.names %in% ov.names.l[[l]] &
                                    !ov.names %in% unlist(both.names) )
 
+            # not any longer, we split them, but still treat them as 'fixed'
+            # new in 0.6-12
+            #ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
+            #                        ov.names %in% ov.names.l[[l]] )
+
             # if some ov.names.x have been 'splitted', and end up in both.names,
             # they should become part of ov.y.idx (despite being exogenous)
             # as they are now latent variables
             ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
                                    !ov.names %in% ov.names.x[!ov.names.x %in% unlist(both.names)] )
+
+            # not any longer, ov.x stays ov.x (even if we split)
+            # new in 0.6-12
+            #ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
+            #                       !ov.names %in% ov.names.x )
+
+
             if(l == 1L) {
                 next
             }

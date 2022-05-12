@@ -15,7 +15,7 @@
 lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
                      meanstructure = FALSE, slopestructure = FALSE,
-                     gamma.n.minus.one = FALSE,
+                     gamma.n.minus.one = FALSE, ADF = TRUE, NT.rescale = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
 
     if(inherits(object, "lavaan")) {
@@ -71,7 +71,8 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
         } else {
             cluster.idx <- NULL
         }
-        out <- lav_samplestats_Gamma(Y              = Y[[g]],
+        if(ADF) {
+            out <- lav_samplestats_Gamma(Y              = Y[[g]],
                                      x.idx          = x.idx[[g]],
                                      cluster.idx    = cluster.idx,
                                      fixed.x        = fixed.x,
@@ -80,6 +81,16 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                      slopestructure = conditional.x,
                                      gamma.n.minus.one = gamma.n.minus.one,
                                      Mplus.WLS      = Mplus.WLS)
+        } else {
+            out <- lav_samplestats_Gamma_NT(Y       = Y[[g]],
+                                     wt             = NULL, # for now
+                                     rescale        = NT.rescale,
+                                     x.idx          = x.idx[[g]],
+                                     fixed.x        = fixed.x,
+                                     conditional.x  = conditional.x,
+                                     meanstructure  = meanstructure,
+                                     slopestructure = conditional.x)
+        }
         out})
 
     OUT
