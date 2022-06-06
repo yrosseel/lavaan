@@ -1222,22 +1222,26 @@ lav_fit_measures <- function(object, fit.measures = "all",
     # multilevel version
     if(any(c("srmr_within", "srmr_between", "srmr") %in% fit.measures) &&
        object@Data@nlevels > 1L) {
-
         nlevels <-  object@Data@nlevels > 1L
         SRMR.within  <- numeric(G)
         SRMR.between <- numeric(G)
         for(g in 1:G) {
+
+            b.within  <- (g - 1L) * nlevels + 1L
+            b.between <- (g - 1L) * nlevels + 2L
+
             # observed
-            S.within  <- object@h1$implied$cov[[  (g-1)*nlevels + 1 ]]
-            M.within  <- object@h1$implied$mean[[ (g-1)*nlevels + 1 ]]
-            S.between <- object@h1$implied$cov[[  (g-1)*nlevels + 2 ]]
-            M.between <- object@h1$implied$mean[[ (g-1)*nlevels + 2 ]]
+            S.within  <- object@h1$implied$cov[[  b.within  ]]
+            M.within  <- object@h1$implied$mean[[ b.within  ]]
+            S.between <- object@h1$implied$cov[[  b.between ]]
+            M.between <- object@h1$implied$mean[[ b.between ]]
 
             # estimated
-            Sigma.within  <- object@implied$cov[[  (g-1)*nlevels + 1 ]]
-            Mu.within     <- object@implied$mean[[ (g-1)*nlevels + 1 ]]
-            Sigma.between <- object@implied$cov[[  (g-1)*nlevels + 2 ]]
-            Mu.between    <- object@implied$mean[[ (g-1)*nlevels + 2 ]]
+            implied <- lav_model_implied_cond2uncond(object@implied)
+            Sigma.within  <- implied$cov[[  b.within  ]]
+            Mu.within     <- implied$mean[[ b.within  ]]
+            Sigma.between <- implied$cov[[  b.between ]]
+            Mu.between    <- implied$mean[[ b.between ]]
 
             # force pd for between
             #    S.between <- lav_matrix_symmetric_force_pd(S.between)

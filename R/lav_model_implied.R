@@ -75,3 +75,43 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
     implied
 }
+
+# convert 'conditional.x = TRUE' to 'conditional.x = FALSE'
+lav_model_implied_cond2uncond <- function(lavimplied) {
+
+    # check for res.cov
+    if(is.null(lavimplied$res.cov[[1]])) {
+        # already unconditional
+        return(lavimplied)
+    } else {
+        nblocks <- length(lavimplied$res.cov)
+    }
+
+    COV  <- vector("list", length = nblocks)
+    MEAN <- vector("list", length = nblocks)
+
+    # reconstruct COV/MEAN per block
+    for(b in seq_len(nblocks)) {
+        res.Sigma  <- lavimplied$res.cov[[b]]
+        res.slopes <- lavimplied$res.slopes[[b]]
+        res.int    <- lavimplied$res.int[[b]]
+        S.xx       <- lavimplied$cov.x[[b]]
+        M.x        <- lavimplied$mean.x[[b]]
+
+        S.yx <- res.slopes %*% S.xx
+        S.xy <- t(S.yx)
+        S.yy <- res.Sigma + tcrossprod(S.yx, res.slopes)
+        COV[[b]] <- rbind( cbind(S.yy, S.yx), cbind(S.xy, S.xx) )
+
+        Mu.y <- as.vector(res.int + res.slopes %*% M.x)
+        Mu.x <- as.vector(M.x)
+        MEAN[[b]] <- matrix(c(Mu.y, Mu.x), ncol = 1L)
+    }
+
+    # we ignore res.th for now, as we do not support categorical data
+    # in the two-level setting anyway
+    implied <- list(cov = COV, mean = MEAN, th = lavimplied$res.th,
+                    group.w = lavimplied$group.w)
+
+    implied
+}

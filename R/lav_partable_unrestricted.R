@@ -387,7 +387,9 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 # if multilevel, level=1 has fixed zeroes
                 if(nlevels > 1L && l == 1L) {
                     WITHIN <- rep(0L, nel)
-                    WITHIN[Lp$within.idx[[2]]] <- 1L
+                    # FIXME: assuming 1 group
+                    within.idx <- match(Lp$within.idx[[2]], Lp$ov.idx[[1]])
+                    WITHIN[within.idx] <- 1L
                     free  <- c(free, WITHIN)
                 } else {
                     free  <- c(free,  rep(1L, nel))
@@ -766,7 +768,8 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
                 # if multilevel, level=1 has fixed zeroes
                 if(nlevels > 1L && l == 1L) {
                     WITHIN <- rep(0L, nel)
-                    WITHIN[Lp$within.idx[[2]]] <- 1L
+                    within.idx <- match(Lp$within.idx[[2]], Lp$ov.idx[[1]])
+                    WITHIN[within.idx] <- 1L
                     free  <- c(free, WITHIN)
                 } else {
                     free  <- c(free,  rep(1L, nel))
