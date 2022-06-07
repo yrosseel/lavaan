@@ -1770,7 +1770,15 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
             sample.XX.wb1 <- crossprod(EXO.wb1)
 
             # sample beta.wb (level 2)
-            sample.wb2 <- solve(crossprod(EXO.wb2), crossprod(EXO.wb2, Y2.wb))
+            XX.wb2 <- crossprod(EXO.wb2)
+            sample.wb2 <- try(solve(XX.wb2, crossprod(EXO.wb2, Y2.wb)),
+                              silent = TRUE)
+            if(inherits(sample.wb2, "try-error")) {
+                # this may happen if the covariate is cluster-centered
+                # using the observed cluster means; then the 'means' will
+                # be all (near) zero, and there is no variance
+                sample.wb2 <- MASS::ginv(XX.wb2) %*% crossprod(EXO.wb2, Y2.wb)
+            }
             sample.yhat.wb2 <- EXO.wb2 %*% sample.wb2
             sample.yres.wb2 <- Y2.wb - sample.yhat.wb2
 
@@ -1809,8 +1817,13 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
                 } else {
                     EXO2.clz <- matrix(1, nrow(Y2.clz), 1L)
                 }
-                clz.Y2.B <- solve(crossprod(EXO2.clz),
-                                  crossprod(EXO2.clz, Y2.clz))
+                XX.clz <- crossprod(EXO2.clz)
+                clz.Y2.B <- try(solve(XX.clz, crossprod(EXO2.clz, Y2.clz)),
+                                silent = TRUE)
+                if(inherits(clz.Y2.B, "try-error")) {
+                    clz.Y2.B <-
+                        MASS::ginv(XX.clz) %*% crossprod(EXO2.clz, Y2.clz)
+                }
                 clz.Y2.hat <- EXO2.clz %*% clz.Y2.B
                 clz.Y2.res <- Y2.clz - clz.Y2.hat
                 sample.clz.Y2.B[[clz]] <- clz.Y2.B
@@ -1826,8 +1839,14 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
                     } else {
                         EXO.clz.z <- matrix(1, nrow(Z.clz.z), 1L)
                     }
-                    clz.ZZ.B <- solve(crossprod(EXO.clz.z),
-                                      crossprod(EXO.clz.z, Z.clz.z))
+                    ZZ.clz <- crossprod(EXO.clz.z)
+                    clz.ZZ.B <- try(solve(ZZ.clz,
+                                          crossprod(EXO.clz.z, Z.clz.z)),
+                                    silent = TRUE)
+                    if(inherits(clz.ZZ.B, "try-error")) {
+                        clz.ZZ.B <-
+                            MASS::ginv(ZZ.clz) %*% crossprod(EXO.clz.z,Z.clz.z)
+                    }
                     clz.Z.hat <- EXO.clz.z %*% clz.ZZ.B
                     clz.Z.res <- Z.clz.z - clz.Z.hat
                     sample.clz.ZZ.B[[clz]] <- clz.ZZ.B

@@ -397,31 +397,23 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise" # still needed for 0.6-8 (otherwise, we
-        #                          # we break tidySEM tests where they set
-        #                          # missing = "fiml" + multilevel
-        #if(opt$missing %in% c("ml", "fiml", "direct")) {
-            #opt$optim.gradient = "numerical"
-            #opt$optim.gradient = "complex"
-        #}
 
         # test
         if(length(opt$test) == 1L && opt$test == "default") {
-            opt$test <- "standard"
+            # ok, will be set later
         } else if(all(opt$test %in% c("none", "standard","yuan.bentler"))) {
             # nothing to do
-        } else if(opt$se == "robust") {
-            opt$test <- "yuan.bentler"
         } else {
             stop("lavaan ERROR: `test' argument must one of \"none\", \"standard\" or \"yuan.bentler\" in the multilevel case")
         }
 
         # se
         if(opt$se == "default") {
-            opt$se <- "standard"
-        } else if(opt$se %in% c("none", "standard", "robust.huber.white", "sandwich")) {
+            # ok, will be set later
+        } else if(opt$se %in% c("none", "standard", "robust.huber.white",
+                                "sandwich")) {
             # nothing to do
-        } else if(opt$se == "robust.sem") {
+        } else if(opt$se == "robust") {
             opt$se <- "robust.huber.white"
         } else {
             stop("lavaan ERROR: `se' argument must one of \"none\", \"standard\" or \"robust.huber.white\" in the multilevel case")
@@ -435,7 +427,6 @@ lav_options_set <- function(opt = NULL) {
             opt$information[2] <- "observed"
         }
     }
-
 
     # missing
     if(opt$missing == "default") {

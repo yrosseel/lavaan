@@ -575,9 +575,9 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         #if(lavsamplestats@missing.flag) {
         #    stop("lavaan ERROR: clustered information is not (yet) available when missing = \"ML\"")
         #}
-        if(lavmodel@conditional.x) {
-            stop("lavaan ERROR: clustered information is not (yet) available when conditional.x = TRUE")
-        }
+        #if(lavmodel@conditional.x) {
+        #    stop("lavaan ERROR: clustered information is not (yet) available when conditional.x = TRUE")
+        #}
         #if(!structured) {
         #    stop("lavaan ERROR: clustered information is not (yet) available when h1.information = \"unstructured\"")
         #}
@@ -641,22 +641,43 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
         } else if(estimator == "ML" && lavdata@nlevels > 1L) {
 
-            MU.W    <- implied$mean[[ (g-1)*lavdata@nlevels + 1L ]]
-            MU.B    <- implied$mean[[ (g-1)*lavdata@nlevels + 2L ]]
-            SIGMA.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1L ]]
-            SIGMA.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2L ]]
+            # if not-structured, we use lavh1, and that is always
+            # 'unconditional' (for now)
+            if(lavmodel@conditional.x && structured) {
+                Res.Sigma.W <- implied$res.cov[[    (g-1)*lavdata@nlevels + 1L]]
+                Res.Int.W   <- implied$res.int[[    (g-1)*lavdata@nlevels + 1L]]
+                Res.Pi.W    <- implied$res.slopes[[ (g-1)*lavdata@nlevels + 1L]]
 
-            # clustered data
-            B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
-                           Y1           = lavdata@X[[g]],
-                           YLp          = lavsamplestats@YLp[[g]],
-                           Lp           = lavdata@Lp[[g]],
-                           Mu.W         = MU.W,
-                           Sigma.W      = SIGMA.W,
-                           Mu.B         = MU.B,
-                           Sigma.B      = SIGMA.B,
-                           x.idx        = lavsamplestats@x.idx[[g]],
-                           divide.by.two = TRUE)
+                Res.Sigma.B <- implied$res.cov[[    (g-1)*lavdata@nlevels + 2L]]
+                Res.Int.B   <- implied$res.int[[    (g-1)*lavdata@nlevels + 2L]]
+                Res.Pi.B    <- implied$res.slopes[[ (g-1)*lavdata@nlevels + 2L]]
+                B1[[g]] <- lav_mvreg_cluster_information_firstorder(
+                               Y1            = lavdata@X[[g]],
+                               YLp           = lavsamplestats@YLp[[g]],
+                               Lp            = lavdata@Lp[[g]],
+                               Res.Sigma.W   = Res.Sigma.W,
+                               Res.Int.W     = Res.Int.W,
+                               Res.Pi.W      = Res.Pi.W,
+                               Res.Sigma.B   = Res.Sigma.B,
+                               Res.Int.B     = Res.Int.B,
+                               Res.Pi.B      = Res.Pi.B,
+                               divide.by.two = TRUE)
+            } else {
+                MU.W    <- implied$mean[[ (g-1)*lavdata@nlevels + 1L ]]
+                MU.B    <- implied$mean[[ (g-1)*lavdata@nlevels + 2L ]]
+                SIGMA.W <- implied$cov[[  (g-1)*lavdata@nlevels + 1L ]]
+                SIGMA.B <- implied$cov[[  (g-1)*lavdata@nlevels + 2L ]]
+                B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
+                               Y1            = lavdata@X[[g]],
+                               YLp           = lavsamplestats@YLp[[g]],
+                               Lp            = lavdata@Lp[[g]],
+                               Mu.W          = MU.W,
+                               Sigma.W       = SIGMA.W,
+                               Mu.B          = MU.B,
+                               Sigma.B       = SIGMA.B,
+                               x.idx         = lavsamplestats@x.idx[[g]],
+                               divide.by.two = TRUE)
+            }
 
         } else if(estimator == "ML" && lavdata@nlevels == 1L) {
 

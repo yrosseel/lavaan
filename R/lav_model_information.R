@@ -106,6 +106,9 @@ lav_model_information_expected <- function(lavmodel       = NULL,
                                                 lavimplied     = lavimplied,
                                                 lavh1          = lavh1,
                                                 lavcache       = lavcache)
+    } else {
+        # force conditional.x = FALSE
+        lavimplied <- lav_model_implied_cond2uncond(lavimplied)
     }
 
     # 3. compute Information per group

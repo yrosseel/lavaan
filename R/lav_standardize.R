@@ -312,8 +312,10 @@ lav_standardize_all <- function(lavobject = NULL,
         if(lavmodel@conditional.x) {
             if(is.null(cov.x)) {
                 # try SampleStats slot
-                if("SampleStats" %in% slotNames(lavobject)) {
-                    cov.x <- lavobject@SampleStats@cov.x
+                #if("SampleStats" %in% slotNames(lavobject)) {
+                #    cov.x <- lavobject@SampleStats@cov.x
+                if(!is.null(lavobject@implied$cov.x[[1]])) {
+                    cov.x <- lavobject@implied$cov.x
                 } else {
                     # perhaps lavaanList object
                     # extract it from GLIST per block
@@ -543,8 +545,10 @@ lav_standardize_all_nox <- function(lavobject = NULL,
         if(lavmodel@conditional.x) {
             if(is.null(cov.x)) {
                 # try SampleStats slot
-                if("SampleStats" %in% slotNames(lavobject)) {
-                    cov.x <- lavobject@SampleStats@cov.x
+                #if("SampleStats" %in% slotNames(lavobject)) {
+                #    cov.x <- lavobject@SampleStats@cov.x
+                if(!is.null(lavobject@implied$cov.x[[1]])) {
+                    cov.x <- lavobject@implied$cov.x
                 } else {
                     # perhaps lavaanList object
                     # extract it from GLIST per block

@@ -638,7 +638,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
-                         ceq.simple = FALSE) {
+                         ceq.simple = FALSE,
+                         force.conditional.x.false = FALSE) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical

@@ -43,7 +43,7 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
             if(length(mean.x.idx) > 0L) {
                 MEAN.X[[b]] <- MLIST[[mean.x.idx]]
             } else {
-                MEAN.X[[b]] <- matrix(0, 0L, 0L)
+                MEAN.X[[b]] <- matrix(0, 0L, 1L)
             }
         }
     } else {
