@@ -446,7 +446,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
     G.beta.w   <- matrix(0, ncluster.sizes, length(beta.w))
     G.beta.b   <- matrix(0, ncluster.sizes, length(beta.b))
     G.beta.wb  <- matrix(0, ncluster.sizes, length(beta.wb))
-    G.sigma.w  <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.w)))
+    G.sigma.w1 <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.w)))
     G.sigma.b  <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.b)))
 
     if(length(between.y.idx) > 0L) {
@@ -500,7 +500,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
             # SIGMA.W (between part)
             g.sigma.w1 <- ns.sigma.j.inv - jYZj
             tmp <- g.sigma.w1*2; diag(tmp) <- diag(g.sigma.w1)
-            G.sigma.w[clz,] <- lav_matrix_vech(tmp)
+            G.sigma.w1[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * g.sigma.w1
@@ -547,7 +547,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
 
         d.beta.w1  <- matrix(colSums(G.beta.w), nrow(beta.w), ncol(beta.w))
         d.beta.b   <- matrix(colSums(G.beta.b), nrow(beta.b), ncol(beta.b))
-        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w))
+        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w1))
         d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.sigma.b))
 
         # z
@@ -577,7 +577,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
             # SIGMA.W (between part)
             g.sigma.w1 <- (n.s[clz]*sigma.j.inv) - jYYj
             tmp <- g.sigma.w1*2; diag(tmp) <- diag(g.sigma.w1)
-            G.sigma.w[clz,] <- lav_matrix_vech(tmp)
+            G.sigma.w1[clz,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * g.sigma.w1
@@ -596,7 +596,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
 
         d.beta.w1  <- matrix(colSums(G.beta.w), nrow(beta.w), ncol(beta.w))
         d.beta.b   <- matrix(colSums(G.beta.b), nrow(beta.b), ncol(beta.b))
-        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w))
+        d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w1))
         d.sigma.b  <- lav_matrix_vech_reverse(colSums(G.sigma.b))
 
         # z
@@ -715,16 +715,15 @@ lav_mvreg_cluster_scores_2l <- function(Y1           = NULL,
             EXO.z <- cbind(1, Y2[, between.x.idx, drop = FALSE])
             Y2.z <- Y2[, between.y.idx, drop = FALSE]
             Y2z.res <-  Y2.z - EXO.z %*% beta.z
-
             # sample.z
-            XX.z <- crossprod(EXO.z)
-            sample.z <- try(solve(XX.z, crossprod(EXO.z, Y2.z)))
-            if(inherits(sample.z, "try-error")) {
-                sample.z <- MASS::ginv(XX.z) %*% crossprod(EXO.z, Y2.z)
-            }
+            #XX.z <- crossprod(EXO.z)
+            #sample.z <- try(solve(XX.z, crossprod(EXO.z, Y2.z)))
+            #if(inherits(sample.z, "try-error")) {
+            #    sample.z <- MASS::ginv(XX.z) %*% crossprod(EXO.z, Y2.z)
+            #}
 
             # sample.wb2
-            sample.wb2 <- YLp[[2]]$sample.wb2
+            #sample.wb2 <- YLp[[2]]$sample.wb2
         } else {
             Y2z.res <- Y2[, between.y.idx, drop = FALSE]
         }
@@ -733,11 +732,12 @@ lav_mvreg_cluster_scores_2l <- function(Y1           = NULL,
     # common parts:
     sigma.w.inv <- lav_matrix_symmetric_inverse(S = sigma.w)
 
-    G.beta.w   <- matrix(0, nclusters, length(beta.w))
+    G.beta.w1  <- matrix(0, nclusters, length(beta.w))
     G.beta.b   <- matrix(0, nclusters, length(beta.b))
     G.beta.wb  <- matrix(0, nclusters, length(beta.wb))
-    G.sigma.w  <- matrix(0, nclusters, length(lav_matrix_vech(sigma.w)))
+    G.sigma.w1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma.w)))
     G.sigma.b  <- matrix(0, nclusters, length(lav_matrix_vech(sigma.b)))
+
 
     if(length(between.y.idx) > 0L) {
 
@@ -782,65 +782,80 @@ lav_mvreg_cluster_scores_2l <- function(Y1           = NULL,
             jYZj <- nj * (jYZj.yy + jYZj.zz - jYZj.yz - t(jYZj.yz))
 
             # SIGMA.W (between part)
-            g.sigma.w1 <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
-                + sigma.j.inv - jYZj )
+            g.sigma.w1 <- sigma.j.inv - jYZj
             tmp <- g.sigma.w1*2; diag(tmp) <- diag(g.sigma.w1)
-            G.sigma.w[cl,] <- lav_matrix_vech(tmp)
+            G.sigma.w1[cl,] <- lav_matrix_vech(tmp)
+
+            # SIGMA.W (within part)
+            #g.sigma.w2 <- ( (nj-1) * sigma.w.inv
+            #    - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv )
+            #tmp <- g.sigma.w2*2; diag(tmp) <- diag(g.sigma.w2)
+            #G.sigma.w2[cl,] <- lav_matrix_vech(tmp)
+            #G.sigma.w[cl,] <- G.sigma.w1[cl,] + G.sigma.w2[cl,]
 
             # SIGMA.B
-            g.sigma.b <- nj * (sigma.j.inv - jYZj)
+            g.sigma.b <- nj * g.sigma.w1
             tmp <- g.sigma.b*2; diag(tmp) <- diag(g.sigma.b)
             G.sigma.b[cl,] <- lav_matrix_vech(tmp)
 
             # SIGMA.ZZ
-            Z1 <- Y2Yc.zz %*% t(sigma.ji.yz.zi) %*% sigma.yz
-            YZ1 <- t(Y2Yc.yz) %*% sigma.j.inv %*% sigma.yz
-            g.sigma.zz <- ( sigma.zz.inv + nj * sigma.zz.inv %*% (
-                              t(sigma.yz) %*% (sigma.j.inv - jYZj) %*% sigma.yz
-                            -(1/nj * Y2Yc.zz + t(Z1) + Z1 - t(YZ1) - YZ1) ) %*%
-                                                sigma.zz.inv )
+            YZ1 <- ZZ.zi.yz.ji %*% sigma.yz
+            YZ2 <- crossprod(Y2Yc.yz, sigma.ji.yz)
+            tmp <- ( t(sigma.yz) %*% g.sigma.w1 %*% sigma.yz
+                     -(1/nj * Y2Yc.zz + t(YZ1) + YZ1 - t(YZ2) - YZ2) )
+            g.sigma.zz <- ( sigma.zz.inv +
+                            nj * sigma.zz.inv %*% tmp %*% sigma.zz.inv )
             tmp <- g.sigma.zz*2; diag(tmp) <- diag(g.sigma.zz)
             G.sigma.zz[cl,] <- lav_matrix_vech(tmp)
 
             # SIGMA.ZY
-            g.sigma.yz <- 2 * nj * (
-                          (sigma.j.inv %*%
-                              (sigma.yz.zi %*% Y2Yc.zz - sigma.yz - Y2Yc.yz)
-                               + jYZj %*% sigma.yz) %*% sigma.zz.inv )
+            #g.sigma.yz <- 2 * nj * (
+            #              (sigma.j.inv %*%
+            #                  (sigma.yz.zi %*% Y2Yc.zz - sigma.yz - Y2Yc.yz)
+            #                   + jYZj %*% sigma.yz) %*% sigma.zz.inv )
+            tmp1 <- crossprod(ZZ.zi.yz.ji, sigma.zz.inv)
+            tmp2 <- sigma.ji.yz.zi
+            tmp3 <- ji.YZ.zi
+            tmp4 <- jYZj %*% sigma.yz.zi
+            g.sigma.yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
             G.sigma.yz[cl,] <- lav_matrix_vec(g.sigma.yz)
 
             # BETA.Z
+            # here, we avoid the (sample.z - beta.z) approach
             exo.z <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
-            z <- t(Y2[cl, between.y.idx, drop = FALSE])
-            zhat <- z - t(sample.z) %*% t(exo.z)
-            yb <- t(Y2[cl, y1.idx, drop = FALSE])
-            ybhat <- yb - t(sample.wb2) %*% EXO.wb2[cl,]
-
-            A <- (sigma.zz.inv + nj*(sigma.zi.zy.ji %*% sigma.yz.zi)) # symm!
-            B <- nj*(sigma.zi.zy.ji)
-            tmp.z <- (
-                t(A %*% (zhat %*% exo.z +
-                         t(sample.z - beta.z) %*% t(exo.z) %*% exo.z)) -
-                t(B %*% (ybhat %*% exo.z +
-                         t(sample.wb2 - beta.wb) %*% EXO.wb2[cl,] %*% exo.z)))
+            tmp1 <- (sigma.zz.inv + nj*(sigma.zi.zy.ji %*% sigma.yz.zi)) %*% zc
+            tmp2 <- nj * (sigma.zi.zy.ji) %*% yc
+            tmp.z <- crossprod(exo.z, drop(tmp1 - tmp2))
             G.beta.z[cl, ] <- as.vector(-2 * tmp.z)
 
             # BETA.W
-            exo.w <- cbind(1,
-                           Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
-            G.beta.w[cl,] <- as.vector( 2 * t(exo.w) %*% (
-                                 matrix(1, nj, 1) %x% (zc %*% sigma.zi.zy.ji -
-                                                       yc %*% sigma.j.inv +
-                                                       yc %*% sigma.w.inv) -
-                                 Y1m %*% sigma.w.inv) )
+#            exo.w <- cbind(1,
+#                           Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
+#            G.beta.w[cl,] <- as.vector( 2 * t(exo.w) %*% (
+#                                 matrix(1, nj, 1) %x% (zc %*% sigma.zi.zy.ji -
+#                                                       yc %*% sigma.j.inv +
+#                                                       yc %*% sigma.w.inv) -
+#                                 Y1m %*% sigma.w.inv) )
+
+            # BETA.W (between part only)
+            exo2.w <- cbind(1, Y2[cl, within.x.idx, drop = FALSE])
+            tmp2 <- (zc %*% sigma.zi.zy.ji -
+                     yc %*% sigma.j.inv +
+                     yc %*% sigma.w.inv)
+            G.beta.w1[cl,] <- as.vector( 2 * nj * crossprod(exo2.w, tmp2) )
+
+            # BETA.W (within part only)
+            #exo.w <- cbind(1,
+            #               Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
+            #tmp1 <- - Y1m %*% sigma.w.inv
+            #G.beta.ww <- as.vector( 2 * crossprod(exo.w, tmp1) )
+            #G.beta.w[cl,] <- G.beta.w1 + G.beta.ww
+            #G.beta.w2[cl,] <- G.beta.ww
 
             # BETA.B
-            exo.b <- cbind(1,
-                           Y1[cluster.idx == cl, between.x.idx, drop = FALSE])
-            G.beta.b[cl,] <- as.vector(  2 * t(exo.b) %*%
-                                 (matrix(1, nj, 1) %x% (zc %*% sigma.zi.zy.ji -
-                                                        yc %*% sigma.j.inv)) )
+            exo2.b <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
+            tmp <- ( zc %*% sigma.zi.zy.ji - yc %*% sigma.j.inv )
+            G.beta.b[cl,] <- as.vector(  2 * nj * crossprod(exo2.b, tmp) )
         } # cl
 
     } # between.y.idx
@@ -866,30 +881,72 @@ lav_mvreg_cluster_scores_2l <- function(Y1           = NULL,
             jYYj <- nj * sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
 
             # SIGMA.W
-            g.sigma.w <- ( (nj-1) * sigma.w.inv
-                - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
-                + sigma.j.inv - jYYj )
-            tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
-            G.sigma.w[cl,] <- lav_matrix_vech(tmp)
+            #g.sigma.w <- ( (nj-1) * sigma.w.inv
+            #    - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
+            #    + sigma.j.inv - jYYj )
+            #tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
+            #G.sigma.w[cl,] <- lav_matrix_vech(tmp)
+
+            # SIGMA.W (between part)
+            g.sigma.w1 <- sigma.j.inv - jYYj
+            tmp <- g.sigma.w1*2; diag(tmp) <- diag(g.sigma.w1)
+            G.sigma.w1[cl,] <- lav_matrix_vech(tmp)
 
             # SIGMA.B
             g.sigma.b <- nj * (sigma.j.inv - jYYj)
             tmp <- g.sigma.b*2; diag(tmp) <- diag(g.sigma.b)
             G.sigma.b[cl,] <- lav_matrix_vech(tmp)
 
-            # BETA.W
-            exo.w <- cbind(1, Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
-            G.beta.w[cl,] <- as.vector( 2 * t(exo.w) %*% (
-             matrix(1, nj, 1) %x% (-yc %*% sigma.j.inv + yc %*% sigma.w.inv) -
-             Y1m %*% sigma.w.inv) )
+            # BETA.W (between part only)
+            exo2.w <- cbind(1, Y2[cl, within.x.idx, drop = FALSE])
+            tmp2 <- ( - yc %*% sigma.j.inv + yc %*% sigma.w.inv )
+            G.beta.w1[cl,] <- as.vector( 2 * nj * crossprod(exo2.w, tmp2) )
 
             # BETA.B
-            exo.b <- cbind(1, Y1[cluster.idx == cl, between.x.idx, drop = FALSE])
-            G.beta.b[cl,] <- as.vector(  2 * t(exo.b) %*% (
-                matrix(1, nj, 1) %x% (-yc %*% sigma.j.inv)) )
+            exo2.b <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
+            tmp <- - yc %*% sigma.j.inv
+            G.beta.b[cl,] <- as.vector(  2 * nj * crossprod(exo2.b, tmp) )
         } # cl
 
     } # no-between-y
+
+    # beta.w (bis)
+
+#    d.beta.w2 <- -2 * t(EXO.wb[,1:(length(within.x.idx) + 1L), drop = FALSE]) %*% Y1.wb.res %*% sigma.w.inv
+
+    Y1.wb.res.i <- Y1.wb.res %*% sigma.w.inv
+    w1.idx <- seq_len(length(within.x.idx) + 1L)
+    a1.idx <- rep(w1.idx, times = ncol(Y1.wb.res.i))
+    b1.idx <- rep(seq_len(ncol(Y1.wb.res.i)), each = length(w1.idx))
+    TMP <- EXO.wb[,a1.idx,drop = FALSE] * Y1.wb.res.i[,b1.idx,drop = FALSE]
+    G.beta.w2 <- -2 * rowsum.default(TMP, cluster.idx, reorder = FALSE,
+                                     na.rm = TRUE)
+    G.beta.w <- G.beta.w1 + G.beta.w2
+
+    # Sigma.W (bis)
+    #d.sigma.w2 <- sum(cluster.size - 1) * ( sigma.w.inv
+    #               - sigma.w.inv %*% S.PW %*% sigma.w.inv )
+    #tmp <- d.sigma.w2*2; diag(tmp) <- diag(d.sigma.w2)
+    #d.sigma.w2 <- tmp
+
+    #g.sigma.w2 <- ( (nj-1) * sigma.w.inv
+    #        - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv )
+
+    Y1a.res <- Y1.wb.res - Y2w.res[cluster.idx, , drop = FALSE]
+    Y1a.res.i <- Y1a.res %*% sigma.w.inv
+    idx1 <- lav_matrix_vech_col_idx(nrow(sigma.w))
+    idx2 <- lav_matrix_vech_row_idx(nrow(sigma.w))
+    SW2 <- matrix(lav_matrix_vech(sigma.w.inv), nrow = nclusters,
+                  length(lav_matrix_vech(sigma.w.inv)), byrow = TRUE)
+    SW2 <- SW2 * (cluster.size - 1)
+    TMP <- Y1a.res.i[, idx1, drop = FALSE] * Y1a.res.i[, idx2, drop = FALSE]
+    TMP2 <- rowsum.default(TMP, cluster.idx, reorder = FALSE, na.rm = TRUE)
+    G.sigma.w2 <- 2 * (SW2 - TMP2)
+    diagh.idx <- lav_matrix_diagh_idx(nrow(sigma.w))
+    G.sigma.w2[,diagh.idx] <- G.sigma.w2[,diagh.idx,drop = FALSE]/2
+    G.sigma.w <- G.sigma.w1 + G.sigma.w2
+
+
 
     # rearrange columns to Res.Int.W, Res.Pi.W, Res.Sigma.W,
     #                      Res.Int.B, Res.Pi.B, Res.Sigma.B
