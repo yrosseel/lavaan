@@ -213,8 +213,8 @@ modindices <- function(object,
                                   TRUE, FALSE )
         high.power <- LIST$power > high.power
         # FIXME: sepc.all or epc??
-        #epc.high <- LIST$sepc.all > LIST$delta
-        epc.high <- LIST$epc > LIST$delta
+        #epc.high <- abs(LIST$sepc.all) > LIST$delta
+        epc.high <- abs(LIST$epc) > LIST$delta
 
         LIST$decision[ which(!mi.significant & !high.power)] <- "(i)"
         LIST$decision[ which( mi.significant & !high.power)] <- "**(m)**"
