@@ -37,6 +37,8 @@ lav_model <- function(lavpartable      = NULL,
         if(nlevels > 1L) {
             multilevel <- TRUE
         }
+    } else {
+        nlevels <- 1L
     }
 
     nefa <- lav_partable_nefa(lavpartable)

@@ -79,17 +79,17 @@ lav_partable_flat <- function(FLAT = NULL,
     ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
 
     # if we have the "|" in the model syntax, check the number of thresholds
-    if(!is.null(varTable) && length(ov.names.ord1) > 0L) {
-        for(o in ov.names.ord1) {
-            nth <- varTable$nlev[ varTable$name == o ] - 1L
-            nth.in.partable <- sum(FLAT$op == "|" & FLAT$lhs == o)
-            if(nth != nth.in.partable) {
-                stop("lavaan ERROR: expected ", max(0,nth),
-                     " threshold(s) for variable ",
-                     sQuote(o), "; syntax contains ", nth.in.partable, "\n")
-            }
-        }
-    }
+    #if(!is.null(varTable) && length(ov.names.ord1) > 0L) {
+    #    for(o in ov.names.ord1) {
+    #        nth <- varTable$nlev[ varTable$name == o ] - 1L
+    #        nth.in.partable <- sum(FLAT$op == "|" & FLAT$lhs == o)
+    #        if(nth != nth.in.partable) {
+    #            stop("lavaan ERROR: expected ", max(0,nth),
+    #                 " threshold(s) for variable ",
+    #                 sQuote(o), "; syntax contains ", nth.in.partable, "\n")
+    #        }
+    #    }
+    #}
 
     if(length(ov.names.ord) > 0L)
         categorical <- TRUE
@@ -131,12 +131,15 @@ lav_partable_flat <- function(FLAT = NULL,
     # 1. THRESHOLDS (based on varTable)
     #    NOTE: - new in 0.5-18: ALWAYS include threshold parameters in partable,
     #            but only free them if auto.th = TRUE
-    #          - only ov.names.ord2, because ov.names.ord1 are already in USER
-    #            and we only need to add 'default' parameters here
+    #          - [only ov.names.ord2, because ov.names.ord1 are already in USER
+    #            and we only need to add 'default' parameters here]
+    #            (not any longer: we create them for ALL ordered var (0.6-12)
     nth <- 0L
     #if(auto.th && length(ov.names.ord2) > 0L) {
-    if(length(ov.names.ord2) > 0L) {
-        for(o in ov.names.ord2) {
+    #if(length(ov.names.ord2) > 0L) {
+    if(length(ov.names.ord) > 0L) {
+        #for(o in ov.names.ord2) {
+        for(o in ov.names.ord) {
             nth  <- varTable$nlev[ varTable$name == o ] - 1L
             if(nth < 1L) next
             lhs <- c(lhs, rep(o, nth))

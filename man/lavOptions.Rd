@@ -58,7 +58,7 @@ Model features (always available):
       \code{FALSE}, the metric of each latent variable is determined by fixing 
       the factor loading of the first indicator to 1.0. If there are multiple
       groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
-      the \code{group.label} argument, then only the latent variances i
+      the \code{group.label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
     \item{\code{effect.coding}:}{Can be logical or character string. If
@@ -74,8 +74,9 @@ Model features (always available):
      equals zero.
      As a result, the latent mean will be freely estimated and usually 
      equal the average of the means of the involved indicators.}
-    \item{code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
-     general constraints are used in the model, simple equality constraints
+    \item{\code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
+     general (equality or inequality) constraints are used in the model, 
+     simple equality constraints
      are represented in the parameter table as duplicated free parameters 
      (instead of extra rows with \code{op = "=="}).}
     \item{\code{parameterization}:}{Currently only used if data is 

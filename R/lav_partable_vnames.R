@@ -561,6 +561,16 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                                   # sort(TH)
                                   # NO!, don't do that; t10 will be before t2
                                   # fixed in 0.6-1 (bug report from Myrsini)
+                                  # in 0.6-12, we do this anyway like this:
+
+                                  # get var name
+                                  TH1 <- sapply(strsplit(TH, split = "\\|t"),
+                                                "[[", 1)
+                                  # get number, and sort
+                                  TH2 <- as.character(sort(as.integer(sapply(
+                                      strsplit(TH, split = "\\|t"), "[[", 2))))
+                                  # paste back togehter in the right order
+                                  paste(TH1, TH2, sep = "|t")
                              }))
             } else {
                 out <- character(0L)
